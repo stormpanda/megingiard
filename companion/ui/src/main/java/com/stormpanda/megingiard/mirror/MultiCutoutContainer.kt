@@ -24,6 +24,8 @@ import kotlin.math.roundToInt
 
 private const val MCC_TOUCH_TOLERANCE = 0.005f
 private const val MCC_UNCROPPED_THRESHOLD = 0.999f
+private const val MCC_MAX_ALPHA_FLOAT = 255f
+private const val MCC_MAX_ALPHA_INT = 255
 
 internal class MultiCutoutContainer(
     context: Context,
@@ -31,6 +33,10 @@ internal class MultiCutoutContainer(
     private val srcHeight: Int,
 ) : FrameLayout(context) {
     private val bgDimPaint = Paint()
+    private val ambientDimPaint =
+        Paint().apply {
+            style = Paint.Style.FILL
+        }
     private val bgSrcRect = Rect()
     private val bgDestRect = RectF()
     var cutouts: List<ScreenCutout> = emptyList()
@@ -93,6 +99,23 @@ internal class MultiCutoutContainer(
             bgDimPaint.colorFilter = ColorMatrixColorFilter(matrix)
         } else {
             bgDimPaint.colorFilter = null
+        }
+    }
+
+    var ambientDim: Float = 0f
+        set(value) {
+            val clamped = value.coerceIn(0f, 1f)
+            if (field != clamped) {
+                field = clamped
+                updateAmbientDimPaint()
+                invalidate()
+            }
+        }
+
+    private fun updateAmbientDimPaint() {
+        if (ambientDim > 0f) {
+            val alpha = (ambientDim * MCC_MAX_ALPHA_FLOAT).roundToInt().coerceIn(0, MCC_MAX_ALPHA_INT)
+            ambientDimPaint.color = Color.argb(alpha, 0, 0, 0)
         }
     }
 
@@ -331,6 +354,10 @@ internal class MultiCutoutContainer(
                     }
 
                     canvas.restoreToCount(innerSaveCount)
+
+                    if (ambientDim > 0f) {
+                        canvas.drawRect(0f, 0f, dw, dh, ambientDimPaint)
+                    }
 
                     if (cutout.shape == CutoutShape.CIRCLE) {
                         if (edgeBlending) {

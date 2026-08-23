@@ -113,11 +113,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
         }
     }
 
-    val currentLayout = layout
-    if (currentLayout == null) {
-        onDone()
-        return
-    }
+    val currentLayout = layout ?: return
 
     var dimAlpha by remember(currentLayout.id) { mutableFloatStateOf(currentLayout.ambientDim) }
     var edgeBlendWidth by remember(currentLayout.id) { mutableFloatStateOf(currentLayout.mirrorEdgeBlendWidth) }

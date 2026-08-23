@@ -589,13 +589,7 @@ private fun HeroCompanionCard(
                             Button(
                                 onClick = {
                                     MacroPadState.setActiveProfileId(associatedProfile.id)
-                                    val currentMode = AppStateManager.companionViewMode.value
-                                    val focusedPkg = AppStateManager.focusedAppPackageName.value
-                                    val focusedRom = AppStateManager.focusedRomPath.value
-                                    val matchesFocused = associatedProfile.matches(focusedPkg, focusedRom, isActiveProfile = true)
-                                    if (currentMode != CompanionViewMode.AUTO || !matchesFocused) {
-                                        AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
-                                    }
+                                    AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
                                 },
                                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
                                 colors =
@@ -796,13 +790,7 @@ private fun HeroCompanionCard(
 
                     Button(
                         onClick = {
-                            val currentMode = AppStateManager.companionViewMode.value
-                            val focusedPkg = AppStateManager.focusedAppPackageName.value
-                            val focusedRom = AppStateManager.focusedRomPath.value
-                            val matchesFocused = activeProfile.matches(focusedPkg, focusedRom, isActiveProfile = true)
-                            if (currentMode != CompanionViewMode.AUTO || !matchesFocused) {
-                                AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
-                            }
+                            AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
                         },
                         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
                         colors =
@@ -861,14 +849,7 @@ private fun CompanionToolsDeck(
                 colors = colors,
                 modifier = Modifier.weight(1f),
                 onClick = {
-                    val profile = activeProfile
-                    val currentMode = AppStateManager.companionViewMode.value
-                    val focusedPkg = AppStateManager.focusedAppPackageName.value
-                    val focusedRom = AppStateManager.focusedRomPath.value
-                    val matchesFocused = profile != null && profile.matches(focusedPkg, focusedRom, isActiveProfile = true)
-                    if (currentMode != CompanionViewMode.AUTO || !matchesFocused) {
-                        AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
-                    }
+                    AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
                 },
             )
 

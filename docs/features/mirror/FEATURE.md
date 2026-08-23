@@ -247,6 +247,11 @@ The master texture surface buffer allocation matches the source resolution. The 
 - **Background Mode (`useBackgroundImageAsMask = false`)**: The bitmap is applied behind the cutouts. Mirrored cutouts are drawn on top. If no background image is set (or it is removed), the background falls back to the app theme background.
 - **Mask Mode (`useBackgroundImageAsMask = true`)**: The bitmap is passed directly to `MultiCutoutContainer`. Inside `MultiCutoutContainer.dispatchDraw`, the bitmap is drawn *on top* of the rendered mirrored cutouts, serving as an overlay mask. This allows the mirrored screen viewports to show through any transparent regions in the background image.
 
+### Ambient Dimming Support
+
+- **Per-Layout Dim Level (`ambientDim`)**: In `BackgroundSettingsOverlay`, users can configure a dimming percentage (`0%` to `90%`, stored as `ambientDim` in `PadLayout`).
+- **Dimming Veil Application**: `EmbeddedMirrorView` passes `layout.ambientDim` to `MultiCutoutContainer`. During drawing in `MultiCutoutContainer`, a semi-transparent black veil (`Color.argb(alpha, 0, 0, 0)`) is drawn specifically over the rendered screen cutouts, keeping overlay buttons in `MacroPadScreen` legible without affecting any configured background image artwork (which maintains its own independent `backgroundImageDim` setting).
+
 ### Cutout Layout Editor & Viewport Centering
 
 The layout editor (`CutoutLayoutEditor`) allows user interaction for moving and resizing cutouts, and crop configuration.

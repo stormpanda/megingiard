@@ -701,6 +701,31 @@ class MacroPadStateTest {
     }
 
     @Test
+    fun `updateLayout preserves and updates ambientDim`() {
+        val p1Id = UUID.randomUUID().toString()
+        val layoutId = "layout-1"
+        val l1 = PadLayout(id = layoutId, name = "Lay1", ambientDim = 0f)
+        val p1 =
+            PadProfile(
+                id = p1Id,
+                name = "P1",
+                layouts = listOf(l1),
+                activeLayoutId = layoutId,
+            )
+        MacroPadState.loadFrom(listOf(p1), p1Id)
+
+        // Verify initially 0f
+        assertEquals(0f, MacroPadState.activeLayout.value?.ambientDim)
+
+        // When updating the layout with ambientDim = 0.4f
+        val updatedLayout = l1.copy(ambientDim = 0.4f)
+        MacroPadState.updateLayout(updatedLayout)
+
+        // Then it is preserved in state
+        assertEquals(0.4f, MacroPadState.activeLayout.value?.ambientDim)
+    }
+
+    @Test
     fun `updateLayout preserves and updates bgImageScale and offsets`() {
         val p1Id = UUID.randomUUID().toString()
         val layoutId = "layout-1"

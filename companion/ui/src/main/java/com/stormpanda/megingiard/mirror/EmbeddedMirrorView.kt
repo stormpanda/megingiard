@@ -293,6 +293,7 @@ fun EmbeddedMirrorView(
             mcc.bgImageOffsetX = if (showLayoutBackground) layout?.bgImageOffsetX ?: 0f else 0f
             mcc.bgImageOffsetY = if (showLayoutBackground) layout?.bgImageOffsetY ?: 0f else 0f
             mcc.bgImageDim = if (showLayoutBackground) layout?.backgroundImageDim ?: 0f else 0f
+            mcc.ambientDim = if (overrideCutouts == null) layout?.ambientDim ?: 0f else 0f
 
             val tv = containerHolder.textureView
             if (tv != null) {
