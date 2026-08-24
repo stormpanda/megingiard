@@ -919,6 +919,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="gamepad_action_crop">Zuschneiden</string>
     <string name="gamepad_action_open">Öffnen</string>
     <string name="gamepad_action_clear">Entfernen</string>
+    <string name="gamepad_action_enable">Aktivieren</string>
     <string name="gamepad_action_choose_app">App wählen</string>
     <string name="gamepad_action_custom_color">Eigene Farbe</string>
     <string name="gamepad_action_choose_icon">Symbol wählen</string>

@@ -19,21 +19,23 @@ import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.Opacity
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -41,15 +43,16 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCutout
-import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.BumperDirection
 import com.stormpanda.megingiard.ui.GamepadCategoryTile
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
 import com.stormpanda.megingiard.ui.GamepadDeck
+import com.stormpanda.megingiard.ui.GamepadInfoBox
 import com.stormpanda.megingiard.ui.GamepadSliderCard
 import com.stormpanda.megingiard.ui.GamepadTextFieldCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.GamepadTwoPaneScaffold
+import com.stormpanda.megingiard.ui.GamepadTwoStepConfirmCard
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
 import com.stormpanda.megingiard.ui.firstDeckItem
@@ -95,7 +98,6 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
 
     var dimAlpha by remember(currentLayout.id) { mutableFloatStateOf(currentLayout.ambientDim) }
     var edgeBlendWidth by remember(currentLayout.id) { mutableFloatStateOf(currentLayout.mirrorEdgeBlendWidth) }
-    var pendingProjectionCutout by remember { mutableStateOf<ScreenCutout?>(null) }
 
     var selectedCategory by remember { mutableStateOf<AmbientCategory>(AmbientCategory.General) }
 
@@ -280,10 +282,32 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                             cutout.name.ifBlank {
                                 stringResource(R.string.settings_mirror_cutout_default_name_fmt, cutoutIndex + 1)
                             }
+                        val projectionFocusRequester = remember(cutout.id) { FocusRequester() }
+                        var restoreFocusTrigger by remember(cutout.id) { mutableIntStateOf(0) }
+
+                        LaunchedEffect(restoreFocusTrigger) {
+                            if (restoreFocusTrigger > 0) {
+                                try {
+                                    projectionFocusRequester.requestFocus()
+                                } catch (_: Exception) {
+                                    // Focus requester not attached
+                                }
+                            }
+                        }
+
                         GamepadDeck(
                             title = cutoutTitle,
                             accentColor = colors.accent,
                         ) {
+                            if (currentLayout.backgroundTouchpad.enabled) {
+                                GamepadInfoBox(
+                                    text = stringResource(R.string.layout_settings_touchpad_incompatible_warning),
+                                    description = stringResource(R.string.macropad_projection_conflict_touchpad_body),
+                                    icon = Icons.Rounded.Warning,
+                                    iconTint = colors.error,
+                                )
+                            }
+
                             GamepadTextFieldCard(
                                 modifier = Modifier.firstDeckItem(),
                                 title = stringResource(R.string.macropad_cutout_rename_title),
@@ -316,7 +340,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                         ASO_SMOOTHING_VAL_LIGHT -> 1
                                         ASO_SMOOTHING_VAL_MEDIUM -> 2
                                         ASO_SMOOTHING_VAL_STRONG -> 3
-                                        else -> 3
+                                        else -> 0
                                     }
                                 } else {
                                     0
@@ -326,22 +350,21 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                 title = stringResource(R.string.settings_mirror_follow_smoothing),
                                 description = stringResource(R.string.settings_mirror_follow_smoothing_desc),
                                 selectedText = smoothingModes[currentSmoothIdx],
-                                icon = Icons.Rounded.Tune,
+                                icon = Icons.Rounded.Grain,
                                 itemKey = "cutout_${cutout.id}_smoothing",
                                 onPrevious = {
-                                    val nextIdx = (currentSmoothIdx - 1 + smoothingModes.size) % smoothingModes.size
-                                    val isSmooth = nextIdx > 0
+                                    val newIdx = (currentSmoothIdx - 1 + smoothingModes.size) % smoothingModes.size
+                                    val isSmooth = newIdx > 0
                                     val strength =
-                                        when (nextIdx) {
+                                        when (newIdx) {
                                             1 -> ASO_SMOOTHING_VAL_LIGHT
                                             2 -> ASO_SMOOTHING_VAL_MEDIUM
-                                            else -> ASO_SMOOTHING_VAL_STRONG
+                                            3 -> ASO_SMOOTHING_VAL_STRONG
+                                            else -> ASO_SMOOTHING_VAL_MEDIUM
                                         }
                                     val updated =
                                         currentLayout.mirrorCutouts.map {
-                                            if (it.id ==
-                                                cutout.id
-                                            ) {
+                                            if (it.id == cutout.id) {
                                                 it.copy(motionSmoothing = isSmooth, motionSmoothingStrength = strength)
                                             } else {
                                                 it
@@ -350,13 +373,14 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                     commitLayout { copy(mirrorCutouts = updated) }
                                 },
                                 onNext = {
-                                    val nextIdx = (currentSmoothIdx + 1) % smoothingModes.size
-                                    val isSmooth = nextIdx > 0
+                                    val newIdx = (currentSmoothIdx + 1) % smoothingModes.size
+                                    val isSmooth = newIdx > 0
                                     val strength =
-                                        when (nextIdx) {
+                                        when (newIdx) {
                                             1 -> ASO_SMOOTHING_VAL_LIGHT
                                             2 -> ASO_SMOOTHING_VAL_MEDIUM
-                                            else -> ASO_SMOOTHING_VAL_STRONG
+                                            3 -> ASO_SMOOTHING_VAL_STRONG
+                                            else -> ASO_SMOOTHING_VAL_MEDIUM
                                         }
                                     val updated =
                                         currentLayout.mirrorCutouts.map {
@@ -373,16 +397,42 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                             )
 
                             // Touch Projection
-                            GamepadToggleCard(
-                                title = stringResource(R.string.settings_mirror_touch_projection),
-                                description = stringResource(R.string.settings_mirror_touch_projection_desc),
-                                checked = cutout.touchProjectionEnabled,
-                                icon = Icons.Rounded.Mouse,
-                                itemKey = "cutout_${cutout.id}_projection",
-                                onCheckedChange = { isChecked ->
-                                    if (isChecked && currentLayout.backgroundTouchpad.enabled) {
-                                        pendingProjectionCutout = cutout
-                                    } else {
+                            if (!cutout.touchProjectionEnabled && currentLayout.backgroundTouchpad.enabled) {
+                                GamepadTwoStepConfirmCard(
+                                    title = stringResource(R.string.settings_mirror_touch_projection),
+                                    confirmTitle = stringResource(R.string.macropad_projection_conflict_touchpad_title),
+                                    description = stringResource(R.string.settings_mirror_touch_projection_desc),
+                                    confirmDescription = stringResource(R.string.macropad_projection_conflict_touchpad_body),
+                                    actionText = stringResource(R.string.gamepad_action_enable),
+                                    confirmActionText = stringResource(R.string.gamepad_action_confirm),
+                                    icon = Icons.Rounded.Mouse,
+                                    isDestructive = true,
+                                    itemKey = "cutout_${cutout.id}_projection",
+                                    cardFocusRequester = projectionFocusRequester,
+                                    onConfirm = {
+                                        val updatedCutouts =
+                                            currentLayout.mirrorCutouts.map { c ->
+                                                if (c.id == cutout.id) c.copy(touchProjectionEnabled = true) else c
+                                            }
+                                        commitLayout {
+                                            copy(
+                                                mirrorCutouts = updatedCutouts,
+                                                backgroundTouchpad = backgroundTouchpad.copy(enabled = false),
+                                            )
+                                        }
+                                        ScreenCaptureManager.setLocked(true)
+                                        restoreFocusTrigger++
+                                    },
+                                )
+                            } else {
+                                GamepadToggleCard(
+                                    title = stringResource(R.string.settings_mirror_touch_projection),
+                                    description = stringResource(R.string.settings_mirror_touch_projection_desc),
+                                    checked = cutout.touchProjectionEnabled,
+                                    icon = Icons.Rounded.Mouse,
+                                    itemKey = "cutout_${cutout.id}_projection",
+                                    cardFocusRequester = projectionFocusRequester,
+                                    onCheckedChange = { isChecked ->
                                         val updated =
                                             currentLayout.mirrorCutouts.map {
                                                 if (it.id == cutout.id) it.copy(touchProjectionEnabled = isChecked) else it
@@ -391,61 +441,13 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                         if (isChecked) {
                                             ScreenCaptureManager.setLocked(true)
                                         }
-                                    }
-                                },
-                            )
+                                    },
+                                )
+                            }
                         }
                     }
                 }
             }
         },
     )
-
-    // Projection conflict alert
-    if (pendingProjectionCutout != null) {
-        val targetCutout = pendingProjectionCutout!!
-        AppAlertDialog(
-            onDismissRequest = { pendingProjectionCutout = null },
-            title = {
-                Text(
-                    text = stringResource(R.string.macropad_projection_conflict_touchpad_title),
-                    color = colors.onSurface,
-                )
-            },
-            text = {
-                Text(
-                    text = stringResource(R.string.macropad_projection_conflict_touchpad_body),
-                    color = colors.onSurfaceSecondary,
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val updatedCutouts =
-                            currentLayout.mirrorCutouts.map { c ->
-                                if (c.id == targetCutout.id) c.copy(touchProjectionEnabled = true) else c
-                            }
-                        commitLayout {
-                            copy(
-                                mirrorCutouts = updatedCutouts,
-                                backgroundTouchpad = backgroundTouchpad.copy(enabled = false),
-                            )
-                        }
-                        ScreenCaptureManager.setLocked(true)
-                        pendingProjectionCutout = null
-                    },
-                ) {
-                    Text(
-                        text = stringResource(R.string.macropad_projection_conflict_touchpad_confirm),
-                        color = colors.error,
-                    )
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { pendingProjectionCutout = null }) {
-                    Text(text = stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
-                }
-            },
-        )
-    }
 }

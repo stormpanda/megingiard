@@ -1,12 +1,5 @@
 package com.stormpanda.megingiard.macropad
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.Speed
@@ -14,25 +7,25 @@ import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.rounded.Warning
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.ui.GamepadConfirmDialog
+import com.stormpanda.megingiard.ui.GamepadInfoBox
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadSliderCard
 import com.stormpanda.megingiard.ui.GamepadStepperCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
+import com.stormpanda.megingiard.ui.GamepadTwoStepConfirmCard
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.firstDeckItem
 import kotlin.math.roundToInt
@@ -49,45 +42,57 @@ internal fun LayoutTouchpadSubPageContent(
     val cfg = layout.backgroundTouchpad
     val hasTouchProjection = layout.mirrorCutouts.any { it.touchProjectionEnabled }
 
-    var showConflictDialog by remember { mutableStateOf(false) }
+    val touchpadFocusRequester = remember { FocusRequester() }
+    var restoreFocusTrigger by remember { mutableIntStateOf(0) }
 
-    GamepadToggleCard(
-        title = stringResource(R.string.layout_settings_touchpad_enable),
-        description = stringResource(R.string.layout_settings_touchpad_enable_desc),
-        checked = cfg.enabled,
-        icon = Icons.Rounded.Mouse,
-        onCheckedChange = { targetState ->
-            if (targetState && hasTouchProjection) {
-                showConflictDialog = true
-            } else {
-                onUpdate(cfg.copy(enabled = targetState), false)
+    LaunchedEffect(restoreFocusTrigger) {
+        if (restoreFocusTrigger > 0) {
+            try {
+                touchpadFocusRequester.requestFocus()
+            } catch (_: Exception) {
+                // Focus requester not attached
             }
-        },
-        modifier = Modifier.firstDeckItem(),
-    )
+        }
+    }
 
     if (hasTouchProjection) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .background(colors.error.copy(alpha = 0.15f), RoundedCornerShape(8.dp))
-                    .padding(horizontal = 16.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.Warning,
-                contentDescription = null,
-                tint = colors.error,
-                modifier = Modifier.size(20.dp),
-            )
-            Text(
-                text = stringResource(R.string.layout_settings_touchpad_incompatible_warning),
-                color = colors.error,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
+        GamepadInfoBox(
+            text = stringResource(R.string.layout_settings_touchpad_incompatible_warning),
+            description = stringResource(R.string.macropad_touchpad_conflict_projection_body),
+            icon = Icons.Rounded.Warning,
+            iconTint = colors.error,
+        )
+    }
+
+    if (!cfg.enabled && hasTouchProjection) {
+        GamepadTwoStepConfirmCard(
+            title = stringResource(R.string.layout_settings_touchpad_enable),
+            confirmTitle = stringResource(R.string.layout_settings_touchpad_enable),
+            description = stringResource(R.string.layout_settings_touchpad_enable_desc),
+            confirmDescription = stringResource(R.string.macropad_touchpad_conflict_projection_body),
+            actionText = stringResource(R.string.gamepad_action_enable),
+            confirmActionText = stringResource(R.string.gamepad_action_confirm),
+            icon = Icons.Rounded.Mouse,
+            isDestructive = true,
+            cardFocusRequester = touchpadFocusRequester,
+            onConfirm = {
+                onUpdate(cfg.copy(enabled = true), true)
+                restoreFocusTrigger++
+            },
+            modifier = Modifier.firstDeckItem(),
+        )
+    } else {
+        GamepadToggleCard(
+            title = stringResource(R.string.layout_settings_touchpad_enable),
+            description = stringResource(R.string.layout_settings_touchpad_enable_desc),
+            checked = cfg.enabled,
+            icon = Icons.Rounded.Mouse,
+            cardFocusRequester = touchpadFocusRequester,
+            onCheckedChange = { targetState ->
+                onUpdate(cfg.copy(enabled = targetState), false)
+            },
+            modifier = Modifier.firstDeckItem(),
+        )
     }
 
     if (cfg.enabled) {
@@ -191,20 +196,6 @@ internal fun LayoutTouchpadSubPageContent(
             checked = cfg.hapticsEnabled,
             icon = Icons.Rounded.Vibration,
             onCheckedChange = { onUpdate(cfg.copy(hapticsEnabled = it), false) },
-        )
-    }
-
-    if (showConflictDialog) {
-        GamepadConfirmDialog(
-            title = stringResource(R.string.layout_settings_touchpad_enable),
-            message = stringResource(R.string.macropad_touchpad_conflict_projection_body),
-            confirmText = stringResource(R.string.macropad_editor_confirm),
-            cancelText = stringResource(R.string.settings_cancel),
-            onConfirm = {
-                onUpdate(cfg.copy(enabled = true), true)
-                showConflictDialog = false
-            },
-            onDismiss = { showConflictDialog = false },
         )
     }
 }

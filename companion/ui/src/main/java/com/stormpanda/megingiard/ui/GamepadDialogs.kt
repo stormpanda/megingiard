@@ -12,12 +12,10 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
@@ -129,59 +127,4 @@ fun <T> GamepadSearchBar(
             }
         }
     }
-}
-
-/**
- * Standard gamepad-focused confirmation dialog with destructive styling support.
- */
-@Composable
-fun GamepadConfirmDialog(
-    title: String,
-    message: String,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-    confirmText: String = stringResource(R.string.gamepad_confirm_dialog_confirm),
-    cancelText: String = stringResource(R.string.gamepad_confirm_dialog_cancel),
-    isDestructive: Boolean = false,
-) {
-    val colors = LocalAppColors.current
-    AppAlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = title,
-                color = if (isDestructive) colors.error else colors.onSurface,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
-        },
-        text = {
-            Text(
-                text = message,
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        },
-        confirmButton = {
-            GamepadActionCard(
-                title = confirmText,
-                onClick = {
-                    AppLog.d(TAG, "GamepadConfirmDialog: confirmed '$title'")
-                    onConfirm()
-                },
-                actionGlyph = GamePadGlyph.BTN_A,
-                isDestructive = isDestructive,
-            )
-        },
-        dismissButton = {
-            GamepadActionCard(
-                title = cancelText,
-                onClick = {
-                    AppLog.d(TAG, "GamepadConfirmDialog: dismissed '$title'")
-                    onDismiss()
-                },
-                actionGlyph = GamePadGlyph.BTN_B,
-            )
-        },
-    )
 }

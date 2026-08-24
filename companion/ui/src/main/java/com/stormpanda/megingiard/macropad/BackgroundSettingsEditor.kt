@@ -1,7 +1,7 @@
 package com.stormpanda.megingiard.macropad
 
-import android.content.Context
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -83,13 +83,11 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.BitmapUtils
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.math.ViewportMath
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.GamepadActionCard
-import com.stormpanda.megingiard.ui.GamepadConfirmDialog
 import com.stormpanda.megingiard.ui.GamepadFocusCard
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadSliderCard
@@ -156,7 +154,6 @@ internal fun LayoutBackgroundSubPageContent(
     var bgImageDim by remember(layout) { mutableFloatStateOf(layout.backgroundImageDim) }
 
     var previewBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
-    var showApiTokenMissingDialog by remember { mutableStateOf(false) }
     var isSaving by remember { mutableStateOf(false) }
 
     val bgImageDimFilter =
@@ -308,7 +305,7 @@ internal fun LayoutBackgroundSubPageContent(
         icon = Icons.Rounded.Search,
         onClick = {
             if (SettingsManager.steamGridDbApiToken.value.isBlank()) {
-                showApiTokenMissingDialog = true
+                Toast.makeText(context, R.string.steamgriddb_token_missing_message, Toast.LENGTH_LONG).show()
             } else {
                 onOpenScrape()
             }
@@ -421,20 +418,6 @@ internal fun LayoutBackgroundSubPageContent(
                 bgOffsetX = 0f
                 bgOffsetY = 0f
             },
-        )
-    }
-
-    if (showApiTokenMissingDialog) {
-        GamepadConfirmDialog(
-            title = stringResource(R.string.steamgriddb_token_missing_title),
-            message = stringResource(R.string.steamgriddb_token_missing_message),
-            confirmText = stringResource(R.string.steamgriddb_token_missing_go_settings),
-            cancelText = stringResource(R.string.settings_color_cancel),
-            onConfirm = {
-                showApiTokenMissingDialog = false
-                AppStateManager.setGlobalSettingsOpen(true)
-            },
-            onDismiss = { showApiTokenMissingDialog = false },
         )
     }
 }

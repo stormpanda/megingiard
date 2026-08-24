@@ -735,6 +735,7 @@ fun GamepadToggleCard(
     icon: ImageVector? = null,
     enabled: Boolean = true,
     itemKey: Any? = title,
+    cardFocusRequester: FocusRequester = remember { FocusRequester() },
     onFocusChanged: ((Boolean) -> Unit)? = null,
 ) {
     GamepadFocusCard(
@@ -747,6 +748,7 @@ fun GamepadToggleCard(
         enabled = enabled,
         modifier = modifier,
         itemKey = itemKey,
+        cardFocusRequester = cardFocusRequester,
         onFocusChanged = onFocusChanged,
     ) { isFocused ->
         GamepadCardRow(
@@ -1550,6 +1552,7 @@ fun GamepadTwoStepConfirmCard(
     enabled: Boolean = true,
     isDestructive: Boolean = false,
     itemKey: Any? = title,
+    cardFocusRequester: FocusRequester = remember { FocusRequester() },
 ) {
     val colors = LocalAppColors.current
     var isConfirming by remember { mutableStateOf(false) }
@@ -1567,6 +1570,7 @@ fun GamepadTwoStepConfirmCard(
         enabled = enabled,
         modifier = modifier,
         itemKey = itemKey,
+        cardFocusRequester = cardFocusRequester,
         onFocusChanged = { isFocused ->
             if (!isFocused && isConfirming) {
                 isConfirming = false
