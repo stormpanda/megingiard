@@ -27,6 +27,7 @@ the same device or share individual profiles with other Megingiard users.
 - The export MUST embed an SHA-256 checksum to detect file corruption or unintended modification.
   This is a data-integrity check, distinct from the application / daemon hardening layers
   summarized in [SECURITY_CONCEPT.md](../../../SECURITY_CONCEPT.md).
+- An animated toast notification ("Configuration exported successfully") MUST be shown after the backup is saved without interrupting the user with a modal dialog.
 
 ### FR-CF2: Backup Restore (Import)
 
@@ -72,6 +73,7 @@ the same device or share individual profiles with other Megingiard users.
 - The user MAY optionally provide author, description, and comma-separated tags before exporting.
 - The suggested filename format is:
   `megingiard_profile_v<versionName>_<date>[_<profileName up to 30 chars>][_<author up to 20 chars>].mgrd`.
+- An animated toast notification ("Profile exported successfully") MUST be shown after the profile export is saved without interrupting the user with a modal dialog.
 
 ### FR-CF7: Per-Profile Share Import
 
@@ -79,7 +81,7 @@ the same device or share individual profiles with other Megingiard users.
 - The import preview dialog MUST indicate that settings in the file will be ignored.
 - After a successful profile-share import, only the profiles are added (via
   `ConfigManager.applyProfileImport()`); `SettingsManager` is NOT updated.
-- A success confirmation MUST be shown after the profile is imported.
+- An animated toast notification ("Profile imported successfully") MUST be shown after the profile is imported without interrupting the user with a modal dialog.
 
 ### FR-CF8: Automatic Daily Backups
 
@@ -92,7 +94,7 @@ the same device or share individual profiles with other Megingiard users.
 - When invoking the "Restore Backup" function under Global Settings, a dedicated sub-menu within the two-pane scaffold (`RestoreBackupSubPage`) MUST be displayed.
 - The first option in the selection list MUST be "External File…", which routes the user to the standard SAF file picker upon selection.
 - Subsequent options in the list MUST show the 5 internal daily backups, labelled by their localized creation weekday, date, and time (e.g. `Sunday, 2026-05-24 21:15`), and showing the count of profiles, layouts, and macros.
-- Selecting an internal daily backup or an external file MUST transition the right-pane deck into a dedicated in-deck **Review & Apply** view showing archive metadata, contents breakdown, overwrite notice, and an "Apply & Restore" gamepad action card without showing floating popup modals. Pressing back smoothly returns to the backup selection list.
+- Selecting an internal daily backup or an external file MUST transition the right-pane deck into a dedicated in-deck **Review & Apply** view showing archive metadata, contents breakdown, overwrite notice, and an "Apply & Restore" gamepad action card without showing floating popup modals. Pressing back smoothly returns to the backup selection list. Upon confirming the restore, an animated toast notification ("Backup restored successfully") MUST be shown.
 
 ---
 
@@ -228,7 +230,6 @@ Adding a new setting requires assigning the key to a section in `SECTION_MAP` or
 | `settings/SettingsKeysTest.kt`         | Reflection-based unit test guard asserting 100% coverage of declared preference keys across `SECTION_MAP` and `EXCLUDED_KEYS`                                                                                    |
 | `settings/GlobalSettingsScreen.kt`     | State hoists, navigation scaffold, sections orchestrator, and export sub-pages (`CreateBackupSubPage`, `ShareProfileSubPage`)                                                     |
 | `settings/GlobalSettingsComponents.kt` | SettingsCategory enum, SettingsSubPage enum, and enum display name mapping helpers                                                                                                  |
-| `settings/GlobalSettingsDialogs.kt`    | In-tree settings overlay dialogs (import preview, internal backups selection, and result messages)                                                                                  |
 | `MainAppScreen.kt`                     | `LaunchedEffect(pendingImportUri)` + `IncomingImportDialog` for external file intents                                                                                                                               |
 | `MainActivity.kt`                      | `handleIncomingIntent()` / `onNewIntent()` — routes `ACTION_VIEW` uri to `ConfigManager`; holds `createDocumentLauncher` / `openDocumentLauncher`; discriminates `ExportKind` to call correct build function        |
 | `AndroidManifest.xml`                  | `ACTION_VIEW` intent-filter for `application/vnd.megingiard.config+json`                                                                                                                                            |

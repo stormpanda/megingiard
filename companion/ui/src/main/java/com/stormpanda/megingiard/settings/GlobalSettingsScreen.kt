@@ -37,6 +37,7 @@ import androidx.compose.material.icons.rounded.ColorLens
 import androidx.compose.material.icons.rounded.Colorize
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.FileUpload
 import androidx.compose.material.icons.rounded.FormatColorFill
@@ -214,8 +215,6 @@ fun GlobalSettingsScreen(
         }
     }
     var importError by rememberSaveable { mutableStateOf<String?>(null) }
-    var importSuccess by rememberSaveable { mutableStateOf(false) }
-    var profileImportSuccess by rememberSaveable { mutableStateOf(false) }
     val pendingInAppImportMode by ConfigManager.pendingInAppImportMode.collectAsState()
     val coroutineScope = rememberCoroutineScope()
     var selectedCategory by remember { mutableStateOf(SettingsCategory.GENERAL) }
@@ -899,8 +898,17 @@ fun GlobalSettingsScreen(
                                                 }
                                             }.onSuccess {
                                                 when (mode) {
-                                                    ConfigManager.ImportMode.BACKUP_RESTORE -> importSuccess = true
-                                                    ConfigManager.ImportMode.PROFILE_SHARE -> profileImportSuccess = true
+                                                    ConfigManager.ImportMode.BACKUP_RESTORE -> {
+                                                        DialogToastManager.show(
+                                                            context.getString(R.string.config_import_success),
+                                                        )
+                                                    }
+
+                                                    ConfigManager.ImportMode.PROFILE_SHARE -> {
+                                                        DialogToastManager.show(
+                                                            context.getString(R.string.config_profile_import_success),
+                                                        )
+                                                    }
                                                 }
                                             }.onFailure { e ->
                                                 importError =
@@ -938,88 +946,70 @@ fun GlobalSettingsScreen(
             onDismiss = { showUpdatePromptDialog = false },
         )
     }
-    (importError ?: configImportError)?.let { error ->
-        InTreeMessageDialog(
-            title = stringResource(R.string.config_error_title),
-            text = error,
-            buttonText = stringResource(R.string.config_ok),
-            colors = colors,
-            accentColor = effectiveAccent,
-            onDismiss = {
-                importError = null
-                ConfigManager.setInAppImportError(null)
-            },
-        )
-    }
-    if (importSuccess) {
-        InTreeMessageDialog(
-            title = stringResource(R.string.config_success_title),
-            text = stringResource(R.string.config_import_success),
-            buttonText = stringResource(R.string.config_ok),
-            colors = colors,
-            accentColor = effectiveAccent,
-            onDismiss = { importSuccess = false },
-        )
-    }
-    if (profileImportSuccess) {
-        InTreeMessageDialog(
-            title = stringResource(R.string.config_success_title),
-            text = stringResource(R.string.config_profile_import_success),
-            buttonText = stringResource(R.string.config_ok),
-            colors = colors,
-            accentColor = effectiveAccent,
-            onDismiss = { profileImportSuccess = false },
-        )
-    }
-    when (val result = exportResult) {
-        is ConfigManager.ExportResult.Success -> {
-            InTreeMessageDialog(
-                title = stringResource(R.string.config_success_title),
-                text = stringResource(R.string.config_export_success),
-                buttonText = stringResource(R.string.config_ok),
-                colors = colors,
-                accentColor = effectiveAccent,
-                onDismiss = { ConfigManager.clearExportResult() },
+    LaunchedEffect(importError, configImportError) {
+        val error = importError ?: configImportError
+        if (error != null) {
+            DialogToastManager.show(
+                message = error,
+                icon = Icons.Rounded.ErrorOutline,
+                isError = true,
             )
+            importError = null
+            ConfigManager.setInAppImportError(null)
         }
-
-        is ConfigManager.ExportResult.Failure -> {
-            InTreeMessageDialog(
-                title = stringResource(R.string.config_error_title),
-                text = result.message?.takeIf { it.isNotBlank() } ?: stringResource(R.string.config_error_unknown),
-                buttonText = stringResource(R.string.config_ok),
-                colors = colors,
-                accentColor = effectiveAccent,
-                onDismiss = { ConfigManager.clearExportResult() },
-            )
-        }
-
-        null -> {}
     }
-    when (val logResult = logReportSaveResult) {
-        is LogReportManager.SaveResult.Success -> {
-            InTreeMessageDialog(
-                title = stringResource(R.string.config_success_title),
-                text = stringResource(R.string.log_report_save_success),
-                buttonText = stringResource(R.string.config_ok),
-                colors = colors,
-                accentColor = effectiveAccent,
-                onDismiss = { LogReportManager.clearSaveResult() },
-            )
-        }
+    LaunchedEffect(exportResult) {
+        when (val result = exportResult) {
+            is ConfigManager.ExportResult.Success -> {
+                val toastMsg =
+                    if (result.kind is ConfigManager.ExportKind.ProfileShare) {
+                        context.getString(R.string.config_profile_export_success)
+                    } else {
+                        context.getString(R.string.config_export_success)
+                    }
+                DialogToastManager.show(toastMsg)
+                ConfigManager.clearExportResult()
+                if (subPageStack.isNotEmpty()) {
+                    subPageStack = emptyList()
+                }
+            }
 
-        is LogReportManager.SaveResult.Failure -> {
-            InTreeMessageDialog(
-                title = stringResource(R.string.config_error_title),
-                text = logResult.message?.takeIf { it.isNotBlank() } ?: stringResource(R.string.log_report_save_error),
-                buttonText = stringResource(R.string.config_ok),
-                colors = colors,
-                accentColor = effectiveAccent,
-                onDismiss = { LogReportManager.clearSaveResult() },
-            )
-        }
+            is ConfigManager.ExportResult.Failure -> {
+                val errorMsg =
+                    result.message?.takeIf { it.isNotBlank() }
+                        ?: context.getString(R.string.config_error_unknown)
+                DialogToastManager.show(
+                    message = errorMsg,
+                    icon = Icons.Rounded.ErrorOutline,
+                    isError = true,
+                )
+                ConfigManager.clearExportResult()
+            }
 
-        null -> {}
+            null -> {}
+        }
+    }
+    LaunchedEffect(logReportSaveResult) {
+        when (val logResult = logReportSaveResult) {
+            is LogReportManager.SaveResult.Success -> {
+                DialogToastManager.show(context.getString(R.string.log_report_save_success))
+                LogReportManager.clearSaveResult()
+            }
+
+            is LogReportManager.SaveResult.Failure -> {
+                val errorMsg =
+                    logResult.message?.takeIf { it.isNotBlank() }
+                        ?: context.getString(R.string.log_report_save_error)
+                DialogToastManager.show(
+                    message = errorMsg,
+                    icon = Icons.Rounded.ErrorOutline,
+                    isError = true,
+                )
+                LogReportManager.clearSaveResult()
+            }
+
+            null -> {}
+        }
     }
 }
 

@@ -608,6 +608,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
 
     <!-- Export/import results -->
     <string name="config_export_success">Konfiguration erfolgreich exportiert.</string>
+    <string name="config_profile_export_success">Profil erfolgreich exportiert.</string>
     <string name="config_import_success">Konfiguration erfolgreich importiert.</string>
     <string name="config_error_title">Fehler</string>
     <string name="config_success_title">Fertig</string>

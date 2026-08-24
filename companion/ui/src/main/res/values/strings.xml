@@ -202,6 +202,7 @@ Open Settings to create a layout.</string>
 
     <!-- Export/import results -->
     <string name="config_export_success">Configuration exported successfully.</string>
+    <string name="config_profile_export_success">Profile exported successfully.</string>
     <string name="config_import_success">Configuration imported successfully.</string>
     <string name="config_error_title">Error</string>
     <string name="config_success_title">Done</string>

@@ -56,6 +56,7 @@ private const val DTM_FONT_SIZE_SP = 13
 data class DialogToast(
     val message: String,
     val icon: ImageVector? = Icons.Rounded.CheckCircle,
+    val isError: Boolean = false,
 )
 
 /**
@@ -73,10 +74,11 @@ object DialogToastManager {
         message: String,
         durationMs: Long = DTM_TOAST_DURATION_MS,
         icon: ImageVector? = Icons.Rounded.CheckCircle,
+        isError: Boolean = false,
     ) {
-        AppLog.d(TAG, "show: '$message'")
+        AppLog.d(TAG, "show: '$message' (isError=$isError)")
         toastJob?.cancel()
-        _currentToast.value = DialogToast(message, icon)
+        _currentToast.value = DialogToast(message, icon, isError)
         toastJob =
             scope.launch {
                 delay(durationMs)
@@ -111,15 +113,16 @@ fun DialogToastPill(
         modifier = modifier,
     ) {
         if (toast != null) {
+            val pillColor = if (toast.isError) colors.error else colors.accent
             Row(
                 modifier =
                     Modifier
                         .background(
-                            color = colors.accent.copy(alpha = DTM_BG_ALPHA),
+                            color = pillColor.copy(alpha = DTM_BG_ALPHA),
                             shape = RoundedCornerShape(DTM_CORNER_DP.dp),
                         ).border(
                             width = DTM_BORDER_WIDTH_DP.dp,
-                            color = colors.accent.copy(alpha = DTM_BORDER_ALPHA),
+                            color = pillColor.copy(alpha = DTM_BORDER_ALPHA),
                             shape = RoundedCornerShape(DTM_CORNER_DP.dp),
                         ).padding(
                             horizontal = DTM_PADDING_H_DP.dp,
@@ -132,7 +135,7 @@ fun DialogToastPill(
                     Icon(
                         imageVector = toast.icon,
                         contentDescription = null,
-                        tint = colors.accent,
+                        tint = pillColor,
                         modifier = Modifier.size(DTM_ICON_SIZE_DP.dp),
                     )
                 }

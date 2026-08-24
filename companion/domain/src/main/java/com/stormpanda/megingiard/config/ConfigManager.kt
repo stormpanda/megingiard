@@ -257,7 +257,9 @@ object ConfigManager {
     }
 
     sealed interface ExportResult {
-        data object Success : ExportResult
+        data class Success(
+            val kind: ExportKind? = null,
+        ) : ExportResult
 
         data class Failure(
             val message: String?,

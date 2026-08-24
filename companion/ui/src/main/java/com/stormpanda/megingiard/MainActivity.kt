@@ -154,7 +154,7 @@ class MainActivity : ComponentActivity() {
                     ConfigManager.writeToUri(this@MainActivity, uri, export, kind.includeBackgrounds)
                 }.onSuccess {
                     AppLog.i(TAG, "Export written to $uri")
-                    ConfigManager.setExportResult(ConfigManager.ExportResult.Success)
+                    ConfigManager.setExportResult(ConfigManager.ExportResult.Success(kind))
                 }.onFailure { e ->
                     AppLog.e(TAG, "Export failed", e)
                     ConfigManager.setExportResult(ConfigManager.ExportResult.Failure(e.message))
