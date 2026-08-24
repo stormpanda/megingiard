@@ -288,6 +288,8 @@ class MainActivity : ComponentActivity() {
 
         SettingsManager.onThemeChangedListener = {
             MegingiardSettingsProvider.notifyThemeChanged(this)
+        }
+        SettingsManager.onSettingsChangedListener = {
             MegingiardSettingsProvider.notifySettingsChanged(this)
         }
 

@@ -275,6 +275,9 @@ object SettingsManager {
     @Volatile
     var onThemeChangedListener: (() -> Unit)? = null
 
+    @Volatile
+    var onSettingsChangedListener: (() -> Unit)? = null
+
     fun setAccentColor(argb: Int) {
         updateSettingPref(KEY_ACCENT_COLOR, argb, _accentColor, scope, optionalDataStore, TAG, "setAccentColor")
         onThemeChangedListener?.invoke()
@@ -302,6 +305,7 @@ object SettingsManager {
     fun setSteamGridDbApiToken(value: String) {
         AppLog.d(TAG, "setSteamGridDbApiToken(redacted)")
         _steamGridDbApiToken.value = value
+        onSettingsChangedListener?.invoke()
         scope.launch {
             if (::dataStore.isInitialized) {
                 dataStore.edit { prefs ->
