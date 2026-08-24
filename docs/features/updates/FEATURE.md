@@ -33,6 +33,11 @@ The Automatic Update Check feature periodically and silently queries the GitHub 
   2. **Open Link Directly**: Opens the release URL on the top display (`Display.DEFAULT_DISPLAY`) without launching the backup export dialog.
   3. **Cancel**: Dismisses the update prompt.
 
+### FR-U4: Obtainium App Tracking Shortcut
+
+- A shortcut action card ("Add to Obtainium") MUST be provided as the final item in the Updates section in Global Settings.
+- Tapping this card attempts to open Obtainium via its custom URI scheme (`obtainium://add/...`) with the pre-filled repository URL, falling back to the Obtainium GitHub releases web page if the application is not installed.
+
 ---
 
 ## Technical Implementation

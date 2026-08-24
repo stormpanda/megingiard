@@ -56,11 +56,11 @@ the same device or share individual profiles with other Megingiard users.
 - The app MUST accept imports with `schemaVersion` 3 or 4. Older versions are rejected.
 - Files with an unsupported `schemaVersion` (below 3 or above 4) MUST be rejected with an error.
 
-### FR-CF5: Restore Default Profiles
+### FR-CF5: Delete All Custom Profiles (Restore Defaults)
 
-- The user MUST be able to restore default MacroPad profiles from Global Settings.
+- The user MUST be able to reset MacroPad profiles from the **Share & Backup** section in Global Settings using the **"Delete all custom profiles"** action.
 - This operation deletes all existing profiles and creates a single blank "Default" profile.
-- A confirmation dialog MUST be shown before the operation is executed.
+- Instead of showing a popup confirmation dialog, tapping the action card triggers a 5-second countdown timer directly inside the badge ("5s" → "1s"). Once elapsed, the badge transitions to "Confirm", requiring an explicit secondary tap to execute profile deletion.
 
 ### FR-CF6: Per-Profile Share Export
 

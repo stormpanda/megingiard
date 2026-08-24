@@ -531,12 +531,12 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="cd_more_options">Weitere Optionen</string>
 
     <!-- Data / restore -->
-    <string name="settings_section_data">Daten</string>
+    <string name="settings_section_scraping">Scraping</string>
     <string name="settings_section_updates">Updates</string>
     <string name="settings_jump_general">Allgemein</string>
     <string name="settings_jump_appearance">Darstellung</string>
-    <string name="settings_jump_data">Daten</string>
     <string name="settings_jump_config">Teilen &amp; Backup</string>
+    <string name="settings_jump_scraping">Scraping</string>
     <string name="settings_jump_updates">Updates</string>
     <string name="settings_jump_input">Eingabe</string>
     <string name="settings_jump_diagnostics">Diagnose</string>
@@ -557,11 +557,13 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="mirror_control_label_screenshot">Screenshot</string>
     <string name="screenshot_saved">Screenshot unter Pictures/Megingiard gespeichert</string>
     <string name="screenshot_failed">Screenshot konnte nicht gespeichert werden</string>
-    <string name="settings_restore_defaults">Standardprofile wiederherstellen</string>
+    <string name="settings_restore_defaults">Alle benutzerdefinierten Profile löschen</string>
     <string name="settings_restore_defaults_desc">Löscht alle Profile und erstellt ein leeres Standardprofil</string>
     <string name="settings_restore_defaults_confirm">Alle vorhandenen Profile und Makros werden gelöscht und ein einzelnes leeres Profil erstellt. Diese Aktion kann nicht rückgängig gemacht werden.</string>
     <string name="settings_restore_defaults_confirm_button">Wiederherstellen</string>
     <string name="settings_restore_defaults_confirm_countdown">Wiederherstellen (%1$d)</string>
+    <string name="settings_restore_defaults_toast">Alle benutzerdefinierten Profile gelöscht</string>
+    <string name="settings_restore_defaults_countdown">%1$ds</string>
     <string name="settings_cancel">Abbrechen</string>
 
     <!-- Configuration export/import -->

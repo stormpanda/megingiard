@@ -5,8 +5,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Gamepad
 import androidx.compose.material.icons.rounded.HealthAndSafety
+import androidx.compose.material.icons.rounded.ImageSearch
 import androidx.compose.material.icons.rounded.Palette
-import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -18,8 +18,8 @@ val SettingsCategory.titleResId: Int
             SettingsCategory.GENERAL -> R.string.settings_jump_general
             SettingsCategory.INPUT -> R.string.settings_jump_input
             SettingsCategory.APPEARANCE -> R.string.settings_jump_appearance
-            SettingsCategory.DATA -> R.string.settings_jump_data
             SettingsCategory.CONFIGURATION -> R.string.settings_jump_config
+            SettingsCategory.SCRAPING -> R.string.settings_jump_scraping
             SettingsCategory.UPDATES -> R.string.settings_jump_updates
             SettingsCategory.DIAGNOSTICS -> R.string.settings_jump_diagnostics
         }
@@ -30,8 +30,8 @@ val SettingsCategory.icon: ImageVector
             SettingsCategory.GENERAL -> Icons.Rounded.Tune
             SettingsCategory.INPUT -> Icons.Rounded.Gamepad
             SettingsCategory.APPEARANCE -> Icons.Rounded.Palette
-            SettingsCategory.DATA -> Icons.Rounded.Storage
             SettingsCategory.CONFIGURATION -> Icons.Rounded.Build
+            SettingsCategory.SCRAPING -> Icons.Rounded.ImageSearch
             SettingsCategory.UPDATES -> Icons.Rounded.SystemUpdate
             SettingsCategory.DIAGNOSTICS -> Icons.Rounded.HealthAndSafety
         }

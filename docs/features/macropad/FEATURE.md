@@ -270,7 +270,7 @@ Each button supports one of the following actions:
   - **Being rate limited**: Informs the user that the rate limit was exceeded.
   - **SteamGridDB unreachable**: Informs the user that the service is down or unreachable.
   - **Other errors**: Handled with a generic error message.
-- A **SteamGridDB API-Token** field is provided in the **Global Settings Screen** under the General section to allow users to input and persist their API key via DataStore.
+- A **SteamGridDB API-Token** field is provided in the **Global Settings Screen** under the Scraping section to allow users to input and persist their API key via DataStore.
 
 
 ### FR-P9c: Background Image Dimming

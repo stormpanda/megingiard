@@ -153,12 +153,14 @@ Open Settings to create a layout.</string>
     <!-- Configuration export/import -->
     <string name="settings_section_config">Share &amp; Backup</string>
     <string name="settings_section_updates">Updates</string>
-    <string name="settings_section_data">Data</string>
-    <string name="settings_restore_defaults">Restore default profiles</string>
+    <string name="settings_section_scraping">Scraping</string>
+    <string name="settings_restore_defaults">Delete all custom profiles</string>
     <string name="settings_restore_defaults_desc">Deletes all profiles and creates a blank default profile</string>
     <string name="settings_restore_defaults_confirm">This will delete all existing profiles and macros and create a single blank profile. This action cannot be undone.</string>
     <string name="settings_restore_defaults_confirm_button">Restore</string>
     <string name="settings_restore_defaults_confirm_countdown">Restore (%1$d)</string>
+    <string name="settings_restore_defaults_toast">All custom profiles deleted</string>
+    <string name="settings_restore_defaults_countdown">%1$ds</string>
     <string name="settings_cancel">Cancel</string>
     <string name="settings_config_export">Create backup</string>
     <string name="settings_config_import">Restore backup</string>
@@ -357,8 +359,8 @@ Open Settings to create a layout.</string>
     <string name="privd_error_version_mismatch">Daemon version mismatch. Tap Auto Setup or Connect to update the daemon.</string>
     <string name="settings_jump_general">General</string>
     <string name="settings_jump_appearance">Appearance</string>
-    <string name="settings_jump_data">Data</string>
     <string name="settings_jump_config">Share &amp; Backup</string>
+    <string name="settings_jump_scraping">Scraping</string>
     <string name="settings_jump_updates">Updates</string>
     <string name="settings_jump_input">Input</string>
     <string name="settings_jump_diagnostics">Diagnostics</string>

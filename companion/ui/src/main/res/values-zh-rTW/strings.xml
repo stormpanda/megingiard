@@ -131,12 +131,14 @@
     <string name="macropad_icon_picker_currently_selected">當前選擇</string>
     <string name="settings_section_config">分享與備份</string>
     <string name="settings_section_updates">應用程式更新</string>
-    <string name="settings_section_data">還原與重置</string>
-    <string name="settings_restore_defaults">還原預設設定檔</string>
+    <string name="settings_section_scraping">資料搜刮</string>
+    <string name="settings_restore_defaults">刪除所有自訂設定檔</string>
     <string name="settings_restore_defaults_desc">刪除所有設定檔並建立一個空白預設設定檔</string>
     <string name="settings_restore_defaults_confirm">這將刪除所有現有的設定檔與巨集，並建立一個空白設定檔。此操作無法撤銷。</string>
     <string name="settings_restore_defaults_confirm_button">還原</string>
     <string name="settings_restore_defaults_confirm_countdown">還原 (%1$d)</string>
+    <string name="settings_restore_defaults_toast">已刪除所有自訂設定檔</string>
+    <string name="settings_restore_defaults_countdown">%1$d秒</string>
     <string name="settings_cancel">取消</string>
     <string name="settings_config_export">建立備份</string>
     <string name="settings_config_import">還原備份</string>
@@ -294,8 +296,8 @@
     <string name="privd_error_version_mismatch">Daemon 版本不符。請點擊「自動設定」或「連接」以更新 daemon。</string>
     <string name="settings_jump_general">一般</string>
     <string name="settings_jump_appearance">外觀</string>
-    <string name="settings_jump_data">還原與重置</string>
     <string name="settings_jump_config">分享與備份</string>
+    <string name="settings_jump_scraping">資料搜刮</string>
     <string name="settings_jump_updates">應用程式更新</string>
     <string name="settings_jump_input">輸入</string>
     <string name="settings_jump_diagnostics">診斷</string>

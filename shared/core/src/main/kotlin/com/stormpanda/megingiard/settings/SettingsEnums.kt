@@ -7,8 +7,8 @@ enum class SettingsCategory {
     GENERAL,
     INPUT,
     APPEARANCE,
-    DATA,
     CONFIGURATION,
+    SCRAPING,
     UPDATES,
     DIAGNOSTICS,
 }
@@ -20,7 +20,7 @@ enum class SettingsSubPage(
     val parentCategory: SettingsCategory,
 ) {
     DEADZONES(SettingsCategory.INPUT),
-    STEAMGRIDDB_TOKEN(SettingsCategory.GENERAL),
+    STEAMGRIDDB_TOKEN(SettingsCategory.SCRAPING),
     CUSTOM_ACCENT(SettingsCategory.APPEARANCE),
     CREATE_BACKUP(SettingsCategory.CONFIGURATION),
     SHARE_PROFILE(SettingsCategory.CONFIGURATION),

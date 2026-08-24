@@ -35,6 +35,7 @@ import androidx.compose.material.icons.rounded.BrightnessMedium
 import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.ColorLens
 import androidx.compose.material.icons.rounded.Colorize
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.FileUpload
@@ -68,6 +69,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -136,6 +138,7 @@ private const val TAG = "GlobalSettingsScreen"
 
 private const val GS_RESTORE_COUNTDOWN_SECONDS = 5
 private const val GS_RESTORE_COUNTDOWN_INTERVAL_MS = 1_000L
+private const val GS_RESTORE_CONFIRM_TIMEOUT_MS = 8_000L
 
 private const val GS_OBTAINIUM_REPO_URL = "https://github.com/stormpanda/megingiard"
 private const val GS_OBTAINIUM_FALLBACK_URL = "https://github.com/ImranR98/Obtainium"
@@ -215,20 +218,30 @@ fun GlobalSettingsScreen(
     var profileImportSuccess by rememberSaveable { mutableStateOf(false) }
     val pendingInAppImportMode by ConfigManager.pendingInAppImportMode.collectAsState()
     val coroutineScope = rememberCoroutineScope()
+    var selectedCategory by remember { mutableStateOf(SettingsCategory.GENERAL) }
 
-    var showRestoreDefaultsConfirm by rememberSaveable { mutableStateOf(false) }
-    var restoreCountdown by rememberSaveable { mutableStateOf(GS_RESTORE_COUNTDOWN_SECONDS) }
-    LaunchedEffect(showRestoreDefaultsConfirm) {
-        if (showRestoreDefaultsConfirm) {
-            restoreCountdown = GS_RESTORE_COUNTDOWN_SECONDS
-            while (restoreCountdown > 0) {
+    var deleteCountdown by rememberSaveable(selectedCategory, subPageStack) { mutableIntStateOf(-1) }
+    var isDeleteCountingDown by rememberSaveable(selectedCategory, subPageStack) { mutableStateOf(false) }
+
+    LaunchedEffect(isDeleteCountingDown) {
+        if (isDeleteCountingDown) {
+            deleteCountdown = GS_RESTORE_COUNTDOWN_SECONDS
+            while (deleteCountdown > 0) {
                 delay(GS_RESTORE_COUNTDOWN_INTERVAL_MS)
-                restoreCountdown--
+                deleteCountdown--
             }
+            isDeleteCountingDown = false
         }
     }
 
-    var selectedCategory by remember { mutableStateOf(SettingsCategory.GENERAL) }
+    LaunchedEffect(deleteCountdown) {
+        if (deleteCountdown == 0) {
+            delay(GS_RESTORE_CONFIRM_TIMEOUT_MS)
+            if (deleteCountdown == 0) {
+                deleteCountdown = -1
+            }
+        }
+    }
 
     val categoryList = remember { SettingsCategory.entries }
     val activePrimaryModal by AppStateManager.activePrimaryModal.collectAsState()
@@ -376,16 +389,16 @@ fun GlobalSettingsScreen(
                                 )
 
                                 GamepadActionCard(
-                                    title = stringResource(R.string.settings_steamgriddb_token),
-                                    description =
-                                        if (steamGridDbApiToken.isNotBlank()) {
-                                            stringResource(R.string.settings_steamgriddb_token_configured, steamGridDbApiToken.take(6))
-                                        } else {
-                                            stringResource(R.string.settings_steamgriddb_token_desc)
-                                        },
-                                    actionText = stringResource(R.string.gamepad_action_edit),
-                                    icon = Icons.Rounded.Key,
-                                    onClick = { subPageStack = listOf(SettingsSubPage.STEAMGRIDDB_TOKEN) },
+                                    title = stringResource(R.string.settings_reset_tutorials),
+                                    description = stringResource(R.string.settings_reset_tutorials_desc),
+                                    actionText = stringResource(R.string.gamepad_action_reset),
+                                    icon = Icons.AutoMirrored.Rounded.HelpOutline,
+                                    onClick = {
+                                        viewModel.resetAllTutorials()
+                                        DialogToastManager.show(
+                                            context.getString(R.string.settings_reset_tutorials_toast),
+                                        )
+                                    },
                                 )
                             }
 
@@ -478,32 +491,6 @@ fun GlobalSettingsScreen(
                                 )
                             }
 
-                            // DATA
-                            if (selectedCategory == SettingsCategory.DATA) {
-                                GamepadActionCard(
-                                    title = stringResource(R.string.settings_restore_defaults),
-                                    description = stringResource(R.string.settings_restore_defaults_desc),
-                                    actionText = stringResource(R.string.gamepad_action_restore),
-                                    isDestructive = true,
-                                    icon = Icons.Rounded.Restore,
-                                    onClick = { showRestoreDefaultsConfirm = true },
-                                    modifier = Modifier.firstDeckItem(isFirst = selectedCategory == SettingsCategory.DATA),
-                                )
-
-                                GamepadActionCard(
-                                    title = stringResource(R.string.settings_reset_tutorials),
-                                    description = stringResource(R.string.settings_reset_tutorials_desc),
-                                    actionText = stringResource(R.string.gamepad_action_reset),
-                                    icon = Icons.AutoMirrored.Rounded.HelpOutline,
-                                    onClick = {
-                                        viewModel.resetAllTutorials()
-                                        DialogToastManager.show(
-                                            context.getString(R.string.settings_reset_tutorials_toast),
-                                        )
-                                    },
-                                )
-                            }
-
                             // CONFIGURATION
                             if (selectedCategory == SettingsCategory.CONFIGURATION) {
                                 GamepadActionCard(
@@ -544,22 +531,71 @@ fun GlobalSettingsScreen(
                                     },
                                 )
 
-                                GamepadActionCard(
-                                    title = stringResource(R.string.settings_add_to_obtainium),
-                                    description = stringResource(R.string.help_settings_add_to_obtainium_desc),
-                                    actionText = stringResource(R.string.gamepad_action_add),
-                                    icon = Icons.Rounded.Download,
-                                    onClick = {
-                                        val deepLink = "obtainium://add/${GS_OBTAINIUM_REPO_URL}"
-                                        try {
-                                            launchUrlOnPrimaryDisplay(context, deepLink)
-                                        } catch (e: Exception) {
-                                            AppLog.w(TAG, "Obtainium deep link failed: ${e.message}, falling back to browser")
-                                            launchUrlOnPrimaryDisplay(context, GS_OBTAINIUM_FALLBACK_URL)
+                                val deleteBadgeText =
+                                    when {
+                                        deleteCountdown > 0 -> {
+                                            stringResource(
+                                                R.string.settings_restore_defaults_countdown,
+                                                deleteCountdown,
+                                            )
                                         }
-                                        AppStateManager.closeActiveModal()
-                                        onBack()
+
+                                        deleteCountdown == 0 -> {
+                                            stringResource(R.string.gamepad_action_confirm)
+                                        }
+
+                                        else -> {
+                                            stringResource(R.string.gamepad_action_delete)
+                                        }
+                                    }
+
+                                GamepadActionCard(
+                                    title = stringResource(R.string.settings_restore_defaults),
+                                    description = stringResource(R.string.settings_restore_defaults_desc),
+                                    actionLeadingContent = {
+                                        GamepadPill(
+                                            text = deleteBadgeText,
+                                            isDestructive = true,
+                                            isAccent = deleteCountdown == 0,
+                                            isHighlighted = deleteCountdown >= 0,
+                                        )
                                     },
+                                    isDestructive = true,
+                                    icon = Icons.Rounded.Delete,
+                                    onClick = {
+                                        when {
+                                            deleteCountdown > 0 -> {}
+
+                                            deleteCountdown == 0 -> {
+                                                MacroPadState.restoreDefaults()
+                                                DialogToastManager.show(
+                                                    context.getString(R.string.settings_restore_defaults_toast),
+                                                )
+                                                deleteCountdown = -1
+                                            }
+
+                                            else -> {
+                                                isDeleteCountingDown = true
+                                            }
+                                        }
+                                    },
+                                )
+                            }
+
+                            // SCRAPING
+                            if (selectedCategory == SettingsCategory.SCRAPING) {
+                                GamepadActionCard(
+                                    title = stringResource(R.string.settings_steamgriddb_token),
+                                    description =
+                                        if (steamGridDbApiToken.isNotBlank()) {
+                                            stringResource(R.string.settings_steamgriddb_token_configured, steamGridDbApiToken.take(6))
+                                        } else {
+                                            stringResource(R.string.settings_steamgriddb_token_desc)
+                                        },
+                                    actionText = stringResource(R.string.gamepad_action_edit),
+                                    icon = Icons.Rounded.Key,
+                                    onClick = { subPageStack = listOf(SettingsSubPage.STEAMGRIDDB_TOKEN) },
+                                    modifier = Modifier.firstDeckItem(isFirst = selectedCategory == SettingsCategory.SCRAPING),
                                 )
                             }
 
@@ -648,6 +684,24 @@ fun GlobalSettingsScreen(
                                         }
                                     },
                                 )
+
+                                GamepadActionCard(
+                                    title = stringResource(R.string.settings_add_to_obtainium),
+                                    description = stringResource(R.string.help_settings_add_to_obtainium_desc),
+                                    actionText = stringResource(R.string.gamepad_action_add),
+                                    icon = Icons.Rounded.Download,
+                                    onClick = {
+                                        val deepLink = "obtainium://add/${GS_OBTAINIUM_REPO_URL}"
+                                        try {
+                                            launchUrlOnPrimaryDisplay(context, deepLink)
+                                        } catch (e: Exception) {
+                                            AppLog.w(TAG, "Obtainium deep link failed: ${e.message}, falling back to browser")
+                                            launchUrlOnPrimaryDisplay(context, GS_OBTAINIUM_FALLBACK_URL)
+                                        }
+                                        AppStateManager.closeActiveModal()
+                                        onBack()
+                                    },
+                                )
                             }
 
                             // DIAGNOSTICS
@@ -705,7 +759,7 @@ fun GlobalSettingsScreen(
                         GamepadDeck(
                             breadcrumbs =
                                 listOf(
-                                    stringResource(R.string.settings_section_general),
+                                    stringResource(R.string.settings_section_scraping),
                                     stringResource(R.string.settings_steamgriddb_token),
                                 ),
                             accentColor = effectiveAccent,
@@ -863,27 +917,6 @@ fun GlobalSettingsScreen(
             }
         },
     )
-    if (showRestoreDefaultsConfirm) {
-        InTreeConfirmDialog(
-            title = stringResource(R.string.settings_restore_defaults),
-            text = stringResource(R.string.settings_restore_defaults_confirm),
-            confirmText =
-                if (restoreCountdown > 0) {
-                    stringResource(R.string.settings_restore_defaults_confirm_countdown, restoreCountdown)
-                } else {
-                    stringResource(R.string.settings_restore_defaults_confirm_button)
-                },
-            confirmEnabled = restoreCountdown == 0,
-            dismissText = stringResource(R.string.settings_cancel),
-            colors = colors,
-            accentColor = effectiveAccent,
-            onConfirm = {
-                showRestoreDefaultsConfirm = false
-                MacroPadState.restoreDefaults()
-            },
-            onDismiss = { showRestoreDefaultsConfirm = false },
-        )
-    }
     if (showUpdatePromptDialog) {
         val releaseUrl =
             latestReleaseInfo?.htmlUrl?.ifBlank { "https://github.com/stormpanda/megingiard/releases" }
