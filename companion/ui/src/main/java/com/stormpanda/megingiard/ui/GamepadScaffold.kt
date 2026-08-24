@@ -143,7 +143,7 @@ fun rememberGamepadBringIntoViewSpec(extraPadding: Dp = GS_DECK_SCROLL_EXTRA_PAD
  * - Gamepad [BringIntoViewSpec] focus scrolling behavior.
  * - Optional vertical scrolling container vs non-scrollable fill (e.g. for LazyLists or custom canvas).
  */
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun GamepadDeck(
     breadcrumbs: List<String>,
@@ -153,8 +153,45 @@ fun GamepadDeck(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val bringIntoViewSpec = rememberGamepadBringIntoViewSpec()
+    val parentRequester = LocalFirstContentRequester.current
+    val localRequester = remember { FocusRequester() }
+    val effectiveRequester = parentRequester ?: localRequester
+    val inputModeManager = LocalInputModeManager.current
 
-    CompositionLocalProvider(LocalBringIntoViewSpec provides bringIntoViewSpec) {
+    if (parentRequester == null) {
+        LaunchedEffect(Unit) {
+            inputModeManager.requestInputMode(InputMode.Keyboard)
+            try {
+                effectiveRequester.requestFocus()
+                AppLog.d(TAG, "GamepadDeck: standalone deck initial focus requested")
+            } catch (_: IllegalStateException) {
+                delay(GS_INITIAL_FOCUS_DELAY_MS)
+                try {
+                    effectiveRequester.requestFocus()
+                    AppLog.d(TAG, "GamepadDeck: standalone deck initial focus retry succeeded")
+                } catch (_: IllegalStateException) {
+                    AppLog.d(TAG, "GamepadDeck: focus requester unattached on standalone deck initial focus")
+                }
+            }
+        }
+
+        LaunchedEffect(Unit) {
+            PrimaryOverlayInputBridge.focusRecoveryEvents.collect { keyCode ->
+                inputModeManager.requestInputMode(InputMode.Keyboard)
+                try {
+                    effectiveRequester.requestFocus()
+                    AppLog.d(TAG, "GamepadDeck: focus recovered on standalone deck")
+                } catch (_: IllegalStateException) {
+                    AppLog.d(TAG, "GamepadDeck: effectiveRequester unattached on standalone focus recovery")
+                }
+            }
+        }
+    }
+
+    CompositionLocalProvider(
+        LocalBringIntoViewSpec provides bringIntoViewSpec,
+        LocalFirstContentRequester provides effectiveRequester,
+    ) {
         Column(
             modifier =
                 modifier

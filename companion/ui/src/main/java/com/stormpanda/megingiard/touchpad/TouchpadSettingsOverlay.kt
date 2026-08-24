@@ -1,12 +1,6 @@
 package com.stormpanda.megingiard.touchpad
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BrightnessMedium
 import androidx.compose.material.icons.rounded.Mouse
@@ -16,32 +10,24 @@ import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.rounded.Videocam
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.TouchpadSettings
+import com.stormpanda.megingiard.ui.GamepadDeck
+import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadStepperCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.firstDeckItem
 import java.util.Locale
 
 private const val TAG = "TouchpadSettingsOverlay"
-
-private val TS_PADDING_SCREEN = 16.dp
-private val TS_SPACING_CARDS = 10.dp
-private val TS_SECTION_TOP_PADDING = 10.dp
 
 @Composable
 fun TouchpadSettingsOverlay(onBack: () -> Unit) {
@@ -67,20 +53,13 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
         }
     }
 
-    Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(colors.appBackground)
-                .verticalScroll(rememberScrollState())
-                .padding(TS_PADDING_SCREEN),
-        verticalArrangement = Arrangement.spacedBy(TS_SPACING_CARDS),
+    GamepadDeck(
+        title = "",
+        modifier = Modifier.fillMaxSize(),
     ) {
-        Text(
+        GamepadSectionHeader(
             text = stringResource(R.string.settings_section_relative_mouse).uppercase(),
             color = colors.accent,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold,
         )
 
         GamepadToggleCard(
@@ -89,6 +68,7 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
             checked = touchpadTapToClick,
             icon = Icons.Rounded.TouchApp,
             onCheckedChange = { TouchpadSettings.setTouchpadTapToClick(it) },
+            modifier = Modifier.firstDeckItem(),
         )
 
         GamepadToggleCard(
@@ -167,12 +147,9 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
             onCheckedChange = { TouchpadSettings.setTouchpadHapticsEnabled(it) },
         )
 
-        Text(
+        GamepadSectionHeader(
             text = stringResource(R.string.settings_section_absolute_touch).uppercase(),
             color = colors.accent,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(top = TS_SECTION_TOP_PADDING),
         )
 
         GamepadToggleCard(
