@@ -65,11 +65,6 @@ private const val ASO_EDGE_BLEND_MIN = 0f
 private const val ASO_EDGE_BLEND_MAX = 100f
 private const val ASO_EDGE_BLEND_STEP = 5f
 
-private const val ASO_SMOOTHING_OFF = 0f
-private const val ASO_SMOOTHING_LIGHT = 1f
-private const val ASO_SMOOTHING_MEDIUM = 2f
-private const val ASO_SMOOTHING_STRONG = 3f
-
 private const val ASO_SMOOTHING_VAL_LIGHT = 75
 private const val ASO_SMOOTHING_VAL_MEDIUM = 80
 private const val ASO_SMOOTHING_VAL_STRONG = 85

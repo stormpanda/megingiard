@@ -189,11 +189,6 @@ internal val EXCLUDED_KEYS: Set<Preferences.Key<*>> =
         KEY_LATEST_RELEASE_NOTES,
     )
 
-/** Reverse lookup: DataStore key name → section name. */
-internal val KEY_TO_SECTION: Map<String, String> by lazy {
-    SECTION_MAP.flatMap { (section, keys) -> keys.map { it.name to section } }.toMap()
-}
-
 /** Flat map from DataStore key name to the actual typed key instance, used by config import. */
 internal val KEY_BY_NAME: Map<String, Preferences.Key<*>> by lazy {
     SECTION_MAP.values.flatten().associateBy { it.name }

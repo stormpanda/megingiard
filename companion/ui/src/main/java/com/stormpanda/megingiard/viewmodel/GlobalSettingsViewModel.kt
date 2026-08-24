@@ -137,10 +137,6 @@ class GlobalSettingsViewModel : ViewModel() {
         }
     }
 
-    fun resetSteamGridDbTestStatus() {
-        _steamGridDbTestStatus.value = SteamGridDbTestStatus.IDLE
-    }
-
     fun requestSaveLogReport() = LogReportManager.requestSaveReport()
 
     fun resetAllTutorials() = SettingsManager.resetAllTutorials()
@@ -172,11 +168,6 @@ class GlobalSettingsViewModel : ViewModel() {
             PrivdManager.connect(appContext)
         }
     }
-
-    /**
-     * Disconnects from the daemon socket. The daemon binary stays on the device.
-     */
-    fun privdDisconnect() = PrivdManager.disconnect()
 
     fun setPrivdDeadzoneLeft(value: Float) = MacroPadSettings.setDeadzoneLeft(value)
 
@@ -227,11 +218,6 @@ class GlobalSettingsViewModel : ViewModel() {
             onResult(ok)
         }
     }
-
-    /**
-     * Checks if the Megingiard Accessibility Service is currently enabled in Android system settings.
-     */
-    fun checkAccessibilityActive(context: Context): Boolean = MegingiardAccessibilityService.isEnabled(context)
 
     fun checkPrivilegedModeStatus(context: Context) {
         val appContext = context.applicationContext

@@ -112,18 +112,9 @@ private const val BSE_DIM_STEP = 0.05f
 private const val BSE_PERCENT_DIVISOR = 100f
 
 private val BSE_PREVIEW_IMAGE_ROUNDING = 8.dp
-private val BSE_BORDER_WIDTH_1 = 1.dp
 private val BSE_ICON_SIZE_48 = 48.dp
-private val BSE_ICON_SIZE_40 = 40.dp
-private val BSE_ICON_SIZE_72 = 72.dp
 private val BSE_SPACING_8 = 8.dp
-private val BSE_SPACING_12 = 12.dp
 private val BSE_SPACING_16 = 16.dp
-private val BSE_SPACING_40 = 40.dp
-
-private const val BSE_PREVIEW_MODAL_WIDTH_FRACTION = 0.95f
-private val BSE_PREVIEW_MODAL_CORNER_RADIUS = 12.dp
-private const val BSE_PREVIEW_MODAL_BG_ALPHA = 0.7f
 
 private const val BSE_BOTTOM_SCREEN_ASPECT_RATIO = 31f / 27f // 1240 x 1080
 private const val BSE_PREVIEW_WIDTH_FRACTION = 0.5f

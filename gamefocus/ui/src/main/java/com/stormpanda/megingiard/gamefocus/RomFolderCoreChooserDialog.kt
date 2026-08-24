@@ -47,7 +47,6 @@ private val DIALOG_ITEM_PADDING_HORIZONTAL = 16.dp
 private val DIALOG_SPACING = 16.dp
 private val DIALOG_TITLE_PADDING_BOTTOM = 8.dp
 private val DIALOG_INNER_SPACING = 8.dp
-private val DIALOG_MAX_HEIGHT = 200.dp
 
 @Composable
 fun RomFolderCoreChooserDialog(

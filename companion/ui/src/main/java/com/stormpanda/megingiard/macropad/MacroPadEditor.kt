@@ -157,11 +157,7 @@ private fun applyActionToDraftButton(
     )
 }
 
-internal val MPE_TOP_BAR_HEIGHT = 56.dp
 internal val MPE_PADDING = 16.dp
-internal val MPE_ITEM_PADDING = 12.dp
-internal val MPE_GRID_TOGGLE_SIZE = 36.dp
-internal val MPE_SECTION_HEADER_V_PADDING = 10.dp
 
 @Composable
 fun MacroPadEditor(

@@ -37,8 +37,6 @@ private const val TAG = "RemoveRomFolderDialog"
 private val DIALOG_ITEM_PADDING_VERTICAL = 10.dp
 private val DIALOG_ITEM_PADDING_HORIZONTAL = 12.dp
 private val DIALOG_SPACING = 12.dp
-private val DIALOG_LIST_MAX_HEIGHT = 200.dp
-private val DIALOG_CORNER_RADIUS = 8.dp
 private val DIALOG_INNER_SPACING = 8.dp
 
 @Composable

@@ -201,8 +201,6 @@ object ConfigManager {
 
     fun getPendingInAppImageCount(): Int = _pendingInAppImportImages.value.size
 
-    fun getPendingImageCount(): Int = _pendingImportImages.value.size
-
     fun getPendingInAppImages(): Map<String, ByteArray> = _pendingInAppImportImages.value
 
     fun getPendingImages(): Map<String, ByteArray> = _pendingImportImages.value

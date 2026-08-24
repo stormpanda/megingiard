@@ -83,7 +83,6 @@ private const val PBD_PULSE_SURFACE_ALPHA = 0.55f
 private val PBD_COLOR_PREVIEW_SIZE = 36.dp
 private val PBD_CORNER_RADIUS_DP = 6.dp
 private val PBD_ICON_SIZE_DP = 20.dp
-private val PBD_GRID_SPACING = 10.dp
 
 internal fun MouseButton.labelRes(): Int =
     when (this) {

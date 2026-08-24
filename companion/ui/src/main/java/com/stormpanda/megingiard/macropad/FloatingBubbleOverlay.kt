@@ -49,7 +49,6 @@ import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.settings.SettingsManager
@@ -221,7 +220,6 @@ object FloatingBubbleOverlay {
 
             wm.addView(view, params)
             bubbleView = view
-            AppStateManager.setFloatingBubbleActive(true)
             AppLog.i(
                 TAG,
                 "Floating bubble overlay displayed on display ${targetDisplay.displayId} via TYPE_ACCESSIBILITY_OVERLAY (size=${windowSizePx}px)",
@@ -246,7 +244,6 @@ object FloatingBubbleOverlay {
         bubbleView = null
         windowManager = null
         lifecycleOwner = null
-        AppStateManager.setFloatingBubbleActive(false)
     }
 }
 

@@ -89,9 +89,6 @@ object AppStateManager {
     private val _promptInFlight = MutableStateFlow(false)
     val promptInFlight: StateFlow<Boolean> = _promptInFlight.asStateFlow()
 
-    private val _mirrorAutoStartSuppressedLayoutId = MutableStateFlow<String?>(null)
-    val mirrorAutoStartSuppressedLayoutId: StateFlow<String?> = _mirrorAutoStartSuppressedLayoutId.asStateFlow()
-
     // ── Mirror control signals ────────────────────────────────────────────────
     // One-shot fire-and-forget flags: MainActivity resets them after handling.
 
@@ -118,9 +115,6 @@ object AppStateManager {
     private val _pendingAppLaunchRequest = MutableStateFlow<AppLaunchRequest?>(null)
     val pendingAppLaunchRequest: StateFlow<AppLaunchRequest?> = _pendingAppLaunchRequest.asStateFlow()
 
-    private val _isFloatingBubbleActive = MutableStateFlow(false)
-    val isFloatingBubbleActive: StateFlow<Boolean> = _isFloatingBubbleActive.asStateFlow()
-
     fun requestAppLaunch(
         packageName: String,
         touchX: Float = -1f,
@@ -133,11 +127,6 @@ object AppStateManager {
     fun consumeAppLaunchRequest() {
         AppLog.d(TAG, "consumeAppLaunchRequest")
         _pendingAppLaunchRequest.value = null
-    }
-
-    fun setFloatingBubbleActive(active: Boolean) {
-        AppLog.d(TAG, "setFloatingBubbleActive: $active")
-        _isFloatingBubbleActive.value = active
     }
 
     fun requestMirrorStart() {
@@ -281,28 +270,6 @@ object AppStateManager {
     fun setPromptInFlight(inFlight: Boolean) {
         AppLog.d(TAG, "setPromptInFlight($inFlight)")
         _promptInFlight.value = inFlight
-    }
-
-    fun suppressMirrorAutoStart(layoutId: String) {
-        AppLog.d(TAG, "suppressMirrorAutoStart($layoutId)")
-        _mirrorAutoStartSuppressedLayoutId.value = layoutId
-    }
-
-    fun clearMirrorAutoStartSuppression(layoutId: String) {
-        if (_mirrorAutoStartSuppressedLayoutId.value == layoutId) {
-            AppLog.d(TAG, "clearMirrorAutoStartSuppression($layoutId)")
-            _mirrorAutoStartSuppressedLayoutId.value = null
-        }
-    }
-
-    // ── Touch / gesture state ─────────────────────────────────────────────────
-
-    /** True while any finger is pressing the screen. Used by SwipeGestureProcessor. */
-    private val _isTouching = MutableStateFlow(false)
-    val isTouching: StateFlow<Boolean> = _isTouching.asStateFlow()
-
-    fun setTouching(touching: Boolean) {
-        _isTouching.value = touching
     }
 
     // ── Quick Menu ────────────────────────────────────────────────────────────

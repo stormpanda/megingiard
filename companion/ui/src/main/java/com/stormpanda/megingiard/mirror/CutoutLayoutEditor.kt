@@ -1112,34 +1112,6 @@ private fun ResizeHandleView(
 }
 
 @Composable
-private fun ToolbarButton(
-    text: String,
-    color: Color,
-    enabled: Boolean = true,
-    onClick: () -> Unit,
-) {
-    val colors = LocalAppColors.current
-    Button(
-        onClick = onClick,
-        enabled = enabled,
-        colors =
-            ButtonDefaults.buttonColors(
-                containerColor = color,
-                disabledContainerColor = colors.onSurfaceSecondary.copy(alpha = 0.1f),
-            ),
-        shape = RoundedCornerShape(4.dp),
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-        modifier = Modifier.height(32.dp),
-    ) {
-        Text(
-            text = text,
-            color = if (enabled) colors.onAccent else colors.onSurfaceSecondary.copy(alpha = 0.5f),
-            style = MaterialTheme.typography.labelSmall,
-        )
-    }
-}
-
-@Composable
 private fun ToolbarIconButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     contentDescription: String,

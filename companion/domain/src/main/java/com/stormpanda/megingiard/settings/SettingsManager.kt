@@ -78,9 +78,6 @@ object SettingsManager {
     private val _internalBackups = MutableStateFlow<List<InternalBackup>>(emptyList())
     val internalBackups: StateFlow<List<InternalBackup>> = _internalBackups.asStateFlow()
 
-    private val _autoSwitchProfiles = MutableStateFlow(true)
-    val autoSwitchProfiles: StateFlow<Boolean> = _autoSwitchProfiles.asStateFlow()
-
     private val _excludeFromRecents = MutableStateFlow(false)
     val excludeFromRecents: StateFlow<Boolean> = _excludeFromRecents.asStateFlow()
 
@@ -113,7 +110,6 @@ object SettingsManager {
     // Mirror settings live in [MirrorSettings] (pinch-while-projecting + remember-* flags + session save/restore).
     // Keyboard settings live in [KeyboardSettings].
     // Touchpad settings live in [TouchpadSettings].
-    // MacroPad background display settings live in [BackgroundSettings].
     // MacroPad recording dialogs + gamepad-swap + macropad profile data live in [MacroPadSettings].
 
     // App language
@@ -166,7 +162,6 @@ object SettingsManager {
         // can persist their own settings without each one opening its own DataStore.
         KeyboardSettings.init(dataStore, scope)
         TouchpadSettings.init(dataStore, scope)
-        BackgroundSettings.init(dataStore, scope)
         MirrorSettings.init(dataStore, scope)
         MacroPadSettings.init(dataStore, scope)
         UpdateManager.init(dataStore, scope)
@@ -177,7 +172,6 @@ object SettingsManager {
                 .collect { prefs ->
                     AppLog.i(TAG, "settings loaded from DataStore")
 
-                    _autoSwitchProfiles.value = prefs[KEY_AUTO_SWITCH_PROFILES] ?: true
                     _excludeFromRecents.value = prefs[KEY_EXCLUDE_FROM_RECENTS] ?: false
                     _accentColor.value = prefs[KEY_ACCENT_COLOR] ?: DEFAULT_ACCENT_COLOR
                     _customAccentColor.value = prefs[KEY_CUSTOM_ACCENT_COLOR] ?: prefs[KEY_ACCENT_COLOR] ?: DEFAULT_ACCENT_COLOR
@@ -194,7 +188,6 @@ object SettingsManager {
                     _appLanguage.value = AppLanguage.entries.firstOrNull { it.name == prefs[KEY_APP_LANGUAGE] } ?: AppLanguage.SYSTEM
                     _logLevel.value = AppLog.Level.entries.firstOrNull { it.name == prefs[KEY_LOG_LEVEL] } ?: AppLog.Level.WARN
                     AppLog.level = _logLevel.value
-                    BackgroundSettings.loadFrom(prefs)
                     MacroPadSettings.loadFrom(prefs)
                     UpdateManager.loadFrom(prefs)
 
@@ -262,10 +255,6 @@ object SettingsManager {
                 prefs[KEY_WELCOME_TOUR_COMPLETED_VERSION] = 0
             }
         }
-    }
-
-    fun setAutoSwitchProfiles(value: Boolean) {
-        updateSettingPref(KEY_AUTO_SWITCH_PROFILES, value, _autoSwitchProfiles, scope, optionalDataStore, TAG, "setAutoSwitchProfiles")
     }
 
     fun setExcludeFromRecents(value: Boolean) {

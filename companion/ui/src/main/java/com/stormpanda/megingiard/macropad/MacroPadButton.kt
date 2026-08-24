@@ -86,9 +86,7 @@ private const val MP_PRESS_ANIM_MS = 80
 private const val MP_RELEASE_ANIM_MS = 160
 
 // Outer gradient edge alpha at resting state; intermediate stops follow r² quadratic curve.
-// Scale factor maps animated alpha (resting = MP_BTN_NORMAL_ALPHA) → MP_BTN_GRADIENT_OUTER.
 internal const val MP_BTN_GRADIENT_OUTER = 0.7f
-internal const val MP_BTN_GRADIENT_SCALE = MP_BTN_GRADIENT_OUTER / MP_BTN_NORMAL_ALPHA
 
 // Neutral (theme-independent) ambient button style — intentionally NOT derived from AppColors;
 // these are muted, always-dim values designed to look unobtrusive on any background color and

@@ -71,11 +71,6 @@ object TouchRecordingManager {
     /** `true` while the recording sheet is shown on Display 4. */
     val recordingRequested: StateFlow<Boolean> = _recordingRequested.asStateFlow()
 
-    private val _recordingMode = MutableStateFlow(TouchRecordingMode.TAP)
-
-    /** The active recording mode (TAP or GESTURE). */
-    val recordingMode: StateFlow<TouchRecordingMode> = _recordingMode.asStateFlow()
-
     private val _state = MutableStateFlow<TouchRecordingState>(TouchRecordingState.Idle)
     val state: StateFlow<TouchRecordingState> = _state.asStateFlow()
 
@@ -133,7 +128,6 @@ object TouchRecordingManager {
                 totalRecordedSampleCount = 0,
                 startElapsedRealtime = now,
             )
-        _recordingMode.value = mode
         _recordingRequested.value = true
 
         TouchScreenObserver.onTouchEvent = { slot, action, normX, normY ->

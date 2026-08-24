@@ -101,7 +101,6 @@ private val IH_PADDING_SCREEN = 20.dp
 private val IH_PADDING_HEADER_TOP = 12.dp
 private val IH_PADDING_HEADER_BOTTOM = 8.dp
 private val IH_SPACING_CARD = 12.dp
-private val IH_SPACING_SECTION = 16.dp
 private val IH_SPACING_GRID = 12.dp
 private val IH_HERO_ICON_SIZE = 32.dp
 private val IH_HERO_ICON_BG_SIZE = 56.dp

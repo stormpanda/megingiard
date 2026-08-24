@@ -92,8 +92,6 @@ data class AutoSetupLanguageConfig(
         val SPANISH_MX = SPANISH_ES.copy(localeTag = "es-MX")
         val SPANISH_US = SPANISH_ES.copy(localeTag = "es-US")
 
-        val SPANISH = SPANISH_ES
-
         val FRENCH_FR =
             AutoSetupLanguageConfig(
                 localeTag = "fr-FR",
@@ -121,8 +119,6 @@ data class AutoSetupLanguageConfig(
             )
 
         val FRENCH_CA = FRENCH_FR.copy(localeTag = "fr-CA")
-
-        val FRENCH = FRENCH_FR
 
         val ENGLISH_US =
             AutoSetupLanguageConfig(
@@ -181,13 +177,6 @@ data class AutoSetupLanguageConfig(
 
         val CHINESE_HK = CHINESE_TW.copy(localeTag = "zh-HK")
         val CHINESE_MO = CHINESE_TW.copy(localeTag = "zh-MO")
-
-        /**
-         * Traditional Chinese only. Simplified Chinese (zh-CN, zh-SG) uses different
-         * Settings wording ("版本号", "无线调试", …) and is deliberately not mapped here,
-         * so there is no alias for a bare `CHINESE`.
-         */
-        val CHINESE_TRADITIONAL = CHINESE_TW
 
         private val TRADITIONAL_CHINESE_SUBTAGS = setOf("tw", "hk", "mo", "hant")
 

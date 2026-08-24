@@ -122,8 +122,6 @@ private val OW_DIALOG_PADDING_BOTTOM = 16.dp
 
 private val OW_STEPPER_DOT_SIZE = 24.dp
 
-private const val OW_SCRIM_ALPHA = 0.55f
-
 private val OW_WARNING_CORNER_RADIUS = 12.dp
 private val OW_WARNING_BORDER_WIDTH = 1.dp
 private val OW_WARNING_PADDING = 12.dp

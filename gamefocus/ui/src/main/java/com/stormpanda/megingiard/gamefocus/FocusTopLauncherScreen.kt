@@ -118,7 +118,6 @@ private val FTL_ROM_ICON_CORNER_RADIUS = 14.dp
 private val FTL_FALLBACK_ICON_SIZE = 48.dp
 private val FTL_BADGE_PADDING = 10.dp
 private val FTL_BADGE_ICON_SIZE = 22.dp
-private const val FTL_CATEGORY_ROLL_ANGLE_DEG = 35f
 private const val FTL_BACKGROUND_COLOR_DEBOUNCE_MS = 220L
 private const val FTL_BACKGROUND_COLOR_ANIM_MS = 500
 private const val FTL_LETTER_NAV_DEBOUNCE_MS = 500L
@@ -863,7 +862,6 @@ fun FocusTopLauncherScreen(
                         }
 
                         // Bottom-Right subdued touch buttons hovering over the gallery plane
-                        val noFocusInteractionSource = remember { MutableInteractionSource() }
                         val isBottomBarEnabled = isControlsEnabled && !isMainOptionsMenuExpanded
                         Row(
                             modifier =

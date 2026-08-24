@@ -1,6 +1,5 @@
 package com.stormpanda.megingiard.macropad
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -15,8 +14,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.relocation.BringIntoViewResponder
-import androidx.compose.foundation.relocation.bringIntoViewResponder
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.FormatPaint
@@ -24,16 +21,13 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -66,7 +60,6 @@ private val IP_GRID_4_ROWS_HEIGHT = (IP_ICON_CELL_SIZE * 4) + (IP_GRID_SPACING *
 /**
  * Full-screen icon picker that lets the user choose a Material Symbol icon by name.
  */
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun ChooseIconSubPageContent(
     selectedIcon: String?,
@@ -79,20 +72,6 @@ internal fun ChooseIconSubPageContent(
     var query by remember { mutableStateOf("") }
     var pendingIcon by remember(selectedIcon) { mutableStateOf(selectedIcon) }
     val results = remember(query) { MaterialIconRegistry.searchIcons(query) }
-
-    var gridHeightPx by remember { mutableFloatStateOf(0f) }
-    var gridWidthPx by remember { mutableFloatStateOf(0f) }
-
-    val gridResponder =
-        remember(gridWidthPx, gridHeightPx) {
-            object : BringIntoViewResponder {
-                override fun calculateRectForParent(localRect: Rect): Rect = Rect(0f, 0f, gridWidthPx, gridHeightPx)
-
-                override suspend fun bringChildIntoView(localRect: () -> Rect?) {
-                    // Internal cell scrolling is handled by LazyVerticalGrid.
-                }
-            }
-        }
 
     // ── Search bar ─────────────────────────────────────────────────────────
     GamepadTextFieldCard(
@@ -162,11 +141,7 @@ internal fun ChooseIconSubPageContent(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(IP_GRID_4_ROWS_HEIGHT)
-                    .onSizeChanged { size ->
-                        gridWidthPx = size.width.toFloat()
-                        gridHeightPx = size.height.toFloat()
-                    }.bringIntoViewResponder(gridResponder),
+                    .height(IP_GRID_4_ROWS_HEIGHT),
         ) {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(IP_GRID_COLUMNS),

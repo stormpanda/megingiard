@@ -63,44 +63,6 @@ object MacroPadMediaRepository {
         }
 
     /**
-     * Returns the [File] object for the background image associated with [layoutId]
-     * if it exists on disk under `filesDir/backgrounds/bg_[layoutId]`.
-     */
-    fun getBackgroundImageFile(
-        context: Context,
-        layoutId: String,
-    ): File? {
-        val backgroundsDir = File(context.filesDir, BACKGROUNDS_DIR)
-        val file = File(backgroundsDir, "bg_$layoutId")
-        return if (file.exists() && file.isFile) file else null
-    }
-
-    /**
-     * Saves raw [bytes] as a background image for [layoutId] under `backgrounds/bg_[layoutId]`.
-     * Returns the relative storage path or `null` if saving failed.
-     */
-    suspend fun saveBackgroundImageBytes(
-        context: Context,
-        layoutId: String,
-        bytes: ByteArray,
-    ): String? =
-        withContext(Dispatchers.IO) {
-            try {
-                val backgroundsDir = File(context.filesDir, BACKGROUNDS_DIR)
-                if (!backgroundsDir.exists()) {
-                    backgroundsDir.mkdirs()
-                }
-                val destFile = File(backgroundsDir, "bg_$layoutId")
-                destFile.writeBytes(bytes)
-                AppLog.d(TAG, "Saved ${bytes.size} background bytes for layout $layoutId")
-                "$BACKGROUNDS_DIR/bg_$layoutId"
-            } catch (e: Exception) {
-                AppLog.e(TAG, "Failed to save background image bytes for layout $layoutId", e)
-                null
-            }
-        }
-
-    /**
      * Deletes the background image associated with [layoutId] if it exists.
      */
     suspend fun deleteBackgroundImage(

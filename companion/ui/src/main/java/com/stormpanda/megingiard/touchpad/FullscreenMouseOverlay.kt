@@ -86,8 +86,6 @@ import kotlinx.coroutines.withContext
 private const val TAG = "FullscreenMouseOverlay"
 
 // Layout dimensions matching the keyboard style
-private val TP_CONTAINER_HEIGHT = 320.dp
-private val TP_TOOLBAR_HEIGHT = 44.dp
 private val TP_BOTTOM_BAR_HEIGHT = 50.dp
 private val TP_GLOBE_BUTTON_WIDTH = 72.dp
 private val TP_ICON_SIZE_MEDIUM = 24.dp

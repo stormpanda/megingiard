@@ -29,7 +29,6 @@ private const val SYN_REPORT = 0
 private const val BTN_TOUCH = 0x14a
 
 private const val ABS_MT_SLOT = 0x2f
-private const val ABS_MT_TOUCH_MAJOR = 0x30
 private const val ABS_MT_POSITION_X = 0x35
 private const val ABS_MT_POSITION_Y = 0x36
 private const val ABS_MT_TRACKING_ID = 0x39

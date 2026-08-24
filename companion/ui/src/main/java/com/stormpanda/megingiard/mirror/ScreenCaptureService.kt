@@ -163,7 +163,6 @@ class ScreenCaptureService : Service() {
             }
 
             isPrivilegedMode = false
-            ScreenCaptureManager.setPrivilegedMirror(false)
             val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
             mediaProjection = projectionManager.getMediaProjection(resultCode, data)
 
@@ -262,7 +261,6 @@ class ScreenCaptureService : Service() {
             return START_NOT_STICKY
         }
         isPrivilegedMode = true
-        ScreenCaptureManager.setPrivilegedMirror(true)
         startForegroundNotificationConnectedDevice()
 
         val displayManager = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
@@ -431,7 +429,6 @@ class ScreenCaptureService : Service() {
         super.onDestroy()
         AppLog.i(TAG, "onDestroy: cleanup sequence")
         scope.cancel()
-        ScreenCaptureManager.setPrivilegedMirror(false)
         if (ScreenCaptureManager.isCapturing.value) ScreenCaptureManager.setCapturing(false)
         if (!consentFallbackInFlight) AppStateManager.setPromptInFlight(false)
         mirrorVirtualDisplay?.release()

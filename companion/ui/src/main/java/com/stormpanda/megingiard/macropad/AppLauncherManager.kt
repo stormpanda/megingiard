@@ -84,9 +84,4 @@ object AppLauncherManager {
             AppLog.e(TAG, "Failed to restore Megingiard: ${e.message}")
         }
     }
-
-    fun dismissBubble() {
-        AppLog.d(TAG, "Dismissing floating bubble")
-        FloatingBubbleOverlay.hide()
-    }
 }

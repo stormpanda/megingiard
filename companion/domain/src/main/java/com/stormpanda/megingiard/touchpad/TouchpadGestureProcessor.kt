@@ -354,12 +354,4 @@ class TouchpadGestureProcessor(
             TouchInjector.injectTouch(slot, TouchAction.UP, 0f, 0f)
         }
     }
-
-    /**
-     * Designate a pointer as the new primary (for cursor movement in mouse mode).
-     * Call when the previous primary pointer lifts and others are still held.
-     */
-    fun setPrimaryPointer(pointerId: Long) {
-        primaryPointer = pointerId
-    }
 }

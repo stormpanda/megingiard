@@ -89,8 +89,6 @@ private const val TAG = "PadCanvas"
 private val ED_BUTTON_UNIT_DP = 60.dp
 private val ED_BTN_SQUARE_RADIUS = 4.dp
 
-// Shared with MacroPadScreen so the editor canvas remains pixel-identical to use mode.
-private val PC_SCREEN_PADDING = MP_SCREEN_PADDING
 private const val ED_EDGE_MARGIN = 0.05f
 
 // Highlight border when button positioning is unlocked

@@ -547,12 +547,6 @@ object MacroPadState {
         )
     }
 
-    fun updateButton(button: PadButton) {
-        val layout = activeLayout.value ?: return
-        val updatedButtons = layout.buttons.map { if (it.id == button.id) button else it }
-        updateLayout(layout.copy(buttons = updatedButtons))
-    }
-
     fun deleteLayout(layoutId: String) {
         val profile = activeProfile.value ?: return
         val remaining = profile.layouts.filter { it.id != layoutId }

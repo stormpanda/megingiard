@@ -41,22 +41,6 @@ private val EBC_INFO_BOX_PADDING_V = 12.dp
 private val EBC_ARROW_SIZE = 14.dp
 private const val EBC_ARROW_ALPHA = 0.6f
 
-internal val EBC_PALETTE_PRESETS =
-    listOf(
-        Color(0xFFFF5252), // Red
-        Color(0xFFFF7043), // Deep Orange
-        Color(0xFFFFA726), // Orange
-        Color(0xFFFFCA28), // Amber
-        Color(0xFF66BB6A), // Green
-        Color(0xFF26A69A), // Teal
-        Color(0xFF29B6F6), // Light Blue
-        Color(0xFF42A5F5), // Blue
-        Color(0xFF7E57C2), // Deep Purple
-        Color(0xFFEC407A), // Pink
-        Color(0xFFFFFFFF), // White
-        Color(0xFF212121), // Dark Grey
-    )
-
 @Composable
 internal fun SwordsButtonPreview(
     textColor: Color,

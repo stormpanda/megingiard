@@ -19,9 +19,6 @@ import kotlinx.coroutines.launch
 
 private const val TAG = "MirrorViewportCtrl"
 
-const val VIEWPORT_ZOOM_MIN = 1f
-const val VIEWPORT_ZOOM_MAX = 10f
-private const val SNAP_BACK_THRESHOLD = 1.15f
 private const val VIEWPORT_SAVE_DEBOUNCE_MS = 300L
 
 private data class ViewportSnapshot(
@@ -34,14 +31,9 @@ private data class ViewportSnapshot(
 /**
  * Manages the mirror viewport state: scale, offsetX, offsetY.
  *
- * Business logic extracted from MirrorScreen — responsible for:
- * - Constrained zoom / pan calculations
- * - Snap-back logic when pinch drops below threshold
+ * Responsible for:
  * - Debounced viewport persistence via [SettingsManager]
  * - Lock/projection session-state save
- *
- * The UI layer reads these [StateFlow]s and may wrap them in `Animatable`
- * for smooth animations. All mutation goes through the controller methods.
  */
 object MirrorViewportController {
     private val _scale = MutableStateFlow(1f)
@@ -52,42 +44,6 @@ object MirrorViewportController {
 
     private val _offsetY = MutableStateFlow(0f)
     val offsetY: StateFlow<Float> = _offsetY.asStateFlow()
-
-    /**
-     * Apply a zoom and pan gesture.
-     *
-     * @param zoom    multiplicative zoom factor from the gesture (1.0 = no change)
-     * @param panX    horizontal pan in pixels
-     * @param panY    vertical pan in pixels
-     * @param surfaceW  width of the mirrored surface in pixels
-     * @param surfaceH  height of the mirrored surface in pixels
-     */
-    fun applyZoomPan(
-        zoom: Float,
-        panX: Float,
-        panY: Float,
-        surfaceW: Float,
-        surfaceH: Float,
-    ) {
-        val newScale = (_scale.value * zoom).coerceIn(VIEWPORT_ZOOM_MIN, VIEWPORT_ZOOM_MAX)
-        _scale.value = newScale
-        val maxX = (surfaceW * (newScale - 1f)) / 2f
-        val maxY = (surfaceH * (newScale - 1f)) / 2f
-        _offsetX.value = (_offsetX.value + panX).coerceIn(-maxX, maxX)
-        _offsetY.value = (_offsetY.value + panY).coerceIn(-maxY, maxY)
-        syncToManager()
-    }
-
-    /** Reset viewport to default (no zoom, no pan). */
-    fun resetViewport() {
-        _scale.value = VIEWPORT_ZOOM_MIN
-        _offsetX.value = 0f
-        _offsetY.value = 0f
-        syncToManager()
-    }
-
-    /** Whether the current scale is below the snap-back threshold. */
-    fun shouldSnapBack(): Boolean = _scale.value < SNAP_BACK_THRESHOLD
 
     /**
      * Restore viewport from persisted session state.
@@ -151,18 +107,6 @@ object MirrorViewportController {
         _offsetY.value = oy
         syncToManager()
         ScreenCaptureManager.setFollowActive(follow)
-    }
-
-    /** Directly set scale/offset (used when syncing from Animatable). */
-    fun setValues(
-        scale: Float,
-        offsetX: Float,
-        offsetY: Float,
-    ) {
-        _scale.value = scale
-        _offsetX.value = offsetX
-        _offsetY.value = offsetY
-        syncToManager()
     }
 
     /**
