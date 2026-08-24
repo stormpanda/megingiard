@@ -821,14 +821,27 @@ fun GlobalSettingsScreen(
                                     export = reviewExport,
                                     pendingInAppImportMode = pendingInAppImportMode,
                                     onConfirmImport = { exp, mode ->
+                                        val pendingImages = ConfigManager.getPendingInAppImages()
                                         showImportPreviewDialog = null
-                                        ConfigManager.clearInAppPendingImport()
                                         subPageStack = emptyList()
                                         coroutineScope.launch {
                                             runCatching {
                                                 when (mode) {
-                                                    ConfigManager.ImportMode.BACKUP_RESTORE -> ConfigManager.applyImport(context, exp)
-                                                    ConfigManager.ImportMode.PROFILE_SHARE -> ConfigManager.applyProfileImport(context, exp)
+                                                    ConfigManager.ImportMode.BACKUP_RESTORE -> {
+                                                        ConfigManager.applyImport(
+                                                            context,
+                                                            exp,
+                                                            pendingImages,
+                                                        )
+                                                    }
+
+                                                    ConfigManager.ImportMode.PROFILE_SHARE -> {
+                                                        ConfigManager.applyProfileImport(
+                                                            context,
+                                                            exp,
+                                                            pendingImages,
+                                                        )
+                                                    }
                                                 }
                                             }.onSuccess {
                                                 when (mode) {

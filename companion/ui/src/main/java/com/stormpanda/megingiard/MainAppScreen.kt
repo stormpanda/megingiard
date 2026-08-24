@@ -555,9 +555,9 @@ fun MainAppScreen() {
             IncomingImportDialog(
                 export = export,
                 onConfirm = {
+                    val pendingImages = ConfigManager.getPendingImages()
                     coroutineScope.launch {
-                        ConfigManager.applyImport(context, export)
-                        ConfigManager.clearPendingImport()
+                        ConfigManager.applyImport(context, export, pendingImages)
                     }
                 },
                 onDismiss = { ConfigManager.clearPendingImport() },

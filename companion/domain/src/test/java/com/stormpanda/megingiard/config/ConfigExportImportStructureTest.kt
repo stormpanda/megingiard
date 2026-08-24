@@ -1,6 +1,8 @@
 package com.stormpanda.megingiard.config
 
+import android.content.Context
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.security.HmacUtil
@@ -25,8 +27,12 @@ import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.floatOrNull
 import kotlinx.serialization.json.intOrNull
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -38,12 +44,9 @@ import java.util.zip.ZipOutputStream
  * Tests for the [ConfigManager.ExportKind] sealed interface and
  * [ConfigManager.ImportMode] enum introduced with the per-profile
  * export/import feature.
- *
- * These tests are purely structural — they verify that the discriminator
- * types have the correct shape and carry the expected data. No Android APIs
- * or coroutines are involved.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
+@RunWith(RobolectricTestRunner::class)
 class ConfigExportImportStructureTest {
     private val testJson = Json { encodeDefaults = true }
     private val testMetadata =
@@ -553,5 +556,96 @@ class ConfigExportImportStructureTest {
         ConfigManager.clearInAppPendingImport()
         assertEquals(null, ConfigManager.pendingInAppParsedImport.value)
         assertEquals(null, ConfigManager.inAppImportError.value)
+        assertEquals(emptyMap<String, ByteArray>(), ConfigManager.getPendingInAppImages())
     }
+
+    // ── 5. Background Image Restoration Tests ─────────────────────────────────
+
+    @Test
+    fun testApplyImportRestoresBackgroundImagesWithExplicitMap() =
+        runBlocking {
+            val context: Context = RuntimeEnvironment.getApplication()
+            val layoutId = "layout-bg-import-1"
+            val mockImageBytes = "mock_background_bytes_12345".toByteArray(Charsets.UTF_8)
+
+            val bgLayout =
+                PadLayout(
+                    id = layoutId,
+                    name = "LayoutWithBg",
+                    backgroundImagePath = "backgrounds/bg_$layoutId",
+                )
+            val bgProfile =
+                PadProfile(
+                    id = "profile-bg-import",
+                    name = "ProfileToImport",
+                    layouts = listOf(bgLayout),
+                )
+
+            val export =
+                MegingiardExport(
+                    schemaVersion = SCHEMA_VERSION,
+                    metadata = testMetadata,
+                    checksum = "dummy",
+                    settings = emptyMap(),
+                    profiles = listOf(bgProfile),
+                )
+
+            val imagesMap = mapOf(layoutId to mockImageBytes)
+
+            ConfigManager.applyImport(context, export, imagesMap)
+
+            val importedProfile = MacroPadState.profiles.value.find { it.name == "ProfileToImport" }
+            assertNotNull(importedProfile)
+            val importedLayout = importedProfile!!.layouts.first()
+            assertNotNull(importedLayout.backgroundImagePath)
+            assertTrue(importedLayout.backgroundImagePath!!.startsWith("backgrounds/bg_"))
+
+            val savedFile = File(context.filesDir, importedLayout.backgroundImagePath!!)
+            assertTrue(savedFile.exists())
+            assertTrue(savedFile.readBytes().contentEquals(mockImageBytes))
+        }
+
+    @Test
+    fun testApplyProfileImportRestoresBackgroundImagesWithExplicitMap() =
+        runBlocking {
+            val context: Context = RuntimeEnvironment.getApplication()
+            val layoutId = "layout-profile-share-bg-1"
+            val mockImageBytes = "mock_profile_share_background_bytes_67890".toByteArray(Charsets.UTF_8)
+
+            val bgLayout =
+                PadLayout(
+                    id = layoutId,
+                    name = "ProfileShareLayout",
+                    backgroundImagePath = "backgrounds/bg_$layoutId",
+                )
+            val bgProfile =
+                PadProfile(
+                    id = "profile-share-bg-import",
+                    name = "ProfileShareToImport",
+                    layouts = listOf(bgLayout),
+                )
+
+            val export =
+                MegingiardExport(
+                    schemaVersion = SCHEMA_VERSION,
+                    metadata = testMetadata,
+                    checksum = "dummy",
+                    settings = emptyMap(),
+                    profiles = listOf(bgProfile),
+                )
+
+            val imagesMap = mapOf("bg_$layoutId" to mockImageBytes)
+
+            ConfigManager.applyProfileImport(context, export, imagesMap)
+
+            val importedProfile = MacroPadState.profiles.value.find { it.name == "ProfileShareToImport" }
+            assertNotNull(importedProfile)
+            val importedLayout = importedProfile!!.layouts.first()
+            assertNotNull(importedLayout.backgroundImagePath)
+            assertTrue(importedLayout.backgroundImagePath!!.startsWith("backgrounds/bg_"))
+
+            val savedFile = File(context.filesDir, importedLayout.backgroundImagePath!!)
+            assertTrue(savedFile.exists())
+            assertTrue(savedFile.readBytes().contentEquals(mockImageBytes))
+        }
 }
