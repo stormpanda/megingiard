@@ -771,10 +771,14 @@ object AppStateManager {
             MacroPadState.activeLayout.collect { layout ->
                 val newId = layout?.id
                 if (lastActiveLayoutId != null && newId != lastActiveLayoutId) {
-                    AppLog.d(TAG, "activeLayout changed from $lastActiveLayoutId to $newId; closing active modals")
-                    if (_uiMode.value != UiMode.QUICK_MENU &&
+                    AppLog.d(TAG, "activeLayout changed from $lastActiveLayoutId to $newId; checking modal dismissal")
+                    if (_activePrimaryModal.value == null &&
+                        _uiMode.value != UiMode.QUICK_MENU &&
                         _uiMode.value != UiMode.LAYOUT_EDITOR &&
-                        _uiMode.value != UiMode.BACKGROUND_SETTINGS
+                        _uiMode.value != UiMode.BACKGROUND_SETTINGS &&
+                        _uiMode.value != UiMode.GLOBAL_SETTINGS &&
+                        _uiMode.value != UiMode.KEYBOARD_SETTINGS &&
+                        _uiMode.value != UiMode.TOUCHPAD_SETTINGS
                     ) {
                         closeActiveModal()
                     }

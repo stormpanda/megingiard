@@ -654,6 +654,21 @@ class AppStateManagerTest {
         }
 
     @Test
+    fun `restoreDefaults does not close GlobalSettings primary modal or uiMode`() =
+        runTest {
+            AppStateManager.closeActiveModal()
+            AppStateManager.setGlobalSettingsOpen(true)
+            assertTrue(AppStateManager.isGlobalSettingsOpen.value)
+            assertEquals(PrimaryModalType.GLOBAL_SETTINGS, AppStateManager.activePrimaryModal.value?.type)
+
+            MacroPadState.restoreDefaults()
+
+            assertTrue(AppStateManager.isGlobalSettingsOpen.value)
+            assertEquals(PrimaryModalType.GLOBAL_SETTINGS, AppStateManager.activePrimaryModal.value?.type)
+            AppStateManager.closeActiveModal()
+        }
+
+    @Test
     fun `shouldShowIntegrationHome evaluates true for launcher packages in AUTO mode`() =
         runTest {
             val autoMode = CompanionViewMode.AUTO
