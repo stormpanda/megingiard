@@ -16,8 +16,8 @@ import java.net.UnknownHostException
 
 private const val TAG = "SteamGridDbClient"
 private const val BASE_URL = "https://www.steamgriddb.com/api/v2"
-private const val TIMEOUT_CONNECT_MS = 8000
-private const val TIMEOUT_READ_MS = 10000
+private const val TIMEOUT_CONNECT_MS = 2000
+private const val TIMEOUT_READ_MS = 3000
 
 sealed class SteamGridDbException(
     message: String,
