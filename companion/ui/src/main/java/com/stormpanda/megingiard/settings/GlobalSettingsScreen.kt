@@ -209,10 +209,14 @@ fun GlobalSettingsScreen(
             lastReviewExport = activeImportPreview
         }
     }
+    var pendingUpdateReleaseUrl by rememberSaveable { mutableStateOf<String?>(null) }
     LaunchedEffect(subPageStack) {
         if (SettingsSubPage.RESTORE_REVIEW !in subPageStack) {
             showImportPreviewDialog = null
             ConfigManager.clearInAppPendingImport()
+        }
+        if (SettingsSubPage.CREATE_BACKUP !in subPageStack) {
+            pendingUpdateReleaseUrl = null
         }
     }
     var importError by rememberSaveable { mutableStateOf<String?>(null) }
@@ -940,12 +944,14 @@ fun GlobalSettingsScreen(
                                 tagName = tagName,
                                 effectiveAccent = effectiveAccent,
                                 onBackupAndOpen = {
+                                    pendingUpdateReleaseUrl = releaseUrl
                                     selectedCategory = SettingsCategory.CONFIGURATION
                                     subPageStack = listOf(SettingsSubPage.CREATE_BACKUP)
-                                    launchUrlOnPrimaryDisplay(context, releaseUrl)
                                 },
                                 onOpenDirectly = {
                                     launchUrlOnPrimaryDisplay(context, releaseUrl)
+                                    AppStateManager.closeActiveModal()
+                                    onBack()
                                 },
                             )
                         }
@@ -969,6 +975,8 @@ fun GlobalSettingsScreen(
     LaunchedEffect(exportResult) {
         when (val result = exportResult) {
             is ConfigManager.ExportResult.Success -> {
+                val urlToLaunch = pendingUpdateReleaseUrl
+                pendingUpdateReleaseUrl = null
                 val toastMsg =
                     if (result.kind is ConfigManager.ExportKind.ProfileShare) {
                         context.getString(R.string.config_profile_export_success)
@@ -977,7 +985,11 @@ fun GlobalSettingsScreen(
                     }
                 DialogToastManager.show(toastMsg)
                 ConfigManager.clearExportResult()
-                if (subPageStack.isNotEmpty()) {
+                if (urlToLaunch != null) {
+                    launchUrlOnPrimaryDisplay(context, urlToLaunch)
+                    AppStateManager.closeActiveModal()
+                    onBack()
+                } else if (subPageStack.isNotEmpty()) {
                     subPageStack = emptyList()
                 }
             }

@@ -29,9 +29,9 @@ The Automatic Update Check feature periodically and silently queries the GitHub 
 
 - Clicking the update link or banner MUST drill down into the dedicated update sub-page (`SettingsSubPage.UPDATE_AVAILABLE`).
 - The sub-page MUST allow the user to choose between:
-  1. **Backup Config & Open Link**: Navigates to the full configuration export sub-page (`SettingsSubPage.CREATE_BACKUP`) and opens the release URL on the top display (`Display.DEFAULT_DISPLAY`).
-  2. **Open Link Directly**: Opens the release URL on the top display (`Display.DEFAULT_DISPLAY`) without launching backup export.
-  3. **Cancel / Back**: Pressing `[B]` or back navigation returns to the main settings deck.
+  1. **Backup Config & Open Link**: Navigates to the full configuration export sub-page (`SettingsSubPage.CREATE_BACKUP`). Once the user successfully creates the backup, opens the release URL on the top display (`Display.DEFAULT_DISPLAY`) and closes the settings overlay.
+  2. **Open Link Directly**: Opens the release URL on the top display (`Display.DEFAULT_DISPLAY`) and immediately closes the settings overlay so the user can view the browser.
+  3. **Cancel / Back**: Pressing `[B]` or back navigation returns to the main settings deck without closing settings.
 
 ### FR-U4: Obtainium App Tracking Shortcut
 
