@@ -72,7 +72,6 @@ import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.mirror.ACTION_START_PRIVD
 import com.stormpanda.megingiard.mirror.ACTION_STOP
-import com.stormpanda.megingiard.mirror.CropSelectorActivity
 import com.stormpanda.megingiard.mirror.MirrorRuntimeAction
 import com.stormpanda.megingiard.mirror.MirrorRuntimePolicyState
 import com.stormpanda.megingiard.mirror.MirrorStrategy
@@ -344,26 +343,6 @@ class MainActivity : ComponentActivity() {
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 BackgroundPickerManager.pickRequest.collect {
                     pickImageLauncher.launch("image/*")
-                }
-            }
-        }
-        lifecycleScope.launch {
-            var lastLaunchedId: String? = null
-            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                AppStateManager.activeCropCutoutId.collect { id ->
-                    if (id != null && id != lastLaunchedId) {
-                        lastLaunchedId = id
-                        AppLog.i(TAG, "activeCropCutoutId=$id -> launching CropSelectorActivity on primary display")
-                        val options = ActivityOptions.makeBasic()
-                        options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-                        val intent =
-                            Intent(this@MainActivity, CropSelectorActivity::class.java).apply {
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
-                            }
-                        startActivity(intent, options.toBundle())
-                    } else if (id == null) {
-                        lastLaunchedId = null
-                    }
                 }
             }
         }

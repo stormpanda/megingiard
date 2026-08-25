@@ -62,7 +62,7 @@ object PrimaryOverlayManager {
     private var overlayView: ComposeView? = null
     private var overlayWindowManager: WindowManager? = null
     private var lifecycleOwner: WindowOverlayLifecycleOwner? = null
-    private var wasFrozenBeforeOverlay = false
+    private var wasFrozenForModal = false
     private val mainHandler = Handler(Looper.getMainLooper())
 
     fun init(app: Application) {
@@ -76,32 +76,54 @@ object PrimaryOverlayManager {
                 AppStateManager.activePrimaryModal,
                 AppStateManager.activeCropCutoutId,
             ) { modal, cropId ->
-                modal != null || cropId != null
-            }.collect { shouldShow ->
-                if (shouldShow) {
-                    showOverlay()
-                } else {
-                    hideOverlay()
-                }
+                Pair(modal != null, cropId != null)
+            }.collect { (hasModal, hasCrop) ->
+                handleOverlayState(hasModal, hasCrop)
             }
         }
         AppLog.i(TAG, "PrimaryOverlayManager initialized")
     }
 
-    private fun showOverlay() {
+    private fun handleOverlayState(
+        hasModal: Boolean,
+        hasCrop: Boolean,
+    ) {
         if (Looper.myLooper() == Looper.getMainLooper()) {
-            showOverlayOnMainThread()
+            handleOverlayStateOnMainThread(hasModal, hasCrop)
         } else {
-            mainHandler.post { showOverlayOnMainThread() }
+            mainHandler.post { handleOverlayStateOnMainThread(hasModal, hasCrop) }
         }
     }
 
-    private fun hideOverlay() {
-        if (Looper.myLooper() == Looper.getMainLooper()) {
+    private fun handleOverlayStateOnMainThread(
+        hasModal: Boolean,
+        hasCrop: Boolean,
+    ) {
+        val shouldShow = hasModal || hasCrop
+        if (!shouldShow) {
             hideOverlayOnMainThread()
-        } else {
-            mainHandler.post { hideOverlayOnMainThread() }
+            return
         }
+
+        // Adjust mirror freeze state: freeze only for opaque configuration modals, not for crop selection.
+        if (hasModal) {
+            if (!wasFrozenForModal && ScreenCaptureManager.isCapturing.value && !ScreenCaptureManager.isFrozen.value) {
+                AppLog.i(TAG, "Freezing mirror capture for primary modal dialog")
+                wasFrozenForModal = true
+                ScreenCaptureManager.setFrozen(true)
+            }
+        } else {
+            // Only crop selector is active: unfreeze if previously frozen for a modal
+            if (wasFrozenForModal) {
+                AppLog.i(TAG, "Resuming live mirror capture for crop selector")
+                if (ScreenCaptureManager.isCapturing.value) {
+                    ScreenCaptureManager.setFrozen(false)
+                }
+                wasFrozenForModal = false
+            }
+        }
+
+        showOverlayOnMainThread()
     }
 
     private fun showOverlayOnMainThread() {
@@ -116,16 +138,6 @@ object PrimaryOverlayManager {
             // Overlay already attached to WindowManager; Compose state flow will re-compose content
             AppLog.d(TAG, "Overlay window already attached — updating content via state flow")
             return
-        }
-
-        if (ScreenCaptureManager.isCapturing.value) {
-            wasFrozenBeforeOverlay = ScreenCaptureManager.isFrozen.value
-            if (!wasFrozenBeforeOverlay) {
-                AppLog.i(TAG, "Freezing mirror capture for primary overlay")
-                ScreenCaptureManager.setFrozen(true)
-            }
-        } else {
-            wasFrozenBeforeOverlay = false
         }
 
         val accessibilityService = MegingiardAccessibilityService.getInstance()
@@ -332,10 +344,10 @@ object PrimaryOverlayManager {
             AppLog.i(TAG, "Primary overlay window successfully attached to Display 0 WindowManager (non-activity)")
         } catch (e: Exception) {
             AppLog.e(TAG, "Failed to attach primary overlay window: ${e.message}", e)
-            if (ScreenCaptureManager.isCapturing.value && !wasFrozenBeforeOverlay) {
+            if (wasFrozenForModal && ScreenCaptureManager.isCapturing.value) {
                 ScreenCaptureManager.setFrozen(false)
             }
-            wasFrozenBeforeOverlay = false
+            wasFrozenForModal = false
             launchFallbackActivity(app)
         }
     }
@@ -354,11 +366,11 @@ object PrimaryOverlayManager {
             overlayWindowManager = null
             lifecycleOwner?.destroy()
             lifecycleOwner = null
-            if (ScreenCaptureManager.isCapturing.value && !wasFrozenBeforeOverlay) {
-                AppLog.i(TAG, "Resuming live mirror capture after closing primary overlay")
+            if (wasFrozenForModal && ScreenCaptureManager.isCapturing.value) {
+                AppLog.i(TAG, "Resuming live mirror capture after closing primary modal")
                 ScreenCaptureManager.setFrozen(false)
             }
-            wasFrozenBeforeOverlay = false
+            wasFrozenForModal = false
         }
     }
 

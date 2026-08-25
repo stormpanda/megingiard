@@ -64,8 +64,7 @@ Megingiard runs on the AYN Thor, an Android gaming handheld with two physical di
 ```
 Primary Display (DEFAULT_DISPLAY) — top screen, game display & deep configuration overlays
   ├─ [running games / other apps — captured by MediaProjection]
-  ├─ CropSelectorActivity (translucent crop selection overlay)
-  └─ PrimaryOverlayActivity (translucent 16:9 widescreen settings, inspectors, wizards, & tutorials)
+  └─ PrimaryOverlayManager / PrimaryOverlayActivity (translucent 16:9 widescreen settings, inspectors, crop selector, & tutorials)
 
 Secondary Display (non-default displayId) — bottom screen, interactive deck & tools
   └─ MainActivity → MainAppScreen (Jetpack Compose)

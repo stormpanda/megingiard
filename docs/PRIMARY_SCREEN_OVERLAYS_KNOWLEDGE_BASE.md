@@ -70,8 +70,9 @@ startActivity(intent, options.toBundle())
    - The game/app running underneath on Display 0 remains completely visible.
 
 ### 2.3 Frame Freeze & Capture Management
-* When a primary overlay opens, [`PrimaryOverlayManager`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayManager.kt) (and fallback [`PrimaryOverlayActivity`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayActivity.kt) / [`CropSelectorActivity`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/ui/src/main/java/com/stormpanda/megingiard/mirror/CropSelectorActivity.kt)) automatically freezes screen capture (`ScreenCaptureManager.setFrozen(true)`).
+* When a primary configuration modal opens (`AppStateManager.activePrimaryModal != null`), [`PrimaryOverlayManager`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayManager.kt) (and fallback [`PrimaryOverlayActivity`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayActivity.kt)) automatically freezes screen capture (`ScreenCaptureManager.setFrozen(true)`).
 * When dismissed, it automatically restores live capture (`ScreenCaptureManager.setFrozen(false)`), while preserving prior manual freeze state if the user had already frozen capture beforehand.
+* When cropping a screen mirroring cutout (`AppStateManager.activeCropCutoutId != null`), screen capture and the background game remain live to provide real-time visual feedback.
 
 ### 2.4 Single-Process State Synchronization
 * Both activities run within the same process (`com.stormpanda.megingiard`).
@@ -194,10 +195,11 @@ insetsController.hide(WindowInsetsCompat.Type.systemBars())
 ---
 
 ## 7. Related Codebase References
-
-* [`CropSelectorActivity.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/ui/src/main/java/com/stormpanda/megingiard/mirror/CropSelectorActivity.kt) — Translucent Activity pattern on `Display.DEFAULT_DISPLAY`.
+ 
 * [`CropSelectorOverlay.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/ui/src/main/java/com/stormpanda/megingiard/mirror/CropSelectorOverlay.kt) — Multi-display Compose overlay with scrims and gesture handlers.
-* [`MainActivity.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/ui/src/main/java/com/stormpanda/megingiard/MainActivity.kt#L330-L348) — Display targeting with `ActivityOptions.setLaunchDisplayId()`.
+* [`PrimaryOverlayManager.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayManager.kt) — Non-Activity WindowManager overlay on `Display.DEFAULT_DISPLAY`.
+* [`PrimaryOverlayActivity.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayActivity.kt) — Translucent fallback Activity on `Display.DEFAULT_DISPLAY`.
+* [`MainActivity.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/ui/src/main/java/com/stormpanda/megingiard/MainActivity.kt) — Companion screen host and state observer.
 * [`AppStateManager.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/domain/src/main/java/com/stormpanda/megingiard/AppStateManager.kt) — Central reactive state holder.
 * [`AutoSwitchCoordinator.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/domain/src/main/java/com/stormpanda/megingiard/macropad/AutoSwitchCoordinator.kt) — Accessibility-driven profile switching exclusions.
 * [`DisplayDetector.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/shared/catalog/src/main/java/com/stormpanda/megingiard/display/DisplayDetector.kt) — Hardware display topology detection.

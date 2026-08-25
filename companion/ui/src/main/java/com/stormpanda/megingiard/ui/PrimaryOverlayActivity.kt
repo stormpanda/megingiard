@@ -43,16 +43,18 @@ private const val TAG = "PrimaryOverlayActivity"
  * display to remain an unobstructed, live interactive action deck.
  */
 class PrimaryOverlayActivity : ComponentActivity() {
-    private var wasFrozenBeforeOverlay = false
+    private var wasFrozenForModal = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val displayId = runCatching { display?.displayId }.getOrNull()
         AppLog.i(TAG, "onCreate: started on display=$displayId")
 
-        wasFrozenBeforeOverlay = savedInstanceState?.getBoolean("wasFrozenBeforeOverlay") ?: ScreenCaptureManager.isFrozen.value
-        if (savedInstanceState == null && !wasFrozenBeforeOverlay && ScreenCaptureManager.isCapturing.value) {
-            AppLog.i(TAG, "Freezing mirror capture for primary overlay activity")
+        wasFrozenForModal = savedInstanceState?.getBoolean("wasFrozenForModal") ?: false
+        val initialModal = AppStateManager.activePrimaryModal.value != null
+        if (savedInstanceState == null && initialModal && ScreenCaptureManager.isCapturing.value && !ScreenCaptureManager.isFrozen.value) {
+            AppLog.i(TAG, "Freezing mirror capture for primary modal activity")
+            wasFrozenForModal = true
             ScreenCaptureManager.setFrozen(true)
         }
 
@@ -69,11 +71,28 @@ class PrimaryOverlayActivity : ComponentActivity() {
                 AppStateManager.activePrimaryModal,
                 AppStateManager.activeCropCutoutId,
             ) { modal, cropId ->
-                modal == null && cropId == null
-            }.collect { shouldFinish ->
-                if (shouldFinish) {
+                Pair(modal != null, cropId != null)
+            }.collect { (hasModal, hasCrop) ->
+                if (!hasModal && !hasCrop) {
                     AppLog.i(TAG, "All primary overlays inactive -> finishing activity")
                     finish()
+                    return@collect
+                }
+
+                if (hasModal) {
+                    if (!wasFrozenForModal && ScreenCaptureManager.isCapturing.value && !ScreenCaptureManager.isFrozen.value) {
+                        AppLog.i(TAG, "Freezing mirror capture for primary modal activity")
+                        wasFrozenForModal = true
+                        ScreenCaptureManager.setFrozen(true)
+                    }
+                } else {
+                    if (wasFrozenForModal) {
+                        AppLog.i(TAG, "Resuming live mirror capture for crop selector activity")
+                        if (ScreenCaptureManager.isCapturing.value) {
+                            ScreenCaptureManager.setFrozen(false)
+                        }
+                        wasFrozenForModal = false
+                    }
                 }
             }
         }
@@ -197,7 +216,7 @@ class PrimaryOverlayActivity : ComponentActivity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        outState.putBoolean("wasFrozenBeforeOverlay", wasFrozenBeforeOverlay)
+        outState.putBoolean("wasFrozenForModal", wasFrozenForModal)
     }
 
     override fun onDestroy() {
@@ -206,10 +225,11 @@ class PrimaryOverlayActivity : ComponentActivity() {
         if (isFinishing) {
             AppStateManager.closePrimaryModal()
             AppStateManager.setActiveCropCutoutId(null)
-            if (!wasFrozenBeforeOverlay && ScreenCaptureManager.isCapturing.value) {
+            if (wasFrozenForModal && ScreenCaptureManager.isCapturing.value) {
                 AppLog.i(TAG, "Resuming live mirror capture after closing primary overlay activity")
                 ScreenCaptureManager.setFrozen(false)
             }
+            wasFrozenForModal = false
         }
     }
 }

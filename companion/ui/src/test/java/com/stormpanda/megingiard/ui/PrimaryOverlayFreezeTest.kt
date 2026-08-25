@@ -87,4 +87,32 @@ class PrimaryOverlayFreezeTest {
         controller.pause().stop().destroy()
         assertFalse(ScreenCaptureManager.isFrozen.value)
     }
+
+    @Test
+    fun testPrimaryOverlayActivity_whenCropping_doesNotFreezeCapture() {
+        ScreenCaptureManager.setCapturing(true)
+        ScreenCaptureManager.setFrozen(false)
+        AppStateManager.setActiveCropCutoutId("cutout_1")
+
+        val controller = Robolectric.buildActivity(PrimaryOverlayActivity::class.java).setup()
+        assertFalse("Mirror capture should remain live (not frozen) when cropping a cutout", ScreenCaptureManager.isFrozen.value)
+
+        controller.get().finish()
+        controller.pause().stop().destroy()
+        assertFalse("Mirror capture should remain live after crop selector finishes", ScreenCaptureManager.isFrozen.value)
+    }
+
+    @Test
+    fun testPrimaryOverlayActivity_whenCropping_preservesPriorManualFreeze() {
+        ScreenCaptureManager.setCapturing(true)
+        ScreenCaptureManager.setFrozen(true)
+        AppStateManager.setActiveCropCutoutId("cutout_1")
+
+        val controller = Robolectric.buildActivity(PrimaryOverlayActivity::class.java).setup()
+        assertTrue("Mirror capture should remain frozen if manually frozen before crop selector", ScreenCaptureManager.isFrozen.value)
+
+        controller.get().finish()
+        controller.pause().stop().destroy()
+        assertTrue("Mirror capture should remain frozen after crop selector finishes", ScreenCaptureManager.isFrozen.value)
+    }
 }

@@ -26,7 +26,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
   - **Moving**: Dragging a cutout box moves it across the secondary display.
   - **Resizing**: A selected cutout shows corner handles. Dragging these handles resizes the cutout destination rectangle.
 - Movement and resizing MUST enforce boundary collisions (no off-screen placements, sliding collision clamping, and Z-ordering overlap prevention).
-- Changing the primary display source crop area is configured by clicking the **Edit Crop** button in the layout editor toolbar, which launches `CropSelectorActivity` via `AppStateManager.setActiveCropCutoutId(...)`.
+- Changing the primary display source crop area is configured by clicking the **Edit Crop** button in the layout editor toolbar, which attaches `CropSelectorOverlay` on the primary display via `AppStateManager.setActiveCropCutoutId(...)` while keeping the background game and mirror stream running live.
 
 ### FR-M3: Freeze Frame
 
@@ -104,7 +104,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - Users MUST be able to define multiple cropped regions ("cutouts") of the primary screen and freely arrange them on the secondary screen.
 - Multi-cutout mode is supported in both standard MediaProjection and Privileged modes. Both modes utilize a single-surface duplication architecture where a single master capture stream is created, and individual cutouts are drawn via canvas transformations, avoiding device freezes and display token conflicts.
 - The app always defaults to and operates in multi-cutout mode. Single viewport mode is deleted, as it is treated as a special case of multi-cutout mode containing only one cutout.
-- Defining source crop boundaries is done via the `CropSelectorOverlay` hosted in `CropSelectorActivity` on the primary display.
+- Defining source crop boundaries is done via the `CropSelectorOverlay` hosted on the primary display via `PrimaryOverlayManager`.
 - Arranging cutout placements on the secondary display enforces boundary collisions (sliding collision clamping, no grid snapping) to prevent any Z-ordering overlaps.
 - Multi-viewport configurations (`mirrorCutouts`) and single-viewport zoom/pan settings (`mirrorSavedScale/X/Y`) are persisted completely independently in `PadLayout` (the latter preserved solely for backward compatibility and initial follow mode centering). New layouts start completely blank (with no default cutouts).
 - The user MUST be able to delete the last remaining cutout, leaving an empty list (0 cutouts), which renders a blank mirrored screen. Deleting a selected cutout from the editor toolbar requires a two-step confirmation (the delete toolbar button label changes to "Confirm" on first tap and deletes on the second tap).
@@ -273,7 +273,7 @@ For Follow Touch mode, viewport scale/offset are used to center the crop of the 
 **Freeze OFF:** `SurfaceView.visibility = VISIBLE`, `setFrozenBitmap(null)` (recycles frozen bitmap), `virtualDisplay.surface` is restored to the active surface.
 
 **Primary Overlay Auto-Freeze:**
-When any primary screen overlay (e.g. `GlobalSettingsScreen`, `MacroPadEditor`, `MacroPadInspector`, `LayoutSettings`, `ProfileSettings`, `BackgroundSettings`, `CropSelectorOverlay`, etc.) opens on Display 0, `PrimaryOverlayManager` (and fallback `PrimaryOverlayActivity`) automatically freezes the mirror frame (`ScreenCaptureManager.setFrozen(true)`) so the companion display continues showing the frozen game frame rather than live-mirroring the configuration dialog or stopping capture. When the overlay is dismissed, live mirroring automatically resumes (`ScreenCaptureManager.setFrozen(false)`). If the mirror session was already manually frozen by the user prior to opening the overlay, the manual freeze state is preserved upon dismissal.
+When any primary screen configuration modal (e.g. `GlobalSettingsScreen`, `MacroPadEditor`, `MacroPadInspector`, `LayoutSettings`, `ProfileSettings`, `BackgroundSettings`, etc.) opens on Display 0 (`AppStateManager.activePrimaryModal != null`), `PrimaryOverlayManager` (and fallback `PrimaryOverlayActivity`) automatically freezes the mirror frame (`ScreenCaptureManager.setFrozen(true)`) so the companion display continues showing the frozen game frame rather than live-mirroring the configuration dialog or stopping capture. When the modal dialog is dismissed, live mirroring automatically resumes (`ScreenCaptureManager.setFrozen(false)`). If the mirror session was already manually frozen by the user prior to opening the overlay, the manual freeze state is preserved upon dismissal. For cutout cropping (`activeCropCutoutId != null`), the background game and mirror capture remain live to allow real-time visual feedback.
 
 **PixelCopy failure:** If `PixelCopy` returns a non-SUCCESS result, the caller MUST call `bitmap.recycle()` immediately — the manager never received ownership (see AGENTS.md §7.3).
 
