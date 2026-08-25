@@ -3,29 +3,13 @@ package com.stormpanda.megingiard.mirror
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.DragIndicator
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -35,16 +19,13 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.adjustDestSizeToAspectRatio
@@ -56,61 +37,24 @@ import kotlin.math.roundToInt
 private const val TAG = "CropSelectorOverlay"
 private const val MIN_CROP_SIZE = 0.05f
 private const val CS_TOUCH_AREA_RATIO = 0.25f
+private const val CS_SCRIM_ALPHA = 0.35f
 private val CS_HANDLE_SIZE = 24.dp
 private val CS_BORDER_WIDTH = 1.dp
-private val CS_CARD_SHADOW = 8.dp
-private val CS_CARD_CORNER = 12.dp
-private val CS_BOTTOM_PADDING = 32.dp
-private val CS_CONTAINER_BORDER = 1.dp
-private val CS_ROW_PADDING_V = 4.dp
-private val CS_ROW_PADDING_E = 8.dp
-private val CS_DRAG_HANDLE_W = 36.dp
-private val CS_DRAG_HANDLE_H = 32.dp
-private val CS_DRAG_HANDLE_ICON_SIZE = 20.dp
-private val CS_DRAG_HANDLE_START_PADDING = 40.dp
-private val CS_SPACING_8 = 8.dp
-private val CS_BUTTON_CORNER = 4.dp
-private val CS_BUTTON_PADDING_H = 8.dp
-private val CS_BUTTON_PADDING_V = 6.dp
-private val CS_BUTTON_HEIGHT = 32.dp
-private val CS_BUTTON_ICON_SIZE = 18.dp
 private val CS_INDICATOR_CORNER = 4.dp
 
 @Composable
 fun CropSelectorOverlay(
     cutoutId: String,
-    onDismiss: () -> Unit,
+    onDismiss: () -> Unit = {},
 ) {
     AppLog.d(TAG, "CropSelectorOverlay composed for cutoutId=$cutoutId")
     val colors = LocalAppColors.current
     val activeLayout by MacroPadState.activeLayout.collectAsState()
     val layout = activeLayout ?: return
     val cutout = layout.mirrorCutouts.find { it.id == cutoutId } ?: return
-    val initialCutout = remember(cutoutId) { cutout }
     val currentCutoutState = rememberUpdatedState(cutout)
     val currentLayoutState = rememberUpdatedState(layout)
     val density = LocalDensity.current
-
-    val onCancel = {
-        val curLayout = currentLayoutState.value
-        val updated =
-            curLayout.mirrorCutouts.map {
-                if (it.id == cutoutId) {
-                    it.copy(
-                        srcX = initialCutout.srcX,
-                        srcY = initialCutout.srcY,
-                        srcWidth = initialCutout.srcWidth,
-                        srcHeight = initialCutout.srcHeight,
-                        destWidth = initialCutout.destWidth,
-                        destHeight = initialCutout.destHeight,
-                    )
-                } else {
-                    it
-                }
-            }
-        MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
-        onDismiss()
-    }
 
     val captureSourceWidth by ScreenCaptureManager.captureSourceWidth.collectAsState()
     val captureSourceHeight by ScreenCaptureManager.captureSourceHeight.collectAsState()
@@ -185,7 +129,7 @@ fun CropSelectorOverlay(
                     .size(
                         width = this@BoxWithConstraints.maxWidth,
                         height = with(density) { cropTop.toDp() },
-                    ).background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.7f)),
+                    ).background(MaterialTheme.colorScheme.scrim.copy(alpha = CS_SCRIM_ALPHA)),
         )
         // Left scrim
         Box(
@@ -195,7 +139,7 @@ fun CropSelectorOverlay(
                     .size(
                         width = with(density) { cropLeft.toDp() },
                         height = with(density) { cropH.toDp() },
-                    ).background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.7f)),
+                    ).background(MaterialTheme.colorScheme.scrim.copy(alpha = CS_SCRIM_ALPHA)),
         )
         // Right scrim
         Box(
@@ -205,7 +149,7 @@ fun CropSelectorOverlay(
                     .size(
                         width = this@BoxWithConstraints.maxWidth - with(density) { (cropLeft + cropW).toDp() },
                         height = with(density) { cropH.toDp() },
-                    ).background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.7f)),
+                    ).background(MaterialTheme.colorScheme.scrim.copy(alpha = CS_SCRIM_ALPHA)),
         )
         // Bottom scrim
         Box(
@@ -215,7 +159,7 @@ fun CropSelectorOverlay(
                     .size(
                         width = this@BoxWithConstraints.maxWidth,
                         height = this@BoxWithConstraints.maxHeight - with(density) { (cropTop + cropH).toDp() },
-                    ).background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.7f)),
+                    ).background(MaterialTheme.colorScheme.scrim.copy(alpha = CS_SCRIM_ALPHA)),
         )
 
         val handleSizePx = with(density) { CS_HANDLE_SIZE.toPx() }
@@ -535,104 +479,6 @@ fun CropSelectorOverlay(
                     }
                 MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
             },
-        )
-
-        var toolbarOffset by remember { mutableStateOf(IntOffset.Zero) }
-
-        // 4. Control panel card
-        Surface(
-            modifier =
-                Modifier
-                    .align(Alignment.BottomCenter)
-                    .offset { toolbarOffset }
-                    .padding(bottom = CS_BOTTOM_PADDING)
-                    .shadow(CS_CARD_SHADOW, RoundedCornerShape(CS_CARD_CORNER)),
-            color = colors.surface.copy(alpha = 0.9f),
-            shape = RoundedCornerShape(CS_CARD_CORNER),
-            border = androidx.compose.foundation.BorderStroke(CS_CONTAINER_BORDER, colors.controlOverlayBorder),
-        ) {
-            Box(
-                modifier =
-                    Modifier.padding(
-                        top = CS_ROW_PADDING_V,
-                        bottom = CS_ROW_PADDING_V,
-                        start = CS_ROW_PADDING_V,
-                        end = CS_ROW_PADDING_E,
-                    ),
-            ) {
-                // Drag handle at top-left
-                Box(
-                    modifier =
-                        Modifier
-                            .align(Alignment.TopStart)
-                            .size(width = CS_DRAG_HANDLE_W, height = CS_DRAG_HANDLE_H)
-                            .pointerInput(Unit) {
-                                detectDragGestures { change, dragAmount ->
-                                    change.consume()
-                                    toolbarOffset =
-                                        IntOffset(
-                                            x = toolbarOffset.x + dragAmount.x.roundToInt(),
-                                            y = toolbarOffset.y + dragAmount.y.roundToInt(),
-                                        )
-                                }
-                            },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.DragIndicator,
-                        contentDescription = stringResource(R.string.cd_drag_toolbar),
-                        tint = colors.onSurfaceSecondary,
-                        modifier = Modifier.size(CS_DRAG_HANDLE_ICON_SIZE),
-                    )
-                }
-
-                // Row of buttons
-                Row(
-                    modifier = Modifier.padding(start = CS_DRAG_HANDLE_START_PADDING), // clear drag handle (36dp + 4dp space)
-                    horizontalArrangement = Arrangement.spacedBy(CS_SPACING_8),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    // Cancel button (X)
-                    ToolbarIconButton(
-                        icon = Icons.Rounded.Close,
-                        contentDescription = stringResource(R.string.mirror_crop_editor_cancel),
-                        color = colors.error,
-                        onClick = onCancel,
-                    )
-
-                    // Done button (Checkmark)
-                    ToolbarIconButton(
-                        icon = Icons.Rounded.Check,
-                        contentDescription = stringResource(R.string.mirror_crop_editor_done),
-                        color = colors.accent,
-                        onClick = onDismiss,
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ToolbarIconButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    contentDescription: String,
-    color: Color,
-    onClick: () -> Unit,
-) {
-    val colors = LocalAppColors.current
-    Button(
-        onClick = onClick,
-        colors = ButtonDefaults.buttonColors(containerColor = color),
-        shape = RoundedCornerShape(CS_BUTTON_CORNER),
-        contentPadding = PaddingValues(horizontal = CS_BUTTON_PADDING_H, vertical = CS_BUTTON_PADDING_V),
-        modifier = Modifier.height(CS_BUTTON_HEIGHT),
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            tint = colors.onAccent,
-            modifier = Modifier.size(CS_BUTTON_ICON_SIZE),
         )
     }
 }

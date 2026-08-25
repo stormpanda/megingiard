@@ -565,6 +565,9 @@ object AppStateManager {
     fun setSelectedCutoutId(id: String?) {
         AppLog.d(TAG, "setSelectedCutoutId($id)")
         _selectedCutoutId.value = id
+        if (_uiMode.value == UiMode.VIEWPORT_EDIT) {
+            _activeCropCutoutId.value = id
+        }
     }
 
     fun setGlobalSettingsOpen(open: Boolean) {
@@ -667,6 +670,10 @@ object AppStateManager {
         AppLog.i(TAG, "setViewportEditActive($active)")
         if (active) {
             ScreenCaptureManager.setFollowActive(false, persist = true)
+            _activeCropCutoutId.value = _selectedCutoutId.value
+        } else {
+            _selectedCutoutId.value = null
+            _activeCropCutoutId.value = null
         }
         _uiMode.value = if (active) UiMode.VIEWPORT_EDIT else UiMode.MACROPAD_USE
     }

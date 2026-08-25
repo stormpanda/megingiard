@@ -31,9 +31,9 @@ import androidx.compose.material.icons.rounded.AspectRatio
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Circle
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Crop
 import androidx.compose.material.icons.rounded.CropSquare
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Deselect
 import androidx.compose.material.icons.rounded.DragIndicator
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Button
@@ -889,14 +889,14 @@ fun CutoutLayoutEditor() {
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         ToolbarIconButton(
-                            icon = Icons.Rounded.Crop,
-                            contentDescription = stringResource(R.string.mirror_editor_edit_crop),
+                            icon = Icons.Rounded.Deselect,
+                            contentDescription = stringResource(R.string.mirror_editor_deselect_cutout),
                             color = colors.accent,
-                            label = stringResource(R.string.mirror_editor_toolbar_crop),
+                            label = stringResource(R.string.mirror_editor_toolbar_deselect),
                             enabled = selectedCutoutId != null,
                             modifier = Modifier.weight(1f),
                             onClick = {
-                                AppStateManager.setActiveCropCutoutId(selectedCutoutId)
+                                AppStateManager.setSelectedCutoutId(null)
                             },
                         )
 
@@ -1043,9 +1043,9 @@ private fun CutoutLayoutEditorHelpModal(
             description = stringResource(R.string.help_mirror_editor_shape_desc),
         )
         HelpEntry(
-            icon = Icons.Rounded.Crop,
-            label = stringResource(R.string.mirror_editor_toolbar_crop),
-            description = stringResource(R.string.help_mirror_editor_crop_desc),
+            icon = Icons.Rounded.Deselect,
+            label = stringResource(R.string.mirror_editor_toolbar_deselect),
+            description = stringResource(R.string.help_mirror_editor_deselect_desc),
         )
         HelpEntry(
             icon = Icons.Rounded.Delete,

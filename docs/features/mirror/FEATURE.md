@@ -22,11 +22,9 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 
 - Sizing and placement of cutouts MUST only be active when the user explicitly enters **Screen Mirroring edit mode** (`isViewportEditActive = true`) via the Quick Menu control card. Outside of this mode, cutout configurations are locked and interactive layout adjustments are disabled.
 - While Screen Mirroring edit mode is active, users MUST be able to arrange cutout destination bounds on the secondary display:
-  - **Selection**: Tapping a cutout selects it.
-  - **Moving**: Dragging a cutout box moves it across the secondary display.
-  - **Resizing**: A selected cutout shows corner handles. Dragging these handles resizes the cutout destination rectangle.
-- Movement and resizing MUST enforce boundary collisions (no off-screen placements, sliding collision clamping, and Z-ordering overlap prevention).
-- Changing the primary display source crop area is configured by clicking the **Edit Crop** button in the layout editor toolbar, which attaches `CropSelectorOverlay` on the primary display via `AppStateManager.setActiveCropCutoutId(...)` while keeping the background game and mirror stream running live.
+- Selecting a cutout in the layout editor automatically opens `CropSelectorOverlay` on the primary display with a 35% opacity scrim veil and interactive crop frame while keeping the background game and mirror stream running live.
+- Adjusting the crop boundaries or corner handles on the top screen updates the cutout's source coordinates in `MacroPadState.activeLayout` in real time. The top screen overlay contains no floating buttons; crop changes are saved whenever the layout is saved on the bottom screen (or reverted if Cancel is selected in the layout editor).
+- The layout editor toolbar on the bottom screen includes a **Deselect** button (`Icons.Rounded.Deselect`) to deselect the active cutout and dismiss the top-screen crop overlay.
 
 ### FR-M3: Freeze Frame
 
@@ -104,7 +102,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - Users MUST be able to define multiple cropped regions ("cutouts") of the primary screen and freely arrange them on the secondary screen.
 - Multi-cutout mode is supported in both standard MediaProjection and Privileged modes. Both modes utilize a single-surface duplication architecture where a single master capture stream is created, and individual cutouts are drawn via canvas transformations, avoiding device freezes and display token conflicts.
 - The app always defaults to and operates in multi-cutout mode. Single viewport mode is deleted, as it is treated as a special case of multi-cutout mode containing only one cutout.
-- Defining source crop boundaries is done via the `CropSelectorOverlay` hosted on the primary display via `PrimaryOverlayManager`.
+- Defining source crop boundaries is done via the `CropSelectorOverlay` hosted on the primary display via `PrimaryOverlayManager`, which automatically appears when a cutout is selected in the layout editor.
 - Arranging cutout placements on the secondary display enforces boundary collisions (sliding collision clamping, no grid snapping) to prevent any Z-ordering overlaps.
 - Multi-viewport configurations (`mirrorCutouts`) and single-viewport zoom/pan settings (`mirrorSavedScale/X/Y`) are persisted completely independently in `PadLayout` (the latter preserved solely for backward compatibility and initial follow mode centering). New layouts start completely blank (with no default cutouts).
 - The user MUST be able to delete the last remaining cutout, leaving an empty list (0 cutouts), which renders a blank mirrored screen. Deleting a selected cutout from the editor toolbar requires a two-step confirmation (the delete toolbar button label changes to "Confirm" on first tap and deletes on the second tap).

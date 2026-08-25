@@ -564,7 +564,7 @@ Open Settings to create a layout.</string>
     <!-- Cutout Layout Editor -->
     <string name="mirror_editor_add_cutout">Add Cutout</string>
     <string name="mirror_editor_delete_cutout">Delete Selected</string>
-    <string name="mirror_editor_edit_crop">Edit Crop</string>
+    <string name="mirror_editor_deselect_cutout">Deselect Cutout</string>
     <string name="mirror_editor_done">Done</string>
     <string name="mirror_editor_aspect_ratio_mode">Aspect Ratio Mode</string>
     <string name="mirror_editor_aspect_ratio_free">Free</string>
@@ -584,7 +584,7 @@ Open Settings to create a layout.</string>
     <string name="mirror_editor_toolbar_add">Add</string>
     <string name="mirror_editor_toolbar_settings">Settings</string>
     <string name="mirror_editor_toolbar_delete">Delete</string>
-    <string name="mirror_editor_toolbar_crop">Crop</string>
+    <string name="mirror_editor_toolbar_deselect">Deselect</string>
     <string name="mirror_editor_toolbar_done">Done</string>
     <string name="mirror_editor_toolbar_cancel">Cancel</string>
     <string name="mirror_editor_toolbar_shape_circle">Circle</string>
@@ -604,12 +604,12 @@ Open Settings to create a layout.</string>
     <!-- Macro List help -->
 
     <!-- Macro Timeline Editor help -->
-    <string name="help_timeline_name_label">Macro name field</string>
-    <string name="help_timeline_name_desc">Tap the text field to rename the macro. The name is saved when you tap Save.</string>
+    <string name="help_timeline_name_label">Macro Name Field</string>
+    <string name="help_timeline_name_desc">Tap the text field to rename the macro. The name is saved when tapping Save.</string>
 
     <!-- Ambient / Background Settings help -->
-    <string name="help_ambient_dim_desc" formatted="false">Reduces the brightness of the mirrored image by overlaying a black veil. 0% means no dimming; 90% is nearly black.</string>
-    <string name="help_ambient_blend_desc">Fades the edges of the mirror image inward so the mirrored content transitions smoothly into the background rather than cutting off sharply. Higher values produce a stronger vignette effect.</string>
+    <string name="help_ambient_dim_desc" formatted="false">Reduces the brightness of the mirrored display with a black veil overlay. 0% means no dimming; 90% is near black.</string>
+    <string name="help_ambient_blend_desc">Fades the edges of the mirrored display inward so content softly transitions into the background rather than clipping abruptly. Higher values create a stronger vignette.</string>
 
     <!-- Mirror editor (Cutout Layout Editor) help -->
     <string name="help_mirror_editor_title">Mirror Editor — Help</string>
@@ -621,7 +621,7 @@ Open Settings to create a layout.</string>
     <string name="help_mirror_editor_aspect_desc">Cycles through three aspect ratio modes for the selected cutout. Free — no constraint, resize independently. Top — lock aspect ratio to match the crop on the Top screen. Bottom — lock aspect ratio to match the cutout on the Bottom screen.</string>
     <string name="help_mirror_editor_shape_label">Shape</string>
     <string name="help_mirror_editor_shape_desc">Toggles the selected cutout between rectangle and circle shapes. Useful for game mini-maps or round gauges that look better clipped to a circle.</string>
-    <string name="help_mirror_editor_crop_desc">Opens the crop selector for the selected cutout, letting you drag a frame over the top screen to choose which region is mirrored into this cutout.</string>
+    <string name="help_mirror_editor_deselect_desc">Deselects the currently selected cutout and closes the top-screen crop overlay.</string>
     <string name="help_mirror_editor_delete_desc">Permanently removes the selected cutout from the layout. If the deleted cutout had touch-follow enabled, that mode is also deactivated.</string>
     <string name="help_mirror_editor_section_finish">Finish</string>
     <string name="help_mirror_editor_done_desc">Saves all changes made in this session and closes the editor. The updated cutout layout becomes immediately active.</string>

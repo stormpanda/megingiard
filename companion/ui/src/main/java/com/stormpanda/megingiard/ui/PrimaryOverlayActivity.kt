@@ -120,11 +120,6 @@ class PrimaryOverlayActivity : ComponentActivity() {
                             activeCropCutoutId != null -> {
                                 CropSelectorOverlay(
                                     cutoutId = activeCropCutoutId!!,
-                                    onDismiss = {
-                                        AppLog.d(TAG, "Dismissing crop selector")
-                                        AppStateManager.setActiveCropCutoutId(null)
-                                        AppStateManager.closePrimaryModal()
-                                    },
                                 )
                             }
 
@@ -170,6 +165,7 @@ class PrimaryOverlayActivity : ComponentActivity() {
                 } else {
                     AppStateManager.closePrimaryModal()
                     AppStateManager.setActiveCropCutoutId(null)
+                    AppStateManager.setSelectedCutoutId(null)
                 }
                 return true
             }

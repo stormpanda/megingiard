@@ -411,7 +411,7 @@
     <string name="cd_drag_toolbar">拖曳以移動工具列</string>
     <string name="mirror_editor_add_cutout">新增區塊</string>
     <string name="mirror_editor_delete_cutout">刪除所選</string>
-    <string name="mirror_editor_edit_crop">編輯裁切</string>
+    <string name="mirror_editor_deselect_cutout">取消選取區塊</string>
     <string name="mirror_editor_done">完成</string>
     <string name="mirror_editor_aspect_ratio_mode">長寬比模式</string>
     <string name="mirror_editor_aspect_ratio_free">自由</string>
@@ -429,7 +429,7 @@
     <string name="mirror_editor_toolbar_add">新增</string>
     <string name="mirror_editor_toolbar_settings">設定</string>
     <string name="mirror_editor_toolbar_delete">刪除</string>
-    <string name="mirror_editor_toolbar_crop">裁切</string>
+    <string name="mirror_editor_toolbar_deselect">取消選取</string>
     <string name="mirror_editor_toolbar_done">完成</string>
     <string name="mirror_editor_toolbar_cancel">取消</string>
     <string name="mirror_editor_toolbar_shape_circle">圓形</string>
@@ -453,7 +453,7 @@
     <string name="help_mirror_editor_aspect_desc">為所選區塊循環切換三種長寬比模式。「自由」— 無限制，可獨立調整大小。「頂部」— 鎖定長寬比以匹配主螢幕的裁切。「底部」— 鎖定長寬比以匹配次螢幕的區塊。</string>
     <string name="help_mirror_editor_shape_label">形狀</string>
     <string name="help_mirror_editor_shape_desc">在矩形與圓形之間切換所選區塊的形狀。適用於遊戲小地圖或圓形儀表，圓形裁切外觀更佳。</string>
-    <string name="help_mirror_editor_crop_desc">開啟所選區塊的裁切選擇器，讓您在主螢幕拖曳框架以選擇投影到此區塊的區域。</string>
+    <string name="help_mirror_editor_deselect_desc">取消選取當前編輯的區域，並關閉主螢幕上的裁切覆蓋層。</string>
     <string name="help_mirror_editor_delete_desc">從配置中永久移除所選區塊。如果被刪除的區塊啟用了觸控跟隨，該模式也會被停用。</string>
     <string name="help_mirror_editor_section_finish">完成</string>
     <string name="help_mirror_editor_done_desc">儲存本次的所有變更並關閉編輯器。更新後的區塊配置會立即生效。</string>

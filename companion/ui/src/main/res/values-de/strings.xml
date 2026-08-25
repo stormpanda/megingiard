@@ -573,7 +573,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <!-- Cutout Layout Editor -->
     <string name="mirror_editor_add_cutout">Ausschnitt hinzufügen</string>
     <string name="mirror_editor_delete_cutout">Auswahl löschen</string>
-    <string name="mirror_editor_edit_crop">Ausschnitt wählen</string>
+    <string name="mirror_editor_deselect_cutout">Ausschnitt abwählen</string>
     <string name="mirror_editor_done">Fertig</string>
     <string name="mirror_editor_aspect_ratio_mode">Seitenverhältnis-Modus</string>
     <string name="mirror_editor_aspect_ratio_free">Frei</string>
@@ -593,7 +593,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="mirror_editor_toolbar_add">Hinzufügen</string>
     <string name="mirror_editor_toolbar_settings">Optionen</string>
     <string name="mirror_editor_toolbar_delete">Löschen</string>
-    <string name="mirror_editor_toolbar_crop">Zuschneiden</string>
+    <string name="mirror_editor_toolbar_deselect">Abwählen</string>
     <string name="mirror_editor_toolbar_done">Fertig</string>
     <string name="mirror_editor_toolbar_cancel">Abbrechen</string>
     <string name="mirror_editor_toolbar_shape_circle">Kreis</string>
@@ -630,7 +630,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_mirror_editor_aspect_desc">Wechselt zwischen drei Seitenverhältnis-Modi für den ausgewählten Ausschnitt. Frei — keine Einschränkung, unabhängige Größenänderung. Oben — fixiert das Seitenverhältnis passend zum Crop-Bereich auf dem oberen Bildschirm. Unten — fixiert das Seitenverhältnis passend zum Ausschnitt auf dem unteren Bildschirm.</string>
     <string name="help_mirror_editor_shape_label">Form</string>
     <string name="help_mirror_editor_shape_desc">Wechselt die Form des ausgewählten Ausschnitts zwischen Rechteck und Kreis. Nützlich für Spielminiaturkarten oder runde Anzeigen, die im Kreis besser aussehen.</string>
-    <string name="help_mirror_editor_crop_desc">Öffnet die Crop-Auswahl für den gewählten Ausschnitt und ermöglicht es, einen Rahmen über den oberen Bildschirm zu ziehen, um den gespiegelten Bereich festzulegen.</string>
+    <string name="help_mirror_editor_deselect_desc">Hebt die Auswahl des aktuellen Ausschnitts auf und schließt die Zuschnitt-Überlagerung auf dem oberen Bildschirm.</string>
     <string name="help_mirror_editor_delete_desc">Entfernt den ausgewählten Ausschnitt dauerhaft aus dem Layout. Wenn der gelöschte Ausschnitt Touch-Follow aktiv hatte, wird dieser Modus ebenfalls deaktiviert.</string>
     <string name="help_mirror_editor_section_finish">Abschließen</string>
     <string name="help_mirror_editor_done_desc">Speichert alle in dieser Sitzung vorgenommenen Änderungen und schließt den Editor. Das aktualisierte Ausschnitt-Layout wird sofort aktiv.</string>

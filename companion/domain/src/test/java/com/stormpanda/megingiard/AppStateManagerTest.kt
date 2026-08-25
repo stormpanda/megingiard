@@ -887,4 +887,41 @@ class AppStateManagerTest {
             assertFalse(AppStateManager.hasSuspendedPrimaryModal.value)
             assertEquals(null, AppStateManager.suspendedPrimaryModal.value)
         }
+
+    @Test
+    fun `setSelectedCutoutId during viewport edit automatically syncs activeCropCutoutId`() =
+        runTest {
+            AppStateManager.closeActiveModal()
+            AppStateManager.setViewportEditActive(true)
+            assertEquals(null, AppStateManager.selectedCutoutId.value)
+            assertEquals(null, AppStateManager.activeCropCutoutId.value)
+
+            AppStateManager.setSelectedCutoutId("cutout_123")
+            assertEquals("cutout_123", AppStateManager.selectedCutoutId.value)
+            assertEquals("cutout_123", AppStateManager.activeCropCutoutId.value)
+
+            AppStateManager.setSelectedCutoutId(null)
+            assertEquals(null, AppStateManager.selectedCutoutId.value)
+            assertEquals(null, AppStateManager.activeCropCutoutId.value)
+
+            AppStateManager.closeActiveModal()
+        }
+
+    @Test
+    fun `setViewportEditActive syncs existing selectedCutoutId and clears on exit`() =
+        runTest {
+            AppStateManager.closeActiveModal()
+            AppStateManager.setSelectedCutoutId("cutout_abc")
+            // Outside viewport edit, activeCropCutoutId is not automatically updated
+            assertEquals("cutout_abc", AppStateManager.selectedCutoutId.value)
+            assertEquals(null, AppStateManager.activeCropCutoutId.value)
+
+            AppStateManager.setViewportEditActive(true)
+            assertEquals("cutout_abc", AppStateManager.selectedCutoutId.value)
+            assertEquals("cutout_abc", AppStateManager.activeCropCutoutId.value)
+
+            AppStateManager.setViewportEditActive(false)
+            assertEquals(null, AppStateManager.selectedCutoutId.value)
+            assertEquals(null, AppStateManager.activeCropCutoutId.value)
+        }
 }
