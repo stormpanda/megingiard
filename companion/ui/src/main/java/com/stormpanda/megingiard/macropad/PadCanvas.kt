@@ -136,6 +136,7 @@ internal fun PadCanvas(
     accentColor: Color,
     gridMode: GridMode,
     isLocked: Boolean,
+    transparentBackground: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
@@ -216,7 +217,7 @@ internal fun PadCanvas(
         modifier
             .fillMaxSize()
             .clip(RoundedCornerShape(PC_HIGHLIGHT_BORDER_RADIUS))
-            .background(Color.Black)
+            .background(if (transparentBackground) Color.Transparent else Color.Black)
             .then(
                 if (!isLocked) {
                     Modifier.border(

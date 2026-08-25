@@ -272,6 +272,9 @@ For Follow Touch mode, viewport scale/offset are used to center the crop of the 
 
 **Freeze OFF:** `SurfaceView.visibility = VISIBLE`, `setFrozenBitmap(null)` (recycles frozen bitmap), `virtualDisplay.surface` is restored to the active surface.
 
+**Primary Overlay Auto-Freeze:**
+When any primary screen overlay (e.g. `GlobalSettingsScreen`, `MacroPadEditor`, `MacroPadInspector`, `LayoutSettings`, `ProfileSettings`, `BackgroundSettings`, `CropSelectorOverlay`, etc.) opens on Display 0, `PrimaryOverlayManager` (and fallback `PrimaryOverlayActivity`) automatically freezes the mirror frame (`ScreenCaptureManager.setFrozen(true)`) so the companion display continues showing the frozen game frame rather than live-mirroring the configuration dialog or stopping capture. When the overlay is dismissed, live mirroring automatically resumes (`ScreenCaptureManager.setFrozen(false)`). If the mirror session was already manually frozen by the user prior to opening the overlay, the manual freeze state is preserved upon dismissal.
+
 **PixelCopy failure:** If `PixelCopy` returns a non-SUCCESS result, the caller MUST call `bitmap.recycle()` immediately — the manager never received ownership (see AGENTS.md §7.3).
 
 ### Follow Touch Mode

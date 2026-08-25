@@ -150,6 +150,7 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
                 accentColor = colors.accent,
                 gridMode = gridMode,
                 isLocked = !isEditingPositions,
+                transparentBackground = showEmbeddedMirror,
                 modifier = Modifier.fillMaxSize(),
             )
         } else {

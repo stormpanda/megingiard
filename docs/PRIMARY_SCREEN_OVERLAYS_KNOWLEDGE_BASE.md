@@ -70,8 +70,8 @@ startActivity(intent, options.toBundle())
    - The game/app running underneath on Display 0 remains completely visible.
 
 ### 2.3 Frame Freeze & Capture Management
-* When the overlay opens, [`CropSelectorActivity.onCreate`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/ui/src/main/java/com/stormpanda/megingiard/mirror/CropSelectorActivity.kt#L41-L44) freezes screen capture (`ScreenCaptureManager.setFrozen(true)`).
-* When dismissed (`onDestroy`), it restores live capture (`ScreenCaptureManager.setFrozen(false)`).
+* When a primary overlay opens, [`PrimaryOverlayManager`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayManager.kt) (and fallback [`PrimaryOverlayActivity`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayActivity.kt) / [`CropSelectorActivity`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/ui/src/main/java/com/stormpanda/megingiard/mirror/CropSelectorActivity.kt)) automatically freezes screen capture (`ScreenCaptureManager.setFrozen(true)`).
+* When dismissed, it automatically restores live capture (`ScreenCaptureManager.setFrozen(false)`), while preserving prior manual freeze state if the user had already frozen capture beforehand.
 
 ### 2.4 Single-Process State Synchronization
 * Both activities run within the same process (`com.stormpanda.megingiard`).

@@ -22,7 +22,14 @@ import androidx.lifecycle.lifecycleScope
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.mirror.CropSelectorOverlay
+import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.ui.AppDimens
+import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.LocalAppDimens
+import com.stormpanda.megingiard.ui.colorSchemeFor
+import com.stormpanda.megingiard.ui.megingiardTypography
+import com.stormpanda.megingiard.ui.paletteFor
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
@@ -36,9 +43,18 @@ private const val TAG = "PrimaryOverlayActivity"
  * display to remain an unobstructed, live interactive action deck.
  */
 class PrimaryOverlayActivity : ComponentActivity() {
+    private var wasFrozenBeforeOverlay = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        AppLog.i(TAG, "onCreate: started on display=${display?.displayId}")
+        val displayId = runCatching { display?.displayId }.getOrNull()
+        AppLog.i(TAG, "onCreate: started on display=$displayId")
+
+        wasFrozenBeforeOverlay = savedInstanceState?.getBoolean("wasFrozenBeforeOverlay") ?: ScreenCaptureManager.isFrozen.value
+        if (savedInstanceState == null && !wasFrozenBeforeOverlay && ScreenCaptureManager.isCapturing.value) {
+            AppLog.i(TAG, "Freezing mirror capture for primary overlay activity")
+            ScreenCaptureManager.setFrozen(true)
+        }
 
         enableEdgeToEdge()
         window.addFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL)
@@ -179,12 +195,21 @@ class PrimaryOverlayActivity : ComponentActivity() {
         return super.onKeyUp(keyCode, event)
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean("wasFrozenBeforeOverlay", wasFrozenBeforeOverlay)
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         AppLog.i(TAG, "onDestroy: isFinishing=$isFinishing")
         if (isFinishing) {
             AppStateManager.closePrimaryModal()
             AppStateManager.setActiveCropCutoutId(null)
+            if (!wasFrozenBeforeOverlay && ScreenCaptureManager.isCapturing.value) {
+                AppLog.i(TAG, "Resuming live mirror capture after closing primary overlay activity")
+                ScreenCaptureManager.setFrozen(false)
+            }
         }
     }
 }

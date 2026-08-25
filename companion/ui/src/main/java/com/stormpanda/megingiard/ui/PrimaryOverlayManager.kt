@@ -34,6 +34,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.catalog.DisplayDetector
 import com.stormpanda.megingiard.mirror.CropSelectorOverlay
+import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.SettingsManager
@@ -61,6 +62,7 @@ object PrimaryOverlayManager {
     private var overlayView: ComposeView? = null
     private var overlayWindowManager: WindowManager? = null
     private var lifecycleOwner: WindowOverlayLifecycleOwner? = null
+    private var wasFrozenBeforeOverlay = false
     private val mainHandler = Handler(Looper.getMainLooper())
 
     fun init(app: Application) {
@@ -114,6 +116,16 @@ object PrimaryOverlayManager {
             // Overlay already attached to WindowManager; Compose state flow will re-compose content
             AppLog.d(TAG, "Overlay window already attached — updating content via state flow")
             return
+        }
+
+        if (ScreenCaptureManager.isCapturing.value) {
+            wasFrozenBeforeOverlay = ScreenCaptureManager.isFrozen.value
+            if (!wasFrozenBeforeOverlay) {
+                AppLog.i(TAG, "Freezing mirror capture for primary overlay")
+                ScreenCaptureManager.setFrozen(true)
+            }
+        } else {
+            wasFrozenBeforeOverlay = false
         }
 
         val accessibilityService = MegingiardAccessibilityService.getInstance()
@@ -320,6 +332,10 @@ object PrimaryOverlayManager {
             AppLog.i(TAG, "Primary overlay window successfully attached to Display 0 WindowManager (non-activity)")
         } catch (e: Exception) {
             AppLog.e(TAG, "Failed to attach primary overlay window: ${e.message}", e)
+            if (ScreenCaptureManager.isCapturing.value && !wasFrozenBeforeOverlay) {
+                ScreenCaptureManager.setFrozen(false)
+            }
+            wasFrozenBeforeOverlay = false
             launchFallbackActivity(app)
         }
     }
@@ -338,6 +354,11 @@ object PrimaryOverlayManager {
             overlayWindowManager = null
             lifecycleOwner?.destroy()
             lifecycleOwner = null
+            if (ScreenCaptureManager.isCapturing.value && !wasFrozenBeforeOverlay) {
+                AppLog.i(TAG, "Resuming live mirror capture after closing primary overlay")
+                ScreenCaptureManager.setFrozen(false)
+            }
+            wasFrozenBeforeOverlay = false
         }
     }
 
