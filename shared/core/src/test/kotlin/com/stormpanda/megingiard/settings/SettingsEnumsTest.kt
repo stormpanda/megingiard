@@ -28,5 +28,6 @@ class SettingsEnumsTest {
         assertEquals(SettingsCategory.CONFIGURATION, SettingsSubPage.SHARE_PROFILE.parentCategory)
         assertEquals(SettingsCategory.CONFIGURATION, SettingsSubPage.RESTORE_BACKUP.parentCategory)
         assertEquals(SettingsCategory.CONFIGURATION, SettingsSubPage.RESTORE_REVIEW.parentCategory)
+        assertEquals(SettingsCategory.UPDATES, SettingsSubPage.UPDATE_AVAILABLE.parentCategory)
     }
 }

@@ -33,7 +33,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -58,7 +57,6 @@ import com.stormpanda.megingiard.media.SteamGridDbException
 import com.stormpanda.megingiard.media.SteamGridDbGame
 import com.stormpanda.megingiard.media.SteamGridDbImage
 import com.stormpanda.megingiard.settings.SettingsManager
-import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
 import com.stormpanda.megingiard.ui.GamepadFocusCard
@@ -131,8 +129,7 @@ internal fun SteamGridDbScrapeSubPageContent(
     var selectedImage by remember { mutableStateOf<SteamGridDbImage?>(null) }
 
     var isDownloading by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-    var pendingErrorDialog by remember { mutableStateOf<Throwable?>(null) }
+    var scrapeError by remember { mutableStateOf<Throwable?>(null) }
 
     var activeFetchJob by remember { mutableStateOf<Job?>(null) }
 
@@ -145,7 +142,7 @@ internal fun SteamGridDbScrapeSubPageContent(
         type: String,
     ) {
         selectedImage = null
-        errorMessage = null
+        scrapeError = null
         val cacheKey = gameId to type
         val cached = imagesCache[cacheKey]
         if (cached != null) {
@@ -167,9 +164,8 @@ internal fun SteamGridDbScrapeSubPageContent(
                         isLoadingImages = false
                     }.onFailure { err ->
                         AppLog.w(TAG, "loadImagesForGame failure: ${err.message}")
-                        errorMessage = err.message
                         isLoadingImages = false
-                        pendingErrorDialog = err
+                        scrapeError = err
                     }
             }
     }
@@ -182,7 +178,7 @@ internal fun SteamGridDbScrapeSubPageContent(
         selectedGame = null
         selectedImage = null
         imagesList = emptyList()
-        errorMessage = null
+        scrapeError = null
         activeFetchJob =
             scope.launch {
                 SteamGridDbClient
@@ -210,17 +206,15 @@ internal fun SteamGridDbScrapeSubPageContent(
                                         isLoadingImages = false
                                     }.onFailure { err ->
                                         AppLog.w(TAG, "searchGames auto-fetch failure: ${err.message}")
-                                        errorMessage = err.message
                                         isLoadingImages = false
-                                        pendingErrorDialog = err
+                                        scrapeError = err
                                     }
                             }
                         }
                     }.onFailure { err ->
                         AppLog.w(TAG, "searchGames failure: ${err.message}")
-                        errorMessage = err.message
                         isSearchingGames = false
-                        pendingErrorDialog = err
+                        scrapeError = err
                     }
             }
     }
@@ -345,9 +339,8 @@ internal fun SteamGridDbScrapeSubPageContent(
                                 isDownloading = false
                             }.onFailure { err ->
                                 AppLog.e(TAG, "Failed to download image: ${err.message}", err)
-                                errorMessage = err.message
                                 isDownloading = false
-                                pendingErrorDialog = err
+                                scrapeError = err
                             }
                     }
                 },
@@ -402,29 +395,31 @@ internal fun SteamGridDbScrapeSubPageContent(
                     )
                 }
             }
-        } else if (errorMessage != null) {
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(STATUS_BOX_HEIGHT),
-                contentAlignment = Alignment.Center,
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.Rounded.Warning,
-                        contentDescription = null,
-                        tint = colors.error,
-                        modifier = Modifier.size(SG_ICON_SIZE_36),
-                    )
-                    Spacer(Modifier.height(SG_SPACING_8))
-                    Text(
-                        text = stringResource(R.string.steamgriddb_scrape_error, errorMessage ?: ""),
-                        color = colors.error,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
+        } else if (scrapeError != null) {
+            val (titleRes, messageRes) =
+                when (scrapeError) {
+                    is SteamGridDbException.Offline -> {
+                        R.string.steamgriddb_error_offline_title to R.string.steamgriddb_error_offline_message
+                    }
+
+                    is SteamGridDbException.RateLimited -> {
+                        R.string.steamgriddb_error_rate_limited_title to R.string.steamgriddb_error_rate_limited_message
+                    }
+
+                    is SteamGridDbException.ServiceUnavailable -> {
+                        R.string.steamgriddb_error_unreachable_title to R.string.steamgriddb_error_unreachable_message
+                    }
+
+                    else -> {
+                        R.string.steamgriddb_error_generic_title to R.string.steamgriddb_error_generic_message
+                    }
                 }
-            }
+            GamepadInfoBox(
+                text = stringResource(titleRes),
+                description = stringResource(messageRes),
+                icon = Icons.Rounded.Warning,
+                iconTint = colors.error,
+            )
         } else if (gamesList.isEmpty() && searchQuery.isNotBlank()) {
             GamepadInfoBox(
                 text = stringResource(R.string.steamgriddb_scrape_no_games_found),
@@ -499,62 +494,6 @@ internal fun SteamGridDbScrapeSubPageContent(
                 }
             }
         }
-    }
-
-    val currentError = pendingErrorDialog
-    if (currentError != null) {
-        val (titleRes, messageRes) =
-            when (currentError) {
-                is SteamGridDbException.Offline -> {
-                    R.string.steamgriddb_error_offline_title to R.string.steamgriddb_error_offline_message
-                }
-
-                is SteamGridDbException.RateLimited -> {
-                    R.string.steamgriddb_error_rate_limited_title to R.string.steamgriddb_error_rate_limited_message
-                }
-
-                is SteamGridDbException.ServiceUnavailable -> {
-                    R.string.steamgriddb_error_unreachable_title to R.string.steamgriddb_error_unreachable_message
-                }
-
-                else -> {
-                    R.string.steamgriddb_error_generic_title to R.string.steamgriddb_error_generic_message
-                }
-            }
-        AppAlertDialog(
-            onDismissRequest = {
-                AppLog.d(TAG, "Dismissing error dialog")
-                pendingErrorDialog = null
-                errorMessage = null
-            },
-            title = {
-                Text(
-                    text = stringResource(titleRes),
-                    color = colors.onSurface,
-                    style = MaterialTheme.typography.titleLarge,
-                )
-            },
-            text = {
-                Text(
-                    text = stringResource(messageRes),
-                    color = colors.onSurfaceSecondary,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    AppLog.d(TAG, "Confirm dismissing error dialog")
-                    pendingErrorDialog = null
-                    errorMessage = null
-                }) {
-                    Text(
-                        text = stringResource(R.string.steamgriddb_error_dismiss),
-                        color = colors.accent,
-                        style = MaterialTheme.typography.labelLarge,
-                    )
-                }
-            },
-        )
     }
 }
 

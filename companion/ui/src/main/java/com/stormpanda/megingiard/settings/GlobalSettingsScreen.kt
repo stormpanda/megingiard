@@ -46,6 +46,7 @@ import androidx.compose.material.icons.rounded.Gradient
 import androidx.compose.material.icons.rounded.Inventory2
 import androidx.compose.material.icons.rounded.Key
 import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.OpenInBrowser
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PlayCircle
@@ -112,6 +113,7 @@ import com.stormpanda.megingiard.ui.GamepadColorPaletteCard
 import com.stormpanda.megingiard.ui.GamepadColorSwatch
 import com.stormpanda.megingiard.ui.GamepadDeck
 import com.stormpanda.megingiard.ui.GamepadFocusCard
+import com.stormpanda.megingiard.ui.GamepadInfoBox
 import com.stormpanda.megingiard.ui.GamepadPill
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadSliderCard
@@ -191,7 +193,6 @@ fun GlobalSettingsScreen(
     val colors = LocalAppColors.current
     val effectiveAccent = colors.accent
 
-    var showUpdatePromptDialog by rememberSaveable { mutableStateOf(false) }
     val exportResult by ConfigManager.exportResult.collectAsState()
     val logReportSaveResult by LogReportManager.saveResult.collectAsState()
 
@@ -326,7 +327,7 @@ fun GlobalSettingsScreen(
                                         description = stringResource(R.string.settings_update_available_banner_desc),
                                         actionText = stringResource(R.string.settings_update_now_btn),
                                         icon = Icons.Rounded.SystemUpdate,
-                                        onClick = { showUpdatePromptDialog = true },
+                                        onClick = { subPageStack = listOf(SettingsSubPage.UPDATE_AVAILABLE) },
                                         modifier = Modifier.firstDeckItem(),
                                     )
                                 }
@@ -676,7 +677,7 @@ fun GlobalSettingsScreen(
                                         if (isCheckingUpdates) return@GamepadActionCard
 
                                         if (hasTriggeredManualCheck && updateAvailable) {
-                                            showUpdatePromptDialog = true
+                                            subPageStack = listOf(SettingsSubPage.UPDATE_AVAILABLE)
                                         } else {
                                             hasTriggeredManualCheck = true
                                             viewModel.checkForUpdatesManually()
@@ -921,31 +922,38 @@ fun GlobalSettingsScreen(
                             }
                         }
                     }
+
+                    SettingsSubPage.UPDATE_AVAILABLE -> {
+                        val releaseUrl =
+                            latestReleaseInfo?.htmlUrl?.ifBlank { "https://github.com/stormpanda/megingiard/releases" }
+                                ?: "https://github.com/stormpanda/megingiard/releases"
+                        val tagName = latestReleaseInfo?.tagName ?: ""
+                        GamepadDeck(
+                            breadcrumbs =
+                                listOf(
+                                    stringResource(R.string.settings_jump_updates),
+                                    stringResource(R.string.update_dialog_title, tagName),
+                                ),
+                            accentColor = effectiveAccent,
+                        ) {
+                            UpdateAvailableSubPage(
+                                tagName = tagName,
+                                effectiveAccent = effectiveAccent,
+                                onBackupAndOpen = {
+                                    selectedCategory = SettingsCategory.CONFIGURATION
+                                    subPageStack = listOf(SettingsSubPage.CREATE_BACKUP)
+                                    launchUrlOnPrimaryDisplay(context, releaseUrl)
+                                },
+                                onOpenDirectly = {
+                                    launchUrlOnPrimaryDisplay(context, releaseUrl)
+                                },
+                            )
+                        }
+                    }
                 }
             }
         },
     )
-    if (showUpdatePromptDialog) {
-        val releaseUrl =
-            latestReleaseInfo?.htmlUrl?.ifBlank { "https://github.com/stormpanda/megingiard/releases" }
-                ?: "https://github.com/stormpanda/megingiard/releases"
-        UpdatePromptDialog(
-            tagName = latestReleaseInfo?.tagName ?: "",
-            colors = colors,
-            accentColor = effectiveAccent,
-            onBackupAndOpen = {
-                showUpdatePromptDialog = false
-                selectedCategory = SettingsCategory.CONFIGURATION
-                subPageStack = listOf(SettingsSubPage.CREATE_BACKUP)
-                launchUrlOnPrimaryDisplay(context, releaseUrl)
-            },
-            onOpenDirectly = {
-                showUpdatePromptDialog = false
-                launchUrlOnPrimaryDisplay(context, releaseUrl)
-            },
-            onDismiss = { showUpdatePromptDialog = false },
-        )
-    }
     LaunchedEffect(importError, configImportError) {
         val error = importError ?: configImportError
         if (error != null) {
@@ -1535,5 +1543,37 @@ private fun RestoreReviewSubPage(
         onClick = {
             onConfirmImport(export, pendingInAppImportMode)
         },
+    )
+}
+
+@Composable
+private fun UpdateAvailableSubPage(
+    tagName: String,
+    effectiveAccent: Color,
+    onBackupAndOpen: () -> Unit,
+    onOpenDirectly: () -> Unit,
+) {
+    GamepadInfoBox(
+        text = stringResource(R.string.update_dialog_title, tagName),
+        description = stringResource(R.string.update_dialog_message, tagName),
+        icon = Icons.Rounded.SystemUpdate,
+        iconTint = effectiveAccent,
+    )
+
+    GamepadActionCard(
+        title = stringResource(R.string.update_dialog_btn_backup_and_open),
+        description = stringResource(R.string.update_dialog_backup_and_open_desc),
+        actionText = stringResource(R.string.gamepad_action_open),
+        icon = Icons.Rounded.SaveAlt,
+        onClick = onBackupAndOpen,
+        modifier = Modifier.firstDeckItem(),
+    )
+
+    GamepadActionCard(
+        title = stringResource(R.string.update_dialog_btn_open_directly),
+        description = stringResource(R.string.update_dialog_open_directly_desc),
+        actionText = stringResource(R.string.gamepad_action_open),
+        icon = Icons.Rounded.OpenInBrowser,
+        onClick = onOpenDirectly,
     )
 }

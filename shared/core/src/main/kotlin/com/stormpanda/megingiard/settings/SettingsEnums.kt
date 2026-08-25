@@ -26,4 +26,5 @@ enum class SettingsSubPage(
     SHARE_PROFILE(SettingsCategory.CONFIGURATION),
     RESTORE_BACKUP(SettingsCategory.CONFIGURATION),
     RESTORE_REVIEW(SettingsCategory.CONFIGURATION),
+    UPDATE_AVAILABLE(SettingsCategory.UPDATES),
 }

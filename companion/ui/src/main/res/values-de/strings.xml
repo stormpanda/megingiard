@@ -887,7 +887,9 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="update_dialog_title">Update verfügbar (%1$s)</string>
     <string name="update_dialog_message">Version %1$s ist auf GitHub Releases verfügbar.\n\nMöchtest du deine Konfiguration sichern, bevor die Download-Seite geöffnet wird?</string>
     <string name="update_dialog_btn_backup_and_open">Sichern &amp; Link öffnen</string>
+    <string name="update_dialog_backup_and_open_desc">Einstellungen in Backup-Datei exportieren und GitHub Releases im Browser öffnen</string>
     <string name="update_dialog_btn_open_directly">Link direkt öffnen</string>
+    <string name="update_dialog_open_directly_desc">GitHub Releases-Downloadseite im Browser ohne Backup öffnen</string>
     <string name="update_dialog_btn_cancel">Abbrechen</string>
 
     <!-- Settings card description -->

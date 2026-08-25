@@ -25,13 +25,13 @@ The Automatic Update Check feature periodically and silently queries the GitHub 
 - The UI MUST display the current update check status (e.g. checking status, app up-to-date, or new release tag).
 - The update available banner MUST remain prominently displayed at the top of the Global Settings screen when an update is available.
 
-### FR-U3: Pre-Update Backup Prompt & Top-Screen Launcher
+### FR-U3: Pre-Update Backup Drill-Down & Top-Screen Launcher
 
-- Clicking the update link or banner MUST present an update prompt dialog.
-- The dialog MUST allow the user to choose between:
+- Clicking the update link or banner MUST drill down into the dedicated update sub-page (`SettingsSubPage.UPDATE_AVAILABLE`).
+- The sub-page MUST allow the user to choose between:
   1. **Backup Config & Open Link**: Navigates to the full configuration export sub-page (`SettingsSubPage.CREATE_BACKUP`) and opens the release URL on the top display (`Display.DEFAULT_DISPLAY`).
-  2. **Open Link Directly**: Opens the release URL on the top display (`Display.DEFAULT_DISPLAY`) without launching the backup export dialog.
-  3. **Cancel**: Dismisses the update prompt.
+  2. **Open Link Directly**: Opens the release URL on the top display (`Display.DEFAULT_DISPLAY`) without launching backup export.
+  3. **Cancel / Back**: Pressing `[B]` or back navigation returns to the main settings deck.
 
 ### FR-U4: Obtainium App Tracking Shortcut
 
@@ -53,10 +53,10 @@ GitHub Releases API
        ├── Parses release tag & evaluates SemVerComparator (:core)
        ├── Persists check timestamp & release data in DataStore
        ▼
-GlobalSettingsViewModel / GlobalSettingsScreen (:app)
+GlobalSettingsViewModel / GlobalSettingsScreen (:companion:ui)
        │
        ├── Displays UpdateAvailableBanner & UpdateCheckSection
-       └── Opens UpdatePromptDialog & launches top-screen browser
+       └── Navigates to SettingsSubPage.UPDATE_AVAILABLE & launches top-screen browser
 ```
 
 ### Component Details
@@ -64,7 +64,7 @@ GlobalSettingsViewModel / GlobalSettingsScreen (:app)
 - **`AppReleaseInfo` (`:core`)**: Lightweight `@Serializable` data model for GitHub release payloads.
 - **`SemVerComparator` (`:core`)**: Semantic version string comparison logic handling `'v'` prefixes, `-SNAPSHOT` pre-release tags, and `major.minor.patch` numerical ordering.
 - **`UpdateManager` (`:domain`)**: Singleton managing background network calls on `Dispatchers.IO`, 24-hour rate limiting, and DataStore state persistence.
-- **`UpdatePromptDialog` (`:app`)**: Confirmation dialog offering configuration backup prior to opening the web browser on the top display.
+- **`SettingsSubPage.UPDATE_AVAILABLE` (`:companion:ui`)**: Dedicated in-tree gamepad sub-page offering configuration backup prior to opening the web browser on the top display.
 
 ### Source Files
 
@@ -73,5 +73,4 @@ GlobalSettingsViewModel / GlobalSettingsScreen (:app)
 | `AppReleaseInfo.kt` | Data model for GitHub release JSON responses |
 | `SemVerComparator.kt` | Version string parser and semver comparison logic |
 | `UpdateManager.kt` | Background fetcher, rate-limiter, and DataStore state persistence |
-| `UpdatePromptDialog.kt` | Pre-update backup prompt dialog |
-| `GlobalSettingsScreen.kt` | Renders update checking controls and update available banner in Global Settings |
+| `GlobalSettingsScreen.kt` | Renders update checking controls, update available banner, and `UpdateAvailableSubPage` in Global Settings |

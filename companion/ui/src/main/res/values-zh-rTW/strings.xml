@@ -662,7 +662,9 @@
     <string name="update_dialog_title">有可用更新 (%1$s)</string>
     <string name="update_dialog_message">GitHub Releases 上有新版本 %1$s 可供下載。\n\n在開啟下載頁面之前，您是否要先備份您的設定檔？</string>
     <string name="update_dialog_btn_backup_and_open">備份並開啟連結</string>
+    <string name="update_dialog_backup_and_open_desc">將設定匯出至備份檔案並在瀏覽器中開啟 GitHub Releases</string>
     <string name="update_dialog_btn_open_directly">直接開啟連結</string>
+    <string name="update_dialog_open_directly_desc">直接在瀏覽器中開啟 GitHub Releases 下載頁面而不進行備份</string>
     <string name="update_dialog_btn_cancel">取消</string>
     <!-- Settings card description -->
     <string name="help_settings_auto_update_desc">啟用時，Megingiard 會每 24 小時靜默檢查一次新版本。若發現更新，您可以備份設定並在上方螢幕的預設瀏覽器中開啟發布頁面。</string>
