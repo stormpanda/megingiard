@@ -778,6 +778,9 @@ Open Settings to create a layout.</string>
     <string name="steamgriddb_error_rate_limited_message">Rate limit exceeded. Please try again later.</string>
     <string name="steamgriddb_error_unreachable_title">SteamGridDB Unreachable</string>
     <string name="steamgriddb_error_unreachable_message">SteamGridDB is currently unreachable or down. Please try again later.</string>
+    <string name="steamgriddb_error_invalid_token_title">Invalid API Key</string>
+    <string name="steamgriddb_error_invalid_token_message">Your SteamGridDB API key is invalid, missing, or unauthorized. Please verify your token in Settings.</string>
+    <string name="steamgriddb_error_api_title">SteamGridDB API Error</string>
     <string name="steamgriddb_error_generic_title">Error</string>
     <string name="steamgriddb_error_generic_message">An unexpected error occurred. Please try again.</string>
     <string name="steamgriddb_error_dismiss">OK</string>

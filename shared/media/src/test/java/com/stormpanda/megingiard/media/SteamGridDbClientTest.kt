@@ -13,6 +13,15 @@ class SteamGridDbClientTest {
 
     @Test
     fun testMapHttpError() {
+        // 401 -> Unauthorized
+        val err401Json = mapHttpError(401, """{"success":false,"errors":["Invalid API key"]}""")
+        assertTrue(err401Json is SteamGridDbException.Unauthorized)
+        assertEquals("Invalid API key", err401Json.message)
+
+        val err401Plain = mapHttpError(401, "")
+        assertTrue(err401Plain is SteamGridDbException.Unauthorized)
+        assertEquals("Invalid or unauthorized API key", err401Plain.message)
+
         // 429 -> RateLimited
         val err429 = mapHttpError(429, "Too many requests")
         assertTrue(err429 is SteamGridDbException.RateLimited)
@@ -28,11 +37,19 @@ class SteamGridDbClientTest {
         // Other status codes -> ApiError
         val err400 = mapHttpError(400, "Bad Request")
         assertTrue(err400 is SteamGridDbException.ApiError)
-        assertEquals("HTTP error 400: Bad Request", err400.message)
+        assertEquals("HTTP 400: Bad Request", err400.message)
 
         val err500 = mapHttpError(500, "Internal Server Error")
         assertTrue(err500 is SteamGridDbException.ApiError)
-        assertEquals("HTTP error 500: Internal Server Error", err500.message)
+        assertEquals("HTTP 500: Internal Server Error", err500.message)
+    }
+
+    @Test
+    fun testParseErrorText() {
+        assertEquals("Invalid key format", parseErrorText("""{"success":false,"errors":["Invalid key format"]}"""))
+        assertEquals("First error; Second error", parseErrorText("""{"success":false,"errors":["First error","Second error"]}"""))
+        assertEquals("Plain text error", parseErrorText("Plain text error"))
+        assertEquals("", parseErrorText(""))
     }
 
     @Test
@@ -146,7 +163,7 @@ class SteamGridDbClientTest {
         kotlinx.coroutines.runBlocking {
             val result = SteamGridDbClient.validateToken("")
             assertTrue(result.isFailure)
-            assertTrue(result.exceptionOrNull() is IllegalArgumentException)
+            assertTrue(result.exceptionOrNull() is SteamGridDbException.Unauthorized)
         }
     }
 }

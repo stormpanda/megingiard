@@ -787,6 +787,9 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="steamgriddb_error_rate_limited_message">Anfragenlimit überschritten. Bitte versuche es später noch einmal.</string>
     <string name="steamgriddb_error_unreachable_title">SteamGridDB nicht erreichbar</string>
     <string name="steamgriddb_error_unreachable_message">SteamGridDB ist derzeit nicht erreichbar oder offline. Bitte versuche es später noch einmal.</string>
+    <string name="steamgriddb_error_invalid_token_title">Ungültiger API-Schlüssel</string>
+    <string name="steamgriddb_error_invalid_token_message">Dein SteamGridDB-API-Schlüssel ist ungültig, fehlt oder ist nicht autorisiert. Bitte überprüfe deinen Schlüssel in den Einstellungen.</string>
+    <string name="steamgriddb_error_api_title">SteamGridDB API-Fehler</string>
     <string name="steamgriddb_error_generic_title">Fehler</string>
     <string name="steamgriddb_error_generic_message">Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es noch einmal.</string>
     <string name="steamgriddb_error_dismiss">OK</string>

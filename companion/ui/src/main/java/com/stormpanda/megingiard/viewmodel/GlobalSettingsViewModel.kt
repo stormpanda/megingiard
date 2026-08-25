@@ -130,7 +130,8 @@ class GlobalSettingsViewModel : ViewModel() {
                             is SteamGridDbException.Offline -> SteamGridDbTestStatus.OFFLINE
                             is SteamGridDbException.RateLimited -> SteamGridDbTestStatus.RATE_LIMITED
                             is SteamGridDbException.ServiceUnavailable -> SteamGridDbTestStatus.UNREACHABLE
-                            is SteamGridDbException.ApiError -> SteamGridDbTestStatus.INVALID_TOKEN
+                            is SteamGridDbException.Unauthorized -> SteamGridDbTestStatus.INVALID_TOKEN
+                            is SteamGridDbException.ApiError -> SteamGridDbTestStatus.ERROR
                             else -> SteamGridDbTestStatus.ERROR
                         }
                 }

@@ -577,6 +577,9 @@
     <string name="steamgriddb_error_rate_limited_message">已超過頻率限制。請稍後重試。</string>
     <string name="steamgriddb_error_unreachable_title">無法連接 SteamGridDB</string>
     <string name="steamgriddb_error_unreachable_message">目前無法連接 SteamGridDB 或伺服器已離線。請稍後重試。</string>
+    <string name="steamgriddb_error_invalid_token_title">無效的 API 金鑰</string>
+    <string name="steamgriddb_error_invalid_token_message">您的 SteamGridDB API 金鑰無效、遺失或未獲授權。請在設定中檢查您的金鑰。</string>
+    <string name="steamgriddb_error_api_title">SteamGridDB API 錯誤</string>
     <string name="steamgriddb_error_generic_title">錯誤</string>
     <string name="steamgriddb_error_generic_message">發生非預期的錯誤。請重試。</string>
     <string name="steamgriddb_error_dismiss">確定</string>

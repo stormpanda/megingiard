@@ -396,27 +396,48 @@ internal fun SteamGridDbScrapeSubPageContent(
                 }
             }
         } else if (scrapeError != null) {
-            val (titleRes, messageRes) =
-                when (scrapeError) {
+            val (title, message) =
+                when (val err = scrapeError) {
+                    is SteamGridDbException.Unauthorized -> {
+                        stringResource(R.string.steamgriddb_error_invalid_token_title) to
+                            (
+                                err.message?.takeIf { it.isNotBlank() }
+                                    ?: stringResource(R.string.steamgriddb_error_invalid_token_message)
+                            )
+                    }
+
                     is SteamGridDbException.Offline -> {
-                        R.string.steamgriddb_error_offline_title to R.string.steamgriddb_error_offline_message
+                        stringResource(R.string.steamgriddb_error_offline_title) to
+                            stringResource(R.string.steamgriddb_error_offline_message)
                     }
 
                     is SteamGridDbException.RateLimited -> {
-                        R.string.steamgriddb_error_rate_limited_title to R.string.steamgriddb_error_rate_limited_message
+                        stringResource(R.string.steamgriddb_error_rate_limited_title) to
+                            stringResource(R.string.steamgriddb_error_rate_limited_message)
                     }
 
                     is SteamGridDbException.ServiceUnavailable -> {
-                        R.string.steamgriddb_error_unreachable_title to R.string.steamgriddb_error_unreachable_message
+                        stringResource(R.string.steamgriddb_error_unreachable_title) to
+                            stringResource(R.string.steamgriddb_error_unreachable_message)
+                    }
+
+                    is SteamGridDbException.ApiError -> {
+                        stringResource(R.string.steamgriddb_error_api_title) to
+                            (
+                                err.message?.takeIf { it.isNotBlank() }
+                                    ?: stringResource(R.string.steamgriddb_error_generic_message)
+                            )
                     }
 
                     else -> {
-                        R.string.steamgriddb_error_generic_title to R.string.steamgriddb_error_generic_message
+                        val detail = err?.message?.takeIf { it.isNotBlank() }
+                        stringResource(R.string.steamgriddb_error_generic_title) to
+                            (detail ?: stringResource(R.string.steamgriddb_error_generic_message))
                     }
                 }
             GamepadInfoBox(
-                text = stringResource(titleRes),
-                description = stringResource(messageRes),
+                text = title,
+                description = message,
                 icon = Icons.Rounded.Warning,
                 iconTint = colors.error,
             )
