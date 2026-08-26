@@ -48,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -169,18 +170,6 @@ internal fun TouchRecordingSheet(
         }
     }
 
-    val pulseTransition = rememberInfiniteTransition(label = "touchRecordingPulse")
-    val pulseAlpha by pulseTransition.animateFloat(
-        initialValue = 0.35f,
-        targetValue = 1f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(durationMillis = TRS_PULSE_ANIM_MS, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "touchRecordingDotPulse",
-    )
-
     val mode = recording?.mode ?: TouchRecordingMode.TAP
 
     Box(
@@ -248,12 +237,9 @@ internal fun TouchRecordingSheet(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Box(
-                        modifier =
-                            Modifier
-                                .size(TRS_DOT_SIZE)
-                                .clip(CircleShape)
-                                .background(colors.error.copy(alpha = pulseAlpha)),
+                    PulsingRecordingDot(
+                        color = colors.error,
+                        modifier = Modifier.size(TRS_DOT_SIZE),
                     )
                     Spacer(Modifier.width(TRS_SPACING_M))
                     Text(
@@ -640,4 +626,30 @@ private fun TouchScreenRadar(
             }
         }
     }
+}
+
+@Composable
+private fun PulsingRecordingDot(
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    val pulseTransition = rememberInfiniteTransition(label = "touchRecordingDotPulse")
+    val pulseAlpha by pulseTransition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 1f,
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(durationMillis = TRS_PULSE_ANIM_MS, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "touchRecordingDotPulseAlpha",
+    )
+
+    Box(
+        modifier =
+            modifier
+                .drawBehind {
+                    drawCircle(color = color.copy(alpha = pulseAlpha))
+                },
+    )
 }

@@ -146,7 +146,7 @@ private const val GS_RESTORE_CONFIRM_TIMEOUT_MS = 8_000L
 private const val GS_OBTAINIUM_REPO_URL = "https://github.com/stormpanda/megingiard"
 private const val GS_OBTAINIUM_FALLBACK_URL = "https://github.com/ImranR98/Obtainium"
 
-private val ACCENT_PALETTE_PRESETS =
+private val GS_ACCENT_PALETTE_PRESETS =
     listOf(
         Color(0xFFFF5252), // Red
         Color(0xFFFF7043), // Deep Orange
@@ -452,13 +452,14 @@ fun GlobalSettingsScreen(
                                 )
 
                                 if (themeMode.supportsCustomAccent) {
-                                    val isCustomAccent = accentColorArgb == customAccentColorArgb && accentColor !in ACCENT_PALETTE_PRESETS
+                                    val isCustomAccent =
+                                        accentColorArgb == customAccentColorArgb && accentColor !in GS_ACCENT_PALETTE_PRESETS
 
                                     GamepadColorPaletteCard(
                                         title = stringResource(R.string.settings_accent_color),
                                         description = stringResource(R.string.settings_accent_color_desc),
                                         icon = Icons.Rounded.FormatColorFill,
-                                        paletteColors = ACCENT_PALETTE_PRESETS,
+                                        paletteColors = GS_ACCENT_PALETTE_PRESETS,
                                         selectedColor = accentColor,
                                         onColorSelected = { viewModel.setAccentColor(it.toArgb()) },
                                     )

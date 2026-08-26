@@ -45,6 +45,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -75,6 +76,14 @@ private const val PR_RADAR_BG_ALPHA = 0.12f
 private const val PR_CONTAINER_RADIUS_DP = 20
 private const val PR_BUTTON_RADIUS_DP = 12
 private const val PR_PILL_RADIUS_DP = 8
+
+private val PR_PULSE_DOT_SIZE = 12.dp
+private val PR_SPACING_XS = 4.dp
+private val PR_SPACING_S = 8.dp
+private val PR_SPACING_M = 10.dp
+private val PR_SPACING_L = 14.dp
+private val PR_CONTAINER_PADDING = 20.dp
+private val PR_BORDER_WIDTH = 1.dp
 
 private fun formatElapsedTime(elapsedMs: Long): String {
     val totalSec = elapsedMs / 1000
@@ -142,18 +151,6 @@ internal fun PhysicalGamepadRecordingSheet(
         }
     }
 
-    val pulseTransition = rememberInfiniteTransition(label = "recordingPulse")
-    val pulseAlpha by pulseTransition.animateFloat(
-        initialValue = 0.35f,
-        targetValue = 1f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(durationMillis = PR_PULSE_ANIM_MS, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "recordingDotPulse",
-    )
-
     Box(
         modifier =
             Modifier
@@ -177,21 +174,18 @@ internal fun PhysicalGamepadRecordingSheet(
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(14.dp),
+                verticalArrangement = Arrangement.spacedBy(PR_SPACING_L),
             ) {
                 // ── Header row with Pulse Dot, Title, Timer, and Step Count ──
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Box(
-                        modifier =
-                            Modifier
-                                .size(12.dp)
-                                .clip(CircleShape)
-                                .background(colors.error.copy(alpha = pulseAlpha)),
+                    PulsingRecordingDot(
+                        color = colors.error,
+                        modifier = Modifier.size(PR_PULSE_DOT_SIZE),
                     )
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(PR_SPACING_S))
                     Text(
                         text = stringResource(R.string.privd_recording_physical_title),
                         color = colors.onSurface,
@@ -206,8 +200,8 @@ internal fun PhysicalGamepadRecordingSheet(
                             Modifier
                                 .clip(RoundedCornerShape(PR_PILL_RADIUS_DP.dp))
                                 .background(colors.surfaceVariant)
-                                .border(width = 1.dp, color = colors.divider, shape = RoundedCornerShape(PR_PILL_RADIUS_DP.dp))
-                                .padding(horizontal = 10.dp, vertical = 4.dp),
+                                .border(width = PR_BORDER_WIDTH, color = colors.divider, shape = RoundedCornerShape(PR_PILL_RADIUS_DP.dp))
+                                .padding(horizontal = PR_SPACING_M, vertical = PR_SPACING_XS),
                     ) {
                         Text(
                             text = formatElapsedTime(currentElapsedMs),
@@ -505,4 +499,30 @@ private fun StickRadar(
             fontWeight = if (magPercent > 5) FontWeight.Bold else FontWeight.Normal,
         )
     }
+}
+
+@Composable
+private fun PulsingRecordingDot(
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    val pulseTransition = rememberInfiniteTransition(label = "recordingPulse")
+    val pulseAlpha by pulseTransition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 1f,
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(durationMillis = PR_PULSE_ANIM_MS, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "recordingDotPulse",
+    )
+
+    Box(
+        modifier =
+            modifier
+                .drawBehind {
+                    drawCircle(color = color.copy(alpha = pulseAlpha))
+                },
+    )
 }

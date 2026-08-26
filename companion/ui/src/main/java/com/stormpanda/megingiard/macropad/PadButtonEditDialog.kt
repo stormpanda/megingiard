@@ -1,11 +1,6 @@
 package com.stormpanda.megingiard.macropad
 
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -49,7 +44,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -76,9 +70,6 @@ import java.util.UUID
 import kotlin.math.roundToInt
 
 private const val TAG = "PadButtonEditDialog"
-private const val PBD_PULSE_DURATION_MS = 1400
-private const val PBD_PULSE_ACCENT_ALPHA = 0.35f
-private const val PBD_PULSE_SURFACE_ALPHA = 0.55f
 
 private val PBD_COLOR_PREVIEW_SIZE = 36.dp
 private val PBD_CORNER_RADIUS_DP = 6.dp
@@ -323,28 +314,6 @@ internal fun EditButtonSubPageContent(
 
     val hasChanges =
         isNew || currentButton.copy(posX = savedButton.posX, posY = savedButton.posY) != savedButton
-
-    val pulseTransition = rememberInfiniteTransition(label = "btnEditSavePulse")
-    val pulseFraction by pulseTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(durationMillis = PBD_PULSE_DURATION_MS, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "btnEditSavePulseFraction",
-    )
-    val saveCardBgColor =
-        if (hasChanges) {
-            lerp(
-                colors.surface.copy(alpha = PBD_PULSE_SURFACE_ALPHA),
-                colors.accent.copy(alpha = PBD_PULSE_ACCENT_ALPHA),
-                pulseFraction,
-            )
-        } else {
-            null
-        }
 
     val layoutTextOpt = activeLayout?.buttonTextColor ?: ColorOption.Neutral
     val layoutBorderOpt = activeLayout?.buttonBorderColor ?: ColorOption.Neutral
@@ -711,7 +680,7 @@ internal fun EditButtonSubPageContent(
                 stringResource(
                     if (isNew) R.string.macropad_editor_create_button_desc else R.string.macropad_editor_save_button_desc,
                 ),
-            cardBgColor = saveCardBgColor,
+            pulseOnChanges = hasChanges,
             saveActionText = stringResource(if (isNew) R.string.gamepad_action_create else R.string.gamepad_action_save),
             saveIcon = Icons.Rounded.Save,
             enabled = isConfirmEnabled,

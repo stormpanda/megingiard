@@ -1,11 +1,6 @@
 package com.stormpanda.megingiard.macropad
 
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Delete
@@ -28,7 +23,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.stormpanda.megingiard.AppLog
@@ -55,9 +49,6 @@ private const val TAG = "MacroTimelineEditor"
 
 private const val MTE_DEFAULT_TOUCH_DURATION_MS = 100L
 private const val MTE_UNDO_STACK_MAX = 50
-private const val MTE_PULSE_DURATION_MS = 1400
-private const val MTE_PULSE_ACCENT_ALPHA = 0.35f
-private const val MTE_PULSE_SURFACE_ALPHA = 0.55f
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -109,28 +100,6 @@ internal fun MacroTimelineSubPageContent(
                 onDiscard()
             },
         )
-
-    val pulseTransition = rememberInfiniteTransition(label = "macroSavePulse")
-    val pulseFraction by pulseTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(durationMillis = MTE_PULSE_DURATION_MS, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "macroSavePulseFraction",
-    )
-    val saveCardBgColor =
-        if (hasChanges) {
-            lerp(
-                colors.surface.copy(alpha = MTE_PULSE_SURFACE_ALPHA),
-                colors.accent.copy(alpha = MTE_PULSE_ACCENT_ALPHA),
-                pulseFraction,
-            )
-        } else {
-            null
-        }
 
     val touchRecordingState by TouchRecordingManager.state.collectAsState()
     val physicalRecordingState by PhysicalGamepadRecordingManager.state.collectAsState()
@@ -395,7 +364,7 @@ internal fun MacroTimelineSubPageContent(
     GamepadSaveExitActionRow(
         title = stringResource(R.string.macropad_editor_save_macro_title),
         description = stringResource(R.string.macropad_editor_save_macro_desc),
-        cardBgColor = saveCardBgColor,
+        pulseOnChanges = hasChanges,
         saveActionText = stringResource(R.string.gamepad_action_save),
         saveIcon = Icons.Rounded.Save,
         enabled = isConfirmEnabled,

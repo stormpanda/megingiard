@@ -5,8 +5,12 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -78,6 +82,7 @@ import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.KeyEventType
@@ -157,6 +162,9 @@ private const val GC_SPLIT_ANIM_DURATION_MS = 220
 private const val GC_UNFOCUSED_MAX_LINES = 2
 private const val GC_DEFAULT_SLIDER_STEP = 0.05f
 private const val GC_DISABLED_CARD_ALPHA = 0.38f
+private const val GC_PULSE_DURATION_MS = 1400
+private const val GC_PULSE_ACCENT_ALPHA = 0.35f
+private const val GC_PULSE_SURFACE_ALPHA = 0.55f
 
 private val GC_INFO_BOX_RADIUS = 8.dp
 private const val GC_INFO_BOX_BG_ALPHA = 0.5f
@@ -1207,6 +1215,7 @@ fun GamepadActionCard(
     actionGlyph: GamePadGlyph? = null,
     actionLeadingContent: (@Composable () -> Unit)? = null,
     cardBgColor: Color? = null,
+    pulseOnChanges: Boolean = false,
     enabled: Boolean = true,
     isDestructive: Boolean = false,
     alwaysShowFullDescription: Boolean = false,
@@ -1215,12 +1224,36 @@ fun GamepadActionCard(
 ) {
     val colors = LocalAppColors.current
 
+    val effectiveBg =
+        if (cardBgColor != null) {
+            cardBgColor
+        } else if (pulseOnChanges) {
+            val pulseTransition = rememberInfiniteTransition(label = "actionPulse")
+            val pulseFraction by pulseTransition.animateFloat(
+                initialValue = 0f,
+                targetValue = 1f,
+                animationSpec =
+                    infiniteRepeatable(
+                        animation = tween(durationMillis = GC_PULSE_DURATION_MS, easing = FastOutSlowInEasing),
+                        repeatMode = RepeatMode.Reverse,
+                    ),
+                label = "actionPulseFraction",
+            )
+            lerp(
+                colors.surface.copy(alpha = GC_PULSE_SURFACE_ALPHA),
+                colors.accent.copy(alpha = GC_PULSE_ACCENT_ALPHA),
+                pulseFraction,
+            )
+        } else {
+            null
+        }
+
     GamepadFocusCard(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier,
         itemKey = itemKey,
-        cardBgColor = cardBgColor,
+        cardBgColor = effectiveBg,
         onFocusChanged = onFocusChanged,
     ) { isFocused ->
         GamepadCardRow(
@@ -1417,6 +1450,7 @@ fun GamepadSaveExitActionRow(
     saveActionText: String = stringResource(R.string.gamepad_action_save),
     saveActionLeadingContent: (@Composable () -> Unit)? = null,
     cardBgColor: Color? = null,
+    pulseOnChanges: Boolean = false,
     enabled: Boolean = true,
     showExitPrompt: Boolean = false,
     saveFocusRequester: FocusRequester? = null,
@@ -1487,6 +1521,7 @@ fun GamepadSaveExitActionRow(
                 actionText = saveActionText,
                 icon = saveIcon,
                 cardBgColor = cardBgColor,
+                pulseOnChanges = pulseOnChanges,
                 actionLeadingContent = if (!showExitPrompt) saveActionLeadingContent else null,
                 enabled = enabled,
                 onClick = onSave,

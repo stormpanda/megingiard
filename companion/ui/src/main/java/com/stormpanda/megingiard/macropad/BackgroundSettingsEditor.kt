@@ -5,10 +5,7 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -69,7 +66,6 @@ import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -119,10 +115,6 @@ private const val BSE_PREVIEW_WIDTH_FRACTION = 0.5f
 
 private const val BSE_CROP_MIN_SCALE = 1.0f
 private const val BSE_CROP_MAX_SCALE = 5.0f
-
-private const val BSE_PULSE_DURATION_MS = 1200
-private const val BSE_PULSE_SURFACE_ALPHA = 0.85f
-private const val BSE_PULSE_ACCENT_ALPHA = 0.45f
 
 @Composable
 internal fun LayoutBackgroundSubPageContent(
@@ -607,28 +599,6 @@ internal fun BackgroundCropSubPageContent(
                     kotlin.math.abs(offsetYState - initialPixelOffsetY) > 0.5f
             )
 
-    val pulseTransition = rememberInfiniteTransition(label = "cropSavePulse")
-    val pulseFraction by pulseTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(durationMillis = BSE_PULSE_DURATION_MS, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "savePulseFraction",
-    )
-    val saveCardBgColor =
-        if (hasCropChanges) {
-            lerp(
-                colors.surface.copy(alpha = BSE_PULSE_SURFACE_ALPHA),
-                colors.accent.copy(alpha = BSE_PULSE_ACCENT_ALPHA),
-                pulseFraction,
-            )
-        } else {
-            null
-        }
-
     // ── Save Section ─────────────────────────────────────────────────
     GamepadSectionHeader(
         text = stringResource(R.string.macropad_editor_section_save),
@@ -640,7 +610,7 @@ internal fun BackgroundCropSubPageContent(
         description = stringResource(R.string.macropad_editor_bg_crop_save_desc),
         actionText = stringResource(R.string.gamepad_action_save),
         icon = Icons.Rounded.Save,
-        cardBgColor = saveCardBgColor,
+        pulseOnChanges = hasCropChanges,
         onClick = {
             val finalOffsetX = if (containerSize.width > 0) offsetXState / containerSize.width else 0f
             val finalOffsetY = if (containerSize.height > 0) offsetYState / containerSize.height else 0f

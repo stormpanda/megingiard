@@ -1,11 +1,6 @@
 package com.stormpanda.megingiard.macropad
 
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -32,7 +27,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -51,9 +45,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlin.math.roundToInt
 
 private const val TAG = "LayoutSettingsEditor"
-private const val LSE_PULSE_DURATION_MS = 1400
-private const val LSE_PULSE_ACCENT_ALPHA = 0.35f
-private const val LSE_PULSE_SURFACE_ALPHA = 0.55f
 
 @Composable
 private fun describeColorOption(
@@ -122,28 +113,6 @@ internal fun LayoutAppearanceSubPageContent(
             },
             onDiscard = onDiscard,
         )
-
-    val pulseTransition = rememberInfiniteTransition(label = "appearanceSavePulse")
-    val pulseFraction by pulseTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(durationMillis = LSE_PULSE_DURATION_MS, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "appearanceSavePulseFraction",
-    )
-    val saveCardBgColor =
-        if (hasColorChanges) {
-            lerp(
-                colors.surface.copy(alpha = LSE_PULSE_SURFACE_ALPHA),
-                colors.accent.copy(alpha = LSE_PULSE_ACCENT_ALPHA),
-                pulseFraction,
-            )
-        } else {
-            null
-        }
 
     val globalAccentInt by SettingsManager.accentColor.collectAsState()
     val globalAccentColor = Color(globalAccentInt)
@@ -278,7 +247,7 @@ internal fun LayoutAppearanceSubPageContent(
     GamepadSaveExitActionRow(
         title = stringResource(R.string.macropad_editor_save_button_colors_title),
         description = stringResource(R.string.macropad_editor_save_button_colors_desc),
-        cardBgColor = saveCardBgColor,
+        pulseOnChanges = hasColorChanges,
         saveActionText = stringResource(R.string.gamepad_action_confirm),
         saveIcon = Icons.Rounded.Save,
         enabled = true,

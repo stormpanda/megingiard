@@ -54,6 +54,7 @@ private val VGP_SYS_BTN_HEIGHT = 32.dp
 private val VGP_SYS_FONT_SIZE = 11.sp
 private val VGP_HOME_BTN_WIDTH = 56.dp
 private val VGP_ICON_SIZE = 18.dp
+private val VGP_CLEAR_ICON_SIZE = 14.dp
 
 // Uniform 3x3 Grid Dimensions for Stick, D-Pad & ABXY
 private val VGP_GRID_BTN_SIZE = 34.dp
@@ -872,14 +873,14 @@ private fun ClearButtonTile(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            modifier = Modifier.padding(horizontal = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(VGP_LABEL_SPACING),
+            modifier = Modifier.padding(horizontal = VGP_LABEL_SPACING),
         ) {
             Icon(
                 imageVector = Icons.Rounded.Close,
                 contentDescription = stringResource(R.string.gamepad_action_clear),
                 tint = colors.error,
-                modifier = Modifier.size(14.dp),
+                modifier = Modifier.size(VGP_CLEAR_ICON_SIZE),
             )
             Text(
                 text = stringResource(R.string.gamepad_action_clear),
