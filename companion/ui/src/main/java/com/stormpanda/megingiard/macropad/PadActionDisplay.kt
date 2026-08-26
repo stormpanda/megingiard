@@ -514,6 +514,14 @@ internal fun ButtonSize.displayLabel(): String =
         ButtonSize.SIZE_2X2 -> stringResource(R.string.macropad_button_size_2x2)
     }
 
+@Composable
+internal fun ButtonShape.displayLabel(): String =
+    when (this) {
+        ButtonShape.SQUARE -> stringResource(R.string.macropad_editor_shape_square)
+        ButtonShape.CIRCLE -> stringResource(R.string.macropad_editor_shape_circle)
+        ButtonShape.ICON_ONLY -> stringResource(R.string.macropad_editor_shape_icon_only)
+    }
+
 internal fun MouseButton.displayLabel(): String =
     when (this) {
         MouseButton.LEFT -> "Left"

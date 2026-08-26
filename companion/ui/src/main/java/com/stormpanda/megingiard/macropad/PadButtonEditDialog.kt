@@ -408,17 +408,11 @@ internal fun EditButtonSubPageContent(
         )
 
         val shapeEntries = ButtonShape.entries
-        val shapeLabels =
-            listOf(
-                stringResource(R.string.macropad_editor_shape_circle),
-                stringResource(R.string.macropad_editor_shape_square),
-                stringResource(R.string.macropad_editor_shape_icon_only),
-            )
         val shapeIdx = shapeEntries.indexOf(buttonShape).coerceAtLeast(0)
         GamepadChoiceCard(
             title = stringResource(R.string.macropad_editor_button_shape),
             description = stringResource(R.string.macropad_btn_shape_desc),
-            selectedText = shapeLabels[shapeIdx],
+            selectedText = shapeEntries[shapeIdx].displayLabel(),
             icon = Icons.Rounded.CropFree,
             onPrevious = {
                 val nextIdx = (shapeIdx - 1 + shapeEntries.size) % shapeEntries.size
