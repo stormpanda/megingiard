@@ -40,7 +40,6 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -65,7 +64,6 @@ import com.stormpanda.megingiard.ui.GamepadTwoStepConfirmCard
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
-import kotlinx.coroutines.flow.collectLatest
 import java.util.UUID
 import kotlin.math.roundToInt
 
@@ -177,17 +175,13 @@ internal fun EditButtonSubPageContent(
     val context = LocalContext.current
     val colors = LocalAppColors.current
     val activeLayout = MacroPadState.activeLayout.collectAsState().value
+    val stableButtonId = remember(button?.id) { button?.id ?: UUID.randomUUID().toString() }
 
-    LaunchedEffect(button?.id) {
-        if (button != null) {
-            MacroPadState.setSelectedButtonId(button.id)
-        }
-    }
-    DisposableEffect(button?.id) {
+    DisposableEffect(stableButtonId) {
+        MacroPadState.setSelectedButtonId(stableButtonId)
         onDispose {
-            if (button != null) {
-                MacroPadState.setSelectedButtonId(null)
-            }
+            MacroPadState.setSelectedButtonId(null)
+            MacroPadState.setPreviewButton(null)
         }
     }
 
@@ -260,39 +254,44 @@ internal fun EditButtonSubPageContent(
         }
     }
 
-    fun buildCurrentButton(): PadButton =
-        button?.copy(
-            label = label,
-            iconName = iconName,
-            iconFilled = iconFilled,
-            buttonShape = buttonShape,
-            buttonSize = buttonSize,
-            action = action,
-            hapticStrength = hapticStrength,
-            hapticCustomDurationMs = hapticCustomDurationMs,
-            hapticCustomAmplitude = hapticCustomAmplitude,
-            buttonTextColor = buttonTextColor,
-            buttonBorderColor = buttonBorderColor,
-            buttonBgColor = buttonBgColor,
-            invisible = invisible,
-        ) ?: PadButton(
-            id = UUID.randomUUID().toString(),
-            label = label,
-            iconName = iconName,
-            iconFilled = iconFilled,
-            posX = 0.5f,
-            posY = 0.5f,
-            buttonShape = buttonShape,
-            buttonSize = buttonSize,
-            action = action,
-            hapticStrength = hapticStrength,
-            hapticCustomDurationMs = hapticCustomDurationMs,
-            hapticCustomAmplitude = hapticCustomAmplitude,
-            buttonTextColor = buttonTextColor,
-            buttonBorderColor = buttonBorderColor,
-            buttonBgColor = buttonBgColor,
-            invisible = invisible,
-        )
+    val currentButton =
+        remember(
+            stableButtonId,
+            button?.posX,
+            button?.posY,
+            label,
+            iconName,
+            iconFilled,
+            buttonShape,
+            buttonSize,
+            action,
+            hapticStrength,
+            hapticCustomDurationMs,
+            hapticCustomAmplitude,
+            buttonTextColor,
+            buttonBorderColor,
+            buttonBgColor,
+            invisible,
+        ) {
+            PadButton(
+                id = stableButtonId,
+                label = label,
+                iconName = iconName,
+                iconFilled = iconFilled,
+                posX = button?.posX ?: 0.5f,
+                posY = button?.posY ?: 0.5f,
+                buttonShape = buttonShape,
+                buttonSize = buttonSize,
+                action = action,
+                hapticStrength = hapticStrength,
+                hapticCustomDurationMs = hapticCustomDurationMs,
+                hapticCustomAmplitude = hapticCustomAmplitude,
+                buttonTextColor = buttonTextColor,
+                buttonBorderColor = buttonBorderColor,
+                buttonBgColor = buttonBgColor,
+                invisible = invisible,
+            )
+        }
 
     val isConfirmEnabled =
         when {
@@ -303,13 +302,9 @@ internal fun EditButtonSubPageContent(
         }
 
     val isNew = savedButton == null
-    val currentButton = buildCurrentButton()
 
-    LaunchedEffect(Unit) {
-        snapshotFlow { currentButton }
-            .collectLatest { liveBtn ->
-                MacroPadState.setPreviewButton(liveBtn)
-            }
+    LaunchedEffect(currentButton) {
+        MacroPadState.setPreviewButton(currentButton)
     }
 
     val hasChanges =
@@ -591,7 +586,7 @@ internal fun EditButtonSubPageContent(
             icon = Icons.Rounded.FormatColorText,
             actionLeadingContent = buttonPreviewLeading(currentText, Color.Transparent, Color.Transparent, true),
             actionText = stringResource(R.string.gamepad_action_edit),
-            onClick = { onOpenColorSubMenu(buildCurrentButton(), ButtonColorTarget.TEXT) },
+            onClick = { onOpenColorSubMenu(currentButton, ButtonColorTarget.TEXT) },
         )
 
         // ── Border Color Menu Item ──────────────────────────────────
@@ -601,7 +596,7 @@ internal fun EditButtonSubPageContent(
             icon = Icons.Rounded.Palette,
             actionLeadingContent = buttonPreviewLeading(Color.Transparent, currentBorder, Color.Transparent, false),
             actionText = stringResource(R.string.gamepad_action_edit),
-            onClick = { onOpenColorSubMenu(buildCurrentButton(), ButtonColorTarget.BORDER) },
+            onClick = { onOpenColorSubMenu(currentButton, ButtonColorTarget.BORDER) },
         )
 
         // ── Background / Fading Color Menu Item ─────────────────────
@@ -611,7 +606,7 @@ internal fun EditButtonSubPageContent(
             icon = Icons.Rounded.FormatColorFill,
             actionLeadingContent = buttonPreviewLeading(Color.Transparent, Color.Transparent, currentBg, false),
             actionText = stringResource(R.string.gamepad_action_edit),
-            onClick = { onOpenColorSubMenu(buildCurrentButton(), ButtonColorTarget.BG) },
+            onClick = { onOpenColorSubMenu(currentButton, ButtonColorTarget.BG) },
         )
 
         GamepadSectionHeader(
