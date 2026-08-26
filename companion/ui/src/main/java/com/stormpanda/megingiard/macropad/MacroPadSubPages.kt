@@ -36,12 +36,10 @@ import com.stormpanda.megingiard.ui.GamePadGlyph
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadCardText
 import com.stormpanda.megingiard.ui.GamepadColorSwatch
-import com.stormpanda.megingiard.ui.GamepadSaveExitActionRow
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadSliderCard
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.firstDeckItem
-import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
 import kotlinx.coroutines.flow.collectLatest
 import kotlin.math.roundToInt
 import android.graphics.Color as AndroidColor

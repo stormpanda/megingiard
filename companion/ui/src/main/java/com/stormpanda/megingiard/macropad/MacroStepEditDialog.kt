@@ -551,6 +551,7 @@ internal fun MacroStepEditSubPageContent(
             } else {
                 stringResource(R.string.macropad_editor_save_step_desc)
             },
+        pulseOnChanges = hasChanges,
         saveActionText =
             if (step == null) {
                 stringResource(R.string.gamepad_action_create)

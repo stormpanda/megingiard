@@ -158,6 +158,7 @@ internal fun NewProfileSubPageContent(
     GamepadSaveExitActionRow(
         title = stringResource(R.string.macropad_editor_create_profile_title),
         description = stringResource(R.string.macropad_editor_create_profile_desc),
+        pulseOnChanges = true,
         saveActionText = stringResource(R.string.gamepad_action_create),
         saveIcon = Icons.Rounded.Save,
         enabled = isConfirmEnabled,
@@ -268,6 +269,7 @@ internal fun EditProfileSubPageContent(
     GamepadSaveExitActionRow(
         title = stringResource(R.string.macropad_editor_save_profile_title),
         description = stringResource(R.string.macropad_editor_edit_profile_desc),
+        pulseOnChanges = hasChanges,
         saveActionText = stringResource(R.string.gamepad_action_save),
         saveIcon = Icons.Rounded.Save,
         enabled = isConfirmEnabled,

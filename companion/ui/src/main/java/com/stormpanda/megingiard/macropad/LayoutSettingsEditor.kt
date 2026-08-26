@@ -470,6 +470,7 @@ internal fun NewLayoutSubPageContent(
     GamepadSaveExitActionRow(
         title = stringResource(R.string.macropad_editor_create_layout_title),
         description = stringResource(R.string.macropad_editor_create_layout_desc),
+        pulseOnChanges = true,
         saveActionText = stringResource(R.string.gamepad_action_create),
         saveIcon = Icons.Rounded.Save,
         enabled = isConfirmEnabled,
