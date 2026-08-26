@@ -66,13 +66,13 @@ The input pipeline is coordinated through [`PrimaryOverlayManager.kt`](file:///U
  ┌──────────────────────┬────────────────────────────────────────┐
  │ Category Sidebar Rail│ Right Content Deck                     │
  │ (180 dp width)       │                                        │
- │                      │  ┌──────────────────────────────────┐  │
- │ ┌──────────────────┐ │  │ [Card 1: Modifier.firstDeckItem] │  │
- │ │ Quick Actions ★  │ │  └──────────────────────────────────┘  │
- │ ├──────────────────┤ │  ┌──────────────────────────────────┐  │
- │ │ Profiles         │ │  │ [Card 2]                         │  │
+ │                      │  PROFILES › EDIT PROFILE (Stationary)  │
+ │ ┌──────────────────┐ │  ┌──────────────────────────────────┐  │
+ │ │ Quick Actions ★  │ │  │ [Card 1: Modifier.firstDeckItem] │  │
  │ ├──────────────────┤ │  └──────────────────────────────────┘  │
- │ │ Layouts          │ │                                        │
+ │ │ Profiles         │ │  ┌──────────────────────────────────┐  │
+ │ ├──────────────────┤ │  │ [Card 2]                         │  │
+ │ │ Layouts          │ │  └──────────────────────────────────┘  │
  │ ├──────────────────┤ │                                        │
  │ │ Buttons          │ │                                        │
  │ ├──────────────────┤ │                                        │
@@ -81,7 +81,15 @@ The input pipeline is coordinated through [`PrimaryOverlayManager.kt`](file:///U
  └──────────────────────┴────────────────────────────────────────┘
 ```
 
-### 3.1 Bidirectional Horizontal Traversal & Sidebar Focus Isolation
+### 3.1 Pinned Stationary Breadcrumbs (`GamepadBreadcrumbHeader`)
+
+To ensure a seamless, non-jarring console UX when drilling into nested sub-menus or scrolling through long lists:
+* **Stationary Header:** `GamepadTwoPaneScaffold` hoists the breadcrumbs trail above the sliding sub-page `AnimatedContent`.
+* **In-Place Crossfade:** When navigating between menu levels, the breadcrumb trail crossfades in-place via `AnimatedContent` (`fadeIn(tween(150)) togetherWith fadeOut(tween(150))`), rather than sliding horizontally with deck cards.
+* **Sticky Positioning:** The breadcrumbs remain permanently visible at the top of the right deck pane, avoiding being scrolled off-screen when browsing deep lists.
+* **Usage:** Pass `breadcrumbs = activeBreadcrumbs` and `accentColor = colors.accent` directly to `GamepadTwoPaneScaffold`. Inner `GamepadDeck` calls omit local breadcrumbs definitions to prevent duplicate headers.
+
+### 3.2 Bidirectional Horizontal Traversal & Sidebar Focus Isolation
 
 1. **Sidebar to Deck (`D-Pad Right` / `Button A`):**
    * Pressing `DPAD_RIGHT` on a `GamepadCategoryTile` triggers `transferFocusToDeck()`, shifting focus directly to the remembered focused card at the current depth (or `firstDeckItem`).

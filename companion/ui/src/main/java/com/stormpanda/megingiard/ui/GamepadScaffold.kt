@@ -2,7 +2,12 @@ package com.stormpanda.megingiard.ui
 
 import android.view.KeyEvent
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.BringIntoViewSpec
@@ -29,6 +34,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
@@ -65,6 +71,7 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 private const val TAG = "GamepadScaffold"
 
@@ -87,6 +94,7 @@ private const val GS_SIDEBAR_SELECTED_ALPHA = 0.2f
 private const val GS_CARD_FOCUSED_BG_ALPHA = 0.95f
 private const val GS_SIDEBAR_BG_ALPHA = 0.5f
 private const val GS_INITIAL_FOCUS_DELAY_MS = 50L
+private const val GS_BREADCRUMB_FADE_DURATION_MS = 150
 
 val LocalActiveCategoryRequester = compositionLocalOf<FocusRequester?> { null }
 val LocalFirstContentRequester = compositionLocalOf<FocusRequester?> { null }
@@ -95,6 +103,7 @@ val LocalLastFocusedDeckTracker = compositionLocalOf<((key: Any, requester: Focu
 val LocalDeckCardRegistry = compositionLocalOf<((key: Any, requester: FocusRequester?) -> Unit)?> { null }
 val LocalResetLastFocusedTracker = compositionLocalOf<(() -> Unit)?> { null }
 val LocalDeckBackInterceptor = compositionLocalOf<((() -> Boolean)?) -> Unit> { {} }
+val LocalBreadcrumbConsumer = compositionLocalOf<((List<String>) -> Unit)?> { null }
 
 /**
  * Modifier extension to mark a composable card as the primary focus target when entering the right deck from the sidebar.
@@ -135,23 +144,59 @@ fun rememberGamepadBringIntoViewSpec(extraPadding: Dp = GS_DECK_SCROLL_EXTRA_PAD
 }
 
 /**
+ * Pinned breadcrumb header with subtle in-place crossfade transition when navigating sub-menus.
+ */
+@Composable
+fun GamepadBreadcrumbHeader(
+    breadcrumbs: List<String>,
+    modifier: Modifier = Modifier,
+    accentColor: Color = LocalAppColors.current.accent,
+) {
+    AnimatedContent(
+        targetState = breadcrumbs,
+        transitionSpec = {
+            fadeIn(animationSpec = tween(GS_BREADCRUMB_FADE_DURATION_MS)) togetherWith
+                fadeOut(animationSpec = tween(GS_BREADCRUMB_FADE_DURATION_MS))
+        },
+        label = "BreadcrumbFade",
+        modifier = modifier,
+    ) { crumbs ->
+        if (crumbs.isNotEmpty()) {
+            GamepadSectionHeader(
+                text = crumbs.joinToString("  ›  ") { it.uppercase(Locale.ROOT) },
+                color = accentColor,
+            )
+        }
+    }
+}
+
+/**
  * Unified right-pane deck container used across root sidebar categories and nested subpages.
  *
  * Automatically manages:
- * - Top breadcrumb / category header trail formatted with ' › ' in uppercase.
- * - Standardized 16.dp horizontal & 12.dp vertical padding and 10.dp vertical spacing.
+ * - Top breadcrumb / category header trail formatted with ' › ' in uppercase (when rendered inside standalone deck).
+ * - Standardized 16.dp horizontal padding and 10.dp vertical spacing.
  * - Gamepad [BringIntoViewSpec] focus scrolling behavior.
  * - Optional vertical scrolling container vs non-scrollable fill (e.g. for LazyLists or custom canvas).
  */
 @OptIn(ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun GamepadDeck(
-    breadcrumbs: List<String>,
+    breadcrumbs: List<String> = emptyList(),
     modifier: Modifier = Modifier,
     scrollable: Boolean = true,
     accentColor: Color = LocalAppColors.current.accent,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val breadcrumbConsumer = LocalBreadcrumbConsumer.current
+    if (breadcrumbConsumer != null && breadcrumbs.isNotEmpty()) {
+        DisposableEffect(breadcrumbs) {
+            breadcrumbConsumer(breadcrumbs)
+            onDispose { }
+        }
+    }
+    val showLocalHeader = breadcrumbConsumer == null && breadcrumbs.isNotEmpty()
+
     val bringIntoViewSpec = rememberGamepadBringIntoViewSpec()
     val parentRequester = LocalFirstContentRequester.current
     val localRequester = remember { FocusRequester() }
@@ -197,12 +242,15 @@ fun GamepadDeck(
                 modifier
                     .fillMaxSize()
                     .then(if (scrollable) Modifier.verticalScroll(rememberScrollState()) else Modifier)
-                    .padding(horizontal = GS_DECK_PADDING_H, vertical = GS_DECK_PADDING_V),
+                    .padding(
+                        horizontal = GS_DECK_PADDING_H,
+                        vertical = if (showLocalHeader) GS_DECK_PADDING_V else 0.dp,
+                    ),
             verticalArrangement = Arrangement.spacedBy(GS_DECK_SPACING),
         ) {
-            if (breadcrumbs.isNotEmpty()) {
+            if (showLocalHeader) {
                 GamepadSectionHeader(
-                    text = breadcrumbs.joinToString("  ›  ") { it.uppercase() },
+                    text = breadcrumbs.joinToString("  ›  ") { it.uppercase(Locale.ROOT) },
                     color = accentColor,
                 )
             }
@@ -362,6 +410,8 @@ fun GamepadTwoPaneScaffold(
     sidebarContent: @Composable ColumnScope.() -> Unit,
     content: @Composable ColumnScope.() -> Unit,
     modifier: Modifier = Modifier,
+    breadcrumbs: List<String> = emptyList(),
+    accentColor: Color = LocalAppColors.current.accent,
     isCustomBackActive: Boolean = false,
     onCustomBack: (() -> Unit)? = null,
     navigationKey: Any? = null,
@@ -389,6 +439,8 @@ fun GamepadTwoPaneScaffold(
     var currentDepth by remember { mutableIntStateOf(initialDepth) }
     var isDeckFocused by remember { mutableStateOf(false) }
     var isSidebarFocused by remember { mutableStateOf(false) }
+    var registeredBreadcrumbs by remember { mutableStateOf<List<String>>(emptyList()) }
+    val effectiveBreadcrumbs = if (breadcrumbs.isNotEmpty()) breadcrumbs else registeredBreadcrumbs
 
     val transferFocusToDeck: () -> Unit = {
         var handled = false
@@ -470,6 +522,7 @@ fun GamepadTwoPaneScaffold(
         LocalFirstContentRequester provides firstContentRequester,
         LocalTransferFocusToDeck provides transferFocusToDeck,
         LocalDeckBackInterceptor provides { interceptor -> deckBackInterceptor = interceptor },
+        LocalBreadcrumbConsumer provides { newCrumbs -> registeredBreadcrumbs = newCrumbs },
         LocalLastFocusedDeckTracker provides { key, req ->
             savedFocusKeyByDepth[currentDepth] = key
             activeDeckCardRequesters[key] = req
@@ -666,38 +719,69 @@ fun GamepadTwoPaneScaffold(
                     modifier =
                         Modifier
                             .weight(1f)
-                            .fillMaxHeight()
-                            .padding(
-                                horizontal = if (scrollableDeck) GS_DECK_PADDING_H else 0.dp,
-                                vertical = if (scrollableDeck) GS_DECK_PADDING_V else 0.dp,
-                            ).onFocusChanged { focusState ->
-                                isDeckFocused = focusState.hasFocus
-                            }.focusProperties {
-                                exit = { direction ->
-                                    if (direction == FocusDirection.Left) {
-                                        if (!isCustomBackActive) {
-                                            activeCategoryRequester
-                                        } else {
-                                            FocusRequester.Cancel
-                                        }
-                                    } else if (direction == FocusDirection.Right ||
-                                        direction == FocusDirection.Up || direction == FocusDirection.Down
-                                    ) {
-                                        FocusRequester.Cancel
-                                    } else {
-                                        FocusRequester.Default
-                                    }
-                                }
-                            }.then(
-                                if (scrollableDeck) {
-                                    Modifier.verticalScroll(rememberScrollState())
-                                } else {
-                                    Modifier
-                                },
-                            ),
-                    verticalArrangement = if (scrollableDeck) Arrangement.spacedBy(GS_DECK_SPACING) else Arrangement.Top,
+                            .fillMaxHeight(),
                 ) {
-                    content()
+                    if (effectiveBreadcrumbs.isNotEmpty()) {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(
+                                        start = GS_DECK_PADDING_H,
+                                        end = GS_DECK_PADDING_H,
+                                        top = GS_DECK_PADDING_V,
+                                    ),
+                        ) {
+                            GamepadBreadcrumbHeader(
+                                breadcrumbs = effectiveBreadcrumbs,
+                                accentColor = accentColor,
+                            )
+                        }
+                    }
+
+                    Column(
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .fillMaxWidth()
+                                .padding(
+                                    horizontal = if (scrollableDeck) GS_DECK_PADDING_H else 0.dp,
+                                    vertical =
+                                        if (scrollableDeck) {
+                                            (if (effectiveBreadcrumbs.isNotEmpty()) 0.dp else GS_DECK_PADDING_V)
+                                        } else {
+                                            0
+                                                .dp
+                                        },
+                                ).onFocusChanged { focusState ->
+                                    isDeckFocused = focusState.hasFocus
+                                }.focusProperties {
+                                    exit = { direction ->
+                                        if (direction == FocusDirection.Left) {
+                                            if (!isCustomBackActive) {
+                                                activeCategoryRequester
+                                            } else {
+                                                FocusRequester.Cancel
+                                            }
+                                        } else if (direction == FocusDirection.Right ||
+                                            direction == FocusDirection.Up || direction == FocusDirection.Down
+                                        ) {
+                                            FocusRequester.Cancel
+                                        } else {
+                                            FocusRequester.Default
+                                        }
+                                    }
+                                }.then(
+                                    if (scrollableDeck) {
+                                        Modifier.verticalScroll(rememberScrollState())
+                                    } else {
+                                        Modifier
+                                    },
+                                ),
+                        verticalArrangement = if (scrollableDeck) Arrangement.spacedBy(GS_DECK_SPACING) else Arrangement.Top,
+                    ) {
+                        content()
+                    }
                 }
             }
             if (footerContent != null) {
