@@ -985,4 +985,40 @@ class MacroPadStateTest {
         assertEquals(0x80, (btn2Bg.argb ushr 24) and 0xFF)
         assertEquals(0xFF5500, btn2Bg.argb and 0x00FFFFFF)
     }
+
+    @Test
+    fun `setCroppingBackground updates isCroppingBackground state`() {
+        assertEquals(false, MacroPadState.isCroppingBackground.value)
+        MacroPadState.setCroppingBackground(true)
+        assertEquals(true, MacroPadState.isCroppingBackground.value)
+        MacroPadState.setCroppingBackground(false)
+        assertEquals(false, MacroPadState.isCroppingBackground.value)
+    }
+
+    @Test
+    fun `updatePreviewBackgroundCrop updates preview layout scale and offsets`() {
+        val pId = UUID.randomUUID().toString()
+        val lId = UUID.randomUUID().toString()
+        val layout = PadLayout(id = lId, name = "Layout", bgImageScale = 1.0f, bgImageOffsetX = 0f, bgImageOffsetY = 0f)
+        val profile = PadProfile(id = pId, name = "Profile", layouts = listOf(layout), activeLayoutId = lId)
+        MacroPadState.loadFrom(listOf(profile), pId)
+
+        // Given a preview layout
+        MacroPadState.setPreviewLayout(layout)
+        assertEquals(1.0f, MacroPadState.previewLayout.value?.bgImageScale)
+
+        // When updatePreviewBackgroundCrop is called
+        MacroPadState.updatePreviewBackgroundCrop(2.5f, 0.15f, -0.25f)
+
+        // Then previewLayout reflects the updated scale and offsets
+        assertEquals(2.5f, MacroPadState.previewLayout.value?.bgImageScale)
+        assertEquals(0.15f, MacroPadState.previewLayout.value?.bgImageOffsetX)
+        assertEquals(-0.25f, MacroPadState.previewLayout.value?.bgImageOffsetY)
+
+        // And clearPreviewLayout resets previewLayout and isCroppingBackground
+        MacroPadState.setCroppingBackground(true)
+        MacroPadState.clearPreviewLayout()
+        assertEquals(null, MacroPadState.previewLayout.value)
+        assertEquals(false, MacroPadState.isCroppingBackground.value)
+    }
 }

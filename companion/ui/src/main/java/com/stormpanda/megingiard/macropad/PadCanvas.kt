@@ -12,6 +12,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -91,10 +92,14 @@ private val ED_BTN_SQUARE_RADIUS = 4.dp
 
 private const val ED_EDGE_MARGIN = 0.05f
 
-// Highlight border when button positioning is unlocked
+// Highlight border when button positioning is unlocked or cropping background
 private val PC_HIGHLIGHT_BORDER_WIDTH = 2.dp
 private val PC_HIGHLIGHT_BORDER_RADIUS = 10.dp
 private const val PC_HIGHLIGHT_BORDER_ALPHA = 0.85f
+
+// Background image cropping scale limits
+private const val PC_CROP_MIN_SCALE = 1.0f
+private const val PC_CROP_MAX_SCALE = 5.0f
 
 // Lock symbol badge timing and dimensions
 private const val PC_LOCK_TOAST_DURATION_MS = 650L
@@ -136,6 +141,7 @@ internal fun PadCanvas(
     accentColor: Color,
     gridMode: GridMode,
     isLocked: Boolean,
+    isCropping: Boolean = false,
     transparentBackground: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
@@ -219,7 +225,7 @@ internal fun PadCanvas(
             .clip(RoundedCornerShape(PC_HIGHLIGHT_BORDER_RADIUS))
             .background(if (transparentBackground) Color.Transparent else Color.Black)
             .then(
-                if (!isLocked) {
+                if (!isLocked || isCropping) {
                     Modifier.border(
                         width = PC_HIGHLIGHT_BORDER_WIDTH,
                         color = accentColor.copy(alpha = PC_HIGHLIGHT_BORDER_ALPHA),
@@ -230,7 +236,42 @@ internal fun PadCanvas(
                 },
             ).onSizeChanged { canvasSize = it }
 
-    Box(modifier = padModifier) {
+    val cropModifier =
+        if (isCropping && bgBitmap != null && canvasSize.width > 0 && canvasSize.height > 0) {
+            Modifier.pointerInput(canvasSize, isCropping, bgBitmap != null) {
+                detectTransformGestures { _, pan, zoom, _ ->
+                    val cw = canvasSize.width.toFloat()
+                    val ch = canvasSize.height.toFloat()
+                    val bitmap = bgBitmap ?: return@detectTransformGestures
+                    val iw = bitmap.width.toFloat()
+                    val ih = bitmap.height.toFloat()
+                    if (cw > 0f && ch > 0f && iw > 0f && ih > 0f) {
+                        val currentLayout = MacroPadState.previewLayout.value ?: layout
+                        val currentScale = currentLayout?.bgImageScale ?: 1f
+                        val newScale = (currentScale * zoom).coerceIn(PC_CROP_MIN_SCALE, PC_CROP_MAX_SCALE)
+
+                        val scaleBase = ViewportMath.calculateAspectFillScale(cw, ch, iw, ih)
+                        val ws = iw * scaleBase
+                        val hs = ih * scaleBase
+
+                        val (maxTx, maxTy) = ViewportMath.getMaxOffsets(cw, ch, ws, hs, newScale)
+                        val currentPixelX = (currentLayout?.bgImageOffsetX ?: 0f) * cw
+                        val currentPixelY = (currentLayout?.bgImageOffsetY ?: 0f) * ch
+                        val clampedX = (currentPixelX + pan.x).coerceIn(-maxTx, maxTx)
+                        val clampedY = (currentPixelY + pan.y).coerceIn(-maxTy, maxTy)
+
+                        val normX = if (cw > 0f) clampedX / cw else 0f
+                        val normY = if (ch > 0f) clampedY / ch else 0f
+
+                        MacroPadState.updatePreviewBackgroundCrop(newScale, normX, normY)
+                    }
+                }
+            }
+        } else {
+            Modifier
+        }
+
+    Box(modifier = padModifier.then(cropModifier)) {
         if (bgBitmap != null) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val cw = size.width
@@ -293,7 +334,7 @@ internal fun PadCanvas(
                 enableTouch = profile.enableTouch,
                 gridMode = gridMode,
                 gridStepPx = gridStepPx,
-                isLocked = isLocked,
+                isLocked = isLocked || isCropping,
                 onTouch = {
                     MacroPadState.setSelectedButtonId(btn.id)
                 },
@@ -363,7 +404,7 @@ internal fun PadCanvas(
             val rightHandleLeft = centerX + halfW + paddingPx
             val rightHandleTop = centerY - handleSizePx / 2f
 
-            if (!isLocked) {
+            if (!isLocked && !isCropping) {
                 // Top handle
                 DragHandle(
                     buttonId = activeBtn.id,

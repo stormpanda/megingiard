@@ -97,6 +97,7 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
     val layout by viewModel.activeLayout.collectAsState()
     val isEditorActive by AppStateManager.isEditorActive.collectAsState()
     val isEditingPositions by MacroPadState.isEditingButtonPositions.collectAsState()
+    val isCroppingBackground by MacroPadState.isCroppingBackground.collectAsState()
     val gridMode by MacroPadState.gridMode.collectAsState()
     val colors = LocalAppColors.current
     var disabledFeedback by remember { mutableStateOf<DisabledReason?>(null) }
@@ -150,6 +151,7 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
                 accentColor = colors.accent,
                 gridMode = gridMode,
                 isLocked = !isEditingPositions,
+                isCropping = isCroppingBackground,
                 transparentBackground = showEmbeddedMirror,
                 modifier = Modifier.fillMaxSize(),
             )

@@ -285,6 +285,7 @@
     <string name="layout_settings_bg_image_use_as_mask">作為遮罩使用</string>
     <string name="layout_settings_bg_image_use_as_mask_desc">將背景圖片繪製在螢幕投影區塊上方。適用於具有透明度的 PNG。</string>
     <string name="layout_settings_bg_image_crop">裁切</string>
+    <string name="layout_settings_bg_image_crop_desc">在下螢幕雙指縮放與拖曳移動背景圖片。</string>
     <string name="layout_settings_bg_section_title">背景</string>
     <string name="layout_settings_bg_image_dimming_title">調暗</string>
     <string name="layout_settings_colors_section_title">按鈕預設顏色</string>

@@ -153,6 +153,7 @@ object MacroPadState {
     fun clearPreviewLayout() {
         AppLog.d(TAG, "clearPreviewLayout()")
         _previewLayout.value = null
+        _isCroppingBackground.value = false
     }
 
     fun setPreviewButton(button: PadButton?) {
@@ -174,6 +175,20 @@ object MacroPadState {
         setPreviewLayout(currentActiveLayout.copy(buttons = updatedButtons))
     }
 
+    fun updatePreviewBackgroundCrop(
+        scale: Float,
+        offsetX: Float,
+        offsetY: Float,
+    ) {
+        val current = _previewLayout.value ?: return
+        _previewLayout.value =
+            current.copy(
+                bgImageScale = scale,
+                bgImageOffsetX = offsetX,
+                bgImageOffsetY = offsetY,
+            )
+    }
+
     private val _selectedButtonId = MutableStateFlow<String?>(null)
     val selectedButtonId: StateFlow<String?> = _selectedButtonId.asStateFlow()
 
@@ -191,6 +206,14 @@ object MacroPadState {
         if (!editing) {
             _selectedButtonId.value = null
         }
+    }
+
+    private val _isCroppingBackground = MutableStateFlow(false)
+    val isCroppingBackground: StateFlow<Boolean> = _isCroppingBackground.asStateFlow()
+
+    fun setCroppingBackground(cropping: Boolean) {
+        AppLog.d(TAG, "setCroppingBackground($cropping)")
+        _isCroppingBackground.value = cropping
     }
 
     private val _gridMode = MutableStateFlow(GridMode.OFF)

@@ -111,15 +111,6 @@ internal sealed interface MacroPadSubPage {
         override val parentSection = EditorSection.LAYOUTS
     }
 
-    data class BackgroundCrop(
-        val layoutId: String,
-        val initialScale: Float = 1f,
-        val initialOffsetX: Float = 0f,
-        val initialOffsetY: Float = 0f,
-    ) : MacroPadSubPage {
-        override val parentSection = EditorSection.BACKGROUND
-    }
-
     data class SteamGridDbScrape(
         val layoutId: String,
     ) : MacroPadSubPage {

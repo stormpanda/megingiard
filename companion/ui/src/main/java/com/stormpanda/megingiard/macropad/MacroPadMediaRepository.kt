@@ -17,17 +17,43 @@ private const val BACKGROUNDS_DIR = "backgrounds"
  */
 object MacroPadMediaRepository {
     /**
-     * Reads and decodes a scaled bitmap for the given relative path under `context.filesDir`.
+     * Reads and decodes a scaled bitmap for the given path or URI (relative path under `context.filesDir`,
+     * absolute filesystem path, or `content://`/`file://` URI).
      */
     suspend fun loadScaledBitmap(
         context: Context,
-        relativePath: String,
+        pathOrUri: String,
     ): Bitmap? =
         withContext(Dispatchers.IO) {
-            val file = File(context.filesDir, relativePath)
-            if (!file.exists()) return@withContext null
             val (targetW, targetH) = BitmapUtils.getScreenTargetDimensions(context)
-            BitmapUtils.decodeScaledBitmap(file, targetW, targetH)
+            when {
+                pathOrUri.startsWith("content://") || pathOrUri.startsWith("file://") -> {
+                    try {
+                        BitmapUtils.decodeScaledBitmapFromUri(context, Uri.parse(pathOrUri), targetW, targetH)
+                    } catch (e: Exception) {
+                        AppLog.e(TAG, "Failed to decode scaled bitmap from uri $pathOrUri", e)
+                        null
+                    }
+                }
+
+                pathOrUri.startsWith("/") -> {
+                    val file = File(pathOrUri)
+                    if (!file.exists()) {
+                        null
+                    } else {
+                        BitmapUtils.decodeScaledBitmap(file, targetW, targetH)
+                    }
+                }
+
+                else -> {
+                    val file = File(context.filesDir, pathOrUri)
+                    if (!file.exists()) {
+                        null
+                    } else {
+                        BitmapUtils.decodeScaledBitmap(file, targetW, targetH)
+                    }
+                }
+            }
         }
 
     /**

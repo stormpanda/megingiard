@@ -213,7 +213,7 @@ fun MacroPadEditor(
         MacroPadState.setEditingButtonPositions(isEditingPositionsSubPage)
     }
 
-    LaunchedEffect(subPageStack) {
+    LaunchedEffect(subPageStack, selectedSection) {
         val hasAppearanceSubPages =
             subPageStack.any {
                 it is MacroPadSubPage.LayoutAppearance || it is MacroPadSubPage.LayoutColor ||
@@ -224,13 +224,18 @@ fun MacroPadEditor(
                 it is MacroPadSubPage.EditButton || it is MacroPadSubPage.ButtonColor ||
                     (it is MacroPadSubPage.ColorWheel && it.section == EditorSection.BUTTONS)
             }
+        val hasBackgroundSubPages =
+            subPageStack.any {
+                it is MacroPadSubPage.SteamGridDbScrape
+            }
+        val isBackgroundSection = selectedSection == EditorSection.BACKGROUND
         if (!hasAppearanceSubPages) {
             appearanceDraft = null
         }
         if (!hasButtonSubPages) {
             buttonDraft = null
         }
-        if (!hasAppearanceSubPages && !hasButtonSubPages) {
+        if (!hasAppearanceSubPages && !hasButtonSubPages && !hasBackgroundSubPages && !isBackgroundSection) {
             MacroPadState.clearPreviewLayout()
         }
     }
@@ -553,18 +558,11 @@ fun MacroPadEditor(
                                                             subPageStack + MacroPadSubPage.SteamGridDbScrape(activeLayout.id),
                                                         )
                                                     },
-                                                    onOpenCrop = { scale, ox, oy ->
-                                                        MacroPadNavState.setStack(
-                                                            subPageStack +
-                                                                MacroPadSubPage.BackgroundCrop(
-                                                                    layoutId = activeLayout.id,
-                                                                    initialScale = scale,
-                                                                    initialOffsetX = ox,
-                                                                    initialOffsetY = oy,
-                                                                ),
-                                                        )
+                                                    onDiscard = {
+                                                        MacroPadState.clearPreviewLayout()
                                                     },
                                                     onConfirm = { bgImagePath, useAsMask, bgChanged, bgScale, bgOffsetX, bgOffsetY, bgDim ->
+                                                        MacroPadState.clearPreviewLayout()
                                                         MacroPadState.updateLayout(
                                                             activeLayout.copy(
                                                                 backgroundImagePath = bgImagePath,
@@ -940,37 +938,6 @@ fun MacroPadEditor(
                                                                     },
                                                                 ),
                                                         )
-                                                    },
-                                                )
-                                            }
-                                        }
-                                    }
-
-                                    is MacroPadSubPage.BackgroundCrop -> {
-                                        val lay = profile.layouts.firstOrNull { it.id == currentSubPage.layoutId } ?: activeLayout
-                                        if (lay != null) {
-                                            GamepadDeck(
-                                                breadcrumbs =
-                                                    listOf(
-                                                        stringResource(R.string.layout_settings_bg_section_title),
-                                                        stringResource(R.string.layout_settings_bg_image_crop),
-                                                    ),
-                                            ) {
-                                                BackgroundCropSubPageContent(
-                                                    layout = lay,
-                                                    initialScale = currentSubPage.initialScale,
-                                                    initialOffsetX = currentSubPage.initialOffsetX,
-                                                    initialOffsetY = currentSubPage.initialOffsetY,
-                                                    accentColor = colors.accent,
-                                                    onConfirmCrop = { scale, ox, oy ->
-                                                        MacroPadState.updateLayout(
-                                                            lay.copy(
-                                                                bgImageScale = scale,
-                                                                bgImageOffsetX = ox,
-                                                                bgImageOffsetY = oy,
-                                                            ),
-                                                        )
-                                                        MacroPadNavState.pop()
                                                     },
                                                 )
                                             }
