@@ -278,7 +278,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <!-- MacroPad-Picker -->
 
     <!-- MacroPad-Editor-Toolbar -->
-    <string name="macropad_editor_manage_macros">Makros…</string>
+    <string name="macropad_editor_manage_macros">Makros</string>
 
     <!-- MacroPad editor section headers -->
     <string name="macropad_editor_section_layout">Layout</string>

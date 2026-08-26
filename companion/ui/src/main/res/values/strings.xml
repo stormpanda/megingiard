@@ -347,7 +347,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_picker_folder_empty">No macros available</string>
 
     <!-- MacroPad editor toolbar -->
-    <string name="macropad_editor_manage_macros">Macros…</string>
+    <string name="macropad_editor_manage_macros">Macros</string>
 
     <!-- MacroPad editor grid -->
 

@@ -276,7 +276,7 @@
     <string name="macropad_action_macro">巨集</string>
     <string name="macropad_display_macro">巨集: %s</string>
     <string name="macropad_picker_folder_empty">沒有可用的巨集</string>
-    <string name="macropad_editor_manage_macros">巨集…</string>
+    <string name="macropad_editor_manage_macros">巨集</string>
     <string name="macropad_editor_section_layout">配置</string>
     <string name="macropad_editor_section_buttons">按鈕</string>
     <string name="macropad_editor_section_button_settings">按鈕設定</string>
