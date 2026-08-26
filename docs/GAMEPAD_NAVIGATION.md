@@ -50,9 +50,9 @@ The input pipeline is coordinated through [`PrimaryOverlayManager.kt`](file:///U
 
 | Control | Key / Motion Code | Dispatch Action |
 | :--- | :--- | :--- |
-| **D-Pad / Left Stick** | `AXIS_X`, `AXIS_Y`, `AXIS_HAT_X`, `AXIS_HAT_Y` | Translated into discrete `KEYCODE_DPAD_UP`, `DOWN`, `LEFT`, `RIGHT` key events with accelerating repeat (`REPEAT_INITIAL_DELAY_MS = 250L`, `REPEAT_START_DELAY_MS = 120L`, `REPEAT_MIN_DELAY_MS = 60L`). |
-| **Button A** | `KEYCODE_BUTTON_A` (96) | Forwarded as `KEYCODE_DPAD_CENTER` to activate focused cards, toggles, or options. |
-| **Button B / Back** | `KEYCODE_BUTTON_B` (97), `BACK` (4) | Pops current sub-page (`subPageStack.dropLast(1)`), or closes overlay if at root. |
+| **D-Pad / Left Stick** | `AXIS_X`, `AXIS_Y`, `AXIS_HAT_X`, `AXIS_HAT_Y` | Translated into discrete `KEYCODE_DPAD_UP`, `DOWN`, `LEFT`, `RIGHT` key events with accelerating repeat (`REPEAT_INITIAL_DELAY_MS = 250L`, `REPEAT_START_DELAY_MS = 120L`, `REPEAT_MIN_DELAY_MS = 60L`). Supports bidirectional pane navigation (`DPAD_RIGHT` enters the deck from the category sidebar; `DPAD_LEFT` returns to the sidebar from the root deck). |
+| **Button A** | `KEYCODE_BUTTON_A` (96) | Forwarded as `KEYCODE_DPAD_CENTER` to activate focused cards, toggles, or options; enters the deck from the sidebar. |
+| **Button B / Back** | `KEYCODE_BUTTON_B` (97), `BACK` (4) | Returns from root deck to sidebar, pops current sub-page (`subPageStack.dropLast(1)`), or closes overlay if at root. |
 | **Bumper L1** | `KEYCODE_BUTTON_L1` (102) | Dispatches `BumperDirection.PREV` to cycle to the previous sidebar category. |
 | **Bumper R1** | `KEYCODE_BUTTON_R1` (103) | Dispatches `BumperDirection.NEXT` to cycle to the next sidebar category. |
 
@@ -81,12 +81,19 @@ The input pipeline is coordinated through [`PrimaryOverlayManager.kt`](file:///U
  └──────────────────────┴────────────────────────────────────────┘
 ```
 
-### 3.1 Sidebar Focus Isolation (`canFocus = !isCustomBackActive`)
+### 3.1 Bidirectional Horizontal Traversal & Sidebar Focus Isolation
 
-In Compose, when the currently focused card inside the Right Deck is disposed (e.g. when entering a sub-page), Compose's automatic focus resolution traverses up the hierarchy and defaults to the first available focusable node — which is the Left Sidebar category tile.
+1. **Sidebar to Deck (`D-Pad Right` / `Button A`):**
+   * Pressing `DPAD_RIGHT` on a `GamepadCategoryTile` triggers `transferFocusToDeck()`, shifting focus directly to the remembered focused card at the current depth (or `firstDeckItem`).
+2. **Deck to Sidebar (`D-Pad Left` / `Button B`):**
+   * At root navigation depth (`!isCustomBackActive`), pressing `DPAD_LEFT` from a single-column card or from Column 0 of a 2-column grid exits to `activeCategoryRequester` (the selected category tile).
+   * In 2-tier interactive cards (`GamepadStepperCard`, `GamepadChoiceCard`, `GamepadSliderCard`, `GamepadColorPaletteCard`), `DPAD_LEFT` navigates back to the sidebar in Tier 1 (row navigation), but adjusts values in Tier 2 (adjustment mode).
+3. **Sub-Page Focus Isolation (`canFocus = !isCustomBackActive`):**
+   * When inside sub-pages (`isCustomBackActive == true`), the sidebar rail is non-focusable (`canFocus = false`) and the Right Content Deck's leftward exit is cancelled (`FocusRequester.Cancel`). Sub-page popping is handled exclusively by `Button B` / `Back`.
 
-**Rule:** The Left Sidebar Rail Column MUST be configured with:
+**Rule:** The Left Sidebar Rail Column and Right Content Deck Column MUST be configured with:
 ```kotlin
+// Left Sidebar Rail
 Modifier.focusProperties {
     canFocus = !isCustomBackActive
     exit = { direction ->
@@ -97,8 +104,26 @@ Modifier.focusProperties {
         }
     }
 }
+
+// Right Content Deck
+Modifier.focusProperties {
+    exit = { direction ->
+        if (direction == FocusDirection.Left) {
+            if (!isCustomBackActive) {
+                activeCategoryRequester
+            } else {
+                FocusRequester.Cancel
+            }
+        } else if (direction == FocusDirection.Right ||
+            direction == FocusDirection.Up || direction == FocusDirection.Down
+        ) {
+            FocusRequester.Cancel
+        } else {
+            FocusRequester.Default
+        }
+    }
+}
 ```
-This isolates the sidebar from receiving accidental fallback focus whenever sub-pages are active (`isCustomBackActive == true`).
 
 ### 3.2 Immediate Synchronous Focus at Depth Changes
 

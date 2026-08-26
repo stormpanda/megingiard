@@ -309,7 +309,17 @@ fun GamepadCategoryTile(
                         }
                     }
                 }.then(requesterModifier)
-                .primaryOverlayFocusable(
+                .onKeyEvent { keyEvent ->
+                    val keyCode = keyEvent.nativeKeyEvent.keyCode
+                    if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
+                        if (keyEvent.type == KeyEventType.KeyDown) {
+                            transferFocusToDeck?.invoke()
+                        }
+                        true
+                    } else {
+                        false
+                    }
+                }.primaryOverlayFocusable(
                     onClick = wrappedOnClick,
                     shape = shape,
                     borderWidth = GS_ZERO_BORDER_WIDTH,
@@ -664,7 +674,13 @@ fun GamepadTwoPaneScaffold(
                                 isDeckFocused = focusState.hasFocus
                             }.focusProperties {
                                 exit = { direction ->
-                                    if (direction == FocusDirection.Left || direction == FocusDirection.Right ||
+                                    if (direction == FocusDirection.Left) {
+                                        if (!isCustomBackActive) {
+                                            activeCategoryRequester
+                                        } else {
+                                            FocusRequester.Cancel
+                                        }
+                                    } else if (direction == FocusDirection.Right ||
                                         direction == FocusDirection.Up || direction == FocusDirection.Down
                                     ) {
                                         FocusRequester.Cancel
