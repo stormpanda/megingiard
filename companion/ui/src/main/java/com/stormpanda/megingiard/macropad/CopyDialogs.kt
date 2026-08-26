@@ -13,7 +13,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.GamepadActionCard
-import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.firstDeckItem
 
@@ -74,25 +73,26 @@ internal fun CopyButtonSubPageContent(
         )
     } else {
         var isFirst = true
+        val showProfileInDesc = profiles.count { p -> p.layouts.any { it.id != excludeLayoutId } } > 1
         profiles.forEach { profile ->
             val layouts = profile.layouts.filter { it.id != excludeLayoutId }
-            if (layouts.isNotEmpty()) {
-                GamepadSectionHeader(
-                    text = profile.name,
-                    color = accentColor,
+            layouts.forEach { layout ->
+                val first = isFirst
+                isFirst = false
+                val desc =
+                    if (showProfileInDesc) {
+                        "${profile.name} • " + stringResource(R.string.quick_menu_buttons_count, layout.buttons.size)
+                    } else {
+                        stringResource(R.string.quick_menu_buttons_count, layout.buttons.size)
+                    }
+                GamepadActionCard(
+                    title = layout.name,
+                    description = desc,
+                    actionText = stringResource(R.string.gamepad_action_copy),
+                    icon = Icons.Rounded.ContentCopy,
+                    modifier = Modifier.firstDeckItem(first),
+                    onClick = { onSelect(profile.id, layout.id) },
                 )
-                layouts.forEach { layout ->
-                    val first = isFirst
-                    isFirst = false
-                    GamepadActionCard(
-                        title = layout.name,
-                        description = stringResource(R.string.quick_menu_buttons_count, layout.buttons.size),
-                        actionText = stringResource(R.string.gamepad_action_copy),
-                        icon = Icons.Rounded.ContentCopy,
-                        modifier = Modifier.firstDeckItem(first),
-                        onClick = { onSelect(profile.id, layout.id) },
-                    )
-                }
             }
         }
     }

@@ -265,12 +265,6 @@ internal fun MacroStepEditSubPageContent(
             },
         )
 
-    // ── Action Type Section ──────────────────────────────────────────────────
-    GamepadSectionHeader(
-        text = stringResource(R.string.macro_step_action_type_title),
-        color = accentColor,
-    )
-
     val availableTypes =
         StepType.entries.filter { type ->
             val initialIsRecorded =

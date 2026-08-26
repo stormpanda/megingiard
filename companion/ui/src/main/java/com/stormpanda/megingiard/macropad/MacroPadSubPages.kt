@@ -36,7 +36,6 @@ import com.stormpanda.megingiard.ui.GamePadGlyph
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadCardText
 import com.stormpanda.megingiard.ui.GamepadColorSwatch
-import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadSliderCard
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.firstDeckItem
@@ -288,29 +287,6 @@ internal sealed interface MacroPadSubPage {
 }
 
 @Composable
-internal fun GamepadSubPageHeader(
-    breadcrumbs: List<String>,
-    accentColor: Color,
-) {
-    GamepadSectionHeader(
-        text = breadcrumbs.joinToString("  ›  ") { it.uppercase() },
-        color = accentColor,
-    )
-}
-
-@Composable
-internal fun GamepadSubPageHeader(
-    parentTitle: String,
-    subPageTitle: String,
-    accentColor: Color,
-) {
-    GamepadSubPageHeader(
-        breadcrumbs = listOf(parentTitle, subPageTitle),
-        accentColor = accentColor,
-    )
-}
-
-@Composable
 internal fun ColorWheelSubPageContent(
     title: String,
     breadcrumbs: List<String>,
@@ -393,13 +369,6 @@ internal fun ColorWheelSubPageContent(
                     ),
             )
         }
-
-    if (breadcrumbs.isNotEmpty()) {
-        GamepadSubPageHeader(
-            breadcrumbs = breadcrumbs,
-            accentColor = accentColor,
-        )
-    }
 
     val hex =
         if (showAlphaSlider && workingColor.alpha < 0.99f) {

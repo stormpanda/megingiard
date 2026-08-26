@@ -219,12 +219,6 @@ internal fun MacroTimelineSubPageContent(
         }
     }
 
-    // ── General Section ──────────────────────────────────────────────────────
-    GamepadSectionHeader(
-        text = stringResource(R.string.macropad_macro_section_general),
-        color = accentColor,
-    )
-
     GamepadTextFieldCard(
         title = stringResource(R.string.help_timeline_name_label),
         description = stringResource(R.string.help_timeline_name_desc),

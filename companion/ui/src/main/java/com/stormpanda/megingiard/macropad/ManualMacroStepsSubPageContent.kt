@@ -30,12 +30,6 @@ internal fun ManualMacroStepsSubPageContent(
     AppLog.d(TAG, "ManualMacroStepsSubPageContent rendered for '${macro.name}' (${macro.steps.size} steps)")
     val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsState()
 
-    // ── Quick Actions Section ───────────────────────────────────────────────
-    GamepadSectionHeader(
-        text = stringResource(R.string.macropad_macro_section_actions),
-        color = accentColor,
-    )
-
     GamepadActionCard(
         title = stringResource(R.string.macropad_macro_step_new),
         description = stringResource(R.string.macro_step_action_type_desc),

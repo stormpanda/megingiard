@@ -727,9 +727,8 @@ fun GamepadTwoPaneScaffold(
                                 Modifier
                                     .fillMaxWidth()
                                     .padding(
-                                        start = GS_DECK_PADDING_H,
-                                        end = GS_DECK_PADDING_H,
-                                        top = GS_DECK_PADDING_V,
+                                        horizontal = GS_DECK_PADDING_H,
+                                        vertical = GS_DECK_PADDING_V,
                                     ),
                         ) {
                             GamepadBreadcrumbHeader(

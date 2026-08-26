@@ -191,11 +191,6 @@ internal fun VisualKeyboardPicker(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(VKP_SECTION_SPACING),
     ) {
-        GamepadSectionHeader(
-            text = stringResource(R.string.macropad_picker_visual_keyboard_title),
-            color = accentColor,
-        )
-
         // ── Main Keyboard Block ───────────────────────────────────────────────
         Column(
             modifier = Modifier.fillMaxWidth(),

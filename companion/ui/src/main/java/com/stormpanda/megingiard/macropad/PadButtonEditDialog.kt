@@ -372,11 +372,6 @@ internal fun EditButtonSubPageContent(
         )
     }
 
-    GamepadSectionHeader(
-        text = stringResource(R.string.macropad_editor_action),
-        color = accentColor,
-    )
-
     ActionPicker(
         current = action,
         accentColor = accentColor,
