@@ -30,7 +30,6 @@ class MirrorControlCardTest {
         val testColors = paletteFor(ThemeMode.DARK)
         var stopClicked = false
         var freezeClicked = false
-        var editClicked = false
         var screenshotClicked = false
 
         composeTestRule.setContent {
@@ -39,30 +38,26 @@ class MirrorControlCardTest {
                     colors = testColors,
                     isCapturing = true,
                     isFrozen = false,
-                    isViewportEditActive = false,
                     isScreenshotEnabled = true,
                     isCompanionHub = true,
                     onStart = {},
                     onStop = { stopClicked = true },
                     onToggleFreeze = { freezeClicked = true },
-                    onToggleViewportEdit = { editClicked = true },
                     onTakeScreenshot = { screenshotClicked = true },
                 )
             }
         }
 
-        // Stop, Freeze, and Edit controls must be disabled when in Companion Hub
+        // Stop and Freeze controls must be disabled when in Companion Hub
         composeTestRule.onNodeWithContentDescription("Stop Mirroring").assertIsNotEnabled()
         composeTestRule.onNodeWithContentDescription("Freeze").assertIsNotEnabled()
 
-        // Click on Stop / Freeze / Edit should not trigger callbacks
+        // Click on Stop / Freeze should not trigger callbacks
         composeTestRule.onNodeWithContentDescription("Stop Mirroring").performClick()
         composeTestRule.onNodeWithContentDescription("Freeze").performClick()
-        composeTestRule.onNodeWithText("Screen Mirroring").performClick()
 
         assertFalse("stopClicked should be false when in Companion Hub", stopClicked)
         assertFalse("freezeClicked should be false when in Companion Hub", freezeClicked)
-        assertFalse("editClicked should be false when in Companion Hub", editClicked)
 
         // Screenshot button remains enabled
         composeTestRule.onNodeWithContentDescription("Screenshot").assertIsEnabled()
@@ -75,7 +70,6 @@ class MirrorControlCardTest {
         val testColors = paletteFor(ThemeMode.DARK)
         var stopClicked = false
         var freezeClicked = false
-        var editClicked = false
 
         composeTestRule.setContent {
             CompositionLocalProvider(LocalAppColors provides testColors) {
@@ -83,13 +77,11 @@ class MirrorControlCardTest {
                     colors = testColors,
                     isCapturing = true,
                     isFrozen = false,
-                    isViewportEditActive = false,
                     isScreenshotEnabled = true,
                     isCompanionHub = false,
                     onStart = {},
                     onStop = { stopClicked = true },
                     onToggleFreeze = { freezeClicked = true },
-                    onToggleViewportEdit = { editClicked = true },
                     onTakeScreenshot = {},
                 )
             }
@@ -101,10 +93,8 @@ class MirrorControlCardTest {
 
         composeTestRule.onNodeWithContentDescription("Stop Mirroring").performClick()
         composeTestRule.onNodeWithContentDescription("Freeze").performClick()
-        composeTestRule.onNodeWithText("Screen Mirroring").performClick()
 
         assertTrue("stopClicked should be true when not in Companion Hub", stopClicked)
         assertTrue("freezeClicked should be true when not in Companion Hub", freezeClicked)
-        assertTrue("editClicked should be true when not in Companion Hub", editClicked)
     }
 }

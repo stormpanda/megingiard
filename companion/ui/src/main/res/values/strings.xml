@@ -564,6 +564,7 @@ Open Settings to create a layout.</string>
 
     <!-- Cutout Layout Editor -->
     <string name="mirror_editor_add_cutout">Add Cutout</string>
+    <string name="mirror_editor_add_cutout_desc">Create a new screen mirror region</string>
     <string name="mirror_editor_delete_cutout">Delete Selected</string>
     <string name="mirror_editor_deselect_cutout">Deselect Cutout</string>
     <string name="mirror_editor_done">Done</string>

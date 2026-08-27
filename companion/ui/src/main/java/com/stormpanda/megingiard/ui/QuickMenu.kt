@@ -111,7 +111,6 @@ fun QuickMenu(
     val activeLayout by MacroPadState.activeLayout.collectAsState()
     val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
     val isFrozen by ScreenCaptureManager.isFrozen.collectAsState()
-    val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
     val companionViewMode by AppStateManager.companionViewMode.collectAsState()
     val showIntegrationHome by AppStateManager.showIntegrationHome.collectAsState()
     val privdState by PrivdClient.state.collectAsState()
@@ -144,7 +143,6 @@ fun QuickMenu(
                 colors = colors,
                 isCapturing = isCapturing,
                 isFrozen = isFrozen,
-                isViewportEditActive = isViewportEditActive,
                 isScreenshotEnabled = isCapturing || isPrivdConnected,
                 isCompanionHub = showIntegrationHome,
                 modifier =
@@ -162,10 +160,6 @@ fun QuickMenu(
                     onDismiss()
                 },
                 onToggleFreeze = { ScreenCaptureManager.toggleFrozen() },
-                onToggleViewportEdit = {
-                    AppStateManager.setViewportEditActive(true)
-                    onDismiss()
-                },
                 onTakeScreenshot = { ScreenCaptureManager.requestScreenshot() },
             )
 

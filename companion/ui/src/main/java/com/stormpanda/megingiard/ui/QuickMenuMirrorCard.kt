@@ -4,9 +4,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CameraAlt
-import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Stop
@@ -43,18 +42,15 @@ internal fun MirrorControlCard(
     colors: AppColors,
     isCapturing: Boolean,
     isFrozen: Boolean,
-    isViewportEditActive: Boolean,
     isScreenshotEnabled: Boolean,
     isCompanionHub: Boolean = false,
     modifier: Modifier = Modifier,
     onStart: () -> Unit,
     onStop: () -> Unit,
     onToggleFreeze: () -> Unit,
-    onToggleViewportEdit: () -> Unit,
     onTakeScreenshot: () -> Unit,
 ) {
     val menuBezelBrush = rememberBezelBrush()
-    val isEditEnabled = !isCompanionHub && isCapturing
     val isStartStopEnabled = !isCompanionHub
     val isPauseEnabled = !isCompanionHub && isCapturing
 
@@ -72,46 +68,10 @@ internal fun MirrorControlCard(
                     indication = null,
                 ) { } // absorb clicks — prevent scrim dismiss
                 .padding(horizontal = PM_CONTENT_PADDING, vertical = PM_MIRROR_CARD_V_PADDING),
+        horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Screen Mirroring button (left)
-        Row(
-            modifier =
-                Modifier
-                    .clip(RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
-                    .background(if (isViewportEditActive) colors.accent.copy(alpha = 0.15f) else Color.Transparent)
-                    .border(
-                        width = PM_BORDER_WIDTH,
-                        color =
-                            if (isViewportEditActive) {
-                                colors.accent
-                            } else {
-                                if (isEditEnabled) colors.accent.copy(alpha = 0.5f) else colors.onControlOverlay.copy(alpha = 0.15f)
-                            },
-                        shape = RoundedCornerShape(PM_ACTION_BUTTON_CORNER),
-                    ).clickable(
-                        enabled = isEditEnabled,
-                        onClick = onToggleViewportEdit,
-                    ).padding(horizontal = PM_ACTION_BUTTON_H_PADDING, vertical = PM_ACTION_BUTTON_V_PADDING),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.Edit,
-                contentDescription = stringResource(R.string.cd_viewport_edit),
-                tint = if (isEditEnabled) colors.accent else colors.onControlOverlay.copy(alpha = 0.3f),
-                modifier = Modifier.size(PM_SCREEN_MIRRORING_ICON_SIZE),
-            )
-            Spacer(Modifier.width(PM_SCREEN_MIRRORING_SPACER_W))
-            Text(
-                text = stringResource(R.string.quick_menu_screen_mirroring),
-                color = if (isEditEnabled) colors.accent else colors.onControlOverlay.copy(alpha = 0.3f),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        }
-
-        Spacer(Modifier.weight(1f))
-
-        // Mirror control icon buttons (right)
+        // Mirror control icon buttons
         if (isCapturing) {
             MirrorControlIconButton(
                 icon = Icons.Rounded.Stop,

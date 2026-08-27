@@ -2,10 +2,8 @@ package com.stormpanda.megingiard.macropad
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AspectRatio
-import androidx.compose.material.icons.rounded.Circle
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Crop
-import androidx.compose.material.icons.rounded.CropSquare
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Grain
@@ -27,8 +25,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.mirror.AspectRatioMode
-import com.stormpanda.megingiard.mirror.CutoutShape
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.ui.GamepadActionCard
@@ -45,6 +41,7 @@ import kotlin.math.roundToInt
 
 private const val TAG = "MirrorSettingsEditor"
 
+private const val MSE_MAX_CUTOUTS = 10
 private const val MSE_DIM_MAX = 0.9f
 private const val MSE_DIM_STEP = 0.05f
 private const val MSE_PERCENT_DIVISOR = 100f
@@ -63,6 +60,7 @@ internal fun MirrorDeck(
     layout: PadLayout,
     accentColor: Color,
     onArrangeCutouts: () -> Unit,
+    onAddCutout: () -> Unit,
     onEditCutout: (ScreenCutout) -> Unit,
 ) {
     AppLog.d(TAG, "MirrorDeck composition for profile=${profile.id}, layout=${layout.id}")
@@ -171,6 +169,16 @@ internal fun MirrorDeck(
     GamepadSectionHeader(
         text = stringResource(R.string.settings_mirror_cutouts_header),
         color = accentColor,
+    )
+
+    // First item in cutouts list: Add Cutout action card
+    GamepadActionCard(
+        title = stringResource(R.string.mirror_editor_add_cutout),
+        description = stringResource(R.string.mirror_editor_add_cutout_desc),
+        actionText = stringResource(R.string.settings_macropad_new),
+        icon = Icons.Rounded.Add,
+        enabled = layout.mirrorCutouts.size < MSE_MAX_CUTOUTS,
+        onClick = onAddCutout,
     )
 
     if (layout.mirrorCutouts.isEmpty()) {
@@ -359,72 +367,7 @@ internal fun CutoutSettingsSubPageContent(
         )
     }
 
-    // 4. Aspect Ratio Mode
-    val aspectModes = AspectRatioMode.entries
-    val currentAspectIdx = aspectModes.indexOf(cutout.aspectRatioMode).coerceAtLeast(0)
-    val aspectSelectedText =
-        when (cutout.aspectRatioMode) {
-            AspectRatioMode.FREE -> stringResource(R.string.mirror_editor_aspect_ratio_free)
-            AspectRatioMode.TOP -> stringResource(R.string.mirror_editor_aspect_ratio_top)
-            AspectRatioMode.BOTTOM -> stringResource(R.string.mirror_editor_aspect_ratio_bottom)
-        }
-
-    GamepadChoiceCard(
-        title = stringResource(R.string.mirror_editor_aspect_ratio_mode),
-        description = stringResource(R.string.mirror_editor_aspect_ratio_desc),
-        selectedText = aspectSelectedText,
-        icon = Icons.Rounded.AspectRatio,
-        itemKey = "cutout_${cutout.id}_aspect_ratio",
-        onPrevious = {
-            val newIdx = (currentAspectIdx - 1 + aspectModes.size) % aspectModes.size
-            val nextMode = aspectModes[newIdx]
-            onUpdateCutout(
-                cutout.copy(
-                    aspectRatioMode = nextMode,
-                    keepAspectRatio = (nextMode == AspectRatioMode.TOP),
-                ),
-                false,
-            )
-        },
-        onNext = {
-            val newIdx = (currentAspectIdx + 1) % aspectModes.size
-            val nextMode = aspectModes[newIdx]
-            onUpdateCutout(
-                cutout.copy(
-                    aspectRatioMode = nextMode,
-                    keepAspectRatio = (nextMode == AspectRatioMode.TOP),
-                ),
-                false,
-            )
-        },
-    )
-
-    // 5. Cutout Shape
-    val isCircle = cutout.shape == CutoutShape.CIRCLE
-    val shapeSelectedText =
-        if (isCircle) {
-            stringResource(R.string.mirror_editor_toolbar_shape_circle)
-        } else {
-            stringResource(R.string.mirror_editor_toolbar_shape_rect)
-        }
-
-    GamepadChoiceCard(
-        title = stringResource(R.string.mirror_editor_shape_mode),
-        description = stringResource(R.string.mirror_editor_shape_desc),
-        selectedText = shapeSelectedText,
-        icon = if (isCircle) Icons.Rounded.Circle else Icons.Rounded.CropSquare,
-        itemKey = "cutout_${cutout.id}_shape",
-        onPrevious = {
-            val nextShape = if (isCircle) CutoutShape.RECTANGLE else CutoutShape.CIRCLE
-            onUpdateCutout(cutout.copy(shape = nextShape), false)
-        },
-        onNext = {
-            val nextShape = if (isCircle) CutoutShape.RECTANGLE else CutoutShape.CIRCLE
-            onUpdateCutout(cutout.copy(shape = nextShape), false)
-        },
-    )
-
-    // 6. Delete Cutout Action
+    // 4. Delete Cutout Action
     GamepadSectionHeader(
         text = stringResource(R.string.macropad_editor_section_actions),
         color = accentColor,

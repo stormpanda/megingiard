@@ -411,6 +411,7 @@
     <string name="mirror_crop_editor_cancel">取消</string>
     <string name="cd_drag_toolbar">拖曳以移動工具列</string>
     <string name="mirror_editor_add_cutout">新增區塊</string>
+    <string name="mirror_editor_add_cutout_desc">建立新的螢幕鏡像區塊</string>
     <string name="mirror_editor_delete_cutout">刪除所選</string>
     <string name="mirror_editor_deselect_cutout">取消選取區塊</string>
     <string name="mirror_editor_done">完成</string>

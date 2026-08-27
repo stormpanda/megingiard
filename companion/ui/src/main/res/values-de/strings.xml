@@ -573,6 +573,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
 
     <!-- Cutout Layout Editor -->
     <string name="mirror_editor_add_cutout">Ausschnitt hinzufügen</string>
+    <string name="mirror_editor_add_cutout_desc">Neuen Bildschirmspiegelungsbereich erstellen</string>
     <string name="mirror_editor_delete_cutout">Auswahl löschen</string>
     <string name="mirror_editor_deselect_cutout">Ausschnitt abwählen</string>
     <string name="mirror_editor_done">Fertig</string>
