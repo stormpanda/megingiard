@@ -41,7 +41,6 @@ import kotlin.math.roundToInt
 
 private const val TAG = "MirrorSettingsEditor"
 
-private const val MSE_MAX_CUTOUTS = 10
 private const val MSE_DIM_MAX = 0.9f
 private const val MSE_DIM_STEP = 0.05f
 private const val MSE_PERCENT_DIVISOR = 100f
@@ -177,7 +176,6 @@ internal fun MirrorDeck(
         description = stringResource(R.string.mirror_editor_add_cutout_desc),
         actionText = stringResource(R.string.settings_macropad_new),
         icon = Icons.Rounded.Add,
-        enabled = layout.mirrorCutouts.size < MSE_MAX_CUTOUTS,
         onClick = onAddCutout,
     )
 

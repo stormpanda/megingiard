@@ -88,6 +88,7 @@ import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.mirror.AspectRatioMode
+import com.stormpanda.megingiard.mirror.CutoutPlacementHelper
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.mirror.adjustSourceCropToAspectRatio
@@ -571,107 +572,59 @@ fun MacroPadEditor(
                                                     },
                                                     onAddCutout = {
                                                         val layout = activeLayout
-                                                        if (layout.mirrorCutouts.size >= 10) {
+                                                        val slot = CutoutPlacementHelper.findAvailableSlot(layout.mirrorCutouts)
+                                                        if (slot == null) {
                                                             DialogToastManager.show(
-                                                                context.getString(R.string.mirror_editor_max_cutouts),
+                                                                context.getString(R.string.mirror_editor_no_space),
                                                             )
                                                         } else {
                                                             val newId = UUID.randomUUID().toString()
-                                                            var foundX = 0f
-                                                            var foundY = 0f
-                                                            var collides = true
-                                                            for (y in listOf(0f, 0.35f, 0.7f)) {
-                                                                for (x in listOf(0f, 0.35f, 0.7f)) {
-                                                                    collides =
-                                                                        layout.mirrorCutouts.any { other ->
-                                                                            x < other.destX + other.destWidth && x + 0.3f > other.destX &&
-                                                                                y < other.destY + other.destHeight && y + 0.3f > other.destY
-                                                                        }
-                                                                    if (!collides) {
-                                                                        foundX = x
-                                                                        foundY = y
-                                                                        break
-                                                                    }
+                                                            val initialCutout =
+                                                                ScreenCutout(
+                                                                    id = newId,
+                                                                    name = "Cutout ${layout.mirrorCutouts.size + 1}",
+                                                                    srcX = 0.25f,
+                                                                    srcY = 0.25f,
+                                                                    srcWidth = 0.5f,
+                                                                    srcHeight = 0.5f,
+                                                                    destX = slot.destX,
+                                                                    destY = slot.destY,
+                                                                    destWidth = slot.destWidth,
+                                                                    destHeight = slot.destHeight,
+                                                                    aspectRatioMode = AspectRatioMode.BOTTOM,
+                                                                )
+                                                            val screenW =
+                                                                ScreenCaptureManager.surfaceWidth.value.toFloat().let {
+                                                                    if (it > 0f) it else 1920f
                                                                 }
-                                                                if (!collides) break
-                                                            }
-                                                            if (collides) {
-                                                                DialogToastManager.show(
-                                                                    context.getString(R.string.mirror_editor_no_space),
+                                                            val screenH =
+                                                                ScreenCaptureManager.surfaceHeight.value.toFloat().let {
+                                                                    if (it > 0f) it else 1080f
+                                                                }
+                                                            val srcW =
+                                                                ScreenCaptureManager.captureSourceWidth.value.toFloat().let {
+                                                                    if (it > 0f) it else 1920f
+                                                                }
+                                                            val srcH =
+                                                                ScreenCaptureManager.captureSourceHeight.value.toFloat().let {
+                                                                    if (it > 0f) it else 1080f
+                                                                }
+                                                            val newCutout =
+                                                                adjustSourceCropToAspectRatio(
+                                                                    cutout = initialCutout,
+                                                                    screenW = screenW,
+                                                                    screenH = screenH,
+                                                                    srcW = srcW,
+                                                                    srcH = srcH,
                                                                 )
-                                                            } else {
-                                                                val initialCutout =
-                                                                    ScreenCutout(
-                                                                        id = newId,
-                                                                        name = "Cutout ${layout.mirrorCutouts.size + 1}",
-                                                                        srcX = 0.25f,
-                                                                        srcY = 0.25f,
-                                                                        srcWidth = 0.5f,
-                                                                        srcHeight = 0.5f,
-                                                                        destX = foundX,
-                                                                        destY = foundY,
-                                                                        destWidth = 0.3f,
-                                                                        destHeight = 0.3f,
-                                                                        aspectRatioMode = AspectRatioMode.BOTTOM,
-                                                                    )
-                                                                val screenW =
-                                                                    ScreenCaptureManager.surfaceWidth.value.toFloat().let {
-                                                                        if (it >
-                                                                            0f
-                                                                        ) {
-                                                                            it
-                                                                        } else {
-                                                                            1920f
-                                                                        }
-                                                                    }
-                                                                val screenH =
-                                                                    ScreenCaptureManager.surfaceHeight.value.toFloat().let {
-                                                                        if (it >
-                                                                            0f
-                                                                        ) {
-                                                                            it
-                                                                        } else {
-                                                                            1080f
-                                                                        }
-                                                                    }
-                                                                val srcW =
-                                                                    ScreenCaptureManager.captureSourceWidth.value.toFloat().let {
-                                                                        if (it >
-                                                                            0f
-                                                                        ) {
-                                                                            it
-                                                                        } else {
-                                                                            1920f
-                                                                        }
-                                                                    }
-                                                                val srcH =
-                                                                    ScreenCaptureManager.captureSourceHeight.value.toFloat().let {
-                                                                        if (it >
-                                                                            0f
-                                                                        ) {
-                                                                            it
-                                                                        } else {
-                                                                            1080f
-                                                                        }
-                                                                    }
-                                                                val newCutout =
-                                                                    adjustSourceCropToAspectRatio(
-                                                                        cutout = initialCutout,
-                                                                        screenW = screenW,
-                                                                        screenH = screenH,
-                                                                        srcW = srcW,
-                                                                        srcH = srcH,
-                                                                    )
-                                                                MacroPadState.updateLayout(
-                                                                    layout.copy(
-                                                                        mirrorCutouts =
-                                                                            layout.mirrorCutouts + newCutout,
-                                                                    ),
-                                                                )
-                                                                MacroPadNavState.setStack(
-                                                                    subPageStack + MacroPadSubPage.CutoutSettings(newId),
-                                                                )
-                                                            }
+                                                            MacroPadState.updateLayout(
+                                                                layout.copy(
+                                                                    mirrorCutouts = layout.mirrorCutouts + newCutout,
+                                                                ),
+                                                            )
+                                                            MacroPadNavState.setStack(
+                                                                subPageStack + MacroPadSubPage.CutoutSettings(newId),
+                                                            )
                                                         }
                                                     },
                                                     onEditCutout = { cutout ->

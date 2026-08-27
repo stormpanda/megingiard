@@ -24,8 +24,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - While Screen Mirroring edit mode is active, users MUST be able to arrange cutout destination bounds on the secondary display:
   - Selecting a cutout in the layout editor automatically opens `CropSelectorOverlay` on the primary display with a 35% opacity scrim veil and interactive crop frame while keeping the background game and mirror stream running live.
   - Adjusting the crop boundaries or corner handles on the top screen updates the cutout's source coordinates in `MacroPadState.activeLayout` in real time. The top screen overlay contains no floating buttons; crop changes are saved whenever the layout is saved on the bottom screen (or reverted if Cancel is selected in the layout editor).
-  - The layout editor toolbar on the bottom screen provides quick access to **Aspect Ratio Mode**, **Cutout Shape Toggle**, **Done**, and **Cancel**. Hitting **Done** or **Cancel** exits layout arrangement and re-opens the Screen Mirroring category in the primary overlay right where it was left.
-  - Creating new cutouts is managed from the primary overlay menu (via the "Add Cutout" item in the Screen Mirroring cutouts list).
+  - Creating new cutouts is managed from the primary overlay menu (via the "Add Cutout" item in the Screen Mirroring cutouts list). There is no arbitrary hard cap on the number of cutouts. If the standard base cutout size (0.3 x 0.3) cannot fit on the canvas without colliding with existing cutouts, candidate dimensions are dynamically reduced by up to 50% (down to 0.15 x 0.15). If no available non-overlapping space can be found even at minimum scale, a toast prompts the user to make room on the screen first.
 
 ### FR-M3: Freeze Frame
 

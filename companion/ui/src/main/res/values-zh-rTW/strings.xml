@@ -425,8 +425,7 @@
     <string name="mirror_smoothing_strength_off">關閉</string>
     <string name="mirror_editor_shape_circle">形狀: 圓形</string>
     <string name="mirror_editor_shape_rectangle">形狀: 矩形</string>
-    <string name="mirror_editor_no_space">沒有足夠空間新增另一個區塊</string>
-    <string name="mirror_editor_max_cutouts">最多允許 10 個區塊</string>
+    <string name="mirror_editor_no_space">請先在螢幕上騰出空間以新增區塊</string>
     <string name="mirror_editor_cutout_name_hint">區塊名稱</string>
     <string name="mirror_editor_toolbar_add">新增</string>
     <string name="mirror_editor_toolbar_settings">設定</string>
