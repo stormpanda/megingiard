@@ -45,6 +45,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.CropSquare
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.FilterCenterFocus
+import androidx.compose.material.icons.rounded.OpenWith
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.UnfoldLess
@@ -54,6 +55,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -61,6 +63,8 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -106,8 +110,12 @@ import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.rememberBezelBrush
 import com.stormpanda.megingiard.ui.rememberGamepadBringIntoViewSpec
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import java.util.UUID
+import kotlin.math.max
 import kotlin.math.roundToInt
 import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 
@@ -152,7 +160,10 @@ private val METO_DEFAULT_BORDER_WIDTH = 1.dp
 private val METO_FOCUS_ELEVATION = 4.dp
 
 private const val METO_SURFACE_ALPHA = 0.70f
-private const val METO_CROP_NUDGE_DELTA = 0.01f
+private const val METO_MOVE_INITIAL_DELAY_MS = 250L
+private const val METO_MOVE_START_DELAY_MS = 80L
+private const val METO_MOVE_MIN_DELAY_MS = 16L
+private const val METO_MOVE_ACCEL_FACTOR = 0.88f
 private const val METO_INITIAL_FOCUS_DELAY_MS = 100L
 private val METO_SCROLL_EXTRA_PADDING = 0.dp
 
@@ -285,6 +296,44 @@ fun MirrorEditorTopOverlay(
     val surfaceHeight by ScreenCaptureManager.surfaceHeight.collectAsState()
     val secScreenW = if (surfaceWidth > 0f) surfaceWidth else 1280f
     val secScreenH = if (surfaceHeight > 0f) surfaceHeight else 960f
+
+    fun moveTopCutout(
+        cutoutId: String,
+        dx: Int,
+        dy: Int,
+    ) {
+        val currentProfile = MacroPadState.activeProfile.value ?: return
+        val currentLayout = currentProfile.layouts.firstOrNull { it.id == currentProfile.activeLayoutId } ?: return
+        val cur = currentLayout.mirrorCutouts.firstOrNull { it.id == cutoutId } ?: return
+        val stepX = 1f / srcWidth
+        val stepY = 1f / srcHeight
+        val newX = (cur.srcX + dx * stepX).coerceIn(0f, 1f - cur.srcWidth)
+        val newY = (cur.srcY + dy * stepY).coerceIn(0f, 1f - cur.srcHeight)
+        if (newX != cur.srcX || newY != cur.srcY) {
+            val updated = cur.copy(srcX = newX, srcY = newY)
+            val updatedList = currentLayout.mirrorCutouts.map { if (it.id == cur.id) updated else it }
+            MacroPadState.updateLayout(currentLayout.copy(mirrorCutouts = updatedList))
+        }
+    }
+
+    fun moveBottomCutout(
+        cutoutId: String,
+        dx: Int,
+        dy: Int,
+    ) {
+        val currentProfile = MacroPadState.activeProfile.value ?: return
+        val currentLayout = currentProfile.layouts.firstOrNull { it.id == currentProfile.activeLayoutId } ?: return
+        val cur = currentLayout.mirrorCutouts.firstOrNull { it.id == cutoutId } ?: return
+        val stepX = 1f / secScreenW
+        val stepY = 1f / secScreenH
+        val newX = (cur.destX + dx * stepX).coerceIn(0f, 1f - cur.destWidth)
+        val newY = (cur.destY + dy * stepY).coerceIn(0f, 1f - cur.destHeight)
+        if (newX != cur.destX || newY != cur.destY) {
+            val updated = cur.copy(destX = newX, destY = newY)
+            val updatedList = currentLayout.mirrorCutouts.map { if (it.id == cur.id) updated else it }
+            MacroPadState.updateLayout(currentLayout.copy(mirrorCutouts = updatedList))
+        }
+    }
 
     // Root key handler to reliably catch Controller B / Back button
     val rootKeyModifier =
@@ -425,20 +474,27 @@ fun MirrorEditorTopOverlay(
                                 },
                             )
 
-                            // Item 3: Nudge Crop Coordinates
-                            AdjustCropCard(
+                            // Item 3: Adjust Top Cutout Coordinates (Source Screen)
+                            AdjustCoordinatesCard(
+                                title = stringResource(R.string.mirror_editor_adjust_top_cutout),
+                                icon = Icons.Rounded.Tune,
                                 selectedCutout = selectedCutout,
-                                onNudge = { dx, dy ->
-                                    val cur = selectedCutout ?: return@AdjustCropCard
-                                    val newX = (cur.srcX + dx).coerceIn(0f, 1f - cur.srcWidth)
-                                    val newY = (cur.srcY + dy).coerceIn(0f, 1f - cur.srcHeight)
-                                    val updated = cur.copy(srcX = newX, srcY = newY)
-                                    val updatedList = cutouts.map { if (it.id == cur.id) updated else it }
-                                    MacroPadState.updateLayout(layout.copy(mirrorCutouts = updatedList))
+                                onMove = { dx, dy ->
+                                    selectedCutout?.id?.let { moveTopCutout(it, dx, dy) }
                                 },
                             )
 
-                            // Item 4: Add Cutout
+                            // Item 4: Adjust Bottom Cutout Coordinates (Target Screen)
+                            AdjustCoordinatesCard(
+                                title = stringResource(R.string.mirror_editor_adjust_bottom_cutout),
+                                icon = Icons.Rounded.OpenWith,
+                                selectedCutout = selectedCutout,
+                                onMove = { dx, dy ->
+                                    selectedCutout?.id?.let { moveBottomCutout(it, dx, dy) }
+                                },
+                            )
+
+                            // Item 5: Add Cutout
                             ToolboxActionCard(
                                 title = stringResource(R.string.mirror_editor_add_cutout),
                                 icon = Icons.Rounded.Add,
@@ -1161,55 +1217,124 @@ private fun ShapeToggleCard(
 }
 
 @Composable
-private fun AdjustCropCard(
+private fun AdjustCoordinatesCard(
+    title: String,
+    icon: ImageVector,
     selectedCutout: ScreenCutout?,
-    onNudge: (Float, Float) -> Unit,
+    onMove: (Int, Int) -> Unit,
     modifier: Modifier = Modifier,
     cardFocusRequester: FocusRequester = remember { FocusRequester() },
     onFocusChanged: ((Boolean) -> Unit)? = null,
 ) {
     val colors = LocalAppColors.current
-    var isNudging by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+    val currentOnMove by rememberUpdatedState(onMove)
+    var isMoving by remember { mutableStateOf(false) }
     val enabled = selectedCutout != null
 
+    var activeDirectionKey by remember { mutableIntStateOf(0) }
+    var activeRepeatJob by remember { mutableStateOf<Job?>(null) }
+
+    fun stopMovingImmediate() {
+        activeRepeatJob?.cancel()
+        activeRepeatJob = null
+        activeDirectionKey = 0
+    }
+
+    fun startMoving(
+        keyCode: Int,
+        dx: Int,
+        dy: Int,
+    ) {
+        if (activeDirectionKey == keyCode && activeRepeatJob?.isActive == true) {
+            return
+        }
+        activeRepeatJob?.cancel()
+        activeDirectionKey = keyCode
+        currentOnMove(dx, dy)
+        activeRepeatJob =
+            coroutineScope.launch {
+                delay(METO_MOVE_INITIAL_DELAY_MS)
+                var delayMs = METO_MOVE_START_DELAY_MS
+                while (isActive && activeDirectionKey == keyCode) {
+                    currentOnMove(dx, dy)
+                    delay(delayMs)
+                    delayMs = max(METO_MOVE_MIN_DELAY_MS, (delayMs * METO_MOVE_ACCEL_FACTOR).toLong())
+                }
+            }
+    }
+
+    fun stopMoving(keyCode: Int) {
+        if (activeDirectionKey == keyCode) {
+            stopMovingImmediate()
+        }
+    }
+
+    LaunchedEffect(selectedCutout?.id) {
+        if (isMoving) {
+            stopMovingImmediate()
+            isMoving = false
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            stopMovingImmediate()
+        }
+    }
+
     ToolboxCard(
-        onClick = { isNudging = !isNudging },
-        isFocusedOverride = isNudging,
+        onClick = {
+            if (isMoving) {
+                stopMovingImmediate()
+                isMoving = false
+            } else {
+                isMoving = true
+            }
+        },
+        isFocusedOverride = isMoving,
         enabled = enabled,
         cardFocusRequester = cardFocusRequester,
-        onFocusChanged = onFocusChanged,
-        cardBgColor = if (isNudging) colors.accent.copy(alpha = 0.25f) else null,
-        icon = Icons.Rounded.Tune,
-        title = stringResource(R.string.mirror_editor_nudge_crop),
+        onFocusChanged = { focused ->
+            if (!focused && isMoving) {
+                stopMovingImmediate()
+                isMoving = false
+            }
+            onFocusChanged?.invoke(focused)
+        },
+        cardBgColor = if (isMoving) colors.accent.copy(alpha = 0.25f) else null,
+        icon = icon,
+        title = title,
         onCustomKeyEvent = { event ->
-            if (!isNudging) return@ToolboxCard false
+            if (!isMoving) return@ToolboxCard false
             val keyCode = event.nativeKeyEvent.keyCode
             if (event.type == KeyEventType.KeyDown) {
                 when (keyCode) {
                     KeyEvent.KEYCODE_DPAD_UP -> {
-                        onNudge(0f, -METO_CROP_NUDGE_DELTA)
+                        startMoving(keyCode, 0, -1)
                         true
                     }
 
                     KeyEvent.KEYCODE_DPAD_DOWN -> {
-                        onNudge(0f, METO_CROP_NUDGE_DELTA)
+                        startMoving(keyCode, 0, 1)
                         true
                     }
 
                     KeyEvent.KEYCODE_DPAD_LEFT -> {
-                        onNudge(-METO_CROP_NUDGE_DELTA, 0f)
+                        startMoving(keyCode, -1, 0)
                         true
                     }
 
                     KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                        onNudge(METO_CROP_NUDGE_DELTA, 0f)
+                        startMoving(keyCode, 1, 0)
                         true
                     }
 
                     KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_BUTTON_A,
                     KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE,
                     -> {
-                        isNudging = false
+                        stopMovingImmediate()
+                        isMoving = false
                         true
                     }
 
@@ -1217,16 +1342,37 @@ private fun AdjustCropCard(
                         true
                     }
                 }
+            } else if (event.type == KeyEventType.KeyUp) {
+                when (keyCode) {
+                    KeyEvent.KEYCODE_DPAD_UP,
+                    KeyEvent.KEYCODE_DPAD_DOWN,
+                    KeyEvent.KEYCODE_DPAD_LEFT,
+                    KeyEvent.KEYCODE_DPAD_RIGHT,
+                    -> {
+                        stopMoving(keyCode)
+                        true
+                    }
+
+                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_BUTTON_A,
+                    KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE,
+                    -> {
+                        true
+                    }
+
+                    else -> {
+                        false
+                    }
+                }
             } else {
-                true
+                false
             }
         },
         modifier = modifier,
     ) { isFocused ->
         ToolboxPill(
-            text = if (isNudging) stringResource(R.string.mirror_editor_nudge_active) else "NUDGE",
-            isHighlighted = isNudging || isFocused,
-            isAccent = isNudging,
+            text = if (isMoving) stringResource(R.string.mirror_editor_move_active) else stringResource(R.string.mirror_editor_move_badge),
+            isHighlighted = isMoving || isFocused,
+            isAccent = isMoving,
         )
     }
 }

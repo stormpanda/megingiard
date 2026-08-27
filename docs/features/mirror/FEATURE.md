@@ -30,7 +30,8 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
     - **Cutout Selector:** `◀ CutoutName (X/Y) ▶` cycles active cutout with D-Pad Left/Right or A.
     - **Aspect Ratio Lock:** Cycles `FREE` → `TOP` → `BOTTOM` with D-Pad Left/Right or A.
     - **Shape Toggle:** Toggles `RECTANGLE` ↔ `CIRCLE` with A.
-    - **Adjust Crop (Nudge Mode):** Pressing A enters Tier-2 D-Pad nudge mode with visual pulsing highlight where D-Pad Up/Down/Left/Right moves source crop coordinates by `0.01f`. Pressing A/B/Back exits nudge mode.
+    - **Adjust Top Cutout (Move Mode):** Pressing A enters Tier-2 D-Pad move mode with visual highlight where holding D-Pad Up/Down/Left/Right moves source crop coordinates on Display 0 pixel-by-pixel with acceleration. Pressing A/B/Back exits move mode.
+    - **Adjust Bottom Cutout (Move Mode):** Pressing A enters Tier-2 D-Pad move mode with visual highlight where holding D-Pad Up/Down/Left/Right moves target cutout destination coordinates on the secondary screen pixel-by-pixel with acceleration. Pressing A/B/Back exits move mode.
     - **Add Cutout:** Finds an available non-overlapping canvas slot (`CutoutPlacementHelper.findAvailableSlot`) and adds a new cutout. If no space is available, prompts user with a toast.
     - **Delete Cutout:** Two-step confirmation (`[ DEL ]` → `[ CONFIRM ]`) deletes the selected cutout.
     - **Save Changes / Exit Row:** Commits cutout changes to active layout or prompts for Save/Discard on back.

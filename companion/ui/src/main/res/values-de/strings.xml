@@ -589,9 +589,10 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="mirror_editor_shape_rectangle">Form: Rechteck</string>
     <string name="mirror_editor_no_space">Bitte schaffe zuerst Platz auf dem Bildschirm für einen weiteren Ausschnitt</string>
     <string name="mirror_editor_cutout_name_hint">Ausschnitt-Name</string>
-    <string name="mirror_editor_nudge_crop">Zuschnitt anpassen</string>
-    <string name="mirror_editor_nudge_crop_desc">Steuerkreuz zum Verschieben nutzen</string>
-    <string name="mirror_editor_nudge_active">Aktiv</string>
+    <string name="mirror_editor_adjust_top_cutout">Oberen Ausschnitt anpassen</string>
+    <string name="mirror_editor_adjust_bottom_cutout">Unteren Ausschnitt anpassen</string>
+    <string name="mirror_editor_move_badge">MOVE</string>
+    <string name="mirror_editor_move_active">Aktiv</string>
     <string name="mirror_editor_target_cutout">Ziel-Ausschnitt</string>
     <string name="mirror_editor_no_cutouts">Keine Ausschnitte</string>
     <string name="mirror_editor_save_changes">Änderungen speichern</string>
