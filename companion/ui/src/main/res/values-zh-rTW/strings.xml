@@ -427,6 +427,18 @@
     <string name="mirror_editor_shape_rectangle">形狀: 矩形</string>
     <string name="mirror_editor_no_space">請先在螢幕上騰出空間以新增區塊</string>
     <string name="mirror_editor_cutout_name_hint">區塊名稱</string>
+    <string name="mirror_editor_adjust_top_cutout">調整頂部區塊</string>
+    <string name="mirror_editor_adjust_bottom_cutout">調整底部區塊</string>
+    <string name="mirror_editor_move_badge">MOVE</string>
+    <string name="mirror_editor_resize_badge">RESIZE</string>
+    <string name="mirror_editor_adjust_toast">使用方向鍵移動。按住 R2 縮放。</string>
+    <string name="mirror_editor_move_active">作用中</string>
+    <string name="mirror_editor_target_cutout">目標區塊</string>
+    <string name="mirror_editor_no_cutouts">無區塊</string>
+    <string name="mirror_editor_save_changes">儲存變更</string>
+    <string name="mirror_editor_saved_toast">已儲存版面變更</string>
+    <string name="mirror_editor_minimize">最小化</string>
+    <string name="mirror_editor_expand">展開</string>
     <string name="mirror_editor_toolbar_add">新增</string>
     <string name="mirror_editor_toolbar_settings">設定</string>
     <string name="mirror_editor_toolbar_delete">刪除</string>
@@ -458,6 +470,8 @@
     <string name="help_mirror_editor_aspect_desc">為所選區塊循環切換三種長寬比模式。「自由」— 無限制，可獨立調整大小。「頂部」— 鎖定長寬比以匹配主螢幕的裁切。「底部」— 鎖定長寬比以匹配次螢幕的區塊。</string>
     <string name="help_mirror_editor_shape_label">形狀</string>
     <string name="help_mirror_editor_shape_desc">在矩形與圓形之間切換所選區塊的形狀。適用於遊戲小地圖或圓形儀表，圓形裁切外觀更佳。</string>
+    <string name="help_mirror_editor_adjust_label">調整座標</string>
+    <string name="help_mirror_editor_adjust_desc">進入微調模式。使用方向鍵逐像素移動區塊。按住 R2 同時按方向鍵可調整區塊大小（繞中心點對稱放大或縮小）。</string>
     <string name="help_mirror_editor_deselect_desc">取消選取當前編輯的區域，並關閉主螢幕上的裁切覆蓋層。</string>
     <string name="help_mirror_editor_delete_desc">從配置中永久移除所選區塊。如果被刪除的區塊啟用了觸控跟隨，該模式也會被停用。</string>
     <string name="help_mirror_editor_section_finish">完成</string>

@@ -583,6 +583,8 @@ Open Settings to create a layout.</string>
     <string name="mirror_editor_adjust_top_cutout">Adjust Top Cutout</string>
     <string name="mirror_editor_adjust_bottom_cutout">Adjust Bottom Cutout</string>
     <string name="mirror_editor_move_badge">MOVE</string>
+    <string name="mirror_editor_resize_badge">RESIZE</string>
+    <string name="mirror_editor_adjust_toast">Use D-Pad to move. Hold R2 to resize.</string>
     <string name="mirror_editor_move_active">Active</string>
     <string name="mirror_editor_target_cutout">Target Cutout</string>
     <string name="mirror_editor_no_cutouts">No Cutouts</string>
@@ -647,6 +649,8 @@ Open Settings to create a layout.</string>
     <string name="help_mirror_editor_aspect_desc">Cycles through three aspect ratio modes for the selected cutout. Free — no constraint, resize independently. Top — lock aspect ratio to match the crop on the Top screen. Bottom — lock aspect ratio to match the cutout on the Bottom screen.</string>
     <string name="help_mirror_editor_shape_label">Shape</string>
     <string name="help_mirror_editor_shape_desc">Toggles the selected cutout between rectangle and circle shapes. Useful for game mini-maps or round gauges that look better clipped to a circle.</string>
+    <string name="help_mirror_editor_adjust_label">Adjust Coordinates</string>
+    <string name="help_mirror_editor_adjust_desc">Enters fine-tuning mode. Use D-Pad to move the cutout pixel-by-pixel. Hold R2 while pressing D-Pad to resize the cutout (expanding or shrinking symmetrically around its center).</string>
     <string name="help_mirror_editor_deselect_desc">Deselects the currently selected cutout and closes the top-screen crop overlay.</string>
     <string name="help_mirror_editor_delete_desc">Permanently removes the selected cutout from the layout. If the deleted cutout had touch-follow enabled, that mode is also deactivated.</string>
     <string name="help_mirror_editor_section_finish">Finish</string>

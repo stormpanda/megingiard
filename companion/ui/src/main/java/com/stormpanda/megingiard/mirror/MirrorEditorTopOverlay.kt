@@ -108,6 +108,7 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.ui.DialogToastManager
+import com.stormpanda.megingiard.ui.DialogToastPill
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.LocalFirstContentRequester
 import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
@@ -277,6 +278,7 @@ fun MirrorEditorTopOverlay(
         }
     }
 
+    val activeToast by DialogToastManager.currentToast.collectAsState()
     val captureSourceWidth by ScreenCaptureManager.captureSourceWidth.collectAsState()
     val captureSourceHeight by ScreenCaptureManager.captureSourceHeight.collectAsState()
     val srcWidth = if (captureSourceWidth > 0) captureSourceWidth.toFloat() else 1920f
@@ -286,6 +288,11 @@ fun MirrorEditorTopOverlay(
     val surfaceHeight by ScreenCaptureManager.surfaceHeight.collectAsState()
     val secScreenW = if (surfaceWidth > 0f) surfaceWidth else 1280f
     val secScreenH = if (surfaceHeight > 0f) surfaceHeight else 960f
+
+    var topHToggle by remember(selectedCutout?.id) { mutableIntStateOf(0) }
+    var topVToggle by remember(selectedCutout?.id) { mutableIntStateOf(0) }
+    var bottomHToggle by remember(selectedCutout?.id) { mutableIntStateOf(0) }
+    var bottomVToggle by remember(selectedCutout?.id) { mutableIntStateOf(0) }
 
     fun moveTopCutout(
         cutoutId: String,
@@ -306,6 +313,61 @@ fun MirrorEditorTopOverlay(
         }
     }
 
+    fun resizeTopCutout(
+        cutoutId: String,
+        dx: Int,
+        dy: Int,
+    ) {
+        val currentProfile = MacroPadState.activeProfile.value ?: return
+        val currentLayout = currentProfile.layouts.firstOrNull { it.id == currentProfile.activeLayoutId } ?: return
+        val cur = currentLayout.mirrorCutouts.firstOrNull { it.id == cutoutId } ?: return
+        val others = currentLayout.mirrorCutouts.filter { it.id != cutoutId }
+
+        val resized =
+            calculateResizedBounds(
+                normX = cur.srcX,
+                normY = cur.srcY,
+                normW = cur.srcWidth,
+                normH = cur.srcHeight,
+                screenWidth = srcWidth,
+                screenHeight = srcHeight,
+                dx = dx,
+                dy = dy,
+                hToggle = topHToggle,
+                vToggle = topVToggle,
+            )
+
+        var updated =
+            cur.copy(
+                srcX = resized.x,
+                srcY = resized.y,
+                srcWidth = resized.width,
+                srcHeight = resized.height,
+            )
+        if (updated.aspectRatioMode == AspectRatioMode.TOP) {
+            val cropRatio = (updated.srcWidth * srcWidth) / (updated.srcHeight * srcHeight)
+            val (newDestW, newDestH) =
+                adjustDestSizeToAspectRatio(
+                    destX = updated.destX,
+                    destY = updated.destY,
+                    destWidth = updated.destWidth,
+                    destHeight = updated.destHeight,
+                    cropRatio = cropRatio,
+                    screenW = secScreenW,
+                    screenH = secScreenH,
+                )
+            if (!isCutoutGeometryValid(updated.destX, updated.destY, newDestW, newDestH, others)) {
+                return
+            }
+            updated = updated.copy(destWidth = newDestW, destHeight = newDestH)
+        }
+        topHToggle = resized.hToggle
+        topVToggle = resized.vToggle
+
+        val updatedList = currentLayout.mirrorCutouts.map { if (it.id == cur.id) updated else it }
+        MacroPadState.updateLayout(currentLayout.copy(mirrorCutouts = updatedList))
+    }
+
     fun moveBottomCutout(
         cutoutId: String,
         dx: Int,
@@ -316,13 +378,78 @@ fun MirrorEditorTopOverlay(
         val cur = currentLayout.mirrorCutouts.firstOrNull { it.id == cutoutId } ?: return
         val stepX = 1f / secScreenW
         val stepY = 1f / secScreenH
-        val newX = (cur.destX + dx * stepX).coerceIn(0f, 1f - cur.destWidth)
-        val newY = (cur.destY + dy * stepY).coerceIn(0f, 1f - cur.destHeight)
-        if (newX != cur.destX || newY != cur.destY) {
-            val updated = cur.copy(destX = newX, destY = newY)
+        val targetX = cur.destX + dx * stepX
+        val targetY = cur.destY + dy * stepY
+        val (clampedX, clampedY) =
+            clampCutoutDrag(
+                cutoutId = cur.id,
+                originalX = cur.destX,
+                originalY = cur.destY,
+                targetX = targetX,
+                targetY = targetY,
+                width = cur.destWidth,
+                height = cur.destHeight,
+                allCutouts = currentLayout.mirrorCutouts,
+            )
+        if (clampedX != cur.destX || clampedY != cur.destY) {
+            val updated = cur.copy(destX = clampedX, destY = clampedY)
             val updatedList = currentLayout.mirrorCutouts.map { if (it.id == cur.id) updated else it }
             MacroPadState.updateLayout(currentLayout.copy(mirrorCutouts = updatedList))
         }
+    }
+
+    fun resizeBottomCutout(
+        cutoutId: String,
+        dx: Int,
+        dy: Int,
+    ) {
+        val currentProfile = MacroPadState.activeProfile.value ?: return
+        val currentLayout = currentProfile.layouts.firstOrNull { it.id == currentProfile.activeLayoutId } ?: return
+        val cur = currentLayout.mirrorCutouts.firstOrNull { it.id == cutoutId } ?: return
+        val others = currentLayout.mirrorCutouts.filter { it.id != cutoutId }
+
+        val resized =
+            calculateResizedBounds(
+                normX = cur.destX,
+                normY = cur.destY,
+                normW = cur.destWidth,
+                normH = cur.destHeight,
+                screenWidth = secScreenW,
+                screenHeight = secScreenH,
+                dx = dx,
+                dy = dy,
+                hToggle = bottomHToggle,
+                vToggle = bottomVToggle,
+                others = others,
+            )
+        bottomHToggle = resized.hToggle
+        bottomVToggle = resized.vToggle
+
+        if (resized.x == cur.destX && resized.y == cur.destY &&
+            resized.width == cur.destWidth && resized.height == cur.destHeight
+        ) {
+            return
+        }
+
+        var updated =
+            cur.copy(
+                destX = resized.x,
+                destY = resized.y,
+                destWidth = resized.width,
+                destHeight = resized.height,
+            )
+        if (updated.aspectRatioMode == AspectRatioMode.BOTTOM) {
+            updated =
+                adjustSourceCropToAspectRatio(
+                    cutout = updated,
+                    screenW = secScreenW,
+                    screenH = secScreenH,
+                    srcW = srcWidth,
+                    srcH = srcHeight,
+                )
+        }
+        val updatedList = currentLayout.mirrorCutouts.map { if (it.id == cur.id) updated else it }
+        MacroPadState.updateLayout(currentLayout.copy(mirrorCutouts = updatedList))
     }
 
     // Root key handler to reliably catch Controller B / Back button
@@ -472,6 +599,9 @@ fun MirrorEditorTopOverlay(
                                 onMove = { dx, dy ->
                                     selectedCutout?.id?.let { moveTopCutout(it, dx, dy) }
                                 },
+                                onResize = { dx, dy ->
+                                    selectedCutout?.id?.let { resizeTopCutout(it, dx, dy) }
+                                },
                             )
 
                             // Item 4: Adjust Bottom Cutout Coordinates (Target Screen)
@@ -481,6 +611,9 @@ fun MirrorEditorTopOverlay(
                                 selectedCutout = selectedCutout,
                                 onMove = { dx, dy ->
                                     selectedCutout?.id?.let { moveBottomCutout(it, dx, dy) }
+                                },
+                                onResize = { dx, dy ->
+                                    selectedCutout?.id?.let { resizeBottomCutout(it, dx, dy) }
                                 },
                             )
 
@@ -577,6 +710,15 @@ fun MirrorEditorTopOverlay(
                     }
                 }
             }
+
+            // ── 3. Toast Notifications (Display 0 Top) ───────────────────────────
+            DialogToastPill(
+                toast = activeToast,
+                modifier =
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 16.dp),
+            )
         }
     }
 }
@@ -1170,26 +1312,43 @@ private fun AdjustCoordinatesCard(
     icon: ImageVector,
     selectedCutout: ScreenCutout?,
     onMove: (Int, Int) -> Unit,
+    onResize: (Int, Int) -> Unit,
     modifier: Modifier = Modifier,
     cardFocusRequester: FocusRequester = remember { FocusRequester() },
     onFocusChanged: ((Boolean) -> Unit)? = null,
 ) {
     val colors = LocalAppColors.current
+    val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val currentOnMove by rememberUpdatedState(onMove)
-    var isMoving by remember { mutableStateOf(false) }
+    val currentOnResize by rememberUpdatedState(onResize)
+    var isAdjusting by remember { mutableStateOf(false) }
+    var isR2Held by remember { mutableStateOf(false) }
+    val isR2HeldState = rememberUpdatedState(isR2Held)
     val enabled = selectedCutout != null
 
     var activeDirectionKey by remember { mutableIntStateOf(0) }
     var activeRepeatJob by remember { mutableStateOf<Job?>(null) }
 
-    fun stopMovingImmediate() {
+    fun stopAdjustingImmediate() {
         activeRepeatJob?.cancel()
         activeRepeatJob = null
         activeDirectionKey = 0
+        isR2Held = false
     }
 
-    fun startMoving(
+    fun dispatchAction(
+        dx: Int,
+        dy: Int,
+    ) {
+        if (isR2HeldState.value) {
+            currentOnResize(dx, dy)
+        } else {
+            currentOnMove(dx, dy)
+        }
+    }
+
+    fun startAdjusting(
         keyCode: Int,
         dx: Int,
         dy: Int,
@@ -1199,90 +1358,119 @@ private fun AdjustCoordinatesCard(
         }
         activeRepeatJob?.cancel()
         activeDirectionKey = keyCode
-        currentOnMove(dx, dy)
+        dispatchAction(dx, dy)
         activeRepeatJob =
             coroutineScope.launch {
                 delay(METO_MOVE_INITIAL_DELAY_MS)
                 var delayMs = METO_MOVE_START_DELAY_MS
                 while (isActive && activeDirectionKey == keyCode) {
-                    currentOnMove(dx, dy)
+                    dispatchAction(dx, dy)
                     delay(delayMs)
                     delayMs = max(METO_MOVE_MIN_DELAY_MS, (delayMs * METO_MOVE_ACCEL_FACTOR).toLong())
                 }
             }
     }
 
-    fun stopMoving(keyCode: Int) {
+    fun stopAdjusting(keyCode: Int) {
         if (activeDirectionKey == keyCode) {
-            stopMovingImmediate()
+            activeRepeatJob?.cancel()
+            activeRepeatJob = null
+            activeDirectionKey = 0
         }
     }
 
     LaunchedEffect(selectedCutout?.id) {
-        if (isMoving) {
-            stopMovingImmediate()
-            isMoving = false
+        if (isAdjusting) {
+            stopAdjustingImmediate()
+            isAdjusting = false
         }
     }
 
     DisposableEffect(Unit) {
         onDispose {
-            stopMovingImmediate()
+            stopAdjustingImmediate()
         }
     }
 
     ToolboxCard(
         onClick = {
-            if (isMoving) {
-                stopMovingImmediate()
-                isMoving = false
+            if (isAdjusting) {
+                stopAdjustingImmediate()
+                isAdjusting = false
             } else {
-                isMoving = true
+                isAdjusting = true
+                isR2Held = false
+                DialogToastManager.show(
+                    message = context.getString(R.string.mirror_editor_adjust_toast),
+                    icon = icon,
+                )
             }
         },
-        isFocusedOverride = isMoving,
+        isFocusedOverride = isAdjusting,
         enabled = enabled,
         cardFocusRequester = cardFocusRequester,
         onFocusChanged = { focused ->
-            if (!focused && isMoving) {
-                stopMovingImmediate()
-                isMoving = false
+            if (!focused && isAdjusting) {
+                stopAdjustingImmediate()
+                isAdjusting = false
             }
             onFocusChanged?.invoke(focused)
         },
-        cardBgColor = if (isMoving) colors.accent.copy(alpha = 0.25f) else null,
+        cardBgColor = if (isAdjusting) colors.accent.copy(alpha = 0.25f) else null,
         icon = icon,
         title = title,
+        trailingContent =
+            if (isAdjusting) {
+                { isFocused ->
+                    ToolboxPill(
+                        text =
+                            if (isR2Held) {
+                                stringResource(R.string.mirror_editor_resize_badge)
+                            } else {
+                                stringResource(R.string.mirror_editor_move_badge)
+                            },
+                        isAccent = isR2Held,
+                        isHighlighted = isFocused || isR2Held,
+                    )
+                }
+            } else {
+                null
+            },
         onCustomKeyEvent = { event ->
-            if (!isMoving) return@ToolboxCard false
+            if (!isAdjusting) return@ToolboxCard false
             val keyCode = event.nativeKeyEvent.keyCode
             if (event.type == KeyEventType.KeyDown) {
                 when (keyCode) {
+                    KeyEvent.KEYCODE_BUTTON_R2 -> {
+                        isR2Held = true
+                        true
+                    }
+
                     KeyEvent.KEYCODE_DPAD_UP -> {
-                        startMoving(keyCode, 0, -1)
+                        startAdjusting(keyCode, 0, -1)
                         true
                     }
 
                     KeyEvent.KEYCODE_DPAD_DOWN -> {
-                        startMoving(keyCode, 0, 1)
+                        startAdjusting(keyCode, 0, 1)
                         true
                     }
 
                     KeyEvent.KEYCODE_DPAD_LEFT -> {
-                        startMoving(keyCode, -1, 0)
+                        startAdjusting(keyCode, -1, 0)
                         true
                     }
 
                     KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                        startMoving(keyCode, 1, 0)
+                        startAdjusting(keyCode, 1, 0)
                         true
                     }
 
                     KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_BUTTON_A,
                     KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE,
                     -> {
-                        stopMovingImmediate()
-                        isMoving = false
+                        stopAdjustingImmediate()
+                        isAdjusting = false
                         true
                     }
 
@@ -1292,12 +1480,17 @@ private fun AdjustCoordinatesCard(
                 }
             } else if (event.type == KeyEventType.KeyUp) {
                 when (keyCode) {
+                    KeyEvent.KEYCODE_BUTTON_R2 -> {
+                        isR2Held = false
+                        true
+                    }
+
                     KeyEvent.KEYCODE_DPAD_UP,
                     KeyEvent.KEYCODE_DPAD_DOWN,
                     KeyEvent.KEYCODE_DPAD_LEFT,
                     KeyEvent.KEYCODE_DPAD_RIGHT,
                     -> {
-                        stopMoving(keyCode)
+                        stopAdjusting(keyCode)
                         true
                     }
 

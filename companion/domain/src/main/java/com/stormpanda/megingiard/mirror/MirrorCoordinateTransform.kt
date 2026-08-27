@@ -1,9 +1,11 @@
 package com.stormpanda.megingiard.mirror
 
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
-private const val OVERLAP_TOLERANCE: Float = 0.001f
+private const val OVERLAP_TOLERANCE: Float = 0.0001f
 private const val BINARY_SEARCH_STEPS = 10
+private const val MIN_RESIZE_PX = 8
 
 /**
  * Maps a raw touch position on the mirror surface back through the current zoom/pan
@@ -303,22 +305,39 @@ fun adjustDestSizeToAspectRatio(
     return Pair(targetW, targetH)
 }
 
+fun isCutoutGeometryValid(
+    x: Float,
+    y: Float,
+    w: Float,
+    h: Float,
+    others: List<ScreenCutout>,
+    minCutoutSize: Float = MIN_CUTOUT_SIZE,
+): Boolean {
+    if (x < -OVERLAP_TOLERANCE || y < -OVERLAP_TOLERANCE ||
+        x + w > 1f + OVERLAP_TOLERANCE || y + h > 1f + OVERLAP_TOLERANCE
+    ) {
+        return false
+    }
+    if (w < minCutoutSize - OVERLAP_TOLERANCE || h < minCutoutSize - OVERLAP_TOLERANCE) {
+        return false
+    }
+    val overlaps =
+        others.any { other ->
+            x < other.destX + other.destWidth - OVERLAP_TOLERANCE &&
+                x + w > other.destX + OVERLAP_TOLERANCE &&
+                y < other.destY + other.destHeight - OVERLAP_TOLERANCE &&
+                y + h > other.destY + OVERLAP_TOLERANCE
+        }
+    return !overlaps
+}
+
 private fun isGeometryValid(
     x: Float,
     y: Float,
     w: Float,
     h: Float,
     others: List<ScreenCutout>,
-): Boolean {
-    if (x < 0f || y < 0f || x + w > 1f || y + h > 1f) return false
-    if (w < MIN_CUTOUT_SIZE || h < MIN_CUTOUT_SIZE) return false
-    val overlaps =
-        others.any { other ->
-            x < other.destX + other.destWidth - OVERLAP_TOLERANCE && x + w > other.destX + OVERLAP_TOLERANCE &&
-                y < other.destY + other.destHeight - OVERLAP_TOLERANCE && y + h > other.destY + OVERLAP_TOLERANCE
-        }
-    return !overlaps
-}
+): Boolean = isCutoutGeometryValid(x, y, w, h, others)
 
 fun getTargetGeometryWithAspectRatio(
     handle: ResizeHandle,
@@ -645,4 +664,198 @@ fun clampCutoutResize(
     }
 
     return ScreenCutoutGeometry(clampedX, clampedY, finalWidth, finalHeight)
+}
+
+/**
+ * Bounds in normalized [0, 1] coordinates along with alternating step toggle states
+ * for horizontal and vertical 1-pixel resizing.
+ */
+data class CutoutPixelBounds(
+    val x: Float,
+    val y: Float,
+    val width: Float,
+    val height: Float,
+    val hToggle: Int,
+    val vToggle: Int,
+)
+
+/**
+ * Resizes cutout bounds 1 pixel at a time while holding R2:
+ * - Direction Up (dy < 0): increases vertical size by 1 pixel, alternating top and bottom border.
+ * - Direction Down (dy > 0): decreases vertical size by 1 pixel, alternating top and bottom border.
+ * - Direction Right (dx > 0): increases horizontal size by 1 pixel, alternating right and left border.
+ * - Direction Left (dx < 0): decreases horizontal size by 1 pixel, alternating right and left border.
+ */
+fun calculateResizedBounds(
+    normX: Float,
+    normY: Float,
+    normW: Float,
+    normH: Float,
+    screenWidth: Float,
+    screenHeight: Float,
+    dx: Int,
+    dy: Int,
+    hToggle: Int = 0,
+    vToggle: Int = 0,
+    minSizeRatio: Float = MIN_CUTOUT_SIZE,
+    others: List<ScreenCutout> = emptyList(),
+): CutoutPixelBounds {
+    if (screenWidth <= 0f || screenHeight <= 0f) {
+        return CutoutPixelBounds(normX, normY, normW, normH, hToggle, vToggle)
+    }
+
+    var pxX = (normX * screenWidth).roundToInt()
+    var pxY = (normY * screenHeight).roundToInt()
+    var pxW = (normW * screenWidth).roundToInt()
+    var pxH = (normH * screenHeight).roundToInt()
+
+    val minW = (minSizeRatio * screenWidth).roundToInt().coerceAtLeast(MIN_RESIZE_PX)
+    val minH = (minSizeRatio * screenHeight).roundToInt().coerceAtLeast(MIN_RESIZE_PX)
+    val maxW = screenWidth.roundToInt()
+    val maxH = screenHeight.roundToInt()
+
+    fun isValid(
+        testPxX: Int,
+        testPxY: Int,
+        testPxW: Int,
+        testPxH: Int,
+    ): Boolean {
+        if (testPxX < 0 || testPxY < 0 || testPxX + testPxW > maxW || testPxY + testPxH > maxH) {
+            return false
+        }
+        if (testPxW < minW || testPxH < minH) {
+            return false
+        }
+        if (others.isEmpty()) {
+            return true
+        }
+        val normTestX = testPxX.toFloat() / screenWidth
+        val normTestY = testPxY.toFloat() / screenHeight
+        val normTestW = testPxW.toFloat() / screenWidth
+        val normTestH = testPxH.toFloat() / screenHeight
+        return isCutoutGeometryValid(normTestX, normTestY, normTestW, normTestH, others, minSizeRatio)
+    }
+
+    var nextHToggle = hToggle
+    var nextVToggle = vToggle
+
+    // Horizontal resize
+    if (dx > 0) { // Direction RIGHT: increase horizontal size by 1 px
+        if (pxW < maxW) {
+            if (hToggle == 0) {
+                // Try expand right border first
+                if (isValid(pxX, pxY, pxW + 1, pxH)) {
+                    pxW += 1
+                    nextHToggle = 1
+                } else if (isValid(pxX - 1, pxY, pxW + 1, pxH)) {
+                    // Expand left instead if right is blocked
+                    pxX -= 1
+                    pxW += 1
+                    nextHToggle = 0
+                }
+            } else {
+                // Try expand left border first
+                if (isValid(pxX - 1, pxY, pxW + 1, pxH)) {
+                    pxX -= 1
+                    pxW += 1
+                    nextHToggle = 0
+                } else if (isValid(pxX, pxY, pxW + 1, pxH)) {
+                    // Expand right instead if left is blocked
+                    pxW += 1
+                    nextHToggle = 1
+                }
+            }
+        }
+    } else if (dx < 0) { // Direction LEFT: decrease horizontal size by 1 px
+        if (pxW > minW) {
+            if (hToggle == 1) {
+                // Try shrink right border first
+                if (isValid(pxX, pxY, pxW - 1, pxH)) {
+                    pxW -= 1
+                    nextHToggle = 0
+                } else if (isValid(pxX + 1, pxY, pxW - 1, pxH)) {
+                    pxX += 1
+                    pxW -= 1
+                    nextHToggle = 1
+                }
+            } else {
+                // Try shrink left border first
+                if (isValid(pxX + 1, pxY, pxW - 1, pxH)) {
+                    pxX += 1
+                    pxW -= 1
+                    nextHToggle = 1
+                } else if (isValid(pxX, pxY, pxW - 1, pxH)) {
+                    pxW -= 1
+                    nextHToggle = 0
+                }
+            }
+        }
+    }
+
+    // Vertical resize
+    if (dy < 0) { // Direction UP: increase vertical size by 1 px
+        if (pxH < maxH) {
+            if (vToggle == 0) {
+                // Try expand top border first
+                if (isValid(pxX, pxY - 1, pxW, pxH + 1)) {
+                    pxY -= 1
+                    pxH += 1
+                    nextVToggle = 1
+                } else if (isValid(pxX, pxY, pxW, pxH + 1)) {
+                    // Expand bottom instead if top is blocked
+                    pxH += 1
+                    nextVToggle = 0
+                }
+            } else {
+                // Try expand bottom border first
+                if (isValid(pxX, pxY, pxW, pxH + 1)) {
+                    pxH += 1
+                    nextVToggle = 0
+                } else if (isValid(pxX, pxY - 1, pxW, pxH + 1)) {
+                    // Expand top instead if bottom is blocked
+                    pxY -= 1
+                    pxH += 1
+                    nextVToggle = 1
+                }
+            }
+        }
+    } else if (dy > 0) { // Direction DOWN: decrease vertical size by 1 px
+        if (pxH > minH) {
+            if (vToggle == 1) {
+                // Try shrink top border first
+                if (isValid(pxX, pxY + 1, pxW, pxH - 1)) {
+                    pxY += 1
+                    pxH -= 1
+                    nextVToggle = 0
+                } else if (isValid(pxX, pxY, pxW, pxH - 1)) {
+                    pxH -= 1
+                    nextVToggle = 1
+                }
+            } else {
+                // Try shrink bottom border first
+                if (isValid(pxX, pxY, pxW, pxH - 1)) {
+                    pxH -= 1
+                    nextVToggle = 1
+                } else if (isValid(pxX, pxY + 1, pxW, pxH - 1)) {
+                    pxY += 1
+                    pxH -= 1
+                    nextVToggle = 0
+                }
+            }
+        }
+    }
+
+    val finalNormX = (pxX.toFloat() / screenWidth).coerceIn(0f, 1f)
+    val finalNormY = (pxY.toFloat() / screenHeight).coerceIn(0f, 1f)
+    val finalNormW = (pxW.toFloat() / screenWidth).coerceIn(0f, 1f - finalNormX)
+    val finalNormH = (pxH.toFloat() / screenHeight).coerceIn(0f, 1f - finalNormY)
+
+    return CutoutPixelBounds(
+        x = finalNormX,
+        y = finalNormY,
+        width = finalNormW,
+        height = finalNormH,
+        hToggle = nextHToggle,
+        vToggle = nextVToggle,
+    )
 }

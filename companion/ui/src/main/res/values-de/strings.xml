@@ -592,6 +592,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="mirror_editor_adjust_top_cutout">Oberen Ausschnitt anpassen</string>
     <string name="mirror_editor_adjust_bottom_cutout">Unteren Ausschnitt anpassen</string>
     <string name="mirror_editor_move_badge">MOVE</string>
+    <string name="mirror_editor_resize_badge">RESIZE</string>
+    <string name="mirror_editor_adjust_toast">Steuerkreuz zum Verschieben. R2 gedrückt halten zum Ändern der Größe.</string>
     <string name="mirror_editor_move_active">Aktiv</string>
     <string name="mirror_editor_target_cutout">Ziel-Ausschnitt</string>
     <string name="mirror_editor_no_cutouts">Keine Ausschnitte</string>
@@ -656,6 +658,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_mirror_editor_aspect_desc">Wechselt zwischen drei Seitenverhältnis-Modi für den ausgewählten Ausschnitt. Frei — keine Einschränkung, unabhängige Größenänderung. Oben — fixiert das Seitenverhältnis passend zum Crop-Bereich auf dem oberen Bildschirm. Unten — fixiert das Seitenverhältnis passend zum Ausschnitt auf dem unteren Bildschirm.</string>
     <string name="help_mirror_editor_shape_label">Form</string>
     <string name="help_mirror_editor_shape_desc">Wechselt die Form des ausgewählten Ausschnitts zwischen Rechteck und Kreis. Nützlich für Spielminiaturkarten oder runde Anzeigen, die im Kreis besser aussehen.</string>
+    <string name="help_mirror_editor_adjust_label">Koordinaten anpassen</string>
+    <string name="help_mirror_editor_adjust_desc">Aktiviert den Feinjustierungsmodus. Verwende das Steuerkreuz zum pixelweisen Verschieben. Halte R2 gedrückt, während du das Steuerkreuz drückst, um die Größe symmetrisch zum Mittelpunkt zu ändern.</string>
     <string name="help_mirror_editor_deselect_desc">Hebt die Auswahl des aktuellen Ausschnitts auf und schließt die Zuschnitt-Überlagerung auf dem oberen Bildschirm.</string>
     <string name="help_mirror_editor_delete_desc">Entfernt den ausgewählten Ausschnitt dauerhaft aus dem Layout. Wenn der gelöschte Ausschnitt Touch-Follow aktiv hatte, wird dieser Modus ebenfalls deaktiviert.</string>
     <string name="help_mirror_editor_section_finish">Abschließen</string>

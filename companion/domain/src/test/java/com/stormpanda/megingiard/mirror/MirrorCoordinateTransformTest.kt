@@ -5,6 +5,7 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -1165,5 +1166,390 @@ class MirrorCoordinateTransformTest {
         assertEquals(0.2890625f, portraitCutout.destX, EPS)
         assertEquals(1f, portraitCutout.destHeight, EPS)
         assertEquals(0f, portraitCutout.destY, EPS)
+    }
+
+    @Test
+    fun `calculateResizedBounds expands width alternating right and left border`() {
+        val screenW = 1000f
+        val screenH = 1000f
+        // 100px to 300px (width 200px, center 200px)
+        val initialX = 0.100f
+        val initialY = 0.100f
+        val initialW = 0.200f
+        val initialH = 0.200f
+
+        // Step 1: Expand right border (+1 px)
+        val step1 =
+            calculateResizedBounds(
+                normX = initialX,
+                normY = initialY,
+                normW = initialW,
+                normH = initialH,
+                screenWidth = screenW,
+                screenHeight = screenH,
+                dx = 1,
+                dy = 0,
+                hToggle = 0,
+                vToggle = 0,
+            )
+        assertEquals(0.100f, step1.x, EPS) // Left unchanged
+        assertEquals(0.201f, step1.width, EPS) // Width +1
+        assertEquals(1, step1.hToggle)
+
+        // Step 2: Expand left border (+1 px)
+        val step2 =
+            calculateResizedBounds(
+                normX = step1.x,
+                normY = step1.y,
+                normW = step1.width,
+                normH = step1.height,
+                screenWidth = screenW,
+                screenHeight = screenH,
+                dx = 1,
+                dy = 0,
+                hToggle = step1.hToggle,
+                vToggle = step1.vToggle,
+            )
+        assertEquals(0.099f, step2.x, EPS) // Left shifted -1 px
+        assertEquals(0.202f, step2.width, EPS) // Width +1 px
+        assertEquals(0, step2.hToggle)
+
+        // Center calculation: (99 + 202 / 2) = 200px = initial center (100 + 200 / 2 = 200px)
+        val centerStep2 = (step2.x + step2.width / 2f) * screenW
+        assertEquals(200f, centerStep2, EPS)
+    }
+
+    @Test
+    fun `calculateResizedBounds shrinks width alternating left and right border`() {
+        val screenW = 1000f
+        val screenH = 1000f
+        val startX = 0.099f
+        val startY = 0.100f
+        val startW = 0.202f
+        val startH = 0.200f
+
+        // Step 1: Shrink left border (-1 px)
+        val step1 =
+            calculateResizedBounds(
+                normX = startX,
+                normY = startY,
+                normW = startW,
+                normH = startH,
+                screenWidth = screenW,
+                screenHeight = screenH,
+                dx = -1,
+                dy = 0,
+                hToggle = 0,
+                vToggle = 0,
+            )
+        assertEquals(0.100f, step1.x, EPS) // Left shifted +1 px
+        assertEquals(0.201f, step1.width, EPS) // Width -1 px
+        assertEquals(1, step1.hToggle)
+
+        // Step 2: Shrink right border (-1 px)
+        val step2 =
+            calculateResizedBounds(
+                normX = step1.x,
+                normY = step1.y,
+                normW = step1.width,
+                normH = step1.height,
+                screenWidth = screenW,
+                screenHeight = screenH,
+                dx = -1,
+                dy = 0,
+                hToggle = step1.hToggle,
+                vToggle = step1.vToggle,
+            )
+        assertEquals(0.100f, step2.x, EPS) // Left unchanged
+        assertEquals(0.200f, step2.width, EPS) // Width -1 px
+        assertEquals(0, step2.hToggle)
+    }
+
+    @Test
+    fun `calculateResizedBounds expands height alternating top and bottom border on UP`() {
+        val screenW = 1000f
+        val screenH = 1000f
+        val initialX = 0.100f
+        val initialY = 0.100f
+        val initialW = 0.200f
+        val initialH = 0.200f
+
+        // Step 1: Direction UP (dy = -1) -> Top border expands (-1 px top)
+        val step1 =
+            calculateResizedBounds(
+                normX = initialX,
+                normY = initialY,
+                normW = initialW,
+                normH = initialH,
+                screenWidth = screenW,
+                screenHeight = screenH,
+                dx = 0,
+                dy = -1,
+                hToggle = 0,
+                vToggle = 0,
+            )
+        assertEquals(0.099f, step1.y, EPS) // Top shifted -1 px
+        assertEquals(0.201f, step1.height, EPS) // Height +1 px
+        assertEquals(1, step1.vToggle)
+
+        // Step 2: Direction UP (dy = -1) -> Bottom border expands (+1 px bottom)
+        val step2 =
+            calculateResizedBounds(
+                normX = step1.x,
+                normY = step1.y,
+                normW = step1.width,
+                normH = step1.height,
+                screenWidth = screenW,
+                screenHeight = screenH,
+                dx = 0,
+                dy = -1,
+                hToggle = step1.hToggle,
+                vToggle = step1.vToggle,
+            )
+        assertEquals(0.099f, step2.y, EPS) // Top unchanged
+        assertEquals(0.202f, step2.height, EPS) // Height +1 px
+        assertEquals(0, step2.vToggle)
+
+        // Center calculation: (99 + 202 / 2) = 200px = initial center (100 + 200 / 2 = 200px)
+        val centerStep2 = (step2.y + step2.height / 2f) * screenH
+        assertEquals(200f, centerStep2, EPS)
+    }
+
+    @Test
+    fun `calculateResizedBounds shrinks height alternating bottom and top border on DOWN`() {
+        val screenW = 1000f
+        val screenH = 1000f
+        val startX = 0.100f
+        val startY = 0.099f
+        val startW = 0.200f
+        val startH = 0.202f
+
+        // Step 1: Direction DOWN (dy = 1) -> Bottom border shrinks (-1 px bottom)
+        val step1 =
+            calculateResizedBounds(
+                normX = startX,
+                normY = startY,
+                normW = startW,
+                normH = startH,
+                screenWidth = screenW,
+                screenHeight = screenH,
+                dx = 0,
+                dy = 1,
+                hToggle = 0,
+                vToggle = 0,
+            )
+        assertEquals(0.099f, step1.y, EPS) // Top unchanged
+        assertEquals(0.201f, step1.height, EPS) // Height -1 px
+        assertEquals(1, step1.vToggle)
+
+        // Step 2: Direction DOWN (dy = 1) -> Top border shrinks (-1 px top)
+        val step2 =
+            calculateResizedBounds(
+                normX = step1.x,
+                normY = step1.y,
+                normW = step1.width,
+                normH = step1.height,
+                screenWidth = screenW,
+                screenHeight = screenH,
+                dx = 0,
+                dy = 1,
+                hToggle = step1.hToggle,
+                vToggle = step1.vToggle,
+            )
+        assertEquals(0.100f, step2.y, EPS) // Top shifted +1 px
+        assertEquals(0.200f, step2.height, EPS) // Height -1 px
+        assertEquals(0, step2.vToggle)
+    }
+
+    @Test
+    fun `calculateResizedBounds clamps at screen boundaries and minimum size`() {
+        val screenW = 1000f
+        val screenH = 1000f
+
+        // Top-left boundary: expanding left when at X=0 expands right instead
+        val atLeft =
+            calculateResizedBounds(
+                normX = 0f,
+                normY = 0f,
+                normW = 0.100f,
+                normH = 0.100f,
+                screenWidth = screenW,
+                screenHeight = screenH,
+                dx = 1,
+                dy = 0,
+                hToggle = 1, // Wants to expand left
+                vToggle = 0,
+            )
+        assertEquals(0f, atLeft.x, EPS)
+        assertEquals(0.101f, atLeft.width, EPS)
+
+        // Minimum size limit
+        val atMin =
+            calculateResizedBounds(
+                normX = 0.100f,
+                normY = 0.100f,
+                normW = 0.050f,
+                normH = 0.050f,
+                screenWidth = screenW,
+                screenHeight = screenH,
+                dx = -1,
+                dy = 1,
+                hToggle = 0,
+                vToggle = 0,
+                minSizeRatio = 0.05f,
+            )
+        assertEquals(0.050f, atMin.width, EPS) // Does not shrink past min
+        assertEquals(0.050f, atMin.height, EPS) // Does not shrink past min
+    }
+
+    @Test
+    fun `isCutoutGeometryValid detects overlaps, boundaries and minimum sizes`() {
+        val obstacle =
+            ScreenCutout(
+                id = "obs",
+                name = "Obs",
+                destX = 0.300f,
+                destY = 0.100f,
+                destWidth = 0.200f,
+                destHeight = 0.200f,
+                srcX = 0f,
+                srcY = 0f,
+                srcWidth = 1f,
+                srcHeight = 1f,
+            )
+        val others = listOf(obstacle)
+
+        // Non-overlapping rectangle
+        assertTrue(isCutoutGeometryValid(x = 0.050f, y = 0.100f, w = 0.200f, h = 0.200f, others = others))
+
+        // Overlapping right edge with obstacle
+        assertFalse(isCutoutGeometryValid(x = 0.150f, y = 0.100f, w = 0.200f, h = 0.200f, others = others))
+
+        // Out of screen boundaries
+        assertFalse(isCutoutGeometryValid(x = -0.010f, y = 0.100f, w = 0.200f, h = 0.200f, others = others))
+        assertFalse(isCutoutGeometryValid(x = 0.900f, y = 0.100f, w = 0.200f, h = 0.200f, others = others))
+
+        // Below minimum size
+        assertFalse(isCutoutGeometryValid(x = 0.050f, y = 0.100f, w = 0.020f, h = 0.200f, others = others, minCutoutSize = 0.05f))
+    }
+
+    @Test
+    fun `calculateResizedBounds avoids overlapping other cutouts`() {
+        val screenW = 1000f
+        val screenH = 1000f
+
+        // Cutout A: X=0.080, W=0.200 (Right edge at 0.280)
+        // Obstacle right: X=0.280, W=0.200
+        val rightObstacle =
+            ScreenCutout(
+                id = "right",
+                name = "Right",
+                destX = 0.280f,
+                destY = 0.100f,
+                destWidth = 0.200f,
+                destHeight = 0.200f,
+                srcX = 0f,
+                srcY = 0f,
+                srcWidth = 1f,
+                srcHeight = 1f,
+            )
+
+        // Expanding right border (hToggle=0) hits obstacle -> falls back to expanding left border
+        val expandedLeftFallback =
+            calculateResizedBounds(
+                normX = 0.080f,
+                normY = 0.100f,
+                normW = 0.200f,
+                normH = 0.200f,
+                screenWidth = screenW,
+                screenHeight = screenH,
+                dx = 1,
+                dy = 0,
+                hToggle = 0, // Wants right, but right (0.281) hits obstacle (0.280)
+                vToggle = 0,
+                others = listOf(rightObstacle),
+            )
+        assertEquals(0.079f, expandedLeftFallback.x, EPS) // Left shifted -1 px
+        assertEquals(0.201f, expandedLeftFallback.width, EPS) // Width +1 px
+        assertEquals(0, expandedLeftFallback.hToggle)
+
+        // Obstacle on both left (X=0) and right (X=0.200)
+        val leftObstacle =
+            ScreenCutout(
+                id = "left",
+                name = "Left",
+                destX = 0f,
+                destY = 0.100f,
+                destWidth = 0.100f,
+                destHeight = 0.200f,
+                srcX = 0f,
+                srcY = 0f,
+                srcWidth = 1f,
+                srcHeight = 1f,
+            )
+        val rightObs2 =
+            ScreenCutout(
+                id = "right",
+                name = "Right",
+                destX = 0.300f,
+                destY = 0.100f,
+                destWidth = 0.200f,
+                destHeight = 0.200f,
+                srcX = 0f,
+                srcY = 0f,
+                srcWidth = 1f,
+                srcHeight = 1f,
+            )
+
+        // Cutout bounded tightly: X=0.100, W=0.200 (from 0.100 to 0.300)
+        val trapped =
+            calculateResizedBounds(
+                normX = 0.100f,
+                normY = 0.100f,
+                normW = 0.200f,
+                normH = 0.200f,
+                screenWidth = screenW,
+                screenHeight = screenH,
+                dx = 1,
+                dy = 0,
+                hToggle = 0,
+                vToggle = 0,
+                others = listOf(leftObstacle, rightObs2),
+            )
+        // Expansion is blocked on both sides, size stays invariant
+        assertEquals(0.100f, trapped.x, EPS)
+        assertEquals(0.200f, trapped.width, EPS)
+
+        // Vertical obstacle above (Y=0, H=0.100) -> Cutout at Y=0.100, H=0.200 (Y range 0.100 - 0.300)
+        val topObstacle =
+            ScreenCutout(
+                id = "top",
+                name = "Top",
+                destX = 0.100f,
+                destY = 0f,
+                destWidth = 0.200f,
+                destHeight = 0.100f,
+                srcX = 0f,
+                srcY = 0f,
+                srcWidth = 1f,
+                srcHeight = 1f,
+            )
+        val expandBottomFallback =
+            calculateResizedBounds(
+                normX = 0.100f,
+                normY = 0.100f,
+                normW = 0.200f,
+                normH = 0.200f,
+                screenWidth = screenW,
+                screenHeight = screenH,
+                dx = 0,
+                dy = -1, // D-Pad UP wants to expand top border first (vToggle=0)
+                hToggle = 0,
+                vToggle = 0,
+                others = listOf(topObstacle),
+            )
+        assertEquals(0.100f, expandBottomFallback.y, EPS) // Top stayed at 0.100
+        assertEquals(0.201f, expandBottomFallback.height, EPS) // Bottom expanded +1 px to 0.301
+        assertEquals(0, expandBottomFallback.vToggle)
     }
 }
