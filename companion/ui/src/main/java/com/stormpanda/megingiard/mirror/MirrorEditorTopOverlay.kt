@@ -45,12 +45,11 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AspectRatio
 import androidx.compose.material.icons.rounded.Circle
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Crop
 import androidx.compose.material.icons.rounded.CropSquare
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.FilterCenterFocus
-import androidx.compose.material.icons.rounded.OpenWith
 import androidx.compose.material.icons.rounded.Save
-import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.UnfoldLess
 import androidx.compose.material.icons.rounded.UnfoldMore
 import androidx.compose.material3.Icon
@@ -594,7 +593,7 @@ fun MirrorEditorTopOverlay(
                             // Item 3: Adjust Top Cutout Coordinates (Source Screen)
                             AdjustCoordinatesCard(
                                 title = stringResource(R.string.mirror_editor_adjust_top_cutout),
-                                icon = Icons.Rounded.Tune,
+                                icon = Icons.Rounded.Crop,
                                 selectedCutout = selectedCutout,
                                 onMove = { dx, dy ->
                                     selectedCutout?.id?.let { moveTopCutout(it, dx, dy) }
@@ -607,7 +606,7 @@ fun MirrorEditorTopOverlay(
                             // Item 4: Adjust Bottom Cutout Coordinates (Target Screen)
                             AdjustCoordinatesCard(
                                 title = stringResource(R.string.mirror_editor_adjust_bottom_cutout),
-                                icon = Icons.Rounded.OpenWith,
+                                icon = Icons.Rounded.Crop,
                                 selectedCutout = selectedCutout,
                                 onMove = { dx, dy ->
                                     selectedCutout?.id?.let { moveBottomCutout(it, dx, dy) }
