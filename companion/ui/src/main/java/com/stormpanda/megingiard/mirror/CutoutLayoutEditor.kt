@@ -23,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -49,9 +50,13 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 private const val TAG = "CutoutLayoutEditor"
-private val HANDLE_SIZE = 20.dp
 private val BORDER_WIDTH = 1.dp
-private const val TOUCH_AREA_RATIO = 0.25f
+private val EDGE_HANDLE_LENGTH = 36.dp
+private val EDGE_HANDLE_THICKNESS = 6.dp
+private val EDGE_HANDLE_MARGIN = 6.dp
+private val EDGE_TOUCH_LENGTH = 56.dp
+private val EDGE_TOUCH_THICKNESS = 36.dp
+private val EDGE_HANDLE_CORNER = 3.dp
 
 @Composable
 fun CutoutLayoutEditor() {
@@ -92,7 +97,6 @@ fun CutoutLayoutEditor() {
         ) {
             // ── Multi-Cutout Arrangement Mode ──────────────────────────────────────
             // Draw all active cutout destinations
-            val handleSizePx = with(density) { HANDLE_SIZE.toPx() }
             for (cutout in layout.mirrorCutouts) {
                 val currentCutoutState = rememberUpdatedState(cutout)
                 val currentLayoutState = rememberUpdatedState(layout)
@@ -208,357 +212,166 @@ fun CutoutLayoutEditor() {
                     )
                 }
 
-                // Show corner resize handles if selected
+                // Show edge drag handles if selected
                 if (isSelected) {
-                    val handleSizePx = with(density) { HANDLE_SIZE.toPx() }
-                    val touchWPx = kotlin.math.max(handleSizePx, destW * TOUCH_AREA_RATIO)
-                    val touchHPx = kotlin.math.max(handleSizePx, destH * TOUCH_AREA_RATIO)
-                    val touchWidth = with(density) { touchWPx.toDp() }
-                    val touchHeight = with(density) { touchHPx.toDp() }
+                    val marginPx = with(density) { EDGE_HANDLE_MARGIN.toPx() }
+                    val handleThicknessPx = with(density) { EDGE_HANDLE_THICKNESS.toPx() }
+                    val touchLengthPx = with(density) { EDGE_TOUCH_LENGTH.toPx() }
+                    val touchThicknessPx = with(density) { EDGE_TOUCH_THICKNESS.toPx() }
 
-                    var dragStartX by remember(cutout.id) { mutableStateOf(0f) }
-                    var dragStartY by remember(cutout.id) { mutableStateOf(0f) }
-                    var dragStartW by remember(cutout.id) { mutableStateOf(0f) }
-                    var dragStartH by remember(cutout.id) { mutableStateOf(0f) }
-                    var dragStartSrcX by remember(cutout.id) { mutableStateOf(0f) }
-                    var dragStartSrcY by remember(cutout.id) { mutableStateOf(0f) }
-                    var dragStartSrcW by remember(cutout.id) { mutableStateOf(0f) }
-                    var dragStartSrcH by remember(cutout.id) { mutableStateOf(0f) }
+                    var dragStartX by remember(cutout.id) { mutableFloatStateOf(0f) }
+                    var dragStartY by remember(cutout.id) { mutableFloatStateOf(0f) }
+                    var dragStartW by remember(cutout.id) { mutableFloatStateOf(0f) }
+                    var dragStartH by remember(cutout.id) { mutableFloatStateOf(0f) }
+                    var dragStartSrcX by remember(cutout.id) { mutableFloatStateOf(0f) }
+                    var dragStartSrcY by remember(cutout.id) { mutableFloatStateOf(0f) }
+                    var dragStartSrcW by remember(cutout.id) { mutableFloatStateOf(0f) }
+                    var dragStartSrcH by remember(cutout.id) { mutableFloatStateOf(0f) }
 
-                    // Top-Left handle
-                    val topLeftCenterX = destLeft + handleSizePx / 2f
-                    val topLeftCenterY = destTop + handleSizePx / 2f
-                    val topLeftTouchX = topLeftCenterX - touchWPx / 2f
-                    val topLeftTouchY = topLeftCenterY - touchHPx / 2f
-                    ResizeHandleView(
-                        offset = IntOffset(topLeftTouchX.roundToInt(), topLeftTouchY.roundToInt()),
-                        touchWidth = touchWidth,
-                        touchHeight = touchHeight,
-                        color = colors.accent,
-                        onDragStart = {
-                            val curCutout = currentCutoutState.value
-                            dragStartX = curCutout.destX
-                            dragStartY = curCutout.destY
-                            dragStartW = curCutout.destWidth
-                            dragStartH = curCutout.destHeight
-                            dragStartSrcX = curCutout.srcX
-                            dragStartSrcY = curCutout.srcY
-                            dragStartSrcW = curCutout.srcWidth
-                            dragStartSrcH = curCutout.srcHeight
-                            AppLog.d(
-                                TAG,
-                                "Resize start TOP_LEFT cutout '${curCutout.name}' bounds=(${curCutout.destX}, ${curCutout.destY}, ${curCutout.destWidth}, ${curCutout.destHeight})",
-                            )
-                        },
-                        onDrag = { totalDx, totalDy ->
-                            val curLayout = currentLayoutState.value
-                            val curCutout = currentCutoutState.value
-                            val targetX = dragStartX + totalDx / screenW
-                            val targetY = dragStartY + totalDy / screenH
-                            val targetWidth = dragStartW - totalDx / screenW
-                            val targetHeight = dragStartH - totalDy / screenH
-                            val cropRatio = (curCutout.srcWidth * srcWidth) / (curCutout.srcHeight * srcHeight)
-                            val geom =
-                                clampCutoutResize(
-                                    cutoutId = curCutout.id,
-                                    handle = ResizeHandle.TOP_LEFT,
-                                    originalX = dragStartX,
-                                    originalY = dragStartY,
-                                    originalWidth = dragStartW,
-                                    originalHeight = dragStartH,
-                                    targetX = targetX,
-                                    targetY = targetY,
-                                    targetWidth = targetWidth,
-                                    targetHeight = targetHeight,
-                                    allCutouts = curLayout.mirrorCutouts,
-                                    keepAspectRatio = (curCutout.aspectRatioMode == AspectRatioMode.TOP),
-                                    cropRatio = cropRatio,
-                                    screenW = screenW,
-                                    screenH = screenH,
-                                )
-                            if (geom.x != targetX || geom.y != targetY || geom.w != targetWidth || geom.h != targetHeight) {
-                                AppLog.d(
-                                    TAG,
-                                    "Resize TOP_LEFT clamped '${curCutout.name}': target=($targetX, $targetY, $targetWidth, $targetHeight) -> clamped=(${geom.x}, ${geom.y}, ${geom.w}, ${geom.h})",
-                                )
+                    fun captureDragStart() {
+                        val curCutout = currentCutoutState.value
+                        dragStartX = curCutout.destX
+                        dragStartY = curCutout.destY
+                        dragStartW = curCutout.destWidth
+                        dragStartH = curCutout.destHeight
+                        dragStartSrcX = curCutout.srcX
+                        dragStartSrcY = curCutout.srcY
+                        dragStartSrcW = curCutout.srcWidth
+                        dragStartSrcH = curCutout.srcHeight
+                    }
+
+                    fun handleEdgeDrag(
+                        handle: ResizeHandle,
+                        totalDx: Float,
+                        totalDy: Float,
+                    ) {
+                        val curLayout = currentLayoutState.value
+                        val curCutout = currentCutoutState.value
+                        val targetX =
+                            when (handle) {
+                                ResizeHandle.LEFT -> dragStartX + totalDx / screenW
+                                else -> dragStartX
                             }
-                            val updated =
-                                curLayout.mirrorCutouts.map {
-                                    if (it.id == curCutout.id) {
-                                        val next = it.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h)
-                                        if (next.aspectRatioMode == AspectRatioMode.BOTTOM) {
-                                            adjustSourceCropToAspectRatio(
-                                                next,
-                                                screenW = screenW,
-                                                screenH = screenH,
-                                                srcW = srcWidth,
-                                                srcH = srcHeight,
-                                                baseSrcX = dragStartSrcX,
-                                                baseSrcY = dragStartSrcY,
-                                                baseSrcW = dragStartSrcW,
-                                                baseSrcH = dragStartSrcH,
-                                            )
-                                        } else {
-                                            next
-                                        }
+                        val targetY =
+                            when (handle) {
+                                ResizeHandle.TOP -> dragStartY + totalDy / screenH
+                                else -> dragStartY
+                            }
+                        val targetWidth =
+                            when (handle) {
+                                ResizeHandle.LEFT -> dragStartW - totalDx / screenW
+                                ResizeHandle.RIGHT -> dragStartW + totalDx / screenW
+                                else -> dragStartW
+                            }
+                        val targetHeight =
+                            when (handle) {
+                                ResizeHandle.TOP -> dragStartH - totalDy / screenH
+                                ResizeHandle.BOTTOM -> dragStartH + totalDy / screenH
+                                else -> dragStartH
+                            }
+                        val cropRatio = (curCutout.srcWidth * srcWidth) / (curCutout.srcHeight * srcHeight)
+                        val geom =
+                            clampCutoutResize(
+                                cutoutId = curCutout.id,
+                                handle = handle,
+                                originalX = dragStartX,
+                                originalY = dragStartY,
+                                originalWidth = dragStartW,
+                                originalHeight = dragStartH,
+                                targetX = targetX,
+                                targetY = targetY,
+                                targetWidth = targetWidth,
+                                targetHeight = targetHeight,
+                                allCutouts = curLayout.mirrorCutouts,
+                                keepAspectRatio = false,
+                                cropRatio = cropRatio,
+                                screenW = screenW,
+                                screenH = screenH,
+                            )
+                        val updated =
+                            curLayout.mirrorCutouts.map {
+                                if (it.id == curCutout.id) {
+                                    val next = it.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h)
+                                    if (next.aspectRatioMode == AspectRatioMode.BOTTOM) {
+                                        adjustSourceCropToAspectRatio(
+                                            next,
+                                            screenW = screenW,
+                                            screenH = screenH,
+                                            srcW = srcWidth,
+                                            srcH = srcHeight,
+                                            baseSrcX = dragStartSrcX,
+                                            baseSrcY = dragStartSrcY,
+                                            baseSrcW = dragStartSrcW,
+                                            baseSrcH = dragStartSrcH,
+                                        )
                                     } else {
-                                        it
+                                        next
                                     }
+                                } else {
+                                    it
                                 }
-                            MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
-                        },
+                            }
+                        MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
+                    }
+
+                    // ── TOP Edge Handle (Horizontal Bar above Top edge) ───────────────
+                    val topCenterY = destTop - marginPx - handleThicknessPx / 2f
+                    val topTouchX = (destLeft + destW / 2f) - touchLengthPx / 2f
+                    val topTouchY = topCenterY - touchThicknessPx / 2f
+                    ResizeHandleView(
+                        offset = IntOffset(topTouchX.roundToInt(), topTouchY.roundToInt()),
+                        touchWidth = EDGE_TOUCH_LENGTH,
+                        touchHeight = EDGE_TOUCH_THICKNESS,
+                        handleWidth = EDGE_HANDLE_LENGTH,
+                        handleHeight = EDGE_HANDLE_THICKNESS,
+                        color = colors.accent,
+                        onDragStart = { captureDragStart() },
+                        onDrag = { totalDx, totalDy -> handleEdgeDrag(ResizeHandle.TOP, totalDx, totalDy) },
                     )
 
-                    // Top-Right handle
-                    val topRightCenterX = destLeft + destW - handleSizePx / 2f
-                    val topRightCenterY = destTop + handleSizePx / 2f
-                    val topRightTouchX = topRightCenterX - touchWPx / 2f
-                    val topRightTouchY = topRightCenterY - touchHPx / 2f
+                    // ── BOTTOM Edge Handle (Horizontal Bar below Bottom edge) ──────────
+                    val bottomCenterY = destTop + destH + marginPx + handleThicknessPx / 2f
+                    val bottomTouchX = (destLeft + destW / 2f) - touchLengthPx / 2f
+                    val bottomTouchY = bottomCenterY - touchThicknessPx / 2f
                     ResizeHandleView(
-                        offset = IntOffset(topRightTouchX.roundToInt(), topRightTouchY.roundToInt()),
-                        touchWidth = touchWidth,
-                        touchHeight = touchHeight,
+                        offset = IntOffset(bottomTouchX.roundToInt(), bottomTouchY.roundToInt()),
+                        touchWidth = EDGE_TOUCH_LENGTH,
+                        touchHeight = EDGE_TOUCH_THICKNESS,
+                        handleWidth = EDGE_HANDLE_LENGTH,
+                        handleHeight = EDGE_HANDLE_THICKNESS,
                         color = colors.accent,
-                        onDragStart = {
-                            val curCutout = currentCutoutState.value
-                            dragStartX = curCutout.destX
-                            dragStartY = curCutout.destY
-                            dragStartW = curCutout.destWidth
-                            dragStartH = curCutout.destHeight
-                            dragStartSrcX = curCutout.srcX
-                            dragStartSrcY = curCutout.srcY
-                            dragStartSrcW = curCutout.srcWidth
-                            dragStartSrcH = curCutout.srcHeight
-                            AppLog.d(
-                                TAG,
-                                "Resize start TOP_RIGHT cutout '${curCutout.name}' bounds=(${curCutout.destX}, ${curCutout.destY}, ${curCutout.destWidth}, ${curCutout.destHeight})",
-                            )
-                        },
-                        onDrag = { totalDx, totalDy ->
-                            val curLayout = currentLayoutState.value
-                            val curCutout = currentCutoutState.value
-                            val targetX = dragStartX
-                            val targetY = dragStartY + totalDy / screenH
-                            val targetWidth = dragStartW + totalDx / screenW
-                            val targetHeight = dragStartH - totalDy / screenH
-                            val cropRatio = (curCutout.srcWidth * srcWidth) / (curCutout.srcHeight * srcHeight)
-                            val geom =
-                                clampCutoutResize(
-                                    cutoutId = curCutout.id,
-                                    handle = ResizeHandle.TOP_RIGHT,
-                                    originalX = dragStartX,
-                                    originalY = dragStartY,
-                                    originalWidth = dragStartW,
-                                    originalHeight = dragStartH,
-                                    targetX = targetX,
-                                    targetY = targetY,
-                                    targetWidth = targetWidth,
-                                    targetHeight = targetHeight,
-                                    allCutouts = curLayout.mirrorCutouts,
-                                    keepAspectRatio = (curCutout.aspectRatioMode == AspectRatioMode.TOP),
-                                    cropRatio = cropRatio,
-                                    screenW = screenW,
-                                    screenH = screenH,
-                                )
-                            if (geom.x != targetX || geom.y != targetY || geom.w != targetWidth || geom.h != targetHeight) {
-                                AppLog.d(
-                                    TAG,
-                                    "Resize TOP_RIGHT clamped '${curCutout.name}': target=($targetX, $targetY, $targetWidth, $targetHeight) -> clamped=(${geom.x}, ${geom.y}, ${geom.w}, ${geom.h})",
-                                )
-                            }
-                            val updated =
-                                curLayout.mirrorCutouts.map {
-                                    if (it.id == curCutout.id) {
-                                        val next = it.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h)
-                                        if (next.aspectRatioMode == AspectRatioMode.BOTTOM) {
-                                            adjustSourceCropToAspectRatio(
-                                                next,
-                                                screenW = screenW,
-                                                screenH = screenH,
-                                                srcW = srcWidth,
-                                                srcH = srcHeight,
-                                                baseSrcX = dragStartSrcX,
-                                                baseSrcY = dragStartSrcY,
-                                                baseSrcW = dragStartSrcW,
-                                                baseSrcH = dragStartSrcH,
-                                            )
-                                        } else {
-                                            next
-                                        }
-                                    } else {
-                                        it
-                                    }
-                                }
-                            MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
-                        },
+                        onDragStart = { captureDragStart() },
+                        onDrag = { totalDx, totalDy -> handleEdgeDrag(ResizeHandle.BOTTOM, totalDx, totalDy) },
                     )
 
-                    // Bottom-Left handle
-                    val bottomLeftCenterX = destLeft + handleSizePx / 2f
-                    val bottomLeftCenterY = destTop + destH - handleSizePx / 2f
-                    val bottomLeftTouchX = bottomLeftCenterX - touchWPx / 2f
-                    val bottomLeftTouchY = bottomLeftCenterY - touchHPx / 2f
+                    // ── LEFT Edge Handle (Vertical Bar to the left of Left edge) ──────
+                    val leftCenterX = destLeft - marginPx - handleThicknessPx / 2f
+                    val leftTouchX = leftCenterX - touchThicknessPx / 2f
+                    val leftTouchY = (destTop + destH / 2f) - touchLengthPx / 2f
                     ResizeHandleView(
-                        offset = IntOffset(bottomLeftTouchX.roundToInt(), bottomLeftTouchY.roundToInt()),
-                        touchWidth = touchWidth,
-                        touchHeight = touchHeight,
+                        offset = IntOffset(leftTouchX.roundToInt(), leftTouchY.roundToInt()),
+                        touchWidth = EDGE_TOUCH_THICKNESS,
+                        touchHeight = EDGE_TOUCH_LENGTH,
+                        handleWidth = EDGE_HANDLE_THICKNESS,
+                        handleHeight = EDGE_HANDLE_LENGTH,
                         color = colors.accent,
-                        onDragStart = {
-                            val curCutout = currentCutoutState.value
-                            dragStartX = curCutout.destX
-                            dragStartY = curCutout.destY
-                            dragStartW = curCutout.destWidth
-                            dragStartH = curCutout.destHeight
-                            dragStartSrcX = curCutout.srcX
-                            dragStartSrcY = curCutout.srcY
-                            dragStartSrcW = curCutout.srcWidth
-                            dragStartSrcH = curCutout.srcHeight
-                            AppLog.d(
-                                TAG,
-                                "Resize start BOTTOM_LEFT cutout '${curCutout.name}' bounds=(${curCutout.destX}, ${curCutout.destY}, ${curCutout.destWidth}, ${curCutout.destHeight})",
-                            )
-                        },
-                        onDrag = { totalDx, totalDy ->
-                            val curLayout = currentLayoutState.value
-                            val curCutout = currentCutoutState.value
-                            val targetX = dragStartX + totalDx / screenW
-                            val targetY = dragStartY
-                            val targetWidth = dragStartW - totalDx / screenW
-                            val targetHeight = dragStartH + totalDy / screenH
-                            val cropRatio = (curCutout.srcWidth * srcWidth) / (curCutout.srcHeight * srcHeight)
-                            val geom =
-                                clampCutoutResize(
-                                    cutoutId = curCutout.id,
-                                    handle = ResizeHandle.BOTTOM_LEFT,
-                                    originalX = dragStartX,
-                                    originalY = dragStartY,
-                                    originalWidth = dragStartW,
-                                    originalHeight = dragStartH,
-                                    targetX = targetX,
-                                    targetY = targetY,
-                                    targetWidth = targetWidth,
-                                    targetHeight = targetHeight,
-                                    allCutouts = curLayout.mirrorCutouts,
-                                    keepAspectRatio = (curCutout.aspectRatioMode == AspectRatioMode.TOP),
-                                    cropRatio = cropRatio,
-                                    screenW = screenW,
-                                    screenH = screenH,
-                                )
-                            if (geom.x != targetX || geom.y != targetY || geom.w != targetWidth || geom.h != targetHeight) {
-                                AppLog.d(
-                                    TAG,
-                                    "Resize BOTTOM_LEFT clamped '${curCutout.name}': target=($targetX, $targetY, $targetWidth, $targetHeight) -> clamped=(${geom.x}, ${geom.y}, ${geom.w}, ${geom.h})",
-                                )
-                            }
-                            val updated =
-                                curLayout.mirrorCutouts.map {
-                                    if (it.id == curCutout.id) {
-                                        val next = it.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h)
-                                        if (next.aspectRatioMode == AspectRatioMode.BOTTOM) {
-                                            adjustSourceCropToAspectRatio(
-                                                next,
-                                                screenW = screenW,
-                                                screenH = screenH,
-                                                srcW = srcWidth,
-                                                srcH = srcHeight,
-                                                baseSrcX = dragStartSrcX,
-                                                baseSrcY = dragStartSrcY,
-                                                baseSrcW = dragStartSrcW,
-                                                baseSrcH = dragStartSrcH,
-                                            )
-                                        } else {
-                                            next
-                                        }
-                                    } else {
-                                        it
-                                    }
-                                }
-                            MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
-                        },
+                        onDragStart = { captureDragStart() },
+                        onDrag = { totalDx, totalDy -> handleEdgeDrag(ResizeHandle.LEFT, totalDx, totalDy) },
                     )
 
-                    // Bottom-Right handle
-                    val bottomRightCenterX = destLeft + destW - handleSizePx / 2f
-                    val bottomRightCenterY = destTop + destH - handleSizePx / 2f
-                    val bottomRightTouchX = bottomRightCenterX - touchWPx / 2f
-                    val bottomRightTouchY = bottomRightCenterY - touchHPx / 2f
+                    // ── RIGHT Edge Handle (Vertical Bar to the right of Right edge) ───
+                    val rightCenterX = destLeft + destW + marginPx + handleThicknessPx / 2f
+                    val rightTouchX = rightCenterX - touchThicknessPx / 2f
+                    val rightTouchY = (destTop + destH / 2f) - touchLengthPx / 2f
                     ResizeHandleView(
-                        offset = IntOffset(bottomRightTouchX.roundToInt(), bottomRightTouchY.roundToInt()),
-                        touchWidth = touchWidth,
-                        touchHeight = touchHeight,
+                        offset = IntOffset(rightTouchX.roundToInt(), rightTouchY.roundToInt()),
+                        touchWidth = EDGE_TOUCH_THICKNESS,
+                        touchHeight = EDGE_TOUCH_LENGTH,
+                        handleWidth = EDGE_HANDLE_THICKNESS,
+                        handleHeight = EDGE_HANDLE_LENGTH,
                         color = colors.accent,
-                        onDragStart = {
-                            val curCutout = currentCutoutState.value
-                            dragStartX = curCutout.destX
-                            dragStartY = curCutout.destY
-                            dragStartW = curCutout.destWidth
-                            dragStartH = curCutout.destHeight
-                            dragStartSrcX = curCutout.srcX
-                            dragStartSrcY = curCutout.srcY
-                            dragStartSrcW = curCutout.srcWidth
-                            dragStartSrcH = curCutout.srcHeight
-                            AppLog.d(
-                                TAG,
-                                "Resize start BOTTOM_RIGHT cutout '${curCutout.name}' bounds=(${curCutout.destX}, ${curCutout.destY}, ${curCutout.destWidth}, ${curCutout.destHeight})",
-                            )
-                        },
-                        onDrag = { totalDx, totalDy ->
-                            val curLayout = currentLayoutState.value
-                            val curCutout = currentCutoutState.value
-                            val targetX = dragStartX
-                            val targetY = dragStartY
-                            val targetWidth = dragStartW + totalDx / screenW
-                            val targetHeight = dragStartH + totalDy / screenH
-                            val cropRatio = (curCutout.srcWidth * srcWidth) / (curCutout.srcHeight * srcHeight)
-                            val geom =
-                                clampCutoutResize(
-                                    cutoutId = curCutout.id,
-                                    handle = ResizeHandle.BOTTOM_RIGHT,
-                                    originalX = dragStartX,
-                                    originalY = dragStartY,
-                                    originalWidth = dragStartW,
-                                    originalHeight = dragStartH,
-                                    targetX = targetX,
-                                    targetY = targetY,
-                                    targetWidth = targetWidth,
-                                    targetHeight = targetHeight,
-                                    allCutouts = curLayout.mirrorCutouts,
-                                    keepAspectRatio = (curCutout.aspectRatioMode == AspectRatioMode.TOP),
-                                    cropRatio = cropRatio,
-                                    screenW = screenW,
-                                    screenH = screenH,
-                                )
-                            if (geom.x != targetX || geom.y != targetY || geom.w != targetWidth || geom.h != targetHeight) {
-                                AppLog.d(
-                                    TAG,
-                                    "Resize BOTTOM_RIGHT clamped '${curCutout.name}': target=($targetX, $targetY, $targetWidth, $targetHeight) -> clamped=(${geom.x}, ${geom.y}, ${geom.w}, ${geom.h})",
-                                )
-                            }
-                            val updated =
-                                curLayout.mirrorCutouts.map {
-                                    if (it.id == curCutout.id) {
-                                        val next = it.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h)
-                                        if (next.aspectRatioMode == AspectRatioMode.BOTTOM) {
-                                            adjustSourceCropToAspectRatio(
-                                                next,
-                                                screenW = screenW,
-                                                screenH = screenH,
-                                                srcW = srcWidth,
-                                                srcH = srcHeight,
-                                                baseSrcX = dragStartSrcX,
-                                                baseSrcY = dragStartSrcY,
-                                                baseSrcW = dragStartSrcW,
-                                                baseSrcH = dragStartSrcH,
-                                            )
-                                        } else {
-                                            next
-                                        }
-                                    } else {
-                                        it
-                                    }
-                                }
-                            MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
-                        },
+                        onDragStart = { captureDragStart() },
+                        onDrag = { totalDx, totalDy -> handleEdgeDrag(ResizeHandle.RIGHT, totalDx, totalDy) },
                     )
                 }
             }
@@ -612,14 +425,14 @@ internal fun CutoutLayoutEditorHelpModal(
 @Composable
 private fun ResizeHandleView(
     offset: IntOffset,
-    touchWidth: androidx.compose.ui.unit.Dp,
-    touchHeight: androidx.compose.ui.unit.Dp,
+    touchWidth: Dp,
+    touchHeight: Dp,
+    handleWidth: Dp,
+    handleHeight: Dp,
     color: Color,
     onDragStart: () -> Unit,
     onDrag: (Float, Float) -> Unit,
 ) {
-    var accumulatedX by remember { mutableStateOf(0f) }
-    var accumulatedY by remember { mutableStateOf(0f) }
     val currentOnDragStart by rememberUpdatedState(onDragStart)
     val currentOnDrag by rememberUpdatedState(onDrag)
 
@@ -629,6 +442,8 @@ private fun ResizeHandleView(
                 .offset { offset }
                 .size(width = touchWidth, height = touchHeight)
                 .pointerInput(Unit) {
+                    var accumulatedX = 0f
+                    var accumulatedY = 0f
                     detectDragGestures(
                         onDragStart = {
                             accumulatedX = 0f
@@ -648,8 +463,8 @@ private fun ResizeHandleView(
         Box(
             modifier =
                 Modifier
-                    .size(HANDLE_SIZE)
-                    .background(color.copy(alpha = 0.5f), RoundedCornerShape(4.dp)),
+                    .size(width = handleWidth, height = handleHeight)
+                    .background(color.copy(alpha = 0.75f), RoundedCornerShape(EDGE_HANDLE_CORNER)),
         )
     }
 }

@@ -110,7 +110,16 @@ fun projectCutoutCoordinates(
     return Pair(px.coerceIn(0f, 1f), py.coerceIn(0f, 1f))
 }
 
-enum class ResizeHandle { TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT }
+enum class ResizeHandle {
+    TOP,
+    BOTTOM,
+    LEFT,
+    RIGHT,
+    TOP_LEFT,
+    TOP_RIGHT,
+    BOTTOM_LEFT,
+    BOTTOM_RIGHT,
+}
 
 data class ScreenCutoutGeometry(
     val x: Float,
@@ -374,6 +383,26 @@ fun getTargetGeometryWithAspectRatio(
     }
 
     when (handle) {
+        ResizeHandle.TOP -> {
+            finalX = originalX
+            finalY = originalBottom - finalH
+        }
+
+        ResizeHandle.BOTTOM -> {
+            finalX = originalX
+            finalY = originalY
+        }
+
+        ResizeHandle.LEFT -> {
+            finalX = originalRight - finalW
+            finalY = originalY
+        }
+
+        ResizeHandle.RIGHT -> {
+            finalX = originalX
+            finalY = originalY
+        }
+
         ResizeHandle.TOP_LEFT -> {
             finalX = originalRight - finalW
             finalY = originalBottom - finalH
@@ -448,6 +477,26 @@ fun clampCutoutResize(
             var x = originalX
             var y = originalY
             when (handle) {
+                ResizeHandle.TOP -> {
+                    x = originalX
+                    y = (originalY + originalHeight) - h
+                }
+
+                ResizeHandle.BOTTOM -> {
+                    x = originalX
+                    y = originalY
+                }
+
+                ResizeHandle.LEFT -> {
+                    x = (originalX + originalWidth) - w
+                    y = originalY
+                }
+
+                ResizeHandle.RIGHT -> {
+                    x = originalX
+                    y = originalY
+                }
+
                 ResizeHandle.TOP_LEFT -> {
                     x = (originalX + originalWidth) - w
                     y = (originalY + originalHeight) - h
@@ -498,6 +547,80 @@ fun clampCutoutResize(
     var finalWidth = clampedWidth
     var finalHeight = clampedHeight
     when (handle) {
+        ResizeHandle.TOP -> {
+            clampedY = clampedY.coerceIn(0f, originalBottom - MIN_CUTOUT_SIZE)
+            for (other in others) {
+                val xOverlaps =
+                    originalX < other.destX + other.destWidth - OVERLAP_TOLERANCE && originalRight > other.destX + OVERLAP_TOLERANCE
+                val yOverlaps =
+                    clampedY < other.destY + other.destHeight - OVERLAP_TOLERANCE && originalBottom > other.destY + OVERLAP_TOLERANCE
+                if (xOverlaps && yOverlaps) {
+                    val candY = other.destY + other.destHeight
+                    clampedY = maxOf(clampedY, candY)
+                }
+            }
+            clampedY = clampedY.coerceIn(0f, originalBottom - MIN_CUTOUT_SIZE)
+            clampedX = originalX
+            finalWidth = originalWidth
+            finalHeight = originalBottom - clampedY
+        }
+
+        ResizeHandle.BOTTOM -> {
+            var clampedBottom = (originalY + clampedHeight).coerceIn(originalY + MIN_CUTOUT_SIZE, 1f)
+            for (other in others) {
+                val xOverlaps =
+                    originalX < other.destX + other.destWidth - OVERLAP_TOLERANCE && originalRight > other.destX + OVERLAP_TOLERANCE
+                val yOverlaps =
+                    originalY < other.destY + other.destHeight - OVERLAP_TOLERANCE && clampedBottom > other.destY + OVERLAP_TOLERANCE
+                if (xOverlaps && yOverlaps) {
+                    val candBottom = other.destY
+                    clampedBottom = minOf(clampedBottom, candBottom)
+                }
+            }
+            clampedBottom = clampedBottom.coerceIn(originalY + MIN_CUTOUT_SIZE, 1f)
+            clampedX = originalX
+            clampedY = originalY
+            finalWidth = originalWidth
+            finalHeight = clampedBottom - originalY
+        }
+
+        ResizeHandle.LEFT -> {
+            clampedX = clampedX.coerceIn(0f, originalRight - MIN_CUTOUT_SIZE)
+            for (other in others) {
+                val xOverlaps =
+                    clampedX < other.destX + other.destWidth - OVERLAP_TOLERANCE && originalRight > other.destX + OVERLAP_TOLERANCE
+                val yOverlaps =
+                    originalY < other.destY + other.destHeight - OVERLAP_TOLERANCE && originalBottom > other.destY + OVERLAP_TOLERANCE
+                if (xOverlaps && yOverlaps) {
+                    val candX = other.destX + other.destWidth
+                    clampedX = maxOf(clampedX, candX)
+                }
+            }
+            clampedX = clampedX.coerceIn(0f, originalRight - MIN_CUTOUT_SIZE)
+            clampedY = originalY
+            finalWidth = originalRight - clampedX
+            finalHeight = originalHeight
+        }
+
+        ResizeHandle.RIGHT -> {
+            var clampedRight = (originalX + clampedWidth).coerceIn(originalX + MIN_CUTOUT_SIZE, 1f)
+            for (other in others) {
+                val xOverlaps =
+                    originalX < other.destX + other.destWidth - OVERLAP_TOLERANCE && clampedRight > other.destX + OVERLAP_TOLERANCE
+                val yOverlaps =
+                    originalY < other.destY + other.destHeight - OVERLAP_TOLERANCE && originalBottom > other.destY + OVERLAP_TOLERANCE
+                if (xOverlaps && yOverlaps) {
+                    val candRight = other.destX
+                    clampedRight = minOf(clampedRight, candRight)
+                }
+            }
+            clampedRight = clampedRight.coerceIn(originalX + MIN_CUTOUT_SIZE, 1f)
+            clampedX = originalX
+            clampedY = originalY
+            finalWidth = clampedRight - originalX
+            finalHeight = originalHeight
+        }
+
         ResizeHandle.TOP_LEFT -> {
             clampedX = clampedX.coerceIn(0f, originalRight - MIN_CUTOUT_SIZE)
             clampedY = clampedY.coerceIn(0f, originalBottom - MIN_CUTOUT_SIZE)

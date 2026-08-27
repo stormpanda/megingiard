@@ -1552,4 +1552,116 @@ class MirrorCoordinateTransformTest {
         assertEquals(0.201f, expandBottomFallback.height, EPS) // Bottom expanded +1 px to 0.301
         assertEquals(0, expandBottomFallback.vToggle)
     }
+
+    @Test
+    fun `clampCutoutResize edge handles move only respective edge and clamp against collisions`() {
+        val obstacleTop =
+            ScreenCutout(
+                id = "obs_top",
+                name = "Obs Top",
+                destX = 0.2f,
+                destY = 0f,
+                destWidth = 0.4f,
+                destHeight = 0.2f,
+                srcX = 0f,
+                srcY = 0f,
+                srcWidth = 1f,
+                srcHeight = 1f,
+            )
+        val obstacleRight =
+            ScreenCutout(
+                id = "obs_right",
+                name = "Obs Right",
+                destX = 0.7f,
+                destY = 0.2f,
+                destWidth = 0.2f,
+                destHeight = 0.4f,
+                srcX = 0f,
+                srcY = 0f,
+                srcWidth = 1f,
+                srcHeight = 1f,
+            )
+        val allCutouts = listOf(obstacleTop, obstacleRight)
+
+        // Initial cutout: X=0.2, Y=0.3, W=0.3, H=0.3
+        // 1. TOP Handle: drag upward towards Y=0.1. Should clamp against obstacleTop bottom (0.2)
+        val topGeom =
+            clampCutoutResize(
+                cutoutId = "test",
+                handle = ResizeHandle.TOP,
+                originalX = 0.2f,
+                originalY = 0.3f,
+                originalWidth = 0.3f,
+                originalHeight = 0.3f,
+                targetX = 0.2f,
+                targetY = 0.1f, // Wants to reach 0.1, but obstacleTop is at [0.0 - 0.2]
+                targetWidth = 0.3f,
+                targetHeight = 0.5f,
+                allCutouts = allCutouts,
+            )
+        assertEquals(0.2f, topGeom.x, EPS)
+        assertEquals(0.2f, topGeom.y, EPS) // Clamped to obstacle bottom (0.2)
+        assertEquals(0.3f, topGeom.w, EPS) // Width unchanged
+        assertEquals(0.4f, topGeom.h, EPS) // Height from 0.2 to 0.6 = 0.4
+
+        // 2. BOTTOM Handle: drag downward towards Y+H = 0.8
+        val bottomGeom =
+            clampCutoutResize(
+                cutoutId = "test",
+                handle = ResizeHandle.BOTTOM,
+                originalX = 0.2f,
+                originalY = 0.3f,
+                originalWidth = 0.3f,
+                originalHeight = 0.3f,
+                targetX = 0.2f,
+                targetY = 0.3f,
+                targetWidth = 0.3f,
+                targetHeight = 0.5f, // Target bottom = 0.3 + 0.5 = 0.8
+                allCutouts = allCutouts,
+            )
+        assertEquals(0.2f, bottomGeom.x, EPS)
+        assertEquals(0.3f, bottomGeom.y, EPS)
+        assertEquals(0.3f, bottomGeom.w, EPS)
+        assertEquals(0.5f, bottomGeom.h, EPS)
+
+        // 3. LEFT Handle: drag leftward towards X=0.05
+        val leftGeom =
+            clampCutoutResize(
+                cutoutId = "test",
+                handle = ResizeHandle.LEFT,
+                originalX = 0.2f,
+                originalY = 0.3f,
+                originalWidth = 0.3f,
+                originalHeight = 0.3f,
+                targetX = 0.05f,
+                targetY = 0.3f,
+                targetWidth = 0.45f,
+                targetHeight = 0.3f,
+                allCutouts = allCutouts,
+            )
+        assertEquals(0.05f, leftGeom.x, EPS)
+        assertEquals(0.3f, leftGeom.y, EPS)
+        assertEquals(0.45f, leftGeom.w, EPS) // 0.5 - 0.05 = 0.45
+        assertEquals(0.3f, leftGeom.h, EPS)
+
+        // 4. RIGHT Handle: drag rightward towards X+W = 0.85. Should clamp against obstacleRight left (0.7)
+        val rightGeom =
+            clampCutoutResize(
+                cutoutId = "test",
+                handle = ResizeHandle.RIGHT,
+                originalX = 0.2f,
+                originalY = 0.3f,
+                originalWidth = 0.3f,
+                originalHeight = 0.3f,
+                targetX = 0.2f,
+                targetY = 0.3f,
+                targetWidth = 0.65f, // Wants right to be 0.85, but obstacleRight starts at 0.7
+                targetHeight = 0.3f,
+                allCutouts = allCutouts,
+            )
+        assertEquals(0.2f, rightGeom.x, EPS)
+        assertEquals(0.3f, rightGeom.y, EPS)
+        assertEquals(0.5f, rightGeom.w, EPS) // Clamped to 0.7 - 0.2 = 0.5
+        assertEquals(0.3f, rightGeom.h, EPS)
+    }
 }
