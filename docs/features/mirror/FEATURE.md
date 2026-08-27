@@ -22,17 +22,18 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 
 - Sizing and placement of cutouts MUST only be active when the user explicitly enters **Screen Mirroring edit mode** (`isViewportEditActive = true`) via the "Edit Screen Mirroring Layout" card in the Screen Mirroring section of the MacroPad Editor. Outside of this mode, cutout configurations are locked and interactive layout adjustments are disabled. While editing (`isViewportEditActive = true`), `MainAppScreen` always renders `MacroPadScreen` (suppressing the Companion Hub `IntegrationHomeScreen` even if `showIntegrationHome` is true) so cutouts are positioned directly over the active MacroPad layout with locked button previews (`PadCanvas`).
 - While Screen Mirroring edit mode is active:
-  - **Top Screen (Display 0):** `PrimaryOverlayManager` hosts `MirrorEditorTopOverlay`. It renders the live crop bounding box and handles (`CropSelectorOverlay`) for the selected cutout over the un-frozen live game stream, combined with a left-docked 220dp vertical toolbox rail (`MirrorEditorVerticalToolbox`).
-  - **Controller Navigation:** The top-screen vertical toolbox is 100% navigable with D-Pad and left stick, requiring no button hotkeys:
+  - **Top Screen (Display 0):** `PrimaryOverlayManager` hosts `MirrorEditorTopOverlay`. It renders the live crop bounding box and handles (`CropSelectorOverlay`) for the selected cutout over the un-frozen live game stream, combined with a 2D draggable, compact vertical toolbox with unified scroll container and collapsible single-card height mode.
+  - **Controller Navigation & Layout:** The top-screen vertical toolbox is 100% navigable with D-Pad and left stick, requiring no button hotkeys:
+    - **Unified Scroll Container:** Items reside in a single vertical scroll container. When collapsed, the container height constrains to a single card height (38 dp) and native 2D focus traversal smoothly scrolls focused items into view.
+    - **Dynamic Viewport Boundary Clamping:** When expanded, the container automatically shifts upward if its height would exceed the bottom screen boundary, guaranteeing the entire toolbox remains 100% visible on Display 0.
+    - **Bidirectional Focus Loop:** Focus smoothly wraps between the top cutout selector card and the bottom drag handle collapse button.
     - **Cutout Selector:** `◀ CutoutName (X/Y) ▶` cycles active cutout with D-Pad Left/Right or A.
     - **Aspect Ratio Lock:** Cycles `FREE` → `TOP` → `BOTTOM` with D-Pad Left/Right or A.
     - **Shape Toggle:** Toggles `RECTANGLE` ↔ `CIRCLE` with A.
     - **Adjust Crop (Nudge Mode):** Pressing A enters Tier-2 D-Pad nudge mode with visual pulsing highlight where D-Pad Up/Down/Left/Right moves source crop coordinates by `0.01f`. Pressing A/B/Back exits nudge mode.
     - **Add Cutout:** Finds an available non-overlapping canvas slot (`CutoutPlacementHelper.findAvailableSlot`) and adds a new cutout. If no space is available, prompts user with a toast.
     - **Delete Cutout:** Two-step confirmation (`[ DEL ]` → `[ CONFIRM ]`) deletes the selected cutout.
-    - **Help & Guide:** Opens `CutoutLayoutEditorHelpModal` over Display 0.
-    - **Done & Save:** Commits cutout changes to active layout and exits edit mode back to MacroPad Editor.
-    - **Cancel & Revert:** Reverts all cutout changes back to initial state and exits edit mode back to MacroPad Editor.
+    - **Save Changes / Exit Row:** Commits cutout changes to active layout or prompts for Save/Discard on back.
   - **Bottom Screen (Display 4):** `CutoutLayoutEditor` renders an unobstructed touch canvas with destination bounding boxes and draggable corner resize handles for direct touch manipulation without floating toolbar obstruction.
 
 ### FR-M3: Freeze Frame

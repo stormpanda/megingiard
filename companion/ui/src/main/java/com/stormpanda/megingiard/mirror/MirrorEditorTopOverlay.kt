@@ -2,18 +2,12 @@ package com.stormpanda.megingiard.mirror
 
 import android.view.KeyEvent
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -75,6 +69,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
@@ -89,6 +84,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInputModeManager
@@ -158,7 +154,7 @@ private val METO_FOCUS_ELEVATION = 4.dp
 private const val METO_SURFACE_ALPHA = 0.70f
 private const val METO_CROP_NUDGE_DELTA = 0.01f
 private const val METO_INITIAL_FOCUS_DELAY_MS = 100L
-private const val METO_ITEM_COUNT = 7
+private val METO_SCROLL_EXTRA_PADDING = 0.dp
 
 /**
  * Top-Screen (Display 0) Overlay for the Screen Mirroring Editor.
@@ -192,22 +188,18 @@ fun MirrorEditorTopOverlay(
 
     var showExitPrompt by remember { mutableStateOf(false) }
     var isMinimized by remember { mutableStateOf(false) }
-    var selectedItemIndex by remember { mutableIntStateOf(0) }
 
     val inputModeManager = LocalInputModeManager.current
     val firstItemFocusRequester = remember { FocusRequester() }
     val saveFocusRequester = remember { FocusRequester() }
-    val minimizedItemFocusRequester = remember { FocusRequester() }
-    val bringIntoViewSpec = rememberGamepadBringIntoViewSpec()
+    val collapseButtonFocusRequester = remember { FocusRequester() }
+    val bringIntoViewSpec = rememberGamepadBringIntoViewSpec(extraPadding = METO_SCROLL_EXTRA_PADDING)
 
     fun handleBackAction(): Boolean {
         AppLog.d(TAG, "handleBackAction: hasChanges=$hasChanges, showExitPrompt=$showExitPrompt, isMinimized=$isMinimized")
         if (hasChanges) {
             if (!showExitPrompt) {
                 showExitPrompt = true
-                if (isMinimized) {
-                    selectedItemIndex = METO_ITEM_COUNT - 1
-                }
                 return true
             } else {
                 showExitPrompt = false
@@ -274,8 +266,6 @@ fun MirrorEditorTopOverlay(
             try {
                 if (showExitPrompt) {
                     saveFocusRequester.requestFocus()
-                } else if (isMinimized) {
-                    minimizedItemFocusRequester.requestFocus()
                 } else {
                     firstItemFocusRequester.requestFocus()
                 }
@@ -337,8 +327,10 @@ fun MirrorEditorTopOverlay(
                             bottom = METO_TOOLBOX_PADDING_VERTICAL,
                         ),
             ) {
-                val maxOffsetX = (constraints.maxWidth - with(density) { METO_TOOLBOX_WIDTH.toPx() }).coerceAtLeast(0f)
-                val maxOffsetY = (constraints.maxHeight - with(density) { 100.dp.toPx() }).coerceAtLeast(0f)
+                val boxMaxHeight = constraints.maxHeight
+                val boxMaxWidth = constraints.maxWidth
+                var surfaceHeightPx by remember { mutableIntStateOf(0) }
+                val maxOffsetX = (boxMaxWidth - with(density) { METO_TOOLBOX_WIDTH.toPx() }).coerceAtLeast(0f)
 
                 var offsetX by remember {
                     mutableFloatStateOf(with(density) { METO_TOOLBOX_PADDING_START.toPx() })
@@ -360,454 +352,208 @@ fun MirrorEditorTopOverlay(
                                 shape = RoundedCornerShape(METO_CONTAINER_CORNER),
                             ).animateContentSize(
                                 animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioNoBouncy),
-                            ),
+                            ).onSizeChanged { size ->
+                                surfaceHeightPx = size.height
+                                val currentMaxOffsetY = (boxMaxHeight - size.height).coerceAtLeast(0).toFloat()
+                                if (offsetY > currentMaxOffsetY) {
+                                    offsetY = currentMaxOffsetY
+                                }
+                            },
                     color = colors.surface.copy(alpha = METO_SURFACE_ALPHA),
                     shape = RoundedCornerShape(METO_CONTAINER_CORNER),
                 ) {
                     Column(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().padding(top = METO_INNER_PADDING_V),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        // ── Menu Content Area (Full List or Minimized Single Card) ──
-                        if (!isMinimized) {
-                            // Expanded Mode: Full scrollable vertical column
-                            Column(
+                        // ── Menu Content Area (Unified vertical scroll container) ──
+                        Column(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .then(
+                                        if (isMinimized) {
+                                            Modifier.height(METO_CARD_MIN_HEIGHT)
+                                        } else {
+                                            Modifier
+                                        },
+                                    ).verticalScroll(rememberScrollState())
+                                    .padding(horizontal = METO_INNER_PADDING_H),
+                            verticalArrangement = Arrangement.spacedBy(METO_ITEM_SPACING),
+                        ) {
+                            // Item 0: Target Cutout Carousel Selector
+                            TargetCutoutCarouselCard(
+                                cutouts = cutouts,
+                                selectedCutout = selectedCutout,
+                                onSelectCutout = { id ->
+                                    AppStateManager.setSelectedCutoutId(id)
+                                },
+                                cardFocusRequester = firstItemFocusRequester,
                                 modifier =
                                     Modifier
-                                        .fillMaxWidth()
-                                        .padding(
-                                            start = METO_INNER_PADDING_H,
-                                            end = METO_INNER_PADDING_H,
-                                            top = METO_INNER_PADDING_V,
-                                            bottom = 2.dp,
-                                        ).verticalScroll(rememberScrollState()),
-                                verticalArrangement = Arrangement.spacedBy(METO_ITEM_SPACING),
-                            ) {
-                                // Item 0: Target Cutout Carousel Selector
-                                TargetCutoutCarouselCard(
-                                    cutouts = cutouts,
-                                    selectedCutout = selectedCutout,
-                                    onSelectCutout = { id ->
-                                        AppStateManager.setSelectedCutoutId(id)
-                                    },
-                                    cardFocusRequester = firstItemFocusRequester,
-                                    onFocusChanged = { if (it) selectedItemIndex = 0 },
-                                    modifier = Modifier.firstDeckItem(),
-                                )
+                                        .firstDeckItem()
+                                        .focusProperties {
+                                            up = collapseButtonFocusRequester
+                                        },
+                            )
 
-                                // Item 1: Fixed Aspect Ratio Mode
-                                AspectRatioCard(
-                                    selectedCutout = selectedCutout,
-                                    srcWidth = srcWidth,
-                                    srcHeight = srcHeight,
-                                    secScreenW = secScreenW,
-                                    secScreenH = secScreenH,
-                                    onFocusChanged = { if (it) selectedItemIndex = 1 },
-                                    onUpdate = { updatedCutout ->
-                                        val updatedList =
-                                            cutouts.map {
-                                                if (it.id == updatedCutout.id) updatedCutout else it
-                                            }
-                                        MacroPadState.updateLayout(layout.copy(mirrorCutouts = updatedList))
-                                    },
-                                )
-
-                                // Item 2: Shape Mode
-                                ShapeToggleCard(
-                                    selectedCutout = selectedCutout,
-                                    onFocusChanged = { if (it) selectedItemIndex = 2 },
-                                    onUpdate = { updatedCutout ->
-                                        val updatedList =
-                                            cutouts.map {
-                                                if (it.id == updatedCutout.id) updatedCutout else it
-                                            }
-                                        MacroPadState.updateLayout(layout.copy(mirrorCutouts = updatedList))
-                                    },
-                                )
-
-                                // Item 3: Nudge Crop Coordinates
-                                AdjustCropCard(
-                                    selectedCutout = selectedCutout,
-                                    onFocusChanged = { if (it) selectedItemIndex = 3 },
-                                    onNudge = { dx, dy ->
-                                        val cur = selectedCutout ?: return@AdjustCropCard
-                                        val newX = (cur.srcX + dx).coerceIn(0f, 1f - cur.srcWidth)
-                                        val newY = (cur.srcY + dy).coerceIn(0f, 1f - cur.srcHeight)
-                                        val updated = cur.copy(srcX = newX, srcY = newY)
-                                        val updatedList = cutouts.map { if (it.id == cur.id) updated else it }
-                                        MacroPadState.updateLayout(layout.copy(mirrorCutouts = updatedList))
-                                    },
-                                )
-
-                                // Item 4: Add Cutout
-                                ToolboxActionCard(
-                                    title = stringResource(R.string.mirror_editor_add_cutout),
-                                    icon = Icons.Rounded.Add,
-                                    actionBadge = "+",
-                                    onFocusChanged = { if (it) selectedItemIndex = 4 },
-                                    onClick = {
-                                        val slot = CutoutPlacementHelper.findAvailableSlot(cutouts)
-                                        if (slot == null) {
-                                            DialogToastManager.show(context.getString(R.string.mirror_editor_no_space))
-                                        } else {
-                                            val newId = UUID.randomUUID().toString()
-                                            val initialCutout =
-                                                ScreenCutout(
-                                                    id = newId,
-                                                    name =
-                                                        context.getString(
-                                                            R.string.settings_mirror_cutout_default_name_fmt,
-                                                            cutouts.size + 1,
-                                                        ),
-                                                    srcX = 0.25f,
-                                                    srcY = 0.25f,
-                                                    srcWidth = 0.5f,
-                                                    srcHeight = 0.5f,
-                                                    destX = slot.destX,
-                                                    destY = slot.destY,
-                                                    destWidth = slot.destWidth,
-                                                    destHeight = slot.destHeight,
-                                                    aspectRatioMode = AspectRatioMode.BOTTOM,
-                                                )
-                                            val newCutout =
-                                                adjustSourceCropToAspectRatio(
-                                                    cutout = initialCutout,
-                                                    screenW = secScreenW,
-                                                    screenH = secScreenH,
-                                                    srcW = srcWidth,
-                                                    srcH = srcHeight,
-                                                )
-                                            MacroPadState.updateLayout(layout.copy(mirrorCutouts = cutouts + newCutout))
-                                            AppStateManager.setSelectedCutoutId(newId)
+                            // Item 1: Fixed Aspect Ratio Mode
+                            AspectRatioCard(
+                                selectedCutout = selectedCutout,
+                                srcWidth = srcWidth,
+                                srcHeight = srcHeight,
+                                secScreenW = secScreenW,
+                                secScreenH = secScreenH,
+                                onUpdate = { updatedCutout ->
+                                    val updatedList =
+                                        cutouts.map {
+                                            if (it.id == updatedCutout.id) updatedCutout else it
                                         }
+                                    MacroPadState.updateLayout(layout.copy(mirrorCutouts = updatedList))
+                                },
+                            )
+
+                            // Item 2: Shape Mode
+                            ShapeToggleCard(
+                                selectedCutout = selectedCutout,
+                                onUpdate = { updatedCutout ->
+                                    val updatedList =
+                                        cutouts.map {
+                                            if (it.id == updatedCutout.id) updatedCutout else it
+                                        }
+                                    MacroPadState.updateLayout(layout.copy(mirrorCutouts = updatedList))
+                                },
+                            )
+
+                            // Item 3: Nudge Crop Coordinates
+                            AdjustCropCard(
+                                selectedCutout = selectedCutout,
+                                onNudge = { dx, dy ->
+                                    val cur = selectedCutout ?: return@AdjustCropCard
+                                    val newX = (cur.srcX + dx).coerceIn(0f, 1f - cur.srcWidth)
+                                    val newY = (cur.srcY + dy).coerceIn(0f, 1f - cur.srcHeight)
+                                    val updated = cur.copy(srcX = newX, srcY = newY)
+                                    val updatedList = cutouts.map { if (it.id == cur.id) updated else it }
+                                    MacroPadState.updateLayout(layout.copy(mirrorCutouts = updatedList))
+                                },
+                            )
+
+                            // Item 4: Add Cutout
+                            ToolboxActionCard(
+                                title = stringResource(R.string.mirror_editor_add_cutout),
+                                icon = Icons.Rounded.Add,
+                                actionBadge = "+",
+                                onClick = {
+                                    val slot = CutoutPlacementHelper.findAvailableSlot(cutouts)
+                                    if (slot == null) {
+                                        DialogToastManager.show(context.getString(R.string.mirror_editor_no_space))
+                                    } else {
+                                        val newId = UUID.randomUUID().toString()
+                                        val initialCutout =
+                                            ScreenCutout(
+                                                id = newId,
+                                                name =
+                                                    context.getString(
+                                                        R.string.settings_mirror_cutout_default_name_fmt,
+                                                        cutouts.size + 1,
+                                                    ),
+                                                srcX = 0.25f,
+                                                srcY = 0.25f,
+                                                srcWidth = 0.5f,
+                                                srcHeight = 0.5f,
+                                                destX = slot.destX,
+                                                destY = slot.destY,
+                                                destWidth = slot.destWidth,
+                                                destHeight = slot.destHeight,
+                                                aspectRatioMode = AspectRatioMode.BOTTOM,
+                                            )
+                                        val newCutout =
+                                            adjustSourceCropToAspectRatio(
+                                                cutout = initialCutout,
+                                                screenW = secScreenW,
+                                                screenH = secScreenH,
+                                                srcW = srcWidth,
+                                                srcH = srcHeight,
+                                            )
+                                        MacroPadState.updateLayout(layout.copy(mirrorCutouts = cutouts + newCutout))
+                                        AppStateManager.setSelectedCutoutId(newId)
+                                    }
+                                },
+                            )
+
+                            // Item 5: Delete Cutout
+                            DeleteCutoutCard(
+                                selectedCutout = selectedCutout,
+                                onDelete = { cutoutId ->
+                                    val updatedList = cutouts.filterNot { it.id == cutoutId }
+                                    MacroPadState.updateLayout(layout.copy(mirrorCutouts = updatedList))
+                                    AppStateManager.setSelectedCutoutId(updatedList.firstOrNull()?.id)
+                                },
+                            )
+
+                            // Item 6: Save Changes / Save & Discard Exit Row
+                            if (!showExitPrompt) {
+                                ToolboxActionCard(
+                                    title = stringResource(R.string.mirror_editor_save_changes),
+                                    icon = Icons.Rounded.Save,
+                                    actionBadge = "SAVE",
+                                    isAccent = true,
+                                    cardBgColor = colors.accent.copy(alpha = 0.20f),
+                                    cardFocusRequester = saveFocusRequester,
+                                    onClick = {
+                                        savedCutouts = currentCutouts
+                                        MacroPadState.saveMirrorCutouts(layout.id, currentCutouts)
+                                        DialogToastManager.show(context.getString(R.string.mirror_editor_saved_toast))
                                     },
                                 )
+                            } else {
+                                var isSaveFocused by remember { mutableStateOf(false) }
+                                var isDiscardFocused by remember { mutableStateOf(false) }
+                                val isExitRowFocused = isSaveFocused || isDiscardFocused
 
-                                // Item 5: Delete Cutout
-                                DeleteCutoutCard(
-                                    selectedCutout = selectedCutout,
-                                    onFocusChanged = { if (it) selectedItemIndex = 5 },
-                                    onDelete = { cutoutId ->
-                                        val updatedList = cutouts.filterNot { it.id == cutoutId }
-                                        MacroPadState.updateLayout(layout.copy(mirrorCutouts = updatedList))
-                                        AppStateManager.setSelectedCutoutId(updatedList.firstOrNull()?.id)
-                                    },
-                                )
+                                LaunchedEffect(isExitRowFocused, showExitPrompt) {
+                                    if (showExitPrompt && !isExitRowFocused) {
+                                        delay(100)
+                                        if (showExitPrompt && !isSaveFocused && !isDiscardFocused) {
+                                            AppLog.d(TAG, "Expanded exit row focus settled outside -> reverting to normal state")
+                                            showExitPrompt = false
+                                        }
+                                    }
+                                }
 
-                                // Item 6: Save Changes / Save & Discard Exit Row
-                                if (!showExitPrompt) {
-                                    ToolboxActionCard(
-                                        title = stringResource(R.string.mirror_editor_save_changes),
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(METO_ITEM_SPACING),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    // Save & Exit (Left)
+                                    ToolboxCard(
+                                        title = stringResource(R.string.gamepad_action_save),
                                         icon = Icons.Rounded.Save,
-                                        actionBadge = "SAVE",
-                                        isAccent = true,
-                                        cardBgColor = colors.accent.copy(alpha = 0.20f),
+                                        cardBgColor = colors.accent.copy(alpha = 0.25f),
                                         cardFocusRequester = saveFocusRequester,
-                                        onFocusChanged = { if (it) selectedItemIndex = 6 },
+                                        onFocusChanged = { isSaveFocused = it },
+                                        modifier = Modifier.weight(1f),
                                         onClick = {
                                             savedCutouts = currentCutouts
                                             MacroPadState.saveMirrorCutouts(layout.id, currentCutouts)
-                                            DialogToastManager.show(context.getString(R.string.mirror_editor_saved_toast))
+                                            onDone()
                                         },
                                     )
-                                } else {
-                                    var isSaveFocused by remember { mutableStateOf(false) }
-                                    var isDiscardFocused by remember { mutableStateOf(false) }
-                                    val isExitRowFocused = isSaveFocused || isDiscardFocused
 
-                                    LaunchedEffect(isExitRowFocused, showExitPrompt) {
-                                        if (showExitPrompt && !isExitRowFocused) {
-                                            delay(100)
-                                            if (showExitPrompt && !isSaveFocused && !isDiscardFocused) {
-                                                AppLog.d(TAG, "Expanded exit row focus settled outside -> reverting to normal state")
-                                                showExitPrompt = false
-                                            }
-                                        }
-                                    }
-
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(METO_ITEM_SPACING),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        // Save & Exit (Left)
-                                        ToolboxCard(
-                                            title = stringResource(R.string.gamepad_action_save),
-                                            icon = Icons.Rounded.Save,
-                                            cardBgColor = colors.accent.copy(alpha = 0.25f),
-                                            cardFocusRequester = saveFocusRequester,
-                                            onFocusChanged = {
-                                                isSaveFocused = it
-                                                if (it) selectedItemIndex = 6
-                                            },
-                                            modifier = Modifier.weight(1f),
-                                            onClick = {
-                                                savedCutouts = currentCutouts
-                                                MacroPadState.saveMirrorCutouts(layout.id, currentCutouts)
-                                                onDone()
-                                            },
-                                        )
-
-                                        // Discard & Exit (Right)
-                                        ToolboxCard(
-                                            title = stringResource(R.string.gamepad_action_discard),
-                                            icon = Icons.Rounded.Close,
-                                            isDestructive = true,
-                                            cardBgColor = colors.error.copy(alpha = 0.15f),
-                                            onFocusChanged = {
-                                                isDiscardFocused = it
-                                                if (it) selectedItemIndex = 6
-                                            },
-                                            modifier = Modifier.weight(1f),
-                                            onClick = {
-                                                MacroPadState.updateLayout(layout.copy(mirrorCutouts = savedCutouts))
-                                                onCancel()
-                                            },
-                                        )
-                                    }
-                                }
-                            }
-                        } else {
-                            // Minimized Mode: Render single active card with Up/Down navigation
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(
-                                            start = METO_INNER_PADDING_H,
-                                            end = METO_INNER_PADDING_H,
-                                            top = METO_INNER_PADDING_V,
-                                            bottom = 2.dp,
-                                        ),
-                            ) {
-                                val onNavigateUp = {
-                                    selectedItemIndex = if (selectedItemIndex > 0) selectedItemIndex - 1 else METO_ITEM_COUNT - 1
-                                }
-                                val onNavigateDown = {
-                                    selectedItemIndex = (selectedItemIndex + 1) % METO_ITEM_COUNT
-                                }
-
-                                AnimatedContent(
-                                    targetState = selectedItemIndex,
-                                    transitionSpec = {
-                                        if (targetState > initialState) {
-                                            (slideInVertically { height -> height } + fadeIn()).togetherWith(
-                                                slideOutVertically { height -> -height } + fadeOut(),
-                                            )
-                                        } else {
-                                            (slideInVertically { height -> -height } + fadeIn()).togetherWith(
-                                                slideOutVertically { height -> height } + fadeOut(),
-                                            )
-                                        }
-                                    },
-                                    label = "minimizedCardAnimation",
-                                ) { targetIndex ->
-                                    when (targetIndex) {
-                                        0 -> {
-                                            TargetCutoutCarouselCard(
-                                                cutouts = cutouts,
-                                                selectedCutout = selectedCutout,
-                                                onSelectCutout = { id -> AppStateManager.setSelectedCutoutId(id) },
-                                                cardFocusRequester = minimizedItemFocusRequester,
-                                                onUpKey = onNavigateUp,
-                                                onDownKey = onNavigateDown,
-                                            )
-                                        }
-
-                                        1 -> {
-                                            AspectRatioCard(
-                                                selectedCutout = selectedCutout,
-                                                srcWidth = srcWidth,
-                                                srcHeight = srcHeight,
-                                                secScreenW = secScreenW,
-                                                secScreenH = secScreenH,
-                                                cardFocusRequester = minimizedItemFocusRequester,
-                                                onUpKey = onNavigateUp,
-                                                onDownKey = onNavigateDown,
-                                                onUpdate = { updatedCutout ->
-                                                    val updatedList = cutouts.map { if (it.id == updatedCutout.id) updatedCutout else it }
-                                                    MacroPadState.updateLayout(layout.copy(mirrorCutouts = updatedList))
-                                                },
-                                            )
-                                        }
-
-                                        2 -> {
-                                            ShapeToggleCard(
-                                                selectedCutout = selectedCutout,
-                                                cardFocusRequester = minimizedItemFocusRequester,
-                                                onUpKey = onNavigateUp,
-                                                onDownKey = onNavigateDown,
-                                                onUpdate = { updatedCutout ->
-                                                    val updatedList = cutouts.map { if (it.id == updatedCutout.id) updatedCutout else it }
-                                                    MacroPadState.updateLayout(layout.copy(mirrorCutouts = updatedList))
-                                                },
-                                            )
-                                        }
-
-                                        3 -> {
-                                            AdjustCropCard(
-                                                selectedCutout = selectedCutout,
-                                                cardFocusRequester = minimizedItemFocusRequester,
-                                                onUpKey = onNavigateUp,
-                                                onDownKey = onNavigateDown,
-                                                onNudge = { dx, dy ->
-                                                    val cur = selectedCutout ?: return@AdjustCropCard
-                                                    val newX = (cur.srcX + dx).coerceIn(0f, 1f - cur.srcWidth)
-                                                    val newY = (cur.srcY + dy).coerceIn(0f, 1f - cur.srcHeight)
-                                                    val updated = cur.copy(srcX = newX, srcY = newY)
-                                                    val updatedList = cutouts.map { if (it.id == cur.id) updated else it }
-                                                    MacroPadState.updateLayout(layout.copy(mirrorCutouts = updatedList))
-                                                },
-                                            )
-                                        }
-
-                                        4 -> {
-                                            ToolboxActionCard(
-                                                title = stringResource(R.string.mirror_editor_add_cutout),
-                                                icon = Icons.Rounded.Add,
-                                                actionBadge = "+",
-                                                cardFocusRequester = minimizedItemFocusRequester,
-                                                onUpKey = onNavigateUp,
-                                                onDownKey = onNavigateDown,
-                                                onClick = {
-                                                    val slot = CutoutPlacementHelper.findAvailableSlot(cutouts)
-                                                    if (slot == null) {
-                                                        DialogToastManager.show(context.getString(R.string.mirror_editor_no_space))
-                                                    } else {
-                                                        val newId = UUID.randomUUID().toString()
-                                                        val initialCutout =
-                                                            ScreenCutout(
-                                                                id = newId,
-                                                                name =
-                                                                    context.getString(
-                                                                        R.string.settings_mirror_cutout_default_name_fmt,
-                                                                        cutouts.size + 1,
-                                                                    ),
-                                                                srcX = 0.25f,
-                                                                srcY = 0.25f,
-                                                                srcWidth = 0.5f,
-                                                                srcHeight = 0.5f,
-                                                                destX = slot.destX,
-                                                                destY = slot.destY,
-                                                                destWidth = slot.destWidth,
-                                                                destHeight = slot.destHeight,
-                                                                aspectRatioMode = AspectRatioMode.BOTTOM,
-                                                            )
-                                                        val newCutout =
-                                                            adjustSourceCropToAspectRatio(
-                                                                cutout = initialCutout,
-                                                                screenW = secScreenW,
-                                                                screenH = secScreenH,
-                                                                srcW = srcWidth,
-                                                                srcH = srcHeight,
-                                                            )
-                                                        MacroPadState.updateLayout(layout.copy(mirrorCutouts = cutouts + newCutout))
-                                                        AppStateManager.setSelectedCutoutId(newId)
-                                                    }
-                                                },
-                                            )
-                                        }
-
-                                        5 -> {
-                                            DeleteCutoutCard(
-                                                selectedCutout = selectedCutout,
-                                                cardFocusRequester = minimizedItemFocusRequester,
-                                                onUpKey = onNavigateUp,
-                                                onDownKey = onNavigateDown,
-                                                onDelete = { cutoutId ->
-                                                    val updatedList = cutouts.filterNot { it.id == cutoutId }
-                                                    MacroPadState.updateLayout(layout.copy(mirrorCutouts = updatedList))
-                                                    AppStateManager.setSelectedCutoutId(updatedList.firstOrNull()?.id)
-                                                },
-                                            )
-                                        }
-
-                                        6 -> {
-                                            if (!showExitPrompt) {
-                                                ToolboxActionCard(
-                                                    title = stringResource(R.string.mirror_editor_save_changes),
-                                                    icon = Icons.Rounded.Save,
-                                                    actionBadge = "SAVE",
-                                                    isAccent = true,
-                                                    cardBgColor = colors.accent.copy(alpha = 0.20f),
-                                                    cardFocusRequester = saveFocusRequester,
-                                                    onUpKey = onNavigateUp,
-                                                    onDownKey = onNavigateDown,
-                                                    onClick = {
-                                                        savedCutouts = currentCutouts
-                                                        MacroPadState.saveMirrorCutouts(layout.id, currentCutouts)
-                                                        DialogToastManager.show(context.getString(R.string.mirror_editor_saved_toast))
-                                                    },
-                                                )
-                                            } else {
-                                                var isMinSaveFocused by remember { mutableStateOf(false) }
-                                                var isMinDiscardFocused by remember { mutableStateOf(false) }
-                                                val isMinExitRowFocused = isMinSaveFocused || isMinDiscardFocused
-
-                                                LaunchedEffect(isMinExitRowFocused, showExitPrompt) {
-                                                    if (showExitPrompt && !isMinExitRowFocused) {
-                                                        delay(100)
-                                                        if (showExitPrompt && !isMinSaveFocused && !isMinDiscardFocused) {
-                                                            AppLog.d(
-                                                                TAG,
-                                                                "Minimized exit row focus settled outside -> reverting to normal state",
-                                                            )
-                                                            showExitPrompt = false
-                                                        }
-                                                    }
-                                                }
-
-                                                Row(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    horizontalArrangement = Arrangement.spacedBy(METO_ITEM_SPACING),
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                ) {
-                                                    ToolboxCard(
-                                                        title = stringResource(R.string.gamepad_action_save),
-                                                        icon = Icons.Rounded.Save,
-                                                        cardBgColor = colors.accent.copy(alpha = 0.25f),
-                                                        cardFocusRequester = saveFocusRequester,
-                                                        onFocusChanged = { isMinSaveFocused = it },
-                                                        onUpKey = {
-                                                            showExitPrompt = false
-                                                            onNavigateUp()
-                                                        },
-                                                        onDownKey = {
-                                                            showExitPrompt = false
-                                                            onNavigateDown()
-                                                        },
-                                                        modifier = Modifier.weight(1f),
-                                                        onClick = {
-                                                            savedCutouts = currentCutouts
-                                                            MacroPadState.saveMirrorCutouts(layout.id, currentCutouts)
-                                                            onDone()
-                                                        },
-                                                    )
-
-                                                    ToolboxCard(
-                                                        title = stringResource(R.string.gamepad_action_discard),
-                                                        icon = Icons.Rounded.Close,
-                                                        isDestructive = true,
-                                                        cardBgColor = colors.error.copy(alpha = 0.15f),
-                                                        onFocusChanged = { isMinDiscardFocused = it },
-                                                        onUpKey = {
-                                                            showExitPrompt = false
-                                                            onNavigateUp()
-                                                        },
-                                                        onDownKey = {
-                                                            showExitPrompt = false
-                                                            onNavigateDown()
-                                                        },
-                                                        modifier = Modifier.weight(1f),
-                                                        onClick = {
-                                                            MacroPadState.updateLayout(layout.copy(mirrorCutouts = savedCutouts))
-                                                            onCancel()
-                                                        },
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
+                                    // Discard & Exit (Right)
+                                    ToolboxCard(
+                                        title = stringResource(R.string.gamepad_action_discard),
+                                        icon = Icons.Rounded.Close,
+                                        isDestructive = true,
+                                        cardBgColor = colors.error.copy(alpha = 0.15f),
+                                        onFocusChanged = { isDiscardFocused = it },
+                                        modifier = Modifier.weight(1f),
+                                        onClick = {
+                                            MacroPadState.updateLayout(layout.copy(mirrorCutouts = savedCutouts))
+                                            onCancel()
+                                        },
+                                    )
                                 }
                             }
                         }
@@ -817,9 +563,12 @@ fun MirrorEditorTopOverlay(
                             isMinimized = isMinimized,
                             onToggleMinimize = { isMinimized = !isMinimized },
                             onDrag = { dx, dy ->
+                                val currentMaxOffsetY = (boxMaxHeight - surfaceHeightPx).coerceAtLeast(0).toFloat()
                                 offsetX = (offsetX + dx).coerceIn(0f, maxOffsetX)
-                                offsetY = (offsetY + dy).coerceIn(0f, maxOffsetY)
+                                offsetY = (offsetY + dy).coerceIn(0f, currentMaxOffsetY)
                             },
+                            toggleButtonFocusRequester = collapseButtonFocusRequester,
+                            firstItemFocusRequester = firstItemFocusRequester,
                         )
                     }
                 }
@@ -842,8 +591,29 @@ private fun ToolboxDragHandle(
     onToggleMinimize: () -> Unit,
     onDrag: (Float, Float) -> Unit,
     modifier: Modifier = Modifier,
+    toggleButtonFocusRequester: FocusRequester = remember { FocusRequester() },
+    firstItemFocusRequester: FocusRequester? = null,
 ) {
     val colors = LocalAppColors.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+
+    val buttonBg by animateColorAsState(
+        targetValue = if (isFocused) colors.accent.copy(alpha = 0.25f) else colors.surfaceVariant.copy(alpha = 0.5f),
+        animationSpec = tween(150),
+        label = "toggleButtonBg",
+    )
+    val buttonBorderColor by animateColorAsState(
+        targetValue = if (isFocused) colors.accent else Color.Transparent,
+        animationSpec = tween(150),
+        label = "toggleButtonBorder",
+    )
+    val iconTint by animateColorAsState(
+        targetValue = if (isFocused) colors.accent else colors.onSurfaceSecondary,
+        animationSpec = tween(150),
+        label = "toggleButtonIconTint",
+    )
+
     Box(
         modifier =
             modifier
@@ -878,14 +648,41 @@ private fun ToolboxDragHandle(
                     .align(Alignment.CenterEnd)
                     .size(METO_TOGGLE_BUTTON_SIZE)
                     .clip(CircleShape)
-                    .clickable(onClick = onToggleMinimize)
-                    .background(colors.surfaceVariant.copy(alpha = 0.5f)),
+                    .background(buttonBg)
+                    .border(METO_DEFAULT_BORDER_WIDTH, buttonBorderColor, CircleShape)
+                    .focusRequester(toggleButtonFocusRequester)
+                    .then(
+                        if (firstItemFocusRequester != null) {
+                            Modifier.focusProperties {
+                                down = firstItemFocusRequester
+                            }
+                        } else {
+                            Modifier
+                        },
+                    ).onKeyEvent { keyEvent ->
+                        val keyCode = keyEvent.nativeKeyEvent.keyCode
+                        if (keyEvent.type == KeyEventType.KeyUp &&
+                            (
+                                keyCode == KeyEvent.KEYCODE_BUTTON_A || keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+                                    keyCode == KeyEvent.KEYCODE_ENTER
+                            )
+                        ) {
+                            onToggleMinimize()
+                            true
+                        } else {
+                            false
+                        }
+                    }.clickable(
+                        interactionSource = interactionSource,
+                        indication = null,
+                        onClick = onToggleMinimize,
+                    ),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = if (isMinimized) Icons.Rounded.UnfoldMore else Icons.Rounded.UnfoldLess,
                 contentDescription = stringResource(if (isMinimized) R.string.mirror_editor_expand else R.string.mirror_editor_minimize),
-                tint = colors.onSurfaceSecondary,
+                tint = iconTint,
                 modifier = Modifier.size(METO_TOGGLE_ICON_SIZE),
             )
         }
@@ -906,8 +703,6 @@ private fun ToolboxCard(
     cardBgColor: Color? = null,
     onLeftKey: (() -> Unit)? = null,
     onRightKey: (() -> Unit)? = null,
-    onUpKey: (() -> Unit)? = null,
-    onDownKey: (() -> Unit)? = null,
     onFocusChanged: ((Boolean) -> Unit)? = null,
     onCustomKeyEvent: ((ComposeKeyEvent) -> Boolean)? = null,
     icon: ImageVector,
@@ -1000,24 +795,6 @@ private fun ToolboxCard(
                     }
                 }
 
-                KeyEvent.KEYCODE_DPAD_UP -> {
-                    if (keyEvent.type == KeyEventType.KeyDown && onUpKey != null) {
-                        onUpKey()
-                        true
-                    } else {
-                        false
-                    }
-                }
-
-                KeyEvent.KEYCODE_DPAD_DOWN -> {
-                    if (keyEvent.type == KeyEventType.KeyDown && onDownKey != null) {
-                        onDownKey()
-                        true
-                    } else {
-                        false
-                    }
-                }
-
                 else -> {
                     false
                 }
@@ -1079,7 +856,8 @@ private fun ToolboxCard(
                 modifier =
                     Modifier
                         .size(METO_ICON_BOX_SIZE)
-                        .background(iconBg, RoundedCornerShape(METO_ICON_BOX_CORNER)),
+                        .clip(RoundedCornerShape(METO_ICON_BOX_CORNER))
+                        .background(iconBg),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -1123,15 +901,15 @@ private fun ToolboxCard(
 @Composable
 private fun ToolboxPill(
     text: String,
+    modifier: Modifier = Modifier,
     isHighlighted: Boolean = false,
     isAccent: Boolean = false,
     isDestructive: Boolean = false,
-    modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
     val pillBg =
         when {
-            isDestructive -> colors.error.copy(alpha = 0.15f)
+            isDestructive -> colors.error.copy(alpha = if (isHighlighted) 0.25f else 0.15f)
             isAccent -> colors.accent
             isHighlighted -> colors.accent.copy(alpha = 0.15f)
             else -> colors.surfaceVariant
@@ -1175,8 +953,6 @@ private fun TargetCutoutCarouselCard(
     onSelectCutout: (String) -> Unit,
     modifier: Modifier = Modifier,
     cardFocusRequester: FocusRequester = remember { FocusRequester() },
-    onUpKey: (() -> Unit)? = null,
-    onDownKey: (() -> Unit)? = null,
     onFocusChanged: ((Boolean) -> Unit)? = null,
 ) {
     val colors = LocalAppColors.current
@@ -1208,8 +984,6 @@ private fun TargetCutoutCarouselCard(
         onClick = { selectNext() },
         onLeftKey = { selectPrevious() },
         onRightKey = { selectNext() },
-        onUpKey = onUpKey,
-        onDownKey = onDownKey,
         onFocusChanged = onFocusChanged,
         cardFocusRequester = cardFocusRequester,
         enabled = hasCutouts,
@@ -1266,8 +1040,6 @@ private fun AspectRatioCard(
     onUpdate: (ScreenCutout) -> Unit,
     modifier: Modifier = Modifier,
     cardFocusRequester: FocusRequester = remember { FocusRequester() },
-    onUpKey: (() -> Unit)? = null,
-    onDownKey: (() -> Unit)? = null,
     onFocusChanged: ((Boolean) -> Unit)? = null,
 ) {
     val currentMode = selectedCutout?.aspectRatioMode ?: AspectRatioMode.FREE
@@ -1334,8 +1106,6 @@ private fun AspectRatioCard(
         onClick = { cycleMode(forward = true) },
         onLeftKey = { cycleMode(forward = false) },
         onRightKey = { cycleMode(forward = true) },
-        onUpKey = onUpKey,
-        onDownKey = onDownKey,
         onFocusChanged = onFocusChanged,
         cardFocusRequester = cardFocusRequester,
         enabled = enabled,
@@ -1356,8 +1126,6 @@ private fun ShapeToggleCard(
     onUpdate: (ScreenCutout) -> Unit,
     modifier: Modifier = Modifier,
     cardFocusRequester: FocusRequester = remember { FocusRequester() },
-    onUpKey: (() -> Unit)? = null,
-    onDownKey: (() -> Unit)? = null,
     onFocusChanged: ((Boolean) -> Unit)? = null,
 ) {
     val isCircle = selectedCutout?.shape == CutoutShape.CIRCLE
@@ -1378,8 +1146,6 @@ private fun ShapeToggleCard(
 
     ToolboxCard(
         onClick = { toggleShape() },
-        onUpKey = onUpKey,
-        onDownKey = onDownKey,
         onFocusChanged = onFocusChanged,
         cardFocusRequester = cardFocusRequester,
         enabled = enabled,
@@ -1400,8 +1166,6 @@ private fun AdjustCropCard(
     onNudge: (Float, Float) -> Unit,
     modifier: Modifier = Modifier,
     cardFocusRequester: FocusRequester = remember { FocusRequester() },
-    onUpKey: (() -> Unit)? = null,
-    onDownKey: (() -> Unit)? = null,
     onFocusChanged: ((Boolean) -> Unit)? = null,
 ) {
     val colors = LocalAppColors.current
@@ -1413,8 +1177,6 @@ private fun AdjustCropCard(
         isFocusedOverride = isNudging,
         enabled = enabled,
         cardFocusRequester = cardFocusRequester,
-        onUpKey = if (!isNudging) onUpKey else null,
-        onDownKey = if (!isNudging) onDownKey else null,
         onFocusChanged = onFocusChanged,
         cardBgColor = if (isNudging) colors.accent.copy(alpha = 0.25f) else null,
         icon = Icons.Rounded.Tune,
@@ -1475,8 +1237,6 @@ private fun DeleteCutoutCard(
     onDelete: (String) -> Unit,
     modifier: Modifier = Modifier,
     cardFocusRequester: FocusRequester = remember { FocusRequester() },
-    onUpKey: (() -> Unit)? = null,
-    onDownKey: (() -> Unit)? = null,
     onFocusChanged: ((Boolean) -> Unit)? = null,
 ) {
     var isConfirming by remember { mutableStateOf(false) }
@@ -1496,8 +1256,6 @@ private fun DeleteCutoutCard(
                 isConfirming = true
             }
         },
-        onUpKey = if (!isConfirming) onUpKey else null,
-        onDownKey = if (!isConfirming) onDownKey else null,
         onFocusChanged = onFocusChanged,
         onCustomKeyEvent = { event ->
             if (isConfirming &&
@@ -1537,8 +1295,6 @@ private fun ToolboxActionCard(
     isAccent: Boolean = false,
     isDestructive: Boolean = false,
     cardBgColor: Color? = null,
-    onUpKey: (() -> Unit)? = null,
-    onDownKey: (() -> Unit)? = null,
     onFocusChanged: ((Boolean) -> Unit)? = null,
 ) {
     ToolboxCard(
@@ -1548,8 +1304,6 @@ private fun ToolboxActionCard(
         isDestructive = isDestructive,
         cardBgColor = cardBgColor,
         cardFocusRequester = cardFocusRequester,
-        onUpKey = onUpKey,
-        onDownKey = onDownKey,
         onFocusChanged = onFocusChanged,
         modifier = modifier,
     ) { isFocused ->
