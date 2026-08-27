@@ -498,7 +498,6 @@ fun MirrorEditorTopOverlay(
                             ToolboxActionCard(
                                 title = stringResource(R.string.mirror_editor_add_cutout),
                                 icon = Icons.Rounded.Add,
-                                actionBadge = "+",
                                 onClick = {
                                     val slot = CutoutPlacementHelper.findAvailableSlot(cutouts)
                                     if (slot == null) {
@@ -537,7 +536,7 @@ fun MirrorEditorTopOverlay(
                                 },
                             )
 
-                            // Item 5: Delete Cutout
+                            // Item 6: Delete Cutout
                             DeleteCutoutCard(
                                 selectedCutout = selectedCutout,
                                 onDelete = { cutoutId ->
@@ -547,14 +546,14 @@ fun MirrorEditorTopOverlay(
                                 },
                             )
 
-                            // Item 6: Save Changes / Save & Discard Exit Row
+                            // Item 7: Save Changes / Save & Discard Exit Row
                             if (!showExitPrompt) {
                                 ToolboxActionCard(
                                     title = stringResource(R.string.mirror_editor_save_changes),
                                     icon = Icons.Rounded.Save,
-                                    actionBadge = "SAVE",
+                                    actionBadge = if (!hasChanges) "SAVED" else null,
                                     isAccent = true,
-                                    cardBgColor = colors.accent.copy(alpha = 0.20f),
+                                    cardBgColor = if (hasChanges) colors.accent.copy(alpha = 0.20f) else null,
                                     cardFocusRequester = saveFocusRequester,
                                     onClick = {
                                         savedCutouts = currentCutouts
@@ -1368,13 +1367,7 @@ private fun AdjustCoordinatesCard(
             }
         },
         modifier = modifier,
-    ) { isFocused ->
-        ToolboxPill(
-            text = if (isMoving) stringResource(R.string.mirror_editor_move_active) else stringResource(R.string.mirror_editor_move_badge),
-            isHighlighted = isMoving || isFocused,
-            isAccent = isMoving,
-        )
-    }
+    )
 }
 
 @Composable
@@ -1416,27 +1409,28 @@ private fun DeleteCutoutCard(
             }
         },
         icon = Icons.Rounded.Delete,
-        title = stringResource(R.string.macropad_delete_cutout_title),
+        title =
+            if (isConfirming) {
+                stringResource(
+                    R.string.gamepad_action_confirm,
+                )
+            } else {
+                stringResource(R.string.macropad_delete_cutout_title)
+            },
         isDestructive = true,
         enabled = enabled,
         cardFocusRequester = cardFocusRequester,
         modifier = modifier,
-    ) { isFocused ->
-        ToolboxPill(
-            text = if (isConfirming) "CONFIRM" else "DEL",
-            isDestructive = true,
-            isHighlighted = isConfirming || isFocused,
-        )
-    }
+    )
 }
 
 @Composable
 private fun ToolboxActionCard(
     title: String,
     icon: ImageVector,
-    actionBadge: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    actionBadge: String? = null,
     cardFocusRequester: FocusRequester = remember { FocusRequester() },
     isAccent: Boolean = false,
     isDestructive: Boolean = false,
@@ -1452,12 +1446,18 @@ private fun ToolboxActionCard(
         cardFocusRequester = cardFocusRequester,
         onFocusChanged = onFocusChanged,
         modifier = modifier,
-    ) { isFocused ->
-        ToolboxPill(
-            text = actionBadge,
-            isAccent = isAccent,
-            isDestructive = isDestructive,
-            isHighlighted = isFocused,
-        )
-    }
+        trailingContent =
+            if (actionBadge != null) {
+                { isFocused ->
+                    ToolboxPill(
+                        text = actionBadge,
+                        isAccent = isAccent,
+                        isDestructive = isDestructive,
+                        isHighlighted = isFocused,
+                    )
+                }
+            } else {
+                null
+            },
+    )
 }
