@@ -3,6 +3,7 @@ package com.stormpanda.megingiard.macropad
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
 import androidx.compose.material.icons.automirrored.rounded.ViewQuilt
+import androidx.compose.material.icons.rounded.Crop
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.OpenWith
 import androidx.compose.material.icons.rounded.SmartButton
@@ -32,11 +33,12 @@ internal fun QuickActionsDeckContent(
     onNewLayout: () -> Unit,
     onNewProfile: () -> Unit,
     onArrangeButtons: () -> Unit,
+    onEditMirrorLayout: () -> Unit,
 ) {
     AppLog.d(TAG, "Rendering QuickActionsDeckContent")
 
     val items =
-        remember(onNewButton, onNewMacro, onNewLayout, onNewProfile, onArrangeButtons) {
+        remember(onNewButton, onNewMacro, onNewLayout, onNewProfile, onArrangeButtons, onEditMirrorLayout) {
             listOf(
                 QuickActionItem(
                     titleRes = R.string.macropad_editor_add_button,
@@ -72,6 +74,13 @@ internal fun QuickActionsDeckContent(
                     actionRes = R.string.gamepad_action_open,
                     icon = Icons.Rounded.OpenWith,
                     onClick = onArrangeButtons,
+                ),
+                QuickActionItem(
+                    titleRes = R.string.mirror_editor_arrange_cutouts_title,
+                    descRes = R.string.mirror_editor_arrange_cutouts_desc,
+                    actionRes = R.string.gamepad_action_open,
+                    icon = Icons.Rounded.Crop,
+                    onClick = onEditMirrorLayout,
                 ),
             )
         }

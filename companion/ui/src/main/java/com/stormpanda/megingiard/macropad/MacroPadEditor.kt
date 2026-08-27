@@ -420,6 +420,10 @@ fun MacroPadEditor(
                                                 onArrangeButtons = {
                                                     MacroPadNavState.setStack(listOf(MacroPadSubPage.EditButtonPositions))
                                                 },
+                                                onEditMirrorLayout = {
+                                                    onDone()
+                                                    AppStateManager.setViewportEditActive(true)
+                                                },
                                             )
                                         }
 
