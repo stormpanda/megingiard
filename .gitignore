@@ -27,3 +27,4 @@ build/
 local.properties
 megingiard.jks
 .tmp/
+bin/

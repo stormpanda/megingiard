@@ -54,6 +54,7 @@ import androidx.compose.material.icons.rounded.SmartButton
 import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material.icons.rounded.TouchApp
+import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -329,6 +330,14 @@ fun MacroPadEditor(
                             },
                         )
                         GamepadCategoryTile(
+                            title = stringResource(R.string.quick_menu_screen_mirroring),
+                            icon = Icons.Rounded.Videocam,
+                            selected = selectedSection == EditorSection.MIRROR,
+                            onClick = {
+                                MacroPadNavState.selectSection(EditorSection.MIRROR)
+                            },
+                        )
+                        GamepadCategoryTile(
                             title = stringResource(R.string.layout_settings_bg_section_title),
                             icon = Icons.Rounded.Wallpaper,
                             selected = selectedSection == EditorSection.BACKGROUND,
@@ -376,6 +385,7 @@ fun MacroPadEditor(
                                         EditorSection.QUICK_ACTIONS -> stringResource(R.string.quick_actions_title)
                                         EditorSection.PROFILES -> stringResource(R.string.quick_menu_profile_label)
                                         EditorSection.LAYOUTS -> stringResource(R.string.macropad_editor_section_layout)
+                                        EditorSection.MIRROR -> stringResource(R.string.quick_menu_screen_mirroring)
                                         EditorSection.BACKGROUND -> stringResource(R.string.layout_settings_bg_section_title)
                                         EditorSection.BUTTONS -> stringResource(R.string.macropad_editor_section_buttons)
                                         EditorSection.MACROS -> stringResource(R.string.macropad_editor_manage_macros)
@@ -545,6 +555,26 @@ fun MacroPadEditor(
                                                     }
                                                 },
                                             )
+                                        }
+
+                                        EditorSection.MIRROR -> {
+                                            if (activeLayout != null) {
+                                                MirrorDeck(
+                                                    profile = profile,
+                                                    layout = activeLayout,
+                                                    accentColor = colors.accent,
+                                                    onArrangeCutouts = {
+                                                        MacroPadNavState.reset()
+                                                        onDone()
+                                                        AppStateManager.setViewportEditActive(true)
+                                                    },
+                                                    onEditCutout = { cutout ->
+                                                        MacroPadNavState.setStack(
+                                                            subPageStack + MacroPadSubPage.CutoutSettings(cutout.id),
+                                                        )
+                                                    },
+                                                )
+                                            }
                                         }
 
                                         EditorSection.BACKGROUND -> {
@@ -938,6 +968,60 @@ fun MacroPadEditor(
                                                                     },
                                                                 ),
                                                         )
+                                                    },
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    is MacroPadSubPage.CutoutSettings -> {
+                                        val layout = activeLayout
+                                        val cutout =
+                                            layout?.mirrorCutouts?.firstOrNull { it.id == currentSubPage.cutoutId }
+                                        if (cutout != null) {
+                                            val cutoutTitle =
+                                                cutout.name.ifBlank {
+                                                    val index = layout.mirrorCutouts.indexOfFirst { it.id == cutout.id }
+                                                    stringResource(
+                                                        R.string.settings_mirror_cutout_default_name_fmt,
+                                                        if (index >= 0) index + 1 else 1,
+                                                    )
+                                                }
+                                            GamepadDeck(
+                                                breadcrumbs =
+                                                    listOf(
+                                                        stringResource(R.string.quick_menu_screen_mirroring),
+                                                        cutoutTitle,
+                                                    ),
+                                            ) {
+                                                CutoutSettingsSubPageContent(
+                                                    cutout = cutout,
+                                                    layout = layout,
+                                                    accentColor = colors.accent,
+                                                    onUpdateCutout = { updatedCutout, disableTouchpad ->
+                                                        val updatedList =
+                                                            layout.mirrorCutouts.map {
+                                                                if (it.id == updatedCutout.id) updatedCutout else it
+                                                            }
+                                                        val updatedLayout =
+                                                            if (disableTouchpad) {
+                                                                layout.copy(
+                                                                    mirrorCutouts = updatedList,
+                                                                    backgroundTouchpad = layout.backgroundTouchpad.copy(enabled = false),
+                                                                )
+                                                            } else {
+                                                                layout.copy(mirrorCutouts = updatedList)
+                                                            }
+                                                        MacroPadState.updateLayout(updatedLayout)
+                                                    },
+                                                    onDeleteCutout = { cutoutIdToDelete ->
+                                                        val deletedName = cutout.name.ifBlank { cutoutTitle }
+                                                        val updatedList = layout.mirrorCutouts.filter { it.id != cutoutIdToDelete }
+                                                        MacroPadState.updateLayout(layout.copy(mirrorCutouts = updatedList))
+                                                        DialogToastManager.show(
+                                                            context.getString(R.string.macropad_cutout_deleted_toast, deletedName),
+                                                        )
+                                                        MacroPadNavState.pop()
                                                     },
                                                 )
                                             }

@@ -572,7 +572,7 @@ PadProfile
 
 | Property / Method | Description |
 | --- | --- |
-| `selectedSection: StateFlow<EditorSection>` | Active primary category deck (`QUICK_ACTIONS`, `PROFILES`, `LAYOUTS`, `BACKGROUND`, `BUTTONS`, `MACROS`). |
+| `selectedSection: StateFlow<EditorSection>` | Active primary category deck (`QUICK_ACTIONS`, `PROFILES`, `LAYOUTS`, `MIRROR`, `BACKGROUND`, `BUTTONS`, `MACROS`). |
 | `subPageStack: StateFlow<List<MacroPadSubPage>>` | Active stack of nested subpages, preserving deep subpages (e.g. `MacroTimeline`, `EditButtonPositions`, `LayoutAppearance`) across suspension and remounting. |
 | `selectSection(section)` | Selects a top-level category and resets the subpage stack to empty. |
 | `push(subPage)` / `pop()` | Appends or drops the top subpage in the stack. |

@@ -79,4 +79,15 @@ class NavDestinationTest {
         assertNotNull(payload)
         assertEquals("layout-abc", payload?.layoutId)
     }
+
+    @Test
+    fun `BackgroundSettings destination maps correctly to MacroPadEditor with MIRROR section`() {
+        val dest = NavDestination.BackgroundSettings
+        val config = dest.toPrimaryModalConfig()
+
+        assertEquals(PrimaryModalType.MACROPAD_EDITOR, config.type)
+        val payload = config.payload as? PrimaryModalPayload.MacroPad
+        assertNotNull(payload)
+        assertEquals(EditorSection.MIRROR, payload?.section)
+    }
 }

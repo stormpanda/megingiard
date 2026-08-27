@@ -27,7 +27,6 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.KeyboardSettingsOverlay
-import com.stormpanda.megingiard.macropad.BackgroundSettingsOverlay
 import com.stormpanda.megingiard.macropad.MacroPadEditor
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.mirror.CropSelectorOverlay
@@ -105,19 +104,7 @@ fun PrimaryModalHost(
             }
         }
 
-        PrimaryModalType.BACKGROUND_SETTINGS -> {
-            PrimaryOverlayContainer(
-                title = stringResource(R.string.quick_menu_ambient_settings),
-                icon = Icons.Rounded.Videocam,
-                onDismiss = onDismiss,
-                modifier = modifier,
-            ) {
-                BackgroundSettingsOverlay(
-                    onDone = onDismiss,
-                )
-            }
-        }
-
+        PrimaryModalType.BACKGROUND_SETTINGS,
         PrimaryModalType.MACROPAD_EDITOR,
         PrimaryModalType.MACROPAD_INSPECTOR,
         PrimaryModalType.LAYOUT_SETTINGS,

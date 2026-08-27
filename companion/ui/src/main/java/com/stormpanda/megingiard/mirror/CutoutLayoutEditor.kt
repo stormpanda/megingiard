@@ -70,6 +70,7 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.macropad.EditorSection
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.settings.MirrorSettings
 import com.stormpanda.megingiard.ui.HelpEntry
@@ -77,6 +78,9 @@ import com.stormpanda.megingiard.ui.HelpIntro
 import com.stormpanda.megingiard.ui.HelpModal
 import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.PrimaryModalConfig
+import com.stormpanda.megingiard.ui.PrimaryModalPayload
+import com.stormpanda.megingiard.ui.PrimaryModalType
 import java.util.UUID
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -755,7 +759,12 @@ fun CutoutLayoutEditor() {
                             label = stringResource(R.string.mirror_editor_toolbar_settings),
                             modifier = Modifier.weight(1f),
                             onClick = {
-                                AppStateManager.setBackgroundSettingsActive(true)
+                                AppStateManager.openPrimaryModal(
+                                    PrimaryModalConfig(
+                                        type = PrimaryModalType.MACROPAD_EDITOR,
+                                        payload = PrimaryModalPayload.MacroPad(section = EditorSection.MIRROR),
+                                    ),
+                                )
                             },
                         )
 

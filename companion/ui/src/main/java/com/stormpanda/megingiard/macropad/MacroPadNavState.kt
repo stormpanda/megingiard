@@ -163,6 +163,11 @@ internal object MacroPadNavState {
                 _subPageStack.value = listOf(MacroPadSubPage.EditButtonPositions)
             }
 
+            is PrimaryModalPayload.CutoutInspector -> {
+                _selectedSection.value = EditorSection.MIRROR
+                _subPageStack.value = listOf(MacroPadSubPage.CutoutSettings(payload.cutoutId))
+            }
+
             else -> {}
         }
     }

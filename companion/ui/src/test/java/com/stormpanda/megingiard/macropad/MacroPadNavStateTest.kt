@@ -138,6 +138,15 @@ class MacroPadNavStateTest {
     }
 
     @Test
+    fun `applyPrimaryModalPayload with CutoutInspector updates section and stack`() {
+        val payload = PrimaryModalPayload.CutoutInspector(cutoutId = "cutout-abc")
+        MacroPadNavState.applyPrimaryModalPayload(payload)
+
+        assertEquals(EditorSection.MIRROR, MacroPadNavState.selectedSection.value)
+        assertEquals(listOf(MacroPadSubPage.CutoutSettings("cutout-abc")), MacroPadNavState.subPageStack.value)
+    }
+
+    @Test
     fun `focus tracking records and removes keys per depth`() {
         MacroPadNavState.recordFocusedKey(depth = 0, key = "deck_card_profile")
         MacroPadNavState.recordFocusedKey(depth = 1, key = "btn_record_gamepad")

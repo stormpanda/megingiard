@@ -603,6 +603,19 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_mirror_touch_projection_desc">Berührungen innerhalb dieses Ausschnitts an den Hauptbildschirm weiterleiten</string>
     <string name="settings_mirror_cutout_default">Ausschnitt</string>
     <string name="settings_mirror_cutout_default_name_fmt">Ausschnitt %1$d</string>
+    <string name="mirror_editor_arrange_cutouts_title">Ausschnitte anordnen</string>
+    <string name="mirror_editor_arrange_cutouts_desc">Spiegelungsbereiche auf dem Bildschirm anordnen und zuschneiden</string>
+    <string name="settings_mirror_cutouts_header">Ausschnitte</string>
+    <string name="macropad_cutout_deleted_toast">Ausschnitt \"%1$s\" gelöscht</string>
+    <string name="macropad_delete_cutout_title">Ausschnitt löschen</string>
+    <string name="macropad_delete_cutout_desc">Diesen Ausschnitt dauerhaft aus dem Layout entfernen</string>
+    <string name="mirror_editor_shape_mode">Ausschnittform</string>
+    <string name="mirror_editor_aspect_ratio_desc">Steuert die Seitenverhältnis-Sperre zwischen Quell- und Zielbereich</string>
+    <string name="mirror_editor_shape_desc">Zwischen rechteckiger und kreisförmiger Darstellung wechseln</string>
+    <string name="settings_mirror_cutout_summary_fmt">Glättung: %1$s • Projektion: %2$s</string>
+    <string name="settings_mirror_projection_on">Ein</string>
+    <string name="settings_mirror_projection_off">Aus</string>
+    <string name="macropad_editor_section_actions">Aktionen</string>
 
     <!-- ── Help tutorial system ──────────────────────────────────────────── -->
     <!-- Shared -->

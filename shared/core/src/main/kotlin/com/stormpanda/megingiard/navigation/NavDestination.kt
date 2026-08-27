@@ -130,7 +130,8 @@ fun NavDestination.toPrimaryModalConfig(): PrimaryModalConfig =
 
         is NavDestination.BackgroundSettings -> {
             PrimaryModalConfig(
-                type = PrimaryModalType.BACKGROUND_SETTINGS,
+                type = PrimaryModalType.MACROPAD_EDITOR,
+                payload = PrimaryModalPayload.MacroPad(section = EditorSection.MIRROR),
             )
         }
 

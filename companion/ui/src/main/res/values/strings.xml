@@ -594,6 +594,19 @@ Open Settings to create a layout.</string>
     <string name="settings_mirror_touch_projection_desc">Forward touch inputs inside this cutout to the primary screen</string>
     <string name="settings_mirror_cutout_default">Cutout</string>
     <string name="settings_mirror_cutout_default_name_fmt">Cutout %1$d</string>
+    <string name="mirror_editor_arrange_cutouts_title">Arrange Cutouts</string>
+    <string name="mirror_editor_arrange_cutouts_desc">Move, resize, and crop screen mirror regions on the canvas</string>
+    <string name="settings_mirror_cutouts_header">Cutouts</string>
+    <string name="macropad_cutout_deleted_toast">Cutout \"%1$s\" deleted</string>
+    <string name="macropad_delete_cutout_title">Delete Cutout</string>
+    <string name="macropad_delete_cutout_desc">Permanently remove this cutout from the layout</string>
+    <string name="mirror_editor_shape_mode">Cutout Shape</string>
+    <string name="mirror_editor_aspect_ratio_desc">Control aspect ratio locking between source crop and destination</string>
+    <string name="mirror_editor_shape_desc">Switch between rectangular and circular viewport rendering</string>
+    <string name="settings_mirror_cutout_summary_fmt">Smoothing: %1$s • Projection: %2$s</string>
+    <string name="settings_mirror_projection_on">On</string>
+    <string name="settings_mirror_projection_off">Off</string>
+    <string name="macropad_editor_section_actions">Actions</string>
 
     <!-- ── Help tutorial system ──────────────────────────────────────────── -->
     <!-- Shared -->

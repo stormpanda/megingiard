@@ -77,7 +77,6 @@ import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.keyboard.KeyboardScreen
 import com.stormpanda.megingiard.keyboard.KeyboardSettingsOverlay
-import com.stormpanda.megingiard.macropad.BackgroundSettingsOverlay
 import com.stormpanda.megingiard.macropad.GamepadRecordingState
 import com.stormpanda.megingiard.macropad.HapticStrength
 import com.stormpanda.megingiard.macropad.MacroPadEditor
@@ -503,7 +502,7 @@ fun MainAppScreen() {
                 exit = slideOutVertically { it } + fadeOut(),
                 modifier = Modifier.fillMaxSize(),
             ) {
-                BackgroundSettingsOverlay(
+                MacroPadEditor(
                     onDone = { AppStateManager.setBackgroundSettingsActive(false) },
                 )
             }

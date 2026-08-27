@@ -36,10 +36,10 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 
 ### FR-M4: Controls Access & Quick Menu
 
-- All mirror controls (Play/Stop, Freeze/Unfreeze, and Screen Mirroring edit button) MUST reside inside the **Mirror Control Card** at the top of the **Quick Menu** overlay, while **Touch Projection** is configured on a per-cutout level in the background settings overlay.
+- All mirror controls (Play/Stop, Freeze/Unfreeze, and Screen Mirroring edit button) MUST reside inside the **Mirror Control Card** at the top of the **Quick Menu** overlay, while **Touch Projection** and mirror options are configured in the **Screen Mirroring category** of the MacroPad Editor.
 - An **edge swipe** (swipe up from bottom edge or swipe down from top edge, depending on quick menu bar position) over the quick menu bar indicator MUST show the **Quick Menu** overlay panel.
 - The **Mirror Control Card** hosts the Play/Stop and Freeze/Unfreeze icon buttons on the right, and the **Screen Mirroring** action button (with an Edit icon) on the left.
-- Clicking the **Screen Mirroring** button enters the Screen Mirroring edit mode (cutout layout editor). The layout editor toolbar contains a settings cogwheel button to open the background settings overlay (`BackgroundSettingsOverlay`).
+- Clicking the **Screen Mirroring** button enters the Screen Mirroring edit mode (cutout layout editor). The layout editor toolbar contains a settings cogwheel button to open the Screen Mirroring editor category (`EditorSection.MIRROR`) inside the MacroPad Editor.
 - There is **no tap-anywhere overlay** on the mirror surface itself, and **no auto-hide timers** exist for these controls. Controls remain accessible inside the Quick Menu overlay until it is manually dismissed by tapping the scrim or close elements.
 - Mirror control icon buttons in the Quick Menu MUST use ergonomic touch targets (minimum 48 dp).
 - Mirror control labels MUST be shown below icon buttons to improve discoverability.
@@ -57,7 +57,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 
 ### FR-M7: Touch Projection
 
-- Touch Projection is configured on a per-cutout level in the layout settings overlay.
+- Touch Projection is configured on a per-cutout level in the Screen Mirroring section of the MacroPad Editor.
 - When active for any cutout, touch events inside that cutout on the mirror surface MUST be forwarded to the **primary display**'s input system using the same native injection mechanism as the Virtual Touchpad feature.
 - The projected touch position MUST account for the active cutout crop and placement bounds: when a user touches a cutout, the controller MUST determine which cutout's destination bounds contain the touch, check if touch projection is enabled for that cutout, map the touch coordinates relative to that destination rectangle, project them back to the corresponding normalized source crop coordinates on the primary display, and forward them using slot-aware multi-touch injection (up to 10 slots `0..9`).
 - Touch events originating in the **edge zone** (40 dp from the configured overlay edge) MUST NOT be forwarded — that zone remains reserved for the edge-swipe gesture to open the Quick Menu.
@@ -88,10 +88,10 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 
 ### FR-M10: Follow Touch Mode
 
-- Touch tracking (Follow Touch) is configured via a dropdown selection in the General section of the background settings overlay. The dropdown contains "Off" and all cutouts defined in the active layout as options. If a cutout is deleted, the selection automatically falls back to "Off".
+- Touch tracking (Follow Touch) is configured via a dropdown selection in the General section of the Screen Mirroring editor deck. The dropdown contains "Off" and all cutouts defined in the active layout as options. If a cutout is deleted, the selection automatically falls back to "Off".
 - When Follow Touch Mode is active for a cutout, that cutout's crop viewport MUST center on the spot last touched on the primary screen, using the source crop dimensions saved in the layout.
 - Activating Follow Touch Mode for a cutout restores the cutout's original crop coordinates when disabled, discarding any panning drift accumulated during tracking.
-- A **Smoothing** setting MUST be available for each individual cutout in the background settings overlay, rendered as a 4-stop discrete slider (Off, Light, Medium, Strong).
+- A **Smoothing** setting MUST be available for each individual cutout in the Screen Mirroring cutout settings sub-page, rendered as a 4-stop discrete slider (Off, Light, Medium, Strong).
 - When Smoothing is enabled (non-Off stops) for a cutout, its crop viewport panning MUST glide smoothly to target coordinates using exponential easing (blending strength dictated by the slider position). When set to "Off", the panning MUST snap instantly.
 - By default, touch tracking and crop centering MUST be temporarily paused while any macro sequence is running (indicated by a non-empty list of active macro IDs in `MacroExecutor.runningMacroIds`), resuming automatically once the macro completes or stops.
 - Entering Screen Mirroring edit mode (`isViewportEditActive = true`) MUST automatically suspend Follow Touch Mode to prevent gesture and coordinate conflicts (mutual exclusion).
@@ -120,7 +120,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 
 ### FR-M13: Multi-Cutout Edge Blending
 
-- The user MUST be able to configure an edge blending width using a slider (`Edge blending` / `Kantenübergänge`) in the background settings overlay (`GamepadSliderCard`).
+- The user MUST be able to configure an edge blending width using a slider (`Edge blending` / `Kantenübergänge`) in the Screen Mirroring editor deck (`GamepadSliderCard`).
 - The slider range MUST be `0` to `100 dp` in steps of `5 dp`, displaying "Off" when `0 dp` is selected and the active value in `dp` otherwise.
 - The edge blending width (`mirrorEdgeBlendWidth`) MUST be saved and persisted per-layout inside the layout configuration schema.
 - When edge blending is configured (> 0 dp):
@@ -134,7 +134,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 
 ### FR-M15: Motion Smoothing / Temporal Blending
 
-- The user MUST be able to configure the "Motion Smoothing" behavior of each individual cutout in the background settings overlay using a 4-stop discrete slider (Off, Light, Medium, and Strong stops, mapping to 75%, 80%, and 85% temporal blending strength respectively). The percentage values are hidden from the user interface.
+- The user MUST be able to configure the "Motion Smoothing" behavior of each individual cutout in the Screen Mirroring cutout settings sub-page using a 4-stop discrete slider (Off, Light, Medium, and Strong stops, mapping to 75%, 80%, and 85% temporal blending strength respectively). The percentage values are hidden from the user interface.
 - Selecting "Off" disables motion smoothing for that cutout. Selecting "Light", "Medium", or "Strong" enables motion smoothing and applies the corresponding temporal blending strength layout-wide.
 - When enabled, the cutout frame MUST be temporally smoothed using exponential moving average (EMA) blending to stabilize UI elements.
 - Motion smoothing MUST function correctly when enabled on all cutouts, without freezing the mirror display rendering.
