@@ -577,7 +577,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="mirror_editor_delete_cutout">Auswahl löschen</string>
     <string name="mirror_editor_deselect_cutout">Ausschnitt abwählen</string>
     <string name="mirror_editor_done">Fertig</string>
-    <string name="mirror_editor_aspect_ratio_mode">Seitenverhältnis-Modus</string>
+    <string name="mirror_editor_aspect_ratio_mode">Festes Seitenverhältnis</string>
     <string name="mirror_editor_aspect_ratio_free">Frei</string>
     <string name="mirror_editor_aspect_ratio_top">Oben</string>
     <string name="mirror_editor_aspect_ratio_bottom">Unten</string>
@@ -594,6 +594,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="mirror_editor_nudge_active">Aktiv</string>
     <string name="mirror_editor_target_cutout">Ziel-Ausschnitt</string>
     <string name="mirror_editor_no_cutouts">Keine Ausschnitte</string>
+    <string name="mirror_editor_save_changes">Änderungen speichern</string>
+    <string name="mirror_editor_saved_toast">Layout-Änderungen gespeichert</string>
 
     <!-- Cutout Layout Editor Toolbar Short Labels -->
     <string name="mirror_editor_toolbar_add">Hinzufügen</string>

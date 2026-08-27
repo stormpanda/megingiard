@@ -568,7 +568,7 @@ Open Settings to create a layout.</string>
     <string name="mirror_editor_delete_cutout">Delete Selected</string>
     <string name="mirror_editor_deselect_cutout">Deselect Cutout</string>
     <string name="mirror_editor_done">Done</string>
-    <string name="mirror_editor_aspect_ratio_mode">Aspect Ratio Mode</string>
+    <string name="mirror_editor_aspect_ratio_mode">Fixed Aspect Ratio</string>
     <string name="mirror_editor_aspect_ratio_free">Free</string>
     <string name="mirror_editor_aspect_ratio_top">Top</string>
     <string name="mirror_editor_aspect_ratio_bottom">Bottom</string>
@@ -585,6 +585,8 @@ Open Settings to create a layout.</string>
     <string name="mirror_editor_nudge_active">Active</string>
     <string name="mirror_editor_target_cutout">Target Cutout</string>
     <string name="mirror_editor_no_cutouts">No Cutouts</string>
+    <string name="mirror_editor_save_changes">Save Changes</string>
+    <string name="mirror_editor_saved_toast">Layout changes saved</string>
 
     <!-- Cutout Layout Editor Toolbar Short Labels -->
     <string name="mirror_editor_toolbar_add">Add</string>

@@ -32,17 +32,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AspectRatio
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Circle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.CropSquare
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.FilterCenterFocus
+import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
@@ -165,19 +164,39 @@ fun MirrorEditorTopOverlay(
     val density = LocalDensity.current
     val activeLayout by MacroPadState.activeLayout.collectAsState()
     val layout = activeLayout ?: return
-    val initialCutouts = remember(layout.id) { layout.mirrorCutouts }
+
+    // Track baseline saved state; all modifications are in-flight until explicitly saved
+    var savedCutouts by remember(layout.id) { mutableStateOf(layout.mirrorCutouts) }
+    val currentCutouts = layout.mirrorCutouts
+    val hasChanges = currentCutouts != savedCutouts
 
     val selectedCutoutId by AppStateManager.selectedCutoutId.collectAsState()
     val cutouts = layout.mirrorCutouts
     val selectedCutout = cutouts.find { it.id == selectedCutoutId } ?: cutouts.firstOrNull()
 
-    var showHelp by remember { mutableStateOf(false) }
+    var showExitPrompt by remember { mutableStateOf(false) }
+    val inputModeManager = LocalInputModeManager.current
+    val firstItemFocusRequester = remember { FocusRequester() }
+    val saveFocusRequester = remember { FocusRequester() }
+    val bringIntoViewSpec = rememberGamepadBringIntoViewSpec()
 
-    // Intercept hardware Back / Controller B-Button when overlay is active
+    // Intercept hardware Back / Controller B-Button
     BackHandler {
-        AppLog.d(TAG, "BackHandler triggered: reverting cutouts and canceling")
-        MacroPadState.updateLayout(layout.copy(mirrorCutouts = initialCutouts))
-        onCancel()
+        if (hasChanges) {
+            if (!showExitPrompt) {
+                showExitPrompt = true
+                try {
+                    inputModeManager.requestInputMode(InputMode.Keyboard)
+                    saveFocusRequester.requestFocus()
+                } catch (_: Exception) {
+                }
+            } else {
+                showExitPrompt = false
+            }
+        } else {
+            // No in-flight changes -> leave editing mode immediately
+            onCancel()
+        }
     }
 
     // Auto-select the first cutout if none is currently selected
@@ -188,10 +207,6 @@ fun MirrorEditorTopOverlay(
             AppStateManager.setSelectedCutoutId(firstId)
         }
     }
-
-    val inputModeManager = LocalInputModeManager.current
-    val firstItemFocusRequester = remember { FocusRequester() }
-    val bringIntoViewSpec = rememberGamepadBringIntoViewSpec()
 
     // Request initial focus and keyboard input mode on presentation
     LaunchedEffect(Unit) {
@@ -304,7 +319,7 @@ fun MirrorEditorTopOverlay(
                                 modifier = Modifier.firstDeckItem(),
                             )
 
-                            // Aspect Ratio Mode
+                            // Fixed Aspect Ratio Mode
                             AspectRatioCard(
                                 selectedCutout = selectedCutout,
                                 srcWidth = srcWidth,
@@ -398,36 +413,55 @@ fun MirrorEditorTopOverlay(
                                 },
                             )
 
-                            // Help & Guide
-                            ToolboxActionCard(
-                                title = stringResource(R.string.help_mirror_editor_title),
-                                icon = Icons.AutoMirrored.Rounded.HelpOutline,
-                                actionBadge = "?",
-                                onClick = { showHelp = true },
-                            )
+                            // Unified Save Changes / Save & Discard Exit Row
+                            if (!showExitPrompt) {
+                                ToolboxActionCard(
+                                    title = stringResource(R.string.mirror_editor_save_changes),
+                                    icon = Icons.Rounded.Save,
+                                    actionBadge = "SAVE",
+                                    isAccent = true,
+                                    cardBgColor = colors.accent.copy(alpha = 0.20f),
+                                    cardFocusRequester = saveFocusRequester,
+                                    onClick = {
+                                        savedCutouts = currentCutouts
+                                        MacroPadState.saveMirrorCutouts(layout.id, currentCutouts)
+                                        DialogToastManager.show(context.getString(R.string.mirror_editor_saved_toast))
+                                    },
+                                )
+                            } else {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(METO_ITEM_SPACING),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    // Save & Exit (Left)
+                                    ToolboxCard(
+                                        title = stringResource(R.string.gamepad_action_save),
+                                        icon = Icons.Rounded.Save,
+                                        cardBgColor = colors.accent.copy(alpha = 0.25f),
+                                        cardFocusRequester = saveFocusRequester,
+                                        modifier = Modifier.weight(1f),
+                                        onClick = {
+                                            savedCutouts = currentCutouts
+                                            MacroPadState.saveMirrorCutouts(layout.id, currentCutouts)
+                                            onDone()
+                                        },
+                                    )
 
-                            // Save & Done
-                            ToolboxActionCard(
-                                title = stringResource(R.string.mirror_editor_toolbar_done),
-                                icon = Icons.Rounded.Check,
-                                actionBadge = "SAVE",
-                                isAccent = true,
-                                cardBgColor = colors.accent.copy(alpha = 0.20f),
-                                onClick = onDone,
-                            )
-
-                            // Cancel & Revert
-                            ToolboxActionCard(
-                                title = stringResource(R.string.mirror_editor_toolbar_cancel),
-                                icon = Icons.Rounded.Close,
-                                actionBadge = "CANCEL",
-                                isDestructive = true,
-                                cardBgColor = colors.error.copy(alpha = 0.15f),
-                                onClick = {
-                                    MacroPadState.updateLayout(layout.copy(mirrorCutouts = initialCutouts))
-                                    onCancel()
-                                },
-                            )
+                                    // Discard & Exit (Right)
+                                    ToolboxCard(
+                                        title = stringResource(R.string.gamepad_action_discard),
+                                        icon = Icons.Rounded.Close,
+                                        isDestructive = true,
+                                        cardBgColor = colors.error.copy(alpha = 0.15f),
+                                        modifier = Modifier.weight(1f),
+                                        onClick = {
+                                            MacroPadState.updateLayout(layout.copy(mirrorCutouts = savedCutouts))
+                                            onCancel()
+                                        },
+                                    )
+                                }
+                            }
                         }
 
                         // Bottom Drag Handle (Outside Scroll Container)
@@ -439,12 +473,6 @@ fun MirrorEditorTopOverlay(
                     }
                 }
             }
-
-            // ── 3. Help Modal Dialog (Rendered on Display 0) ─────────────────────
-            CutoutLayoutEditorHelpModal(
-                visible = showHelp,
-                onDismiss = { showHelp = false },
-            )
         }
     }
 }
@@ -503,7 +531,7 @@ private fun ToolboxCard(
     onCustomKeyEvent: ((ComposeKeyEvent) -> Boolean)? = null,
     icon: ImageVector,
     title: String,
-    trailingContent: @Composable (isFocused: Boolean) -> Unit,
+    trailingContent: (@Composable (isFocused: Boolean) -> Unit)? = null,
 ) {
     val colors = LocalAppColors.current
     val interactionSource = remember { MutableInteractionSource() }
@@ -680,9 +708,10 @@ private fun ToolboxCard(
                 modifier = Modifier.weight(1f),
             )
 
-            Spacer(modifier = Modifier.width(METO_ROW_SPACING))
-
-            trailingContent(effectivelyFocused)
+            if (trailingContent != null) {
+                Spacer(modifier = Modifier.width(METO_ROW_SPACING))
+                trailingContent(effectivelyFocused)
+            }
         }
     }
 }
@@ -1065,6 +1094,7 @@ private fun ToolboxActionCard(
     actionBadge: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    cardFocusRequester: FocusRequester = remember { FocusRequester() },
     isAccent: Boolean = false,
     isDestructive: Boolean = false,
     cardBgColor: Color? = null,
@@ -1075,6 +1105,7 @@ private fun ToolboxActionCard(
         title = title,
         isDestructive = isDestructive,
         cardBgColor = cardBgColor,
+        cardFocusRequester = cardFocusRequester,
         modifier = modifier,
     ) { isFocused ->
         ToolboxPill(
