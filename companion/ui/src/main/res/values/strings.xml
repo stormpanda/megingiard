@@ -580,6 +580,11 @@ Open Settings to create a layout.</string>
     <string name="mirror_editor_shape_rectangle">Shape: Rectangle</string>
     <string name="mirror_editor_no_space">Please make room on the screen for another cutout first</string>
     <string name="mirror_editor_cutout_name_hint">Cutout Name</string>
+    <string name="mirror_editor_nudge_crop">Adjust Crop</string>
+    <string name="mirror_editor_nudge_crop_desc">Use D-Pad to nudge crop position</string>
+    <string name="mirror_editor_nudge_active">Active</string>
+    <string name="mirror_editor_target_cutout">Target Cutout</string>
+    <string name="mirror_editor_no_cutouts">No Cutouts</string>
 
     <!-- Cutout Layout Editor Toolbar Short Labels -->
     <string name="mirror_editor_toolbar_add">Add</string>

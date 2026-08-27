@@ -33,7 +33,8 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.catalog.DisplayDetector
-import com.stormpanda.megingiard.mirror.CropSelectorOverlay
+import com.stormpanda.megingiard.macropad.EditorSection
+import com.stormpanda.megingiard.mirror.MirrorEditorTopOverlay
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.settings.AppLanguage
@@ -74,11 +75,11 @@ object PrimaryOverlayManager {
         coroutineScope.launch {
             combine(
                 AppStateManager.activePrimaryModal,
-                AppStateManager.activeCropCutoutId,
-            ) { modal, cropId ->
-                Pair(modal != null, cropId != null)
-            }.collect { (hasModal, hasCrop) ->
-                handleOverlayState(hasModal, hasCrop)
+                AppStateManager.isViewportEditActive,
+            ) { modal, isEdit ->
+                Pair(modal != null, isEdit)
+            }.collect { (hasModal, isEdit) ->
+                handleOverlayState(hasModal, isEdit)
             }
         }
         AppLog.i(TAG, "PrimaryOverlayManager initialized")
@@ -86,36 +87,36 @@ object PrimaryOverlayManager {
 
     private fun handleOverlayState(
         hasModal: Boolean,
-        hasCrop: Boolean,
+        isEdit: Boolean,
     ) {
         if (Looper.myLooper() == Looper.getMainLooper()) {
-            handleOverlayStateOnMainThread(hasModal, hasCrop)
+            handleOverlayStateOnMainThread(hasModal, isEdit)
         } else {
-            mainHandler.post { handleOverlayStateOnMainThread(hasModal, hasCrop) }
+            mainHandler.post { handleOverlayStateOnMainThread(hasModal, isEdit) }
         }
     }
 
     private fun handleOverlayStateOnMainThread(
         hasModal: Boolean,
-        hasCrop: Boolean,
+        isEdit: Boolean,
     ) {
-        val shouldShow = hasModal || hasCrop
+        val shouldShow = hasModal || isEdit
         if (!shouldShow) {
             hideOverlayOnMainThread()
             return
         }
 
-        // Adjust mirror freeze state: freeze only for opaque configuration modals, not for crop selection.
-        if (hasModal) {
+        // Adjust mirror freeze state: freeze only for opaque configuration modals, not for viewport editor.
+        if (hasModal && !isEdit) {
             if (!wasFrozenForModal && ScreenCaptureManager.isCapturing.value && !ScreenCaptureManager.isFrozen.value) {
                 AppLog.i(TAG, "Freezing mirror capture for primary modal dialog")
                 wasFrozenForModal = true
                 ScreenCaptureManager.setFrozen(true)
             }
         } else {
-            // Only crop selector is active: unfreeze if previously frozen for a modal
+            // Viewport editing is active: unfreeze if previously frozen for a modal
             if (wasFrozenForModal) {
-                AppLog.i(TAG, "Resuming live mirror capture for crop selector")
+                AppLog.i(TAG, "Resuming live mirror capture for viewport editor")
                 if (ScreenCaptureManager.isCapturing.value) {
                     ScreenCaptureManager.setFrozen(false)
                 }
@@ -137,6 +138,10 @@ object PrimaryOverlayManager {
         if (overlayView != null) {
             // Overlay already attached to WindowManager; Compose state flow will re-compose content
             AppLog.d(TAG, "Overlay window already attached — updating content via state flow")
+            overlayView?.post {
+                overlayView?.requestFocus()
+            }
+            PrimaryOverlayInputBridge.sendFocusRecovery(KeyEvent.KEYCODE_DPAD_DOWN)
             return
         }
 
@@ -231,9 +236,19 @@ object PrimaryOverlayManager {
                                 if (owner.onBackPressedDispatcher.hasEnabledCallbacks()) {
                                     owner.onBackPressedDispatcher.onBackPressed()
                                 } else {
-                                    AppStateManager.closePrimaryModal()
-                                    AppStateManager.setActiveCropCutoutId(null)
-                                    AppStateManager.setSelectedCutoutId(null)
+                                    if (AppStateManager.isViewportEditActive.value) {
+                                        AppStateManager.setViewportEditActive(false)
+                                        AppStateManager.openPrimaryModal(
+                                            PrimaryModalConfig(
+                                                type = PrimaryModalType.MACROPAD_EDITOR,
+                                                payload = PrimaryModalPayload.MacroPad(section = EditorSection.MIRROR),
+                                            ),
+                                        )
+                                    } else {
+                                        AppStateManager.closePrimaryModal()
+                                        AppStateManager.setActiveCropCutoutId(null)
+                                        AppStateManager.setSelectedCutoutId(null)
+                                    }
                                 }
                                 true
                             }
@@ -278,7 +293,7 @@ object PrimaryOverlayManager {
                         val userAccentArgb by SettingsManager.accentColor.collectAsState()
                         val appColors = paletteFor(themeMode, Color(userAccentArgb))
                         val activeModal by AppStateManager.activePrimaryModal.collectAsState()
-                        val activeCropCutoutId by AppStateManager.activeCropCutoutId.collectAsState()
+                        val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
 
                         val appLanguage by SettingsManager.appLanguage.collectAsState()
                         val localeContext =
@@ -310,9 +325,26 @@ object PrimaryOverlayManager {
                                     color = Color.Transparent,
                                 ) {
                                     when {
-                                        activeCropCutoutId != null -> {
-                                            CropSelectorOverlay(
-                                                cutoutId = activeCropCutoutId!!,
+                                        isViewportEditActive -> {
+                                            MirrorEditorTopOverlay(
+                                                onDone = {
+                                                    AppStateManager.setViewportEditActive(false)
+                                                    AppStateManager.openPrimaryModal(
+                                                        PrimaryModalConfig(
+                                                            type = PrimaryModalType.MACROPAD_EDITOR,
+                                                            payload = PrimaryModalPayload.MacroPad(section = EditorSection.MIRROR),
+                                                        ),
+                                                    )
+                                                },
+                                                onCancel = {
+                                                    AppStateManager.setViewportEditActive(false)
+                                                    AppStateManager.openPrimaryModal(
+                                                        PrimaryModalConfig(
+                                                            type = PrimaryModalType.MACROPAD_EDITOR,
+                                                            payload = PrimaryModalPayload.MacroPad(section = EditorSection.MIRROR),
+                                                        ),
+                                                    )
+                                                },
                                             )
                                         }
 

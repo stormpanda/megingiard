@@ -4,43 +4,22 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.rounded.AspectRatio
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Circle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.CropSquare
-import androidx.compose.material.icons.rounded.DragIndicator
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,59 +28,36 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.macropad.EditorSection
 import com.stormpanda.megingiard.macropad.MacroPadState
-import com.stormpanda.megingiard.settings.MirrorSettings
 import com.stormpanda.megingiard.ui.HelpEntry
 import com.stormpanda.megingiard.ui.HelpIntro
 import com.stormpanda.megingiard.ui.HelpModal
 import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
-import com.stormpanda.megingiard.ui.PrimaryModalConfig
-import com.stormpanda.megingiard.ui.PrimaryModalPayload
-import com.stormpanda.megingiard.ui.PrimaryModalType
 import kotlin.math.min
 import kotlin.math.roundToInt
 
 private const val TAG = "CutoutLayoutEditor"
 private val HANDLE_SIZE = 20.dp
 private val BORDER_WIDTH = 1.dp
-private val TOOLBAR_SHADOW = 6.dp
-private val TOOLBAR_CORNER = 8.dp
-private val TOOLBAR_SAFE_MARGIN = 32.dp
 private const val TOUCH_AREA_RATIO = 0.25f
-private val CLE_HELP_BTN_SIZE = 32.dp
-private val CLE_HELP_ICON_SIZE = 20.dp
-private val CLE_HELP_BTN_CORNER = 4.dp
-private val CLE_SPACER_WIDTH = 32.dp
 
 @Composable
 fun CutoutLayoutEditor() {
     val colors = LocalAppColors.current
     val activeLayout by MacroPadState.activeLayout.collectAsState()
     val layout = activeLayout ?: return
-    val context = LocalContext.current
 
-    val initialCutouts = remember(layout.id) { layout.mirrorCutouts }
-
-    var toolbarOffset by remember { mutableStateOf<IntOffset?>(null) }
-    var toolbarSize by remember { mutableStateOf(IntSize.Zero) }
     val selectedCutoutId by AppStateManager.selectedCutoutId.collectAsState()
     val density = LocalDensity.current
     val surfaceWidth by ScreenCaptureManager.surfaceWidth.collectAsState()
@@ -606,272 +562,11 @@ fun CutoutLayoutEditor() {
                 }
             }
         }
-
-        val marginPx = with(density) { TOOLBAR_SAFE_MARGIN.toPx() }
-
-        if (toolbarOffset == null && toolbarSize != IntSize.Zero) {
-            val initialX = (containerW - toolbarSize.width) / 2f - marginPx
-            val initialY = containerH - toolbarSize.height.toFloat() - marginPx
-            toolbarOffset = IntOffset(initialX.roundToInt(), initialY.roundToInt())
-        }
-
-        val currentOffset = toolbarOffset ?: IntOffset.Zero
-        val clampedOffset =
-            if (toolbarSize != IntSize.Zero) {
-                val maxStartX = ((containerW - toolbarSize.width) / 2f - marginPx).coerceAtLeast(0f)
-                val clampedX = currentOffset.x.toFloat().coerceIn(-maxStartX, maxStartX)
-
-                val minY = marginPx
-                val maxY = containerH - toolbarSize.height.toFloat() - marginPx
-                val clampedY = currentOffset.y.toFloat().coerceIn(minY, maxY.coerceAtLeast(minY))
-
-                IntOffset(clampedX.roundToInt(), clampedY.roundToInt())
-            } else {
-                currentOffset
-            }
-
-        val currentClampedOffset by rememberUpdatedState(clampedOffset)
-
-        var showEditorHelp by remember { mutableStateOf(false) }
-        var isConfirmingDelete by remember { mutableStateOf(false) }
-
-        LaunchedEffect(selectedCutoutId) {
-            isConfirmingDelete = false
-        }
-
-        Surface(
-            modifier =
-                Modifier
-                    .align(Alignment.TopCenter)
-                    .onGloballyPositioned { coords -> toolbarSize = coords.size }
-                    .offset { clampedOffset }
-                    .shadow(TOOLBAR_SHADOW, RoundedCornerShape(TOOLBAR_CORNER)),
-            color = colors.surface.copy(alpha = 0.9f),
-            shape = RoundedCornerShape(TOOLBAR_CORNER),
-            border = borderStrokeFor(colors.controlOverlayBorder),
-        ) {
-            Row(
-                modifier = Modifier.padding(top = 4.dp, bottom = 4.dp, start = 8.dp, end = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                // Button grid (left side)
-                Column(
-                    modifier =
-                        Modifier
-                            .width(IntrinsicSize.Max),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    horizontalAlignment = Alignment.Start,
-                ) {
-                    val selectedCutout =
-                        selectedCutoutId?.let { cutoutId ->
-                            layout.mirrorCutouts.find { it.id == cutoutId }
-                        }
-                    val currentMode = selectedCutout?.aspectRatioMode ?: AspectRatioMode.FREE
-                    val isCircle = selectedCutout?.shape == CutoutShape.CIRCLE
-
-                    // Row 1: Aspect Ratio | Shape Toggle | Help
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        ToolbarIconButton(
-                            icon = Icons.Rounded.AspectRatio,
-                            contentDescription = stringResource(R.string.mirror_editor_aspect_ratio_mode),
-                            color = colors.accent,
-                            label =
-                                when (currentMode) {
-                                    AspectRatioMode.FREE -> stringResource(R.string.mirror_editor_aspect_ratio_free)
-                                    AspectRatioMode.TOP -> stringResource(R.string.mirror_editor_aspect_ratio_top)
-                                    AspectRatioMode.BOTTOM -> stringResource(R.string.mirror_editor_aspect_ratio_bottom)
-                                },
-                            enabled = selectedCutout != null,
-                            modifier = Modifier.weight(1f),
-                            onClick = {
-                                val cutoutId = selectedCutoutId ?: return@ToolbarIconButton
-                                val updated =
-                                    layout.mirrorCutouts.map {
-                                        if (it.id == cutoutId) {
-                                            val nextMode =
-                                                when (it.aspectRatioMode) {
-                                                    AspectRatioMode.FREE -> AspectRatioMode.TOP
-                                                    AspectRatioMode.TOP -> AspectRatioMode.BOTTOM
-                                                    AspectRatioMode.BOTTOM -> AspectRatioMode.FREE
-                                                }
-                                            var updatedCutout =
-                                                it.copy(
-                                                    aspectRatioMode = nextMode,
-                                                    keepAspectRatio = (nextMode == AspectRatioMode.TOP),
-                                                )
-                                            if (nextMode == AspectRatioMode.TOP) {
-                                                val cropRatio = (updatedCutout.srcWidth * srcWidth) / (updatedCutout.srcHeight * srcHeight)
-                                                val (newDestW, newDestH) =
-                                                    adjustDestSizeToAspectRatio(
-                                                        destX = updatedCutout.destX,
-                                                        destY = updatedCutout.destY,
-                                                        destWidth = updatedCutout.destWidth,
-                                                        destHeight = updatedCutout.destHeight,
-                                                        cropRatio = cropRatio,
-                                                        screenW = screenW,
-                                                        screenH = screenH,
-                                                    )
-                                                updatedCutout = updatedCutout.copy(destWidth = newDestW, destHeight = newDestH)
-                                            } else if (nextMode == AspectRatioMode.BOTTOM) {
-                                                updatedCutout =
-                                                    adjustSourceCropToAspectRatio(
-                                                        updatedCutout,
-                                                        screenW = screenW,
-                                                        screenH = screenH,
-                                                        srcW = srcWidth,
-                                                        srcH = srcHeight,
-                                                    )
-                                            }
-                                            updatedCutout
-                                        } else {
-                                            it
-                                        }
-                                    }
-                                MacroPadState.updateLayout(layout.copy(mirrorCutouts = updated))
-                            },
-                        )
-
-                        ToolbarIconButton(
-                            icon = if (isCircle) Icons.Rounded.Circle else Icons.Rounded.CropSquare,
-                            contentDescription =
-                                if (isCircle) {
-                                    stringResource(R.string.mirror_editor_shape_circle)
-                                } else {
-                                    stringResource(R.string.mirror_editor_shape_rectangle)
-                                },
-                            color = colors.accent,
-                            label =
-                                if (isCircle) {
-                                    stringResource(R.string.mirror_editor_toolbar_shape_circle)
-                                } else {
-                                    stringResource(R.string.mirror_editor_toolbar_shape_rect)
-                                },
-                            enabled = selectedCutout != null,
-                            modifier = Modifier.weight(1f),
-                            onClick = {
-                                val cutoutId = selectedCutoutId ?: return@ToolbarIconButton
-                                val updated =
-                                    layout.mirrorCutouts.map {
-                                        if (it.id == cutoutId) {
-                                            val nextShape =
-                                                if (it.shape == CutoutShape.CIRCLE) {
-                                                    CutoutShape.RECTANGLE
-                                                } else {
-                                                    CutoutShape.CIRCLE
-                                                }
-                                            it.copy(shape = nextShape)
-                                        } else {
-                                            it
-                                        }
-                                    }
-                                MacroPadState.updateLayout(layout.copy(mirrorCutouts = updated))
-                            },
-                        )
-
-                        Box(
-                            modifier =
-                                Modifier
-                                    .size(CLE_HELP_BTN_SIZE)
-                                    .clip(RoundedCornerShape(CLE_HELP_BTN_CORNER))
-                                    .clickable { showEditorHelp = true },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Rounded.HelpOutline,
-                                contentDescription = stringResource(R.string.help_open_cd),
-                                tint = colors.onSurfaceSecondary,
-                                modifier = Modifier.size(CLE_HELP_ICON_SIZE),
-                            )
-                        }
-                    }
-
-                    // Row 2: Done / Save | Cancel / Revert | Drag Handle
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        ToolbarIconButton(
-                            icon = Icons.Rounded.Check,
-                            contentDescription = stringResource(R.string.mirror_editor_done),
-                            color = colors.accent,
-                            label = stringResource(R.string.mirror_editor_toolbar_done),
-                            modifier = Modifier.weight(1f),
-                            onClick = {
-                                AppStateManager.setViewportEditActive(false)
-                                AppStateManager.openPrimaryModal(
-                                    PrimaryModalConfig(
-                                        type = PrimaryModalType.MACROPAD_EDITOR,
-                                        payload = PrimaryModalPayload.MacroPad(section = EditorSection.MIRROR),
-                                    ),
-                                )
-                            },
-                        )
-
-                        ToolbarIconButton(
-                            icon = Icons.Rounded.Close,
-                            contentDescription = stringResource(R.string.settings_color_cancel),
-                            color = colors.error,
-                            label = stringResource(R.string.mirror_editor_toolbar_cancel),
-                            modifier = Modifier.weight(1f),
-                            onClick = {
-                                val updatedLayout =
-                                    layout.copy(
-                                        mirrorCutouts = initialCutouts,
-                                    )
-                                MacroPadState.updateLayout(updatedLayout)
-                                AppStateManager.setViewportEditActive(false)
-                                AppStateManager.openPrimaryModal(
-                                    PrimaryModalConfig(
-                                        type = PrimaryModalType.MACROPAD_EDITOR,
-                                        payload = PrimaryModalPayload.MacroPad(section = EditorSection.MIRROR),
-                                    ),
-                                )
-                            },
-                        )
-
-                        Box(
-                            modifier =
-                                Modifier
-                                    .size(CLE_HELP_BTN_SIZE)
-                                    .pointerInput(Unit) {
-                                        detectDragGestures { change, dragAmount ->
-                                            change.consume()
-                                            val cur = currentClampedOffset
-                                            toolbarOffset =
-                                                IntOffset(
-                                                    x = cur.x + dragAmount.x.roundToInt(),
-                                                    y = cur.y + dragAmount.y.roundToInt(),
-                                                )
-                                        }
-                                    },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.DragIndicator,
-                                contentDescription = stringResource(R.string.cd_drag_toolbar),
-                                tint = colors.onSurfaceSecondary,
-                                modifier = Modifier.size(CLE_HELP_ICON_SIZE),
-                            )
-                        }
-                    }
-                }
-            } // end Row
-        } // end Surface
-
-        CutoutLayoutEditorHelpModal(
-            visible = showEditorHelp,
-            onDismiss = { showEditorHelp = false },
-        )
     }
 }
 
 @Composable
-private fun CutoutLayoutEditorHelpModal(
+internal fun CutoutLayoutEditorHelpModal(
     visible: Boolean,
     onDismiss: () -> Unit,
 ) {
@@ -952,54 +647,6 @@ private fun ResizeHandleView(
         )
     }
 }
-
-@Composable
-private fun ToolbarIconButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    contentDescription: String,
-    color: Color,
-    enabled: Boolean = true,
-    label: String? = null,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-) {
-    val colors = LocalAppColors.current
-    Button(
-        onClick = onClick,
-        enabled = enabled,
-        colors =
-            ButtonDefaults.buttonColors(
-                containerColor = color,
-                disabledContainerColor = colors.onSurfaceSecondary.copy(alpha = 0.1f),
-            ),
-        shape = RoundedCornerShape(4.dp),
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
-        modifier = modifier.height(32.dp),
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                tint = if (enabled) colors.onAccent else colors.onSurfaceSecondary.copy(alpha = 0.5f),
-                modifier = Modifier.size(18.dp),
-            )
-            if (label != null) {
-                Text(
-                    text = label,
-                    color = if (enabled) colors.onAccent else colors.onSurfaceSecondary.copy(alpha = 0.5f),
-                    style = MaterialTheme.typography.labelSmall,
-                )
-            }
-        }
-    }
-}
-
-// Small helper since BorderStroke needs it
-@Composable
-private fun borderStrokeFor(color: Color) = androidx.compose.foundation.BorderStroke(1.dp, color)
 
 internal fun adjustSourceCropToAspectRatio(
     cutout: ScreenCutout,

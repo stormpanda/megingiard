@@ -86,7 +86,7 @@ Sheet geometry:
 |---|---|---|
 | `IntegrationHomeScreen.kt` | `CompanionHubHelpModal` | Secondary (Display 4) |
 | `QuickMenu.kt` | `QuickMenuHelpModal` | Secondary (Display 4) |
-| `CutoutLayoutEditor.kt` | `CutoutLayoutEditorHelpModal` | Secondary (Display 4) |
+| `MirrorEditorTopOverlay.kt` / `CutoutLayoutEditor.kt` | `CutoutLayoutEditorHelpModal` | Primary (Display 0) |
 
 ### State management
 

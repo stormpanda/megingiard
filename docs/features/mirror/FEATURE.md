@@ -18,13 +18,22 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - `ImageReader` and software bitmap-copy approaches are explicitly excluded due to latency and DRM interference.
 - **Reconnect Dialog Priority**: When the Privileged Mode reconnect prompt dialog (`AppStateManager.isPrivdPromptActive`) is active, `MainAppScreen` renders `PrivdReconnectPromptDialog` in its modal hierarchy to guarantee the reconnect dialog is clearly accessible.
 
-### FR-M2: Cutout Layout Editor (Placement & Sizing)
+### FR-M2: Cutout Layout Editor & Top-Screen Controller-Navigable Toolbox
 
 - Sizing and placement of cutouts MUST only be active when the user explicitly enters **Screen Mirroring edit mode** (`isViewportEditActive = true`) via the "Edit Screen Mirroring Layout" card in the Screen Mirroring section of the MacroPad Editor. Outside of this mode, cutout configurations are locked and interactive layout adjustments are disabled. While editing (`isViewportEditActive = true`), `MainAppScreen` always renders `MacroPadScreen` (suppressing the Companion Hub `IntegrationHomeScreen` even if `showIntegrationHome` is true) so cutouts are positioned directly over the active MacroPad layout with locked button previews (`PadCanvas`).
-- While Screen Mirroring edit mode is active, users MUST be able to arrange cutout destination bounds on the secondary display:
-  - Selecting a cutout in the layout editor automatically opens `CropSelectorOverlay` on the primary display with a 35% opacity scrim veil and interactive crop frame while keeping the background game and mirror stream running live.
-  - Adjusting the crop boundaries or corner handles on the top screen updates the cutout's source coordinates in `MacroPadState.activeLayout` in real time. The top screen overlay contains no floating buttons; crop changes are saved whenever the layout is saved on the bottom screen (or reverted if Cancel is selected in the layout editor).
-  - Creating new cutouts is managed from the primary overlay menu (via the "Add Cutout" item in the Screen Mirroring cutouts list). There is no arbitrary hard cap on the number of cutouts. If the standard base cutout size (0.3 x 0.3) cannot fit on the canvas without colliding with existing cutouts, candidate dimensions are dynamically reduced by up to 50% (down to 0.15 x 0.15). If no available non-overlapping space can be found even at minimum scale, a toast prompts the user to make room on the screen first.
+- While Screen Mirroring edit mode is active:
+  - **Top Screen (Display 0):** `PrimaryOverlayManager` hosts `MirrorEditorTopOverlay`. It renders the live crop bounding box and handles (`CropSelectorOverlay`) for the selected cutout over the un-frozen live game stream, combined with a left-docked 220dp vertical toolbox rail (`MirrorEditorVerticalToolbox`).
+  - **Controller Navigation:** The top-screen vertical toolbox is 100% navigable with D-Pad and left stick, requiring no button hotkeys:
+    - **Cutout Selector:** `◀ CutoutName (X/Y) ▶` cycles active cutout with D-Pad Left/Right or A.
+    - **Aspect Ratio Lock:** Cycles `FREE` → `TOP` → `BOTTOM` with D-Pad Left/Right or A.
+    - **Shape Toggle:** Toggles `RECTANGLE` ↔ `CIRCLE` with A.
+    - **Adjust Crop (Nudge Mode):** Pressing A enters Tier-2 D-Pad nudge mode with visual pulsing highlight where D-Pad Up/Down/Left/Right moves source crop coordinates by `0.01f`. Pressing A/B/Back exits nudge mode.
+    - **Add Cutout:** Finds an available non-overlapping canvas slot (`CutoutPlacementHelper.findAvailableSlot`) and adds a new cutout. If no space is available, prompts user with a toast.
+    - **Delete Cutout:** Two-step confirmation (`[ DEL ]` → `[ CONFIRM ]`) deletes the selected cutout.
+    - **Help & Guide:** Opens `CutoutLayoutEditorHelpModal` over Display 0.
+    - **Done & Save:** Commits cutout changes to active layout and exits edit mode back to MacroPad Editor.
+    - **Cancel & Revert:** Reverts all cutout changes back to initial state and exits edit mode back to MacroPad Editor.
+  - **Bottom Screen (Display 4):** `CutoutLayoutEditor` renders an unobstructed touch canvas with destination bounding boxes and draggable corner resize handles for direct touch manipulation without floating toolbar obstruction.
 
 ### FR-M3: Freeze Frame
 

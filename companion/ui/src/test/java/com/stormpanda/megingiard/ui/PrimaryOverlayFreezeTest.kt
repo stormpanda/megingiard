@@ -31,6 +31,7 @@ class PrimaryOverlayFreezeTest {
         ScreenCaptureManager.setCapturing(false)
         ScreenCaptureManager.setFrozen(false)
         AppStateManager.closePrimaryModal()
+        AppStateManager.setViewportEditActive(false)
         AppStateManager.setActiveCropCutoutId(null)
     }
 
@@ -39,6 +40,7 @@ class PrimaryOverlayFreezeTest {
         ScreenCaptureManager.setCapturing(false)
         ScreenCaptureManager.setFrozen(false)
         AppStateManager.closePrimaryModal()
+        AppStateManager.setViewportEditActive(false)
         AppStateManager.setActiveCropCutoutId(null)
         Dispatchers.resetMain()
     }
@@ -89,30 +91,30 @@ class PrimaryOverlayFreezeTest {
     }
 
     @Test
-    fun testPrimaryOverlayActivity_whenCropping_doesNotFreezeCapture() {
+    fun testPrimaryOverlayActivity_whenViewportEditing_doesNotFreezeCapture() {
         ScreenCaptureManager.setCapturing(true)
         ScreenCaptureManager.setFrozen(false)
-        AppStateManager.setActiveCropCutoutId("cutout_1")
+        AppStateManager.setViewportEditActive(true)
 
         val controller = Robolectric.buildActivity(PrimaryOverlayActivity::class.java).setup()
-        assertFalse("Mirror capture should remain live (not frozen) when cropping a cutout", ScreenCaptureManager.isFrozen.value)
+        assertFalse("Mirror capture should remain live (not frozen) when viewport editing", ScreenCaptureManager.isFrozen.value)
 
         controller.get().finish()
         controller.pause().stop().destroy()
-        assertFalse("Mirror capture should remain live after crop selector finishes", ScreenCaptureManager.isFrozen.value)
+        assertFalse("Mirror capture should remain live after viewport editor finishes", ScreenCaptureManager.isFrozen.value)
     }
 
     @Test
-    fun testPrimaryOverlayActivity_whenCropping_preservesPriorManualFreeze() {
+    fun testPrimaryOverlayActivity_whenViewportEditing_preservesPriorManualFreeze() {
         ScreenCaptureManager.setCapturing(true)
         ScreenCaptureManager.setFrozen(true)
-        AppStateManager.setActiveCropCutoutId("cutout_1")
+        AppStateManager.setViewportEditActive(true)
 
         val controller = Robolectric.buildActivity(PrimaryOverlayActivity::class.java).setup()
-        assertTrue("Mirror capture should remain frozen if manually frozen before crop selector", ScreenCaptureManager.isFrozen.value)
+        assertTrue("Mirror capture should remain frozen if manually frozen before viewport editor", ScreenCaptureManager.isFrozen.value)
 
         controller.get().finish()
         controller.pause().stop().destroy()
-        assertTrue("Mirror capture should remain frozen after crop selector finishes", ScreenCaptureManager.isFrozen.value)
+        assertTrue("Mirror capture should remain frozen after viewport editor finishes", ScreenCaptureManager.isFrozen.value)
     }
 }

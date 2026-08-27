@@ -21,7 +21,8 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
-import com.stormpanda.megingiard.mirror.CropSelectorOverlay
+import com.stormpanda.megingiard.macropad.EditorSection
+import com.stormpanda.megingiard.mirror.MirrorEditorTopOverlay
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.AppDimens
@@ -69,17 +70,17 @@ class PrimaryOverlayActivity : ComponentActivity() {
         lifecycleScope.launch {
             combine(
                 AppStateManager.activePrimaryModal,
-                AppStateManager.activeCropCutoutId,
-            ) { modal, cropId ->
-                Pair(modal != null, cropId != null)
-            }.collect { (hasModal, hasCrop) ->
-                if (!hasModal && !hasCrop) {
+                AppStateManager.isViewportEditActive,
+            ) { modal, isEdit ->
+                Pair(modal != null, isEdit)
+            }.collect { (hasModal, isEdit) ->
+                if (!hasModal && !isEdit) {
                     AppLog.i(TAG, "All primary overlays inactive -> finishing activity")
                     finish()
                     return@collect
                 }
 
-                if (hasModal) {
+                if (hasModal && !isEdit) {
                     if (!wasFrozenForModal && ScreenCaptureManager.isCapturing.value && !ScreenCaptureManager.isFrozen.value) {
                         AppLog.i(TAG, "Freezing mirror capture for primary modal activity")
                         wasFrozenForModal = true
@@ -87,7 +88,7 @@ class PrimaryOverlayActivity : ComponentActivity() {
                     }
                 } else {
                     if (wasFrozenForModal) {
-                        AppLog.i(TAG, "Resuming live mirror capture for crop selector activity")
+                        AppLog.i(TAG, "Resuming live mirror capture for viewport editor activity")
                         if (ScreenCaptureManager.isCapturing.value) {
                             ScreenCaptureManager.setFrozen(false)
                         }
@@ -102,7 +103,7 @@ class PrimaryOverlayActivity : ComponentActivity() {
             val userAccentArgb by SettingsManager.accentColor.collectAsState()
             val appColors = paletteFor(themeMode, Color(userAccentArgb))
             val activeModal by AppStateManager.activePrimaryModal.collectAsState()
-            val activeCropCutoutId by AppStateManager.activeCropCutoutId.collectAsState()
+            val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
 
             MaterialTheme(
                 colorScheme = colorSchemeFor(appColors, themeMode),
@@ -117,9 +118,26 @@ class PrimaryOverlayActivity : ComponentActivity() {
                         color = Color.Transparent,
                     ) {
                         when {
-                            activeCropCutoutId != null -> {
-                                CropSelectorOverlay(
-                                    cutoutId = activeCropCutoutId!!,
+                            isViewportEditActive -> {
+                                MirrorEditorTopOverlay(
+                                    onDone = {
+                                        AppStateManager.setViewportEditActive(false)
+                                        AppStateManager.openPrimaryModal(
+                                            PrimaryModalConfig(
+                                                type = PrimaryModalType.MACROPAD_EDITOR,
+                                                payload = PrimaryModalPayload.MacroPad(section = EditorSection.MIRROR),
+                                            ),
+                                        )
+                                    },
+                                    onCancel = {
+                                        AppStateManager.setViewportEditActive(false)
+                                        AppStateManager.openPrimaryModal(
+                                            PrimaryModalConfig(
+                                                type = PrimaryModalType.MACROPAD_EDITOR,
+                                                payload = PrimaryModalPayload.MacroPad(section = EditorSection.MIRROR),
+                                            ),
+                                        )
+                                    },
                                 )
                             }
 
