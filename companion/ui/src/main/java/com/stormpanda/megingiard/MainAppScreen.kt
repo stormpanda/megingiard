@@ -407,7 +407,13 @@ fun MainAppScreen() {
         ) {
             val showIntegrationHome by AppStateManager.showIntegrationHome.collectAsState()
 
-            if (showIntegrationHome && !isEditorActive) {
+            if (shouldShowCompanionHub(
+                    showIntegrationHome = showIntegrationHome,
+                    isEditorActive = isEditorActive,
+                    isViewportEditActive = isViewportEditActive,
+                    isBackgroundSettingsActive = isBackgroundSettingsActive,
+                )
+            ) {
                 IntegrationHomeScreen()
             } else {
                 MacroPadScreen()
@@ -868,3 +874,15 @@ private fun IncomingImportDialog(
         },
     )
 }
+
+/**
+ * Evaluates whether the Companion Home Hub (`IntegrationHomeScreen`) should be displayed
+ * as the base screen layer, or whether `MacroPadScreen` should take precedence (such as when
+ * an editor, screen mirror cutout arrangement, or background editor is active).
+ */
+internal fun shouldShowCompanionHub(
+    showIntegrationHome: Boolean,
+    isEditorActive: Boolean,
+    isViewportEditActive: Boolean,
+    isBackgroundSettingsActive: Boolean,
+): Boolean = showIntegrationHome && !isEditorActive && !isViewportEditActive && !isBackgroundSettingsActive

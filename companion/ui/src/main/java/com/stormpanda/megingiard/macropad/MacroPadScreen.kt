@@ -96,6 +96,7 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
     val profile by viewModel.activeProfile.collectAsState()
     val layout by viewModel.activeLayout.collectAsState()
     val isEditorActive by AppStateManager.isEditorActive.collectAsState()
+    val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
     val isEditingPositions by MacroPadState.isEditingButtonPositions.collectAsState()
     val isCroppingBackground by MacroPadState.isCroppingBackground.collectAsState()
     val gridMode by MacroPadState.gridMode.collectAsState()
@@ -144,7 +145,7 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(32.dp),
             )
-        } else if (isEditorActive) {
+        } else if (isEditorActive || isViewportEditActive) {
             PadCanvas(
                 profile = p,
                 layout = l,
