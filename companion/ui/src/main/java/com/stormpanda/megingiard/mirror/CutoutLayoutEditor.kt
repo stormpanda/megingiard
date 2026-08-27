@@ -31,7 +31,6 @@ import androidx.compose.material.icons.rounded.Circle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.CropSquare
 import androidx.compose.material.icons.rounded.DragIndicator
-import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -77,7 +76,6 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.PrimaryModalConfig
 import com.stormpanda.megingiard.ui.PrimaryModalPayload
 import com.stormpanda.megingiard.ui.PrimaryModalType
-import java.util.UUID
 import kotlin.math.min
 import kotlin.math.roundToInt
 
@@ -671,48 +669,7 @@ fun CutoutLayoutEditor() {
                     val currentMode = selectedCutout?.aspectRatioMode ?: AspectRatioMode.FREE
                     val isCircle = selectedCutout?.shape == CutoutShape.CIRCLE
 
-                    // Row 1: Settings | Spacer | Help
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        ToolbarIconButton(
-                            icon = Icons.Rounded.Settings,
-                            contentDescription = stringResource(R.string.quick_menu_ambient_settings),
-                            color = colors.accent,
-                            label = stringResource(R.string.mirror_editor_toolbar_settings),
-                            modifier = Modifier.weight(1f),
-                            onClick = {
-                                AppStateManager.openPrimaryModal(
-                                    PrimaryModalConfig(
-                                        type = PrimaryModalType.MACROPAD_EDITOR,
-                                        payload = PrimaryModalPayload.MacroPad(section = EditorSection.MIRROR),
-                                    ),
-                                )
-                            },
-                        )
-
-                        Spacer(Modifier.weight(1f))
-
-                        Box(
-                            modifier =
-                                Modifier
-                                    .size(CLE_HELP_BTN_SIZE)
-                                    .clip(RoundedCornerShape(CLE_HELP_BTN_CORNER))
-                                    .clickable { showEditorHelp = true },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Rounded.HelpOutline,
-                                contentDescription = stringResource(R.string.help_open_cd),
-                                tint = colors.onSurfaceSecondary,
-                                modifier = Modifier.size(CLE_HELP_ICON_SIZE),
-                            )
-                        }
-                    }
-
-                    // Row 2: Aspect Ratio | Shape Toggle | Spacer
+                    // Row 1: Aspect Ratio | Shape Toggle | Help
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -815,10 +772,24 @@ fun CutoutLayoutEditor() {
                             },
                         )
 
-                        Spacer(Modifier.width(CLE_SPACER_WIDTH))
+                        Box(
+                            modifier =
+                                Modifier
+                                    .size(CLE_HELP_BTN_SIZE)
+                                    .clip(RoundedCornerShape(CLE_HELP_BTN_CORNER))
+                                    .clickable { showEditorHelp = true },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Rounded.HelpOutline,
+                                contentDescription = stringResource(R.string.help_open_cd),
+                                tint = colors.onSurfaceSecondary,
+                                modifier = Modifier.size(CLE_HELP_ICON_SIZE),
+                            )
+                        }
                     }
 
-                    // Row 3: Done / Save | Cancel / Revert | Drag Handle
+                    // Row 2: Done / Save | Cancel / Revert | Drag Handle
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -832,6 +803,12 @@ fun CutoutLayoutEditor() {
                             modifier = Modifier.weight(1f),
                             onClick = {
                                 AppStateManager.setViewportEditActive(false)
+                                AppStateManager.openPrimaryModal(
+                                    PrimaryModalConfig(
+                                        type = PrimaryModalType.MACROPAD_EDITOR,
+                                        payload = PrimaryModalPayload.MacroPad(section = EditorSection.MIRROR),
+                                    ),
+                                )
                             },
                         )
 
@@ -848,6 +825,12 @@ fun CutoutLayoutEditor() {
                                     )
                                 MacroPadState.updateLayout(updatedLayout)
                                 AppStateManager.setViewportEditActive(false)
+                                AppStateManager.openPrimaryModal(
+                                    PrimaryModalConfig(
+                                        type = PrimaryModalType.MACROPAD_EDITOR,
+                                        payload = PrimaryModalPayload.MacroPad(section = EditorSection.MIRROR),
+                                    ),
+                                )
                             },
                         )
 
@@ -898,13 +881,6 @@ private fun CutoutLayoutEditorHelpModal(
         onDismiss = onDismiss,
     ) {
         HelpIntro(stringResource(R.string.help_mirror_editor_intro))
-
-        HelpSection(stringResource(R.string.help_mirror_editor_section_global))
-        HelpEntry(
-            icon = Icons.Rounded.Settings,
-            label = stringResource(R.string.mirror_editor_toolbar_settings),
-            description = stringResource(R.string.help_mirror_editor_settings_desc),
-        )
 
         HelpSection(stringResource(R.string.help_mirror_editor_section_selected))
         HelpEntry(

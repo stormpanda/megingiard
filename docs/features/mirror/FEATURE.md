@@ -24,7 +24,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - While Screen Mirroring edit mode is active, users MUST be able to arrange cutout destination bounds on the secondary display:
   - Selecting a cutout in the layout editor automatically opens `CropSelectorOverlay` on the primary display with a 35% opacity scrim veil and interactive crop frame while keeping the background game and mirror stream running live.
   - Adjusting the crop boundaries or corner handles on the top screen updates the cutout's source coordinates in `MacroPadState.activeLayout` in real time. The top screen overlay contains no floating buttons; crop changes are saved whenever the layout is saved on the bottom screen (or reverted if Cancel is selected in the layout editor).
-  - The layout editor toolbar on the bottom screen provides quick access to **Settings** (opens MacroPad Editor Screen Mirroring section), **Aspect Ratio Mode**, **Cutout Shape Toggle**, **Done**, and **Cancel**.
+  - The layout editor toolbar on the bottom screen provides quick access to **Aspect Ratio Mode**, **Cutout Shape Toggle**, **Done**, and **Cancel**. Hitting **Done** or **Cancel** exits layout arrangement and re-opens the Screen Mirroring category in the primary overlay right where it was left.
   - Creating new cutouts is managed from the primary overlay menu (via the "Add Cutout" item in the Screen Mirroring cutouts list).
 
 ### FR-M3: Freeze Frame
@@ -40,7 +40,6 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - All mirror quick controls (Play/Stop, Freeze/Unfreeze, and Screenshot) MUST reside inside the **Mirror Control Card** at the top of the **Quick Menu** overlay, while **Touch Projection**, layout configuration, adding cutouts, dimming, and edge blending are configured in the **Screen Mirroring category** of the MacroPad Editor.
 - An **edge swipe** (swipe up from bottom edge or swipe down from top edge, depending on quick menu bar position) over the quick menu bar indicator MUST show the **Quick Menu** overlay panel.
 - The **Mirror Control Card** hosts the Play/Stop, Freeze/Unfreeze, and Screenshot icon buttons, evenly spaced across the card.
-- The layout editor toolbar contains a settings cogwheel button to open the Screen Mirroring editor category (`EditorSection.MIRROR`) inside the MacroPad Editor.
 - There is **no tap-anywhere overlay** on the mirror surface itself, and **no auto-hide timers** exist for these controls. Controls remain accessible inside the Quick Menu overlay until it is manually dismissed by tapping the scrim or close elements.
 - Mirror control icon buttons in the Quick Menu MUST use ergonomic touch targets (minimum 48 dp).
 - Mirror control labels MUST be shown below icon buttons to improve discoverability.

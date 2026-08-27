@@ -566,7 +566,6 @@ fun MacroPadEditor(
                                                     layout = activeLayout,
                                                     accentColor = colors.accent,
                                                     onArrangeCutouts = {
-                                                        MacroPadNavState.reset()
                                                         onDone()
                                                         AppStateManager.setViewportEditActive(true)
                                                     },

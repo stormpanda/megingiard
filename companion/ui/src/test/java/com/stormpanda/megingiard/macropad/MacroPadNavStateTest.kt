@@ -228,4 +228,16 @@ class MacroPadNavStateTest {
         assertEquals(updatedMacro, activeSubPage.effectiveMacro)
         assertEquals(1, activeSubPage.effectiveMacro?.steps?.size)
     }
+
+    @Test
+    fun `applyPrimaryModalPayload preserves Mirror section and subpage stack when reopening MacroPad editor`() {
+        MacroPadNavState.selectSection(EditorSection.MIRROR)
+        MacroPadNavState.push(MacroPadSubPage.CutoutSettings("cutout-1"))
+
+        val payload = PrimaryModalPayload.MacroPad(section = EditorSection.MIRROR)
+        MacroPadNavState.applyPrimaryModalPayload(payload)
+
+        assertEquals(EditorSection.MIRROR, MacroPadNavState.selectedSection.value)
+        assertEquals(listOf(MacroPadSubPage.CutoutSettings("cutout-1")), MacroPadNavState.subPageStack.value)
+    }
 }
