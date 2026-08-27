@@ -4,8 +4,10 @@ import android.view.KeyEvent
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -29,6 +31,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -70,6 +73,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
@@ -211,9 +215,11 @@ fun MirrorEditorTopOverlay(
         if (hasChanges) {
             if (!showExitPrompt) {
                 showExitPrompt = true
+                saveFocusRequester.requestFocus()
                 return true
             } else {
                 showExitPrompt = false
+                saveFocusRequester.requestFocus()
                 return true
             }
         } else {
@@ -226,22 +232,6 @@ fun MirrorEditorTopOverlay(
     // Intercept hardware Back / Controller B-Button via standard BackHandler
     BackHandler {
         handleBackAction()
-    }
-
-    // Auto-focus the save button whenever exit prompt is shown
-    LaunchedEffect(showExitPrompt) {
-        if (showExitPrompt) {
-            inputModeManager.requestInputMode(InputMode.Keyboard)
-            try {
-                saveFocusRequester.requestFocus()
-            } catch (_: Exception) {
-                delay(50)
-                try {
-                    saveFocusRequester.requestFocus()
-                } catch (_: Exception) {
-                }
-            }
-        }
     }
 
     // Auto-select the first cutout if none is currently selected
@@ -547,70 +537,29 @@ fun MirrorEditorTopOverlay(
                             )
 
                             // Item 7: Save Changes / Save & Discard Exit Row
-                            if (!showExitPrompt) {
-                                ToolboxActionCard(
-                                    title = stringResource(R.string.mirror_editor_save_changes),
-                                    icon = Icons.Rounded.Save,
-                                    actionBadge = if (!hasChanges) "SAVED" else null,
-                                    isAccent = true,
-                                    cardBgColor = if (hasChanges) colors.accent.copy(alpha = 0.20f) else null,
-                                    cardFocusRequester = saveFocusRequester,
-                                    onClick = {
+                            ToolboxSaveExitRow(
+                                showExitPrompt = showExitPrompt,
+                                hasChanges = hasChanges,
+                                saveFocusRequester = saveFocusRequester,
+                                onSave = {
+                                    if (showExitPrompt) {
+                                        savedCutouts = currentCutouts
+                                        MacroPadState.saveMirrorCutouts(layout.id, currentCutouts)
+                                        onDone()
+                                    } else {
                                         savedCutouts = currentCutouts
                                         MacroPadState.saveMirrorCutouts(layout.id, currentCutouts)
                                         DialogToastManager.show(context.getString(R.string.mirror_editor_saved_toast))
-                                    },
-                                )
-                            } else {
-                                var isSaveFocused by remember { mutableStateOf(false) }
-                                var isDiscardFocused by remember { mutableStateOf(false) }
-                                val isExitRowFocused = isSaveFocused || isDiscardFocused
-
-                                LaunchedEffect(isExitRowFocused, showExitPrompt) {
-                                    if (showExitPrompt && !isExitRowFocused) {
-                                        delay(100)
-                                        if (showExitPrompt && !isSaveFocused && !isDiscardFocused) {
-                                            AppLog.d(TAG, "Expanded exit row focus settled outside -> reverting to normal state")
-                                            showExitPrompt = false
-                                        }
                                     }
-                                }
-
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(METO_ITEM_SPACING),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    // Save & Exit (Left)
-                                    ToolboxCard(
-                                        title = stringResource(R.string.gamepad_action_save),
-                                        icon = Icons.Rounded.Save,
-                                        cardBgColor = colors.accent.copy(alpha = 0.25f),
-                                        cardFocusRequester = saveFocusRequester,
-                                        onFocusChanged = { isSaveFocused = it },
-                                        modifier = Modifier.weight(1f),
-                                        onClick = {
-                                            savedCutouts = currentCutouts
-                                            MacroPadState.saveMirrorCutouts(layout.id, currentCutouts)
-                                            onDone()
-                                        },
-                                    )
-
-                                    // Discard & Exit (Right)
-                                    ToolboxCard(
-                                        title = stringResource(R.string.gamepad_action_discard),
-                                        icon = Icons.Rounded.Close,
-                                        isDestructive = true,
-                                        cardBgColor = colors.error.copy(alpha = 0.15f),
-                                        onFocusChanged = { isDiscardFocused = it },
-                                        modifier = Modifier.weight(1f),
-                                        onClick = {
-                                            MacroPadState.updateLayout(layout.copy(mirrorCutouts = savedCutouts))
-                                            onCancel()
-                                        },
-                                    )
-                                }
-                            }
+                                },
+                                onDiscard = {
+                                    MacroPadState.updateLayout(layout.copy(mirrorCutouts = savedCutouts))
+                                    onCancel()
+                                },
+                                onDismissPrompt = {
+                                    showExitPrompt = false
+                                },
+                            )
                         }
 
                         // Bottom Drag Handle (Outside Scroll Container) with 2D Drag & Collapse Toggle
@@ -1460,4 +1409,106 @@ private fun ToolboxActionCard(
                 null
             },
     )
+}
+
+@Composable
+private fun ToolboxSaveExitRow(
+    showExitPrompt: Boolean,
+    hasChanges: Boolean,
+    saveFocusRequester: FocusRequester,
+    onSave: () -> Unit,
+    onDiscard: () -> Unit,
+    onDismissPrompt: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalAppColors.current
+    var isSaveFocused by remember { mutableStateOf(false) }
+    var isDiscardFocused by remember { mutableStateOf(false) }
+    val isRowFocused = isSaveFocused || isDiscardFocused
+
+    LaunchedEffect(isRowFocused, showExitPrompt) {
+        if (showExitPrompt && !isRowFocused) {
+            delay(100)
+            if (showExitPrompt && !isSaveFocused && !isDiscardFocused) {
+                AppLog.d(TAG, "ToolboxSaveExitRow focus settled outside -> dismissing prompt")
+                onDismissPrompt()
+            }
+        }
+    }
+
+    val splitFraction by animateFloatAsState(
+        targetValue = if (showExitPrompt) 1f else 0f,
+        animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
+        label = "toolboxSaveExitSplitFraction",
+    )
+
+    val isPromptActive = showExitPrompt || splitFraction > 0.05f
+    val effectiveTitle =
+        if (isPromptActive) {
+            stringResource(R.string.gamepad_action_save)
+        } else {
+            stringResource(R.string.mirror_editor_save_changes)
+        }
+
+    BoxWithConstraints(
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        val totalWidth = maxWidth
+        val targetCardWidth = ((totalWidth - METO_ITEM_SPACING) / 2f).coerceAtLeast(0.dp)
+        val currentSpacing = METO_ITEM_SPACING * splitFraction
+        val card2VisibleWidth = targetCardWidth * splitFraction
+        val card1VisibleWidth =
+            (
+                totalWidth - (
+                    if (splitFraction > 0.001f) {
+                        card2VisibleWidth + currentSpacing
+                    } else {
+                        0.dp
+                    }
+                )
+            ).coerceAtLeast(0.dp)
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // Card 1: Save Changes / Save & Exit (Persistent! Never unmounts!)
+            ToolboxActionCard(
+                title = effectiveTitle,
+                icon = Icons.Rounded.Save,
+                actionBadge = if (!isPromptActive && !hasChanges) "SAVED" else null,
+                isAccent = true,
+                cardBgColor = if (hasChanges) colors.accent.copy(alpha = 0.20f) else null,
+                cardFocusRequester = saveFocusRequester,
+                onFocusChanged = { isSaveFocused = it },
+                onClick = onSave,
+                modifier = Modifier.width(card1VisibleWidth),
+            )
+
+            if (splitFraction > 0.001f) {
+                Spacer(modifier = Modifier.width(currentSpacing))
+
+                Box(
+                    modifier =
+                        Modifier
+                            .width(card2VisibleWidth)
+                            .clipToBounds()
+                            .graphicsLayer {
+                                alpha = splitFraction
+                            },
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    ToolboxActionCard(
+                        title = stringResource(R.string.gamepad_action_discard),
+                        icon = Icons.Rounded.Close,
+                        isDestructive = true,
+                        cardBgColor = colors.error.copy(alpha = 0.15f),
+                        onClick = onDiscard,
+                        onFocusChanged = { isDiscardFocused = it },
+                        modifier = Modifier.requiredWidth(targetCardWidth),
+                    )
+                }
+            }
+        }
+    }
 }
