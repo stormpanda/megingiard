@@ -403,6 +403,7 @@ internal fun LayoutBackgroundSubPageContent(
         saveIcon = Icons.Rounded.Save,
         enabled = !isSaving,
         showExitPrompt = promptState.showExitPrompt,
+        onDismissPrompt = promptState.dismissPrompt,
         saveFocusRequester = promptState.focusRequester,
         bringIntoViewRequester = promptState.bringIntoViewRequester,
         onSave = promptState.onSave,

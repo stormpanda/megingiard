@@ -74,6 +74,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -1410,16 +1411,40 @@ fun rememberSaveExitPromptState(
         handleBack()
     }
 
-    return remember(showExitPrompt, focusRequester, bringIntoViewRequester) {
+    val activeCategoryRequester = LocalActiveCategoryRequester.current
+    val firstContentRequester = LocalFirstContentRequester.current
+
+    return remember(showExitPrompt, focusRequester, bringIntoViewRequester, activeCategoryRequester, firstContentRequester) {
         SaveExitPromptState(
             showExitPrompt = showExitPrompt,
             focusRequester = focusRequester,
             bringIntoViewRequester = bringIntoViewRequester,
             onSave = { currentOnSave() },
-            onDiscard = { currentOnDiscard() },
+            onDiscard = {
+                currentOnDiscard()
+                try {
+                    inputModeManager.requestInputMode(InputMode.Keyboard)
+                    if (activeCategoryRequester != null) {
+                        try {
+                            activeCategoryRequester.requestFocus()
+                        } catch (_: Exception) {
+                            focusRequester.requestFocus()
+                        }
+                    } else {
+                        focusRequester.requestFocus()
+                    }
+                } catch (_: Exception) {
+                    coroutineScope.launch {
+                        delay(50)
+                        try {
+                            activeCategoryRequester?.requestFocus() ?: focusRequester.requestFocus()
+                        } catch (_: Exception) {
+                        }
+                    }
+                }
+            },
             dismissPrompt = {
                 showExitPrompt = false
-                refocusSaveAction()
             },
         )
     }
@@ -1437,6 +1462,7 @@ fun rememberSaveExitPromptState(
  * In exit confirmation mode ([showExitPrompt] = true):
  * - The primary card transitions to "Save & Exit" while preserving active focus.
  * - The secondary "Discard & Exit" card appears beside it sharing the row (weight 1f each).
+ * - Navigating away from the row automatically dismisses the exit prompt and reverts to normal mode.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -1453,6 +1479,7 @@ fun GamepadSaveExitActionRow(
     pulseOnChanges: Boolean = false,
     enabled: Boolean = true,
     showExitPrompt: Boolean = false,
+    onDismissPrompt: (() -> Unit)? = null,
     saveFocusRequester: FocusRequester? = null,
     bringIntoViewRequester: BringIntoViewRequester? = null,
     itemKey: Any? = title,
@@ -1470,6 +1497,21 @@ fun GamepadSaveExitActionRow(
         } else {
             Modifier
         }
+
+    var isSaveFocused by remember { mutableStateOf(false) }
+    var isDiscardFocused by remember { mutableStateOf(false) }
+    val isRowFocused = isSaveFocused || isDiscardFocused
+
+    LaunchedEffect(isRowFocused, showExitPrompt) {
+        if (showExitPrompt && !isRowFocused) {
+            // Debounce to allow focus traversal between Save and Discard siblings to settle
+            delay(100)
+            if (showExitPrompt && !isSaveFocused && !isDiscardFocused) {
+                AppLog.d(TAG, "GamepadSaveExitActionRow focus settled outside -> dismissing prompt")
+                onDismissPrompt?.invoke()
+            }
+        }
+    }
 
     val splitFraction by animateFloatAsState(
         targetValue = if (showExitPrompt) 1f else 0f,
@@ -1526,7 +1568,11 @@ fun GamepadSaveExitActionRow(
                 enabled = enabled,
                 onClick = onSave,
                 itemKey = itemKey,
-                modifier = Modifier.width(card1VisibleWidth).then(saveReqModifier),
+                modifier =
+                    Modifier
+                        .width(card1VisibleWidth)
+                        .then(saveReqModifier)
+                        .onFocusChanged { isSaveFocused = it.hasFocus },
             )
 
             if (splitFraction > 0.001f) {
@@ -1550,7 +1596,10 @@ fun GamepadSaveExitActionRow(
                         isDestructive = true,
                         onClick = onDiscard,
                         itemKey = "discard_and_exit",
-                        modifier = Modifier.requiredWidth(targetCardWidth),
+                        modifier =
+                            Modifier
+                                .requiredWidth(targetCardWidth)
+                                .onFocusChanged { isDiscardFocused = it.hasFocus },
                     )
                 }
             }

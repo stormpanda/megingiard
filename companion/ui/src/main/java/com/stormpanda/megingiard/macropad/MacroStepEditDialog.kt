@@ -553,8 +553,8 @@ internal fun MacroStepEditSubPageContent(
                 stringResource(R.string.gamepad_action_save)
             },
         saveIcon = Icons.Rounded.Save,
-        enabled = isConfirmEnabled,
         showExitPrompt = promptState.showExitPrompt,
+        onDismissPrompt = promptState.dismissPrompt,
         saveFocusRequester = promptState.focusRequester,
         bringIntoViewRequester = promptState.bringIntoViewRequester,
         onSave = promptState.onSave,

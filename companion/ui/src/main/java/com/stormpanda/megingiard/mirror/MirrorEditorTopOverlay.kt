@@ -520,6 +520,20 @@ fun MirrorEditorTopOverlay(
                                         },
                                     )
                                 } else {
+                                    var isSaveFocused by remember { mutableStateOf(false) }
+                                    var isDiscardFocused by remember { mutableStateOf(false) }
+                                    val isExitRowFocused = isSaveFocused || isDiscardFocused
+
+                                    LaunchedEffect(isExitRowFocused, showExitPrompt) {
+                                        if (showExitPrompt && !isExitRowFocused) {
+                                            delay(100)
+                                            if (showExitPrompt && !isSaveFocused && !isDiscardFocused) {
+                                                AppLog.d(TAG, "Expanded exit row focus settled outside -> reverting to normal state")
+                                                showExitPrompt = false
+                                            }
+                                        }
+                                    }
+
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.spacedBy(METO_ITEM_SPACING),
@@ -531,6 +545,10 @@ fun MirrorEditorTopOverlay(
                                             icon = Icons.Rounded.Save,
                                             cardBgColor = colors.accent.copy(alpha = 0.25f),
                                             cardFocusRequester = saveFocusRequester,
+                                            onFocusChanged = {
+                                                isSaveFocused = it
+                                                if (it) selectedItemIndex = 6
+                                            },
                                             modifier = Modifier.weight(1f),
                                             onClick = {
                                                 savedCutouts = currentCutouts
@@ -545,6 +563,10 @@ fun MirrorEditorTopOverlay(
                                             icon = Icons.Rounded.Close,
                                             isDestructive = true,
                                             cardBgColor = colors.error.copy(alpha = 0.15f),
+                                            onFocusChanged = {
+                                                isDiscardFocused = it
+                                                if (it) selectedItemIndex = 6
+                                            },
                                             modifier = Modifier.weight(1f),
                                             onClick = {
                                                 MacroPadState.updateLayout(layout.copy(mirrorCutouts = savedCutouts))
@@ -722,6 +744,23 @@ fun MirrorEditorTopOverlay(
                                                     },
                                                 )
                                             } else {
+                                                var isMinSaveFocused by remember { mutableStateOf(false) }
+                                                var isMinDiscardFocused by remember { mutableStateOf(false) }
+                                                val isMinExitRowFocused = isMinSaveFocused || isMinDiscardFocused
+
+                                                LaunchedEffect(isMinExitRowFocused, showExitPrompt) {
+                                                    if (showExitPrompt && !isMinExitRowFocused) {
+                                                        delay(100)
+                                                        if (showExitPrompt && !isMinSaveFocused && !isMinDiscardFocused) {
+                                                            AppLog.d(
+                                                                TAG,
+                                                                "Minimized exit row focus settled outside -> reverting to normal state",
+                                                            )
+                                                            showExitPrompt = false
+                                                        }
+                                                    }
+                                                }
+
                                                 Row(
                                                     modifier = Modifier.fillMaxWidth(),
                                                     horizontalArrangement = Arrangement.spacedBy(METO_ITEM_SPACING),
@@ -732,8 +771,15 @@ fun MirrorEditorTopOverlay(
                                                         icon = Icons.Rounded.Save,
                                                         cardBgColor = colors.accent.copy(alpha = 0.25f),
                                                         cardFocusRequester = saveFocusRequester,
-                                                        onUpKey = onNavigateUp,
-                                                        onDownKey = onNavigateDown,
+                                                        onFocusChanged = { isMinSaveFocused = it },
+                                                        onUpKey = {
+                                                            showExitPrompt = false
+                                                            onNavigateUp()
+                                                        },
+                                                        onDownKey = {
+                                                            showExitPrompt = false
+                                                            onNavigateDown()
+                                                        },
                                                         modifier = Modifier.weight(1f),
                                                         onClick = {
                                                             savedCutouts = currentCutouts
@@ -747,8 +793,15 @@ fun MirrorEditorTopOverlay(
                                                         icon = Icons.Rounded.Close,
                                                         isDestructive = true,
                                                         cardBgColor = colors.error.copy(alpha = 0.15f),
-                                                        onUpKey = onNavigateUp,
-                                                        onDownKey = onNavigateDown,
+                                                        onFocusChanged = { isMinDiscardFocused = it },
+                                                        onUpKey = {
+                                                            showExitPrompt = false
+                                                            onNavigateUp()
+                                                        },
+                                                        onDownKey = {
+                                                            showExitPrompt = false
+                                                            onNavigateDown()
+                                                        },
                                                         modifier = Modifier.weight(1f),
                                                         onClick = {
                                                             MacroPadState.updateLayout(layout.copy(mirrorCutouts = savedCutouts))
