@@ -589,7 +589,6 @@ Open Settings to create a layout.</string>
     <string name="mirror_editor_saved_toast">Layout changes saved</string>
     <string name="mirror_editor_minimize">Minimize</string>
     <string name="mirror_editor_expand">Expand</string>
-    <string name="mirror_editor_toolbox_title">Toolbox</string>
 
     <!-- Cutout Layout Editor Toolbar Short Labels -->
     <string name="mirror_editor_toolbar_add">Add</string>

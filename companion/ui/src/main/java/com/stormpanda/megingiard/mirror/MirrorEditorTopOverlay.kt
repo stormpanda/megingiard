@@ -44,7 +44,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.rounded.ViewSidebar
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AspectRatio
 import androidx.compose.material.icons.rounded.Circle
@@ -56,7 +55,6 @@ import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.UnfoldLess
 import androidx.compose.material.icons.rounded.UnfoldMore
-import androidx.compose.material.icons.rounded.ViewSidebar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -129,9 +127,8 @@ private val METO_INNER_PADDING_H = 8.dp
 private val METO_INNER_PADDING_V = 8.dp
 private val METO_ITEM_SPACING = 6.dp
 
-private val METO_HEADER_HEIGHT = 26.dp
-private val METO_HEADER_ICON_SIZE = 14.dp
-private val METO_HEADER_TEXT_SIZE = 10.sp
+private val METO_TOGGLE_BUTTON_SIZE = 20.dp
+private val METO_TOGGLE_ICON_SIZE = 14.dp
 
 private val METO_CARD_CORNER = 8.dp
 private val METO_CARD_MIN_HEIGHT = 38.dp
@@ -371,16 +368,6 @@ fun MirrorEditorTopOverlay(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        // ── Toolbox Header with Minimize / Expand Button & 2D Drag ──
-                        ToolboxHeader(
-                            isMinimized = isMinimized,
-                            onToggleMinimize = { isMinimized = !isMinimized },
-                            onDrag = { dx, dy ->
-                                offsetX = (offsetX + dx).coerceIn(0f, maxOffsetX)
-                                offsetY = (offsetY + dy).coerceIn(0f, maxOffsetY)
-                            },
-                        )
-
                         // ── Menu Content Area (Full List or Minimized Single Card) ──
                         if (!isMinimized) {
                             // Expanded Mode: Full scrollable vertical column
@@ -388,8 +375,12 @@ fun MirrorEditorTopOverlay(
                                 modifier =
                                     Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = METO_INNER_PADDING_H, vertical = 4.dp)
-                                        .verticalScroll(rememberScrollState()),
+                                        .padding(
+                                            start = METO_INNER_PADDING_H,
+                                            end = METO_INNER_PADDING_H,
+                                            top = METO_INNER_PADDING_V,
+                                            bottom = 2.dp,
+                                        ).verticalScroll(rememberScrollState()),
                                 verticalArrangement = Arrangement.spacedBy(METO_ITEM_SPACING),
                             ) {
                                 // Item 0: Target Cutout Carousel Selector
@@ -582,7 +573,12 @@ fun MirrorEditorTopOverlay(
                                 modifier =
                                     Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = METO_INNER_PADDING_H, vertical = 4.dp),
+                                        .padding(
+                                            start = METO_INNER_PADDING_H,
+                                            end = METO_INNER_PADDING_H,
+                                            top = METO_INNER_PADDING_V,
+                                            bottom = 2.dp,
+                                        ),
                             ) {
                                 val onNavigateUp = {
                                     selectedItemIndex = if (selectedItemIndex > 0) selectedItemIndex - 1 else METO_ITEM_COUNT - 1
@@ -816,8 +812,10 @@ fun MirrorEditorTopOverlay(
                             }
                         }
 
-                        // Bottom Drag Handle (Outside Scroll Container) with 2D Drag
+                        // Bottom Drag Handle (Outside Scroll Container) with 2D Drag & Collapse Toggle
                         ToolboxDragHandle(
+                            isMinimized = isMinimized,
+                            onToggleMinimize = { isMinimized = !isMinimized },
                             onDrag = { dx, dy ->
                                 offsetX = (offsetX + dx).coerceIn(0f, maxOffsetX)
                                 offsetY = (offsetY + dy).coerceIn(0f, maxOffsetY)
@@ -835,74 +833,13 @@ fun MirrorEditorTopOverlay(
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Top header bar of the toolbox with minimize / expand toggle and 2D drag gesture detection.
- */
-@Composable
-private fun ToolboxHeader(
-    isMinimized: Boolean,
-    onToggleMinimize: () -> Unit,
-    onDrag: (Float, Float) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val colors = LocalAppColors.current
-    Row(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .height(METO_HEADER_HEIGHT)
-                .pointerInput(Unit) {
-                    detectDragGestures { change, dragAmount ->
-                        change.consume()
-                        onDrag(dragAmount.x, dragAmount.y)
-                    }
-                }.padding(horizontal = METO_INNER_PADDING_H),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Rounded.ViewSidebar,
-                contentDescription = null,
-                tint = colors.onSurfaceSecondary.copy(alpha = 0.6f),
-                modifier = Modifier.size(METO_HEADER_ICON_SIZE),
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = stringResource(R.string.mirror_editor_toolbox_title).uppercase(),
-                color = colors.onSurfaceSecondary.copy(alpha = 0.6f),
-                fontSize = METO_HEADER_TEXT_SIZE,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 0.5.sp,
-            )
-        }
-
-        Box(
-            modifier =
-                Modifier
-                    .size(20.dp)
-                    .clip(CircleShape)
-                    .clickable(onClick = onToggleMinimize)
-                    .background(colors.surfaceVariant.copy(alpha = 0.5f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = if (isMinimized) Icons.Rounded.UnfoldMore else Icons.Rounded.UnfoldLess,
-                contentDescription = stringResource(if (isMinimized) R.string.mirror_editor_expand else R.string.mirror_editor_minimize),
-                tint = colors.onSurfaceSecondary,
-                modifier = Modifier.size(14.dp),
-            )
-        }
-    }
-}
-
-/**
- * Shared capsule drag handle matching the appearance in HelpModal, anchored at the bottom
- * of the toolbox container for dragging the menu in 2D across Display 0.
+ * Bottom drag handle anchored at the bottom of the toolbox container for dragging the menu
+ * in 2D across Display 0, housing the minimize / expand toggle button on its right flank.
  */
 @Composable
 private fun ToolboxDragHandle(
+    isMinimized: Boolean,
+    onToggleMinimize: () -> Unit,
     onDrag: (Float, Float) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -916,9 +853,15 @@ private fun ToolboxDragHandle(
                         change.consume()
                         onDrag(dragAmount.x, dragAmount.y)
                     }
-                }.padding(top = METO_HANDLE_V_PADDING_TOP, bottom = METO_HANDLE_V_PADDING_BOTTOM),
+                }.padding(
+                    start = METO_INNER_PADDING_H,
+                    end = METO_INNER_PADDING_H,
+                    top = METO_HANDLE_V_PADDING_TOP,
+                    bottom = METO_HANDLE_V_PADDING_BOTTOM,
+                ),
         contentAlignment = Alignment.Center,
     ) {
+        // Centered Capsule Drag Handle
         Box(
             modifier =
                 Modifier
@@ -927,6 +870,25 @@ private fun ToolboxDragHandle(
                     .clip(RoundedCornerShape(50))
                     .background(colors.onSurfaceSecondary.copy(alpha = 0.4f)),
         )
+
+        // Minimize / Expand Toggle Button anchored to the right
+        Box(
+            modifier =
+                Modifier
+                    .align(Alignment.CenterEnd)
+                    .size(METO_TOGGLE_BUTTON_SIZE)
+                    .clip(CircleShape)
+                    .clickable(onClick = onToggleMinimize)
+                    .background(colors.surfaceVariant.copy(alpha = 0.5f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = if (isMinimized) Icons.Rounded.UnfoldMore else Icons.Rounded.UnfoldLess,
+                contentDescription = stringResource(if (isMinimized) R.string.mirror_editor_expand else R.string.mirror_editor_minimize),
+                tint = colors.onSurfaceSecondary,
+                modifier = Modifier.size(METO_TOGGLE_ICON_SIZE),
+            )
+        }
     }
 }
 

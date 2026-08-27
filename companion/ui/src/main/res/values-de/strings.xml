@@ -598,7 +598,6 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="mirror_editor_saved_toast">Layout-Änderungen gespeichert</string>
     <string name="mirror_editor_minimize">Minimieren</string>
     <string name="mirror_editor_expand">Erweitern</string>
-    <string name="mirror_editor_toolbox_title">Werkzeuge</string>
 
     <!-- Cutout Layout Editor Toolbar Short Labels -->
     <string name="mirror_editor_toolbar_add">Hinzufügen</string>
