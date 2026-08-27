@@ -11,6 +11,7 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.Opacity
 import androidx.compose.material.icons.rounded.TouchApp
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -59,6 +60,7 @@ internal fun MirrorDeck(
     layout: PadLayout,
     accentColor: Color,
     onArrangeCutouts: () -> Unit,
+    onOpenAdvancedSettings: () -> Unit,
     onAddCutout: () -> Unit,
     onEditCutout: (ScreenCutout) -> Unit,
 ) {
@@ -66,12 +68,7 @@ internal fun MirrorDeck(
     val colors = LocalAppColors.current
     val firstItemFocusRequester = remember { FocusRequester() }
 
-    fun commitLayout(block: PadLayout.() -> PadLayout) {
-        val updated = MacroPadState.activeLayout.value ?: return
-        MacroPadState.updateLayout(updated.block())
-    }
-
-    // ── 1. Top action card: Arrange Cutouts on secondary canvas ───────────────
+    // ── 1. Top action card: Edit Screen Mirroring Layout on secondary canvas ─
     GamepadActionCard(
         title = stringResource(R.string.mirror_editor_arrange_cutouts_title),
         description = stringResource(R.string.mirror_editor_arrange_cutouts_desc),
@@ -81,87 +78,13 @@ internal fun MirrorDeck(
         modifier = Modifier.firstDeckItem().focusRequester(firstItemFocusRequester),
     )
 
-    // ── 2. General Section ───────────────────────────────────────────────────
-    GamepadSectionHeader(
-        text = stringResource(R.string.settings_section_general),
-        color = accentColor,
-    )
-
-    // Ambient Dimming
-    GamepadSliderCard(
-        title = stringResource(R.string.settings_macropad_dim),
-        description = stringResource(R.string.help_ambient_dim_desc),
-        value = layout.ambientDim,
-        valueRange = 0f..MSE_DIM_MAX,
-        step = MSE_DIM_STEP,
-        icon = Icons.Rounded.Opacity,
-        valueLabel = "${(layout.ambientDim * MSE_PERCENT_DIVISOR).roundToInt()}%",
-        onValueChange = { newVal ->
-            AppLog.d(TAG, "Updating ambientDim: $newVal")
-            commitLayout { copy(ambientDim = newVal) }
-        },
-    )
-
-    // Edge Blending Width
-    val edgeBlendLabel =
-        if (layout.mirrorEdgeBlendWidth.roundToInt() == 0) {
-            stringResource(R.string.mirror_edge_blend_strength_off)
-        } else {
-            "${layout.mirrorEdgeBlendWidth.roundToInt()} dp"
-        }
-    GamepadSliderCard(
-        title = stringResource(R.string.mirror_edge_blend_label),
-        description = stringResource(R.string.help_ambient_blend_desc),
-        value = layout.mirrorEdgeBlendWidth,
-        valueRange = MSE_EDGE_BLEND_MIN..MSE_EDGE_BLEND_MAX,
-        step = MSE_EDGE_BLEND_STEP,
-        icon = Icons.Rounded.Grain,
-        valueLabel = edgeBlendLabel,
-        onValueChange = { newVal ->
-            AppLog.d(TAG, "Updating mirrorEdgeBlendWidth: $newVal")
-            commitLayout { copy(mirrorEdgeBlendWidth = newVal) }
-        },
-    )
-
-    // Follow Touch Target Cutout
-    val followCutoutId = layout.mirrorCutouts.find { it.followTouch }?.id
-    val cutoutsList = layout.mirrorCutouts
-    val followOptions = listOf<String?>(null) + cutoutsList.map { it.id }
-    val followIdx = followOptions.indexOf(followCutoutId).coerceAtLeast(0)
-    val followSelectedText =
-        if (followCutoutId == null) {
-            stringResource(R.string.settings_mirror_follow_touch_off)
-        } else {
-            val defName = stringResource(R.string.settings_mirror_cutout_default)
-            cutoutsList.find { it.id == followCutoutId }?.name?.ifBlank { defName } ?: defName
-        }
-
-    GamepadChoiceCard(
-        title = stringResource(R.string.settings_mirror_follow_touch),
-        description = stringResource(R.string.settings_mirror_follow_touch_desc),
-        selectedText = followSelectedText,
-        icon = Icons.Rounded.TouchApp,
-        enabled = cutoutsList.isNotEmpty(),
-        onPrevious = {
-            if (followOptions.isNotEmpty()) {
-                val newIdx = (followIdx - 1 + followOptions.size) % followOptions.size
-                val newId = followOptions[newIdx]
-                AppLog.d(TAG, "Setting followTouch target: $newId")
-                val updated = layout.mirrorCutouts.map { it.copy(followTouch = (it.id == newId)) }
-                commitLayout { copy(mirrorCutouts = updated, mirrorFollowActive = (newId != null)) }
-                ScreenCaptureManager.setFollowActive(newId != null, persist = false)
-            }
-        },
-        onNext = {
-            if (followOptions.isNotEmpty()) {
-                val newIdx = (followIdx + 1) % followOptions.size
-                val newId = followOptions[newIdx]
-                AppLog.d(TAG, "Setting followTouch target: $newId")
-                val updated = layout.mirrorCutouts.map { it.copy(followTouch = (it.id == newId)) }
-                commitLayout { copy(mirrorCutouts = updated, mirrorFollowActive = (newId != null)) }
-                ScreenCaptureManager.setFollowActive(newId != null, persist = false)
-            }
-        },
+    // ── 2. Directly under Arrange Cutouts with no headline: Advanced Settings ───
+    GamepadActionCard(
+        title = stringResource(R.string.settings_mirror_advanced_title),
+        description = stringResource(R.string.settings_mirror_advanced_desc),
+        actionText = stringResource(R.string.gamepad_action_edit),
+        icon = Icons.Rounded.Tune,
+        onClick = onOpenAdvancedSettings,
     )
 
     // ── 3. Cutouts Section ───────────────────────────────────────────────────
@@ -383,6 +306,97 @@ internal fun CutoutSettingsSubPageContent(
         itemKey = "cutout_${cutout.id}_delete",
         onConfirm = {
             onDeleteCutout(cutout.id)
+        },
+    )
+}
+
+@Composable
+internal fun MirrorAdvancedSettingsSubPageContent(
+    layout: PadLayout,
+    accentColor: Color,
+) {
+    AppLog.d(TAG, "MirrorAdvancedSettingsSubPageContent composition for layout=${layout.id}")
+
+    fun commitLayout(block: PadLayout.() -> PadLayout) {
+        val updated = MacroPadState.activeLayout.value ?: return
+        MacroPadState.updateLayout(updated.block())
+    }
+
+    // 1. Ambient Dimming
+    GamepadSliderCard(
+        modifier = Modifier.firstDeckItem(),
+        title = stringResource(R.string.settings_macropad_dim),
+        description = stringResource(R.string.help_ambient_dim_desc),
+        value = layout.ambientDim,
+        valueRange = 0f..MSE_DIM_MAX,
+        step = MSE_DIM_STEP,
+        icon = Icons.Rounded.Opacity,
+        valueLabel = "${(layout.ambientDim * MSE_PERCENT_DIVISOR).roundToInt()}%",
+        onValueChange = { newVal ->
+            AppLog.d(TAG, "Updating ambientDim: $newVal")
+            commitLayout { copy(ambientDim = newVal) }
+        },
+    )
+
+    // 2. Edge Blending Width
+    val edgeBlendLabel =
+        if (layout.mirrorEdgeBlendWidth.roundToInt() == 0) {
+            stringResource(R.string.mirror_edge_blend_strength_off)
+        } else {
+            "${layout.mirrorEdgeBlendWidth.roundToInt()} dp"
+        }
+    GamepadSliderCard(
+        title = stringResource(R.string.mirror_edge_blend_label),
+        description = stringResource(R.string.help_ambient_blend_desc),
+        value = layout.mirrorEdgeBlendWidth,
+        valueRange = MSE_EDGE_BLEND_MIN..MSE_EDGE_BLEND_MAX,
+        step = MSE_EDGE_BLEND_STEP,
+        icon = Icons.Rounded.Grain,
+        valueLabel = edgeBlendLabel,
+        onValueChange = { newVal ->
+            AppLog.d(TAG, "Updating mirrorEdgeBlendWidth: $newVal")
+            commitLayout { copy(mirrorEdgeBlendWidth = newVal) }
+        },
+    )
+
+    // 3. Follow Touch Target Cutout
+    val followCutoutId = layout.mirrorCutouts.find { it.followTouch }?.id
+    val cutoutsList = layout.mirrorCutouts
+    val followOptions = listOf<String?>(null) + cutoutsList.map { it.id }
+    val followIdx = followOptions.indexOf(followCutoutId).coerceAtLeast(0)
+    val followSelectedText =
+        if (followCutoutId == null) {
+            stringResource(R.string.settings_mirror_follow_touch_off)
+        } else {
+            val defName = stringResource(R.string.settings_mirror_cutout_default)
+            cutoutsList.find { it.id == followCutoutId }?.name?.ifBlank { defName } ?: defName
+        }
+
+    GamepadChoiceCard(
+        title = stringResource(R.string.settings_mirror_follow_touch),
+        description = stringResource(R.string.settings_mirror_follow_touch_desc),
+        selectedText = followSelectedText,
+        icon = Icons.Rounded.TouchApp,
+        enabled = cutoutsList.isNotEmpty(),
+        onPrevious = {
+            if (followOptions.isNotEmpty()) {
+                val newIdx = (followIdx - 1 + followOptions.size) % followOptions.size
+                val newId = followOptions[newIdx]
+                AppLog.d(TAG, "Setting followTouch target: $newId")
+                val updated = layout.mirrorCutouts.map { it.copy(followTouch = (it.id == newId)) }
+                commitLayout { copy(mirrorCutouts = updated, mirrorFollowActive = (newId != null)) }
+                ScreenCaptureManager.setFollowActive(newId != null, persist = false)
+            }
+        },
+        onNext = {
+            if (followOptions.isNotEmpty()) {
+                val newIdx = (followIdx + 1) % followOptions.size
+                val newId = followOptions[newIdx]
+                AppLog.d(TAG, "Setting followTouch target: $newId")
+                val updated = layout.mirrorCutouts.map { it.copy(followTouch = (it.id == newId)) }
+                commitLayout { copy(mirrorCutouts = updated, mirrorFollowActive = (newId != null)) }
+                ScreenCaptureManager.setFollowActive(newId != null, persist = false)
+            }
         },
     )
 }

@@ -240,4 +240,15 @@ class MacroPadNavStateTest {
         assertEquals(EditorSection.MIRROR, MacroPadNavState.selectedSection.value)
         assertEquals(listOf(MacroPadSubPage.CutoutSettings("cutout-1")), MacroPadNavState.subPageStack.value)
     }
+
+    @Test
+    fun `MirrorAdvancedSettings has correct parentSection MIRROR`() {
+        val advancedSubPage = MacroPadSubPage.MirrorAdvancedSettings(layoutId = "layout-123")
+        assertEquals(EditorSection.MIRROR, advancedSubPage.parentSection)
+        assertEquals("layout-123", advancedSubPage.layoutId)
+
+        MacroPadNavState.selectSection(EditorSection.MIRROR)
+        MacroPadNavState.push(advancedSubPage)
+        assertEquals(listOf(advancedSubPage), MacroPadNavState.subPageStack.value)
+    }
 }

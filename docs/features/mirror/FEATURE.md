@@ -20,7 +20,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 
 ### FR-M2: Cutout Layout Editor (Placement & Sizing)
 
-- Sizing and placement of cutouts MUST only be active when the user explicitly enters **Screen Mirroring edit mode** (`isViewportEditActive = true`) via the "Arrange Cutouts" card in the Screen Mirroring section of the MacroPad Editor. Outside of this mode, cutout configurations are locked and interactive layout adjustments are disabled.
+- Sizing and placement of cutouts MUST only be active when the user explicitly enters **Screen Mirroring edit mode** (`isViewportEditActive = true`) via the "Edit Screen Mirroring Layout" card in the Screen Mirroring section of the MacroPad Editor. Outside of this mode, cutout configurations are locked and interactive layout adjustments are disabled.
 - While Screen Mirroring edit mode is active, users MUST be able to arrange cutout destination bounds on the secondary display:
   - Selecting a cutout in the layout editor automatically opens `CropSelectorOverlay` on the primary display with a 35% opacity scrim veil and interactive crop frame while keeping the background game and mirror stream running live.
   - Adjusting the crop boundaries or corner handles on the top screen updates the cutout's source coordinates in `MacroPadState.activeLayout` in real time. The top screen overlay contains no floating buttons; crop changes are saved whenever the layout is saved on the bottom screen (or reverted if Cancel is selected in the layout editor).
@@ -36,7 +36,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 
 ### FR-M4: Controls Access & Quick Menu
 
-- All mirror quick controls (Play/Stop, Freeze/Unfreeze, and Screenshot) MUST reside inside the **Mirror Control Card** at the top of the **Quick Menu** overlay, while **Touch Projection**, layout configuration, adding cutouts, dimming, and edge blending are configured in the **Screen Mirroring category** of the MacroPad Editor.
+- All mirror quick controls (Play/Stop, Freeze/Unfreeze, and Screenshot) MUST reside inside the **Mirror Control Card** at the top of the **Quick Menu** overlay, while **Touch Projection**, layout configuration, adding cutouts, and the **Advanced Settings** sub menu (ambient dimming, edge blending, and follow touch) are configured in the **Screen Mirroring category** of the MacroPad Editor.
 - An **edge swipe** (swipe up from bottom edge or swipe down from top edge, depending on quick menu bar position) over the quick menu bar indicator MUST show the **Quick Menu** overlay panel.
 - The **Mirror Control Card** hosts the Play/Stop, Freeze/Unfreeze, and Screenshot icon buttons, evenly spaced across the card.
 - There is **no tap-anywhere overlay** on the mirror surface itself, and **no auto-hide timers** exist for these controls. Controls remain accessible inside the Quick Menu overlay until it is manually dismissed by tapping the scrim or close elements.

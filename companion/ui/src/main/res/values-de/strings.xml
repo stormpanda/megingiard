@@ -603,8 +603,10 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_mirror_touch_projection_desc">Berührungen innerhalb dieses Ausschnitts an den Hauptbildschirm weiterleiten</string>
     <string name="settings_mirror_cutout_default">Ausschnitt</string>
     <string name="settings_mirror_cutout_default_name_fmt">Ausschnitt %1$d</string>
-    <string name="mirror_editor_arrange_cutouts_title">Ausschnitte anordnen</string>
+    <string name="mirror_editor_arrange_cutouts_title">Bildschirmspiegelungs-Layout bearbeiten</string>
     <string name="mirror_editor_arrange_cutouts_desc">Spiegelungsbereiche auf dem Bildschirm anordnen und zuschneiden</string>
+    <string name="settings_mirror_advanced_title">Erweiterte Einstellungen</string>
+    <string name="settings_mirror_advanced_desc">Umgebungs-Abdunklung, Kantenüberblendung und Touch-Verfolgung konfigurieren</string>
     <string name="settings_mirror_cutouts_header">Ausschnitte</string>
     <string name="macropad_cutout_deleted_toast">Ausschnitt \"%1$s\" gelöscht</string>
     <string name="macropad_delete_cutout_title">Ausschnitt löschen</string>

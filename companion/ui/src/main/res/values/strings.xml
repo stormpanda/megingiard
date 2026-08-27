@@ -594,8 +594,10 @@ Open Settings to create a layout.</string>
     <string name="settings_mirror_touch_projection_desc">Forward touch inputs inside this cutout to the primary screen</string>
     <string name="settings_mirror_cutout_default">Cutout</string>
     <string name="settings_mirror_cutout_default_name_fmt">Cutout %1$d</string>
-    <string name="mirror_editor_arrange_cutouts_title">Arrange Cutouts</string>
+    <string name="mirror_editor_arrange_cutouts_title">Edit Screen Mirroring Layout</string>
     <string name="mirror_editor_arrange_cutouts_desc">Move, resize, and crop screen mirror regions on the canvas</string>
+    <string name="settings_mirror_advanced_title">Advanced Settings</string>
+    <string name="settings_mirror_advanced_desc">Configure ambient dimming, edge blending, and touch tracking</string>
     <string name="settings_mirror_cutouts_header">Cutouts</string>
     <string name="macropad_cutout_deleted_toast">Cutout \"%1$s\" deleted</string>
     <string name="macropad_delete_cutout_title">Delete Cutout</string>

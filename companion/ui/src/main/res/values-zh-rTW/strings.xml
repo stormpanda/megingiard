@@ -439,6 +439,10 @@
     <string name="settings_mirror_touch_projection_desc">將此區塊內的觸控輸入轉發到主螢幕</string>
     <string name="settings_mirror_cutout_default">區塊</string>
     <string name="settings_mirror_cutout_default_name_fmt">區塊 %1$d</string>
+    <string name="mirror_editor_arrange_cutouts_title">編輯螢幕鏡像版面</string>
+    <string name="mirror_editor_arrange_cutouts_desc">在畫布上移動、調整大小及裁剪螢幕鏡像區塊</string>
+    <string name="settings_mirror_advanced_title">進階設定</string>
+    <string name="settings_mirror_advanced_desc">設定環境調暗、邊緣融合與觸控追蹤</string>
     <string name="help_open_cd">開啟說明</string>
     <string name="help_close_cd">關閉說明</string>
     <string name="help_timeline_name_label">巨集名稱欄位</string>

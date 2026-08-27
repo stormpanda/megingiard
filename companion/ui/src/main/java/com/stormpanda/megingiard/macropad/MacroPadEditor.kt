@@ -570,6 +570,11 @@ fun MacroPadEditor(
                                                         onDone()
                                                         AppStateManager.setViewportEditActive(true)
                                                     },
+                                                    onOpenAdvancedSettings = {
+                                                        MacroPadNavState.setStack(
+                                                            subPageStack + MacroPadSubPage.MirrorAdvancedSettings(activeLayout.id),
+                                                        )
+                                                    },
                                                     onAddCutout = {
                                                         val layout = activeLayout
                                                         val slot = CutoutPlacementHelper.findAvailableSlot(layout.mirrorCutouts)
@@ -1028,6 +1033,24 @@ fun MacroPadEditor(
                                                                 ),
                                                         )
                                                     },
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    is MacroPadSubPage.MirrorAdvancedSettings -> {
+                                        val lay = profile.layouts.firstOrNull { it.id == currentSubPage.layoutId } ?: activeLayout
+                                        if (lay != null) {
+                                            GamepadDeck(
+                                                breadcrumbs =
+                                                    listOf(
+                                                        stringResource(R.string.quick_menu_screen_mirroring),
+                                                        stringResource(R.string.settings_mirror_advanced_title),
+                                                    ),
+                                            ) {
+                                                MirrorAdvancedSettingsSubPageContent(
+                                                    layout = lay,
+                                                    accentColor = colors.accent,
                                                 )
                                             }
                                         }
