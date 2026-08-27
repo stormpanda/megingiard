@@ -126,9 +126,9 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 ### FR-M12: Aspect Ratio Lock Modes (Free, Top, Bottom)
 
 - The user MUST be able to configure the aspect ratio locking mode of each cutout individually. Newly added cutouts default to **Bottom (`BOTTOM`)** mode. There are three modes:
-  - **Free (`FREE`)**: Independent resizing/scaling on both source crop and destination bounds.
-  - **Top (`TOP`)**: Locks the destination bounds' aspect ratio to the source crop's aspect ratio. Resizing destination bounds in the editor scales them uniformly. Changing the source crop automatically adjusts the destination dimensions to match.
-  - **Bottom (`BOTTOM`)**: Locks the source crop's aspect ratio to the destination bounds' aspect ratio. Resizing destination bounds in the editor is free, but automatically scales/adjusts the source crop to match the destination's new aspect ratio. Resizing the source crop in the crop selector is locked to the destination aspect ratio.
+  - **Free (`FREE`)**: Both the source crop (top screen) and destination cutout (bottom screen) use 4 **Edge Drag Handles** (Top, Bottom, Left, Right) for independent resizing. The cropped image is projected fully onto the cutout and stretched or squished to fill it. Gamepad and touch resizing are independent.
+  - **Top (`TOP`)**: Locks the destination bounds' aspect ratio to the source crop's aspect ratio. The source crop uses 4 **Edge Drag Handles** for free resizing and automatically adjusts destination dimensions to match. The destination cutout switches to 4 **Corner Drag Handles** (rendered as diagonal rounded pill handles positioned outside each corner at TL=-45°, TR=45°, BL=45°, BR=-45°); resizing the cutout is strictly locked to the crop's aspect ratio for both touch drag and gamepad (R2 + D-Pad) resizing.
+  - **Bottom (`BOTTOM`)**: Locks the source crop's aspect ratio to the destination bounds' aspect ratio. The destination cutout uses 4 **Edge Drag Handles** for free resizing and automatically adjusts source crop dimensions to match. The source crop switches to 4 **Corner Drag Handles** (rendered as diagonal rounded pill handles positioned outside each corner at TL=-45°, TR=45°, BL=45°, BR=-45°); resizing the crop is strictly locked to the destination's aspect ratio for both touch drag and gamepad (R2 + D-Pad) resizing.
 - Boundary collisions during aspect-ratio-locked resizing MUST be resolved by scaling both axes uniformly to prevent stretching or overlap.
 - The aspect ratio mode (`aspectRatioMode: AspectRatioMode`) MUST be saved and persisted inside the layout profile schema. The legacy `keepAspectRatio: Boolean` is automatically migrated to the corresponding aspect ratio mode for backward compatibility.
 
@@ -358,19 +358,24 @@ Both the Virtual Touchpad and Mirror Touch Projection use `TouchInjector` from t
 - `DisposableEffect(Unit)` stops the injector with the `"MirrorPresentation"` token when `MirrorScreen` leaves composition (mode switch).
 - `resetMirrorSessionState()` resets `isLocked`, `isTouchProjectionActive`, and `isFrozen` atomically — called from the Stop button (after saving state).
 
-### Aspect-Ratio-Locked Resizing & Collision Clamping
+### Aspect-Ratio-Locked Resizing & Adaptive Drag Handles
 
-Three modes govern aspect ratio relations (`FREE`, `TOP`, and `BOTTOM`):
+Three modes govern aspect ratio relations and drag handle visual styles (`FREE`, `TOP`, and `BOTTOM`):
 
-1. **Top Aspect Ratio Mode (`TOP`)**:
-   - Resizing destination bounds in the editor maintains their aspect ratio matching the source crop.
-   - Standard axis-by-axis collision clamping would break the aspect ratio if only one axis is clamped. To resolve this, a binary search collision resolver is used:
-     - **Aspect Ratio Fitting on Init/Crop Change**: When the source crop changes, `adjustDestSizeToAspectRatio` computes the target width and height to fit the new aspect ratio while respecting screen boundaries.
-     - **Dominant Axis Detection**: In `getTargetGeometryWithAspectRatio`, we compare the horizontal delta (\(\Delta x\)) with the normalized vertical delta (\(\Delta y \times \text{aspectRatio}\)) to identify the dominant scaling axis dictated by the drag gesture. The non-dominant axis is scaled proportionally to match the dominant axis.
-     - **Binary Search Collision Resolution**: In `clampCutoutResize`, if the target geometry overlaps with another cutout or goes off-screen, a binary search determines the maximum scaling factor \(t \in [0, 1]\) between the original and target geometry.
-2. **Bottom Aspect Ratio Mode (`BOTTOM`)**:
-   - Resizing destination bounds in the editor is free, but on every drag event, `adjustSourceCropToAspectRatio` scales the source crop normalized bounds to match the new destination aspect ratio, preserving the original crop center and making the best use of the original size it had when editing started.
-   - Resizing the source crop in the crop selector is locked to the destination aspect ratio. In `CropSelectorOverlay`, when dragging corner handles, `adjustCropResizeToAspectRatio` matches the aspect ratio of the crop to the fixed destination aspect ratio, scaling the rectangle down if it hits screen boundaries.
+1. **Free Aspect Ratio Mode (`FREE`)**:
+   - Both the source crop on the primary screen (`CropSelectorOverlay`) and destination cutouts on the secondary screen (`CutoutLayoutEditor`) use 4 **Edge Drag Handles** (Top, Bottom, Left, Right).
+   - Touch drag gestures and Gamepad R2 + D-Pad resize actions modify horizontal and vertical extents independently.
+   - The cropped texture fills the cutout fully without constraint.
+2. **Top Aspect Ratio Mode (`TOP`)**:
+   - Top source crop uses 4 **Edge Drag Handles** for independent touch/gamepad resizing; changes automatically update destination bounds via `adjustDestSizeToAspectRatio`.
+   - Bottom destination cutout switches to 4 **Corner Drag Handles** (`CornerResizeHandleView`), rendering custom diagonal rounded pill bars outside each corner (TL = -45°, TR = 45°, BL = 45°, BR = -45°).
+   - Dragging any corner handle in `CutoutLayoutEditor` invokes `clampCutoutResize(..., keepAspectRatio = true, cropRatio = cropRatio)` using dominant axis detection and binary-search collision resolution against screen bounds and neighboring cutouts.
+   - Gamepad R2 + D-Pad resizing on the bottom display calls `calculateProportionalResizedBounds` to expand or shrink the cutout by 1-step increments symmetrically while strictly preserving the top crop's aspect ratio.
+3. **Bottom Aspect Ratio Mode (`BOTTOM`)**:
+   - Bottom destination cutout uses 4 **Edge Drag Handles** for free touch/gamepad resizing; on every change, `adjustSourceCropToAspectRatio` scales the top source crop to match the destination aspect ratio, preserving the original crop center.
+   - Top source crop switches to 4 **Corner Drag Handles** (`CornerResizeHandleView`), rendering custom diagonal rounded pill bars outside each corner.
+   - Dragging any corner handle in `CropSelectorOverlay` invokes `clampCropResizeProportional`, anchoring the opposite corner and scaling width and height uniformly to match the secondary cutout's aspect ratio.
+   - Gamepad R2 + D-Pad resizing on the top display calls `calculateProportionalResizedBounds` to expand or shrink the crop symmetrically while strictly preserving the bottom cutout's aspect ratio.
 
 ### Session State Persistence
 

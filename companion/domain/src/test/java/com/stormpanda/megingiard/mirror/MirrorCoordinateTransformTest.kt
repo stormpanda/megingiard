@@ -1664,4 +1664,117 @@ class MirrorCoordinateTransformTest {
         assertEquals(0.5f, rightGeom.w, EPS) // Clamped to 0.7 - 0.2 = 0.5
         assertEquals(0.3f, rightGeom.h, EPS)
     }
+
+    @Test
+    fun `clampCropResizeProportional maintains exact aspect ratio for all corners`() {
+        val topW = 1920f
+        val topH = 1080f
+        val cutoutRatio = 16f / 9f // Physical ratio = 16:9
+        val expectedNormRatio = cutoutRatio * (topH / topW) // (16/9) * (1080/1920) = 1.0
+
+        // Test BOTTOM_RIGHT handle drag outwards (+dx, +dy)
+        val br =
+            clampCropResizeProportional(
+                handle = ResizeHandle.BOTTOM_RIGHT,
+                originalX = 0.2f,
+                originalY = 0.2f,
+                originalWidth = 0.4f,
+                originalHeight = 0.4f,
+                totalDx = 192f, // +0.1
+                totalDy = 108f, // +0.1
+                topScreenW = topW,
+                topScreenH = topH,
+                cutoutRatio = cutoutRatio,
+            )
+        assertEquals(0.2f, br.x, EPS)
+        assertEquals(0.2f, br.y, EPS)
+        assertEquals(0.5f, br.w, EPS)
+        assertEquals(0.5f, br.h, EPS)
+        assertEquals(expectedNormRatio, br.w / br.h, EPS)
+
+        // Test TOP_LEFT handle drag outwards (-dx, -dy)
+        val tl =
+            clampCropResizeProportional(
+                handle = ResizeHandle.TOP_LEFT,
+                originalX = 0.2f,
+                originalY = 0.2f,
+                originalWidth = 0.4f,
+                originalHeight = 0.4f,
+                totalDx = -192f, // -0.1 (moves left)
+                totalDy = -108f, // -0.1 (moves top)
+                topScreenW = topW,
+                topScreenH = topH,
+                cutoutRatio = cutoutRatio,
+            )
+        assertEquals(0.1f, tl.x, EPS)
+        assertEquals(0.1f, tl.y, EPS)
+        assertEquals(0.5f, tl.w, EPS)
+        assertEquals(0.5f, tl.h, EPS)
+        assertEquals(expectedNormRatio, tl.w / tl.h, EPS)
+    }
+
+    @Test
+    fun `clampCropResizeProportional clamps at display boundaries without deforming ratio`() {
+        val topW = 1920f
+        val topH = 1080f
+        val cutoutRatio = 16f / 9f // Norm ratio = 1.0
+
+        // Drag BOTTOM_RIGHT way beyond screen (e.g. +2000px)
+        val brClamped =
+            clampCropResizeProportional(
+                handle = ResizeHandle.BOTTOM_RIGHT,
+                originalX = 0.3f,
+                originalY = 0.5f,
+                originalWidth = 0.3f,
+                originalHeight = 0.3f,
+                totalDx = 2000f,
+                totalDy = 2000f,
+                topScreenW = topW,
+                topScreenH = topH,
+                cutoutRatio = cutoutRatio,
+            )
+        // Max height from 0.5 is 0.5, so max width is 0.5 (X: 0.3 + 0.5 = 0.8 <= 1.0)
+        assertEquals(0.3f, brClamped.x, EPS)
+        assertEquals(0.5f, brClamped.y, EPS)
+        assertEquals(0.5f, brClamped.w, EPS)
+        assertEquals(0.5f, brClamped.h, EPS)
+        assertEquals(1.0f, brClamped.w / brClamped.h, EPS)
+    }
+
+    @Test
+    fun `calculateProportionalResizedBounds expands and shrinks preserving ratio`() {
+        val screenW = 1000f
+        val screenH = 1000f
+        val normRatio = 1.5f // w / h = 1.5
+
+        val expanded =
+            calculateProportionalResizedBounds(
+                normX = 0.2f,
+                normY = 0.2f,
+                normW = 0.3f,
+                normH = 0.2f,
+                screenWidth = screenW,
+                screenHeight = screenH,
+                stepDelta = 1,
+                targetNormRatio = normRatio,
+            )
+        assertTrue(expanded.w > 0.3f)
+        assertTrue(expanded.h > 0.2f)
+        assertEquals(normRatio, expanded.w / expanded.h, EPS)
+
+        val shrunk =
+            calculateProportionalResizedBounds(
+                normX = 0.2f,
+                normY = 0.2f,
+                normW = 0.3f,
+                normH = 0.2f,
+                screenWidth = screenW,
+                screenHeight = screenH,
+                stepDelta = -1,
+                targetNormRatio = normRatio,
+            )
+        assertTrue(shrunk.w < 0.3f)
+        assertTrue(shrunk.h < 0.2f)
+        assertEquals(normRatio, shrunk.w / shrunk.h, EPS)
+    }
 }

@@ -1,6 +1,8 @@
 package com.stormpanda.megingiard.mirror
 
 import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.roundToInt
 
 private const val OVERLAP_TOLERANCE: Float = 0.0001f
@@ -981,4 +983,195 @@ fun calculateResizedBounds(
         hToggle = nextHToggle,
         vToggle = nextVToggle,
     )
+}
+
+/**
+ * Clamps proportional resize of a crop rectangle on the primary display anchored at the opposite corner.
+ * Used when aspect ratio is locked to BOTTOM (cutout aspect ratio is master).
+ *
+ * @param handle The active corner handle (TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT).
+ * @param originalX Starting normalized X of the crop rectangle.
+ * @param originalY Starting normalized Y of the crop rectangle.
+ * @param originalWidth Starting normalized width of the crop rectangle.
+ * @param originalHeight Starting normalized height of the crop rectangle.
+ * @param totalDx Accumulated drag delta in pixels along X.
+ * @param totalDy Accumulated drag delta in pixels along Y.
+ * @param topScreenW Width in pixels of the primary screen.
+ * @param topScreenH Height in pixels of the primary screen.
+ * @param cutoutRatio Physical aspect ratio of the follower/master cutout (cutoutWidthPx / cutoutHeightPx).
+ * @param minSize Minimum normalized size.
+ * @return The resulting clamped [ScreenCutoutGeometry].
+ */
+fun clampCropResizeProportional(
+    handle: ResizeHandle,
+    originalX: Float,
+    originalY: Float,
+    originalWidth: Float,
+    originalHeight: Float,
+    totalDx: Float,
+    totalDy: Float,
+    topScreenW: Float,
+    topScreenH: Float,
+    cutoutRatio: Float,
+    minSize: Float = MIN_CUTOUT_SIZE,
+): ScreenCutoutGeometry {
+    if (topScreenW <= 0f || topScreenH <= 0f || cutoutRatio <= 0f) {
+        return ScreenCutoutGeometry(originalX, originalY, originalWidth, originalHeight)
+    }
+
+    val normCropRatio = cutoutRatio * (topScreenH / topScreenW)
+    if (normCropRatio <= 0f) {
+        return ScreenCutoutGeometry(originalX, originalY, originalWidth, originalHeight)
+    }
+
+    val origRight = originalX + originalWidth
+    val origBottom = originalY + originalHeight
+
+    val rawW: Float
+    val rawH: Float
+    val maxW: Float
+    val maxH: Float
+
+    when (handle) {
+        ResizeHandle.TOP_LEFT -> {
+            rawW = originalWidth - totalDx / topScreenW
+            rawH = originalHeight - totalDy / topScreenH
+            maxW = origRight
+            maxH = origBottom
+        }
+
+        ResizeHandle.TOP_RIGHT, ResizeHandle.TOP -> {
+            rawW = originalWidth + totalDx / topScreenW
+            rawH = originalHeight - totalDy / topScreenH
+            maxW = 1f - originalX
+            maxH = origBottom
+        }
+
+        ResizeHandle.BOTTOM_LEFT, ResizeHandle.LEFT -> {
+            rawW = originalWidth - totalDx / topScreenW
+            rawH = originalHeight + totalDy / topScreenH
+            maxW = origRight
+            maxH = 1f - originalY
+        }
+
+        ResizeHandle.BOTTOM_RIGHT, ResizeHandle.BOTTOM, ResizeHandle.RIGHT -> {
+            rawW = originalWidth + totalDx / topScreenW
+            rawH = originalHeight + totalDy / topScreenH
+            maxW = 1f - originalX
+            maxH = 1f - originalY
+        }
+    }
+
+    val dw = rawW - originalWidth
+    val dh = rawH - originalHeight
+
+    val targetW: Float =
+        if (abs(dw) >= abs(dh * normCropRatio)) {
+            rawW
+        } else {
+            rawH * normCropRatio
+        }
+
+    val limitW = min(maxW, maxH * normCropRatio)
+    val minW = min(limitW, max(minSize, minSize * normCropRatio))
+
+    val finalW = targetW.coerceIn(minW, limitW)
+    val finalH = finalW / normCropRatio
+
+    val finalX: Float
+    val finalY: Float
+
+    when (handle) {
+        ResizeHandle.TOP_LEFT -> {
+            finalX = origRight - finalW
+            finalY = origBottom - finalH
+        }
+
+        ResizeHandle.TOP_RIGHT, ResizeHandle.TOP -> {
+            finalX = originalX
+            finalY = origBottom - finalH
+        }
+
+        ResizeHandle.BOTTOM_LEFT, ResizeHandle.LEFT -> {
+            finalX = origRight - finalW
+            finalY = originalY
+        }
+
+        ResizeHandle.BOTTOM_RIGHT, ResizeHandle.BOTTOM, ResizeHandle.RIGHT -> {
+            finalX = originalX
+            finalY = originalY
+        }
+    }
+
+    val clampedX = finalX.coerceIn(0f, 1f)
+    val clampedY = finalY.coerceIn(0f, 1f)
+    return ScreenCutoutGeometry(
+        x = clampedX,
+        y = clampedY,
+        w = finalW.coerceIn(0f, 1f - clampedX),
+        h = finalH.coerceIn(0f, 1f - clampedY),
+    )
+}
+
+/**
+ * Resizes cutout or crop bounds proportionally by 1 step while preserving the specified aspect ratio.
+ * Used for gamepad D-pad resizing when aspect ratio is locked.
+ *
+ * @param normX Current normalized X position.
+ * @param normY Current normalized Y position.
+ * @param normW Current normalized width.
+ * @param normH Current normalized height.
+ * @param screenWidth Screen width in pixels.
+ * @param screenHeight Screen height in pixels.
+ * @param stepDelta Positive (+1) to expand, negative (-1) to shrink.
+ * @param targetNormRatio The locked aspect ratio in normalized coordinates (w / h).
+ * @param minSizeRatio Minimum size in normalized coordinates.
+ * @param others Other cutouts on the display for collision detection (optional).
+ * @return The updated [ScreenCutoutGeometry].
+ */
+fun calculateProportionalResizedBounds(
+    normX: Float,
+    normY: Float,
+    normW: Float,
+    normH: Float,
+    screenWidth: Float,
+    screenHeight: Float,
+    stepDelta: Int,
+    targetNormRatio: Float,
+    minSizeRatio: Float = MIN_CUTOUT_SIZE,
+    others: List<ScreenCutout> = emptyList(),
+): ScreenCutoutGeometry {
+    if (screenWidth <= 0f || screenHeight <= 0f || targetNormRatio <= 0f || stepDelta == 0) {
+        return ScreenCutoutGeometry(normX, normY, normW, normH)
+    }
+
+    val stepW = if (targetNormRatio >= 1f) (1f / screenWidth) * targetNormRatio else (1f / screenWidth)
+    val stepH = stepW / targetNormRatio
+
+    val targetW = if (stepDelta > 0) normW + stepW else normW - stepW
+    val targetH = targetW / targetNormRatio
+
+    val minW = max(minSizeRatio, minSizeRatio * targetNormRatio)
+    val minH = minW / targetNormRatio
+    val maxW = min(1f, targetNormRatio)
+    val maxH = maxW / targetNormRatio
+
+    if (targetW < minW || targetH < minH || targetW > maxW || targetH > maxH) {
+        return ScreenCutoutGeometry(normX, normY, normW, normH)
+    }
+
+    val centerX = normX + normW / 2f
+    val centerY = normY + normH / 2f
+
+    val rawX = centerX - targetW / 2f
+    val rawY = centerY - targetH / 2f
+
+    val clampedX = rawX.coerceIn(0f, 1f - targetW)
+    val clampedY = rawY.coerceIn(0f, 1f - targetH)
+
+    if (others.isNotEmpty() && !isCutoutGeometryValid(clampedX, clampedY, targetW, targetH, others, minSizeRatio)) {
+        return ScreenCutoutGeometry(normX, normY, normW, normH)
+    }
+
+    return ScreenCutoutGeometry(clampedX, clampedY, targetW, targetH)
 }

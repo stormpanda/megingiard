@@ -322,6 +322,38 @@ fun MirrorEditorTopOverlay(
         val cur = currentLayout.mirrorCutouts.firstOrNull { it.id == cutoutId } ?: return
         val others = currentLayout.mirrorCutouts.filter { it.id != cutoutId }
 
+        if (cur.aspectRatioMode == AspectRatioMode.BOTTOM) {
+            val stepDelta =
+                if (dx > 0 || dy < 0) {
+                    1
+                } else if (dx < 0 || dy > 0) {
+                    -1
+                } else {
+                    0
+                }
+            if (stepDelta == 0) return
+            val cutoutRatio = (cur.destWidth * secScreenW) / (cur.destHeight * secScreenH)
+            val normCropRatio = cutoutRatio * (srcHeight / srcWidth)
+            val geom =
+                calculateProportionalResizedBounds(
+                    normX = cur.srcX,
+                    normY = cur.srcY,
+                    normW = cur.srcWidth,
+                    normH = cur.srcHeight,
+                    screenWidth = srcWidth,
+                    screenHeight = srcHeight,
+                    stepDelta = stepDelta,
+                    targetNormRatio = normCropRatio,
+                )
+            if (geom.x == cur.srcX && geom.y == cur.srcY && geom.w == cur.srcWidth && geom.h == cur.srcHeight) {
+                return
+            }
+            val updated = cur.copy(srcX = geom.x, srcY = geom.y, srcWidth = geom.w, srcHeight = geom.h)
+            val updatedList = currentLayout.mirrorCutouts.map { if (it.id == cur.id) updated else it }
+            MacroPadState.updateLayout(currentLayout.copy(mirrorCutouts = updatedList))
+            return
+        }
+
         val resized =
             calculateResizedBounds(
                 normX = cur.srcX,
@@ -406,6 +438,39 @@ fun MirrorEditorTopOverlay(
         val currentLayout = currentProfile.layouts.firstOrNull { it.id == currentProfile.activeLayoutId } ?: return
         val cur = currentLayout.mirrorCutouts.firstOrNull { it.id == cutoutId } ?: return
         val others = currentLayout.mirrorCutouts.filter { it.id != cutoutId }
+
+        if (cur.aspectRatioMode == AspectRatioMode.TOP) {
+            val stepDelta =
+                if (dx > 0 || dy < 0) {
+                    1
+                } else if (dx < 0 || dy > 0) {
+                    -1
+                } else {
+                    0
+                }
+            if (stepDelta == 0) return
+            val cropRatio = (cur.srcWidth * srcWidth) / (cur.srcHeight * srcHeight)
+            val normRatio = cropRatio * (secScreenH / secScreenW)
+            val geom =
+                calculateProportionalResizedBounds(
+                    normX = cur.destX,
+                    normY = cur.destY,
+                    normW = cur.destWidth,
+                    normH = cur.destHeight,
+                    screenWidth = secScreenW,
+                    screenHeight = secScreenH,
+                    stepDelta = stepDelta,
+                    targetNormRatio = normRatio,
+                    others = others,
+                )
+            if (geom.x == cur.destX && geom.y == cur.destY && geom.w == cur.destWidth && geom.h == cur.destHeight) {
+                return
+            }
+            val updated = cur.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h)
+            val updatedList = currentLayout.mirrorCutouts.map { if (it.id == cur.id) updated else it }
+            MacroPadState.updateLayout(currentLayout.copy(mirrorCutouts = updatedList))
+            return
+        }
 
         val resized =
             calculateResizedBounds(

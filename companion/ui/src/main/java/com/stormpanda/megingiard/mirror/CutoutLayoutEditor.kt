@@ -31,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -50,13 +51,20 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 private const val TAG = "CutoutLayoutEditor"
-private val BORDER_WIDTH = 1.dp
-private val EDGE_HANDLE_LENGTH = 36.dp
-private val EDGE_HANDLE_THICKNESS = 6.dp
-private val EDGE_HANDLE_MARGIN = 6.dp
-private val EDGE_TOUCH_LENGTH = 56.dp
-private val EDGE_TOUCH_THICKNESS = 36.dp
-private val EDGE_HANDLE_CORNER = 3.dp
+private val CLE_BORDER_WIDTH = 1.dp
+private val CLE_EDGE_HANDLE_LENGTH = 36.dp
+private val CLE_EDGE_HANDLE_THICKNESS = 6.dp
+private val CLE_EDGE_HANDLE_MARGIN = 6.dp
+private val CLE_EDGE_TOUCH_LENGTH = 56.dp
+private val CLE_EDGE_TOUCH_THICKNESS = 36.dp
+private val CLE_EDGE_HANDLE_CORNER = 3.dp
+
+private val CLE_CORNER_TOUCH_SIZE = 56.dp
+private val CLE_CORNER_HANDLE_MARGIN = 6.dp
+private const val CLE_ROTATION_TL = -45f
+private const val CLE_ROTATION_TR = 45f
+private const val CLE_ROTATION_BL = 45f
+private const val CLE_ROTATION_BR = -45f
 
 @Composable
 fun CutoutLayoutEditor() {
@@ -180,7 +188,7 @@ fun CutoutLayoutEditor() {
                                         color = if (isSelected) colors.accent.copy(alpha = 0.15f) else Color.White.copy(alpha = 0.05f),
                                         shape = CircleShape,
                                     ).border(
-                                        width = BORDER_WIDTH,
+                                        width = CLE_BORDER_WIDTH,
                                         color = if (isSelected) colors.accent.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.15f),
                                         shape = CircleShape,
                                     ),
@@ -194,7 +202,7 @@ fun CutoutLayoutEditor() {
                                         color = if (isSelected) colors.accent.copy(alpha = 0.15f) else Color.White.copy(alpha = 0.05f),
                                         shape = RoundedCornerShape(4.dp),
                                     ).border(
-                                        width = BORDER_WIDTH,
+                                        width = CLE_BORDER_WIDTH,
                                         color = if (isSelected) colors.accent.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.15f),
                                         shape = RoundedCornerShape(4.dp),
                                     ),
@@ -212,13 +220,8 @@ fun CutoutLayoutEditor() {
                     )
                 }
 
-                // Show edge drag handles if selected
+                // Show drag handles if selected
                 if (isSelected) {
-                    val marginPx = with(density) { EDGE_HANDLE_MARGIN.toPx() }
-                    val handleThicknessPx = with(density) { EDGE_HANDLE_THICKNESS.toPx() }
-                    val touchLengthPx = with(density) { EDGE_TOUCH_LENGTH.toPx() }
-                    val touchThicknessPx = with(density) { EDGE_TOUCH_THICKNESS.toPx() }
-
                     var dragStartX by remember(cutout.id) { mutableFloatStateOf(0f) }
                     var dragStartY by remember(cutout.id) { mutableFloatStateOf(0f) }
                     var dragStartW by remember(cutout.id) { mutableFloatStateOf(0f) }
@@ -314,65 +317,209 @@ fun CutoutLayoutEditor() {
                         MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
                     }
 
-                    // ── TOP Edge Handle (Horizontal Bar above Top edge) ───────────────
-                    val topCenterY = destTop - marginPx - handleThicknessPx / 2f
-                    val topTouchX = (destLeft + destW / 2f) - touchLengthPx / 2f
-                    val topTouchY = topCenterY - touchThicknessPx / 2f
-                    ResizeHandleView(
-                        offset = IntOffset(topTouchX.roundToInt(), topTouchY.roundToInt()),
-                        touchWidth = EDGE_TOUCH_LENGTH,
-                        touchHeight = EDGE_TOUCH_THICKNESS,
-                        handleWidth = EDGE_HANDLE_LENGTH,
-                        handleHeight = EDGE_HANDLE_THICKNESS,
-                        color = colors.accent,
-                        onDragStart = { captureDragStart() },
-                        onDrag = { totalDx, totalDy -> handleEdgeDrag(ResizeHandle.TOP, totalDx, totalDy) },
-                    )
+                    fun handleCornerDrag(
+                        handle: ResizeHandle,
+                        totalDx: Float,
+                        totalDy: Float,
+                    ) {
+                        val curLayout = currentLayoutState.value
+                        val curCutout = currentCutoutState.value
+                        val targetX =
+                            when (handle) {
+                                ResizeHandle.TOP_LEFT, ResizeHandle.BOTTOM_LEFT -> dragStartX + totalDx / screenW
+                                else -> dragStartX
+                            }
+                        val targetY =
+                            when (handle) {
+                                ResizeHandle.TOP_LEFT, ResizeHandle.TOP_RIGHT -> dragStartY + totalDy / screenH
+                                else -> dragStartY
+                            }
+                        val targetWidth =
+                            when (handle) {
+                                ResizeHandle.TOP_LEFT, ResizeHandle.BOTTOM_LEFT -> dragStartW - totalDx / screenW
+                                ResizeHandle.TOP_RIGHT, ResizeHandle.BOTTOM_RIGHT -> dragStartW + totalDx / screenW
+                                else -> dragStartW
+                            }
+                        val targetHeight =
+                            when (handle) {
+                                ResizeHandle.TOP_LEFT, ResizeHandle.TOP_RIGHT -> dragStartH - totalDy / screenH
+                                ResizeHandle.BOTTOM_LEFT, ResizeHandle.BOTTOM_RIGHT -> dragStartH + totalDy / screenH
+                                else -> dragStartH
+                            }
+                        val cropRatio = (curCutout.srcWidth * srcWidth) / (curCutout.srcHeight * srcHeight)
+                        val geom =
+                            clampCutoutResize(
+                                cutoutId = curCutout.id,
+                                handle = handle,
+                                originalX = dragStartX,
+                                originalY = dragStartY,
+                                originalWidth = dragStartW,
+                                originalHeight = dragStartH,
+                                targetX = targetX,
+                                targetY = targetY,
+                                targetWidth = targetWidth,
+                                targetHeight = targetHeight,
+                                allCutouts = curLayout.mirrorCutouts,
+                                keepAspectRatio = true,
+                                cropRatio = cropRatio,
+                                screenW = screenW,
+                                screenH = screenH,
+                            )
+                        val updated =
+                            curLayout.mirrorCutouts.map {
+                                if (it.id == curCutout.id) {
+                                    it.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h)
+                                } else {
+                                    it
+                                }
+                            }
+                        MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
+                    }
 
-                    // ── BOTTOM Edge Handle (Horizontal Bar below Bottom edge) ──────────
-                    val bottomCenterY = destTop + destH + marginPx + handleThicknessPx / 2f
-                    val bottomTouchX = (destLeft + destW / 2f) - touchLengthPx / 2f
-                    val bottomTouchY = bottomCenterY - touchThicknessPx / 2f
-                    ResizeHandleView(
-                        offset = IntOffset(bottomTouchX.roundToInt(), bottomTouchY.roundToInt()),
-                        touchWidth = EDGE_TOUCH_LENGTH,
-                        touchHeight = EDGE_TOUCH_THICKNESS,
-                        handleWidth = EDGE_HANDLE_LENGTH,
-                        handleHeight = EDGE_HANDLE_THICKNESS,
-                        color = colors.accent,
-                        onDragStart = { captureDragStart() },
-                        onDrag = { totalDx, totalDy -> handleEdgeDrag(ResizeHandle.BOTTOM, totalDx, totalDy) },
-                    )
+                    if (cutout.aspectRatioMode == AspectRatioMode.TOP) {
+                        // ── CORNER Handles (Aspect ratio locked to TOP) ──────────────────
+                        val cornerMarginPx = with(density) { CLE_CORNER_HANDLE_MARGIN.toPx() }
+                        val handleThicknessPx = with(density) { CLE_EDGE_HANDLE_THICKNESS.toPx() }
+                        val cornerTouchSizePx = with(density) { CLE_CORNER_TOUCH_SIZE.toPx() }
 
-                    // ── LEFT Edge Handle (Vertical Bar to the left of Left edge) ──────
-                    val leftCenterX = destLeft - marginPx - handleThicknessPx / 2f
-                    val leftTouchX = leftCenterX - touchThicknessPx / 2f
-                    val leftTouchY = (destTop + destH / 2f) - touchLengthPx / 2f
-                    ResizeHandleView(
-                        offset = IntOffset(leftTouchX.roundToInt(), leftTouchY.roundToInt()),
-                        touchWidth = EDGE_TOUCH_THICKNESS,
-                        touchHeight = EDGE_TOUCH_LENGTH,
-                        handleWidth = EDGE_HANDLE_THICKNESS,
-                        handleHeight = EDGE_HANDLE_LENGTH,
-                        color = colors.accent,
-                        onDragStart = { captureDragStart() },
-                        onDrag = { totalDx, totalDy -> handleEdgeDrag(ResizeHandle.LEFT, totalDx, totalDy) },
-                    )
+                        // Top-Left (TL)
+                        val tlCenterX = destLeft - cornerMarginPx - handleThicknessPx / 2f
+                        val tlCenterY = destTop - cornerMarginPx - handleThicknessPx / 2f
+                        CornerResizeHandleView(
+                            offset =
+                                IntOffset(
+                                    (tlCenterX - cornerTouchSizePx / 2f).roundToInt(),
+                                    (tlCenterY - cornerTouchSizePx / 2f).roundToInt(),
+                                ),
+                            touchSize = CLE_CORNER_TOUCH_SIZE,
+                            handleWidth = CLE_EDGE_HANDLE_LENGTH,
+                            handleHeight = CLE_EDGE_HANDLE_THICKNESS,
+                            rotation = CLE_ROTATION_TL,
+                            color = colors.accent,
+                            onDragStart = { captureDragStart() },
+                            onDrag = { totalDx, totalDy -> handleCornerDrag(ResizeHandle.TOP_LEFT, totalDx, totalDy) },
+                        )
 
-                    // ── RIGHT Edge Handle (Vertical Bar to the right of Right edge) ───
-                    val rightCenterX = destLeft + destW + marginPx + handleThicknessPx / 2f
-                    val rightTouchX = rightCenterX - touchThicknessPx / 2f
-                    val rightTouchY = (destTop + destH / 2f) - touchLengthPx / 2f
-                    ResizeHandleView(
-                        offset = IntOffset(rightTouchX.roundToInt(), rightTouchY.roundToInt()),
-                        touchWidth = EDGE_TOUCH_THICKNESS,
-                        touchHeight = EDGE_TOUCH_LENGTH,
-                        handleWidth = EDGE_HANDLE_THICKNESS,
-                        handleHeight = EDGE_HANDLE_LENGTH,
-                        color = colors.accent,
-                        onDragStart = { captureDragStart() },
-                        onDrag = { totalDx, totalDy -> handleEdgeDrag(ResizeHandle.RIGHT, totalDx, totalDy) },
-                    )
+                        // Top-Right (TR)
+                        val trCenterX = destLeft + destW + cornerMarginPx + handleThicknessPx / 2f
+                        val trCenterY = destTop - cornerMarginPx - handleThicknessPx / 2f
+                        CornerResizeHandleView(
+                            offset =
+                                IntOffset(
+                                    (trCenterX - cornerTouchSizePx / 2f).roundToInt(),
+                                    (trCenterY - cornerTouchSizePx / 2f).roundToInt(),
+                                ),
+                            touchSize = CLE_CORNER_TOUCH_SIZE,
+                            handleWidth = CLE_EDGE_HANDLE_LENGTH,
+                            handleHeight = CLE_EDGE_HANDLE_THICKNESS,
+                            rotation = CLE_ROTATION_TR,
+                            color = colors.accent,
+                            onDragStart = { captureDragStart() },
+                            onDrag = { totalDx, totalDy -> handleCornerDrag(ResizeHandle.TOP_RIGHT, totalDx, totalDy) },
+                        )
+
+                        // Bottom-Left (BL)
+                        val blCenterX = destLeft - cornerMarginPx - handleThicknessPx / 2f
+                        val blCenterY = destTop + destH + cornerMarginPx + handleThicknessPx / 2f
+                        CornerResizeHandleView(
+                            offset =
+                                IntOffset(
+                                    (blCenterX - cornerTouchSizePx / 2f).roundToInt(),
+                                    (blCenterY - cornerTouchSizePx / 2f).roundToInt(),
+                                ),
+                            touchSize = CLE_CORNER_TOUCH_SIZE,
+                            handleWidth = CLE_EDGE_HANDLE_LENGTH,
+                            handleHeight = CLE_EDGE_HANDLE_THICKNESS,
+                            rotation = CLE_ROTATION_BL,
+                            color = colors.accent,
+                            onDragStart = { captureDragStart() },
+                            onDrag = { totalDx, totalDy -> handleCornerDrag(ResizeHandle.BOTTOM_LEFT, totalDx, totalDy) },
+                        )
+
+                        // Bottom-Right (BR)
+                        val brCenterX = destLeft + destW + cornerMarginPx + handleThicknessPx / 2f
+                        val brCenterY = destTop + destH + cornerMarginPx + handleThicknessPx / 2f
+                        CornerResizeHandleView(
+                            offset =
+                                IntOffset(
+                                    (brCenterX - cornerTouchSizePx / 2f).roundToInt(),
+                                    (brCenterY - cornerTouchSizePx / 2f).roundToInt(),
+                                ),
+                            touchSize = CLE_CORNER_TOUCH_SIZE,
+                            handleWidth = CLE_EDGE_HANDLE_LENGTH,
+                            handleHeight = CLE_EDGE_HANDLE_THICKNESS,
+                            rotation = CLE_ROTATION_BR,
+                            color = colors.accent,
+                            onDragStart = { captureDragStart() },
+                            onDrag = { totalDx, totalDy -> handleCornerDrag(ResizeHandle.BOTTOM_RIGHT, totalDx, totalDy) },
+                        )
+                    } else {
+                        // ── EDGE Handles (FREE or BOTTOM aspect ratio) ───────────────────
+                        val marginPx = with(density) { CLE_EDGE_HANDLE_MARGIN.toPx() }
+                        val handleThicknessPx = with(density) { CLE_EDGE_HANDLE_THICKNESS.toPx() }
+                        val touchLengthPx = with(density) { CLE_EDGE_TOUCH_LENGTH.toPx() }
+                        val touchThicknessPx = with(density) { CLE_EDGE_TOUCH_THICKNESS.toPx() }
+
+                        // ── TOP Edge Handle (Horizontal Bar above Top edge) ───────────────
+                        val topCenterY = destTop - marginPx - handleThicknessPx / 2f
+                        val topTouchX = (destLeft + destW / 2f) - touchLengthPx / 2f
+                        val topTouchY = topCenterY - touchThicknessPx / 2f
+                        ResizeHandleView(
+                            offset = IntOffset(topTouchX.roundToInt(), topTouchY.roundToInt()),
+                            touchWidth = CLE_EDGE_TOUCH_LENGTH,
+                            touchHeight = CLE_EDGE_TOUCH_THICKNESS,
+                            handleWidth = CLE_EDGE_HANDLE_LENGTH,
+                            handleHeight = CLE_EDGE_HANDLE_THICKNESS,
+                            color = colors.accent,
+                            onDragStart = { captureDragStart() },
+                            onDrag = { totalDx, totalDy -> handleEdgeDrag(ResizeHandle.TOP, totalDx, totalDy) },
+                        )
+
+                        // ── BOTTOM Edge Handle (Horizontal Bar below Bottom edge) ──────────
+                        val bottomCenterY = destTop + destH + marginPx + handleThicknessPx / 2f
+                        val bottomTouchX = (destLeft + destW / 2f) - touchLengthPx / 2f
+                        val bottomTouchY = bottomCenterY - touchThicknessPx / 2f
+                        ResizeHandleView(
+                            offset = IntOffset(bottomTouchX.roundToInt(), bottomTouchY.roundToInt()),
+                            touchWidth = CLE_EDGE_TOUCH_LENGTH,
+                            touchHeight = CLE_EDGE_TOUCH_THICKNESS,
+                            handleWidth = CLE_EDGE_HANDLE_LENGTH,
+                            handleHeight = CLE_EDGE_HANDLE_THICKNESS,
+                            color = colors.accent,
+                            onDragStart = { captureDragStart() },
+                            onDrag = { totalDx, totalDy -> handleEdgeDrag(ResizeHandle.BOTTOM, totalDx, totalDy) },
+                        )
+
+                        // ── LEFT Edge Handle (Vertical Bar to the left of Left edge) ──────
+                        val leftCenterX = destLeft - marginPx - handleThicknessPx / 2f
+                        val leftTouchX = leftCenterX - touchThicknessPx / 2f
+                        val leftTouchY = (destTop + destH / 2f) - touchLengthPx / 2f
+                        ResizeHandleView(
+                            offset = IntOffset(leftTouchX.roundToInt(), leftTouchY.roundToInt()),
+                            touchWidth = CLE_EDGE_TOUCH_THICKNESS,
+                            touchHeight = CLE_EDGE_TOUCH_LENGTH,
+                            handleWidth = CLE_EDGE_HANDLE_THICKNESS,
+                            handleHeight = CLE_EDGE_HANDLE_LENGTH,
+                            color = colors.accent,
+                            onDragStart = { captureDragStart() },
+                            onDrag = { totalDx, totalDy -> handleEdgeDrag(ResizeHandle.LEFT, totalDx, totalDy) },
+                        )
+
+                        // ── RIGHT Edge Handle (Vertical Bar to the right of Right edge) ───
+                        val rightCenterX = destLeft + destW + marginPx + handleThicknessPx / 2f
+                        val rightTouchX = rightCenterX - touchThicknessPx / 2f
+                        val rightTouchY = (destTop + destH / 2f) - touchLengthPx / 2f
+                        ResizeHandleView(
+                            offset = IntOffset(rightTouchX.roundToInt(), rightTouchY.roundToInt()),
+                            touchWidth = CLE_EDGE_TOUCH_THICKNESS,
+                            touchHeight = CLE_EDGE_TOUCH_LENGTH,
+                            handleWidth = CLE_EDGE_HANDLE_THICKNESS,
+                            handleHeight = CLE_EDGE_HANDLE_LENGTH,
+                            color = colors.accent,
+                            onDragStart = { captureDragStart() },
+                            onDrag = { totalDx, totalDy -> handleEdgeDrag(ResizeHandle.RIGHT, totalDx, totalDy) },
+                        )
+                    }
                 }
             }
         }
@@ -464,7 +611,55 @@ private fun ResizeHandleView(
             modifier =
                 Modifier
                     .size(width = handleWidth, height = handleHeight)
-                    .background(color.copy(alpha = 0.75f), RoundedCornerShape(EDGE_HANDLE_CORNER)),
+                    .background(color.copy(alpha = 0.75f), RoundedCornerShape(CLE_EDGE_HANDLE_CORNER)),
+        )
+    }
+}
+
+@Composable
+private fun CornerResizeHandleView(
+    offset: IntOffset,
+    touchSize: Dp,
+    handleWidth: Dp,
+    handleHeight: Dp,
+    rotation: Float,
+    color: Color,
+    onDragStart: () -> Unit,
+    onDrag: (Float, Float) -> Unit,
+) {
+    val currentOnDragStart by rememberUpdatedState(onDragStart)
+    val currentOnDrag by rememberUpdatedState(onDrag)
+
+    Box(
+        modifier =
+            Modifier
+                .offset { offset }
+                .size(touchSize)
+                .pointerInput(Unit) {
+                    var accumulatedX = 0f
+                    var accumulatedY = 0f
+                    detectDragGestures(
+                        onDragStart = {
+                            accumulatedX = 0f
+                            accumulatedY = 0f
+                            currentOnDragStart()
+                        },
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            accumulatedX += dragAmount.x
+                            accumulatedY += dragAmount.y
+                            currentOnDrag(accumulatedX, accumulatedY)
+                        },
+                    )
+                },
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .size(width = handleWidth, height = handleHeight)
+                    .graphicsLayer { rotationZ = rotation }
+                    .background(color.copy(alpha = 0.75f), RoundedCornerShape(CLE_EDGE_HANDLE_CORNER)),
         )
     }
 }
