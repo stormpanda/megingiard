@@ -29,12 +29,12 @@
     <string name="steamgriddb_error_dismiss">OK</string>
     <string name="steamgriddb_cd_search">Search</string>
     <string name="steamgriddb_cd_cancel_edit">Cancel edit</string>
-    <string name="steamgriddb_search_placeholder">Enter search term…</string>
+    <string name="steamgriddb_search_placeholder">Enter search term</string>
     <string name="steamgriddb_preview_unavailable">Preview Unavailable</string>
     <string name="steamgriddb_cd_artwork_option">SteamGridDB Artwork Option</string>
-    <string name="steamgriddb_status_downloading">Downloading artwork…</string>
-    <string name="steamgriddb_status_searching">Searching SteamGridDB…</string>
-    <string name="steamgriddb_status_fetching">Fetching game covers…</string>
+    <string name="steamgriddb_status_downloading">Downloading artwork</string>
+    <string name="steamgriddb_status_searching">Searching SteamGridDB</string>
+    <string name="steamgriddb_status_fetching">Fetching game covers</string>
     <string name="gamefocus_option_change_search_term">Change Search Term</string>
     <string name="gamefocus_option_use_app_icon">Use App Icon</string>
 

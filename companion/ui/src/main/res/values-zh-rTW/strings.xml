@@ -104,11 +104,11 @@
     <string name="profile_settings_title">設定檔設定</string>
     <string name="profile_settings_name">設定檔名稱</string>
     <string name="profile_settings_app_mapping">分配應用程式</string>
-    <string name="profile_settings_search_apps">搜尋應用程式…</string>
+    <string name="profile_settings_search_apps">搜尋應用程式</string>
     <string name="profile_settings_no_apps">找不到應用程式</string>
     <string name="profile_settings_app_assigned">(已分配)</string>
     <string name="macropad_icon_picker_title">選擇圖示</string>
-    <string name="macropad_icon_picker_search">搜尋圖示…</string>
+    <string name="macropad_icon_picker_search">搜尋圖示</string>
     <string name="macropad_icon_picker_no_results">找不到圖示</string>
     <string name="macropad_icon_picker_filled">填滿</string>
     <string name="settings_section_config">分享與備份</string>
@@ -168,7 +168,7 @@
     <string name="macropad_action_mirror_touch_projection">觸控投影</string>
     <string name="macropad_action_fullscreen_mouse">全螢幕滑鼠</string>
     <string name="macropad_action_fullscreen_keyboard">全螢幕鍵盤</string>
-    <string name="settings_macropad_new_profile">新設定檔…</string>
+    <string name="settings_macropad_new_profile">新設定檔</string>
     <string name="settings_macropad_new_layout">新配置</string>
     <string name="settings_macropad_new">新建</string>
     <string name="macropad_reorder_profiles">重新排序設定檔</string>
@@ -202,15 +202,15 @@
     <string name="privd_deadzone_title">配置死區</string>
     <string name="privd_deadzone_left">左搖桿</string>
     <string name="privd_deadzone_right">右搖桿</string>
-    <string name="privd_recording_physical_title">正在錄製實體控制器…</string>
+    <string name="privd_recording_physical_title">正在錄製實體控制器</string>
     <string name="privd_recording_physical_hint">按下實體手把上的按鈕並移動搖桿。完成後點擊停止。</string>
     <string name="privd_recording_physical_stop">停止並儲存</string>
     <string name="privd_recording_physical_cancel">取消</string>
     <string name="privd_wizard_next">下一步</string>
     <string name="privd_wizard_back">上一步</string>
     <string name="privd_wizard_close">完成</string>
-    <string name="privd_wizard_pairing">正在配對…</string>
-    <string name="privd_wizard_bootstrapping">正在初始化…</string>
+    <string name="privd_wizard_pairing">正在配對</string>
+    <string name="privd_wizard_bootstrapping">正在初始化</string>
     <string name="privd_wizard_step1_intro">按照以下步驟啟用無線偵錯：</string>
     <string name="privd_wizard_step1_variant_dev_disabled_title">若尚未啟用開發人員選項：</string>
     <string name="privd_wizard_step1_substep_1">1. 開啟設定 → 關於掌上型主機</string>
@@ -324,12 +324,12 @@
     <string name="macropad_macro_record_gamepad">錄製</string>
     <string name="macropad_macro_record_touch">錄製</string>
     <string name="macropad_macro_step_delete_confirm">從巨集中移除此步驟？</string>
-    <string name="touch_recording_title">正在錄製螢幕觸控…</string>
+    <string name="touch_recording_title">正在錄製螢幕觸控</string>
     <string name="touch_recording_mode_tap">單次點擊</string>
     <string name="touch_recording_mode_gesture">觸控手勢</string>
     <string name="touch_recording_hint_tap">請在主螢幕上點擊目標位置。點擊位置將自動記錄。</string>
     <string name="touch_recording_hint_gesture">請在主螢幕上繪製觸控手勢。完成後點擊停止並儲存。</string>
-    <string name="touch_recording_radar_waiting">等待主螢幕上的觸控輸入…</string>
+    <string name="touch_recording_radar_waiting">等待主螢幕上的觸控輸入</string>
     <string name="touch_recording_radar_coords">X: %1$.1f%%  Y: %2$.1f%%</string>
     <string name="touch_recording_actions_tap" formatted="false">%1$d 次點擊</string>
     <string name="touch_recording_actions_gestures" formatted="false">%1$d 個手勢 (%2$d 點)</string>
@@ -406,7 +406,7 @@
     <string name="log_report_save_success">日誌報告已儲存。</string>
     <string name="log_report_save_error">儲存日誌報告失敗。</string>
     <string name="config_restore_dialog_title">還原備份</string>
-    <string name="config_restore_option_external">外部檔案…</string>
+    <string name="config_restore_option_external">外部檔案</string>
     <string name="config_restore_option_external_sub">從儲存空間選擇 .mgrd 檔案</string>
     <string name="config_restore_option_internal_sub">%1$d 個設定檔 • %2$d 個配置 • %3$d 個巨集</string>
     <string name="config_restore_automatic_backups">自動備份</string>
@@ -414,8 +414,8 @@
     <string name="config_import_archive_title">Megingiard 備份封存</string>
     <string name="config_import_show_details">顯示詳細資訊</string>
     <string name="config_import_hide_details">隱藏詳細資訊</string>
-    <string name="macropad_editor_copy_to_layout">複製到配置…</string>
-    <string name="macropad_editor_copy_profile_select">複製版面配置至…</string>
+    <string name="macropad_editor_copy_to_layout">複製到配置</string>
+    <string name="macropad_editor_copy_profile_select">複製配置至設定檔</string>
     <string name="macropad_editor_copy_layout_select">選擇目標配置</string>
     <string name="macropad_editor_copy_button_duplicate">重複按鈕</string>
     <string name="macropad_duplicate_profile">重複設定檔</string>
@@ -605,12 +605,12 @@
     <string name="steamgriddb_scrape_type_hero">主圖 (Hero)</string>
     <string name="steamgriddb_scrape_type_logo">標誌 (Logo)</string>
     <string name="steamgriddb_scrape_type_icon">圖示 (Icon)</string>
-    <string name="steamgriddb_scrape_searching_games">正在搜尋遊戲\u2026</string>
-    <string name="steamgriddb_scrape_loading_images">正在載入圖片\u2026</string>
+    <string name="steamgriddb_scrape_searching_games">正在搜尋遊戲</string>
+    <string name="steamgriddb_scrape_loading_images">正在載入圖片</string>
     <string name="steamgriddb_scrape_no_games_found">找不到遊戲。</string>
     <string name="steamgriddb_scrape_no_images_found">找不到此類型的圖片。</string>
     <string name="steamgriddb_scrape_error">錯誤: %1$s</string>
-    <string name="steamgriddb_scrape_downloading">正在下載圖片\u2026</string>
+    <string name="steamgriddb_scrape_downloading">正在下載圖片</string>
     <string name="steamgriddb_error_offline_title">連線已斷開</string>
     <string name="steamgriddb_error_offline_message">您目前處於離線狀態。請檢查您的網路連線並重試。</string>
     <string name="steamgriddb_error_rate_limited_title">觸發頻率限制</string>

@@ -122,13 +122,13 @@ Open Settings to create a layout.</string>
     <string name="profile_settings_title">Profile Settings</string>
     <string name="profile_settings_name">Profile Name</string>
     <string name="profile_settings_app_mapping">Assign App</string>
-    <string name="profile_settings_search_apps">Search apps…</string>
+    <string name="profile_settings_search_apps">Search Apps</string>
     <string name="profile_settings_no_apps">No applications found</string>
     <string name="profile_settings_app_assigned">(assigned)</string>
 
     <!-- MacroPad icon picker -->
     <string name="macropad_icon_picker_title">Select Icon</string>
-    <string name="macropad_icon_picker_search">Search icons…</string>
+    <string name="macropad_icon_picker_search">Search Icons</string>
     <string name="macropad_icon_picker_no_results">No icons found</string>
     <string name="macropad_icon_picker_filled">Filled</string>
     <string name="macropad_icon_clear_confirm_title">Clear selected icon?</string>
@@ -201,12 +201,12 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_fullscreen_keyboard">Fullscreen Keyboard</string>
     <string name="macropad_action_app_launcher">App Quick-Switch</string>
     <string name="app_launcher_picker_title">Select Application</string>
-    <string name="app_launcher_picker_select_app">Choose app…</string>
+    <string name="app_launcher_picker_select_app">Choose App</string>
     <string name="app_launcher_button_label_format">Open %1$s</string>
     <string name="floating_bubble_cd">Megingiard Floating Bubble Overlay</string>
 
     <!-- MacroPad profile / layout strings -->
-    <string name="settings_macropad_new_profile">New Profile…</string>
+    <string name="settings_macropad_new_profile">New Profile</string>
     <string name="settings_macropad_new_layout">New Layout</string>
     <string name="settings_macropad_new">New</string>
     <string name="macropad_reorder_profiles">Reorder Profiles</string>
@@ -251,11 +251,11 @@ Open Settings to create a layout.</string>
     <string name="privd_deadzone_left">Left stick</string>
     <string name="privd_deadzone_right">Right stick</string>
 
-    <string name="privd_recording_physical_title">Recording Controller Input…</string>
+    <string name="privd_recording_physical_title">Recording Controller Input</string>
     <string name="privd_recording_physical_hint">Press buttons and move sticks on your physical gamepad. Idle pauses are trimmed automatically.</string>
     <string name="privd_recording_physical_stick_neutral">Neutral</string>
     <string name="privd_recording_physical_actions_count" formatted="false">%1$d actions</string>
-    <string name="privd_recording_physical_no_buttons">Waiting for controller input…</string>
+    <string name="privd_recording_physical_no_buttons">Waiting for controller input</string>
     <string name="privd_recording_physical_dpad_title">D-Pad: %1$s</string>
     <string name="privd_recording_physical_stick_l_label">L Stick</string>
     <string name="privd_recording_physical_stick_r_label">R Stick</string>
@@ -266,8 +266,8 @@ Open Settings to create a layout.</string>
     <string name="privd_wizard_next">Next</string>
     <string name="privd_wizard_back">Back</string>
     <string name="privd_wizard_close">Done</string>
-    <string name="privd_wizard_pairing">Pairing…</string>
-    <string name="privd_wizard_bootstrapping">Bootstrapping…</string>
+    <string name="privd_wizard_pairing">Pairing</string>
+    <string name="privd_wizard_bootstrapping">Bootstrapping</string>
 
     <string name="privd_wizard_step1_intro">Follow these steps to enable Wireless Debugging:</string>
     <string name="privd_wizard_step1_variant_dev_disabled_title">If Developer options are NOT active yet:</string>
@@ -430,12 +430,12 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_recorded_steps_toast_multiple">%1$d steps recorded</string>
 
     <!-- Touch recording flow -->
-    <string name="touch_recording_title">Recording Screen Touch…</string>
+    <string name="touch_recording_title">Recording Screen Touch</string>
     <string name="touch_recording_mode_tap">Single Tap</string>
     <string name="touch_recording_mode_gesture">Touch Gesture</string>
     <string name="touch_recording_hint_tap">Tap the target location on the primary display. The tap position will be recorded automatically.</string>
     <string name="touch_recording_hint_gesture">Draw your touch gestures on the primary display. Tap Stop &amp; Save when finished.</string>
-    <string name="touch_recording_radar_waiting">Waiting for touch input on primary display…</string>
+    <string name="touch_recording_radar_waiting">Waiting for touch input on primary display</string>
     <string name="touch_recording_radar_coords">X: %1$.1f%%  Y: %2$.1f%%</string>
     <string name="touch_recording_actions_tap" formatted="false">%1$d tap</string>
     <string name="touch_recording_actions_gestures" formatted="false">%1$d gestures (%2$d pts)</string>
@@ -555,7 +555,7 @@ Open Settings to create a layout.</string>
 
     <!-- Restore backup selection dialog -->
     <string name="config_restore_dialog_title">Restore Backup</string>
-    <string name="config_restore_option_external">External File…</string>
+    <string name="config_restore_option_external">External File</string>
     <string name="config_restore_option_external_sub">Select a .mgrd file from storage</string>
     <string name="config_restore_option_internal_sub">%1$d profiles • %2$d layouts • %3$d macros</string>
     <string name="config_restore_automatic_backups">Automatic Backups</string>
@@ -565,8 +565,8 @@ Open Settings to create a layout.</string>
     <string name="config_import_hide_details">Hide Details</string>
 
     <!-- Copy macros/buttons/layouts to other profiles/layouts -->
-    <string name="macropad_editor_copy_to_layout">Copy to Layout…</string>
-    <string name="macropad_editor_copy_profile_select">Copy Layout to…</string>
+    <string name="macropad_editor_copy_to_layout">Copy to Layout</string>
+    <string name="macropad_editor_copy_profile_select">Copy Layout to Profile</string>
     <string name="macropad_editor_copy_layout_select">Select Target Layout</string>
     <string name="macropad_editor_copy_button_duplicate">Duplicate Button</string>
     <string name="macropad_duplicate_profile">Duplicate Profile</string>
@@ -798,7 +798,7 @@ Open Settings to create a layout.</string>
     <string name="settings_steamgriddb_test_title">Test Connection</string>
     <string name="settings_steamgriddb_test_desc">Verify that your API token is valid and can connect to SteamGridDB.</string>
     <string name="settings_steamgriddb_test_btn">Test</string>
-    <string name="settings_steamgriddb_status_testing">Testing...</string>
+    <string name="settings_steamgriddb_status_testing">Testing</string>
     <string name="settings_steamgriddb_status_connected">Connected</string>
     <string name="settings_steamgriddb_status_invalid">Invalid Token (401)</string>
     <string name="settings_steamgriddb_status_offline">Offline</string>
@@ -824,12 +824,12 @@ Open Settings to create a layout.</string>
     <string name="steamgriddb_scrape_type_hero">Hero</string>
     <string name="steamgriddb_scrape_type_logo">Logo</string>
     <string name="steamgriddb_scrape_type_icon">Icon</string>
-    <string name="steamgriddb_scrape_searching_games">Searching games...</string>
-    <string name="steamgriddb_scrape_loading_images">Loading images...</string>
+    <string name="steamgriddb_scrape_searching_games">Searching games</string>
+    <string name="steamgriddb_scrape_loading_images">Loading images</string>
     <string name="steamgriddb_scrape_no_games_found">No games found.</string>
     <string name="steamgriddb_scrape_no_images_found">No images found for this type.</string>
     <string name="steamgriddb_scrape_error">Error: %1$s</string>
-    <string name="steamgriddb_scrape_downloading">Downloading image...</string>
+    <string name="steamgriddb_scrape_downloading">Downloading image</string>
     <string name="steamgriddb_error_offline_title">Connection Offline</string>
     <string name="steamgriddb_error_offline_message">You are offline. Please check your internet connection and try again.</string>
     <string name="steamgriddb_error_rate_limited_title">Rate Limited</string>
@@ -957,7 +957,7 @@ Open Settings to create a layout.</string>
     <string name="gamepad_action_add">Add</string>
     <string name="gamepad_action_save">Save</string>
     <string name="gamepad_action_check">Check</string>
-    <string name="gamepad_action_checking">Checking…</string>
+    <string name="gamepad_action_checking">Checking</string>
     <string name="gamepad_action_new">New</string>
     <string name="gamepad_action_duplicate">Duplicate</string>
     <string name="gamepad_action_reorder">Reorder</string>
@@ -1157,7 +1157,7 @@ Open Settings to create a layout.</string>
     <string name="gamepad_toggle_off">OFF</string>
     <string name="gamepad_color_option">Color option %1$d</string>
     <string name="gamepad_color_selected">Selected</string>
-    <string name="gamepad_search_placeholder">Search…</string>
+    <string name="gamepad_search_placeholder">Search</string>
     <string name="gamepad_search_clear">Clear search</string>
     <string name="gamepad_category_all">All</string>
     <string name="gamepad_confirm_dialog_confirm">Confirm</string>
@@ -1180,8 +1180,8 @@ Open Settings to create a layout.</string>
     <string name="profile_settings_name_placeholder">e.g. Name of Game / App</string>
     <string name="quick_menu_layout_name_placeholder">e.g. Default, Combat, Menu</string>
     <string name="profile_settings_search_apps_desc">Filter installed apps by name or package</string>
-    <string name="profile_settings_search_apps_placeholder">Search apps…</string>
-    <string name="macropad_icon_picker_search_placeholder">Search icons…</string>
+    <string name="profile_settings_search_apps_placeholder">Search apps</string>
+    <string name="macropad_icon_picker_search_placeholder">Search icons</string>
     <string name="macropad_icon_picker_filled_desc">Toggle between solid and outline icon variants</string>
     <string name="gamepad_action_create">Create</string>
     <string name="gamepad_action_confirm">Confirm</string>

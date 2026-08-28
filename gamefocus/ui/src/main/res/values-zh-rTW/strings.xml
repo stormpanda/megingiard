@@ -29,12 +29,12 @@
     <string name="steamgriddb_error_dismiss">確定</string>
     <string name="steamgriddb_cd_search">搜尋</string>
     <string name="steamgriddb_cd_cancel_edit">取消編輯</string>
-    <string name="steamgriddb_search_placeholder">輸入搜尋關鍵字…</string>
+    <string name="steamgriddb_search_placeholder">輸入搜尋關鍵字</string>
     <string name="steamgriddb_preview_unavailable">無法預覽</string>
     <string name="steamgriddb_cd_artwork_option">SteamGridDB 封面選項</string>
-    <string name="steamgriddb_status_downloading">正在下載封面圖…</string>
-    <string name="steamgriddb_status_searching">正在搜尋 SteamGridDB…</string>
-    <string name="steamgriddb_status_fetching">正在取得遊戲封面…</string>
+    <string name="steamgriddb_status_downloading">正在下載封面圖</string>
+    <string name="steamgriddb_status_searching">正在搜尋 SteamGridDB</string>
+    <string name="steamgriddb_status_fetching">正在取得遊戲封面</string>
     <string name="gamefocus_option_change_search_term">更改搜尋關鍵字</string>
     <string name="gamefocus_option_use_app_icon">使用應用程式圖示</string>
 

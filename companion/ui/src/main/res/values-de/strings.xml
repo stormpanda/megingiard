@@ -125,13 +125,13 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="profile_settings_title">Profil-Einstellungen</string>
     <string name="profile_settings_name">Profilname</string>
     <string name="profile_settings_app_mapping">App zuweisen</string>
-    <string name="profile_settings_search_apps">Apps suchen…</string>
+    <string name="profile_settings_search_apps">Apps suchen</string>
     <string name="profile_settings_no_apps">Keine Apps gefunden</string>
     <string name="profile_settings_app_assigned">(zugewiesen)</string>
 
     <!-- MacroPad icon picker -->
     <string name="macropad_icon_picker_title">Icon auswählen</string>
-    <string name="macropad_icon_picker_search">Icons suchen\u2026</string>
+    <string name="macropad_icon_picker_search">Icons suchen</string>
     <string name="macropad_icon_picker_no_results">Keine Icons gefunden</string>
     <string name="macropad_icon_picker_filled">Ausgefüllt</string>
     <string name="macropad_icon_clear_confirm_title">Ausgewähltes Symbol entfernen?</string>
@@ -156,12 +156,12 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_action_fullscreen_keyboard">Vollbild-Tastatur</string>
     <string name="macropad_action_app_launcher">App Quick-Switch</string>
     <string name="app_launcher_picker_title">Anwendung auswählen</string>
-    <string name="app_launcher_picker_select_app">App wählen…</string>
+    <string name="app_launcher_picker_select_app">App wählen</string>
     <string name="app_launcher_button_label_format">Öffnen %1$s</string>
     <string name="floating_bubble_cd">Megingiard Schwebendes Bubble-Overlay</string>
 
     <!-- MacroPad settings (ToolSettingsPanel) -->
-    <string name="settings_macropad_new_profile">Neues Profil\u2026</string>
+    <string name="settings_macropad_new_profile">Neues Profil</string>
     <string name="settings_macropad_new_layout">Neues Layout</string>
     <string name="settings_macropad_new">Neu</string>
     <string name="macropad_reorder_profiles">Profile sortieren</string>
@@ -206,11 +206,11 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_deadzone_left">Linker Stick</string>
     <string name="privd_deadzone_right">Rechter Stick</string>
 
-    <string name="privd_recording_physical_title">Controller-Eingabe aufzeichnen…</string>
+    <string name="privd_recording_physical_title">Controller-Eingabe aufzeichnen</string>
     <string name="privd_recording_physical_hint">Drücke Tasten und bewege Sticks am Controller. Leerlaufpausen werden automatisch gekürzt.</string>
     <string name="privd_recording_physical_stick_neutral">Neutral</string>
     <string name="privd_recording_physical_actions_count" formatted="false">%1$d Aktionen</string>
-    <string name="privd_recording_physical_no_buttons">Warte auf Controller-Eingaben…</string>
+    <string name="privd_recording_physical_no_buttons">Warte auf Controller-Eingaben</string>
     <string name="privd_recording_physical_dpad_title">Steuerkreuz: %1$s</string>
     <string name="privd_recording_physical_stick_l_label">L-Stick</string>
     <string name="privd_recording_physical_stick_r_label">R-Stick</string>
@@ -221,8 +221,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_wizard_next">Weiter</string>
     <string name="privd_wizard_back">Zurück</string>
     <string name="privd_wizard_close">Fertig</string>
-    <string name="privd_wizard_pairing">Koppeln…</string>
-    <string name="privd_wizard_bootstrapping">Einrichten…</string>
+    <string name="privd_wizard_pairing">Koppeln</string>
+    <string name="privd_wizard_bootstrapping">Einrichten</string>
 
     <string name="privd_wizard_step1_intro">Folge diesen Schritten, um Drahtloses Debugging zu aktivieren:</string>
     <string name="privd_wizard_step1_variant_dev_disabled_title">Falls Entwickleroptionen NOCH NICHT aktiv sind:</string>
@@ -347,12 +347,12 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_macro_editor_save">Speichern</string>
 
     <!-- Touch-Aufzeichnung -->
-    <string name="touch_recording_title">Touch-Eingabe aufzeichnen…</string>
+    <string name="touch_recording_title">Touch-Eingabe aufzeichnen</string>
     <string name="touch_recording_mode_tap">Einzeltippen</string>
     <string name="touch_recording_mode_gesture">Touch-Geste</string>
     <string name="touch_recording_hint_tap">Tippe auf die gewünschte Stelle auf dem Hauptbildschirm. Die Position wird automatisch erfasst.</string>
     <string name="touch_recording_hint_gesture">Führe Touch-Gesten auf dem Hauptbildschirm aus. Tippe auf ‚Stopp &amp; Speichern‘, wenn du fertig bist.</string>
-    <string name="touch_recording_radar_waiting">Warte auf Touch-Eingabe auf dem Hauptbildschirm…</string>
+    <string name="touch_recording_radar_waiting">Warte auf Touch-Eingabe auf dem Hauptbildschirm</string>
     <string name="touch_recording_radar_coords">X: %1$.1f%%  Y: %2$.1f%%</string>
     <string name="touch_recording_actions_tap" formatted="false">%1$d Tippen</string>
     <string name="touch_recording_actions_gestures" formatted="false">%1$d Gesten (%2$d Pkt.)</string>
@@ -564,7 +564,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
 
     <!-- Restore backup selection dialog -->
     <string name="config_restore_dialog_title">Backup wiederherstellen</string>
-    <string name="config_restore_option_external">Externe Datei…</string>
+    <string name="config_restore_option_external">Externe Datei</string>
     <string name="config_restore_option_external_sub">Wählen Sie eine .mgrd-Sicherungsdatei aus</string>
     <string name="config_restore_option_internal_sub">%1$d Profile • %2$d Layouts • %3$d Makros</string>
     <string name="config_restore_automatic_backups">Automatische Sicherungen</string>
@@ -574,8 +574,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="config_import_hide_details">Details ausblenden</string>
 
     <!-- Copy macros/buttons/layouts to other profiles/layouts -->
-    <string name="macropad_editor_copy_to_layout">In Layout kopieren…</string>
-    <string name="macropad_editor_copy_profile_select">Layout kopieren nach…</string>
+    <string name="macropad_editor_copy_to_layout">In Layout kopieren</string>
+    <string name="macropad_editor_copy_profile_select">Layout in Profil kopieren</string>
     <string name="macropad_editor_copy_layout_select">Ziellayout auswählen</string>
     <string name="macropad_editor_copy_button_duplicate">Taste duplizieren</string>
     <string name="macropad_duplicate_profile">Profil duplizieren</string>
@@ -807,7 +807,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_steamgriddb_test_title">Verbindung testen</string>
     <string name="settings_steamgriddb_test_desc">Überprüft, ob dein API-Token eine Verbindung zu SteamGridDB herstellen kann.</string>
     <string name="settings_steamgriddb_test_btn">Testen</string>
-    <string name="settings_steamgriddb_status_testing">Wird getestet...</string>
+    <string name="settings_steamgriddb_status_testing">Wird getestet</string>
     <string name="settings_steamgriddb_status_connected">Verbunden</string>
     <string name="settings_steamgriddb_status_invalid">Ungültiges Token (401)</string>
     <string name="settings_steamgriddb_status_offline">Offline</string>
@@ -833,12 +833,12 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="steamgriddb_scrape_type_hero">Hero</string>
     <string name="steamgriddb_scrape_type_logo">Logo</string>
     <string name="steamgriddb_scrape_type_icon">Icon</string>
-    <string name="steamgriddb_scrape_searching_games">Spiele werden gesucht...</string>
-    <string name="steamgriddb_scrape_loading_images">Bilder werden geladen...</string>
+    <string name="steamgriddb_scrape_searching_games">Spiele werden gesucht</string>
+    <string name="steamgriddb_scrape_loading_images">Bilder werden geladen</string>
     <string name="steamgriddb_scrape_no_games_found">Keine Spiele gefunden.</string>
     <string name="steamgriddb_scrape_no_images_found">Keine Bilder für diesen Typ gefunden.</string>
     <string name="steamgriddb_scrape_error">Fehler: %1$s</string>
-    <string name="steamgriddb_scrape_downloading">Bild wird heruntergeladen...</string>
+    <string name="steamgriddb_scrape_downloading">Bild wird heruntergeladen</string>
     <string name="steamgriddb_error_offline_title">Verbindung offline</string>
     <string name="steamgriddb_error_offline_message">Du bist offline. Bitte überprüfe deine Internetverbindung und versuche es erneut.</string>
     <string name="steamgriddb_error_rate_limited_title">Anfragen begrenzt</string>
@@ -966,12 +966,12 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="gamepad_action_add">Hinzufügen</string>
     <string name="gamepad_action_save">Speichern</string>
     <string name="gamepad_action_check">Prüfen</string>
-    <string name="gamepad_action_checking">Prüfe…</string>
+    <string name="gamepad_action_checking">Prüfen</string>
     <string name="gamepad_action_new">Neu</string>
     <string name="gamepad_action_duplicate">Duplizieren</string>
     <string name="gamepad_action_reorder">Neu anordnen</string>
     <string name="gamepad_action_move">Verschieben</string>
-    <string name="gamepad_action_moving">Verschieben…</string>
+    <string name="gamepad_action_moving">Verschieben</string>
     <string name="gamepad_action_delete">Löschen</string>
     <string name="macropad_reorder_empty">Keine Einträge zum Neuanordnen</string>
     <string name="gamepad_action_appearance">Aussehen</string>
@@ -1166,7 +1166,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="gamepad_toggle_off">AUS</string>
     <string name="gamepad_color_option">Farboption %1$d</string>
     <string name="gamepad_color_selected">Ausgewählt</string>
-    <string name="gamepad_search_placeholder">Suchen…</string>
+    <string name="gamepad_search_placeholder">Suchen</string>
     <string name="gamepad_search_clear">Suche löschen</string>
     <string name="gamepad_category_all">Alle</string>
     <string name="gamepad_confirm_dialog_confirm">Bestätigen</string>
@@ -1189,8 +1189,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="profile_settings_name_placeholder">z. B. Name des Spiels / der App</string>
     <string name="quick_menu_layout_name_placeholder">z.B. Standard, Kampf, Menü</string>
     <string name="profile_settings_search_apps_desc">Installierte Apps nach Name oder Paket filtern</string>
-    <string name="profile_settings_search_apps_placeholder">Apps suchen…</string>
-    <string name="macropad_icon_picker_search_placeholder">Symbole suchen…</string>
+    <string name="profile_settings_search_apps_placeholder">Apps suchen</string>
+    <string name="macropad_icon_picker_search_placeholder">Symbole suchen</string>
     <string name="macropad_icon_picker_filled_desc">Zwischen ausgefüllten und Umriss-Symbolen umschalten</string>
     <string name="gamepad_action_create">Erstellen</string>
     <string name="gamepad_action_confirm">Bestätigen</string>
