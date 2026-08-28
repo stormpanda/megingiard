@@ -72,22 +72,24 @@ the universal "go back" mechanism throughout the app.
 - **Switch to Hub / Switch to Game Profile & Auto Switch Toggle** — rendered as a side-by-side action row at the bottom card. The primary manual action button displays "Switch to Hub" (`R.string.quick_menu_show_dashboard`) when MacroPad is visible, and "Switch to Game Profile" (`R.string.quick_menu_show_macropad`) when Companion Hub is visible. Tapping "Switch to Hub" sets `companionViewMode` to `DASHBOARD`, which locks the view mode to Dashboard and disables Auto Mode. Tapping "Switch to Game Profile" or an active profile button checks whether `companionViewMode` is `AUTO` and the selected profile matches display 1's focused package; if so, `companionViewMode` remains `AUTO` while returning to the profile view, fixing desynced view state without turning off Auto Switch. Otherwise, it sets `companionViewMode` to `MACROPAD`. Next to it, an "Auto Switch" (`R.string.quick_menu_auto_mode`) chip is displayed as a sticky toggle with a magic wand icon (`AutoFixHigh`). When Auto Mode is active (`companionViewMode = CompanionViewMode.AUTO`), the chip is illuminated with the primary accent color; tapping it freezes the current view mode and pauses profile auto-matching (keeping the Quick Menu open). When Auto Mode is inactive, tapping the chip re-enables `CompanionViewMode.AUTO`, triggers a single 360° magical shimmer rotation animation, and immediately re-evaluates the foreground app/emulator focus to match profiles and views dynamically. Whenever Auto Switch is turned off by any action other than tapping the Auto Switch chip itself (such as selecting a profile chip, selecting a layout chip, switching to hub, or picking a profile in editor), a Toast notification ("Auto Switch: off" / `R.string.toast_auto_switch_off`) is displayed on the bottom screen.
 - **Help** — icon button (`HelpIconButton`) rendered to the right of the Shut Off button; opens `QuickMenuHelpModal` which provides an in-app guide explaining all controls in the Quick Menu.
 
-### FR-PM5: Mirror Controls Card (Top Card)
+### FR-PM5: Split Upper Area — Screen Mirroring & Take Screenshot Cards
 
-- The top card slides in from the top of the screen and is **always shown** when the Quick Menu is
-  open (it is not conditional on mirroring being active). It contains:
-  - **Screen Mirroring** action button (left side): renders as "Screen Mirroring" on screen (resource
-    `R.string.quick_menu_screen_mirroring`) with an Edit icon, and opens Screen Mirroring edit mode (layout editor)
-    by setting `AppStateManager.setViewportEditActive(true)`. Disabled when not capturing or when in Companion Hub.
-  - **Start / Stop** icon button: starts mirroring via `AppStateManager.requestMirrorStart()` or
-    stops it via `requestMirrorStop()`. Shows a Play icon when not capturing, a Stop icon when
-    capturing. Disabled when in Companion Hub.
-  - **Freeze / Unfreeze** icon button: toggles `ScreenCaptureManager.toggleFrozen()`. Shows a Play
-    icon when frozen (to resume/unfreeze), and a Pause icon when capturing/active (to freeze). Tinted
-    with `colors.accent` when frozen. Disabled when not capturing or when in Companion Hub.
-  - **Screenshot** icon button (rightmost): requests a screenshot via `ScreenCaptureManager.requestScreenshot()`. Renders with a CameraAlt icon. Disabled when neither capturing nor connected to privileged mode. Unchanged by Companion Hub status.
-- All icon buttons in this card MUST have a minimum touch target of **48 dp**.
-- A short text label is rendered below each icon button to improve discoverability.
+- The top area slides in from the top of the screen and is **always shown** when the Quick Menu is
+  open (it is not conditional on mirroring being active). It is split into two distinct standalone cards rendered in a top row:
+  - **Screen Mirroring Card (Left Card):**
+    - Headline: "SCREEN MIRRORING" (`R.string.quick_menu_screen_mirroring`).
+    - **Start / Stop** icon button: starts mirroring via `AppStateManager.requestMirrorStart()` or
+      stops it via `requestMirrorStop()`. Shows a Play icon when not capturing, a Stop icon when
+      capturing. Disabled when in Companion Hub.
+    - **Freeze / Unfreeze** icon button: toggles `ScreenCaptureManager.toggleFrozen()`. Shows a Play
+      icon when frozen (to resume/unfreeze), and a Pause icon when capturing/active (to freeze). Tinted
+      with `colors.accent` when frozen. Disabled when not capturing or when in Companion Hub.
+  - **Take Screenshot Card (Right Card):**
+    - Headline: "TAKE SCREENSHOT" (`R.string.quick_menu_take_screenshot`).
+    - **Top Screenshot** icon button: captures Display 0 (Top Screen) via `ScreenCaptureManager.requestScreenshot(ScreenshotTarget.TOP)`. Uses Material Symbol `splitscreen_bottom` (inverted per layout orientation convention) with label "Top". Enabled when capturing or Privileged Mode is connected.
+    - **Bottom Screenshot** icon button: captures the secondary display (Bottom Screen) via `ScreenCaptureManager.requestScreenshot(ScreenshotTarget.BOTTOM)`. Uses Material Symbol `splitscreen_top` with label "Bottom". Auto-dismisses the Quick Menu overlay to capture a clean MacroPad/companion screen.
+    - **Both Screenshot** icon button: captures both screens simultaneously via `ScreenCaptureManager.requestScreenshot(ScreenshotTarget.BOTH)` and composites them into a vertical dual-screen image. Uses Material Symbol `splitscreen` with label "Both".
+- All icon buttons in these cards have compact vertical spacing with clear text labels rendered directly beneath each icon.
 
 ### FR-PM6: Injector Suspension While Open
 
@@ -111,11 +113,14 @@ MainAppScreen (or BackgroundMacroPadOverlay)
         ├── QuickMenuBarTab  — slim bar affordance at screen edge
         └── QuickMenu        — full-screen overlay when isQuickMenuOpen == true
               ├── Scrim (Color.Black @ 55% alpha)
-              ├── MirrorControlCard (standalone Composable, slides in from top)
-               │     ├── "Screen Mirroring" Bordered Row Button (Viewport Edit)
-               │     ├── Start/Stop IconButton
-               │     ├── Freeze/Unfreeze IconButton
-               │     └── Screenshot IconButton
+              ├── MirrorControlCard (standalone Composable Row, slides in from top)
+              │     ├── Left Card: SCREEN MIRRORING
+              │     │     ├── Start/Stop IconButton
+              │     │     └── Freeze/Unfreeze IconButton
+              │     └── Right Card: TAKE SCREENSHOT
+              │           ├── "Top" IconButton (MaterialSymbol "splitscreen_bottom")
+              │           ├── "Bottom" IconButton (MaterialSymbol "splitscreen_top")
+              │           └── "Both" IconButton (MaterialSymbol "splitscreen")
               └── Bottom Column card (inline Column, slides in from bottom)
                      ├── Profile chips row
                      ├── Layout chips row

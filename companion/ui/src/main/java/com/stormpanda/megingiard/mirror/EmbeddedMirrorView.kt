@@ -24,6 +24,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.macropad.MacroPadMediaRepository
 import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.privd.PrivdClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -134,18 +135,21 @@ fun EmbeddedMirrorView(
     // React to screenshot requests
     LaunchedEffect(screenshotRequested) {
         if (screenshotRequested) {
-            val tv = containerHolder.textureView
-            if (tv != null && tv.width > 0 && tv.height > 0) {
-                try {
-                    val bitmap = tv.bitmap
-                    if (bitmap != null) {
-                        ScreenCaptureManager.showScreenshotPreview(bitmap)
+            val target = ScreenCaptureManager.pendingScreenshotTarget.value ?: ScreenshotTarget.TOP
+            if (target == ScreenshotTarget.TOP && !PrivdClient.isConnected) {
+                val tv = containerHolder.textureView
+                if (tv != null && tv.width > 0 && tv.height > 0) {
+                    try {
+                        val bitmap = tv.bitmap
+                        if (bitmap != null) {
+                            ScreenCaptureManager.showScreenshotPreview(bitmap)
+                        }
+                    } catch (e: Exception) {
+                        AppLog.e(TAG, "Failed to capture TextureView bitmap for screenshot", e)
                     }
-                } catch (e: Exception) {
-                    AppLog.e(TAG, "Failed to capture TextureView bitmap for screenshot", e)
                 }
+                ScreenCaptureManager.consumeScreenshotRequest()
             }
-            ScreenCaptureManager.consumeScreenshotRequest()
         }
     }
 

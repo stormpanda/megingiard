@@ -6,14 +6,20 @@ import android.app.LocaleManager
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
 import android.media.MediaScannerConnection
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.os.Handler
 import android.os.LocaleList
+import android.os.Looper
 import android.os.Process
 import android.view.Display
+import android.view.PixelCopy
+import android.view.Window
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -77,6 +83,7 @@ import com.stormpanda.megingiard.mirror.MirrorRuntimePolicyState
 import com.stormpanda.megingiard.mirror.MirrorStrategy
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCaptureService
+import com.stormpanda.megingiard.mirror.ScreenshotTarget
 import com.stormpanda.megingiard.mirror.decideMirrorRuntimeAction
 import com.stormpanda.megingiard.mirror.isPrivdMirrorConnecting
 import com.stormpanda.megingiard.mirror.selectMirrorStrategy
@@ -106,13 +113,17 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.coroutines.resume
 
 private const val TAG = "MainActivity"
+private const val SCREENSHOT_EXIT_DELAY_MS = 200L
+private const val SCREENSHOT_COMPRESS_QUALITY = 100
 
 class MainActivity : ComponentActivity() {
     // ── File picker launchers ─────────────────────────────────────────────────
@@ -602,50 +613,142 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(Unit) {
                 ScreenCaptureManager.screenshotRequested.collect { requested ->
                     if (!requested) return@collect
-                    if (!ScreenCaptureManager.isCapturing.value) {
-                        if (PrivdClient.isConnected) {
-                            AppLog.i(TAG, "screenshotRequested → handling via privileged mode (mirroring not running)")
-                            launch(Dispatchers.IO) {
-                                try {
-                                    val filename = "Megingiard_Screenshot_${System.currentTimeMillis()}.png"
-                                    val picturesDir =
-                                        File(Environment.getExternalStorageDirectory(), ScreenCaptureManager.SCREENSHOT_SUBDIR)
-                                    if (!picturesDir.exists()) {
-                                        picturesDir.mkdirs()
+                    val target = ScreenCaptureManager.pendingScreenshotTarget.value ?: ScreenshotTarget.TOP
+                    AppLog.i(TAG, "screenshotRequested received for target: $target")
+
+                    launch(Dispatchers.IO) {
+                        try {
+                            when (target) {
+                                ScreenshotTarget.TOP -> {
+                                    if (PrivdClient.isConnected) {
+                                        val timestamp = System.currentTimeMillis()
+                                        val filename = "Megingiard_Screenshot_Top_$timestamp.png"
+                                        val picturesDir =
+                                            File(Environment.getExternalStorageDirectory(), ScreenCaptureManager.SCREENSHOT_SUBDIR)
+                                        if (!picturesDir.exists()) {
+                                            picturesDir.mkdirs()
+                                        }
+                                        val filepath = File(picturesDir, filename).absolutePath
+                                        val ok = PrivdClient.takeScreenshot(filepath)
+                                        if (ok) {
+                                            MediaScannerConnection.scanFile(this@MainActivity, arrayOf(filepath), null, null)
+                                            val bitmap = BitmapFactory.decodeFile(filepath)
+                                            if (bitmap != null) {
+                                                ScreenCaptureManager.showScreenshotPreview(bitmap)
+                                                withContext(Dispatchers.Main) {
+                                                    Toast.makeText(this@MainActivity, R.string.screenshot_saved, Toast.LENGTH_SHORT).show()
+                                                }
+                                            } else {
+                                                AppLog.e(TAG, "Failed to decode top screenshot file $filepath")
+                                                withContext(Dispatchers.Main) {
+                                                    Toast.makeText(this@MainActivity, R.string.screenshot_failed, Toast.LENGTH_SHORT).show()
+                                                }
+                                            }
+                                        } else {
+                                            AppLog.e(TAG, "Privileged screenshot failed via privd client")
+                                            withContext(Dispatchers.Main) {
+                                                Toast.makeText(this@MainActivity, R.string.screenshot_failed, Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                        ScreenCaptureManager.consumeScreenshotRequest()
+                                    } else if (!ScreenCaptureManager.isCapturing.value) {
+                                        AppLog.w(TAG, "Top screenshot requested but mirroring is not active and privd is not connected.")
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(this@MainActivity, R.string.screenshot_failed, Toast.LENGTH_SHORT).show()
+                                        }
+                                        ScreenCaptureManager.consumeScreenshotRequest()
                                     }
-                                    val filepath = File(picturesDir, filename).absolutePath
-                                    val ok = PrivdClient.takeScreenshot(filepath)
-                                    if (ok) {
-                                        MediaScannerConnection.scanFile(this@MainActivity, arrayOf(filepath), null, null)
-                                        val bitmap = BitmapFactory.decodeFile(filepath)
-                                        if (bitmap != null) {
-                                            ScreenCaptureManager.showScreenshotPreview(bitmap)
+                                    // If mirroring is active and privd is not connected, EmbeddedMirrorView handles it via TextureView.
+                                }
+
+                                ScreenshotTarget.BOTTOM -> {
+                                    withContext(Dispatchers.Main) {
+                                        if (AppStateManager.isQuickMenuOpen.value) {
+                                            AppStateManager.closeQuickMenu()
+                                        }
+                                    }
+                                    delay(SCREENSHOT_EXIT_DELAY_MS)
+                                    val bottomBitmap =
+                                        withContext(Dispatchers.Main) {
+                                            captureWindowBitmap(window)
+                                        }
+                                    if (bottomBitmap != null) {
+                                        saveBitmapToPictures(bottomBitmap, "Bottom")
+                                        ScreenCaptureManager.showScreenshotPreview(bottomBitmap)
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(this@MainActivity, R.string.screenshot_saved, Toast.LENGTH_SHORT).show()
+                                        }
+                                    } else {
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(this@MainActivity, R.string.screenshot_failed, Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                    ScreenCaptureManager.consumeScreenshotRequest()
+                                }
+
+                                ScreenshotTarget.BOTH -> {
+                                    withContext(Dispatchers.Main) {
+                                        if (AppStateManager.isQuickMenuOpen.value) {
+                                            AppStateManager.closeQuickMenu()
+                                        }
+                                    }
+                                    delay(SCREENSHOT_EXIT_DELAY_MS)
+                                    var topBitmap: Bitmap? = null
+                                    if (PrivdClient.isConnected) {
+                                        val picturesDir =
+                                            File(Environment.getExternalStorageDirectory(), ScreenCaptureManager.SCREENSHOT_SUBDIR)
+                                        if (!picturesDir.exists()) {
+                                            picturesDir.mkdirs()
+                                        }
+                                        val tempFile = File(picturesDir, ".temp_top_${System.currentTimeMillis()}.png")
+                                        val ok = PrivdClient.takeScreenshot(tempFile.absolutePath)
+                                        if (ok && tempFile.exists()) {
+                                            topBitmap = BitmapFactory.decodeFile(tempFile.absolutePath)
+                                            tempFile.delete()
+                                        }
+                                    }
+                                    if (topBitmap == null && ScreenCaptureManager.isFrozen.value) {
+                                        topBitmap =
+                                            ScreenCaptureManager.frozenBitmap.value?.let {
+                                                it.copy(Bitmap.Config.ARGB_8888, false)
+                                            }
+                                    }
+                                    val bottomBitmap =
+                                        withContext(Dispatchers.Main) {
+                                            captureWindowBitmap(window)
+                                        }
+                                    if (topBitmap != null && bottomBitmap != null) {
+                                        val stitched = stitchVertical(topBitmap, bottomBitmap)
+                                        topBitmap.recycle()
+                                        bottomBitmap.recycle()
+                                        val savedFile = saveBitmapToPictures(stitched, "Both")
+                                        if (savedFile != null) {
+                                            ScreenCaptureManager.showScreenshotPreview(stitched)
                                             withContext(Dispatchers.Main) {
                                                 Toast.makeText(this@MainActivity, R.string.screenshot_saved, Toast.LENGTH_SHORT).show()
                                             }
                                         } else {
-                                            AppLog.e(TAG, "Failed to decode screenshot file $filepath")
+                                            stitched.recycle()
                                             withContext(Dispatchers.Main) {
                                                 Toast.makeText(this@MainActivity, R.string.screenshot_failed, Toast.LENGTH_SHORT).show()
                                             }
                                         }
                                     } else {
-                                        AppLog.e(TAG, "Privileged screenshot failed via privd client")
+                                        topBitmap?.recycle()
+                                        bottomBitmap?.recycle()
+                                        AppLog.w(TAG, "ScreenshotTarget.BOTH failed: topBitmap=$topBitmap, bottomBitmap=$bottomBitmap")
                                         withContext(Dispatchers.Main) {
                                             Toast.makeText(this@MainActivity, R.string.screenshot_failed, Toast.LENGTH_SHORT).show()
                                         }
                                     }
-                                } catch (t: Throwable) {
-                                    AppLog.e(TAG, "Exception during privileged screenshot", t)
-                                    withContext(Dispatchers.Main) {
-                                        Toast.makeText(this@MainActivity, R.string.screenshot_failed, Toast.LENGTH_SHORT).show()
-                                    }
-                                } finally {
                                     ScreenCaptureManager.consumeScreenshotRequest()
                                 }
                             }
-                        } else {
-                            AppLog.w(TAG, "Screenshot requested but mirroring is not active and privd is not connected. Consuming request.")
+                        } catch (t: Throwable) {
+                            AppLog.e(TAG, "Exception during screenshot capture", t)
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(this@MainActivity, R.string.screenshot_failed, Toast.LENGTH_SHORT).show()
+                            }
                             ScreenCaptureManager.consumeScreenshotRequest()
                         }
                     }
@@ -752,5 +855,70 @@ class MainActivity : ComponentActivity() {
                 ConfigManager.setPendingUri(uri)
             }
         }
+    }
+
+    private suspend fun captureWindowBitmap(targetWindow: Window): Bitmap? =
+        suspendCancellableCoroutine { cont ->
+            val view = targetWindow.decorView
+            if (view.width <= 0 || view.height <= 0) {
+                cont.resume(null)
+                return@suspendCancellableCoroutine
+            }
+            val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+            try {
+                PixelCopy.request(
+                    targetWindow,
+                    bitmap,
+                    { result ->
+                        if (result == PixelCopy.SUCCESS) {
+                            cont.resume(bitmap)
+                        } else {
+                            bitmap.recycle()
+                            cont.resume(null)
+                        }
+                    },
+                    Handler(Looper.getMainLooper()),
+                )
+            } catch (e: Exception) {
+                AppLog.e(TAG, "PixelCopy error", e)
+                bitmap.recycle()
+                cont.resume(null)
+            }
+        }
+
+    private fun saveBitmapToPictures(
+        bitmap: Bitmap,
+        targetName: String,
+    ): File? =
+        try {
+            val timestamp = System.currentTimeMillis()
+            val filename = "Megingiard_Screenshot_${targetName}_$timestamp.png"
+            val picturesDir = File(Environment.getExternalStorageDirectory(), ScreenCaptureManager.SCREENSHOT_SUBDIR)
+            if (!picturesDir.exists()) {
+                picturesDir.mkdirs()
+            }
+            val file = File(picturesDir, filename)
+            file.outputStream().use { out ->
+                bitmap.compress(Bitmap.CompressFormat.PNG, SCREENSHOT_COMPRESS_QUALITY, out)
+            }
+            MediaScannerConnection.scanFile(this, arrayOf(file.absolutePath), null, null)
+            file
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Failed to save bitmap to pictures", e)
+            null
+        }
+
+    private fun stitchVertical(
+        top: Bitmap,
+        bottom: Bitmap,
+    ): Bitmap {
+        val width = maxOf(top.width, bottom.width)
+        val height = top.height + bottom.height
+        val combined = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(combined)
+        canvas.drawARGB(255, 0, 0, 0)
+        canvas.drawBitmap(top, (width - top.width) / 2f, 0f, null)
+        canvas.drawBitmap(bottom, (width - bottom.width) / 2f, top.height.toFloat(), null)
+        return combined
     }
 }

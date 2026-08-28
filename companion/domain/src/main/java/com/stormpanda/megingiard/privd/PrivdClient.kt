@@ -306,15 +306,19 @@ object PrivdClient {
             return ok
         }
 
-    suspend fun takeScreenshot(path: String): Boolean =
+    suspend fun takeScreenshot(
+        path: String,
+        displayId: Int? = null,
+    ): Boolean =
         commandMutex.withLock {
             if (!isConnected) return false
             val deferred = CompletableDeferred<Boolean>()
             screenshotDeferred = deferred
-            send("SCREENSHOT $path\n")
+            val cmd = if (displayId != null) "SCREENSHOT $displayId $path\n" else "SCREENSHOT $path\n"
+            send(cmd)
             val ok = withTimeoutOrNull(SCREENSHOT_TIMEOUT_MS) { deferred.await() } ?: false
             screenshotDeferred = null
-            AppLog.i(TAG, "takeScreenshot($path) -> $ok")
+            AppLog.i(TAG, "takeScreenshot($path, displayId=$displayId) -> $ok")
             return ok
         }
 

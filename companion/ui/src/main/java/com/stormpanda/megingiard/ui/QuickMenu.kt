@@ -56,6 +56,7 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.catalog.DisplayDetector
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.mirror.ScreenshotTarget
 import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdConnectionState
 import com.stormpanda.megingiard.ui.PrimaryModalConfig
@@ -143,7 +144,9 @@ fun QuickMenu(
                 colors = colors,
                 isCapturing = isCapturing,
                 isFrozen = isFrozen,
-                isScreenshotEnabled = isCapturing || isPrivdConnected,
+                isTopScreenshotEnabled = isCapturing || isPrivdConnected,
+                isBottomScreenshotEnabled = true,
+                isBothScreenshotEnabled = isCapturing || isPrivdConnected,
                 isCompanionHub = showIntegrationHome,
                 modifier =
                     Modifier
@@ -160,7 +163,9 @@ fun QuickMenu(
                     onDismiss()
                 },
                 onToggleFreeze = { ScreenCaptureManager.toggleFrozen() },
-                onTakeScreenshot = { ScreenCaptureManager.requestScreenshot() },
+                onTakeTopScreenshot = { ScreenCaptureManager.requestScreenshot(ScreenshotTarget.TOP) },
+                onTakeBottomScreenshot = { ScreenCaptureManager.requestScreenshot(ScreenshotTarget.BOTTOM) },
+                onTakeBothScreenshot = { ScreenCaptureManager.requestScreenshot(ScreenshotTarget.BOTH) },
             )
 
             // ── Bottom card — Profiles / Layouts / Actions ─────────────────
@@ -373,9 +378,19 @@ private fun QuickMenuHelpModal(
             description = stringResource(R.string.help_quickmenu_viewport_desc),
         )
         HelpEntry(
-            icon = Icons.Rounded.CameraAlt,
-            label = stringResource(R.string.help_quickmenu_screenshot_label),
-            description = stringResource(R.string.help_quickmenu_screenshot_desc),
+            symbolName = "splitscreen_bottom",
+            label = stringResource(R.string.help_quickmenu_screenshot_top_label),
+            description = stringResource(R.string.help_quickmenu_screenshot_top_desc),
+        )
+        HelpEntry(
+            symbolName = "splitscreen_top",
+            label = stringResource(R.string.help_quickmenu_screenshot_bottom_label),
+            description = stringResource(R.string.help_quickmenu_screenshot_bottom_desc),
+        )
+        HelpEntry(
+            symbolName = "splitscreen",
+            label = stringResource(R.string.help_quickmenu_screenshot_both_label),
+            description = stringResource(R.string.help_quickmenu_screenshot_both_desc),
         )
 
         HelpSection(stringResource(R.string.help_quickmenu_section_macropad))

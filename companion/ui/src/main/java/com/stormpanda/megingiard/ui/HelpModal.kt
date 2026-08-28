@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.macropad.MaterialSymbol
 import kotlinx.coroutines.launch
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -328,6 +329,7 @@ internal fun HelpEntry(
     label: String,
     description: String,
     icon: ImageVector? = null,
+    symbolName: String? = null,
     iconTint: Color? = null,
 ) {
     val colors = LocalAppColors.current
@@ -339,7 +341,18 @@ internal fun HelpEntry(
                 .padding(vertical = HM_ENTRY_V_PADDING),
         verticalAlignment = Alignment.Top,
     ) {
-        if (icon != null) {
+        if (symbolName != null) {
+            MaterialSymbol(
+                name = symbolName,
+                size = HM_ENTRY_ICON_SIZE,
+                tint = tint,
+                modifier =
+                    Modifier
+                        .size(HM_ENTRY_ICON_SIZE)
+                        .padding(top = HM_ENTRY_ICON_TOP_PADDING),
+            )
+            Spacer(Modifier.width(HM_ENTRY_ICON_SPACER))
+        } else if (icon != null) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,

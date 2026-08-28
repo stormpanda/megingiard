@@ -330,6 +330,13 @@ Open Settings to create a layout.</string>
     <string name="mirror_control_label_freeze">Freeze</string>
     <string name="mirror_control_label_unfreeze">Unfreeze</string>
     <string name="mirror_control_label_screenshot">Screenshot</string>
+    <string name="quick_menu_take_screenshot">Take Screenshot</string>
+    <string name="quick_menu_screenshot_top">Top</string>
+    <string name="quick_menu_screenshot_bottom">Bottom</string>
+    <string name="quick_menu_screenshot_both">Both</string>
+    <string name="cd_screenshot_top">Take screenshot of top screen</string>
+    <string name="cd_screenshot_bottom">Take screenshot of bottom screen</string>
+    <string name="cd_screenshot_both">Take screenshot of both screens</string>
     <string name="screenshot_saved">Screenshot saved to Pictures/Megingiard</string>
     <string name="screenshot_failed">Failed to save screenshot</string>
 
@@ -687,7 +694,13 @@ Open Settings to create a layout.</string>
     <string name="help_quickmenu_freeze_desc">Freezes the mirrored image so it shows a still frame instead of the live feed. Useful for pausing a game scene while you read it carefully.</string>
     <string name="help_quickmenu_viewport_desc">Opens the Cutout Layout Editor on the secondary screen so you can resize, move, or add transparent cutout windows in the mirror overlay.</string>
     <string name="help_quickmenu_screenshot_label">Take Screenshot</string>
-    <string name="help_quickmenu_screenshot_desc">Takes a screenshot of the main screen. If mirroring is not active, this requires Privileged Mode to be connected.</string>
+    <string name="help_quickmenu_screenshot_desc">Takes a screenshot of the selected screen. If mirroring is not active, top screen capture requires Privileged Mode to be connected.</string>
+    <string name="help_quickmenu_screenshot_top_label">Top Screen Screenshot</string>
+    <string name="help_quickmenu_screenshot_top_desc">Takes a screenshot of the top screen. If mirroring is not active, this requires Privileged Mode to be connected.</string>
+    <string name="help_quickmenu_screenshot_bottom_label">Bottom Screen Screenshot</string>
+    <string name="help_quickmenu_screenshot_bottom_desc">Takes a clean screenshot of the bottom screen layout.</string>
+    <string name="help_quickmenu_screenshot_both_label">Dual Screen Screenshot</string>
+    <string name="help_quickmenu_screenshot_both_desc">Takes a simultaneous screenshot of both screens and stitches them vertically into a single dual-screen image.</string>
     <string name="help_quickmenu_section_macropad">MacroPad controls (bottom card)</string>
     <string name="help_quickmenu_profiles_desc">Tap a chip to instantly switch to a different game profile (deactivates Auto Switch). The currently active profile is highlighted. Profiles and their layouts are created and managed in the Edit Profile/Layout screen.</string>
     <string name="help_quickmenu_layouts_desc">Tap a chip to switch to a different layout within the current profile (deactivates Auto Switch). Only layouts marked as enabled in the editor appear here.</string>

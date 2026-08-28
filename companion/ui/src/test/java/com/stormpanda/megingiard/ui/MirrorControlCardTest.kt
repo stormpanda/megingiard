@@ -5,7 +5,6 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.stormpanda.megingiard.settings.ThemeMode
 import org.junit.Assert.assertFalse
@@ -17,7 +16,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * Robolectric Compose UI test for [MirrorControlCard] button enabled states in Companion Hub mode.
+ * Robolectric Compose UI test for [MirrorControlCard] button enabled states and screenshot actions.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
@@ -30,7 +29,9 @@ class MirrorControlCardTest {
         val testColors = paletteFor(ThemeMode.DARK)
         var stopClicked = false
         var freezeClicked = false
-        var screenshotClicked = false
+        var topScreenshotClicked = false
+        var bottomScreenshotClicked = false
+        var bothScreenshotClicked = false
 
         composeTestRule.setContent {
             CompositionLocalProvider(LocalAppColors provides testColors) {
@@ -38,12 +39,16 @@ class MirrorControlCardTest {
                     colors = testColors,
                     isCapturing = true,
                     isFrozen = false,
-                    isScreenshotEnabled = true,
+                    isTopScreenshotEnabled = true,
+                    isBottomScreenshotEnabled = true,
+                    isBothScreenshotEnabled = true,
                     isCompanionHub = true,
                     onStart = {},
                     onStop = { stopClicked = true },
                     onToggleFreeze = { freezeClicked = true },
-                    onTakeScreenshot = { screenshotClicked = true },
+                    onTakeTopScreenshot = { topScreenshotClicked = true },
+                    onTakeBottomScreenshot = { bottomScreenshotClicked = true },
+                    onTakeBothScreenshot = { bothScreenshotClicked = true },
                 )
             }
         }
@@ -59,10 +64,18 @@ class MirrorControlCardTest {
         assertFalse("stopClicked should be false when in Companion Hub", stopClicked)
         assertFalse("freezeClicked should be false when in Companion Hub", freezeClicked)
 
-        // Screenshot button remains enabled
-        composeTestRule.onNodeWithContentDescription("Screenshot").assertIsEnabled()
-        composeTestRule.onNodeWithContentDescription("Screenshot").performClick()
-        assertTrue("screenshotClicked should be true", screenshotClicked)
+        // Screenshot buttons remain enabled
+        composeTestRule.onNodeWithContentDescription("Take screenshot of top screen").assertIsEnabled()
+        composeTestRule.onNodeWithContentDescription("Take screenshot of top screen").performClick()
+        assertTrue("topScreenshotClicked should be true", topScreenshotClicked)
+
+        composeTestRule.onNodeWithContentDescription("Take screenshot of bottom screen").assertIsEnabled()
+        composeTestRule.onNodeWithContentDescription("Take screenshot of bottom screen").performClick()
+        assertTrue("bottomScreenshotClicked should be true", bottomScreenshotClicked)
+
+        composeTestRule.onNodeWithContentDescription("Take screenshot of both screens").assertIsEnabled()
+        composeTestRule.onNodeWithContentDescription("Take screenshot of both screens").performClick()
+        assertTrue("bothScreenshotClicked should be true", bothScreenshotClicked)
     }
 
     @Test
@@ -77,12 +90,16 @@ class MirrorControlCardTest {
                     colors = testColors,
                     isCapturing = true,
                     isFrozen = false,
-                    isScreenshotEnabled = true,
+                    isTopScreenshotEnabled = true,
+                    isBottomScreenshotEnabled = true,
+                    isBothScreenshotEnabled = true,
                     isCompanionHub = false,
                     onStart = {},
                     onStop = { stopClicked = true },
                     onToggleFreeze = { freezeClicked = true },
-                    onTakeScreenshot = {},
+                    onTakeTopScreenshot = {},
+                    onTakeBottomScreenshot = {},
+                    onTakeBothScreenshot = {},
                 )
             }
         }
