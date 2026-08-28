@@ -724,7 +724,9 @@ fun MacroPadEditor(
                                                 profile = prof,
                                                 existingNames = profiles.filter { it.id != prof.id }.map { it.name },
                                                 accentColor = colors.accent,
-                                                onDiscard = { MacroPadNavState.pop() },
+                                                onNameChange = { name ->
+                                                    MacroPadState.renameProfile(prof.id, name)
+                                                },
                                                 onUnlinkApp = {
                                                     val unlinked = prof.copy(association = null)
                                                     MacroPadState.updateProfile(unlinked)
@@ -745,10 +747,6 @@ fun MacroPadEditor(
                                                     DialogToastManager.show(
                                                         context.getString(R.string.macropad_profile_deleted_toast, deletedName),
                                                     )
-                                                },
-                                                onSave = { name ->
-                                                    MacroPadState.renameProfile(prof.id, name)
-                                                    MacroPadNavState.pop()
                                                 },
                                             )
                                         }

@@ -205,6 +205,43 @@ internal fun EditLayoutSubPageContent(
         onClick = { onOpenColorSubMenu(LayoutColorTarget.BG) },
     )
 
+    ColorPreviewInfoBox(
+        title = stringResource(R.string.macropad_editor_color_preview_title),
+        description = stringResource(R.string.macropad_editor_color_preview_desc),
+        savedPreview = {
+            SwordsButtonPreview(
+                textColor = savedResolvedText,
+                borderColor = savedResolvedBorder,
+                bgColor = savedResolvedBg,
+                isIconOnly = false,
+            )
+        },
+        currentPreview = {
+            SwordsButtonPreview(
+                textColor = currentResolvedText,
+                borderColor = currentResolvedBorder,
+                bgColor = currentResolvedBg,
+                isIconOnly = false,
+            )
+        },
+    )
+
+    // ── Save & Exit Action Row ───────────────────────────────────────────────
+    GamepadSaveExitActionRow(
+        title = stringResource(R.string.macropad_editor_save_button_colors_title),
+        description = stringResource(R.string.macropad_editor_save_button_colors_desc),
+        pulseOnChanges = hasColorChanges,
+        saveActionText = stringResource(R.string.gamepad_action_confirm),
+        saveIcon = Icons.Rounded.Save,
+        enabled = true,
+        showExitPrompt = promptState.showExitPrompt,
+        onDismissPrompt = promptState.dismissPrompt,
+        saveFocusRequester = promptState.focusRequester,
+        bringIntoViewRequester = promptState.bringIntoViewRequester,
+        onSave = promptState.onSave,
+        onDiscard = promptState.onDiscard,
+    )
+
     GamepadSectionHeader(
         text = stringResource(R.string.macropad_editor_section_visibility_behavior),
         color = accentColor,
@@ -246,49 +283,6 @@ internal fun EditLayoutSubPageContent(
         isDestructive = true,
         icon = Icons.Rounded.Delete,
         onConfirm = onDeleteLayout,
-    )
-
-    // ── Save Section ─────────────────────────────────────────────────
-    GamepadSectionHeader(
-        text = stringResource(R.string.macropad_editor_section_save),
-        color = accentColor,
-    )
-
-    ColorPreviewInfoBox(
-        title = stringResource(R.string.macropad_editor_color_preview_title),
-        description = stringResource(R.string.macropad_editor_color_preview_desc),
-        savedPreview = {
-            SwordsButtonPreview(
-                textColor = savedResolvedText,
-                borderColor = savedResolvedBorder,
-                bgColor = savedResolvedBg,
-                isIconOnly = false,
-            )
-        },
-        currentPreview = {
-            SwordsButtonPreview(
-                textColor = currentResolvedText,
-                borderColor = currentResolvedBorder,
-                bgColor = currentResolvedBg,
-                isIconOnly = false,
-            )
-        },
-    )
-
-    // ── Save & Exit Action Row ───────────────────────────────────────────────
-    GamepadSaveExitActionRow(
-        title = stringResource(R.string.macropad_editor_save_button_colors_title),
-        description = stringResource(R.string.macropad_editor_save_button_colors_desc),
-        pulseOnChanges = hasColorChanges,
-        saveActionText = stringResource(R.string.gamepad_action_confirm),
-        saveIcon = Icons.Rounded.Save,
-        enabled = true,
-        showExitPrompt = promptState.showExitPrompt,
-        onDismissPrompt = promptState.dismissPrompt,
-        saveFocusRequester = promptState.focusRequester,
-        bringIntoViewRequester = promptState.bringIntoViewRequester,
-        onSave = promptState.onSave,
-        onDiscard = promptState.onDiscard,
     )
 }
 

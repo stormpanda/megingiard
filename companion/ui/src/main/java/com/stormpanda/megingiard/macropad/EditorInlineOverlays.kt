@@ -122,35 +122,20 @@ internal fun NewProfileSubPageContent(
     )
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun EditProfileSubPageContent(
     profile: PadProfile,
     existingNames: List<String>,
     accentColor: Color,
-    onDiscard: () -> Unit = {},
+    onNameChange: (String) -> Unit,
     onUnlinkApp: () -> Unit,
     onDeleteProfile: () -> Unit,
-    onSave: (name: String) -> Unit,
 ) {
     val context = LocalContext.current
-    var nameText by remember(profile) { mutableStateOf(profile.name) }
+    var nameText by remember(profile.id, profile.name) { mutableStateOf(profile.name) }
     val normalizedName = nameText.trim()
     val isDuplicate = existingNames.any { it.equals(normalizedName, ignoreCase = true) }
     val hasError = normalizedName.isEmpty() || isDuplicate
-    val isConfirmEnabled = !hasError
-    val hasChanges = normalizedName != profile.name
-
-    val promptState =
-        rememberSaveExitPromptState(
-            hasChanges = hasChanges,
-            onSave = {
-                if (isConfirmEnabled) {
-                    onSave(normalizedName)
-                }
-            },
-            onDiscard = onDiscard,
-        )
 
     GamepadTextFieldCard(
         title = stringResource(R.string.profile_settings_name),
@@ -162,7 +147,13 @@ internal fun EditProfileSubPageContent(
             },
         placeholder = stringResource(R.string.profile_settings_name_placeholder),
         value = nameText,
-        onValueChange = { nameText = it },
+        onValueChange = {
+            nameText = it
+            val trimmed = it.trim()
+            if (trimmed.isNotEmpty() && !existingNames.any { n -> n.equals(trimmed, ignoreCase = true) }) {
+                onNameChange(trimmed)
+            }
+        },
         icon = Icons.Rounded.Edit,
         isError = hasError,
         modifier = Modifier.firstDeckItem(),
@@ -219,27 +210,6 @@ internal fun EditProfileSubPageContent(
         isDestructive = true,
         icon = Icons.Rounded.Delete,
         onConfirm = onDeleteProfile,
-    )
-
-    // ── Save Section ─────────────────────────────────────────────────
-    GamepadSectionHeader(
-        text = stringResource(R.string.macropad_editor_section_save),
-        color = accentColor,
-    )
-
-    GamepadSaveExitActionRow(
-        title = stringResource(R.string.macropad_editor_save_profile_title),
-        description = stringResource(R.string.macropad_editor_edit_profile_desc),
-        pulseOnChanges = hasChanges,
-        saveActionText = stringResource(R.string.gamepad_action_save),
-        saveIcon = Icons.Rounded.Save,
-        enabled = isConfirmEnabled,
-        showExitPrompt = promptState.showExitPrompt,
-        onDismissPrompt = promptState.dismissPrompt,
-        saveFocusRequester = promptState.focusRequester,
-        bringIntoViewRequester = promptState.bringIntoViewRequester,
-        onSave = promptState.onSave,
-        onDiscard = promptState.onDiscard,
     )
 }
 
