@@ -50,6 +50,11 @@ private const val CS_ROTATION_TR = 45f
 private const val CS_ROTATION_BL = 45f
 private const val CS_ROTATION_BR = -45f
 
+private const val CS_FALLBACK_SRC_WIDTH = 1920f
+private const val CS_FALLBACK_SRC_HEIGHT = 1080f
+private const val CS_FALLBACK_SEC_WIDTH = 1240f
+private const val CS_FALLBACK_SEC_HEIGHT = 1080f
+
 @Composable
 fun CropSelectorOverlay(
     cutoutId: String,
@@ -66,13 +71,13 @@ fun CropSelectorOverlay(
 
     val captureSourceWidth by ScreenCaptureManager.captureSourceWidth.collectAsState()
     val captureSourceHeight by ScreenCaptureManager.captureSourceHeight.collectAsState()
-    val srcWidth = if (captureSourceWidth > 0) captureSourceWidth.toFloat() else 1920f
-    val srcHeight = if (captureSourceHeight > 0) captureSourceHeight.toFloat() else 1080f
+    val srcWidth = if (captureSourceWidth > 0) captureSourceWidth.toFloat() else CS_FALLBACK_SRC_WIDTH
+    val srcHeight = if (captureSourceHeight > 0) captureSourceHeight.toFloat() else CS_FALLBACK_SRC_HEIGHT
 
     val surfaceWidth by ScreenCaptureManager.surfaceWidth.collectAsState()
     val surfaceHeight by ScreenCaptureManager.surfaceHeight.collectAsState()
-    val secScreenW = if (surfaceWidth > 0f) surfaceWidth else 1280f
-    val secScreenH = if (surfaceHeight > 0f) surfaceHeight else 960f
+    val secScreenW = if (surfaceWidth > 0f) surfaceWidth else CS_FALLBACK_SEC_WIDTH
+    val secScreenH = if (surfaceHeight > 0f) surfaceHeight else CS_FALLBACK_SEC_HEIGHT
 
     fun updateCutoutWithNewCrop(
         cutout: ScreenCutout,

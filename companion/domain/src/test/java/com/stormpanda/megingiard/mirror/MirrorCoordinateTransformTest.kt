@@ -461,11 +461,11 @@ class MirrorCoordinateTransformTest {
                 destWidth = 0.3f,
                 destHeight = 0.3f,
                 cropRatio = 16f / 9f,
-                screenW = 1280f,
-                screenH = 960f,
+                screenW = 1240f,
+                screenH = 1080f,
             )
         assertEquals(0.3f, w, EPS)
-        assertEquals(0.225f, h, EPS)
+        assertEquals(0.19375f, h, EPS)
     }
 
     @Test

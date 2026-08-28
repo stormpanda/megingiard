@@ -175,6 +175,11 @@ private const val METO_MOVE_ACCEL_FACTOR = 0.88f
 private const val METO_INITIAL_FOCUS_DELAY_MS = 100L
 private val METO_SCROLL_EXTRA_PADDING = 0.dp
 
+private const val METO_FALLBACK_SRC_WIDTH = 1920f
+private const val METO_FALLBACK_SRC_HEIGHT = 1080f
+private const val METO_FALLBACK_SEC_WIDTH = 1240f
+private const val METO_FALLBACK_SEC_HEIGHT = 1080f
+
 /**
  * Top-Screen (Display 0) Overlay for the Screen Mirroring Editor.
  *
@@ -284,13 +289,13 @@ fun MirrorEditorTopOverlay(
     val activeToast by DialogToastManager.currentToast.collectAsState()
     val captureSourceWidth by ScreenCaptureManager.captureSourceWidth.collectAsState()
     val captureSourceHeight by ScreenCaptureManager.captureSourceHeight.collectAsState()
-    val srcWidth = if (captureSourceWidth > 0) captureSourceWidth.toFloat() else 1920f
-    val srcHeight = if (captureSourceHeight > 0) captureSourceHeight.toFloat() else 1080f
+    val srcWidth = if (captureSourceWidth > 0) captureSourceWidth.toFloat() else METO_FALLBACK_SRC_WIDTH
+    val srcHeight = if (captureSourceHeight > 0) captureSourceHeight.toFloat() else METO_FALLBACK_SRC_HEIGHT
 
     val surfaceWidth by ScreenCaptureManager.surfaceWidth.collectAsState()
     val surfaceHeight by ScreenCaptureManager.surfaceHeight.collectAsState()
-    val secScreenW = if (surfaceWidth > 0f) surfaceWidth else 1280f
-    val secScreenH = if (surfaceHeight > 0f) surfaceHeight else 960f
+    val secScreenW = if (surfaceWidth > 0f) surfaceWidth else METO_FALLBACK_SEC_WIDTH
+    val secScreenH = if (surfaceHeight > 0f) surfaceHeight else METO_FALLBACK_SEC_HEIGHT
 
     var topHToggle by remember(selectedCutout?.id) { mutableIntStateOf(0) }
     var topVToggle by remember(selectedCutout?.id) { mutableIntStateOf(0) }
