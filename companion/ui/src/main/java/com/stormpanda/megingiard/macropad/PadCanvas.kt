@@ -276,7 +276,7 @@ internal fun PadCanvas(
         }
 
     Box(modifier = padModifier.then(cropModifier)) {
-        if (!shouldHideBackground && bgBitmap != null) {
+        if (!shouldHideBackground && !transparentBackground && bgBitmap != null) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val cw = size.width
                 val ch = size.height
