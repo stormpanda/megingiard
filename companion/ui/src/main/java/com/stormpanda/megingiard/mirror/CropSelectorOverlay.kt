@@ -35,7 +35,7 @@ import kotlin.math.roundToInt
 private const val TAG = "CropSelectorOverlay"
 private const val MIN_CROP_SIZE = 0.05f
 private const val CS_SCRIM_ALPHA = 0.35f
-private val CS_BORDER_WIDTH = 1.dp
+private val CS_BORDER_WIDTH = 2.dp
 private val CS_EDGE_HANDLE_LENGTH = 36.dp
 private val CS_EDGE_HANDLE_THICKNESS = 6.dp
 private val CS_EDGE_HANDLE_MARGIN = 6.dp
@@ -178,7 +178,7 @@ fun CropSelectorOverlay(
                     .size(
                         width = with(density) { cropW.toDp() },
                         height = with(density) { cropH.toDp() },
-                    ).border(CS_BORDER_WIDTH, colors.accent.copy(alpha = 0.5f))
+                    ).border(CS_BORDER_WIDTH, colors.accent.copy(alpha = 0.75f))
                     .pointerInput(cutoutId) {
                         var dragStartX = 0f
                         var dragStartY = 0f

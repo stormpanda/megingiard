@@ -53,6 +53,7 @@ import kotlin.math.roundToInt
 
 private const val TAG = "CutoutLayoutEditor"
 private val CLE_BORDER_WIDTH = 1.dp
+private val CLE_SELECTED_BORDER_WIDTH = 2.dp
 private val CLE_EDGE_HANDLE_LENGTH = 36.dp
 private val CLE_EDGE_HANDLE_THICKNESS = 6.dp
 private val CLE_EDGE_HANDLE_MARGIN = 6.dp
@@ -70,8 +71,7 @@ private const val CLE_ROTATION_BR = -45f
 private val CLE_RECT_CORNER = 4.dp
 private const val CLE_UNSELECTED_BG_ALPHA = 0.05f
 private const val CLE_UNSELECTED_BORDER_ALPHA = 0.15f
-private const val CLE_SELECTED_BG_ALPHA = 0.15f
-private const val CLE_SELECTED_BORDER_ALPHA = 0.5f
+private const val CLE_SELECTED_BORDER_ALPHA = 0.75f
 
 @Composable
 fun CutoutLayoutEditor() {
@@ -210,13 +210,13 @@ fun CutoutLayoutEditor() {
                                     .background(
                                         color =
                                             if (isSelected) {
-                                                colors.accent.copy(alpha = CLE_SELECTED_BG_ALPHA)
+                                                Color.Transparent
                                             } else {
                                                 Color.White.copy(alpha = CLE_UNSELECTED_BG_ALPHA)
                                             },
                                         shape = CircleShape,
                                     ).border(
-                                        width = CLE_BORDER_WIDTH,
+                                        width = if (isSelected) CLE_SELECTED_BORDER_WIDTH else CLE_BORDER_WIDTH,
                                         color =
                                             if (isSelected) {
                                                 colors.accent.copy(alpha = CLE_SELECTED_BORDER_ALPHA)
@@ -234,13 +234,13 @@ fun CutoutLayoutEditor() {
                                     .background(
                                         color =
                                             if (isSelected) {
-                                                colors.accent.copy(alpha = CLE_SELECTED_BG_ALPHA)
+                                                Color.Transparent
                                             } else {
                                                 Color.White.copy(alpha = CLE_UNSELECTED_BG_ALPHA)
                                             },
                                         shape = RoundedCornerShape(CLE_RECT_CORNER),
                                     ).border(
-                                        width = CLE_BORDER_WIDTH,
+                                        width = if (isSelected) CLE_SELECTED_BORDER_WIDTH else CLE_BORDER_WIDTH,
                                         color =
                                             if (isSelected) {
                                                 colors.accent.copy(alpha = CLE_SELECTED_BORDER_ALPHA)
