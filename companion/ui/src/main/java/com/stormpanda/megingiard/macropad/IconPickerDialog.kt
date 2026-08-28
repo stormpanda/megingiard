@@ -2,12 +2,10 @@ package com.stormpanda.megingiard.macropad
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,15 +16,9 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material.icons.rounded.FormatPaint
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,132 +29,81 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.ui.AppTextField
-import com.stormpanda.megingiard.ui.FullScreenTopBar
+import com.stormpanda.megingiard.ui.GamepadActionCard
+import com.stormpanda.megingiard.ui.GamepadInfoBox
+import com.stormpanda.megingiard.ui.GamepadTextFieldCard
+import com.stormpanda.megingiard.ui.GamepadToggleCard
+import com.stormpanda.megingiard.ui.GamepadTwoStepConfirmCard
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.firstDeckItem
+import com.stormpanda.megingiard.ui.primaryOverlayFocusable
 
 private const val TAG = "IconPickerDialog"
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Constants
-// ─────────────────────────────────────────────────────────────────────────────
-
 private val IP_ICON_CELL_SIZE = 64.dp
 private val IP_ICON_SIZE = 28.dp
-private val IP_PREVIEW_SIZE = 48.dp
+private val IP_PREVIEW_SIZE = 36.dp
+private val IP_PREVIEW_ICON_SIZE = 24.dp
 private val IP_ICON_NAME_SIZE = 8.sp
 private const val IP_GRID_COLUMNS = 5
 private val IP_CELL_CORNER = 8.dp
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Icon Picker Dialog
-// ─────────────────────────────────────────────────────────────────────────────
+private val IP_GRID_SPACING = 4.dp
+private val IP_GRID_VERTICAL_PADDING = 4.dp
+private val IP_GRID_4_ROWS_HEIGHT = (IP_ICON_CELL_SIZE * 4) + (IP_GRID_SPACING * 3) + (IP_GRID_VERTICAL_PADDING * 2)
 
 /**
  * Full-screen icon picker that lets the user choose a Material Symbol icon by name.
- *
- * @param selectedIcon  The currently selected icon name, or `null` if none is set.
- * @param accentColor   Accent colour used for selection border and focus highlight.
- * @param filled        Whether icons are shown filled (`true`) or outline (`false`).
- * @param onFilledChange Called when the user toggles the filled/outline checkbox.
- * @param onSelect      Called with the pending icon name when the user taps confirm (✓),
- *                       or `null` if the selection was cleared via the delete (🗑) button.
- * @param onDismiss     Called when the user taps Cancel without making a selection.
  */
 @Composable
-internal fun IconPickerDialog(
+internal fun ChooseIconSubPageContent(
     selectedIcon: String?,
     accentColor: Color,
     filled: Boolean,
     onFilledChange: (Boolean) -> Unit,
     onSelect: (String?) -> Unit,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
     var query by remember { mutableStateOf("") }
-    var pendingIcon by remember { mutableStateOf(selectedIcon) }
+    var pendingIcon by remember(selectedIcon) { mutableStateOf(selectedIcon) }
     val results = remember(query) { MaterialIconRegistry.searchIcons(query) }
 
-    Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .background(colors.appBackground),
-    ) {
-        FullScreenTopBar(
-            title = stringResource(R.string.macropad_icon_picker_title),
-            onDismiss = onDismiss,
-        ) {
-            IconButton(onClick = { onSelect(pendingIcon) }) {
-                Icon(
-                    imageVector = Icons.Rounded.Check,
-                    contentDescription = stringResource(R.string.cd_icon_picker_confirm),
-                    tint = accentColor,
-                )
-            }
-        }
+    // ── Search bar ─────────────────────────────────────────────────────────
+    GamepadTextFieldCard(
+        title = stringResource(R.string.macropad_icon_picker_search),
+        description = stringResource(R.string.macropad_icon_picker_empty_desc),
+        placeholder = stringResource(R.string.macropad_icon_picker_search_placeholder),
+        value = query,
+        onValueChange = { query = it },
+        icon = Icons.Rounded.Search,
+        modifier = Modifier.firstDeckItem(),
+    )
 
-        // ── Search bar + filled toggle ──────────────────────────────────────────
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-        ) {
-            AppTextField(
-                value = query,
-                onValueChange = { query = it },
-                label = {
-                    Text(
-                        stringResource(R.string.macropad_icon_picker_search),
-                        color = colors.onSurfaceSecondary,
-                    )
-                },
-                modifier = Modifier.weight(1f),
-            )
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier =
-                    Modifier
-                        .clickable { onFilledChange(!filled) }
-                        .padding(start = 4.dp),
-            ) {
-                Checkbox(
-                    checked = filled,
-                    onCheckedChange = onFilledChange,
-                    colors =
-                        CheckboxDefaults.colors(
-                            checkedColor = accentColor,
-                            uncheckedColor = colors.onSurfaceSecondary,
-                        ),
-                )
-                Text(
-                    text = stringResource(R.string.macropad_icon_picker_filled),
-                    color = colors.onSurface,
-                    style = MaterialTheme.typography.labelMedium,
-                )
-            }
-        }
+    // ── Filled variant toggle ──────────────────────────────────────────────
+    GamepadToggleCard(
+        title = stringResource(R.string.macropad_icon_picker_filled),
+        description = stringResource(R.string.macropad_icon_picker_filled_desc),
+        checked = filled,
+        icon = Icons.Rounded.FormatPaint,
+        onCheckedChange = onFilledChange,
+    )
 
-        // ── Current selection row (only visible when an icon is pending) ────────
-        val currentIcon = pendingIcon
-        if (currentIcon != null) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .background(colors.surface)
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-            ) {
+    // ── Current selection card (only visible when an icon is pending) ────────
+    val currentIcon = pendingIcon
+    if (currentIcon != null) {
+        GamepadTwoStepConfirmCard(
+            title = currentIcon,
+            confirmTitle = stringResource(R.string.macropad_icon_clear_confirm_title),
+            description = stringResource(R.string.gamepad_color_selected),
+            actionText = stringResource(R.string.gamepad_action_clear),
+            confirmActionText = stringResource(R.string.gamepad_action_confirm),
+            isDestructive = true,
+            leadingContent = {
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier =
@@ -174,65 +115,44 @@ internal fun IconPickerDialog(
                 ) {
                     MaterialSymbol(
                         name = currentIcon,
-                        size = IP_ICON_SIZE,
+                        size = IP_PREVIEW_ICON_SIZE,
                         tint = accentColor,
                         filled = filled,
                     )
                 }
-                Column(
-                    modifier =
-                        Modifier
-                            .weight(1f)
-                            .padding(horizontal = 12.dp),
-                ) {
-                    Text(
-                        text = currentIcon,
-                        color = colors.onSurface,
-                        style = MaterialTheme.typography.labelMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = stringResource(R.string.macropad_icon_picker_currently_selected),
-                        color = colors.onSurfaceSecondary,
-                        style = MaterialTheme.typography.labelSmall,
-                    )
-                }
-                IconButton(onClick = { pendingIcon = null }) {
-                    Icon(
-                        imageVector = Icons.Rounded.Delete,
-                        contentDescription = stringResource(R.string.cd_icon_picker_delete),
-                        tint = colors.onSurfaceSecondary,
-                    )
-                }
-            }
-        }
+            },
+            onConfirm = {
+                AppLog.d(TAG, "ChooseIconSubPageContent: selection cleared")
+                pendingIcon = null
+                onSelect(null)
+            },
+        )
+    }
 
-        // ── Icon grid ──────────────────────────────────────────────────────────
-        if (results.isEmpty()) {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-            ) {
-                Text(
-                    stringResource(R.string.macropad_icon_picker_no_results),
-                    color = colors.onSurfaceSecondary,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-        } else {
+    // ── Icon grid ──────────────────────────────────────────────────────────
+    if (results.isEmpty()) {
+        GamepadInfoBox(
+            text = stringResource(R.string.macropad_icon_picker_no_results),
+            description = stringResource(R.string.macropad_icon_picker_empty_desc),
+            icon = Icons.Rounded.Search,
+        )
+    } else {
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(IP_GRID_4_ROWS_HEIGHT),
+        ) {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(IP_GRID_COLUMNS),
-                contentPadding = PaddingValues(8.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(vertical = IP_GRID_VERTICAL_PADDING),
+                horizontalArrangement = Arrangement.spacedBy(IP_GRID_SPACING),
+                verticalArrangement = Arrangement.spacedBy(IP_GRID_SPACING),
+                modifier = Modifier.fillMaxSize(),
             ) {
                 items(results, key = { it }) { name ->
                     val isSelected = name == pendingIcon
+
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier =
@@ -240,16 +160,18 @@ internal fun IconPickerDialog(
                                 .size(IP_ICON_CELL_SIZE)
                                 .clip(RoundedCornerShape(IP_CELL_CORNER))
                                 .background(
-                                    if (isSelected) {
-                                        accentColor.copy(alpha = 0.2f)
-                                    } else {
-                                        colors.surface
-                                    },
+                                    if (isSelected) accentColor.copy(alpha = 0.25f) else colors.surface,
                                 ).border(
                                     width = if (isSelected) 2.dp else 1.dp,
-                                    color = if (isSelected) accentColor else colors.accentBorder,
+                                    color = if (isSelected) accentColor else colors.subduedBorder,
                                     shape = RoundedCornerShape(IP_CELL_CORNER),
-                                ).clickable { pendingIcon = name },
+                                ).primaryOverlayFocusable(
+                                    onClick = {
+                                        pendingIcon = name
+                                        onSelect(name)
+                                    },
+                                    shape = RoundedCornerShape(IP_CELL_CORNER),
+                                ),
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,

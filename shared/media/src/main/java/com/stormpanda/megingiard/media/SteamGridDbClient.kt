@@ -16,8 +16,8 @@ import java.net.UnknownHostException
 
 private const val TAG = "SteamGridDbClient"
 private const val BASE_URL = "https://www.steamgriddb.com/api/v2"
-private const val TIMEOUT_CONNECT_MS = 8000
-private const val TIMEOUT_READ_MS = 10000
+private const val TIMEOUT_CONNECT_MS = 2000
+private const val TIMEOUT_READ_MS = 3000
 
 sealed class SteamGridDbException(
     message: String,
@@ -29,6 +29,10 @@ sealed class SteamGridDbException(
 
     object ServiceUnavailable : SteamGridDbException("SteamGridDB is unreachable")
 
+    class Unauthorized(
+        message: String = "Invalid or unauthorized API key",
+    ) : SteamGridDbException(message)
+
     class ApiError(
         message: String,
     ) : SteamGridDbException(message)
@@ -38,15 +42,60 @@ sealed class SteamGridDbException(
     ) : SteamGridDbException("An unknown error occurred", cause)
 }
 
+@Serializable
+private data class SteamGridDbErrorPayload(
+    val success: Boolean = false,
+    val errors: List<String> = emptyList(),
+)
+
+private val json = Json { ignoreUnknownKeys = true }
+
+internal fun parseErrorText(errorText: String): String {
+    val trimmed = errorText.trim()
+    if (trimmed.isBlank()) return ""
+    return try {
+        val parsed = json.decodeFromString<SteamGridDbErrorPayload>(trimmed)
+        if (parsed.errors.isNotEmpty()) {
+            parsed.errors.joinToString("; ")
+        } else {
+            trimmed
+        }
+    } catch (_: Exception) {
+        trimmed
+    }
+}
+
 internal fun mapHttpError(
     responseCode: Int,
     errorText: String,
-): SteamGridDbException =
-    when (responseCode) {
-        429 -> SteamGridDbException.RateLimited
-        502, 503, 504 -> SteamGridDbException.ServiceUnavailable
-        else -> SteamGridDbException.ApiError("HTTP error $responseCode: $errorText")
+): SteamGridDbException {
+    val parsedMessage = parseErrorText(errorText)
+    return when (responseCode) {
+        401 -> {
+            SteamGridDbException.Unauthorized(
+                parsedMessage.ifBlank { "Invalid or unauthorized API key" },
+            )
+        }
+
+        429 -> {
+            SteamGridDbException.RateLimited
+        }
+
+        502, 503, 504 -> {
+            SteamGridDbException.ServiceUnavailable
+        }
+
+        else -> {
+            val msg =
+                if (parsedMessage.isNotBlank()) {
+                    "HTTP $responseCode: $parsedMessage"
+                } else {
+                    "HTTP error $responseCode"
+                }
+            SteamGridDbException.ApiError(msg)
+        }
     }
+}
 
 internal fun mapNetworkError(e: Exception): SteamGridDbException =
     when (e) {
@@ -82,8 +131,6 @@ data class SteamGridDbImage(
 )
 
 object SteamGridDbClient {
-    private val json = Json { ignoreUnknownKeys = true }
-
     fun cleanSearchQuery(rawQuery: String): String {
         if (rawQuery.isBlank()) return rawQuery
 
@@ -109,6 +156,24 @@ object SteamGridDbClient {
         return if (cleaned.isNotBlank()) cleaned else rawQuery.trim()
     }
 
+    suspend fun validateToken(apiKey: String): Result<Boolean> {
+        if (apiKey.isBlank()) {
+            return Result.failure(SteamGridDbException.Unauthorized("API key is missing"))
+        }
+        val urlString = "$BASE_URL/search/autocomplete/test"
+        return fetchString(urlString, apiKey)
+            .mapCatching { jsonStr ->
+                val parsed = json.decodeFromString<SteamGridDbResponse<List<SteamGridDbGame>>>(jsonStr)
+                if (parsed.success) {
+                    true
+                } else {
+                    throw Exception("API returned success=false")
+                }
+            }.recoverCatching { err ->
+                throw if (err is SteamGridDbException) err else mapNetworkError(err as Exception)
+            }
+    }
+
     suspend fun searchGames(
         query: String,
         apiKey: String,
@@ -116,7 +181,7 @@ object SteamGridDbClient {
         val cleanedQuery = cleanSearchQuery(query)
         AppLog.d(TAG, "searchGames: rawQuery='$query' -> cleanedQuery='$cleanedQuery'")
         if (apiKey.isBlank()) {
-            return Result.failure(IllegalArgumentException("API Key is blank"))
+            return Result.failure(SteamGridDbException.Unauthorized("API key is missing"))
         }
         val encodedQuery =
             withContext(Dispatchers.IO) {
@@ -143,7 +208,7 @@ object SteamGridDbClient {
     ): Result<List<SteamGridDbImage>> {
         AppLog.d(TAG, "fetchImages: gameId=$gameId, type=$type")
         if (apiKey.isBlank()) {
-            return Result.failure(IllegalArgumentException("API Key is blank"))
+            return Result.failure(SteamGridDbException.Unauthorized("API key is missing"))
         }
         // Validate type against supported categories
         val validTypes = setOf("grids", "heroes", "logos", "icons")

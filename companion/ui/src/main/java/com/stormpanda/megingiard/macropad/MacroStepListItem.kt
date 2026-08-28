@@ -1,40 +1,19 @@
 package com.stormpanda.megingiard.macropad
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
+import android.content.Context
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.rounded.NearMe
+import androidx.compose.material.icons.rounded.OpenWith
+import androidx.compose.material.icons.rounded.SportsEsports
+import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.settings.MacroPadSettings
-import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.sqrt
 
 private const val TAG = "MacroStepListItem"
-private const val MTE_PADDING = 16
 
 private fun dirArrow(
     dirX: Int,
@@ -107,121 +86,78 @@ internal fun shortStepLabel(
         }
     }
 
-internal fun stepColor(
-    step: MacroStep,
-    accentColor: Color,
-    joystickColor: Color,
-    dpadColor: Color,
-    touchColor: Color,
-): Color =
+internal fun stepIcon(step: MacroStep): ImageVector =
     when (step) {
-        is MacroStep.GamepadButtonTap -> accentColor
-        is MacroStep.JoystickMove -> joystickColor
-        is MacroStep.DPadTap -> dpadColor
-        is MacroStep.TouchTap -> touchColor
-        is MacroStep.JoystickPath -> joystickColor
-        is MacroStep.TouchPath -> touchColor
+        is MacroStep.GamepadButtonTap -> Icons.Rounded.SportsEsports
+        is MacroStep.JoystickMove, is MacroStep.JoystickPath -> Icons.Rounded.NearMe
+        is MacroStep.DPadTap -> Icons.Rounded.OpenWith
+        is MacroStep.TouchTap, is MacroStep.TouchPath -> Icons.Rounded.TouchApp
+    }
+
+internal fun stepTypeLabelRes(step: MacroStep): Int =
+    when (step) {
+        is MacroStep.GamepadButtonTap -> R.string.macropad_macro_step_type_gamepad
+        is MacroStep.JoystickMove -> R.string.macropad_macro_step_type_joystick
+        is MacroStep.DPadTap -> R.string.macropad_macro_step_type_dpad
+        is MacroStep.TouchTap -> R.string.macropad_macro_step_type_touch
+        is MacroStep.JoystickPath -> R.string.macropad_macro_step_type_joystick_path
+        is MacroStep.TouchPath -> R.string.macropad_macro_step_type_touch_path
     }
 
 @Composable
-internal fun StepListItem(
-    index: Int,
+internal fun stepTypeLabel(step: MacroStep): String = stringResource(stepTypeLabelRes(step))
+
+internal fun stepTypeLabel(
     step: MacroStep,
-    accentColor: Color,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit,
-) {
-    val colors = LocalAppColors.current
-    val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsState()
-    val joystickColor = colors.actionColorGamepad
-    val dpadColor = colors.actionColorSystem
-    val touchColor = MaterialTheme.colorScheme.tertiary
-    val typeLabel =
-        stringResource(
-            when (step) {
-                is MacroStep.GamepadButtonTap -> R.string.macropad_macro_step_type_gamepad
-                is MacroStep.JoystickMove -> R.string.macropad_macro_step_type_joystick
-                is MacroStep.DPadTap -> R.string.macropad_macro_step_type_dpad
-                is MacroStep.TouchTap -> R.string.macropad_macro_step_type_touch
-                is MacroStep.JoystickPath -> R.string.macropad_macro_step_type_joystick_path
-                is MacroStep.TouchPath -> R.string.macropad_macro_step_type_touch_path
-            },
-        )
-    val description =
-        when (step) {
-            is MacroStep.GamepadButtonTap -> {
-                gamepadCodeDisplayLabel(step.btnCode, swapFaceButtons)
-            }
+    context: Context,
+): String = context.getString(stepTypeLabelRes(step))
 
-            is MacroStep.JoystickMove -> {
-                val stickLabel = if (step.stick == JoystickStick.LEFT) "L" else "R"
-                "$stickLabel ${joyDirArrow(step.x, step.y)}"
-            }
-
-            is MacroStep.DPadTap -> {
-                dirArrow(step.dirX, step.dirY)
-            }
-
-            is MacroStep.TouchTap -> {
-                "${"%.2f".format(step.normX)}, ${"%.2f".format(step.normY)}"
-            }
-
-            is MacroStep.JoystickPath -> {
-                val stickLabel = if (step.stick == JoystickStick.LEFT) "L" else "R"
-                stringResource(R.string.macropad_macro_step_joystick_path_short, stickLabel, step.samples.size)
-            }
-
-            is MacroStep.TouchPath -> {
-                stringResource(R.string.macropad_macro_step_short_samples_count, step.samples.size)
-            }
-        }
-    val indicatorColor = stepColor(step, accentColor, joystickColor, dpadColor, touchColor)
-
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onEdit)
-                .padding(start = MTE_PADDING.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier =
-                Modifier
-                    .size(12.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(indicatorColor),
-        )
-        Spacer(Modifier.width(12.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                "${index + 1}. $typeLabel: $description",
-                color = colors.onSurface,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                stringResource(R.string.macropad_macro_step_timing, step.startTimeMs, step.durationMs),
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.bodySmall,
-            )
+internal fun stepActionDescription(
+    step: MacroStep,
+    swapFaceButtons: Boolean,
+    context: Context,
+): String =
+    when (step) {
+        is MacroStep.GamepadButtonTap -> {
+            gamepadCodeDisplayLabel(step.btnCode, swapFaceButtons, context)
         }
 
-        IconButton(onClick = onEdit) {
-            Icon(
-                Icons.Rounded.Edit,
-                contentDescription = stringResource(R.string.macropad_macro_step_edit),
-                tint = colors.onSurfaceSecondary,
-            )
+        is MacroStep.JoystickMove -> {
+            val stickLabel =
+                if (step.stick == JoystickStick.LEFT) {
+                    context.getString(R.string.macropad_macro_step_stick_left)
+                } else {
+                    context.getString(R.string.macropad_macro_step_stick_right)
+                }
+            val magPercent = (sqrt(step.x * step.x + step.y * step.y).coerceIn(0f, 1f) * 100).toInt()
+            "$stickLabel ${joyDirArrow(step.x, step.y)} ($magPercent%)"
         }
-        IconButton(onClick = onDelete) {
-            Icon(
-                Icons.Rounded.Delete,
-                contentDescription = stringResource(R.string.macropad_editor_delete_button),
-                tint = colors.onSurfaceSecondary,
-            )
+
+        is MacroStep.DPadTap -> {
+            dirArrow(step.dirX, step.dirY)
+        }
+
+        is MacroStep.TouchTap -> {
+            "X: ${(step.normX * 100).toInt()}%, Y: ${(step.normY * 100).toInt()}%"
+        }
+
+        is MacroStep.JoystickPath -> {
+            val stickLabel =
+                if (step.stick == JoystickStick.LEFT) {
+                    context.getString(R.string.macropad_macro_step_stick_left)
+                } else {
+                    context.getString(R.string.macropad_macro_step_stick_right)
+                }
+            context.getString(R.string.macropad_macro_step_joystick_path_short, stickLabel, step.samples.size)
+        }
+
+        is MacroStep.TouchPath -> {
+            context.getString(R.string.macropad_macro_step_short_samples_count, step.samples.size)
         }
     }
-}
+
+@Composable
+internal fun stepActionDescription(
+    step: MacroStep,
+    swapFaceButtons: Boolean,
+): String = stepActionDescription(step, swapFaceButtons, LocalContext.current)

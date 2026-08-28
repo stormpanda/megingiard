@@ -25,6 +25,26 @@ private const val EV_ABS = 3
 private const val ABS_HAT0X = 16
 private const val ABS_HAT0Y = 17
 
+sealed interface GamepadRecordingState {
+    data object Idle : GamepadRecordingState
+
+    data class Recording(
+        val pressedButtons: Set<Int>,
+        val dpadDirectionX: Int,
+        val dpadDirectionY: Int,
+        val leftStickX: Float,
+        val leftStickY: Float,
+        val rightStickX: Float,
+        val rightStickY: Float,
+        val stepCount: Int = 0,
+        val startElapsedRealtime: Long = 0L,
+    ) : GamepadRecordingState
+
+    data class Done(
+        val steps: List<MacroStep>,
+    ) : GamepadRecordingState
+}
+
 /**
  * Records buttons, D-Pad taps, and analog stick gestures from the physical gamepad
  * via the `megingiard_privd`
@@ -46,8 +66,6 @@ private const val ABS_HAT0Y = 17
  *
  * **Coroutine scope:** app-lifetime [SupervisorJob] on [Dispatchers.Default].
  * The scope is never cancelled — only the per-session collector [Job] is cancelled.
- *
- * @see GamepadRecordingState — same sealed interface as [GamepadRecordingManager]
  */
 object PhysicalGamepadRecordingManager {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -174,6 +192,12 @@ object PhysicalGamepadRecordingManager {
         }
         // Update Recording state snapshot after each event for UI reactivity.
         val current = _state.value as? GamepadRecordingState.Recording ?: return
+        val activeStepCount =
+            recordedSteps.size +
+                pendingButtonDowns.size +
+                (if (hatStartMs != null) 1 else 0) +
+                (if (leftInGesture) 1 else 0) +
+                (if (rightInGesture) 1 else 0)
         _state.value =
             current.copy(
                 pressedButtons = pressedButtons.toSet(),
@@ -183,6 +207,8 @@ object PhysicalGamepadRecordingManager {
                 leftStickY = leftY,
                 rightStickX = rightX,
                 rightStickY = rightY,
+                stepCount = activeStepCount,
+                startElapsedRealtime = recordingStartEpochMs,
             )
     }
 
@@ -197,6 +223,8 @@ object PhysicalGamepadRecordingManager {
                 leftStickY = 0f,
                 rightStickX = 0f,
                 rightStickY = 0f,
+                stepCount = 0,
+                startElapsedRealtime = startElapsedMs,
             )
     }
 

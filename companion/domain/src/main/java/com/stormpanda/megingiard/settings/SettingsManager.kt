@@ -78,14 +78,14 @@ object SettingsManager {
     private val _internalBackups = MutableStateFlow<List<InternalBackup>>(emptyList())
     val internalBackups: StateFlow<List<InternalBackup>> = _internalBackups.asStateFlow()
 
-    private val _autoSwitchProfiles = MutableStateFlow(true)
-    val autoSwitchProfiles: StateFlow<Boolean> = _autoSwitchProfiles.asStateFlow()
-
     private val _excludeFromRecents = MutableStateFlow(false)
     val excludeFromRecents: StateFlow<Boolean> = _excludeFromRecents.asStateFlow()
 
     private val _accentColor = MutableStateFlow(DEFAULT_ACCENT_COLOR)
     val accentColor: StateFlow<Int> = _accentColor.asStateFlow()
+
+    private val _customAccentColor = MutableStateFlow(DEFAULT_ACCENT_COLOR)
+    val customAccentColor: StateFlow<Int> = _customAccentColor.asStateFlow()
 
     private val _themeMode = MutableStateFlow(ThemeMode.DARK)
     val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
@@ -110,7 +110,6 @@ object SettingsManager {
     // Mirror settings live in [MirrorSettings] (pinch-while-projecting + remember-* flags + session save/restore).
     // Keyboard settings live in [KeyboardSettings].
     // Touchpad settings live in [TouchpadSettings].
-    // MacroPad background display settings live in [BackgroundSettings].
     // MacroPad recording dialogs + gamepad-swap + macropad profile data live in [MacroPadSettings].
 
     // App language
@@ -146,6 +145,7 @@ object SettingsManager {
 
                     _themeMode.value = ThemeMode.entries.firstOrNull { it.name == prefs[KEY_THEME_MODE] } ?: ThemeMode.DARK
                     _accentColor.value = prefs[KEY_ACCENT_COLOR] ?: DEFAULT_ACCENT_COLOR
+                    _customAccentColor.value = prefs[KEY_CUSTOM_ACCENT_COLOR] ?: prefs[KEY_ACCENT_COLOR] ?: DEFAULT_ACCENT_COLOR
                     _steamGridDbApiToken.value = prefs[KEY_STEAMGRIDDB_API_TOKEN] ?: ""
                 } else {
                     AppLog.w(TAG, "DataStore bootstrap timed out — retaining default log level")
@@ -162,7 +162,6 @@ object SettingsManager {
         // can persist their own settings without each one opening its own DataStore.
         KeyboardSettings.init(dataStore, scope)
         TouchpadSettings.init(dataStore, scope)
-        BackgroundSettings.init(dataStore, scope)
         MirrorSettings.init(dataStore, scope)
         MacroPadSettings.init(dataStore, scope)
         UpdateManager.init(dataStore, scope)
@@ -173,9 +172,9 @@ object SettingsManager {
                 .collect { prefs ->
                     AppLog.i(TAG, "settings loaded from DataStore")
 
-                    _autoSwitchProfiles.value = prefs[KEY_AUTO_SWITCH_PROFILES] ?: true
                     _excludeFromRecents.value = prefs[KEY_EXCLUDE_FROM_RECENTS] ?: false
                     _accentColor.value = prefs[KEY_ACCENT_COLOR] ?: DEFAULT_ACCENT_COLOR
+                    _customAccentColor.value = prefs[KEY_CUSTOM_ACCENT_COLOR] ?: prefs[KEY_ACCENT_COLOR] ?: DEFAULT_ACCENT_COLOR
                     _themeMode.value = ThemeMode.entries.firstOrNull { it.name == prefs[KEY_THEME_MODE] } ?: ThemeMode.DARK
                     _overlayAtBottom.value = prefs[KEY_OVERLAY_AT_BOTTOM] ?: false
                     _overlayFadeOut.value = prefs[KEY_OVERLAY_FADE_OUT] ?: false
@@ -189,7 +188,6 @@ object SettingsManager {
                     _appLanguage.value = AppLanguage.entries.firstOrNull { it.name == prefs[KEY_APP_LANGUAGE] } ?: AppLanguage.SYSTEM
                     _logLevel.value = AppLog.Level.entries.firstOrNull { it.name == prefs[KEY_LOG_LEVEL] } ?: AppLog.Level.WARN
                     AppLog.level = _logLevel.value
-                    BackgroundSettings.loadFrom(prefs)
                     MacroPadSettings.loadFrom(prefs)
                     UpdateManager.loadFrom(prefs)
 
@@ -259,10 +257,6 @@ object SettingsManager {
         }
     }
 
-    fun setAutoSwitchProfiles(value: Boolean) {
-        updateSettingPref(KEY_AUTO_SWITCH_PROFILES, value, _autoSwitchProfiles, scope, optionalDataStore, TAG, "setAutoSwitchProfiles")
-    }
-
     fun setExcludeFromRecents(value: Boolean) {
         updateSettingPref(KEY_EXCLUDE_FROM_RECENTS, value, _excludeFromRecents, scope, optionalDataStore, TAG, "setExcludeFromRecents")
     }
@@ -270,9 +264,16 @@ object SettingsManager {
     @Volatile
     var onThemeChangedListener: (() -> Unit)? = null
 
+    @Volatile
+    var onSettingsChangedListener: (() -> Unit)? = null
+
     fun setAccentColor(argb: Int) {
         updateSettingPref(KEY_ACCENT_COLOR, argb, _accentColor, scope, optionalDataStore, TAG, "setAccentColor")
         onThemeChangedListener?.invoke()
+    }
+
+    fun setCustomAccentColor(argb: Int) {
+        updateSettingPref(KEY_CUSTOM_ACCENT_COLOR, argb, _customAccentColor, scope, optionalDataStore, TAG, "setCustomAccentColor")
     }
 
     fun setThemeMode(value: ThemeMode) {
@@ -293,6 +294,7 @@ object SettingsManager {
     fun setSteamGridDbApiToken(value: String) {
         AppLog.d(TAG, "setSteamGridDbApiToken(redacted)")
         _steamGridDbApiToken.value = value
+        onSettingsChangedListener?.invoke()
         scope.launch {
             if (::dataStore.isInitialized) {
                 dataStore.edit { prefs ->

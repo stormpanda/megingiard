@@ -65,6 +65,12 @@ enum class TrackpointMode {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Editor Grid Mode
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum class GridMode { OFF, RECTANGULAR, RADIAL }
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Button color style — per-layout override for neutral vs accented appearance
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -417,6 +423,16 @@ data class PadLayout(
     val backgroundImageDim: Float = 0f,
     val backgroundTouchpad: BackgroundTouchpadConfig = BackgroundTouchpadConfig(),
 )
+
+/**
+ * Returns true if this layout has no buttons, no background image, no screen cutouts,
+ * and no background touchpad enabled (i.e. is an untouched / empty layout).
+ */
+fun PadLayout.isEmpty(): Boolean =
+    buttons.isEmpty() &&
+        backgroundImagePath == null &&
+        mirrorCutouts.isEmpty() &&
+        !backgroundTouchpad.enabled
 
 // ─────────────────────────────────────────────────────────────────────────────
 @Serializable

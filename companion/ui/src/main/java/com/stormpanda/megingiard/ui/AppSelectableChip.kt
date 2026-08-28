@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 private val CHIP_CORNER = 20.dp
 private val CHIP_H_PADDING = 12.dp
 private val CHIP_V_PADDING = 6.dp
+private val CHIP_CONTENT_SPACING = 6.dp
 
 /**
  * A fully-rounded selectable pill chip.
@@ -43,8 +44,10 @@ private val CHIP_V_PADDING = 6.dp
  * @param modifier         Optional outer modifier.
  * @param enabled          When false the chip is non-interactive and rendered at reduced opacity.
  * @param contentDescription Accessibility label; defaults to [text] when null.
+ * @param selectedContentColor Color of text and icons when selected. Defaults to [AppColors.onAccent].
+ * @param unselectedContentColor Color of text and icons when unselected. Defaults to [AppColors.onControlOverlay].
  * @param leadingIcon      Optional leading icon slot. The lambda receives the resolved content
- *                         color (onAccent when selected, onControlOverlay otherwise) so callers
+ *                         color (onAccent when selected, unselectedContentColor otherwise) so callers
  *                         can tint icons without knowing about selection state.
  * @param trailingContent  Optional trailing content slot, resolved like [leadingIcon].
  */
@@ -56,12 +59,16 @@ fun AppSelectableChip(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     contentDescription: String? = null,
+    selectedContentColor: Color = LocalAppColors.current.onAccent,
+    unselectedContentColor: Color = LocalAppColors.current.onControlOverlay,
     leadingIcon: (@Composable (contentColor: Color) -> Unit)? = null,
     trailingContent: (@Composable (contentColor: Color) -> Unit)? = null,
 ) {
     val colors = LocalAppColors.current
-    val contentColor = if (selected) colors.onAccent else colors.onControlOverlay
+    val contentColor = if (selected) selectedContentColor else unselectedContentColor
     val effectiveAlpha = if (enabled) 1f else 0.38f
+
+    val chipBorderColor = (if (selected) colors.accent else colors.controlOverlayBorder).copy(alpha = effectiveAlpha)
 
     Box(
         modifier =
@@ -80,16 +87,17 @@ fun AppSelectableChip(
                     ).copy(alpha = (if (selected) 0.85f else 0.5f) * effectiveAlpha),
                 ).border(
                     1.dp,
-                    (if (selected) colors.accent else colors.controlOverlayBorder)
-                        .copy(alpha = effectiveAlpha),
+                    chipBorderColor,
                     RoundedCornerShape(CHIP_CORNER),
-                ).clickable(enabled = enabled, onClick = onClick)
-                .padding(horizontal = CHIP_H_PADDING, vertical = CHIP_V_PADDING),
+                ).primaryOverlayFocusable(
+                    onClick = if (enabled) onClick else null,
+                    shape = RoundedCornerShape(CHIP_CORNER),
+                ).padding(horizontal = CHIP_H_PADDING, vertical = CHIP_V_PADDING),
     ) {
         if (leadingIcon != null || trailingContent != null) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(CHIP_CONTENT_SPACING),
             ) {
                 leadingIcon?.invoke(contentColor.copy(alpha = effectiveAlpha))
                 Text(

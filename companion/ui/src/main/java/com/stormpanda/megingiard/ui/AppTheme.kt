@@ -99,7 +99,11 @@ data class AppColors(
     val sectionHeaderColor: Color,
     /** Thin divider between transparent settings rows drawn on the default screen/dialog background. */
     val settingsSeparator: Color,
-)
+) {
+    /** Subtle, non-accented border used for unfocused cards, pills, text fields, and chips. */
+    val subduedBorder: Color
+        get() = onSurface.copy(alpha = 0.15f)
+}
 
 // ─── Palettes ─────────────────────────────────────────────────────────────────
 
@@ -133,7 +137,7 @@ private val darkPalette =
         controlIndicatorActive = Color.White,
         navQuickMenuBody = DEFAULT_DARK_LIGHT_ACCENT,
         buttonBody = DEFAULT_DARK_LIGHT_ACCENT,
-        controlOverlayBorder = Color.Transparent,
+        controlOverlayBorder = DEFAULT_DARK_LIGHT_ACCENT.copy(alpha = 0.3f),
         navQuickMenuBorder = Color.Transparent,
         mirrorQuickMenuBorder = Color.Transparent,
         buttonIconTint = Color.White,
@@ -175,7 +179,7 @@ private val darkOledPalette =
         controlIndicatorActive = DARK_OLED_TEXT,
         navQuickMenuBody = DEFAULT_DARK_LIGHT_ACCENT,
         buttonBody = DEFAULT_DARK_LIGHT_ACCENT,
-        controlOverlayBorder = Color.Transparent,
+        controlOverlayBorder = DEFAULT_DARK_LIGHT_ACCENT.copy(alpha = 0.3f),
         navQuickMenuBorder = Color.Transparent,
         mirrorQuickMenuBorder = Color.Transparent,
         buttonIconTint = DARK_OLED_TEXT,
@@ -498,7 +502,13 @@ fun paletteFor(
         }
     return if (mode.supportsCustomAccent) {
         val eff = userAccent ?: base.accent
-        base.copy(accent = eff, navQuickMenuBody = eff, buttonBody = eff, sectionHeaderColor = eff)
+        base.copy(
+            accent = eff,
+            navQuickMenuBody = eff,
+            buttonBody = eff,
+            sectionHeaderColor = eff,
+            controlOverlayBorder = eff.copy(alpha = 0.3f),
+        )
     } else {
         base
     }

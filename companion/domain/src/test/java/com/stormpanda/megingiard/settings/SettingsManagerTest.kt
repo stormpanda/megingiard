@@ -44,4 +44,20 @@ class SettingsManagerTest {
         assertEquals(0, SettingsManager.welcomeTourCompletedVersion.value)
         assertTrue(SettingsManager.showMacroEditorTutorial.value)
     }
+
+    @Test
+    fun testAccentColorAndCustomAccentColorIndependence() {
+        val testCustomColor = 0xFF00E5FF.toInt() // Cyan
+        val testPresetColor = 0xFFFF5252.toInt() // Red preset
+
+        SettingsManager.setCustomAccentColor(testCustomColor)
+        SettingsManager.setAccentColor(testCustomColor)
+        assertEquals(testCustomColor, SettingsManager.customAccentColor.value)
+        assertEquals(testCustomColor, SettingsManager.accentColor.value)
+
+        // Switch to preset: accentColor changes, but customAccentColor is preserved
+        SettingsManager.setAccentColor(testPresetColor)
+        assertEquals(testPresetColor, SettingsManager.accentColor.value)
+        assertEquals(testCustomColor, SettingsManager.customAccentColor.value)
+    }
 }

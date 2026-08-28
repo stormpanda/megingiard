@@ -24,11 +24,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.rounded.AutoFixHigh
-import androidx.compose.material.icons.rounded.Autorenew
 import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Gamepad
-import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.PowerSettingsNew
@@ -45,8 +43,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -57,16 +53,14 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.catalog.DisplayDetector
 import com.stormpanda.megingiard.macropad.MacroPadState
-import com.stormpanda.megingiard.macropad.PadLayout
-import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.mirror.ScreenshotTarget
 import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdConnectionState
-import com.stormpanda.megingiard.settings.GlobalSettingsScreen
-import com.stormpanda.megingiard.settings.SettingsManager
-import com.stormpanda.megingiard.shouldShowIntegrationHome
-import java.util.UUID
+import com.stormpanda.megingiard.ui.PrimaryModalConfig
+import com.stormpanda.megingiard.ui.PrimaryModalType
 
 private const val TAG = "QuickMenu"
 
@@ -118,7 +112,6 @@ fun QuickMenu(
     val activeLayout by MacroPadState.activeLayout.collectAsState()
     val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
     val isFrozen by ScreenCaptureManager.isFrozen.collectAsState()
-    val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
     val companionViewMode by AppStateManager.companionViewMode.collectAsState()
     val showIntegrationHome by AppStateManager.showIntegrationHome.collectAsState()
     val privdState by PrivdClient.state.collectAsState()
@@ -151,8 +144,9 @@ fun QuickMenu(
                 colors = colors,
                 isCapturing = isCapturing,
                 isFrozen = isFrozen,
-                isViewportEditActive = isViewportEditActive,
-                isScreenshotEnabled = isCapturing || isPrivdConnected,
+                isTopScreenshotEnabled = isCapturing || isPrivdConnected,
+                isBottomScreenshotEnabled = true,
+                isBothScreenshotEnabled = isCapturing || isPrivdConnected,
                 isCompanionHub = showIntegrationHome,
                 modifier =
                     Modifier
@@ -169,11 +163,9 @@ fun QuickMenu(
                     onDismiss()
                 },
                 onToggleFreeze = { ScreenCaptureManager.toggleFrozen() },
-                onToggleViewportEdit = {
-                    AppStateManager.setViewportEditActive(true)
-                    onDismiss()
-                },
-                onTakeScreenshot = { ScreenCaptureManager.requestScreenshot() },
+                onTakeTopScreenshot = { ScreenCaptureManager.requestScreenshot(ScreenshotTarget.TOP) },
+                onTakeBottomScreenshot = { ScreenCaptureManager.requestScreenshot(ScreenshotTarget.BOTTOM) },
+                onTakeBothScreenshot = { ScreenCaptureManager.requestScreenshot(ScreenshotTarget.BOTH) },
             )
 
             // ── Bottom card — Profiles / Layouts / Actions ─────────────────
@@ -318,7 +310,10 @@ fun QuickMenu(
                         label = stringResource(R.string.quick_menu_global_settings),
                         icon = Icons.Rounded.Settings,
                         colors = colors,
-                        onClick = { AppStateManager.setGlobalSettingsOpen(true) },
+                        onClick = {
+                            AppStateManager.setGlobalSettingsOpen(true)
+                            onDismiss()
+                        },
                         modifier = Modifier.weight(1f),
                     )
                     ShutOffIconButton(
@@ -383,9 +378,19 @@ private fun QuickMenuHelpModal(
             description = stringResource(R.string.help_quickmenu_viewport_desc),
         )
         HelpEntry(
-            icon = Icons.Rounded.CameraAlt,
-            label = stringResource(R.string.help_quickmenu_screenshot_label),
-            description = stringResource(R.string.help_quickmenu_screenshot_desc),
+            symbolName = "splitscreen_bottom",
+            label = stringResource(R.string.help_quickmenu_screenshot_top_label),
+            description = stringResource(R.string.help_quickmenu_screenshot_top_desc),
+        )
+        HelpEntry(
+            symbolName = "splitscreen_top",
+            label = stringResource(R.string.help_quickmenu_screenshot_bottom_label),
+            description = stringResource(R.string.help_quickmenu_screenshot_bottom_desc),
+        )
+        HelpEntry(
+            symbolName = "splitscreen",
+            label = stringResource(R.string.help_quickmenu_screenshot_both_label),
+            description = stringResource(R.string.help_quickmenu_screenshot_both_desc),
         )
 
         HelpSection(stringResource(R.string.help_quickmenu_section_macropad))

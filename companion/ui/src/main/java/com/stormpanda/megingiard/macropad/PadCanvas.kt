@@ -2,11 +2,17 @@ package com.stormpanda.megingiard.macropad
 
 import android.content.Context
 import android.graphics.BitmapFactory
-import android.view.WindowManager
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,11 +28,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -36,6 +45,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
@@ -56,9 +66,12 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.BitmapUtils
+import com.stormpanda.megingiard.math.ViewportMath
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.math.PI
@@ -78,9 +91,24 @@ private const val TAG = "PadCanvas"
 private val ED_BUTTON_UNIT_DP = 60.dp
 private val ED_BTN_SQUARE_RADIUS = 4.dp
 
-// Reuse the shared screen padding so the editor canvas remains pixel-identical to use mode.
-private val PC_SCREEN_PADDING = MP_SCREEN_PADDING
 private const val ED_EDGE_MARGIN = 0.05f
+
+// Highlight border when button positioning is unlocked or cropping background
+private val PC_HIGHLIGHT_BORDER_WIDTH = 2.dp
+private val PC_HIGHLIGHT_BORDER_RADIUS = 10.dp
+private const val PC_HIGHLIGHT_BORDER_ALPHA = 0.85f
+
+// Background image cropping scale limits
+private const val PC_CROP_MIN_SCALE = 1.0f
+private const val PC_CROP_MAX_SCALE = 5.0f
+
+// Lock symbol badge timing and dimensions
+private const val PC_LOCK_TOAST_DURATION_MS = 650L
+private const val PC_LOCK_ANIM_IN_MS = 150
+private const val PC_LOCK_ANIM_OUT_MS = 250
+private val PC_LOCK_BADGE_SIZE = 72.dp
+private val PC_LOCK_BADGE_CORNER = 16.dp
+private val PC_LOCK_ICON_SIZE = 40.dp
 
 // Grid: half a button unit — two steps apart = buttons touch exactly
 private val PC_GRID_STEP_DP = 30.dp
@@ -95,14 +123,13 @@ private val PC_RADIAL_CENTER_DOT = 5.dp
 private const val PC_RADIAL_MIN_POINTS = 4
 private const val PC_RADIAL_EXTRA_RINGS = 3
 
-// Outer gradient edge alpha for editor chip buttons (matches use-mode resting appearance)
-private const val PC_BTN_GRADIENT_OUTER = 0.9f
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Grid mode
-// ─────────────────────────────────────────────────────────────────────────────
-
-internal enum class GridMode { OFF, RECTANGULAR, RADIAL }
+// Drag handles & highlight pointers
+private val PC_HANDLE_SIZE = 32.dp
+private val PC_HANDLE_PADDING = 4.dp
+private const val PC_POINTER_ROTATION_TOP = 0f
+private const val PC_POINTER_ROTATION_BOTTOM = 180f
+private const val PC_POINTER_ROTATION_LEFT = 270f
+private const val PC_POINTER_ROTATION_RIGHT = 90f
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Pad canvas — drag buttons to reposition
@@ -115,16 +142,18 @@ internal fun PadCanvas(
     accentColor: Color,
     gridMode: GridMode,
     isLocked: Boolean,
+    isCropping: Boolean = false,
+    transparentBackground: Boolean = false,
+    modifier: Modifier = Modifier,
 ) {
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
-    var lastTouchedButtonId by remember { mutableStateOf<String?>(null) }
+    val selectedButtonId by MacroPadState.selectedButtonId.collectAsState()
+    val isMirrorEditorBackgroundHidden by AppStateManager.isMirrorEditorBackgroundHidden.collectAsState()
+    val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
+    val shouldHideBackground = isViewportEditActive && isMirrorEditorBackgroundHidden
     val colors = LocalAppColors.current
     val density = LocalDensity.current
     val context = LocalContext.current
-    val windowManager = remember { context.getSystemService(Context.WINDOW_SERVICE) as WindowManager }
-    val bounds = windowManager.currentWindowMetrics.bounds
-    val padWidth = with(density) { bounds.width().toDp() } - PC_SCREEN_PADDING * 2
-    val padHeight = with(density) { bounds.height().toDp() } - PC_SCREEN_PADDING * 2
     val gridStepPx = with(density) { PC_GRID_STEP_DP.toPx() }
 
     var bgBitmap by remember(layout?.backgroundImagePath, layout?.backgroundImageVersion) { mutableStateOf<ImageBitmap?>(null) }
@@ -179,17 +208,75 @@ internal fun PadCanvas(
             }
         }
 
-    val padModifier =
-        Modifier
-            .width(padWidth)
-            .height(padHeight)
-            .border(1.dp, colors.macroPadAccentBorder, RoundedCornerShape(0.dp))
-            .clip(RoundedCornerShape(0.dp))
-            .background(Color.Black)
-            .onSizeChanged { canvasSize = it }
+    var lockSymbolVisible by remember { mutableStateOf(false) }
+    var lockSymbolLocked by remember { mutableStateOf(isLocked) }
+    var isFirstComposition by remember { mutableStateOf(true) }
 
-    Box(modifier = padModifier) {
-        if (bgBitmap != null) {
+    LaunchedEffect(isLocked) {
+        if (isFirstComposition) {
+            isFirstComposition = false
+            return@LaunchedEffect
+        }
+        lockSymbolLocked = isLocked
+        lockSymbolVisible = true
+        delay(PC_LOCK_TOAST_DURATION_MS)
+        lockSymbolVisible = false
+    }
+
+    val padModifier =
+        modifier
+            .fillMaxSize()
+            .clip(RoundedCornerShape(PC_HIGHLIGHT_BORDER_RADIUS))
+            .background(if (transparentBackground) Color.Transparent else Color.Black)
+            .then(
+                if (!isLocked || isCropping) {
+                    Modifier.border(
+                        width = PC_HIGHLIGHT_BORDER_WIDTH,
+                        color = accentColor.copy(alpha = PC_HIGHLIGHT_BORDER_ALPHA),
+                        shape = RoundedCornerShape(PC_HIGHLIGHT_BORDER_RADIUS),
+                    )
+                } else {
+                    Modifier
+                },
+            ).onSizeChanged { canvasSize = it }
+
+    val cropModifier =
+        if (isCropping && bgBitmap != null && canvasSize.width > 0 && canvasSize.height > 0) {
+            Modifier.pointerInput(canvasSize, isCropping, bgBitmap != null) {
+                detectTransformGestures { _, pan, zoom, _ ->
+                    val cw = canvasSize.width.toFloat()
+                    val ch = canvasSize.height.toFloat()
+                    val bitmap = bgBitmap ?: return@detectTransformGestures
+                    val iw = bitmap.width.toFloat()
+                    val ih = bitmap.height.toFloat()
+                    if (cw > 0f && ch > 0f && iw > 0f && ih > 0f) {
+                        val currentLayout = MacroPadState.previewLayout.value ?: layout
+                        val currentScale = currentLayout?.bgImageScale ?: 1f
+                        val newScale = (currentScale * zoom).coerceIn(PC_CROP_MIN_SCALE, PC_CROP_MAX_SCALE)
+
+                        val scaleBase = ViewportMath.calculateAspectFillScale(cw, ch, iw, ih)
+                        val ws = iw * scaleBase
+                        val hs = ih * scaleBase
+
+                        val (maxTx, maxTy) = ViewportMath.getMaxOffsets(cw, ch, ws, hs, newScale)
+                        val currentPixelX = (currentLayout?.bgImageOffsetX ?: 0f) * cw
+                        val currentPixelY = (currentLayout?.bgImageOffsetY ?: 0f) * ch
+                        val clampedX = (currentPixelX + pan.x).coerceIn(-maxTx, maxTx)
+                        val clampedY = (currentPixelY + pan.y).coerceIn(-maxTy, maxTy)
+
+                        val normX = if (cw > 0f) clampedX / cw else 0f
+                        val normY = if (ch > 0f) clampedY / ch else 0f
+
+                        MacroPadState.updatePreviewBackgroundCrop(newScale, normX, normY)
+                    }
+                }
+            }
+        } else {
+            Modifier
+        }
+
+    Box(modifier = padModifier.then(cropModifier)) {
+        if (!shouldHideBackground && !transparentBackground && bgBitmap != null) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val cw = size.width
                 val ch = size.height
@@ -201,7 +288,7 @@ internal fun PadCanvas(
                     val oy = layout?.bgImageOffsetY ?: 0f
 
                     val scaleBase =
-                        com.stormpanda.megingiard.math.ViewportMath
+                        ViewportMath
                             .calculateAspectFillScale(cw, ch, iw, ih)
                     val ws = iw * scaleBase
                     val hs = ih * scaleBase
@@ -251,8 +338,10 @@ internal fun PadCanvas(
                 enableTouch = profile.enableTouch,
                 gridMode = gridMode,
                 gridStepPx = gridStepPx,
-                isLocked = isLocked,
-                onTouch = { lastTouchedButtonId = btn.id },
+                isLocked = isLocked || isCropping,
+                onTouch = {
+                    MacroPadState.setSelectedButtonId(btn.id)
+                },
                 onPositionChanged = { nx, ny ->
                     val layoutId = targetLayoutId
                     val activeProfile = MacroPadState.activeProfile.value
@@ -273,9 +362,9 @@ internal fun PadCanvas(
             )
         }
 
-        // Render handles for the last touched button if not locked
-        val activeBtn = (layout?.buttons ?: emptyList()).firstOrNull { it.id == lastTouchedButtonId }
-        if (!isLocked && activeBtn != null) {
+        // Render handles or highlight pointers for the active button
+        val activeBtn = (layout?.buttons ?: emptyList()).firstOrNull { it.id == selectedButtonId }
+        if (activeBtn != null) {
             val isTrackpoint = activeBtn.action is PadAction.TrackpointMove
             val tpMultiplier = if (isTrackpoint) (activeBtn.action as PadAction.TrackpointMove).size.multiplier else 1f
             val chipWidthPx =
@@ -304,73 +393,155 @@ internal fun PadCanvas(
             val halfW = chipWidthPx / 2f
             val halfH = chipHeightPx / 2f
 
-            val handleSize = 16.dp
-            val handleSizePx = with(density) { handleSize.toPx() }
-            val paddingPx = with(density) { 4.dp.toPx() }
+            val handleSizePx = with(density) { PC_HANDLE_SIZE.toPx() }
+            val paddingPx = with(density) { PC_HANDLE_PADDING.toPx() }
 
-            // Top handle
-            DragHandle(
-                buttonId = activeBtn.id,
-                leftPx = centerX - handleSizePx / 2f,
-                topPx = centerY - halfH - paddingPx - handleSizePx,
-                handleSize = handleSize,
-                buttonPosX = activeBtn.posX,
-                buttonPosY = activeBtn.posY,
-                w = w,
-                h = h,
-                gridMode = gridMode,
-                gridStepPx = gridStepPx,
-                layoutId = layout?.id,
-                accentColor = accentColor,
-            )
+            val topHandleLeft = centerX - handleSizePx / 2f
+            val topHandleTop = centerY - halfH - paddingPx - handleSizePx
 
-            // Bottom handle
-            DragHandle(
-                buttonId = activeBtn.id,
-                leftPx = centerX - handleSizePx / 2f,
-                topPx = centerY + halfH + paddingPx,
-                handleSize = handleSize,
-                buttonPosX = activeBtn.posX,
-                buttonPosY = activeBtn.posY,
-                w = w,
-                h = h,
-                gridMode = gridMode,
-                gridStepPx = gridStepPx,
-                layoutId = layout?.id,
-                accentColor = accentColor,
-            )
+            val bottomHandleLeft = centerX - handleSizePx / 2f
+            val bottomHandleTop = centerY + halfH + paddingPx
 
-            // Left handle
-            DragHandle(
-                buttonId = activeBtn.id,
-                leftPx = centerX - halfW - paddingPx - handleSizePx,
-                topPx = centerY - handleSizePx / 2f,
-                handleSize = handleSize,
-                buttonPosX = activeBtn.posX,
-                buttonPosY = activeBtn.posY,
-                w = w,
-                h = h,
-                gridMode = gridMode,
-                gridStepPx = gridStepPx,
-                layoutId = layout?.id,
-                accentColor = accentColor,
-            )
+            val leftHandleLeft = centerX - halfW - paddingPx - handleSizePx
+            val leftHandleTop = centerY - handleSizePx / 2f
 
-            // Right handle
-            DragHandle(
-                buttonId = activeBtn.id,
-                leftPx = centerX + halfW + paddingPx,
-                topPx = centerY - handleSizePx / 2f,
-                handleSize = handleSize,
-                buttonPosX = activeBtn.posX,
-                buttonPosY = activeBtn.posY,
-                w = w,
-                h = h,
-                gridMode = gridMode,
-                gridStepPx = gridStepPx,
-                layoutId = layout?.id,
-                accentColor = accentColor,
-            )
+            val rightHandleLeft = centerX + halfW + paddingPx
+            val rightHandleTop = centerY - handleSizePx / 2f
+
+            if (!isLocked && !isCropping) {
+                // Top handle
+                DragHandle(
+                    buttonId = activeBtn.id,
+                    leftPx = topHandleLeft,
+                    topPx = topHandleTop,
+                    handleSize = PC_HANDLE_SIZE,
+                    buttonPosX = activeBtn.posX,
+                    buttonPosY = activeBtn.posY,
+                    w = w,
+                    h = h,
+                    gridMode = gridMode,
+                    gridStepPx = gridStepPx,
+                    layoutId = layout?.id,
+                    accentColor = accentColor,
+                )
+
+                // Bottom handle
+                DragHandle(
+                    buttonId = activeBtn.id,
+                    leftPx = bottomHandleLeft,
+                    topPx = bottomHandleTop,
+                    handleSize = PC_HANDLE_SIZE,
+                    buttonPosX = activeBtn.posX,
+                    buttonPosY = activeBtn.posY,
+                    w = w,
+                    h = h,
+                    gridMode = gridMode,
+                    gridStepPx = gridStepPx,
+                    layoutId = layout?.id,
+                    accentColor = accentColor,
+                )
+
+                // Left handle
+                DragHandle(
+                    buttonId = activeBtn.id,
+                    leftPx = leftHandleLeft,
+                    topPx = leftHandleTop,
+                    handleSize = PC_HANDLE_SIZE,
+                    buttonPosX = activeBtn.posX,
+                    buttonPosY = activeBtn.posY,
+                    w = w,
+                    h = h,
+                    gridMode = gridMode,
+                    gridStepPx = gridStepPx,
+                    layoutId = layout?.id,
+                    accentColor = accentColor,
+                )
+
+                // Right handle
+                DragHandle(
+                    buttonId = activeBtn.id,
+                    leftPx = rightHandleLeft,
+                    topPx = rightHandleTop,
+                    handleSize = PC_HANDLE_SIZE,
+                    buttonPosX = activeBtn.posX,
+                    buttonPosY = activeBtn.posY,
+                    w = w,
+                    h = h,
+                    gridMode = gridMode,
+                    gridStepPx = gridStepPx,
+                    layoutId = layout?.id,
+                    accentColor = accentColor,
+                )
+            } else {
+                // Top pointer (points DOWN towards the button)
+                HighlightPointer(
+                    leftPx = topHandleLeft,
+                    topPx = topHandleTop,
+                    handleSize = PC_HANDLE_SIZE,
+                    rotation = PC_POINTER_ROTATION_TOP,
+                    accentColor = accentColor,
+                )
+
+                // Bottom pointer (points UP towards the button)
+                HighlightPointer(
+                    leftPx = bottomHandleLeft,
+                    topPx = bottomHandleTop,
+                    handleSize = PC_HANDLE_SIZE,
+                    rotation = PC_POINTER_ROTATION_BOTTOM,
+                    accentColor = accentColor,
+                )
+
+                // Left pointer (points RIGHT towards the button)
+                HighlightPointer(
+                    leftPx = leftHandleLeft,
+                    topPx = leftHandleTop,
+                    handleSize = PC_HANDLE_SIZE,
+                    rotation = PC_POINTER_ROTATION_LEFT,
+                    accentColor = accentColor,
+                )
+
+                // Right pointer (points LEFT towards the button)
+                HighlightPointer(
+                    leftPx = rightHandleLeft,
+                    topPx = rightHandleTop,
+                    handleSize = PC_HANDLE_SIZE,
+                    rotation = PC_POINTER_ROTATION_RIGHT,
+                    accentColor = accentColor,
+                )
+            }
+        }
+
+        AnimatedVisibility(
+            visible = lockSymbolVisible,
+            enter =
+                fadeIn(animationSpec = tween(PC_LOCK_ANIM_IN_MS)) +
+                    scaleIn(initialScale = 0.8f, animationSpec = tween(PC_LOCK_ANIM_IN_MS)),
+            exit =
+                fadeOut(animationSpec = tween(PC_LOCK_ANIM_OUT_MS)) +
+                    scaleOut(targetScale = 1.1f, animationSpec = tween(PC_LOCK_ANIM_OUT_MS)),
+            modifier = Modifier.align(Alignment.Center),
+        ) {
+            Box(
+                modifier =
+                    Modifier
+                        .size(PC_LOCK_BADGE_SIZE)
+                        .background(
+                            color = Color.Black.copy(alpha = 0.75f),
+                            shape = RoundedCornerShape(PC_LOCK_BADGE_CORNER),
+                        ).border(
+                            width = 1.dp,
+                            color = if (!lockSymbolLocked) accentColor else Color.White.copy(alpha = 0.2f),
+                            shape = RoundedCornerShape(PC_LOCK_BADGE_CORNER),
+                        ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = if (lockSymbolLocked) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
+                    contentDescription = null,
+                    tint = if (!lockSymbolLocked) accentColor else Color.White,
+                    modifier = Modifier.size(PC_LOCK_ICON_SIZE),
+                )
+            }
         }
     }
 }
@@ -397,7 +568,7 @@ private fun DraggableButton(
     val resolvedBorderColorOption = btn.buttonBorderColor ?: layout.buttonBorderColor
     val resolvedTextColorOption = btn.buttonTextColor ?: layout.buttonTextColor
 
-    val effectiveBg = resolveColorOption(resolvedBgColorOption, accentColor, MP_AMBIENT_NEUTRAL_BG)
+    val effectiveBg = resolveBgColorOption(resolvedBgColorOption, accentColor)
     val effectiveBorder = resolveColorOption(resolvedBorderColorOption, accentColor, MP_AMBIENT_NEUTRAL_BORDER)
     val effectiveTextTint = resolveColorOption(resolvedTextColorOption, accentColor, MP_AMBIENT_NEUTRAL_TEXT)
 
@@ -589,8 +760,6 @@ private fun DraggableButton(
             isDeviceDisabled = isDeviceDisabled,
             borderColor = effectiveBorder,
             bgColor = effectiveBg,
-            bgAlpha = 0.25f,
-            gradientScale = PC_BTN_GRADIENT_OUTER / 0.25f,
             modifier =
                 Modifier
                     .fillMaxSize()
@@ -605,7 +774,7 @@ private fun DraggableButton(
             PadButtonContent(
                 btn = btn,
                 effectiveTextTint = effectiveTextTint,
-                iconSize = MP_BUTTON_UNIT_DP * 0.73f * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
+                iconSize = MP_BTN_ICON_UNIT * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
                 isTrackpoint = isTrackpoint,
             )
         }
@@ -875,6 +1044,7 @@ private fun DragHandle(
                             startPosY = buttonPosY
                             dragOffsetX = 0f
                             dragOffsetY = 0f
+                            MacroPadState.setSelectedButtonId(buttonId)
                         },
                         onDrag = { change, drag ->
                             change.consume()
@@ -920,6 +1090,30 @@ private fun DragHandle(
             name = "drag_pan",
             size = handleSize,
             tint = accentColor,
+        )
+    }
+}
+
+@Composable
+private fun HighlightPointer(
+    leftPx: Float,
+    topPx: Float,
+    handleSize: Dp,
+    rotation: Float,
+    accentColor: Color,
+) {
+    Box(
+        modifier =
+            Modifier
+                .absoluteOffset { IntOffset(leftPx.roundToInt(), topPx.roundToInt()) }
+                .size(handleSize),
+        contentAlignment = Alignment.Center,
+    ) {
+        MaterialSymbol(
+            name = "arrow_drop_down",
+            size = handleSize,
+            tint = accentColor,
+            modifier = Modifier.rotate(rotation),
         )
     }
 }

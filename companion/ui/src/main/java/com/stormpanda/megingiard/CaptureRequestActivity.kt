@@ -32,7 +32,6 @@ class CaptureRequestActivity : ComponentActivity() {
                 AppLog.i(TAG, "RESULT_CANCELED → checking Privd state before updating layout mirrorAutoStart")
                 if (PrivdManager.state.value != PrivdState.RUNNING) {
                     MacroPadState.activeLayout.value?.id?.let { layoutId ->
-                        AppStateManager.suppressMirrorAutoStart(layoutId)
                         MacroPadState.setLayoutMirrorAutoStart(layoutId, false)
                     }
                 } else {

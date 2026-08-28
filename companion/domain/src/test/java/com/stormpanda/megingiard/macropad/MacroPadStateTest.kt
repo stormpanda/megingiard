@@ -701,6 +701,31 @@ class MacroPadStateTest {
     }
 
     @Test
+    fun `updateLayout preserves and updates ambientDim`() {
+        val p1Id = UUID.randomUUID().toString()
+        val layoutId = "layout-1"
+        val l1 = PadLayout(id = layoutId, name = "Lay1", ambientDim = 0f)
+        val p1 =
+            PadProfile(
+                id = p1Id,
+                name = "P1",
+                layouts = listOf(l1),
+                activeLayoutId = layoutId,
+            )
+        MacroPadState.loadFrom(listOf(p1), p1Id)
+
+        // Verify initially 0f
+        assertEquals(0f, MacroPadState.activeLayout.value?.ambientDim)
+
+        // When updating the layout with ambientDim = 0.4f
+        val updatedLayout = l1.copy(ambientDim = 0.4f)
+        MacroPadState.updateLayout(updatedLayout)
+
+        // Then it is preserved in state
+        assertEquals(0.4f, MacroPadState.activeLayout.value?.ambientDim)
+    }
+
+    @Test
     fun `updateLayout preserves and updates bgImageScale and offsets`() {
         val p1Id = UUID.randomUUID().toString()
         val layoutId = "layout-1"
@@ -739,5 +764,261 @@ class MacroPadStateTest {
         assertEquals(2.5f, MacroPadState.activeLayout.value?.bgImageScale)
         assertEquals(0.2f, MacroPadState.activeLayout.value?.bgImageOffsetX)
         assertEquals(-0.1f, MacroPadState.activeLayout.value?.bgImageOffsetY)
+    }
+
+    @Test
+    fun `reorderProfiles updates profile order in state`() {
+        val p1 = PadProfile(id = "p1", name = "Profile 1", layouts = listOf(PadLayout(id = "l1", name = "L1")), activeLayoutId = "l1")
+        val p2 = PadProfile(id = "p2", name = "Profile 2", layouts = listOf(PadLayout(id = "l2", name = "L2")), activeLayoutId = "l2")
+        val p3 = PadProfile(id = "p3", name = "Profile 3", layouts = listOf(PadLayout(id = "l3", name = "L3")), activeLayoutId = "l3")
+
+        MacroPadState.loadFrom(listOf(p1, p2, p3), "p1")
+        assertEquals(listOf("p1", "p2", "p3"), MacroPadState.profiles.value.map { it.id })
+
+        MacroPadState.reorderProfiles(listOf(p3, p1, p2))
+        assertEquals(listOf("p3", "p1", "p2"), MacroPadState.profiles.value.map { it.id })
+    }
+
+    @Test
+    fun `reorderLayouts updates layout order in active profile`() {
+        val l1 = PadLayout(id = "l1", name = "Layout 1")
+        val l2 = PadLayout(id = "l2", name = "Layout 2")
+        val l3 = PadLayout(id = "l3", name = "Layout 3")
+        val p1 = PadProfile(id = "p1", name = "Profile 1", layouts = listOf(l1, l2, l3), activeLayoutId = "l1")
+
+        MacroPadState.loadFrom(listOf(p1), "p1")
+        assertEquals(
+            listOf("l1", "l2", "l3"),
+            MacroPadState.activeProfile.value
+                ?.layouts
+                ?.map { it.id },
+        )
+
+        MacroPadState.reorderLayouts(listOf(l2, l3, l1))
+        assertEquals(
+            listOf("l2", "l3", "l1"),
+            MacroPadState.activeProfile.value
+                ?.layouts
+                ?.map { it.id },
+        )
+    }
+
+    @Test
+    fun `isEditingButtonPositions defaults to false and updates correctly`() {
+        // Default is false (off by default)
+        assertEquals(false, MacroPadState.isEditingButtonPositions.value)
+
+        MacroPadState.setEditingButtonPositions(true)
+        assertEquals(true, MacroPadState.isEditingButtonPositions.value)
+
+        MacroPadState.setEditingButtonPositions(false)
+        assertEquals(false, MacroPadState.isEditingButtonPositions.value)
+    }
+
+    @Test
+    fun `gridMode defaults to OFF and updates correctly`() {
+        assertEquals(GridMode.OFF, MacroPadState.gridMode.value)
+
+        MacroPadState.setGridMode(GridMode.RECTANGULAR)
+        assertEquals(GridMode.RECTANGULAR, MacroPadState.gridMode.value)
+
+        MacroPadState.setGridMode(GridMode.RADIAL)
+        assertEquals(GridMode.RADIAL, MacroPadState.gridMode.value)
+
+        MacroPadState.setGridMode(GridMode.OFF)
+        assertEquals(GridMode.OFF, MacroPadState.gridMode.value)
+    }
+
+    @Test
+    fun `setSelectedButtonId updates selectedButtonId and setEditingButtonPositions resets it`() {
+        assertEquals(null, MacroPadState.selectedButtonId.value)
+
+        MacroPadState.setSelectedButtonId("btn-123")
+        assertEquals("btn-123", MacroPadState.selectedButtonId.value)
+
+        MacroPadState.setEditingButtonPositions(false)
+        assertEquals(null, MacroPadState.selectedButtonId.value)
+    }
+
+    @Test
+    fun `setPreviewLayout and clearPreviewLayout manage in-flight layout preview`() {
+        val p1Id = UUID.randomUUID().toString()
+        val l1Id = UUID.randomUUID().toString()
+        val savedLayout = PadLayout(id = l1Id, name = "Saved Layout", buttonTextColor = ColorOption.Neutral, mirrorConfigured = true)
+        val p1 = PadProfile(id = p1Id, name = "Profile 1", layouts = listOf(savedLayout), activeLayoutId = l1Id)
+        MacroPadState.loadFrom(listOf(p1), p1Id)
+
+        assertEquals(savedLayout, MacroPadState.activeLayout.value)
+        assertEquals(null, MacroPadState.previewLayout.value)
+
+        // Set in-flight preview layout
+        val previewLayout = savedLayout.copy(buttonTextColor = ColorOption.Accent)
+        MacroPadState.setPreviewLayout(previewLayout)
+
+        assertEquals(previewLayout, MacroPadState.previewLayout.value)
+        assertEquals(previewLayout, MacroPadState.activeLayout.value)
+        // Underlying saved profiles list is unaffected
+        assertEquals(
+            ColorOption.Neutral,
+            MacroPadState.profiles.value
+                .first()
+                .layouts
+                .first()
+                .buttonTextColor,
+        )
+
+        // Clear preview layout
+        MacroPadState.clearPreviewLayout()
+        assertEquals(null, MacroPadState.previewLayout.value)
+        assertEquals(savedLayout, MacroPadState.activeLayout.value)
+    }
+
+    @Test
+    fun `setPreviewButton replaces existing button or appends new button in activeLayout preview`() {
+        val p1Id = UUID.randomUUID().toString()
+        val l1Id = UUID.randomUUID().toString()
+        val b1 =
+            PadButton(
+                id = "btn-1",
+                label = "A",
+                posX = 0.2f,
+                posY = 0.2f,
+                action = PadAction.KeyboardKey(65, "A"),
+                buttonTextColor = ColorOption.Neutral,
+            )
+        val savedLayout = PadLayout(id = l1Id, name = "Saved Layout", buttons = listOf(b1), mirrorConfigured = true)
+        val p1 = PadProfile(id = p1Id, name = "Profile 1", layouts = listOf(savedLayout), activeLayoutId = l1Id)
+        MacroPadState.loadFrom(listOf(p1), p1Id)
+
+        // 1. Modify existing button in preview
+        val modifiedB1 = b1.copy(buttonTextColor = ColorOption.Accent)
+        MacroPadState.setPreviewButton(modifiedB1)
+
+        val preview1 = MacroPadState.activeLayout.value
+        assertNotNull(preview1)
+        assertEquals(1, preview1!!.buttons.size)
+        assertEquals(ColorOption.Accent, preview1.buttons.first().buttonTextColor)
+        // Profiles list still has saved button
+        assertEquals(
+            ColorOption.Neutral,
+            MacroPadState.profiles.value
+                .first()
+                .layouts
+                .first()
+                .buttons
+                .first()
+                .buttonTextColor,
+        )
+
+        // 2. Add new button in preview
+        val b2 =
+            PadButton(
+                id = "btn-2",
+                label = "B",
+                posX = 0.4f,
+                posY = 0.4f,
+                action = PadAction.KeyboardKey(66, "B"),
+                buttonTextColor = ColorOption.Custom(0xFF112233.toInt()),
+            )
+        MacroPadState.setPreviewButton(b2)
+
+        val preview2 = MacroPadState.activeLayout.value
+        assertNotNull(preview2)
+        assertEquals(2, preview2!!.buttons.size)
+        assertTrue(preview2.buttons.any { it.id == "btn-2" })
+
+        // 3. Passing null clears preview
+        MacroPadState.setPreviewButton(null)
+        assertEquals(null, MacroPadState.previewLayout.value)
+        assertEquals(savedLayout, MacroPadState.activeLayout.value)
+    }
+
+    @Test
+    fun `loadFrom migrates legacy full opacity custom buttonBgColor on layout and buttons`() {
+        val pId = UUID.randomUUID().toString()
+        val lId = UUID.randomUUID().toString()
+        val b1 =
+            PadButton(
+                id = "btn-1",
+                label = "Full Opacity Custom",
+                posX = 0.1f,
+                posY = 0.1f,
+                action = PadAction.KeyboardKey(65, "A"),
+                buttonBgColor = ColorOption.Custom(0xFFFF5500.toInt()), // Alpha = 0xFF (1.0f)
+            )
+        val b2 =
+            PadButton(
+                id = "btn-2",
+                label = "Existing Custom Alpha",
+                posX = 0.3f,
+                posY = 0.3f,
+                action = PadAction.KeyboardKey(66, "B"),
+                buttonBgColor = ColorOption.Custom(0x80FF5500.toInt()), // Alpha = 0x80 (~0.5f)
+            )
+        val layout =
+            PadLayout(
+                id = lId,
+                name = "Layout",
+                buttonBgColor = ColorOption.Custom(0xFF00FF00.toInt()), // Alpha = 0xFF (1.0f)
+                buttons = listOf(b1, b2),
+                mirrorConfigured = true,
+            )
+        val profile = PadProfile(id = pId, name = "Profile", layouts = listOf(layout), activeLayoutId = lId)
+
+        MacroPadState.loadFrom(listOf(profile), pId)
+
+        val loadedProfile = MacroPadState.profiles.value.first { it.id == pId }
+        val loadedLayout = loadedProfile.layouts.first { it.id == lId }
+
+        // Layout bg color migrated from 0xFF to 0xB3 (0.70f)
+        val layoutBg = loadedLayout.buttonBgColor as ColorOption.Custom
+        assertEquals(0xB3, (layoutBg.argb ushr 24) and 0xFF)
+        assertEquals(0x00FF00, layoutBg.argb and 0x00FFFFFF)
+
+        // Button 1 bg color migrated from 0xFF to 0xB3 (0.70f)
+        val btn1Bg = loadedLayout.buttons.first { it.id == "btn-1" }.buttonBgColor as ColorOption.Custom
+        assertEquals(0xB3, (btn1Bg.argb ushr 24) and 0xFF)
+        assertEquals(0xFF5500, btn1Bg.argb and 0x00FFFFFF)
+
+        // Button 2 bg color preserved at 0x80
+        val btn2Bg = loadedLayout.buttons.first { it.id == "btn-2" }.buttonBgColor as ColorOption.Custom
+        assertEquals(0x80, (btn2Bg.argb ushr 24) and 0xFF)
+        assertEquals(0xFF5500, btn2Bg.argb and 0x00FFFFFF)
+    }
+
+    @Test
+    fun `setCroppingBackground updates isCroppingBackground state`() {
+        assertEquals(false, MacroPadState.isCroppingBackground.value)
+        MacroPadState.setCroppingBackground(true)
+        assertEquals(true, MacroPadState.isCroppingBackground.value)
+        MacroPadState.setCroppingBackground(false)
+        assertEquals(false, MacroPadState.isCroppingBackground.value)
+    }
+
+    @Test
+    fun `updatePreviewBackgroundCrop updates preview layout scale and offsets`() {
+        val pId = UUID.randomUUID().toString()
+        val lId = UUID.randomUUID().toString()
+        val layout = PadLayout(id = lId, name = "Layout", bgImageScale = 1.0f, bgImageOffsetX = 0f, bgImageOffsetY = 0f)
+        val profile = PadProfile(id = pId, name = "Profile", layouts = listOf(layout), activeLayoutId = lId)
+        MacroPadState.loadFrom(listOf(profile), pId)
+
+        // Given a preview layout
+        MacroPadState.setPreviewLayout(layout)
+        assertEquals(1.0f, MacroPadState.previewLayout.value?.bgImageScale)
+
+        // When updatePreviewBackgroundCrop is called
+        MacroPadState.updatePreviewBackgroundCrop(2.5f, 0.15f, -0.25f)
+
+        // Then previewLayout reflects the updated scale and offsets
+        assertEquals(2.5f, MacroPadState.previewLayout.value?.bgImageScale)
+        assertEquals(0.15f, MacroPadState.previewLayout.value?.bgImageOffsetX)
+        assertEquals(-0.25f, MacroPadState.previewLayout.value?.bgImageOffsetY)
+
+        // And clearPreviewLayout resets previewLayout and isCroppingBackground
+        MacroPadState.setCroppingBackground(true)
+        MacroPadState.clearPreviewLayout()
+        assertEquals(null, MacroPadState.previewLayout.value)
+        assertEquals(false, MacroPadState.isCroppingBackground.value)
     }
 }

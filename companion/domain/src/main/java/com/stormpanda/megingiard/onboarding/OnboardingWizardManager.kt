@@ -86,7 +86,8 @@ object OnboardingWizardManager {
     }
 
     fun skipWizard() {
-        AppLog.d(TAG, "Dismissing onboarding wizard without storing completion")
+        AppLog.d(TAG, "Dismissing onboarding wizard and marking completed")
+        SettingsManager.setWelcomeTourCompletedVersion(SettingsManager.CURRENT_WELCOME_TOUR_VERSION)
         _isWizardActive.value = false
     }
 

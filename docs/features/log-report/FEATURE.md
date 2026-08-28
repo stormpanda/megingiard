@@ -5,7 +5,6 @@
 > - `companion/domain/src/main/java/com/stormpanda/megingiard/log/` — coordinator singleton
 > - `companion/ui/src/main/java/com/stormpanda/megingiard/MainActivity.kt` — SAF launcher + write
 > - `companion/ui/src/main/java/com/stormpanda/megingiard/settings/GlobalSettingsScreen.kt` — UI entry point
-> - `companion/ui/src/main/java/com/stormpanda/megingiard/settings/GlobalSettingsComponents.kt` — row composable
 
 ---
 
@@ -22,7 +21,7 @@ to be sent to the developer without requiring USB or ADB access.
 - A **Log Level** picker and a **Save log report** row MUST be present together in a dedicated **Settings → Diagnostics** section, located at the bottom of the settings screen (after Privileged Mode).
 - Tapping the row MUST open the SAF "Create Document" picker with a pre-filled filename of the form `megingiard_log_<timestamp>.txt`.
 - The saved file MUST contain a plain-text header (app version, device model, Android version, generation timestamp) followed by up to 3 000 recent logcat lines from the app's own process.
-- On success or failure, an in-tree feedback dialog MUST be shown to the user.
+- On success or failure, an in-overlay toast notification MUST be shown to the user.
 
 ### FR-LR2: Scope and Size
 
@@ -62,7 +61,7 @@ createLogDocumentLauncher callback
 LogReportManager.setSaveResult(Success | Failure)
       │
       ▼
-GlobalSettingsScreen (collectAsState) → InTreeMessageDialog feedback
+GlobalSettingsScreen (collectAsState) → DialogToast feedback
 ```
 
 ### LogReportManager (`:domain`)
@@ -83,16 +82,13 @@ GlobalSettingsScreen (collectAsState) → InTreeMessageDialog feedback
 `readLogcatLines` is blocking I/O and **must** be called from a background thread
 (`Dispatchers.IO` in the `MainActivity` launcher callback).
 
-### SAF File Picker (`:app` — `MainActivity`)
+### SAF File Picker (`:companion:ui` — `MainActivity`)
 
 `createLogDocumentLauncher` is a standard `ActivityResultContracts.CreateDocument("text/plain")` launcher registered in `MainActivity`. Its callback:
 
-1. Sets `AppStateManager.setFilePickerOpen(false)`.
-2. If the user cancels (URI is null), returns early.
-3. On `Dispatchers.IO`: calls `LogReportManager.readLogcatLines(pid)` and `buildReportHeader(...)`, writes header + body to the URI via `contentResolver.openOutputStream`.
-4. Posts `LogReportManager.setSaveResult(Success | Failure)`.
-
-`AppStateManager.setFilePickerOpen(true)` is set before launching, consistent with the rest of the file-picker flow, so the focus-policy logic in `MainActivity` correctly disables game-focus while the picker is open.
+1. If the user cancels (URI is null), returns early.
+2. On `Dispatchers.IO`: calls `LogReportManager.readLogcatLines(pid)` and `buildReportHeader(...)`, writes header + body to the URI via `contentResolver.openOutputStream`.
+3. Posts `LogReportManager.setSaveResult(Success | Failure)`.
 
 ### Pure Helper Unit Tests (`:domain`)
 

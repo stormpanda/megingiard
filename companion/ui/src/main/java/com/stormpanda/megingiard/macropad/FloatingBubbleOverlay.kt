@@ -49,14 +49,13 @@ import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.mirror.MirrorPresentationLifecycleOwner
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.AppDimens
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.LocalAppDimens
+import com.stormpanda.megingiard.ui.WindowOverlayLifecycleOwner
 import com.stormpanda.megingiard.ui.colorSchemeFor
 import com.stormpanda.megingiard.ui.megingiardTypography
 import com.stormpanda.megingiard.ui.paletteFor
@@ -77,7 +76,7 @@ private const val FBO_INITIAL_Y_DP = 200
 object FloatingBubbleOverlay {
     private var bubbleView: ComposeView? = null
     private var windowManager: WindowManager? = null
-    private var lifecycleOwner: MirrorPresentationLifecycleOwner? = null
+    private var lifecycleOwner: WindowOverlayLifecycleOwner? = null
     private val mainHandler = Handler(Looper.getMainLooper())
 
     fun show(
@@ -129,7 +128,7 @@ object FloatingBubbleOverlay {
             val wm = windowContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
             windowManager = wm
 
-            val owner = MirrorPresentationLifecycleOwner(service.application)
+            val owner = WindowOverlayLifecycleOwner(service.application)
             lifecycleOwner = owner
 
             val density = windowContext.resources.displayMetrics.density
@@ -221,7 +220,6 @@ object FloatingBubbleOverlay {
 
             wm.addView(view, params)
             bubbleView = view
-            AppStateManager.setFloatingBubbleActive(true)
             AppLog.i(
                 TAG,
                 "Floating bubble overlay displayed on display ${targetDisplay.displayId} via TYPE_ACCESSIBILITY_OVERLAY (size=${windowSizePx}px)",
@@ -246,7 +244,6 @@ object FloatingBubbleOverlay {
         bubbleView = null
         windowManager = null
         lifecycleOwner = null
-        AppStateManager.setFloatingBubbleActive(false)
     }
 }
 

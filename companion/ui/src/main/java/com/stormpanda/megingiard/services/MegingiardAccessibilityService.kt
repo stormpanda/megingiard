@@ -671,38 +671,6 @@ class MegingiardAccessibilityService : AccessibilityService() {
         return false
     }
 
-    private fun pairKeywordsMatchPresent(
-        rootNode: AccessibilityNodeInfo,
-        pairKeywords: List<String>,
-    ): Boolean {
-        val knownPairingResourceIds =
-            listOf(
-                "com.android.settings:id/adb_pair_choice",
-                "com.android.settings:id/pair_with_code",
-                "com.android.settings:id/adb_pair_code",
-                "com.android.settings:id/adb_pairing_code",
-                "com.android.settings:id/adb_pair_with_code_pref",
-                "com.android.settings:id/adb_pair_by_code_preference",
-            )
-        for (resId in knownPairingResourceIds) {
-            val nodes = rootNode.findAccessibilityNodeInfosByViewId(resId) ?: emptyList()
-            if (nodes.isNotEmpty()) return true
-        }
-        if (findNodeByResourceIdPattern(rootNode) != null) return true
-
-        val titleNodes = rootNode.findAccessibilityNodeInfosByViewId("android:id/title") ?: emptyList()
-        val settingsTitleNodes = rootNode.findAccessibilityNodeInfosByViewId("com.android.settings:id/title") ?: emptyList()
-        val allTitles = (titleNodes + settingsTitleNodes).distinct()
-
-        for (titleNode in allTitles) {
-            val titleText = titleNode.text?.toString() ?: ""
-            if (pairKeywords.any { kw -> titleText.contains(kw, ignoreCase = true) }) {
-                return true
-            }
-        }
-        return false
-    }
-
     private fun findAndClickPreferenceRow(
         rootNode: AccessibilityNodeInfo,
         targetKeyword: String,

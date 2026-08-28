@@ -1,51 +1,38 @@
 package com.stormpanda.megingiard.ui
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
-import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.SwipeGestureProgress
 import com.stormpanda.megingiard.SwipeGestureType
 import com.stormpanda.megingiard.macropad.AmbientPreviewManager
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
@@ -92,7 +79,8 @@ fun QuickMenuBar(modifier: Modifier = Modifier) {
     val previewConfig by AmbientPreviewManager.config.collectAsState()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
     val isWizardActive by OnboardingWizardManager.isWizardActive.collectAsState()
-    if (previewConfig != null || isViewportEditActive || isWizardActive) return
+    val isPrivdSetupWizardActive by AppStateManager.isPrivdSetupWizardActive.collectAsState()
+    if (previewConfig != null || isViewportEditActive || isWizardActive || isPrivdSetupWizardActive) return
 
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
     val overlayFadeOut by SettingsManager.overlayFadeOut.collectAsState()
@@ -103,6 +91,7 @@ fun QuickMenuBar(modifier: Modifier = Modifier) {
 
     val alpha = remember { Animatable(QM_BAR_ALPHA_VISIBLE) }
     LaunchedEffect(isQuickMenuOpen, isFullscreenKeyboardActive, isFullscreenMouseActive, overlayFadeOut) {
+        AppLog.d(TAG, "QuickMenuBar: state changed isQuickMenuOpen=$isQuickMenuOpen")
         if (overlayFadeOut && !isQuickMenuOpen && !isFullscreenKeyboardActive && !isFullscreenMouseActive) {
             alpha.snapTo(QM_BAR_ALPHA_VISIBLE)
             delay(QM_BAR_FADE_OUT_DELAY_MS)

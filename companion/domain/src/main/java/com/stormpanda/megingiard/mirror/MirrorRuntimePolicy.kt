@@ -38,10 +38,6 @@ data class MirrorRuntimePolicyState(
     val privdMirrorConnecting: Boolean = false,
     /** True if welcome onboarding or quick menu swipe tutorial is actively shown. */
     val tutorialsActive: Boolean = false,
-    /** True if the companion hub/dashboard screen is currently active. */
-    val showIntegrationHome: Boolean = false,
-    /** True if an app launcher floating bubble overlay is currently active. */
-    val isFloatingBubbleActive: Boolean = false,
     /** True if the fullscreen mouse/touchpad overlay is currently active. */
     val isFullscreenMouseActive: Boolean = false,
     /** True if the fullscreen keyboard overlay is currently active. */
@@ -70,12 +66,6 @@ fun decideMirrorRuntimeAction(state: MirrorRuntimePolicyState): MirrorRuntimeAct
         state.isFullscreenMouseActive ||
             state.isFullscreenKeyboardActive ||
             state.wasMirroringStartedByTouchpad
-
-    // If companion integration dashboard or app launcher floating bubble is active, ambient mirroring is prohibited,
-    // unless an active fullscreen overlay (such as Touchpad in touch mode) requested mirroring.
-    if ((state.showIntegrationHome || state.isFloatingBubbleActive) && !overlayActive) {
-        return if (state.isCapturing) MirrorRuntimeAction.STOP else MirrorRuntimeAction.NONE
-    }
 
     return when {
         state.isCapturing && !state.layoutWantsMirror && !overlayActive -> MirrorRuntimeAction.STOP

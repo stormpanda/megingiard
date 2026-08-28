@@ -60,6 +60,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -70,6 +71,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.onboarding.OnboardingStepId
@@ -113,7 +115,7 @@ private val SW_CHECKLIST_ICON_SIZE = 18.dp
  */
 @Composable
 internal fun PrivdSetupWizardDialog(
-    viewModel: GlobalSettingsViewModel,
+    viewModel: GlobalSettingsViewModel = viewModel(),
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -612,7 +614,7 @@ private fun Step2ConnectPort(
     connectPort: String,
     busy: Boolean,
     fieldColors: TextFieldColors,
-    focusManager: androidx.compose.ui.focus.FocusManager,
+    focusManager: FocusManager,
     onConnectPortChange: (String) -> Unit,
 ) {
     val colors = LocalAppColors.current
@@ -676,7 +678,7 @@ private fun Step3Pairing(
     lastError: PrivdError?,
     stage: BootstrapStage,
     fieldColors: TextFieldColors,
-    focusManager: androidx.compose.ui.focus.FocusManager,
+    focusManager: FocusManager,
     onPairPortChange: (String) -> Unit,
     onCodeChange: (String) -> Unit,
 ) {

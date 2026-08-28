@@ -30,6 +30,7 @@
 | `SECURITY_CONCEPT.md`                      | Security concept overview, threat model, hardening layers, and links to detailed docs    |
 | `docs/ARCHITECTURE.md`                     | System architecture overview & key design decisions                                      |
 | `docs/BUILD_NATIVE.md`                     | Build setup, instructions, and protocol specifications for native C binaries             |
+| `docs/GAMEPAD_NAVIGATION.md`               | Gamepad Navigation & Focus Architecture — 2D focus traversal, focus isolation & recovery |
 | `docs/MANUAL_VERIFICATION.md`              | Manual Verification Guide — step-by-step manual regression tests and PR sanity checklists |
 | `docs/REQUIREMENTS.md`                     | Requirements overview & non-functional requirements                                      |
 | `docs/features/config/FEATURE.md`          | Configuration Export/Import — portable `.mgrd` app-wide backup and profile sharing       |
@@ -116,12 +117,12 @@
 >    data compilers, state machines, serialization round-trips).
 > 2. **Update existing tests** if the change modifies the behaviour or signature of
 >    already-tested code.
-> 3. **Run all tests** via `./gradlew :core:test :domain:test :app:testDebugUnitTest :gamefocus:testDebugUnitTest` and report the result. Due to Gradle's reliance on local TCP/loopback sockets, this command MUST always be executed with the sandbox bypass enabled (`BypassSandbox: true` / unsandboxed). This, along with sandbox bypass compilation commands for verifying compile safety, are the **only** Gradle commands the agent is permitted to run.
+> 3. **Run all tests** via `./gradlew :shared:core:test :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:ui:testDebugUnitTest` and report the result. Due to Gradle's reliance on local TCP/loopback sockets, this command MUST always be executed with the sandbox bypass enabled (`BypassSandbox: true` / unsandboxed). This, along with sandbox bypass compilation commands for verifying compile safety, are the **only** Gradle commands the agent is permitted to run.
 >
 > Tests must be placed in the correct source set:
 >
-> - `:core` pure-JVM tests → `shared/core/src/test/kotlin/`
-> - `:domain` local tests → `companion/domain/src/test/java/`
+> - `:shared:core` pure-JVM tests → `shared/core/src/test/kotlin/`
+> - `:companion:domain` local tests → `companion/domain/src/test/java/`
 >
 > If logic cannot be unit-tested without significant refactoring, state that explicitly
 > as a follow-up task rather than skipping silently.
@@ -145,18 +146,15 @@ Before marking a task as done, verify:
 - [ ] `snapshotFlow` imported from `androidx.compose.runtime`
 - [ ] Deprecated API branches annotated with `@Suppress("DEPRECATION")`
 - [ ] New `Activity` launches on correct display via `ActivityOptions.setLaunchDisplayId()`
-- [ ] `Presentation` mode switching uses `hide()`/`show()`, not `dismiss()` (except in `onDestroy()`)
-- [ ] `MirrorPresentationLifecycleOwner.destroy()` called in `setOnDismissListener`
-- [ ] `SurfaceView` receiving `VirtualDisplay` output has `setZOrderMediaOverlay(true)`
+- [ ] `WindowOverlayLifecycleOwner.destroy()` called when overlay view is removed
 - [ ] Service `onStartCommand` returns `START_NOT_STICKY`
-- [ ] `MirrorPresentation` show/hide reacts to presentation visibility conditions
 - [ ] Touch injector process stopped in `DisposableEffect` when leaving `TOUCHPAD` mode
 - [ ] Key injector process stopped in `DisposableEffect` when leaving `KEYBOARD` mode
 - [ ] No suspected compile errors (verified via static analysis or build compiles)
 - [ ] All modal dialogs and non-fullscreen popups use the centralized AppModalDialog / AppAlertDialog container or rememberBezelBrush() border
 - [ ] New or changed pure logic is covered by unit tests in `:core` or `:domain`
 - [ ] Existing tests updated if the change modifies previously-tested behaviour
-- [ ] `./gradlew :core:test :domain:test` executed and all tests pass (permitted test command)
+- [ ] `./gradlew :shared:core:test :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:ui:testDebugUnitTest` executed and all tests pass (permitted test command)
 - [ ] If any native C source was modified, the corresponding build script was run and produced a new binary
 - [ ] Help menus, onboardings, and localized strings updated if user interaction behavior changed (verify that every settings preference option has a corresponding explanation entry in its HelpModal)
 
@@ -445,6 +443,15 @@ The coroutine is automatically cancelled when the key (`isActive`) changes to `f
 | Inside a `Service`, `Presentation`, or coroutine scope | `.collect { }` — imperative side-effect, no recomposition involved        |
 
 Never call `.collectAsState()` outside a Composable; never call raw `.collect {}` inside a Composable when the result drives UI.
+
+### 9.6 Gamepad & Settings UI Conventions
+
+- **No Controller Button Prompts in Settings / Editor Menus:** Controller button prompt glyphs (e.g. `GamePadGlyph` badges for A/B/X/Y or footer prompt bars) must **NEVER** be displayed inside Megingiard Companion settings screens or MacroPad editor menus. Button prompt glyphs are exclusively reserved for Game Focus launcher UI.
+- **In-Place Two-Step Confirmation for Destructive Actions:** Never launch modal window dialogs (`Dialog`, `AlertDialog`) from within overlay window contexts or editor menus (prevents window type mismatch crashes on overlay contexts). Instead, destructive actions (e.g. deleting profiles, layouts, buttons, macros) must use in-place two-step confirmation (`GamepadTwoStepConfirmCard`):
+  1. Activating the item (Button A / touch click) changes its headline to a confirmation prompt (e.g. *"Really delete 'Profile'?"*) and changes the badge to *"Confirm"*.
+  2. Activating again executes the action and resets state.
+  3. Pressing Button B or navigating away (losing focus) cancels the confirmation state.
+  4. Upon deletion, focus switches back to the primary selection item in the deck (e.g. profile choice card) and a toast notification confirms the deletion.
 
 ---
 

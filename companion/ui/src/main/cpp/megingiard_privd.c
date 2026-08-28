@@ -65,7 +65,7 @@
 #include <dirent.h>
 #include "cmd_parsers.h"
 
-#define PRIVD_VERSION 5
+#define PRIVD_VERSION 6
 
 static int g_port_start = 51234;
 #define SCAN_MAX 32
@@ -1110,13 +1110,28 @@ static int serve_client(int client_fd) {
                 p[len - 1] = '\0';
                 len--;
             }
+            while (*p == ' ') p++;
             if (len > 0 && len < sizeof(path)) {
-                strncpy(path, p, sizeof(path));
+                char *display_id_str = NULL;
+                char *target_path = p;
+                char *space = strchr(p, ' ');
+                if (space != NULL) {
+                    *space = '\0';
+                    display_id_str = p;
+                    target_path = space + 1;
+                    while (*target_path == ' ') target_path++;
+                }
+                strncpy(path, target_path, sizeof(path));
                 path[sizeof(path) - 1] = '\0';
                 pid_t pid = fork();
                 if (pid == 0) {
-                    char *args[] = {"/system/bin/screencap", "-p", path, NULL};
-                    execv(args[0], args);
+                    if (display_id_str != NULL && strlen(display_id_str) > 0) {
+                        char *args[] = {"/system/bin/screencap", "-d", display_id_str, "-p", path, NULL};
+                        execv(args[0], args);
+                    } else {
+                        char *args[] = {"/system/bin/screencap", "-p", path, NULL};
+                        execv(args[0], args);
+                    }
                     _exit(127);
                 } else if (pid > 0) {
                     int status;

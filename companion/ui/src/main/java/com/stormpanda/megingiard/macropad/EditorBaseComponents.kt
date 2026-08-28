@@ -1,9 +1,7 @@
 package com.stormpanda.megingiard.macropad
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,209 +14,32 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material.icons.rounded.Grid4x4
-import androidx.compose.material.icons.rounded.GridOff
-import androidx.compose.material.icons.rounded.Lock
-import androidx.compose.material.icons.rounded.LockOpen
-import androidx.compose.material.icons.rounded.Mouse
-import androidx.compose.material.icons.rounded.TripOrigin
-import androidx.compose.material.icons.rounded.Wallpaper
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
-import java.util.Locale
 
 private const val TAG = "EditorBaseComponents"
 
-internal val EBC_PREVIEW_DEFAULT_SIZE = 60.dp
-private const val EBC_PREVIEW_BG_ALPHA = 0.25f
-private const val EBC_PREVIEW_GRADIENT_SCALE = 2.8f
-private val EBC_PREVIEW_ICON_SIZE = 44.dp
+internal val EBC_PREVIEW_DEFAULT_SIZE = 36.dp
+private val EBC_PREVIEW_ICON_SIZE = 20.dp
 
-@Composable
-internal fun EditorSectionHeader(
-    @StringRes textRes: Int,
-    actionIcon: ImageVector? = null,
-    actionContentDescription: String? = null,
-    onActionClick: (() -> Unit)? = null,
-) {
-    val colors = LocalAppColors.current
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .background(colors.surfaceVariant)
-                .padding(horizontal = MPE_PADDING, vertical = MPE_SECTION_HEADER_V_PADDING - 2.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = stringResource(textRes).uppercase(Locale.ROOT),
-            color = colors.sectionHeaderColor,
-            style = MaterialTheme.typography.labelSmall,
-        )
-        if (actionIcon != null && onActionClick != null) {
-            Row(
-                modifier =
-                    Modifier
-                        .clip(RoundedCornerShape(4.dp))
-                        .clickable(onClick = onActionClick)
-                        .padding(horizontal = 6.dp, vertical = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                Icon(
-                    imageVector = actionIcon,
-                    contentDescription = actionContentDescription,
-                    tint = colors.accent,
-                    modifier = Modifier.size(14.dp),
-                )
-                Text(
-                    text = stringResource(R.string.macropad_editor_add),
-                    color = colors.accent,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-internal fun EditorActionChip(
-    label: String,
-    icon: ImageVector,
-    accentColor: Color,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-) {
-    val effectiveColor = if (enabled) accentColor else accentColor.copy(alpha = 0.38f)
-    Row(
-        modifier =
-            modifier
-                .clip(RoundedCornerShape(8.dp))
-                .border(1.dp, effectiveColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                .clickable(enabled = enabled, onClick = onClick)
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center,
-    ) {
-        Icon(icon, contentDescription = null, tint = effectiveColor, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(6.dp))
-        Text(label, color = effectiveColor, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-    }
-}
-
-@Composable
-internal fun EditorToolbar(
-    profile: PadProfile,
-    accentColor: Color,
-    gridMode: GridMode,
-    isCanvasLocked: Boolean,
-    onToggleCanvasLock: () -> Unit,
-    onAddButton: () -> Unit,
-    onGridModeChange: () -> Unit,
-    onManageBackground: () -> Unit,
-    onManageTouchpadSettings: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val gridIcon =
-        when (gridMode) {
-            GridMode.OFF -> Icons.Rounded.GridOff
-            GridMode.RECTANGULAR -> Icons.Rounded.Grid4x4
-            GridMode.RADIAL -> Icons.Rounded.TripOrigin
-        }
-    val gridLabel = stringResource(R.string.macropad_editor_grid_toggle)
-    val buttonLabel = stringResource(R.string.macropad_editor_toolbar_button)
-    val bgLabel = stringResource(R.string.macropad_editor_change_background)
-    val touchpadLabel = stringResource(R.string.macropad_editor_touchpad_settings)
-
-    val lockIcon = if (isCanvasLocked) Icons.Rounded.Lock else Icons.Rounded.LockOpen
-    val lockLabel = if (isCanvasLocked) stringResource(R.string.macropad_editor_unlock) else stringResource(R.string.macropad_editor_lock)
-
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(MPE_ITEM_PADDING),
-    ) {
-        // First row: Add Button and Change Background
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(MPE_ITEM_PADDING),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // Add Button ("Add Button")
-            EditorActionChip(
-                label = buttonLabel,
-                icon = Icons.Rounded.Add,
-                accentColor = accentColor,
-                onClick = onAddButton,
-                modifier = Modifier.weight(1f),
-            )
-            // Background Button ("Change Background")
-            EditorActionChip(
-                label = bgLabel,
-                icon = Icons.Rounded.Wallpaper,
-                accentColor = accentColor,
-                onClick = onManageBackground,
-                modifier = Modifier.weight(1f),
-            )
-        }
-        // Second row: Unlock Buttons and Touchpad Settings
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(MPE_ITEM_PADDING),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // Unlock / Lock button
-            EditorActionChip(
-                label = lockLabel,
-                icon = lockIcon,
-                accentColor = accentColor,
-                onClick = onToggleCanvasLock,
-                modifier = Modifier.weight(1f),
-            )
-            // Touchpad Settings button
-            EditorActionChip(
-                label = touchpadLabel,
-                icon = Icons.Rounded.Mouse,
-                accentColor = accentColor,
-                onClick = onManageTouchpadSettings,
-                modifier = Modifier.weight(1f),
-            )
-        }
-        // Third row: Change Grid
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(MPE_ITEM_PADDING),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            EditorActionChip(
-                label = gridLabel,
-                icon = gridIcon,
-                accentColor = accentColor,
-                onClick = onGridModeChange,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-    }
-}
+private val EBC_INFO_BOX_RADIUS = 12.dp
+private val EBC_INFO_BOX_BORDER_WIDTH = 1.dp
+private const val EBC_INFO_BOX_BG_ALPHA = 0.45f
+private const val EBC_INFO_BOX_BORDER_ALPHA = 0.25f
+private val EBC_INFO_BOX_PADDING_H = 16.dp
+private val EBC_INFO_BOX_PADDING_V = 12.dp
+private val EBC_ARROW_SIZE = 14.dp
+private const val EBC_ARROW_ALPHA = 0.6f
 
 @Composable
 internal fun SwordsButtonPreview(
@@ -227,17 +48,16 @@ internal fun SwordsButtonPreview(
     bgColor: Color,
     modifier: Modifier = Modifier,
     size: Dp = EBC_PREVIEW_DEFAULT_SIZE,
+    isIconOnly: Boolean = false,
 ) {
     PadButtonFace(
         width = size,
         height = size,
         shape = CircleShape,
-        isIconOnly = false,
+        isIconOnly = isIconOnly,
         isDeviceDisabled = false,
         borderColor = borderColor,
         bgColor = bgColor,
-        bgAlpha = EBC_PREVIEW_BG_ALPHA,
-        gradientScale = EBC_PREVIEW_GRADIENT_SCALE,
         modifier = modifier,
     ) {
         MaterialSymbol(
@@ -246,5 +66,69 @@ internal fun SwordsButtonPreview(
             tint = textColor,
             filled = true,
         )
+    }
+}
+
+/**
+ * Gamepad-first themed info banner displaying saved style vs in-flight changes above save buttons.
+ */
+@Composable
+internal fun ColorPreviewInfoBox(
+    title: String,
+    description: String,
+    savedPreview: @Composable () -> Unit,
+    currentPreview: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalAppColors.current
+    Box(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .background(
+                    color = colors.surface.copy(alpha = EBC_INFO_BOX_BG_ALPHA),
+                    shape = RoundedCornerShape(EBC_INFO_BOX_RADIUS),
+                ).border(
+                    width = EBC_INFO_BOX_BORDER_WIDTH,
+                    color = colors.onSurfaceSecondary.copy(alpha = EBC_INFO_BOX_BORDER_ALPHA),
+                    shape = RoundedCornerShape(EBC_INFO_BOX_RADIUS),
+                ).padding(horizontal = EBC_INFO_BOX_PADDING_H, vertical = EBC_INFO_BOX_PADDING_V),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    text = title,
+                    color = colors.onSurface,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = description,
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                savedPreview()
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+                    contentDescription = null,
+                    tint = colors.onSurfaceSecondary.copy(alpha = EBC_ARROW_ALPHA),
+                    modifier = Modifier.size(EBC_ARROW_SIZE),
+                )
+                currentPreview()
+            }
+        }
     }
 }

@@ -38,8 +38,10 @@ import kotlinx.coroutines.launch
 
 private const val TAG = "ScreenshotPreviewOverlay"
 
-// Layout dimensions & ratios
+// Layout dimensions & margins
 private const val SS_PREVIEW_WIDTH_FRACTION = 0.85f
+private val SS_MIN_EDGE_MARGIN_V = 24.dp
+private val SS_MIN_EDGE_MARGIN_H = 32.dp
 private val SS_SHADOW_ELEVATION = 12.dp
 private val SS_CORNER_RADIUS = 4.dp
 private val SS_BORDER_WIDTH = 1.dp
@@ -111,10 +113,11 @@ fun ScreenshotPreviewOverlay(modifier: Modifier = Modifier) {
                 remember(currentBitmap) {
                     currentBitmap.width.toFloat() / currentBitmap.height.toFloat()
                 }
+
             Box(
                 modifier =
                     Modifier
-                        .fillMaxWidth(SS_PREVIEW_WIDTH_FRACTION)
+                        .padding(horizontal = SS_MIN_EDGE_MARGIN_H, vertical = SS_MIN_EDGE_MARGIN_V)
                         .shadow(elevation = SS_SHADOW_ELEVATION, shape = RoundedCornerShape(SS_CORNER_RADIUS))
                         .background(SS_BG_COLOR)
                         .border(width = SS_BORDER_WIDTH, color = SS_BORDER_COLOR, shape = RoundedCornerShape(SS_CORNER_RADIUS))
@@ -150,10 +153,16 @@ fun ScreenshotPreviewOverlay(modifier: Modifier = Modifier) {
                     bitmap = currentBitmap.asImageBitmap(),
                     contentDescription = null,
                     modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(aspectRatio)
-                            .border(width = SS_IMAGE_BORDER_WIDTH, color = SS_IMAGE_BORDER_COLOR),
+                        if (aspectRatio >= 1.0f) {
+                            Modifier
+                                .fillMaxWidth(SS_PREVIEW_WIDTH_FRACTION)
+                                .aspectRatio(aspectRatio)
+                                .border(width = SS_IMAGE_BORDER_WIDTH, color = SS_IMAGE_BORDER_COLOR)
+                        } else {
+                            Modifier
+                                .aspectRatio(aspectRatio, matchHeightConstraintsFirst = true)
+                                .border(width = SS_IMAGE_BORDER_WIDTH, color = SS_IMAGE_BORDER_COLOR)
+                        },
                 )
             }
         }

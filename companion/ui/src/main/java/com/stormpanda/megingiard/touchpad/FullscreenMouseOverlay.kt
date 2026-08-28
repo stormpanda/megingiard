@@ -1,7 +1,6 @@
 package com.stormpanda.megingiard.touchpad
 
 import android.os.Vibrator
-import android.view.TextureView
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -66,7 +65,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
@@ -74,8 +72,10 @@ import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.macropad.HapticStrength
 import com.stormpanda.megingiard.macropad.triggerHaptic
-import com.stormpanda.megingiard.mirror.LocalMirrorPresentation
+import com.stormpanda.megingiard.mirror.EmbeddedMirrorView
+import com.stormpanda.megingiard.mirror.MasterSurfaceRegistry
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.settings.TouchpadSettings
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -86,8 +86,6 @@ import kotlinx.coroutines.withContext
 private const val TAG = "FullscreenMouseOverlay"
 
 // Layout dimensions matching the keyboard style
-private val TP_CONTAINER_HEIGHT = 320.dp
-private val TP_TOOLBAR_HEIGHT = 44.dp
 private val TP_BOTTOM_BAR_HEIGHT = 50.dp
 private val TP_GLOBE_BUTTON_WIDTH = 72.dp
 private val TP_ICON_SIZE_MEDIUM = 24.dp
@@ -432,18 +430,13 @@ fun FullscreenMouseOverlay() {
                                 contentAlignment = Alignment.Center,
                             ) {
                                 if (isMirroringActive) {
-                                    val presentation = LocalMirrorPresentation.current
-                                    if (presentation != null) {
-                                        AndroidView(
-                                            factory = { ctx ->
-                                                presentation.acquireMasterTextureView() ?: TextureView(ctx)
-                                            },
-                                            modifier = Modifier.fillMaxSize(),
-                                            onRelease = {
-                                                presentation.releaseMasterTextureView()
-                                            },
-                                        )
-                                    }
+                                    EmbeddedMirrorView(
+                                        modifier = Modifier.fillMaxSize(),
+                                        surfaceOwner = MasterSurfaceRegistry.OWNER_TOUCHPAD,
+                                        surfacePriority = MasterSurfaceRegistry.PRIORITY_TOUCHPAD,
+                                        overrideCutouts = listOf(ScreenCutout.FULLSCREEN),
+                                        showLayoutBackground = false,
+                                    )
                                     Box(
                                         modifier =
                                             Modifier

@@ -25,8 +25,8 @@ private const val TAG = "MacroPadViewModel"
  *   - Restart as soon as all guards are clear.
  *
  * [watchInjectorLifecycle] is the single authoritative restart path.
- * [MacroPadEditor] and [BackgroundSettingsOverlay] only stop injectors on entry;
- * they do NOT restart on exit — this watcher handles that.
+ * [MacroPadEditor] only stops injectors on entry;
+ * it does NOT restart on exit — this watcher handles that.
  */
 class MacroPadViewModel(
     application: Application,

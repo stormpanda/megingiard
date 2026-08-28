@@ -63,6 +63,32 @@ class MegingiardIpcContractTest {
     }
 
     @Test
+    fun testInitForDebugClientWhenOnlyReleaseHostInstalled() {
+        val context =
+            object : ContextWrapper(baseContext) {
+                override fun getPackageName(): String = "com.stormpanda.megingiard.gamefocus.debug"
+            }
+        val releasePkg = PackageInfo().apply { packageName = "com.stormpanda.megingiard" }
+        shadowPackageManager.installPackage(releasePkg)
+
+        MegingiardIpcContract.init(context)
+        assertEquals("com.stormpanda.megingiard.provider", MegingiardIpcContract.AUTHORITY)
+    }
+
+    @Test
+    fun testInitForReleaseClientWhenOnlyDebugHostInstalled() {
+        val context =
+            object : ContextWrapper(baseContext) {
+                override fun getPackageName(): String = "com.stormpanda.megingiard.gamefocus"
+            }
+        val debugPkg = PackageInfo().apply { packageName = "com.stormpanda.megingiard.debug" }
+        shadowPackageManager.installPackage(debugPkg)
+
+        MegingiardIpcContract.init(context)
+        assertEquals("com.stormpanda.megingiard.debug.provider", MegingiardIpcContract.AUTHORITY)
+    }
+
+    @Test
     fun testInitForClientWhenDebugInstalled() {
         val context =
             object : ContextWrapper(baseContext) {

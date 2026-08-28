@@ -1,37 +1,38 @@
 package com.stormpanda.megingiard.macropad
 
-import android.os.Vibrator
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.rounded.Colorize
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.CropFree
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.FormatColorFill
+import androidx.compose.material.icons.rounded.FormatColorText
+import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Save
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.Sync
+import androidx.compose.material.icons.rounded.Vibration
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -41,136 +42,166 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.settings.ColorWheelPicker
-import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.settings.SettingsManager
-import com.stormpanda.megingiard.ui.AppDivider
-import com.stormpanda.megingiard.ui.AppDropdown
-import com.stormpanda.megingiard.ui.AppModalDialog
-import com.stormpanda.megingiard.ui.AppSelectableChip
-import com.stormpanda.megingiard.ui.AppTextField
-import com.stormpanda.megingiard.ui.FullScreenTopBar
+import com.stormpanda.megingiard.ui.GamepadActionCard
+import com.stormpanda.megingiard.ui.GamepadChoiceCard
+import com.stormpanda.megingiard.ui.GamepadColorSwatch
+import com.stormpanda.megingiard.ui.GamepadSaveExitActionRow
+import com.stormpanda.megingiard.ui.GamepadSectionHeader
+import com.stormpanda.megingiard.ui.GamepadStepperCard
+import com.stormpanda.megingiard.ui.GamepadTextFieldCard
+import com.stormpanda.megingiard.ui.GamepadToggleCard
+import com.stormpanda.megingiard.ui.GamepadTwoColumnGrid
+import com.stormpanda.megingiard.ui.GamepadTwoStepConfirmCard
 import com.stormpanda.megingiard.ui.LocalAppColors
-import com.stormpanda.megingiard.ui.appSwitchColors
-import com.stormpanda.megingiard.ui.blockPointerEvents
-import java.util.Locale
+import com.stormpanda.megingiard.ui.firstDeckItem
+import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
 import java.util.UUID
+import kotlin.math.roundToInt
 
 private const val TAG = "PadButtonEditDialog"
-private const val PBD_ICON_LAYOUT_NEXT = "arrow_forward"
-private const val PBD_ICON_LAYOUT_PREVIOUS = "arrow_back"
-private const val PBD_ICON_MIRROR_PLAY_STOP = "cast"
-private const val PBD_ICON_MIRROR_FREEZE = "pause_circle"
-private const val PBD_ICON_MIRROR_VIEWPORT_EDIT = "crop_free"
-private const val PBD_ICON_MIRROR_TOUCH_PROJECTION = "touch_app"
-private const val PBD_ICON_FULLSCREEN_MOUSE = "mouse"
-private const val PBD_ICON_FULLSCREEN_KEYBOARD = "keyboard"
-private const val PBD_ICON_MACRO = "smart_button"
-private const val PBD_ICON_PROFILE_SWITCHER = "swap_horiz"
-private const val PBD_ICON_BACKGROUND_PEEK = "visibility"
-private val PBD_PREVIEW_BUTTON_SIZE = 60.dp
-private val PBD_RECENT_COLORS_GRID_HEIGHT = 128.dp
 
-/**
- * Maps a [PadAction] type to its localised label string resource.
- * Returns `null` for action types that manage their own label
- * ([PadAction.KeyboardKey], [PadAction.GamepadButton], [PadAction.MouseButton])
- * or have fixed rendering ([PadAction.ScrollWheel], [PadAction.TrackpointMove]).
- */
-private fun PadAction.defaultLabelRes(): Int? =
+private val PBD_COLOR_PREVIEW_SIZE = 36.dp
+private val PBD_CORNER_RADIUS_DP = 6.dp
+private val PBD_ICON_SIZE_DP = 20.dp
+
+internal fun MouseButton.labelRes(): Int =
     when (this) {
-        is PadAction.LayoutNext -> R.string.macropad_action_layout_next
-        is PadAction.LayoutPrevious -> R.string.macropad_action_layout_previous
-        is PadAction.ProfileSwitcher -> R.string.macropad_action_profile_switcher
-        is PadAction.MirrorPlayStop -> R.string.macropad_action_mirror_play_stop
-        is PadAction.MirrorFreeze -> R.string.macropad_action_mirror_freeze
-        is PadAction.MirrorViewportEdit -> R.string.macropad_action_mirror_viewport_edit
-        is PadAction.MirrorTouchProjection -> R.string.macropad_action_mirror_touch_projection
-        is PadAction.FullScreenMouse -> R.string.macropad_action_fullscreen_mouse
-        is PadAction.FullScreenKeyboard -> R.string.macropad_action_fullscreen_keyboard
-        is PadAction.Macro -> R.string.macropad_action_macro
-        is PadAction.BackgroundPeek -> R.string.macropad_action_ambient_peek
-        else -> null
+        MouseButton.LEFT -> R.string.macropad_mouse_btn_left
+        MouseButton.RIGHT -> R.string.macropad_mouse_btn_right
+        MouseButton.MIDDLE -> R.string.macropad_mouse_btn_middle
+        MouseButton.MOUSE4 -> R.string.macropad_mouse_btn_back
+        MouseButton.MOUSE5 -> R.string.macropad_mouse_btn_forward
     }
-
-/** Default Material Symbols icon name for actions that behave like regular buttons in the editor. */
-private fun PadAction.editorDefaultIconName(): String? =
-    when (this) {
-        is PadAction.LayoutNext -> PBD_ICON_LAYOUT_NEXT
-        is PadAction.LayoutPrevious -> PBD_ICON_LAYOUT_PREVIOUS
-        is PadAction.ProfileSwitcher -> PBD_ICON_PROFILE_SWITCHER
-        is PadAction.MirrorPlayStop -> PBD_ICON_MIRROR_PLAY_STOP
-        is PadAction.MirrorFreeze -> PBD_ICON_MIRROR_FREEZE
-        is PadAction.MirrorViewportEdit -> PBD_ICON_MIRROR_VIEWPORT_EDIT
-        is PadAction.MirrorTouchProjection -> PBD_ICON_MIRROR_TOUCH_PROJECTION
-        is PadAction.FullScreenMouse -> PBD_ICON_FULLSCREEN_MOUSE
-        is PadAction.FullScreenKeyboard -> PBD_ICON_FULLSCREEN_KEYBOARD
-        is PadAction.Macro -> PBD_ICON_MACRO
-        is PadAction.BackgroundPeek -> PBD_ICON_BACKGROUND_PEEK
-        else -> null
-    }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Button Edit Dialog
-// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-internal fun ButtonEditDialog(
+internal fun describeButtonColorOption(
+    option: ColorOption?,
+    resolvedColor: Color,
+): String =
+    when (option) {
+        null -> {
+            stringResource(R.string.layout_settings_color_layout_default)
+        }
+
+        is ColorOption.Neutral -> {
+            stringResource(R.string.layout_settings_color_neutral)
+        }
+
+        is ColorOption.Accent -> {
+            stringResource(R.string.layout_settings_color_accent)
+        }
+
+        is ColorOption.Custom -> {
+            if (resolvedColor.alpha < 0.99f) {
+                String.format("#%06X (%d%%)", 0xFFFFFF and resolvedColor.toArgb(), (resolvedColor.alpha * 100).roundToInt())
+            } else {
+                String.format("#%06X", 0xFFFFFF and resolvedColor.toArgb())
+            }
+        }
+    }
+
+/**
+ * Deck sub-page allowing the user to select the Button Type (ActionGroup) before editing button details.
+ */
+@Composable
+internal fun ChooseButtonTypeSubPageContent(
+    enableKeyboard: Boolean = true,
+    enableGamepad: Boolean = true,
+    enableMouse: Boolean = true,
+    onSelectType: (ActionGroup) -> Unit,
+) {
+    val profile by MacroPadState.activeProfile.collectAsState()
+    val hasMacros = profile?.macros?.isNotEmpty() == true
+    val availableGroups =
+        remember(hasMacros, enableKeyboard, enableGamepad, enableMouse) {
+            ActionGroup.entries.filter { group ->
+                group.actions().any { category ->
+                    category.isEnabled(enableKeyboard, enableGamepad, enableMouse, hasMacros)
+                }
+            }
+        }
+
+    GamepadTwoColumnGrid(
+        items = availableGroups,
+    ) { group, _, cardModifier ->
+        GamepadActionCard(
+            title = stringResource(group.labelResId()),
+            description = stringResource(group.descriptionResId()),
+            icon = group.icon(),
+            alwaysShowFullDescription = true,
+            onClick = { onSelectType(group) },
+            modifier = cardModifier,
+        )
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+internal fun EditButtonSubPageContent(
     button: PadButton?, // null → create new
+    savedButton: PadButton? = null,
     accentColor: Color,
     enableKeyboard: Boolean = true,
     enableGamepad: Boolean = true,
     enableMouse: Boolean = true,
-    initialAction: PadAction? = null, // pre-set action for new buttons; ignored if button != null
-    onEditMacro: ((Macro) -> Unit)? = null,
-    onConfirm: (PadButton) -> Unit,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier,
+    initialAction: PadAction? = null,
+    selectedIcon: String? = null,
+    onOpenIconPicker: (currentDraft: PadButton) -> Unit,
+    onOpenAppPicker: (currentDraft: PadButton) -> Unit,
+    onOpenColorSubMenu: (currentDraft: PadButton, target: ButtonColorTarget) -> Unit,
+    onOpenKeyboardPicker: ((currentDraft: PadButton) -> Unit)? = null,
+    onOpenGamepadPicker: ((currentDraft: PadButton, slotIndex: Int) -> Unit)? = null,
+    onOpenMousePicker: ((currentDraft: PadButton) -> Unit)? = null,
+    onOpenMirrorPicker: ((currentDraft: PadButton) -> Unit)? = null,
+    onOpenOverlayPicker: ((currentDraft: PadButton) -> Unit)? = null,
+    onOpenLayoutPicker: ((currentDraft: PadButton) -> Unit)? = null,
+    onOpenMacroPicker: ((currentDraft: PadButton) -> Unit)? = null,
+    onDuplicate: ((PadButton) -> Unit)? = null,
+    onCopyToLayout: ((PadButton) -> Unit)? = null,
+    onDelete: ((PadButton) -> Unit)? = null,
+    onDiscard: () -> Unit = {},
+    onSave: (PadButton) -> Unit,
 ) {
     val context = LocalContext.current
+    val colors = LocalAppColors.current
     val activeLayout = MacroPadState.activeLayout.collectAsState().value
+    val stableButtonId = remember(button?.id) { button?.id ?: UUID.randomUUID().toString() }
+
+    DisposableEffect(stableButtonId) {
+        MacroPadState.setSelectedButtonId(stableButtonId)
+        onDispose {
+            MacroPadState.setSelectedButtonId(null)
+            MacroPadState.setPreviewButton(null)
+        }
+    }
+
+    val defaultButtonLabel = stringResource(R.string.macropad_editor_new_button_default_label)
     val initAction =
         button?.action
             ?: initialAction
             ?: PadAction.GamepadButton(GamepadKeycodes.BTN_SOUTH, "A")
     val initLabel =
-        button?.label ?: when (val ia = initialAction) {
-            is PadAction.Macro -> {
-                MacroPadState.activeProfile.value
-                    ?.macros
-                    ?.firstOrNull { it.id == ia.macroId }
-                    ?.name ?: ""
-            }
+        button?.label?.ifBlank { defaultButtonLabel }
+            ?: defaultButtonLabel
+    val initIconName = button?.iconName ?: selectedIcon
+    var label by remember(button) { mutableStateOf(initLabel) }
+    var iconName by remember(button, selectedIcon) { mutableStateOf(selectedIcon ?: initIconName) }
+    var buttonShape by remember(button) { mutableStateOf(button?.buttonShape ?: ButtonShape.CIRCLE) }
+    var buttonSize by remember(button) { mutableStateOf(button?.buttonSize ?: ButtonSize.SIZE_1X1) }
+    var action by remember(button) { mutableStateOf(initAction) }
+    var iconFilled by remember(button) { mutableStateOf(button?.iconFilled ?: true) }
+    var hapticStrength by remember(button) { mutableStateOf(button?.hapticStrength ?: HapticStrength.OFF) }
 
-            null -> {
-                ""
-            }
-
-            else -> {
-                ia.defaultLabelRes()?.let { context.getString(it) } ?: ""
-            }
-        }
-    val initIconName = button?.iconName ?: initialAction?.editorDefaultIconName()
-    var label by remember { mutableStateOf(initLabel) }
-    var iconName by remember { mutableStateOf(initIconName) }
-    var showIconPicker by remember { mutableStateOf(false) }
-    var buttonShape by remember { mutableStateOf(button?.buttonShape ?: ButtonShape.CIRCLE) }
-    var buttonSize by remember { mutableStateOf(button?.buttonSize ?: ButtonSize.SIZE_1X1) }
-    var action by remember { mutableStateOf(initAction) }
-    var iconFilled by remember { mutableStateOf(button?.iconFilled ?: true) }
-    var hapticStrength by remember { mutableStateOf(button?.hapticStrength ?: HapticStrength.OFF) }
-    // Sliders always reflect the active preset or the stored custom values on open
-    var hapticCustomDurationMs by remember {
+    var hapticCustomDurationMs by remember(button) {
         mutableIntStateOf(
             when (button?.hapticStrength) {
                 HapticStrength.LIGHT, HapticStrength.MEDIUM, HapticStrength.STRONG -> HF_PRESET_DURATION_MS
@@ -178,7 +209,7 @@ internal fun ButtonEditDialog(
             },
         )
     }
-    var hapticCustomAmplitude by remember {
+    var hapticCustomAmplitude by remember(button) {
         mutableIntStateOf(
             when (button?.hapticStrength) {
                 HapticStrength.LIGHT -> HF_LIGHT_AMPLITUDE_USER
@@ -188,44 +219,23 @@ internal fun ButtonEditDialog(
             },
         )
     }
-    var buttonTextColor by remember { mutableStateOf(button?.buttonTextColor) }
-    var buttonBorderColor by remember { mutableStateOf(button?.buttonBorderColor) }
-    var buttonBgColor by remember { mutableStateOf(button?.buttonBgColor) }
-    var invisible by remember { mutableStateOf(button?.invisible ?: (activeLayout?.invisibleButtons ?: false)) }
+    var buttonTextColor by remember(button) { mutableStateOf(button?.buttonTextColor) }
+    var buttonBorderColor by remember(button) { mutableStateOf(button?.buttonBorderColor) }
+    var buttonBgColor by remember(button) { mutableStateOf(button?.buttonBgColor) }
+    var invisible by remember(button) { mutableStateOf(button?.invisible ?: (activeLayout?.invisibleButtons ?: false)) }
 
-    var activeColorPickerTarget by remember { mutableStateOf<ButtonColorPickerTarget?>(null) }
-    var activePaletteDialogTarget by remember { mutableStateOf<ButtonColorPickerTarget?>(null) }
-
-    val recentColors by MacroPadSettings.recentColors.collectAsState()
     val globalAccentInt by SettingsManager.accentColor.collectAsState()
     val globalAccentColor = Color(globalAccentInt)
 
-    val colors = LocalAppColors.current
     val profile by MacroPadState.activeProfile.collectAsState()
     val macros = profile?.macros ?: emptyList()
-
-    var actionBeforeEdit by remember { mutableStateOf<PadAction?>(null) }
-
-    LaunchedEffect(button?.id) {
-        AppLog.d(TAG, "Opening ButtonEditDialog for button=${button?.id ?: "new"} action=$initAction")
-    }
 
     LaunchedEffect(macros) {
         val currentAction = action
         if (currentAction is PadAction.Macro) {
             val macroExists = macros.any { it.id == currentAction.macroId }
             if (!macroExists) {
-                val revertTo = actionBeforeEdit
-                if (revertTo != null) {
-                    if (revertTo is PadAction.Macro) {
-                        val revertMacroExists = macros.any { it.id == revertTo.macroId }
-                        action = if (revertMacroExists) revertTo else initAction
-                    } else {
-                        action = revertTo
-                    }
-                } else {
-                    action = initAction
-                }
+                action = initAction
             }
         }
     }
@@ -235,1014 +245,598 @@ internal fun ButtonEditDialog(
         action = newAction
         if (newAction is PadAction.ScrollWheel) {
             buttonSize = ButtonSize.SIZE_1X2
-            label = ""
-            iconName = null
             return
         }
         if (newAction is PadAction.TrackpointMove) {
-            label = ""
-            iconName = null
             buttonShape = ButtonShape.CIRCLE
             return
         }
-        if (newAction is PadAction.AppLauncher) {
-            label = ""
-            iconName = null
-            return
-        }
-        // For Macro: fill label from the macro name if the label field is still blank.
-        if (newAction is PadAction.Macro && label.isBlank()) {
-            val macroName = macros.firstOrNull { it.id == newAction.macroId }?.name
-            if (macroName != null) label = macroName
-        }
-        // For new buttons (or when the label was never customised), pre-fill with the
-        // action-type defaults so the user has a sensible starting point.
-        if (button == null || label.isBlank()) {
-            val defaultLbl = newAction.defaultLabelRes()?.let { context.getString(it) } ?: ""
-            val defaultIcon = newAction.editorDefaultIconName()
-            if (defaultLbl.isNotEmpty()) label = defaultLbl
-            if (defaultIcon != null) iconName = defaultIcon
-        }
     }
+
+    val currentButton =
+        remember(
+            stableButtonId,
+            button?.posX,
+            button?.posY,
+            label,
+            iconName,
+            iconFilled,
+            buttonShape,
+            buttonSize,
+            action,
+            hapticStrength,
+            hapticCustomDurationMs,
+            hapticCustomAmplitude,
+            buttonTextColor,
+            buttonBorderColor,
+            buttonBgColor,
+            invisible,
+        ) {
+            PadButton(
+                id = stableButtonId,
+                label = label,
+                iconName = iconName,
+                iconFilled = iconFilled,
+                posX = button?.posX ?: 0.5f,
+                posY = button?.posY ?: 0.5f,
+                buttonShape = buttonShape,
+                buttonSize = buttonSize,
+                action = action,
+                hapticStrength = hapticStrength,
+                hapticCustomDurationMs = hapticCustomDurationMs,
+                hapticCustomAmplitude = hapticCustomAmplitude,
+                buttonTextColor = buttonTextColor,
+                buttonBorderColor = buttonBorderColor,
+                buttonBgColor = buttonBgColor,
+                invisible = invisible,
+            )
+        }
 
     val isConfirmEnabled =
         when {
-            action is PadAction.ScrollWheel || action is PadAction.TrackpointMove -> {
-                true
-            }
-
-            action is PadAction.AppLauncher -> {
-                (action as PadAction.AppLauncher).packageName.isNotBlank()
-            }
-
-            action is PadAction.Macro -> {
-                label.isNotBlank() &&
-                    macros.any { it.id == (action as PadAction.Macro).macroId }
-            }
-
-            else -> {
-                label.isNotBlank()
-            }
+            action is PadAction.ScrollWheel || action is PadAction.TrackpointMove -> true
+            action is PadAction.AppLauncher -> (action as PadAction.AppLauncher).packageName.isNotBlank()
+            action is PadAction.Macro -> label.isNotBlank() && macros.any { it.id == (action as PadAction.Macro).macroId }
+            else -> label.isNotBlank()
         }
 
-    // ── Full-screen layout (no AlertDialog — stays in same window for IME) ─────────────
-    Box(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .background(colors.surface)
-                .blockPointerEvents(),
-    ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            val topBarTitle =
-                when {
-                    button == null -> stringResource(R.string.macropad_editor_add_button)
-                    button.action is PadAction.TrackpointMove -> stringResource(R.string.macropad_action_trackpoint)
-                    else -> button.label
+    val isNew = savedButton == null
+
+    LaunchedEffect(currentButton) {
+        MacroPadState.setPreviewButton(currentButton)
+    }
+
+    val hasChanges =
+        isNew || currentButton.copy(posX = savedButton.posX, posY = savedButton.posY) != savedButton
+
+    val layoutTextOpt = activeLayout?.buttonTextColor ?: ColorOption.Neutral
+    val layoutBorderOpt = activeLayout?.buttonBorderColor ?: ColorOption.Neutral
+    val layoutBgOpt = activeLayout?.buttonBgColor ?: ColorOption.Neutral
+
+    val effectiveTextOpt = buttonTextColor ?: layoutTextOpt
+    val effectiveBorderOpt = buttonBorderColor ?: layoutBorderOpt
+    val effectiveBgOpt = buttonBgColor ?: layoutBgOpt
+
+    val currentText = resolveColorOption(effectiveTextOpt, globalAccentColor, MP_AMBIENT_NEUTRAL_TEXT)
+    val currentBorder = resolveColorOption(effectiveBorderOpt, globalAccentColor, MP_AMBIENT_NEUTRAL_BORDER)
+    val currentBg = resolveBgColorOption(effectiveBgOpt, globalAccentColor)
+
+    val showLabelAndIcon = action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove && action !is PadAction.AppLauncher
+
+    val promptState =
+        rememberSaveExitPromptState(
+            hasChanges = hasChanges,
+            onSave = {
+                if (isConfirmEnabled) {
+                    AppLog.d(TAG, "Confirm button edit: id=${currentButton.id} label=${currentButton.label} action=${currentButton.action}")
+                    onSave(currentButton)
                 }
-            FullScreenTopBar(title = topBarTitle, onDismiss = onDismiss) {
-                TextButton(
-                    onClick = {
-                        if (isConfirmEnabled) {
-                            val result =
-                                button?.copy(
-                                    label = label,
-                                    iconName = iconName,
-                                    iconFilled = iconFilled,
-                                    buttonShape = buttonShape,
-                                    buttonSize = buttonSize,
-                                    action = action,
-                                    hapticStrength = hapticStrength,
-                                    hapticCustomDurationMs = hapticCustomDurationMs,
-                                    hapticCustomAmplitude = hapticCustomAmplitude,
-                                    buttonTextColor = buttonTextColor,
-                                    buttonBorderColor = buttonBorderColor,
-                                    buttonBgColor = buttonBgColor,
-                                    invisible = invisible,
-                                ) ?: PadButton(
-                                    id = UUID.randomUUID().toString(),
-                                    label = label,
-                                    iconName = iconName,
-                                    iconFilled = iconFilled,
-                                    posX = 0.5f,
-                                    posY = 0.5f,
-                                    buttonShape = buttonShape,
-                                    buttonSize = buttonSize,
-                                    action = action,
-                                    hapticStrength = hapticStrength,
-                                    hapticCustomDurationMs = hapticCustomDurationMs,
-                                    hapticCustomAmplitude = hapticCustomAmplitude,
-                                    buttonTextColor = buttonTextColor,
-                                    buttonBorderColor = buttonBorderColor,
-                                    buttonBgColor = buttonBgColor,
-                                    invisible = invisible,
-                                )
-                            AppLog.d(TAG, "Confirm button edit: id=${result.id} label=${result.label} action=${result.action}")
-                            onConfirm(result)
-                        }
-                    },
-                    enabled = isConfirmEnabled,
-                ) {
-                    Text(
-                        stringResource(R.string.macropad_editor_done),
-                        color = if (isConfirmEnabled) accentColor else colors.onSurfaceSecondary,
-                        fontWeight = FontWeight.SemiBold,
+            },
+            onDiscard = onDiscard,
+        )
+
+    // Label & Icon input
+    if (showLabelAndIcon) {
+        GamepadTextFieldCard(
+            title = stringResource(R.string.macropad_editor_button_label),
+            description = stringResource(R.string.macropad_editor_button_label_desc),
+            placeholder = stringResource(R.string.macropad_editor_button_label_placeholder),
+            value = label,
+            onValueChange = { label = it },
+            icon = Icons.Rounded.Edit,
+            modifier = Modifier.firstDeckItem(),
+        )
+
+        GamepadActionCard(
+            title = stringResource(R.string.macropad_icon_picker_title),
+            description = if (iconName != null) iconName!! else stringResource(R.string.macropad_icon_picker_search),
+            icon = Icons.Rounded.Image,
+            actionLeadingContent = {
+                if (iconName != null) {
+                    MaterialSymbol(
+                        name = iconName!!,
+                        size = 24.dp,
+                        tint = accentColor,
+                        filled = iconFilled,
                     )
                 }
-            }
+            },
+            onClick = { onOpenIconPicker(currentButton) },
+        )
+    }
 
-            // ── Scrollable form body ──────────────────────────────────────────────────────────
-            // ── Section header ───────────────────────────────────────────────────────────────
-            Text(
-                text = stringResource(R.string.macropad_editor_section_button_settings).uppercase(Locale.ROOT),
-                color = colors.sectionHeaderColor,
-                style = MaterialTheme.typography.labelSmall,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .background(colors.surfaceVariant)
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
+    ActionPicker(
+        current = action,
+        accentColor = accentColor,
+        enableKeyboard = enableKeyboard,
+        enableGamepad = enableGamepad,
+        enableMouse = enableMouse,
+        isFirstItem = !showLabelAndIcon,
+        onOpenMacroPicker = {
+            onOpenMacroPicker?.invoke(currentButton)
+        },
+        onOpenAppPicker = {
+            onOpenAppPicker(currentButton)
+        },
+        onOpenKeyboardPicker = {
+            onOpenKeyboardPicker?.invoke(currentButton)
+        },
+        onOpenGamepadPicker = { slotIndex ->
+            onOpenGamepadPicker?.invoke(currentButton, slotIndex)
+        },
+        onOpenMousePicker = {
+            onOpenMousePicker?.invoke(currentButton)
+        },
+        onOpenMirrorPicker = {
+            onOpenMirrorPicker?.invoke(currentButton)
+        },
+        onOpenOverlayPicker = {
+            onOpenOverlayPicker?.invoke(currentButton)
+        },
+        onOpenLayoutPicker = {
+            onOpenLayoutPicker?.invoke(currentButton)
+        },
+        onChange = ::onActionChanged,
+    )
+
+    if (action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove) {
+        GamepadSectionHeader(
+            text = stringResource(R.string.macropad_editor_section_shape_size),
+            color = accentColor,
+        )
+
+        val shapeEntries = ButtonShape.entries
+        val shapeIdx = shapeEntries.indexOf(buttonShape).coerceAtLeast(0)
+        GamepadChoiceCard(
+            title = stringResource(R.string.macropad_editor_button_shape),
+            description = stringResource(R.string.macropad_btn_shape_desc),
+            selectedText = shapeEntries[shapeIdx].displayLabel(),
+            icon = Icons.Rounded.CropFree,
+            onPrevious = {
+                val nextIdx = (shapeIdx - 1 + shapeEntries.size) % shapeEntries.size
+                buttonShape = shapeEntries[nextIdx]
+            },
+            onNext = {
+                val nextIdx = (shapeIdx + 1) % shapeEntries.size
+                buttonShape = shapeEntries[nextIdx]
+            },
+        )
+
+        val sizeEntries = ButtonSize.entries
+        val sizeIdx = sizeEntries.indexOf(buttonSize).coerceAtLeast(0)
+        GamepadChoiceCard(
+            title = stringResource(R.string.macropad_editor_button_size),
+            description = stringResource(R.string.macropad_btn_size_desc),
+            selectedText = sizeEntries[sizeIdx].displayLabel(),
+            icon = Icons.Rounded.CropFree,
+            onPrevious = {
+                val nextIdx = (sizeIdx - 1 + sizeEntries.size) % sizeEntries.size
+                buttonSize = sizeEntries[nextIdx]
+            },
+            onNext = {
+                val nextIdx = (sizeIdx + 1) % sizeEntries.size
+                buttonSize = sizeEntries[nextIdx]
+            },
+        )
+
+        GamepadSectionHeader(
+            text = stringResource(R.string.macropad_editor_section_haptic),
+            color = accentColor,
+        )
+
+        val hapticEntries = HapticStrength.entries
+        val hapticLabels =
+            listOf(
+                stringResource(R.string.macropad_haptic_off),
+                stringResource(R.string.macropad_haptic_light),
+                stringResource(R.string.macropad_haptic_medium),
+                stringResource(R.string.macropad_haptic_strong),
+                stringResource(R.string.macropad_haptic_custom),
             )
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                val iconsFilled = iconFilled
+        val hapticIdx = hapticEntries.indexOf(hapticStrength).coerceAtLeast(0)
+        GamepadChoiceCard(
+            title = stringResource(R.string.macropad_editor_section_haptic),
+            description = stringResource(R.string.macropad_btn_haptic_desc),
+            selectedText = hapticLabels[hapticIdx],
+            icon = Icons.Rounded.Vibration,
+            onPrevious = {
+                val nextIdx = (hapticIdx - 1 + hapticEntries.size) % hapticEntries.size
+                val selectedStrength = hapticEntries[nextIdx]
+                when (selectedStrength) {
+                    HapticStrength.LIGHT -> {
+                        hapticCustomDurationMs = HF_PRESET_DURATION_MS
+                        hapticCustomAmplitude = HF_LIGHT_AMPLITUDE_USER
+                    }
 
-                // Label input and shape — hidden for ScrollWheel, TrackpointMove, and AppLauncher
-                if (action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove && action !is PadAction.AppLauncher) {
-                    // ── Label + Icon selector row ──────────────────────────────────────────
-                    Row(
-                        verticalAlignment = Alignment.Bottom,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth(),
+                    HapticStrength.MEDIUM -> {
+                        hapticCustomDurationMs = HF_PRESET_DURATION_MS
+                        hapticCustomAmplitude = HF_MEDIUM_AMPLITUDE_USER
+                    }
+
+                    HapticStrength.STRONG -> {
+                        hapticCustomDurationMs = HF_PRESET_DURATION_MS
+                        hapticCustomAmplitude = HF_STRONG_AMPLITUDE_USER
+                    }
+
+                    else -> {}
+                }
+                hapticStrength = selectedStrength
+            },
+            onNext = {
+                val nextIdx = (hapticIdx + 1) % hapticEntries.size
+                val selectedStrength = hapticEntries[nextIdx]
+                when (selectedStrength) {
+                    HapticStrength.LIGHT -> {
+                        hapticCustomDurationMs = HF_PRESET_DURATION_MS
+                        hapticCustomAmplitude = HF_LIGHT_AMPLITUDE_USER
+                    }
+
+                    HapticStrength.MEDIUM -> {
+                        hapticCustomDurationMs = HF_PRESET_DURATION_MS
+                        hapticCustomAmplitude = HF_MEDIUM_AMPLITUDE_USER
+                    }
+
+                    HapticStrength.STRONG -> {
+                        hapticCustomDurationMs = HF_PRESET_DURATION_MS
+                        hapticCustomAmplitude = HF_STRONG_AMPLITUDE_USER
+                    }
+
+                    else -> {}
+                }
+                hapticStrength = selectedStrength
+            },
+        )
+
+        if (hapticStrength == HapticStrength.CUSTOM) {
+            GamepadStepperCard(
+                title = stringResource(R.string.macropad_haptic_custom_duration),
+                description = stringResource(R.string.macropad_btn_haptic_duration_desc),
+                valueText = "$hapticCustomDurationMs ms",
+                icon = Icons.Rounded.Vibration,
+                onDecrement = {
+                    hapticCustomDurationMs = (hapticCustomDurationMs - 10).coerceIn(10, 200)
+                },
+                onIncrement = {
+                    hapticCustomDurationMs = (hapticCustomDurationMs + 10).coerceIn(10, 200)
+                },
+            )
+
+            GamepadStepperCard(
+                title = stringResource(R.string.macropad_haptic_custom_amplitude),
+                description = stringResource(R.string.macropad_btn_haptic_amplitude_desc),
+                valueText = "$hapticCustomAmplitude%",
+                icon = Icons.Rounded.Vibration,
+                onDecrement = {
+                    hapticCustomAmplitude = (hapticCustomAmplitude - 5).coerceIn(5, 100)
+                },
+                onIncrement = {
+                    hapticCustomAmplitude = (hapticCustomAmplitude + 5).coerceIn(5, 100)
+                },
+            )
+        }
+
+        GamepadSectionHeader(
+            text = stringResource(R.string.macropad_editor_section_button_colors),
+            color = accentColor,
+        )
+
+        val buttonPreviewLeading: (textColor: Color, borderColor: Color, bgColor: Color, isIconOnly: Boolean) -> @Composable () -> Unit =
+            { tColor, bColor, bgCol, iconOnly ->
+                {
+                    PadButtonFace(
+                        width = PBD_COLOR_PREVIEW_SIZE,
+                        height = PBD_COLOR_PREVIEW_SIZE,
+                        shape = if (buttonShape == ButtonShape.CIRCLE) CircleShape else RoundedCornerShape(PBD_CORNER_RADIUS_DP),
+                        isIconOnly = iconOnly || buttonShape == ButtonShape.ICON_ONLY,
+                        isDeviceDisabled = false,
+                        borderColor = bColor,
+                        bgColor = bgCol,
                     ) {
-                        AppTextField(
-                            value = label,
-                            onValueChange = { label = it },
-                            label = { Text(stringResource(R.string.macropad_editor_button_label), color = colors.onSurfaceSecondary) },
-                            modifier = Modifier.weight(1f),
-                        )
-                        // Icon selector button
-                        Box(
-                            contentAlignment = Alignment.Center,
-                            modifier =
-                                Modifier
-                                    .size(56.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(
-                                        if (iconName != null) {
-                                            accentColor.copy(alpha = 0.2f)
-                                        } else {
-                                            colors.surface
-                                        },
-                                    ).border(
-                                        width = if (iconName != null) 2.dp else 1.dp,
-                                        color = if (iconName != null) accentColor else colors.accentBorder,
-                                        shape = RoundedCornerShape(8.dp),
-                                    ).clickable { showIconPicker = true },
-                        ) {
+                        if (iconName != null) {
                             MaterialSymbol(
-                                name = iconName ?: "add_reaction",
-                                size = 28.dp,
-                                tint = if (iconName != null) accentColor else colors.onSurfaceSecondary,
-                                filled = iconsFilled,
+                                name = iconName!!,
+                                size = PBD_ICON_SIZE_DP,
+                                tint = tColor,
+                                filled = iconFilled,
                             )
-                        }
-                    }
-                }
-
-                SectionLabel(stringResource(R.string.macropad_editor_action), accentColor)
-                ActionPicker(
-                    current = action,
-                    accentColor = accentColor,
-                    enableKeyboard = enableKeyboard,
-                    enableGamepad = enableGamepad,
-                    enableMouse = enableMouse,
-                    onEditMacro = { macro ->
-                        actionBeforeEdit = action
-                        onEditMacro?.invoke(macro)
-                    },
-                    onChange = ::onActionChanged,
-                )
-
-                if (action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove) {
-                    // ── Shape + Size + Haptic side by side ──────────────────────────────────────────────
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            SectionLabel(stringResource(R.string.macropad_editor_button_shape), accentColor)
-                            AppDropdown(
-                                selected = buttonShape,
-                                options = ButtonShape.entries,
-                                optionText = { shape ->
-                                    when (shape) {
-                                        ButtonShape.CIRCLE -> stringResource(R.string.macropad_editor_shape_circle)
-                                        ButtonShape.SQUARE -> stringResource(R.string.macropad_editor_shape_square)
-                                        ButtonShape.ICON_ONLY -> stringResource(R.string.macropad_editor_shape_icon_only)
-                                    }
-                                },
-                                onSelected = { shape -> buttonShape = shape },
-                                horizontalPadding = 16.dp,
-                                verticalPadding = 10.dp,
-                                fillMaxWidth = true,
-                            )
-                        }
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            SectionLabel(stringResource(R.string.macropad_editor_button_size), accentColor)
-                            AppDropdown(
-                                selected = buttonSize,
-                                options = ButtonSize.entries,
-                                optionText = { size -> size.displayLabel() },
-                                onSelected = { size -> buttonSize = size },
-                                horizontalPadding = 16.dp,
-                                verticalPadding = 10.dp,
-                                fillMaxWidth = true,
-                            )
-                        }
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            SectionLabel(stringResource(R.string.macropad_editor_section_haptic), accentColor)
-                            AppDropdown(
-                                selected = hapticStrength,
-                                options = HapticStrength.entries,
-                                optionText = { strength ->
-                                    when (strength) {
-                                        HapticStrength.OFF -> stringResource(R.string.macropad_haptic_off)
-                                        HapticStrength.LIGHT -> stringResource(R.string.macropad_haptic_light)
-                                        HapticStrength.MEDIUM -> stringResource(R.string.macropad_haptic_medium)
-                                        HapticStrength.STRONG -> stringResource(R.string.macropad_haptic_strong)
-                                        HapticStrength.CUSTOM -> stringResource(R.string.macropad_haptic_custom)
-                                    }
-                                },
-                                onSelected = { strength ->
-                                    // Snap sliders to preset values; CUSTOM/OFF leave sliders unchanged
-                                    when (strength) {
-                                        HapticStrength.LIGHT -> {
-                                            hapticCustomDurationMs = HF_PRESET_DURATION_MS
-                                            hapticCustomAmplitude =
-                                                HF_LIGHT_AMPLITUDE_USER
-                                        }
-
-                                        HapticStrength.MEDIUM -> {
-                                            hapticCustomDurationMs = HF_PRESET_DURATION_MS
-                                            hapticCustomAmplitude =
-                                                HF_MEDIUM_AMPLITUDE_USER
-                                        }
-
-                                        HapticStrength.STRONG -> {
-                                            hapticCustomDurationMs = HF_PRESET_DURATION_MS
-                                            hapticCustomAmplitude =
-                                                HF_STRONG_AMPLITUDE_USER
-                                        }
-
-                                        else -> { /* OFF / CUSTOM → keep current slider values */ }
-                                    }
-                                    hapticStrength = strength
-                                },
-                                horizontalPadding = 16.dp,
-                                verticalPadding = 10.dp,
-                                fillMaxWidth = true,
-                            )
-                        }
-                    }
-                } else if (action is PadAction.TrackpointMove) {
-                    // ── Trackpoint size picker + Haptic side by side ────────────────────────
-                    val tpAction = action as PadAction.TrackpointMove
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.weight(1.5f),
-                        ) {
-                            SectionLabel(stringResource(R.string.macropad_editor_trackpoint_size), accentColor)
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                TrackpointSize.entries.forEach { sz ->
-                                    val selected = sz == tpAction.size
-                                    val szLabel =
-                                        when (sz) {
-                                            TrackpointSize.SMALL -> stringResource(R.string.macropad_trackpoint_size_small)
-                                            TrackpointSize.MEDIUM -> stringResource(R.string.macropad_trackpoint_size_medium)
-                                            TrackpointSize.LARGE -> stringResource(R.string.macropad_trackpoint_size_large)
-                                        }
-                                    Box(
-                                        modifier = Modifier.weight(1f),
-                                    ) {
-                                        AppSelectableChip(
-                                            text = szLabel,
-                                            selected = selected,
-                                            onClick = { action = PadAction.TrackpointMove(sz, tpAction.mode) },
-                                            modifier = Modifier.fillMaxWidth(),
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            SectionLabel(stringResource(R.string.macropad_editor_section_haptic), accentColor)
-                            AppDropdown(
-                                selected = hapticStrength,
-                                options = HapticStrength.entries,
-                                optionText = { strength ->
-                                    when (strength) {
-                                        HapticStrength.OFF -> stringResource(R.string.macropad_haptic_off)
-                                        HapticStrength.LIGHT -> stringResource(R.string.macropad_haptic_light)
-                                        HapticStrength.MEDIUM -> stringResource(R.string.macropad_haptic_medium)
-                                        HapticStrength.STRONG -> stringResource(R.string.macropad_haptic_strong)
-                                        HapticStrength.CUSTOM -> stringResource(R.string.macropad_haptic_custom)
-                                    }
-                                },
-                                onSelected = { strength ->
-                                    // Snap sliders to preset values; CUSTOM/OFF leave sliders unchanged
-                                    when (strength) {
-                                        HapticStrength.LIGHT -> {
-                                            hapticCustomDurationMs = HF_PRESET_DURATION_MS
-                                            hapticCustomAmplitude =
-                                                HF_LIGHT_AMPLITUDE_USER
-                                        }
-
-                                        HapticStrength.MEDIUM -> {
-                                            hapticCustomDurationMs = HF_PRESET_DURATION_MS
-                                            hapticCustomAmplitude =
-                                                HF_MEDIUM_AMPLITUDE_USER
-                                        }
-
-                                        HapticStrength.STRONG -> {
-                                            hapticCustomDurationMs = HF_PRESET_DURATION_MS
-                                            hapticCustomAmplitude =
-                                                HF_STRONG_AMPLITUDE_USER
-                                        }
-
-                                        else -> { /* OFF / CUSTOM → keep current slider values */ }
-                                    }
-                                    hapticStrength = strength
-                                },
-                                horizontalPadding = 16.dp,
-                                verticalPadding = 10.dp,
-                                fillMaxWidth = true,
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        SectionLabel(stringResource(R.string.macropad_editor_trackpoint_mode), accentColor)
-                        AppDropdown(
-                            selected = tpAction.mode,
-                            options = TrackpointMode.entries,
-                            optionText = { mode ->
-                                when (mode) {
-                                    TrackpointMode.PHYSICAL_MOUSE -> stringResource(R.string.macropad_trackpoint_mode_physical)
-                                    TrackpointMode.VIRTUAL_TOUCH -> stringResource(R.string.macropad_trackpoint_mode_touch)
-                                }
-                            },
-                            onSelected = { newMode ->
-                                action = PadAction.TrackpointMove(tpAction.size, newMode)
-                            },
-                            horizontalPadding = 16.dp,
-                            verticalPadding = 10.dp,
-                            fillMaxWidth = true,
-                        )
-                        val explainerRes =
-                            when (tpAction.mode) {
-                                TrackpointMode.PHYSICAL_MOUSE -> R.string.macropad_trackpoint_mode_physical_desc
-                                TrackpointMode.VIRTUAL_TOUCH -> R.string.macropad_trackpoint_mode_touch_desc
-                            }
-                        Text(
-                            text = stringResource(explainerRes),
-                            color = colors.onSurfaceSecondary,
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-                        )
-                    }
-                } else if (action is PadAction.ScrollWheel) {
-                    // ── ScrollWheel: size locked to 1×2 + Haptic side by side ────────────────────
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        verticalAlignment = Alignment.Bottom,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            SectionLabel(stringResource(R.string.macropad_editor_button_size), accentColor)
+                        } else {
                             Text(
-                                text = ButtonSize.SIZE_1X2.displayLabel(),
-                                color = colors.onSurfaceSecondary,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            SectionLabel(stringResource(R.string.macropad_editor_section_haptic), accentColor)
-                            AppDropdown(
-                                selected = hapticStrength,
-                                options = HapticStrength.entries,
-                                optionText = { strength ->
-                                    when (strength) {
-                                        HapticStrength.OFF -> stringResource(R.string.macropad_haptic_off)
-                                        HapticStrength.LIGHT -> stringResource(R.string.macropad_haptic_light)
-                                        HapticStrength.MEDIUM -> stringResource(R.string.macropad_haptic_medium)
-                                        HapticStrength.STRONG -> stringResource(R.string.macropad_haptic_strong)
-                                        HapticStrength.CUSTOM -> stringResource(R.string.macropad_haptic_custom)
-                                    }
-                                },
-                                onSelected = { strength ->
-                                    // Snap sliders to preset values; CUSTOM/OFF leave sliders unchanged
-                                    when (strength) {
-                                        HapticStrength.LIGHT -> {
-                                            hapticCustomDurationMs = HF_PRESET_DURATION_MS
-                                            hapticCustomAmplitude =
-                                                HF_LIGHT_AMPLITUDE_USER
-                                        }
-
-                                        HapticStrength.MEDIUM -> {
-                                            hapticCustomDurationMs = HF_PRESET_DURATION_MS
-                                            hapticCustomAmplitude =
-                                                HF_MEDIUM_AMPLITUDE_USER
-                                        }
-
-                                        HapticStrength.STRONG -> {
-                                            hapticCustomDurationMs = HF_PRESET_DURATION_MS
-                                            hapticCustomAmplitude =
-                                                HF_STRONG_AMPLITUDE_USER
-                                        }
-
-                                        else -> { /* OFF / CUSTOM → keep current slider values */ }
-                                    }
-                                    hapticStrength = strength
-                                },
-                                horizontalPadding = 16.dp,
-                                verticalPadding = 10.dp,
-                                fillMaxWidth = true,
+                                text = label.ifBlank { "A" },
+                                color = tColor,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
                             )
                         }
                     }
                 }
-                // Sliders always visible; dragging either slider auto-selects CUSTOM
-                if (hapticStrength != HapticStrength.OFF) {
-                    Column(
-                        modifier = Modifier.padding(top = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Column(modifier = Modifier.width(96.dp)) {
-                                Text(
-                                    text = stringResource(R.string.macropad_haptic_custom_duration),
-                                    color = colors.onSurfaceSecondary,
-                                    style = MaterialTheme.typography.bodySmall,
-                                )
-                                Text(
-                                    text = "$hapticCustomDurationMs ms",
-                                    color = accentColor,
-                                    style = MaterialTheme.typography.bodySmall,
-                                )
-                            }
-                            Slider(
-                                modifier = Modifier.weight(1f),
-                                value = hapticCustomDurationMs.toFloat(),
-                                onValueChange = {
-                                    hapticCustomDurationMs = it.toInt()
-                                    hapticStrength = HapticStrength.CUSTOM
-                                },
-                                valueRange = 1f..200f,
-                                steps = 198, // 1..200 → 200 values = 198 interior steps
-                            )
-                        }
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Column(modifier = Modifier.width(96.dp)) {
-                                Text(
-                                    text = stringResource(R.string.macropad_haptic_custom_amplitude),
-                                    color = colors.onSurfaceSecondary,
-                                    style = MaterialTheme.typography.bodySmall,
-                                )
-                                Text(
-                                    text = "$hapticCustomAmplitude",
-                                    color = accentColor,
-                                    style = MaterialTheme.typography.bodySmall,
-                                )
-                            }
-                            Slider(
-                                modifier = Modifier.weight(1f),
-                                value = hapticCustomAmplitude.toFloat(),
-                                onValueChange = {
-                                    hapticCustomAmplitude = (it / 5).toInt() * 5
-                                    hapticStrength = HapticStrength.CUSTOM
-                                },
-                                valueRange = 5f..100f,
-                                steps = 18, // 5,10,15,…,100 → 20 values = 18 interior steps
-                            )
-                        }
-                        val vibrator = LocalContext.current.getSystemService(Vibrator::class.java)
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End,
-                        ) {
-                            TextButton(
-                                onClick = {
-                                    triggerHaptic(
-                                        vibrator = vibrator,
-                                        strength = HapticStrength.CUSTOM,
-                                        customDurationMs = hapticCustomDurationMs,
-                                        customAmplitude = hapticCustomAmplitude,
-                                    )
-                                },
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.macropad_haptic_custom_test),
-                                    color = accentColor,
-                                    style = MaterialTheme.typography.labelLarge,
-                                )
-                            }
-                        }
-                    }
-                }
+            }
 
-                AppDivider()
-                SectionLabel(stringResource(R.string.button_settings_colors_section_title), accentColor)
+        // ── Text Color Menu Item ────────────────────────────────────
+        GamepadActionCard(
+            title = stringResource(R.string.layout_settings_color_text),
+            description = describeButtonColorOption(buttonTextColor, currentText),
+            icon = Icons.Rounded.FormatColorText,
+            actionLeadingContent = buttonPreviewLeading(currentText, Color.Transparent, Color.Transparent, true),
+            onClick = { onOpenColorSubMenu(currentButton, ButtonColorTarget.TEXT) },
+        )
 
-                ColorPickerRow(
-                    label = stringResource(R.string.layout_settings_color_text),
-                    option = buttonTextColor,
-                    defaultNeutralColor = MP_AMBIENT_NEUTRAL_TEXT,
-                    globalAccentColor = globalAccentColor,
-                    layoutDefaultOption = activeLayout?.buttonTextColor ?: ColorOption.Neutral,
-                    onWheelClick = { activeColorPickerTarget = ButtonColorPickerTarget.TEXT },
-                    onPaletteClick = { activePaletteDialogTarget = ButtonColorPickerTarget.TEXT },
+        // ── Border Color Menu Item ──────────────────────────────────
+        GamepadActionCard(
+            title = stringResource(R.string.layout_settings_color_border),
+            description = describeButtonColorOption(buttonBorderColor, currentBorder),
+            icon = Icons.Rounded.Palette,
+            actionLeadingContent = buttonPreviewLeading(Color.Transparent, currentBorder, Color.Transparent, false),
+            onClick = { onOpenColorSubMenu(currentButton, ButtonColorTarget.BORDER) },
+        )
+
+        // ── Background / Fading Color Menu Item ─────────────────────
+        GamepadActionCard(
+            title = stringResource(R.string.layout_settings_color_bg),
+            description = describeButtonColorOption(buttonBgColor, currentBg),
+            icon = Icons.Rounded.FormatColorFill,
+            actionLeadingContent = buttonPreviewLeading(Color.Transparent, Color.Transparent, currentBg, false),
+            onClick = { onOpenColorSubMenu(currentButton, ButtonColorTarget.BG) },
+        )
+
+        GamepadSectionHeader(
+            text = stringResource(R.string.macropad_editor_section_visibility_behavior),
+            color = accentColor,
+        )
+
+        GamepadToggleCard(
+            title = stringResource(R.string.layout_settings_invisible_buttons),
+            description = stringResource(R.string.layout_settings_invisible_buttons_desc),
+            checked = invisible,
+            icon = Icons.Rounded.VisibilityOff,
+            onCheckedChange = { invisible = it },
+        )
+
+        if (button != null) {
+            GamepadSectionHeader(
+                text = stringResource(R.string.macropad_editor_manage_buttons),
+                color = accentColor,
+            )
+
+            if (onDuplicate != null) {
+                GamepadActionCard(
+                    title = stringResource(R.string.macropad_editor_copy_button_duplicate),
+                    description = stringResource(R.string.macropad_editor_duplicate_button_desc),
+                    icon = Icons.Rounded.ContentCopy,
+                    onClick = { onDuplicate(button) },
                 )
+            }
 
-                ColorPickerRow(
-                    label = stringResource(R.string.layout_settings_color_border),
-                    option = buttonBorderColor,
-                    defaultNeutralColor = MP_AMBIENT_NEUTRAL_BORDER,
-                    globalAccentColor = globalAccentColor,
-                    layoutDefaultOption = activeLayout?.buttonBorderColor ?: ColorOption.Neutral,
-                    onWheelClick = { activeColorPickerTarget = ButtonColorPickerTarget.BORDER },
-                    onPaletteClick = { activePaletteDialogTarget = ButtonColorPickerTarget.BORDER },
+            if (onCopyToLayout != null) {
+                GamepadActionCard(
+                    title = stringResource(R.string.macropad_editor_copy_to_layout),
+                    description = stringResource(R.string.macropad_editor_copy_button_to_layout_desc),
+                    icon = Icons.Rounded.Share,
+                    onClick = { onCopyToLayout(button) },
                 )
-
-                ColorPickerRow(
-                    label = stringResource(R.string.layout_settings_color_bg),
-                    option = buttonBgColor,
-                    defaultNeutralColor = MP_AMBIENT_NEUTRAL_BG,
-                    globalAccentColor = globalAccentColor,
-                    layoutDefaultOption = activeLayout?.buttonBgColor ?: ColorOption.Neutral,
-                    onWheelClick = { activeColorPickerTarget = ButtonColorPickerTarget.BG },
-                    onPaletteClick = { activePaletteDialogTarget = ButtonColorPickerTarget.BG },
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = stringResource(R.string.layout_settings_invisible_buttons),
-                            color = colors.onSurface,
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        Text(
-                            text = stringResource(R.string.layout_settings_invisible_buttons_desc),
-                            color = colors.onSurfaceSecondary,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
-                    Switch(
-                        checked = invisible,
-                        onCheckedChange = { invisible = it },
-                        colors = appSwitchColors(),
-                    )
-                }
             }
         }
 
-        // ── Icon picker overlay ──────────────────────────────────────────────
-        if (showIconPicker) {
-            IconPickerDialog(
-                selectedIcon = iconName,
-                accentColor = accentColor,
-                filled = iconFilled,
-                onFilledChange = { iconFilled = it },
-                onSelect = { name ->
-                    iconName = name
-                    showIconPicker = false
-                },
-                onDismiss = { showIconPicker = false },
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
-        // Color Wheel overlays
-        val activeWheelTarget = activeColorPickerTarget
-        if (activeWheelTarget != null) {
-            val currentText =
-                resolveColorOption(
-                    buttonTextColor ?: activeLayout?.buttonTextColor ?: ColorOption.Neutral,
-                    globalAccentColor,
-                    MP_AMBIENT_NEUTRAL_TEXT,
-                )
-            val currentBorder =
-                resolveColorOption(
-                    buttonBorderColor ?: activeLayout?.buttonBorderColor ?: ColorOption.Neutral,
-                    globalAccentColor,
-                    MP_AMBIENT_NEUTRAL_BORDER,
-                )
-            val currentBg =
-                resolveColorOption(
-                    buttonBgColor ?: activeLayout?.buttonBgColor ?: ColorOption.Neutral,
-                    globalAccentColor,
-                    MP_AMBIENT_NEUTRAL_BG,
-                )
-            val defaultNeutral =
-                when (activeWheelTarget) {
-                    ButtonColorPickerTarget.TEXT -> MP_AMBIENT_NEUTRAL_TEXT
-                    ButtonColorPickerTarget.BORDER -> MP_AMBIENT_NEUTRAL_BORDER
-                    ButtonColorPickerTarget.BG -> MP_AMBIENT_NEUTRAL_BG
-                }
-            val resolvedLayoutOption =
-                when (activeWheelTarget) {
-                    ButtonColorPickerTarget.TEXT -> activeLayout?.buttonTextColor ?: ColorOption.Neutral
-                    ButtonColorPickerTarget.BORDER -> activeLayout?.buttonBorderColor ?: ColorOption.Neutral
-                    ButtonColorPickerTarget.BG -> activeLayout?.buttonBgColor ?: ColorOption.Neutral
-                }
-            val initialColor =
-                when (
-                    val opt =
-                        when (activeWheelTarget) {
-                            ButtonColorPickerTarget.TEXT -> buttonTextColor
-                            ButtonColorPickerTarget.BORDER -> buttonBorderColor
-                            ButtonColorPickerTarget.BG -> buttonBgColor
-                        } ?: resolvedLayoutOption
-                ) {
-                    ColorOption.Neutral -> defaultNeutral
-                    ColorOption.Accent -> globalAccentColor
-                    is ColorOption.Custom -> Color(opt.argb)
-                }
-            ColorWheelPicker(
-                initialColor = initialColor,
-                title =
-                    when (activeWheelTarget) {
-                        ButtonColorPickerTarget.TEXT -> stringResource(R.string.layout_settings_select_text_color)
-                        ButtonColorPickerTarget.BORDER -> stringResource(R.string.layout_settings_select_border_color)
-                        ButtonColorPickerTarget.BG -> stringResource(R.string.layout_settings_select_bg_color)
+        // ── Save / Save & Delete Section ─────────────────────────────────
+        val hasDelete = button != null && onDelete != null
+        GamepadSectionHeader(
+            text =
+                stringResource(
+                    if (hasDelete) {
+                        R.string.macropad_editor_section_save_and_delete
+                    } else {
+                        R.string.macropad_editor_section_save
                     },
-                showAlphaSlider = true,
-                onColorSelected = { selectedColor ->
-                    val customOpt = ColorOption.Custom(selectedColor.toArgb())
-                    when (activeWheelTarget) {
-                        ButtonColorPickerTarget.TEXT -> buttonTextColor = customOpt
-                        ButtonColorPickerTarget.BORDER -> buttonBorderColor = customOpt
-                        ButtonColorPickerTarget.BG -> buttonBgColor = customOpt
-                    }
-                    MacroPadSettings.addRecentColor(selectedColor.toArgb())
-                    activeColorPickerTarget = null
-                },
-                onDismiss = { activeColorPickerTarget = null },
-                preview = { liveColor ->
-                    SwordsButtonPreview(
-                        textColor = if (activeWheelTarget == ButtonColorPickerTarget.TEXT) liveColor else currentText,
-                        borderColor = if (activeWheelTarget == ButtonColorPickerTarget.BORDER) liveColor else currentBorder,
-                        bgColor = if (activeWheelTarget == ButtonColorPickerTarget.BG) liveColor else currentBg,
-                        size = PBD_PREVIEW_BUTTON_SIZE,
-                    )
-                },
-            )
-        }
+                ),
+            color = accentColor,
+        )
 
-        // Palette Overlay Dialogs
-        val activePaletteTarget = activePaletteDialogTarget
-        if (activePaletteTarget != null) {
-            val defaultNeutralColor =
-                when (activePaletteTarget) {
-                    ButtonColorPickerTarget.TEXT -> MP_AMBIENT_NEUTRAL_TEXT
-                    ButtonColorPickerTarget.BORDER -> MP_AMBIENT_NEUTRAL_BORDER
-                    ButtonColorPickerTarget.BG -> MP_AMBIENT_NEUTRAL_BG
-                }
-            val resolvedLayoutOption =
-                when (activePaletteTarget) {
-                    ButtonColorPickerTarget.TEXT -> activeLayout?.buttonTextColor ?: ColorOption.Neutral
-                    ButtonColorPickerTarget.BORDER -> activeLayout?.buttonBorderColor ?: ColorOption.Neutral
-                    ButtonColorPickerTarget.BG -> activeLayout?.buttonBgColor ?: ColorOption.Neutral
-                }
-            val layoutDefaultColor = resolveColorOption(resolvedLayoutOption, globalAccentColor, defaultNeutralColor)
-            val currentText =
-                resolveColorOption(
-                    buttonTextColor ?: activeLayout?.buttonTextColor ?: ColorOption.Neutral,
-                    globalAccentColor,
-                    MP_AMBIENT_NEUTRAL_TEXT,
-                )
-            val currentBorder =
-                resolveColorOption(
-                    buttonBorderColor ?: activeLayout?.buttonBorderColor ?: ColorOption.Neutral,
-                    globalAccentColor,
-                    MP_AMBIENT_NEUTRAL_BORDER,
-                )
-            val currentBg =
-                resolveColorOption(
-                    buttonBgColor ?: activeLayout?.buttonBgColor ?: ColorOption.Neutral,
-                    globalAccentColor,
-                    MP_AMBIENT_NEUTRAL_BG,
-                )
+        // ── Save & Exit Action Row ───────────────────────────────────────
+        GamepadSaveExitActionRow(
+            title = stringResource(if (isNew) R.string.macropad_editor_create_button_title else R.string.macropad_editor_save_button_title),
+            description =
+                stringResource(
+                    if (isNew) R.string.macropad_editor_create_button_desc else R.string.macropad_editor_save_button_desc,
+                ),
+            pulseOnChanges = hasChanges,
+            saveActionText = stringResource(if (isNew) R.string.gamepad_action_create else R.string.gamepad_action_save),
+            saveIcon = Icons.Rounded.Save,
+            enabled = isConfirmEnabled,
+            showExitPrompt = promptState.showExitPrompt,
+            onDismissPrompt = promptState.dismissPrompt,
+            saveFocusRequester = promptState.focusRequester,
+            bringIntoViewRequester = promptState.bringIntoViewRequester,
+            onSave = promptState.onSave,
+            onDiscard = promptState.onDiscard,
+        )
 
-            QuickColorSelectionDialog(
-                title =
-                    when (activePaletteTarget) {
-                        ButtonColorPickerTarget.TEXT -> stringResource(R.string.layout_settings_select_text_color)
-                        ButtonColorPickerTarget.BORDER -> stringResource(R.string.layout_settings_select_border_color)
-                        ButtonColorPickerTarget.BG -> stringResource(R.string.layout_settings_select_bg_color)
-                    },
-                recentColors = recentColors,
-                onSelected = { opt ->
-                    when (activePaletteTarget) {
-                        ButtonColorPickerTarget.TEXT -> buttonTextColor = opt
-                        ButtonColorPickerTarget.BORDER -> buttonBorderColor = opt
-                        ButtonColorPickerTarget.BG -> buttonBgColor = opt
-                    }
-                    if (opt is ColorOption.Custom) {
-                        MacroPadSettings.addRecentColor(opt.argb)
-                    }
-                    activePaletteDialogTarget = null
-                },
-                onDismiss = { activePaletteDialogTarget = null },
-                preview = { option ->
-                    val resolved =
-                        when (option) {
-                            null -> layoutDefaultColor
-                            ColorOption.Neutral -> defaultNeutralColor
-                            ColorOption.Accent -> globalAccentColor
-                            is ColorOption.Custom -> Color(option.argb)
-                        }
-                    SwordsButtonPreview(
-                        textColor = if (activePaletteTarget == ButtonColorPickerTarget.TEXT) resolved else currentText,
-                        borderColor = if (activePaletteTarget == ButtonColorPickerTarget.BORDER) resolved else currentBorder,
-                        bgColor = if (activePaletteTarget == ButtonColorPickerTarget.BG) resolved else currentBg,
-                        size = PBD_PREVIEW_BUTTON_SIZE,
-                    )
-                },
+        // ── Button Deletion (Last Item) ──────────────────────────────────
+        if (button != null && onDelete != null) {
+            GamepadTwoStepConfirmCard(
+                title = stringResource(R.string.macropad_editor_delete_button),
+                confirmTitle = stringResource(R.string.macropad_button_delete_confirm_title),
+                description =
+                    stringResource(
+                        R.string.macropad_editor_delete_button_desc,
+                        button.label.ifBlank { button.action.displayLabel() },
+                    ),
+                actionText = stringResource(R.string.gamepad_action_delete),
+                confirmActionText = stringResource(R.string.gamepad_action_confirm),
+                icon = Icons.Rounded.Delete,
+                isDestructive = true,
+                onConfirm = { onDelete(button) },
             )
         }
     }
 }
-// ─────────────────────────────────────────────────────────────────────────────
-// Section label helper
-// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-internal fun SectionLabel(
-    text: String,
+internal fun ButtonColorSubPageContent(
+    button: PadButton,
+    savedButton: PadButton?,
+    activeLayout: PadLayout?,
+    target: ButtonColorTarget,
     accentColor: Color,
+    onColorOptionChanged: (ColorOption?) -> Unit,
+    onOpenColorWheel: (title: String, breadcrumbs: List<String>, initialColor: Color, inFlightButton: PadButton) -> Unit,
 ) {
-    Text(text, color = accentColor, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
-}
+    val globalAccentInt by SettingsManager.accentColor.collectAsState()
+    val globalAccentColor = Color(globalAccentInt)
 
-private enum class ButtonColorPickerTarget { TEXT, BORDER, BG }
-
-@Composable
-private fun ColorPickerRow(
-    label: String,
-    option: ColorOption?,
-    defaultNeutralColor: Color,
-    globalAccentColor: Color,
-    layoutDefaultOption: ColorOption,
-    onWheelClick: () -> Unit,
-    onPaletteClick: () -> Unit,
-) {
-    val colors = LocalAppColors.current
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Text(
-            text = label,
-            color = colors.onSurface,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.weight(1f),
-        )
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            val resolvedOption = option ?: layoutDefaultOption
-            val previewColor =
-                when (resolvedOption) {
-                    ColorOption.Neutral -> defaultNeutralColor
-                    ColorOption.Accent -> globalAccentColor
-                    is ColorOption.Custom -> Color(resolvedOption.argb)
-                }
-            // Circular color wheel button (click to open color wheel)
-            Box(
-                modifier =
-                    Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(previewColor)
-                        .border(1.dp, colors.accentBorder, CircleShape)
-                        .clickable(onClick = onWheelClick),
-            )
-
-            Spacer(Modifier.width(12.dp))
-
-            // Palette button (click to open quick select dialog)
-            IconButton(
-                onClick = onPaletteClick,
-                modifier =
-                    Modifier
-                        .size(36.dp)
-                        .background(colors.surfaceVariant, CircleShape),
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Palette,
-                    contentDescription = null,
-                    tint = colors.onSurface,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun QuickColorSelectionDialog(
-    title: String,
-    recentColors: List<Int>,
-    onSelected: (ColorOption?) -> Unit,
-    onDismiss: () -> Unit,
-    preview: @Composable (ColorOption?) -> Unit,
-) {
-    val colors = LocalAppColors.current
-
-    AppModalDialog(
-        onDismiss = onDismiss,
-        widthFraction = 0.85f,
-        cornerRadius = 12.dp,
-        contentPadding = 16.dp,
-    ) {
-        Text(
-            text = title,
-            color = colors.onSurface,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-        )
-
-        Spacer(Modifier.height(16.dp))
-
-        // System Styles
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            // Layout Default option
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier =
-                    Modifier
-                        .weight(1f)
-                        .background(colors.surfaceVariant, RoundedCornerShape(8.dp))
-                        .clickable { onSelected(null) }
-                        .padding(8.dp),
-            ) {
-                Box(
-                    modifier = Modifier.size(PBD_PREVIEW_BUTTON_SIZE),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    preview(null)
-                }
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = stringResource(R.string.layout_settings_color_layout_default),
-                    color = colors.onSurface,
-                    style = MaterialTheme.typography.labelSmall,
-                    textAlign = TextAlign.Center,
-                )
-            }
-
-            // Neutral option
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier =
-                    Modifier
-                        .weight(1f)
-                        .background(colors.surfaceVariant, RoundedCornerShape(8.dp))
-                        .clickable { onSelected(ColorOption.Neutral) }
-                        .padding(8.dp),
-            ) {
-                Box(
-                    modifier = Modifier.size(PBD_PREVIEW_BUTTON_SIZE),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    preview(ColorOption.Neutral)
-                }
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = stringResource(R.string.layout_settings_color_neutral),
-                    color = colors.onSurface,
-                    style = MaterialTheme.typography.labelSmall,
-                    textAlign = TextAlign.Center,
-                )
-            }
-
-            // Accent option
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier =
-                    Modifier
-                        .weight(1f)
-                        .background(colors.surfaceVariant, RoundedCornerShape(8.dp))
-                        .clickable { onSelected(ColorOption.Accent) }
-                        .padding(8.dp),
-            ) {
-                Box(
-                    modifier = Modifier.size(PBD_PREVIEW_BUTTON_SIZE),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    preview(ColorOption.Accent)
-                }
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = stringResource(R.string.layout_settings_color_accent),
-                    color = colors.onSurface,
-                    style = MaterialTheme.typography.labelSmall,
-                    textAlign = TextAlign.Center,
-                )
-            }
+    val currentOption =
+        when (target) {
+            ButtonColorTarget.TEXT -> button.buttonTextColor
+            ButtonColorTarget.BORDER -> button.buttonBorderColor
+            ButtonColorTarget.BG -> button.buttonBgColor
         }
 
-        Spacer(Modifier.height(16.dp))
-        Text(
-            text = stringResource(R.string.layout_settings_recent_colors),
-            color = colors.onSurfaceSecondary,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Medium,
-        )
-        Spacer(Modifier.height(8.dp))
+    val layoutDefaultOption =
+        when (target) {
+            ButtonColorTarget.TEXT -> activeLayout?.buttonTextColor ?: ColorOption.Neutral
+            ButtonColorTarget.BORDER -> activeLayout?.buttonBorderColor ?: ColorOption.Neutral
+            ButtonColorTarget.BG -> activeLayout?.buttonBgColor ?: ColorOption.Neutral
+        }
 
-        if (recentColors.isEmpty()) {
-            Text(
-                text = stringResource(R.string.layout_settings_no_recent_colors),
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.bodySmall,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
-            )
+    val defaultNeutralColor =
+        when (target) {
+            ButtonColorTarget.TEXT -> MP_AMBIENT_NEUTRAL_TEXT
+            ButtonColorTarget.BORDER -> MP_AMBIENT_NEUTRAL_BORDER
+            ButtonColorTarget.BG -> MP_AMBIENT_NEUTRAL_BG
+        }
+
+    val currentColor =
+        if (target == ButtonColorTarget.BG) {
+            resolveBgColorOption(currentOption ?: layoutDefaultOption, globalAccentColor)
         } else {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(5),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth().height(PBD_RECENT_COLORS_GRID_HEIGHT),
-            ) {
-                items(recentColors) { argb ->
-                    Box(
-                        modifier =
-                            Modifier
-                                .size(PBD_PREVIEW_BUTTON_SIZE)
-                                .clickable { onSelected(ColorOption.Custom(argb)) },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        preview(ColorOption.Custom(argb))
-                    }
-                }
-            }
+            resolveColorOption(currentOption ?: layoutDefaultOption, globalAccentColor, defaultNeutralColor)
+        }
+    val layoutResolvedColor =
+        if (target == ButtonColorTarget.BG) {
+            resolveBgColorOption(layoutDefaultOption, globalAccentColor)
+        } else {
+            resolveColorOption(layoutDefaultOption, globalAccentColor, defaultNeutralColor)
         }
 
-        Spacer(Modifier.height(16.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
-        ) {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
-            }
+    val targetTitle =
+        when (target) {
+            ButtonColorTarget.TEXT -> stringResource(R.string.layout_settings_color_text)
+            ButtonColorTarget.BORDER -> stringResource(R.string.layout_settings_color_border)
+            ButtonColorTarget.BG -> stringResource(R.string.layout_settings_color_bg)
         }
-    }
+
+    val selectColorWheelTitle =
+        when (target) {
+            ButtonColorTarget.TEXT -> stringResource(R.string.layout_settings_select_text_color)
+            ButtonColorTarget.BORDER -> stringResource(R.string.layout_settings_select_border_color)
+            ButtonColorTarget.BG -> stringResource(R.string.layout_settings_select_bg_color)
+        }
+
+    val colorWheelBreadcrumbs =
+        listOf(
+            stringResource(R.string.macropad_editor_section_buttons),
+            button.label.ifBlank { stringResource(R.string.macropad_editor_section_button_settings) },
+            targetTitle,
+            stringResource(R.string.gamepad_action_custom_color),
+        )
+
+    val isDefaultSelected = currentOption == null
+    val isNeutralSelected = currentOption is ColorOption.Neutral
+    val isAccentSelected = currentOption is ColorOption.Accent
+    val isCustomSelected = currentOption is ColorOption.Custom
+
+    // Option 1: Layout Default
+    GamepadActionCard(
+        title = stringResource(R.string.layout_settings_color_layout_default),
+        description = stringResource(R.string.macropad_btn_color_layout_default_desc),
+        icon = Icons.Rounded.Sync,
+        actionLeadingContent = {
+            GamepadColorSwatch(
+                color = layoutResolvedColor,
+                isSelected = isDefaultSelected,
+            )
+        },
+        actionText = if (isDefaultSelected) stringResource(R.string.gamepad_color_selected) else null,
+        onClick = { onColorOptionChanged(null) },
+        modifier = Modifier.firstDeckItem(),
+    )
+
+    // Option 2: Theme Neutral
+    GamepadActionCard(
+        title = stringResource(R.string.layout_settings_color_neutral),
+        description = stringResource(R.string.macropad_editor_color_palette_desc),
+        icon = Icons.Rounded.FormatColorText,
+        actionLeadingContent = {
+            GamepadColorSwatch(
+                color = defaultNeutralColor,
+                isSelected = isNeutralSelected,
+            )
+        },
+        actionText = if (isNeutralSelected) stringResource(R.string.gamepad_color_selected) else null,
+        onClick = { onColorOptionChanged(ColorOption.Neutral) },
+    )
+
+    // Option 3: App Accent
+    GamepadActionCard(
+        title = stringResource(R.string.layout_settings_color_accent),
+        description = stringResource(R.string.settings_accent_color_desc),
+        icon = Icons.Rounded.Palette,
+        actionLeadingContent = {
+            GamepadColorSwatch(
+                color = globalAccentColor,
+                isSelected = isAccentSelected,
+            )
+        },
+        actionText = if (isAccentSelected) stringResource(R.string.gamepad_color_selected) else null,
+        onClick = { onColorOptionChanged(ColorOption.Accent) },
+    )
+
+    // Option 4: Custom Color (Color Wheel)
+    GamepadActionCard(
+        title = stringResource(R.string.gamepad_action_custom_color),
+        description =
+            if (isCustomSelected) {
+                if (currentColor.alpha < 0.99f) {
+                    String.format("#%06X (%d%%)", 0xFFFFFF and currentColor.toArgb(), (currentColor.alpha * 100).roundToInt())
+                } else {
+                    String.format("#%06X", 0xFFFFFF and currentColor.toArgb())
+                }
+            } else {
+                stringResource(R.string.macropad_editor_color_wheel_desc)
+            },
+        icon = Icons.Rounded.Colorize,
+        actionLeadingContent = {
+            GamepadColorSwatch(
+                color = if (isCustomSelected) currentColor else Color.Transparent,
+                isSelected = isCustomSelected,
+            )
+        },
+        actionText = if (isCustomSelected) stringResource(R.string.gamepad_color_selected) else null,
+        onClick = {
+            onOpenColorWheel(
+                selectColorWheelTitle,
+                colorWheelBreadcrumbs,
+                if (isCustomSelected) currentColor else layoutResolvedColor,
+                button,
+            )
+        },
+    )
 }

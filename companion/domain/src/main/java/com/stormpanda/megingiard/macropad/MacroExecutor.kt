@@ -2,11 +2,13 @@ package com.stormpanda.megingiard.macropad
 
 import android.content.Context
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.input.TouchAction
 import com.stormpanda.megingiard.input.TouchInjector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,6 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.coroutineContext
 
@@ -22,6 +25,8 @@ import kotlin.coroutines.coroutineContext
 // but Android's InputFlinger discovers the new virtual device asynchronously. Dispatching
 // events before InputFlinger registers the device causes them to be silently dropped.
 private const val MAC_GAMEPAD_INJECTOR_INIT_MS = 200L
+private const val MAC_TEST_RUN_PRE_DELAY_MS = 350L
+private const val MAC_TEST_RUN_POST_DELAY_MS = 300L
 
 private const val TAG = "MacroExecutor"
 
@@ -84,6 +89,28 @@ object MacroExecutor {
     }
 
     /**
+     * Executes [macro] synchronously in a single shot (suspending until playback completes).
+     * Used for Test Runs to allow the UI to suspend before execution and resume after completion.
+     */
+    suspend fun executeAndWait(
+        macro: Macro,
+        context: Context? = null,
+    ) {
+        if (macro.steps.isEmpty()) return
+        val ctx = context ?: appContext
+        val singleShot = macro.copy(loopEnabled = false)
+        val currentJob = coroutineContext[Job]
+        synchronized(runningJobs) {
+            runningJobs[macro.id]?.cancel()
+            if (currentJob != null) {
+                runningJobs[macro.id] = currentJob
+            }
+        }
+        AppLog.d(TAG, "executeAndWait macro='${singleShot.name}' id=${singleShot.id} steps=${singleShot.steps.size}")
+        executeSuspend(singleShot, ctx)
+    }
+
+    /**
      * Stops a running macro by cancelling its coroutine. The [_runningMacroIds] set is
      * cleaned up in the [executeSuspend] finally block once the cancellation propagates.
      */
@@ -92,6 +119,47 @@ object MacroExecutor {
         synchronized(runningJobs) {
             // Do NOT remove from the map — let the finally block do it via job-identity check.
             runningJobs[macroId]?.cancel()
+        }
+    }
+
+    /**
+     * Executes a single-shot test run of [macro] with modal UI overlay suspension.
+     *
+     * Suspends the primary modal overlay via [AppStateManager.suspendCurrentAndDismiss] so the
+     * active game is completely visible, delays [preDelayMs] for window focus, replays the single-shot
+     * macro sequence synchronously via [executeAndWait], delays [postDelayMs], and automatically
+     * restores the modal overlay via [AppStateManager.resumeSuspended], invoking [onComplete].
+     *
+     * Executed on [MacroExecutor]'s process-lifetime [scope] so modal overlay unmounting does not
+     * cancel the test execution.
+     */
+    fun runTest(
+        macro: Macro,
+        context: Context? = null,
+        preDelayMs: Long = MAC_TEST_RUN_PRE_DELAY_MS,
+        postDelayMs: Long = MAC_TEST_RUN_POST_DELAY_MS,
+        onComplete: ((success: Boolean) -> Unit)? = null,
+    ) {
+        if (macro.steps.isEmpty()) return
+        val ctx = context ?: appContext
+        AppLog.i(
+            TAG,
+            "Starting test run for macro '${macro.name}' (${macro.id}) with ${macro.steps.size} steps",
+        )
+        AppStateManager.suspendCurrentAndDismiss()
+        scope.launch {
+            var success = false
+            try {
+                delay(preDelayMs)
+                executeAndWait(macro, ctx)
+                delay(postDelayMs)
+                success = true
+            } finally {
+                withContext(NonCancellable + Dispatchers.Main) {
+                    AppStateManager.resumeSuspended()
+                    onComplete?.invoke(success)
+                }
+            }
         }
     }
 

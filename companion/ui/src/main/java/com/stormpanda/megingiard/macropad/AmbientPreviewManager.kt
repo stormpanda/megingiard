@@ -11,7 +11,7 @@ private const val TAG = "AmbientPreviewManager"
 enum class AmbientPreviewType { DIM, EDGE_BLENDING }
 
 /**
- * Shared between [BackgroundSettingsOverlay] (primary screen) and [BackgroundMacroPadOverlay]
+ * Shared between Screen Mirroring editor (primary screen) and [BackgroundMacroPadOverlay]
  * (secondary screen). Non-null while a preview slider is active.
  */
 data class AmbientPreviewConfig(

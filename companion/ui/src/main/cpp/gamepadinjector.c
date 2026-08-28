@@ -23,6 +23,10 @@ static const uint16_t GAMEPAD_BUTTONS[] = {
     BTN_START,
     BTN_SELECT,
     BTN_MODE,    /* Guide / Home button */
+    BTN_DPAD_UP,
+    BTN_DPAD_DOWN,
+    BTN_DPAD_LEFT,
+    BTN_DPAD_RIGHT,
 };
 #define GAMEPAD_BUTTON_COUNT (sizeof(GAMEPAD_BUTTONS) / sizeof(GAMEPAD_BUTTONS[0]))
 

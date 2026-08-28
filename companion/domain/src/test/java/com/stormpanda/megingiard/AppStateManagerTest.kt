@@ -7,10 +7,17 @@ import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
+import com.stormpanda.megingiard.macropad.ProfileAssociation
+import com.stormpanda.megingiard.navigation.NavDestination
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.settings.KeyboardSettings
 import com.stormpanda.megingiard.settings.MacroPadSettings
+import com.stormpanda.megingiard.settings.SettingsCategory
+import com.stormpanda.megingiard.settings.SettingsSubPage
+import com.stormpanda.megingiard.ui.PrimaryModalConfig
+import com.stormpanda.megingiard.ui.PrimaryModalPayload
+import com.stormpanda.megingiard.ui.PrimaryModalType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -439,8 +446,7 @@ class AppStateManagerTest {
                 name = "Game",
                 layouts = emptyList(),
                 association =
-                    com.stormpanda.megingiard.macropad
-                        .ProfileAssociation(packageName = "com.test.game"),
+                    ProfileAssociation(packageName = "com.test.game"),
             )
 
         assertFalse(CompanionViewMode.MACROPAD.shouldShowIntegrationHome("com.test.game", null, associatedProfile))
@@ -464,7 +470,7 @@ class AppStateManagerTest {
                 name = "Ball x Pit",
                 layouts = emptyList(),
                 association =
-                    com.stormpanda.megingiard.macropad.ProfileAssociation(
+                    ProfileAssociation(
                         packageName = "app.gamenative",
                         romFileName = "BALL x PIT.steam",
                         systemId = "pc",
@@ -489,12 +495,11 @@ class AppStateManagerTest {
                     id = "p-1",
                     name = "AetherSX2 Profile",
                     association =
-                        com.stormpanda.megingiard.macropad
-                            .ProfileAssociation(packageName = "com.emulator.aethersx2"),
+                        ProfileAssociation(packageName = "com.emulator.aethersx2"),
                 )
-            com.stormpanda.megingiard.macropad.MacroPadState
+            MacroPadState
                 .addProfile(gameProfile)
-            com.stormpanda.megingiard.macropad.MacroPadState
+            MacroPadState
                 .setActiveProfileId(gameProfile.id)
             AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
             AppStateManager.setStandaloneForegroundState("com.emulator.aethersx2", null)
@@ -649,6 +654,21 @@ class AppStateManagerTest {
         }
 
     @Test
+    fun `restoreDefaults does not close GlobalSettings primary modal or uiMode`() =
+        runTest {
+            AppStateManager.closeActiveModal()
+            AppStateManager.setGlobalSettingsOpen(true)
+            assertTrue(AppStateManager.isGlobalSettingsOpen.value)
+            assertEquals(PrimaryModalType.GLOBAL_SETTINGS, AppStateManager.activePrimaryModal.value?.type)
+
+            MacroPadState.restoreDefaults()
+
+            assertTrue(AppStateManager.isGlobalSettingsOpen.value)
+            assertEquals(PrimaryModalType.GLOBAL_SETTINGS, AppStateManager.activePrimaryModal.value?.type)
+            AppStateManager.closeActiveModal()
+        }
+
+    @Test
     fun `shouldShowIntegrationHome evaluates true for launcher packages in AUTO mode`() =
         runTest {
             val autoMode = CompanionViewMode.AUTO
@@ -715,5 +735,225 @@ class AppStateManagerTest {
 
             AppStateManager.setPromptInFlight(false)
             assertFalse(AppStateManager.promptInFlight.value)
+        }
+
+    @Test
+    fun `openPrimaryModal and closePrimaryModal update activePrimaryModal state flow`() =
+        runTest {
+            assertEquals(null, AppStateManager.activePrimaryModal.value)
+
+            AppStateManager.openPrimaryModal(PrimaryModalType.GLOBAL_SETTINGS)
+            assertEquals(PrimaryModalType.GLOBAL_SETTINGS, AppStateManager.activePrimaryModal.value?.type)
+            assertEquals(UiMode.GLOBAL_SETTINGS, AppStateManager.uiMode.value)
+            assertTrue(AppStateManager.isAnyModalActive.value)
+            assertTrue(AppStateManager.isAnyMenuOpen.value)
+
+            AppStateManager.closePrimaryModal()
+            assertEquals(null, AppStateManager.activePrimaryModal.value)
+            assertEquals(UiMode.MACROPAD_USE, AppStateManager.uiMode.value)
+            assertFalse(AppStateManager.isAnyModalActive.value)
+            assertFalse(AppStateManager.isAnyMenuOpen.value)
+        }
+
+    @Test
+    fun `closePrimaryModal resets isEditorActive and uiMode when closing editor`() =
+        runTest {
+            AppStateManager.closeActiveModal()
+            assertFalse(AppStateManager.isEditorActive.value)
+
+            AppStateManager.setEditorActive(true)
+            assertTrue(AppStateManager.isEditorActive.value)
+            assertEquals(PrimaryModalType.MACROPAD_EDITOR, AppStateManager.activePrimaryModal.value?.type)
+            assertEquals(UiMode.LAYOUT_EDITOR, AppStateManager.uiMode.value)
+            assertTrue(AppStateManager.isAnyMenuOpen.value)
+
+            AppStateManager.closePrimaryModal()
+            assertEquals(null, AppStateManager.activePrimaryModal.value)
+            assertEquals(UiMode.MACROPAD_USE, AppStateManager.uiMode.value)
+            assertFalse(AppStateManager.isEditorActive.value)
+            assertFalse(AppStateManager.isAnyMenuOpen.value)
+            assertFalse(AppStateManager.isAnyModalActive.value)
+        }
+
+    @Test
+    fun `closeActiveModal resets activePrimaryModal and selectedButtonId`() =
+        runTest {
+            AppStateManager.openPrimaryModal(PrimaryModalType.MACROPAD_INSPECTOR)
+            assertEquals(PrimaryModalType.MACROPAD_INSPECTOR, AppStateManager.activePrimaryModal.value?.type)
+            assertTrue(AppStateManager.isEditorActive.value)
+
+            AppStateManager.closeActiveModal()
+            assertEquals(null, AppStateManager.activePrimaryModal.value)
+            assertEquals(UiMode.MACROPAD_USE, AppStateManager.uiMode.value)
+            assertFalse(AppStateManager.isEditorActive.value)
+        }
+
+    @Test
+    fun `setPrivdSetupWizardOpen updates isPrivdSetupWizardActive and suppresses quick menu`() =
+        runTest {
+            AppStateManager.closeActiveModal()
+            AppStateManager.setPrivdSetupWizardOpen(false)
+            assertFalse(AppStateManager.isPrivdSetupWizardActive.value)
+
+            AppStateManager.setPrivdSetupWizardOpen(true)
+            assertTrue(AppStateManager.isPrivdSetupWizardActive.value)
+
+            // Attempt to open quick menu while wizard is active -> should be suppressed
+            AppStateManager.openQuickMenu()
+            assertFalse(AppStateManager.isQuickMenuOpen.value)
+
+            // Close wizard
+            AppStateManager.setPrivdSetupWizardOpen(false)
+            assertFalse(AppStateManager.isPrivdSetupWizardActive.value)
+
+            // Now quick menu can open
+            AppStateManager.openQuickMenu()
+            assertTrue(AppStateManager.isQuickMenuOpen.value)
+            AppStateManager.closeQuickMenu()
+        }
+
+    @Test
+    fun `navigateTo updates currentNavDestination and opens corresponding primary modal`() =
+        runTest {
+            AppStateManager.closeActiveModal()
+            assertEquals(null, AppStateManager.currentNavDestination.value)
+
+            val dest =
+                NavDestination.GlobalSettings(
+                    category = SettingsCategory.APPEARANCE,
+                    subPage = SettingsSubPage.CUSTOM_ACCENT,
+                )
+            AppStateManager.navigateTo(dest)
+
+            assertEquals(dest, AppStateManager.currentNavDestination.value)
+            assertEquals(PrimaryModalType.GLOBAL_SETTINGS, AppStateManager.activePrimaryModal.value?.type)
+            val payload = AppStateManager.activePrimaryModal.value?.payload as? PrimaryModalPayload.GlobalSettings
+            assertEquals(SettingsCategory.APPEARANCE, payload?.category)
+            assertEquals(SettingsSubPage.CUSTOM_ACCENT, payload?.subPage)
+
+            AppStateManager.closePrimaryModal()
+            assertEquals(null, AppStateManager.currentNavDestination.value)
+            assertEquals(null, AppStateManager.activePrimaryModal.value)
+        }
+
+    @Test
+    fun `suspendCurrentAndDismiss and resumeSuspended save and restore modal state`() =
+        runTest {
+            AppStateManager.closeActiveModal()
+            AppStateManager.clearSuspended()
+            assertFalse(AppStateManager.hasSuspendedPrimaryModal.value)
+
+            val modalConfig =
+                PrimaryModalConfig(
+                    type = PrimaryModalType.MACRO_TIMELINE_EDITOR,
+                    payload =
+                        PrimaryModalPayload.MacroTimeline(
+                            macroId = "macro-999",
+                            focusStepIndex = 3,
+                        ),
+                )
+            AppStateManager.openPrimaryModal(modalConfig)
+            assertEquals(PrimaryModalType.MACRO_TIMELINE_EDITOR, AppStateManager.activePrimaryModal.value?.type)
+
+            // Suspend and dismiss
+            AppStateManager.suspendCurrentAndDismiss()
+            assertEquals(null, AppStateManager.activePrimaryModal.value)
+            assertTrue(AppStateManager.hasSuspendedPrimaryModal.value)
+            assertEquals(modalConfig, AppStateManager.suspendedPrimaryModal.value)
+
+            // Resume
+            AppStateManager.resumeSuspended()
+            assertFalse(AppStateManager.hasSuspendedPrimaryModal.value)
+            assertEquals(null, AppStateManager.suspendedPrimaryModal.value)
+            assertEquals(PrimaryModalType.MACRO_TIMELINE_EDITOR, AppStateManager.activePrimaryModal.value?.type)
+            val restoredPayload = AppStateManager.activePrimaryModal.value?.payload as? PrimaryModalPayload.MacroTimeline
+            assertEquals("macro-999", restoredPayload?.macroId)
+            assertEquals(3, restoredPayload?.focusStepIndex)
+
+            AppStateManager.closeActiveModal()
+        }
+
+    @Test
+    fun `clearSuspended resets suspendedPrimaryModal state`() =
+        runTest {
+            AppStateManager.closeActiveModal()
+            AppStateManager.clearSuspended()
+
+            val modalConfig = PrimaryModalConfig(type = PrimaryModalType.KEYBOARD_SETTINGS)
+            AppStateManager.suspendCurrentAndDismiss(modalConfig)
+            assertTrue(AppStateManager.hasSuspendedPrimaryModal.value)
+
+            AppStateManager.clearSuspended()
+            assertFalse(AppStateManager.hasSuspendedPrimaryModal.value)
+            assertEquals(null, AppStateManager.suspendedPrimaryModal.value)
+        }
+
+    @Test
+    fun `setSelectedCutoutId during viewport edit automatically syncs activeCropCutoutId`() =
+        runTest {
+            AppStateManager.closeActiveModal()
+            AppStateManager.setViewportEditActive(true)
+            assertEquals(null, AppStateManager.selectedCutoutId.value)
+            assertEquals(null, AppStateManager.activeCropCutoutId.value)
+
+            AppStateManager.setSelectedCutoutId("cutout_123")
+            assertEquals("cutout_123", AppStateManager.selectedCutoutId.value)
+            assertEquals("cutout_123", AppStateManager.activeCropCutoutId.value)
+
+            AppStateManager.setSelectedCutoutId(null)
+            assertEquals(null, AppStateManager.selectedCutoutId.value)
+            assertEquals(null, AppStateManager.activeCropCutoutId.value)
+
+            AppStateManager.closeActiveModal()
+        }
+
+    @Test
+    fun `setViewportEditActive syncs existing selectedCutoutId and clears on exit`() =
+        runTest {
+            AppStateManager.closeActiveModal()
+            AppStateManager.setSelectedCutoutId("cutout_abc")
+            // Outside viewport edit, activeCropCutoutId is not automatically updated
+            assertEquals("cutout_abc", AppStateManager.selectedCutoutId.value)
+            assertEquals(null, AppStateManager.activeCropCutoutId.value)
+
+            AppStateManager.setViewportEditActive(true)
+            assertEquals("cutout_abc", AppStateManager.selectedCutoutId.value)
+            assertEquals("cutout_abc", AppStateManager.activeCropCutoutId.value)
+
+            AppStateManager.setViewportEditActive(false)
+            assertEquals(null, AppStateManager.selectedCutoutId.value)
+            assertEquals(null, AppStateManager.activeCropCutoutId.value)
+        }
+
+    @Test
+    fun `mirror editor background hidden state toggles and resets on mode changes`() =
+        runTest {
+            AppStateManager.closeActiveModal()
+            assertFalse(AppStateManager.isMirrorEditorBackgroundHidden.value)
+
+            AppStateManager.setMirrorEditorBackgroundHidden(true)
+            assertTrue(AppStateManager.isMirrorEditorBackgroundHidden.value)
+
+            AppStateManager.toggleMirrorEditorBackgroundHidden()
+            assertFalse(AppStateManager.isMirrorEditorBackgroundHidden.value)
+
+            AppStateManager.toggleMirrorEditorBackgroundHidden()
+            assertTrue(AppStateManager.isMirrorEditorBackgroundHidden.value)
+
+            // Exiting viewport edit resets the hidden state
+            AppStateManager.setViewportEditActive(false)
+            assertFalse(AppStateManager.isMirrorEditorBackgroundHidden.value)
+
+            // Entering viewport edit resets the hidden state
+            AppStateManager.setMirrorEditorBackgroundHidden(true)
+            assertTrue(AppStateManager.isMirrorEditorBackgroundHidden.value)
+            AppStateManager.setViewportEditActive(true)
+            assertFalse(AppStateManager.isMirrorEditorBackgroundHidden.value)
+
+            // Closing modal resets the hidden state
+            AppStateManager.setMirrorEditorBackgroundHidden(true)
+            assertTrue(AppStateManager.isMirrorEditorBackgroundHidden.value)
+            AppStateManager.closePrimaryModal()
+            assertFalse(AppStateManager.isMirrorEditorBackgroundHidden.value)
         }
 }
