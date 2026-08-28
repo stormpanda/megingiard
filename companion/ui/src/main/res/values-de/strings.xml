@@ -284,9 +284,14 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_editor_section_layout">Layout</string>
     <string name="macropad_editor_section_buttons">Tasten</string>
     <string name="macropad_editor_section_button_settings">Tasteneinstellungen</string>
+    <string name="macropad_editor_section_button_colors">Tastenfarben</string>
+    <string name="macropad_editor_section_shape_size">Form &amp; Größe</string>
     <string name="macropad_macro_section_steps">Makro-Schritte</string>
+    <string name="macropad_macro_section_action_details">Aktionsdetails</string>
+    <string name="macropad_macro_section_timing">Timing</string>
     <string name="macropad_editor_section_save">Speichern</string>
     <string name="macropad_editor_section_save_and_delete">Speichern &amp; Löschen</string>
+    <string name="settings_section_scrolling">Scrollen</string>
 
     <!-- MacroPad-Editor Layout-Einstellungen — Tastenfarbe -->
 
@@ -296,6 +301,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="layout_settings_bg_image_use_as_mask_desc">Hintergrundbild über den gespiegelten Bildausschnitten anzeigen. Nützlich für PNGs mit Transparenz.</string>
     <string name="layout_settings_bg_image_crop">Zuschneiden</string>
     <string name="layout_settings_bg_image_crop_desc">Auf dem unteren Bildschirm mit zwei Fingern zoomen und durch Ziehen verschieben.</string>
+    <string name="layout_settings_bg_image_adjustments">Bildanpassungen &amp; Maskierung</string>
     <!-- Custom Layout Settings Buttons Colors -->
     <string name="layout_settings_bg_section_title">Hintergrund</string>
     <string name="layout_settings_bg_image_dimming_title">Dimmung</string>
@@ -350,7 +356,9 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="touch_recording_actions_gestures" formatted="false">%1$d Gesten (%2$d Pkt.)</string>
     <string name="macropad_macro_test_run">Testlauf</string>
     <string name="macropad_macro_loop_toggle">Makro wiederholen</string>
+    <string name="macropad_macro_loop_desc">Makro kontinuierlich in Schleife wiederholen</string>
     <string name="macropad_macro_loop_pause_label">Pause zwischen Wiederholungen</string>
+    <string name="macropad_macro_loop_pause_desc">Wartezeit zwischen aufeinanderfolgenden Wiederholungen</string>
     <string name="macropad_macro_randomize_toggle">Timing randomisieren</string>
     <string name="macropad_macro_randomize_range_label">Maximaler Zeitversatz</string>
     <string name="macropad_macro_randomize_desc">Fügt der konfigurierten Startzeit und Dauer jedes Schritts bei jeder Ausführung einen zufälligen Millisekunden-Wert (bis zum Maximum) hinzu.</string>
@@ -1064,9 +1072,12 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_editor_appearance_desc">Schrift-, Rahmen- und Hintergrundfarben der Tasten anpassen</string>
     <string name="macropad_editor_touchpad_desc">Hintergrund-Touchpad und Touch-Projektionsbereiche konfigurieren</string>
     <string name="macropad_editor_duplicate_layout_desc">Aktives Layout innerhalb dieses Profils duplizieren</string>
+    <string name="macropad_editor_duplicate_button_desc">Diese Taste im aktiven Layout duplizieren</string>
     <string name="macropad_editor_copy_layout_desc">Dieses Layout in ein anderes Profil kopieren</string>
+    <string name="macropad_editor_copy_button_to_layout_desc">Diese Taste in ein anderes Layout kopieren</string>
     <string name="macropad_editor_reorder_layouts_desc">Reihenfolge der Layouts in diesem Profil ändern</string>
     <string name="macropad_editor_delete_layout_desc">Löscht \'%1$s\' aus diesem Profil</string>
+    <string name="macropad_editor_delete_button_desc">Löscht \'%1$s\' aus diesem Layout</string>
     <string name="macropad_editor_edit_button_positions">Tastenpositionen bearbeiten</string>
     <string name="macropad_editor_edit_button_positions_card_desc">Tasten per Touch oder D-Pad präzise bewegen</string>
     <string name="macropad_editor_move_buttons_info">Bewege Tasten direkt durch Ziehen auf dem unteren Bildschirm oder wähle unten eine Taste, um sie mit dem Steuerkreuz oder linken Stick pixelgenau zu verschieben.</string>
@@ -1102,6 +1113,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_editor_bg_crop_pan_hint_desc">Ziehen, um sichtbaren Ausschnitt zu wählen</string>
     <string name="macropad_editor_bg_crop_save_title">Hintergrundausschnitt speichern</string>
     <string name="macropad_editor_bg_crop_save_desc">Zoom und Position auf dieses Layout anwenden</string>
+    <string name="macropad_editor_remove_bg_image">Hintergrundbild entfernen</string>
+    <string name="macropad_editor_remove_bg_image_desc">Entfernt das Hintergrundbild aus diesem Layout</string>
 
     <!-- Pad Button Edit Dialog -->
     <string name="macropad_btn_shape_desc">Geometrie der interaktiven Tastenkappe</string>

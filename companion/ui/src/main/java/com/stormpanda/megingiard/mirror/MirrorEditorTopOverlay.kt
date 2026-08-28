@@ -49,6 +49,7 @@ import androidx.compose.material.icons.rounded.Crop
 import androidx.compose.material.icons.rounded.CropSquare
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.FilterCenterFocus
+import androidx.compose.material.icons.rounded.OpenWith
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.UnfoldLess
 import androidx.compose.material.icons.rounded.UnfoldMore
@@ -674,7 +675,7 @@ fun MirrorEditorTopOverlay(
                             // Item 4: Adjust Bottom Cutout Coordinates (Target Screen)
                             AdjustCoordinatesCard(
                                 title = stringResource(R.string.mirror_editor_adjust_bottom_cutout),
-                                icon = Icons.Rounded.Crop,
+                                icon = Icons.Rounded.OpenWith,
                                 selectedCutout = selectedCutout,
                                 onMove = { dx, dy ->
                                     selectedCutout?.id?.let { moveBottomCutout(it, dx, dy) }

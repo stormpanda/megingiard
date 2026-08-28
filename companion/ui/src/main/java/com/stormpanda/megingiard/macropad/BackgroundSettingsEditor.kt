@@ -294,7 +294,7 @@ internal fun LayoutBackgroundSubPageContent(
 
     if (previewBitmap != null) {
         GamepadSectionHeader(
-            text = stringResource(R.string.layout_settings_bg_image_crop),
+            text = stringResource(R.string.layout_settings_bg_image_adjustments),
             color = accentColor,
         )
 
@@ -410,9 +410,9 @@ internal fun LayoutBackgroundSubPageContent(
 
     if (previewBitmap != null) {
         GamepadTwoStepConfirmCard(
-            title = stringResource(R.string.layout_settings_bg_image_none),
+            title = stringResource(R.string.macropad_editor_remove_bg_image),
             confirmTitle = stringResource(R.string.macropad_editor_bg_delete_confirm_title),
-            description = stringResource(R.string.macropad_editor_bg_storage_desc),
+            description = stringResource(R.string.macropad_editor_remove_bg_image_desc),
             actionText = stringResource(R.string.gamepad_action_clear),
             confirmActionText = stringResource(R.string.gamepad_action_confirm),
             icon = Icons.Rounded.Delete,

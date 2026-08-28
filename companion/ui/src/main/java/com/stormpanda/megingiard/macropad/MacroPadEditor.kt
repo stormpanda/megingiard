@@ -3064,7 +3064,7 @@ private fun MacrosDeck(
     GamepadActionCard(
         title = stringResource(R.string.macropad_editor_open_timeline_title),
         description = stringResource(R.string.macropad_editor_open_timeline_desc),
-        icon = Icons.AutoMirrored.Rounded.PlaylistPlay,
+        icon = Icons.Rounded.Add,
         onClick = onNewMacro,
         modifier = Modifier.firstDeckItem(),
     )

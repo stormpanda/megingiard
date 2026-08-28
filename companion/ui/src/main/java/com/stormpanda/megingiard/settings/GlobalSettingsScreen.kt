@@ -46,6 +46,7 @@ import androidx.compose.material.icons.rounded.Gradient
 import androidx.compose.material.icons.rounded.Inventory2
 import androidx.compose.material.icons.rounded.Key
 import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.NearMe
 import androidx.compose.material.icons.rounded.OpenInBrowser
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Person
@@ -521,7 +522,7 @@ fun GlobalSettingsScreen(
                                 GamepadActionCard(
                                     title = stringResource(R.string.settings_config_import_profile),
                                     description = stringResource(R.string.help_settings_import_profile_desc),
-                                    icon = Icons.Rounded.FileDownload,
+                                    icon = Icons.Rounded.FileUpload,
                                     onClick = {
                                         ConfigManager.requestImport(ConfigManager.ImportMode.PROFILE_SHARE)
                                     },
@@ -1106,7 +1107,7 @@ private fun DeadzonesSubPage(
         value = deadzoneLeft,
         valueRange = 0f..0.50f,
         step = 0.01f,
-        icon = Icons.Rounded.Games,
+        icon = Icons.Rounded.NearMe,
         valueLabel = "${(deadzoneLeft * 100f).roundToInt()}%",
         onValueChange = onLeftChange,
         modifier = Modifier.firstDeckItem(),
@@ -1118,7 +1119,7 @@ private fun DeadzonesSubPage(
         value = deadzoneRight,
         valueRange = 0f..0.50f,
         step = 0.01f,
-        icon = Icons.Rounded.Games,
+        icon = Icons.Rounded.NearMe,
         valueLabel = "${(deadzoneRight * 100f).roundToInt()}%",
         onValueChange = onRightChange,
     )
@@ -1383,7 +1384,7 @@ private fun RestoreBackupSubPage(
 
     if (internalBackups.isNotEmpty()) {
         GamepadSectionHeader(
-            text = stringResource(R.string.config_restore_automatic_backups).uppercase(),
+            text = stringResource(R.string.config_restore_automatic_backups),
             color = effectiveAccent,
         )
 

@@ -362,9 +362,14 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_section_layout">Layout</string>
     <string name="macropad_editor_section_buttons">Buttons</string>
     <string name="macropad_editor_section_button_settings">Button Settings</string>
+    <string name="macropad_editor_section_button_colors">Button Colors</string>
+    <string name="macropad_editor_section_shape_size">Shape &amp; Size</string>
     <string name="macropad_macro_section_steps">Macro-Steps</string>
+    <string name="macropad_macro_section_action_details">Action Details</string>
+    <string name="macropad_macro_section_timing">Timing</string>
     <string name="macropad_editor_section_save">Save</string>
     <string name="macropad_editor_section_save_and_delete">Save &amp; Delete</string>
+    <string name="settings_section_scrolling">Scrolling</string>
 
     <!-- MacroPad editor layout settings — button color style -->
 
@@ -374,6 +379,7 @@ Open Settings to create a layout.</string>
     <string name="layout_settings_bg_image_use_as_mask_desc">Draw the background image on top of screen mirror cutouts. Useful for PNGs with transparency.</string>
     <string name="layout_settings_bg_image_crop">Crop</string>
     <string name="layout_settings_bg_image_crop_desc">Pinch to zoom and drag to pan the background image on the bottom screen.</string>
+    <string name="layout_settings_bg_image_adjustments">Image Adjustments &amp; Masking</string>
     <string name="layout_settings_bg_section_title">Background</string>
     <string name="layout_settings_bg_image_dimming_title">Dimming</string>
     <string name="layout_settings_colors_section_title">Button Color Defaults</string>
@@ -433,7 +439,9 @@ Open Settings to create a layout.</string>
     <string name="touch_recording_actions_gestures" formatted="false">%1$d gestures (%2$d pts)</string>
     <string name="macropad_macro_test_run">Test Run</string>
     <string name="macropad_macro_loop_toggle">Loop macro</string>
+    <string name="macropad_macro_loop_desc">Repeatedly play this macro continuously</string>
     <string name="macropad_macro_loop_pause_label">Pause between repetitions</string>
+    <string name="macropad_macro_loop_pause_desc">Delay duration between consecutive playback cycles</string>
     <string name="macropad_macro_randomize_toggle">Randomize timing</string>
     <string name="macropad_macro_randomize_range_label">Timing offset maximum</string>
     <string name="macropad_macro_randomize_desc">Adds a random amount of milliseconds (up to the maximum) to the configured start time and duration of each step on every execution.</string>
@@ -1055,9 +1063,12 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_appearance_desc">Customize button text, border, and background color styling</string>
     <string name="macropad_editor_touchpad_desc">Configure background touchpad and touch projection cutouts</string>
     <string name="macropad_editor_duplicate_layout_desc">Duplicate active layout inside this profile</string>
+    <string name="macropad_editor_duplicate_button_desc">Duplicate this button inside active layout</string>
     <string name="macropad_editor_copy_layout_desc">Copy this layout to another profile</string>
+    <string name="macropad_editor_copy_button_to_layout_desc">Copy this button to another layout</string>
     <string name="macropad_editor_reorder_layouts_desc">Change the order of layouts in this profile</string>
     <string name="macropad_editor_delete_layout_desc">Delete \'%1$s\' from this profile</string>
+    <string name="macropad_editor_delete_button_desc">Delete \'%1$s\' from this layout</string>
     <string name="macropad_editor_edit_button_positions">Edit Button Positions</string>
     <string name="macropad_editor_edit_button_positions_card_desc">Move buttons via touch or D-pad precision</string>
     <string name="macropad_editor_move_buttons_info">Drag buttons directly on the bottom screen, or select a button below to move it pixel-by-pixel with the D-pad or Left Stick.</string>
@@ -1093,6 +1104,8 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_bg_crop_pan_hint_desc">Drag to choose visible section</string>
     <string name="macropad_editor_bg_crop_save_title">Save Background Crop</string>
     <string name="macropad_editor_bg_crop_save_desc">Apply zoom and position changes to this layout</string>
+    <string name="macropad_editor_remove_bg_image">Remove Background Image</string>
+    <string name="macropad_editor_remove_bg_image_desc">Remove the background image from this layout</string>
 
     <!-- Pad Button Edit Dialog -->
     <string name="macropad_btn_shape_desc">Geometry of the interactive button cap</string>

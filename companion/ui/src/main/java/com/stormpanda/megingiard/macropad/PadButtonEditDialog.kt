@@ -401,7 +401,7 @@ internal fun EditButtonSubPageContent(
 
     if (action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove) {
         GamepadSectionHeader(
-            text = stringResource(R.string.macropad_editor_button_shape),
+            text = stringResource(R.string.macropad_editor_section_shape_size),
             color = accentColor,
         )
 
@@ -536,7 +536,7 @@ internal fun EditButtonSubPageContent(
         }
 
         GamepadSectionHeader(
-            text = stringResource(R.string.layout_settings_colors_section_title),
+            text = stringResource(R.string.macropad_editor_section_button_colors),
             color = accentColor,
         )
 
@@ -620,7 +620,7 @@ internal fun EditButtonSubPageContent(
             if (onDuplicate != null) {
                 GamepadActionCard(
                     title = stringResource(R.string.macropad_editor_copy_button_duplicate),
-                    description = stringResource(R.string.macropad_editor_duplicate_layout_desc),
+                    description = stringResource(R.string.macropad_editor_duplicate_button_desc),
                     icon = Icons.Rounded.ContentCopy,
                     onClick = { onDuplicate(button) },
                 )
@@ -629,7 +629,7 @@ internal fun EditButtonSubPageContent(
             if (onCopyToLayout != null) {
                 GamepadActionCard(
                     title = stringResource(R.string.macropad_editor_copy_to_layout),
-                    description = stringResource(R.string.macropad_editor_copy_layout_desc),
+                    description = stringResource(R.string.macropad_editor_copy_button_to_layout_desc),
                     icon = Icons.Rounded.Share,
                     onClick = { onCopyToLayout(button) },
                 )
@@ -676,7 +676,7 @@ internal fun EditButtonSubPageContent(
                 confirmTitle = stringResource(R.string.macropad_button_delete_confirm_title),
                 description =
                     stringResource(
-                        R.string.macropad_editor_delete_layout_desc,
+                        R.string.macropad_editor_delete_button_desc,
                         button.label.ifBlank { button.action.displayLabel() },
                     ),
                 actionText = stringResource(R.string.gamepad_action_delete),

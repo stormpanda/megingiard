@@ -3,13 +3,13 @@ package com.stormpanda.megingiard.touchpad
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BrightnessMedium
+import androidx.compose.material.icons.rounded.Cast
 import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.PanTool
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.Vibration
-import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
@@ -58,7 +58,7 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
         modifier = Modifier.fillMaxSize(),
     ) {
         GamepadSectionHeader(
-            text = stringResource(R.string.settings_section_relative_mouse).uppercase(),
+            text = stringResource(R.string.settings_section_relative_mouse),
             color = colors.accent,
         )
 
@@ -148,7 +148,7 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
         )
 
         GamepadSectionHeader(
-            text = stringResource(R.string.settings_section_absolute_touch).uppercase(),
+            text = stringResource(R.string.settings_section_absolute_touch),
             color = colors.accent,
         )
 
@@ -156,7 +156,7 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
             title = stringResource(R.string.settings_touchpad_mirroring),
             description = stringResource(R.string.settings_touchpad_mirroring_desc),
             checked = touchpadMirroringEnabled,
-            icon = Icons.Rounded.Videocam,
+            icon = Icons.Rounded.Cast,
             onCheckedChange = { TouchpadSettings.setTouchpadMirroringEnabled(it) },
         )
 

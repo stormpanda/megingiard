@@ -309,7 +309,7 @@ internal fun MacroTimelineSubPageContent(
 
     GamepadToggleCard(
         title = stringResource(R.string.macropad_macro_loop_toggle),
-        description = stringResource(R.string.macropad_macro_loop_pause_label),
+        description = stringResource(R.string.macropad_macro_loop_desc),
         checked = loopEnabled,
         icon = Icons.Rounded.Repeat,
         onCheckedChange = { loopEnabled = it },
@@ -318,7 +318,7 @@ internal fun MacroTimelineSubPageContent(
     if (loopEnabled) {
         GamepadSliderCard(
             title = stringResource(R.string.macropad_macro_loop_pause_label),
-            description = stringResource(R.string.macropad_macro_loop_pause_label),
+            description = stringResource(R.string.macropad_macro_loop_pause_desc),
             value = loopPauseMs.toFloat(),
             valueRange = 0f..10000f,
             step = 100f,

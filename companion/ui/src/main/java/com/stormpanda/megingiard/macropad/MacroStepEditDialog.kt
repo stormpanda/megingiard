@@ -303,7 +303,7 @@ internal fun MacroStepEditSubPageContent(
 
     // ── Action Details Section ───────────────────────────────────────────────
     GamepadSectionHeader(
-        text = stringResource(R.string.macropad_macro_section_actions),
+        text = stringResource(R.string.macropad_macro_section_action_details),
         color = accentColor,
     )
 
@@ -447,7 +447,7 @@ internal fun MacroStepEditSubPageContent(
 
     // ── Timing & Sequence Section ────────────────────────────────────────────
     GamepadSectionHeader(
-        text = stringResource(R.string.macropad_macro_section_playback),
+        text = stringResource(R.string.macropad_macro_section_timing),
         color = accentColor,
     )
 

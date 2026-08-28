@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Save
@@ -144,6 +145,7 @@ internal fun NewProfileSubPageContent(
         GamepadActionCard(
             title = stringResource(R.string.macropad_profile_app_association_title),
             description = stringResource(R.string.macropad_profile_app_association_desc),
+            icon = Icons.Rounded.Apps,
             onClick = onOpenAppPicker,
         )
     }
@@ -255,6 +257,7 @@ internal fun EditProfileSubPageContent(
         GamepadActionCard(
             title = stringResource(R.string.macropad_profile_app_association_title),
             description = stringResource(R.string.macropad_profile_app_association_desc),
+            icon = Icons.Rounded.Apps,
             onClick = onOpenAppPicker,
         )
     }

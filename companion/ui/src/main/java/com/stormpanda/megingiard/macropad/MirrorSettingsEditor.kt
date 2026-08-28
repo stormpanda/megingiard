@@ -257,7 +257,7 @@ internal fun CutoutSettingsSubPageContent(
             confirmDescription = stringResource(R.string.macropad_projection_conflict_touchpad_body),
             actionText = stringResource(R.string.gamepad_action_enable),
             confirmActionText = stringResource(R.string.gamepad_action_confirm),
-            icon = Icons.Rounded.Mouse,
+            icon = Icons.Rounded.TouchApp,
             isDestructive = true,
             itemKey = "cutout_${cutout.id}_projection",
             cardFocusRequester = projectionFocusRequester,
@@ -272,7 +272,7 @@ internal fun CutoutSettingsSubPageContent(
             title = stringResource(R.string.settings_mirror_touch_projection),
             description = stringResource(R.string.settings_mirror_touch_projection_desc),
             checked = cutout.touchProjectionEnabled,
-            icon = Icons.Rounded.Mouse,
+            icon = Icons.Rounded.TouchApp,
             itemKey = "cutout_${cutout.id}_projection",
             cardFocusRequester = projectionFocusRequester,
             onCheckedChange = { isChecked ->

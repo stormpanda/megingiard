@@ -150,7 +150,7 @@ internal fun LayoutTouchpadSubPageContent(
         )
 
         GamepadSectionHeader(
-            text = stringResource(R.string.settings_touchpad_scroll_speed),
+            text = stringResource(R.string.settings_section_scrolling),
             color = accentColor,
         )
 
