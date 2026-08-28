@@ -137,7 +137,6 @@ internal fun ChooseButtonTypeSubPageContent(
             title = stringResource(group.labelResId()),
             description = stringResource(group.descriptionResId()),
             icon = group.icon(),
-            actionText = stringResource(R.string.gamepad_action_choose),
             alwaysShowFullDescription = true,
             onClick = { onSelectType(group) },
             modifier = cardModifier,
@@ -351,7 +350,6 @@ internal fun EditButtonSubPageContent(
         GamepadActionCard(
             title = stringResource(R.string.macropad_icon_picker_title),
             description = if (iconName != null) iconName!! else stringResource(R.string.macropad_icon_picker_search),
-            actionText = stringResource(R.string.gamepad_action_choose_icon),
             icon = Icons.Rounded.Image,
             actionLeadingContent = {
                 if (iconName != null) {
@@ -579,7 +577,6 @@ internal fun EditButtonSubPageContent(
             description = describeButtonColorOption(buttonTextColor, currentText),
             icon = Icons.Rounded.FormatColorText,
             actionLeadingContent = buttonPreviewLeading(currentText, Color.Transparent, Color.Transparent, true),
-            actionText = stringResource(R.string.gamepad_action_edit),
             onClick = { onOpenColorSubMenu(currentButton, ButtonColorTarget.TEXT) },
         )
 
@@ -589,7 +586,6 @@ internal fun EditButtonSubPageContent(
             description = describeButtonColorOption(buttonBorderColor, currentBorder),
             icon = Icons.Rounded.Palette,
             actionLeadingContent = buttonPreviewLeading(Color.Transparent, currentBorder, Color.Transparent, false),
-            actionText = stringResource(R.string.gamepad_action_edit),
             onClick = { onOpenColorSubMenu(currentButton, ButtonColorTarget.BORDER) },
         )
 
@@ -599,7 +595,6 @@ internal fun EditButtonSubPageContent(
             description = describeButtonColorOption(buttonBgColor, currentBg),
             icon = Icons.Rounded.FormatColorFill,
             actionLeadingContent = buttonPreviewLeading(Color.Transparent, Color.Transparent, currentBg, false),
-            actionText = stringResource(R.string.gamepad_action_edit),
             onClick = { onOpenColorSubMenu(currentButton, ButtonColorTarget.BG) },
         )
 
@@ -626,7 +621,6 @@ internal fun EditButtonSubPageContent(
                 GamepadActionCard(
                     title = stringResource(R.string.macropad_editor_copy_button_duplicate),
                     description = stringResource(R.string.macropad_editor_duplicate_layout_desc),
-                    actionText = stringResource(R.string.gamepad_action_duplicate),
                     icon = Icons.Rounded.ContentCopy,
                     onClick = { onDuplicate(button) },
                 )
@@ -636,7 +630,6 @@ internal fun EditButtonSubPageContent(
                 GamepadActionCard(
                     title = stringResource(R.string.macropad_editor_copy_to_layout),
                     description = stringResource(R.string.macropad_editor_copy_layout_desc),
-                    actionText = stringResource(R.string.gamepad_action_copy),
                     icon = Icons.Rounded.Share,
                     onClick = { onCopyToLayout(button) },
                 )
@@ -781,12 +774,7 @@ internal fun ButtonColorSubPageContent(
                 isSelected = isDefaultSelected,
             )
         },
-        actionText =
-            if (isDefaultSelected) {
-                stringResource(R.string.gamepad_color_selected)
-            } else {
-                stringResource(R.string.gamepad_action_select)
-            },
+        actionText = if (isDefaultSelected) stringResource(R.string.gamepad_color_selected) else null,
         onClick = { onColorOptionChanged(null) },
         modifier = Modifier.firstDeckItem(),
     )
@@ -802,12 +790,7 @@ internal fun ButtonColorSubPageContent(
                 isSelected = isNeutralSelected,
             )
         },
-        actionText =
-            if (isNeutralSelected) {
-                stringResource(R.string.gamepad_color_selected)
-            } else {
-                stringResource(R.string.gamepad_action_select)
-            },
+        actionText = if (isNeutralSelected) stringResource(R.string.gamepad_color_selected) else null,
         onClick = { onColorOptionChanged(ColorOption.Neutral) },
     )
 
@@ -822,12 +805,7 @@ internal fun ButtonColorSubPageContent(
                 isSelected = isAccentSelected,
             )
         },
-        actionText =
-            if (isAccentSelected) {
-                stringResource(R.string.gamepad_color_selected)
-            } else {
-                stringResource(R.string.gamepad_action_select)
-            },
+        actionText = if (isAccentSelected) stringResource(R.string.gamepad_color_selected) else null,
         onClick = { onColorOptionChanged(ColorOption.Accent) },
     )
 
@@ -851,12 +829,7 @@ internal fun ButtonColorSubPageContent(
                 isSelected = isCustomSelected,
             )
         },
-        actionText =
-            if (isCustomSelected) {
-                stringResource(R.string.gamepad_color_selected)
-            } else {
-                stringResource(R.string.gamepad_action_choose)
-            },
+        actionText = if (isCustomSelected) stringResource(R.string.gamepad_color_selected) else null,
         onClick = {
             onOpenColorWheel(
                 selectColorWheelTitle,

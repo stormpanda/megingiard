@@ -33,7 +33,6 @@ internal fun ManualMacroStepsSubPageContent(
     GamepadActionCard(
         title = stringResource(R.string.macropad_macro_step_new),
         description = stringResource(R.string.macro_step_action_type_desc),
-        actionText = stringResource(R.string.gamepad_action_add),
         icon = Icons.Rounded.Add,
         itemKey = "macro_manual_add_step",
         onClick = onOpenAddStep,
@@ -44,7 +43,6 @@ internal fun ManualMacroStepsSubPageContent(
         GamepadActionCard(
             title = stringResource(R.string.macropad_macro_reorder_steps_title),
             description = stringResource(R.string.macropad_macro_reorder_steps_desc),
-            actionText = stringResource(R.string.gamepad_action_reorder),
             icon = Icons.Rounded.SwapVert,
             itemKey = "macro_manual_reorder_steps",
             onClick = onOpenReorderSteps,
@@ -69,7 +67,6 @@ internal fun ManualMacroStepsSubPageContent(
             GamepadActionCard(
                 title = "${idx + 1}. $typeTitle: $actionDesc",
                 description = stringResource(R.string.macropad_macro_step_timing, step.startTimeMs, step.durationMs),
-                actionText = stringResource(R.string.gamepad_action_edit),
                 icon = stepIcon(step),
                 onClick = { onOpenEditStep(idx) },
                 itemKey = "macro_manual_step_$idx",

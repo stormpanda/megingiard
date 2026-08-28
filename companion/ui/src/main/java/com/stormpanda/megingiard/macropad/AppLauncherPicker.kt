@@ -33,7 +33,6 @@ internal fun AppLauncherPicker(
     GamepadActionCard(
         title = stringResource(R.string.app_launcher_picker_title),
         description = appTitle,
-        actionText = stringResource(R.string.gamepad_action_choose),
         icon = Icons.Rounded.Apps,
         actionLeadingContent = {
             if (current.packageName.isNotBlank()) {

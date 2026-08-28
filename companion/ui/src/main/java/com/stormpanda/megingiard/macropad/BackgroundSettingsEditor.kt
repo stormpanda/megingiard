@@ -274,7 +274,6 @@ internal fun LayoutBackgroundSubPageContent(
     GamepadActionCard(
         title = stringResource(R.string.layout_settings_bg_image_scrape),
         description = stringResource(R.string.macropad_editor_bg_steamgriddb_desc),
-        actionText = stringResource(R.string.gamepad_action_search),
         icon = Icons.Rounded.Search,
         onClick = {
             if (SettingsManager.steamGridDbApiToken.value.isBlank()) {
@@ -289,7 +288,6 @@ internal fun LayoutBackgroundSubPageContent(
     GamepadActionCard(
         title = stringResource(R.string.layout_settings_bg_image_browse_local),
         description = stringResource(R.string.macropad_editor_bg_storage_desc),
-        actionText = stringResource(R.string.gamepad_action_browse),
         icon = Icons.Rounded.Folder,
         onClick = { BackgroundPickerManager.requestImagePicker() },
     )

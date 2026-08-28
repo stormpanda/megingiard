@@ -92,12 +92,7 @@ internal fun MirrorActionPickerSubPageContent(
             title = stringResource(item.titleRes),
             description = stringResource(item.descRes),
             icon = item.icon,
-            actionText =
-                if (isSelected) {
-                    stringResource(R.string.gamepad_color_selected)
-                } else {
-                    stringResource(R.string.gamepad_action_select)
-                },
+            actionText = if (isSelected) stringResource(R.string.gamepad_color_selected) else null,
             alwaysShowFullDescription = true,
             onClick = { onSelectAction(item.action) },
             modifier = cardModifier,
@@ -142,12 +137,7 @@ internal fun OverlayActionPickerSubPageContent(
             title = stringResource(item.titleRes),
             description = stringResource(item.descRes),
             icon = item.icon,
-            actionText =
-                if (isSelected) {
-                    stringResource(R.string.gamepad_color_selected)
-                } else {
-                    stringResource(R.string.gamepad_action_select)
-                },
+            actionText = if (isSelected) stringResource(R.string.gamepad_color_selected) else null,
             alwaysShowFullDescription = true,
             onClick = { onSelectAction(item.action) },
             modifier = cardModifier,
@@ -198,12 +188,7 @@ internal fun LayoutActionPickerSubPageContent(
             title = stringResource(item.titleRes),
             description = stringResource(item.descRes),
             icon = item.icon,
-            actionText =
-                if (isSelected) {
-                    stringResource(R.string.gamepad_color_selected)
-                } else {
-                    stringResource(R.string.gamepad_action_select)
-                },
+            actionText = if (isSelected) stringResource(R.string.gamepad_color_selected) else null,
             alwaysShowFullDescription = true,
             onClick = { onSelectAction(item.action) },
             modifier = cardModifier,
@@ -247,12 +232,7 @@ internal fun MacroActionPickerSubPageContent(
                 title = macro.name,
                 description = stepCountDesc,
                 icon = Icons.Rounded.SmartButton,
-                actionText =
-                    if (isSelected) {
-                        stringResource(R.string.gamepad_color_selected)
-                    } else {
-                        stringResource(R.string.gamepad_action_select)
-                    },
+                actionText = if (isSelected) stringResource(R.string.gamepad_color_selected) else null,
                 alwaysShowFullDescription = true,
                 onClick = { onSelectAction(PadAction.Macro(macro.id)) },
                 modifier = cardModifier,

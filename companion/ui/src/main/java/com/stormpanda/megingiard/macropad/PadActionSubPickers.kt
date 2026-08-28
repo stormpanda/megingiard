@@ -55,7 +55,7 @@ internal fun KeyboardKeyPicker(
     GamepadActionCard(
         title = stringResource(R.string.macropad_picker_label_key),
         description = stringResource(R.string.macropad_picker_label_key_desc),
-        actionText = current.label.ifBlank { stringResource(R.string.gamepad_action_choose_key) },
+        actionText = current.label.ifBlank { null },
         icon = Icons.Rounded.Keyboard,
         onClick = onOpenPicker,
         modifier = Modifier.firstDeckItem(isFirstItem),

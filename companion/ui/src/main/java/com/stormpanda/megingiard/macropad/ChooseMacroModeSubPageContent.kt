@@ -28,7 +28,6 @@ private data class MacroChoiceItem(
     val choice: MacroCreationChoice,
     val titleRes: Int,
     val descRes: Int,
-    val actionRes: Int,
     val icon: ImageVector,
 )
 
@@ -49,28 +48,24 @@ internal fun ChooseMacroModeSubPageContent(
                     choice = MacroCreationChoice.RECORD_GAMEPAD,
                     titleRes = R.string.macropad_macro_create_record_gamepad_title,
                     descRes = R.string.macropad_macro_create_record_gamepad_desc,
-                    actionRes = R.string.macropad_macro_record_gamepad,
                     icon = Icons.Rounded.SportsEsports,
                 ),
                 MacroChoiceItem(
                     choice = MacroCreationChoice.BUILD_MANUAL,
                     titleRes = R.string.macropad_macro_create_manual_title,
                     descRes = R.string.macropad_macro_create_manual_desc,
-                    actionRes = R.string.gamepad_action_create,
                     icon = Icons.Rounded.Tune,
                 ),
                 MacroChoiceItem(
                     choice = MacroCreationChoice.RECORD_TOUCH_TAP,
                     titleRes = R.string.macropad_macro_create_record_touch_tap_title,
                     descRes = R.string.macropad_macro_create_record_touch_tap_desc,
-                    actionRes = R.string.macropad_macro_record_touch,
                     icon = Icons.Rounded.TouchApp,
                 ),
                 MacroChoiceItem(
                     choice = MacroCreationChoice.RECORD_TOUCH_GESTURE,
                     titleRes = R.string.macropad_macro_create_record_touch_gesture_title,
                     descRes = R.string.macropad_macro_create_record_touch_gesture_desc,
-                    actionRes = R.string.macropad_macro_record_touch,
                     icon = Icons.Rounded.Gesture,
                 ),
             )
@@ -84,7 +79,6 @@ internal fun ChooseMacroModeSubPageContent(
             title = stringResource(item.titleRes),
             description = stringResource(item.descRes),
             icon = item.icon,
-            actionText = stringResource(item.actionRes),
             alwaysShowFullDescription = true,
             onClick = {
                 when (item.choice) {

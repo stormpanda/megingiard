@@ -72,7 +72,6 @@ internal fun MirrorDeck(
     GamepadActionCard(
         title = stringResource(R.string.mirror_editor_arrange_cutouts_title),
         description = stringResource(R.string.mirror_editor_arrange_cutouts_desc),
-        actionText = stringResource(R.string.gamepad_action_edit),
         icon = Icons.Rounded.Crop,
         onClick = onArrangeCutouts,
         modifier = Modifier.firstDeckItem().focusRequester(firstItemFocusRequester),
@@ -82,7 +81,6 @@ internal fun MirrorDeck(
     GamepadActionCard(
         title = stringResource(R.string.settings_mirror_advanced_title),
         description = stringResource(R.string.settings_mirror_advanced_desc),
-        actionText = stringResource(R.string.gamepad_action_edit),
         icon = Icons.Rounded.Tune,
         onClick = onOpenAdvancedSettings,
     )
@@ -97,7 +95,6 @@ internal fun MirrorDeck(
     GamepadActionCard(
         title = stringResource(R.string.mirror_editor_add_cutout),
         description = stringResource(R.string.mirror_editor_add_cutout_desc),
-        actionText = stringResource(R.string.settings_macropad_new),
         icon = Icons.Rounded.Add,
         onClick = onAddCutout,
     )
@@ -144,7 +141,6 @@ internal fun MirrorDeck(
             GamepadActionCard(
                 title = cutoutTitle,
                 description = summaryDesc,
-                actionText = stringResource(R.string.gamepad_action_edit),
                 icon = Icons.Rounded.Crop,
                 onClick = { onEditCutout(cutout) },
             )

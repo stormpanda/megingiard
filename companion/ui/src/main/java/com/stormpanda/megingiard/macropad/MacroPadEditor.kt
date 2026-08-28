@@ -2391,7 +2391,6 @@ private fun ProfilesDeck(
     GamepadActionCard(
         title = stringResource(R.string.settings_macropad_new_profile),
         description = stringResource(R.string.macropad_editor_new_profile_desc),
-        actionText = stringResource(R.string.gamepad_action_create),
         icon = Icons.Rounded.Add,
         onClick = onNewProfile,
     )
@@ -2399,7 +2398,6 @@ private fun ProfilesDeck(
     GamepadActionCard(
         title = stringResource(R.string.profile_settings_title),
         description = stringResource(R.string.macropad_editor_edit_profile_desc),
-        actionText = stringResource(R.string.gamepad_action_edit),
         icon = Icons.Rounded.Edit,
         onClick = onEditProfile,
     )
@@ -2407,7 +2405,6 @@ private fun ProfilesDeck(
     GamepadActionCard(
         title = stringResource(R.string.macropad_duplicate_profile),
         description = stringResource(R.string.macropad_editor_duplicate_profile_desc, activeProfile.name),
-        actionText = stringResource(R.string.gamepad_action_duplicate),
         icon = Icons.Rounded.ContentCopy,
         onClick = {
             onDuplicateProfile()
@@ -2423,7 +2420,6 @@ private fun ProfilesDeck(
     GamepadActionCard(
         title = stringResource(R.string.macropad_reorder_profiles),
         description = stringResource(R.string.macropad_editor_reorder_profiles_desc),
-        actionText = stringResource(R.string.gamepad_action_reorder),
         icon = Icons.Rounded.SwapVert,
         onClick = onReorderProfiles,
     )
@@ -2491,7 +2487,6 @@ private fun LayoutsDeck(
     GamepadActionCard(
         title = stringResource(R.string.settings_macropad_new_layout),
         description = stringResource(R.string.macropad_editor_new_layout_desc),
-        actionText = stringResource(R.string.gamepad_action_create),
         icon = Icons.Rounded.Add,
         onClick = onNewLayout,
     )
@@ -2499,7 +2494,6 @@ private fun LayoutsDeck(
     GamepadActionCard(
         title = stringResource(R.string.macropad_editor_appearance_title),
         description = stringResource(R.string.macropad_editor_appearance_desc),
-        actionText = stringResource(R.string.gamepad_action_appearance),
         icon = Icons.Rounded.Palette,
         onClick = onEditAppearance,
     )
@@ -2507,7 +2501,6 @@ private fun LayoutsDeck(
     GamepadActionCard(
         title = stringResource(R.string.settings_touchpad_title),
         description = stringResource(R.string.macropad_editor_touchpad_desc),
-        actionText = stringResource(R.string.gamepad_action_touchpad),
         icon = Icons.Rounded.Mouse,
         onClick = onEditTouchpad,
     )
@@ -2515,7 +2508,6 @@ private fun LayoutsDeck(
     GamepadActionCard(
         title = stringResource(R.string.macropad_duplicate_layout),
         description = stringResource(R.string.macropad_editor_duplicate_layout_desc),
-        actionText = stringResource(R.string.gamepad_action_duplicate),
         icon = Icons.Rounded.ContentCopy,
         onClick = {
             onDuplicateLayout()
@@ -2531,7 +2523,6 @@ private fun LayoutsDeck(
     GamepadActionCard(
         title = stringResource(R.string.macropad_editor_copy_profile_select),
         description = stringResource(R.string.macropad_editor_copy_layout_desc),
-        actionText = stringResource(R.string.gamepad_action_copy),
         icon = Icons.Rounded.Share,
         onClick = onCopyLayout,
     )
@@ -2539,7 +2530,6 @@ private fun LayoutsDeck(
     GamepadActionCard(
         title = stringResource(R.string.macropad_reorder_layouts),
         description = stringResource(R.string.macropad_editor_reorder_layouts_desc),
-        actionText = stringResource(R.string.gamepad_action_reorder),
         icon = Icons.Rounded.SwapVert,
         onClick = onReorderLayouts,
     )
@@ -2613,7 +2603,6 @@ private fun ButtonsDeck(
             GamepadActionCard(
                 title = stringResource(R.string.macropad_editor_edit_button_positions),
                 description = stringResource(R.string.macropad_editor_edit_button_positions_card_desc),
-                actionText = stringResource(R.string.gamepad_action_open),
                 icon = Icons.Rounded.OpenWith,
                 onClick = onEditButtonPositions,
                 modifier = Modifier.firstDeckItem(),
@@ -2644,7 +2633,6 @@ private fun ButtonsDeck(
             GamepadActionCard(
                 title = stringResource(R.string.macropad_editor_add_button),
                 description = stringResource(R.string.macropad_editor_create_button_desc),
-                actionText = stringResource(R.string.gamepad_action_add),
                 icon = Icons.Rounded.Add,
                 onClick = onAddButton,
                 onFocusChanged = { if (it) MacroPadState.setSelectedButtonId(null) },
@@ -2721,7 +2709,6 @@ private fun ButtonsDeck(
                     title = btn.label.ifBlank { btn.action.displayLabel() },
                     description = desc,
                     icon = btn.action.toCategory().icon(),
-                    actionText = stringResource(R.string.gamepad_action_edit),
                     onClick = { onEditButton(btn) },
                     onFocusChanged = { isFocused ->
                         if (isFocused) {
@@ -3077,7 +3064,6 @@ private fun MacrosDeck(
     GamepadActionCard(
         title = stringResource(R.string.macropad_editor_open_timeline_title),
         description = stringResource(R.string.macropad_editor_open_timeline_desc),
-        actionText = stringResource(R.string.gamepad_action_new),
         icon = Icons.AutoMirrored.Rounded.PlaylistPlay,
         onClick = onNewMacro,
         modifier = Modifier.firstDeckItem(),
@@ -3099,7 +3085,6 @@ private fun MacrosDeck(
             GamepadActionCard(
                 title = macro.name,
                 description = stepCountDesc,
-                actionText = stringResource(R.string.gamepad_action_edit),
                 icon = Icons.AutoMirrored.Rounded.PlaylistPlay,
                 onClick = { onEditMacro(macro) },
             )

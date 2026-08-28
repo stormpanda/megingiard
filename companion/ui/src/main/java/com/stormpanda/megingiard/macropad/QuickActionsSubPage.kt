@@ -21,7 +21,6 @@ private const val TAG = "QuickActionsDeck"
 private data class QuickActionItem(
     val titleRes: Int,
     val descRes: Int,
-    val actionRes: Int,
     val icon: ImageVector,
     val onClick: () -> Unit,
 )
@@ -43,42 +42,36 @@ internal fun QuickActionsDeckContent(
                 QuickActionItem(
                     titleRes = R.string.macropad_editor_add_button,
                     descRes = R.string.macropad_editor_create_button_desc,
-                    actionRes = R.string.gamepad_action_create,
                     icon = Icons.Rounded.SmartButton,
                     onClick = onNewButton,
                 ),
                 QuickActionItem(
                     titleRes = R.string.macropad_editor_open_timeline_title,
                     descRes = R.string.macropad_editor_open_timeline_desc,
-                    actionRes = R.string.gamepad_action_create,
                     icon = Icons.AutoMirrored.Rounded.PlaylistPlay,
                     onClick = onNewMacro,
                 ),
                 QuickActionItem(
                     titleRes = R.string.settings_macropad_new_layout,
                     descRes = R.string.macropad_editor_new_layout_desc,
-                    actionRes = R.string.gamepad_action_create,
                     icon = Icons.AutoMirrored.Rounded.ViewQuilt,
                     onClick = onNewLayout,
                 ),
                 QuickActionItem(
                     titleRes = R.string.settings_macropad_new_profile,
                     descRes = R.string.macropad_editor_new_profile_desc,
-                    actionRes = R.string.gamepad_action_create,
                     icon = Icons.Rounded.Folder,
                     onClick = onNewProfile,
                 ),
                 QuickActionItem(
                     titleRes = R.string.quick_action_edit_buttons,
                     descRes = R.string.quick_action_edit_buttons_desc,
-                    actionRes = R.string.gamepad_action_open,
                     icon = Icons.Rounded.OpenWith,
                     onClick = onArrangeButtons,
                 ),
                 QuickActionItem(
                     titleRes = R.string.mirror_editor_arrange_cutouts_title,
                     descRes = R.string.mirror_editor_arrange_cutouts_desc,
-                    actionRes = R.string.gamepad_action_open,
                     icon = Icons.Rounded.Crop,
                     onClick = onEditMirrorLayout,
                 ),
@@ -91,7 +84,6 @@ internal fun QuickActionsDeckContent(
         GamepadActionCard(
             title = stringResource(item.titleRes),
             description = stringResource(item.descRes),
-            actionText = stringResource(item.actionRes),
             icon = item.icon,
             alwaysShowFullDescription = true,
             onClick = item.onClick,

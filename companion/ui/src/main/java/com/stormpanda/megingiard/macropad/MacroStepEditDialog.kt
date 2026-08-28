@@ -510,7 +510,6 @@ internal fun MacroStepEditSubPageContent(
             GamepadActionCard(
                 title = stringResource(R.string.macropad_macro_step_duplicate),
                 description = stringResource(R.string.macropad_macro_step_duplicate_desc),
-                actionText = stringResource(R.string.gamepad_action_duplicate),
                 icon = Icons.Rounded.ContentCopy,
                 onClick = { onDuplicate(constructedStep) },
             )

@@ -144,7 +144,6 @@ internal fun NewProfileSubPageContent(
         GamepadActionCard(
             title = stringResource(R.string.macropad_profile_app_association_title),
             description = stringResource(R.string.macropad_profile_app_association_desc),
-            actionText = stringResource(R.string.gamepad_action_choose_app),
             onClick = onOpenAppPicker,
         )
     }
@@ -256,7 +255,6 @@ internal fun EditProfileSubPageContent(
         GamepadActionCard(
             title = stringResource(R.string.macropad_profile_app_association_title),
             description = stringResource(R.string.macropad_profile_app_association_desc),
-            actionText = stringResource(R.string.gamepad_action_choose_app),
             onClick = onOpenAppPicker,
         )
     }

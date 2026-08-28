@@ -165,7 +165,6 @@ internal fun LayoutAppearanceSubPageContent(
                 isIconOnly = true,
             )
         },
-        actionText = stringResource(R.string.gamepad_action_edit),
         onClick = { onOpenColorSubMenu(LayoutColorTarget.TEXT) },
     )
 
@@ -182,7 +181,6 @@ internal fun LayoutAppearanceSubPageContent(
                 isIconOnly = false,
             )
         },
-        actionText = stringResource(R.string.gamepad_action_edit),
         onClick = { onOpenColorSubMenu(LayoutColorTarget.BORDER) },
     )
 
@@ -199,7 +197,6 @@ internal fun LayoutAppearanceSubPageContent(
                 isIconOnly = false,
             )
         },
-        actionText = stringResource(R.string.gamepad_action_edit),
         onClick = { onOpenColorSubMenu(LayoutColorTarget.BG) },
     )
 
@@ -331,12 +328,7 @@ internal fun LayoutColorSubPageContent(
                 isSelected = isNeutralSelected,
             )
         },
-        actionText =
-            if (isNeutralSelected) {
-                stringResource(R.string.gamepad_color_selected)
-            } else {
-                stringResource(R.string.gamepad_action_select)
-            },
+        actionText = if (isNeutralSelected) stringResource(R.string.gamepad_color_selected) else null,
         onClick = { onColorOptionChanged(ColorOption.Neutral) },
         modifier = Modifier.firstDeckItem(),
     )
@@ -352,12 +344,7 @@ internal fun LayoutColorSubPageContent(
                 isSelected = isAccentSelected,
             )
         },
-        actionText =
-            if (isAccentSelected) {
-                stringResource(R.string.gamepad_color_selected)
-            } else {
-                stringResource(R.string.gamepad_action_select)
-            },
+        actionText = if (isAccentSelected) stringResource(R.string.gamepad_color_selected) else null,
         onClick = { onColorOptionChanged(ColorOption.Accent) },
     )
 
@@ -381,12 +368,7 @@ internal fun LayoutColorSubPageContent(
                 isSelected = isCustomSelected,
             )
         },
-        actionText =
-            if (isCustomSelected) {
-                stringResource(R.string.gamepad_color_selected)
-            } else {
-                stringResource(R.string.gamepad_action_choose)
-            },
+        actionText = if (isCustomSelected) stringResource(R.string.gamepad_color_selected) else null,
         onClick = {
             onOpenColorWheel(
                 selectColorWheelTitle,

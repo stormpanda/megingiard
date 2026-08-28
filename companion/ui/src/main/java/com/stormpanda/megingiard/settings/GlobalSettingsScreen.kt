@@ -329,7 +329,6 @@ fun GlobalSettingsScreen(
                                     GamepadActionCard(
                                         title = stringResource(R.string.settings_update_available_banner, latestReleaseInfo?.tagName ?: ""),
                                         description = stringResource(R.string.settings_update_available_banner_desc),
-                                        actionText = stringResource(R.string.settings_update_now_btn),
                                         icon = Icons.Rounded.SystemUpdate,
                                         onClick = { subPageStack = listOf(SettingsSubPage.UPDATE_AVAILABLE) },
                                         modifier = Modifier.firstDeckItem(),
@@ -339,7 +338,6 @@ fun GlobalSettingsScreen(
                                 GamepadActionCard(
                                     title = stringResource(R.string.settings_start_welcome_tour),
                                     description = stringResource(R.string.settings_start_welcome_tour_desc),
-                                    actionText = stringResource(R.string.settings_start_welcome_tour_btn),
                                     icon = Icons.Rounded.PlayCircle,
                                     onClick = {
                                         AppStateManager.closeActiveModal()
@@ -352,7 +350,6 @@ fun GlobalSettingsScreen(
                                 GamepadActionCard(
                                     title = stringResource(R.string.privd_title),
                                     description = stringResource(R.string.help_settings_privd_desc),
-                                    actionText = stringResource(R.string.gamepad_action_setup),
                                     icon = Icons.Rounded.Security,
                                     onClick = {
                                         AppStateManager.closeActiveModal()
@@ -395,7 +392,6 @@ fun GlobalSettingsScreen(
                                 GamepadActionCard(
                                     title = stringResource(R.string.settings_reset_tutorials),
                                     description = stringResource(R.string.settings_reset_tutorials_desc),
-                                    actionText = stringResource(R.string.gamepad_action_reset),
                                     icon = Icons.AutoMirrored.Rounded.HelpOutline,
                                     onClick = {
                                         viewModel.resetAllTutorials()
@@ -419,13 +415,13 @@ fun GlobalSettingsScreen(
 
                                 GamepadActionCard(
                                     title = stringResource(R.string.privd_deadzone_title),
-                                    description =
+                                    description = stringResource(R.string.help_settings_deadzone_desc),
+                                    actionText =
                                         stringResource(
                                             R.string.privd_deadzone_summary,
                                             (deadzoneLeft * 100f).roundToInt(),
                                             (deadzoneRight * 100f).roundToInt(),
                                         ),
-                                    actionText = stringResource(R.string.gamepad_action_deadzones),
                                     icon = Icons.Rounded.Games,
                                     onClick = { subPageStack = listOf(SettingsSubPage.DEADZONES) },
                                 )
@@ -467,7 +463,6 @@ fun GlobalSettingsScreen(
                                     GamepadActionCard(
                                         title = stringResource(R.string.settings_accent_custom_title),
                                         description = stringResource(R.string.settings_accent_custom_desc),
-                                        actionText = stringResource(R.string.gamepad_action_edit),
                                         icon = Icons.Rounded.Colorize,
                                         actionLeadingContent = {
                                             GamepadColorSwatch(
@@ -501,7 +496,6 @@ fun GlobalSettingsScreen(
                                 GamepadActionCard(
                                     title = stringResource(R.string.settings_config_export),
                                     description = stringResource(R.string.help_settings_export_desc),
-                                    actionText = stringResource(R.string.gamepad_action_setup),
                                     icon = Icons.Rounded.FileDownload,
                                     onClick = { subPageStack = listOf(SettingsSubPage.CREATE_BACKUP) },
                                     modifier =
@@ -513,7 +507,6 @@ fun GlobalSettingsScreen(
                                 GamepadActionCard(
                                     title = stringResource(R.string.settings_config_import),
                                     description = stringResource(R.string.settings_config_import_card_desc),
-                                    actionText = stringResource(R.string.gamepad_action_restore),
                                     icon = Icons.Rounded.FileUpload,
                                     onClick = { subPageStack = listOf(SettingsSubPage.RESTORE_BACKUP) },
                                 )
@@ -521,7 +514,6 @@ fun GlobalSettingsScreen(
                                 GamepadActionCard(
                                     title = stringResource(R.string.settings_config_export_profile),
                                     description = stringResource(R.string.help_settings_export_profile_desc),
-                                    actionText = stringResource(R.string.gamepad_action_setup),
                                     icon = Icons.Rounded.Share,
                                     onClick = { subPageStack = listOf(SettingsSubPage.SHARE_PROFILE) },
                                 )
@@ -529,7 +521,6 @@ fun GlobalSettingsScreen(
                                 GamepadActionCard(
                                     title = stringResource(R.string.settings_config_import_profile),
                                     description = stringResource(R.string.help_settings_import_profile_desc),
-                                    actionText = stringResource(R.string.gamepad_action_browse),
                                     icon = Icons.Rounded.FileDownload,
                                     onClick = {
                                         ConfigManager.requestImport(ConfigManager.ImportMode.PROFILE_SHARE)
@@ -597,7 +588,6 @@ fun GlobalSettingsScreen(
                                         } else {
                                             stringResource(R.string.settings_steamgriddb_token_desc)
                                         },
-                                    actionText = stringResource(R.string.gamepad_action_edit),
                                     icon = Icons.Rounded.Key,
                                     onClick = { subPageStack = listOf(SettingsSubPage.STEAMGRIDDB_TOKEN) },
                                     modifier = Modifier.firstDeckItem(isFirst = selectedCategory == SettingsCategory.SCRAPING),
@@ -619,14 +609,14 @@ fun GlobalSettingsScreen(
                                     mutableStateOf(false)
                                 }
 
-                                val updateBadgeText: String
+                                val updateBadgeText: String?
                                 val updateBadgeAccent: Boolean
                                 val updateBadgeHighlighted: Boolean
                                 val updateBadgeDestructive: Boolean
 
                                 when {
                                     !hasTriggeredManualCheck -> {
-                                        updateBadgeText = stringResource(R.string.gamepad_action_check)
+                                        updateBadgeText = null
                                         updateBadgeAccent = false
                                         updateBadgeHighlighted = false
                                         updateBadgeDestructive = false
@@ -670,14 +660,19 @@ fun GlobalSettingsScreen(
                                             stringResource(R.string.settings_app_version, BuildConfig.VERSION_NAME)
                                         },
                                     icon = Icons.Rounded.Refresh,
-                                    actionLeadingContent = {
-                                        GamepadPill(
-                                            text = updateBadgeText,
-                                            isAccent = updateBadgeAccent,
-                                            isHighlighted = updateBadgeHighlighted,
-                                            isDestructive = updateBadgeDestructive,
-                                        )
-                                    },
+                                    actionLeadingContent =
+                                        if (updateBadgeText != null) {
+                                            {
+                                                GamepadPill(
+                                                    text = updateBadgeText,
+                                                    isAccent = updateBadgeAccent,
+                                                    isHighlighted = updateBadgeHighlighted,
+                                                    isDestructive = updateBadgeDestructive,
+                                                )
+                                            }
+                                        } else {
+                                            null
+                                        },
                                     onClick = {
                                         if (isCheckingUpdates) return@GamepadActionCard
 
@@ -693,7 +688,6 @@ fun GlobalSettingsScreen(
                                 GamepadActionCard(
                                     title = stringResource(R.string.settings_add_to_obtainium),
                                     description = stringResource(R.string.help_settings_add_to_obtainium_desc),
-                                    actionText = stringResource(R.string.gamepad_action_add),
                                     icon = Icons.Rounded.Download,
                                     onClick = {
                                         val deepLink = "obtainium://add/${GS_OBTAINIUM_REPO_URL}"
@@ -734,7 +728,6 @@ fun GlobalSettingsScreen(
                                 GamepadActionCard(
                                     title = stringResource(R.string.settings_save_log_report),
                                     description = stringResource(R.string.help_settings_save_log_desc),
-                                    actionText = stringResource(R.string.gamepad_action_save),
                                     icon = Icons.Rounded.SaveAlt,
                                     onClick = { viewModel.requestSaveLogReport() },
                                 )
@@ -1168,7 +1161,6 @@ private fun CreateBackupSubPage(onExport: (ExportMetadata, Boolean) -> Unit) {
     GamepadActionCard(
         title = stringResource(R.string.settings_config_export),
         description = stringResource(R.string.help_settings_export_desc),
-        actionText = stringResource(R.string.gamepad_action_export),
         icon = Icons.Rounded.FileDownload,
         onClick = {
             val metadata =
@@ -1247,7 +1239,6 @@ private fun ShareProfileSubPage(onExportProfile: (ExportMetadata, PadProfile, Bo
     GamepadActionCard(
         title = stringResource(R.string.settings_config_export_profile),
         description = stringResource(R.string.help_settings_export_profile_desc),
-        actionText = stringResource(R.string.gamepad_action_export),
         icon = Icons.Rounded.Share,
         enabled = currentProfile != null,
         onClick = {
@@ -1362,7 +1353,6 @@ private fun CustomAccentSubPage(
     GamepadActionCard(
         title = stringResource(R.string.settings_color_save_title),
         description = stringResource(R.string.settings_color_save_desc),
-        actionText = stringResource(R.string.gamepad_action_save),
         icon = Icons.Rounded.Colorize,
         actionLeadingContent = {
             GamepadColorSwatch(
@@ -1386,7 +1376,6 @@ private fun RestoreBackupSubPage(
     GamepadActionCard(
         title = stringResource(R.string.config_restore_option_external),
         description = stringResource(R.string.config_restore_option_external_sub),
-        actionText = stringResource(R.string.gamepad_action_browse),
         icon = Icons.Rounded.FileDownload,
         onClick = onPickExternalFile,
         modifier = Modifier.firstDeckItem(),
@@ -1423,7 +1412,6 @@ private fun RestoreBackupSubPage(
             GamepadActionCard(
                 title = formattedTime,
                 description = subtitle,
-                actionText = stringResource(R.string.gamepad_action_restore),
                 icon = Icons.Rounded.Restore,
                 onClick = { onSelectInternalBackup(backup) },
             )
@@ -1550,7 +1538,6 @@ private fun RestoreReviewSubPage(
     GamepadActionCard(
         title = stringResource(R.string.config_import_confirm),
         description = warningText,
-        actionText = stringResource(R.string.gamepad_action_restore),
         icon = Icons.Rounded.Restore,
         isDestructive = true,
         onClick = {
@@ -1576,7 +1563,6 @@ private fun UpdateAvailableSubPage(
     GamepadActionCard(
         title = stringResource(R.string.update_dialog_btn_backup_and_open),
         description = stringResource(R.string.update_dialog_backup_and_open_desc),
-        actionText = stringResource(R.string.gamepad_action_open),
         icon = Icons.Rounded.SaveAlt,
         onClick = onBackupAndOpen,
         modifier = Modifier.firstDeckItem(),
@@ -1585,7 +1571,6 @@ private fun UpdateAvailableSubPage(
     GamepadActionCard(
         title = stringResource(R.string.update_dialog_btn_open_directly),
         description = stringResource(R.string.update_dialog_open_directly_desc),
-        actionText = stringResource(R.string.gamepad_action_open),
         icon = Icons.Rounded.OpenInBrowser,
         onClick = onOpenDirectly,
     )

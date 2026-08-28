@@ -1120,12 +1120,6 @@ fun GamepadTextFieldCard(
                     icon = icon,
                     isFocused = isFocused,
                     isError = isError,
-                    trailingContent = {
-                        GamepadPill(
-                            text = stringResource(R.string.gamepad_action_edit),
-                            isHighlighted = isFocused,
-                        )
-                    },
                 )
             } else {
                 Column(
