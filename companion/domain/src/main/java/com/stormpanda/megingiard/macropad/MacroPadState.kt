@@ -273,7 +273,7 @@ object MacroPadState {
                         name = "Default",
                         layouts =
                             listOf(
-                                PadLayout(id = defaultLayoutId, name = "Default", mirrorCutouts = listOf(ScreenCutout.createDefault())),
+                                PadLayout(id = defaultLayoutId, name = "Default"),
                             ),
                         activeLayoutId = defaultLayoutId,
                     ),
@@ -298,7 +298,6 @@ object MacroPadState {
                                     PadLayout(
                                         id = layoutId,
                                         name = p.name,
-                                        mirrorCutouts = listOf(ScreenCutout.createDefault()),
                                         mirrorConfigured = true,
                                     ),
                                 ),
@@ -462,7 +461,7 @@ object MacroPadState {
             PadProfile(
                 id = defaultId,
                 name = "Default",
-                layouts = listOf(PadLayout(id = defaultLayoutId, name = "Default", mirrorCutouts = listOf(ScreenCutout.createDefault()))),
+                layouts = listOf(PadLayout(id = defaultLayoutId, name = "Default")),
                 activeLayoutId = defaultLayoutId,
             )
         _profiles.value = listOf(defaultProfile)

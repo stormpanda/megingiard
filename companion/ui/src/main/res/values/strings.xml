@@ -63,6 +63,8 @@
     <!-- MacroPad tool -->
     <string name="macropad_no_profile">No profile configured.
 Open Settings to create a layout.</string>
+    <string name="macropad_empty_layout_pill_title">Tap anywhere to customize layout</string>
+    <string name="macropad_empty_layout_pill_hint">Swipe edge for Quick Menu</string>
 
     <!-- MacroPad editor -->
     <string name="macropad_editor_title">Edit Layout</string>

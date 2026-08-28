@@ -52,6 +52,8 @@
     <string name="settings_kb_touchpad">鍵盤觸控板</string>
     <string name="settings_kb_touchpad_desc">在鍵盤上方顯示觸控板</string>
     <string name="macropad_no_profile">未配置設定檔。\n請開啟設定以建立配置。</string>
+    <string name="macropad_empty_layout_pill_title">輕觸任意處自訂配置</string>
+    <string name="macropad_empty_layout_pill_hint">滑動邊緣開啟快捷選單</string>
     <string name="macropad_editor_title">編輯配置</string>
     <string name="macropad_editor_add_button">新增按鈕</string>
     <string name="macropad_editor_add">新增</string>

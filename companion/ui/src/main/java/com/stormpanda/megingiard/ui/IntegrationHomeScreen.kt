@@ -82,7 +82,6 @@ import com.stormpanda.megingiard.macropad.MaterialSymbol
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.macropad.ProfileAssociation
-import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.session.ActiveGameSession
 import com.stormpanda.megingiard.session.EmulatorDetectionFunnel
 import com.stormpanda.megingiard.update.UpdateManager
@@ -666,7 +665,6 @@ private fun HeroCompanionCard(
                                                     PadLayout(
                                                         id = defaultLayoutId,
                                                         name = context.getString(R.string.integration_home_default_layout),
-                                                        mirrorCutouts = listOf(ScreenCutout.createDefault()),
                                                     ),
                                                 ),
                                             activeLayoutId = defaultLayoutId,

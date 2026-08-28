@@ -197,23 +197,6 @@ class ScreenCaptureService : Service() {
 
             scope.launch {
                 MirrorSettings.restoreMirrorSessionState()
-                val layout = MacroPadState.activeLayout.value
-                if (layout != null && layout.mirrorCutouts.isEmpty()) {
-                    val secWindowContext = createWindowContext(secondaryDisplay, WindowManager.LayoutParams.TYPE_APPLICATION, null)
-                    val secWindowMetrics = secWindowContext.getSystemService(WindowManager::class.java).maximumWindowMetrics
-                    val secBounds = secWindowMetrics.bounds
-                    val secWidth = secBounds.width().toFloat()
-                    val secHeight = secBounds.height().toFloat()
-                    val defaultCutout =
-                        ScreenCutout.createDefault(
-                            srcPixelWidth = srcWidth.toFloat(),
-                            srcPixelHeight = srcHeight.toFloat(),
-                            bottomPixelWidth = secWidth,
-                            bottomPixelHeight = secHeight,
-                        )
-                    AppLog.i(TAG, "onStartCommand: cutout list is empty, creating default cutout size=${secWidth}x$secHeight")
-                    MacroPadState.updateLayout(layout.copy(mirrorCutouts = listOf(defaultCutout)))
-                }
                 MirrorViewportController.restoreFromLayout()
                 AppLog.i(TAG, "session state restored → setCapturing(true)")
                 ScreenCaptureManager.setCapturing(true)
@@ -289,23 +272,6 @@ class ScreenCaptureService : Service() {
         MirrorViewportController.startPersistence(scope)
         scope.launch {
             MirrorSettings.restoreMirrorSessionState()
-            val layout = MacroPadState.activeLayout.value
-            if (layout != null && layout.mirrorCutouts.isEmpty()) {
-                val secWindowContext = createWindowContext(secondaryDisplay, WindowManager.LayoutParams.TYPE_APPLICATION, null)
-                val secWindowMetrics = secWindowContext.getSystemService(WindowManager::class.java).maximumWindowMetrics
-                val secBounds = secWindowMetrics.bounds
-                val secWidth = secBounds.width().toFloat()
-                val secHeight = secBounds.height().toFloat()
-                val defaultCutout =
-                    ScreenCutout.createDefault(
-                        srcPixelWidth = srcWidth.toFloat(),
-                        srcPixelHeight = srcHeight.toFloat(),
-                        bottomPixelWidth = secWidth,
-                        bottomPixelHeight = secHeight,
-                    )
-                AppLog.i(TAG, "startPrivdPath: cutout list is empty, creating default cutout size=${secWidth}x$secHeight")
-                MacroPadState.updateLayout(layout.copy(mirrorCutouts = listOf(defaultCutout)))
-            }
             MirrorViewportController.restoreFromLayout()
             AppLog.i(TAG, "privd session state restored → setCapturing(true)")
             ScreenCaptureManager.setCapturing(true)

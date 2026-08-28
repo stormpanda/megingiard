@@ -424,6 +424,16 @@ data class PadLayout(
     val backgroundTouchpad: BackgroundTouchpadConfig = BackgroundTouchpadConfig(),
 )
 
+/**
+ * Returns true if this layout has no buttons, no background image, no screen cutouts,
+ * and no background touchpad enabled (i.e. is an untouched / empty layout).
+ */
+fun PadLayout.isEmpty(): Boolean =
+    buttons.isEmpty() &&
+        backgroundImagePath == null &&
+        mirrorCutouts.isEmpty() &&
+        !backgroundTouchpad.enabled
+
 // ─────────────────────────────────────────────────────────────────────────────
 @Serializable
 data class ProfileAssociation(

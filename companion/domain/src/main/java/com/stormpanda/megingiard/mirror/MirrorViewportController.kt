@@ -69,26 +69,6 @@ object MirrorViewportController {
         val sw = ScreenCaptureManager.surfaceWidth.value
         val sh = ScreenCaptureManager.surfaceHeight.value
 
-        if (layout.mirrorCutouts.isEmpty()) {
-            val sourceW =
-                ScreenCaptureManager.captureSourceWidth.value
-                    .toFloat()
-                    .let { if (it > 0f) it else 1920f }
-            val sourceH =
-                ScreenCaptureManager.captureSourceHeight.value
-                    .toFloat()
-                    .let { if (it > 0f) it else 1080f }
-            val defaultCutout =
-                if (sw > 0f && sh > 0f) {
-                    ScreenCutout.createDefault(sourceW, sourceH, sw, sh)
-                } else {
-                    ScreenCutout.createDefault(sourceW, sourceH)
-                }
-            AppLog.i(TAG, "restoreFromLayout: cutout list is empty, creating default cutout source=${sourceW}x$sourceH surface=${sw}x$sh")
-            MacroPadState.updateLayout(layout.copy(mirrorCutouts = listOf(defaultCutout)))
-            return
-        }
-
         val firstCutout = layout.mirrorCutouts.firstOrNull()
         val (s, ox, oy) =
             if (firstCutout != null && sw > 0f && sh > 0f) {

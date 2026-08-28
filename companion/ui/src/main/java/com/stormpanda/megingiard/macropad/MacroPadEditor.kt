@@ -814,32 +814,16 @@ fun MacroPadEditor(
                                                 accentColor = colors.accent,
                                                 onDiscard = { MacroPadNavState.pop() },
                                                 onCreate = { name, invisibleBtns ->
-                                                    val sourceW =
-                                                        ScreenCaptureManager.captureSourceWidth.value
-                                                            .toFloat()
-                                                            .let { if (it > 0f) it else 1920f }
-                                                    val sourceH =
-                                                        ScreenCaptureManager.captureSourceHeight.value
-                                                            .toFloat()
-                                                            .let { if (it > 0f) it else 1080f }
-                                                    val bottomW = ScreenCaptureManager.surfaceWidth.value
-                                                    val bottomH = ScreenCaptureManager.surfaceHeight.value
-                                                    val defaultCutout =
-                                                        if (bottomW > 0f && bottomH > 0f) {
-                                                            ScreenCutout.createDefault(sourceW, sourceH, bottomW, bottomH)
-                                                        } else {
-                                                            ScreenCutout.createDefault(sourceW, sourceH)
-                                                        }
+                                                    val newId = UUID.randomUUID().toString()
                                                     val newLayout =
                                                         PadLayout(
-                                                            id = UUID.randomUUID().toString(),
+                                                            id = newId,
                                                             name = name,
                                                             enabled = true,
                                                             invisibleButtons = invisibleBtns,
-                                                            mirrorCutouts = listOf(defaultCutout),
                                                         )
                                                     MacroPadState.addLayout(newLayout)
-                                                    MacroPadNavState.pop()
+                                                    MacroPadNavState.setStack(listOf(MacroPadSubPage.EditLayout(newId)))
                                                 },
                                             )
                                         }
