@@ -156,6 +156,7 @@ Before marking a task as done, verify:
 - [ ] Existing tests updated if the change modifies previously-tested behaviour
 - [ ] `./gradlew :shared:core:test :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:ui:testDebugUnitTest` executed and all tests pass (permitted test command)
 - [ ] If any native C source was modified, the corresponding build script was run and produced a new binary
+- [ ] Strict Zero-Heuristics Policy (§7.5) respected: No heuristics, substring guessing (e.g. contains("launcher")), synthetic fallbacks, or approximations introduced without explicit user permission
 - [ ] Help menus, onboardings, and localized strings updated if user interaction behavior changed (verify that every settings preference option has a corresponding explanation entry in its HelpModal)
 
 ---
@@ -290,6 +291,23 @@ PixelCopy.request(sv, bitmap, { result ->
 ### 7.4 Active Game Session Integrity
 
 - **NO SYNTHETIC FALLBACK ROM PATHS EVER:** When constructing an `ActiveGameSession`, `ActiveGameSession.romPath` MUST contain either an exact, verified file path/name (e.g. `Tactics Ogre (USA).iso` or `/storage/.../game.iso`) or `null` if the exact file path cannot be resolved directly from the emulator or SAF URI. **Never** populate `romPath` with synthetic, guessed, or fake fallback filenames (such as `"$derivedTitle.iso"`).
+
+### 7.5 Zero-Heuristics & Strict Determinism Policy
+
+> [!CAUTION]
+> **ABSOLUTE RULE: ZERO HEURISTICS WITHOUT EXPLICIT HUMAN OPERATOR PERMISSION.**
+>
+> AI coding agents and developers are **STRICTLY PROHIBITED** from introducing ANY heuristics, fuzzy matching, guessing algorithms, loose substring deductions, synthetic fallbacks, or probabilistic approximations anywhere in the codebase without the human operator's prior explicit approval.
+
+- **Mandatory Strict Determinism:** Every state transition, app detection, package classification, path resolution, input routing, and configuration decision MUST be 100% deterministic and backed by:
+  1. **Canonical Operating System APIs:** (e.g. Android `PackageManager` intent resolution `Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)`, official lifecycle callbacks, verified system services).
+  2. **Explicit Contracts & Constants:** (e.g. verified IPC contracts like `MegingiardIpcContract.GAMEFOCUS_PACKAGE`, explicit package constants, exact system package IDs).
+  3. **Exact User Configuration / Verified Data:** (e.g. exact user-configured profile associations, exact filesystem paths confirmed to exist).
+- **Prohibited Patterns (Non-Exhaustive Examples):**
+  - ❌ **No substring guessing for roles or types:** Never use `packageName.contains("launcher")`, `packageName.contains("home")`, `packageName.contains("game")`, `title.contains("...")`, etc. to infer system roles or app categories. Substring checks cause severe false positives (e.g. `com.playrix.homescapes`, `net.kdt.pojavlaunch`, `com.ea.gp.homeworld`).
+  - ❌ **No synthetic fallback data:** Never invent guessed or synthetic paths, filenames, or IDs (e.g. `"$title.iso"`) when exact data cannot be resolved (per §7.4).
+  - ❌ **No heuristic fallback defaults:** If an entity, role, or state cannot be resolved with certainty through canonical APIs or exact data, return `null`, empty, or no-op. Never approximate or guess.
+- **Seeking Permission for Edge Cases:** If a technical requirement genuinely lacks a canonical API and appears to require a heuristic, the agent MUST pause, explain the limitation to the user, propose the approach, and obtain their explicit written approval before writing any heuristic code.
 
 ---
 
