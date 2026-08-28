@@ -60,16 +60,6 @@ internal enum class ButtonColorTarget {
     BG,
 }
 
-internal sealed interface AppPickerTarget {
-    data object NewProfile : AppPickerTarget
-
-    data class EditProfile(
-        val profileId: String,
-    ) : AppPickerTarget
-
-    data object EditButton : AppPickerTarget
-}
-
 internal sealed interface MacroPadSubPage {
     val parentSection: EditorSection
 
@@ -83,11 +73,8 @@ internal sealed interface MacroPadSubPage {
         override val parentSection = EditorSection.PROFILES
     }
 
-    data class AppPicker(
-        val target: AppPickerTarget,
-    ) : MacroPadSubPage {
-        override val parentSection: EditorSection
-            get() = if (target is AppPickerTarget.EditButton) EditorSection.BUTTONS else EditorSection.PROFILES
+    data object AppPicker : MacroPadSubPage {
+        override val parentSection = EditorSection.BUTTONS
     }
 
     data object ReorderProfiles : MacroPadSubPage {
@@ -98,7 +85,7 @@ internal sealed interface MacroPadSubPage {
         override val parentSection = EditorSection.LAYOUTS
     }
 
-    data class LayoutAppearance(
+    data class EditLayout(
         val layoutId: String,
     ) : MacroPadSubPage {
         override val parentSection = EditorSection.LAYOUTS

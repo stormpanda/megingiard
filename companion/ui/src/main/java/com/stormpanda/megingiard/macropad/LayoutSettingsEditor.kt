@@ -9,9 +9,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Colorize
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.FormatColorFill
 import androidx.compose.material.icons.rounded.FormatColorText
+import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.VisibilityOff
@@ -38,6 +40,7 @@ import com.stormpanda.megingiard.ui.GamepadSaveExitActionRow
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadTextFieldCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
+import com.stormpanda.megingiard.ui.GamepadTwoStepConfirmCard
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
@@ -71,7 +74,7 @@ private fun describeColorOption(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-internal fun LayoutAppearanceSubPageContent(
+internal fun EditLayoutSubPageContent(
     layout: PadLayout,
     savedLayout: PadLayout,
     existingNames: List<String>,
@@ -79,6 +82,8 @@ internal fun LayoutAppearanceSubPageContent(
     onNameChange: (String) -> Unit,
     onInvisibleButtonsChange: (Boolean) -> Unit,
     onOpenColorSubMenu: (target: LayoutColorTarget) -> Unit,
+    onOpenTouchpadSettings: () -> Unit,
+    onDeleteLayout: () -> Unit,
     onDiscard: () -> Unit = {},
     onSaveColors: (textColor: ColorOption, borderColor: ColorOption, bgColor: ColorOption) -> Unit,
 ) {
@@ -211,6 +216,36 @@ internal fun LayoutAppearanceSubPageContent(
         checked = savedLayout.invisibleButtons,
         icon = Icons.Rounded.VisibilityOff,
         onCheckedChange = onInvisibleButtonsChange,
+    )
+
+    // ── Touchpad Section ─────────────────────────────────────────────
+    GamepadSectionHeader(
+        text = stringResource(R.string.settings_touchpad_title),
+        color = accentColor,
+    )
+
+    GamepadActionCard(
+        title = stringResource(R.string.settings_touchpad_title),
+        description = stringResource(R.string.macropad_editor_touchpad_desc),
+        icon = Icons.Rounded.Mouse,
+        onClick = onOpenTouchpadSettings,
+    )
+
+    // ── Actions Section ───────────────────────────────────────────────
+    GamepadSectionHeader(
+        text = stringResource(R.string.macropad_editor_section_actions),
+        color = accentColor,
+    )
+
+    GamepadTwoStepConfirmCard(
+        title = stringResource(R.string.macropad_editor_delete_layout),
+        confirmTitle = stringResource(R.string.macropad_layout_delete_confirm_title, savedLayout.name),
+        description = stringResource(R.string.macropad_editor_delete_layout_desc, savedLayout.name),
+        actionText = stringResource(R.string.gamepad_action_delete),
+        confirmActionText = stringResource(R.string.gamepad_action_confirm),
+        isDestructive = true,
+        icon = Icons.Rounded.Delete,
+        onConfirm = onDeleteLayout,
     )
 
     // ── Save Section ─────────────────────────────────────────────────

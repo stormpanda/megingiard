@@ -25,9 +25,6 @@ internal object MacroPadNavState {
     private val _macroTimelineFocusStepIndex = MutableStateFlow<Int?>(null)
     val macroTimelineFocusStepIndex: StateFlow<Int?> = _macroTimelineFocusStepIndex.asStateFlow()
 
-    private val _pendingProfilePackage = MutableStateFlow<String?>(null)
-    val pendingProfilePackage: StateFlow<String?> = _pendingProfilePackage.asStateFlow()
-
     private val _appearanceDraft = MutableStateFlow<PadLayout?>(null)
     val appearanceDraft: StateFlow<PadLayout?> = _appearanceDraft.asStateFlow()
 
@@ -66,10 +63,6 @@ internal object MacroPadNavState {
         _macroTimelineFocusStepIndex.value = index
     }
 
-    fun setPendingProfilePackage(packageName: String?) {
-        _pendingProfilePackage.value = packageName
-    }
-
     fun setAppearanceDraft(layout: PadLayout?) {
         _appearanceDraft.value = layout
     }
@@ -97,7 +90,6 @@ internal object MacroPadNavState {
         _selectedSection.value = EditorSection.QUICK_ACTIONS
         _subPageStack.value = emptyList()
         _macroTimelineFocusStepIndex.value = null
-        _pendingProfilePackage.value = null
         _appearanceDraft.value = null
         _savedFocusKeysByDepth.value = emptyMap()
     }
@@ -123,7 +115,7 @@ internal object MacroPadNavState {
                     _subPageStack.value = listOf(MacroPadSubPage.EditProfile(profId))
                 } else if (layId != null) {
                     _selectedSection.value = EditorSection.LAYOUTS
-                    _subPageStack.value = listOf(MacroPadSubPage.LayoutAppearance(layId))
+                    _subPageStack.value = listOf(MacroPadSubPage.EditLayout(layId))
                 } else if (macId != null) {
                     _selectedSection.value = EditorSection.MACROS
                     _subPageStack.value = listOf(MacroPadSubPage.MacroTimeline(macId))
@@ -138,7 +130,7 @@ internal object MacroPadNavState {
 
             is PrimaryModalPayload.LayoutSettings -> {
                 _selectedSection.value = EditorSection.LAYOUTS
-                _subPageStack.value = listOf(MacroPadSubPage.LayoutAppearance(payload.layoutId))
+                _subPageStack.value = listOf(MacroPadSubPage.EditLayout(payload.layoutId))
             }
 
             is PrimaryModalPayload.ProfileSettings -> {

@@ -971,6 +971,7 @@ Open Settings to create a layout.</string>
     <string name="gamepad_action_crop">Crop</string>
     <string name="gamepad_action_open">Open</string>
     <string name="gamepad_action_clear">Clear</string>
+    <string name="gamepad_action_unlink">Unlink</string>
     <string name="gamepad_action_enable">Enable</string>
     <string name="gamepad_action_choose_app">Choose App</string>
     <string name="gamepad_action_custom_color">Custom Color</string>
@@ -1051,13 +1052,16 @@ Open Settings to create a layout.</string>
 
     <!-- MacroPad Editor Screen -->
     <string name="macropad_editor_active_profile_desc">Current active profile</string>
+    <string name="macropad_editor_edit_profile_title">Edit Profile</string>
+    <string name="macropad_editor_edit_profile_desc">Customize name, unlinking, and deletion</string>
     <string name="macropad_editor_new_profile_desc">Create a new profile with custom layouts and macros</string>
-    <string name="macropad_editor_edit_profile_desc">Rename profile or edit app package association</string>
     <string name="macropad_editor_duplicate_profile_desc">Create a full copy of \'%1$s\' with all layouts and assets</string>
     <string name="macropad_editor_reorder_profiles_desc">Change the display order of profiles in the switcher</string>
     <string name="macropad_editor_delete_profile_desc">Permanently delete \'%1$s\' and all its layouts</string>
     <string name="macropad_editor_active_layout_desc">Active layout in \'%1$s\'</string>
     <string name="macropad_editor_none">None</string>
+    <string name="macropad_editor_edit_layout_title">Edit Layout</string>
+    <string name="macropad_editor_edit_layout_desc">Customize name, appearance colors, touchpad, and deletion</string>
     <string name="macropad_editor_new_layout_desc">Add a new button layout to this profile</string>
     <string name="macropad_editor_appearance_title">Layout Appearance &amp; Colors</string>
     <string name="macropad_editor_appearance_desc">Customize button text, border, and background color styling</string>
@@ -1185,6 +1189,11 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_delete_confirm_title">Really delete \"%1$s\"?</string>
     <string name="macropad_editor_bg_delete_confirm_title">Remove background image?</string>
     <string name="macropad_profile_clear_app_confirm_title">Clear app mapping?</string>
+    <string name="macropad_profile_unlink_app">Unlink App/Game</string>
+    <string name="macropad_profile_unlink_app_confirm_title">Really unlink from \"%1$s\"?</string>
+    <string name="macropad_profile_unlink_app_desc">Remove association with %1$s</string>
+    <string name="macropad_profile_no_app_linked">No app or game linked to this profile</string>
+    <string name="macropad_profile_unlinked_toast">Unlinked app from \"%1$s\"</string>
     <string name="macropad_profile_deleted_toast">Profile \"%1$s\" deleted</string>
     <string name="macropad_profile_duplicated_toast">Profile \"%1$s\" duplicated and selected</string>
     <string name="macropad_layout_deleted_toast">Layout \"%1$s\" deleted</string>

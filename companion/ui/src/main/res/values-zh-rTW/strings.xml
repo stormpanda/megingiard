@@ -727,6 +727,17 @@
     <string name="macropad_macro_delete_confirm_title">確定要刪除「%1$s」？</string>
     <string name="macropad_editor_bg_delete_confirm_title">確定要移除背景圖片嗎？</string>
     <string name="macropad_profile_clear_app_confirm_title">確定要清除應用程式關聯嗎？</string>
+    <string name="gamepad_action_unlink">取消連結</string>
+    <string name="macropad_editor_section_actions">操作</string>
+    <string name="macropad_editor_edit_profile_title">編輯設定檔</string>
+    <string name="macropad_editor_edit_profile_desc">自訂名稱、取消連結與刪除</string>
+    <string name="macropad_editor_edit_layout_title">編輯版面配置</string>
+    <string name="macropad_editor_edit_layout_desc">自訂名稱、外觀顏色、觸控板與刪除</string>
+    <string name="macropad_profile_unlink_app">取消應用程式/遊戲連結</string>
+    <string name="macropad_profile_unlink_app_confirm_title">確定要取消「%1$s」的連結嗎？</string>
+    <string name="macropad_profile_unlink_app_desc">移除與 %1$s 的關聯</string>
+    <string name="macropad_profile_no_app_linked">此設定檔尚未連結任何應用程式或遊戲</string>
+    <string name="macropad_profile_unlinked_toast">已取消「%1$s」的應用程式連結</string>
     <string name="macropad_icon_clear_confirm_title">確定要移除選取的圖示嗎？</string>
     <string name="macropad_profile_deleted_toast">已刪除設定檔「%1$s」</string>
     <string name="macropad_profile_duplicated_toast">已複製並選取設定檔「%1$s」</string>

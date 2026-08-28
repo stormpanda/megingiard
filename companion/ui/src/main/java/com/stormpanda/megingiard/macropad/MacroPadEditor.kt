@@ -42,6 +42,7 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Grid4x4
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.LinkOff
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.Mouse
@@ -194,8 +195,6 @@ fun MacroPadEditor(
     val selectedSection by MacroPadNavState.selectedSection.collectAsState()
     val subPageStack by MacroPadNavState.subPageStack.collectAsState()
 
-    // Temporary storage for intermediate wizard picks (e.g. app picker for new/edit profile, icon picker)
-    var pendingProfilePackage by remember { mutableStateOf<String?>(null) }
     val macroTimelineFocusStepIndex by MacroPadNavState.macroTimelineFocusStepIndex.collectAsState()
     var appearanceDraft by remember { mutableStateOf<PadLayout?>(null) }
     var buttonDraft by remember { mutableStateOf<PadButton?>(null) }
@@ -220,7 +219,7 @@ fun MacroPadEditor(
     LaunchedEffect(subPageStack, selectedSection) {
         val hasAppearanceSubPages =
             subPageStack.any {
-                it is MacroPadSubPage.LayoutAppearance || it is MacroPadSubPage.LayoutColor ||
+                it is MacroPadSubPage.EditLayout || it is MacroPadSubPage.LayoutColor ||
                     (it is MacroPadSubPage.ColorWheel && it.section == EditorSection.LAYOUTS)
             }
         val hasButtonSubPages =
@@ -414,7 +413,6 @@ fun MacroPadEditor(
                                                     MacroPadNavState.setStack(listOf(MacroPadSubPage.NewLayout))
                                                 },
                                                 onNewProfile = {
-                                                    pendingProfilePackage = null
                                                     MacroPadNavState.setStack(listOf(MacroPadSubPage.NewProfile))
                                                 },
                                                 onArrangeButtons = {
@@ -437,11 +435,9 @@ fun MacroPadEditor(
                                                     AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
                                                 },
                                                 onNewProfile = {
-                                                    pendingProfilePackage = null
                                                     MacroPadNavState.setStack(subPageStack + MacroPadSubPage.NewProfile)
                                                 },
                                                 onEditProfile = {
-                                                    pendingProfilePackage = profile.association?.packageName
                                                     MacroPadNavState.setStack(subPageStack + MacroPadSubPage.EditProfile(profile.id))
                                                 },
                                                 onDuplicateProfile = {
@@ -472,19 +468,6 @@ fun MacroPadEditor(
                                                 onReorderProfiles = {
                                                     MacroPadNavState.setStack(subPageStack + MacroPadSubPage.ReorderProfiles)
                                                 },
-                                                onDeleteProfile = {
-                                                    val deletedName = profile.name
-                                                    val layoutsToDelete = profile.layouts
-                                                    scope.launch {
-                                                        layoutsToDelete.forEach { lay ->
-                                                            MacroPadMediaRepository.deleteBackgroundImage(context, lay.id)
-                                                        }
-                                                    }
-                                                    MacroPadState.deleteProfile(profile.id)
-                                                    DialogToastManager.show(
-                                                        context.getString(R.string.macropad_profile_deleted_toast, deletedName),
-                                                    )
-                                                },
                                             )
                                         }
 
@@ -497,22 +480,15 @@ fun MacroPadEditor(
                                                     MacroPadState.setActiveLayoutId(it)
                                                     AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
                                                 },
+                                                onEditLayout = {
+                                                    if (activeLayout != null) {
+                                                        MacroPadNavState.setStack(
+                                                            subPageStack + MacroPadSubPage.EditLayout(activeLayout.id),
+                                                        )
+                                                    }
+                                                },
                                                 onNewLayout = {
                                                     MacroPadNavState.setStack(subPageStack + MacroPadSubPage.NewLayout)
-                                                },
-                                                onEditAppearance = {
-                                                    if (activeLayout != null) {
-                                                        MacroPadNavState.setStack(
-                                                            subPageStack + MacroPadSubPage.LayoutAppearance(activeLayout.id),
-                                                        )
-                                                    }
-                                                },
-                                                onEditTouchpad = {
-                                                    if (activeLayout != null) {
-                                                        MacroPadNavState.setStack(
-                                                            subPageStack + MacroPadSubPage.LayoutTouchpad(activeLayout.id),
-                                                        )
-                                                    }
                                                 },
                                                 onDuplicateLayout = {
                                                     val originalLayout = activeLayout
@@ -548,18 +524,6 @@ fun MacroPadEditor(
                                                 },
                                                 onReorderLayouts = {
                                                     MacroPadNavState.setStack(subPageStack + MacroPadSubPage.ReorderLayouts)
-                                                },
-                                                onDeleteLayout = {
-                                                    if (activeLayout != null) {
-                                                        val deletedName = activeLayout.name
-                                                        scope.launch {
-                                                            MacroPadMediaRepository.deleteBackgroundImage(context, activeLayout.id)
-                                                        }
-                                                        MacroPadState.deleteLayout(activeLayout.id)
-                                                        DialogToastManager.show(
-                                                            context.getString(R.string.macropad_layout_deleted_toast, deletedName),
-                                                        )
-                                                    }
                                                 },
                                             )
                                         }
@@ -732,22 +696,13 @@ fun MacroPadEditor(
                                         ) {
                                             NewProfileSubPageContent(
                                                 existingNames = profiles.map { it.name },
-                                                selectedPackage = pendingProfilePackage,
                                                 accentColor = colors.accent,
-                                                onOpenAppPicker = {
-                                                    MacroPadNavState.setStack(
-                                                        subPageStack + MacroPadSubPage.AppPicker(AppPickerTarget.NewProfile),
-                                                    )
-                                                },
-                                                onClearApp = { pendingProfilePackage = null },
                                                 onDiscard = { MacroPadNavState.pop() },
-                                                onCreate = { name, pkg ->
-                                                    val assoc = pkg?.let { ProfileAssociation(packageName = it) }
+                                                onCreate = { name ->
                                                     val newProf =
                                                         PadProfile(
                                                             id = UUID.randomUUID().toString(),
                                                             name = name,
-                                                            association = assoc,
                                                         )
                                                     MacroPadState.addProfile(newProf)
                                                     MacroPadNavState.pop()
@@ -762,34 +717,37 @@ fun MacroPadEditor(
                                             breadcrumbs =
                                                 listOf(
                                                     stringResource(R.string.quick_menu_profile_label),
-                                                    stringResource(R.string.profile_settings_title),
+                                                    stringResource(R.string.macropad_editor_edit_profile_title),
                                                 ),
                                         ) {
                                             EditProfileSubPageContent(
                                                 profile = prof,
                                                 existingNames = profiles.filter { it.id != prof.id }.map { it.name },
-                                                selectedPackage = pendingProfilePackage ?: prof.association?.packageName,
                                                 accentColor = colors.accent,
-                                                onOpenAppPicker = {
-                                                    MacroPadNavState.setStack(
-                                                        subPageStack + MacroPadSubPage.AppPicker(AppPickerTarget.EditProfile(prof.id)),
+                                                onDiscard = { MacroPadNavState.pop() },
+                                                onUnlinkApp = {
+                                                    val unlinked = prof.copy(association = null)
+                                                    MacroPadState.updateProfile(unlinked)
+                                                    DialogToastManager.show(
+                                                        context.getString(R.string.macropad_profile_unlinked_toast, prof.name),
                                                     )
                                                 },
-                                                onClearApp = { pendingProfilePackage = null },
-                                                onDiscard = { MacroPadNavState.pop() },
-                                                onSave = { name, pkg ->
-                                                    val assoc =
-                                                        if (pkg != null) {
-                                                            val existing = prof.association
-                                                            if (existing != null && existing.packageName.equals(pkg, ignoreCase = true)) {
-                                                                existing
-                                                            } else {
-                                                                ProfileAssociation(packageName = pkg)
-                                                            }
-                                                        } else {
-                                                            null
+                                                onDeleteProfile = {
+                                                    val deletedName = prof.name
+                                                    val layoutsToDelete = prof.layouts
+                                                    scope.launch {
+                                                        layoutsToDelete.forEach { lay ->
+                                                            MacroPadMediaRepository.deleteBackgroundImage(context, lay.id)
                                                         }
-                                                    MacroPadState.renameProfile(prof.id, name, assoc)
+                                                    }
+                                                    MacroPadState.deleteProfile(prof.id)
+                                                    MacroPadNavState.pop()
+                                                    DialogToastManager.show(
+                                                        context.getString(R.string.macropad_profile_deleted_toast, deletedName),
+                                                    )
+                                                },
+                                                onSave = { name ->
+                                                    MacroPadState.renameProfile(prof.id, name)
                                                     MacroPadNavState.pop()
                                                 },
                                             )
@@ -797,72 +755,43 @@ fun MacroPadEditor(
                                     }
 
                                     is MacroPadSubPage.AppPicker -> {
-                                        val isButtonTarget = currentSubPage.target is AppPickerTarget.EditButton
-                                        val assigned =
-                                            if (isButtonTarget) {
-                                                emptySet()
-                                            } else {
-                                                profiles
-                                                    .mapNotNull { it.association?.packageName }
-                                                    .map { it.trim().lowercase() }
-                                                    .toSet()
-                                            }
                                         GamepadDeck(
                                             breadcrumbs =
-                                                if (isButtonTarget) {
-                                                    listOf(
-                                                        stringResource(R.string.macropad_editor_section_buttons),
-                                                        stringResource(R.string.app_launcher_picker_title),
-                                                    )
-                                                } else {
-                                                    listOf(
-                                                        stringResource(R.string.quick_menu_profile_label),
-                                                        stringResource(R.string.profile_settings_app_mapping),
-                                                        stringResource(R.string.profile_settings_search_apps),
-                                                    )
-                                                },
+                                                listOf(
+                                                    stringResource(R.string.macropad_editor_section_buttons),
+                                                    stringResource(R.string.app_launcher_picker_title),
+                                                ),
                                             scrollable = false,
                                         ) {
                                             AppPickerSubPageContent(
-                                                assignedPackages = assigned,
+                                                assignedPackages = emptySet(),
                                                 accentColor = colors.accent,
                                                 onSelectApp = { pkg ->
-                                                    when (currentSubPage.target) {
-                                                        is AppPickerTarget.NewProfile,
-                                                        is AppPickerTarget.EditProfile,
-                                                        -> {
-                                                            pendingProfilePackage = pkg
-                                                            MacroPadNavState.pop()
-                                                        }
-
-                                                        is AppPickerTarget.EditButton -> {
-                                                            MacroPadNavState.setStack(
-                                                                subPageStack.dropLast(1).map { subPage ->
-                                                                    if (subPage is MacroPadSubPage.EditButton) {
-                                                                        val draft =
-                                                                            buttonDraft
-                                                                                ?: subPage.draftButton
-                                                                                ?: subPage.button
-                                                                                ?: PadButton(
-                                                                                    id = UUID.randomUUID().toString(),
-                                                                                    label =
-                                                                                        context.getString(
-                                                                                            R.string.macropad_editor_new_button_default_label,
-                                                                                        ),
-                                                                                    posX = 0.5f,
-                                                                                    posY = 0.5f,
-                                                                                    action = PadAction.AppLauncher(pkg),
-                                                                                )
-                                                                        val newBtn = draft.copy(action = PadAction.AppLauncher(pkg))
-                                                                        buttonDraft = newBtn
-                                                                        subPage.copy(draftButton = newBtn)
-                                                                    } else {
-                                                                        subPage
-                                                                    }
-                                                                },
-                                                            )
-                                                        }
-                                                    }
+                                                    MacroPadNavState.setStack(
+                                                        subPageStack.dropLast(1).map { subPage ->
+                                                            if (subPage is MacroPadSubPage.EditButton) {
+                                                                val draft =
+                                                                    buttonDraft
+                                                                        ?: subPage.draftButton
+                                                                        ?: subPage.button
+                                                                        ?: PadButton(
+                                                                            id = UUID.randomUUID().toString(),
+                                                                            label =
+                                                                                context.getString(
+                                                                                    R.string.macropad_editor_new_button_default_label,
+                                                                                ),
+                                                                            posX = 0.5f,
+                                                                            posY = 0.5f,
+                                                                            action = PadAction.AppLauncher(pkg),
+                                                                        )
+                                                                val newBtn = draft.copy(action = PadAction.AppLauncher(pkg))
+                                                                buttonDraft = newBtn
+                                                                subPage.copy(draftButton = newBtn)
+                                                            } else {
+                                                                subPage
+                                                            }
+                                                        },
+                                                    )
                                                 },
                                             )
                                         }
@@ -918,7 +847,7 @@ fun MacroPadEditor(
                                         }
                                     }
 
-                                    is MacroPadSubPage.LayoutAppearance -> {
+                                    is MacroPadSubPage.EditLayout -> {
                                         val lay = profile.layouts.firstOrNull { it.id == currentSubPage.layoutId } ?: activeLayout
                                         if (lay != null) {
                                             val currentDraft = appearanceDraft?.takeIf { it.id == lay.id } ?: lay
@@ -926,10 +855,10 @@ fun MacroPadEditor(
                                                 breadcrumbs =
                                                     listOf(
                                                         stringResource(R.string.macropad_editor_section_layout),
-                                                        stringResource(R.string.macropad_editor_appearance_title),
+                                                        stringResource(R.string.macropad_editor_edit_layout_title),
                                                     ),
                                             ) {
-                                                LayoutAppearanceSubPageContent(
+                                                EditLayoutSubPageContent(
                                                     layout = currentDraft,
                                                     savedLayout = lay,
                                                     existingNames = profile.layouts.filter { it.id != lay.id }.map { it.name },
@@ -949,6 +878,23 @@ fun MacroPadEditor(
                                                     onOpenColorSubMenu = { target ->
                                                         MacroPadNavState.setStack(
                                                             subPageStack + MacroPadSubPage.LayoutColor(lay.id, target),
+                                                        )
+                                                    },
+                                                    onOpenTouchpadSettings = {
+                                                        MacroPadNavState.setStack(
+                                                            subPageStack + MacroPadSubPage.LayoutTouchpad(lay.id),
+                                                        )
+                                                    },
+                                                    onDeleteLayout = {
+                                                        val deletedName = lay.name
+                                                        scope.launch {
+                                                            MacroPadMediaRepository.deleteBackgroundImage(context, lay.id)
+                                                        }
+                                                        MacroPadState.deleteLayout(lay.id)
+                                                        appearanceDraft = null
+                                                        MacroPadNavState.pop()
+                                                        DialogToastManager.show(
+                                                            context.getString(R.string.macropad_layout_deleted_toast, deletedName),
                                                         )
                                                     },
                                                     onDiscard = { MacroPadNavState.pop() },
@@ -982,7 +928,7 @@ fun MacroPadEditor(
                                                 breadcrumbs =
                                                     listOf(
                                                         stringResource(R.string.macropad_editor_section_layout),
-                                                        stringResource(R.string.macropad_editor_appearance_title),
+                                                        stringResource(R.string.macropad_editor_edit_layout_title),
                                                         targetTitle,
                                                     ),
                                             ) {
@@ -1143,6 +1089,7 @@ fun MacroPadEditor(
                                                 breadcrumbs =
                                                     listOf(
                                                         stringResource(R.string.macropad_editor_section_layout),
+                                                        stringResource(R.string.macropad_editor_edit_layout_title),
                                                         stringResource(R.string.settings_touchpad_title),
                                                     ),
                                             ) {
@@ -1298,7 +1245,7 @@ fun MacroPadEditor(
                                                                 button = currentSubPage.button,
                                                                 draftButton = currentDraft,
                                                             ) +
-                                                            MacroPadSubPage.AppPicker(AppPickerTarget.EditButton),
+                                                            MacroPadSubPage.AppPicker,
                                                     )
                                                 },
                                                 onOpenColorSubMenu = { currentDraft, target ->
@@ -2366,7 +2313,6 @@ private fun ProfilesDeck(
     onEditProfile: () -> Unit,
     onDuplicateProfile: () -> Unit,
     onReorderProfiles: () -> Unit,
-    onDeleteProfile: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val firstItemFocusRequester = remember { FocusRequester() }
@@ -2389,17 +2335,17 @@ private fun ProfilesDeck(
     )
 
     GamepadActionCard(
+        title = stringResource(R.string.macropad_editor_edit_profile_title),
+        description = stringResource(R.string.macropad_editor_edit_profile_desc),
+        icon = Icons.Rounded.Edit,
+        onClick = onEditProfile,
+    )
+
+    GamepadActionCard(
         title = stringResource(R.string.settings_macropad_new_profile),
         description = stringResource(R.string.macropad_editor_new_profile_desc),
         icon = Icons.Rounded.Add,
         onClick = onNewProfile,
-    )
-
-    GamepadActionCard(
-        title = stringResource(R.string.profile_settings_title),
-        description = stringResource(R.string.macropad_editor_edit_profile_desc),
-        icon = Icons.Rounded.Edit,
-        onClick = onEditProfile,
     )
 
     GamepadActionCard(
@@ -2423,25 +2369,6 @@ private fun ProfilesDeck(
         icon = Icons.Rounded.SwapVert,
         onClick = onReorderProfiles,
     )
-
-    GamepadTwoStepConfirmCard(
-        title = stringResource(R.string.macropad_editor_delete_profile),
-        confirmTitle = stringResource(R.string.macropad_profile_delete_confirm_title, activeProfile.name),
-        description = stringResource(R.string.macropad_editor_delete_profile_desc, activeProfile.name),
-        actionText = stringResource(R.string.gamepad_action_delete),
-        confirmActionText = stringResource(R.string.gamepad_action_confirm),
-        isDestructive = true,
-        icon = Icons.Rounded.Delete,
-        onConfirm = {
-            onDeleteProfile()
-            scope.launch {
-                try {
-                    firstItemFocusRequester.requestFocus()
-                } catch (_: IllegalStateException) {
-                }
-            }
-        },
-    )
 }
 
 @Composable
@@ -2450,13 +2377,11 @@ private fun LayoutsDeck(
     activeLayout: PadLayout?,
     accentColor: Color,
     onSelectLayout: (String) -> Unit,
+    onEditLayout: () -> Unit,
     onNewLayout: () -> Unit,
-    onEditAppearance: () -> Unit,
-    onEditTouchpad: () -> Unit,
     onDuplicateLayout: () -> Unit,
     onCopyLayout: () -> Unit,
     onReorderLayouts: () -> Unit,
-    onDeleteLayout: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val firstItemFocusRequester = remember { FocusRequester() }
@@ -2485,6 +2410,14 @@ private fun LayoutsDeck(
     )
 
     GamepadActionCard(
+        title = stringResource(R.string.macropad_editor_edit_layout_title),
+        description = stringResource(R.string.macropad_editor_edit_layout_desc),
+        icon = Icons.Rounded.Edit,
+        enabled = activeLayout != null,
+        onClick = onEditLayout,
+    )
+
+    GamepadActionCard(
         title = stringResource(R.string.settings_macropad_new_layout),
         description = stringResource(R.string.macropad_editor_new_layout_desc),
         icon = Icons.Rounded.Add,
@@ -2492,23 +2425,10 @@ private fun LayoutsDeck(
     )
 
     GamepadActionCard(
-        title = stringResource(R.string.macropad_editor_appearance_title),
-        description = stringResource(R.string.macropad_editor_appearance_desc),
-        icon = Icons.Rounded.Palette,
-        onClick = onEditAppearance,
-    )
-
-    GamepadActionCard(
-        title = stringResource(R.string.settings_touchpad_title),
-        description = stringResource(R.string.macropad_editor_touchpad_desc),
-        icon = Icons.Rounded.Mouse,
-        onClick = onEditTouchpad,
-    )
-
-    GamepadActionCard(
         title = stringResource(R.string.macropad_duplicate_layout),
         description = stringResource(R.string.macropad_editor_duplicate_layout_desc),
         icon = Icons.Rounded.ContentCopy,
+        enabled = activeLayout != null,
         onClick = {
             onDuplicateLayout()
             scope.launch {
@@ -2524,6 +2444,7 @@ private fun LayoutsDeck(
         title = stringResource(R.string.macropad_editor_copy_profile_select),
         description = stringResource(R.string.macropad_editor_copy_layout_desc),
         icon = Icons.Rounded.Share,
+        enabled = activeLayout != null,
         onClick = onCopyLayout,
     )
 
@@ -2531,29 +2452,9 @@ private fun LayoutsDeck(
         title = stringResource(R.string.macropad_reorder_layouts),
         description = stringResource(R.string.macropad_editor_reorder_layouts_desc),
         icon = Icons.Rounded.SwapVert,
+        enabled = layouts.size > 1,
         onClick = onReorderLayouts,
     )
-
-    if (activeLayout != null) {
-        GamepadTwoStepConfirmCard(
-            title = stringResource(R.string.macropad_editor_delete_layout),
-            confirmTitle = stringResource(R.string.macropad_layout_delete_confirm_title, activeLayout.name),
-            description = stringResource(R.string.macropad_editor_delete_layout_desc, activeLayout.name),
-            actionText = stringResource(R.string.gamepad_action_delete),
-            confirmActionText = stringResource(R.string.gamepad_action_confirm),
-            isDestructive = true,
-            icon = Icons.Rounded.Delete,
-            onConfirm = {
-                onDeleteLayout()
-                scope.launch {
-                    try {
-                        firstItemFocusRequester.requestFocus()
-                    } catch (_: IllegalStateException) {
-                    }
-                }
-            },
-        )
-    }
 }
 
 @Composable

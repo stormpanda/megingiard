@@ -980,6 +980,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="gamepad_action_crop">Zuschneiden</string>
     <string name="gamepad_action_open">Öffnen</string>
     <string name="gamepad_action_clear">Entfernen</string>
+    <string name="gamepad_action_unlink">Trennen</string>
     <string name="gamepad_action_enable">Aktivieren</string>
     <string name="gamepad_action_choose_app">App wählen</string>
     <string name="gamepad_action_custom_color">Eigene Farbe</string>
@@ -1060,13 +1061,16 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
 
     <!-- MacroPad Editor Screen -->
     <string name="macropad_editor_active_profile_desc">Aktuell aktives Profil</string>
+    <string name="macropad_editor_edit_profile_title">Profil bearbeiten</string>
+    <string name="macropad_editor_edit_profile_desc">Name, Verknüpfung und Löschung verwalten</string>
     <string name="macropad_editor_new_profile_desc">Neues Profil mit eigenen Layouts und Makros erstellen</string>
-    <string name="macropad_editor_edit_profile_desc">Profil umbenennen oder verknüpfte App anpassen</string>
     <string name="macropad_editor_duplicate_profile_desc">Erstelle eine vollständige Kopie von \'%1$s\' mit allen Layouts und Assets</string>
     <string name="macropad_editor_reorder_profiles_desc">Reihenfolge der Profile im Auswahldialog ändern</string>
     <string name="macropad_editor_delete_profile_desc">Löscht \'%1$s\' und alle zugehörigen Layouts dauerhaft</string>
     <string name="macropad_editor_active_layout_desc">Aktives Layout in \'%1$s\'</string>
     <string name="macropad_editor_none">Keines</string>
+    <string name="macropad_editor_edit_layout_title">Layout bearbeiten</string>
+    <string name="macropad_editor_edit_layout_desc">Name, Farben, Touchpad und Löschung verwalten</string>
     <string name="macropad_editor_new_layout_desc">Ein neues Tastenlayout zu diesem Profil hinzufügen</string>
     <string name="macropad_editor_appearance_title">Layout-Darstellung &amp; Farben</string>
     <string name="macropad_editor_appearance_desc">Schrift-, Rahmen- und Hintergrundfarben der Tasten anpassen</string>
@@ -1194,6 +1198,11 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_macro_delete_confirm_title">\"%1$s\" wirklich löschen?</string>
     <string name="macropad_editor_bg_delete_confirm_title">Hintergrundbild entfernen?</string>
     <string name="macropad_profile_clear_app_confirm_title">App-Verknüpfung entfernen?</string>
+    <string name="macropad_profile_unlink_app">App/Spiel-Verknüpfung aufheben</string>
+    <string name="macropad_profile_unlink_app_confirm_title">Verknüpfung von \"%1$s\" wirklich aufheben?</string>
+    <string name="macropad_profile_unlink_app_desc">Verknüpfung mit %1$s aufheben</string>
+    <string name="macropad_profile_no_app_linked">Keine App oder Spiel mit diesem Profil verknüpft</string>
+    <string name="macropad_profile_unlinked_toast">App-Verknüpfung von \"%1$s\" aufgehoben</string>
     <string name="macropad_profile_deleted_toast">Profil \"%1$s\" gelöscht</string>
     <string name="macropad_profile_duplicated_toast">Profil \"%1$s\" dupliziert und ausgewählt</string>
     <string name="macropad_layout_deleted_toast">Layout \"%1$s\" gelöscht</string>

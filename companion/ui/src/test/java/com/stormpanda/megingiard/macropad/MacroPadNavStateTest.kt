@@ -18,7 +18,6 @@ class MacroPadNavStateTest {
         assertEquals(EditorSection.QUICK_ACTIONS, MacroPadNavState.selectedSection.value)
         assertTrue(MacroPadNavState.subPageStack.value.isEmpty())
         assertEquals(null, MacroPadNavState.macroTimelineFocusStepIndex.value)
-        assertEquals(null, MacroPadNavState.pendingProfilePackage.value)
         assertEquals(null, MacroPadNavState.appearanceDraft.value)
     }
 
@@ -80,14 +79,12 @@ class MacroPadNavStateTest {
         MacroPadNavState.selectSection(EditorSection.BUTTONS)
         MacroPadNavState.push(MacroPadSubPage.EditButtonPositions)
         MacroPadNavState.setMacroTimelineFocusStepIndex(5)
-        MacroPadNavState.setPendingProfilePackage("com.test.app")
 
         MacroPadNavState.reset()
 
         assertEquals(EditorSection.QUICK_ACTIONS, MacroPadNavState.selectedSection.value)
         assertTrue(MacroPadNavState.subPageStack.value.isEmpty())
         assertEquals(null, MacroPadNavState.macroTimelineFocusStepIndex.value)
-        assertEquals(null, MacroPadNavState.pendingProfilePackage.value)
     }
 
     @Test
@@ -106,7 +103,7 @@ class MacroPadNavStateTest {
         MacroPadNavState.applyPrimaryModalPayload(payload)
 
         assertEquals(EditorSection.LAYOUTS, MacroPadNavState.selectedSection.value)
-        assertEquals(listOf(MacroPadSubPage.LayoutAppearance("layout-789")), MacroPadNavState.subPageStack.value)
+        assertEquals(listOf(MacroPadSubPage.EditLayout("layout-789")), MacroPadNavState.subPageStack.value)
     }
 
     @Test

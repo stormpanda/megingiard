@@ -10,10 +10,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.LinkOff
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.CircularProgressIndicator
@@ -42,8 +41,6 @@ import com.stormpanda.megingiard.ui.GamepadTextFieldCard
 import com.stormpanda.megingiard.ui.GamepadTwoStepConfirmCard
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 private const val TAG = "EditorInlineOverlays"
 private val EIO_APP_ICON_SIZE = 36.dp
@@ -53,12 +50,9 @@ private val EIO_APP_ICON_CORNER = 8.dp
 @Composable
 internal fun NewProfileSubPageContent(
     existingNames: List<String>,
-    selectedPackage: String?,
     accentColor: Color,
-    onOpenAppPicker: () -> Unit,
-    onClearApp: () -> Unit,
     onDiscard: () -> Unit = {},
-    onCreate: (name: String, packageName: String?) -> Unit,
+    onCreate: (name: String) -> Unit,
 ) {
     val defaultName = stringResource(R.string.integration_home_new_profile)
     val initialName =
@@ -78,36 +72,17 @@ internal fun NewProfileSubPageContent(
     val isDuplicate = existingNames.any { it.equals(normalizedName, ignoreCase = true) }
     val hasError = normalizedName.isEmpty() || isDuplicate
     val isConfirmEnabled = !hasError
-    val context = LocalContext.current
-    var selectedAppName by remember(selectedPackage) { mutableStateOf(selectedPackage ?: "") }
 
     val promptState =
         rememberSaveExitPromptState(
             hasChanges = true,
             onSave = {
                 if (isConfirmEnabled) {
-                    onCreate(normalizedName, selectedPackage)
+                    onCreate(normalizedName)
                 }
             },
             onDiscard = onDiscard,
         )
-
-    LaunchedEffect(selectedPackage) {
-        val pkg = selectedPackage
-        if (pkg != null) {
-            selectedAppName =
-                withContext(Dispatchers.IO) {
-                    try {
-                        val pm = context.packageManager
-                        val info = pm.getApplicationInfo(pkg, 0)
-                        pm.getApplicationLabel(info).toString()
-                    } catch (e: Exception) {
-                        AppLog.w(TAG, "Failed to resolve app label for $pkg: ${e.message}")
-                        pkg
-                    }
-                }
-        }
-    }
 
     GamepadTextFieldCard(
         title = stringResource(R.string.profile_settings_name),
@@ -124,31 +99,6 @@ internal fun NewProfileSubPageContent(
         isError = hasError,
         modifier = Modifier.firstDeckItem(),
     )
-
-    GamepadSectionHeader(
-        text = stringResource(R.string.profile_settings_app_mapping),
-        color = accentColor,
-    )
-
-    if (selectedPackage != null) {
-        GamepadTwoStepConfirmCard(
-            title = selectedAppName,
-            confirmTitle = stringResource(R.string.macropad_profile_clear_app_confirm_title),
-            description = selectedPackage,
-            actionText = stringResource(R.string.gamepad_action_clear),
-            confirmActionText = stringResource(R.string.gamepad_action_confirm),
-            isDestructive = true,
-            icon = Icons.Rounded.Delete,
-            onConfirm = onClearApp,
-        )
-    } else {
-        GamepadActionCard(
-            title = stringResource(R.string.macropad_profile_app_association_title),
-            description = stringResource(R.string.macropad_profile_app_association_desc),
-            icon = Icons.Rounded.Apps,
-            onClick = onOpenAppPicker,
-        )
-    }
 
     // ── Save Section ─────────────────────────────────────────────────
     GamepadSectionHeader(
@@ -177,49 +127,30 @@ internal fun NewProfileSubPageContent(
 internal fun EditProfileSubPageContent(
     profile: PadProfile,
     existingNames: List<String>,
-    selectedPackage: String?,
     accentColor: Color,
-    onOpenAppPicker: () -> Unit,
-    onClearApp: () -> Unit,
     onDiscard: () -> Unit = {},
-    onSave: (name: String, packageName: String?) -> Unit,
+    onUnlinkApp: () -> Unit,
+    onDeleteProfile: () -> Unit,
+    onSave: (name: String) -> Unit,
 ) {
+    val context = LocalContext.current
     var nameText by remember(profile) { mutableStateOf(profile.name) }
     val normalizedName = nameText.trim()
     val isDuplicate = existingNames.any { it.equals(normalizedName, ignoreCase = true) }
     val hasError = normalizedName.isEmpty() || isDuplicate
     val isConfirmEnabled = !hasError
-    val hasChanges = normalizedName != profile.name || selectedPackage != (profile.association?.packageName)
-    val context = LocalContext.current
-    var selectedAppName by remember(selectedPackage) { mutableStateOf(selectedPackage ?: "") }
+    val hasChanges = normalizedName != profile.name
 
     val promptState =
         rememberSaveExitPromptState(
             hasChanges = hasChanges,
             onSave = {
                 if (isConfirmEnabled) {
-                    onSave(normalizedName, selectedPackage)
+                    onSave(normalizedName)
                 }
             },
             onDiscard = onDiscard,
         )
-
-    LaunchedEffect(selectedPackage) {
-        val pkg = selectedPackage
-        if (pkg != null) {
-            selectedAppName =
-                withContext(Dispatchers.IO) {
-                    try {
-                        val pm = context.packageManager
-                        val info = pm.getApplicationInfo(pkg, 0)
-                        pm.getApplicationLabel(info).toString()
-                    } catch (e: Exception) {
-                        AppLog.w(TAG, "Failed to resolve app label for $pkg: ${e.message}")
-                        pkg
-                    }
-                }
-        }
-    }
 
     GamepadTextFieldCard(
         title = stringResource(R.string.profile_settings_name),
@@ -237,30 +168,58 @@ internal fun EditProfileSubPageContent(
         modifier = Modifier.firstDeckItem(),
     )
 
+    // ── Actions Section ───────────────────────────────────────────────
     GamepadSectionHeader(
-        text = stringResource(R.string.profile_settings_app_mapping),
+        text = stringResource(R.string.macropad_editor_section_actions),
         color = accentColor,
     )
 
-    if (selectedPackage != null) {
-        GamepadTwoStepConfirmCard(
-            title = selectedAppName,
-            confirmTitle = stringResource(R.string.macropad_profile_clear_app_confirm_title),
-            description = selectedPackage,
-            actionText = stringResource(R.string.gamepad_action_clear),
-            confirmActionText = stringResource(R.string.gamepad_action_confirm),
-            isDestructive = true,
-            icon = Icons.Rounded.Delete,
-            onConfirm = onClearApp,
-        )
-    } else {
-        GamepadActionCard(
-            title = stringResource(R.string.macropad_profile_app_association_title),
-            description = stringResource(R.string.macropad_profile_app_association_desc),
-            icon = Icons.Rounded.Apps,
-            onClick = onOpenAppPicker,
-        )
-    }
+    val hasAssociation = profile.association != null
+    val linkedTargetDesc =
+        remember(profile.association) {
+            val assoc = profile.association ?: return@remember null
+            val romName = assoc.romFileName
+            if (!romName.isNullOrBlank()) {
+                romName
+            } else {
+                try {
+                    val pm = context.packageManager
+                    val info = pm.getApplicationInfo(assoc.packageName, 0)
+                    pm.getApplicationLabel(info).toString()
+                } catch (_: Exception) {
+                    assoc.packageName
+                }
+            }
+        }
+    val unlinkTarget = linkedTargetDesc ?: profile.name
+
+    GamepadTwoStepConfirmCard(
+        title = stringResource(R.string.macropad_profile_unlink_app),
+        confirmTitle = stringResource(R.string.macropad_profile_unlink_app_confirm_title, profile.name),
+        description =
+            if (hasAssociation) {
+                stringResource(R.string.macropad_profile_unlink_app_desc, unlinkTarget)
+            } else {
+                stringResource(R.string.macropad_profile_no_app_linked)
+            },
+        actionText = if (hasAssociation) stringResource(R.string.gamepad_action_unlink) else null,
+        confirmActionText = stringResource(R.string.gamepad_action_confirm),
+        isDestructive = true,
+        icon = Icons.Rounded.LinkOff,
+        enabled = hasAssociation,
+        onConfirm = onUnlinkApp,
+    )
+
+    GamepadTwoStepConfirmCard(
+        title = stringResource(R.string.macropad_editor_delete_profile),
+        confirmTitle = stringResource(R.string.macropad_profile_delete_confirm_title, profile.name),
+        description = stringResource(R.string.macropad_editor_delete_profile_desc, profile.name),
+        actionText = stringResource(R.string.gamepad_action_delete),
+        confirmActionText = stringResource(R.string.gamepad_action_confirm),
+        isDestructive = true,
+        icon = Icons.Rounded.Delete,
+        onConfirm = onDeleteProfile,
+    )
 
     // ── Save Section ─────────────────────────────────────────────────
     GamepadSectionHeader(
@@ -298,6 +257,7 @@ internal fun AppPickerSubPageContent(
     LaunchedEffect(Unit) {
         isLoadingApps = true
         appsList = queryInstalledLauncherApps(context)
+        AppLog.d(TAG, "Loaded ${appsList.size} launcher apps for button app action")
         isLoadingApps = false
     }
 
@@ -353,7 +313,10 @@ internal fun AppPickerSubPageContent(
                             )
                         },
                         enabled = !isAssigned,
-                        onClick = { onSelectApp(appItem.packageName) },
+                        onClick = {
+                            AppLog.d(TAG, "Selected app for button action: ${appItem.packageName}")
+                            onSelectApp(appItem.packageName)
+                        },
                     )
                 }
             }
