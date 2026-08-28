@@ -14,7 +14,6 @@
     <string name="settings_close">Schließen</string>
     <string name="settings_support_app">App unterstützen</string>
     <string name="cd_drag_reorder">Zum Sortieren ziehen</string>
-    <string name="settings_section_general">Allgemein</string>
     <string name="settings_section_appearance">Erscheinungsbild</string>
     <string name="settings_global_title">Einstellungen</string>
     <string name="settings_accent_color">Akzentfarbe</string>
@@ -72,7 +71,6 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_add">Hinzufügen</string>
     <string name="macropad_editor_delete_button">Löschen</string>
     <string name="macropad_editor_button_label">Beschriftung</string>
-    <string name="macropad_editor_action">Aktion</string>
     <string name="macropad_editor_button_shape">Tastenform</string>
     <string name="macropad_editor_shape_circle">Kreis</string>
     <string name="macropad_editor_shape_square">Quadrat</string>
@@ -116,12 +114,9 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_delete_profile">Profil löschen</string>
     <string name="macropad_editor_delete_layout">Layout löschen</string>
     <string name="macropad_editor_cancel">Abbrechen</string>
-    <string name="macropad_editor_confirm">Löschen</string>
 
     <!-- Profile settings -->
-    <string name="profile_settings_title">Profil-Einstellungen</string>
     <string name="profile_settings_name">Profilname</string>
-    <string name="profile_settings_app_mapping">App zuweisen</string>
     <string name="profile_settings_search_apps">Apps suchen</string>
     <string name="profile_settings_no_apps">Keine Apps gefunden</string>
     <string name="profile_settings_app_assigned">(zugewiesen)</string>
@@ -331,7 +326,6 @@ Open Settings to create a layout.</string>
     <string name="mirror_control_label_stop">Stop</string>
     <string name="mirror_control_label_freeze">Einfrieren</string>
     <string name="mirror_control_label_unfreeze">Auftauen</string>
-    <string name="mirror_control_label_screenshot">Screenshot</string>
     <string name="quick_menu_take_screenshot">Screenshot aufnehmen</string>
     <string name="quick_menu_screenshot_top">Oben</string>
     <string name="quick_menu_screenshot_bottom">Unten</string>
@@ -503,7 +497,6 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_dir_down_right">Unten-Rechts (↘)</string>
     <string name="macropad_macro_section_playback">Wiedergabe &amp; Schleife</string>
     <string name="macropad_macro_section_actions">Schritt-Aktionen</string>
-    <string name="macropad_macro_section_general">Allgemein</string>
     <string name="macropad_macro_section_recording">Aufnahme &amp; Schnellaktionen</string>
     <string name="macropad_macro_step_start_desc">Zeitpunkt auf der Zeitachse, an dem diese Aktion auslöst</string>
     <string name="macropad_macro_step_duration_desc">Dauer, wie lange diese Aktion aktiv bleibt</string>
@@ -513,14 +506,12 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_step_pos_desc" formatted="false">Normalisierte Bildschirm-Koordinaten (0% bis 100%)</string>
     <string name="macropad_macro_test_run_success">Makro \"%1$s\" ausgeführt</string>
 
-
     <!-- Quick Menu Bar -->
 
     <!-- Quick Menu -->
     <string name="quick_menu_profile_label">Profil</string>
     <string name="quick_menu_layout_label">Layout</string>
     <string name="quick_menu_edit_layout">Profil/Layout bearbeiten</string>
-    <string name="quick_menu_ambient_settings">Bildschirmspiegelungs-Einstellungen</string>
     <string name="quick_menu_screen_mirroring">Bildschirmspiegelung</string>
     <string name="quick_menu_global_settings">Globale Einstellungen</string>
     <string name="quick_menu_shut_off_cd">Megingiard beenden</string>
@@ -528,7 +519,6 @@ Open Settings to create a layout.</string>
     <string name="shut_off_dialog_body">Möchtest du Megingiard wirklich beenden?</string>
     <string name="shut_off_dialog_confirm">Beenden</string>
     <string name="quick_menu_layout_name_hint">Layoutname</string>
-    <string name="cd_viewport_edit">Viewport bearbeiten</string>
 
     <string name="macropad_action_group_keyboard">Tastatur</string>
     <string name="macropad_action_group_keyboard_desc">Einzelne Tastaturanschläge oder Tastenkombinationen senden</string>
@@ -574,16 +564,9 @@ Open Settings to create a layout.</string>
     <string name="macropad_copy_no_profiles_available">Keine anderen Profile verfügbar.</string>
     <string name="macropad_copy_no_layouts_available">Keine anderen Layouts verfügbar.</string>
 
-    <!-- Crop editor -->
-    <string name="mirror_crop_editor_done">Fertig</string>
-    <string name="mirror_crop_editor_cancel">Abbrechen</string>
-    <string name="cd_drag_toolbar">Ziehen, um die Symbolleiste zu verschieben</string>
-
     <!-- Cutout Layout Editor -->
     <string name="mirror_editor_add_cutout">Ausschnitt hinzufügen</string>
     <string name="mirror_editor_add_cutout_desc">Neuen Bildschirmspiegelungsbereich erstellen</string>
-    <string name="mirror_editor_delete_cutout">Auswahl löschen</string>
-    <string name="mirror_editor_deselect_cutout">Ausschnitt abwählen</string>
     <string name="mirror_editor_done">Fertig</string>
     <string name="mirror_editor_aspect_ratio_mode">Festes Seitenverhältnis</string>
     <string name="mirror_editor_aspect_ratio_free">Frei</string>
@@ -593,8 +576,6 @@ Open Settings to create a layout.</string>
     <string name="mirror_smoothing_strength_medium">Mittel</string>
     <string name="mirror_smoothing_strength_strong">Stark</string>
     <string name="mirror_smoothing_strength_off">Aus</string>
-    <string name="mirror_editor_shape_circle">Form: Kreis</string>
-    <string name="mirror_editor_shape_rectangle">Form: Rechteck</string>
     <string name="mirror_editor_no_space">Bitte schaffe zuerst Platz auf dem Bildschirm für einen weiteren Ausschnitt</string>
     <string name="mirror_editor_cutout_name_hint">Ausschnitt-Name</string>
     <string name="mirror_editor_adjust_top_cutout">Oberen Ausschnitt anpassen</string>
@@ -602,8 +583,6 @@ Open Settings to create a layout.</string>
     <string name="mirror_editor_move_badge">MOVE</string>
     <string name="mirror_editor_resize_badge">RESIZE</string>
     <string name="mirror_editor_adjust_toast">Steuerkreuz zum Verschieben. R2 gedrückt halten zum Ändern der Größe.</string>
-    <string name="mirror_editor_move_active">Aktiv</string>
-    <string name="mirror_editor_target_cutout">Ziel-Ausschnitt</string>
     <string name="mirror_editor_no_cutouts">Keine Ausschnitte</string>
     <string name="mirror_editor_save_changes">Änderungen speichern</string>
     <string name="mirror_editor_saved_toast">Layout-Änderungen gespeichert</string>
@@ -615,10 +594,6 @@ Open Settings to create a layout.</string>
     <string name="mirror_editor_bg_none">Keiner</string>
 
     <!-- Cutout Layout Editor Toolbar Short Labels -->
-    <string name="mirror_editor_toolbar_add">Hinzufügen</string>
-    <string name="mirror_editor_toolbar_settings">Optionen</string>
-    <string name="mirror_editor_toolbar_delete">Löschen</string>
-    <string name="mirror_editor_toolbar_deselect">Abwählen</string>
     <string name="mirror_editor_toolbar_done">Fertig</string>
     <string name="mirror_editor_toolbar_cancel">Abbrechen</string>
     <string name="mirror_editor_toolbar_shape_circle">Kreis</string>
@@ -636,7 +611,6 @@ Open Settings to create a layout.</string>
     <string name="macropad_delete_cutout_title">Ausschnitt löschen</string>
     <string name="macropad_delete_cutout_desc">Diesen Ausschnitt dauerhaft aus dem Layout entfernen</string>
     <string name="mirror_editor_shape_mode">Ausschnittform</string>
-    <string name="mirror_editor_aspect_ratio_desc">Steuert die Seitenverhältnis-Sperre zwischen Quell- und Zielbereich</string>
     <string name="mirror_editor_shape_desc">Zwischen rechteckiger und kreisförmiger Darstellung wechseln</string>
     <string name="settings_mirror_cutout_summary_fmt">Glättung: %1$s • Projektion: %2$s</string>
     <string name="settings_mirror_projection_on">Ein</string>
@@ -663,17 +637,12 @@ Open Settings to create a layout.</string>
     <!-- Mirror editor (Cutout Layout Editor) help -->
     <string name="help_mirror_editor_title">Spiegel-Editor — Hilfe</string>
     <string name="help_mirror_editor_intro">Der Spiegel-Editor ermöglicht es, die Viewport-Ausschnitte hinzuzufügen, zu verschieben, in der Größe zu ändern und zu konfigurieren, die während der Spiegelung auf dem Sekundärbildschirm erscheinen. Tippe auf einen Ausschnitt, um ihn auszuwählen, und nutze dann die Toolbar-Schaltflächen, um darauf zu reagieren.</string>
-    <string name="help_mirror_editor_section_global">Globale Aktionen</string>
-    <string name="help_mirror_editor_add_desc">Erstellt einen neuen Viewport-Ausschnitt an einer freien Position auf dem Sekundärbildschirm. Pro Layout sind bis zu 10 Ausschnitte erlaubt. Der neue Ausschnitt wird automatisch ausgewählt.</string>
-    <string name="help_mirror_editor_settings_desc">Öffnet die layoutspezifischen Ambient-Anzeigeeinstellungen (Abdunkelung, Randüberblendung, Weichzeichnung). Änderungen gelten nur für das aktuell aktive Layout.</string>
     <string name="help_mirror_editor_section_selected">Ausgewählter Ausschnitt</string>
     <string name="help_mirror_editor_aspect_desc">Wechselt zwischen drei Seitenverhältnis-Modi für den ausgewählten Ausschnitt. Frei — keine Einschränkung, unabhängige Größenänderung. Oben — fixiert das Seitenverhältnis passend zum Crop-Bereich auf dem oberen Bildschirm. Unten — fixiert das Seitenverhältnis passend zum Ausschnitt auf dem unteren Bildschirm.</string>
     <string name="help_mirror_editor_shape_label">Form</string>
     <string name="help_mirror_editor_shape_desc">Wechselt die Form des ausgewählten Ausschnitts zwischen Rechteck und Kreis. Nützlich für Spielminiaturkarten oder runde Anzeigen, die im Kreis besser aussehen.</string>
     <string name="help_mirror_editor_adjust_label">Koordinaten anpassen</string>
     <string name="help_mirror_editor_adjust_desc">Aktiviert den Feinjustierungsmodus. Verwende das Steuerkreuz zum pixelweisen Verschieben. Halte R2 gedrückt, während du das Steuerkreuz drückst, um die Größe symmetrisch zum Mittelpunkt zu ändern.</string>
-    <string name="help_mirror_editor_deselect_desc">Hebt die Auswahl des aktuellen Ausschnitts auf und schließt die Zuschnitt-Überlagerung auf dem oberen Bildschirm.</string>
-    <string name="help_mirror_editor_delete_desc">Entfernt den ausgewählten Ausschnitt dauerhaft aus dem Layout. Wenn der gelöschte Ausschnitt Touch-Follow aktiv hatte, wird dieser Modus ebenfalls deaktiviert.</string>
     <string name="help_mirror_editor_hide_bg_desc">Blendet das Layout-Hintergrundbild auf dem sekundären Bildschirm während der Bearbeitung vorübergehend aus, um das Anpassen der Ausschnittgrenzen zu erleichtern. Ändert nicht Ihre gespeicherten Layouteinstellungen.</string>
     <string name="help_mirror_editor_section_finish">Abschließen</string>
     <string name="help_mirror_editor_done_desc">Speichert alle in dieser Sitzung vorgenommenen Änderungen und schließt den Editor. Das aktualisierte Ausschnitt-Layout wird sofort aktiv.</string>
@@ -703,8 +672,6 @@ Open Settings to create a layout.</string>
     <string name="help_quickmenu_freeze_label">Einfrieren / Auftauen</string>
     <string name="help_quickmenu_freeze_desc">Friert das gespiegelte Bild ein, sodass ein Standbild statt des Live-Feeds angezeigt wird. Nützlich, um eine Spielszene zum genauen Lesen anzuhalten.</string>
     <string name="help_quickmenu_viewport_desc">Öffnet den Ausschnitt-Layout-Editor auf dem Sekundärbildschirm, um transparente Ausschnittfenster im Spiegel-Overlay zu verschieben, zu skalieren oder hinzuzufügen.</string>
-    <string name="help_quickmenu_screenshot_label">Screenshot aufnehmen</string>
-    <string name="help_quickmenu_screenshot_desc">Nimmt einen Screenshot des gewählten Bildschirms auf. Wenn kein Mirroring aktiv ist, erfordert die Aufnahme des oberen Bildschirms den verbundenen Privileged Mode.</string>
     <string name="help_quickmenu_screenshot_top_label">Screenshot oberer Bildschirm</string>
     <string name="help_quickmenu_screenshot_top_desc">Nimmt einen Screenshot des oberen Bildschirms auf. Wenn kein Mirroring aktiv ist, muss der Privileged Mode verbunden sein.</string>
     <string name="help_quickmenu_screenshot_bottom_label">Screenshot unterer Bildschirm</string>
@@ -753,7 +720,6 @@ Open Settings to create a layout.</string>
     <!-- Onboarding Wizard -->
     <string name="settings_start_welcome_tour">Willkommenstour / Schnell-Einrichtung starten</string>
     <string name="settings_start_welcome_tour_desc">Führe die Schritt-für-Schritt-Einführung und Randgesten-Tour erneut aus</string>
-    <string name="settings_start_welcome_tour_btn">Starten</string>
     <string name="onboarding_theme_title">Wähle deinen Stil</string>
     <string name="onboarding_theme_desc">Wähle ein visuelles Thema für Megingiard. Du kannst dies jederzeit in den globalen Einstellungen ändern.</string>
     <string name="onboarding_theme_prev">Vorheriges Thema</string>
@@ -809,7 +775,6 @@ Open Settings to create a layout.</string>
     <string name="layout_settings_bg_image_browse_local">Lokale Bilder durchsuchen</string>
     <string name="steamgriddb_token_missing_title">API-Token erforderlich</string>
     <string name="steamgriddb_token_missing_message">Das Laden von SteamGridDB erfordert ein API-Token. Bitte erstelle einen API-Schlüssel in deinen SteamGridDB-Kontoeinstellungen und füge ihn in den globalen Einstellungen von Megingiard hinzu.</string>
-    <string name="steamgriddb_token_missing_go_settings">Einstellungen öffnen</string>
     <string name="steamgriddb_scrape_search_title">Spiel suchen</string>
     <string name="steamgriddb_scrape_search_desc">SteamGridDB nach Postern, Bannern und Logos durchsuchen</string>
     <string name="steamgriddb_scrape_type_title">Grafik-Kategorie</string>
@@ -828,7 +793,6 @@ Open Settings to create a layout.</string>
     <string name="steamgriddb_scrape_loading_images">Bilder werden geladen</string>
     <string name="steamgriddb_scrape_no_games_found">Keine Spiele gefunden.</string>
     <string name="steamgriddb_scrape_no_images_found">Keine Bilder für diesen Typ gefunden.</string>
-    <string name="steamgriddb_scrape_error">Fehler: %1$s</string>
     <string name="steamgriddb_scrape_downloading">Bild wird heruntergeladen</string>
     <string name="steamgriddb_error_offline_title">Verbindung offline</string>
     <string name="steamgriddb_error_offline_message">Du bist offline. Bitte überprüfe deine Internetverbindung und versuche es erneut.</string>
@@ -890,7 +854,6 @@ Open Settings to create a layout.</string>
     <string name="macropad_touchpad_conflict_projection_body">Das Aktivieren des Hintergrund-Touchpads deaktiviert die Touch-Projektion für alle Ausschnitte dieses Layouts.</string>
     <string name="macropad_projection_conflict_touchpad_title">Hintergrund-Touchpad deaktivieren?</string>
     <string name="macropad_projection_conflict_touchpad_body">Das Aktivieren der Touch-Projektion deaktiviert das Hintergrund-Touchpad für dieses Layout.</string>
-    <string name="macropad_projection_conflict_touchpad_confirm">Touchpad deaktivieren &amp; Projektion aktivieren</string>
     <string name="layout_settings_touchpad_incompatible_warning">Nicht kompatibel mit aktiver Touch-Projektion</string>
     <string name="settings_section_pointer_speed">Zeigergeschwindigkeit</string>
     <string name="settings_section_gestures">Gesten &amp; Aktionen</string>
@@ -942,45 +905,24 @@ Open Settings to create a layout.</string>
     <string name="update_dialog_backup_and_open_desc">Einstellungen in Backup-Datei exportieren und GitHub Releases im Browser öffnen</string>
     <string name="update_dialog_btn_open_directly">Link direkt öffnen</string>
     <string name="update_dialog_open_directly_desc">GitHub Releases-Downloadseite im Browser ohne Backup öffnen</string>
-    <string name="update_dialog_btn_cancel">Abbrechen</string>
 
     <!-- Settings card description -->
     <string name="help_settings_auto_update_desc">Wenn aktiviert, prüft Megingiard alle 24 Stunden lautlos im Hintergrund auf neue Releases. Wenn ein Update gefunden wird, kannst du deine Einstellungen sichern und die Release-Seite im Standardbrowser auf dem oberen Bildschirm öffnen.</string>
 
     <!-- Gamepad Action Buttons -->
-    <string name="gamepad_action_setup">Einrichten</string>
-    <string name="gamepad_action_edit">Bearbeiten</string>
-    <string name="gamepad_action_deadzones">Totzonen</string>
-    <string name="gamepad_action_restore">Wiederherstellen</string>
-    <string name="gamepad_action_reset">Zurücksetzen</string>
-    <string name="gamepad_action_export">Exportieren</string>
-    <string name="gamepad_action_add">Hinzufügen</string>
     <string name="gamepad_action_save">Speichern</string>
     <string name="gamepad_action_check">Prüfen</string>
     <string name="gamepad_action_checking">Prüfen</string>
-    <string name="gamepad_action_new">Neu</string>
-    <string name="gamepad_action_duplicate">Duplizieren</string>
-    <string name="gamepad_action_reorder">Neu anordnen</string>
     <string name="gamepad_action_move">Verschieben</string>
     <string name="gamepad_action_moving">Verschieben</string>
     <string name="gamepad_action_delete">Löschen</string>
     <string name="macropad_reorder_empty">Keine Einträge zum Neuanordnen</string>
-    <string name="gamepad_action_appearance">Aussehen</string>
-    <string name="gamepad_action_touchpad">Touchpad</string>
     <string name="gamepad_action_copy">Kopieren</string>
-    <string name="gamepad_action_search">Suchen</string>
-    <string name="gamepad_action_browse">Durchsuchen</string>
-    <string name="gamepad_action_crop">Zuschneiden</string>
-    <string name="gamepad_action_open">Öffnen</string>
     <string name="gamepad_action_clear">Entfernen</string>
     <string name="gamepad_action_unlink">Trennen</string>
     <string name="gamepad_action_enable">Aktivieren</string>
-    <string name="gamepad_action_choose_app">App wählen</string>
     <string name="gamepad_action_custom_color">Eigene Farbe</string>
-    <string name="gamepad_action_choose_icon">Symbol wählen</string>
     <string name="gamepad_action_select">Auswählen</string>
-    <string name="gamepad_action_choose">Wählen</string>
-    <string name="gamepad_action_choose_key">Taste wählen</string>
     <string name="macropad_picker_visual_keyboard_title">Tastaturtaste auswählen</string>
     <string name="macropad_picker_keyboard_nav_title">Navigation &amp; Erweitert</string>
     <string name="macropad_picker_visual_gamepad_title">Gamepad-Taste auswählen</string>
@@ -1066,7 +1008,6 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_edit_layout_desc">Name, Farben, Touchpad und Löschung verwalten</string>
     <string name="macropad_editor_new_layout_desc">Ein neues Tastenlayout zu diesem Profil hinzufügen</string>
     <string name="macropad_editor_appearance_title">Layout-Darstellung &amp; Farben</string>
-    <string name="macropad_editor_appearance_desc">Schrift-, Rahmen- und Hintergrundfarben der Tasten anpassen</string>
     <string name="macropad_editor_touchpad_desc">Hintergrund-Touchpad und Touch-Projektionsbereiche konfigurieren</string>
     <string name="macropad_editor_duplicate_layout_desc">Aktives Layout innerhalb dieses Profils duplizieren</string>
     <string name="macropad_editor_duplicate_button_desc">Diese Taste im aktiven Layout duplizieren</string>
@@ -1104,12 +1045,6 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_section_artwork_source">Bildquelle</string>
     <string name="macropad_editor_bg_steamgriddb_desc">Spielbanner und Poster auf SteamGridDB suchen</string>
     <string name="macropad_editor_bg_storage_desc">Bild aus dem Gerätespeicher wählen</string>
-    <string name="macropad_editor_bg_crop_zoom_hint_title">Mit zwei Fingern zoomen</string>
-    <string name="macropad_editor_bg_crop_zoom_hint_desc" formatted="false">Bildgröße zwischen 100% und 500% skalieren</string>
-    <string name="macropad_editor_bg_crop_pan_hint_title">Verschieben zum Positionieren</string>
-    <string name="macropad_editor_bg_crop_pan_hint_desc">Ziehen, um sichtbaren Ausschnitt zu wählen</string>
-    <string name="macropad_editor_bg_crop_save_title">Hintergrundausschnitt speichern</string>
-    <string name="macropad_editor_bg_crop_save_desc">Zoom und Position auf dieses Layout anwenden</string>
     <string name="macropad_editor_remove_bg_image">Hintergrundbild entfernen</string>
     <string name="macropad_editor_remove_bg_image_desc">Entfernt das Hintergrundbild aus diesem Layout</string>
 
@@ -1142,8 +1077,6 @@ Open Settings to create a layout.</string>
     <!-- Dialogs & Overlays -->
     <string name="macropad_cutout_rename_title">Ausschnitt umbenennen</string>
     <string name="macropad_cutout_rename_desc">Anzeigenamen dieses Spiegelungsbereichs ändern</string>
-    <string name="macropad_profile_app_association_title">App zuweisen</string>
-    <string name="macropad_profile_app_association_desc">Profil automatisch aktivieren, wenn Ziel-App oder Spiel gestartet wird</string>
     <string name="macropad_icon_picker_empty_desc">Versuche es mit einem anderen Suchbegriff</string>
     <string name="steamgriddb_empty_games_desc">Versuche nach einem anderen Spieletitel zu suchen</string>
     <string name="steamgriddb_empty_images_desc">Keine Bilder für diese Kategorie gefunden</string>
@@ -1160,15 +1093,12 @@ Open Settings to create a layout.</string>
     <string name="gamepad_search_placeholder">Suchen</string>
     <string name="gamepad_search_clear">Suche löschen</string>
     <string name="gamepad_category_all">Alle</string>
-    <string name="gamepad_confirm_dialog_confirm">Bestätigen</string>
-    <string name="gamepad_confirm_dialog_cancel">Abbrechen</string>
     <string name="gamepad_prompt_select">Auswählen</string>
     <string name="quick_menu_layouts_count">%1$d Layouts</string>
     <string name="quick_menu_buttons_count">%1$d Buttons</string>
 
     <string name="macropad_editor_create_profile_title">Profil erstellen</string>
     <string name="macropad_editor_create_profile_desc">Dieses neue MacroPad-Profil speichern und aktivieren</string>
-    <string name="macropad_editor_save_profile_title">Profil speichern</string>
     <string name="macropad_editor_create_layout_title">Layout erstellen</string>
     <string name="macropad_editor_create_layout_desc">Dieses neue Tastenlayout zum aktiven Profil hinzufügen</string>
     <string name="macropad_editor_save_layout_title">Layout speichern</string>
@@ -1190,7 +1120,6 @@ Open Settings to create a layout.</string>
     <string name="macropad_button_delete_confirm_title">Diesen Button wirklich löschen?</string>
     <string name="macropad_macro_delete_confirm_title">\"%1$s\" wirklich löschen?</string>
     <string name="macropad_editor_bg_delete_confirm_title">Hintergrundbild entfernen?</string>
-    <string name="macropad_profile_clear_app_confirm_title">App-Verknüpfung entfernen?</string>
     <string name="macropad_profile_unlink_app">App/Spiel-Verknüpfung aufheben</string>
     <string name="macropad_profile_unlink_app_confirm_title">Verknüpfung von \"%1$s\" wirklich aufheben?</string>
     <string name="macropad_profile_unlink_app_desc">Verknüpfung mit %1$s aufheben</string>
