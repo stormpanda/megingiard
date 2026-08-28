@@ -924,4 +924,36 @@ class AppStateManagerTest {
             assertEquals(null, AppStateManager.selectedCutoutId.value)
             assertEquals(null, AppStateManager.activeCropCutoutId.value)
         }
+
+    @Test
+    fun `mirror editor background hidden state toggles and resets on mode changes`() =
+        runTest {
+            AppStateManager.closeActiveModal()
+            assertFalse(AppStateManager.isMirrorEditorBackgroundHidden.value)
+
+            AppStateManager.setMirrorEditorBackgroundHidden(true)
+            assertTrue(AppStateManager.isMirrorEditorBackgroundHidden.value)
+
+            AppStateManager.toggleMirrorEditorBackgroundHidden()
+            assertFalse(AppStateManager.isMirrorEditorBackgroundHidden.value)
+
+            AppStateManager.toggleMirrorEditorBackgroundHidden()
+            assertTrue(AppStateManager.isMirrorEditorBackgroundHidden.value)
+
+            // Exiting viewport edit resets the hidden state
+            AppStateManager.setViewportEditActive(false)
+            assertFalse(AppStateManager.isMirrorEditorBackgroundHidden.value)
+
+            // Entering viewport edit resets the hidden state
+            AppStateManager.setMirrorEditorBackgroundHidden(true)
+            assertTrue(AppStateManager.isMirrorEditorBackgroundHidden.value)
+            AppStateManager.setViewportEditActive(true)
+            assertFalse(AppStateManager.isMirrorEditorBackgroundHidden.value)
+
+            // Closing modal resets the hidden state
+            AppStateManager.setMirrorEditorBackgroundHidden(true)
+            assertTrue(AppStateManager.isMirrorEditorBackgroundHidden.value)
+            AppStateManager.closePrimaryModal()
+            assertFalse(AppStateManager.isMirrorEditorBackgroundHidden.value)
+        }
 }

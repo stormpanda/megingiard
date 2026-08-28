@@ -18,6 +18,7 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Crop
 import androidx.compose.material.icons.rounded.CropSquare
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -553,6 +554,11 @@ internal fun CutoutLayoutEditorHelpModal(
             icon = Icons.Rounded.Crop,
             label = stringResource(R.string.help_mirror_editor_adjust_label),
             description = stringResource(R.string.help_mirror_editor_adjust_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.VisibilityOff,
+            label = stringResource(R.string.mirror_editor_hide_background),
+            description = stringResource(R.string.help_mirror_editor_hide_bg_desc),
         )
 
         HelpSection(stringResource(R.string.help_mirror_editor_section_finish))

@@ -443,6 +443,18 @@ object AppStateManager {
     private val _selectedCutoutId = MutableStateFlow<String?>(null)
     val selectedCutoutId: StateFlow<String?> = _selectedCutoutId.asStateFlow()
 
+    private val _isMirrorEditorBackgroundHidden = MutableStateFlow(false)
+    val isMirrorEditorBackgroundHidden: StateFlow<Boolean> = _isMirrorEditorBackgroundHidden.asStateFlow()
+
+    fun setMirrorEditorBackgroundHidden(hidden: Boolean) {
+        AppLog.d(TAG, "setMirrorEditorBackgroundHidden($hidden)")
+        _isMirrorEditorBackgroundHidden.value = hidden
+    }
+
+    fun toggleMirrorEditorBackgroundHidden() {
+        setMirrorEditorBackgroundHidden(!_isMirrorEditorBackgroundHidden.value)
+    }
+
     fun openPrimaryModal(config: PrimaryModalConfig) {
         AppLog.i(TAG, "openPrimaryModal: type=${config.type} payload=${config.payload}")
         _activePrimaryModal.value = config
@@ -545,6 +557,7 @@ object AppStateManager {
         _activePrimaryModal.value = null
         _activeCropCutoutId.value = null
         _selectedCutoutId.value = null
+        _isMirrorEditorBackgroundHidden.value = false
         _currentNavDestination.value = null
         wasViewportEditActiveBeforeSettings = false
         if (_uiMode.value == UiMode.LAYOUT_EDITOR ||
@@ -671,9 +684,11 @@ object AppStateManager {
         if (active) {
             ScreenCaptureManager.setFollowActive(false, persist = true)
             _activeCropCutoutId.value = _selectedCutoutId.value
+            _isMirrorEditorBackgroundHidden.value = false
         } else {
             _selectedCutoutId.value = null
             _activeCropCutoutId.value = null
+            _isMirrorEditorBackgroundHidden.value = false
         }
         _uiMode.value = if (active) UiMode.VIEWPORT_EDIT else UiMode.MACROPAD_USE
     }

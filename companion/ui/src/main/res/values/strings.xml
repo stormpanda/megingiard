@@ -592,6 +592,10 @@ Open Settings to create a layout.</string>
     <string name="mirror_editor_saved_toast">Layout changes saved</string>
     <string name="mirror_editor_minimize">Minimize</string>
     <string name="mirror_editor_expand">Expand</string>
+    <string name="mirror_editor_hide_background">Hide Background</string>
+    <string name="mirror_editor_bg_hidden">Hidden</string>
+    <string name="mirror_editor_bg_visible">Shown</string>
+    <string name="mirror_editor_bg_none">None</string>
 
     <!-- Cutout Layout Editor Toolbar Short Labels -->
     <string name="mirror_editor_toolbar_add">Add</string>
@@ -653,6 +657,7 @@ Open Settings to create a layout.</string>
     <string name="help_mirror_editor_adjust_desc">Enters fine-tuning mode. Use D-Pad to move the cutout pixel-by-pixel. Hold R2 while pressing D-Pad to resize the cutout (expanding or shrinking symmetrically around its center).</string>
     <string name="help_mirror_editor_deselect_desc">Deselects the currently selected cutout and closes the top-screen crop overlay.</string>
     <string name="help_mirror_editor_delete_desc">Permanently removes the selected cutout from the layout. If the deleted cutout had touch-follow enabled, that mode is also deactivated.</string>
+    <string name="help_mirror_editor_hide_bg_desc">Temporarily hides the layout background image on the secondary display while editing to make it easier to see and adjust cutout boundaries. Does not change your saved layout settings.</string>
     <string name="help_mirror_editor_section_finish">Finish</string>
     <string name="help_mirror_editor_done_desc">Saves all changes made in this session and closes the editor. The updated cutout layout becomes immediately active.</string>
     <string name="help_mirror_editor_cancel_desc">Discards all changes made since the editor was opened and reverts the layout to its previous state. No modifications are saved.</string>

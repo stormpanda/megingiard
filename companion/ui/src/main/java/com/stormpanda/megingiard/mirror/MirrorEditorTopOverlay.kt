@@ -52,6 +52,8 @@ import androidx.compose.material.icons.rounded.FilterCenterFocus
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.UnfoldLess
 import androidx.compose.material.icons.rounded.UnfoldMore
+import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -106,6 +108,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.ui.DialogToastManager
 import com.stormpanda.megingiard.ui.DialogToastPill
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -681,7 +684,12 @@ fun MirrorEditorTopOverlay(
                                 },
                             )
 
-                            // Item 5: Add Cutout
+                            // Item 5: Temporarily Hide Background
+                            HideBackgroundCard(
+                                layout = layout,
+                            )
+
+                            // Item 6: Add Cutout
                             ToolboxActionCard(
                                 title = stringResource(R.string.mirror_editor_add_cutout),
                                 icon = Icons.Rounded.Add,
@@ -723,7 +731,7 @@ fun MirrorEditorTopOverlay(
                                 },
                             )
 
-                            // Item 6: Delete Cutout
+                            // Item 7: Delete Cutout
                             DeleteCutoutCard(
                                 selectedCutout = selectedCutout,
                                 onDelete = { cutoutId ->
@@ -733,7 +741,7 @@ fun MirrorEditorTopOverlay(
                                 },
                             )
 
-                            // Item 7: Save Changes / Save & Discard Exit Row
+                            // Item 8: Save Changes / Save & Discard Exit Row
                             ToolboxSaveExitRow(
                                 showExitPrompt = showExitPrompt,
                                 hasChanges = hasChanges,
@@ -1628,6 +1636,48 @@ private fun DeleteCutoutCard(
         cardFocusRequester = cardFocusRequester,
         modifier = modifier,
     )
+}
+
+@Composable
+private fun HideBackgroundCard(
+    layout: PadLayout?,
+    modifier: Modifier = Modifier,
+    cardFocusRequester: FocusRequester = remember { FocusRequester() },
+    onFocusChanged: ((Boolean) -> Unit)? = null,
+) {
+    val isHidden by AppStateManager.isMirrorEditorBackgroundHidden.collectAsState()
+    val hasBackground = !layout?.backgroundImagePath.isNullOrEmpty()
+
+    val label =
+        if (!hasBackground) {
+            stringResource(R.string.mirror_editor_bg_none)
+        } else if (isHidden) {
+            stringResource(R.string.mirror_editor_bg_hidden)
+        } else {
+            stringResource(R.string.mirror_editor_bg_visible)
+        }
+
+    fun toggle() {
+        if (!hasBackground) return
+        AppStateManager.toggleMirrorEditorBackgroundHidden()
+    }
+
+    ToolboxCard(
+        onClick = { toggle() },
+        onLeftKey = { if (hasBackground && isHidden) AppStateManager.setMirrorEditorBackgroundHidden(false) },
+        onRightKey = { if (hasBackground && !isHidden) AppStateManager.setMirrorEditorBackgroundHidden(true) },
+        onFocusChanged = onFocusChanged,
+        cardFocusRequester = cardFocusRequester,
+        enabled = hasBackground,
+        icon = if (isHidden) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
+        title = stringResource(R.string.mirror_editor_hide_background),
+        modifier = modifier,
+    ) { isFocused ->
+        ToolboxPill(
+            text = label,
+            isHighlighted = isFocused && hasBackground,
+        )
+    }
 }
 
 @Composable

@@ -601,6 +601,10 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="mirror_editor_saved_toast">Layout-Änderungen gespeichert</string>
     <string name="mirror_editor_minimize">Minimieren</string>
     <string name="mirror_editor_expand">Erweitern</string>
+    <string name="mirror_editor_hide_background">Hintergrund ausblenden</string>
+    <string name="mirror_editor_bg_hidden">Ausgeblendet</string>
+    <string name="mirror_editor_bg_visible">Sichtbar</string>
+    <string name="mirror_editor_bg_none">Keiner</string>
 
     <!-- Cutout Layout Editor Toolbar Short Labels -->
     <string name="mirror_editor_toolbar_add">Hinzufügen</string>
@@ -662,6 +666,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_mirror_editor_adjust_desc">Aktiviert den Feinjustierungsmodus. Verwende das Steuerkreuz zum pixelweisen Verschieben. Halte R2 gedrückt, während du das Steuerkreuz drückst, um die Größe symmetrisch zum Mittelpunkt zu ändern.</string>
     <string name="help_mirror_editor_deselect_desc">Hebt die Auswahl des aktuellen Ausschnitts auf und schließt die Zuschnitt-Überlagerung auf dem oberen Bildschirm.</string>
     <string name="help_mirror_editor_delete_desc">Entfernt den ausgewählten Ausschnitt dauerhaft aus dem Layout. Wenn der gelöschte Ausschnitt Touch-Follow aktiv hatte, wird dieser Modus ebenfalls deaktiviert.</string>
+    <string name="help_mirror_editor_hide_bg_desc">Blendet das Layout-Hintergrundbild auf dem sekundären Bildschirm während der Bearbeitung vorübergehend aus, um das Anpassen der Ausschnittgrenzen zu erleichtern. Ändert nicht Ihre gespeicherten Layouteinstellungen.</string>
     <string name="help_mirror_editor_section_finish">Abschließen</string>
     <string name="help_mirror_editor_done_desc">Speichert alle in dieser Sitzung vorgenommenen Änderungen und schließt den Editor. Das aktualisierte Ausschnitt-Layout wird sofort aktiv.</string>
     <string name="help_mirror_editor_cancel_desc">Verwirft alle seit dem Öffnen des Editors vorgenommenen Änderungen und stellt das Layout in den vorherigen Zustand zurück. Es werden keine Änderungen gespeichert.</string>

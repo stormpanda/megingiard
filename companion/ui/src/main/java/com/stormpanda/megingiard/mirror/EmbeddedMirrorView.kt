@@ -52,17 +52,20 @@ fun EmbeddedMirrorView(
     val srcWidth by ScreenCaptureManager.captureSourceWidth.collectAsState()
     val srcHeight by ScreenCaptureManager.captureSourceHeight.collectAsState()
     val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsState()
+    val isMirrorEditorBackgroundHidden by AppStateManager.isMirrorEditorBackgroundHidden.collectAsState()
+    val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
     val layout by MacroPadState.activeLayout.collectAsState()
     val screenshotRequested by ScreenCaptureManager.screenshotRequested.collectAsState()
 
     val effectiveCutouts = overrideCutouts ?: cutouts
+    val effectiveShowLayoutBackground = showLayoutBackground && !(isViewportEditActive && isMirrorEditorBackgroundHidden)
 
-    var bgBitmap by remember(layout?.backgroundImagePath, layout?.backgroundImageVersion, showLayoutBackground) {
+    var bgBitmap by remember(layout?.backgroundImagePath, layout?.backgroundImageVersion, effectiveShowLayoutBackground) {
         mutableStateOf<Bitmap?>(null)
     }
 
-    LaunchedEffect(layout?.backgroundImagePath, layout?.backgroundImageVersion, showLayoutBackground) {
-        if (!showLayoutBackground) {
+    LaunchedEffect(layout?.backgroundImagePath, layout?.backgroundImageVersion, effectiveShowLayoutBackground) {
+        if (!effectiveShowLayoutBackground) {
             bgBitmap = null
             return@LaunchedEffect
         }
@@ -288,11 +291,11 @@ fun EmbeddedMirrorView(
             mcc.viewportOffsetX = if (overrideCutouts != null) 0f else offsetX
             mcc.viewportOffsetY = if (overrideCutouts != null) 0f else offsetY
             mcc.bgBitmap = bgBitmap
-            mcc.useAsMask = showLayoutBackground && layout?.useBackgroundImageAsMask == true
-            mcc.bgImageScale = if (showLayoutBackground) layout?.bgImageScale ?: 1f else 1f
-            mcc.bgImageOffsetX = if (showLayoutBackground) layout?.bgImageOffsetX ?: 0f else 0f
-            mcc.bgImageOffsetY = if (showLayoutBackground) layout?.bgImageOffsetY ?: 0f else 0f
-            mcc.bgImageDim = if (showLayoutBackground) layout?.backgroundImageDim ?: 0f else 0f
+            mcc.useAsMask = effectiveShowLayoutBackground && layout?.useBackgroundImageAsMask == true
+            mcc.bgImageScale = if (effectiveShowLayoutBackground) layout?.bgImageScale ?: 1f else 1f
+            mcc.bgImageOffsetX = if (effectiveShowLayoutBackground) layout?.bgImageOffsetX ?: 0f else 0f
+            mcc.bgImageOffsetY = if (effectiveShowLayoutBackground) layout?.bgImageOffsetY ?: 0f else 0f
+            mcc.bgImageDim = if (effectiveShowLayoutBackground) layout?.backgroundImageDim ?: 0f else 0f
             mcc.ambientDim = if (overrideCutouts == null) layout?.ambientDim ?: 0f else 0f
 
             val tv = containerHolder.textureView

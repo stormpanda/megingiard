@@ -66,6 +66,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.BitmapUtils
 import com.stormpanda.megingiard.math.ViewportMath
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -147,6 +148,9 @@ internal fun PadCanvas(
 ) {
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
     val selectedButtonId by MacroPadState.selectedButtonId.collectAsState()
+    val isMirrorEditorBackgroundHidden by AppStateManager.isMirrorEditorBackgroundHidden.collectAsState()
+    val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
+    val shouldHideBackground = isViewportEditActive && isMirrorEditorBackgroundHidden
     val colors = LocalAppColors.current
     val density = LocalDensity.current
     val context = LocalContext.current
@@ -272,7 +276,7 @@ internal fun PadCanvas(
         }
 
     Box(modifier = padModifier.then(cropModifier)) {
-        if (bgBitmap != null) {
+        if (!shouldHideBackground && bgBitmap != null) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val cw = size.width
                 val ch = size.height
