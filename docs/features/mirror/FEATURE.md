@@ -159,6 +159,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - The user MUST be able to toggle each cutout shape individually between circular and rectangular via a shape toggle button in the layout-editor toolbar.
 - Internally, the cutout's dimensions and resize logic MUST remain rectangular to allow uniform resizing and placement operations.
 - When the shape is set to circular, the visual rendering of the cutout (both in the editor preview and on the secondary display's mirror presentation canvas) MUST be clipped to a perfect circle that fills as much space as possible inside the destination rectangle (`min(width, height)`).
+- When a circular cutout is actively selected and edited on the secondary screen (`CutoutLayoutEditor`), the underlying rectangular boundary box (which governs collision clamping and drag handle positions) MUST be rendered in the unselected cutout outline style (`Color.White.copy(alpha = 0.05f)` background, `0.15f` border) behind the highlighted circular preview, ensuring clear spatial feedback of the physical bounding box.
 - The toggle button MUST look like the other buttons, switch between a rectangle and circle icon, and use the same active accent color in both states.
 - The Aspect Ratio lock button MUST also be updated to use the active accent color in both states.
 

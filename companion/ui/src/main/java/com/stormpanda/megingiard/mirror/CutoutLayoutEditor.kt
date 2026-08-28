@@ -67,6 +67,12 @@ private const val CLE_ROTATION_TR = 45f
 private const val CLE_ROTATION_BL = 45f
 private const val CLE_ROTATION_BR = -45f
 
+private val CLE_RECT_CORNER = 4.dp
+private const val CLE_UNSELECTED_BG_ALPHA = 0.05f
+private const val CLE_UNSELECTED_BORDER_ALPHA = 0.15f
+private const val CLE_SELECTED_BG_ALPHA = 0.15f
+private const val CLE_SELECTED_BORDER_ALPHA = 0.5f
+
 @Composable
 fun CutoutLayoutEditor() {
     val colors = LocalAppColors.current
@@ -180,17 +186,43 @@ fun CutoutLayoutEditor() {
                 ) {
                     if (isCircle) {
                         val diameterDp = with(density) { min(destW, destH).toDp() }
+                        if (isSelected) {
+                            // Show collision rectangle bounding box in unselected style
+                            Box(
+                                modifier =
+                                    Modifier
+                                        .fillMaxSize()
+                                        .background(
+                                            color = Color.White.copy(alpha = CLE_UNSELECTED_BG_ALPHA),
+                                            shape = RoundedCornerShape(CLE_RECT_CORNER),
+                                        ).border(
+                                            width = CLE_BORDER_WIDTH,
+                                            color = Color.White.copy(alpha = CLE_UNSELECTED_BORDER_ALPHA),
+                                            shape = RoundedCornerShape(CLE_RECT_CORNER),
+                                        ),
+                            )
+                        }
                         Box(
                             modifier =
                                 Modifier
                                     .align(Alignment.Center)
                                     .size(diameterDp)
                                     .background(
-                                        color = if (isSelected) colors.accent.copy(alpha = 0.15f) else Color.White.copy(alpha = 0.05f),
+                                        color =
+                                            if (isSelected) {
+                                                colors.accent.copy(alpha = CLE_SELECTED_BG_ALPHA)
+                                            } else {
+                                                Color.White.copy(alpha = CLE_UNSELECTED_BG_ALPHA)
+                                            },
                                         shape = CircleShape,
                                     ).border(
                                         width = CLE_BORDER_WIDTH,
-                                        color = if (isSelected) colors.accent.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.15f),
+                                        color =
+                                            if (isSelected) {
+                                                colors.accent.copy(alpha = CLE_SELECTED_BORDER_ALPHA)
+                                            } else {
+                                                Color.White.copy(alpha = CLE_UNSELECTED_BORDER_ALPHA)
+                                            },
                                         shape = CircleShape,
                                     ),
                         )
@@ -200,12 +232,22 @@ fun CutoutLayoutEditor() {
                                 Modifier
                                     .fillMaxSize()
                                     .background(
-                                        color = if (isSelected) colors.accent.copy(alpha = 0.15f) else Color.White.copy(alpha = 0.05f),
-                                        shape = RoundedCornerShape(4.dp),
+                                        color =
+                                            if (isSelected) {
+                                                colors.accent.copy(alpha = CLE_SELECTED_BG_ALPHA)
+                                            } else {
+                                                Color.White.copy(alpha = CLE_UNSELECTED_BG_ALPHA)
+                                            },
+                                        shape = RoundedCornerShape(CLE_RECT_CORNER),
                                     ).border(
                                         width = CLE_BORDER_WIDTH,
-                                        color = if (isSelected) colors.accent.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.15f),
-                                        shape = RoundedCornerShape(4.dp),
+                                        color =
+                                            if (isSelected) {
+                                                colors.accent.copy(alpha = CLE_SELECTED_BORDER_ALPHA)
+                                            } else {
+                                                Color.White.copy(alpha = CLE_UNSELECTED_BORDER_ALPHA)
+                                            },
+                                        shape = RoundedCornerShape(CLE_RECT_CORNER),
                                     ),
                         )
                     }
