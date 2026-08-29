@@ -235,7 +235,7 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
                 modifier =
                     Modifier
                         .align(Alignment.TopCenter)
-                        .padding(top = 12.dp),
+                        .padding(top = 12.dp, start = 24.dp, end = 24.dp),
             )
         }
     }
