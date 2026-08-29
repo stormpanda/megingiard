@@ -50,6 +50,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.privd.PrivdManager
+import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
@@ -119,11 +121,14 @@ internal fun ChooseButtonTypeSubPageContent(
     enableMouse: Boolean = true,
     onSelectType: (ActionGroup) -> Unit,
 ) {
+    val privdState by PrivdManager.state.collectAsState()
+    val isPrivdRunning = privdState == PrivdState.RUNNING
     val profile by MacroPadState.activeProfile.collectAsState()
-    val hasMacros = profile?.macros?.isNotEmpty() == true
+    val hasMacros = isPrivdRunning && (profile?.macros?.isNotEmpty() == true)
     val availableGroups =
-        remember(hasMacros, enableKeyboard, enableGamepad, enableMouse) {
+        remember(hasMacros, enableKeyboard, enableGamepad, enableMouse, isPrivdRunning) {
             ActionGroup.entries.filter { group ->
+                if (group == ActionGroup.MACRO && !isPrivdRunning) return@filter false
                 group.actions().any { category ->
                     category.isEnabled(enableKeyboard, enableGamepad, enableMouse, hasMacros)
                 }

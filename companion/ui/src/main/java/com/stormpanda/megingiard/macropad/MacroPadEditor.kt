@@ -2972,6 +2972,7 @@ private fun MacrosDeck(
             text = stringResource(R.string.macropad_macro_privd_required_banner),
             modifier = Modifier.firstDeckItem(),
         )
+        return
     }
 
     GamepadActionCard(
@@ -2979,7 +2980,7 @@ private fun MacrosDeck(
         description = stringResource(R.string.macropad_editor_open_timeline_desc),
         icon = Icons.Rounded.Add,
         onClick = onNewMacro,
-        modifier = if (isPrivdRunning) Modifier.firstDeckItem() else Modifier,
+        modifier = Modifier.firstDeckItem(),
     )
 
     val macros = profile.macros

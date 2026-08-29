@@ -8,11 +8,15 @@ import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.OpenWith
 import androidx.compose.material.icons.rounded.SmartButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.privd.PrivdManager
+import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadTwoColumnGrid
 
@@ -36,46 +40,62 @@ internal fun QuickActionsDeckContent(
 ) {
     AppLog.d(TAG, "Rendering QuickActionsDeckContent")
 
+    val privdState by PrivdManager.state.collectAsState()
+    val isPrivdRunning = privdState == PrivdState.RUNNING
     val items =
-        remember(onNewButton, onNewMacro, onNewLayout, onNewProfile, onArrangeButtons, onEditMirrorLayout) {
-            listOf(
-                QuickActionItem(
-                    titleRes = R.string.macropad_editor_add_button,
-                    descRes = R.string.macropad_editor_create_button_desc,
-                    icon = Icons.Rounded.SmartButton,
-                    onClick = onNewButton,
-                ),
-                QuickActionItem(
-                    titleRes = R.string.macropad_editor_open_timeline_title,
-                    descRes = R.string.macropad_editor_open_timeline_desc,
-                    icon = Icons.AutoMirrored.Rounded.PlaylistPlay,
-                    onClick = onNewMacro,
-                ),
-                QuickActionItem(
-                    titleRes = R.string.settings_macropad_new_layout,
-                    descRes = R.string.macropad_editor_new_layout_desc,
-                    icon = Icons.AutoMirrored.Rounded.ViewQuilt,
-                    onClick = onNewLayout,
-                ),
-                QuickActionItem(
-                    titleRes = R.string.settings_macropad_new_profile,
-                    descRes = R.string.macropad_editor_new_profile_desc,
-                    icon = Icons.Rounded.Folder,
-                    onClick = onNewProfile,
-                ),
-                QuickActionItem(
-                    titleRes = R.string.quick_action_edit_buttons,
-                    descRes = R.string.quick_action_edit_buttons_desc,
-                    icon = Icons.Rounded.OpenWith,
-                    onClick = onArrangeButtons,
-                ),
-                QuickActionItem(
-                    titleRes = R.string.mirror_editor_arrange_cutouts_title,
-                    descRes = R.string.mirror_editor_arrange_cutouts_desc,
-                    icon = Icons.Rounded.Crop,
-                    onClick = onEditMirrorLayout,
-                ),
-            )
+        remember(onNewButton, onNewMacro, onNewLayout, onNewProfile, onArrangeButtons, onEditMirrorLayout, isPrivdRunning) {
+            buildList {
+                add(
+                    QuickActionItem(
+                        titleRes = R.string.macropad_editor_add_button,
+                        descRes = R.string.macropad_editor_create_button_desc,
+                        icon = Icons.Rounded.SmartButton,
+                        onClick = onNewButton,
+                    ),
+                )
+                if (isPrivdRunning) {
+                    add(
+                        QuickActionItem(
+                            titleRes = R.string.macropad_editor_open_timeline_title,
+                            descRes = R.string.macropad_editor_open_timeline_desc,
+                            icon = Icons.AutoMirrored.Rounded.PlaylistPlay,
+                            onClick = onNewMacro,
+                        ),
+                    )
+                }
+                add(
+                    QuickActionItem(
+                        titleRes = R.string.settings_macropad_new_layout,
+                        descRes = R.string.macropad_editor_new_layout_desc,
+                        icon = Icons.AutoMirrored.Rounded.ViewQuilt,
+                        onClick = onNewLayout,
+                    ),
+                )
+                add(
+                    QuickActionItem(
+                        titleRes = R.string.settings_macropad_new_profile,
+                        descRes = R.string.macropad_editor_new_profile_desc,
+                        icon = Icons.Rounded.Folder,
+                        onClick = onNewProfile,
+                    ),
+                )
+                add(
+                    QuickActionItem(
+                        titleRes = R.string.quick_action_edit_buttons,
+                        descRes = R.string.quick_action_edit_buttons_desc,
+                        icon = Icons.Rounded.OpenWith,
+                        onClick = onArrangeButtons,
+                    ),
+                )
+                add(
+                    QuickActionItem(
+                        titleRes = R.string.mirror_editor_arrange_cutouts_title,
+                        descRes = R.string.mirror_editor_arrange_cutouts_desc,
+                        icon = Icons.Rounded.Crop,
+                        onClick = onEditMirrorLayout,
+                    ),
+                )
+            }
         }
 
     GamepadTwoColumnGrid(
