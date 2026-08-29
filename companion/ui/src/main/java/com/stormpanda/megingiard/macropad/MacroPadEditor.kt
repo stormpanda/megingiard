@@ -1920,12 +1920,20 @@ fun MacroPadEditor(
                                                     applyNewMacroToStack(newMacro)
                                                 },
                                                 onRecordTouchTap = {
+                                                    if (privdState != PrivdState.RUNNING) {
+                                                        DialogToastManager.show(context.getString(R.string.privd_error_daemon_unreachable))
+                                                        return@ChooseMacroModeSubPageContent
+                                                    }
                                                     val newMacro = createNewMacro()
                                                     applyNewMacroToStack(newMacro)
                                                     AppStateManager.suspendCurrentAndDismiss()
                                                     TouchRecordingManager.requestRecording(TouchRecordingMode.TAP)
                                                 },
                                                 onRecordTouchGesture = {
+                                                    if (privdState != PrivdState.RUNNING) {
+                                                        DialogToastManager.show(context.getString(R.string.privd_error_daemon_unreachable))
+                                                        return@ChooseMacroModeSubPageContent
+                                                    }
                                                     val newMacro = createNewMacro()
                                                     applyNewMacroToStack(newMacro)
                                                     AppStateManager.suspendCurrentAndDismiss()

@@ -3,17 +3,18 @@ package com.stormpanda.megingiard.mirror
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.input.TouchAction
 import com.stormpanda.megingiard.input.TouchInjector
+import com.stormpanda.megingiard.privd.EvdevEvent
+import com.stormpanda.megingiard.privd.PrivdClient
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExecutorCoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileInputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.Collections
-import java.util.concurrent.Executors
 
 private const val TAG = "TouchScreenObserver"
 private const val EVENT_NODE = "/dev/input/event6"
@@ -56,6 +57,92 @@ private class SlotTracker(
 }
 
 /**
+ * Protocol parser for Linux Multi-Touch Protocol Type B evdev streams.
+ */
+internal class TouchEventParser(
+    private val onDown: (slot: Int, normX: Float, normY: Float) -> Unit,
+    private val onMove: (slot: Int, normX: Float, normY: Float) -> Unit,
+    private val onUp: (slot: Int, normX: Float, normY: Float) -> Unit,
+) {
+    private val slots = Array(MAX_TOUCH_SLOTS) { SlotTracker(it) }
+    private var currentSlot = 0
+
+    fun processEvent(
+        type: Int,
+        code: Int,
+        value: Int,
+    ) {
+        when (type) {
+            EV_ABS -> {
+                when (code) {
+                    ABS_MT_SLOT -> {
+                        currentSlot = value.coerceIn(0, MAX_TOUCH_SLOTS - 1)
+                    }
+
+                    ABS_MT_TRACKING_ID -> {
+                        val slot = slots[currentSlot]
+                        if (value == -1) {
+                            if (slot.isActive) {
+                                slot.isActive = false
+                                slot.isPendingUp = true
+                                slot.trackingId = -1
+                            }
+                        } else {
+                            if (!slot.isActive) {
+                                slot.isActive = true
+                                slot.isNewDown = true
+                                slot.trackingId = value
+                            }
+                        }
+                    }
+
+                    ABS_MT_POSITION_X -> {
+                        val slot = slots[currentSlot]
+                        slot.rawX = value
+                        slot.hasMovedInPacket = true
+                    }
+
+                    ABS_MT_POSITION_Y -> {
+                        val slot = slots[currentSlot]
+                        slot.rawY = value
+                        slot.hasMovedInPacket = true
+                    }
+                }
+            }
+
+            EV_SYN -> {
+                if (code == SYN_REPORT) {
+                    for (slot in slots) {
+                        val rx = slot.rawX
+                        val ry = slot.rawY
+                        if (rx != null && ry != null) {
+                            val nx = (ry.toFloat() / TouchInjector.THOR_SENSOR_H).coerceIn(0f, 1f)
+                            val ny = (1.0f - (rx.toFloat() / TouchInjector.THOR_SENSOR_W)).coerceIn(0f, 1f)
+
+                            if (slot.isNewDown) {
+                                slot.isNewDown = false
+                                slot.hasMovedInPacket = false
+                                onDown(slot.slotId, nx, ny)
+                            } else if (slot.isActive && slot.hasMovedInPacket) {
+                                slot.hasMovedInPacket = false
+                                onMove(slot.slotId, nx, ny)
+                            }
+
+                            if (slot.isPendingUp) {
+                                slot.isPendingUp = false
+                                slot.hasMovedInPacket = false
+                                onUp(slot.slotId, nx, ny)
+                                slot.reset()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
  * Passive evdev reader for the primary touchscreen device node (`/dev/input/event6`).
  *
  * Monitors physical touches on Display 0 in real time without grabbing the device (`EVIOCGRAB`),
@@ -63,15 +150,15 @@ private class SlotTracker(
  *
  * Uses token-based client reference counting so multiple consumers (e.g. Follow Mode, Touch Macro Recording)
  * can safely request touch observation without prematurely closing active sessions.
+ *
+ * Automatically routes through [PrivdClient.touchEvdevEvents] (`SUB TOUCH`) when Privileged Mode is active.
  */
 object TouchScreenObserver {
     private val activeClients = Collections.synchronizedSet(mutableSetOf<String>())
     private var job: Job? = null
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    // Created per start(), closed per stop() so the backing thread does not outlive the session.
-    private var dispatcher: ExecutorCoroutineDispatcher? = null
-
-    // Retained so stop() can close the stream and unblock the in-progress blocking read() immediately.
+    // Retained so stop() can close the file stream and unblock in-progress blocking read() in fallback mode.
     @Volatile private var activeStream: FileInputStream? = null
 
     /**
@@ -134,14 +221,44 @@ object TouchScreenObserver {
 
     private fun startInternal() {
         if (job != null) return
-        AppLog.i(TAG, "startInternal()")
-        val exec = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
-        dispatcher = exec
+        AppLog.i(TAG, "startInternal() isPrivdConnected=${PrivdClient.isConnected}")
+
+        val parser =
+            TouchEventParser(
+                onDown = { slot, nx, ny ->
+                    onTouchEvent?.invoke(slot, TouchAction.DOWN, nx, ny)
+                    onTouchNormalized?.invoke(nx, ny)
+                },
+                onMove = { slot, nx, ny ->
+                    onTouchEvent?.invoke(slot, TouchAction.MOVE, nx, ny)
+                    onTouchNormalized?.invoke(nx, ny)
+                },
+                onUp = { slot, nx, ny ->
+                    onTouchEvent?.invoke(slot, TouchAction.UP, nx, ny)
+                },
+            )
+
+        if (PrivdClient.isConnected) {
+            AppLog.i(TAG, "Starting touch observation via PrivdClient SUB TOUCH")
+            PrivdClient.subscribeTouch()
+            job =
+                scope.launch {
+                    PrivdClient.touchEvdevEvents.collect { ev ->
+                        parser.processEvent(ev.type, ev.code, ev.value)
+                    }
+                }
+            return
+        }
+
+        // Direct file fallback (e.g. root environments or unit testing)
         job =
-            CoroutineScope(exec).launch {
+            scope.launch {
                 val file = File(EVENT_NODE)
-                if (!file.exists()) {
-                    AppLog.e(TAG, "Touch event node $EVENT_NODE does not exist")
+                if (!file.exists() || !file.canRead()) {
+                    AppLog.w(
+                        TAG,
+                        "Touch event node $EVENT_NODE is not accessible directly (exists=${file.exists()}, canRead=${file.canRead()})",
+                    )
                     return@launch
                 }
                 try {
@@ -150,9 +267,6 @@ object TouchScreenObserver {
                     fis.use {
                         val buffer = ByteArray(INPUT_EVENT_SIZE)
                         val byteBuffer = ByteBuffer.wrap(buffer).order(ByteOrder.nativeOrder())
-
-                        val slots = Array(MAX_TOUCH_SLOTS) { SlotTracker(it) }
-                        var currentSlot = 0
 
                         while (coroutineContext[Job]?.isActive == true) {
                             var bytesRead = 0
@@ -173,72 +287,7 @@ object TouchScreenObserver {
                             val code = byteBuffer.short.toInt() and 0xFFFF
                             val value = byteBuffer.int
 
-                            when (type) {
-                                EV_ABS -> {
-                                    when (code) {
-                                        ABS_MT_SLOT -> {
-                                            currentSlot = value.coerceIn(0, MAX_TOUCH_SLOTS - 1)
-                                        }
-
-                                        ABS_MT_TRACKING_ID -> {
-                                            val slot = slots[currentSlot]
-                                            if (value == -1) {
-                                                if (slot.isActive) {
-                                                    slot.isActive = false
-                                                    slot.isPendingUp = true
-                                                    slot.trackingId = -1
-                                                }
-                                            } else {
-                                                if (!slot.isActive) {
-                                                    slot.isActive = true
-                                                    slot.isNewDown = true
-                                                    slot.trackingId = value
-                                                }
-                                            }
-                                        }
-
-                                        ABS_MT_POSITION_X -> {
-                                            val slot = slots[currentSlot]
-                                            slot.rawX = value
-                                            slot.hasMovedInPacket = true
-                                        }
-
-                                        ABS_MT_POSITION_Y -> {
-                                            val slot = slots[currentSlot]
-                                            slot.rawY = value
-                                            slot.hasMovedInPacket = true
-                                        }
-                                    }
-                                }
-
-                                EV_SYN -> {
-                                    if (code == SYN_REPORT) {
-                                        for (slot in slots) {
-                                            val rx = slot.rawX
-                                            val ry = slot.rawY
-                                            if (rx != null && ry != null) {
-                                                val nx = (ry.toFloat() / TouchInjector.THOR_SENSOR_H).coerceIn(0f, 1f)
-                                                val ny = (1.0f - (rx.toFloat() / TouchInjector.THOR_SENSOR_W)).coerceIn(0f, 1f)
-
-                                                if (slot.isNewDown) {
-                                                    slot.isNewDown = false
-                                                    onTouchEvent?.invoke(slot.slotId, TouchAction.DOWN, nx, ny)
-                                                    onTouchNormalized?.invoke(nx, ny)
-                                                } else if (slot.isActive && slot.hasMovedInPacket) {
-                                                    slot.hasMovedInPacket = false
-                                                    onTouchEvent?.invoke(slot.slotId, TouchAction.MOVE, nx, ny)
-                                                    onTouchNormalized?.invoke(nx, ny)
-                                                }
-
-                                                if (slot.isPendingUp) {
-                                                    slot.isPendingUp = false
-                                                    onTouchEvent?.invoke(slot.slotId, TouchAction.UP, nx, ny)
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                            parser.processEvent(type, code, value)
                         }
                     }
                 } catch (e: Exception) {
@@ -251,11 +300,12 @@ object TouchScreenObserver {
 
     private fun stopInternal() {
         AppLog.i(TAG, "stopInternal()")
+        if (PrivdClient.isConnected) {
+            PrivdClient.unsubscribeTouch()
+        }
         activeStream?.close() // unblocks the blocking read() immediately
         activeStream = null
         job?.cancel()
         job = null
-        dispatcher?.close() // shuts down the backing executor thread
-        dispatcher = null
     }
 }

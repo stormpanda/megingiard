@@ -147,6 +147,10 @@ internal fun MacroTimelineSubPageContent(
     }
 
     fun requestTouchTapRecording() {
+        if (!physicalRecordingAvailable) {
+            DialogToastManager.show(context.getString(R.string.privd_error_daemon_unreachable))
+            return
+        }
         syncDraftToNavState(currentMacro)
         if (savedMacro != null) {
             MacroPadState.updateMacro(currentMacro)
@@ -156,6 +160,10 @@ internal fun MacroTimelineSubPageContent(
     }
 
     fun requestTouchGestureRecording() {
+        if (!physicalRecordingAvailable) {
+            DialogToastManager.show(context.getString(R.string.privd_error_daemon_unreachable))
+            return
+        }
         syncDraftToNavState(currentMacro)
         if (savedMacro != null) {
             MacroPadState.updateMacro(currentMacro)

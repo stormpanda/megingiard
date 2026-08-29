@@ -89,6 +89,19 @@ object PrivdClient {
         )
     val evdevEvents: SharedFlow<EvdevEvent> = _evdevEvents.asSharedFlow()
 
+    /**
+     * Raw touchscreen evdev events streamed from the daemon while a `SUB TOUCH` subscription is active.
+     * Consumed by [com.stormpanda.megingiard.mirror.TouchScreenObserver].
+     *
+     * Buffer: 128 events (DROP_OLDEST on overflow).
+     */
+    private val _touchEvdevEvents =
+        MutableSharedFlow<EvdevEvent>(
+            extraBufferCapacity = 128,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
+    val touchEvdevEvents: SharedFlow<EvdevEvent> = _touchEvdevEvents.asSharedFlow()
+
     // Per-install HMAC key loaded from Android Keystore-encrypted storage at startup.
     // Null means the Privileged Mode setup wizard has not been run yet (or the app was
     // reinstalled and the Keystore entry was destroyed). connect() fails gracefully while
@@ -348,6 +361,16 @@ object PrivdClient {
             return result
         }
 
+    fun subscribeTouch() {
+        AppLog.d(TAG, "subscribeTouch() -> sending 'SUB TOUCH\\n'")
+        send("SUB TOUCH\n")
+    }
+
+    fun unsubscribeTouch() {
+        AppLog.d(TAG, "unsubscribeTouch() -> sending 'UNSUB TOUCH\\n'")
+        send("UNSUB TOUCH\n")
+    }
+
     // -------------------------------------------------------------------------
     // Internal
     // -------------------------------------------------------------------------
@@ -523,6 +546,19 @@ object PrivdClient {
                         _evdevEvents.tryEmit(EvdevEvent(type, code, value))
                     }
                 }
+                continue
+            }
+            if (line.startsWith("EVT_TOUCH ")) {
+                val parts = line.split(' ')
+                if (parts.size == 4) {
+                    val type = parts[1].toIntOrNull()
+                    val code = parts[2].toIntOrNull()
+                    val value = parts[3].toIntOrNull()
+                    if (type != null && code != null && value != null) {
+                        _touchEvdevEvents.tryEmit(EvdevEvent(type, code, value))
+                    }
+                }
+                continue
             }
         }
         markBroken()

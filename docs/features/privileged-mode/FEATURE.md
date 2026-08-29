@@ -355,6 +355,9 @@ the existing protocol.
 | App → D   | `SUB GAMEPAD\n`                | Start streaming physical gamepad evdev events to the app |
 | App → D   | `UNSUB GAMEPAD\n`              | Stop streaming physical gamepad evdev events             |
 | D → App   | `EVT <type> <code> <value>\n`  | Physical evdev event while subscribed                    |
+| App → D   | `SUB TOUCH\n`                  | Start streaming physical touchscreen evdev events to app |
+| App → D   | `UNSUB TOUCH\n`                | Stop streaming physical touchscreen evdev events        |
+| D → App   | `EVT_TOUCH <type> <code> <val>`| Physical touchscreen evdev event while subscribed        |
 | App → D   | `MIRROR START_DIRECT w h\n`    | Spawn direct-Surface `app_process` mirror child (FR-M9/FR-M11) |
 | D → App   | `MIRROR_DIRECT_READY\n`        | Direct mirror child bound its readiness socket           |
 | D → App   | `MIRROR_DIRECT_ERR <reason>\n` | Direct mirror child failed to start                      |
@@ -370,7 +373,7 @@ the existing protocol.
 
 For the privileged mirror (`MIRROR START_DIRECT`), the `app_process` child registers the Binder service `megingiard.direct.surface` to receive multiple target `Surface` instances and their physical dimensions. This allows the direct mirror server to set up and capture multiple concurrent virtual displays mapping to different cutout regions without process restarts.
 
-`SUB GAMEPAD` opens the physical evdev node read-only and starts a reader thread that forwards filtered `EVT` lines to the app. The fd is **not** grabbed via `EVIOCGRAB` — evdev is multicast, so Android's EventHub continues to dispatch the same events to the foreground game in parallel. Recording is therefore purely passive observation; nothing is intercepted or replayed.
+`SUB GAMEPAD` and `SUB TOUCH` open the physical evdev nodes (`/dev/input/event*` for gamepad, `/dev/input/event6` for touchscreen) read-only/read-write and start dedicated reader threads that forward filtered `EVT` and `EVT_TOUCH` lines to the app. The fds are **not** grabbed via `EVIOCGRAB` — evdev is multicast, so Android's EventHub continues to dispatch the same events to the foreground game in parallel. Recording is therefore purely passive observation; nothing is intercepted or replayed.
 
 On startup the daemon prints exactly one line on **stdout** so the
 spawn command can detect success:
