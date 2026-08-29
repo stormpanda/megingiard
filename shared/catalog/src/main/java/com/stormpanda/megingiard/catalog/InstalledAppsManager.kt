@@ -252,6 +252,8 @@ object InstalledAppsManager {
             RomManager.loadRomFolders(context)
             RomManager.reloadRomApps(context)
 
+            SystemRoleClassifier.refreshLaunchers(context)
+
             loadFavorites(context)
             loadHidden(context)
             loadLastUsed(context)

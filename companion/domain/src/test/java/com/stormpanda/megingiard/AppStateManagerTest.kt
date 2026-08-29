@@ -3,7 +3,9 @@ package com.stormpanda.megingiard
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.emptyPreferences
+import com.stormpanda.megingiard.catalog.SystemRoleClassifier
 import com.stormpanda.megingiard.keyboard.KbLayout
+import com.stormpanda.megingiard.macropad.AutoSwitchCoordinator
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
@@ -50,12 +52,28 @@ class AppStateManagerTest {
                 override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences = emptyPreferences()
             }
         KeyboardSettings.init(dummyDataStore, CoroutineScope(testDispatcher))
+        SystemRoleClassifier.resetForTesting()
+        AutoSwitchCoordinator.resetForTesting()
         AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
+        AppStateManager.setExternalClientState(
+            isActive = false,
+            packageName = null,
+            focusedApp = null,
+        )
+        AppStateManager.setStandaloneForegroundState(null, null)
     }
 
     @After
     fun tearDown() {
+        SystemRoleClassifier.resetForTesting()
+        AutoSwitchCoordinator.resetForTesting()
         AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
+        AppStateManager.setExternalClientState(
+            isActive = false,
+            packageName = null,
+            focusedApp = null,
+        )
+        AppStateManager.setStandaloneForegroundState(null, null)
         Dispatchers.resetMain()
     }
 
@@ -366,6 +384,50 @@ class AppStateManagerTest {
             assertEquals(null, AppStateManager.hoveredAppLabel.value)
             assertEquals(null, AppStateManager.hoveredAppPrimaryColor.value)
             assertEquals(null, AppStateManager.hoveredAppSecondaryColor.value)
+        }
+
+    @Test
+    fun `deactivating external client with null focusedApp preserves running foreground game and keeps showIntegrationHome false`() =
+        runTest {
+            val gameProfile =
+                PadProfile(
+                    id = "p-genshin",
+                    name = "Genshin Impact",
+                    association = ProfileAssociation(packageName = "com.miHoYo.GenshinImpact"),
+                )
+            MacroPadState.addProfile(gameProfile)
+            MacroPadState.setActiveProfileId(gameProfile.id)
+            AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
+
+            // Given Genshin Impact is running in standalone foreground
+            AutoSwitchCoordinator.onPackageChanged("com.miHoYo.GenshinImpact")
+            assertEquals("com.miHoYo.GenshinImpact", AppStateManager.focusedAppPackageName.value)
+            assertFalse(AppStateManager.showIntegrationHome.value)
+
+            // When GameFocus launcher becomes active on top screen
+            AppStateManager.setExternalClientState(
+                isActive = true,
+                packageName = "com.stormpanda.megingiard.gamefocus.debug",
+                focusedApp = null,
+                hoveredPackage = "com.other.game",
+                hoveredLabel = "Other Game",
+            )
+            assertTrue(AppStateManager.isExternalClientActive.value)
+            assertEquals(null, AppStateManager.focusedAppPackageName.value)
+            assertTrue(AppStateManager.showIntegrationHome.value)
+
+            // When user returns to Genshin Impact and launcher deactivates (onStop sends isActive=false, focusedApp=null)
+            AutoSwitchCoordinator.onPackageChanged("com.miHoYo.GenshinImpact")
+            AppStateManager.setExternalClientState(
+                isActive = false,
+                packageName = "com.stormpanda.megingiard.gamefocus.debug",
+                focusedApp = null,
+            )
+
+            // Then focusedAppPackageName is preserved from foreground app and showIntegrationHome remains false
+            assertFalse(AppStateManager.isExternalClientActive.value)
+            assertEquals("com.miHoYo.GenshinImpact", AppStateManager.focusedAppPackageName.value)
+            assertFalse(AppStateManager.showIntegrationHome.value)
         }
 
     @Test

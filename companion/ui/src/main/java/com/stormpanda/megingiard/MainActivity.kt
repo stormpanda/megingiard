@@ -67,6 +67,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.stormpanda.megingiard.catalog.DisplayDetector
+import com.stormpanda.megingiard.catalog.SystemRoleClassifier
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.MGRD_MIME_TYPE
 import com.stormpanda.megingiard.log.LogReportManager
@@ -237,6 +238,9 @@ class MainActivity : ComponentActivity() {
         // else runs (including SignatureGuard below). SettingsManager.init() reads
         // just the log level synchronously from DataStore then continues async.
         SettingsManager.init(this)
+
+        // Initialize canonical home launcher and system role classifier
+        SystemRoleClassifier.init(this)
 
         // Trigger session background update check on app launch
         UpdateManager.checkForUpdates(

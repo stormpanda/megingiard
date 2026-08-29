@@ -2,13 +2,16 @@ package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CompanionViewMode
+import com.stormpanda.megingiard.catalog.SystemRoleClassifier
 import com.stormpanda.megingiard.session.ActiveGameSession
 import com.stormpanda.megingiard.session.EmulatorDetectionFunnel
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -33,6 +36,7 @@ class AutoSwitchCoordinatorTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         AutoSwitchCoordinator.resetForTesting()
+        SystemRoleClassifier.setLaunchersForTesting(setOf("com.android.launcher3"))
         AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
 
         // Setup mock profiles with app mappings
@@ -343,7 +347,7 @@ class AutoSwitchCoordinatorTest {
 
     @Test
     fun `onPackageChanged preserves active ROM path when window focus ticks occur for same emulator`() =
-        kotlinx.coroutines.runBlocking {
+        runTest {
             val p3Id = UUID.randomUUID().toString()
             val l3Id = UUID.randomUUID().toString()
             val profile3 =
@@ -435,21 +439,55 @@ class AutoSwitchCoordinatorTest {
                 )
             EmulatorDetectionFunnel.setActiveSessionForTesting(session)
             AutoSwitchCoordinator.onPackageChanged("com.retroarch")
-            kotlinx.coroutines.delay(150)
+            delay(150)
             assertEquals(profile3.id, MacroPadState.activeProfileId.value)
 
             // When Task Switcher (com.android.launcher3) is opened
+            SystemRoleClassifier.setLaunchersForTesting(setOf("com.android.launcher3"))
             AutoSwitchCoordinator.onPackageChanged("com.android.launcher3")
             assertEquals("com.android.launcher3", AutoSwitchCoordinator.foregroundApp.value)
             assertEquals("com.retroarch", AppStateManager.focusedAppPackageName.value)
 
             // When user returns to RetroArch from Task Switcher
             AutoSwitchCoordinator.onPackageChanged("com.retroarch")
-            kotlinx.coroutines.delay(150)
+            delay(150)
 
             // Then ROM session and active profile profile3 are restored
             assertEquals("com.retroarch", AppStateManager.focusedAppPackageName.value)
             assertEquals("/roms/snes/Super Mario World.sfc", AppStateManager.focusedRomPath.value)
             assertEquals(profile3.id, MacroPadState.activeProfileId.value)
+        }
+
+    @Test
+    fun `pressing back from launcher to game preserves macropad and does not revert to hub`() =
+        runTest {
+            // Given profile2 is associated with com.citra.emu
+            MacroPadState.setActiveProfileId(profile2.id)
+            AutoSwitchCoordinator.onPackageChanged("com.citra.emu")
+            assertEquals("com.citra.emu", AppStateManager.focusedAppPackageName.value)
+            assertFalse(AppStateManager.showIntegrationHome.value)
+
+            // When user presses Home and launcher opens
+            AutoSwitchCoordinator.onPackageChanged("com.stormpanda.megingiard.gamefocus.debug")
+            AppStateManager.setExternalClientState(
+                isActive = true,
+                packageName = "com.stormpanda.megingiard.gamefocus.debug",
+                focusedApp = null,
+                hoveredPackage = "com.test.game",
+            )
+            assertTrue(AppStateManager.showIntegrationHome.value)
+
+            // When user presses Back: OS foreground switches to game, then launcher sends onStop (isActive=false, focusedPackage=null)
+            AutoSwitchCoordinator.onPackageChanged("com.citra.emu")
+            AppStateManager.setExternalClientState(
+                isActive = false,
+                packageName = "com.stormpanda.megingiard.gamefocus.debug",
+                focusedApp = null,
+            )
+
+            // Then game profile remains active and hub is NOT shown
+            assertEquals(profile2.id, MacroPadState.activeProfileId.value)
+            assertEquals("com.citra.emu", AppStateManager.focusedAppPackageName.value)
+            assertFalse(AppStateManager.showIntegrationHome.value)
         }
 }

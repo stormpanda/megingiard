@@ -3,6 +3,7 @@ package com.stormpanda.megingiard.macropad
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CompanionViewMode
+import com.stormpanda.megingiard.catalog.SystemRoleClassifier
 import com.stormpanda.megingiard.session.EmulatorDetectionFunnel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -32,14 +33,6 @@ private val IGNORED_PACKAGE_PREFIXES =
 private fun isIgnoredPackage(packageName: String): Boolean {
     if (packageName in IGNORED_PACKAGES) return true
     return IGNORED_PACKAGE_PREFIXES.any { packageName.startsWith(it) }
-}
-
-private fun isLauncherOrTaskSwitcher(packageName: String): Boolean {
-    val pkg = packageName.lowercase().trim()
-    return pkg.startsWith("com.stormpanda.megingiard.gamefocus") ||
-        pkg.contains("launcher") ||
-        pkg.contains("home") ||
-        pkg == "com.android.systemui"
 }
 
 /**
@@ -145,7 +138,7 @@ object AutoSwitchCoordinator {
         _foregroundApp.value = normalized
 
         val isRegisteredEmulator = EmulatorDetectionFunnel.isRegisteredEmulator(normalized)
-        val isLauncherOrSwitcher = isLauncherOrTaskSwitcher(normalized)
+        val isLauncherOrSwitcher = SystemRoleClassifier.isLauncherOrSystemUi(normalized)
 
         // 1. Process emulator package changes for ROM detection
         if (isRegisteredEmulator) {
@@ -264,5 +257,6 @@ object AutoSwitchCoordinator {
     internal fun resetForTesting() {
         _foregroundApp.value = null
         EmulatorDetectionFunnel.clearSession()
+        SystemRoleClassifier.resetForTesting()
     }
 }

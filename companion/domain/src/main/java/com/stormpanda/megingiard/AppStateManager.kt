@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard
 
+import com.stormpanda.megingiard.catalog.SystemRoleClassifier
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.macropad.AutoSwitchCoordinator
@@ -11,6 +12,7 @@ import com.stormpanda.megingiard.navigation.toPrimaryModalConfig
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
+import com.stormpanda.megingiard.session.EmulatorDetectionFunnel
 import com.stormpanda.megingiard.settings.KeyboardSettings
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.ui.PrimaryModalConfig
@@ -44,6 +46,7 @@ fun CompanionViewMode.shouldShowIntegrationHome(
     focusedAppPackageName: String?,
     focusedRomPath: String?,
     activeProfile: PadProfile?,
+    foregroundApp: String? = AutoSwitchCoordinator.foregroundApp.value,
 ): Boolean =
     when (this) {
         CompanionViewMode.MACROPAD -> {
@@ -55,15 +58,7 @@ fun CompanionViewMode.shouldShowIntegrationHome(
         }
 
         CompanionViewMode.AUTO -> {
-            val foreground = AutoSwitchCoordinator.foregroundApp.value
-            val isForegroundLauncher =
-                foreground != null &&
-                    (
-                        foreground.startsWith(MegingiardIpcContract.GAMEFOCUS_PACKAGE) ||
-                            foreground.contains("launcher") ||
-                            foreground.contains("home") ||
-                            foreground == "com.android.systemui"
-                    )
+            val isForegroundLauncher = SystemRoleClassifier.isLauncherOrSystemUi(foregroundApp)
 
             if (focusedAppPackageName == null || isForegroundLauncher) {
                 true
@@ -227,17 +222,47 @@ object AppStateManager {
             )
         }
         _isExternalClientActive.value = isActive
-        _externalClientPackage.value = packageName
-        _focusedAppPackageName.value = focusedApp
-        _focusedRomPath.value = focusedRomPath
-        _focusedRomIdentifier.value = focusedRomIdentifier
-        _hoveredAppPackageName.value = hoveredPackage
-        _hoveredAppLabel.value = hoveredLabel
-        _hoveredRomPath.value = hoveredRomPath
-        _hoveredRomIdentifier.value = hoveredRomIdentifier
-        _hoveredSystemId.value = hoveredSystemId
-        _hoveredAppPrimaryColor.value = hoveredPrimaryColor
-        _hoveredAppSecondaryColor.value = hoveredSecondaryColor
+        _externalClientPackage.value = if (isActive) packageName else null
+
+        if (isActive || focusedApp != null) {
+            _focusedAppPackageName.value = focusedApp
+            _focusedRomPath.value = focusedRomPath
+            _focusedRomIdentifier.value = focusedRomIdentifier
+        } else {
+            val foreground = AutoSwitchCoordinator.foregroundApp.value
+            val session = EmulatorDetectionFunnel.activeSession.value ?: EmulatorDetectionFunnel.lastDetectedSession.value
+            if (session != null && session.packageName == foreground) {
+                _focusedAppPackageName.value = session.packageName
+                _focusedRomPath.value = session.romPath ?: session.romIdentifier
+                _focusedRomIdentifier.value = session.romIdentifier ?: session.romPath
+            } else if (foreground != null && !SystemRoleClassifier.isLauncherOrSystemUi(foreground)) {
+                _focusedAppPackageName.value = foreground
+                _focusedRomPath.value = null
+                _focusedRomIdentifier.value = null
+            } else {
+                _focusedAppPackageName.value = null
+                _focusedRomPath.value = null
+                _focusedRomIdentifier.value = null
+            }
+        }
+
+        if (isActive) {
+            _hoveredAppPackageName.value = hoveredPackage
+            _hoveredAppLabel.value = hoveredLabel
+            _hoveredRomPath.value = hoveredRomPath
+            _hoveredRomIdentifier.value = hoveredRomIdentifier
+            _hoveredSystemId.value = hoveredSystemId
+            _hoveredAppPrimaryColor.value = hoveredPrimaryColor
+            _hoveredAppSecondaryColor.value = hoveredSecondaryColor
+        } else {
+            _hoveredAppPackageName.value = null
+            _hoveredAppLabel.value = null
+            _hoveredRomPath.value = null
+            _hoveredRomIdentifier.value = null
+            _hoveredSystemId.value = null
+            _hoveredAppPrimaryColor.value = null
+            _hoveredAppSecondaryColor.value = null
+        }
     }
 
     fun setStandaloneForegroundState(
@@ -386,8 +411,9 @@ object AppStateManager {
             _focusedRomPath,
             MacroPadState.activeProfile,
             _companionViewMode,
-        ) { focusedPackage, focusedRom, profile, viewMode ->
-            viewMode.shouldShowIntegrationHome(focusedPackage, focusedRom, profile)
+            AutoSwitchCoordinator.foregroundApp,
+        ) { focusedPackage, focusedRom, profile, viewMode, foreground ->
+            viewMode.shouldShowIntegrationHome(focusedPackage, focusedRom, profile, foreground)
         }.stateIn(scope, SharingStarted.Eagerly, false)
 
     fun setCompanionViewMode(
