@@ -175,6 +175,10 @@ private const val METO_MOVE_ACCEL_FACTOR = 0.88f
 private const val METO_INITIAL_FOCUS_DELAY_MS = 100L
 private val METO_SCROLL_EXTRA_PADDING = 0.dp
 
+private const val METO_NORMAL_STEP_PX = 10
+private const val METO_FINE_STEP_PX = 1
+private const val METO_ADJUST_TOAST_DURATION_MS = 5000L
+
 private const val METO_FALLBACK_SRC_WIDTH = 1920f
 private const val METO_FALLBACK_SRC_HEIGHT = 1080f
 private const val METO_FALLBACK_SEC_WIDTH = 1240f
@@ -333,10 +337,10 @@ fun MirrorEditorTopOverlay(
 
         if (cur.aspectRatioMode == AspectRatioMode.BOTTOM) {
             val stepDelta =
-                if (dx > 0 || dy < 0) {
-                    1
-                } else if (dx < 0 || dy > 0) {
-                    -1
+                if (dx != 0) {
+                    dx
+                } else if (dy != 0) {
+                    -dy
                 } else {
                     0
                 }
@@ -450,10 +454,10 @@ fun MirrorEditorTopOverlay(
 
         if (cur.aspectRatioMode == AspectRatioMode.TOP) {
             val stepDelta =
-                if (dx > 0 || dy < 0) {
-                    1
-                } else if (dx < 0 || dy > 0) {
-                    -1
+                if (dx != 0) {
+                    dx
+                } else if (dy != 0) {
+                    -dy
                 } else {
                     0
                 }
@@ -1402,7 +1406,9 @@ private fun AdjustCoordinatesCard(
     val currentOnResize by rememberUpdatedState(onResize)
     var isAdjusting by remember { mutableStateOf(false) }
     var isR2Held by remember { mutableStateOf(false) }
+    var isL2Held by remember { mutableStateOf(false) }
     val isR2HeldState = rememberUpdatedState(isR2Held)
+    val isL2HeldState = rememberUpdatedState(isL2Held)
     val enabled = selectedCutout != null
 
     var activeDirectionKey by remember { mutableIntStateOf(0) }
@@ -1413,12 +1419,16 @@ private fun AdjustCoordinatesCard(
         activeRepeatJob = null
         activeDirectionKey = 0
         isR2Held = false
+        isL2Held = false
     }
 
     fun dispatchAction(
-        dx: Int,
-        dy: Int,
+        dirX: Int,
+        dirY: Int,
     ) {
+        val stepSize = if (isL2HeldState.value) METO_FINE_STEP_PX else METO_NORMAL_STEP_PX
+        val dx = dirX * stepSize
+        val dy = dirY * stepSize
         if (isR2HeldState.value) {
             currentOnResize(dx, dy)
         } else {
@@ -1428,21 +1438,21 @@ private fun AdjustCoordinatesCard(
 
     fun startAdjusting(
         keyCode: Int,
-        dx: Int,
-        dy: Int,
+        dirX: Int,
+        dirY: Int,
     ) {
         if (activeDirectionKey == keyCode && activeRepeatJob?.isActive == true) {
             return
         }
         activeRepeatJob?.cancel()
         activeDirectionKey = keyCode
-        dispatchAction(dx, dy)
+        dispatchAction(dirX, dirY)
         activeRepeatJob =
             coroutineScope.launch {
                 delay(METO_MOVE_INITIAL_DELAY_MS)
                 var delayMs = METO_MOVE_START_DELAY_MS
                 while (isActive && activeDirectionKey == keyCode) {
-                    dispatchAction(dx, dy)
+                    dispatchAction(dirX, dirY)
                     delay(delayMs)
                     delayMs = max(METO_MOVE_MIN_DELAY_MS, (delayMs * METO_MOVE_ACCEL_FACTOR).toLong())
                 }
@@ -1478,8 +1488,10 @@ private fun AdjustCoordinatesCard(
             } else {
                 isAdjusting = true
                 isR2Held = false
+                isL2Held = false
                 DialogToastManager.show(
                     message = context.getString(R.string.mirror_editor_adjust_toast),
+                    durationMs = METO_ADJUST_TOAST_DURATION_MS,
                     icon = icon,
                 )
             }
@@ -1519,6 +1531,11 @@ private fun AdjustCoordinatesCard(
             val keyCode = event.nativeKeyEvent.keyCode
             if (event.type == KeyEventType.KeyDown) {
                 when (keyCode) {
+                    KeyEvent.KEYCODE_BUTTON_L2 -> {
+                        isL2Held = true
+                        true
+                    }
+
                     KeyEvent.KEYCODE_BUTTON_R2 -> {
                         isR2Held = true
                         true
@@ -1558,6 +1575,11 @@ private fun AdjustCoordinatesCard(
                 }
             } else if (event.type == KeyEventType.KeyUp) {
                 when (keyCode) {
+                    KeyEvent.KEYCODE_BUTTON_L2 -> {
+                        isL2Held = false
+                        true
+                    }
+
                     KeyEvent.KEYCODE_BUTTON_R2 -> {
                         isR2Held = false
                         true

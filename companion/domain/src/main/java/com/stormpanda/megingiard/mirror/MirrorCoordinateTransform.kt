@@ -865,106 +865,110 @@ fun calculateResizedBounds(
     var nextVToggle = vToggle
 
     // Horizontal resize
-    if (dx > 0) { // Direction RIGHT: increase horizontal size by 1 px
-        if (pxW < maxW) {
-            if (hToggle == 0) {
-                // Try expand right border first
-                if (isValid(pxX, pxY, pxW + 1, pxH)) {
-                    pxW += 1
-                    nextHToggle = 1
-                } else if (isValid(pxX - 1, pxY, pxW + 1, pxH)) {
-                    // Expand left instead if right is blocked
-                    pxX -= 1
-                    pxW += 1
-                    nextHToggle = 0
-                }
-            } else {
-                // Try expand left border first
-                if (isValid(pxX - 1, pxY, pxW + 1, pxH)) {
-                    pxX -= 1
-                    pxW += 1
-                    nextHToggle = 0
-                } else if (isValid(pxX, pxY, pxW + 1, pxH)) {
-                    // Expand right instead if left is blocked
-                    pxW += 1
-                    nextHToggle = 1
+    repeat(abs(dx)) {
+        if (dx > 0) { // Direction RIGHT: increase horizontal size by 1 px
+            if (pxW < maxW) {
+                if (nextHToggle == 0) {
+                    // Try expand right border first
+                    if (isValid(pxX, pxY, pxW + 1, pxH)) {
+                        pxW += 1
+                        nextHToggle = 1
+                    } else if (isValid(pxX - 1, pxY, pxW + 1, pxH)) {
+                        // Expand left instead if right is blocked
+                        pxX -= 1
+                        pxW += 1
+                        nextHToggle = 0
+                    }
+                } else {
+                    // Try expand left border first
+                    if (isValid(pxX - 1, pxY, pxW + 1, pxH)) {
+                        pxX -= 1
+                        pxW += 1
+                        nextHToggle = 0
+                    } else if (isValid(pxX, pxY, pxW + 1, pxH)) {
+                        // Expand right instead if left is blocked
+                        pxW += 1
+                        nextHToggle = 1
+                    }
                 }
             }
-        }
-    } else if (dx < 0) { // Direction LEFT: decrease horizontal size by 1 px
-        if (pxW > minW) {
-            if (hToggle == 1) {
-                // Try shrink right border first
-                if (isValid(pxX, pxY, pxW - 1, pxH)) {
-                    pxW -= 1
-                    nextHToggle = 0
-                } else if (isValid(pxX + 1, pxY, pxW - 1, pxH)) {
-                    pxX += 1
-                    pxW -= 1
-                    nextHToggle = 1
-                }
-            } else {
-                // Try shrink left border first
-                if (isValid(pxX + 1, pxY, pxW - 1, pxH)) {
-                    pxX += 1
-                    pxW -= 1
-                    nextHToggle = 1
-                } else if (isValid(pxX, pxY, pxW - 1, pxH)) {
-                    pxW -= 1
-                    nextHToggle = 0
+        } else if (dx < 0) { // Direction LEFT: decrease horizontal size by 1 px
+            if (pxW > minW) {
+                if (nextHToggle == 1) {
+                    // Try shrink right border first
+                    if (isValid(pxX, pxY, pxW - 1, pxH)) {
+                        pxW -= 1
+                        nextHToggle = 0
+                    } else if (isValid(pxX + 1, pxY, pxW - 1, pxH)) {
+                        pxX += 1
+                        pxW -= 1
+                        nextHToggle = 1
+                    }
+                } else {
+                    // Try shrink left border first
+                    if (isValid(pxX + 1, pxY, pxW - 1, pxH)) {
+                        pxX += 1
+                        pxW -= 1
+                        nextHToggle = 1
+                    } else if (isValid(pxX, pxY, pxW - 1, pxH)) {
+                        pxW -= 1
+                        nextHToggle = 0
+                    }
                 }
             }
         }
     }
 
     // Vertical resize
-    if (dy < 0) { // Direction UP: increase vertical size by 1 px
-        if (pxH < maxH) {
-            if (vToggle == 0) {
-                // Try expand top border first
-                if (isValid(pxX, pxY - 1, pxW, pxH + 1)) {
-                    pxY -= 1
-                    pxH += 1
-                    nextVToggle = 1
-                } else if (isValid(pxX, pxY, pxW, pxH + 1)) {
-                    // Expand bottom instead if top is blocked
-                    pxH += 1
-                    nextVToggle = 0
-                }
-            } else {
-                // Try expand bottom border first
-                if (isValid(pxX, pxY, pxW, pxH + 1)) {
-                    pxH += 1
-                    nextVToggle = 0
-                } else if (isValid(pxX, pxY - 1, pxW, pxH + 1)) {
-                    // Expand top instead if bottom is blocked
-                    pxY -= 1
-                    pxH += 1
-                    nextVToggle = 1
+    repeat(abs(dy)) {
+        if (dy < 0) { // Direction UP: increase vertical size by 1 px
+            if (pxH < maxH) {
+                if (nextVToggle == 0) {
+                    // Try expand top border first
+                    if (isValid(pxX, pxY - 1, pxW, pxH + 1)) {
+                        pxY -= 1
+                        pxH += 1
+                        nextVToggle = 1
+                    } else if (isValid(pxX, pxY, pxW, pxH + 1)) {
+                        // Expand bottom instead if top is blocked
+                        pxH += 1
+                        nextVToggle = 0
+                    }
+                } else {
+                    // Try expand bottom border first
+                    if (isValid(pxX, pxY, pxW, pxH + 1)) {
+                        pxH += 1
+                        nextVToggle = 0
+                    } else if (isValid(pxX, pxY - 1, pxW, pxH + 1)) {
+                        // Expand top instead if bottom is blocked
+                        pxY -= 1
+                        pxH += 1
+                        nextVToggle = 1
+                    }
                 }
             }
-        }
-    } else if (dy > 0) { // Direction DOWN: decrease vertical size by 1 px
-        if (pxH > minH) {
-            if (vToggle == 1) {
-                // Try shrink top border first
-                if (isValid(pxX, pxY + 1, pxW, pxH - 1)) {
-                    pxY += 1
-                    pxH -= 1
-                    nextVToggle = 0
-                } else if (isValid(pxX, pxY, pxW, pxH - 1)) {
-                    pxH -= 1
-                    nextVToggle = 1
-                }
-            } else {
-                // Try shrink bottom border first
-                if (isValid(pxX, pxY, pxW, pxH - 1)) {
-                    pxH -= 1
-                    nextVToggle = 1
-                } else if (isValid(pxX, pxY + 1, pxW, pxH - 1)) {
-                    pxY += 1
-                    pxH -= 1
-                    nextVToggle = 0
+        } else if (dy > 0) { // Direction DOWN: decrease vertical size by 1 px
+            if (pxH > minH) {
+                if (nextVToggle == 1) {
+                    // Try shrink top border first
+                    if (isValid(pxX, pxY + 1, pxW, pxH - 1)) {
+                        pxY += 1
+                        pxH -= 1
+                        nextVToggle = 0
+                    } else if (isValid(pxX, pxY, pxW, pxH - 1)) {
+                        pxH -= 1
+                        nextVToggle = 1
+                    }
+                } else {
+                    // Try shrink bottom border first
+                    if (isValid(pxX, pxY, pxW, pxH - 1)) {
+                        pxH -= 1
+                        nextVToggle = 1
+                    } else if (isValid(pxX, pxY + 1, pxW, pxH - 1)) {
+                        pxY += 1
+                        pxH -= 1
+                        nextVToggle = 0
+                    }
                 }
             }
         }
@@ -1148,30 +1152,41 @@ fun calculateProportionalResizedBounds(
     val stepW = if (targetNormRatio >= 1f) (1f / screenWidth) * targetNormRatio else (1f / screenWidth)
     val stepH = stepW / targetNormRatio
 
-    val targetW = if (stepDelta > 0) normW + stepW else normW - stepW
-    val targetH = targetW / targetNormRatio
-
     val minW = max(minSizeRatio, minSizeRatio * targetNormRatio)
     val minH = minW / targetNormRatio
     val maxW = min(1f, targetNormRatio)
     val maxH = maxW / targetNormRatio
 
-    if (targetW < minW || targetH < minH || targetW > maxW || targetH > maxH) {
-        return ScreenCutoutGeometry(normX, normY, normW, normH)
+    val singleDelta = if (stepDelta > 0) 1 else -1
+    var curW = normW
+    var curX = normX
+    var curY = normY
+
+    repeat(abs(stepDelta)) {
+        val targetW = if (singleDelta > 0) curW + stepW else curW - stepW
+        val targetH = targetW / targetNormRatio
+
+        if (targetW < minW || targetH < minH || targetW > maxW || targetH > maxH) {
+            return ScreenCutoutGeometry(curX, curY, curW, curW / targetNormRatio)
+        }
+
+        val centerX = curX + curW / 2f
+        val centerY = curY + (curW / targetNormRatio) / 2f
+
+        val rawX = centerX - targetW / 2f
+        val rawY = centerY - targetH / 2f
+
+        val clampedX = rawX.coerceIn(0f, 1f - targetW)
+        val clampedY = rawY.coerceIn(0f, 1f - targetH)
+
+        if (others.isNotEmpty() && !isCutoutGeometryValid(clampedX, clampedY, targetW, targetH, others, minSizeRatio)) {
+            return ScreenCutoutGeometry(curX, curY, curW, curW / targetNormRatio)
+        }
+
+        curW = targetW
+        curX = clampedX
+        curY = clampedY
     }
 
-    val centerX = normX + normW / 2f
-    val centerY = normY + normH / 2f
-
-    val rawX = centerX - targetW / 2f
-    val rawY = centerY - targetH / 2f
-
-    val clampedX = rawX.coerceIn(0f, 1f - targetW)
-    val clampedY = rawY.coerceIn(0f, 1f - targetH)
-
-    if (others.isNotEmpty() && !isCutoutGeometryValid(clampedX, clampedY, targetW, targetH, others, minSizeRatio)) {
-        return ScreenCutoutGeometry(normX, normY, normW, normH)
-    }
-
-    return ScreenCutoutGeometry(clampedX, clampedY, targetW, targetH)
+    return ScreenCutoutGeometry(curX, curY, curW, curW / targetNormRatio)
 }

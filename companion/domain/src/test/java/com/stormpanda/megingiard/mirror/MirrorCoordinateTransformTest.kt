@@ -1777,4 +1777,78 @@ class MirrorCoordinateTransformTest {
         assertTrue(shrunk.h < 0.2f)
         assertEquals(normRatio, shrunk.w / shrunk.h, EPS)
     }
+
+    @Test
+    fun `calculateResizedBounds supports multi-pixel step increments`() {
+        val screenW = 1000f
+        val screenH = 1000f
+
+        // Initial cutout: X=0.200 (200px), Y=0.200 (200px), W=0.400 (400px), H=0.400 (400px)
+        val resized10px =
+            calculateResizedBounds(
+                normX = 0.200f,
+                normY = 0.200f,
+                normW = 0.400f,
+                normH = 0.400f,
+                screenWidth = screenW,
+                screenHeight = screenH,
+                dx = 10,
+                dy = 0,
+                hToggle = 0,
+                vToggle = 0,
+            )
+        // Expanded by exactly 10 pixels on width: 400px + 10px = 410px -> 0.410f
+        assertEquals(0.410f, resized10px.width, EPS)
+
+        val shrunk10px =
+            calculateResizedBounds(
+                normX = resized10px.x,
+                normY = resized10px.y,
+                normW = resized10px.width,
+                normH = resized10px.height,
+                screenWidth = screenW,
+                screenHeight = screenH,
+                dx = -10,
+                dy = 0,
+                hToggle = resized10px.hToggle,
+                vToggle = resized10px.vToggle,
+            )
+        // Shrunk back by 10 pixels: 410px - 10px = 400px -> 0.400f
+        assertEquals(0.400f, shrunk10px.width, EPS)
+    }
+
+    @Test
+    fun `calculateProportionalResizedBounds supports multi-step delta increments`() {
+        val screenW = 1000f
+        val screenH = 1000f
+        val normRatio = 1.5f
+
+        val expanded10Steps =
+            calculateProportionalResizedBounds(
+                normX = 0.2f,
+                normY = 0.2f,
+                normW = 0.3f,
+                normH = 0.2f,
+                screenWidth = screenW,
+                screenHeight = screenH,
+                stepDelta = 10,
+                targetNormRatio = normRatio,
+            )
+        assertTrue(expanded10Steps.w > 0.3f)
+        assertTrue(expanded10Steps.h > 0.2f)
+        assertEquals(normRatio, expanded10Steps.w / expanded10Steps.h, EPS)
+
+        val singleStep =
+            calculateProportionalResizedBounds(
+                normX = 0.2f,
+                normY = 0.2f,
+                normW = 0.3f,
+                normH = 0.2f,
+                screenWidth = screenW,
+                screenHeight = screenH,
+                stepDelta = 1,
+                targetNormRatio = normRatio,
+            )
+        assertTrue(expanded10Steps.w > singleStep.w)
+    }
 }

@@ -584,7 +584,7 @@ Open Settings to create a layout.</string>
     <string name="mirror_editor_adjust_bottom_cutout">Unteren Ausschnitt anpassen</string>
     <string name="mirror_editor_move_badge">MOVE</string>
     <string name="mirror_editor_resize_badge">RESIZE</string>
-    <string name="mirror_editor_adjust_toast">Steuerkreuz zum Verschieben. R2 gedrückt halten zum Ändern der Größe.</string>
+    <string name="mirror_editor_adjust_toast">Steuerkreuz zum Verschieben. R2 gedrückt halten zum Ändern der Größe. L2 gedrückt halten für Präzision.</string>
     <string name="mirror_editor_no_cutouts">Keine Ausschnitte</string>
     <string name="mirror_editor_save_changes">Änderungen speichern</string>
     <string name="mirror_editor_saved_toast">Layout-Änderungen gespeichert</string>
