@@ -117,7 +117,7 @@ class ScreenCaptureService : Service() {
                                     capturedSrcWidth,
                                     capturedSrcHeight,
                                     capturedDpi,
-                                    DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
+                                    DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
                                     activeSurface,
                                     null,
                                     null,
@@ -164,7 +164,17 @@ class ScreenCaptureService : Service() {
 
             isPrivilegedMode = false
             val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-            mediaProjection = projectionManager.getMediaProjection(resultCode, data)
+            val mp = projectionManager.getMediaProjection(resultCode, data)
+            mp?.registerCallback(
+                object : MediaProjection.Callback() {
+                    override fun onStop() {
+                        AppLog.i(TAG, "MediaProjection callback onStop: stopping ScreenCaptureService")
+                        stopSelf()
+                    }
+                },
+                null,
+            )
+            mediaProjection = mp
 
             val displayManager = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
             val secondaryDisplay =
