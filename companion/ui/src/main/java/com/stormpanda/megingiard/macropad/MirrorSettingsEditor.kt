@@ -326,6 +326,7 @@ internal fun MirrorAdvancedSettingsSubPageContent(
         value = layout.ambientDim,
         valueRange = 0f..MSE_DIM_MAX,
         step = MSE_DIM_STEP,
+        fineStep = 0.01f,
         icon = Icons.Rounded.Opacity,
         valueLabel = "${(layout.ambientDim * MSE_PERCENT_DIVISOR).roundToInt()}%",
         onValueChange = { newVal ->
@@ -347,6 +348,7 @@ internal fun MirrorAdvancedSettingsSubPageContent(
         value = layout.mirrorEdgeBlendWidth,
         valueRange = MSE_EDGE_BLEND_MIN..MSE_EDGE_BLEND_MAX,
         step = MSE_EDGE_BLEND_STEP,
+        fineStep = 1f,
         icon = Icons.Rounded.Grain,
         valueLabel = edgeBlendLabel,
         onValueChange = { newVal ->

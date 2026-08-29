@@ -44,6 +44,8 @@ class PrimaryOverlayInputBridgeTest {
         axisY: Float = 0f,
         hatX: Float = 0f,
         hatY: Float = 0f,
+        axisBrake: Float = 0f,
+        axisLTrigger: Float = 0f,
         source: Int = InputDevice.SOURCE_JOYSTICK,
     ): MotionEvent {
         val pointerProperties =
@@ -60,6 +62,8 @@ class PrimaryOverlayInputBridgeTest {
                     setAxisValue(MotionEvent.AXIS_Y, axisY)
                     setAxisValue(MotionEvent.AXIS_HAT_X, hatX)
                     setAxisValue(MotionEvent.AXIS_HAT_Y, hatY)
+                    setAxisValue(MotionEvent.AXIS_BRAKE, axisBrake)
+                    setAxisValue(MotionEvent.AXIS_LTRIGGER, axisLTrigger)
                 },
             )
         return MotionEvent.obtain(
@@ -230,5 +234,28 @@ class PrimaryOverlayInputBridgeTest {
             val countAfterRelease = downEvents.size
             testScheduler.advanceTimeBy(500)
             assertEquals("Repeat must stop after releasing to center", countAfterRelease, downEvents.size)
+        }
+
+    @Test
+    fun testProcessGenericMotionEvent_analogL2Trigger() =
+        runTest {
+            val events = mutableListOf<Pair<Int, Int>>()
+            val pressEvent = createJoystickMotionEvent(axisBrake = 0.8f)
+            val handledPress =
+                PrimaryOverlayInputBridge.processGenericMotionEvent(pressEvent) { action, key ->
+                    events.add(action to key)
+                }
+            assertTrue(handledPress)
+            assertEquals(1, events.size)
+            assertEquals(KeyEvent.ACTION_DOWN to KeyEvent.KEYCODE_BUTTON_L2, events[0])
+
+            val releaseEvent = createJoystickMotionEvent(axisBrake = 0.0f)
+            val handledRelease =
+                PrimaryOverlayInputBridge.processGenericMotionEvent(releaseEvent) { action, key ->
+                    events.add(action to key)
+                }
+            assertFalse(handledRelease)
+            assertEquals(2, events.size)
+            assertEquals(KeyEvent.ACTION_UP to KeyEvent.KEYCODE_BUTTON_L2, events[1])
         }
 }

@@ -88,6 +88,16 @@ object DialogToastManager {
             }
     }
 
+    fun showPersistent(
+        message: String,
+        icon: ImageVector? = Icons.Rounded.CheckCircle,
+        isError: Boolean = false,
+    ) {
+        AppLog.d(TAG, "showPersistent: '$message' (isError=$isError)")
+        toastJob?.cancel()
+        _currentToast.value = DialogToast(message, icon, isError)
+    }
+
     fun clear() {
         toastJob?.cancel()
         _currentToast.value = null

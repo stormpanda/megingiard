@@ -87,4 +87,15 @@ class DialogToastManagerTest {
             DialogToastManager.show("Second Toast")
             assertEquals("Second Toast", DialogToastManager.currentToast.value?.message)
         }
+
+    @Test
+    fun testShowPersistentDoesNotAutoDismiss() =
+        runTest {
+            DialogToastManager.showPersistent("Hold L2 for precise adjustments")
+            testScheduler.advanceTimeBy(10000)
+            assertEquals("Hold L2 for precise adjustments", DialogToastManager.currentToast.value?.message)
+
+            DialogToastManager.clear()
+            assertNull(DialogToastManager.currentToast.value)
+        }
 }

@@ -65,6 +65,7 @@ object PrimaryOverlayInputBridge {
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var repeatJob: Job? = null
     private var lastJoystickKeyCode = 0
+    private var lastL2Pressed = false
 
     fun sendBumper(direction: BumperDirection) {
         AppLog.d(TAG, "sendBumper: direction=$direction")
@@ -85,8 +86,8 @@ object PrimaryOverlayInputBridge {
      * with deadzone filtering, stateful press/release transitions, and accelerating repeat.
      *
      * @param event The generic motion event from the gamepad.
-     * @param onDpadKey Callback receiving the action ([KeyEvent.ACTION_DOWN] / [KeyEvent.ACTION_UP]) and translated [KeyEvent.KEYCODE_DPAD_*].
-     * @return true if the event was handled as a navigation movement.
+     * @param onDpadKey Callback receiving the action ([KeyEvent.ACTION_DOWN] / [KeyEvent.ACTION_UP]) and translated key codes.
+     * @return true if the event was handled as a navigation or modifier movement.
      */
     fun processGenericMotionEvent(
         event: MotionEvent,
@@ -97,6 +98,15 @@ object PrimaryOverlayInputBridge {
             (event.source and InputDevice.SOURCE_DPAD) != InputDevice.SOURCE_DPAD
         ) {
             return false
+        }
+
+        val brake = event.getAxisValue(MotionEvent.AXIS_BRAKE)
+        val ltrigger = event.getAxisValue(MotionEvent.AXIS_LTRIGGER)
+        val isL2Pressed = brake > STICK_DEADZONE || ltrigger > STICK_DEADZONE
+
+        if (isL2Pressed != lastL2Pressed) {
+            lastL2Pressed = isL2Pressed
+            onDpadKey(if (isL2Pressed) KeyEvent.ACTION_DOWN else KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BUTTON_L2)
         }
 
         val axisX = event.getAxisValue(MotionEvent.AXIS_X).let { if (abs(it) > STICK_DEADZONE) it else 0f }
@@ -117,7 +127,7 @@ object PrimaryOverlayInputBridge {
             }
 
         if (targetKeyCode == lastJoystickKeyCode) {
-            return targetKeyCode != 0
+            return targetKeyCode != 0 || isL2Pressed
         }
 
         repeatJob?.cancel()
@@ -155,6 +165,7 @@ object PrimaryOverlayInputBridge {
         repeatJob?.cancel()
         repeatJob = null
         lastJoystickKeyCode = 0
+        lastL2Pressed = false
     }
 }
 

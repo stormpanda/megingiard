@@ -49,6 +49,7 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Save
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -2171,8 +2172,9 @@ fun GamepadSectionHeader(
  *
  * In Tier 2 (Value Adjustment Mode):
  * - Readout pill illuminates with glowing accent border
- * - D-Pad Left: decrements value by step
- * - D-Pad Right: increments value by step
+ * - Persistent toast displayed in header when [fineStep] is available, prompting to hold L2 for fine adjustments
+ * - D-Pad Left: decrements value by [step] (or [fineStep] if L2 is held)
+ * - D-Pad Right: increments value by [step] (or [fineStep] if L2 is held)
  * - Button A: confirms value and exits adjustment
  * - Button B / Back: cancels/exits adjustment without dismissing overlay
  * - D-Pad Up / Down: exits adjustment and moves to adjacent card
@@ -2188,38 +2190,78 @@ fun GamepadSliderCard(
     icon: ImageVector? = null,
     valueLabel: String = "%.0f%%".format(value * 100f),
     step: Float = GC_DEFAULT_SLIDER_STEP,
+    fineStep: Float? = null,
     trackBrush: Brush? = null,
     thumbColor: Color? = null,
     enabled: Boolean = true,
 ) {
     val colors = LocalAppColors.current
     var isAdjusting by remember { mutableStateOf(false) }
+    var isL2Held by remember { mutableStateOf(false) }
+
+    val hasFineStep = fineStep != null && fineStep < step
+    val toastMessage = stringResource(R.string.gamepad_slider_fine_adjustment_toast)
+
+    DisposableEffect(isAdjusting, hasFineStep, toastMessage) {
+        if (isAdjusting && hasFineStep) {
+            DialogToastManager.showPersistent(
+                message = toastMessage,
+                icon = Icons.Rounded.Tune,
+            )
+            onDispose {
+                DialogToastManager.clear()
+            }
+        } else {
+            onDispose { }
+        }
+    }
 
     GamepadFocusCard(
         onClick = {
             isAdjusting = !isAdjusting
+            if (!isAdjusting) {
+                isL2Held = false
+            }
         },
         modifier = modifier,
         enabled = enabled,
         isAdjusting = isAdjusting,
         onCustomKeyEvent = { keyEvent ->
-            handleAdjustmentKeyEvent(
-                keyEvent = keyEvent,
-                isAdjusting = isAdjusting,
-                onAdjustLeft = {
-                    val newVal = (value - step).coerceIn(valueRange.start, valueRange.endInclusive)
-                    onValueChange(newVal)
-                },
-                onAdjustRight = {
-                    val newVal = (value + step).coerceIn(valueRange.start, valueRange.endInclusive)
-                    onValueChange(newVal)
-                },
-                onDismissAdjustment = { isAdjusting = false },
-            )
+            val keyCode = keyEvent.nativeKeyEvent.keyCode
+            if (isAdjusting && keyCode == KeyEvent.KEYCODE_BUTTON_L2) {
+                if (keyEvent.type == KeyEventType.KeyDown) {
+                    isL2Held = true
+                    true
+                } else if (keyEvent.type == KeyEventType.KeyUp) {
+                    isL2Held = false
+                    true
+                } else {
+                    false
+                }
+            } else {
+                val effectiveStep = if (isL2Held && fineStep != null) fineStep else step
+                handleAdjustmentKeyEvent(
+                    keyEvent = keyEvent,
+                    isAdjusting = isAdjusting,
+                    onAdjustLeft = {
+                        val newVal = (value - effectiveStep).coerceIn(valueRange.start, valueRange.endInclusive)
+                        onValueChange(newVal)
+                    },
+                    onAdjustRight = {
+                        val newVal = (value + effectiveStep).coerceIn(valueRange.start, valueRange.endInclusive)
+                        onValueChange(newVal)
+                    },
+                    onDismissAdjustment = {
+                        isAdjusting = false
+                        isL2Held = false
+                    },
+                )
+            }
         },
         onFocusChanged = { focused ->
             if (!focused) {
                 isAdjusting = false
+                isL2Held = false
             }
         },
     ) { focused ->

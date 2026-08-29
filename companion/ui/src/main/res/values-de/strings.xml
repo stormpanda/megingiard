@@ -925,6 +925,7 @@ Open Settings to create a layout.</string>
     <string name="gamepad_action_enable">Aktivieren</string>
     <string name="gamepad_action_custom_color">Eigene Farbe</string>
     <string name="gamepad_action_select">Auswählen</string>
+    <string name="gamepad_slider_fine_adjustment_toast">L2 gedrückt halten für präzise Anpassungen</string>
     <string name="macropad_picker_visual_keyboard_title">Tastaturtaste auswählen</string>
     <string name="macropad_picker_keyboard_nav_title">Navigation &amp; Erweitert</string>
     <string name="macropad_picker_visual_gamepad_title">Gamepad-Taste auswählen</string>

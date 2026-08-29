@@ -375,6 +375,7 @@ internal fun ColorWheelSubPageContent(
         onValueChange = { hue = it },
         valueLabel = "${hue.roundToInt()}°",
         step = 5f,
+        fineStep = 1f,
         trackBrush = hueGradient,
         thumbColor = Color(AndroidColor.HSVToColor(floatArrayOf(hue, 1f, 1f))),
         modifier = Modifier.firstDeckItem(),
@@ -388,6 +389,7 @@ internal fun ColorWheelSubPageContent(
         onValueChange = { sat = it },
         valueLabel = "${(sat * 100).roundToInt()}%",
         step = 0.02f,
+        fineStep = 0.01f,
         trackBrush = saturationGradient,
         thumbColor = workingColor,
     )
@@ -400,6 +402,7 @@ internal fun ColorWheelSubPageContent(
         onValueChange = { bri = it },
         valueLabel = "${(bri * 100).roundToInt()}%",
         step = 0.02f,
+        fineStep = 0.01f,
         trackBrush = brightnessGradient,
         thumbColor = workingColor,
     )
@@ -413,6 +416,7 @@ internal fun ColorWheelSubPageContent(
             onValueChange = { alpha = it },
             valueLabel = "${(alpha * 100).roundToInt()}%",
             step = 0.02f,
+            fineStep = 0.01f,
             trackBrush = opacityGradient,
             thumbColor = workingColor,
             icon = Icons.Rounded.Opacity,

@@ -26,6 +26,7 @@ import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.firstDeckItem
 import java.util.Locale
+import kotlin.math.roundToInt
 
 private const val TAG = "TouchpadSettingsOverlay"
 
@@ -117,8 +118,14 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
                 description = stringResource(R.string.help_touchpad_settings_scroll_speed_desc),
                 valueText = "%.1fx".format(Locale.US, touchpadScrollSpeed),
                 icon = Icons.Rounded.Speed,
-                onDecrement = { TouchpadSettings.setTouchpadScrollSpeed((touchpadScrollSpeed - 0.2f).coerceAtLeast(0.5f)) },
-                onIncrement = { TouchpadSettings.setTouchpadScrollSpeed((touchpadScrollSpeed + 0.2f).coerceAtMost(3.0f)) },
+                onDecrement = {
+                    val newVal = ((touchpadScrollSpeed - 0.1f) * 10f).roundToInt() / 10f
+                    TouchpadSettings.setTouchpadScrollSpeed(newVal.coerceAtLeast(0.5f))
+                },
+                onIncrement = {
+                    val newVal = ((touchpadScrollSpeed + 0.1f) * 10f).roundToInt() / 10f
+                    TouchpadSettings.setTouchpadScrollSpeed(newVal.coerceAtMost(3.0f))
+                },
             )
         }
 
@@ -127,8 +134,14 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
             description = stringResource(R.string.help_touchpad_settings_sensitivity_desc),
             valueText = "%.1fx".format(Locale.US, touchpadSensitivity),
             icon = Icons.Rounded.Speed,
-            onDecrement = { TouchpadSettings.setTouchpadSensitivity((touchpadSensitivity - 0.2f).coerceAtLeast(0.2f)) },
-            onIncrement = { TouchpadSettings.setTouchpadSensitivity((touchpadSensitivity + 0.2f).coerceAtMost(3.0f)) },
+            onDecrement = {
+                val newVal = ((touchpadSensitivity - 0.1f) * 10f).roundToInt() / 10f
+                TouchpadSettings.setTouchpadSensitivity(newVal.coerceAtLeast(0.2f))
+            },
+            onIncrement = {
+                val newVal = ((touchpadSensitivity + 0.1f) * 10f).roundToInt() / 10f
+                TouchpadSettings.setTouchpadSensitivity(newVal.coerceAtMost(3.0f))
+            },
         )
 
         GamepadToggleCard(

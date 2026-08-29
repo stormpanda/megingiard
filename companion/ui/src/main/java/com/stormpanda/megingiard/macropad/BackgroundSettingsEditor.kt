@@ -312,6 +312,7 @@ internal fun LayoutBackgroundSubPageContent(
             value = bgImageDim,
             valueRange = 0f..BSE_DIM_MAX,
             step = BSE_DIM_STEP,
+            fineStep = 0.01f,
             icon = Icons.Rounded.BrightnessMedium,
             valueLabel = "${(bgImageDim * BSE_PERCENT_DIVISOR).roundToInt()}%",
             onValueChange = { newVal ->

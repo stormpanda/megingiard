@@ -925,6 +925,7 @@ Open Settings to create a layout.</string>
     <string name="gamepad_action_enable">啟用</string>
     <string name="gamepad_action_custom_color">自訂顏色</string>
     <string name="gamepad_action_select">選取</string>
+    <string name="gamepad_slider_fine_adjustment_toast">按住 L2 進行微調</string>
     <string name="macropad_picker_visual_keyboard_title">選取鍵盤按鍵</string>
     <string name="macropad_picker_keyboard_nav_title">導覽與擴充</string>
     <string name="macropad_picker_visual_gamepad_title">選取手把按鈕</string>
