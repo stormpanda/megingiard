@@ -263,7 +263,6 @@ internal fun MacroTimelineSubPageContent(
             syncDraftToNavState(currentMacro)
             MacroExecutor.runTest(
                 macro = currentMacro,
-                context = context,
                 onComplete = { success ->
                     if (success) {
                         DialogToastManager.show(

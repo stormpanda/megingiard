@@ -1,6 +1,5 @@
 package com.stormpanda.megingiard.macropad
 
-import android.content.Context
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.input.TouchAction
@@ -40,10 +39,6 @@ object MacroExecutor {
     // App-lifetime scope: intentionally never cancelled — lives for the duration of the process.
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    // Stored at app startup so that touch-tap steps can start TouchInjector without
-    // requiring the caller to pass a Context through the action-dispatch chain.
-    private var appContext: Context? = null
-
     // One active Job per macro ID; ConcurrentHashMap for thread-safe access from IO + Main.
     private val runningJobs: ConcurrentHashMap<String, Job> = ConcurrentHashMap()
 
@@ -52,15 +47,6 @@ object MacroExecutor {
     /** IDs of macros currently executing. Collect in UI to drive button animations. */
     val runningMacroIds: StateFlow<Set<String>> = _runningMacroIds.asStateFlow()
 
-    /**
-     * Must be called once from [MainActivity.onCreate] to provide a stable application
-     * context used when starting [TouchInjector] for [MacroStep.TouchTap] replay.
-     */
-    fun init(context: Context) {
-        appContext = context.applicationContext
-        AppLog.d(TAG, "init appContext=${appContext?.packageName}")
-    }
-
     /** Returns true if the macro with [macroId] is currently running. */
     fun isRunning(macroId: String): Boolean = macroId in _runningMacroIds.value
 
@@ -68,24 +54,20 @@ object MacroExecutor {
      * Starts executing [macro]. If the same macro is already running, the previous execution
      * is cancelled before starting a new one (use [stop] directly for toggle-off semantics).
      */
-    fun execute(
-        macro: Macro,
-        context: Context? = null,
-    ) {
+    fun execute(macro: Macro) {
         if (macro.steps.isEmpty() || !PrivdClient.isConnected) {
             if (!PrivdClient.isConnected) {
                 AppLog.w(TAG, "Cannot execute macro '${macro.name}': Privileged Mode is not connected")
             }
             return
         }
-        val ctx = context ?: appContext
         synchronized(runningJobs) {
             // Cancel any existing execution for this macro before launching a new one.
             // Do NOT remove from the map here — the finally block handles removal via a job-identity
             // check, preventing the old job's finally from corrupting the new job's state.
             runningJobs[macro.id]?.cancel()
             AppLog.d(TAG, "execute macro='${macro.name}' id=${macro.id} steps=${macro.steps.size} loop=${macro.loopEnabled}")
-            val job = scope.launch { executeSuspend(macro, ctx) }
+            val job = scope.launch { executeSuspend(macro) }
             runningJobs[macro.id] = job
         }
     }
@@ -94,17 +76,13 @@ object MacroExecutor {
      * Executes [macro] synchronously in a single shot (suspending until playback completes).
      * Used for Test Runs to allow the UI to suspend before execution and resume after completion.
      */
-    suspend fun executeAndWait(
-        macro: Macro,
-        context: Context? = null,
-    ) {
+    suspend fun executeAndWait(macro: Macro) {
         if (macro.steps.isEmpty() || !PrivdClient.isConnected) {
             if (!PrivdClient.isConnected) {
                 AppLog.w(TAG, "Cannot execute macro '${macro.name}': Privileged Mode is not connected")
             }
             return
         }
-        val ctx = context ?: appContext
         val singleShot = macro.copy(loopEnabled = false)
         val currentJob = coroutineContext[Job]
         synchronized(runningJobs) {
@@ -114,7 +92,7 @@ object MacroExecutor {
             }
         }
         AppLog.d(TAG, "executeAndWait macro='${singleShot.name}' id=${singleShot.id} steps=${singleShot.steps.size}")
-        executeSuspend(singleShot, ctx)
+        executeSuspend(singleShot)
     }
 
     /**
@@ -142,7 +120,6 @@ object MacroExecutor {
      */
     fun runTest(
         macro: Macro,
-        context: Context? = null,
         preDelayMs: Long = MAC_TEST_RUN_PRE_DELAY_MS,
         postDelayMs: Long = MAC_TEST_RUN_POST_DELAY_MS,
         onComplete: ((success: Boolean) -> Unit)? = null,
@@ -154,7 +131,6 @@ object MacroExecutor {
             onComplete?.invoke(false)
             return
         }
-        val ctx = context ?: appContext
         AppLog.i(
             TAG,
             "Starting test run for macro '${macro.name}' (${macro.id}) with ${macro.steps.size} steps",
@@ -164,7 +140,7 @@ object MacroExecutor {
             var success = false
             try {
                 delay(preDelayMs)
-                executeAndWait(macro, ctx)
+                executeAndWait(macro)
                 delay(postDelayMs)
                 success = true
             } finally {
@@ -180,10 +156,7 @@ object MacroExecutor {
     // Internal execution logic
     // -------------------------------------------------------------------------
 
-    private suspend fun executeSuspend(
-        macro: Macro,
-        context: Context?,
-    ) {
+    private suspend fun executeSuspend(macro: Macro) {
         if (!PrivdClient.isConnected) return
 
         // Capture this coroutine's Job for race-safe map cleanup in finally.

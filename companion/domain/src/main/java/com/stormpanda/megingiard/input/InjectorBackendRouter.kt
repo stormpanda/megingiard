@@ -69,7 +69,7 @@ class InjectorBackendRouter(
     /**
      * Returns whether the privileged backend is currently selected.
      */
-    val isPrivd: Boolean get() = usePrivd
+    val isPrivd: Boolean get() = usePrivd || PrivdClient.isConnected
 
     /**
      * Queries whether the underlying backend injector is active.

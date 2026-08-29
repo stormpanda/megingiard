@@ -177,7 +177,8 @@ object TouchInjector {
         val px = ((1f - cy) * THOR_SENSOR_W).toInt()
         val py = (cx * THOR_SENSOR_H).toInt()
 
-        if (usePrivd) {
+        val isPrivd = usePrivd || PrivdClient.isConnected
+        if (isPrivd) {
             if (action == TouchAction.UP) {
                 PrivdClient.send("U $slot\n")
             } else {
@@ -190,8 +191,9 @@ object TouchInjector {
     }
 
     fun releaseAllSlots() {
+        val isPrivd = usePrivd || PrivdClient.isConnected
         for (slot in TOUCH_SLOT_MIN..TOUCH_SLOT_MAX) {
-            if (usePrivd) {
+            if (isPrivd) {
                 PrivdClient.send("U $slot\n")
             } else {
                 ShellInputInjector.injectTouch(slot, TouchAction.UP, 0, 0)
