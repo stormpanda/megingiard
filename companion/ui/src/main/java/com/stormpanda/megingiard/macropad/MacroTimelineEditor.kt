@@ -227,13 +227,20 @@ internal fun MacroTimelineSubPageContent(
         }
     }
 
+    if (!physicalRecordingAvailable) {
+        GamepadInfoBox(
+            text = stringResource(R.string.macropad_macro_privd_required_banner),
+            modifier = Modifier.firstDeckItem(),
+        )
+    }
+
     GamepadTextFieldCard(
         title = stringResource(R.string.help_timeline_name_label),
         description = stringResource(R.string.help_timeline_name_desc),
         value = localName,
         onValueChange = { localName = it },
         placeholder = stringResource(R.string.macropad_macro_default_name),
-        modifier = Modifier.firstDeckItem(),
+        modifier = if (physicalRecordingAvailable) Modifier.firstDeckItem() else Modifier,
     )
 
     GamepadActionCard(
@@ -249,6 +256,10 @@ internal fun MacroTimelineSubPageContent(
         itemKey = "macro_test_run",
         enabled = steps.isNotEmpty(),
         onClick = {
+            if (!physicalRecordingAvailable) {
+                DialogToastManager.show(context.getString(R.string.privd_error_daemon_unreachable))
+                return@GamepadActionCard
+            }
             syncDraftToNavState(currentMacro)
             MacroExecutor.runTest(
                 macro = currentMacro,

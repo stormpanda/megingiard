@@ -5,6 +5,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.input.TouchAction
 import com.stormpanda.megingiard.input.TouchInjector
+import com.stormpanda.megingiard.privd.PrivdClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -20,11 +21,6 @@ import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.coroutineContext
 
-// Wait after starting GamepadInjector before the first event dispatch, in milliseconds.
-// start() blocks until the native binary signals "R\n", meaning the uinput fd is opened,
-// but Android's InputFlinger discovers the new virtual device asynchronously. Dispatching
-// events before InputFlinger registers the device causes them to be silently dropped.
-private const val MAC_GAMEPAD_INJECTOR_INIT_MS = 200L
 private const val MAC_TEST_RUN_PRE_DELAY_MS = 350L
 private const val MAC_TEST_RUN_POST_DELAY_MS = 300L
 
@@ -34,6 +30,7 @@ private const val TAG = "MacroExecutor"
  * Executes [Macro] sequences by compiling their overlapping [MacroStep] list into a
  * flat, time-sorted event list and replaying it with coroutine [delay]s.
  *
+ * All macro executions strictly require Privileged Mode ([PrivdClient.isConnected]).
  * A macro button acts as a toggle: a first tap starts execution, a second tap stops it.
  * When [Macro.loopEnabled] is true, the sequence repeats indefinitely until [stop] is called.
  *
@@ -75,7 +72,12 @@ object MacroExecutor {
         macro: Macro,
         context: Context? = null,
     ) {
-        if (macro.steps.isEmpty()) return
+        if (macro.steps.isEmpty() || !PrivdClient.isConnected) {
+            if (!PrivdClient.isConnected) {
+                AppLog.w(TAG, "Cannot execute macro '${macro.name}': Privileged Mode is not connected")
+            }
+            return
+        }
         val ctx = context ?: appContext
         synchronized(runningJobs) {
             // Cancel any existing execution for this macro before launching a new one.
@@ -96,7 +98,12 @@ object MacroExecutor {
         macro: Macro,
         context: Context? = null,
     ) {
-        if (macro.steps.isEmpty()) return
+        if (macro.steps.isEmpty() || !PrivdClient.isConnected) {
+            if (!PrivdClient.isConnected) {
+                AppLog.w(TAG, "Cannot execute macro '${macro.name}': Privileged Mode is not connected")
+            }
+            return
+        }
         val ctx = context ?: appContext
         val singleShot = macro.copy(loopEnabled = false)
         val currentJob = coroutineContext[Job]
@@ -140,7 +147,13 @@ object MacroExecutor {
         postDelayMs: Long = MAC_TEST_RUN_POST_DELAY_MS,
         onComplete: ((success: Boolean) -> Unit)? = null,
     ) {
-        if (macro.steps.isEmpty()) return
+        if (macro.steps.isEmpty() || !PrivdClient.isConnected) {
+            if (!PrivdClient.isConnected) {
+                AppLog.w(TAG, "Cannot run test for macro '${macro.name}': Privileged Mode is not connected")
+            }
+            onComplete?.invoke(false)
+            return
+        }
         val ctx = context ?: appContext
         AppLog.i(
             TAG,
@@ -171,6 +184,8 @@ object MacroExecutor {
         macro: Macro,
         context: Context?,
     ) {
+        if (!PrivdClient.isConnected) return
+
         // Capture this coroutine's Job for race-safe map cleanup in finally.
         val thisJob = coroutineContext[Job]!!
 
@@ -184,31 +199,7 @@ object MacroExecutor {
         var liveTouchPos: Pair<Float, Float>? = null
 
         _runningMacroIds.update { it + macro.id }
-        val hasTouchEvents = macro.steps.any { it is MacroStep.TouchTap || it is MacroStep.TouchPath }
-        val hasGamepadEvents = macro.steps.any { it !is MacroStep.TouchTap && it !is MacroStep.TouchPath }
-        var startedGamepad = false
         try {
-            // Start injectors that aren't already running.
-            // start() blocks until the binary signals readiness ("R\n") before returning,
-            // so no additional delay is needed — isRunning is already true when start() returns.
-            if (hasTouchEvents && context != null) {
-                AppLog.i(TAG, "macro has touch events → starting TouchInjector")
-                TouchInjector.start(context, "MacroExecutor_${macro.id}")
-            }
-            startedGamepad = hasGamepadEvents && context != null && !GamepadInjector.isRunning
-            if (startedGamepad) {
-                AppLog.i(TAG, "macro has gamepad events → starting GamepadInjector")
-                GamepadInjector.start(context!!)
-                // InputFlinger discovers the uinput virtual device asynchronously after the binary
-                // creates it. Wait for device registration before dispatching the first event.
-                delay(MAC_GAMEPAD_INJECTOR_INIT_MS)
-            }
-            if (hasTouchEvents && !TouchInjector.isRunning) {
-                AppLog.w(TAG, "TouchInjector failed to start — touch steps will be skipped")
-            }
-            if (hasGamepadEvents && !GamepadInjector.isRunning) {
-                AppLog.w(TAG, "GamepadInjector failed to start — gamepad steps will be skipped")
-            }
             // Execute once, or loop indefinitely if loopEnabled (cancelled by stop()).
             do {
                 val randomizedMacro = macro.randomized()
@@ -284,13 +275,8 @@ object MacroExecutor {
                 GamepadInjector.hat(axis = 0, value = 0)
                 GamepadInjector.hat(axis = 1, value = 0)
             }
-            if (hasTouchEvents) {
-                AppLog.i(TAG, "macro done → stopping TouchInjector")
-                TouchInjector.stop("MacroExecutor_${macro.id}")
-            }
-            if (startedGamepad) {
-                AppLog.i(TAG, "macro done → stopping GamepadInjector")
-                GamepadInjector.stop()
+            if (liveTouchPos != null) {
+                TouchInjector.releaseAllSlots()
             }
             // Race-safe state cleanup: only remove our map entry and running-ID if this job is
             // still the one registered for this macro. A rapid execute()→execute() restart

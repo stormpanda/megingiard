@@ -111,6 +111,8 @@ Open Settings to create a layout.</string>
     <!-- Keyboard trackpoint mouse button position setting -->
     <string name="macropad_device_disabled_mouse">Mouse has been disabled for this layout</string>
     <string name="macropad_device_disabled_touch">Touch has been disabled for this layout</string>
+    <string name="macropad_device_disabled_macro_privd">Macros require Privileged Mode. Please activate Privileged Mode in Settings.</string>
+    <string name="macropad_macro_privd_required_banner">Privileged Mode is required to create, edit, test, and execute macros. Please activate Privileged Mode in Settings.</string>
     <string name="macropad_editor_delete_profile">Delete Profile</string>
     <string name="macropad_editor_delete_layout">Delete Layout</string>
     <string name="macropad_editor_cancel">Cancel</string>

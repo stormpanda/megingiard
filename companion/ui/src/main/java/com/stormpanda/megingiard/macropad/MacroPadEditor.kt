@@ -667,7 +667,11 @@ fun MacroPadEditor(
                                                 profile = profile,
                                                 accentColor = colors.accent,
                                                 onNewMacro = {
-                                                    MacroPadNavState.setStack(subPageStack + MacroPadSubPage.ChooseMacroMode)
+                                                    if (PrivdManager.state.value != PrivdState.RUNNING) {
+                                                        DialogToastManager.show(context.getString(R.string.privd_error_daemon_unreachable))
+                                                    } else {
+                                                        MacroPadNavState.setStack(subPageStack + MacroPadSubPage.ChooseMacroMode)
+                                                    }
                                                 },
                                                 onEditMacro = { macro ->
                                                     MacroPadNavState.setStack(subPageStack + MacroPadSubPage.MacroTimeline(macro = macro))
@@ -1153,6 +1157,10 @@ fun MacroPadEditor(
                                         ) {
                                             ChooseButtonTypeSubPageContent(
                                                 onSelectType = { group ->
+                                                    if (group == ActionGroup.MACRO && PrivdManager.state.value != PrivdState.RUNNING) {
+                                                        DialogToastManager.show(context.getString(R.string.privd_error_daemon_unreachable))
+                                                        return@ChooseButtonTypeSubPageContent
+                                                    }
                                                     val hasMacros = profile.macros.isNotEmpty()
                                                     val defaultCategory =
                                                         group.actions().firstOrNull { it.isEnabled(true, true, true, hasMacros) }
@@ -1916,6 +1924,10 @@ fun MacroPadEditor(
                                                     PhysicalGamepadRecordingManager.startRecording()
                                                 },
                                                 onBuildManual = {
+                                                    if (privdState != PrivdState.RUNNING) {
+                                                        DialogToastManager.show(context.getString(R.string.privd_error_daemon_unreachable))
+                                                        return@ChooseMacroModeSubPageContent
+                                                    }
                                                     val newMacro = createNewMacro()
                                                     applyNewMacroToStack(newMacro)
                                                 },
@@ -2952,12 +2964,22 @@ private fun MacrosDeck(
     onEditMacro: (Macro) -> Unit,
     onDeleteMacro: (Macro) -> Unit,
 ) {
+    val privdState by PrivdManager.state.collectAsState()
+    val isPrivdRunning = privdState == PrivdState.RUNNING
+
+    if (!isPrivdRunning) {
+        GamepadInfoBox(
+            text = stringResource(R.string.macropad_macro_privd_required_banner),
+            modifier = Modifier.firstDeckItem(),
+        )
+    }
+
     GamepadActionCard(
         title = stringResource(R.string.macropad_editor_open_timeline_title),
         description = stringResource(R.string.macropad_editor_open_timeline_desc),
         icon = Icons.Rounded.Add,
         onClick = onNewMacro,
-        modifier = Modifier.firstDeckItem(),
+        modifier = if (isPrivdRunning) Modifier.firstDeckItem() else Modifier,
     )
 
     val macros = profile.macros

@@ -5,6 +5,7 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.input.TouchAction
 import com.stormpanda.megingiard.input.TouchInjector
+import com.stormpanda.megingiard.privd.PrivdClient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,7 +24,7 @@ private const val LOGICAL_SCREEN_HEIGHT = 1080f
  * so the `:domain` module never references Android resources directly.
  * The UI layer maps this to a localised string.
  */
-enum class DisabledReason { KEYBOARD, GAMEPAD, MOUSE, TOUCH }
+enum class DisabledReason { KEYBOARD, GAMEPAD, MOUSE, TOUCH, MACRO_PRIVD }
 
 /**
  * Hit-test engine and multi-touch dispatch for MacroPad use-mode.
@@ -473,7 +474,7 @@ class MacroPadHitTestEngine(
                 }
 
                 is PadAction.Macro -> {
-                    false
+                    !PrivdClient.isConnected
                 }
 
                 is PadAction.BackgroundPeek -> {
@@ -536,7 +537,7 @@ class MacroPadHitTestEngine(
                 }
 
                 is PadAction.Macro -> {
-                    null
+                    if (!PrivdClient.isConnected) DisabledReason.MACRO_PRIVD else null
                 }
 
                 is PadAction.BackgroundPeek -> {

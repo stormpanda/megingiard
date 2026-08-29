@@ -183,8 +183,10 @@ object PrivdClient {
 
     private val dumpLock = Any()
 
+    @Volatile internal var isConnectedForTest: Boolean? = null
+
     val isConnected: Boolean
-        get() = running && (socket?.isConnected == true) && (socket?.isClosed == false)
+        get() = isConnectedForTest ?: (running && (socket?.isConnected == true) && (socket?.isClosed == false))
 
     /**
      * Attempts to connect to the local TCP port range.

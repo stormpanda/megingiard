@@ -10,15 +10,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import java.io.File
-import java.io.FileInputStream
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import java.util.Collections
 
 private const val TAG = "TouchScreenObserver"
-private const val EVENT_NODE = "/dev/input/event6"
-private const val INPUT_EVENT_SIZE = 24
 private const val MAX_TOUCH_SLOTS = 10
 
 // Linux evdev protocol constants
@@ -158,9 +152,6 @@ object TouchScreenObserver {
     private var job: Job? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    // Retained so stop() can close the file stream and unblock in-progress blocking read() in fallback mode.
-    @Volatile private var activeStream: FileInputStream? = null
-
     /**
      * Legacy single-point callback for normalized landscape coordinates `[0, 1]`.
      */
@@ -250,52 +241,7 @@ object TouchScreenObserver {
             return
         }
 
-        // Direct file fallback (e.g. root environments or unit testing)
-        job =
-            scope.launch {
-                val file = File(EVENT_NODE)
-                if (!file.exists() || !file.canRead()) {
-                    AppLog.w(
-                        TAG,
-                        "Touch event node $EVENT_NODE is not accessible directly (exists=${file.exists()}, canRead=${file.canRead()})",
-                    )
-                    return@launch
-                }
-                try {
-                    val fis = FileInputStream(file)
-                    activeStream = fis
-                    fis.use {
-                        val buffer = ByteArray(INPUT_EVENT_SIZE)
-                        val byteBuffer = ByteBuffer.wrap(buffer).order(ByteOrder.nativeOrder())
-
-                        while (coroutineContext[Job]?.isActive == true) {
-                            var bytesRead = 0
-                            while (bytesRead < INPUT_EVENT_SIZE) {
-                                val r = fis.read(buffer, bytesRead, INPUT_EVENT_SIZE - bytesRead)
-                                if (r < 0) break
-                                bytesRead += r
-                            }
-                            if (bytesRead < INPUT_EVENT_SIZE) {
-                                AppLog.w(TAG, "Read fewer bytes than expected input event size, stopping")
-                                break
-                            }
-
-                            byteBuffer.rewind()
-                            // Skip timeval (16 bytes on 64-bit systems)
-                            byteBuffer.position(16)
-                            val type = byteBuffer.short.toInt() and 0xFFFF
-                            val code = byteBuffer.short.toInt() and 0xFFFF
-                            val value = byteBuffer.int
-
-                            parser.processEvent(type, code, value)
-                        }
-                    }
-                } catch (e: Exception) {
-                    AppLog.w(TAG, "Exception in touch screen reading loop: $e")
-                } finally {
-                    activeStream = null
-                }
-            }
+        AppLog.w(TAG, "Cannot start touch observation: Privileged Mode is not connected")
     }
 
     private fun stopInternal() {
@@ -303,8 +249,6 @@ object TouchScreenObserver {
         if (PrivdClient.isConnected) {
             PrivdClient.unsubscribeTouch()
         }
-        activeStream?.close() // unblocks the blocking read() immediately
-        activeStream = null
         job?.cancel()
         job = null
     }

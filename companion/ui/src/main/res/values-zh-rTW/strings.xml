@@ -111,6 +111,8 @@ Open Settings to create a layout.</string>
     <!-- Keyboard trackpoint mouse button position setting -->
     <string name="macropad_device_disabled_mouse">此配置已禁用滑鼠</string>
     <string name="macropad_device_disabled_touch">此配置已禁用觸控</string>
+    <string name="macropad_device_disabled_macro_privd">巨集需要特權模式。請在設定中啟用特權模式。</string>
+    <string name="macropad_macro_privd_required_banner">建立、編輯、測試及執行巨集需要特權模式。請在設定中啟用特權模式。</string>
     <string name="macropad_editor_delete_profile">刪除設定檔</string>
     <string name="macropad_editor_delete_layout">刪除配置</string>
     <string name="macropad_editor_cancel">取消</string>

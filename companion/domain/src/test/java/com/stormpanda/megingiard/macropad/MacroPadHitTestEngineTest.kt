@@ -280,4 +280,30 @@ class MacroPadHitTestEngineTest {
         engine.onRelease(pointerId, listOf(button), enabledProfile)
         org.junit.Assert.assertFalse(engine.isPointerTracked(pointerId))
     }
+
+    @Test
+    fun `macro button is disabled when Privileged Mode is disconnected`() {
+        val macroAction = PadAction.Macro("macro-1")
+
+        com.stormpanda.megingiard.privd.PrivdClient.isConnectedForTest = false
+        org.junit.Assert.assertTrue(
+            "Macro button should be disabled when Privd is disconnected",
+            MacroPadHitTestEngine.isDeviceDisabled(macroAction, enabledProfile),
+        )
+        assertEquals(
+            DisabledReason.MACRO_PRIVD,
+            MacroPadHitTestEngine.deviceDisabledReason(macroAction, enabledProfile),
+        )
+
+        com.stormpanda.megingiard.privd.PrivdClient.isConnectedForTest = true
+        org.junit.Assert.assertFalse(
+            "Macro button should be enabled when Privd is connected",
+            MacroPadHitTestEngine.isDeviceDisabled(macroAction, enabledProfile),
+        )
+        assertNull(
+            MacroPadHitTestEngine.deviceDisabledReason(macroAction, enabledProfile),
+        )
+
+        com.stormpanda.megingiard.privd.PrivdClient.isConnectedForTest = null
+    }
 }

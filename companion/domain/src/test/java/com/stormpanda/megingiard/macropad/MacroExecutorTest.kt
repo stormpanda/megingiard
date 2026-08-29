@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.ui.PrimaryModalConfig
 import com.stormpanda.megingiard.ui.PrimaryModalType
 import kotlinx.coroutines.Dispatchers
@@ -27,12 +28,48 @@ class MacroExecutorTest {
     @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
+        PrivdClient.isConnectedForTest = true
     }
 
     @After
     fun tearDown() {
+        PrivdClient.isConnectedForTest = null
         Dispatchers.resetMain()
     }
+
+    @Test
+    fun testMacroExecutionRejectedWhenPrivdDisconnected() =
+        runBlocking {
+            PrivdClient.isConnectedForTest = false
+            MacroExecutor.setRunningMacroIdsForTest(emptySet())
+
+            val macro =
+                Macro(
+                    id = "unprivileged-macro",
+                    name = "Unprivileged Macro",
+                    steps =
+                        listOf(
+                            MacroStep.GamepadButtonTap(
+                                startTimeMs = 0L,
+                                durationMs = 5L,
+                                btnCode = 96,
+                                label = "A",
+                            ),
+                        ),
+                )
+
+            MacroExecutor.execute(macro)
+            assertFalse("Macro should not start when Privileged Mode is disconnected", MacroExecutor.isRunning(macro.id))
+
+            var testRunSuccess: Boolean? = null
+            MacroExecutor.runTest(
+                macro = macro,
+                onComplete = { success ->
+                    testRunSuccess = success
+                },
+            )
+            assertEquals("Test run should immediately fail when Privileged Mode is disconnected", false, testRunSuccess)
+        }
 
     @Test
     fun testMacroExecutionCompletesAndClearsRunningId() =
