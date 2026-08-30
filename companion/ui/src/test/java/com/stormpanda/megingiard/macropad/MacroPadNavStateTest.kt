@@ -248,4 +248,21 @@ class MacroPadNavStateTest {
         MacroPadNavState.push(advancedSubPage)
         assertEquals(listOf(advancedSubPage), MacroPadNavState.subPageStack.value)
     }
+
+    @Test
+    fun `NewProfile and EditProfile have correct parentSection PROFILES`() {
+        assertEquals(EditorSection.PROFILES, MacroPadSubPage.NewProfile.parentSection)
+        val editProfile = MacroPadSubPage.EditProfile(profileId = "prof-new-1")
+        assertEquals(EditorSection.PROFILES, editProfile.parentSection)
+        assertEquals("prof-new-1", editProfile.profileId)
+
+        MacroPadNavState.push(MacroPadSubPage.NewProfile)
+        assertEquals(listOf(MacroPadSubPage.NewProfile), MacroPadNavState.subPageStack.value)
+
+        // After creating a profile, the editor navigates to the PROFILES main menu
+        MacroPadNavState.selectSection(EditorSection.PROFILES)
+        MacroPadNavState.setStack(emptyList())
+        assertEquals(EditorSection.PROFILES, MacroPadNavState.selectedSection.value)
+        assertTrue(MacroPadNavState.subPageStack.value.isEmpty())
+    }
 }

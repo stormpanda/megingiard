@@ -703,13 +703,16 @@ fun MacroPadEditor(
                                                 accentColor = colors.accent,
                                                 onDiscard = { MacroPadNavState.pop() },
                                                 onCreate = { name ->
+                                                    val newId = UUID.randomUUID().toString()
                                                     val newProf =
                                                         PadProfile(
-                                                            id = UUID.randomUUID().toString(),
+                                                            id = newId,
                                                             name = name,
                                                         )
                                                     MacroPadState.addProfile(newProf)
-                                                    MacroPadNavState.pop()
+                                                    MacroPadState.setActiveProfileId(newId)
+                                                    MacroPadNavState.selectSection(EditorSection.PROFILES)
+                                                    MacroPadNavState.setStack(emptyList())
                                                 },
                                             )
                                         }
