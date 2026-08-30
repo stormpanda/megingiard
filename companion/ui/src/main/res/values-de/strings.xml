@@ -514,7 +514,7 @@ Open Settings to create a layout.</string>
     <string name="quick_menu_profile_label">Profil</string>
     <string name="quick_menu_layout_label">Layout</string>
     <string name="quick_menu_edit_layout">Profil/Layout bearbeiten</string>
-    <string name="quick_menu_screen_mirroring">Bildschirmspiegel</string>
+    <string name="quick_menu_screen_mirroring">Spiegelung</string>
     <string name="quick_menu_global_settings">Globale Einstellungen</string>
     <string name="quick_menu_shut_off_cd">Megingiard beenden</string>
     <string name="shut_off_dialog_title">Megingiard beenden</string>
