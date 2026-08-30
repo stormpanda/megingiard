@@ -568,7 +568,6 @@ Open Settings to create a layout.</string>
 
     <!-- Cutout Layout Editor -->
     <string name="mirror_editor_add_cutout">Add Cutout</string>
-    <string name="mirror_editor_add_cutout_desc">Create a new screen mirror region</string>
     <string name="mirror_editor_done">Done</string>
     <string name="mirror_editor_aspect_ratio_mode">Fixed Aspect Ratio</string>
     <string name="mirror_editor_aspect_ratio_free">Free</string>

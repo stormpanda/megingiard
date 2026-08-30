@@ -52,7 +52,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 
 ### FR-M4: Controls Access & Quick Menu
 
-- All mirror quick controls (Play/Stop, Freeze/Unfreeze, and Screenshot) MUST reside inside the **Mirror Control Card** at the top of the **Quick Menu** overlay, while **Touch Projection**, layout configuration, adding cutouts, and the **Advanced Settings** sub menu (ambient dimming, edge blending, and follow touch) are configured in the **Screen Mirroring category** of the MacroPad Editor.
+- All mirror quick controls (Play/Stop, Freeze/Unfreeze, and Screenshot) MUST reside inside the **Mirror Control Card** at the top of the **Quick Menu** overlay, while **Touch Projection**, layout configuration, and the **Advanced Settings** sub menu (ambient dimming, edge blending, and follow touch) are configured in the **Screen Mirroring category** of the MacroPad Editor (with cutout creation and spatial placement managed in the Screen Mirroring edit mode).
 - An **edge swipe** (swipe up from bottom edge or swipe down from top edge, depending on quick menu bar position) over the quick menu bar indicator MUST show the **Quick Menu** overlay panel.
 - The **Mirror Control Card** hosts the Play/Stop, Freeze/Unfreeze, and Screenshot icon buttons, evenly spaced across the card.
 - There is **no tap-anywhere overlay** on the mirror surface itself, and **no auto-hide timers** exist for these controls. Controls remain accessible inside the Quick Menu overlay until it is manually dismissed by tapping the scrim or close elements.

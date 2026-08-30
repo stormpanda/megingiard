@@ -88,11 +88,6 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
-import com.stormpanda.megingiard.mirror.AspectRatioMode
-import com.stormpanda.megingiard.mirror.CutoutPlacementHelper
-import com.stormpanda.megingiard.mirror.ScreenCaptureManager
-import com.stormpanda.megingiard.mirror.ScreenCutout
-import com.stormpanda.megingiard.mirror.adjustSourceCropToAspectRatio
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.settings.MacroPadSettings
@@ -542,63 +537,6 @@ fun MacroPadEditor(
                                                         MacroPadNavState.setStack(
                                                             subPageStack + MacroPadSubPage.MirrorAdvancedSettings(activeLayout.id),
                                                         )
-                                                    },
-                                                    onAddCutout = {
-                                                        val layout = activeLayout
-                                                        val slot = CutoutPlacementHelper.findAvailableSlot(layout.mirrorCutouts)
-                                                        if (slot == null) {
-                                                            DialogToastManager.show(
-                                                                context.getString(R.string.mirror_editor_no_space),
-                                                            )
-                                                        } else {
-                                                            val newId = UUID.randomUUID().toString()
-                                                            val initialCutout =
-                                                                ScreenCutout(
-                                                                    id = newId,
-                                                                    name = "Cutout ${layout.mirrorCutouts.size + 1}",
-                                                                    srcX = 0.25f,
-                                                                    srcY = 0.25f,
-                                                                    srcWidth = 0.5f,
-                                                                    srcHeight = 0.5f,
-                                                                    destX = slot.destX,
-                                                                    destY = slot.destY,
-                                                                    destWidth = slot.destWidth,
-                                                                    destHeight = slot.destHeight,
-                                                                    aspectRatioMode = AspectRatioMode.BOTTOM,
-                                                                )
-                                                            val screenW =
-                                                                ScreenCaptureManager.surfaceWidth.value.toFloat().let {
-                                                                    if (it > 0f) it else 1240f
-                                                                }
-                                                            val screenH =
-                                                                ScreenCaptureManager.surfaceHeight.value.toFloat().let {
-                                                                    if (it > 0f) it else 1080f
-                                                                }
-                                                            val srcW =
-                                                                ScreenCaptureManager.captureSourceWidth.value.toFloat().let {
-                                                                    if (it > 0f) it else 1920f
-                                                                }
-                                                            val srcH =
-                                                                ScreenCaptureManager.captureSourceHeight.value.toFloat().let {
-                                                                    if (it > 0f) it else 1080f
-                                                                }
-                                                            val newCutout =
-                                                                adjustSourceCropToAspectRatio(
-                                                                    cutout = initialCutout,
-                                                                    screenW = screenW,
-                                                                    screenH = screenH,
-                                                                    srcW = srcW,
-                                                                    srcH = srcH,
-                                                                )
-                                                            MacroPadState.updateLayout(
-                                                                layout.copy(
-                                                                    mirrorCutouts = layout.mirrorCutouts + newCutout,
-                                                                ),
-                                                            )
-                                                            MacroPadNavState.setStack(
-                                                                subPageStack + MacroPadSubPage.CutoutSettings(newId),
-                                                            )
-                                                        }
                                                     },
                                                     onEditCutout = { cutout ->
                                                         MacroPadNavState.setStack(

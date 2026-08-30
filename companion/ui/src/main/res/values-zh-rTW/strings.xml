@@ -568,7 +568,6 @@ Open Settings to create a layout.</string>
 
     <!-- Cutout Layout Editor -->
     <string name="mirror_editor_add_cutout">新增區塊</string>
-    <string name="mirror_editor_add_cutout_desc">建立新的螢幕鏡像區塊</string>
     <string name="mirror_editor_done">完成</string>
     <string name="mirror_editor_aspect_ratio_mode">長寬比模式</string>
     <string name="mirror_editor_aspect_ratio_free">自由</string>
