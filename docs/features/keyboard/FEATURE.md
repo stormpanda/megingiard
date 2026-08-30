@@ -89,7 +89,7 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
 ### FR-K9: Keyboard Settings Toolbar Button & Screen
 
 - The bottom toolbar MUST render a Settings Cog button on the right-hand side.
-- Tapping this button MUST open a fullscreen Keyboard Settings screen overlay.
+- Tapping this button MUST open a Keyboard Settings screen overlay. In dual-screen mode, this settings overlay is displayed on the primary (top) display while the virtual keyboard remains active, visible, and fully interactive on the secondary (bottom) display without closing or tearing down input injection. In single-screen mode, the settings overlay is presented on top, and dismissing it returns directly to the active virtual keyboard.
 - The settings screen MUST include a dropdown to select between **QWERTZ**, **QWERTY**, and **AZERTY** regional layouts.
 - Switching layout via this dropdown MUST only impact the alphabetic (`LETTERS` / ABC) keyboard layout, leaving symbol and numeric layouts unaffected.
 
@@ -150,9 +150,9 @@ The pre-built `keyinjector_arm64` binary is bundled in `companion/ui/src/main/as
 
 The binary signals readiness by writing `"R\n"` to stdout. `start()` blocks waiting for this signal with a 5-second timeout; startup fails if the signal does not arrive or the process exits prematurely.
 
-The binary opens `/dev/uinput` using the standard `uinput` protocol (register a virtual keyboard device, then inject `EV_KEY` events). Injector start and stop lifecycle is centrally managed by `InjectorLifecycleManager`, which evaluates app UI state (`AppStateManager.uiMode`), active MacroPad layout keyboard controls, and blocking modals to determine when `KeyInjector` should be active:
+The binary opens `/dev/uinput` using the standard `uinput` protocol (register a virtual keyboard device, then inject `EV_KEY` events). Injector start and stop lifecycle is centrally managed by `InjectorLifecycleManager`, which evaluates app UI state (`AppStateManager.companionSurfaceMode`), active MacroPad layout keyboard controls, and blocking modals to determine when `KeyInjector` should be active:
 
-* **ON**: When `UiMode.FULLSCREEN_KEYBOARD` is active, or when an active MacroPad layout has keyboard buttons and no blocking editor/modal is open.
+* **ON**: When `CompanionSurfaceMode.KEYBOARD` is active, or when an active MacroPad layout has keyboard buttons and no blocking editor/modal is open.
 * **OFF**: When no keyboard controls are needed, or when any editor modal, settings screen, quick menu, or prompt is active (ensuring Android's standard soft IME operates without hardware keyboard conflicts).
 
 ```kotlin

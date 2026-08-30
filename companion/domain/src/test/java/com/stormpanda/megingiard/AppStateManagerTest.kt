@@ -806,19 +806,19 @@ class AppStateManagerTest {
 
             AppStateManager.openPrimaryModal(PrimaryModalType.GLOBAL_SETTINGS)
             assertEquals(PrimaryModalType.GLOBAL_SETTINGS, AppStateManager.activePrimaryModal.value?.type)
-            assertEquals(UiMode.GLOBAL_SETTINGS, AppStateManager.uiMode.value)
+            assertEquals(CompanionSurfaceMode.MACROPAD, AppStateManager.companionSurfaceMode.value)
             assertTrue(AppStateManager.isAnyModalActive.value)
             assertTrue(AppStateManager.isAnyMenuOpen.value)
 
             AppStateManager.closePrimaryModal()
             assertEquals(null, AppStateManager.activePrimaryModal.value)
-            assertEquals(UiMode.MACROPAD_USE, AppStateManager.uiMode.value)
+            assertEquals(CompanionSurfaceMode.MACROPAD, AppStateManager.companionSurfaceMode.value)
             assertFalse(AppStateManager.isAnyModalActive.value)
             assertFalse(AppStateManager.isAnyMenuOpen.value)
         }
 
     @Test
-    fun `closePrimaryModal resets isEditorActive and uiMode when closing editor`() =
+    fun `closePrimaryModal resets isEditorActive when closing editor without changing companion surface`() =
         runTest {
             AppStateManager.closeActiveModal()
             assertFalse(AppStateManager.isEditorActive.value)
@@ -826,19 +826,19 @@ class AppStateManagerTest {
             AppStateManager.setEditorActive(true)
             assertTrue(AppStateManager.isEditorActive.value)
             assertEquals(PrimaryModalType.MACROPAD_EDITOR, AppStateManager.activePrimaryModal.value?.type)
-            assertEquals(UiMode.LAYOUT_EDITOR, AppStateManager.uiMode.value)
+            assertEquals(CompanionSurfaceMode.MACROPAD, AppStateManager.companionSurfaceMode.value)
             assertTrue(AppStateManager.isAnyMenuOpen.value)
 
             AppStateManager.closePrimaryModal()
             assertEquals(null, AppStateManager.activePrimaryModal.value)
-            assertEquals(UiMode.MACROPAD_USE, AppStateManager.uiMode.value)
+            assertEquals(CompanionSurfaceMode.MACROPAD, AppStateManager.companionSurfaceMode.value)
             assertFalse(AppStateManager.isEditorActive.value)
             assertFalse(AppStateManager.isAnyMenuOpen.value)
             assertFalse(AppStateManager.isAnyModalActive.value)
         }
 
     @Test
-    fun `closeActiveModal resets activePrimaryModal and selectedButtonId`() =
+    fun `closeActiveModal resets activePrimaryModal and companion surface`() =
         runTest {
             AppStateManager.openPrimaryModal(PrimaryModalType.MACROPAD_INSPECTOR)
             assertEquals(PrimaryModalType.MACROPAD_INSPECTOR, AppStateManager.activePrimaryModal.value?.type)
@@ -846,8 +846,111 @@ class AppStateManagerTest {
 
             AppStateManager.closeActiveModal()
             assertEquals(null, AppStateManager.activePrimaryModal.value)
-            assertEquals(UiMode.MACROPAD_USE, AppStateManager.uiMode.value)
+            assertEquals(CompanionSurfaceMode.MACROPAD, AppStateManager.companionSurfaceMode.value)
             assertFalse(AppStateManager.isEditorActive.value)
+        }
+
+    @Test
+    fun `opening and closing keyboard settings preserves active fullscreen keyboard`() =
+        runTest {
+            AppStateManager.closeActiveModal()
+            AppStateManager.setFullscreenKeyboardActive(true)
+            assertTrue(AppStateManager.isFullscreenKeyboardActive.value)
+            assertEquals(CompanionSurfaceMode.KEYBOARD, AppStateManager.companionSurfaceMode.value)
+            assertFalse(AppStateManager.isKeyboardSettingsOpen.value)
+
+            // Open keyboard settings
+            AppStateManager.setKeyboardSettingsOpen(true)
+            assertTrue(AppStateManager.isFullscreenKeyboardActive.value)
+            assertEquals(CompanionSurfaceMode.KEYBOARD, AppStateManager.companionSurfaceMode.value)
+            assertTrue(AppStateManager.isKeyboardSettingsOpen.value)
+
+            // Close keyboard settings via setKeyboardSettingsOpen(false)
+            AppStateManager.setKeyboardSettingsOpen(false)
+            assertTrue(AppStateManager.isFullscreenKeyboardActive.value)
+            assertEquals(CompanionSurfaceMode.KEYBOARD, AppStateManager.companionSurfaceMode.value)
+            assertFalse(AppStateManager.isKeyboardSettingsOpen.value)
+
+            // Open keyboard settings again and dismiss via closePrimaryModal
+            AppStateManager.setKeyboardSettingsOpen(true)
+            assertTrue(AppStateManager.isFullscreenKeyboardActive.value)
+            assertTrue(AppStateManager.isKeyboardSettingsOpen.value)
+
+            AppStateManager.closePrimaryModal()
+            assertTrue(AppStateManager.isFullscreenKeyboardActive.value)
+            assertEquals(CompanionSurfaceMode.KEYBOARD, AppStateManager.companionSurfaceMode.value)
+            assertFalse(AppStateManager.isKeyboardSettingsOpen.value)
+
+            // Explicitly deactivate keyboard
+            AppStateManager.setFullscreenKeyboardActive(false)
+            assertFalse(AppStateManager.isFullscreenKeyboardActive.value)
+            assertEquals(CompanionSurfaceMode.MACROPAD, AppStateManager.companionSurfaceMode.value)
+        }
+
+    @Test
+    fun `opening and closing touchpad settings preserves active fullscreen mouse`() =
+        runTest {
+            AppStateManager.closeActiveModal()
+            AppStateManager.setFullscreenMouseActive(true)
+            assertTrue(AppStateManager.isFullscreenMouseActive.value)
+            assertEquals(CompanionSurfaceMode.TOUCHPAD, AppStateManager.companionSurfaceMode.value)
+            assertFalse(AppStateManager.isTouchpadSettingsOpen.value)
+
+            // Open touchpad settings
+            AppStateManager.setTouchpadSettingsOpen(true)
+            assertTrue(AppStateManager.isFullscreenMouseActive.value)
+            assertEquals(CompanionSurfaceMode.TOUCHPAD, AppStateManager.companionSurfaceMode.value)
+            assertTrue(AppStateManager.isTouchpadSettingsOpen.value)
+
+            // Close touchpad settings via setTouchpadSettingsOpen(false)
+            AppStateManager.setTouchpadSettingsOpen(false)
+            assertTrue(AppStateManager.isFullscreenMouseActive.value)
+            assertEquals(CompanionSurfaceMode.TOUCHPAD, AppStateManager.companionSurfaceMode.value)
+            assertFalse(AppStateManager.isTouchpadSettingsOpen.value)
+
+            // Open touchpad settings again and dismiss via closePrimaryModal
+            AppStateManager.setTouchpadSettingsOpen(true)
+            assertTrue(AppStateManager.isFullscreenMouseActive.value)
+            assertTrue(AppStateManager.isTouchpadSettingsOpen.value)
+
+            AppStateManager.closePrimaryModal()
+            assertTrue(AppStateManager.isFullscreenMouseActive.value)
+            assertEquals(CompanionSurfaceMode.TOUCHPAD, AppStateManager.companionSurfaceMode.value)
+            assertFalse(AppStateManager.isTouchpadSettingsOpen.value)
+
+            // Explicitly deactivate mouse
+            AppStateManager.setFullscreenMouseActive(false)
+            assertFalse(AppStateManager.isFullscreenMouseActive.value)
+            assertEquals(CompanionSurfaceMode.MACROPAD, AppStateManager.companionSurfaceMode.value)
+        }
+
+    @Test
+    fun `opening and closing settings from macropad use preserves macropad use and does not activate keyboard or mouse`() =
+        runTest {
+            AppStateManager.closeActiveModal()
+            assertEquals(CompanionSurfaceMode.MACROPAD, AppStateManager.companionSurfaceMode.value)
+            assertFalse(AppStateManager.isFullscreenKeyboardActive.value)
+            assertFalse(AppStateManager.isFullscreenMouseActive.value)
+
+            // Open and close keyboard settings
+            AppStateManager.setKeyboardSettingsOpen(true)
+            assertTrue(AppStateManager.isKeyboardSettingsOpen.value)
+            assertFalse(AppStateManager.isFullscreenKeyboardActive.value)
+
+            AppStateManager.setKeyboardSettingsOpen(false)
+            assertFalse(AppStateManager.isKeyboardSettingsOpen.value)
+            assertFalse(AppStateManager.isFullscreenKeyboardActive.value)
+            assertEquals(CompanionSurfaceMode.MACROPAD, AppStateManager.companionSurfaceMode.value)
+
+            // Open and close touchpad settings
+            AppStateManager.setTouchpadSettingsOpen(true)
+            assertTrue(AppStateManager.isTouchpadSettingsOpen.value)
+            assertFalse(AppStateManager.isFullscreenMouseActive.value)
+
+            AppStateManager.setTouchpadSettingsOpen(false)
+            assertFalse(AppStateManager.isTouchpadSettingsOpen.value)
+            assertFalse(AppStateManager.isFullscreenMouseActive.value)
+            assertEquals(CompanionSurfaceMode.MACROPAD, AppStateManager.companionSurfaceMode.value)
         }
 
     @Test

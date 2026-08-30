@@ -184,7 +184,7 @@ precedence to the Quick Menu Bar navigation.
 `isAnyModalActive` in `AppStateManager` is a derived `StateFlow` that is `true` whenever any of the
 interactive overlays (`activePrimaryModal != null`, `isFullscreenKeyboardActive`, `isFullscreenMouseActive`, `isViewportEditActive`,
 `isBackgroundSettingsActive`, `isGlobalSettingsOpen`, `isKeyboardSettingsOpen`, `isTouchpadSettingsOpen`, or `MacroPadState.isPeekActive`) are active. The edge-swipe
-handler reads `isAnyModalActive` to decide whether to close the active modal instead of toggling the Quick Menu. `closePrimaryModal()` resets `_uiMode` back to `MACROPAD_USE` ensuring the secondary display's Quick Menu Bar and edge-swipe gesture interactions are immediately restored upon dismissing top-screen dialogs.
+handler reads `isAnyModalActive` to decide whether to close the active modal instead of toggling the Quick Menu. `closePrimaryModal()` clears `_activePrimaryModal` while leaving `_companionSurfaceMode` intact, ensuring the secondary display's surface and edge-swipe gesture interactions remain consistent upon dismissing top-screen dialogs.
 
 ### Primary Screen Overlay Gamepad Navigation & Gamepad-First UI Design
 

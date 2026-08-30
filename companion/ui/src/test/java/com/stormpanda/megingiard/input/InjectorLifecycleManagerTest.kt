@@ -1,10 +1,11 @@
 package com.stormpanda.megingiard.input
 
-import com.stormpanda.megingiard.UiMode
+import com.stormpanda.megingiard.CompanionSurfaceMode
 import com.stormpanda.megingiard.macropad.MouseButton
 import com.stormpanda.megingiard.macropad.PadAction
 import com.stormpanda.megingiard.macropad.PadButton
 import com.stormpanda.megingiard.macropad.PadLayout
+import com.stormpanda.megingiard.macropad.TrackpointMode
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -49,7 +50,9 @@ class InjectorLifecycleManagerTest {
         val layout = createLayout(hasKeyboard = false, hasMouse = false)
         val states =
             InjectorLifecycleManager.calculateInjectorStates(
-                uiMode = UiMode.FULLSCREEN_KEYBOARD,
+                surfaceMode = CompanionSurfaceMode.KEYBOARD,
+                isModalOpen = false,
+                isQuickMenuOpen = false,
                 promptInFlight = false,
                 activeLayout = layout,
             )
@@ -60,11 +63,64 @@ class InjectorLifecycleManagerTest {
     }
 
     @Test
+    fun testFullscreenKeyboardActive_withSettingsModalOpen_keepsKeyboardInjectorActive() {
+        val layout = createLayout(hasKeyboard = false, hasMouse = false)
+        val states =
+            InjectorLifecycleManager.calculateInjectorStates(
+                surfaceMode = CompanionSurfaceMode.KEYBOARD,
+                isModalOpen = true,
+                isQuickMenuOpen = false,
+                promptInFlight = false,
+                activeLayout = layout,
+            )
+
+        assertTrue(states.startKeyboard)
+        assertFalse(states.startMouse)
+        assertFalse(states.startGamepad)
+    }
+
+    @Test
+    fun testFullscreenTouchpadActive_startsMouseInjector() {
+        val layout = createLayout(hasKeyboard = false, hasMouse = false)
+        val states =
+            InjectorLifecycleManager.calculateInjectorStates(
+                surfaceMode = CompanionSurfaceMode.TOUCHPAD,
+                isModalOpen = false,
+                isQuickMenuOpen = false,
+                promptInFlight = false,
+                activeLayout = layout,
+            )
+
+        assertFalse(states.startKeyboard)
+        assertTrue(states.startMouse)
+        assertFalse(states.startGamepad)
+    }
+
+    @Test
+    fun testFullscreenTouchpadActive_withSettingsModalOpen_keepsMouseInjectorActive() {
+        val layout = createLayout(hasKeyboard = false, hasMouse = false)
+        val states =
+            InjectorLifecycleManager.calculateInjectorStates(
+                surfaceMode = CompanionSurfaceMode.TOUCHPAD,
+                isModalOpen = true,
+                isQuickMenuOpen = false,
+                promptInFlight = false,
+                activeLayout = layout,
+            )
+
+        assertFalse(states.startKeyboard)
+        assertTrue(states.startMouse)
+        assertFalse(states.startGamepad)
+    }
+
+    @Test
     fun testMacroPadWithKeyboardKeys_inUseMode_startsKeyboardInjector() {
         val layout = createLayout(hasKeyboard = true, hasMouse = true)
         val states =
             InjectorLifecycleManager.calculateInjectorStates(
-                uiMode = UiMode.MACROPAD_USE,
+                surfaceMode = CompanionSurfaceMode.MACROPAD,
+                isModalOpen = false,
+                isQuickMenuOpen = false,
                 promptInFlight = false,
                 activeLayout = layout,
             )
@@ -74,11 +130,13 @@ class InjectorLifecycleManagerTest {
     }
 
     @Test
-    fun testBlockingEditorMode_stopsAllInjectors() {
+    fun testBlockingModalOpen_stopsAllMacroInjectors() {
         val layout = createLayout(hasKeyboard = true, hasMouse = true)
         val states =
             InjectorLifecycleManager.calculateInjectorStates(
-                uiMode = UiMode.LAYOUT_EDITOR,
+                surfaceMode = CompanionSurfaceMode.MACROPAD,
+                isModalOpen = true,
+                isQuickMenuOpen = false,
                 promptInFlight = false,
                 activeLayout = layout,
             )
@@ -94,7 +152,9 @@ class InjectorLifecycleManagerTest {
         val layout = createLayout(hasKeyboard = true, hasMouse = true)
         val states =
             InjectorLifecycleManager.calculateInjectorStates(
-                uiMode = UiMode.MACROPAD_USE,
+                surfaceMode = CompanionSurfaceMode.MACROPAD,
+                isModalOpen = false,
+                isQuickMenuOpen = false,
                 promptInFlight = true,
                 activeLayout = layout,
             )
@@ -110,7 +170,9 @@ class InjectorLifecycleManagerTest {
         val layout = createLayout(hasKeyboard = false, hasMouse = true)
         val states =
             InjectorLifecycleManager.calculateInjectorStates(
-                uiMode = UiMode.MACROPAD_USE,
+                surfaceMode = CompanionSurfaceMode.MACROPAD,
+                isModalOpen = false,
+                isQuickMenuOpen = false,
                 promptInFlight = false,
                 activeLayout = layout,
             )
@@ -124,7 +186,9 @@ class InjectorLifecycleManagerTest {
         val layout = createLayout(hasKeyboard = true, hasMouse = true)
         val states =
             InjectorLifecycleManager.calculateInjectorStates(
-                uiMode = UiMode.QUICK_MENU,
+                surfaceMode = CompanionSurfaceMode.MACROPAD,
+                isModalOpen = false,
+                isQuickMenuOpen = true,
                 promptInFlight = false,
                 activeLayout = layout,
             )
@@ -136,18 +200,21 @@ class InjectorLifecycleManagerTest {
     }
 
     @Test
-    fun testFullscreenMouseActive_startsMouseInjector() {
-        val layout = createLayout(hasKeyboard = false, hasMouse = false)
+    fun testViewportEditActive_stopsAllMacroInjectors() {
+        val layout = createLayout(hasKeyboard = true, hasMouse = true)
         val states =
             InjectorLifecycleManager.calculateInjectorStates(
-                uiMode = UiMode.FULLSCREEN_MOUSE,
+                surfaceMode = CompanionSurfaceMode.VIEWPORT_EDIT,
+                isModalOpen = false,
+                isQuickMenuOpen = false,
                 promptInFlight = false,
                 activeLayout = layout,
             )
 
         assertFalse(states.startKeyboard)
-        assertTrue(states.startMouse)
+        assertFalse(states.startMouse)
         assertFalse(states.startGamepad)
+        assertFalse(states.startTouch)
     }
 
     @Test
@@ -169,7 +236,9 @@ class InjectorLifecycleManagerTest {
             )
         val states =
             InjectorLifecycleManager.calculateInjectorStates(
-                uiMode = UiMode.MACROPAD_USE,
+                surfaceMode = CompanionSurfaceMode.MACROPAD,
+                isModalOpen = false,
+                isQuickMenuOpen = false,
                 promptInFlight = false,
                 activeLayout = layout,
             )
@@ -194,14 +263,16 @@ class InjectorLifecycleManagerTest {
                             posY = 0f,
                             action =
                                 PadAction.TrackpointMove(
-                                    mode = com.stormpanda.megingiard.macropad.TrackpointMode.VIRTUAL_TOUCH,
+                                    mode = TrackpointMode.VIRTUAL_TOUCH,
                                 ),
                         ),
                     ),
             )
         val states =
             InjectorLifecycleManager.calculateInjectorStates(
-                uiMode = UiMode.MACROPAD_USE,
+                surfaceMode = CompanionSurfaceMode.MACROPAD,
+                isModalOpen = false,
+                isQuickMenuOpen = false,
                 promptInFlight = false,
                 activeLayout = layout,
             )
