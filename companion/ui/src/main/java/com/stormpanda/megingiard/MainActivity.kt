@@ -227,10 +227,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        val isDual = DisplayDetector.findSecondaryDisplay(this) != null
-        if (isDual) {
-            window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
-        }
+        window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
         super.onCreate(savedInstanceState)
 
         // Init settings first so the persisted log level is active before anything
