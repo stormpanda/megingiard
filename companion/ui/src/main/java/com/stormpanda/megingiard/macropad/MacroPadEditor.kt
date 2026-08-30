@@ -1127,6 +1127,9 @@ fun MacroPadEditor(
                                                     onSelect = { targetProfileId ->
                                                         MacroPadState.copyLayoutToProfile(lay, profile.id, targetProfileId)
                                                         MacroPadNavState.pop()
+                                                        DialogToastManager.show(
+                                                            context.getString(R.string.macropad_layout_copied_toast),
+                                                        )
                                                     },
                                                 )
                                             }
