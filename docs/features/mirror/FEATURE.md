@@ -27,7 +27,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
     - **Unified Scroll Container:** Items reside in a single vertical scroll container. When collapsed, the container height constrains to a single card height (38 dp) and native 2D focus traversal smoothly scrolls focused items into view.
     - **Dynamic Viewport Boundary Clamping:** When expanded, the container automatically shifts upward if its height would exceed the bottom screen boundary, guaranteeing the entire toolbox remains 100% visible on Display 0.
     - **Bidirectional Focus Loop:** Focus smoothly wraps between the top cutout selector card and the bottom drag handle collapse button.
-    - **Cutout Selector:** `◀ CutoutName (X/Y) ▶` cycles active cutout with D-Pad Left/Right or A.
+    - **Cutout Selector:** Pressing A enters Tier-2 selection mode (capsule illuminates with glowing accent border); D-Pad Left/Right cycles active cutout (with wrap-around); pressing A or B/Back exits selection mode.
     - **Aspect Ratio Lock:** Cycles `FREE` → `TOP` → `BOTTOM` with D-Pad Left/Right or A.
     - **Shape Toggle:** Toggles `RECTANGLE` ↔ `CIRCLE` with A.
     - **Adjust Top Cutout (Move & Resize Mode):** Pressing A enters Tier-2 adjustment mode with visual highlight and a top-screen toast notification informing the user ("Use D-Pad to move. Hold R2 to resize. Hold L2 for precision.").

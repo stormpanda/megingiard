@@ -116,6 +116,7 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.LocalFirstContentRequester
 import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
 import com.stormpanda.megingiard.ui.firstDeckItem
+import com.stormpanda.megingiard.ui.handleAdjustmentKeyEvent
 import com.stormpanda.megingiard.ui.rememberBezelBrush
 import com.stormpanda.megingiard.ui.rememberGamepadBringIntoViewSpec
 import kotlinx.coroutines.Job
@@ -1184,8 +1185,15 @@ private fun TargetCutoutCarouselCard(
     onFocusChanged: ((Boolean) -> Unit)? = null,
 ) {
     val colors = LocalAppColors.current
+    var isAdjusting by remember { mutableStateOf(false) }
     val currentIdx = if (selectedCutout != null) cutouts.indexOfFirst { it.id == selectedCutout.id } else -1
     val hasCutouts = cutouts.isNotEmpty()
+
+    LaunchedEffect(hasCutouts) {
+        if (!hasCutouts && isAdjusting) {
+            isAdjusting = false
+        }
+    }
 
     val titleText =
         if (!hasCutouts) {
@@ -1209,20 +1217,39 @@ private fun TargetCutoutCarouselCard(
     }
 
     ToolboxCard(
-        onClick = { selectNext() },
-        onLeftKey = { selectPrevious() },
-        onRightKey = { selectNext() },
-        onFocusChanged = onFocusChanged,
+        onClick = {
+            if (hasCutouts) {
+                val nextState = !isAdjusting
+                AppLog.d(TAG, "TargetCutoutCarouselCard: adjustment mode=$nextState")
+                isAdjusting = nextState
+            }
+        },
+        isFocusedOverride = isAdjusting,
+        onCustomKeyEvent = { keyEvent ->
+            handleAdjustmentKeyEvent(
+                keyEvent = keyEvent,
+                isAdjusting = isAdjusting,
+                onAdjustLeft = { selectPrevious() },
+                onAdjustRight = { selectNext() },
+                onDismissAdjustment = { isAdjusting = false },
+            )
+        },
+        onFocusChanged = { focused ->
+            if (!focused) {
+                isAdjusting = false
+            }
+            onFocusChanged?.invoke(focused)
+        },
         cardFocusRequester = cardFocusRequester,
         enabled = hasCutouts,
         icon = Icons.Rounded.FilterCenterFocus,
         title = titleText,
         modifier = modifier,
     ) { isFocused ->
-        val capsuleBorderColor = if (isFocused) colors.accent else colors.subduedBorder
-        val capsuleBorderWidth = if (isFocused) 1.5.dp else 1.dp
-        val capsuleBg = if (isFocused) colors.accent.copy(alpha = 0.15f) else colors.surfaceVariant
-        val arrowTint = if (isFocused) colors.accent else colors.onSurfaceSecondary
+        val capsuleBorderColor = if (isAdjusting) colors.accent else colors.subduedBorder
+        val capsuleBorderWidth = if (isAdjusting) 1.5.dp else 1.dp
+        val capsuleBg = if (isAdjusting) colors.accent.copy(alpha = 0.15f) else colors.surfaceVariant
+        val arrowTint = if (isAdjusting || isFocused) colors.accent else colors.onSurfaceSecondary
 
         Row(
             modifier =
@@ -1232,28 +1259,46 @@ private fun TargetCutoutCarouselCard(
                     .padding(horizontal = 4.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowLeft,
-                contentDescription = null,
-                tint = arrowTint,
-                modifier = Modifier.size(14.dp),
-            )
+            Box(
+                modifier =
+                    Modifier
+                        .size(16.dp)
+                        .clip(CircleShape)
+                        .clickable(enabled = hasCutouts) { selectPrevious() },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowLeft,
+                    contentDescription = stringResource(R.string.gamepad_previous),
+                    tint = arrowTint,
+                    modifier = Modifier.size(14.dp),
+                )
+            }
 
             Text(
                 text = readoutText,
-                color = if (isFocused) colors.accent else colors.onSurface,
+                color = if (isAdjusting) colors.accent else colors.onSurface,
                 fontSize = METO_TEXT_SIZE_PILL,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(horizontal = 4.dp),
             )
 
-            Icon(
-                imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-                contentDescription = null,
-                tint = arrowTint,
-                modifier = Modifier.size(14.dp),
-            )
+            Box(
+                modifier =
+                    Modifier
+                        .size(16.dp)
+                        .clip(CircleShape)
+                        .clickable(enabled = hasCutouts) { selectNext() },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                    contentDescription = stringResource(R.string.gamepad_next),
+                    tint = arrowTint,
+                    modifier = Modifier.size(14.dp),
+                )
+            }
         }
     }
 }
