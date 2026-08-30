@@ -545,6 +545,7 @@ internal fun EditButtonSubPageContent(
             color = accentColor,
         )
 
+        val previewLabel = stringResource(R.string.macropad_editor_button_preview_text)
         val buttonPreviewLeading: (textColor: Color, borderColor: Color, bgColor: Color, isIconOnly: Boolean) -> @Composable () -> Unit =
             { tColor, bColor, bgCol, iconOnly ->
                 {
@@ -566,10 +567,12 @@ internal fun EditButtonSubPageContent(
                             )
                         } else {
                             Text(
-                                text = label.ifBlank { "A" },
+                                text = previewLabel,
                                 color = tColor,
-                                style = MaterialTheme.typography.labelMedium,
+                                style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                softWrap = false,
                             )
                         }
                     }

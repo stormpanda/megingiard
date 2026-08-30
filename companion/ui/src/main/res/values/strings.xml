@@ -1147,6 +1147,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_save_layout_desc">Apply and save layout appearance configuration</string>
     <string name="macropad_editor_new_layout_default_name">New Layout</string>
     <string name="macropad_editor_new_button_default_label">New Button</string>
+    <string name="macropad_editor_button_preview_text">Label</string>
     <string name="gamepad_action_save_and_exit">Save &amp; Exit</string>
     <string name="gamepad_action_save_and_exit_desc">Apply and save changes</string>
     <string name="gamepad_action_discard_and_exit">Discard &amp; Exit</string>
