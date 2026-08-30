@@ -329,17 +329,9 @@ internal fun LayoutBackgroundSubPageContent(
         )
     }
 
-    // ── Save / Save & Delete Section ─────────────────────────────────
-    val hasDelete = previewBitmap != null
+    // ── Save & Delete Section ─────────────────────────────────────────
     GamepadSectionHeader(
-        text =
-            stringResource(
-                if (hasDelete) {
-                    R.string.macropad_editor_section_save_and_delete
-                } else {
-                    R.string.macropad_editor_section_save
-                },
-            ),
+        text = stringResource(R.string.macropad_editor_section_save_and_delete),
         color = accentColor,
     )
 
@@ -409,25 +401,24 @@ internal fun LayoutBackgroundSubPageContent(
         onDiscard = promptState.onDiscard,
     )
 
-    if (previewBitmap != null) {
-        GamepadTwoStepConfirmCard(
-            title = stringResource(R.string.macropad_editor_remove_bg_image),
-            confirmTitle = stringResource(R.string.macropad_editor_bg_delete_confirm_title),
-            description = stringResource(R.string.macropad_editor_remove_bg_image_desc),
-            actionText = stringResource(R.string.gamepad_action_clear),
-            confirmActionText = stringResource(R.string.gamepad_action_confirm),
-            icon = Icons.Rounded.Delete,
-            isDestructive = true,
-            onConfirm = {
-                isCropActive = false
-                MacroPadState.setCroppingBackground(false)
-                pendingImageUri = null
-                currentBgPath = null
-                previewBitmap = null
-                bgScale = 1f
-                bgOffsetX = 0f
-                bgOffsetY = 0f
-            },
-        )
-    }
+    GamepadTwoStepConfirmCard(
+        title = stringResource(R.string.macropad_editor_remove_bg_image),
+        confirmTitle = stringResource(R.string.macropad_editor_bg_delete_confirm_title),
+        description = stringResource(R.string.macropad_editor_remove_bg_image_desc),
+        actionText = stringResource(R.string.gamepad_action_clear),
+        confirmActionText = stringResource(R.string.gamepad_action_confirm),
+        icon = Icons.Rounded.Delete,
+        isDestructive = true,
+        enabled = previewBitmap != null,
+        onConfirm = {
+            isCropActive = false
+            MacroPadState.setCroppingBackground(false)
+            pendingImageUri = null
+            currentBgPath = null
+            previewBitmap = null
+            bgScale = 1f
+            bgOffsetX = 0f
+            bgOffsetY = 0f
+        },
+    )
 }

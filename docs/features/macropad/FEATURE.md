@@ -265,7 +265,7 @@ Each button supports one of the following actions:
   - Enabling Touch Projection on a layout displays a warning and confirmation dialog offering to turn OFF the Background Touchpad.
   - Enabling Background Touchpad when Touch Projection is active on any cutout displays a warning and confirmation dialog offering to turn OFF Touch Projection for all cutouts of that layout.
 
-- **Two-Step In-Place Confirmation**: Deleting or removing profiles, layouts, pad buttons, macros, background artwork, and app associations uses an inline two-step confirmation card (`GamepadTwoStepConfirmCard`). Activating the action changes the card headline to a confirmation prompt (e.g. *"Really delete 'Profile'?"*, *"Really delete this button?"*, *"Really delete 'Macro'?"*) with a *"Confirm"* badge. Activating again executes the action, shifts focus appropriately, and displays a toast confirmation. Pressing Button B or navigating away cancels the prompt.
+- **Two-Step In-Place Confirmation**: Deleting or removing profiles, layouts, pad buttons, macros, background artwork, and app associations uses an inline two-step confirmation card (`GamepadTwoStepConfirmCard`). In the Background settings editor, the "Remove Background Image" card remains visible in the deck even when no background image is currently set, rendering in a disabled state to prevent focus loss when an image is deleted. Activating an active delete action changes the card headline to a confirmation prompt (e.g. *"Really delete 'Profile'?"*, *"Really delete this button?"*, *"Really delete 'Macro'?"*) with a *"Confirm"* badge. Activating again executes the action, shifts focus appropriately, and displays a toast confirmation. Pressing Button B or navigating away cancels the prompt.
 - When a profile is deleted, all background image files for its layouts are deleted.
 - Creating a layout from a template layout (deep copy) automatically duplicates the background image file under the new layout's ID, ensuring that layouts do not share dependencies on the same file.
 
@@ -278,7 +278,8 @@ Each button supports one of the following actions:
   - If a key is configured, the **SteamGridDB Scraper** subpage opens in the editor deck.
 - The scraper subpage automatically performs an autocomplete search for games matching the profile's name as the initial query.
 - The user can modify the search query, search for games manually, select a matching game, and switch between four asset types: **Grid**, **Hero**, **Logo**, and **Icon**.
-- Tapping or selecting a preview thumbnail and confirming downloads the chosen image asynchronously, copies it to the internal files folder, and sets it as the layout's background image.
+- Tapping or selecting a preview thumbnail enables the **"Apply Artwork"** action row (`GamepadSaveExitActionRow`) at position 4. Confirming downloads the chosen image asynchronously, copies it to the internal files folder, and sets it as the layout's background image.
+- **In-Flight Exit Confirmation**: When an artwork thumbnail is selected, pressing Button B, Escape, or system Back intercepts navigation via `rememberSaveExitPromptState`. The action row splits into side-by-side **Save & Exit** and **Discard & Exit** options, preventing accidental exit without deciding whether to keep or discard the chosen artwork.
 - **Scraper Error Handling**: If any network request to SteamGridDB fails while the scraping dialog is open (searching, loading images, or downloading a selected image), a dismissible `AlertDialog` is displayed to the user explaining the specific error:
   - **Being offline**: Informs the user they are offline and should check their connection.
   - **Being rate limited**: Informs the user that the rate limit was exceeded.

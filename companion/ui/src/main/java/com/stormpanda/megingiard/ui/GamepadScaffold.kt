@@ -39,6 +39,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -56,6 +57,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.InputMode
@@ -64,11 +66,14 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -102,7 +107,7 @@ val LocalTransferFocusToDeck = compositionLocalOf<(() -> Unit)?> { null }
 val LocalLastFocusedDeckTracker = compositionLocalOf<((key: Any, requester: FocusRequester) -> Unit)?> { null }
 val LocalDeckCardRegistry = compositionLocalOf<((key: Any, requester: FocusRequester?) -> Unit)?> { null }
 val LocalResetLastFocusedTracker = compositionLocalOf<(() -> Unit)?> { null }
-val LocalDeckBackInterceptor = compositionLocalOf<((() -> Boolean)?) -> Unit> { {} }
+val LocalDeckBackInterceptor = compositionLocalOf<((interceptor: () -> Boolean, active: Boolean) -> Unit)?> { null }
 val LocalBreadcrumbConsumer = compositionLocalOf<((List<String>) -> Unit)?> { null }
 
 /**
@@ -489,10 +494,10 @@ fun GamepadTwoPaneScaffold(
         }
     }
 
-    var deckBackInterceptor by remember { mutableStateOf<(() -> Boolean)?>(null) }
+    val backInterceptors = remember { mutableStateListOf<() -> Boolean>() }
 
     val handleBackNavigation: () -> Boolean = {
-        val intercepted = deckBackInterceptor?.invoke() ?: false
+        val intercepted = backInterceptors.lastOrNull()?.invoke() ?: false
         if (intercepted) {
             true
         } else if (isCustomBackActive && onCustomBack != null) {
@@ -521,7 +526,15 @@ fun GamepadTwoPaneScaffold(
         LocalActiveCategoryRequester provides activeCategoryRequester,
         LocalFirstContentRequester provides firstContentRequester,
         LocalTransferFocusToDeck provides transferFocusToDeck,
-        LocalDeckBackInterceptor provides { interceptor -> deckBackInterceptor = interceptor },
+        LocalDeckBackInterceptor provides { interceptor, active ->
+            if (active) {
+                if (!backInterceptors.contains(interceptor)) {
+                    backInterceptors.add(interceptor)
+                }
+            } else {
+                backInterceptors.remove(interceptor)
+            }
+        },
         LocalBreadcrumbConsumer provides { newCrumbs -> registeredBreadcrumbs = newCrumbs },
         LocalLastFocusedDeckTracker provides { key, req ->
             savedFocusKeyByDepth[currentDepth] = key

@@ -1009,6 +1009,9 @@ fun MacroPadEditor(
                                                         BackgroundPickerManager.setPickedUri(uri)
                                                         MacroPadNavState.pop()
                                                     },
+                                                    onDiscard = {
+                                                        MacroPadNavState.pop()
+                                                    },
                                                 )
                                             }
                                         }

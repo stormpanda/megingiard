@@ -3,6 +3,7 @@ package com.stormpanda.megingiard.steamgriddb
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.view.KeyEvent
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -57,14 +58,15 @@ import com.stormpanda.megingiard.media.SteamGridDbException
 import com.stormpanda.megingiard.media.SteamGridDbGame
 import com.stormpanda.megingiard.media.SteamGridDbImage
 import com.stormpanda.megingiard.settings.SettingsManager
-import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
 import com.stormpanda.megingiard.ui.GamepadFocusCard
 import com.stormpanda.megingiard.ui.GamepadInfoBox
+import com.stormpanda.megingiard.ui.GamepadSaveExitActionRow
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadTextFieldCard
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.firstDeckItem
+import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -105,13 +107,14 @@ private val SG_SPACING_12 = 12.dp
 private val SG_SPACING_8 = 8.dp
 private val SG_ICON_SIZE_36 = 36.dp
 
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
 @Composable
 internal fun SteamGridDbScrapeSubPageContent(
     initialSearchQuery: String,
     onImageSelected: (Uri) -> Unit,
     accentColor: Color,
     modifier: Modifier = Modifier,
+    onDiscard: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val colors = LocalAppColors.current
@@ -317,35 +320,48 @@ internal fun SteamGridDbScrapeSubPageContent(
             )
         }
 
-        // ── 4. Apply Artwork Action Card (when an image is selected) ────────────
-        if (selectedImage != null) {
-            GamepadActionCard(
-                title = stringResource(R.string.steamgriddb_scrape_apply_title),
-                description = stringResource(R.string.steamgriddb_scrape_apply_desc),
-                actionText = stringResource(R.string.macropad_macro_editor_save),
-                icon = Icons.Rounded.Download,
-                enabled = !isDownloading,
-                onClick = {
-                    val currentImage = selectedImage ?: return@GamepadActionCard
-                    isDownloading = true
-                    AppLog.i(TAG, "Starting download for image URL: ${currentImage.url}")
-                    scope.launch {
-                        val cacheDir = context.cacheDir
-                        SteamGridDbClient
-                            .downloadImageToTempFile(currentImage.url, cacheDir)
-                            .onSuccess { tempFile ->
-                                AppLog.i(TAG, "Download successful, file saved to: ${tempFile.absolutePath}")
-                                onImageSelected(Uri.fromFile(tempFile))
-                                isDownloading = false
-                            }.onFailure { err ->
-                                AppLog.e(TAG, "Failed to download image: ${err.message}", err)
-                                isDownloading = false
-                                scrapeError = err
-                            }
+        // ── 4. Apply Artwork Action Row ──────────────────────────────────────────
+        val promptState =
+            rememberSaveExitPromptState(
+                hasChanges = selectedImage != null,
+                onSave = {
+                    val currentImage = selectedImage ?: return@rememberSaveExitPromptState
+                    if (!isDownloading) {
+                        isDownloading = true
+                        AppLog.i(TAG, "Starting download for image URL: ${currentImage.url}")
+                        scope.launch {
+                            val cacheDir = context.cacheDir
+                            SteamGridDbClient
+                                .downloadImageToTempFile(currentImage.url, cacheDir)
+                                .onSuccess { tempFile ->
+                                    AppLog.i(TAG, "Download successful, file saved to: ${tempFile.absolutePath}")
+                                    onImageSelected(Uri.fromFile(tempFile))
+                                    isDownloading = false
+                                }.onFailure { err ->
+                                    AppLog.e(TAG, "Failed to download image: ${err.message}", err)
+                                    isDownloading = false
+                                    scrapeError = err
+                                }
+                        }
                     }
                 },
+                onDiscard = onDiscard,
             )
-        }
+
+        GamepadSaveExitActionRow(
+            title = stringResource(R.string.steamgriddb_scrape_apply_title),
+            description = stringResource(R.string.steamgriddb_scrape_apply_desc),
+            pulseOnChanges = selectedImage != null,
+            saveActionText = stringResource(R.string.gamepad_action_save),
+            saveIcon = Icons.Rounded.Download,
+            enabled = selectedImage != null && !isDownloading,
+            showExitPrompt = promptState.showExitPrompt,
+            onDismissPrompt = promptState.dismissPrompt,
+            saveFocusRequester = promptState.focusRequester,
+            bringIntoViewRequester = promptState.bringIntoViewRequester,
+            onSave = promptState.onSave,
+            onDiscard = promptState.onDiscard,
+        )
 
         // ── 5. Section Header ───────────────────────────────────────────────────
         GamepadSectionHeader(

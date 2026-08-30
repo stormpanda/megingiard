@@ -1357,7 +1357,7 @@ fun rememberSaveExitPromptState(
         }
     }
 
-    val registerBackInterceptor = LocalDeckBackInterceptor.current
+    val deckBackInterceptorRegistry = LocalDeckBackInterceptor.current
     val currentHasChanges by rememberUpdatedState(hasChanges)
     val currentShowExitPrompt by rememberUpdatedState(showExitPrompt)
     val currentOnSave by rememberUpdatedState(onSave)
@@ -1379,26 +1379,29 @@ fun rememberSaveExitPromptState(
         }
     }
 
-    val handleBack: () -> Boolean = {
-        if (currentHasChanges) {
-            if (!currentShowExitPrompt) {
-                showExitPrompt = true
-                refocusSaveAction()
-                true
-            } else {
-                showExitPrompt = false
-                refocusSaveAction()
-                true
+    val handleBack: () -> Boolean =
+        remember {
+            {
+                if (currentHasChanges) {
+                    if (!currentShowExitPrompt) {
+                        showExitPrompt = true
+                        refocusSaveAction()
+                        true
+                    } else {
+                        showExitPrompt = false
+                        refocusSaveAction()
+                        true
+                    }
+                } else {
+                    false
+                }
             }
-        } else {
-            false
         }
-    }
 
-    DisposableEffect(registerBackInterceptor) {
-        registerBackInterceptor(handleBack)
+    DisposableEffect(deckBackInterceptorRegistry, handleBack) {
+        deckBackInterceptorRegistry?.invoke(handleBack, true)
         onDispose {
-            registerBackInterceptor(null)
+            deckBackInterceptorRegistry?.invoke(handleBack, false)
         }
     }
 
