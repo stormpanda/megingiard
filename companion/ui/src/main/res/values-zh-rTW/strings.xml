@@ -582,8 +582,7 @@ Open Settings to create a layout.</string>
     <string name="mirror_editor_cutout_name_hint">區塊名稱</string>
     <string name="mirror_editor_adjust_top_cutout">調整頂部區塊</string>
     <string name="mirror_editor_adjust_bottom_cutout">調整底部區塊</string>
-    <string name="mirror_editor_move_badge">MOVE</string>
-    <string name="mirror_editor_resize_badge">RESIZE</string>
+    <string name="mirror_editor_saved_badge">SAVED</string>
     <string name="mirror_editor_adjust_toast">使用方向鍵移動。按住 R2 縮放。按住 L2 進行微調。</string>
     <string name="mirror_editor_no_cutouts">無區塊</string>
     <string name="mirror_editor_save_changes">儲存變更</string>

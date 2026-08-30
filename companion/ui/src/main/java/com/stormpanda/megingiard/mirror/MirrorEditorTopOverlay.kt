@@ -1509,23 +1509,6 @@ private fun AdjustCoordinatesCard(
         cardBgColor = if (isAdjusting) colors.accent.copy(alpha = 0.25f) else null,
         icon = icon,
         title = title,
-        trailingContent =
-            if (isAdjusting) {
-                { isFocused ->
-                    ToolboxPill(
-                        text =
-                            if (isR2Held) {
-                                stringResource(R.string.mirror_editor_resize_badge)
-                            } else {
-                                stringResource(R.string.mirror_editor_move_badge)
-                            },
-                        isAccent = isR2Held,
-                        isHighlighted = isFocused || isR2Held,
-                    )
-                }
-            } else {
-                null
-            },
         onCustomKeyEvent = { event ->
             if (!isAdjusting) return@ToolboxCard false
             val keyCode = event.nativeKeyEvent.keyCode
@@ -1811,7 +1794,7 @@ private fun ToolboxSaveExitRow(
             ToolboxActionCard(
                 title = effectiveTitle,
                 icon = Icons.Rounded.Save,
-                actionBadge = if (!isPromptActive && !hasChanges) "SAVED" else null,
+                actionBadge = if (!isPromptActive && !hasChanges) stringResource(R.string.mirror_editor_saved_badge) else null,
                 isAccent = true,
                 cardBgColor = if (hasChanges) colors.accent.copy(alpha = 0.20f) else null,
                 cardFocusRequester = saveFocusRequester,

@@ -514,7 +514,7 @@ Open Settings to create a layout.</string>
     <string name="quick_menu_profile_label">Profil</string>
     <string name="quick_menu_layout_label">Layout</string>
     <string name="quick_menu_edit_layout">Profil/Layout bearbeiten</string>
-    <string name="quick_menu_screen_mirroring">Bildschirmspiegelung</string>
+    <string name="quick_menu_screen_mirroring">Bildschirmspiegel</string>
     <string name="quick_menu_global_settings">Globale Einstellungen</string>
     <string name="quick_menu_shut_off_cd">Megingiard beenden</string>
     <string name="shut_off_dialog_title">Megingiard beenden</string>
@@ -582,15 +582,14 @@ Open Settings to create a layout.</string>
     <string name="mirror_editor_cutout_name_hint">Ausschnitt-Name</string>
     <string name="mirror_editor_adjust_top_cutout">Oberen Ausschnitt anpassen</string>
     <string name="mirror_editor_adjust_bottom_cutout">Unteren Ausschnitt anpassen</string>
-    <string name="mirror_editor_move_badge">MOVE</string>
-    <string name="mirror_editor_resize_badge">RESIZE</string>
+    <string name="mirror_editor_saved_badge">GESPEICHERT</string>
     <string name="mirror_editor_adjust_toast">Steuerkreuz zum Verschieben. R2 gedrückt halten zum Ändern der Größe. L2 gedrückt halten für Präzision.</string>
     <string name="mirror_editor_no_cutouts">Keine Ausschnitte</string>
-    <string name="mirror_editor_save_changes">Änderungen speichern</string>
+    <string name="mirror_editor_save_changes">Speichern</string>
     <string name="mirror_editor_saved_toast">Layout-Änderungen gespeichert</string>
     <string name="mirror_editor_minimize">Minimieren</string>
     <string name="mirror_editor_expand">Erweitern</string>
-    <string name="mirror_editor_hide_background">Hintergrund ausblenden</string>
+    <string name="mirror_editor_hide_background">Hintergrund</string>
     <string name="mirror_editor_bg_hidden">Ausgeblendet</string>
     <string name="mirror_editor_bg_visible">Sichtbar</string>
     <string name="mirror_editor_bg_none">Keiner</string>

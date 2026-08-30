@@ -582,8 +582,7 @@ Open Settings to create a layout.</string>
     <string name="mirror_editor_cutout_name_hint">Cutout Name</string>
     <string name="mirror_editor_adjust_top_cutout">Adjust Top Cutout</string>
     <string name="mirror_editor_adjust_bottom_cutout">Adjust Bottom Cutout</string>
-    <string name="mirror_editor_move_badge">MOVE</string>
-    <string name="mirror_editor_resize_badge">RESIZE</string>
+    <string name="mirror_editor_saved_badge">SAVED</string>
     <string name="mirror_editor_adjust_toast">Use D-Pad to move. Hold R2 to resize. Hold L2 for precision.</string>
     <string name="mirror_editor_no_cutouts">No Cutouts</string>
     <string name="mirror_editor_save_changes">Save Changes</string>
