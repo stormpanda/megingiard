@@ -239,6 +239,7 @@ Open Settings to create a layout.</string>
     <!-- Privileged Mode -->
     <string name="privd_title">特權模式</string>
     <string name="privd_status_off">關閉</string>
+    <string name="privd_status_running_version">開 (V%1$d)</string>
     <string name="accessibility_status_active">已啟用</string>
     <string name="privd_action_retry">重試自動設定</string>
     <string name="privd_toast_accessibility_required">自動切換需要無障礙服務，請先在系統設定中啟用。</string>

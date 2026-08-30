@@ -32,10 +32,10 @@ every device since Android 11 (API 30).
 
 ### FR-PV2: Status Visibility
 
-- The Settings card MUST show one of five states: `OFF`, `BOOTSTRAPPING`,
-  `CONNECTING`, `RUNNING`, `FAILED`.
-- A `Test connection` button MUST round-trip a `PING` to the daemon and
-  display the result, so the user can verify the link is alive.
+- The Global Settings Privileged Mode action card MUST display a trailing status badge:
+  - `"ON (V<N>)"` (e.g., `ON (V7)`) with illuminated accent badge styling when Privileged Mode is in the `RUNNING` state.
+  - `"OFF"` with standard muted surface badge styling when Privileged Mode is offline or disconnected.
+- The Reconnection Prompt and Onboarding step MUST show detailed status guidance and actionable controls when bootstrapping or connecting.
 
 ### FR-PV3: Automatic Feature Promotion
 

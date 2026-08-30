@@ -239,6 +239,7 @@ Open Settings to create a layout.</string>
     <!-- Privileged Mode -->
     <string name="privd_title">Privilegierter Modus</string>
     <string name="privd_status_off">Aus</string>
+    <string name="privd_status_running_version">AN (V%1$d)</string>
     <string name="accessibility_status_active">Aktiv</string>
     <string name="privd_action_retry">Auto-Einrichtung wiederholen</string>
     <string name="privd_toast_accessibility_required">Eingabehilfe-Dienst wird für den automatischen Toggle benötigt. Bitte in den Einstellungen aktivieren.</string>

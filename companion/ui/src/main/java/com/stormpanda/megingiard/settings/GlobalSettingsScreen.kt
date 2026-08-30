@@ -102,6 +102,8 @@ import com.stormpanda.megingiard.log.LogReportManager
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
+import com.stormpanda.megingiard.privd.PrivdConstants
+import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.settings.ThemeMode
 import com.stormpanda.megingiard.settings.displayNameResId
 import com.stormpanda.megingiard.ui.BumperDirection
@@ -178,6 +180,7 @@ fun GlobalSettingsScreen(
     val logLevel by viewModel.logLevel.collectAsState()
     val excludeFromRecents by viewModel.excludeFromRecents.collectAsState()
     val gamepadSwapFaceButtons by viewModel.gamepadSwapFaceButtons.collectAsState()
+    val privdState by viewModel.privdState.collectAsState()
     val deadzoneLeft by viewModel.privdDeadzoneLeft.collectAsState()
     val deadzoneRight by viewModel.privdDeadzoneRight.collectAsState()
     val steamGridDbApiToken by viewModel.steamGridDbApiToken.collectAsState()
@@ -348,10 +351,25 @@ fun GlobalSettingsScreen(
                                     modifier = Modifier.firstDeckItem(isFirst = !updateAvailable || latestReleaseInfo == null),
                                 )
 
+                                val isPrivdRunning = privdState == PrivdState.RUNNING
                                 GamepadActionCard(
                                     title = stringResource(R.string.privd_title),
                                     description = stringResource(R.string.help_settings_privd_desc),
                                     icon = Icons.Rounded.Security,
+                                    trailingContent = {
+                                        GamepadPill(
+                                            text =
+                                                if (isPrivdRunning) {
+                                                    stringResource(
+                                                        R.string.privd_status_running_version,
+                                                        PrivdConstants.PRIVD_VERSION,
+                                                    )
+                                                } else {
+                                                    stringResource(R.string.gamepad_toggle_off)
+                                                },
+                                            isAccent = isPrivdRunning,
+                                        )
+                                    },
                                     onClick = {
                                         AppStateManager.closeActiveModal()
                                         AppStateManager.setPrivdSetupWizardOpen(true)

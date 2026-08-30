@@ -1210,6 +1210,7 @@ fun GamepadActionCard(
     actionText: String? = null,
     actionGlyph: GamePadGlyph? = null,
     actionLeadingContent: (@Composable () -> Unit)? = null,
+    trailingContent: (@Composable () -> Unit)? = null,
     cardBgColor: Color? = null,
     pulseOnChanges: Boolean = false,
     enabled: Boolean = true,
@@ -1261,7 +1262,7 @@ fun GamepadActionCard(
             isDestructive = isDestructive,
             alwaysShowFullDescription = alwaysShowFullDescription,
             trailingContent =
-                if (actionText != null || actionGlyph != null || actionLeadingContent != null) {
+                trailingContent ?: if (actionText != null || actionGlyph != null || actionLeadingContent != null) {
                     {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,

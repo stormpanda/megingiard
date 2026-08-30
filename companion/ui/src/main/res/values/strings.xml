@@ -239,6 +239,7 @@ Open Settings to create a layout.</string>
     <!-- Privileged Mode -->
     <string name="privd_title">Privileged Mode</string>
     <string name="privd_status_off">Off</string>
+    <string name="privd_status_running_version">ON (V%1$d)</string>
     <string name="accessibility_status_active">Active</string>
     <string name="privd_action_retry">Retry Auto Setup</string>
     <string name="privd_toast_accessibility_required">Accessibility Service is required for auto-toggle. Please enable it in Settings.</string>
