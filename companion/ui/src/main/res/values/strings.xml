@@ -377,6 +377,12 @@ Open Settings to create a layout.</string>
     <string name="layout_settings_bg_image_use_as_mask_desc">Draw the background image on top of screen mirror cutouts. Useful for PNGs with transparency.</string>
     <string name="layout_settings_bg_image_crop">Crop</string>
     <string name="layout_settings_bg_image_crop_desc">Pinch to zoom and drag to pan the background image on the bottom screen.</string>
+    <string name="layout_settings_bg_image_crop_disabled_stretch">Cropping and positioning are disabled when stretch scaling is active.</string>
+    <string name="layout_settings_bg_scale_mode">Scaling</string>
+    <string name="layout_settings_bg_scale_mode_desc">Choose how the background image adapts to the screen aspect ratio.</string>
+    <string name="bg_scale_mode_fill">Fill</string>
+    <string name="bg_scale_mode_fit">Fit</string>
+    <string name="bg_scale_mode_stretch">Stretch</string>
     <string name="layout_settings_bg_image_adjustments">Image Adjustments &amp; Masking</string>
     <string name="layout_settings_bg_section_title">Background</string>
     <string name="layout_settings_bg_image_dimming_title">Dimming</string>

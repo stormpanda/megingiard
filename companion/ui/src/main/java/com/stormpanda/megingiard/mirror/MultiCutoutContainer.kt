@@ -17,6 +17,7 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Shader
 import android.widget.FrameLayout
+import com.stormpanda.megingiard.macropad.BackgroundScaleMode
 import com.stormpanda.megingiard.math.ViewportMath
 import kotlin.math.max
 import kotlin.math.min
@@ -87,6 +88,13 @@ internal class MultiCutoutContainer(
                 invalidate()
             }
         }
+    var bgScaleMode: BackgroundScaleMode = BackgroundScaleMode.FILL
+        set(value) {
+            if (field != value) {
+                field = value
+                invalidate()
+            }
+        }
 
     private fun updateBgDimPaint() {
         val dim = bgImageDim
@@ -99,6 +107,66 @@ internal class MultiCutoutContainer(
             bgDimPaint.colorFilter = ColorMatrixColorFilter(matrix)
         } else {
             bgDimPaint.colorFilter = null
+        }
+    }
+
+    private fun drawBackgroundBitmap(
+        canvas: Canvas,
+        bitmap: Bitmap,
+        parentW: Float,
+        parentH: Float,
+    ) {
+        val paint = if (bgImageDim > 0f) bgDimPaint else null
+        when (bgScaleMode) {
+            BackgroundScaleMode.STRETCH -> {
+                bgSrcRect.set(0, 0, bitmap.width, bitmap.height)
+                bgDestRect.set(0f, 0f, parentW, parentH)
+                canvas.drawBitmap(bitmap, bgSrcRect, bgDestRect, paint)
+            }
+
+            BackgroundScaleMode.FIT -> {
+                canvas.save()
+                val scale = bgImageScale
+                val offsetX = bgImageOffsetX * parentW
+                val offsetY = bgImageOffsetY * parentH
+                val cw = parentW
+                val ch = parentH
+                val iw = bitmap.width.toFloat()
+                val ih = bitmap.height.toFloat()
+                val scaleBase = ViewportMath.calculateAspectFitScale(cw, ch, iw, ih)
+                val ws = iw * scaleBase
+                val hs = ih * scaleBase
+
+                canvas.translate(cw / 2f + offsetX, ch / 2f + offsetY)
+                canvas.scale(scale, scale)
+
+                bgSrcRect.set(0, 0, bitmap.width, bitmap.height)
+                bgDestRect.set(-ws / 2f, -hs / 2f, ws / 2f, hs / 2f)
+                canvas.drawBitmap(bitmap, bgSrcRect, bgDestRect, paint)
+                canvas.restore()
+            }
+
+            BackgroundScaleMode.FILL -> {
+                canvas.save()
+                val scale = bgImageScale
+                val offsetX = bgImageOffsetX * parentW
+                val offsetY = bgImageOffsetY * parentH
+                val cw = parentW
+                val ch = parentH
+                val iw = bitmap.width.toFloat()
+                val ih = bitmap.height.toFloat()
+                val scaleBase = ViewportMath.calculateAspectFillScale(cw, ch, iw, ih)
+                val ws = iw * scaleBase
+                val hs = ih * scaleBase
+
+                canvas.translate(cw / 2f + offsetX, ch / 2f + offsetY)
+                canvas.scale(scale, scale)
+
+                bgSrcRect.set(0, 0, bitmap.width, bitmap.height)
+                bgDestRect.set(-ws / 2f, -hs / 2f, ws / 2f, hs / 2f)
+                canvas.drawBitmap(bitmap, bgSrcRect, bgDestRect, paint)
+                canvas.restore()
+            }
         }
     }
 
@@ -218,28 +286,7 @@ internal class MultiCutoutContainer(
         try {
             val bg = bgBitmap
             if (!useAsMask && bg != null) {
-                canvas.save()
-                val scale = bgImageScale
-                val offsetX = bgImageOffsetX * parentW
-                val offsetY = bgImageOffsetY * parentH
-                val cw = parentW
-                val ch = parentH
-                val iw = bg.width.toFloat()
-                val ih = bg.height.toFloat()
-                val scaleBase =
-                    ViewportMath
-                        .calculateAspectFillScale(cw, ch, iw, ih)
-                val ws = iw * scaleBase
-                val hs = ih * scaleBase
-
-                canvas.translate(cw / 2f + offsetX, ch / 2f + offsetY)
-                canvas.scale(scale, scale)
-
-                bgSrcRect.set(0, 0, bg.width, bg.height)
-                bgDestRect.set(-ws / 2f, -hs / 2f, ws / 2f, hs / 2f)
-                val paint = if (bgImageDim > 0f) bgDimPaint else null
-                canvas.drawBitmap(bg, bgSrcRect, bgDestRect, paint)
-                canvas.restore()
+                drawBackgroundBitmap(canvas, bg, parentW, parentH)
             }
 
             var hasAnyTouchingEdge = false
@@ -430,28 +477,7 @@ internal class MultiCutoutContainer(
 
             val mask = bgBitmap
             if (useAsMask && mask != null) {
-                canvas.save()
-                val scale = bgImageScale
-                val offsetX = bgImageOffsetX * parentW
-                val offsetY = bgImageOffsetY * parentH
-                val cw = parentW
-                val ch = parentH
-                val iw = mask.width.toFloat()
-                val ih = mask.height.toFloat()
-                val scaleBase =
-                    ViewportMath
-                        .calculateAspectFillScale(cw, ch, iw, ih)
-                val ws = iw * scaleBase
-                val hs = ih * scaleBase
-
-                canvas.translate(cw / 2f + offsetX, ch / 2f + offsetY)
-                canvas.scale(scale, scale)
-
-                bgSrcRect.set(0, 0, mask.width, mask.height)
-                bgDestRect.set(-ws / 2f, -hs / 2f, ws / 2f, hs / 2f)
-                val paint = if (bgImageDim > 0f) bgDimPaint else null
-                canvas.drawBitmap(mask, bgSrcRect, bgDestRect, paint)
-                canvas.restore()
+                drawBackgroundBitmap(canvas, mask, parentW, parentH)
             }
         } finally {
             canvas.restoreToCount(overallSaveCount)

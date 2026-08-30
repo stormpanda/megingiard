@@ -377,6 +377,12 @@ Open Settings to create a layout.</string>
     <string name="layout_settings_bg_image_use_as_mask_desc">將背景圖片繪製在螢幕投影區塊上方。適用於具有透明度的 PNG。</string>
     <string name="layout_settings_bg_image_crop">裁切</string>
     <string name="layout_settings_bg_image_crop_desc">在下螢幕雙指縮放與拖曳移動背景圖片。</string>
+    <string name="layout_settings_bg_image_crop_disabled_stretch">當啟用拉伸縮放時，裁切與調整位置功能將會停用。</string>
+    <string name="layout_settings_bg_scale_mode">縮放模式</string>
+    <string name="layout_settings_bg_scale_mode_desc">選擇背景圖片適應螢幕長寬比的方式。</string>
+    <string name="bg_scale_mode_fill">填滿</string>
+    <string name="bg_scale_mode_fit">符合</string>
+    <string name="bg_scale_mode_stretch">拉伸</string>
     <string name="layout_settings_bg_image_adjustments">圖片調整與遮罩</string>
     <string name="layout_settings_bg_section_title">背景</string>
     <string name="layout_settings_bg_image_dimming_title">調暗</string>

@@ -74,6 +74,7 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.BitmapUtils
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.TouchInjector
+import com.stormpanda.megingiard.math.ViewportMath
 import com.stormpanda.megingiard.mirror.EmbeddedMirrorView
 import com.stormpanda.megingiard.mirror.MasterSurfaceRegistry
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
@@ -629,33 +630,76 @@ internal fun PadSurface(
                     val iw = bgBitmap!!.width.toFloat()
                     val ih = bgBitmap!!.height.toFloat()
                     if (cw > 0f && ch > 0f && iw > 0f && ih > 0f) {
-                        val userScale = layout.bgImageScale
-                        val ox = layout.bgImageOffsetX
-                        val oy = layout.bgImageOffsetY
+                        when (layout.bgScaleMode) {
+                            BackgroundScaleMode.STRETCH -> {
+                                drawImage(
+                                    image = bgBitmap!!,
+                                    dstOffset = IntOffset.Zero,
+                                    dstSize = IntSize(cw.toInt(), ch.toInt()),
+                                    colorFilter = bgImageDimFilter,
+                                )
+                            }
 
-                        val scaleBase = maxOf(cw / iw, ch / ih)
-                        val ws = iw * scaleBase
-                        val hs = ih * scaleBase
+                            BackgroundScaleMode.FIT -> {
+                                val userScale = layout.bgImageScale
+                                val ox = layout.bgImageOffsetX
+                                val oy = layout.bgImageOffsetY
 
-                        val maxTx = ((ws * userScale - cw) / 2f).coerceAtLeast(0f)
-                        val maxTy = ((hs * userScale - ch) / 2f).coerceAtLeast(0f)
-                        val clampedX = (ox * cw).coerceIn(-maxTx, maxTx)
-                        val clampedY = (oy * ch).coerceIn(-maxTy, maxTy)
+                                val scaleBase = ViewportMath.calculateAspectFitScale(cw, ch, iw, ih)
+                                val ws = iw * scaleBase
+                                val hs = ih * scaleBase
 
-                        drawImage(
-                            image = bgBitmap!!,
-                            dstOffset =
-                                IntOffset(
-                                    ((cw - ws * userScale) / 2f + clampedX).toInt(),
-                                    ((ch - hs * userScale) / 2f + clampedY).toInt(),
-                                ),
-                            dstSize =
-                                IntSize(
-                                    (ws * userScale).toInt(),
-                                    (hs * userScale).toInt(),
-                                ),
-                            colorFilter = bgImageDimFilter,
-                        )
+                                val maxTx = ((ws * userScale - cw) / 2f).coerceAtLeast(0f)
+                                val maxTy = ((hs * userScale - ch) / 2f).coerceAtLeast(0f)
+                                val clampedX = (ox * cw).coerceIn(-maxTx, maxTx)
+                                val clampedY = (oy * ch).coerceIn(-maxTy, maxTy)
+
+                                drawImage(
+                                    image = bgBitmap!!,
+                                    dstOffset =
+                                        IntOffset(
+                                            ((cw - ws * userScale) / 2f + clampedX).toInt(),
+                                            ((ch - hs * userScale) / 2f + clampedY).toInt(),
+                                        ),
+                                    dstSize =
+                                        IntSize(
+                                            (ws * userScale).toInt(),
+                                            (hs * userScale).toInt(),
+                                        ),
+                                    colorFilter = bgImageDimFilter,
+                                )
+                            }
+
+                            BackgroundScaleMode.FILL -> {
+                                val userScale = layout.bgImageScale
+                                val ox = layout.bgImageOffsetX
+                                val oy = layout.bgImageOffsetY
+
+                                val scaleBase = ViewportMath.calculateAspectFillScale(cw, ch, iw, ih)
+                                val ws = iw * scaleBase
+                                val hs = ih * scaleBase
+
+                                val maxTx = ((ws * userScale - cw) / 2f).coerceAtLeast(0f)
+                                val maxTy = ((hs * userScale - ch) / 2f).coerceAtLeast(0f)
+                                val clampedX = (ox * cw).coerceIn(-maxTx, maxTx)
+                                val clampedY = (oy * ch).coerceIn(-maxTy, maxTy)
+
+                                drawImage(
+                                    image = bgBitmap!!,
+                                    dstOffset =
+                                        IntOffset(
+                                            ((cw - ws * userScale) / 2f + clampedX).toInt(),
+                                            ((ch - hs * userScale) / 2f + clampedY).toInt(),
+                                        ),
+                                    dstSize =
+                                        IntSize(
+                                            (ws * userScale).toInt(),
+                                            (hs * userScale).toInt(),
+                                        ),
+                                    colorFilter = bgImageDimFilter,
+                                )
+                            }
+                        }
                     }
                 }
             }

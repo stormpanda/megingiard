@@ -377,6 +377,12 @@ Open Settings to create a layout.</string>
     <string name="layout_settings_bg_image_use_as_mask_desc">Hintergrundbild über den gespiegelten Bildausschnitten anzeigen. Nützlich für PNGs mit Transparenz.</string>
     <string name="layout_settings_bg_image_crop">Zuschneiden</string>
     <string name="layout_settings_bg_image_crop_desc">Auf dem unteren Bildschirm mit zwei Fingern zoomen und durch Ziehen verschieben.</string>
+    <string name="layout_settings_bg_image_crop_disabled_stretch">Zuschneiden und Positionieren sind deaktiviert, wenn Strecken aktiv ist.</string>
+    <string name="layout_settings_bg_scale_mode">Skalierung</string>
+    <string name="layout_settings_bg_scale_mode_desc">Wähle, wie das Hintergrundbild an das Seitenverhältnis des Bildschirms angepasst wird.</string>
+    <string name="bg_scale_mode_fill">Ausfüllen</string>
+    <string name="bg_scale_mode_fit">Einpassen</string>
+    <string name="bg_scale_mode_stretch">Strecken</string>
     <string name="layout_settings_bg_image_adjustments">Bildanpassungen &amp; Maskierung</string>
     <string name="layout_settings_bg_section_title">Hintergrund</string>
     <string name="layout_settings_bg_image_dimming_title">Dimmung</string>

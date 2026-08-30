@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.macropad.BackgroundScaleMode
 import com.stormpanda.megingiard.macropad.MacroPadMediaRepository
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.privd.PrivdClient
@@ -300,6 +301,8 @@ fun EmbeddedMirrorView(
             mcc.bgImageOffsetX = if (effectiveShowLayoutBackground) layout?.bgImageOffsetX ?: 0f else 0f
             mcc.bgImageOffsetY = if (effectiveShowLayoutBackground) layout?.bgImageOffsetY ?: 0f else 0f
             mcc.bgImageDim = if (effectiveShowLayoutBackground) layout?.backgroundImageDim ?: 0f else 0f
+            mcc.bgScaleMode =
+                if (effectiveShowLayoutBackground) layout?.bgScaleMode ?: BackgroundScaleMode.FILL else BackgroundScaleMode.FILL
             mcc.ambientDim = if (overrideCutouts == null) layout?.ambientDim ?: 0f else 0f
 
             val tv = containerHolder.textureView

@@ -295,6 +295,18 @@ Each button supports one of the following actions:
 - Transparent and semi-transparent PNG images are fully supported: dimming is applied using a `SrcAtop` blending tint color filter. This ensures that only the non-transparent/colored pixels of the image are dimmed, and the transparent background/cutout regions remain completely unaffected.
 - Real-time dimming is visible within the **Layout Settings background preview thumbnail**, the **Layout Editor Canvas** (`PadCanvas`), and the active **MacroPad Screen** (`MacroPadScreen`).
 
+### FR-P9d: Background Image Scaling Modes
+
+- Users can select how the background image scales to fit the secondary display's aspect ratio via a `GamepadChoiceCard` in the layout background settings editor (`LayoutBackgroundSubPageContent`).
+- Three scaling modes are supported:
+  - **Fill** (`BackgroundScaleMode.FILL`): Scales proportionally to cover the entire viewport without letterboxing/pillarboxing, cropping excess edges (default behavior, fully backward compatible with older layout configurations).
+  - **Fit** (`BackgroundScaleMode.FIT`): Scales proportionally so the full image is visible, leaving black letterbox bars (top/bottom) or pillarbox bars (left/right) if aspect ratios differ.
+  - **Stretch** (`BackgroundScaleMode.STRETCH`): Stretches the image non-proportionally to exactly fill screen width and height.
+- **Cropping & Positioning Interaction**:
+  - When **Stretch** scaling is selected, the **Crop** toggle card is disabled (`enabled = false`), its description states that cropping and positioning are disabled when stretch scaling is active, and any active crop mode is automatically deactivated.
+  - While **Fill** or **Fit** is selected, user-adjusted pinch-to-zoom and pan gestures function relative to the mode's base proportional scale.
+- Persisted in `PadLayout.bgScaleMode` (`BackgroundScaleMode`), defaulting to `FILL` for seamless backward compatibility.
+
 ### FR-P15: App Quick-Switch Button & Floating Bubble Overlay
 
 - Users can add buttons of type **App Quick-Switch** (`PadAction.AppLauncher`) to MacroPad layouts to switch quickly between Megingiard and an external application.

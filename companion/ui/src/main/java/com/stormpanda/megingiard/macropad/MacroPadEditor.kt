@@ -561,7 +561,16 @@ fun MacroPadEditor(
                                                     onDiscard = {
                                                         MacroPadState.clearPreviewLayout()
                                                     },
-                                                    onConfirm = { bgImagePath, useAsMask, bgChanged, bgScale, bgOffsetX, bgOffsetY, bgDim ->
+                                                    onConfirm = {
+                                                        bgImagePath,
+                                                        useAsMask,
+                                                        bgChanged,
+                                                        bgScale,
+                                                        bgOffsetX,
+                                                        bgOffsetY,
+                                                        bgDim,
+                                                        bgScaleMode,
+                                                        ->
                                                         MacroPadState.clearPreviewLayout()
                                                         MacroPadState.updateLayout(
                                                             activeLayout.copy(
@@ -573,6 +582,7 @@ fun MacroPadEditor(
                                                                 bgImageOffsetX = bgOffsetX,
                                                                 bgImageOffsetY = bgOffsetY,
                                                                 backgroundImageDim = bgDim,
+                                                                bgScaleMode = bgScaleMode,
                                                             ),
                                                         )
                                                         DialogToastManager.show(
