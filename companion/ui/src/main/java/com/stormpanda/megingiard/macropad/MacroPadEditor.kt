@@ -817,14 +817,13 @@ fun MacroPadEditor(
                                                 existingNames = profile.layouts.map { it.name },
                                                 accentColor = colors.accent,
                                                 onDiscard = { MacroPadNavState.pop() },
-                                                onCreate = { name, invisibleBtns ->
+                                                onCreate = { name ->
                                                     val newId = UUID.randomUUID().toString()
                                                     val newLayout =
                                                         PadLayout(
                                                             id = newId,
                                                             name = name,
                                                             enabled = true,
-                                                            invisibleButtons = invisibleBtns,
                                                         )
                                                     MacroPadState.addLayout(newLayout)
                                                     MacroPadNavState.setStack(listOf(MacroPadSubPage.EditLayout(newId)))

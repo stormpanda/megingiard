@@ -415,7 +415,7 @@ internal fun NewLayoutSubPageContent(
     existingNames: List<String>,
     accentColor: Color,
     onDiscard: () -> Unit = {},
-    onCreate: (name: String, invisibleButtons: Boolean) -> Unit,
+    onCreate: (name: String) -> Unit,
 ) {
     val defaultLayoutName = stringResource(R.string.macropad_editor_new_layout_default_name)
     val initialLayoutName =
@@ -431,7 +431,6 @@ internal fun NewLayoutSubPageContent(
             }
         }
     var nameText by remember { mutableStateOf(initialLayoutName) }
-    var invisibleButtons by remember { mutableStateOf(false) }
 
     val normalizedName = nameText.trim()
     val isDuplicate = existingNames.any { it.equals(normalizedName, ignoreCase = true) }
@@ -443,7 +442,7 @@ internal fun NewLayoutSubPageContent(
             hasChanges = true,
             onSave = {
                 if (isConfirmEnabled) {
-                    onCreate(normalizedName, invisibleButtons)
+                    onCreate(normalizedName)
                 }
             },
             onDiscard = onDiscard,
@@ -463,14 +462,6 @@ internal fun NewLayoutSubPageContent(
         icon = Icons.Rounded.Edit,
         isError = hasError,
         modifier = Modifier.firstDeckItem(),
-    )
-
-    GamepadToggleCard(
-        title = stringResource(R.string.layout_settings_invisible_buttons),
-        description = stringResource(R.string.layout_settings_invisible_buttons_desc),
-        checked = invisibleButtons,
-        icon = Icons.Rounded.VisibilityOff,
-        onCheckedChange = { invisibleButtons = it },
     )
 
     // ── Save Section ─────────────────────────────────────────────────
