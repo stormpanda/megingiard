@@ -4,10 +4,12 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -32,6 +34,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
@@ -66,6 +69,7 @@ private const val BSE_DIM_MAX = 0.95f
 private const val BSE_DIM_STEP = 0.05f
 private const val BSE_PERCENT_DIVISOR = 100f
 
+private val BSE_PREVIEW_PADDING = 12.dp
 private val BSE_PREVIEW_IMAGE_ROUNDING = 8.dp
 private val BSE_ICON_SIZE_48 = 48.dp
 
@@ -213,47 +217,50 @@ internal fun LayoutBackgroundSubPageContent(
                     Modifier
                         .aspectRatio(BSE_BOTTOM_SCREEN_ASPECT_RATIO)
                         .firstDeckItem(),
-                cardBgColor = Color.Black,
-                shape = RoundedCornerShape(BSE_PREVIEW_IMAGE_ROUNDING),
             ) {
-                val bitmap = previewBitmap
-                if (bitmap != null) {
-                    Canvas(modifier = Modifier.fillMaxSize()) {
-                        val cw = size.width
-                        val ch = size.height
-                        val iw = bitmap.width.toFloat()
-                        val ih = bitmap.height.toFloat()
-                        if (cw > 0f && ch > 0f && iw > 0f && ih > 0f) {
-                            val scaleBase = ViewportMath.calculateAspectFillScale(cw, ch, iw, ih)
-                            val ws = iw * scaleBase
-                            val hs = ih * scaleBase
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(BSE_PREVIEW_PADDING)
+                            .clip(RoundedCornerShape(BSE_PREVIEW_IMAGE_ROUNDING))
+                            .background(Color.Black),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    val bitmap = previewBitmap
+                    if (bitmap != null) {
+                        Canvas(modifier = Modifier.fillMaxSize()) {
+                            val cw = size.width
+                            val ch = size.height
+                            val iw = bitmap.width.toFloat()
+                            val ih = bitmap.height.toFloat()
+                            if (cw > 0f && ch > 0f && iw > 0f && ih > 0f) {
+                                val scaleBase = ViewportMath.calculateAspectFillScale(cw, ch, iw, ih)
+                                val ws = iw * scaleBase
+                                val hs = ih * scaleBase
 
-                            val maxTx = ((ws * bgScale - cw) / 2f).coerceAtLeast(0f)
-                            val maxTy = ((hs * bgScale - ch) / 2f).coerceAtLeast(0f)
-                            val clampedX = (bgOffsetX * cw).coerceIn(-maxTx, maxTx)
-                            val clampedY = (bgOffsetY * ch).coerceIn(-maxTy, maxTy)
+                                val maxTx = ((ws * bgScale - cw) / 2f).coerceAtLeast(0f)
+                                val maxTy = ((hs * bgScale - ch) / 2f).coerceAtLeast(0f)
+                                val clampedX = (bgOffsetX * cw).coerceIn(-maxTx, maxTx)
+                                val clampedY = (bgOffsetY * ch).coerceIn(-maxTy, maxTy)
 
-                            drawImage(
-                                image = bitmap,
-                                dstOffset =
-                                    IntOffset(
-                                        ((cw - ws * bgScale) / 2f + clampedX).toInt(),
-                                        ((ch - hs * bgScale) / 2f + clampedY).toInt(),
-                                    ),
-                                dstSize =
-                                    IntSize(
-                                        (ws * bgScale).toInt(),
-                                        (hs * bgScale).toInt(),
-                                    ),
-                                colorFilter = bgImageDimFilter,
-                            )
+                                drawImage(
+                                    image = bitmap,
+                                    dstOffset =
+                                        IntOffset(
+                                            ((cw - ws * bgScale) / 2f + clampedX).toInt(),
+                                            ((ch - hs * bgScale) / 2f + clampedY).toInt(),
+                                        ),
+                                    dstSize =
+                                        IntSize(
+                                            (ws * bgScale).toInt(),
+                                            (hs * bgScale).toInt(),
+                                        ),
+                                    colorFilter = bgImageDimFilter,
+                                )
+                            }
                         }
-                    }
-                } else {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
+                    } else {
                         Icon(
                             imageVector = Icons.Rounded.Image,
                             contentDescription = stringResource(R.string.layout_settings_bg_image_none),
