@@ -114,5 +114,15 @@ class PrimaryModalConfigTest {
 
         val profileSettings = PrimaryModalPayload.ProfileSettings(profileId = "profile_custom")
         assertEquals("profile_custom", profileSettings.profileId)
+        assertEquals(false, profileSettings.isNewProfile)
+
+        val newProfileSettings =
+            PrimaryModalPayload.ProfileSettings(
+                isNewProfile = true,
+                presetName = "Preset Name",
+            )
+        assertEquals(null, newProfileSettings.profileId)
+        assertEquals(true, newProfileSettings.isNewProfile)
+        assertEquals("Preset Name", newProfileSettings.presetName)
     }
 }

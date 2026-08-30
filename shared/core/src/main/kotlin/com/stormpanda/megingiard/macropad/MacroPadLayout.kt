@@ -571,3 +571,21 @@ object PadProfileSerializer : KSerializer<PadProfile> {
         )
     }
 }
+
+/**
+ * Returns a unique name derived from [baseName], appending " (2)", " (3)", etc. if [baseName]
+ * already exists (case-insensitive) in this collection.
+ */
+fun Collection<String>.nextUniqueName(
+    baseName: String,
+    fallback: String = baseName,
+): String {
+    val normalizedBase = baseName.trim().ifBlank { fallback }
+    if (none { it.equals(normalizedBase, ignoreCase = true) }) return normalizedBase
+    var index = 2
+    while (true) {
+        val candidate = "$normalizedBase ($index)"
+        if (none { it.equals(candidate, ignoreCase = true) }) return candidate
+        index += 1
+    }
+}

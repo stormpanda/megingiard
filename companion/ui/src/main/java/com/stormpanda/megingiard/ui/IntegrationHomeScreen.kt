@@ -84,12 +84,14 @@ import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.macropad.ProfileAssociation
 import com.stormpanda.megingiard.session.ActiveGameSession
 import com.stormpanda.megingiard.session.EmulatorDetectionFunnel
+import com.stormpanda.megingiard.ui.PrimaryModalConfig
+import com.stormpanda.megingiard.ui.PrimaryModalPayload
+import com.stormpanda.megingiard.ui.PrimaryModalType
 import com.stormpanda.megingiard.update.UpdateManager
 import kotlinx.coroutines.delay
 import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.util.UUID
 
 private const val TAG = "IntegrationHomeScreen"
 
@@ -647,31 +649,23 @@ private fun HeroCompanionCard(
                         Row(horizontalArrangement = Arrangement.spacedBy(IH_BUTTON_SPACING)) {
                             Button(
                                 onClick = {
-                                    val newProfileId = UUID.randomUUID().toString()
-                                    val defaultLayoutId = UUID.randomUUID().toString()
                                     val assoc =
                                         ProfileAssociation(
                                             packageName = targetPackage,
                                             systemId = targetSystemId,
                                             romFileName = targetRomPath?.substringAfterLast('/'),
                                         )
-                                    val newProfile =
-                                        PadProfile(
-                                            id = newProfileId,
-                                            name = targetLabel ?: context.getString(R.string.integration_home_new_profile),
-                                            association = assoc,
-                                            layouts =
-                                                listOf(
-                                                    PadLayout(
-                                                        id = defaultLayoutId,
-                                                        name = context.getString(R.string.integration_home_default_layout),
-                                                    ),
+                                    AppStateManager.openPrimaryModal(
+                                        PrimaryModalConfig(
+                                            type = PrimaryModalType.PROFILE_SETTINGS,
+                                            payload =
+                                                PrimaryModalPayload.ProfileSettings(
+                                                    isNewProfile = true,
+                                                    presetName = targetLabel,
+                                                    association = assoc,
                                                 ),
-                                            activeLayoutId = defaultLayoutId,
-                                        )
-                                    MacroPadState.addProfile(newProfile)
-                                    MacroPadState.setActiveProfileId(newProfileId)
-                                    AppStateManager.setEditorActive(true)
+                                        ),
+                                    )
                                 },
                                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
                                 colors =

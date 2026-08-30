@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.navigation
 
 import com.stormpanda.megingiard.macropad.EditorSection
+import com.stormpanda.megingiard.macropad.ProfileAssociation
 import com.stormpanda.megingiard.settings.SettingsCategory
 import com.stormpanda.megingiard.settings.SettingsSubPage
 import com.stormpanda.megingiard.ui.PrimaryModalPayload
@@ -89,5 +90,41 @@ class NavDestinationTest {
         val payload = config.payload as? PrimaryModalPayload.MacroPad
         assertNotNull(payload)
         assertEquals(EditorSection.MIRROR, payload?.section)
+    }
+
+    @Test
+    fun `ProfileSettings destination maps correctly to PrimaryModalConfig for existing profile`() {
+        val dest = NavDestination.ProfileSettings(profileId = "prof-123")
+        val config = dest.toPrimaryModalConfig()
+
+        assertEquals(PrimaryModalType.PROFILE_SETTINGS, config.type)
+        val payload = config.payload as? PrimaryModalPayload.ProfileSettings
+        assertNotNull(payload)
+        assertEquals("prof-123", payload?.profileId)
+        assertEquals(false, payload?.isNewProfile)
+    }
+
+    @Test
+    fun `ProfileSettings destination maps correctly to PrimaryModalConfig for new profile with preset name and association`() {
+        val assoc =
+            ProfileAssociation(
+                packageName = "com.retroarch",
+                systemId = "snes",
+                romFileName = "game.sfc",
+            )
+        val dest =
+            NavDestination.ProfileSettings(
+                isNewProfile = true,
+                presetName = "Super Mario World",
+                association = assoc,
+            )
+        val config = dest.toPrimaryModalConfig()
+
+        assertEquals(PrimaryModalType.PROFILE_SETTINGS, config.type)
+        val payload = config.payload as? PrimaryModalPayload.ProfileSettings
+        assertNotNull(payload)
+        assertEquals(true, payload?.isNewProfile)
+        assertEquals("Super Mario World", payload?.presetName)
+        assertEquals(assoc, payload?.association)
     }
 }

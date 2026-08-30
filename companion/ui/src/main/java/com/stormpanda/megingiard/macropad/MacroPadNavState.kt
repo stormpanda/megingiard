@@ -109,7 +109,16 @@ internal object MacroPadNavState {
                 val profId = payload.profileId
                 val layId = payload.layoutId
                 val macId = payload.macroId
-                if (profId != null) {
+                if (payload.newProfile) {
+                    _selectedSection.value = EditorSection.PROFILES
+                    _subPageStack.value =
+                        listOf(
+                            MacroPadSubPage.NewProfile(
+                                presetName = payload.presetProfileName,
+                                association = payload.profileAssociation,
+                            ),
+                        )
+                } else if (profId != null) {
                     _selectedSection.value = payload.section
                     onSetActiveProfileId(profId)
                     _subPageStack.value = listOf(MacroPadSubPage.EditProfile(profId))
@@ -136,8 +145,18 @@ internal object MacroPadNavState {
             is PrimaryModalPayload.ProfileSettings -> {
                 _selectedSection.value = EditorSection.PROFILES
                 val profId = payload.profileId
-                onSetActiveProfileId(profId)
-                _subPageStack.value = listOf(MacroPadSubPage.EditProfile(profId))
+                if (payload.isNewProfile || profId == null) {
+                    _subPageStack.value =
+                        listOf(
+                            MacroPadSubPage.NewProfile(
+                                presetName = payload.presetName,
+                                association = payload.association,
+                            ),
+                        )
+                } else {
+                    onSetActiveProfileId(profId)
+                    _subPageStack.value = listOf(MacroPadSubPage.EditProfile(profId))
+                }
             }
 
             is PrimaryModalPayload.MacroTimeline -> {

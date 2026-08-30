@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.navigation
 
 import com.stormpanda.megingiard.macropad.EditorSection
+import com.stormpanda.megingiard.macropad.ProfileAssociation
 import com.stormpanda.megingiard.settings.SettingsCategory
 import com.stormpanda.megingiard.settings.SettingsSubPage
 import com.stormpanda.megingiard.ui.PrimaryModalConfig
@@ -23,6 +24,9 @@ sealed interface NavDestination {
         val macroId: String? = null,
         val editPositions: Boolean = false,
         val focusStepIndex: Int? = null,
+        val newProfile: Boolean = false,
+        val presetProfileName: String? = null,
+        val profileAssociation: ProfileAssociation? = null,
     ) : NavDestination
 
     data class LayoutSettings(
@@ -30,7 +34,10 @@ sealed interface NavDestination {
     ) : NavDestination
 
     data class ProfileSettings(
-        val profileId: String,
+        val profileId: String? = null,
+        val isNewProfile: Boolean = false,
+        val presetName: String? = null,
+        val association: ProfileAssociation? = null,
     ) : NavDestination
 
     data class MacroTimeline(
@@ -80,6 +87,9 @@ fun NavDestination.toPrimaryModalConfig(): PrimaryModalConfig =
                         macroId = macroId,
                         editPositions = editPositions,
                         focusStepIndex = focusStepIndex,
+                        newProfile = newProfile,
+                        presetProfileName = presetProfileName,
+                        profileAssociation = profileAssociation,
                     ),
             )
         }
@@ -94,7 +104,13 @@ fun NavDestination.toPrimaryModalConfig(): PrimaryModalConfig =
         is NavDestination.ProfileSettings -> {
             PrimaryModalConfig(
                 type = PrimaryModalType.PROFILE_SETTINGS,
-                payload = PrimaryModalPayload.ProfileSettings(profileId = profileId),
+                payload =
+                    PrimaryModalPayload.ProfileSettings(
+                        profileId = profileId,
+                        isNewProfile = isNewProfile,
+                        presetName = presetName,
+                        association = association,
+                    ),
             )
         }
 

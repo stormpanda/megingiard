@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.ui
 
 import com.stormpanda.megingiard.macropad.EditorSection
+import com.stormpanda.megingiard.macropad.ProfileAssociation
 import com.stormpanda.megingiard.settings.SettingsCategory
 import com.stormpanda.megingiard.settings.SettingsSubPage
 
@@ -53,6 +54,9 @@ sealed interface PrimaryModalPayload {
         val macroId: String? = null,
         val editPositions: Boolean = false,
         val focusStepIndex: Int? = null,
+        val newProfile: Boolean = false,
+        val presetProfileName: String? = null,
+        val profileAssociation: ProfileAssociation? = null,
     ) : PrimaryModalPayload
 
     data class LayoutSettings(
@@ -60,7 +64,10 @@ sealed interface PrimaryModalPayload {
     ) : PrimaryModalPayload
 
     data class ProfileSettings(
-        val profileId: String,
+        val profileId: String? = null,
+        val isNewProfile: Boolean = false,
+        val presetName: String? = null,
+        val association: ProfileAssociation? = null,
     ) : PrimaryModalPayload
 }
 

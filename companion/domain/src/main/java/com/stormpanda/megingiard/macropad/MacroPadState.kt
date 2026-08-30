@@ -35,20 +35,6 @@ private fun migrateButtonBgColorOption(option: ColorOption?): ColorOption? {
     return option
 }
 
-private fun List<String>.nextUniqueName(
-    baseName: String,
-    fallback: String,
-): String {
-    val normalizedBase = baseName.trim().ifBlank { fallback }
-    if (none { it.equals(normalizedBase, ignoreCase = true) }) return normalizedBase
-    var index = 2
-    while (true) {
-        val candidate = "$normalizedBase ($index)"
-        if (none { it.equals(candidate, ignoreCase = true) }) return candidate
-        index += 1
-    }
-}
-
 /**
  * Recomputes [PadProfile.enableKeyboard], [PadProfile.enableGamepad], [PadProfile.enableMouse],
  * and [PadProfile.enableTouch] from button actions across **all layouts** so the injectors

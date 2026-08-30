@@ -23,23 +23,23 @@ class MacroPadNavStateTest {
 
     @Test
     fun `push appends subpage to stack`() {
-        MacroPadNavState.push(MacroPadSubPage.NewProfile)
-        assertEquals(listOf(MacroPadSubPage.NewProfile), MacroPadNavState.subPageStack.value)
+        MacroPadNavState.push(MacroPadSubPage.NewProfile())
+        assertEquals(listOf(MacroPadSubPage.NewProfile()), MacroPadNavState.subPageStack.value)
 
         MacroPadNavState.push(MacroPadSubPage.EditProfile("profile-123"))
         assertEquals(
-            listOf(MacroPadSubPage.NewProfile, MacroPadSubPage.EditProfile("profile-123")),
+            listOf(MacroPadSubPage.NewProfile(), MacroPadSubPage.EditProfile("profile-123")),
             MacroPadNavState.subPageStack.value,
         )
     }
 
     @Test
     fun `pop removes top subpage and returns true when stack not empty`() {
-        MacroPadNavState.push(MacroPadSubPage.NewProfile)
+        MacroPadNavState.push(MacroPadSubPage.NewProfile())
         MacroPadNavState.push(MacroPadSubPage.EditProfile("profile-123"))
 
         assertTrue(MacroPadNavState.pop())
-        assertEquals(listOf(MacroPadSubPage.NewProfile), MacroPadNavState.subPageStack.value)
+        assertEquals(listOf(MacroPadSubPage.NewProfile()), MacroPadNavState.subPageStack.value)
 
         assertTrue(MacroPadNavState.pop())
         assertTrue(MacroPadNavState.subPageStack.value.isEmpty())
@@ -49,7 +49,7 @@ class MacroPadNavStateTest {
 
     @Test
     fun `selectSection changes section and clears stack only when section differs`() {
-        MacroPadNavState.push(MacroPadSubPage.NewProfile)
+        MacroPadNavState.push(MacroPadSubPage.NewProfile())
         MacroPadNavState.selectSection(EditorSection.MACROS)
 
         assertEquals(EditorSection.MACROS, MacroPadNavState.selectedSection.value)
@@ -118,6 +118,56 @@ class MacroPadNavStateTest {
         assertEquals(EditorSection.PROFILES, MacroPadNavState.selectedSection.value)
         assertEquals(listOf(MacroPadSubPage.EditProfile("profile-abc")), MacroPadNavState.subPageStack.value)
         assertEquals("profile-abc", activatedProfileId)
+    }
+
+    @Test
+    fun `applyPrimaryModalPayload with ProfileSettings for new profile deep links to NewProfile with preset name and association`() {
+        val assoc =
+            ProfileAssociation(
+                packageName = "com.retroarch",
+                systemId = "gba",
+                romFileName = "pokemon.gba",
+            )
+        val payload =
+            PrimaryModalPayload.ProfileSettings(
+                isNewProfile = true,
+                presetName = "Pokemon Emerald",
+                association = assoc,
+            )
+        MacroPadNavState.applyPrimaryModalPayload(payload)
+
+        assertEquals(EditorSection.PROFILES, MacroPadNavState.selectedSection.value)
+        val expectedSubPage =
+            MacroPadSubPage.NewProfile(
+                presetName = "Pokemon Emerald",
+                association = assoc,
+            )
+        assertEquals(listOf(expectedSubPage), MacroPadNavState.subPageStack.value)
+    }
+
+    @Test
+    fun `applyPrimaryModalPayload with MacroPad newProfile flag deep links to NewProfile with preset name and association`() {
+        val assoc =
+            ProfileAssociation(
+                packageName = "com.retroarch",
+                systemId = "psx",
+                romFileName = "crash.bin",
+            )
+        val payload =
+            PrimaryModalPayload.MacroPad(
+                newProfile = true,
+                presetProfileName = "Crash Bandicoot",
+                profileAssociation = assoc,
+            )
+        MacroPadNavState.applyPrimaryModalPayload(payload)
+
+        assertEquals(EditorSection.PROFILES, MacroPadNavState.selectedSection.value)
+        val expectedSubPage =
+            MacroPadSubPage.NewProfile(
+                presetName = "Crash Bandicoot",
+                association = assoc,
+            )
+        assertEquals(listOf(expectedSubPage), MacroPadNavState.subPageStack.value)
     }
 
     @Test
@@ -251,13 +301,13 @@ class MacroPadNavStateTest {
 
     @Test
     fun `NewProfile and EditProfile have correct parentSection PROFILES`() {
-        assertEquals(EditorSection.PROFILES, MacroPadSubPage.NewProfile.parentSection)
+        assertEquals(EditorSection.PROFILES, MacroPadSubPage.NewProfile().parentSection)
         val editProfile = MacroPadSubPage.EditProfile(profileId = "prof-new-1")
         assertEquals(EditorSection.PROFILES, editProfile.parentSection)
         assertEquals("prof-new-1", editProfile.profileId)
 
-        MacroPadNavState.push(MacroPadSubPage.NewProfile)
-        assertEquals(listOf(MacroPadSubPage.NewProfile), MacroPadNavState.subPageStack.value)
+        MacroPadNavState.push(MacroPadSubPage.NewProfile())
+        assertEquals(listOf(MacroPadSubPage.NewProfile()), MacroPadNavState.subPageStack.value)
 
         // After creating a profile, the editor navigates to the PROFILES main menu
         MacroPadNavState.selectSection(EditorSection.PROFILES)

@@ -63,7 +63,10 @@ internal enum class ButtonColorTarget {
 internal sealed interface MacroPadSubPage {
     val parentSection: EditorSection
 
-    data object NewProfile : MacroPadSubPage {
+    data class NewProfile(
+        val presetName: String? = null,
+        val association: ProfileAssociation? = null,
+    ) : MacroPadSubPage {
         override val parentSection = EditorSection.PROFILES
     }
 

@@ -420,15 +420,7 @@ internal fun NewLayoutSubPageContent(
     val defaultLayoutName = stringResource(R.string.macropad_editor_new_layout_default_name)
     val initialLayoutName =
         remember(existingNames) {
-            if (existingNames.none { it.equals(defaultLayoutName, ignoreCase = true) }) {
-                defaultLayoutName
-            } else {
-                var index = 2
-                while (existingNames.any { it.equals("$defaultLayoutName ($index)", ignoreCase = true) }) {
-                    index++
-                }
-                "$defaultLayoutName ($index)"
-            }
+            existingNames.nextUniqueName(defaultLayoutName)
         }
     var nameText by remember { mutableStateOf(initialLayoutName) }
 

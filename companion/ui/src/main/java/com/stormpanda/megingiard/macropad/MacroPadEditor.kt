@@ -408,7 +408,7 @@ fun MacroPadEditor(
                                                     MacroPadNavState.setStack(listOf(MacroPadSubPage.NewLayout))
                                                 },
                                                 onNewProfile = {
-                                                    MacroPadNavState.setStack(listOf(MacroPadSubPage.NewProfile))
+                                                    MacroPadNavState.setStack(listOf(MacroPadSubPage.NewProfile()))
                                                 },
                                                 onArrangeButtons = {
                                                     MacroPadNavState.setStack(listOf(MacroPadSubPage.EditButtonPositions))
@@ -430,7 +430,7 @@ fun MacroPadEditor(
                                                     AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
                                                 },
                                                 onNewProfile = {
-                                                    MacroPadNavState.setStack(subPageStack + MacroPadSubPage.NewProfile)
+                                                    MacroPadNavState.setStack(subPageStack + MacroPadSubPage.NewProfile())
                                                 },
                                                 onEditProfile = {
                                                     MacroPadNavState.setStack(subPageStack + MacroPadSubPage.EditProfile(profile.id))
@@ -649,13 +649,24 @@ fun MacroPadEditor(
                                             NewProfileSubPageContent(
                                                 existingNames = profiles.map { it.name },
                                                 accentColor = colors.accent,
+                                                presetName = currentSubPage.presetName,
                                                 onDiscard = { MacroPadNavState.pop() },
                                                 onCreate = { name ->
                                                     val newId = UUID.randomUUID().toString()
+                                                    val defaultLayoutId = UUID.randomUUID().toString()
                                                     val newProf =
                                                         PadProfile(
                                                             id = newId,
                                                             name = name,
+                                                            association = currentSubPage.association,
+                                                            layouts =
+                                                                listOf(
+                                                                    PadLayout(
+                                                                        id = defaultLayoutId,
+                                                                        name = context.getString(R.string.integration_home_default_layout),
+                                                                    ),
+                                                                ),
+                                                            activeLayoutId = defaultLayoutId,
                                                         )
                                                     MacroPadState.addProfile(newProf)
                                                     MacroPadState.setActiveProfileId(newId)
@@ -1837,22 +1848,7 @@ fun MacroPadEditor(
                                         val existingMacroNames = profile.macros.map { it.name }
 
                                         fun createNewMacro(): Macro {
-                                            val newMacroName =
-                                                if (existingMacroNames.none { it.equals(defaultMacroName, ignoreCase = true) }) {
-                                                    defaultMacroName
-                                                } else {
-                                                    var index = 2
-                                                    while (existingMacroNames.any {
-                                                            it.equals(
-                                                                "$defaultMacroName ($index)",
-                                                                ignoreCase = true,
-                                                            )
-                                                        }
-                                                    ) {
-                                                        index++
-                                                    }
-                                                    "$defaultMacroName ($index)"
-                                                }
+                                            val newMacroName = existingMacroNames.nextUniqueName(defaultMacroName)
                                             return Macro(
                                                 id = UUID.randomUUID().toString(),
                                                 name = newMacroName,
