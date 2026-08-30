@@ -569,10 +569,18 @@ object MacroPadState {
         )
     }
 
-    fun deleteLayout(layoutId: String) {
-        val profile = activeProfile.value ?: return
+    fun deleteLayout(layoutId: String): Boolean {
+        val profile = activeProfile.value ?: return false
+        val layoutExists = profile.layouts.any { it.id == layoutId }
+        if (!layoutExists) {
+            AppLog.w(TAG, "deleteLayout id=$layoutId not found in profile=${profile.id}")
+            return false
+        }
         val remaining = profile.layouts.filter { it.id != layoutId }
-        if (remaining.isEmpty()) return // must keep at least one layout
+        if (remaining.isEmpty()) {
+            AppLog.w(TAG, "deleteLayout id=$layoutId rejected: profile=${profile.id} must keep at least one layout")
+            return false
+        }
         val newActiveId =
             if (profile.activeLayoutId == layoutId) {
                 remaining.firstOrNull()?.id
@@ -581,6 +589,7 @@ object MacroPadState {
             }
         AppLog.d(TAG, "deleteLayout id=$layoutId → activeLayoutId=$newActiveId")
         updateProfile(profile.copy(layouts = remaining, activeLayoutId = newActiveId))
+        return true
     }
 
     fun reorderLayouts(newOrder: List<PadLayout>) {

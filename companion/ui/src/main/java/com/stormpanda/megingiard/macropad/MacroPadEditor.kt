@@ -875,15 +875,21 @@ fun MacroPadEditor(
                                                     },
                                                     onDeleteLayout = {
                                                         val deletedName = lay.name
-                                                        scope.launch {
-                                                            MacroPadMediaRepository.deleteBackgroundImage(context, lay.id)
+                                                        val isDeleted = MacroPadState.deleteLayout(lay.id)
+                                                        if (isDeleted) {
+                                                            scope.launch {
+                                                                MacroPadMediaRepository.deleteBackgroundImage(context, lay.id)
+                                                            }
+                                                            appearanceDraft = null
+                                                            MacroPadNavState.pop()
+                                                            DialogToastManager.show(
+                                                                context.getString(R.string.macropad_layout_deleted_toast, deletedName),
+                                                            )
+                                                        } else {
+                                                            DialogToastManager.show(
+                                                                context.getString(R.string.macropad_layout_cannot_delete_last_toast),
+                                                            )
                                                         }
-                                                        MacroPadState.deleteLayout(lay.id)
-                                                        appearanceDraft = null
-                                                        MacroPadNavState.pop()
-                                                        DialogToastManager.show(
-                                                            context.getString(R.string.macropad_layout_deleted_toast, deletedName),
-                                                        )
                                                     },
                                                     onDiscard = { MacroPadNavState.pop() },
                                                     onSaveColors = { textCol, borderCol, bgCol ->

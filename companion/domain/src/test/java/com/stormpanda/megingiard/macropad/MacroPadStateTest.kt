@@ -9,6 +9,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -1020,5 +1021,78 @@ class MacroPadStateTest {
         MacroPadState.clearPreviewLayout()
         assertEquals(null, MacroPadState.previewLayout.value)
         assertEquals(false, MacroPadState.isCroppingBackground.value)
+    }
+
+    @Test
+    fun `deleteLayout with multiple layouts removes target layout and returns true`() {
+        val pId = UUID.randomUUID().toString()
+        val l1Id = UUID.randomUUID().toString()
+        val l2Id = UUID.randomUUID().toString()
+        val layout1 = PadLayout(id = l1Id, name = "Layout 1")
+        val layout2 = PadLayout(id = l2Id, name = "Layout 2")
+        val profile = PadProfile(id = pId, name = "Profile", layouts = listOf(layout1, layout2), activeLayoutId = l1Id)
+        MacroPadState.loadFrom(listOf(profile), pId)
+
+        val result = MacroPadState.deleteLayout(l2Id)
+
+        assertTrue(result)
+        val updatedProfile = MacroPadState.activeProfile.value
+        assertNotNull(updatedProfile)
+        assertEquals(1, updatedProfile!!.layouts.size)
+        assertEquals(l1Id, updatedProfile.layouts.first().id)
+    }
+
+    @Test
+    fun `deleteLayout when active layout is deleted switches activeLayoutId to remaining layout`() {
+        val pId = UUID.randomUUID().toString()
+        val l1Id = UUID.randomUUID().toString()
+        val l2Id = UUID.randomUUID().toString()
+        val layout1 = PadLayout(id = l1Id, name = "Layout 1")
+        val layout2 = PadLayout(id = l2Id, name = "Layout 2")
+        val profile = PadProfile(id = pId, name = "Profile", layouts = listOf(layout1, layout2), activeLayoutId = l1Id)
+        MacroPadState.loadFrom(listOf(profile), pId)
+
+        val result = MacroPadState.deleteLayout(l1Id)
+
+        assertTrue(result)
+        val updatedProfile = MacroPadState.activeProfile.value
+        assertNotNull(updatedProfile)
+        assertEquals(1, updatedProfile!!.layouts.size)
+        assertEquals(l2Id, updatedProfile.layouts.first().id)
+        assertEquals(l2Id, updatedProfile.activeLayoutId)
+    }
+
+    @Test
+    fun `deleteLayout with single layout returns false and preserves layout`() {
+        val pId = UUID.randomUUID().toString()
+        val l1Id = UUID.randomUUID().toString()
+        val layout1 = PadLayout(id = l1Id, name = "Only Layout")
+        val profile = PadProfile(id = pId, name = "Profile", layouts = listOf(layout1), activeLayoutId = l1Id)
+        MacroPadState.loadFrom(listOf(profile), pId)
+
+        val result = MacroPadState.deleteLayout(l1Id)
+
+        assertFalse(result)
+        val updatedProfile = MacroPadState.activeProfile.value
+        assertNotNull(updatedProfile)
+        assertEquals(1, updatedProfile!!.layouts.size)
+        assertEquals(l1Id, updatedProfile.layouts.first().id)
+    }
+
+    @Test
+    fun `deleteLayout with non-existent layout returns false`() {
+        val pId = UUID.randomUUID().toString()
+        val l1Id = UUID.randomUUID().toString()
+        val layout1 = PadLayout(id = l1Id, name = "Only Layout")
+        val profile = PadProfile(id = pId, name = "Profile", layouts = listOf(layout1), activeLayoutId = l1Id)
+        MacroPadState.loadFrom(listOf(profile), pId)
+
+        val result = MacroPadState.deleteLayout("non-existent-id")
+
+        assertFalse(result)
+        val updatedProfile = MacroPadState.activeProfile.value
+        assertNotNull(updatedProfile)
+        assertEquals(1, updatedProfile!!.layouts.size)
+        assertEquals(l1Id, updatedProfile.layouts.first().id)
     }
 }
