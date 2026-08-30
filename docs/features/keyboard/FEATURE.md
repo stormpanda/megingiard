@@ -88,8 +88,7 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
 
 ### FR-K9: Keyboard Settings Toolbar Button & Screen
 
-- The bottom toolbar MUST render a Settings Cog button on the right-hand side.
-- Tapping this button MUST open a Keyboard Settings screen overlay. In dual-screen mode, this settings overlay is displayed on the primary (top) display while the virtual keyboard remains active, visible, and fully interactive on the secondary (bottom) display without closing or tearing down input injection. In single-screen mode, the settings overlay is presented on top, and dismissing it returns directly to the active virtual keyboard.
+- Tapping this button MUST open a Keyboard Settings screen overlay on the primary (top) display while the virtual keyboard remains active, visible, and fully interactive on the secondary (bottom) display without closing or tearing down input injection.
 - The settings screen MUST include a dropdown to select between **QWERTZ**, **QWERTY**, and **AZERTY** regional layouts.
 - Switching layout via this dropdown MUST only impact the alphabetic (`LETTERS` / ABC) keyboard layout, leaving symbol and numeric layouts unaffected.
 

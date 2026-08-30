@@ -61,6 +61,10 @@ Megingiard is structured as a **Feature-First Modular Architecture** split acros
 
 Megingiard runs on the AYN Thor, an Android gaming handheld with two physical displays. The app lives on the **secondary (bottom) display** and provides tools that assist the user while the primary (top) display runs games or other applications.
 
+> [!IMPORTANT]
+> **Strict Hardware Target: Dual-Screen Handhelds Only.**
+> Megingiard is architected exclusively for dual-screen devices (AYN Thor). Single-screen devices (standard smartphones, single-screen tablets, and single-screen emulators) are **permanently unsupported**. The system architecture requires concurrent top-screen display and bottom-screen companion presentation and intentionally omits single-screen fallback modes.
+
 ```
 Primary Display (DEFAULT_DISPLAY) — top screen, game display & deep configuration overlays
   ├─ [running games / other apps — captured by MediaProjection]
@@ -90,7 +94,7 @@ The MacroPad macro editor utilizes dual-screen coordination for transient record
 
 2. **Foreground Validation & Wrong-Screen Overlay**:
    - In `MainActivity.onConfigurationChanged()` and `MainActivity.onResume()`, the active display ID is continuously validated via `DisplayDetector.isValidScreen(currentDisplayId)` and updated in `AppStateManager.isOnValidScreen`.
-   - When running on the primary display (e.g. on single-screen devices), a global full-screen blocking overlay (`WrongScreenOverlay`) is rendered in `MainAppScreen`.
+   - When running on the primary display (e.g. if launched incorrectly on Display 0), a global full-screen blocking overlay (`WrongScreenOverlay`) is rendered in `MainAppScreen`.
    - Displays a plain-language message instructing the user to place the app on the bottom screen.
    - Shows an animated, vertically bouncing downward arrow (`KeyboardArrowDown`) as a directional hint.
    - Consumes all pointer events, preventing interaction with underlying controls.

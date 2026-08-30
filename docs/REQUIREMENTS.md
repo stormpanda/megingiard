@@ -14,6 +14,10 @@ Detailed functional requirements (including acceptance criteria and edge cases) 
 
 ## Non-Functional Requirements
 
+### Hardware Environment & Multi-Display Architecture
+
+Megingiard is strictly designed for **dual-screen Android gaming handhelds** (specifically the AYN Thor). Single-screen hardware (phones, tablets, and single-screen emulators) is **permanently unsupported**. The system requires concurrent physical multi-display topology where the companion UI runs exclusively on the secondary display and configuration overlays project to the primary display. Single-screen fallbacks are intentionally excluded from the architecture.
+
 ### Battery Efficiency
 
 The continuous loop required by the `MediaProjection` API must be implemented in a CPU-friendly manner. When leaving the mirror view, the `VirtualDisplay` must be stopped or hidden to conserve computing power and battery life. The native touch injector process must be terminated when leaving Touchpad mode.

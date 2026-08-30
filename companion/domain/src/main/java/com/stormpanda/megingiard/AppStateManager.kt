@@ -512,7 +512,7 @@ object AppStateManager {
     }
 
     /**
-     * Deep-links directly to any destination across single-screen and dual-screen modes.
+     * Deep-links directly to any destination across the app.
      */
     fun navigateTo(destination: NavDestination) {
         AppLog.i(TAG, "navigateTo: $destination")

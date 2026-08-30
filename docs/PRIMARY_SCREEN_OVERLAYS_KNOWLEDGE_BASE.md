@@ -138,34 +138,32 @@ The primary display has ample width (1920×1080). Single-column phone-style vert
 * `AutoSwitchCoordinator` explicitly ignores package `com.stormpanda.megingiard` (`APP_PACKAGE_SELF`).
 * **Guarantee**: Because `PrimaryOverlayActivity` lives in `com.stormpanda.megingiard`, opening a settings overlay on the top screen will **not** trigger an unwanted profile switch away from the active game.
 
-### 4.7 Graceful Single-Screen Fallback
-* When running in an emulator, single-screen dev device, or if the secondary display is disconnected:
-  - Check `DisplayDetector.isDualScreen()`.
-  - **Dual-screen**: Launch `PrimaryOverlayActivity` on `Display.DEFAULT_DISPLAY`.
-  - **Single-screen**: Fall back to displaying in-place Compose modal sheets (`AppModalDialog`) directly on the current screen.
+### 4.7 Dual-Screen Target Enforcement
+* Megingiard is built exclusively for dual-screen handhelds (AYN Thor).
+* Single-screen devices (standard smartphones, single-screen tablets/emulators) are **permanently unsupported**.
+* When secondary display detection fails, `PrimaryOverlayManager` logs a warning and refrains from overlay creation, while `MainAppScreen` renders `WrongScreenOverlay` if executed on the primary display.
 
 ---
 
-## 5. UI Architecture & Composable Decoupling
+## 5. UI Architecture & Primary Overlay Dispatching
 
-To prevent code duplication between dual-screen overlay and single-screen fallback modes, decouple content composables from their containers:
+All configuration menus, settings decks, inspectors, and crop selectors are rendered directly on the primary display (Display 0) via `PrimaryModalHost`:
 
 ```
 ┌────────────────────────────────────────────────────────┐
 │               Pure Content Composables                 │
-│  - GlobalSettingsContent(...)                          │
-│  - LayoutInspectorContent(...)                         │
-│  - MacroEditorContent(...)                             │
-│  - AmbientSettingsContent(...)                         │
+│  - GlobalSettingsScreen(...)                           │
+│  - MacroPadEditor(...)                                 │
+│  - KeyboardSettingsOverlay(...)                        │
+│  - TouchpadSettingsOverlay(...)                        │
+│  - CropSelectorOverlay(...)                            │
 └───────────────────────────┬────────────────────────────┘
                             │
-            ┌───────────────┴───────────────┐
-            ▼                               ▼
-┌──────────────────────────────┐┌────────────────────────┐
-│    PrimaryOverlayActivity    ││   AppModalDialog /     │
-│   (Translucent Host on D0)   ││   AppAlertDialog Host  │
-│   [Dual-Screen Mode]         ││   [Single-Screen Mode] │
-└──────────────────────────────┘└────────────────────────┘
+                            ▼
+┌────────────────────────────────────────────────────────┐
+│                   PrimaryModalHost                     │
+│       (Centralized Overlay Dispatcher on D0)           │
+└────────────────────────────────────────────────────────┘
 ```
 
 ---

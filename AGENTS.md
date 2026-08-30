@@ -16,7 +16,7 @@
 | **Min SDK**       | 33 — **must not be raised**                                                                                                                                                                            |
 | **Target SDK**    | 35                                                                                                                                                                                                     |
 | **Build System**  | Gradle (Kotlin DSL), version catalog `libs.versions.toml`                                                                                                                                              |
-| **Device Target** | AYN Thor dual-screen Android handheld                                                                                                                                                                  |
+| **Device Target** | AYN Thor dual-screen Android handheld (**Dual-screen only — single-screen is permanently unsupported**) |
 
 ---
 

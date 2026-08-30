@@ -50,8 +50,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -62,7 +60,6 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
@@ -76,10 +73,8 @@ import com.stormpanda.megingiard.catalog.DisplayDetector
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.keyboard.KeyboardScreen
-import com.stormpanda.megingiard.keyboard.KeyboardSettingsOverlay
 import com.stormpanda.megingiard.macropad.GamepadRecordingState
 import com.stormpanda.megingiard.macropad.HapticStrength
-import com.stormpanda.megingiard.macropad.MacroPadEditor
 import com.stormpanda.megingiard.macropad.MacroPadScreen
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PhysicalGamepadRecordingManager
@@ -94,11 +89,9 @@ import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdSetupWizardDialog
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
-import com.stormpanda.megingiard.settings.GlobalSettingsScreen
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
-import com.stormpanda.megingiard.touchpad.TouchpadSettingsOverlay
 import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.IntegrationHomeScreen
@@ -117,6 +110,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 private const val TAG = "MainAppScreen"
+private const val MAS_SWIPE_ALPHA = 0.5f
 private val MAS_ARROW_SIZE = 56.dp
 private const val MAS_ARROW_BOUNCE_PX = 24f
 private const val MAS_ARROW_BOUNCE_MS = 800
@@ -129,22 +123,11 @@ fun MainAppScreen() {
     val colors = LocalAppColors.current
 
     val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsState()
-    val isExternalClientActive by AppStateManager.isExternalClientActive.collectAsState()
-    val activeProfile by MacroPadState.activeProfile.collectAsState()
-    val companionViewMode by AppStateManager.companionViewMode.collectAsState()
-    val focusedAppPackageName by AppStateManager.focusedAppPackageName.collectAsState()
-    val focusedRomPath by AppStateManager.focusedRomPath.collectAsState()
     val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsState()
-
     val fullscreenKeyboardLayout by AppStateManager.fullscreenKeyboardLayout.collectAsState()
     val isEditorActive by AppStateManager.isEditorActive.collectAsState()
     val isBackgroundSettingsActive by AppStateManager.isBackgroundSettingsActive.collectAsState()
-    val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
-    val welcomeTourCompletedVersion by SettingsManager.welcomeTourCompletedVersion.collectAsState()
-    val isGlobalSettingsOpen by AppStateManager.isGlobalSettingsOpen.collectAsState()
-    val isKeyboardSettingsOpen by AppStateManager.isKeyboardSettingsOpen.collectAsState()
-    val isTouchpadSettingsOpen by AppStateManager.isTouchpadSettingsOpen.collectAsState()
-    val isQuickMenuOpen by AppStateManager.isQuickMenuOpen.collectAsState()
+
     val isAnyMenuOpen by AppStateManager.isAnyMenuOpen.collectAsState()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
     val isGesturesEnabled = !isAnyMenuOpen && !isFullscreenKeyboardActive && !isFullscreenMouseActive && !isViewportEditActive
@@ -152,12 +135,7 @@ fun MainAppScreen() {
     val showPromptDialog by AppStateManager.isPrivdPromptActive.collectAsState()
     val physicalRecordingState by PhysicalGamepadRecordingManager.state.collectAsState()
     val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsState()
-
-    LaunchedEffect(isBackgroundSettingsActive) {
-        if (isBackgroundSettingsActive) {
-            AppStateManager.setPrivdPromptDismissed(true)
-        }
-    }
+    val welcomeTourCompletedVersion by SettingsManager.welcomeTourCompletedVersion.collectAsState()
 
     val (
         edgeZonePx,
@@ -171,7 +149,6 @@ fun MainAppScreen() {
     ) = rememberQuickMenuGestureMetrics()
 
     val context = LocalContext.current
-    val isDualScreen = remember(context) { DisplayDetector.findSecondaryDisplay(context) != null }
     var showExitDialog by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val pendingImportUri by ConfigManager.pendingUri.collectAsState()
@@ -492,68 +469,13 @@ fun MainAppScreen() {
                 )
             }
 
-            AnimatedVisibility(
-                visible = isEditorActive && !isDualScreen,
-                enter = slideInVertically { it } + fadeIn(),
-                exit = slideOutVertically { it } + fadeOut(),
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                MacroPadEditor(
-                    onDone = { AppStateManager.setEditorActive(false) },
-                )
-            }
-            AnimatedVisibility(
-                visible = isBackgroundSettingsActive && !isDualScreen,
-                enter = slideInVertically { it } + fadeIn(),
-                exit = slideOutVertically { it } + fadeOut(),
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                MacroPadEditor(
-                    onDone = { AppStateManager.setBackgroundSettingsActive(false) },
-                )
-            }
-
             // Quick Menu Bar + Quick Menu overlay — rendered on secondary display,
-            // suppressed only if a single-screen fallback settings overlay is covering
-            // the display or when fullscreen keyboard/mouse is active.
-            val isSingleScreenModalActive = !isDualScreen && isAnyMenuOpen
-            if (!isSingleScreenModalActive && !isFullscreenKeyboardActive && !isFullscreenMouseActive) {
+            // suppressed only when fullscreen keyboard/mouse is active.
+            if (!isFullscreenKeyboardActive && !isFullscreenMouseActive) {
                 QuickMenuBar()
             }
 
             ScreenshotPreviewOverlay(modifier = Modifier.align(Alignment.Center))
-
-            AnimatedVisibility(
-                visible = isGlobalSettingsOpen && !isDualScreen,
-                enter = slideInVertically { it } + fadeIn(),
-                exit = slideOutVertically { it } + fadeOut(),
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                GlobalSettingsScreen(
-                    onBack = { AppStateManager.setGlobalSettingsOpen(false) },
-                )
-            }
-
-            AnimatedVisibility(
-                visible = isKeyboardSettingsOpen && !isDualScreen,
-                enter = slideInVertically { it } + fadeIn(),
-                exit = slideOutVertically { it } + fadeOut(),
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                KeyboardSettingsOverlay(
-                    onBack = { AppStateManager.setKeyboardSettingsOpen(false) },
-                )
-            }
-            AnimatedVisibility(
-                visible = isTouchpadSettingsOpen && !isDualScreen,
-                enter = slideInVertically { it } + fadeIn(),
-                exit = slideOutVertically { it } + fadeOut(),
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                TouchpadSettingsOverlay(
-                    onBack = { AppStateManager.setTouchpadSettingsOpen(false) },
-                )
-            }
         }
 
         pendingImport?.let { export ->

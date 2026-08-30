@@ -23,6 +23,7 @@ Welcome to **Megingiard**, a bespoke companion application specifically designed
 
 - **Target device:** AYN Thor (gaming handheld with two displays)
 - **Minimum Android version:** 13 / API 33 (which is what the Thor comes with)
+- **Single-Screen Devices:** **Permanently unsupported.** Megingiard is architected strictly as an inter-screen companion system where the primary (top) display and secondary (bottom) display operate concurrently. Single-screen phones, tablets, and emulators are not supported.
 - **Other devices:** Not supported. Megingiard depends on hardware-specific
   paths (`/dev/input/event*`, the secondary display, the AYN Thor input layout)
   that might not exist on other phones or handhelds. Also, I just don't have any

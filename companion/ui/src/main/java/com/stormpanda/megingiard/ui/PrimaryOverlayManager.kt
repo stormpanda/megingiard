@@ -131,7 +131,7 @@ object PrimaryOverlayManager {
         val app = application ?: return
         val isDual = DisplayDetector.findSecondaryDisplay(app) != null
         if (!isDual) {
-            // Single-screen devices handle modals in-tree in MainAppScreen
+            AppLog.w(TAG, "No secondary display found; Megingiard requires a dual-screen device.")
             return
         }
 
