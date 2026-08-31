@@ -325,397 +325,358 @@ fun GlobalSettingsScreen(
                             title = categoryTitle,
                             accentColor = effectiveAccent,
                         ) {
-                            // GENERAL
-                            if (selectedCategory == SettingsCategory.GENERAL) {
-                                if (updateAvailable && latestReleaseInfo != null) {
+                            when (selectedCategory) {
+                                SettingsCategory.GENERAL -> {
+                                    if (updateAvailable && latestReleaseInfo != null) {
+                                        GamepadActionCard(
+                                            title =
+                                                stringResource(
+                                                    R.string.settings_update_available_banner,
+                                                    latestReleaseInfo?.tagName ?: "",
+                                                ),
+                                            description = stringResource(R.string.settings_update_available_banner_desc),
+                                            icon = Icons.Rounded.SystemUpdate,
+                                            onClick = { subPageStack = listOf(SettingsSubPage.UPDATE_AVAILABLE) },
+                                            modifier = Modifier.firstDeckItem(),
+                                        )
+                                    }
+
                                     GamepadActionCard(
-                                        title = stringResource(R.string.settings_update_available_banner, latestReleaseInfo?.tagName ?: ""),
-                                        description = stringResource(R.string.settings_update_available_banner_desc),
-                                        icon = Icons.Rounded.SystemUpdate,
-                                        onClick = { subPageStack = listOf(SettingsSubPage.UPDATE_AVAILABLE) },
+                                        title = stringResource(R.string.settings_start_welcome_tour),
+                                        description = stringResource(R.string.settings_start_welcome_tour_desc),
+                                        icon = Icons.Rounded.PlayCircle,
+                                        onClick = {
+                                            AppStateManager.closeActiveModal()
+                                            OnboardingWizardManager.startWizard(force = true)
+                                            onBack()
+                                        },
+                                        modifier = Modifier.firstDeckItem(isFirst = !updateAvailable || latestReleaseInfo == null),
+                                    )
+
+                                    val isPrivdRunning = privdState == PrivdState.RUNNING
+                                    GamepadActionCard(
+                                        title = stringResource(R.string.privd_title),
+                                        description = stringResource(R.string.help_settings_privd_desc),
+                                        icon = Icons.Rounded.Security,
+                                        trailingContent = {
+                                            GamepadPill(
+                                                text =
+                                                    if (isPrivdRunning) {
+                                                        stringResource(
+                                                            R.string.privd_status_running_version,
+                                                            PrivdConstants.PRIVD_VERSION,
+                                                        )
+                                                    } else {
+                                                        stringResource(R.string.gamepad_toggle_off)
+                                                    },
+                                                isAccent = isPrivdRunning,
+                                            )
+                                        },
+                                        onClick = {
+                                            AppStateManager.closeActiveModal()
+                                            AppStateManager.setPrivdSetupWizardOpen(true)
+                                            onBack()
+                                        },
+                                    )
+
+                                    GamepadChoiceCard(
+                                        title = stringResource(R.string.settings_language),
+                                        description = stringResource(R.string.help_settings_language_desc),
+                                        selectedText = stringResource(appLanguage.displayNameResId()),
+                                        icon = Icons.Rounded.Language,
+                                        onPrevious = { viewModel.setAppLanguage(AppLanguage.entries.prevItem(appLanguage)) },
+                                        onNext = { viewModel.setAppLanguage(AppLanguage.entries.nextItem(appLanguage)) },
+                                    )
+
+                                    GamepadToggleCard(
+                                        title = stringResource(R.string.settings_exclude_from_recents),
+                                        description = stringResource(R.string.settings_exclude_from_recents_desc),
+                                        checked = excludeFromRecents,
+                                        icon = Icons.Rounded.VisibilityOff,
+                                        onCheckedChange = { viewModel.setExcludeFromRecents(it) },
+                                    )
+
+                                    GamepadActionCard(
+                                        title = stringResource(R.string.settings_reset_tutorials),
+                                        description = stringResource(R.string.settings_reset_tutorials_desc),
+                                        icon = Icons.AutoMirrored.Rounded.HelpOutline,
+                                        onClick = {
+                                            viewModel.resetAllTutorials()
+                                            DialogToastManager.show(
+                                                context.getString(R.string.settings_reset_tutorials_toast),
+                                            )
+                                        },
+                                    )
+                                }
+
+                                SettingsCategory.INPUT -> {
+                                    GamepadToggleCard(
+                                        title = stringResource(R.string.settings_gamepad_swap_face_buttons),
+                                        description = stringResource(R.string.settings_gamepad_swap_face_buttons_desc),
+                                        checked = gamepadSwapFaceButtons,
+                                        icon = Icons.Rounded.SwapHoriz,
+                                        onCheckedChange = { viewModel.setGamepadSwapFaceButtons(it) },
+                                        modifier = Modifier.firstDeckItem(),
+                                    )
+
+                                    GamepadActionCard(
+                                        title = stringResource(R.string.privd_deadzone_title),
+                                        description = stringResource(R.string.help_settings_deadzone_desc),
+                                        actionText =
+                                            stringResource(
+                                                R.string.privd_deadzone_summary,
+                                                (deadzoneLeft * 100f).roundToInt(),
+                                                (deadzoneRight * 100f).roundToInt(),
+                                            ),
+                                        icon = Icons.Rounded.Games,
+                                        onClick = { subPageStack = listOf(SettingsSubPage.DEADZONES) },
+                                    )
+                                }
+
+                                SettingsCategory.APPEARANCE -> {
+                                    GamepadChoiceCard(
+                                        title = stringResource(R.string.settings_theme),
+                                        description = stringResource(R.string.help_settings_theme_desc),
+                                        selectedText = stringResource(themeMode.displayNameResId()),
+                                        icon = Icons.Rounded.Palette,
+                                        onPrevious = { viewModel.setThemeMode(ThemeMode.entries.prevItem(themeMode)) },
+                                        onNext = { viewModel.setThemeMode(ThemeMode.entries.nextItem(themeMode)) },
+                                        modifier = Modifier.firstDeckItem(),
+                                    )
+
+                                    if (themeMode.supportsCustomAccent) {
+                                        val isCustomAccent =
+                                            accentColorArgb == customAccentColorArgb && accentColor !in GS_ACCENT_PALETTE_PRESETS
+
+                                        GamepadColorPaletteCard(
+                                            title = stringResource(R.string.settings_accent_color),
+                                            description = stringResource(R.string.settings_accent_color_desc),
+                                            icon = Icons.Rounded.FormatColorFill,
+                                            paletteColors = GS_ACCENT_PALETTE_PRESETS,
+                                            selectedColor = accentColor,
+                                            onColorSelected = { viewModel.setAccentColor(it.toArgb()) },
+                                        )
+
+                                        GamepadActionCard(
+                                            title = stringResource(R.string.settings_accent_custom_title),
+                                            description = stringResource(R.string.settings_accent_custom_desc),
+                                            icon = Icons.Rounded.Colorize,
+                                            actionLeadingContent = {
+                                                GamepadColorSwatch(
+                                                    color = customAccentColor,
+                                                    isSelected = isCustomAccent,
+                                                )
+                                            },
+                                            onClick = { subPageStack = listOf(SettingsSubPage.CUSTOM_ACCENT) },
+                                        )
+                                    }
+
+                                    GamepadToggleCard(
+                                        title = stringResource(R.string.settings_overlay_position),
+                                        description = stringResource(R.string.help_settings_overlay_position_desc),
+                                        checked = overlayAtBottom,
+                                        icon = Icons.Rounded.VerticalAlignBottom,
+                                        onCheckedChange = { viewModel.setOverlayAtBottom(it) },
+                                    )
+
+                                    GamepadToggleCard(
+                                        title = stringResource(R.string.settings_overlay_fade_out),
+                                        description = stringResource(R.string.settings_overlay_fade_out_desc),
+                                        checked = overlayFadeOut,
+                                        icon = Icons.Rounded.Animation,
+                                        onCheckedChange = { viewModel.setOverlayFadeOut(it) },
+                                    )
+                                }
+
+                                SettingsCategory.CONFIGURATION -> {
+                                    GamepadActionCard(
+                                        title = stringResource(R.string.settings_config_export),
+                                        description = stringResource(R.string.help_settings_export_desc),
+                                        icon = Icons.Rounded.FileDownload,
+                                        onClick = { subPageStack = listOf(SettingsSubPage.CREATE_BACKUP) },
+                                        modifier = Modifier.firstDeckItem(),
+                                    )
+
+                                    GamepadActionCard(
+                                        title = stringResource(R.string.settings_config_import),
+                                        description = stringResource(R.string.settings_config_import_card_desc),
+                                        icon = Icons.Rounded.FileUpload,
+                                        onClick = { subPageStack = listOf(SettingsSubPage.RESTORE_BACKUP) },
+                                    )
+
+                                    GamepadActionCard(
+                                        title = stringResource(R.string.settings_config_export_profile),
+                                        description = stringResource(R.string.help_settings_export_profile_desc),
+                                        icon = Icons.Rounded.Share,
+                                        onClick = { subPageStack = listOf(SettingsSubPage.SHARE_PROFILE) },
+                                    )
+
+                                    GamepadActionCard(
+                                        title = stringResource(R.string.settings_config_import_profile),
+                                        description = stringResource(R.string.help_settings_import_profile_desc),
+                                        icon = Icons.Rounded.FileUpload,
+                                        onClick = {
+                                            ConfigManager.requestImport(ConfigManager.ImportMode.PROFILE_SHARE)
+                                        },
+                                    )
+
+                                    val deleteBadgeText =
+                                        when {
+                                            deleteCountdown > 0 -> {
+                                                stringResource(
+                                                    R.string.settings_restore_defaults_countdown,
+                                                    deleteCountdown,
+                                                )
+                                            }
+
+                                            deleteCountdown == 0 -> {
+                                                stringResource(R.string.gamepad_action_confirm)
+                                            }
+
+                                            else -> {
+                                                stringResource(R.string.gamepad_action_delete)
+                                            }
+                                        }
+
+                                    GamepadActionCard(
+                                        title = stringResource(R.string.settings_restore_defaults),
+                                        description = stringResource(R.string.settings_restore_defaults_desc),
+                                        actionLeadingContent = {
+                                            GamepadPill(
+                                                text = deleteBadgeText,
+                                                isDestructive = true,
+                                                isAccent = deleteCountdown == 0,
+                                                isHighlighted = deleteCountdown >= 0,
+                                            )
+                                        },
+                                        isDestructive = true,
+                                        icon = Icons.Rounded.Delete,
+                                        onClick = {
+                                            when {
+                                                deleteCountdown > 0 -> {}
+
+                                                deleteCountdown == 0 -> {
+                                                    MacroPadState.restoreDefaults()
+                                                    DialogToastManager.show(
+                                                        context.getString(R.string.settings_restore_defaults_toast),
+                                                    )
+                                                    deleteCountdown = -1
+                                                }
+
+                                                else -> {
+                                                    isDeleteCountingDown = true
+                                                }
+                                            }
+                                        },
+                                    )
+                                }
+
+                                SettingsCategory.SCRAPING -> {
+                                    GamepadActionCard(
+                                        title = stringResource(R.string.settings_steamgriddb_token),
+                                        description =
+                                            if (steamGridDbApiToken.isNotBlank()) {
+                                                stringResource(R.string.settings_steamgriddb_token_configured, steamGridDbApiToken.take(6))
+                                            } else {
+                                                stringResource(R.string.settings_steamgriddb_token_desc)
+                                            },
+                                        icon = Icons.Rounded.Key,
+                                        onClick = { subPageStack = listOf(SettingsSubPage.STEAMGRIDDB_TOKEN) },
                                         modifier = Modifier.firstDeckItem(),
                                     )
                                 }
 
-                                GamepadActionCard(
-                                    title = stringResource(R.string.settings_start_welcome_tour),
-                                    description = stringResource(R.string.settings_start_welcome_tour_desc),
-                                    icon = Icons.Rounded.PlayCircle,
-                                    onClick = {
-                                        AppStateManager.closeActiveModal()
-                                        OnboardingWizardManager.startWizard(force = true)
-                                        onBack()
-                                    },
-                                    modifier = Modifier.firstDeckItem(isFirst = !updateAvailable || latestReleaseInfo == null),
-                                )
+                                SettingsCategory.UPDATES -> {
+                                    GamepadToggleCard(
+                                        title = stringResource(R.string.settings_auto_update_check),
+                                        description = stringResource(R.string.help_settings_auto_update_desc),
+                                        checked = autoUpdateCheckEnabled,
+                                        icon = Icons.Rounded.Update,
+                                        onCheckedChange = { viewModel.setAutoUpdateCheckEnabled(it) },
+                                        modifier = Modifier.firstDeckItem(),
+                                    )
 
-                                val isPrivdRunning = privdState == PrivdState.RUNNING
-                                GamepadActionCard(
-                                    title = stringResource(R.string.privd_title),
-                                    description = stringResource(R.string.help_settings_privd_desc),
-                                    icon = Icons.Rounded.Security,
-                                    trailingContent = {
-                                        GamepadPill(
-                                            text =
-                                                if (isPrivdRunning) {
-                                                    stringResource(
-                                                        R.string.privd_status_running_version,
-                                                        PrivdConstants.PRIVD_VERSION,
+                                    var hasTriggeredManualCheck by rememberSaveable(selectedCategory) {
+                                        mutableStateOf(false)
+                                    }
+
+                                    val updateBadgeText =
+                                        when {
+                                            !hasTriggeredManualCheck -> null
+                                            isCheckingUpdates -> stringResource(R.string.gamepad_action_checking)
+                                            updateAvailable -> stringResource(R.string.settings_update_now_btn)
+                                            updateCheckError != null -> stringResource(R.string.settings_check_failed)
+                                            else -> stringResource(R.string.settings_up_to_date)
+                                        }
+
+                                    GamepadActionCard(
+                                        title = stringResource(R.string.settings_check_for_updates),
+                                        description =
+                                            if (hasTriggeredManualCheck && updateAvailable) {
+                                                stringResource(R.string.settings_update_available_tag, latestReleaseInfo?.tagName ?: "")
+                                            } else {
+                                                stringResource(R.string.settings_app_version, BuildConfig.VERSION_NAME)
+                                            },
+                                        icon = Icons.Rounded.Refresh,
+                                        actionLeadingContent =
+                                            updateBadgeText?.let { text ->
+                                                {
+                                                    GamepadPill(
+                                                        text = text,
+                                                        isAccent = updateAvailable,
+                                                        isHighlighted = isCheckingUpdates,
+                                                        isDestructive = updateCheckError != null,
                                                     )
-                                                } else {
-                                                    stringResource(R.string.gamepad_toggle_off)
-                                                },
-                                            isAccent = isPrivdRunning,
-                                        )
-                                    },
-                                    onClick = {
-                                        AppStateManager.closeActiveModal()
-                                        AppStateManager.setPrivdSetupWizardOpen(true)
-                                        onBack()
-                                    },
-                                )
+                                                }
+                                            },
+                                        onClick = {
+                                            if (isCheckingUpdates) return@GamepadActionCard
 
-                                GamepadChoiceCard(
-                                    title = stringResource(R.string.settings_language),
-                                    description = stringResource(R.string.help_settings_language_desc),
-                                    selectedText = stringResource(appLanguage.displayNameResId()),
-                                    icon = Icons.Rounded.Language,
-                                    onPrevious = { viewModel.setAppLanguage(AppLanguage.entries.prevItem(appLanguage)) },
-                                    onNext = { viewModel.setAppLanguage(AppLanguage.entries.nextItem(appLanguage)) },
-                                )
-
-                                GamepadToggleCard(
-                                    title = stringResource(R.string.settings_exclude_from_recents),
-                                    description = stringResource(R.string.settings_exclude_from_recents_desc),
-                                    checked = excludeFromRecents,
-                                    icon = Icons.Rounded.VisibilityOff,
-                                    onCheckedChange = { viewModel.setExcludeFromRecents(it) },
-                                )
-
-                                GamepadActionCard(
-                                    title = stringResource(R.string.settings_reset_tutorials),
-                                    description = stringResource(R.string.settings_reset_tutorials_desc),
-                                    icon = Icons.AutoMirrored.Rounded.HelpOutline,
-                                    onClick = {
-                                        viewModel.resetAllTutorials()
-                                        DialogToastManager.show(
-                                            context.getString(R.string.settings_reset_tutorials_toast),
-                                        )
-                                    },
-                                )
-                            }
-
-                            // INPUT
-                            if (selectedCategory == SettingsCategory.INPUT) {
-                                GamepadToggleCard(
-                                    title = stringResource(R.string.settings_gamepad_swap_face_buttons),
-                                    description = stringResource(R.string.settings_gamepad_swap_face_buttons_desc),
-                                    checked = gamepadSwapFaceButtons,
-                                    icon = Icons.Rounded.SwapHoriz,
-                                    onCheckedChange = { viewModel.setGamepadSwapFaceButtons(it) },
-                                    modifier = Modifier.firstDeckItem(isFirst = selectedCategory == SettingsCategory.INPUT),
-                                )
-
-                                GamepadActionCard(
-                                    title = stringResource(R.string.privd_deadzone_title),
-                                    description = stringResource(R.string.help_settings_deadzone_desc),
-                                    actionText =
-                                        stringResource(
-                                            R.string.privd_deadzone_summary,
-                                            (deadzoneLeft * 100f).roundToInt(),
-                                            (deadzoneRight * 100f).roundToInt(),
-                                        ),
-                                    icon = Icons.Rounded.Games,
-                                    onClick = { subPageStack = listOf(SettingsSubPage.DEADZONES) },
-                                )
-                            }
-
-                            // APPEARANCE
-                            if (selectedCategory == SettingsCategory.APPEARANCE) {
-                                GamepadChoiceCard(
-                                    title = stringResource(R.string.settings_theme),
-                                    description = stringResource(R.string.help_settings_theme_desc),
-                                    selectedText = stringResource(themeMode.displayNameResId()),
-                                    icon = Icons.Rounded.Palette,
-                                    onPrevious = { viewModel.setThemeMode(ThemeMode.entries.prevItem(themeMode)) },
-                                    onNext = { viewModel.setThemeMode(ThemeMode.entries.nextItem(themeMode)) },
-                                    modifier = Modifier.firstDeckItem(isFirst = selectedCategory == SettingsCategory.APPEARANCE),
-                                )
-
-                                if (themeMode.supportsCustomAccent) {
-                                    val isCustomAccent =
-                                        accentColorArgb == customAccentColorArgb && accentColor !in GS_ACCENT_PALETTE_PRESETS
-
-                                    GamepadColorPaletteCard(
-                                        title = stringResource(R.string.settings_accent_color),
-                                        description = stringResource(R.string.settings_accent_color_desc),
-                                        icon = Icons.Rounded.FormatColorFill,
-                                        paletteColors = GS_ACCENT_PALETTE_PRESETS,
-                                        selectedColor = accentColor,
-                                        onColorSelected = { viewModel.setAccentColor(it.toArgb()) },
+                                            if (hasTriggeredManualCheck && updateAvailable) {
+                                                subPageStack = listOf(SettingsSubPage.UPDATE_AVAILABLE)
+                                            } else {
+                                                hasTriggeredManualCheck = true
+                                                viewModel.checkForUpdatesManually()
+                                            }
+                                        },
                                     )
 
                                     GamepadActionCard(
-                                        title = stringResource(R.string.settings_accent_custom_title),
-                                        description = stringResource(R.string.settings_accent_custom_desc),
-                                        icon = Icons.Rounded.Colorize,
-                                        actionLeadingContent = {
-                                            GamepadColorSwatch(
-                                                color = customAccentColor,
-                                                isSelected = isCustomAccent,
-                                            )
+                                        title = stringResource(R.string.settings_add_to_obtainium),
+                                        description = stringResource(R.string.help_settings_add_to_obtainium_desc),
+                                        icon = Icons.Rounded.Download,
+                                        onClick = {
+                                            val deepLink = "obtainium://add/${GS_OBTAINIUM_REPO_URL}"
+                                            try {
+                                                launchUrlOnPrimaryDisplay(context, deepLink)
+                                            } catch (e: Exception) {
+                                                AppLog.w(TAG, "Obtainium deep link failed: ${e.message}, falling back to browser")
+                                                launchUrlOnPrimaryDisplay(context, GS_OBTAINIUM_FALLBACK_URL)
+                                            }
+                                            AppStateManager.closeActiveModal()
+                                            onBack()
                                         },
-                                        onClick = { subPageStack = listOf(SettingsSubPage.CUSTOM_ACCENT) },
                                     )
                                 }
 
-                                GamepadToggleCard(
-                                    title = stringResource(R.string.settings_overlay_position),
-                                    description = stringResource(R.string.help_settings_overlay_position_desc),
-                                    checked = overlayAtBottom,
-                                    icon = Icons.Rounded.VerticalAlignBottom,
-                                    onCheckedChange = { viewModel.setOverlayAtBottom(it) },
-                                )
+                                SettingsCategory.DIAGNOSTICS -> {
+                                    GamepadChoiceCard(
+                                        title = stringResource(R.string.settings_log_level),
+                                        description = stringResource(R.string.help_settings_log_level_desc),
+                                        selectedText = logLevel.name,
+                                        icon = Icons.Rounded.BugReport,
+                                        onPrevious = { viewModel.setLogLevel(AppLog.Level.entries.prevItem(logLevel)) },
+                                        onNext = { viewModel.setLogLevel(AppLog.Level.entries.nextItem(logLevel)) },
+                                        modifier = Modifier.firstDeckItem(),
+                                    )
 
-                                GamepadToggleCard(
-                                    title = stringResource(R.string.settings_overlay_fade_out),
-                                    description = stringResource(R.string.settings_overlay_fade_out_desc),
-                                    checked = overlayFadeOut,
-                                    icon = Icons.Rounded.Animation,
-                                    onCheckedChange = { viewModel.setOverlayFadeOut(it) },
-                                )
-                            }
-
-                            // CONFIGURATION
-                            if (selectedCategory == SettingsCategory.CONFIGURATION) {
-                                GamepadActionCard(
-                                    title = stringResource(R.string.settings_config_export),
-                                    description = stringResource(R.string.help_settings_export_desc),
-                                    icon = Icons.Rounded.FileDownload,
-                                    onClick = { subPageStack = listOf(SettingsSubPage.CREATE_BACKUP) },
-                                    modifier =
-                                        Modifier.firstDeckItem(
-                                            isFirst = selectedCategory == SettingsCategory.CONFIGURATION,
-                                        ),
-                                )
-
-                                GamepadActionCard(
-                                    title = stringResource(R.string.settings_config_import),
-                                    description = stringResource(R.string.settings_config_import_card_desc),
-                                    icon = Icons.Rounded.FileUpload,
-                                    onClick = { subPageStack = listOf(SettingsSubPage.RESTORE_BACKUP) },
-                                )
-
-                                GamepadActionCard(
-                                    title = stringResource(R.string.settings_config_export_profile),
-                                    description = stringResource(R.string.help_settings_export_profile_desc),
-                                    icon = Icons.Rounded.Share,
-                                    onClick = { subPageStack = listOf(SettingsSubPage.SHARE_PROFILE) },
-                                )
-
-                                GamepadActionCard(
-                                    title = stringResource(R.string.settings_config_import_profile),
-                                    description = stringResource(R.string.help_settings_import_profile_desc),
-                                    icon = Icons.Rounded.FileUpload,
-                                    onClick = {
-                                        ConfigManager.requestImport(ConfigManager.ImportMode.PROFILE_SHARE)
-                                    },
-                                )
-
-                                val deleteBadgeText =
-                                    when {
-                                        deleteCountdown > 0 -> {
-                                            stringResource(
-                                                R.string.settings_restore_defaults_countdown,
-                                                deleteCountdown,
-                                            )
-                                        }
-
-                                        deleteCountdown == 0 -> {
-                                            stringResource(R.string.gamepad_action_confirm)
-                                        }
-
-                                        else -> {
-                                            stringResource(R.string.gamepad_action_delete)
-                                        }
-                                    }
-
-                                GamepadActionCard(
-                                    title = stringResource(R.string.settings_restore_defaults),
-                                    description = stringResource(R.string.settings_restore_defaults_desc),
-                                    actionLeadingContent = {
-                                        GamepadPill(
-                                            text = deleteBadgeText,
-                                            isDestructive = true,
-                                            isAccent = deleteCountdown == 0,
-                                            isHighlighted = deleteCountdown >= 0,
-                                        )
-                                    },
-                                    isDestructive = true,
-                                    icon = Icons.Rounded.Delete,
-                                    onClick = {
-                                        when {
-                                            deleteCountdown > 0 -> {}
-
-                                            deleteCountdown == 0 -> {
-                                                MacroPadState.restoreDefaults()
-                                                DialogToastManager.show(
-                                                    context.getString(R.string.settings_restore_defaults_toast),
-                                                )
-                                                deleteCountdown = -1
-                                            }
-
-                                            else -> {
-                                                isDeleteCountingDown = true
-                                            }
-                                        }
-                                    },
-                                )
-                            }
-
-                            // SCRAPING
-                            if (selectedCategory == SettingsCategory.SCRAPING) {
-                                GamepadActionCard(
-                                    title = stringResource(R.string.settings_steamgriddb_token),
-                                    description =
-                                        if (steamGridDbApiToken.isNotBlank()) {
-                                            stringResource(R.string.settings_steamgriddb_token_configured, steamGridDbApiToken.take(6))
-                                        } else {
-                                            stringResource(R.string.settings_steamgriddb_token_desc)
-                                        },
-                                    icon = Icons.Rounded.Key,
-                                    onClick = { subPageStack = listOf(SettingsSubPage.STEAMGRIDDB_TOKEN) },
-                                    modifier = Modifier.firstDeckItem(isFirst = selectedCategory == SettingsCategory.SCRAPING),
-                                )
-                            }
-
-                            // UPDATES
-                            if (selectedCategory == SettingsCategory.UPDATES) {
-                                GamepadToggleCard(
-                                    title = stringResource(R.string.settings_auto_update_check),
-                                    description = stringResource(R.string.help_settings_auto_update_desc),
-                                    checked = autoUpdateCheckEnabled,
-                                    icon = Icons.Rounded.Update,
-                                    onCheckedChange = { viewModel.setAutoUpdateCheckEnabled(it) },
-                                    modifier = Modifier.firstDeckItem(isFirst = selectedCategory == SettingsCategory.UPDATES),
-                                )
-
-                                var hasTriggeredManualCheck by rememberSaveable(selectedCategory) {
-                                    mutableStateOf(false)
+                                    GamepadActionCard(
+                                        title = stringResource(R.string.settings_save_log_report),
+                                        description = stringResource(R.string.help_settings_save_log_desc),
+                                        icon = Icons.Rounded.SaveAlt,
+                                        onClick = { viewModel.requestSaveLogReport() },
+                                    )
                                 }
-
-                                val updateBadgeText: String?
-                                val updateBadgeAccent: Boolean
-                                val updateBadgeHighlighted: Boolean
-                                val updateBadgeDestructive: Boolean
-
-                                when {
-                                    !hasTriggeredManualCheck -> {
-                                        updateBadgeText = null
-                                        updateBadgeAccent = false
-                                        updateBadgeHighlighted = false
-                                        updateBadgeDestructive = false
-                                    }
-
-                                    isCheckingUpdates -> {
-                                        updateBadgeText = stringResource(R.string.gamepad_action_checking)
-                                        updateBadgeAccent = false
-                                        updateBadgeHighlighted = true
-                                        updateBadgeDestructive = false
-                                    }
-
-                                    updateAvailable -> {
-                                        updateBadgeText = stringResource(R.string.settings_update_now_btn)
-                                        updateBadgeAccent = true
-                                        updateBadgeHighlighted = false
-                                        updateBadgeDestructive = false
-                                    }
-
-                                    updateCheckError != null -> {
-                                        updateBadgeText = stringResource(R.string.settings_check_failed)
-                                        updateBadgeAccent = false
-                                        updateBadgeHighlighted = false
-                                        updateBadgeDestructive = true
-                                    }
-
-                                    else -> {
-                                        updateBadgeText = stringResource(R.string.settings_up_to_date)
-                                        updateBadgeAccent = false
-                                        updateBadgeHighlighted = false
-                                        updateBadgeDestructive = false
-                                    }
-                                }
-
-                                GamepadActionCard(
-                                    title = stringResource(R.string.settings_check_for_updates),
-                                    description =
-                                        if (hasTriggeredManualCheck && updateAvailable) {
-                                            stringResource(R.string.settings_update_available_tag, latestReleaseInfo?.tagName ?: "")
-                                        } else {
-                                            stringResource(R.string.settings_app_version, BuildConfig.VERSION_NAME)
-                                        },
-                                    icon = Icons.Rounded.Refresh,
-                                    actionLeadingContent =
-                                        if (updateBadgeText != null) {
-                                            {
-                                                GamepadPill(
-                                                    text = updateBadgeText,
-                                                    isAccent = updateBadgeAccent,
-                                                    isHighlighted = updateBadgeHighlighted,
-                                                    isDestructive = updateBadgeDestructive,
-                                                )
-                                            }
-                                        } else {
-                                            null
-                                        },
-                                    onClick = {
-                                        if (isCheckingUpdates) return@GamepadActionCard
-
-                                        if (hasTriggeredManualCheck && updateAvailable) {
-                                            subPageStack = listOf(SettingsSubPage.UPDATE_AVAILABLE)
-                                        } else {
-                                            hasTriggeredManualCheck = true
-                                            viewModel.checkForUpdatesManually()
-                                        }
-                                    },
-                                )
-
-                                GamepadActionCard(
-                                    title = stringResource(R.string.settings_add_to_obtainium),
-                                    description = stringResource(R.string.help_settings_add_to_obtainium_desc),
-                                    icon = Icons.Rounded.Download,
-                                    onClick = {
-                                        val deepLink = "obtainium://add/${GS_OBTAINIUM_REPO_URL}"
-                                        try {
-                                            launchUrlOnPrimaryDisplay(context, deepLink)
-                                        } catch (e: Exception) {
-                                            AppLog.w(TAG, "Obtainium deep link failed: ${e.message}, falling back to browser")
-                                            launchUrlOnPrimaryDisplay(context, GS_OBTAINIUM_FALLBACK_URL)
-                                        }
-                                        AppStateManager.closeActiveModal()
-                                        onBack()
-                                    },
-                                )
-                            }
-
-                            // DIAGNOSTICS
-                            if (selectedCategory == SettingsCategory.DIAGNOSTICS) {
-                                GamepadChoiceCard(
-                                    title = stringResource(R.string.settings_log_level),
-                                    description = stringResource(R.string.help_settings_log_level_desc),
-                                    selectedText = logLevel.name,
-                                    icon = Icons.Rounded.BugReport,
-                                    onPrevious = { viewModel.setLogLevel(AppLog.Level.entries.prevItem(logLevel)) },
-                                    onNext = { viewModel.setLogLevel(AppLog.Level.entries.nextItem(logLevel)) },
-                                    modifier = Modifier.firstDeckItem(isFirst = selectedCategory == SettingsCategory.DIAGNOSTICS),
-                                )
-
-                                GamepadActionCard(
-                                    title = stringResource(R.string.settings_save_log_report),
-                                    description = stringResource(R.string.help_settings_save_log_desc),
-                                    icon = Icons.Rounded.SaveAlt,
-                                    onClick = { viewModel.requestSaveLogReport() },
-                                )
                             }
                         }
                     }
@@ -1029,17 +990,6 @@ private fun SteamGridDbTokenSubPage(
         modifier = Modifier.firstDeckItem(),
     )
 
-    val badgeTextRes =
-        when (testStatus) {
-            SteamGridDbTestStatus.IDLE -> R.string.settings_steamgriddb_test_btn
-            SteamGridDbTestStatus.TESTING -> R.string.settings_steamgriddb_status_testing
-            SteamGridDbTestStatus.CONNECTED -> R.string.settings_steamgriddb_status_connected
-            SteamGridDbTestStatus.INVALID_TOKEN -> R.string.settings_steamgriddb_status_invalid
-            SteamGridDbTestStatus.OFFLINE -> R.string.settings_steamgriddb_status_offline
-            SteamGridDbTestStatus.RATE_LIMITED -> R.string.settings_steamgriddb_status_rate_limited
-            SteamGridDbTestStatus.UNREACHABLE -> R.string.settings_steamgriddb_status_unreachable
-            SteamGridDbTestStatus.ERROR -> R.string.settings_steamgriddb_status_error
-        }
     val isDestructive =
         testStatus != SteamGridDbTestStatus.IDLE &&
             testStatus != SteamGridDbTestStatus.TESTING &&
@@ -1051,7 +1001,7 @@ private fun SteamGridDbTokenSubPage(
         icon = Icons.Rounded.Sensors,
         actionLeadingContent = {
             GamepadPill(
-                text = stringResource(badgeTextRes),
+                text = stringResource(testStatus.labelResId),
                 isAccent = testStatus == SteamGridDbTestStatus.CONNECTED,
                 isHighlighted = testStatus == SteamGridDbTestStatus.TESTING,
                 isDestructive = isDestructive,

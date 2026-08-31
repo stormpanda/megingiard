@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.BuildConfig
+import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.config.InternalBackup
 import com.stormpanda.megingiard.log.LogReportManager
 import com.stormpanda.megingiard.media.SteamGridDbClient
@@ -30,15 +31,17 @@ import kotlinx.coroutines.withContext
 
 private const val TAG = "GlobalSettingsVM"
 
-enum class SteamGridDbTestStatus {
-    IDLE,
-    TESTING,
-    CONNECTED,
-    INVALID_TOKEN,
-    OFFLINE,
-    RATE_LIMITED,
-    UNREACHABLE,
-    ERROR,
+enum class SteamGridDbTestStatus(
+    val labelResId: Int,
+) {
+    IDLE(R.string.settings_steamgriddb_test_btn),
+    TESTING(R.string.settings_steamgriddb_status_testing),
+    CONNECTED(R.string.settings_steamgriddb_status_connected),
+    INVALID_TOKEN(R.string.settings_steamgriddb_status_invalid),
+    OFFLINE(R.string.settings_steamgriddb_status_offline),
+    RATE_LIMITED(R.string.settings_steamgriddb_status_rate_limited),
+    UNREACHABLE(R.string.settings_steamgriddb_status_unreachable),
+    ERROR(R.string.settings_steamgriddb_status_error),
 }
 
 /**
