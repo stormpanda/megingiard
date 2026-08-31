@@ -75,7 +75,7 @@ object SystemRoleClassifier {
             return true
         }
 
-        return _launcherPackages.value.contains(pkg)
+        return pkg in _launcherPackages.value
     }
 
     /**
