@@ -110,6 +110,8 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
+import com.stormpanda.megingiard.math.nextItem
+import com.stormpanda.megingiard.math.prevItem
 import com.stormpanda.megingiard.ui.DialogToastManager
 import com.stormpanda.megingiard.ui.DialogToastPill
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -1206,14 +1208,12 @@ private fun TargetCutoutCarouselCard(
 
     fun selectPrevious() {
         if (!hasCutouts) return
-        val prevIdx = if (currentIdx <= 0) cutouts.size - 1 else currentIdx - 1
-        onSelectCutout(cutouts[prevIdx].id)
+        selectedCutout?.let { onSelectCutout(cutouts.prevItem(it).id) }
     }
 
     fun selectNext() {
         if (!hasCutouts) return
-        val nextIdx = (currentIdx + 1) % cutouts.size
-        onSelectCutout(cutouts[nextIdx].id)
+        selectedCutout?.let { onSelectCutout(cutouts.nextItem(it).id) }
     }
 
     ToolboxCard(
@@ -1327,20 +1327,8 @@ private fun AspectRatioCard(
 
     fun cycleMode(forward: Boolean) {
         val cutout = selectedCutout ?: return
-        val nextMode =
-            if (forward) {
-                when (cutout.aspectRatioMode) {
-                    AspectRatioMode.FREE -> AspectRatioMode.TOP
-                    AspectRatioMode.TOP -> AspectRatioMode.BOTTOM
-                    AspectRatioMode.BOTTOM -> AspectRatioMode.FREE
-                }
-            } else {
-                when (cutout.aspectRatioMode) {
-                    AspectRatioMode.FREE -> AspectRatioMode.BOTTOM
-                    AspectRatioMode.TOP -> AspectRatioMode.FREE
-                    AspectRatioMode.BOTTOM -> AspectRatioMode.TOP
-                }
-            }
+        val modes = AspectRatioMode.entries
+        val nextMode = if (forward) modes.nextItem(cutout.aspectRatioMode) else modes.prevItem(cutout.aspectRatioMode)
 
         var updatedCutout =
             cutout.copy(

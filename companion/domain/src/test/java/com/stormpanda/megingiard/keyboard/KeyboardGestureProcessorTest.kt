@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.keyboard
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -38,22 +39,26 @@ class KeyboardGestureProcessorTest {
             ),
         )
 
+    private fun TestScope.createProcessor(
+        controller: KeyRepeatController = KeyRepeatController(this),
+        injector: KeyCodeInjector = TestKeyCodeInjector(),
+        onInjectPopupSelection: (KeyDef, String) -> Unit = { _, _ -> },
+    ) = KeyboardGestureProcessor(
+        controller = controller,
+        scope = this,
+        kbRepeatEnabled = { true },
+        isShiftActive = { false },
+        isCapsActive = { false },
+        isAltGrActive = { false },
+        initialDensity = 1.0f,
+        onInjectPopupSelection = onInjectPopupSelection,
+        injector = injector,
+    )
+
     @Test
     fun `bounds updates populate key bounds map`() =
         runTest(testDispatcher) {
-            val controller = KeyRepeatController(this)
-            val processor =
-                KeyboardGestureProcessor(
-                    controller = controller,
-                    scope = this,
-                    kbRepeatEnabled = { true },
-                    isShiftActive = { false },
-                    isCapsActive = { false },
-                    isAltGrActive = { false },
-                    initialDensity = 1.0f,
-                    onInjectPopupSelection = { _, _ -> },
-                )
-
+            val processor = createProcessor()
             processor.updateBounds("q", 0f, 0f, 50f, 50f)
             assertEquals(KeyBounds(0f, 0f, 50f, 50f), processor.keyBounds["q"])
         }
@@ -61,36 +66,20 @@ class KeyboardGestureProcessorTest {
     @Test
     fun `press on normal character key starts long press timer`() =
         runTest(testDispatcher) {
-            val controller = KeyRepeatController(this)
-            val processor =
-                KeyboardGestureProcessor(
-                    controller = controller,
-                    scope = this,
-                    kbRepeatEnabled = { true },
-                    isShiftActive = { false },
-                    isCapsActive = { false },
-                    isAltGrActive = { false },
-                    initialDensity = 1.0f,
-                    onInjectPopupSelection = { _, _ -> },
-                )
-
+            val processor = createProcessor()
             processor.updateBounds("q", 0f, 0f, 50f, 50f)
             assertNull(processor.activePopupState.value)
 
-            // Press on 'q'
             processor.onPress(1L, 25f, 25f, grid, isFullLayout = false)
 
-            // Right after press, the immediate preview popup should be shown
             assertNotNull(processor.activePopupState.value)
             val initialPopup = processor.activePopupState.value!!
             assertEquals("q", initialPopup.keyDef.id)
             assertFalse(initialPopup.isLongPress)
 
-            // Advance virtual time by 500ms to trigger long-press timer delay
             testScheduler.advanceTimeBy(500L)
             testScheduler.runCurrent()
 
-            // Under UnconfinedTestDispatcher, the delay(400) runs after advancing time and running current
             assertNotNull(processor.activePopupState.value)
             val popup = processor.activePopupState.value!!
             assertEquals("q", popup.keyDef.id)
@@ -101,37 +90,18 @@ class KeyboardGestureProcessorTest {
     @Test
     fun `slide on space bar triggers left and right arrow key injections`() =
         runTest(testDispatcher) {
-            val controller = KeyRepeatController(this)
             val testInjector = TestKeyCodeInjector()
-            val processor =
-                KeyboardGestureProcessor(
-                    controller = controller,
-                    scope = this,
-                    kbRepeatEnabled = { true },
-                    isShiftActive = { false },
-                    isCapsActive = { false },
-                    isAltGrActive = { false },
-                    initialDensity = 1.0f,
-                    onInjectPopupSelection = { _, _ -> },
-                    injector = testInjector,
-                )
+            val processor = createProcessor(injector = testInjector)
 
             processor.updateBounds("space", 0f, 50f, 150f, 100f)
-
-            // Press on space
             processor.onPress(1L, 75f, 75f, grid, isFullLayout = false)
             assertFalse(processor.isSpaceDragging)
 
-            // Slide left beyond swipeThreshold (16 pixels)
-            // 75f to 50f is delta -25f, which is > 16f
             processor.onMove(1L, 50f, 75f, -25f, 0f, grid, isFullLayout = false)
             assertTrue(processor.isSpaceDragging)
 
-            // Slide left more to trigger step (8 pixels)
-            // 50f to 30f is delta -20f
             processor.onMove(1L, 30f, 75f, -20f, 0f, grid, isFullLayout = false)
 
-            // Should have triggered LEFT key injections
             assertTrue(testInjector.calls.isNotEmpty())
             assertEquals("down", testInjector.calls[0].first)
             assertEquals(LinuxKeycodes.KEY_LEFT, testInjector.calls[0].second)
@@ -141,24 +111,13 @@ class KeyboardGestureProcessorTest {
     fun `cancel releases all active keys`() =
         runTest(testDispatcher) {
             val controller = KeyRepeatController(this)
-            val processor =
-                KeyboardGestureProcessor(
-                    controller = controller,
-                    scope = this,
-                    kbRepeatEnabled = { true },
-                    isShiftActive = { false },
-                    isCapsActive = { false },
-                    isAltGrActive = { false },
-                    initialDensity = 1.0f,
-                    onInjectPopupSelection = { _, _ -> },
-                )
+            val processor = createProcessor(controller = controller)
 
             processor.updateBounds("q", 0f, 0f, 50f, 50f)
             processor.onPress(1L, 25f, 25f, grid, isFullLayout = false)
 
             assertTrue(controller.pressedKeys.value.contains("q"))
 
-            // Cancel event stream
             processor.onCancel(grid)
 
             assertTrue(controller.pressedKeys.value.isEmpty())
@@ -168,18 +127,10 @@ class KeyboardGestureProcessorTest {
     @Test
     fun `long press on character key and release injects secondary popup option`() =
         runTest(testDispatcher) {
-            val controller = KeyRepeatController(this)
             var injectedChar: String? = null
             var injectedKeyDef: KeyDef? = null
             val processor =
-                KeyboardGestureProcessor(
-                    controller = controller,
-                    scope = this,
-                    kbRepeatEnabled = { true },
-                    isShiftActive = { false },
-                    isCapsActive = { false },
-                    isAltGrActive = { false },
-                    initialDensity = 1.0f,
+                createProcessor(
                     onInjectPopupSelection = { keyDef, char ->
                         injectedKeyDef = keyDef
                         injectedChar = char
@@ -209,19 +160,8 @@ class KeyboardGestureProcessorTest {
     @Test
     fun `short press on character key and release does not inject secondary popup option`() =
         runTest(testDispatcher) {
-            val controller = KeyRepeatController(this)
             var injectedChar: String? = null
-            val processor =
-                KeyboardGestureProcessor(
-                    controller = controller,
-                    scope = this,
-                    kbRepeatEnabled = { true },
-                    isShiftActive = { false },
-                    isCapsActive = { false },
-                    isAltGrActive = { false },
-                    initialDensity = 1.0f,
-                    onInjectPopupSelection = { _, char -> injectedChar = char },
-                )
+            val processor = createProcessor(onInjectPopupSelection = { _, char -> injectedChar = char })
 
             val qKey = KeyDef("q", "q", LinuxKeycodes.KEY_Q, superscript = "1")
             val testGrid = listOf(listOf(qKey))
