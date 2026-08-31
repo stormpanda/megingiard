@@ -53,17 +53,64 @@ private val MPS_UNDO_ARROW_SIZE = 12.dp
 private const val MPS_UNDO_ARROW_ALPHA = 0.6f
 private val MPS_UNDO_SWATCH_SPACING = 6.dp
 
-internal enum class LayoutColorTarget {
-    TEXT,
-    BORDER,
-    BG,
+internal enum class EditorColorTarget(
+    val titleResId: Int,
+    val selectWheelTitleResId: Int,
+    val defaultNeutralColor: Color,
+) {
+    TEXT(
+        titleResId = R.string.layout_settings_color_text,
+        selectWheelTitleResId = R.string.layout_settings_select_text_color,
+        defaultNeutralColor = MP_AMBIENT_NEUTRAL_TEXT,
+    ),
+    BORDER(
+        titleResId = R.string.layout_settings_color_border,
+        selectWheelTitleResId = R.string.layout_settings_select_border_color,
+        defaultNeutralColor = MP_AMBIENT_NEUTRAL_BORDER,
+    ),
+    BG(
+        titleResId = R.string.layout_settings_color_bg,
+        selectWheelTitleResId = R.string.layout_settings_select_bg_color,
+        defaultNeutralColor = MP_AMBIENT_NEUTRAL_BG,
+    ),
 }
 
-internal enum class ButtonColorTarget {
-    TEXT,
-    BORDER,
-    BG,
-}
+internal typealias LayoutColorTarget = EditorColorTarget
+internal typealias ButtonColorTarget = EditorColorTarget
+
+internal fun PadLayout.getColorOption(target: EditorColorTarget): ColorOption =
+    when (target) {
+        EditorColorTarget.TEXT -> buttonTextColor
+        EditorColorTarget.BORDER -> buttonBorderColor
+        EditorColorTarget.BG -> buttonBgColor
+    }
+
+internal fun PadLayout.withColorOption(
+    target: EditorColorTarget,
+    option: ColorOption,
+): PadLayout =
+    when (target) {
+        EditorColorTarget.TEXT -> copy(buttonTextColor = option)
+        EditorColorTarget.BORDER -> copy(buttonBorderColor = option)
+        EditorColorTarget.BG -> copy(buttonBgColor = option)
+    }
+
+internal fun PadButton.getColorOption(target: EditorColorTarget): ColorOption? =
+    when (target) {
+        EditorColorTarget.TEXT -> buttonTextColor
+        EditorColorTarget.BORDER -> buttonBorderColor
+        EditorColorTarget.BG -> buttonBgColor
+    }
+
+internal fun PadButton.withColorOption(
+    target: EditorColorTarget,
+    option: ColorOption?,
+): PadButton =
+    when (target) {
+        EditorColorTarget.TEXT -> copy(buttonTextColor = option)
+        EditorColorTarget.BORDER -> copy(buttonBorderColor = option)
+        EditorColorTarget.BG -> copy(buttonBgColor = option)
+    }
 
 internal sealed interface MacroPadSubPage {
     val parentSection: EditorSection

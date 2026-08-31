@@ -31,6 +31,14 @@ internal const val HF_LIGHT_AMPLITUDE_USER = 25 // user scale 5–100
 internal const val HF_MEDIUM_AMPLITUDE_USER = 50
 internal const val HF_STRONG_AMPLITUDE_USER = 100
 
+internal fun HapticStrength.defaultCustomAmplitude(): Int =
+    when (this) {
+        HapticStrength.LIGHT -> HF_LIGHT_AMPLITUDE_USER
+        HapticStrength.MEDIUM -> HF_MEDIUM_AMPLITUDE_USER
+        HapticStrength.STRONG -> HF_STRONG_AMPLITUDE_USER
+        else -> HF_LIGHT_AMPLITUDE_USER
+    }
+
 /** Minimum custom amplitude clamped at call-site to prevent silent zero. */
 private const val HF_CUSTOM_AMPLITUDE_MIN = 5
 

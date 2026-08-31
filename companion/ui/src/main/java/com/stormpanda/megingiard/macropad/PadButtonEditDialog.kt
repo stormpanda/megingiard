@@ -187,21 +187,15 @@ internal fun EditButtonSubPageContent(
 
     var hapticCustomDurationMs by remember(button) {
         mutableIntStateOf(
-            when (button?.hapticStrength) {
-                HapticStrength.LIGHT, HapticStrength.MEDIUM, HapticStrength.STRONG -> HF_PRESET_DURATION_MS
-                else -> button?.hapticCustomDurationMs ?: HF_PRESET_DURATION_MS
+            if (button?.hapticStrength in listOf(HapticStrength.LIGHT, HapticStrength.MEDIUM, HapticStrength.STRONG)) {
+                HF_PRESET_DURATION_MS
+            } else {
+                button?.hapticCustomDurationMs ?: HF_PRESET_DURATION_MS
             },
         )
     }
     var hapticCustomAmplitude by remember(button) {
-        mutableIntStateOf(
-            when (button?.hapticStrength) {
-                HapticStrength.LIGHT -> HF_LIGHT_AMPLITUDE_USER
-                HapticStrength.MEDIUM -> HF_MEDIUM_AMPLITUDE_USER
-                HapticStrength.STRONG -> HF_STRONG_AMPLITUDE_USER
-                else -> button?.hapticCustomAmplitude ?: HF_LIGHT_AMPLITUDE_USER
-            },
-        )
+        mutableIntStateOf(button?.hapticStrength?.defaultCustomAmplitude() ?: (button?.hapticCustomAmplitude ?: HF_LIGHT_AMPLITUDE_USER))
     }
     var buttonTextColor by remember(button) { mutableStateOf(button?.buttonTextColor) }
     var buttonBorderColor by remember(button) { mutableStateOf(button?.buttonBorderColor) }
@@ -413,23 +407,9 @@ internal fun EditButtonSubPageContent(
         )
 
         val applyHapticStrength: (HapticStrength) -> Unit = { selectedStrength ->
-            when (selectedStrength) {
-                HapticStrength.LIGHT -> {
-                    hapticCustomDurationMs = HF_PRESET_DURATION_MS
-                    hapticCustomAmplitude = HF_LIGHT_AMPLITUDE_USER
-                }
-
-                HapticStrength.MEDIUM -> {
-                    hapticCustomDurationMs = HF_PRESET_DURATION_MS
-                    hapticCustomAmplitude = HF_MEDIUM_AMPLITUDE_USER
-                }
-
-                HapticStrength.STRONG -> {
-                    hapticCustomDurationMs = HF_PRESET_DURATION_MS
-                    hapticCustomAmplitude = HF_STRONG_AMPLITUDE_USER
-                }
-
-                else -> {}
+            if (selectedStrength in listOf(HapticStrength.LIGHT, HapticStrength.MEDIUM, HapticStrength.STRONG)) {
+                hapticCustomDurationMs = HF_PRESET_DURATION_MS
+                hapticCustomAmplitude = selectedStrength.defaultCustomAmplitude()
             }
             hapticStrength = selectedStrength
         }
@@ -640,56 +620,19 @@ internal fun ButtonColorSubPageContent(
     onColorOptionChanged: (ColorOption?) -> Unit,
     onOpenColorWheel: (title: String, breadcrumbs: List<String>, initialColor: Color, inFlightButton: PadButton) -> Unit,
 ) {
-    val currentOption =
-        when (target) {
-            ButtonColorTarget.TEXT -> button.buttonTextColor
-            ButtonColorTarget.BORDER -> button.buttonBorderColor
-            ButtonColorTarget.BG -> button.buttonBgColor
-        }
-
-    val layoutDefaultOption =
-        when (target) {
-            ButtonColorTarget.TEXT -> activeLayout?.buttonTextColor ?: ColorOption.Neutral
-            ButtonColorTarget.BORDER -> activeLayout?.buttonBorderColor ?: ColorOption.Neutral
-            ButtonColorTarget.BG -> activeLayout?.buttonBgColor ?: ColorOption.Neutral
-        }
-
-    val defaultNeutralColor =
-        when (target) {
-            ButtonColorTarget.TEXT -> MP_AMBIENT_NEUTRAL_TEXT
-            ButtonColorTarget.BORDER -> MP_AMBIENT_NEUTRAL_BORDER
-            ButtonColorTarget.BG -> MP_AMBIENT_NEUTRAL_BG
-        }
-
-    val targetTitle =
-        when (target) {
-            ButtonColorTarget.TEXT -> stringResource(R.string.layout_settings_color_text)
-            ButtonColorTarget.BORDER -> stringResource(R.string.layout_settings_color_border)
-            ButtonColorTarget.BG -> stringResource(R.string.layout_settings_color_bg)
-        }
-
-    val selectColorWheelTitle =
-        when (target) {
-            ButtonColorTarget.TEXT -> stringResource(R.string.layout_settings_select_text_color)
-            ButtonColorTarget.BORDER -> stringResource(R.string.layout_settings_select_border_color)
-            ButtonColorTarget.BG -> stringResource(R.string.layout_settings_select_bg_color)
-        }
-
-    val colorWheelBreadcrumbs =
-        listOf(
-            stringResource(R.string.macropad_editor_section_buttons),
-            button.label.ifBlank { stringResource(R.string.macropad_editor_section_button_settings) },
-            targetTitle,
-            stringResource(R.string.gamepad_action_custom_color),
-        )
-
     ColorOptionSubPageContent(
-        currentOption = currentOption,
-        layoutDefaultOption = layoutDefaultOption,
-        defaultNeutralColor = defaultNeutralColor,
-        isBgTarget = target == ButtonColorTarget.BG,
-        selectColorWheelTitle = selectColorWheelTitle,
-        colorWheelBreadcrumbs = colorWheelBreadcrumbs,
+        currentOption = button.getColorOption(target),
+        layoutDefaultOption = activeLayout?.getColorOption(target) ?: ColorOption.Neutral,
+        defaultNeutralColor = target.defaultNeutralColor,
+        isBgTarget = target == EditorColorTarget.BG,
+        selectColorWheelTitle = stringResource(target.selectWheelTitleResId),
+        colorWheelBreadcrumbs =
+            listOf(
+                stringResource(R.string.macropad_editor_section_buttons),
+                button.label.ifBlank { stringResource(R.string.macropad_editor_section_button_settings) },
+                stringResource(target.titleResId),
+                stringResource(R.string.gamepad_action_custom_color),
+            ),
         onColorOptionChanged = onColorOptionChanged,
         onOpenColorWheel = { title, breadcrumbs, initialColor ->
             onOpenColorWheel(title, breadcrumbs, initialColor, button)

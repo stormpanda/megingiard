@@ -896,18 +896,12 @@ fun MacroPadEditor(
                                         val lay = profile.layouts.firstOrNull { it.id == currentSubPage.layoutId } ?: activeLayout
                                         if (lay != null) {
                                             val currentDraft = appearanceDraft?.takeIf { it.id == lay.id } ?: lay
-                                            val targetTitle =
-                                                when (currentSubPage.target) {
-                                                    LayoutColorTarget.TEXT -> stringResource(R.string.layout_settings_color_text)
-                                                    LayoutColorTarget.BORDER -> stringResource(R.string.layout_settings_color_border)
-                                                    LayoutColorTarget.BG -> stringResource(R.string.layout_settings_color_bg)
-                                                }
                                             GamepadDeck(
                                                 breadcrumbs =
                                                     listOf(
                                                         stringResource(R.string.macropad_editor_section_layout),
                                                         stringResource(R.string.macropad_editor_edit_layout_title),
-                                                        targetTitle,
+                                                        stringResource(currentSubPage.target.titleResId),
                                                     ),
                                             ) {
                                                 LayoutColorSubPageContent(
@@ -916,12 +910,7 @@ fun MacroPadEditor(
                                                     target = currentSubPage.target,
                                                     accentColor = colors.accent,
                                                     onColorOptionChanged = { option ->
-                                                        val updatedDraft =
-                                                            when (currentSubPage.target) {
-                                                                LayoutColorTarget.TEXT -> currentDraft.copy(buttonTextColor = option)
-                                                                LayoutColorTarget.BORDER -> currentDraft.copy(buttonBorderColor = option)
-                                                                LayoutColorTarget.BG -> currentDraft.copy(buttonBgColor = option)
-                                                            }
+                                                        val updatedDraft = currentDraft.withColorOption(currentSubPage.target, option)
                                                         appearanceDraft = updatedDraft
                                                         MacroPadState.setPreviewLayout(updatedDraft)
                                                     },
@@ -935,25 +924,10 @@ fun MacroPadEditor(
                                                                 onColorChange = { liveColor ->
                                                                     val option = ColorOption.Custom(liveColor.toArgb())
                                                                     val liveLayout =
-                                                                        when (currentSubPage.target) {
-                                                                            LayoutColorTarget.TEXT -> {
-                                                                                inFlightLayout.copy(
-                                                                                    buttonTextColor = option,
-                                                                                )
-                                                                            }
-
-                                                                            LayoutColorTarget.BORDER -> {
-                                                                                inFlightLayout.copy(
-                                                                                    buttonBorderColor = option,
-                                                                                )
-                                                                            }
-
-                                                                            LayoutColorTarget.BG -> {
-                                                                                inFlightLayout.copy(
-                                                                                    buttonBgColor = option,
-                                                                                )
-                                                                            }
-                                                                        }
+                                                                        inFlightLayout.withColorOption(
+                                                                            currentSubPage.target,
+                                                                            option,
+                                                                        )
                                                                     appearanceDraft = liveLayout
                                                                     MacroPadState.setPreviewLayout(liveLayout)
                                                                 },
@@ -1353,12 +1327,6 @@ fun MacroPadEditor(
                                         val effectiveButton =
                                             buttonDraft?.takeIf { it.id == (currentSubPage.button?.id ?: currentSubPage.draftButton.id) }
                                                 ?: currentSubPage.draftButton
-                                        val targetTitle =
-                                            when (currentSubPage.target) {
-                                                ButtonColorTarget.TEXT -> stringResource(R.string.layout_settings_color_text)
-                                                ButtonColorTarget.BORDER -> stringResource(R.string.layout_settings_color_border)
-                                                ButtonColorTarget.BG -> stringResource(R.string.layout_settings_color_bg)
-                                            }
                                         GamepadDeck(
                                             breadcrumbs =
                                                 listOf(
@@ -1372,7 +1340,7 @@ fun MacroPadEditor(
                                                             },
                                                         )
                                                     },
-                                                    targetTitle,
+                                                    stringResource(currentSubPage.target.titleResId),
                                                 ),
                                         ) {
                                             ButtonColorSubPageContent(
@@ -1382,12 +1350,7 @@ fun MacroPadEditor(
                                                 target = currentSubPage.target,
                                                 accentColor = colors.accent,
                                                 onColorOptionChanged = { option ->
-                                                    val updatedDraft =
-                                                        when (currentSubPage.target) {
-                                                            ButtonColorTarget.TEXT -> effectiveButton.copy(buttonTextColor = option)
-                                                            ButtonColorTarget.BORDER -> effectiveButton.copy(buttonBorderColor = option)
-                                                            ButtonColorTarget.BG -> effectiveButton.copy(buttonBgColor = option)
-                                                        }
+                                                    val updatedDraft = effectiveButton.withColorOption(currentSubPage.target, option)
                                                     buttonDraft = updatedDraft
                                                     MacroPadState.setPreviewButton(updatedDraft)
                                                 },
@@ -1402,26 +1365,7 @@ fun MacroPadEditor(
                                                             onColorChange = { liveColor ->
                                                                 val option = ColorOption.Custom(liveColor.toArgb())
                                                                 val base = buttonDraft ?: inFlightButton
-                                                                val liveButton =
-                                                                    when (currentSubPage.target) {
-                                                                        ButtonColorTarget.TEXT -> {
-                                                                            base.copy(
-                                                                                buttonTextColor = option,
-                                                                            )
-                                                                        }
-
-                                                                        ButtonColorTarget.BORDER -> {
-                                                                            base.copy(
-                                                                                buttonBorderColor = option,
-                                                                            )
-                                                                        }
-
-                                                                        ButtonColorTarget.BG -> {
-                                                                            base.copy(
-                                                                                buttonBgColor = option,
-                                                                            )
-                                                                        }
-                                                                    }
+                                                                val liveButton = base.withColorOption(currentSubPage.target, option)
                                                                 buttonDraft = liveButton
                                                                 MacroPadState.setPreviewButton(liveButton)
                                                             },

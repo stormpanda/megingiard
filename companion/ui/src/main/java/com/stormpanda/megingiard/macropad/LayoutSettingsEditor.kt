@@ -284,49 +284,19 @@ internal fun LayoutColorSubPageContent(
     onColorOptionChanged: (ColorOption) -> Unit,
     onOpenColorWheel: (title: String, breadcrumbs: List<String>, initialColor: Color, inFlightLayout: PadLayout) -> Unit,
 ) {
-    val currentOption =
-        when (target) {
-            LayoutColorTarget.TEXT -> layout.buttonTextColor
-            LayoutColorTarget.BORDER -> layout.buttonBorderColor
-            LayoutColorTarget.BG -> layout.buttonBgColor
-        }
-
-    val defaultNeutralColor =
-        when (target) {
-            LayoutColorTarget.TEXT -> MP_AMBIENT_NEUTRAL_TEXT
-            LayoutColorTarget.BORDER -> MP_AMBIENT_NEUTRAL_BORDER
-            LayoutColorTarget.BG -> MP_AMBIENT_NEUTRAL_BG
-        }
-
-    val targetTitle =
-        when (target) {
-            LayoutColorTarget.TEXT -> stringResource(R.string.layout_settings_color_text)
-            LayoutColorTarget.BORDER -> stringResource(R.string.layout_settings_color_border)
-            LayoutColorTarget.BG -> stringResource(R.string.layout_settings_color_bg)
-        }
-
-    val selectColorWheelTitle =
-        when (target) {
-            LayoutColorTarget.TEXT -> stringResource(R.string.layout_settings_select_text_color)
-            LayoutColorTarget.BORDER -> stringResource(R.string.layout_settings_select_border_color)
-            LayoutColorTarget.BG -> stringResource(R.string.layout_settings_select_bg_color)
-        }
-
-    val colorWheelBreadcrumbs =
-        listOf(
-            stringResource(R.string.macropad_editor_section_layout),
-            stringResource(R.string.macropad_editor_appearance_title),
-            targetTitle,
-            stringResource(R.string.gamepad_action_custom_color),
-        )
-
     ColorOptionSubPageContent(
-        currentOption = currentOption,
+        currentOption = layout.getColorOption(target),
         layoutDefaultOption = null,
-        defaultNeutralColor = defaultNeutralColor,
-        isBgTarget = target == LayoutColorTarget.BG,
-        selectColorWheelTitle = selectColorWheelTitle,
-        colorWheelBreadcrumbs = colorWheelBreadcrumbs,
+        defaultNeutralColor = target.defaultNeutralColor,
+        isBgTarget = target == EditorColorTarget.BG,
+        selectColorWheelTitle = stringResource(target.selectWheelTitleResId),
+        colorWheelBreadcrumbs =
+            listOf(
+                stringResource(R.string.macropad_editor_section_layout),
+                stringResource(R.string.macropad_editor_appearance_title),
+                stringResource(target.titleResId),
+                stringResource(R.string.gamepad_action_custom_color),
+            ),
         onColorOptionChanged = { option -> option?.let(onColorOptionChanged) },
         onOpenColorWheel = { title, breadcrumbs, initialColor ->
             onOpenColorWheel(title, breadcrumbs, initialColor, layout)
