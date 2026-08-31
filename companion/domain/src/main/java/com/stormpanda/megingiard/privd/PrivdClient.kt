@@ -66,8 +66,8 @@ private const val HMAC_HEX_LEN = 64 // SHA-256 digest → 64 hex chars
  */
 object PrivdClient {
     init {
-        ProcessCmdlineProvider.runningProcessesProvider = { getRunningProcesses() }
-        ProcessCmdlineProvider.textFileReader = { path -> readTextFile(path) }
+        ProcessCmdlineProvider.runningProcessesProvider = ::getRunningProcesses
+        ProcessCmdlineProvider.textFileReader = ::readTextFile
     }
 
     private val _state = MutableStateFlow(PrivdConnectionState.DISCONNECTED)
