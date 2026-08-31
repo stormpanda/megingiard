@@ -105,8 +105,6 @@ import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.PrivdConstants
 import com.stormpanda.megingiard.privd.PrivdState
-import com.stormpanda.megingiard.settings.ThemeMode
-import com.stormpanda.megingiard.settings.displayNameResId
 import com.stormpanda.megingiard.ui.BumperDirection
 import com.stormpanda.megingiard.ui.DialogToastManager
 import com.stormpanda.megingiard.ui.GamepadActionCard
