@@ -68,7 +68,7 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
             description = stringResource(R.string.settings_touchpad_tap_to_click_desc),
             checked = touchpadTapToClick,
             icon = Icons.Rounded.TouchApp,
-            onCheckedChange = { TouchpadSettings.setTouchpadTapToClick(it) },
+            onCheckedChange = TouchpadSettings::setTouchpadTapToClick,
             modifier = Modifier.firstDeckItem(),
         )
 
@@ -77,7 +77,7 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
             description = stringResource(R.string.settings_touchpad_two_finger_tap_desc),
             checked = touchpadTwoFingerTap,
             icon = Icons.Rounded.PanTool,
-            onCheckedChange = { TouchpadSettings.setTouchpadTwoFingerTap(it) },
+            onCheckedChange = TouchpadSettings::setTouchpadTwoFingerTap,
         )
 
         GamepadToggleCard(
@@ -85,7 +85,7 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
             description = stringResource(R.string.settings_touchpad_three_finger_tap_desc),
             checked = touchpadThreeFingerTap,
             icon = Icons.Rounded.PanTool,
-            onCheckedChange = { TouchpadSettings.setTouchpadThreeFingerTap(it) },
+            onCheckedChange = TouchpadSettings::setTouchpadThreeFingerTap,
         )
 
         GamepadToggleCard(
@@ -93,7 +93,7 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
             description = stringResource(R.string.settings_touchpad_tap_drag_desc),
             checked = touchpadTapDrag,
             icon = Icons.Rounded.TouchApp,
-            onCheckedChange = { TouchpadSettings.setTouchpadTapDrag(it) },
+            onCheckedChange = TouchpadSettings::setTouchpadTapDrag,
         )
 
         GamepadToggleCard(
@@ -101,7 +101,7 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
             description = stringResource(R.string.settings_touchpad_two_finger_scroll_desc),
             checked = touchpadTwoFingerScroll,
             icon = Icons.Rounded.SwapVert,
-            onCheckedChange = { TouchpadSettings.setTouchpadTwoFingerScroll(it) },
+            onCheckedChange = TouchpadSettings::setTouchpadTwoFingerScroll,
         )
 
         if (touchpadTwoFingerScroll) {
@@ -110,7 +110,7 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
                 description = stringResource(R.string.settings_touchpad_natural_scroll_desc),
                 checked = touchpadNaturalScroll,
                 icon = Icons.Rounded.SwapVert,
-                onCheckedChange = { TouchpadSettings.setTouchpadNaturalScroll(it) },
+                onCheckedChange = TouchpadSettings::setTouchpadNaturalScroll,
             )
 
             GamepadStepperCard(
@@ -145,7 +145,7 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
             description = stringResource(R.string.settings_touchpad_mouse_4_5_desc),
             checked = touchpadMouse45Enabled,
             icon = Icons.Rounded.Mouse,
-            onCheckedChange = { TouchpadSettings.setTouchpadMouse45Enabled(it) },
+            onCheckedChange = TouchpadSettings::setTouchpadMouse45Enabled,
         )
 
         GamepadToggleCard(
@@ -153,7 +153,7 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
             description = stringResource(R.string.settings_touchpad_haptics_desc),
             checked = touchpadHapticsEnabled,
             icon = Icons.Rounded.Vibration,
-            onCheckedChange = { TouchpadSettings.setTouchpadHapticsEnabled(it) },
+            onCheckedChange = TouchpadSettings::setTouchpadHapticsEnabled,
         )
 
         GamepadSectionHeader(
@@ -166,7 +166,7 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
             description = stringResource(R.string.settings_touchpad_mirroring_desc),
             checked = touchpadMirroringEnabled,
             icon = Icons.Rounded.Cast,
-            onCheckedChange = { TouchpadSettings.setTouchpadMirroringEnabled(it) },
+            onCheckedChange = TouchpadSettings::setTouchpadMirroringEnabled,
         )
 
         if (touchpadMirroringEnabled) {
