@@ -558,17 +558,11 @@ internal fun ColorOptionSubPageContent(
     val globalAccentInt by SettingsManager.accentColor.collectAsState()
     val globalAccentColor = Color(globalAccentInt)
 
-    val currentColor =
-        if (isBgTarget) {
-            resolveBgColorOption(currentOption ?: layoutDefaultOption ?: ColorOption.Neutral, globalAccentColor)
-        } else {
-            resolveColorOption(currentOption ?: layoutDefaultOption ?: ColorOption.Neutral, globalAccentColor, defaultNeutralColor)
-        }
+    fun resolve(opt: ColorOption): Color =
+        if (isBgTarget) resolveBgColorOption(opt, globalAccentColor) else resolveColorOption(opt, globalAccentColor, defaultNeutralColor)
 
-    val layoutResolvedColor =
-        layoutDefaultOption?.let {
-            if (isBgTarget) resolveBgColorOption(it, globalAccentColor) else resolveColorOption(it, globalAccentColor, defaultNeutralColor)
-        }
+    val currentColor = resolve(currentOption ?: layoutDefaultOption ?: ColorOption.Neutral)
+    val layoutResolvedColor = layoutDefaultOption?.let(::resolve)
 
     val isDefaultSelected = currentOption == null
     val isNeutralSelected = currentOption is ColorOption.Neutral
