@@ -112,6 +112,24 @@ object RomManager {
         AppLog.d(TAG, "Saved ${folders.size} ROM folders to disk")
     }
 
+    private fun resolveDocumentFile(
+        context: Context,
+        uri: Uri,
+    ): DocumentFile? {
+        if (uri.scheme == "file" || (uri.scheme == null && uri.path?.startsWith("/") == true)) {
+            val path = uri.path ?: uri.toString().removePrefix("file://")
+            val file = File(path)
+            if (file.exists()) return DocumentFile.fromFile(file)
+        }
+        return try {
+            DocumentFile.fromTreeUri(context, uri)
+        } catch (e: Exception) {
+            val path = uri.path ?: uri.toString().removePrefix("file://")
+            val file = File(path)
+            if (file.exists()) DocumentFile.fromFile(file) else null
+        }
+    }
+
     suspend fun addRomFolder(
         context: Context,
         uri: Uri,
@@ -128,7 +146,7 @@ object RomManager {
             }
 
             // 2. Scan files to recognize system
-            val documentFile = DocumentFile.fromTreeUri(context, uri)
+            val documentFile = resolveDocumentFile(context, uri)
             if (documentFile == null || !documentFile.exists()) {
                 AppLog.w(TAG, "Selected document tree does not exist")
                 return@withContext AddRomFolderResult.Error("Folder does not exist or is inaccessible.")
@@ -161,7 +179,7 @@ object RomManager {
             saveRomFolders(context, current)
 
             // 4. Reload ROM apps
-            reloadRomApps(context)
+            reloadRomAppsSuspend(context)
             AddRomFolderResult.Success(newFolder)
         }
 
@@ -215,13 +233,19 @@ object RomManager {
 
     fun reloadRomApps(context: Context) {
         scope.launch {
+            reloadRomAppsSuspend(context)
+        }
+    }
+
+    suspend fun reloadRomAppsSuspend(context: Context) =
+        withContext(Dispatchers.IO) {
             val coversDir = File(context.cacheDir, "gamefocus_covers").apply { mkdirs() }
             var namesChanged = false
             val allRomApps =
                 buildList {
                     for (folder in _romFolders.value) {
                         val uri = Uri.parse(folder.uriString)
-                        val documentFile = DocumentFile.fromTreeUri(context, uri) ?: continue
+                        val documentFile = resolveDocumentFile(context, uri) ?: continue
                         if (!documentFile.exists()) continue
 
                         val systemDef = SUPPORTED_SYSTEMS.find { it.id == folder.systemId } ?: continue
@@ -281,7 +305,6 @@ object RomManager {
                 saveRomCleanedNames(context)
             }
         }
-    }
 
     fun updateRomCover(
         packageName: String,
