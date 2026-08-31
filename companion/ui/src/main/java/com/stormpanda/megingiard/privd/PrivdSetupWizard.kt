@@ -785,41 +785,26 @@ fun PrivdChecklistRow(
         horizontalArrangement = Arrangement.spacedBy(SW_CHECKLIST_GAP),
         modifier = modifier,
     ) {
-        when (status) {
-            ChecklistStatus.PENDING -> {
-                Icon(
-                    imageVector = Icons.Rounded.RadioButtonUnchecked,
-                    contentDescription = null,
-                    tint = colors.onSurfaceSecondary.copy(alpha = 0.6f),
-                    modifier = Modifier.size(SW_CHECKLIST_ICON_SIZE),
-                )
-            }
-
-            ChecklistStatus.ACTIVE -> {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(SW_CHECKLIST_ICON_SIZE),
-                    strokeWidth = 2.dp,
-                    color = colors.accent,
-                )
-            }
-
-            ChecklistStatus.DONE -> {
-                Icon(
-                    imageVector = Icons.Rounded.CheckCircle,
-                    contentDescription = null,
-                    tint = colors.accent,
-                    modifier = Modifier.size(SW_CHECKLIST_ICON_SIZE),
-                )
-            }
-
-            ChecklistStatus.FAILED -> {
-                Icon(
-                    imageVector = Icons.Rounded.Cancel,
-                    contentDescription = null,
-                    tint = colors.error,
-                    modifier = Modifier.size(SW_CHECKLIST_ICON_SIZE),
-                )
-            }
+        if (status == ChecklistStatus.ACTIVE) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(SW_CHECKLIST_ICON_SIZE),
+                strokeWidth = 2.dp,
+                color = colors.accent,
+            )
+        } else {
+            val (icon, tint) =
+                when (status) {
+                    ChecklistStatus.PENDING -> Icons.Rounded.RadioButtonUnchecked to colors.onSurfaceSecondary.copy(alpha = 0.6f)
+                    ChecklistStatus.DONE -> Icons.Rounded.CheckCircle to colors.accent
+                    ChecklistStatus.FAILED -> Icons.Rounded.Cancel to colors.error
+                    ChecklistStatus.ACTIVE -> error("unreachable")
+                }
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(SW_CHECKLIST_ICON_SIZE),
+            )
         }
         Text(
             text = label,
