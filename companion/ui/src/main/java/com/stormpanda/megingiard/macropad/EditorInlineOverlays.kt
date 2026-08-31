@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.macropad
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -46,6 +47,7 @@ private val EIO_APP_ICON_SIZE = 36.dp
 private val EIO_APP_ICON_CORNER = 8.dp
 private val EIO_APP_ICON_SHAPE = RoundedCornerShape(EIO_APP_ICON_CORNER)
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun NewProfileSubPageContent(
     existingNames: List<String>,

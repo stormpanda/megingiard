@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.macropad
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Gesture
@@ -48,6 +49,7 @@ private const val TAG = "MacroTimelineEditor"
 private const val MTE_DEFAULT_TOUCH_DURATION_MS = 100L
 private const val MTE_UNDO_STACK_MAX = 50
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun MacroTimelineSubPageContent(
     macro: Macro,

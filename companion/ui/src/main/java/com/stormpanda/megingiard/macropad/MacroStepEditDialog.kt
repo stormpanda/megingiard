@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.macropad
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Delete
@@ -82,6 +83,7 @@ private fun findDirectionIndex(
     y: Int,
 ): Int = MSD_DIRECTIONS.indexOfFirst { it.dirX == x && it.dirY == y }.coerceAtLeast(0)
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun MacroStepEditSubPageContent(
     macroName: String,

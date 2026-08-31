@@ -3,6 +3,7 @@ package com.stormpanda.megingiard.macropad
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
@@ -86,6 +87,7 @@ private val BSE_ICON_SIZE_48 = 48.dp
 private const val BSE_BOTTOM_SCREEN_ASPECT_RATIO = 31f / 27f // 1240 x 1080
 private const val BSE_PREVIEW_WIDTH_FRACTION = 0.5f
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun LayoutBackgroundSubPageContent(
     layout: PadLayout,
