@@ -38,5 +38,5 @@ private val DISC_KEYWORDS = listOf("disc", "disk", "side", "part", "track", "tap
 
 private fun String.containsDiscIndicator(): Boolean {
     val lowercase = this.lowercase()
-    return DISC_KEYWORDS.any { lowercase.contains(it) } || SHORT_DISC_REGEX.containsMatchIn(this)
+    return DISC_KEYWORDS.any { it in lowercase } || SHORT_DISC_REGEX.containsMatchIn(this)
 }
