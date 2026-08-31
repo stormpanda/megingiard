@@ -4,7 +4,6 @@ import android.content.Intent
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.rom.cleanRomName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
