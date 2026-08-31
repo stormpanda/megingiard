@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.abs
+import kotlin.math.sign
 
 private const val TAG = "HorizontalLetterCarousel"
 private val HLC_ITEM_WIDTH = 26.dp
@@ -109,7 +110,7 @@ fun HorizontalLetterCarousel(
                             3 -> 40f
                             4 -> 50f
                             else -> 0f
-                        } * kotlin.math.sign(offset.toFloat())
+                        } * sign(offset.toFloat())
 
                     val textColor = if (isSelected) appColors.accent else appColors.onSurfaceSecondary
 
