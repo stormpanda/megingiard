@@ -253,6 +253,7 @@ fun OnboardingWizardDialog(
     }
 
     val wizardCardContent: @Composable () -> Unit = {
+        val dialogShape = remember { RoundedCornerShape(OW_DIALOG_CORNER_RADIUS) }
         Column(
             modifier =
                 Modifier
@@ -261,13 +262,13 @@ fun OnboardingWizardDialog(
                     .animateContentSize(
                         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
                         alignment = Alignment.Center,
-                    ).shadow(OW_DIALOG_SHADOW_ELEVATION, RoundedCornerShape(OW_DIALOG_CORNER_RADIUS))
-                    .clip(RoundedCornerShape(OW_DIALOG_CORNER_RADIUS))
+                    ).shadow(OW_DIALOG_SHADOW_ELEVATION, dialogShape)
+                    .clip(dialogShape)
                     .background(colors.surface)
                     .border(
                         OW_DIALOG_BORDER_WIDTH,
                         brush = rememberBezelBrush(),
-                        shape = RoundedCornerShape(OW_DIALOG_CORNER_RADIUS),
+                        shape = dialogShape,
                     ).padding(
                         start = OW_DIALOG_PADDING_HORIZONTAL,
                         end = OW_DIALOG_PADDING_HORIZONTAL,
@@ -467,12 +468,13 @@ fun ThemeStepContent() {
         Spacer(modifier = Modifier.height(20.dp))
 
         // Theme Selector Container with Arrow Buttons & Subdued Fading Labels
+        val containerShape = remember { RoundedCornerShape(12.dp) }
         Row(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .background(colors.surfaceVariant, RoundedCornerShape(12.dp))
-                    .border(1.dp, colors.controlOverlayBorder, RoundedCornerShape(12.dp))
+                    .background(colors.surfaceVariant, containerShape)
+                    .border(1.dp, colors.controlOverlayBorder, containerShape)
                     .padding(horizontal = 4.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -504,13 +506,9 @@ fun ThemeStepContent() {
                 AnimatedContent(
                     targetState = currentThemeMode,
                     transitionSpec = {
-                        if (isNextAnimation) {
-                            (slideInHorizontally { it } + fadeIn()) togetherWith
-                                (slideOutHorizontally { -it } + fadeOut())
-                        } else {
-                            (slideInHorizontally { -it } + fadeIn()) togetherWith
-                                (slideOutHorizontally { it } + fadeOut())
-                        }
+                        val direction = if (isNextAnimation) 1 else -1
+                        (slideInHorizontally { it * direction } + fadeIn()) togetherWith
+                            (slideOutHorizontally { -it * direction } + fadeOut())
                     },
                     label = "theme-carousel-animation",
                 ) { targetTheme ->
@@ -758,12 +756,13 @@ fun PrivilegedStepContent(
                 }
 
             // Multi-stage status checklist
+            val checklistCardShape = remember { RoundedCornerShape(12.dp) }
             Column(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .background(colors.surfaceVariant, RoundedCornerShape(12.dp))
-                        .border(1.dp, colors.controlOverlayBorder, RoundedCornerShape(12.dp))
+                        .background(colors.surfaceVariant, checklistCardShape)
+                        .border(1.dp, colors.controlOverlayBorder, checklistCardShape)
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
@@ -867,15 +866,16 @@ private fun OnboardingWarningBanner(
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
+    val bannerShape = remember { RoundedCornerShape(OW_WARNING_CORNER_RADIUS) }
     Row(
         modifier =
             modifier
                 .fillMaxWidth()
-                .background(colors.error.copy(alpha = OW_WARNING_ALPHA_BG), RoundedCornerShape(OW_WARNING_CORNER_RADIUS))
+                .background(colors.error.copy(alpha = OW_WARNING_ALPHA_BG), bannerShape)
                 .border(
                     OW_WARNING_BORDER_WIDTH,
                     colors.error.copy(alpha = OW_WARNING_ALPHA_BORDER),
-                    RoundedCornerShape(OW_WARNING_CORNER_RADIUS),
+                    bannerShape,
                 ).padding(OW_WARNING_PADDING),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(OW_WARNING_SPACED_BY_SMALL),
