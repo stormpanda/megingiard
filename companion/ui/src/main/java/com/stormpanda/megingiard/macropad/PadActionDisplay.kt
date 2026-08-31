@@ -33,295 +33,189 @@ import com.stormpanda.megingiard.settings.MacroPadSettings
 
 private const val TAG = "PadActionDisplay"
 
-internal enum class ActionGroup {
-    KEYBOARD,
-    GAMEPAD,
-    MOUSE,
-    APP_LAUNCHER,
-    MACRO,
-    LAYOUT,
-    MIRROR,
-    OTHER,
+internal enum class ActionGroup(
+    val icon: ImageVector,
+    val labelResId: Int,
+    val descriptionResId: Int,
+) {
+    KEYBOARD(
+        Icons.Rounded.Keyboard,
+        R.string.macropad_action_group_keyboard,
+        R.string.macropad_action_group_keyboard_desc,
+    ),
+    GAMEPAD(
+        Icons.Rounded.SportsEsports,
+        R.string.macropad_action_group_gamepad,
+        R.string.macropad_action_group_gamepad_desc,
+    ),
+    MOUSE(
+        Icons.Rounded.Mouse,
+        R.string.macropad_action_group_mouse,
+        R.string.macropad_action_group_mouse_desc,
+    ),
+    APP_LAUNCHER(
+        Icons.Rounded.Apps,
+        R.string.macropad_action_group_app_launcher,
+        R.string.macropad_action_group_app_launcher_desc,
+    ),
+    MACRO(
+        Icons.Rounded.SmartButton,
+        R.string.macropad_action_group_macro,
+        R.string.macropad_action_group_macro_desc,
+    ),
+    LAYOUT(
+        Icons.AutoMirrored.Rounded.ViewQuilt,
+        R.string.macropad_action_group_layout,
+        R.string.macropad_action_group_layout_desc,
+    ),
+    MIRROR(
+        Icons.Rounded.Cast,
+        R.string.macropad_action_group_mirror,
+        R.string.macropad_action_group_mirror_desc,
+    ),
+    OTHER(
+        Icons.Rounded.Layers,
+        R.string.macropad_action_group_other,
+        R.string.macropad_action_group_other_desc,
+    ),
+    ;
+
+    fun icon(): ImageVector = icon
+
+    fun labelResId(): Int = labelResId
+
+    fun descriptionResId(): Int = descriptionResId
+
+    fun actions(): List<ActionCategory> = ActionCategory.entries.filter { it.group == this }
 }
 
-internal fun ActionGroup.icon(): ImageVector =
-    when (this) {
-        ActionGroup.KEYBOARD -> Icons.Rounded.Keyboard
-        ActionGroup.GAMEPAD -> Icons.Rounded.SportsEsports
-        ActionGroup.MOUSE -> Icons.Rounded.Mouse
-        ActionGroup.APP_LAUNCHER -> Icons.Rounded.Apps
-        ActionGroup.MACRO -> Icons.Rounded.SmartButton
-        ActionGroup.LAYOUT -> Icons.AutoMirrored.Rounded.ViewQuilt
-        ActionGroup.MIRROR -> Icons.Rounded.Cast
-        ActionGroup.OTHER -> Icons.Rounded.Layers
-    }
-
-internal fun ActionGroup.labelResId(): Int =
-    when (this) {
-        ActionGroup.KEYBOARD -> R.string.macropad_action_group_keyboard
-        ActionGroup.GAMEPAD -> R.string.macropad_action_group_gamepad
-        ActionGroup.MOUSE -> R.string.macropad_action_group_mouse
-        ActionGroup.APP_LAUNCHER -> R.string.macropad_action_group_app_launcher
-        ActionGroup.MACRO -> R.string.macropad_action_group_macro
-        ActionGroup.LAYOUT -> R.string.macropad_action_group_layout
-        ActionGroup.MIRROR -> R.string.macropad_action_group_mirror
-        ActionGroup.OTHER -> R.string.macropad_action_group_other
-    }
-
-internal fun ActionGroup.descriptionResId(): Int =
-    when (this) {
-        ActionGroup.KEYBOARD -> R.string.macropad_action_group_keyboard_desc
-        ActionGroup.GAMEPAD -> R.string.macropad_action_group_gamepad_desc
-        ActionGroup.MOUSE -> R.string.macropad_action_group_mouse_desc
-        ActionGroup.APP_LAUNCHER -> R.string.macropad_action_group_app_launcher_desc
-        ActionGroup.MACRO -> R.string.macropad_action_group_macro_desc
-        ActionGroup.LAYOUT -> R.string.macropad_action_group_layout_desc
-        ActionGroup.MIRROR -> R.string.macropad_action_group_mirror_desc
-        ActionGroup.OTHER -> R.string.macropad_action_group_other_desc
-    }
-
-internal fun ActionGroup.actions(): List<ActionCategory> =
-    when (this) {
-        ActionGroup.KEYBOARD -> {
-            listOf(ActionCategory.KEYBOARD_KEY)
-        }
-
-        ActionGroup.GAMEPAD -> {
-            listOf(ActionCategory.GAMEPAD_BUTTON)
-        }
-
-        ActionGroup.MOUSE -> {
-            listOf(
-                ActionCategory.MOUSE_BUTTON,
-                ActionCategory.SCROLL_WHEEL,
-                ActionCategory.TRACKPOINT,
-            )
-        }
-
-        ActionGroup.APP_LAUNCHER -> {
-            listOf(ActionCategory.APP_LAUNCHER)
-        }
-
-        ActionGroup.MACRO -> {
-            listOf(ActionCategory.MACRO)
-        }
-
-        ActionGroup.LAYOUT -> {
-            listOf(
-                ActionCategory.LAYOUT_NEXT,
-                ActionCategory.LAYOUT_PREVIOUS,
-                ActionCategory.PROFILE_SWITCHER,
-            )
-        }
-
-        ActionGroup.MIRROR -> {
-            listOf(
-                ActionCategory.MIRROR_PLAY_STOP,
-                ActionCategory.MIRROR_FREEZE,
-                ActionCategory.MIRROR_VIEWPORT_EDIT,
-                ActionCategory.MIRROR_TOUCH_PROJECTION,
-                ActionCategory.BACKGROUND_PEEK,
-            )
-        }
-
-        ActionGroup.OTHER -> {
-            listOf(
-                ActionCategory.FULLSCREEN_MOUSE,
-                ActionCategory.FULLSCREEN_KEYBOARD,
-            )
-        }
-    }
-
-internal enum class ActionCategory {
-    KEYBOARD_KEY,
-    GAMEPAD_BUTTON,
-    MOUSE_BUTTON,
-    SCROLL_WHEEL,
-    TRACKPOINT,
-    MACRO,
-    BACKGROUND_PEEK,
-    LAYOUT_NEXT,
-    LAYOUT_PREVIOUS,
-    PROFILE_SWITCHER,
-    MIRROR_PLAY_STOP,
-    MIRROR_FREEZE,
-    MIRROR_VIEWPORT_EDIT,
-    MIRROR_TOUCH_PROJECTION,
-    FULLSCREEN_MOUSE,
-    FULLSCREEN_KEYBOARD,
-    APP_LAUNCHER,
-}
-
-internal fun ActionCategory.labelResId(): Int =
-    when (this) {
-        ActionCategory.KEYBOARD_KEY -> R.string.macropad_action_keyboard_key
-        ActionCategory.GAMEPAD_BUTTON -> R.string.macropad_action_gamepad_button
-        ActionCategory.MOUSE_BUTTON -> R.string.macropad_action_mouse_button
-        ActionCategory.SCROLL_WHEEL -> R.string.macropad_action_scroll_wheel
-        ActionCategory.TRACKPOINT -> R.string.macropad_action_trackpoint
-        ActionCategory.MACRO -> R.string.macropad_action_macro
-        ActionCategory.BACKGROUND_PEEK -> R.string.macropad_action_ambient_peek
-        ActionCategory.LAYOUT_NEXT -> R.string.macropad_action_layout_next
-        ActionCategory.LAYOUT_PREVIOUS -> R.string.macropad_action_layout_previous
-        ActionCategory.PROFILE_SWITCHER -> R.string.macropad_action_profile_switcher
-        ActionCategory.MIRROR_PLAY_STOP -> R.string.macropad_action_mirror_play_stop
-        ActionCategory.MIRROR_FREEZE -> R.string.macropad_action_mirror_freeze
-        ActionCategory.MIRROR_VIEWPORT_EDIT -> R.string.macropad_action_mirror_viewport_edit
-        ActionCategory.MIRROR_TOUCH_PROJECTION -> R.string.macropad_action_mirror_touch_projection
-        ActionCategory.FULLSCREEN_MOUSE -> R.string.macropad_action_fullscreen_mouse
-        ActionCategory.FULLSCREEN_KEYBOARD -> R.string.macropad_action_fullscreen_keyboard
-        ActionCategory.APP_LAUNCHER -> R.string.macropad_action_app_launcher
-    }
-
-internal fun ActionCategory.icon(): ImageVector =
-    when (this) {
-        ActionCategory.KEYBOARD_KEY -> Icons.Rounded.Keyboard
-        ActionCategory.GAMEPAD_BUTTON -> Icons.Rounded.SportsEsports
-        ActionCategory.MOUSE_BUTTON -> Icons.Rounded.Mouse
-        ActionCategory.SCROLL_WHEEL -> Icons.Rounded.SwapVert
-        ActionCategory.TRACKPOINT -> Icons.Rounded.ControlCamera
-        ActionCategory.MACRO -> Icons.Rounded.SmartButton
-        ActionCategory.BACKGROUND_PEEK -> Icons.Rounded.Visibility
-        ActionCategory.LAYOUT_NEXT -> Icons.AutoMirrored.Rounded.ArrowForward
-        ActionCategory.LAYOUT_PREVIOUS -> Icons.AutoMirrored.Rounded.ArrowBack
-        ActionCategory.PROFILE_SWITCHER -> Icons.Rounded.SwapHoriz
-        ActionCategory.MIRROR_PLAY_STOP -> Icons.Rounded.Cast
-        ActionCategory.MIRROR_FREEZE -> Icons.Rounded.PauseCircle
-        ActionCategory.MIRROR_VIEWPORT_EDIT -> Icons.Rounded.CropFree
-        ActionCategory.MIRROR_TOUCH_PROJECTION -> Icons.Rounded.TouchApp
-        ActionCategory.FULLSCREEN_MOUSE -> Icons.Rounded.Mouse
-        ActionCategory.FULLSCREEN_KEYBOARD -> Icons.Rounded.Keyboard
-        ActionCategory.APP_LAUNCHER -> Icons.Rounded.Apps
-    }
-
-internal fun ActionCategory.defaultAction(): PadAction =
-    when (this) {
-        ActionCategory.KEYBOARD_KEY -> {
-            PadAction.KeyboardKey(LinuxKeycodes.KEY_SPACE, "Space")
-        }
-
-        ActionCategory.GAMEPAD_BUTTON -> {
-            PadAction.GamepadButton(GamepadKeycodes.BTN_SOUTH, "A")
-        }
-
-        ActionCategory.MOUSE_BUTTON -> {
-            PadAction.MouseButton(MouseButton.LEFT)
-        }
-
-        ActionCategory.SCROLL_WHEEL -> {
-            PadAction.ScrollWheel
-        }
-
-        ActionCategory.TRACKPOINT -> {
-            PadAction.TrackpointMove()
-        }
-
-        ActionCategory.MACRO -> {
+internal enum class ActionCategory(
+    val icon: ImageVector,
+    val labelResId: Int,
+    val group: ActionGroup,
+    val defaultActionProvider: () -> PadAction,
+) {
+    KEYBOARD_KEY(
+        Icons.Rounded.Keyboard,
+        R.string.macropad_action_keyboard_key,
+        ActionGroup.KEYBOARD,
+        { PadAction.KeyboardKey(LinuxKeycodes.KEY_SPACE, "Space") },
+    ),
+    GAMEPAD_BUTTON(
+        Icons.Rounded.SportsEsports,
+        R.string.macropad_action_gamepad_button,
+        ActionGroup.GAMEPAD,
+        { PadAction.GamepadButton(GamepadKeycodes.BTN_SOUTH, "A") },
+    ),
+    MOUSE_BUTTON(
+        Icons.Rounded.Mouse,
+        R.string.macropad_action_mouse_button,
+        ActionGroup.MOUSE,
+        { PadAction.MouseButton(MouseButton.LEFT) },
+    ),
+    SCROLL_WHEEL(
+        Icons.Rounded.SwapVert,
+        R.string.macropad_action_scroll_wheel,
+        ActionGroup.MOUSE,
+        { PadAction.ScrollWheel },
+    ),
+    TRACKPOINT(
+        Icons.Rounded.ControlCamera,
+        R.string.macropad_action_trackpoint,
+        ActionGroup.MOUSE,
+        { PadAction.TrackpointMove() },
+    ),
+    MACRO(
+        Icons.Rounded.SmartButton,
+        R.string.macropad_action_macro,
+        ActionGroup.MACRO,
+        {
             PadAction.Macro(
                 MacroPadState.activeProfile.value
                     ?.macros
                     ?.firstOrNull()
                     ?.id ?: "",
             )
-        }
+        },
+    ),
+    BACKGROUND_PEEK(
+        Icons.Rounded.Visibility,
+        R.string.macropad_action_ambient_peek,
+        ActionGroup.MIRROR,
+        { PadAction.BackgroundPeek },
+    ),
+    LAYOUT_NEXT(
+        Icons.AutoMirrored.Rounded.ArrowForward,
+        R.string.macropad_action_layout_next,
+        ActionGroup.LAYOUT,
+        { PadAction.LayoutNext },
+    ),
+    LAYOUT_PREVIOUS(
+        Icons.AutoMirrored.Rounded.ArrowBack,
+        R.string.macropad_action_layout_previous,
+        ActionGroup.LAYOUT,
+        { PadAction.LayoutPrevious },
+    ),
+    PROFILE_SWITCHER(
+        Icons.Rounded.SwapHoriz,
+        R.string.macropad_action_profile_switcher,
+        ActionGroup.LAYOUT,
+        { PadAction.ProfileSwitcher },
+    ),
+    MIRROR_PLAY_STOP(
+        Icons.Rounded.Cast,
+        R.string.macropad_action_mirror_play_stop,
+        ActionGroup.MIRROR,
+        { PadAction.MirrorPlayStop },
+    ),
+    MIRROR_FREEZE(
+        Icons.Rounded.PauseCircle,
+        R.string.macropad_action_mirror_freeze,
+        ActionGroup.MIRROR,
+        { PadAction.MirrorFreeze },
+    ),
+    MIRROR_VIEWPORT_EDIT(
+        Icons.Rounded.CropFree,
+        R.string.macropad_action_mirror_viewport_edit,
+        ActionGroup.MIRROR,
+        { PadAction.MirrorViewportEdit },
+    ),
+    MIRROR_TOUCH_PROJECTION(
+        Icons.Rounded.TouchApp,
+        R.string.macropad_action_mirror_touch_projection,
+        ActionGroup.MIRROR,
+        { PadAction.MirrorTouchProjection },
+    ),
+    FULLSCREEN_MOUSE(
+        Icons.Rounded.Mouse,
+        R.string.macropad_action_fullscreen_mouse,
+        ActionGroup.OTHER,
+        { PadAction.FullScreenMouse() },
+    ),
+    FULLSCREEN_KEYBOARD(
+        Icons.Rounded.Keyboard,
+        R.string.macropad_action_fullscreen_keyboard,
+        ActionGroup.OTHER,
+        { PadAction.FullScreenKeyboard() },
+    ),
+    APP_LAUNCHER(
+        Icons.Rounded.Apps,
+        R.string.macropad_action_app_launcher,
+        ActionGroup.APP_LAUNCHER,
+        { PadAction.AppLauncher() },
+    ),
+    ;
 
-        ActionCategory.BACKGROUND_PEEK -> {
-            PadAction.BackgroundPeek
-        }
+    fun labelResId(): Int = labelResId
 
-        ActionCategory.LAYOUT_NEXT -> {
-            PadAction.LayoutNext
-        }
+    fun icon(): ImageVector = icon
 
-        ActionCategory.LAYOUT_PREVIOUS -> {
-            PadAction.LayoutPrevious
-        }
+    fun defaultAction(): PadAction = defaultActionProvider()
 
-        ActionCategory.PROFILE_SWITCHER -> {
-            PadAction.ProfileSwitcher
-        }
+    fun group(): ActionGroup = group
+}
 
-        ActionCategory.MIRROR_PLAY_STOP -> {
-            PadAction.MirrorPlayStop
-        }
-
-        ActionCategory.MIRROR_FREEZE -> {
-            PadAction.MirrorFreeze
-        }
-
-        ActionCategory.MIRROR_VIEWPORT_EDIT -> {
-            PadAction.MirrorViewportEdit
-        }
-
-        ActionCategory.MIRROR_TOUCH_PROJECTION -> {
-            PadAction.MirrorTouchProjection
-        }
-
-        ActionCategory.FULLSCREEN_MOUSE -> {
-            PadAction.FullScreenMouse()
-        }
-
-        ActionCategory.FULLSCREEN_KEYBOARD -> {
-            PadAction.FullScreenKeyboard()
-        }
-
-        ActionCategory.APP_LAUNCHER -> {
-            PadAction.AppLauncher()
-        }
-    }
-
-internal fun ActionCategory.group(): ActionGroup =
-    when (this) {
-        ActionCategory.KEYBOARD_KEY -> ActionGroup.KEYBOARD
-
-        ActionCategory.GAMEPAD_BUTTON -> ActionGroup.GAMEPAD
-
-        ActionCategory.MOUSE_BUTTON,
-        ActionCategory.SCROLL_WHEEL,
-        ActionCategory.TRACKPOINT,
-        -> ActionGroup.MOUSE
-
-        ActionCategory.MACRO -> ActionGroup.MACRO
-
-        ActionCategory.LAYOUT_NEXT,
-        ActionCategory.LAYOUT_PREVIOUS,
-        ActionCategory.PROFILE_SWITCHER,
-        -> ActionGroup.LAYOUT
-
-        ActionCategory.MIRROR_PLAY_STOP,
-        ActionCategory.MIRROR_FREEZE,
-        ActionCategory.MIRROR_VIEWPORT_EDIT,
-        ActionCategory.MIRROR_TOUCH_PROJECTION,
-        ActionCategory.BACKGROUND_PEEK,
-        -> ActionGroup.MIRROR
-
-        ActionCategory.APP_LAUNCHER -> ActionGroup.APP_LAUNCHER
-
-        ActionCategory.FULLSCREEN_MOUSE,
-        ActionCategory.FULLSCREEN_KEYBOARD,
-        -> ActionGroup.OTHER
-    }
-
-internal fun PadAction.categoryResId(): Int =
-    when (this) {
-        is PadAction.KeyboardKey -> R.string.macropad_action_keyboard_key
-        is PadAction.GamepadButton -> R.string.macropad_action_gamepad_button
-        is PadAction.MouseButton -> R.string.macropad_action_mouse_button
-        is PadAction.ScrollWheel -> R.string.macropad_action_scroll_wheel
-        is PadAction.TrackpointMove -> R.string.macropad_action_trackpoint
-        is PadAction.Macro -> R.string.macropad_action_macro
-        is PadAction.BackgroundPeek -> R.string.macropad_action_ambient_peek
-        is PadAction.LayoutNext -> R.string.macropad_action_layout_next
-        is PadAction.LayoutPrevious -> R.string.macropad_action_layout_previous
-        is PadAction.ProfileSwitcher -> R.string.macropad_action_profile_switcher
-        is PadAction.MirrorPlayStop -> R.string.macropad_action_mirror_play_stop
-        is PadAction.MirrorFreeze -> R.string.macropad_action_mirror_freeze
-        is PadAction.MirrorViewportEdit -> R.string.macropad_action_mirror_viewport_edit
-        is PadAction.MirrorTouchProjection -> R.string.macropad_action_mirror_touch_projection
-        is PadAction.FullScreenMouse -> R.string.macropad_action_fullscreen_mouse
-        is PadAction.FullScreenKeyboard -> R.string.macropad_action_fullscreen_keyboard
-        is PadAction.AppLauncher -> R.string.macropad_action_app_launcher
-    }
+internal fun PadAction.categoryResId(): Int = toCategory().labelResId
 
 internal fun PadAction.toCategory(): ActionCategory =
     when (this) {
@@ -352,30 +246,10 @@ internal fun ActionCategory.isEnabled(
 ): Boolean =
     when (this) {
         ActionCategory.KEYBOARD_KEY -> enableKeyboard
-
         ActionCategory.GAMEPAD_BUTTON -> enableGamepad
-
-        ActionCategory.MOUSE_BUTTON,
-        ActionCategory.SCROLL_WHEEL,
-        ActionCategory.TRACKPOINT,
-        -> enableMouse
-
+        ActionCategory.MOUSE_BUTTON, ActionCategory.SCROLL_WHEEL, ActionCategory.TRACKPOINT -> enableMouse
         ActionCategory.MACRO -> hasMacros
-
-        ActionCategory.BACKGROUND_PEEK,
-        ActionCategory.LAYOUT_NEXT,
-        ActionCategory.LAYOUT_PREVIOUS,
-        ActionCategory.PROFILE_SWITCHER,
-        ActionCategory.MIRROR_PLAY_STOP,
-        ActionCategory.MIRROR_FREEZE,
-        ActionCategory.MIRROR_VIEWPORT_EDIT,
-        ActionCategory.MIRROR_TOUCH_PROJECTION,
-        -> true
-
-        ActionCategory.FULLSCREEN_MOUSE,
-        ActionCategory.FULLSCREEN_KEYBOARD,
-        ActionCategory.APP_LAUNCHER,
-        -> true
+        else -> true
     }
 
 @Composable
