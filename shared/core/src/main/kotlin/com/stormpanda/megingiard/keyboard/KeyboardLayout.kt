@@ -263,43 +263,30 @@ private fun homeRowAzerty(): List<KeyDef> =
         KeyDef("m", "m", KEY_M),
     )
 
-private fun bottomRowQwertz(): List<KeyDef> =
+private fun bottomRow(
+    firstKey: KeyDef,
+    lastLetterKey: KeyDef = KeyDef("m", "m", KEY_M, superscript = "?"),
+): List<KeyDef> =
     listOf(
         KeyDef("lshift", "Shift", KEY_LEFTSHIFT, widthWeight = 1.3f, type = KeyType.MODIFIER),
-        KeyDef("y", "y", KEY_Y, superscript = "*"),
+        firstKey,
         KeyDef("x", "x", KEY_X, superscript = "\""),
         KeyDef("c", "c", KEY_C, superscript = "'"),
         KeyDef("v", "v", KEY_V, superscript = ":"),
         KeyDef("b", "b", KEY_B, superscript = ";"),
         KeyDef("n", "n", KEY_N, superscript = "!"),
-        KeyDef("m", "m", KEY_M, superscript = "?"),
+        lastLetterKey,
         KeyDef("bksp", "⌫", KEY_BACKSPACE, widthWeight = 1.3f),
     )
 
-private fun bottomRowQwerty(): List<KeyDef> =
-    listOf(
-        KeyDef("lshift", "Shift", KEY_LEFTSHIFT, widthWeight = 1.3f, type = KeyType.MODIFIER),
-        KeyDef("z", "z", KEY_Z, superscript = "*"),
-        KeyDef("x", "x", KEY_X, superscript = "\""),
-        KeyDef("c", "c", KEY_C, superscript = "'"),
-        KeyDef("v", "v", KEY_V, superscript = ":"),
-        KeyDef("b", "b", KEY_B, superscript = ";"),
-        KeyDef("n", "n", KEY_N, superscript = "!"),
-        KeyDef("m", "m", KEY_M, superscript = "?"),
-        KeyDef("bksp", "⌫", KEY_BACKSPACE, widthWeight = 1.3f),
-    )
+private fun bottomRowQwertz(): List<KeyDef> = bottomRow(KeyDef("y", "y", KEY_Y, superscript = "*"))
+
+private fun bottomRowQwerty(): List<KeyDef> = bottomRow(KeyDef("z", "z", KEY_Z, superscript = "*"))
 
 private fun bottomRowAzerty(): List<KeyDef> =
-    listOf(
-        KeyDef("lshift", "Shift", KEY_LEFTSHIFT, widthWeight = 1.3f, type = KeyType.MODIFIER),
-        KeyDef("w", "w", KEY_W, superscript = "*"),
-        KeyDef("x", "x", KEY_X, superscript = "\""),
-        KeyDef("c", "c", KEY_C, superscript = "'"),
-        KeyDef("v", "v", KEY_V, superscript = ":"),
-        KeyDef("b", "b", KEY_B, superscript = ";"),
-        KeyDef("n", "n", KEY_N, superscript = "!"),
-        KeyDef("question_azerty", "?", KEY_SLASH, autoModifiers = listOf(KEY_LEFTSHIFT), superscript = "?"),
-        KeyDef("bksp", "⌫", KEY_BACKSPACE, widthWeight = 1.3f),
+    bottomRow(
+        firstKey = KeyDef("w", "w", KEY_W, superscript = "*"),
+        lastLetterKey = KeyDef("question_azerty", "?", KEY_SLASH, autoModifiers = listOf(KEY_LEFTSHIFT), superscript = "?"),
     )
 
 private fun bottomBarRow(): List<KeyDef> =
@@ -527,6 +514,30 @@ private fun buildFullLayout(
         fullBottomRow(),
     )
 
+private fun fullRow4(firstKey: KeyDef): List<KeyDef> =
+    listOf(
+        firstKey,
+        KeyDef("x", "x", KEY_X),
+        KeyDef("c", "c", KEY_C),
+        KeyDef("v", "v", KEY_V),
+        KeyDef("b", "b", KEY_B),
+        KeyDef("n", "n", KEY_N),
+        KeyDef("m", "m", KEY_M),
+    )
+
+private val FULL_ROW3_QWERTY: List<KeyDef> =
+    listOf(
+        KeyDef("a", "a", KEY_A),
+        KeyDef("s", "s", KEY_S),
+        KeyDef("d", "d", KEY_D),
+        KeyDef("f", "f", KEY_F),
+        KeyDef("g", "g", KEY_G),
+        KeyDef("h", "h", KEY_H),
+        KeyDef("j", "j", KEY_J),
+        KeyDef("k", "k", KEY_K),
+        KeyDef("l", "l", KEY_L),
+    )
+
 private fun fullLayoutQwertz(): List<List<KeyDef>> =
     buildFullLayout(
         row2Keys =
@@ -542,28 +553,8 @@ private fun fullLayoutQwertz(): List<List<KeyDef>> =
                 KeyDef("o", "o", KEY_O),
                 KeyDef("p", "p", KEY_P),
             ),
-        row3Keys =
-            listOf(
-                KeyDef("a", "a", KEY_A),
-                KeyDef("s", "s", KEY_S),
-                KeyDef("d", "d", KEY_D),
-                KeyDef("f", "f", KEY_F),
-                KeyDef("g", "g", KEY_G),
-                KeyDef("h", "h", KEY_H),
-                KeyDef("j", "j", KEY_J),
-                KeyDef("k", "k", KEY_K),
-                KeyDef("l", "l", KEY_L),
-            ),
-        row4Keys =
-            listOf(
-                KeyDef("y", "y", KEY_Y),
-                KeyDef("x", "x", KEY_X),
-                KeyDef("c", "c", KEY_C),
-                KeyDef("v", "v", KEY_V),
-                KeyDef("b", "b", KEY_B),
-                KeyDef("n", "n", KEY_N),
-                KeyDef("m", "m", KEY_M),
-            ),
+        row3Keys = FULL_ROW3_QWERTY,
+        row4Keys = fullRow4(KeyDef("y", "y", KEY_Y)),
     )
 
 private fun fullLayoutQwerty(): List<List<KeyDef>> =
@@ -581,28 +572,8 @@ private fun fullLayoutQwerty(): List<List<KeyDef>> =
                 KeyDef("o", "o", KEY_O),
                 KeyDef("p", "p", KEY_P),
             ),
-        row3Keys =
-            listOf(
-                KeyDef("a", "a", KEY_A),
-                KeyDef("s", "s", KEY_S),
-                KeyDef("d", "d", KEY_D),
-                KeyDef("f", "f", KEY_F),
-                KeyDef("g", "g", KEY_G),
-                KeyDef("h", "h", KEY_H),
-                KeyDef("j", "j", KEY_J),
-                KeyDef("k", "k", KEY_K),
-                KeyDef("l", "l", KEY_L),
-            ),
-        row4Keys =
-            listOf(
-                KeyDef("z", "z", KEY_Z),
-                KeyDef("x", "x", KEY_X),
-                KeyDef("c", "c", KEY_C),
-                KeyDef("v", "v", KEY_V),
-                KeyDef("b", "b", KEY_B),
-                KeyDef("n", "n", KEY_N),
-                KeyDef("m", "m", KEY_M),
-            ),
+        row3Keys = FULL_ROW3_QWERTY,
+        row4Keys = fullRow4(KeyDef("z", "z", KEY_Z)),
     )
 
 private fun fullLayoutAzerty(): List<List<KeyDef>> =
@@ -632,16 +603,7 @@ private fun fullLayoutAzerty(): List<List<KeyDef>> =
                 KeyDef("k", "k", KEY_K),
                 KeyDef("l", "l", KEY_L),
             ),
-        row4Keys =
-            listOf(
-                KeyDef("w", "w", KEY_W),
-                KeyDef("x", "x", KEY_X),
-                KeyDef("c", "c", KEY_C),
-                KeyDef("v", "v", KEY_V),
-                KeyDef("b", "b", KEY_B),
-                KeyDef("n", "n", KEY_N),
-                KeyDef("m", "m", KEY_M),
-            ),
+        row4Keys = fullRow4(KeyDef("w", "w", KEY_W)),
     )
 
 // ---------------------------------------------------------------------------
