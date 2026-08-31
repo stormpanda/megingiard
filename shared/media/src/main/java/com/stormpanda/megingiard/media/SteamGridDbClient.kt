@@ -22,11 +22,11 @@ sealed class SteamGridDbException(
     message: String,
     cause: Throwable? = null,
 ) : Exception(message, cause) {
-    object Offline : SteamGridDbException("Device is offline")
+    data object Offline : SteamGridDbException("Device is offline")
 
-    object RateLimited : SteamGridDbException("Rate limit exceeded")
+    data object RateLimited : SteamGridDbException("Rate limit exceeded")
 
-    object ServiceUnavailable : SteamGridDbException("SteamGridDB is unreachable")
+    data object ServiceUnavailable : SteamGridDbException("SteamGridDB is unreachable")
 
     class Unauthorized(
         message: String = "Invalid or unauthorized API key",
