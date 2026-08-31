@@ -4,11 +4,13 @@ import android.graphics.Bitmap
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -22,6 +24,16 @@ private const val TAG = "AppPaletteExtractorTest"
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
 class AppPaletteExtractorTest {
+    @Before
+    fun setUp() {
+        AppPaletteExtractor.resetForTesting()
+    }
+
+    @After
+    fun tearDown() {
+        AppPaletteExtractor.resetForTesting()
+    }
+
     @Test
     fun extractColors_withVibrantBitmap_returnsVibrantPrimaryAndSecondary() {
         val width = 100
