@@ -73,9 +73,11 @@ object PrivdClient {
     private val _state = MutableStateFlow(PrivdConnectionState.DISCONNECTED)
     val state: StateFlow<PrivdConnectionState> = _state.asStateFlow()
 
-    internal fun setStateForTesting(newState: PrivdConnectionState) {
-        isConnectedForTest = (newState == PrivdConnectionState.CONNECTED)
-        _state.value = newState
+    internal fun setStateForTesting(newState: PrivdConnectionState?) {
+        isConnectedForTest = if (newState == null) null else (newState == PrivdConnectionState.CONNECTED)
+        if (newState != null) {
+            _state.value = newState
+        }
     }
 
     private val commandMutex = Mutex()
@@ -129,6 +131,14 @@ object PrivdClient {
         portStart = if (isDebug) PORT_DEBUG_START else PORT_RELEASE_START
         portEnd = portStart + 4
         AppLog.d(TAG, "setPackageName: $name -> port range $portStart..$portEnd")
+    }
+
+    internal fun setPortRangeForTesting(
+        start: Int,
+        end: Int = start,
+    ) {
+        portStart = start
+        portEnd = end
     }
 
     fun loadKey(context: Context) {
@@ -199,6 +209,7 @@ object PrivdClient {
      */
     @Synchronized
     fun connect(): Boolean {
+        isConnectedForTest = null
         if (isConnected) return true
         cleanupLocked()
         _state.value = PrivdConnectionState.CONNECTING
@@ -575,6 +586,7 @@ object PrivdClient {
 
     /** Must be invoked from a synchronized block. */
     private fun cleanupLocked() {
+        isConnectedForTest = null
         running = false
         queue.clear()
         pingDeferred?.complete(false)

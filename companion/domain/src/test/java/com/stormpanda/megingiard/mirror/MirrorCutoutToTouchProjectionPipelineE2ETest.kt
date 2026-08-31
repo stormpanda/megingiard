@@ -101,7 +101,7 @@ class MirrorCutoutToTouchProjectionPipelineE2ETest {
         ScreenCaptureManager.resetMirrorSessionState()
         ScreenCaptureManager.scope.cancel()
         ScreenCaptureManager.scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-        PrivdClient.setStateForTesting(PrivdConnectionState.DISCONNECTED)
+        PrivdClient.setStateForTesting(null)
         Dispatchers.resetMain()
     }
 
