@@ -76,6 +76,7 @@ private const val TAG = "PadButtonEditDialog"
 
 private val PBD_COLOR_PREVIEW_SIZE = 36.dp
 private val PBD_CORNER_RADIUS_DP = 6.dp
+private val PBD_CORNER_SHAPE = RoundedCornerShape(PBD_CORNER_RADIUS_DP)
 private val PBD_ICON_SIZE_DP = 20.dp
 
 @Composable
@@ -459,7 +460,7 @@ internal fun EditButtonSubPageContent(
         )
 
         val previewLabel = stringResource(R.string.macropad_editor_button_preview_text)
-        val previewShape = if (buttonShape == ButtonShape.CIRCLE) CircleShape else RoundedCornerShape(PBD_CORNER_RADIUS_DP)
+        val previewShape = if (buttonShape == ButtonShape.CIRCLE) CircleShape else PBD_CORNER_SHAPE
         val buttonPreviewLeading: (textColor: Color, borderColor: Color, bgColor: Color, isIconOnly: Boolean) -> @Composable () -> Unit =
             { tColor, bColor, bgCol, iconOnly ->
                 {
