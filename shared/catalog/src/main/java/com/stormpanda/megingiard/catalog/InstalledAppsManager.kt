@@ -75,11 +75,13 @@ object InstalledAppsManager {
         val file = File(context.filesDir, filename)
         if (!file.exists()) return emptyList()
         return try {
-            file
-                .readLines()
-                .map { it.trim() }
-                .filter { it.isNotEmpty() }
-                .take(limit)
+            file.useLines { lines ->
+                lines
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+                    .take(limit)
+                    .toList()
+            }
         } catch (e: Exception) {
             AppLog.w(TAG, "Failed to load $filename: ${e.message}")
             emptyList()
