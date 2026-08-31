@@ -9,160 +9,120 @@ import java.util.Locale
 class AutoSetupLanguageConfigTest {
     @Test
     fun fromLocale_returnsCountrySpecificGermanConfigs() {
-        val configDeDe = AutoSetupLanguageConfig.fromLocale(Locale.GERMANY)
-        val configDeAt = AutoSetupLanguageConfig.fromLocale(Locale("de", "AT"))
-        val configDeCh = AutoSetupLanguageConfig.fromLocale(Locale("de", "CH"))
-
-        assertEquals("de-DE", configDeDe.localeTag)
-        assertEquals("de", configDeDe.languageCode)
-        assertEquals("Build-Nummer", configDeDe.buildNumberQueryAndKeyword)
-        assertEquals("Debugging über WLAN", configDeDe.wirelessDebuggingQueryAndKeyword)
-        assertEquals("USB-Debugging", configDeDe.usbDebuggingQueryAndKeyword)
-
-        assertEquals("de-AT", configDeAt.localeTag)
-        assertEquals("de-CH", configDeCh.localeTag)
+        val config = AutoSetupLanguageConfig.fromLocale(Locale.GERMANY)
+        assertEquals("de-DE", config.localeTag)
+        assertEquals("de", config.languageCode)
+        assertEquals("Build-Nummer", config.buildNumberQueryAndKeyword)
+        assertEquals("Debugging über WLAN", config.wirelessDebuggingQueryAndKeyword)
+        assertEquals("USB-Debugging", config.usbDebuggingQueryAndKeyword)
+        assertEquals("de-AT", AutoSetupLanguageConfig.fromLocale(Locale("de", "AT")).localeTag)
+        assertEquals("de-CH", AutoSetupLanguageConfig.fromLocale(Locale("de", "CH")).localeTag)
     }
 
     @Test
     fun fromLocale_returnsCountrySpecificSpanishConfigs() {
-        val configEsEs = AutoSetupLanguageConfig.fromLocale(Locale("es", "ES"))
-        val configEsMx = AutoSetupLanguageConfig.fromLocale(Locale("es", "MX"))
-        val configEsUs = AutoSetupLanguageConfig.fromLocale(Locale("es", "US"))
-
-        assertEquals("es-ES", configEsEs.localeTag)
-        assertEquals("es", configEsEs.languageCode)
-        assertEquals("Número de compilación", configEsEs.buildNumberQueryAndKeyword)
-        assertEquals("Depuración inalámbrica", configEsEs.wirelessDebuggingQueryAndKeyword)
-        assertEquals("Depuración por USB", configEsEs.usbDebuggingQueryAndKeyword)
-
-        assertEquals("es-MX", configEsMx.localeTag)
-        assertEquals("es-US", configEsUs.localeTag)
+        val config = AutoSetupLanguageConfig.fromLocale(Locale("es", "ES"))
+        assertEquals("es-ES", config.localeTag)
+        assertEquals("es", config.languageCode)
+        assertEquals("Número de compilación", config.buildNumberQueryAndKeyword)
+        assertEquals("Depuración inalámbrica", config.wirelessDebuggingQueryAndKeyword)
+        assertEquals("Depuración por USB", config.usbDebuggingQueryAndKeyword)
+        assertEquals("es-MX", AutoSetupLanguageConfig.fromLocale(Locale("es", "MX")).localeTag)
+        assertEquals("es-US", AutoSetupLanguageConfig.fromLocale(Locale("es", "US")).localeTag)
     }
 
     @Test
     fun fromLocale_returnsCountrySpecificFrenchConfigs() {
-        val configFrFr = AutoSetupLanguageConfig.fromLocale(Locale.FRANCE)
-        val configFrCa = AutoSetupLanguageConfig.fromLocale(Locale.CANADA_FRENCH)
-
-        assertEquals("fr-FR", configFrFr.localeTag)
-        assertEquals("fr", configFrFr.languageCode)
-        assertEquals("Numéro de build", configFrFr.buildNumberQueryAndKeyword)
-        assertEquals("Débogage sans fil", configFrFr.wirelessDebuggingQueryAndKeyword)
-        assertEquals("Débogage USB", configFrFr.usbDebuggingQueryAndKeyword)
-
-        assertEquals("fr-CA", configFrCa.localeTag)
+        val config = AutoSetupLanguageConfig.fromLocale(Locale.FRANCE)
+        assertEquals("fr-FR", config.localeTag)
+        assertEquals("fr", config.languageCode)
+        assertEquals("Numéro de build", config.buildNumberQueryAndKeyword)
+        assertEquals("Débogage sans fil", config.wirelessDebuggingQueryAndKeyword)
+        assertEquals("Débogage USB", config.usbDebuggingQueryAndKeyword)
+        assertEquals("fr-CA", AutoSetupLanguageConfig.fromLocale(Locale.CANADA_FRENCH).localeTag)
     }
 
     @Test
     fun fromLocale_returnsCountrySpecificEnglishConfigs() {
-        val configUs = AutoSetupLanguageConfig.fromLocale(Locale.US)
-        val configUk = AutoSetupLanguageConfig.fromLocale(Locale.UK)
-        val configCa = AutoSetupLanguageConfig.fromLocale(Locale.CANADA)
-
-        assertEquals("en-US", configUs.localeTag)
-        assertEquals("en-GB", configUk.localeTag)
-        assertEquals("en-CA", configCa.localeTag)
-
-        assertEquals("Build number", configUs.buildNumberQueryAndKeyword)
-        assertEquals("Wireless debugging", configUs.wirelessDebuggingQueryAndKeyword)
-        assertEquals("USB debugging", configUs.usbDebuggingQueryAndKeyword)
+        val config = AutoSetupLanguageConfig.fromLocale(Locale.US)
+        assertEquals("en-US", config.localeTag)
+        assertEquals("en-GB", AutoSetupLanguageConfig.fromLocale(Locale.UK).localeTag)
+        assertEquals("en-CA", AutoSetupLanguageConfig.fromLocale(Locale.CANADA).localeTag)
+        assertEquals("Build number", config.buildNumberQueryAndKeyword)
+        assertEquals("Wireless debugging", config.wirelessDebuggingQueryAndKeyword)
+        assertEquals("USB debugging", config.usbDebuggingQueryAndKeyword)
     }
 
     @Test
     fun fromLocale_fallsBackForUnsupportedLocales() {
-        val configIt = AutoSetupLanguageConfig.fromLocale(Locale.ITALY)
-        val configJa = AutoSetupLanguageConfig.fromLocale(Locale.JAPAN)
-
-        assertEquals("en-US", configIt.localeTag)
-        assertEquals("en-US", configJa.localeTag)
+        assertEquals("en-US", AutoSetupLanguageConfig.fromLocale(Locale.ITALY).localeTag)
+        assertEquals("en-US", AutoSetupLanguageConfig.fromLocale(Locale.JAPAN).localeTag)
     }
 
     @Test
     fun fromLanguageTag_parsesFullLocaleTags() {
-        val deDeTag = AutoSetupLanguageConfig.fromLanguageTag("de-DE")
-        val deAtTag = AutoSetupLanguageConfig.fromLanguageTag("de-AT")
-        val esEsTag = AutoSetupLanguageConfig.fromLanguageTag("es-ES")
-        val esMxTag = AutoSetupLanguageConfig.fromLanguageTag("es-MX")
-        val frFrTag = AutoSetupLanguageConfig.fromLanguageTag("fr-FR")
-        val frCaTag = AutoSetupLanguageConfig.fromLanguageTag("fr-CA")
-        val enGbTag = AutoSetupLanguageConfig.fromLanguageTag("en-GB")
-
-        assertEquals("de-DE", deDeTag.localeTag)
-        assertEquals("de-AT", deAtTag.localeTag)
-        assertEquals("es-ES", esEsTag.localeTag)
-        assertEquals("es-MX", esMxTag.localeTag)
-        assertEquals("fr-FR", frFrTag.localeTag)
-        assertEquals("fr-CA", frCaTag.localeTag)
-        assertEquals("en-GB", enGbTag.localeTag)
+        val expected =
+            listOf(
+                "de-DE" to "de-DE",
+                "de-AT" to "de-AT",
+                "es-ES" to "es-ES",
+                "es-MX" to "es-MX",
+                "fr-FR" to "fr-FR",
+                "fr-CA" to "fr-CA",
+                "en-GB" to "en-GB",
+            )
+        for ((tag, exp) in expected) {
+            assertEquals(exp, AutoSetupLanguageConfig.fromLanguageTag(tag).localeTag)
+        }
     }
 
     @Test
     fun fromLocaleOrNull_returnsNullForUnsupportedLocales() {
-        val configIt = AutoSetupLanguageConfig.fromLocaleOrNull(Locale.ITALY)
-        val configJa = AutoSetupLanguageConfig.fromLocaleOrNull(Locale.JAPAN)
-        val configZh = AutoSetupLanguageConfig.fromLocaleOrNull(Locale.SIMPLIFIED_CHINESE)
-        val configRu = AutoSetupLanguageConfig.fromLocaleOrNull(Locale("ru", "RU"))
-
-        assertNull(configIt)
-        assertNull(configJa)
-        assertNull(configZh)
-        assertNull(configRu)
-
-        assertNotNull(AutoSetupLanguageConfig.fromLocaleOrNull(Locale.GERMANY))
-        assertNotNull(AutoSetupLanguageConfig.fromLocaleOrNull(Locale.FRANCE))
-        assertNotNull(AutoSetupLanguageConfig.fromLocaleOrNull(Locale.US))
-        assertNotNull(AutoSetupLanguageConfig.fromLocaleOrNull(Locale("es", "ES")))
+        listOf(Locale.ITALY, Locale.JAPAN, Locale.SIMPLIFIED_CHINESE, Locale("ru", "RU")).forEach {
+            assertNull(AutoSetupLanguageConfig.fromLocaleOrNull(it))
+        }
+        listOf(Locale.GERMANY, Locale.FRANCE, Locale.US, Locale("es", "ES")).forEach {
+            assertNotNull(AutoSetupLanguageConfig.fromLocaleOrNull(it))
+        }
     }
 
     @Test
     fun fromLanguageTagOrNull_returnsNullForUnsupportedLanguageTags() {
-        assertNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("ja-JP"))
-        assertNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("zh-CN"))
-        assertNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("ru-RU"))
-        assertNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("it-IT"))
-
-        assertNotNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("de-DE"))
-        assertNotNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("es-ES"))
-        assertNotNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("fr-FR"))
-        assertNotNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("en-US"))
+        listOf("ja-JP", "zh-CN", "ru-RU", "it-IT").forEach {
+            assertNull(AutoSetupLanguageConfig.fromLanguageTagOrNull(it))
+        }
+        listOf("de-DE", "es-ES", "fr-FR", "en-US").forEach {
+            assertNotNull(AutoSetupLanguageConfig.fromLanguageTagOrNull(it))
+        }
     }
 
     @Test
     fun fromLocale_returnsRegionSpecificTraditionalChineseConfigs() {
-        val configZhTw = AutoSetupLanguageConfig.fromLocale(Locale.TRADITIONAL_CHINESE)
-        val configZhHk = AutoSetupLanguageConfig.fromLocale(Locale("zh", "HK"))
-        val configZhMo = AutoSetupLanguageConfig.fromLocale(Locale("zh", "MO"))
-
-        assertEquals("zh-TW", configZhTw.localeTag)
-        assertEquals("zh", configZhTw.languageCode)
-        assertEquals("版本號碼", configZhTw.buildNumberQueryAndKeyword)
-        assertEquals("無線偵錯", configZhTw.wirelessDebuggingQueryAndKeyword)
-        assertEquals("USB 偵錯", configZhTw.usbDebuggingQueryAndKeyword)
-
-        assertEquals("zh-HK", configZhHk.localeTag)
-        assertEquals("zh-MO", configZhMo.localeTag)
+        val config = AutoSetupLanguageConfig.fromLocale(Locale.TRADITIONAL_CHINESE)
+        assertEquals("zh-TW", config.localeTag)
+        assertEquals("zh", config.languageCode)
+        assertEquals("版本號碼", config.buildNumberQueryAndKeyword)
+        assertEquals("無線偵錯", config.wirelessDebuggingQueryAndKeyword)
+        assertEquals("USB 偵錯", config.usbDebuggingQueryAndKeyword)
+        assertEquals("zh-HK", AutoSetupLanguageConfig.fromLocale(Locale("zh", "HK")).localeTag)
+        assertEquals("zh-MO", AutoSetupLanguageConfig.fromLocale(Locale("zh", "MO")).localeTag)
     }
 
     @Test
     fun fromLanguageTag_resolvesTraditionalChineseTags() {
         assertEquals("zh-TW", AutoSetupLanguageConfig.fromLanguageTag("zh-TW").localeTag)
         assertEquals("zh-HK", AutoSetupLanguageConfig.fromLanguageTag("zh-HK").localeTag)
-
-        // Script subtag present but no region, and region present alongside a script subtag.
         assertEquals("zh-TW", AutoSetupLanguageConfig.fromLanguageTag("zh-Hant").localeTag)
         assertEquals("zh-TW", AutoSetupLanguageConfig.fromLanguageTag("zh-Hant-TW").localeTag)
     }
 
     @Test
     fun simplifiedChineseStaysUnsupportedAndDoesNotFallBackToTraditional() {
-        // Simplified Settings entries read "版本号" / "无线调试", so the Traditional keywords
-        // would never match. Reporting the language as unsupported is correct; silently
-        // handing back the Traditional config would stall Auto Setup mid-flow.
-        assertNull(AutoSetupLanguageConfig.fromLocaleOrNull(Locale.SIMPLIFIED_CHINESE))
-        assertNull(AutoSetupLanguageConfig.fromLocaleOrNull(Locale("zh", "SG")))
-        assertNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("zh-CN"))
-        assertNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("zh-Hans"))
-        assertNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("zh-Hans-CN"))
-        assertNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("zh"))
+        listOf(Locale.SIMPLIFIED_CHINESE, Locale("zh", "SG")).forEach {
+            assertNull(AutoSetupLanguageConfig.fromLocaleOrNull(it))
+        }
+        listOf("zh-CN", "zh-Hans", "zh-Hans-CN", "zh").forEach {
+            assertNull(AutoSetupLanguageConfig.fromLanguageTagOrNull(it))
+        }
     }
 }

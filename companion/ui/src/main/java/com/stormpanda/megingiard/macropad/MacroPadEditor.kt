@@ -2159,10 +2159,7 @@ fun MacroPadEditor(
                                             breadcrumbs = currentSubPage.breadcrumbs,
                                         ) {
                                             ColorWheelSubPageContent(
-                                                title = currentSubPage.title,
-                                                breadcrumbs = emptyList(),
                                                 initialColor = currentSubPage.initialColor,
-                                                accentColor = colors.accent,
                                                 showAlphaSlider = currentSubPage.showAlphaSlider,
                                                 onColorChange = currentSubPage.onColorChange,
                                             )

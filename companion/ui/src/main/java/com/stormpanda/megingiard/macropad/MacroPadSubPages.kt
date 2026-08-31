@@ -282,12 +282,10 @@ internal sealed interface MacroPadSubPage {
 
 @Composable
 internal fun ColorWheelSubPageContent(
-    title: String,
-    breadcrumbs: List<String>,
     initialColor: Color,
-    accentColor: Color,
     showAlphaSlider: Boolean = true,
     onColorChange: ((Color) -> Unit)? = null,
+    onSaveColor: ((Color) -> Unit)? = null,
 ) {
     val initHsv =
         remember(initialColor) {
@@ -473,4 +471,21 @@ internal fun ColorWheelSubPageContent(
             alpha = if (showAlphaSlider) initialColor.alpha.coerceIn(0.1f, 1f) else 1f
         },
     )
+
+    if (onSaveColor != null) {
+        GamepadActionCard(
+            title = stringResource(R.string.settings_color_save_title),
+            description = stringResource(R.string.settings_color_save_desc),
+            icon = Icons.Rounded.Colorize,
+            actionLeadingContent = {
+                GamepadColorSwatch(
+                    color = workingColor,
+                    isSelected = false,
+                )
+            },
+            onClick = {
+                onSaveColor(workingColor)
+            },
+        )
+    }
 }

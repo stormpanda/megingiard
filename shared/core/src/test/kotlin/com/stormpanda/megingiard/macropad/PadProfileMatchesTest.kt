@@ -7,181 +7,77 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PadProfileMatchesTest {
+    private fun testProfile(
+        id: String = "test-1",
+        name: String = "Test Game",
+        packageName: String = "app.gamenative",
+        romFileName: String? = "Baba Is You.steam",
+        systemId: String? = "pc",
+    ) = PadProfile(
+        id = id,
+        name = name,
+        association =
+            ProfileAssociation(
+                packageName = packageName,
+                romFileName = romFileName,
+                systemId = systemId,
+            ),
+    )
+
     @Test
     fun matches_strictMatch_returnsTrue() {
-        val profile =
-            PadProfile(
-                id = "test-1",
-                name = "Test Game",
-                association =
-                    ProfileAssociation(
-                        packageName = "app.gamenative",
-                        romFileName = "Baba Is You.steam",
-                        systemId = "pc",
-                    ),
-            )
-
-        assertTrue(profile.matches("app.gamenative", "/storage/Roms/Baba Is You.steam", "pc"))
+        assertTrue(testProfile().matches("app.gamenative", "/storage/Roms/Baba Is You.steam", "pc"))
     }
 
     @Test
     fun matches_differentExtensionFallback_returnsTrue() {
-        val profile =
-            PadProfile(
-                id = "test-1",
-                name = "Test Game",
-                association =
-                    ProfileAssociation(
-                        packageName = "app.gamenative",
-                        romFileName = "Baba Is You.steam",
-                        systemId = "pc",
-                    ),
-            )
-
         // Matches even with a different extension (.steamappid instead of .steam)
-        assertTrue(profile.matches("app.gamenative", "/storage/Roms/Baba Is You.steamappid", "pc"))
+        assertTrue(testProfile().matches("app.gamenative", "/storage/Roms/Baba Is You.steamappid", "pc"))
     }
 
     @Test
     fun matches_differentExtensionFallbackNoDirectory_returnsTrue() {
-        val profile =
-            PadProfile(
-                id = "test-1",
-                name = "Test Game",
-                association =
-                    ProfileAssociation(
-                        packageName = "app.gamenative",
-                        romFileName = "Baba Is You.steam",
-                        systemId = "pc",
-                    ),
-            )
-
         // Matches even with a different extension and no full directory path
-        assertTrue(profile.matches("app.gamenative", "Baba Is You.steamappid", "pc"))
+        assertTrue(testProfile().matches("app.gamenative", "Baba Is You.steamappid", "pc"))
     }
 
     @Test
     fun matches_differentRomName_returnsFalse() {
-        val profile =
-            PadProfile(
-                id = "test-1",
-                name = "Test Game",
-                association =
-                    ProfileAssociation(
-                        packageName = "app.gamenative",
-                        romFileName = "Baba Is You.steam",
-                        systemId = "pc",
-                    ),
-            )
-
-        assertFalse(profile.matches("app.gamenative", "Other Game.steam", "pc"))
+        assertFalse(testProfile().matches("app.gamenative", "Other Game.steam", "pc"))
     }
 
     @Test
     fun matches_differentPackage_returnsFalse() {
-        val profile =
-            PadProfile(
-                id = "test-1",
-                name = "Test Game",
-                association =
-                    ProfileAssociation(
-                        packageName = "app.gamenative",
-                        romFileName = "Baba Is You.steam",
-                        systemId = "pc",
-                    ),
-            )
-
-        assertFalse(profile.matches("other.package", "Baba Is You.steam", "pc"))
+        assertFalse(testProfile().matches("other.package", "Baba Is You.steam", "pc"))
     }
 
     @Test
     fun matches_genericAppProfile_returnsTrue() {
-        val profile =
-            PadProfile(
-                id = "test-2",
-                name = "Generic GameNative",
-                association =
-                    ProfileAssociation(
-                        packageName = "app.gamenative",
-                        romFileName = null,
-                        systemId = null,
-                    ),
-            )
-
+        val profile = testProfile(id = "test-2", name = "Generic GameNative", romFileName = null, systemId = null)
         assertTrue(profile.matches("app.gamenative", null, null))
         assertTrue(profile.matches("app.gamenative", "Any ROM.zip", "snes"))
     }
 
     @Test
     fun matches_spacingDifferences_returnsTrue() {
-        val profile1 =
-            PadProfile(
-                id = "test-3",
-                name = "Ball x Pit Profile",
-                association =
-                    ProfileAssociation(
-                        packageName = "app.gamenative",
-                        romFileName = "BALL x PIT.steam",
-                        systemId = "pc",
-                    ),
-            )
-
-        // Matches when active session has no spaces
+        val profile1 = testProfile(id = "test-3", name = "Ball x Pit Profile", romFileName = "BALL x PIT.steam")
         assertTrue(profile1.matches("app.gamenative", "BALLxPIT.steam", "pc"))
 
-        val profile2 =
-            PadProfile(
-                id = "test-4",
-                name = "BallxPit Profile",
-                association =
-                    ProfileAssociation(
-                        packageName = "app.gamenative",
-                        romFileName = "BALLxPIT.steam",
-                        systemId = "pc",
-                    ),
-            )
-
-        // Matches when active session has spaces
+        val profile2 = testProfile(id = "test-4", name = "BallxPit Profile", romFileName = "BALLxPIT.steam")
         assertTrue(profile2.matches("app.gamenative", "BALL x PIT.steam", "pc"))
-
-        // Matches with underscores/dashes differences
         assertTrue(profile2.matches("app.gamenative", "BALL_x-PIT.steam", "pc"))
     }
 
     @Test
     fun matches_isActiveProfileTrue_returnsTrueWhenPackageMatchesEvenIfRomPathMissing() {
-        val profile =
-            PadProfile(
-                id = "test-1",
-                name = "GameNative Game",
-                association =
-                    ProfileAssociation(
-                        packageName = "app.gamenative",
-                        romFileName = "BALL x PIT.steam",
-                        systemId = "pc",
-                    ),
-            )
-
-        // When isActiveProfile is true and package matches, returns true even if focusedRomPath is null
+        val profile = testProfile(name = "GameNative Game", romFileName = "BALL x PIT.steam")
         assertTrue(profile.matches("app.gamenative", null, "pc", isActiveProfile = true))
         assertTrue(profile.matches("app.gamenative", null, null, isActiveProfile = true))
     }
 
     @Test
     fun matches_isActiveProfileTrue_returnsFalseWhenPackageDoesNotMatch() {
-        val profile =
-            PadProfile(
-                id = "test-1",
-                name = "GameNative Game",
-                association =
-                    ProfileAssociation(
-                        packageName = "app.gamenative",
-                        romFileName = "BALL x PIT.steam",
-                        systemId = "pc",
-                    ),
-            )
-
-        // When isActiveProfile is true but package is a launcher or different app, returns false
+        val profile = testProfile(name = "GameNative Game", romFileName = "BALL x PIT.steam")
         assertFalse(profile.matches("com.android.launcher3", null, null, isActiveProfile = true))
         assertFalse(profile.matches("com.miHoYo.GenshinImpact", null, null, isActiveProfile = true))
     }

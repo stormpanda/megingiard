@@ -99,6 +99,7 @@ import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.config.buildExportFilename
 import com.stormpanda.megingiard.config.buildProfileExportFilename
 import com.stormpanda.megingiard.log.LogReportManager
+import com.stormpanda.megingiard.macropad.ColorWheelSubPageContent
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.math.nextItem
@@ -1238,114 +1239,10 @@ private fun CustomAccentSubPage(
     initialColor: Color,
     onSaveColor: (Color) -> Unit,
 ) {
-    val initHsv =
-        remember(initialColor) {
-            FloatArray(3).also { AndroidColor.colorToHSV(initialColor.toArgb(), it) }
-        }
-    var hue by rememberSaveable(initialColor) { mutableFloatStateOf(initHsv[0]) }
-    var sat by rememberSaveable(initialColor) { mutableFloatStateOf(initHsv[1]) }
-    var bri by rememberSaveable(initialColor) { mutableFloatStateOf(initHsv[2]) }
-
-    val workingColor by remember {
-        derivedStateOf {
-            Color(AndroidColor.HSVToColor(floatArrayOf(hue, sat, bri)))
-        }
-    }
-
-    val hueGradient =
-        remember {
-            Brush.horizontalGradient(
-                colors =
-                    listOf(
-                        Color(0xFFFF0000),
-                        Color(0xFFFFFF00),
-                        Color(0xFF00FF00),
-                        Color(0xFF00FFFF),
-                        Color(0xFF0000FF),
-                        Color(0xFFFF00FF),
-                        Color(0xFFFF0000),
-                    ),
-            )
-        }
-
-    val saturationGradient =
-        remember(hue, bri) {
-            Brush.horizontalGradient(
-                colors =
-                    listOf(
-                        Color(AndroidColor.HSVToColor(floatArrayOf(hue, 0f, bri))),
-                        Color(AndroidColor.HSVToColor(floatArrayOf(hue, 1f, bri))),
-                    ),
-            )
-        }
-
-    val brightnessGradient =
-        remember(hue, sat) {
-            Brush.horizontalGradient(
-                colors =
-                    listOf(
-                        Color.Black,
-                        Color(AndroidColor.HSVToColor(floatArrayOf(hue, sat, 1f))),
-                    ),
-            )
-        }
-
-    GamepadSliderCard(
-        title = stringResource(R.string.settings_color_hue),
-        description = stringResource(R.string.settings_color_hue_desc),
-        value = hue,
-        valueRange = 0f..360f,
-        onValueChange = { hue = it },
-        valueLabel = "${hue.roundToInt()}°",
-        step = 5f,
-        fineStep = 1f,
-        trackBrush = hueGradient,
-        thumbColor = Color(AndroidColor.HSVToColor(floatArrayOf(hue, 1f, 1f))),
-        icon = Icons.Rounded.ColorLens,
-        modifier = Modifier.firstDeckItem(),
-    )
-
-    GamepadSliderCard(
-        title = stringResource(R.string.settings_color_saturation),
-        description = stringResource(R.string.settings_color_saturation_desc),
-        value = sat,
-        valueRange = 0f..1f,
-        onValueChange = { sat = it },
-        valueLabel = "${(sat * 100).roundToInt()}%",
-        step = 0.02f,
-        fineStep = 0.01f,
-        trackBrush = saturationGradient,
-        thumbColor = workingColor,
-        icon = Icons.Rounded.Gradient,
-    )
-
-    GamepadSliderCard(
-        title = stringResource(R.string.settings_color_brightness),
-        description = stringResource(R.string.settings_color_brightness_desc),
-        value = bri,
-        valueRange = 0f..1f,
-        onValueChange = { bri = it },
-        valueLabel = "${(bri * 100).roundToInt()}%",
-        step = 0.02f,
-        fineStep = 0.01f,
-        trackBrush = brightnessGradient,
-        thumbColor = workingColor,
-        icon = Icons.Rounded.BrightnessMedium,
-    )
-
-    GamepadActionCard(
-        title = stringResource(R.string.settings_color_save_title),
-        description = stringResource(R.string.settings_color_save_desc),
-        icon = Icons.Rounded.Colorize,
-        actionLeadingContent = {
-            GamepadColorSwatch(
-                color = workingColor,
-                isSelected = false,
-            )
-        },
-        onClick = {
-            onSaveColor(workingColor)
-        },
+    ColorWheelSubPageContent(
+        initialColor = initialColor,
+        showAlphaSlider = false,
+        onSaveColor = onSaveColor,
     )
 }
 
