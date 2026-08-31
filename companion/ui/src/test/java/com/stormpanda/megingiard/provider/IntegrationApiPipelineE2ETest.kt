@@ -15,6 +15,7 @@ import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.macropad.ProfileAssociation
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.settings.ThemeMode
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -49,6 +50,7 @@ class IntegrationApiPipelineE2ETest {
     fun setUp() {
         context = RuntimeEnvironment.getApplication()
         MegingiardIpcContract.init(context)
+        SettingsManager.init(context)
 
         val info =
             ProviderInfo().apply {
@@ -63,6 +65,12 @@ class IntegrationApiPipelineE2ETest {
         SettingsManager.onSettingsChangedListener = {
             MegingiardSettingsProvider.notifySettingsChanged(context)
         }
+    }
+
+    @After
+    fun tearDown() {
+        SettingsManager.onThemeChangedListener = null
+        SettingsManager.onSettingsChangedListener = null
     }
 
     private fun createProfile(
