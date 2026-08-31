@@ -379,22 +379,33 @@ internal fun resolveAppName(
     }
 }
 
-@Composable
-internal fun ButtonSize.displayLabel(): String =
+internal fun GridMode.labelResId(): Int =
     when (this) {
-        ButtonSize.SIZE_1X1 -> stringResource(R.string.macropad_button_size_1x1)
-        ButtonSize.SIZE_2X1 -> stringResource(R.string.macropad_button_size_2x1)
-        ButtonSize.SIZE_1X2 -> stringResource(R.string.macropad_button_size_1x2)
-        ButtonSize.SIZE_2X2 -> stringResource(R.string.macropad_button_size_2x2)
+        GridMode.OFF -> R.string.macropad_editor_grid_off_label
+        GridMode.RECTANGULAR -> R.string.macropad_editor_grid_rectangular_label
+        GridMode.RADIAL -> R.string.macropad_editor_grid_radial_label
+    }
+
+internal fun ButtonSize.labelResId(): Int =
+    when (this) {
+        ButtonSize.SIZE_1X1 -> R.string.macropad_button_size_1x1
+        ButtonSize.SIZE_2X1 -> R.string.macropad_button_size_2x1
+        ButtonSize.SIZE_1X2 -> R.string.macropad_button_size_1x2
+        ButtonSize.SIZE_2X2 -> R.string.macropad_button_size_2x2
     }
 
 @Composable
-internal fun ButtonShape.displayLabel(): String =
+internal fun ButtonSize.displayLabel(): String = stringResource(labelResId())
+
+internal fun ButtonShape.labelResId(): Int =
     when (this) {
-        ButtonShape.SQUARE -> stringResource(R.string.macropad_editor_shape_square)
-        ButtonShape.CIRCLE -> stringResource(R.string.macropad_editor_shape_circle)
-        ButtonShape.ICON_ONLY -> stringResource(R.string.macropad_editor_shape_icon_only)
+        ButtonShape.SQUARE -> R.string.macropad_editor_shape_square
+        ButtonShape.CIRCLE -> R.string.macropad_editor_shape_circle
+        ButtonShape.ICON_ONLY -> R.string.macropad_editor_shape_icon_only
     }
+
+@Composable
+internal fun ButtonShape.displayLabel(): String = stringResource(labelResId())
 
 internal fun MouseButton.displayLabel(): String =
     when (this) {

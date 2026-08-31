@@ -2184,20 +2184,13 @@ private fun ProfilesDeck(
     val scope = rememberCoroutineScope()
     val firstItemFocusRequester = remember { FocusRequester() }
 
-    val profileIdx = profiles.indexOf(activeProfile).coerceAtLeast(0)
     GamepadChoiceCard(
         title = stringResource(R.string.quick_menu_profile_label),
         description = stringResource(R.string.macropad_editor_active_profile_desc),
         selectedText = activeProfile.name,
         icon = Icons.Rounded.Folder,
-        onPrevious = {
-            val next = profiles[(profileIdx - 1 + profiles.size) % profiles.size]
-            onSelectProfile(next.id)
-        },
-        onNext = {
-            val next = profiles[(profileIdx + 1) % profiles.size]
-            onSelectProfile(next.id)
-        },
+        onPrevious = { onSelectProfile(profiles.cycle(activeProfile, BumperDirection.PREV).id) },
+        onNext = { onSelectProfile(profiles.cycle(activeProfile, BumperDirection.NEXT).id) },
         modifier = Modifier.firstDeckItem().focusRequester(firstItemFocusRequester),
     )
 
@@ -2254,7 +2247,6 @@ private fun LayoutsDeck(
     val firstItemFocusRequester = remember { FocusRequester() }
 
     val layouts = profile.layouts
-    val layoutIdx = layouts.indexOf(activeLayout).coerceAtLeast(0)
     GamepadChoiceCard(
         title = stringResource(R.string.macropad_editor_section_layout),
         description = stringResource(R.string.macropad_editor_active_layout_desc, profile.name),
@@ -2262,17 +2254,13 @@ private fun LayoutsDeck(
         icon = Icons.AutoMirrored.Rounded.ViewQuilt,
         enabled = layouts.isNotEmpty(),
         onPrevious = {
-            if (layouts.isNotEmpty()) {
-                val next = layouts[(layoutIdx - 1 + layouts.size) % layouts.size]
-                onSelectLayout(next.id)
+            if (layouts.isNotEmpty() &&
+                activeLayout != null
+            ) {
+                onSelectLayout(layouts.cycle(activeLayout, BumperDirection.PREV).id)
             }
         },
-        onNext = {
-            if (layouts.isNotEmpty()) {
-                val next = layouts[(layoutIdx + 1) % layouts.size]
-                onSelectLayout(next.id)
-            }
-        },
+        onNext = { if (layouts.isNotEmpty() && activeLayout != null) onSelectLayout(layouts.cycle(activeLayout, BumperDirection.NEXT).id) },
         modifier = Modifier.firstDeckItem().focusRequester(firstItemFocusRequester),
     )
 
@@ -2400,20 +2388,14 @@ private fun ButtonsDeck(
         }
 
         item {
-            val gridModes = listOf(GridMode.OFF, GridMode.RECTANGULAR, GridMode.RADIAL)
-            val gridIdx = gridModes.indexOf(gridMode).coerceAtLeast(0)
+            val gridModes = GridMode.entries
             GamepadChoiceCard(
                 title = stringResource(R.string.macropad_editor_snap_grid),
                 description = stringResource(R.string.macropad_editor_snap_grid_desc),
-                selectedText =
-                    when (gridMode) {
-                        GridMode.OFF -> stringResource(R.string.macropad_editor_grid_off_label)
-                        GridMode.RECTANGULAR -> stringResource(R.string.macropad_editor_grid_rectangular_label)
-                        GridMode.RADIAL -> stringResource(R.string.macropad_editor_grid_radial_label)
-                    },
+                selectedText = stringResource(gridMode.labelResId()),
                 icon = Icons.Rounded.Grid4x4,
-                onPrevious = { MacroPadState.setGridMode(gridModes[(gridIdx - 1 + gridModes.size) % gridModes.size]) },
-                onNext = { MacroPadState.setGridMode(gridModes[(gridIdx + 1) % gridModes.size]) },
+                onPrevious = { MacroPadState.setGridMode(gridModes.cycle(gridMode, BumperDirection.PREV)) },
+                onNext = { MacroPadState.setGridMode(gridModes.cycle(gridMode, BumperDirection.NEXT)) },
                 onFocusChanged = { if (it) MacroPadState.setSelectedButtonId(null) },
             )
         }
