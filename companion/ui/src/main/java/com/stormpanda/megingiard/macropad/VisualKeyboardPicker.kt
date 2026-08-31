@@ -37,6 +37,7 @@ private val VKP_KEY_HEIGHT = 44.dp
 private val VKP_KEY_SPACING = 5.dp
 private val VKP_ROW_SPACING = 5.dp
 private val VKP_KEY_CORNER = 6.dp
+private val VKP_KEY_SHAPE = RoundedCornerShape(VKP_KEY_CORNER)
 private val VKP_SECTION_SPACING = 12.dp
 private const val VKP_SELECTED_ALPHA = 0.35f
 private val VKP_BORDER_WIDTH = 1.dp
@@ -223,17 +224,17 @@ private fun KeyboardRow(
                     Modifier
                         .weight(key.weight)
                         .height(VKP_KEY_HEIGHT)
-                        .clip(RoundedCornerShape(VKP_KEY_CORNER))
+                        .clip(VKP_KEY_SHAPE)
                         .background(
                             if (isSelected) accentColor.copy(alpha = VKP_SELECTED_ALPHA) else colors.surface,
                         ).border(
                             width = if (isSelected) VKP_SELECTED_BORDER_WIDTH else VKP_BORDER_WIDTH,
                             color = if (isSelected) accentColor else colors.subduedBorder,
-                            shape = RoundedCornerShape(VKP_KEY_CORNER),
+                            shape = VKP_KEY_SHAPE,
                         ).then(if (isFirst) Modifier.firstDeckItem() else Modifier)
                         .primaryOverlayFocusable(
                             onClick = { onSelectKey(key.code, key.label) },
-                            shape = RoundedCornerShape(VKP_KEY_CORNER),
+                            shape = VKP_KEY_SHAPE,
                         ),
                 contentAlignment = Alignment.Center,
             ) {

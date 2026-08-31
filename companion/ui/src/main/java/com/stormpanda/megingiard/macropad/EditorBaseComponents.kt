@@ -41,6 +41,7 @@ internal val EBC_PREVIEW_DEFAULT_SIZE = 36.dp
 private val EBC_PREVIEW_ICON_SIZE = 20.dp
 
 private val EBC_INFO_BOX_RADIUS = 12.dp
+private val EBC_INFO_BOX_SHAPE = RoundedCornerShape(EBC_INFO_BOX_RADIUS)
 private val EBC_INFO_BOX_BORDER_WIDTH = 1.dp
 private const val EBC_INFO_BOX_BG_ALPHA = 0.45f
 private const val EBC_INFO_BOX_BORDER_ALPHA = 0.25f
@@ -95,11 +96,11 @@ internal fun ColorPreviewInfoBox(
                 .fillMaxWidth()
                 .background(
                     color = colors.surface.copy(alpha = EBC_INFO_BOX_BG_ALPHA),
-                    shape = RoundedCornerShape(EBC_INFO_BOX_RADIUS),
+                    shape = EBC_INFO_BOX_SHAPE,
                 ).border(
                     width = EBC_INFO_BOX_BORDER_WIDTH,
                     color = colors.onSurfaceSecondary.copy(alpha = EBC_INFO_BOX_BORDER_ALPHA),
-                    shape = RoundedCornerShape(EBC_INFO_BOX_RADIUS),
+                    shape = EBC_INFO_BOX_SHAPE,
                 ).padding(horizontal = EBC_INFO_BOX_PADDING_H, vertical = EBC_INFO_BOX_PADDING_V),
     ) {
         Row(

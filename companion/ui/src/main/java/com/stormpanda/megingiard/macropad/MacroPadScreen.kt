@@ -96,6 +96,7 @@ import java.io.File
 // ─────────────────────────────────────────────────────────────────────────────
 
 private val MP_CORNER_RADIUS = 0.dp
+private val MP_SCREEN_SHAPE = RoundedCornerShape(MP_CORNER_RADIUS)
 
 // Shared with PadCanvas so the editor canvas is pixel-identical to use mode.
 internal val MP_SCREEN_PADDING = 0.dp
@@ -108,6 +109,7 @@ private const val MP_HAPTIC_MAX_INTERVAL_MS = 333L
 private const val MP_HAPTIC_BASE_SPEED = 2000f
 
 private val MP_EMPTY_PILL_CORNER_RADIUS = 24.dp
+private val MP_EMPTY_PILL_SHAPE = RoundedCornerShape(MP_EMPTY_PILL_CORNER_RADIUS)
 private val MP_EMPTY_CANVAS_PADDING = 16.dp
 private val MP_EMPTY_BORDER_STROKE_DP = 1.5.dp
 private val MP_EMPTY_BORDER_CORNER_RADIUS_DP = 16.dp
@@ -396,7 +398,7 @@ internal fun PadSurface(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .clip(RoundedCornerShape(MP_CORNER_RADIUS))
+                    .clip(MP_SCREEN_SHAPE)
                     .background(if (transparentBackground) Color.Transparent else Color.Black)
                     .onSizeChanged { canvasSizeState.value = it }
                     .pointerInput(
@@ -716,12 +718,12 @@ private fun EmptyLayoutPlaceholder(
         Box(
             modifier =
                 Modifier
-                    .clip(RoundedCornerShape(MP_EMPTY_PILL_CORNER_RADIUS))
+                    .clip(MP_EMPTY_PILL_SHAPE)
                     .background(colors.surface.copy(alpha = MP_EMPTY_PILL_BG_ALPHA))
                     .border(
                         width = MP_EMPTY_BORDER_BEZEL_WIDTH,
                         brush = bezelBrush,
-                        shape = RoundedCornerShape(MP_EMPTY_PILL_CORNER_RADIUS),
+                        shape = MP_EMPTY_PILL_SHAPE,
                     ).clickable(onClick = onOpenEditor)
                     .focusable()
                     .onKeyEvent { keyEvent ->

@@ -81,6 +81,7 @@ private const val BSE_PERCENT_DIVISOR = 100f
 
 private val BSE_PREVIEW_PADDING = 12.dp
 private val BSE_PREVIEW_IMAGE_ROUNDING = 8.dp
+private val BSE_PREVIEW_SHAPE = RoundedCornerShape(BSE_PREVIEW_IMAGE_ROUNDING)
 private val BSE_ICON_SIZE_48 = 48.dp
 
 private const val BSE_BOTTOM_SCREEN_ASPECT_RATIO = 31f / 27f // 1240 x 1080
@@ -212,7 +213,7 @@ internal fun LayoutBackgroundSubPageContent(
                         Modifier
                             .fillMaxSize()
                             .padding(BSE_PREVIEW_PADDING)
-                            .clip(RoundedCornerShape(BSE_PREVIEW_IMAGE_ROUNDING))
+                            .clip(BSE_PREVIEW_SHAPE)
                             .background(Color.Black),
                     contentAlignment = Alignment.Center,
                 ) {

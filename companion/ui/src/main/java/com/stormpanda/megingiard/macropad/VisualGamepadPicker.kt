@@ -68,6 +68,7 @@ private val VGP_CENTER_CLEAR_SPACING = 106.dp
 private val VGP_MAIN_BODY_PADDING_TOP = 4.dp
 private val VGP_LABEL_SPACING = 4.dp
 private val VGP_CARD_CORNER = 8.dp
+private val VGP_CARD_SHAPE = RoundedCornerShape(VGP_CARD_CORNER)
 private const val VGP_SELECTED_ALPHA = 0.35f
 private val VGP_BORDER_WIDTH = 1.dp
 private val VGP_SELECTED_BORDER_WIDTH = 2.dp
@@ -396,9 +397,9 @@ private fun DPad3x3Grid(
                     modifier =
                         Modifier
                             .size(VGP_GRID_BTN_SIZE)
-                            .clip(RoundedCornerShape(VGP_GRID_CORNER))
+                            .clip(VGP_CARD_SHAPE)
                             .background(colors.surfaceVariant)
-                            .border(VGP_BORDER_WIDTH, colors.subduedBorder, RoundedCornerShape(VGP_GRID_CORNER)),
+                            .border(VGP_BORDER_WIDTH, colors.subduedBorder, VGP_CARD_SHAPE),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
@@ -488,7 +489,7 @@ private fun GamepadButtonTile(
 ) {
     val isSelected = preset.code == selectedBtnCode
     val colors = LocalAppColors.current
-    val shape = if (isCircle) CircleShape else RoundedCornerShape(shapeCorner)
+    val shape = if (isCircle) CircleShape else VGP_CARD_SHAPE
     val displayLabel = customLabel ?: preset.displayShortLabel(swapFaceButtons)
 
     Box(
@@ -533,7 +534,7 @@ private fun ClearButtonTile(
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
-    val shape = RoundedCornerShape(VGP_CARD_CORNER)
+    val shape = VGP_CARD_SHAPE
 
     Box(
         modifier =
