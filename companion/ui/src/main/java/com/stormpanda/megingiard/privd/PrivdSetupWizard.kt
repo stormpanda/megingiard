@@ -36,6 +36,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Cancel
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material3.Button
@@ -765,19 +766,19 @@ private fun Step3Pairing(
         } else {
             val ord = stage.ordinal
             Column(verticalArrangement = Arrangement.spacedBy(SW_CHECKLIST_GAP)) {
-                ChecklistRow(
+                PrivdChecklistRow(
                     label = stringResource(R.string.privd_wizard_checklist_adb),
                     status = checklistStatus(ord, BootstrapStage.CONNECTING_ADB.ordinal),
                 )
-                ChecklistRow(
+                PrivdChecklistRow(
                     label = stringResource(R.string.privd_wizard_checklist_push),
                     status = checklistStatus(ord, BootstrapStage.PUSHING_BINARY.ordinal),
                 )
-                ChecklistRow(
+                PrivdChecklistRow(
                     label = stringResource(R.string.privd_wizard_checklist_spawn),
                     status = checklistStatus(ord, BootstrapStage.SPAWNING_DAEMON.ordinal),
                 )
-                ChecklistRow(
+                PrivdChecklistRow(
                     label = stringResource(R.string.privd_wizard_checklist_verify),
                     status = checklistStatus(ord, BootstrapStage.VERIFYING.ordinal),
                 )
@@ -785,7 +786,7 @@ private fun Step3Pairing(
         }
 
         if (hasAttemptedSubmit && error && !isProgressActive) {
-            val errorRes = errorStringResource(lastError) ?: R.string.privd_error_pairing_failed
+            val errorRes = lastError.descriptionResId() ?: R.string.privd_error_pairing_failed
             Text(
                 text = stringResource(errorRes),
                 color = colors.error,
@@ -796,24 +797,26 @@ private fun Step3Pairing(
 }
 
 /** Status of a single checklist row. */
-private enum class ChecklistStatus { PENDING, ACTIVE, DONE }
+enum class ChecklistStatus { PENDING, ACTIVE, DONE, FAILED }
 
 @Composable
-private fun ChecklistRow(
+fun PrivdChecklistRow(
     label: String,
     status: ChecklistStatus,
+    modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(SW_CHECKLIST_GAP),
+        modifier = modifier,
     ) {
         when (status) {
             ChecklistStatus.PENDING -> {
                 Icon(
                     imageVector = Icons.Rounded.RadioButtonUnchecked,
                     contentDescription = null,
-                    tint = colors.onSurfaceSecondary,
+                    tint = colors.onSurfaceSecondary.copy(alpha = 0.6f),
                     modifier = Modifier.size(SW_CHECKLIST_ICON_SIZE),
                 )
             }
@@ -822,7 +825,7 @@ private fun ChecklistRow(
                 CircularProgressIndicator(
                     modifier = Modifier.size(SW_CHECKLIST_ICON_SIZE),
                     strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = colors.accent,
                 )
             }
 
@@ -830,7 +833,16 @@ private fun ChecklistRow(
                 Icon(
                     imageVector = Icons.Rounded.CheckCircle,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = colors.accent,
+                    modifier = Modifier.size(SW_CHECKLIST_ICON_SIZE),
+                )
+            }
+
+            ChecklistStatus.FAILED -> {
+                Icon(
+                    imageVector = Icons.Rounded.Cancel,
+                    contentDescription = null,
+                    tint = colors.error,
                     modifier = Modifier.size(SW_CHECKLIST_ICON_SIZE),
                 )
             }
@@ -839,9 +851,9 @@ private fun ChecklistRow(
             text = label,
             color =
                 when (status) {
-                    ChecklistStatus.DONE -> colors.onSurface
-                    ChecklistStatus.ACTIVE -> colors.onSurface
+                    ChecklistStatus.DONE, ChecklistStatus.ACTIVE -> colors.onSurface
                     ChecklistStatus.PENDING -> colors.onSurfaceSecondary
+                    ChecklistStatus.FAILED -> colors.error
                 },
             style = MaterialTheme.typography.bodySmall,
         )
@@ -858,8 +870,8 @@ private fun checklistStatus(
         else -> ChecklistStatus.DONE
     }
 
-private fun errorStringResource(error: PrivdError?): Int? =
-    when (error) {
+fun PrivdError?.descriptionResId(): Int? =
+    when (this) {
         PrivdError.DAEMON_UNREACHABLE -> R.string.privd_error_daemon_unreachable
         PrivdError.PAIRING_FAILED -> R.string.privd_error_pairing_failed
         PrivdError.ADB_DISCOVERY_FAILED -> R.string.privd_error_adb_discovery_failed

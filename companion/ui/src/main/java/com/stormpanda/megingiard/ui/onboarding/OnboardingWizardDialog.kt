@@ -92,10 +92,13 @@ import com.stormpanda.megingiard.onboarding.OnboardingStepId
 import com.stormpanda.megingiard.onboarding.OnboardingStepState
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.AutoSetupLanguageConfig
+import com.stormpanda.megingiard.privd.ChecklistStatus
 import com.stormpanda.megingiard.privd.PrivdBootstrapper
+import com.stormpanda.megingiard.privd.PrivdChecklistRow
 import com.stormpanda.megingiard.privd.PrivdError
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
+import com.stormpanda.megingiard.privd.descriptionResId
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.settings.ThemeMode
@@ -874,7 +877,7 @@ fun PrivilegedStepContent(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(OW_WARNING_SPACED_BY_MEDIUM),
                 ) {
-                    val errorRes = errorStringResource(lastError)
+                    val errorRes = lastError.descriptionResId()
                     Row(
                         modifier =
                             Modifier
@@ -946,68 +949,6 @@ fun PrivilegedStepContent(
                 }
             }
         }
-    }
-}
-
-private enum class ChecklistStatus { PENDING, ACTIVE, DONE, FAILED }
-
-@Composable
-private fun PrivdChecklistRow(
-    label: String,
-    status: ChecklistStatus,
-) {
-    val colors = LocalAppColors.current
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        when (status) {
-            ChecklistStatus.PENDING -> {
-                Icon(
-                    imageVector = Icons.Rounded.RadioButtonUnchecked,
-                    contentDescription = null,
-                    tint = colors.onSurfaceSecondary.copy(alpha = 0.6f),
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-
-            ChecklistStatus.ACTIVE -> {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(20.dp),
-                    strokeWidth = 2.dp,
-                    color = colors.accent,
-                )
-            }
-
-            ChecklistStatus.DONE -> {
-                Icon(
-                    imageVector = Icons.Rounded.CheckCircle,
-                    contentDescription = null,
-                    tint = colors.accent,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-
-            ChecklistStatus.FAILED -> {
-                Icon(
-                    imageVector = Icons.Rounded.Cancel,
-                    contentDescription = null,
-                    tint = colors.error,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-        }
-        Text(
-            text = label,
-            color =
-                when (status) {
-                    ChecklistStatus.DONE -> colors.onSurface
-                    ChecklistStatus.ACTIVE -> colors.onSurface
-                    ChecklistStatus.PENDING -> colors.onSurfaceSecondary
-                    ChecklistStatus.FAILED -> colors.error
-                },
-            style = MaterialTheme.typography.bodyMedium,
-        )
     }
 }
 
@@ -1210,17 +1151,3 @@ fun AccessibilityStepContent(
         }
     }
 }
-
-private fun errorStringResource(error: PrivdError?): Int? =
-    when (error) {
-        PrivdError.DAEMON_UNREACHABLE -> R.string.privd_error_daemon_unreachable
-        PrivdError.PAIRING_FAILED -> R.string.privd_error_pairing_failed
-        PrivdError.ADB_DISCOVERY_FAILED -> R.string.privd_error_adb_discovery_failed
-        PrivdError.ADB_CONNECT_FAILED -> R.string.privd_error_adb_connect_failed
-        PrivdError.BOOTSTRAP_PUSH_FAILED -> R.string.privd_error_bootstrap_push_failed
-        PrivdError.BOOTSTRAP_SPAWN_FAILED -> R.string.privd_error_bootstrap_spawn_failed
-        PrivdError.BOOTSTRAP_PROVISION_FAILED -> R.string.privd_error_bootstrap_provision_failed
-        PrivdError.ADB_PAIRING_REQUIRED -> R.string.privd_error_adb_pairing_required
-        PrivdError.VERSION_MISMATCH -> R.string.privd_error_version_mismatch
-        null -> null
-    }
