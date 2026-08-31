@@ -264,10 +264,16 @@ object SettingsManager {
     }
 
     fun setThemeMode(value: ThemeMode) {
-        AppLog.d(TAG, "setThemeMode($value)")
-        _themeMode.value = value
-        scope.launch { optionalDataStore?.edit { prefs -> prefs[KEY_THEME_MODE] = value.name } }
-        onThemeChangedListener?.invoke()
+        updateEnumSettingPref(
+            KEY_THEME_MODE,
+            value,
+            _themeMode,
+            scope,
+            optionalDataStore,
+            TAG,
+            "setThemeMode",
+            onChanged = { onThemeChangedListener?.invoke() },
+        )
     }
 
     fun setOverlayAtBottom(value: Boolean) {
@@ -287,23 +293,27 @@ object SettingsManager {
             optionalDataStore,
             TAG,
             "setSteamGridDbApiToken(redacted)",
+            onChanged = { onSettingsChangedListener?.invoke() },
         )
-        onSettingsChangedListener?.invoke()
     }
 
     // Mirror setters + session save/restore live in [MirrorSettings].
 
     fun setAppLanguage(value: AppLanguage) {
-        AppLog.d(TAG, "setAppLanguage($value)")
-        _appLanguage.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_APP_LANGUAGE] = value.name } }
+        updateEnumSettingPref(KEY_APP_LANGUAGE, value, _appLanguage, scope, optionalDataStore, TAG, "setAppLanguage")
     }
 
     fun setLogLevel(value: AppLog.Level) {
-        AppLog.i(TAG, "setLogLevel($value)")
-        _logLevel.value = value
-        AppLog.level = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_LOG_LEVEL] = value.name } }
+        updateEnumSettingPref(
+            KEY_LOG_LEVEL,
+            value,
+            _logLevel,
+            scope,
+            optionalDataStore,
+            TAG,
+            "setLogLevel",
+            onChanged = { AppLog.level = value },
+        )
     }
 
     // Keyboard setters live in [KeyboardSettings]; touchpad setters in [TouchpadSettings].

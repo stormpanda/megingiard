@@ -75,9 +75,7 @@ object KeyboardSettings {
         get() = if (::scope.isInitialized) scope else null
 
     fun setKbLayout(value: KbLayout) {
-        AppLog.d(TAG, "setKbLayout($value)")
-        _kbLayout.value = value
-        optionalScope?.launch { optionalDataStore?.edit { prefs -> prefs[KEY_KB_LAYOUT] = value.name } }
+        updateEnumSettingPref(KEY_KB_LAYOUT, value, _kbLayout, optionalScope, optionalDataStore, TAG, "setKbLayout")
     }
 
     fun setKbTrackpointEnabled(value: Boolean) {
@@ -101,9 +99,7 @@ object KeyboardSettings {
     }
 
     fun setKbMouseBtnPos(value: KbMouseBtnPos) {
-        AppLog.d(TAG, "setKbMouseBtnPos($value)")
-        _kbMouseBtnPos.value = value
-        optionalScope?.launch { optionalDataStore?.edit { prefs -> prefs[KEY_KB_MOUSE_BTN_POS] = value.name } }
+        updateEnumSettingPref(KEY_KB_MOUSE_BTN_POS, value, _kbMouseBtnPos, optionalScope, optionalDataStore, TAG, "setKbMouseBtnPos")
     }
 
     fun setKbTouchpadEnabled(value: Boolean) {

@@ -7,7 +7,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.RomLauncher
-import com.stormpanda.megingiard.catalog.RomSystemDef
 import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
