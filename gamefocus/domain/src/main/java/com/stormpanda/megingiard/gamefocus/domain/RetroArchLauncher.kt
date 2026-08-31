@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.RomLauncher
 import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
+import com.stormpanda.megingiard.catalog.SafPathResolver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -72,15 +73,17 @@ class RetroArchLauncher : RomLauncher {
     }
 
     private fun resolveConfigFile(packageName: String): String? {
-        val candidatePaths =
+        val relativeSubPaths =
             listOf(
-                "/storage/emulated/0/Android/data/$packageName/files/retroarch.cfg",
-                "/sdcard/Android/data/$packageName/files/retroarch.cfg",
-                "/storage/emulated/0/RetroArch/retroarch.cfg",
-                "/sdcard/RetroArch/retroarch.cfg",
+                "Android/data/$packageName/files/retroarch.cfg",
+                "RetroArch/retroarch.cfg",
             )
+        val candidatePaths =
+            SafPathResolver.getStorageVolumeRoots().flatMap { root ->
+                relativeSubPaths.map { subPath -> "$root/$subPath" }
+            }
         return candidatePaths.firstOrNull { File(it).exists() }
-            ?: "/storage/emulated/0/Android/data/$packageName/files/retroarch.cfg"
+            ?: candidatePaths.firstOrNull()
     }
 
     private fun getRetroArchPackageName(context: Context): String? {
