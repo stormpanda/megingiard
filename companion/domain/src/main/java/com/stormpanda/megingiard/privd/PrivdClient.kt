@@ -73,6 +73,11 @@ object PrivdClient {
     private val _state = MutableStateFlow(PrivdConnectionState.DISCONNECTED)
     val state: StateFlow<PrivdConnectionState> = _state.asStateFlow()
 
+    internal fun setStateForTesting(newState: PrivdConnectionState) {
+        isConnectedForTest = (newState == PrivdConnectionState.CONNECTED)
+        _state.value = newState
+    }
+
     private val commandMutex = Mutex()
 
     /**
