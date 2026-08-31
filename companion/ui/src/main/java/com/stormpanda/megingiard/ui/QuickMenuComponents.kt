@@ -66,6 +66,9 @@ private const val TAG = "QuickMenuComponents"
 internal val PM_CHIP_LABEL_GAP = 6.dp
 internal val PM_AUTO_SWITCH_GAP = 8.dp
 
+private val PM_ACTION_BUTTON_SHAPE = RoundedCornerShape(PM_ACTION_BUTTON_CORNER)
+private val PM_TOGGLE_CONTAINER_SHAPE = RoundedCornerShape(8.dp)
+
 @Composable
 internal fun SectionLabel(
     text: String,
@@ -168,8 +171,8 @@ internal fun QuickMenuActionChip(
     Row(
         modifier =
             modifier
-                .clip(RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
-                .border(PM_BORDER_WIDTH, borderColor, RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
+                .clip(PM_ACTION_BUTTON_SHAPE)
+                .border(PM_BORDER_WIDTH, borderColor, PM_ACTION_BUTTON_SHAPE)
                 .clickable(onClick = {
                     AppLog.d(TAG, "QuickMenuActionChip clicked: $label")
                     onClick()
@@ -236,7 +239,7 @@ internal fun MagicalAutoToggleChip(
     Row(
         modifier =
             modifier
-                .clip(RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
+                .clip(PM_ACTION_BUTTON_SHAPE)
                 .then(
                     if (active) {
                         Modifier
@@ -308,9 +311,9 @@ internal fun MagicalAutoToggleChip(
                                         style = Stroke(width = strokeWidth),
                                     )
                                 }
-                            }.background(accentColor.copy(alpha = 0.10f), RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
+                            }.background(accentColor.copy(alpha = 0.10f), PM_ACTION_BUTTON_SHAPE)
                     } else {
-                        Modifier.border(PM_BORDER_WIDTH, colors.controlOverlayBorder, RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
+                        Modifier.border(PM_BORDER_WIDTH, colors.controlOverlayBorder, PM_ACTION_BUTTON_SHAPE)
                     },
                 ).clickable(onClick = {
                     AppLog.d(TAG, "MagicalAutoToggleChip clicked: active=$active")
@@ -341,9 +344,9 @@ internal fun MagicalAutoToggleChip(
                 Modifier
                     .width(28.dp)
                     .height(16.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(PM_TOGGLE_CONTAINER_SHAPE)
                     .background(if (active) accentColor.copy(alpha = 0.35f) else colors.surfaceVariant)
-                    .border(1.dp, if (active) accentColor.copy(alpha = 0.7f) else colors.controlOverlayBorder, RoundedCornerShape(8.dp))
+                    .border(1.dp, if (active) accentColor.copy(alpha = 0.7f) else colors.controlOverlayBorder, PM_TOGGLE_CONTAINER_SHAPE)
                     .padding(2.dp),
             contentAlignment = if (active) Alignment.CenterEnd else Alignment.CenterStart,
         ) {
@@ -372,8 +375,8 @@ internal fun QuickMenuIconButton(
     Box(
         modifier =
             modifier
-                .clip(RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
-                .border(PM_BORDER_WIDTH, accent.copy(alpha = 0.5f), RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
+                .clip(PM_ACTION_BUTTON_SHAPE)
+                .border(PM_BORDER_WIDTH, accent.copy(alpha = 0.5f), PM_ACTION_BUTTON_SHAPE)
                 .clickable(onClick = {
                     AppLog.d(TAG, "QuickMenuIconButton clicked: $contentDescription")
                     onClick()
