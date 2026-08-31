@@ -114,6 +114,9 @@ private const val TAG = "FocusLibraryScreen"
 
 internal const val FLS_GRID_COLUMNS = 6
 private val FLS_CORNER_RADIUS = 16.dp
+private val FLS_CARD_SHAPE = RoundedCornerShape(FLS_CORNER_RADIUS)
+private val FLS_ROM_ICON_CORNER_RADIUS = 14.dp
+private val FLS_ROM_ICON_SHAPE = RoundedCornerShape(FLS_ROM_ICON_CORNER_RADIUS)
 private val FLS_ICON_SIZE = 64.dp
 private val FLS_GRID_PADDING = 16.dp
 private val FLS_GRID_SPACING = 12.dp
@@ -124,8 +127,6 @@ private val FLS_GRID_CONTENT_PADDING_TOP = 112.dp
 private val FLS_GRID_CONTENT_PADDING_BOTTOM = 112.dp
 private val FLS_BOTTOM_GRADIENT_HEIGHT = 96.dp
 private val FLS_TOP_GRADIENT_HEIGHT = 112.dp
-
-private val FLS_ROM_ICON_CORNER_RADIUS = 14.dp
 private val FLS_FALLBACK_ICON_SIZE = 36.dp
 private val FLS_LABEL_GAP = 6.dp
 private val FLS_SHADOW_BLUR_RADIUS = 16.dp
@@ -795,9 +796,6 @@ private fun LibraryGridItem(
         label = "LibraryVisibilityOffAlpha",
     )
 
-    val cardShape = remember { RoundedCornerShape(FLS_CORNER_RADIUS) }
-    val romIconShape = remember { RoundedCornerShape(FLS_ROM_ICON_CORNER_RADIUS) }
-
     Box(
         modifier =
             modifier
@@ -805,7 +803,7 @@ private fun LibraryGridItem(
                     scaleX = cardScale
                     scaleY = cardScale
                     alpha = cardAlpha
-                }.clip(cardShape)
+                }.clip(FLS_CARD_SHAPE)
                 .drawBehind {
                     drawRect(animatedCardBg)
                 }.noFocusClickable(onClickTop),
@@ -831,7 +829,7 @@ private fun LibraryGridItem(
                         bitmap = currentBitmap,
                         contentDescription = appInfo.label,
                         contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxSize().clip(romIconShape),
+                        modifier = Modifier.fillMaxSize().clip(FLS_ROM_ICON_SHAPE),
                     )
                 } else {
                     GameFocusFallbackIcon(
