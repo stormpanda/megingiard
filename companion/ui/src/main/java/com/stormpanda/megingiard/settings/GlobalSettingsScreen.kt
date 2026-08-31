@@ -1245,7 +1245,7 @@ private fun RestoreReviewSubPage(
     val metadata = export.metadata
     val authorText = metadata.author?.ifBlank { null }
     val descText = metadata.description?.ifBlank { null }
-    val tagsText = if (metadata.tags.isNotEmpty()) metadata.tags.joinToString(", ") else null
+    val tagsText = metadata.tags.takeIf { it.isNotEmpty() }?.joinToString(", ")
 
     val profilesCount = export.profiles.size
     val layoutsCount = export.profiles.sumOf { it.layouts.size }
@@ -1255,15 +1255,13 @@ private fun RestoreReviewSubPage(
             ?: export.profiles.sumOf { p -> p.layouts.count { !it.backgroundImagePath.isNullOrEmpty() } }
 
     val includedSections =
-        buildList {
-            if ("global" in export.settings) add(stringResource(R.string.config_import_section_global))
-            if ("mirror" in export.settings) add(stringResource(R.string.config_import_section_mirror))
-            if ("touchpad" in export.settings) add(stringResource(R.string.config_import_section_touchpad))
-            if ("keyboard" in export.settings) add(stringResource(R.string.config_import_section_keyboard))
-            if ("macropad_settings" in export.settings) {
-                add(stringResource(R.string.config_import_section_macropad_settings))
-            }
-        }
+        listOf(
+            "global" to R.string.config_import_section_global,
+            "mirror" to R.string.config_import_section_mirror,
+            "touchpad" to R.string.config_import_section_touchpad,
+            "keyboard" to R.string.config_import_section_keyboard,
+            "macropad_settings" to R.string.config_import_section_macropad_settings,
+        ).filter { it.first in export.settings }.map { stringResource(it.second) }
 
     val summarySubtitle =
         buildString {
