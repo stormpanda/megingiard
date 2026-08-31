@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.input
 
 import android.content.Context
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.macropad.MouseButton
 import com.stormpanda.megingiard.privd.PrivdClient
 
 private const val TAG = "MouseInjector"
@@ -48,9 +49,9 @@ object MouseInjector {
         router.dispatch({ PrivdClient.send("MB $code U\n") }, { ShellMouseInjector.buttonUp(code) })
     }
 
-    fun buttonDown(button: com.stormpanda.megingiard.macropad.MouseButton) = buttonDown(button.code)
+    fun buttonDown(button: MouseButton) = buttonDown(button.code)
 
-    fun buttonUp(button: com.stormpanda.megingiard.macropad.MouseButton) = buttonUp(button.code)
+    fun buttonUp(button: MouseButton) = buttonUp(button.code)
 
     fun leftDown() = buttonDown('L')
 
