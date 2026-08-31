@@ -38,6 +38,7 @@ import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -184,10 +185,12 @@ internal fun MouseButton(
                 .pointerInput(Unit) {
                     detectHoldPointerEvents(
                         onPress = {
+                            AppLog.d(TAG, "MouseButton press: $label")
                             pressed = true
                             onDown()
                         },
                         onRelease = {
+                            AppLog.d(TAG, "MouseButton release: $label")
                             pressed = false
                             onUp()
                         },

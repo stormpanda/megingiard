@@ -831,7 +831,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
         }
 
         fun clickPairDialogRow(
-            pairKeywords: List<String> = AutoSetupLanguageConfig.fromLocale(java.util.Locale.getDefault()).pairDeviceKeywords,
+            pairKeywords: List<String> = AutoSetupLanguageConfig.fromLocale(Locale.getDefault()).pairDeviceKeywords,
         ): Boolean {
             val inst = instance ?: return false
             val rootNode = inst.rootInActiveWindow ?: return false

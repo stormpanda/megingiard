@@ -31,6 +31,7 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.floatOrNull
 import kotlinx.serialization.json.intOrNull
+import java.time.LocalDate
 
 private val backupsJson =
     Json {
@@ -435,7 +436,7 @@ object SettingsManager {
         scope.launch {
             try {
                 val currentDateStr =
-                    java.time.LocalDate
+                    LocalDate
                         .now()
                         .toString()
                 val alreadyHasBackup = _internalBackups.value.any { it.dateString == currentDateStr }

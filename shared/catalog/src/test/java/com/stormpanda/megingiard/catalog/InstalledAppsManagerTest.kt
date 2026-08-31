@@ -13,8 +13,6 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
-private const val TAG = "InstalledAppsManagerTest"
-
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
 class InstalledAppsManagerTest {

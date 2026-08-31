@@ -44,6 +44,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.math.ViewportMath
 import com.stormpanda.megingiard.settings.SettingsManager
@@ -123,6 +124,10 @@ internal fun LayoutBackgroundSubPageContent(
     var previewBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
     var isSaving by remember { mutableStateOf(false) }
 
+    LaunchedEffect(layout.id) {
+        AppLog.d(TAG, "LayoutBackgroundSubPageContent opened for profile: $profileName, layout: ${layout.name}")
+    }
+
     LaunchedEffect(isCropActive) {
         MacroPadState.setCroppingBackground(isCropActive)
     }
@@ -152,8 +157,9 @@ internal fun LayoutBackgroundSubPageContent(
         }
 
     LaunchedEffect(pendingImageUri, currentBgPath) {
+        val pathOrUri = pendingImageUri?.toString() ?: currentBgPath
+        AppLog.d(TAG, "Loading background bitmap for: $pathOrUri")
         withContext(Dispatchers.IO) {
-            val pathOrUri = pendingImageUri?.toString() ?: currentBgPath
             val bitmap =
                 if (pathOrUri != null) {
                     MacroPadMediaRepository.loadScaledBitmap(context, pathOrUri)
@@ -172,6 +178,7 @@ internal fun LayoutBackgroundSubPageContent(
     val pickedUri by BackgroundPickerManager.pickedUri.collectAsState()
     LaunchedEffect(pickedUri) {
         val uri = pickedUri ?: return@LaunchedEffect
+        AppLog.d(TAG, "Background image picked from system picker: $uri")
         pendingImageUri = uri
         currentBgPath = null
         BackgroundPickerManager.clearPickedUri()

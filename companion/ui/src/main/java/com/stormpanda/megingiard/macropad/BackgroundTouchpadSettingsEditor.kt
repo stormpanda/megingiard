@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.GamepadInfoBox
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
@@ -43,6 +44,10 @@ internal fun LayoutTouchpadSubPageContent(
 
     val touchpadFocusRequester = remember { FocusRequester() }
     var restoreFocusTrigger by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(layout.id) {
+        AppLog.d(TAG, "LayoutTouchpadSubPageContent opened for layout: ${layout.name} (${layout.id})")
+    }
 
     LaunchedEffect(restoreFocusTrigger) {
         if (restoreFocusTrigger > 0) {

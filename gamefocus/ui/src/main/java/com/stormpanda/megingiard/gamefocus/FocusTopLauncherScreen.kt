@@ -75,6 +75,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.stormpanda.megingiard.AppLog
@@ -1012,7 +1013,7 @@ internal fun Modifier.noFocusClickable(onClick: () -> Unit): Modifier = noFocusC
 @Composable
 internal fun GameFocusFallbackIcon(
     appInfo: InstalledAppInfo,
-    size: androidx.compose.ui.unit.Dp,
+    size: Dp,
     modifier: Modifier = Modifier,
     tint: Color = LocalAppColors.current.accent,
 ) {

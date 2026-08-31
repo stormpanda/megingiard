@@ -128,9 +128,11 @@ fun GameFocusArtworkDialog(
     val useAppIcon =
         remember(appInfo.packageName) {
             {
-                val coversDir = File(context.cacheDir, "gamefocus_covers")
-                val targetFile = File(coversDir, "${appInfo.packageName}.png")
-                if (targetFile.exists()) targetFile.delete()
+                scope.launch(Dispatchers.IO) {
+                    val coversDir = File(context.cacheDir, "gamefocus_covers")
+                    val targetFile = File(coversDir, "${appInfo.packageName}.png")
+                    if (targetFile.exists()) targetFile.delete()
+                }
                 AppPaletteExtractor.invalidatePalette(appInfo.packageName)
                 InstalledAppsManager.updateAppCover(appInfo.packageName, null)
                 InstalledAppsManager.markAppAsScraped(context, appInfo.packageName)

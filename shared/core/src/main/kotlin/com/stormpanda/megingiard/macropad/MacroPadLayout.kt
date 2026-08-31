@@ -9,6 +9,7 @@ import kotlinx.serialization.Transient
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import com.stormpanda.megingiard.macropad.MouseButton as MouseBtnEnum
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shape enums
@@ -177,7 +178,7 @@ sealed class PadAction {
     @Serializable
     @SerialName("mouse_button")
     data class MouseButton(
-        val button: com.stormpanda.megingiard.macropad.MouseButton,
+        val button: MouseBtnEnum,
     ) : PadAction()
 
     /**

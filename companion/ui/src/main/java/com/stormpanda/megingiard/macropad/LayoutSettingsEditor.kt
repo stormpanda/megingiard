@@ -27,8 +27,10 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.GamepadActionCard
@@ -74,6 +76,10 @@ internal fun EditLayoutSubPageContent(
 ) {
     val colors = LocalAppColors.current
     var nameText by remember(savedLayout.id, savedLayout.name) { mutableStateOf(savedLayout.name) }
+
+    LaunchedEffect(savedLayout.id) {
+        AppLog.d(TAG, "EditLayoutSubPageContent opened for layout: ${savedLayout.name} (${savedLayout.id})")
+    }
 
     LaunchedEffect(Unit) {
         snapshotFlow { layout }
@@ -146,7 +152,7 @@ internal fun EditLayoutSubPageContent(
         val target: EditorColorTarget,
         val colorOption: ColorOption,
         val resolvedColor: Color,
-        val icon: androidx.compose.ui.graphics.vector.ImageVector,
+        val icon: ImageVector,
     )
     val colorTargets =
         listOf(

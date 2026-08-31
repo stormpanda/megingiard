@@ -689,7 +689,7 @@ private fun ModeToggleButton(
 @Composable
 private fun ModeSegment(
     text: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     contentDescription: String,
     color: Color,
     iconAfterText: Boolean,

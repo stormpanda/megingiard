@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.GamepadActionCard
@@ -349,6 +350,10 @@ internal fun ColorWheelSubPageContent(
         }
     }
 
+    LaunchedEffect(initialColor) {
+        AppLog.d(TAG, "ColorWheelSubPageContent opened (initialColor=$initialColor)")
+    }
+
     LaunchedEffect(Unit) {
         snapshotFlow { workingColor }
             .collectLatest { color ->
@@ -556,6 +561,10 @@ internal fun ColorOptionSubPageContent(
 
     val currentColor = resolve(currentOption ?: layoutDefaultOption ?: ColorOption.Neutral)
     val layoutResolvedColor = layoutDefaultOption?.let(::resolve)
+
+    LaunchedEffect(selectColorWheelTitle) {
+        AppLog.d(TAG, "ColorOptionSubPageContent opened: $selectColorWheelTitle")
+    }
 
     val isDefaultSelected = currentOption == null
     val isNeutralSelected = currentOption is ColorOption.Neutral

@@ -30,6 +30,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppLog
@@ -482,7 +483,7 @@ private fun GamepadButtonTile(
     modifier: Modifier = Modifier,
     customLabel: String? = null,
     customTextColor: Color? = null,
-    fontSize: androidx.compose.ui.unit.TextUnit = VGP_BTN_FONT_SIZE,
+    fontSize: TextUnit = VGP_BTN_FONT_SIZE,
     isCircle: Boolean = false,
     shapeCorner: Dp = VGP_CARD_CORNER,
     icon: ImageVector? = null,

@@ -117,6 +117,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
+import java.util.Collections
 import java.util.UUID
 import kotlin.math.max
 
@@ -156,7 +157,6 @@ private fun applyActionToDraftButton(
 ): PadButton =
     draftButton.copy(
         action = newAction,
-        buttonShape = if (newAction is PadAction.TrackpointMove) ButtonShape.CIRCLE else draftButton.buttonShape,
         buttonSize = if (newAction is PadAction.ScrollWheel) ButtonSize.SIZE_1X2 else draftButton.buttonSize,
     )
 
@@ -167,7 +167,7 @@ private fun swapButtons(
 ) {
     if (layout == null || from !in layout.buttons.indices || to !in layout.buttons.indices) return
     val mutable = layout.buttons.toMutableList()
-    java.util.Collections.swap(mutable, from, to)
+    Collections.swap(mutable, from, to)
     MacroPadState.updateLayout(layout.copy(buttons = mutable))
 }
 
