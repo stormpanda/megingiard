@@ -8,7 +8,6 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.net.Uri
-import android.os.Build
 import android.provider.Settings
 import android.view.Display
 import com.stormpanda.megingiard.AppLog
@@ -16,8 +15,6 @@ import com.stormpanda.megingiard.ipc.IpcSettingsParser
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import com.stormpanda.megingiard.ipc.observeContentProvider
 import com.stormpanda.megingiard.media.SteamGridDbClient
-import com.stormpanda.megingiard.media.SteamGridDbGame
-import com.stormpanda.megingiard.media.SteamGridDbImage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
