@@ -71,8 +71,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.net.HttpURLConnection
-import java.net.URL
 
 private const val TAG = "SteamGridDbScrapeDlg"
 
@@ -146,30 +144,27 @@ internal fun SteamGridDbScrapeSubPageContent(
     ) {
         selectedImage = null
         scrapeError = null
-        val cacheKey = gameId to type
-        val cached = imagesCache[cacheKey]
-        if (cached != null) {
-            AppLog.d(TAG, "loadImagesForGame: cache hit for gameId=$gameId type=$type (${cached.size} images)")
-            imagesList = cached
-            return
-        }
         activeFetchJob?.cancel()
         isLoadingImages = true
         AppLog.i(TAG, "loadImagesForGame: fetching images for gameId=$gameId type=$type")
         activeFetchJob =
             scope.launch {
-                SteamGridDbClient
-                    .fetchImages(gameId, type, apiKey)
-                    .onSuccess { images ->
+                fetchImagesForGame(
+                    gameId = gameId,
+                    type = type,
+                    apiKey = apiKey,
+                    imagesCache = imagesCache,
+                    onSuccess = { images ->
                         AppLog.d(TAG, "loadImagesForGame success: loaded ${images.size} images")
-                        imagesCache[cacheKey] = images
                         imagesList = images
                         isLoadingImages = false
-                    }.onFailure { err ->
+                    },
+                    onFailure = { err ->
                         AppLog.w(TAG, "loadImagesForGame failure: ${err.message}")
                         isLoadingImages = false
                         scrapeError = err
-                    }
+                    },
+                )
             }
     }
 
@@ -193,26 +188,22 @@ internal fun SteamGridDbScrapeSubPageContent(
                         if (games.isNotEmpty()) {
                             val firstGame = games.first()
                             selectedGame = firstGame
-                            val cacheKey = firstGame.id to selectedType
-                            val cached = imagesCache[cacheKey]
-                            if (cached != null) {
-                                AppLog.d(TAG, "searchGames auto-fetch: cache hit for gameId=${firstGame.id} type=$selectedType")
-                                imagesList = cached
-                            } else {
-                                isLoadingImages = true
-                                AppLog.i(TAG, "searchGames auto-fetch: loading images for gameId=${firstGame.id} type=$selectedType")
-                                SteamGridDbClient
-                                    .fetchImages(firstGame.id, selectedType, apiKey)
-                                    .onSuccess { images ->
-                                        imagesCache[cacheKey] = images
-                                        imagesList = images
-                                        isLoadingImages = false
-                                    }.onFailure { err ->
-                                        AppLog.w(TAG, "searchGames auto-fetch failure: ${err.message}")
-                                        isLoadingImages = false
-                                        scrapeError = err
-                                    }
-                            }
+                            isLoadingImages = true
+                            fetchImagesForGame(
+                                gameId = firstGame.id,
+                                type = selectedType,
+                                apiKey = apiKey,
+                                imagesCache = imagesCache,
+                                onSuccess = { images ->
+                                    imagesList = images
+                                    isLoadingImages = false
+                                },
+                                onFailure = { err ->
+                                    AppLog.w(TAG, "searchGames auto-fetch failure: ${err.message}")
+                                    isLoadingImages = false
+                                    scrapeError = err
+                                },
+                            )
                         }
                     }.onFailure { err ->
                         AppLog.w(TAG, "searchGames failure: ${err.message}")
@@ -583,4 +574,27 @@ private fun SteamGridDbImageThumbnail(
             )
         }
     }
+}
+
+private suspend fun fetchImagesForGame(
+    gameId: Int,
+    type: String,
+    apiKey: String,
+    imagesCache: HashMap<Pair<Int, String>, List<SteamGridDbImage>>,
+    onSuccess: (List<SteamGridDbImage>) -> Unit,
+    onFailure: (Throwable) -> Unit,
+) {
+    val cacheKey = gameId to type
+    val cached = imagesCache[cacheKey]
+    if (cached != null) {
+        AppLog.d(TAG, "fetchImagesForGame: cache hit for gameId=$gameId type=$type (${cached.size} images)")
+        onSuccess(cached)
+        return
+    }
+    SteamGridDbClient
+        .fetchImages(gameId, type, apiKey)
+        .onSuccess { images ->
+            imagesCache[cacheKey] = images
+            onSuccess(images)
+        }.onFailure(onFailure)
 }
