@@ -31,7 +31,7 @@ import kotlin.math.roundToInt
 private const val TAG = "TouchpadSettingsOverlay"
 
 @Composable
-fun TouchpadSettingsOverlay(onBack: () -> Unit) {
+fun TouchpadSettingsOverlay() {
     val colors = LocalAppColors.current
 
     val touchpadTapToClick by TouchpadSettings.touchpadTapToClick.collectAsState()

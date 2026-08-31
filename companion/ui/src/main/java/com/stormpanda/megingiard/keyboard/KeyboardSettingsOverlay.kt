@@ -24,10 +24,7 @@ import com.stormpanda.megingiard.viewmodel.KeyboardViewModel
 private const val TAG = "KbSettingsOverlay"
 
 @Composable
-fun KeyboardSettingsOverlay(
-    onBack: () -> Unit,
-    viewModel: KeyboardViewModel = viewModel(),
-) {
+fun KeyboardSettingsOverlay(viewModel: KeyboardViewModel = viewModel()) {
     val currentLayout by viewModel.kbLayout.collectAsState()
     val kbTouchpadEnabled by viewModel.kbTouchpadEnabled.collectAsState()
 

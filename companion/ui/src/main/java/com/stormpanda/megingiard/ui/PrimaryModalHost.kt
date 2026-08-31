@@ -77,9 +77,7 @@ fun PrimaryModalHost(
                 onDismiss = onDismiss,
                 modifier = modifier,
             ) {
-                KeyboardSettingsOverlay(
-                    onBack = onDismiss,
-                )
+                KeyboardSettingsOverlay()
             }
         }
 
@@ -90,9 +88,7 @@ fun PrimaryModalHost(
                 onDismiss = onDismiss,
                 modifier = modifier,
             ) {
-                TouchpadSettingsOverlay(
-                    onBack = onDismiss,
-                )
+                TouchpadSettingsOverlay()
             }
         }
 

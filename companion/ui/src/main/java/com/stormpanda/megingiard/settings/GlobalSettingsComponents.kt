@@ -1,6 +1,5 @@
 package com.stormpanda.megingiard.settings
 
-import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Gamepad
