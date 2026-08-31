@@ -17,6 +17,7 @@ private const val RETROARCH_MAIN_ACTIVITY = "com.retroarch.browser.retroactivity
 private const val RETROARCH_EXTRA_ROM = "ROM"
 private const val RETROARCH_EXTRA_LIBRETRO = "LIBRETRO"
 private const val RETROARCH_EXTRA_CONFIGFILE = "CONFIGFILE"
+private val RETROARCH_PACKAGES = listOf("com.retroarch.aarch64", "com.retroarch")
 
 class RetroArchLauncher : RomLauncher {
     override val id: String = "retroarch"
@@ -84,7 +85,7 @@ class RetroArchLauncher : RomLauncher {
 
     private fun getRetroArchPackageName(context: Context): String? {
         val pm = context.packageManager
-        return listOf("com.retroarch.aarch64", "com.retroarch").firstOrNull { pkg ->
+        return RETROARCH_PACKAGES.firstOrNull { pkg ->
             try {
                 pm.getPackageInfo(pkg, 0)
                 true
