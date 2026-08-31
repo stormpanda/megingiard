@@ -139,6 +139,7 @@ private const val TAG = "MirrorEditorTopOverlay"
 // ── Proportional compact styling (25% smaller than default primary overlay cards) ──
 private val METO_TOOLBOX_WIDTH = 220.dp
 private val METO_CONTAINER_CORNER = 12.dp
+private val METO_CONTAINER_SHAPE = RoundedCornerShape(METO_CONTAINER_CORNER)
 private val METO_CONTAINER_ELEVATION = 16.dp
 private val METO_TOOLBOX_PADDING_START = 24.dp
 private val METO_TOOLBOX_PADDING_VERTICAL = 20.dp
@@ -150,6 +151,7 @@ private val METO_TOGGLE_BUTTON_SIZE = 20.dp
 private val METO_TOGGLE_ICON_SIZE = 14.dp
 
 private val METO_CARD_CORNER = 8.dp
+private val METO_CARD_SHAPE = RoundedCornerShape(METO_CARD_CORNER)
 private val METO_CARD_MIN_HEIGHT = 38.dp
 private val METO_CARD_PADDING_H = 8.dp
 private val METO_CARD_PADDING_V = 5.dp
@@ -157,11 +159,13 @@ private val METO_CARD_PADDING_V = 5.dp
 private val METO_ICON_BOX_SIZE = 26.dp
 private val METO_ICON_SIZE = 16.dp
 private val METO_ICON_BOX_CORNER = 6.dp
+private val METO_ICON_BOX_SHAPE = RoundedCornerShape(METO_ICON_BOX_CORNER)
 private val METO_ROW_SPACING = 8.dp
 
 private val METO_TEXT_SIZE_TITLE = 11.sp
 private val METO_TEXT_SIZE_PILL = 9.5.sp
 private val METO_PILL_CORNER = 12.dp
+private val METO_PILL_SHAPE = RoundedCornerShape(METO_PILL_CORNER)
 private val METO_PILL_PADDING_H = 7.dp
 private val METO_PILL_PADDING_V = 2.dp
 
@@ -556,12 +560,12 @@ fun MirrorEditorTopOverlay(
                         Modifier
                             .offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }
                             .width(METO_TOOLBOX_WIDTH)
-                            .shadow(METO_CONTAINER_ELEVATION, RoundedCornerShape(METO_CONTAINER_CORNER))
-                            .clip(RoundedCornerShape(METO_CONTAINER_CORNER))
+                            .shadow(METO_CONTAINER_ELEVATION, METO_CONTAINER_SHAPE)
+                            .clip(METO_CONTAINER_SHAPE)
                             .border(
                                 width = METO_DEFAULT_BORDER_WIDTH,
                                 brush = rememberBezelBrush(),
-                                shape = RoundedCornerShape(METO_CONTAINER_CORNER),
+                                shape = METO_CONTAINER_SHAPE,
                             ).animateContentSize(
                                 animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioNoBouncy),
                             ).onSizeChanged { size ->
@@ -572,7 +576,7 @@ fun MirrorEditorTopOverlay(
                                 }
                             },
                     color = colors.surface.copy(alpha = METO_SURFACE_ALPHA),
-                    shape = RoundedCornerShape(METO_CONTAINER_CORNER),
+                    shape = METO_CONTAINER_SHAPE,
                 ) {
                     Column(
                         modifier = Modifier.fillMaxWidth().padding(top = METO_INNER_PADDING_V),
@@ -834,7 +838,7 @@ private fun ToolboxDragHandle(
                 Modifier
                     .width(METO_HANDLE_WIDTH)
                     .height(METO_HANDLE_HEIGHT)
-                    .clip(RoundedCornerShape(50))
+                    .clip(CircleShape)
                     .background(colors.onSurfaceSecondary.copy(alpha = 0.4f)),
         )
 
@@ -1005,10 +1009,10 @@ private fun ToolboxCard(
                 .defaultMinSize(minHeight = METO_CARD_MIN_HEIGHT)
                 .graphicsLayer {
                     this.shadowElevation = animatedElevation.toPx()
-                    this.shape = RoundedCornerShape(METO_CARD_CORNER)
+                    this.shape = METO_CARD_SHAPE
                     this.clip = false
                 }.drawBehind {
-                    val outline = RoundedCornerShape(METO_CARD_CORNER).createOutline(size, layoutDirection, this)
+                    val outline = METO_CARD_SHAPE.createOutline(size, layoutDirection, this)
                     drawOutline(
                         outline = outline,
                         brush = SolidColor(animatedBgColor),
@@ -1053,7 +1057,7 @@ private fun ToolboxCard(
                 modifier =
                     Modifier
                         .size(METO_ICON_BOX_SIZE)
-                        .clip(RoundedCornerShape(METO_ICON_BOX_CORNER))
+                        .clip(METO_ICON_BOX_SHAPE)
                         .background(iconBg),
                 contentAlignment = Alignment.Center,
             ) {
@@ -1169,8 +1173,8 @@ private fun TargetCutoutCarouselCard(
         Row(
             modifier =
                 Modifier
-                    .background(capsuleBg, RoundedCornerShape(METO_PILL_CORNER))
-                    .border(capsuleBorderWidth, capsuleBorderColor, RoundedCornerShape(METO_PILL_CORNER))
+                    .background(capsuleBg, METO_PILL_SHAPE)
+                    .border(capsuleBorderWidth, capsuleBorderColor, METO_PILL_SHAPE)
                     .padding(horizontal = 4.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
