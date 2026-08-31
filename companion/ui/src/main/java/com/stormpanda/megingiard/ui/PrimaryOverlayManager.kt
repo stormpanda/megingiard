@@ -341,14 +341,16 @@ object PrimaryOverlayManager {
                                             )
                                         }
 
-                                        activeModal != null -> {
-                                            PrimaryModalHost(
-                                                config = activeModal!!,
-                                                onDismiss = {
-                                                    AppLog.d(TAG, "Dismissing primary modal: ${activeModal?.type}")
-                                                    AppStateManager.closePrimaryModal()
-                                                },
-                                            )
+                                        else -> {
+                                            activeModal?.let { modal ->
+                                                PrimaryModalHost(
+                                                    config = modal,
+                                                    onDismiss = {
+                                                        AppLog.d(TAG, "Dismissing primary modal: ${modal.type}")
+                                                        AppStateManager.closePrimaryModal()
+                                                    },
+                                                )
+                                            }
                                         }
                                     }
                                 }
