@@ -57,7 +57,7 @@ fun KeyboardSettingsOverlay(
             description = stringResource(R.string.settings_kb_touchpad_desc),
             checked = kbTouchpadEnabled,
             icon = Icons.Rounded.Mouse,
-            onCheckedChange = { viewModel.setKbTouchpadEnabled(it) },
+            onCheckedChange = viewModel::setKbTouchpadEnabled,
         )
     }
 }
