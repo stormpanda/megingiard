@@ -40,45 +40,37 @@ object MouseInjector {
 
     val isRunning: Boolean get() = router.isRunning { ShellMouseInjector.isRunning }
 
-    fun leftDown() {
-        router.dispatch({ PrivdClient.send("MB L D\n") }, { ShellMouseInjector.buttonDown('L') })
+    fun buttonDown(code: Char) {
+        router.dispatch({ PrivdClient.send("MB $code D\n") }, { ShellMouseInjector.buttonDown(code) })
     }
 
-    fun leftUp() {
-        router.dispatch({ PrivdClient.send("MB L U\n") }, { ShellMouseInjector.buttonUp('L') })
+    fun buttonUp(code: Char) {
+        router.dispatch({ PrivdClient.send("MB $code U\n") }, { ShellMouseInjector.buttonUp(code) })
     }
 
-    fun rightDown() {
-        router.dispatch({ PrivdClient.send("MB R D\n") }, { ShellMouseInjector.buttonDown('R') })
-    }
+    fun buttonDown(button: com.stormpanda.megingiard.macropad.MouseButton) = buttonDown(button.code)
 
-    fun rightUp() {
-        router.dispatch({ PrivdClient.send("MB R U\n") }, { ShellMouseInjector.buttonUp('R') })
-    }
+    fun buttonUp(button: com.stormpanda.megingiard.macropad.MouseButton) = buttonUp(button.code)
 
-    fun middleDown() {
-        router.dispatch({ PrivdClient.send("MB M D\n") }, { ShellMouseInjector.buttonDown('M') })
-    }
+    fun leftDown() = buttonDown('L')
 
-    fun middleUp() {
-        router.dispatch({ PrivdClient.send("MB M U\n") }, { ShellMouseInjector.buttonUp('M') })
-    }
+    fun leftUp() = buttonUp('L')
 
-    fun mouse4Down() {
-        router.dispatch({ PrivdClient.send("MB 4 D\n") }, { ShellMouseInjector.buttonDown('4') })
-    }
+    fun rightDown() = buttonDown('R')
 
-    fun mouse4Up() {
-        router.dispatch({ PrivdClient.send("MB 4 U\n") }, { ShellMouseInjector.buttonUp('4') })
-    }
+    fun rightUp() = buttonUp('R')
 
-    fun mouse5Down() {
-        router.dispatch({ PrivdClient.send("MB 5 D\n") }, { ShellMouseInjector.buttonDown('5') })
-    }
+    fun middleDown() = buttonDown('M')
 
-    fun mouse5Up() {
-        router.dispatch({ PrivdClient.send("MB 5 U\n") }, { ShellMouseInjector.buttonUp('5') })
-    }
+    fun middleUp() = buttonUp('M')
+
+    fun mouse4Down() = buttonDown('4')
+
+    fun mouse4Up() = buttonUp('4')
+
+    fun mouse5Down() = buttonDown('5')
+
+    fun mouse5Up() = buttonUp('5')
 
     fun moveMouse(
         dx: Int,

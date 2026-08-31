@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
-import android.os.Build
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -47,15 +46,10 @@ object SystemRoleClassifier {
                 }
 
             val resolveList: List<ResolveInfo> =
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    packageManager.queryIntentActivities(
-                        homeIntent,
-                        PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_ALL.toLong()),
-                    )
-                } else {
-                    @Suppress("DEPRECATION")
-                    packageManager.queryIntentActivities(homeIntent, PackageManager.MATCH_ALL)
-                }
+                packageManager.queryIntentActivities(
+                    homeIntent,
+                    PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_ALL.toLong()),
+                )
 
             val packages = resolveList.mapNotNull { it.activityInfo?.packageName }.toSet()
             _launcherPackages.value = packages

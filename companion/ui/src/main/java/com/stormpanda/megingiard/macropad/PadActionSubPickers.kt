@@ -108,7 +108,7 @@ internal fun MouseButtonPicker(
     GamepadActionCard(
         title = stringResource(R.string.macropad_action_mouse_button),
         description = stringResource(R.string.macropad_picker_mouse_button_desc),
-        actionText = current.button.displayLabel(),
+        actionText = current.button.displayLabel,
         icon = Icons.Rounded.Mouse,
         onClick = onOpenPicker,
     )

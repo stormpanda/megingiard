@@ -78,15 +78,6 @@ private val PBD_COLOR_PREVIEW_SIZE = 36.dp
 private val PBD_CORNER_RADIUS_DP = 6.dp
 private val PBD_ICON_SIZE_DP = 20.dp
 
-internal fun MouseButton.labelRes(): Int =
-    when (this) {
-        MouseButton.LEFT -> R.string.macropad_mouse_btn_left
-        MouseButton.RIGHT -> R.string.macropad_mouse_btn_right
-        MouseButton.MIDDLE -> R.string.macropad_mouse_btn_middle
-        MouseButton.MOUSE4 -> R.string.macropad_mouse_btn_back
-        MouseButton.MOUSE5 -> R.string.macropad_mouse_btn_forward
-    }
-
 @Composable
 internal fun describeButtonColorOption(
     option: ColorOption?,

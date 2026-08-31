@@ -293,7 +293,7 @@ internal fun PadAction.displayLabel(): String {
         }
 
         is PadAction.MouseButton -> {
-            context.getString(R.string.macropad_display_mouse_button, button.displayLabel())
+            context.getString(R.string.macropad_display_mouse_button, button.displayLabel)
         }
 
         is PadAction.ScrollWheel -> {
@@ -406,15 +406,6 @@ internal fun ButtonShape.labelResId(): Int =
 
 @Composable
 internal fun ButtonShape.displayLabel(): String = stringResource(labelResId())
-
-internal fun MouseButton.displayLabel(): String =
-    when (this) {
-        MouseButton.LEFT -> "Left"
-        MouseButton.RIGHT -> "Right"
-        MouseButton.MIDDLE -> "Middle"
-        MouseButton.MOUSE4 -> "Mouse 4"
-        MouseButton.MOUSE5 -> "Mouse 5"
-    }
 
 internal fun gamepadCodeDisplayShortLabel(
     code: Int,

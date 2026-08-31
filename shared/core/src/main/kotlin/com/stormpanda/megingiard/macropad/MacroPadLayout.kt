@@ -47,7 +47,16 @@ enum class TrackpointSize(
 // Mouse button enum — used by PadAction.MouseButton
 // ─────────────────────────────────────────────────────────────────────────────
 
-enum class MouseButton { LEFT, RIGHT, MIDDLE, MOUSE4, MOUSE5 }
+enum class MouseButton(
+    val code: Char,
+    val displayLabel: String,
+) {
+    LEFT('L', "Left"),
+    RIGHT('R', "Right"),
+    MIDDLE('M', "Middle"),
+    MOUSE4('4', "Mouse 4"),
+    MOUSE5('5', "Mouse 5"),
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 
