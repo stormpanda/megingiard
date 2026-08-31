@@ -3,7 +3,6 @@ package com.stormpanda.megingiard.ui.onboarding
 import android.app.ActivityOptions
 import android.app.LocaleManager
 import android.content.Intent
-import android.os.Build
 import android.provider.Settings
 import android.view.Display
 import androidx.activity.compose.BackHandler
@@ -48,7 +47,6 @@ import androidx.compose.material.icons.rounded.AutoFixHigh
 import androidx.compose.material.icons.rounded.Cancel
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
