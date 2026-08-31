@@ -55,6 +55,7 @@ import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.catalog.DisplayDetector
 import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenshotTarget
 import com.stormpanda.megingiard.privd.PrivdClient
@@ -168,6 +169,20 @@ fun QuickMenu(
                 onTakeBothScreenshot = { ScreenCaptureManager.requestScreenshot(ScreenshotTarget.BOTH) },
             )
 
+            val panelShape = RoundedCornerShape(PM_PANEL_CORNER)
+
+            fun ensureMacroPadModeForProfile(profile: PadProfile?) {
+                val matchesFocused =
+                    profile?.matches(
+                        AppStateManager.focusedAppPackageName.value,
+                        AppStateManager.focusedRomPath.value,
+                        isActiveProfile = true,
+                    ) == true
+                if (companionViewMode != CompanionViewMode.AUTO || !matchesFocused) {
+                    AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
+                }
+            }
+
             // ── Bottom card — Profiles / Layouts / Actions ─────────────────
             Column(
                 modifier =
@@ -178,10 +193,10 @@ fun QuickMenu(
                             exit = slideOutVertically { it },
                         ).fillMaxWidth()
                         .padding(horizontal = PM_PANEL_H_PADDING, vertical = PM_PANEL_V_PADDING)
-                        .shadow(PM_ELEVATION, RoundedCornerShape(PM_PANEL_CORNER))
-                        .clip(RoundedCornerShape(PM_PANEL_CORNER))
+                        .shadow(PM_ELEVATION, panelShape)
+                        .clip(panelShape)
                         .background(colors.controlOverlay)
-                        .border(PM_BORDER_WIDTH, brush = menuBezelBrush, shape = RoundedCornerShape(PM_PANEL_CORNER))
+                        .border(PM_BORDER_WIDTH, brush = menuBezelBrush, shape = panelShape)
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
@@ -198,13 +213,7 @@ fun QuickMenu(
                     onProfileSelected = { profile ->
                         AppLog.d(TAG, "profile selected: ${profile.id}")
                         MacroPadState.setActiveProfileId(profile.id)
-                        val currentMode = AppStateManager.companionViewMode.value
-                        val focusedPkg = AppStateManager.focusedAppPackageName.value
-                        val focusedRom = AppStateManager.focusedRomPath.value
-                        val matchesFocused = profile.matches(focusedPkg, focusedRom, isActiveProfile = true)
-                        if (currentMode != CompanionViewMode.AUTO || !matchesFocused) {
-                            AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
-                        }
+                        ensureMacroPadModeForProfile(profile)
                     },
                 )
 
@@ -220,14 +229,7 @@ fun QuickMenu(
                     onLayoutSelected = { layoutId ->
                         AppLog.d(TAG, "layout selected: $layoutId")
                         MacroPadState.setActiveLayoutId(layoutId)
-                        val profile = MacroPadState.activeProfile.value
-                        val currentMode = AppStateManager.companionViewMode.value
-                        val focusedPkg = AppStateManager.focusedAppPackageName.value
-                        val focusedRom = AppStateManager.focusedRomPath.value
-                        val matchesFocused = profile != null && profile.matches(focusedPkg, focusedRom, isActiveProfile = true)
-                        if (currentMode != CompanionViewMode.AUTO || !matchesFocused) {
-                            AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
-                        }
+                        ensureMacroPadModeForProfile(MacroPadState.activeProfile.value)
                     },
                 )
 
@@ -256,14 +258,7 @@ fun QuickMenu(
                             icon = Icons.Rounded.Gamepad,
                             colors = colors,
                             onClick = {
-                                val profile = MacroPadState.activeProfile.value
-                                val currentMode = AppStateManager.companionViewMode.value
-                                val focusedPkg = AppStateManager.focusedAppPackageName.value
-                                val focusedRom = AppStateManager.focusedRomPath.value
-                                val matchesFocused = profile != null && profile.matches(focusedPkg, focusedRom, isActiveProfile = true)
-                                if (currentMode != CompanionViewMode.AUTO || !matchesFocused) {
-                                    AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
-                                }
+                                ensureMacroPadModeForProfile(MacroPadState.activeProfile.value)
                             },
                             modifier = Modifier.weight(1f),
                         )
