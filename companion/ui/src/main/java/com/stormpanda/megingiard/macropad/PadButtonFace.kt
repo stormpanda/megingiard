@@ -22,8 +22,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlin.math.sqrt
 
-private const val TAG = "PadButtonFace"
-
 private const val PBF_DISABLED_ALPHA = 0.38f
 private val PBF_BACKING_COLOR = Color(0x80121212)
 private val PBF_BORDER_WIDTH = 1.dp
