@@ -54,41 +54,22 @@ class KeyboardViewModel(
         KeyboardSettings.setKbTouchpadEnabled(value)
     }
 
-    fun selectAll() {
+    private fun sendCtrlCombo(keyCode: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
-            KeyInjector.keyDown(LinuxKeycodes.KEY_A)
-            KeyInjector.keyUp(LinuxKeycodes.KEY_A)
+            KeyInjector.keyDown(keyCode)
+            KeyInjector.keyUp(keyCode)
             KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
         }
     }
 
-    fun cut() {
-        viewModelScope.launch(Dispatchers.IO) {
-            KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
-            KeyInjector.keyDown(LinuxKeycodes.KEY_X)
-            KeyInjector.keyUp(LinuxKeycodes.KEY_X)
-            KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
-        }
-    }
+    fun selectAll() = sendCtrlCombo(LinuxKeycodes.KEY_A)
 
-    fun copy() {
-        viewModelScope.launch(Dispatchers.IO) {
-            KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
-            KeyInjector.keyDown(LinuxKeycodes.KEY_C)
-            KeyInjector.keyUp(LinuxKeycodes.KEY_C)
-            KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
-        }
-    }
+    fun cut() = sendCtrlCombo(LinuxKeycodes.KEY_X)
 
-    fun paste() {
-        viewModelScope.launch(Dispatchers.IO) {
-            KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
-            KeyInjector.keyDown(LinuxKeycodes.KEY_V)
-            KeyInjector.keyUp(LinuxKeycodes.KEY_V)
-            KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
-        }
-    }
+    fun copy() = sendCtrlCombo(LinuxKeycodes.KEY_C)
+
+    fun paste() = sendCtrlCombo(LinuxKeycodes.KEY_V)
 
     val controller = KeyRepeatController(viewModelScope)
     val gestureProcessor =

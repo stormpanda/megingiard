@@ -44,6 +44,15 @@ enum class SteamGridDbTestStatus(
     ERROR(R.string.settings_steamgriddb_status_error),
 }
 
+private fun Throwable.toSteamGridDbTestStatus(): SteamGridDbTestStatus =
+    when (this) {
+        is SteamGridDbException.Offline -> SteamGridDbTestStatus.OFFLINE
+        is SteamGridDbException.RateLimited -> SteamGridDbTestStatus.RATE_LIMITED
+        is SteamGridDbException.ServiceUnavailable -> SteamGridDbTestStatus.UNREACHABLE
+        is SteamGridDbException.Unauthorized -> SteamGridDbTestStatus.INVALID_TOKEN
+        else -> SteamGridDbTestStatus.ERROR
+    }
+
 /**
  * ViewModel for [GlobalSettingsScreen] — exposes the app-global settings state
  * and routes mutations through named functions instead of letting Composables
@@ -123,21 +132,11 @@ class GlobalSettingsViewModel : ViewModel() {
         }
         viewModelScope.launch {
             _steamGridDbTestStatus.value = SteamGridDbTestStatus.TESTING
-            val result = SteamGridDbClient.validateToken(token.trim())
-            result
-                .onSuccess {
-                    _steamGridDbTestStatus.value = SteamGridDbTestStatus.CONNECTED
-                }.onFailure { err ->
-                    _steamGridDbTestStatus.value =
-                        when (err) {
-                            is SteamGridDbException.Offline -> SteamGridDbTestStatus.OFFLINE
-                            is SteamGridDbException.RateLimited -> SteamGridDbTestStatus.RATE_LIMITED
-                            is SteamGridDbException.ServiceUnavailable -> SteamGridDbTestStatus.UNREACHABLE
-                            is SteamGridDbException.Unauthorized -> SteamGridDbTestStatus.INVALID_TOKEN
-                            is SteamGridDbException.ApiError -> SteamGridDbTestStatus.ERROR
-                            else -> SteamGridDbTestStatus.ERROR
-                        }
-                }
+            _steamGridDbTestStatus.value =
+                SteamGridDbClient.validateToken(token.trim()).fold(
+                    onSuccess = { SteamGridDbTestStatus.CONNECTED },
+                    onFailure = { it.toSteamGridDbTestStatus() },
+                )
         }
     }
 
