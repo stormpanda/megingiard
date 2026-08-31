@@ -1,6 +1,5 @@
 package com.stormpanda.megingiard.macropad
 
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Delete
