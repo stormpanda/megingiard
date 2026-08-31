@@ -55,6 +55,8 @@ private const val SYMBOL_SPLITSCREEN_BOTTOM = "splitscreen_bottom"
 private const val SYMBOL_SPLITSCREEN_TOP = "splitscreen_top"
 private const val SYMBOL_SPLITSCREEN = "splitscreen"
 
+private val PM_PANEL_SHAPE = RoundedCornerShape(PM_PANEL_CORNER)
+
 @Composable
 internal fun MirrorControlCard(
     colors: AppColors,
@@ -75,7 +77,6 @@ internal fun MirrorControlCard(
     val menuBezelBrush = rememberBezelBrush()
     val isStartStopEnabled = !isCompanionHub
     val isPauseEnabled = !isCompanionHub && isCapturing
-    val panelShape = RoundedCornerShape(PM_PANEL_CORNER)
 
     Row(
         modifier =
@@ -90,10 +91,10 @@ internal fun MirrorControlCard(
             modifier =
                 Modifier
                     .weight(PM_MIRROR_CARD_WEIGHT)
-                    .shadow(PM_ELEVATION, panelShape)
-                    .clip(panelShape)
+                    .shadow(PM_ELEVATION, PM_PANEL_SHAPE)
+                    .clip(PM_PANEL_SHAPE)
                     .background(colors.controlOverlay)
-                    .border(PM_BORDER_WIDTH, brush = menuBezelBrush, shape = panelShape)
+                    .border(PM_BORDER_WIDTH, brush = menuBezelBrush, shape = PM_PANEL_SHAPE)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
@@ -136,10 +137,10 @@ internal fun MirrorControlCard(
             modifier =
                 Modifier
                     .weight(PM_SCREENSHOT_CARD_WEIGHT)
-                    .shadow(PM_ELEVATION, panelShape)
-                    .clip(panelShape)
+                    .shadow(PM_ELEVATION, PM_PANEL_SHAPE)
+                    .clip(PM_PANEL_SHAPE)
                     .background(colors.controlOverlay)
-                    .border(PM_BORDER_WIDTH, brush = menuBezelBrush, shape = panelShape)
+                    .border(PM_BORDER_WIDTH, brush = menuBezelBrush, shape = PM_PANEL_SHAPE)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
