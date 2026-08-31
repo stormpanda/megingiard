@@ -124,6 +124,7 @@ private const val IH_BATTERY_MAX = 100
 
 private val IH_BORDER_WIDTH = 1.dp
 private val IH_BUTTON_CORNER_RADIUS = 10.dp
+private val IH_BUTTON_SHAPE = RoundedCornerShape(IH_BUTTON_CORNER_RADIUS)
 private val IH_BUTTON_ICON_SIZE = 16.dp
 private val IH_BUTTON_ICON_SPACING = 6.dp
 private const val IH_HIGHLIGHT_ALPHA = 0.15f
@@ -597,7 +598,7 @@ private fun HeroCompanionCard(
                                         containerColor = colors.accent,
                                         contentColor = colors.onAccent,
                                     ),
-                                shape = RoundedCornerShape(IH_BUTTON_CORNER_RADIUS),
+                                shape = IH_BUTTON_SHAPE,
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -627,7 +628,7 @@ private fun HeroCompanionCard(
                                     ButtonDefaults.outlinedButtonColors(
                                         contentColor = colors.onSurface,
                                     ),
-                                shape = RoundedCornerShape(IH_BUTTON_CORNER_RADIUS),
+                                shape = IH_BUTTON_SHAPE,
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -673,7 +674,7 @@ private fun HeroCompanionCard(
                                         containerColor = colors.accent,
                                         contentColor = colors.onAccent,
                                     ),
-                                shape = RoundedCornerShape(IH_BUTTON_CORNER_RADIUS),
+                                shape = IH_BUTTON_SHAPE,
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -701,7 +702,7 @@ private fun HeroCompanionCard(
                                         ButtonDefaults.outlinedButtonColors(
                                             contentColor = colors.onSurface,
                                         ),
-                                    shape = RoundedCornerShape(IH_BUTTON_CORNER_RADIUS),
+                                    shape = IH_BUTTON_SHAPE,
                                 ) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
@@ -789,7 +790,7 @@ private fun HeroCompanionCard(
                                 containerColor = colors.accent,
                                 contentColor = colors.onAccent,
                             ),
-                        shape = RoundedCornerShape(IH_BUTTON_CORNER_RADIUS),
+                        shape = IH_BUTTON_SHAPE,
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
