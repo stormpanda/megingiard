@@ -546,47 +546,60 @@ fun GamepadCardText(
 fun GamepadPill(
     text: String,
     modifier: Modifier = Modifier,
+    leadingContent: (@Composable () -> Unit)? = null,
     isHighlighted: Boolean = false,
     isAccent: Boolean = false,
     isDestructive: Boolean = false,
+    isConfirming: Boolean = false,
+    enabled: Boolean = true,
 ) {
     val colors = LocalAppColors.current
     val pillBg =
         when {
+            isConfirming -> colors.error
             isDestructive -> colors.error.copy(alpha = GC_DESTRUCTIVE_BG_ALPHA)
             isAccent -> colors.accent
             isHighlighted -> colors.accent.copy(alpha = GC_ACCENT_TINT_ALPHA)
+            !enabled -> colors.surfaceVariant.copy(alpha = GC_DISABLED_CARD_ALPHA)
             else -> colors.surfaceVariant
         }
     val pillTextColor =
         when {
+            isConfirming -> colors.surface
             isDestructive -> colors.error
             isAccent -> colors.onAccent
             isHighlighted -> colors.accent
+            !enabled -> colors.onSurfaceSecondary
             else -> colors.onSurfaceSecondary
         }
     val pillBorderColor =
         when {
+            isConfirming -> colors.error
             isDestructive -> colors.error.copy(alpha = GC_DESTRUCTIVE_BORDER_ALPHA)
             isHighlighted -> colors.accent
+            !enabled -> colors.subduedBorder.copy(alpha = GC_DISABLED_CARD_ALPHA)
             else -> colors.subduedBorder
         }
     val pillBorderWidth = if (isHighlighted) 2.dp else 1.dp
 
-    Box(
+    Row(
         modifier =
             modifier
                 .background(pillBg, RoundedCornerShape(GC_STATUS_PILL_CORNER))
                 .border(pillBorderWidth, pillBorderColor, RoundedCornerShape(GC_STATUS_PILL_CORNER))
                 .padding(horizontal = GC_STATUS_PILL_H_PADDING, vertical = GC_STATUS_PILL_V_PADDING),
-        contentAlignment = Alignment.Center,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(GC_SPACING_6),
     ) {
-        Text(
-            text = text,
-            color = pillTextColor,
-            fontSize = GC_TEXT_SIZE_PILL,
-            fontWeight = FontWeight.Bold,
-        )
+        leadingContent?.invoke()
+        if (text.isNotEmpty()) {
+            Text(
+                text = text,
+                color = pillTextColor,
+                fontSize = GC_TEXT_SIZE_PILL,
+                fontWeight = FontWeight.Bold,
+            )
+        }
     }
 }
 
@@ -1268,49 +1281,21 @@ fun GamepadActionCard(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(GC_SPACING_8),
                         ) {
-                            if (actionLeadingContent != null) {
-                                actionLeadingContent()
-                            }
+                            actionLeadingContent?.invoke()
                             if (actionText != null || actionGlyph != null) {
-                                Row(
-                                    modifier =
-                                        Modifier
-                                            .background(
-                                                if (isDestructive) {
-                                                    colors.error.copy(
-                                                        alpha = GC_DESTRUCTIVE_BG_ALPHA,
-                                                    )
-                                                } else {
-                                                    colors.surfaceVariant
-                                                },
-                                                RoundedCornerShape(GC_STATUS_PILL_CORNER),
-                                            ).border(
-                                                GC_DEFAULT_BORDER_WIDTH,
-                                                if (isDestructive) {
-                                                    colors.error.copy(alpha = GC_DESTRUCTIVE_BORDER_ALPHA)
-                                                } else {
-                                                    colors.subduedBorder
-                                                },
-                                                RoundedCornerShape(GC_STATUS_PILL_CORNER),
-                                            ).padding(horizontal = GC_STATUS_PILL_H_PADDING, vertical = GC_STATUS_PILL_V_PADDING),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(GC_SPACING_6),
-                                ) {
-                                    if (actionGlyph != null) {
-                                        GamePadGlyphBadge(
-                                            glyph = actionGlyph,
-                                            tint = if (isDestructive) colors.error else colors.accent,
-                                        )
-                                    }
-                                    if (actionText != null) {
-                                        Text(
-                                            text = actionText,
-                                            color = if (isDestructive) colors.error else colors.onSurface,
-                                            fontSize = GC_TEXT_SIZE_PILL,
-                                            fontWeight = FontWeight.Bold,
-                                        )
-                                    }
-                                }
+                                GamepadPill(
+                                    text = actionText ?: "",
+                                    leadingContent =
+                                        actionGlyph?.let { glyph ->
+                                            {
+                                                GamePadGlyphBadge(
+                                                    glyph = glyph,
+                                                    tint = if (isDestructive) colors.error else colors.accent,
+                                                )
+                                            }
+                                        },
+                                    isDestructive = isDestructive,
+                                )
                             }
                         }
                     }
@@ -1684,48 +1669,13 @@ fun GamepadTwoStepConfirmCard(
             isFocused = isFocused,
             isDestructive = isDestructive,
             trailingContent = {
-                Row(
-                    modifier =
-                        Modifier
-                            .background(
-                                color =
-                                    when {
-                                        isConfirming -> colors.error
-                                        isDestructive -> colors.error.copy(alpha = GC_DESTRUCTIVE_BG_ALPHA)
-                                        !enabled -> colors.surfaceVariant.copy(alpha = GC_DISABLED_CARD_ALPHA)
-                                        isFocused -> colors.accent
-                                        else -> colors.surfaceVariant
-                                    },
-                                shape = RoundedCornerShape(GC_STATUS_PILL_CORNER),
-                            ).border(
-                                width = GC_DEFAULT_BORDER_WIDTH,
-                                color =
-                                    when {
-                                        isConfirming -> colors.error
-                                        isDestructive -> colors.error.copy(alpha = GC_DESTRUCTIVE_BORDER_ALPHA)
-                                        !enabled -> colors.subduedBorder.copy(alpha = GC_DISABLED_CARD_ALPHA)
-                                        isFocused -> colors.accent
-                                        else -> colors.subduedBorder
-                                    },
-                                shape = RoundedCornerShape(GC_STATUS_PILL_CORNER),
-                            ).padding(horizontal = GC_STATUS_PILL_H_PADDING, vertical = GC_STATUS_PILL_V_PADDING),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(GC_SPACING_6),
-                ) {
-                    Text(
-                        text = if (isConfirming) confirmActionText else (actionText ?: stringResource(R.string.gamepad_action_delete)),
-                        color =
-                            when {
-                                isConfirming -> colors.surface
-                                isDestructive -> colors.error
-                                !enabled -> colors.onSurfaceSecondary
-                                isFocused -> colors.onAccent
-                                else -> colors.onSurfaceSecondary
-                            },
-                        fontSize = GC_TEXT_SIZE_PILL,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
+                GamepadPill(
+                    text = if (isConfirming) confirmActionText else (actionText ?: stringResource(R.string.gamepad_action_delete)),
+                    isConfirming = isConfirming,
+                    isDestructive = isDestructive,
+                    isAccent = isFocused && !isConfirming && !isDestructive,
+                    enabled = enabled,
+                )
             },
         )
     }
