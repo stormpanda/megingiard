@@ -326,25 +326,18 @@ object PrimaryOverlayManager {
                                 ) {
                                     when {
                                         isViewportEditActive -> {
+                                            val closeViewportEdit = {
+                                                AppStateManager.setViewportEditActive(false)
+                                                AppStateManager.openPrimaryModal(
+                                                    PrimaryModalConfig(
+                                                        type = PrimaryModalType.MACROPAD_EDITOR,
+                                                        payload = PrimaryModalPayload.MacroPad(section = EditorSection.MIRROR),
+                                                    ),
+                                                )
+                                            }
                                             MirrorEditorTopOverlay(
-                                                onDone = {
-                                                    AppStateManager.setViewportEditActive(false)
-                                                    AppStateManager.openPrimaryModal(
-                                                        PrimaryModalConfig(
-                                                            type = PrimaryModalType.MACROPAD_EDITOR,
-                                                            payload = PrimaryModalPayload.MacroPad(section = EditorSection.MIRROR),
-                                                        ),
-                                                    )
-                                                },
-                                                onCancel = {
-                                                    AppStateManager.setViewportEditActive(false)
-                                                    AppStateManager.openPrimaryModal(
-                                                        PrimaryModalConfig(
-                                                            type = PrimaryModalType.MACROPAD_EDITOR,
-                                                            payload = PrimaryModalPayload.MacroPad(section = EditorSection.MIRROR),
-                                                        ),
-                                                    )
-                                                },
+                                                onDone = closeViewportEdit,
+                                                onCancel = closeViewportEdit,
                                             )
                                         }
 
