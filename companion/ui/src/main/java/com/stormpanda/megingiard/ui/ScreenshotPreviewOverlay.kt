@@ -44,6 +44,7 @@ private val SS_MIN_EDGE_MARGIN_V = 24.dp
 private val SS_MIN_EDGE_MARGIN_H = 32.dp
 private val SS_SHADOW_ELEVATION = 12.dp
 private val SS_CORNER_RADIUS = 4.dp
+private val SS_SHAPE = RoundedCornerShape(SS_CORNER_RADIUS)
 private val SS_BORDER_WIDTH = 1.dp
 private val SS_IMAGE_BORDER_WIDTH = 1.dp
 private val SS_FRAME_PADDING = 12.dp
@@ -118,9 +119,9 @@ fun ScreenshotPreviewOverlay(modifier: Modifier = Modifier) {
                 modifier =
                     Modifier
                         .padding(horizontal = SS_MIN_EDGE_MARGIN_H, vertical = SS_MIN_EDGE_MARGIN_V)
-                        .shadow(elevation = SS_SHADOW_ELEVATION, shape = RoundedCornerShape(SS_CORNER_RADIUS))
+                        .shadow(elevation = SS_SHADOW_ELEVATION, shape = SS_SHAPE)
                         .background(SS_BG_COLOR)
-                        .border(width = SS_BORDER_WIDTH, color = SS_BORDER_COLOR, shape = RoundedCornerShape(SS_CORNER_RADIUS))
+                        .border(width = SS_BORDER_WIDTH, color = SS_BORDER_COLOR, shape = SS_SHAPE)
                         .padding(SS_FRAME_PADDING)
                         .drawWithContent {
                             drawContent()
