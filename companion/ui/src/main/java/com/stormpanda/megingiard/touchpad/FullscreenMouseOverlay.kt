@@ -79,6 +79,7 @@ import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.settings.TouchpadSettings
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.detectHoldPointerEvents
 import com.stormpanda.megingiard.ui.rememberBezelBrush
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -589,51 +590,19 @@ private fun TouchpadMouseButton(
         modifier =
             modifier
                 .pointerInput(Unit) {
-                    awaitPointerEventScope {
-                        val activePids = mutableSetOf<PointerId>()
-                        while (true) {
-                            val event = awaitPointerEvent(PointerEventPass.Initial)
-                            for (change in event.changes) {
-                                val pid = change.id
-                                when (event.type) {
-                                    PointerEventType.Press -> {
-                                        if (!change.previousPressed) {
-                                            if (change.position.x in 0f..size.width.toFloat() &&
-                                                change.position.y in 0f..size.height.toFloat()
-                                            ) {
-                                                activePids += pid
-                                                pressed = true
-                                                if (touchpadHapticsEnabled && vibrator != null) {
-                                                    triggerHaptic(vibrator, HapticStrength.LIGHT)
-                                                }
-                                                onDown()
-                                                change.consume()
-                                            }
-                                        }
-                                    }
-
-                                    PointerEventType.Release -> {
-                                        if (!change.pressed && pid in activePids) {
-                                            activePids -= pid
-                                            if (activePids.isEmpty()) pressed = false
-                                            onUp()
-                                            change.consume()
-                                        }
-                                    }
-
-                                    PointerEventType.Move -> {
-                                        if (pid in activePids) {
-                                            change.consume()
-                                        }
-                                    }
-
-                                    else -> {
-                                        Unit
-                                    }
-                                }
+                    detectHoldPointerEvents(
+                        onPress = {
+                            pressed = true
+                            if (touchpadHapticsEnabled && vibrator != null) {
+                                triggerHaptic(vibrator, HapticStrength.LIGHT)
                             }
-                        }
-                    }
+                            onDown()
+                        },
+                        onRelease = {
+                            pressed = false
+                            onUp()
+                        },
+                    )
                 },
     ) {
         // 1. Depth shadow layer

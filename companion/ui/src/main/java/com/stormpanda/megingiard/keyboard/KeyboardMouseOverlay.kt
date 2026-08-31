@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.detectHoldPointerEvents
 
 private const val TAG = "KeyboardMouseOverlay"
 
@@ -181,51 +182,16 @@ internal fun MouseButton(
                 .background(accentColor.copy(alpha = alpha))
                 .border(1.dp, accentColor, shape)
                 .pointerInput(Unit) {
-                    awaitPointerEventScope {
-                        // Only consume events for pointers that *started* within this button.
-                        // Pointers originating outside (e.g. the trackpoint finger) are ignored
-                        // so the outer handler can still close the overlay on trackpoint release.
-                        val activePids = mutableSetOf<PointerId>()
-                        while (true) {
-                            val event = awaitPointerEvent(PointerEventPass.Initial)
-                            for (change in event.changes) {
-                                val pid = change.id
-                                when (event.type) {
-                                    PointerEventType.Press -> {
-                                        if (!change.previousPressed) {
-                                            if (change.position.x in 0f..size.width.toFloat() &&
-                                                change.position.y in 0f..size.height.toFloat()
-                                            ) {
-                                                activePids += pid
-                                                pressed = true
-                                                onDown()
-                                                change.consume()
-                                            }
-                                        }
-                                    }
-
-                                    PointerEventType.Release -> {
-                                        if (!change.pressed && pid in activePids) {
-                                            activePids -= pid
-                                            if (activePids.isEmpty()) pressed = false
-                                            onUp()
-                                            change.consume()
-                                        }
-                                    }
-
-                                    PointerEventType.Move -> {
-                                        if (pid in activePids) {
-                                            change.consume()
-                                        }
-                                    }
-
-                                    else -> {
-                                        Unit
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    detectHoldPointerEvents(
+                        onPress = {
+                            pressed = true
+                            onDown()
+                        },
+                        onRelease = {
+                            pressed = false
+                            onUp()
+                        },
+                    )
                 },
         contentAlignment = Alignment.Center,
     ) {

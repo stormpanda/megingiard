@@ -93,6 +93,10 @@ import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerId
+import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
@@ -122,6 +126,55 @@ import kotlin.math.roundToInt
 import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 
 private const val TAG = "GamepadComponents"
+
+/**
+ * Detects pointer press and release events in the [PointerEventPass.Initial] pass, ensuring
+ * pointer tracking is scoped to touches that originated inside the bounds of the component.
+ */
+suspend fun PointerInputScope.detectHoldPointerEvents(
+    onPress: () -> Unit,
+    onRelease: () -> Unit,
+) {
+    awaitPointerEventScope {
+        val activePids = mutableSetOf<PointerId>()
+        while (true) {
+            val event = awaitPointerEvent(PointerEventPass.Initial)
+            for (change in event.changes) {
+                val pid = change.id
+                when (event.type) {
+                    PointerEventType.Press -> {
+                        if (!change.previousPressed &&
+                            change.position.x in 0f..size.width.toFloat() &&
+                            change.position.y in 0f..size.height.toFloat()
+                        ) {
+                            activePids += pid
+                            onPress()
+                            change.consume()
+                        }
+                    }
+
+                    PointerEventType.Release -> {
+                        if (!change.pressed && pid in activePids) {
+                            activePids -= pid
+                            if (activePids.isEmpty()) onRelease()
+                            change.consume()
+                        }
+                    }
+
+                    PointerEventType.Move -> {
+                        if (pid in activePids) {
+                            change.consume()
+                        }
+                    }
+
+                    else -> {
+                        Unit
+                    }
+                }
+            }
+        }
+    }
+}
 
 const val GAMEPAD_REPEAT_INITIAL_DELAY_MS = 250L
 const val GAMEPAD_REPEAT_START_DELAY_MS = 100L
