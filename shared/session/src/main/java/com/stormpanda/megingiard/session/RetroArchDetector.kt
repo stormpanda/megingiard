@@ -22,19 +22,23 @@ object RetroArchDetector : EmulatorDetector {
 
     override val systemId: String = "retroarch"
 
-    private val lplPaths =
-        listOf(
-            "/storage/emulated/0/RetroArch/playlists/content_history.lpl",
-            "/storage/emulated/0/RetroArch/playlists/builtin/content_history.lpl",
-            "/sdcard/RetroArch/playlists/content_history.lpl",
-            "/storage/emulated/0/Android/data/com.retroarch.aarch64/files/playlists/content_history.lpl",
-            "/storage/emulated/0/Android/data/com.retroarch/files/playlists/content_history.lpl",
-        )
+    private fun getCandidatePaths(packageName: String): List<String> {
+        val relativeSubPaths =
+            listOf(
+                "RetroArch/playlists/content_history.lpl",
+                "RetroArch/playlists/builtin/content_history.lpl",
+                "Android/data/$packageName/files/playlists/content_history.lpl",
+            )
+        return SafPathResolver.getStorageVolumeRoots().flatMap { root ->
+            relativeSubPaths.map { subPath -> "$root/$subPath" }
+        }
+    }
 
     override suspend fun detectActiveSession(packageName: String): ActiveGameSession? {
         if (!supportedPackages.contains(packageName)) return null
 
-        for (path in lplPaths) {
+        val candidatePaths = getCandidatePaths(packageName)
+        for (path in candidatePaths) {
             val jsonContent = ProcessCmdlineProvider.readTextFile(path)
             if (!jsonContent.isNullOrBlank()) {
                 val session = RetroArchLplParser.parseMostRecentSession(packageName, jsonContent)

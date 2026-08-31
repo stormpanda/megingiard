@@ -28,18 +28,20 @@ object YuzuDetector : EmulatorDetector {
 
     override val systemId: String = "switch"
 
-    private fun getCandidateLogPaths(packageName: String): List<String> {
-        val logFileName =
-            when {
-                packageName.contains("citron") -> "citron_log.txt"
-                packageName.contains("sudachi") -> "sudachi_log.txt"
-                packageName.contains("suyu") -> "suyu_log.txt"
-                else -> "yuzu_log.txt"
-            }
-        return listOf(
-            "/storage/emulated/0/Android/data/$packageName/files/log/$logFileName",
-            "/sdcard/Android/data/$packageName/files/log/$logFileName",
+    private val logFileNames =
+        mapOf(
+            "org.citron.citron_emu" to "citron_log.txt",
+            "org.citron.citron_emu.debug" to "citron_log.txt",
+            "org.sudachi.sudachi_emu" to "sudachi_log.txt",
+            "com.suyu.suyu" to "suyu_log.txt",
+            "org.yuzu.yuzu_emu" to "yuzu_log.txt",
+            "org.yuzu.yuzu_emu.ea" to "yuzu_log.txt",
         )
+
+    private fun getCandidateLogPaths(packageName: String): List<String> {
+        val logFileName = logFileNames[packageName] ?: "yuzu_log.txt"
+        val relativeSubPath = "Android/data/$packageName/files/log/$logFileName"
+        return SafPathResolver.getStorageVolumeRoots().map { root -> "$root/$relativeSubPath" }
     }
 
     override suspend fun detectActiveSession(packageName: String): ActiveGameSession? {
