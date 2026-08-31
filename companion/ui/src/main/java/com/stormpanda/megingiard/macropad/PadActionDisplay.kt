@@ -421,148 +421,99 @@ internal fun gamepadCodeDisplayShortLabel(
  * Non-Composable variant of [gamepadCodeDisplayLabel] for use in non-Composable contexts
  * (e.g. inside `map` / `mapNotNull` lambdas). Uses [Context.getString] instead of `stringResource`.
  */
+private data class GamepadFaceButtonDescriptor(
+    val symbolResId: Int,
+    val positionResId: Int,
+)
+
+private fun getGamepadFaceDescriptor(code: Int): GamepadFaceButtonDescriptor? =
+    when (code) {
+        GamepadKeycodes.BTN_SOUTH -> {
+            GamepadFaceButtonDescriptor(
+                R.string.macropad_gamepad_symbol_cross,
+                R.string.macropad_gamepad_position_south,
+            )
+        }
+
+        GamepadKeycodes.BTN_EAST -> {
+            GamepadFaceButtonDescriptor(
+                R.string.macropad_gamepad_symbol_circle,
+                R.string.macropad_gamepad_position_east,
+            )
+        }
+
+        GamepadKeycodes.BTN_NORTH -> {
+            GamepadFaceButtonDescriptor(
+                R.string.macropad_gamepad_symbol_triangle,
+                R.string.macropad_gamepad_position_north,
+            )
+        }
+
+        GamepadKeycodes.BTN_WEST -> {
+            GamepadFaceButtonDescriptor(
+                R.string.macropad_gamepad_symbol_square,
+                R.string.macropad_gamepad_position_west,
+            )
+        }
+
+        else -> {
+            null
+        }
+    }
+
+internal fun gamepadCodeLabelResId(code: Int): Int? =
+    when (code) {
+        GamepadKeycodes.BTN_DPAD_UP -> R.string.macropad_gamepad_btn_dpad_up
+        GamepadKeycodes.BTN_DPAD_DOWN -> R.string.macropad_gamepad_btn_dpad_down
+        GamepadKeycodes.BTN_DPAD_LEFT -> R.string.macropad_gamepad_btn_dpad_left
+        GamepadKeycodes.BTN_DPAD_RIGHT -> R.string.macropad_gamepad_btn_dpad_right
+        GamepadKeycodes.CODE_DPAD_UP_LEFT -> R.string.macropad_gamepad_btn_dpad_up_left
+        GamepadKeycodes.CODE_DPAD_UP_RIGHT -> R.string.macropad_gamepad_btn_dpad_up_right
+        GamepadKeycodes.CODE_DPAD_DOWN_LEFT -> R.string.macropad_gamepad_btn_dpad_down_left
+        GamepadKeycodes.CODE_DPAD_DOWN_RIGHT -> R.string.macropad_gamepad_btn_dpad_down_right
+        GamepadKeycodes.CODE_LS_UP -> R.string.macropad_gamepad_btn_ls_up
+        GamepadKeycodes.CODE_LS_DOWN -> R.string.macropad_gamepad_btn_ls_down
+        GamepadKeycodes.CODE_LS_LEFT -> R.string.macropad_gamepad_btn_ls_left
+        GamepadKeycodes.CODE_LS_RIGHT -> R.string.macropad_gamepad_btn_ls_right
+        GamepadKeycodes.CODE_LS_UP_LEFT -> R.string.macropad_gamepad_btn_ls_up_left
+        GamepadKeycodes.CODE_LS_UP_RIGHT -> R.string.macropad_gamepad_btn_ls_up_right
+        GamepadKeycodes.CODE_LS_DOWN_LEFT -> R.string.macropad_gamepad_btn_ls_down_left
+        GamepadKeycodes.CODE_LS_DOWN_RIGHT -> R.string.macropad_gamepad_btn_ls_down_right
+        GamepadKeycodes.CODE_RS_UP -> R.string.macropad_gamepad_btn_rs_up
+        GamepadKeycodes.CODE_RS_DOWN -> R.string.macropad_gamepad_btn_rs_down
+        GamepadKeycodes.CODE_RS_LEFT -> R.string.macropad_gamepad_btn_rs_left
+        GamepadKeycodes.CODE_RS_RIGHT -> R.string.macropad_gamepad_btn_rs_right
+        GamepadKeycodes.CODE_RS_UP_LEFT -> R.string.macropad_gamepad_btn_rs_up_left
+        GamepadKeycodes.CODE_RS_UP_RIGHT -> R.string.macropad_gamepad_btn_rs_up_right
+        GamepadKeycodes.CODE_RS_DOWN_LEFT -> R.string.macropad_gamepad_btn_rs_down_left
+        GamepadKeycodes.CODE_RS_DOWN_RIGHT -> R.string.macropad_gamepad_btn_rs_down_right
+        else -> null
+    }
+
+/**
+ * Non-Composable variant of [gamepadCodeDisplayLabel] for use in non-Composable contexts
+ * (e.g. inside `map` / `mapNotNull` lambdas). Uses [Context.getString] instead of `stringResource`.
+ */
 internal fun gamepadCodeDisplayLabel(
     code: Int,
     swapFaceButtons: Boolean,
     context: Context,
 ): String {
     val primary = gamepadCodeDisplayShortLabel(code, swapFaceButtons)
-    return when (code) {
-        GamepadKeycodes.BTN_SOUTH -> {
-            context.getString(
-                R.string.macropad_gamepad_face_label_template,
-                primary,
-                context.getString(R.string.macropad_gamepad_symbol_cross),
-                context.getString(R.string.macropad_gamepad_position_south),
-            )
-        }
-
-        GamepadKeycodes.BTN_EAST -> {
-            context.getString(
-                R.string.macropad_gamepad_face_label_template,
-                primary,
-                context.getString(R.string.macropad_gamepad_symbol_circle),
-                context.getString(R.string.macropad_gamepad_position_east),
-            )
-        }
-
-        GamepadKeycodes.BTN_NORTH -> {
-            context.getString(
-                R.string.macropad_gamepad_face_label_template,
-                primary,
-                context.getString(R.string.macropad_gamepad_symbol_triangle),
-                context.getString(R.string.macropad_gamepad_position_north),
-            )
-        }
-
-        GamepadKeycodes.BTN_WEST -> {
-            context.getString(
-                R.string.macropad_gamepad_face_label_template,
-                primary,
-                context.getString(R.string.macropad_gamepad_symbol_square),
-                context.getString(R.string.macropad_gamepad_position_west),
-            )
-        }
-
-        GamepadKeycodes.BTN_DPAD_UP -> {
-            context.getString(R.string.macropad_gamepad_btn_dpad_up)
-        }
-
-        GamepadKeycodes.BTN_DPAD_DOWN -> {
-            context.getString(R.string.macropad_gamepad_btn_dpad_down)
-        }
-
-        GamepadKeycodes.BTN_DPAD_LEFT -> {
-            context.getString(R.string.macropad_gamepad_btn_dpad_left)
-        }
-
-        GamepadKeycodes.BTN_DPAD_RIGHT -> {
-            context.getString(R.string.macropad_gamepad_btn_dpad_right)
-        }
-
-        GamepadKeycodes.CODE_DPAD_UP_LEFT -> {
-            context.getString(R.string.macropad_gamepad_btn_dpad_up_left)
-        }
-
-        GamepadKeycodes.CODE_DPAD_UP_RIGHT -> {
-            context.getString(R.string.macropad_gamepad_btn_dpad_up_right)
-        }
-
-        GamepadKeycodes.CODE_DPAD_DOWN_LEFT -> {
-            context.getString(R.string.macropad_gamepad_btn_dpad_down_left)
-        }
-
-        GamepadKeycodes.CODE_DPAD_DOWN_RIGHT -> {
-            context.getString(R.string.macropad_gamepad_btn_dpad_down_right)
-        }
-
-        GamepadKeycodes.CODE_LS_UP -> {
-            context.getString(R.string.macropad_gamepad_btn_ls_up)
-        }
-
-        GamepadKeycodes.CODE_LS_DOWN -> {
-            context.getString(R.string.macropad_gamepad_btn_ls_down)
-        }
-
-        GamepadKeycodes.CODE_LS_LEFT -> {
-            context.getString(R.string.macropad_gamepad_btn_ls_left)
-        }
-
-        GamepadKeycodes.CODE_LS_RIGHT -> {
-            context.getString(R.string.macropad_gamepad_btn_ls_right)
-        }
-
-        GamepadKeycodes.CODE_LS_UP_LEFT -> {
-            context.getString(R.string.macropad_gamepad_btn_ls_up_left)
-        }
-
-        GamepadKeycodes.CODE_LS_UP_RIGHT -> {
-            context.getString(R.string.macropad_gamepad_btn_ls_up_right)
-        }
-
-        GamepadKeycodes.CODE_LS_DOWN_LEFT -> {
-            context.getString(R.string.macropad_gamepad_btn_ls_down_left)
-        }
-
-        GamepadKeycodes.CODE_LS_DOWN_RIGHT -> {
-            context.getString(R.string.macropad_gamepad_btn_ls_down_right)
-        }
-
-        GamepadKeycodes.CODE_RS_UP -> {
-            context.getString(R.string.macropad_gamepad_btn_rs_up)
-        }
-
-        GamepadKeycodes.CODE_RS_DOWN -> {
-            context.getString(R.string.macropad_gamepad_btn_rs_down)
-        }
-
-        GamepadKeycodes.CODE_RS_LEFT -> {
-            context.getString(R.string.macropad_gamepad_btn_rs_left)
-        }
-
-        GamepadKeycodes.CODE_RS_RIGHT -> {
-            context.getString(R.string.macropad_gamepad_btn_rs_right)
-        }
-
-        GamepadKeycodes.CODE_RS_UP_LEFT -> {
-            context.getString(R.string.macropad_gamepad_btn_rs_up_left)
-        }
-
-        GamepadKeycodes.CODE_RS_UP_RIGHT -> {
-            context.getString(R.string.macropad_gamepad_btn_rs_up_right)
-        }
-
-        GamepadKeycodes.CODE_RS_DOWN_LEFT -> {
-            context.getString(R.string.macropad_gamepad_btn_rs_down_left)
-        }
-
-        GamepadKeycodes.CODE_RS_DOWN_RIGHT -> {
-            context.getString(R.string.macropad_gamepad_btn_rs_down_right)
-        }
-
-        else -> {
-            GamepadKeycodes.PRESETS.firstOrNull { it.code == code }?.label ?: code.toString()
-        }
+    val face = getGamepadFaceDescriptor(code)
+    if (face != null) {
+        return context.getString(
+            R.string.macropad_gamepad_face_label_template,
+            primary,
+            context.getString(face.symbolResId),
+            context.getString(face.positionResId),
+        )
+    }
+    val resId = gamepadCodeLabelResId(code)
+    return if (resId != null) {
+        context.getString(resId)
+    } else {
+        GamepadKeycodes.PRESETS.firstOrNull { it.code == code }?.label ?: code.toString()
     }
 }
 
@@ -570,146 +521,7 @@ internal fun gamepadCodeDisplayLabel(
 internal fun gamepadCodeDisplayLabel(
     code: Int,
     swapFaceButtons: Boolean,
-): String {
-    val primary = gamepadCodeDisplayShortLabel(code, swapFaceButtons)
-    return when (code) {
-        GamepadKeycodes.BTN_SOUTH -> {
-            stringResource(
-                R.string.macropad_gamepad_face_label_template,
-                primary,
-                stringResource(R.string.macropad_gamepad_symbol_cross),
-                stringResource(R.string.macropad_gamepad_position_south),
-            )
-        }
-
-        GamepadKeycodes.BTN_EAST -> {
-            stringResource(
-                R.string.macropad_gamepad_face_label_template,
-                primary,
-                stringResource(R.string.macropad_gamepad_symbol_circle),
-                stringResource(R.string.macropad_gamepad_position_east),
-            )
-        }
-
-        GamepadKeycodes.BTN_NORTH -> {
-            stringResource(
-                R.string.macropad_gamepad_face_label_template,
-                primary,
-                stringResource(R.string.macropad_gamepad_symbol_triangle),
-                stringResource(R.string.macropad_gamepad_position_north),
-            )
-        }
-
-        GamepadKeycodes.BTN_WEST -> {
-            stringResource(
-                R.string.macropad_gamepad_face_label_template,
-                primary,
-                stringResource(R.string.macropad_gamepad_symbol_square),
-                stringResource(R.string.macropad_gamepad_position_west),
-            )
-        }
-
-        GamepadKeycodes.BTN_DPAD_UP -> {
-            stringResource(R.string.macropad_gamepad_btn_dpad_up)
-        }
-
-        GamepadKeycodes.BTN_DPAD_DOWN -> {
-            stringResource(R.string.macropad_gamepad_btn_dpad_down)
-        }
-
-        GamepadKeycodes.BTN_DPAD_LEFT -> {
-            stringResource(R.string.macropad_gamepad_btn_dpad_left)
-        }
-
-        GamepadKeycodes.BTN_DPAD_RIGHT -> {
-            stringResource(R.string.macropad_gamepad_btn_dpad_right)
-        }
-
-        GamepadKeycodes.CODE_DPAD_UP_LEFT -> {
-            stringResource(R.string.macropad_gamepad_btn_dpad_up_left)
-        }
-
-        GamepadKeycodes.CODE_DPAD_UP_RIGHT -> {
-            stringResource(R.string.macropad_gamepad_btn_dpad_up_right)
-        }
-
-        GamepadKeycodes.CODE_DPAD_DOWN_LEFT -> {
-            stringResource(R.string.macropad_gamepad_btn_dpad_down_left)
-        }
-
-        GamepadKeycodes.CODE_DPAD_DOWN_RIGHT -> {
-            stringResource(R.string.macropad_gamepad_btn_dpad_down_right)
-        }
-
-        GamepadKeycodes.CODE_LS_UP -> {
-            stringResource(R.string.macropad_gamepad_btn_ls_up)
-        }
-
-        GamepadKeycodes.CODE_LS_DOWN -> {
-            stringResource(R.string.macropad_gamepad_btn_ls_down)
-        }
-
-        GamepadKeycodes.CODE_LS_LEFT -> {
-            stringResource(R.string.macropad_gamepad_btn_ls_left)
-        }
-
-        GamepadKeycodes.CODE_LS_RIGHT -> {
-            stringResource(R.string.macropad_gamepad_btn_ls_right)
-        }
-
-        GamepadKeycodes.CODE_LS_UP_LEFT -> {
-            stringResource(R.string.macropad_gamepad_btn_ls_up_left)
-        }
-
-        GamepadKeycodes.CODE_LS_UP_RIGHT -> {
-            stringResource(R.string.macropad_gamepad_btn_ls_up_right)
-        }
-
-        GamepadKeycodes.CODE_LS_DOWN_LEFT -> {
-            stringResource(R.string.macropad_gamepad_btn_ls_down_left)
-        }
-
-        GamepadKeycodes.CODE_LS_DOWN_RIGHT -> {
-            stringResource(R.string.macropad_gamepad_btn_ls_down_right)
-        }
-
-        GamepadKeycodes.CODE_RS_UP -> {
-            stringResource(R.string.macropad_gamepad_btn_rs_up)
-        }
-
-        GamepadKeycodes.CODE_RS_DOWN -> {
-            stringResource(R.string.macropad_gamepad_btn_rs_down)
-        }
-
-        GamepadKeycodes.CODE_RS_LEFT -> {
-            stringResource(R.string.macropad_gamepad_btn_rs_left)
-        }
-
-        GamepadKeycodes.CODE_RS_RIGHT -> {
-            stringResource(R.string.macropad_gamepad_btn_rs_right)
-        }
-
-        GamepadKeycodes.CODE_RS_UP_LEFT -> {
-            stringResource(R.string.macropad_gamepad_btn_rs_up_left)
-        }
-
-        GamepadKeycodes.CODE_RS_UP_RIGHT -> {
-            stringResource(R.string.macropad_gamepad_btn_rs_up_right)
-        }
-
-        GamepadKeycodes.CODE_RS_DOWN_LEFT -> {
-            stringResource(R.string.macropad_gamepad_btn_rs_down_left)
-        }
-
-        GamepadKeycodes.CODE_RS_DOWN_RIGHT -> {
-            stringResource(R.string.macropad_gamepad_btn_rs_down_right)
-        }
-
-        else -> {
-            GamepadKeycodes.PRESETS.firstOrNull { it.code == code }?.label ?: code.toString()
-        }
-    }
-}
+): String = gamepadCodeDisplayLabel(code, swapFaceButtons, LocalContext.current)
 
 @Composable
 internal fun GamepadKeycodes.GamepadButtonPreset.localizedDisplayLabel(swapFaceButtons: Boolean): String =

@@ -758,11 +758,11 @@ object AppStateManager {
                 }
                 if (!accessibilityActive) {
                     MacroPadSettings.setPrivdPromptDismissed(false)
-                    _isPrivdPromptShowing.value = true
+                    _isPrivdPromptActive.value = true
                 } else if (dismissed || bgSettingsActive) {
-                    _isPrivdPromptShowing.value = false
+                    _isPrivdPromptActive.value = false
                 } else if (state == PrivdState.FAILED && hasCreds) {
-                    _isPrivdPromptShowing.value = true
+                    _isPrivdPromptActive.value = true
                 }
             }.collect {}
         }
