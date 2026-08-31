@@ -95,6 +95,7 @@ private const val TAG = "GameFocusArtworkDialog"
 
 private val GAD_CHIP_SHAPE = RoundedCornerShape(20.dp)
 private val GAD_BADGE_SHAPE = RoundedCornerShape(6.dp)
+private val GAD_BUTTON_SHAPE = RoundedCornerShape(8.dp)
 
 @Composable
 fun GameFocusArtworkDialog(
@@ -358,7 +359,7 @@ fun GameFocusArtworkDialog(
                         modifier =
                             Modifier
                                 .size(40.dp)
-                                .clip(RoundedCornerShape(8.dp))
+                                .clip(GAD_BUTTON_SHAPE)
                                 .background(appColors.accent),
                     ) {
                         Icon(

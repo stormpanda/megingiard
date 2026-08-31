@@ -434,7 +434,7 @@ fun FocusLibraryScreen(
                                     }.border(
                                         width = FLS_FOCUS_BORDER_WIDTH,
                                         color = appColors.accent,
-                                        shape = RoundedCornerShape(FLS_CORNER_RADIUS),
+                                        shape = FLS_CARD_SHAPE,
                                     ),
                         )
                     }
