@@ -114,14 +114,8 @@ object InstalledAppsManager {
         label: String,
     ) {
         val current = stateFlow.value.toMutableSet()
-        val added =
-            if (current.contains(item)) {
-                current.remove(item)
-                false
-            } else {
-                current.add(item)
-                true
-            }
+        val added = !current.remove(item)
+        if (added) current.add(item)
         AppLog.i(TAG, "${if (added) "Added" else "Removed"} $item ${if (added) "to" else "from"} $label")
         stateFlow.value = current
         persistLines(context, filename, current)
