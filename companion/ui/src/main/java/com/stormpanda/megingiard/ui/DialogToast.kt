@@ -43,6 +43,7 @@ private const val DTM_ANIM_DURATION_MS = 250
 private const val DTM_BG_ALPHA = 0.16f
 private const val DTM_BORDER_ALPHA = 0.45f
 private const val DTM_CORNER_DP = 16
+private val DTM_TOAST_SHAPE = RoundedCornerShape(DTM_CORNER_DP.dp)
 private const val DTM_BORDER_WIDTH_DP = 1
 private const val DTM_PADDING_H_DP = 12
 private const val DTM_PADDING_V_DP = 5
@@ -131,11 +132,11 @@ fun DialogToastPill(
                     Modifier
                         .background(
                             color = pillColor.copy(alpha = DTM_BG_ALPHA),
-                            shape = RoundedCornerShape(DTM_CORNER_DP.dp),
+                            shape = DTM_TOAST_SHAPE,
                         ).border(
                             width = DTM_BORDER_WIDTH_DP.dp,
                             color = pillColor.copy(alpha = DTM_BORDER_ALPHA),
-                            shape = RoundedCornerShape(DTM_CORNER_DP.dp),
+                            shape = DTM_TOAST_SHAPE,
                         ).padding(
                             horizontal = DTM_PADDING_H_DP.dp,
                             vertical = DTM_PADDING_V_DP.dp,
