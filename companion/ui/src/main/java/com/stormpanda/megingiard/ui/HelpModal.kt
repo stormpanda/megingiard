@@ -84,6 +84,9 @@ private val HM_ENTRY_ICON_TOP_PADDING = 2.dp
 private val HM_ENTRY_TEXT_SPACER = 2.dp
 private val HM_INTRO_TOP_SPACER = 12.dp
 
+private val HM_SHEET_SHAPE = RoundedCornerShape(topStart = HM_SHEET_CORNER, topEnd = HM_SHEET_CORNER)
+private val HM_DRAG_HANDLE_SHAPE = RoundedCornerShape(50)
+
 /**
  * Icon button used in every screen top bar to open its help modal.
  *
@@ -188,7 +191,6 @@ internal fun HelpModal(
                     ),
         ) {
             val menuBezelBrush = rememberBezelBrush()
-            val sheetShape = RoundedCornerShape(topStart = HM_SHEET_CORNER, topEnd = HM_SHEET_CORNER)
 
             // Sheet — slides in from the bottom, absorbs clicks so scrim isn't fired
             Column(
@@ -202,7 +204,7 @@ internal fun HelpModal(
                             exit = modalOverlaySheetExit(),
                         ).offset { IntOffset(0, offsetY.value.roundToInt()) }
                         .padding(horizontal = PM_PANEL_H_PADDING)
-                        .clip(sheetShape)
+                        .clip(HM_SHEET_SHAPE)
                         .background(colors.surface)
                         .topAndSideBezelBorder(
                             strokeWidth = PM_BORDER_WIDTH,
@@ -229,7 +231,7 @@ internal fun HelpModal(
                                 Modifier
                                     .width(HM_HANDLE_WIDTH)
                                     .height(HM_HANDLE_HEIGHT)
-                                    .clip(RoundedCornerShape(50))
+                                    .clip(HM_DRAG_HANDLE_SHAPE)
                                     .background(colors.onSurfaceSecondary.copy(alpha = 0.4f)),
                         )
                     }

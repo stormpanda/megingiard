@@ -149,18 +149,9 @@ class KeyboardLayoutTest {
     fun `numeric layout contains expected keys and row count`() {
         val numLayout = qwertzLayout(KeyboardMode.NUMERIC)
         assertEquals("Numeric layout has 4 rows", 4, numLayout.size)
-
-        // Verify key existences
-        assertNotNull("Numeric has ABC switcher", findKeyInLayout(numLayout, "mode_switch_abc"))
-        assertNotNull("Numeric has !?# switcher", findKeyInLayout(numLayout, "mode_switch"))
-        assertNotNull("Numeric has plus key", findKeyInLayout(numLayout, "plus"))
-        assertNotNull("Numeric has minus key", findKeyInLayout(numLayout, "minus"))
-        assertNotNull("Numeric has asterisk key", findKeyInLayout(numLayout, "asterisk"))
-        assertNotNull("Numeric has slash key", findKeyInLayout(numLayout, "slash"))
-
-        // Verify digits 0-9 exist
-        for (i in 0..9) {
-            assertNotNull("Numeric has digit $i", findKeyInLayout(numLayout, "num_$i"))
+        val expectedKeys = listOf("mode_switch_abc", "mode_switch", "plus", "minus", "asterisk", "slash") + (0..9).map { "num_$it" }
+        for (id in expectedKeys) {
+            assertNotNull("Numeric has $id", findKeyInLayout(numLayout, id))
         }
     }
 
@@ -175,42 +166,27 @@ class KeyboardLayoutTest {
     @Test
     fun `getPopupOptions generates expected options list`() {
         val eKey = KeyDef("e", "e", 18, superscript = "3")
-        val optionsLower = getPopupOptions(eKey, isUpper = false)
-        assertEquals(1, optionsLower.size)
-        assertTrue(optionsLower.contains("3"))
-
-        val optionsUpper = getPopupOptions(eKey, isUpper = true)
-        assertEquals(1, optionsUpper.size)
-        assertTrue(optionsUpper.contains("3"))
-
-        // Keys without superscript return empty list
-        val fKey = KeyDef("f", "f", 33)
-        assertTrue(getPopupOptions(fKey, isUpper = false).isEmpty())
-
-        // Keys with shiftLabel (like 1 with shiftLabel !) return the shiftLabel in options
-        val oneKey = KeyDef("1", "1", 2, shiftLabel = "!")
-        val oneOptions = getPopupOptions(oneKey, isUpper = false)
-        assertEquals(listOf("!"), oneOptions)
-
-        // Multi-option keys popup lists
-        val jKey = KeyDef("j", "j", 36, superscript = "(", popupOptions = listOf("(", "[", "{", "<"))
-        val jOptions = getPopupOptions(jKey, isUpper = false)
-        assertEquals(listOf("(", "[", "{", "<"), jOptions)
-
-        val lparenKey = KeyDef("lparen", "(", 10, popupOptions = listOf("[", "{", "<"))
-        val lparenOptions = getPopupOptions(lparenKey, isUpper = false)
-        assertEquals(listOf("[", "{", "<"), lparenOptions)
+        assertEquals(listOf("3"), getPopupOptions(eKey, isUpper = false))
+        assertEquals(listOf("3"), getPopupOptions(eKey, isUpper = true))
+        assertTrue(getPopupOptions(KeyDef("f", "f", 33), isUpper = false).isEmpty())
+        assertEquals(listOf("!"), getPopupOptions(KeyDef("1", "1", 2, shiftLabel = "!"), isUpper = false))
+        assertEquals(
+            listOf("(", "[", "{", "<"),
+            getPopupOptions(KeyDef("j", "j", 36, superscript = "(", popupOptions = listOf("(", "[", "{", "<")), isUpper = false),
+        )
+        assertEquals(
+            listOf("[", "{", "<"),
+            getPopupOptions(KeyDef("lparen", "(", 10, popupOptions = listOf("[", "{", "<")), isUpper = false),
+        )
     }
 
     @Test
     fun `getSuperscriptDisplayLabel returns correct combined superscript strings`() {
-        val jKey = KeyDef("j", "j", 36, superscript = "(", popupOptions = listOf("(", "[", "{", "<"))
-        assertEquals("( [ { <", getSuperscriptDisplayLabel(jKey))
-
-        val lparenKey = KeyDef("lparen", "(", 10, popupOptions = listOf("[", "{", "<"))
-        assertEquals("[ { <", getSuperscriptDisplayLabel(lparenKey))
-
-        val eKey = KeyDef("e", "e", 18, superscript = "3")
-        assertEquals("3", getSuperscriptDisplayLabel(eKey))
+        assertEquals(
+            "( [ { <",
+            getSuperscriptDisplayLabel(KeyDef("j", "j", 36, superscript = "(", popupOptions = listOf("(", "[", "{", "<"))),
+        )
+        assertEquals("[ { <", getSuperscriptDisplayLabel(KeyDef("lparen", "(", 10, popupOptions = listOf("[", "{", "<"))))
+        assertEquals("3", getSuperscriptDisplayLabel(KeyDef("e", "e", 18, superscript = "3")))
     }
 }

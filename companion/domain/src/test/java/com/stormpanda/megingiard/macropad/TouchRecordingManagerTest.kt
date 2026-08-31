@@ -8,6 +8,23 @@ import org.junit.Before
 import org.junit.Test
 
 class TouchRecordingManagerTest {
+    private fun sample(
+        offsetMs: Long = 0L,
+        pointerId: Int = 0,
+        action: TouchAction = TouchAction.DOWN,
+        normX: Float = 0.1f,
+        normY: Float = 0.2f,
+    ) = TouchSample(offsetMs, pointerId, action, normX, normY)
+
+    private fun sendTouch(
+        slot: Int = 0,
+        action: TouchAction,
+        normX: Float,
+        normY: Float,
+    ) {
+        TouchScreenObserver.onTouchEvent?.invoke(slot, action, normX, normY)
+    }
+
     @Before
     fun resetManager() {
         TouchRecordingManager.cancelRecording()
@@ -20,9 +37,8 @@ class TouchRecordingManagerTest {
     fun `request recording enters recording state and clears stale result`() {
         TouchRecordingManager.requestRecording(TouchRecordingMode.GESTURE)
 
-        val state = TouchRecordingManager.state.value
-        assertTrue(state is TouchRecordingState.Recording)
-        assertEquals(TouchRecordingMode.GESTURE, (state as TouchRecordingState.Recording).mode)
+        val state = TouchRecordingManager.state.value as TouchRecordingState.Recording
+        assertEquals(TouchRecordingMode.GESTURE, state.mode)
         assertEquals(0, state.recordedGestureCount)
         assertEquals(true, TouchRecordingManager.recordingRequested.value)
     }
@@ -32,18 +48,14 @@ class TouchRecordingManagerTest {
         TouchRecordingManager.requestRecording(TouchRecordingMode.GESTURE)
 
         TouchRecordingManager.recordGestureCompleted(
-            samples =
-                listOf(
-                    TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.1f, normY = 0.2f),
-                    TouchSample(offsetMs = 10L, pointerId = 0, action = TouchAction.UP, normX = 0.1f, normY = 0.2f),
-                ),
+            samples = listOf(sample(0L, action = TouchAction.DOWN), sample(10L, action = TouchAction.UP)),
             startOffsetMs = 0L,
         )
         TouchRecordingManager.recordGestureCompleted(
             samples =
                 listOf(
-                    TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.5f, normY = 0.6f),
-                    TouchSample(offsetMs = 20L, pointerId = 0, action = TouchAction.MOVE, normX = 0.7f, normY = 0.8f),
+                    sample(0L, action = TouchAction.DOWN, normX = 0.5f, normY = 0.6f),
+                    sample(20L, action = TouchAction.MOVE, normX = 0.7f, normY = 0.8f),
                 ),
             startOffsetMs = 100L,
         )
@@ -66,13 +78,7 @@ class TouchRecordingManagerTest {
     @Test
     fun `cancel recording discards accumulated gestures`() {
         TouchRecordingManager.requestRecording(TouchRecordingMode.GESTURE)
-        TouchRecordingManager.recordGestureCompleted(
-            samples =
-                listOf(
-                    TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.1f, normY = 0.2f),
-                ),
-            startOffsetMs = 0L,
-        )
+        TouchRecordingManager.recordGestureCompleted(samples = listOf(sample()), startOffsetMs = 0L)
 
         TouchRecordingManager.cancelRecording()
 
@@ -84,20 +90,15 @@ class TouchRecordingManagerTest {
     fun `leading idle time is trimmed on finish`() {
         TouchRecordingManager.requestRecording(TouchRecordingMode.GESTURE)
 
-        // First gesture starts 500 ms into the session (user waited before touching)
         TouchRecordingManager.recordGestureCompleted(
-            samples =
-                listOf(
-                    TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.1f, normY = 0.2f),
-                    TouchSample(offsetMs = 10L, pointerId = 0, action = TouchAction.UP, normX = 0.1f, normY = 0.2f),
-                ),
+            samples = listOf(sample(0L, action = TouchAction.DOWN), sample(10L, action = TouchAction.UP)),
             startOffsetMs = 500L,
         )
         TouchRecordingManager.recordGestureCompleted(
             samples =
                 listOf(
-                    TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.5f, normY = 0.6f),
-                    TouchSample(offsetMs = 20L, pointerId = 0, action = TouchAction.UP, normX = 0.5f, normY = 0.6f),
+                    sample(0L, action = TouchAction.DOWN, normX = 0.5f, normY = 0.6f),
+                    sample(20L, action = TouchAction.UP, normX = 0.5f, normY = 0.6f),
                 ),
             startOffsetMs = 800L,
         )
@@ -107,7 +108,6 @@ class TouchRecordingManagerTest {
         val done = TouchRecordingManager.state.value as TouchRecordingState.Done
         val first = done.steps[0] as MacroStep.TouchPath
         val second = done.steps[1] as MacroStep.TouchPath
-        // 500 ms leading idle should be trimmed: first step at 0, second step at 300
         assertEquals(0L, first.startTimeMs)
         assertEquals(300L, second.startTimeMs)
     }
@@ -128,18 +128,12 @@ class TouchRecordingManagerTest {
         TouchRecordingManager.requestRecording(TouchRecordingMode.TAP)
 
         TouchRecordingManager.recordGestureCompleted(
-            samples =
-                listOf(
-                    TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.1f, normY = 0.2f),
-                    TouchSample(offsetMs = 10L, pointerId = 0, action = TouchAction.UP, normX = 0.1f, normY = 0.2f),
-                ),
+            samples = listOf(sample(0L, action = TouchAction.DOWN), sample(10L, action = TouchAction.UP)),
             startOffsetMs = 0L,
         )
 
-        // State must still be Recording in TAP mode with zero accumulated gestures
-        val state = TouchRecordingManager.state.value
-        assertTrue(state is TouchRecordingState.Recording)
-        assertEquals(TouchRecordingMode.TAP, (state as TouchRecordingState.Recording).mode)
+        val state = TouchRecordingManager.state.value as TouchRecordingState.Recording
+        assertEquals(TouchRecordingMode.TAP, state.mode)
         assertEquals(0, state.recordedGestureCount)
     }
 
@@ -208,7 +202,7 @@ class TouchRecordingManagerTest {
         TouchRecordingManager.requestRecording(TouchRecordingMode.TAP)
         assertEquals(true, TouchRecordingManager.recordingRequested.value)
 
-        TouchScreenObserver.onTouchEvent?.invoke(0, TouchAction.DOWN, 0.42f, 0.88f)
+        sendTouch(0, TouchAction.DOWN, 0.42f, 0.88f)
 
         assertEquals(Pair(0.42f, 0.88f), TouchRecordingManager.recordedTap.value)
         assertEquals(false, TouchRecordingManager.recordingRequested.value)
@@ -223,9 +217,9 @@ class TouchRecordingManagerTest {
     fun `onTouchEvent in GESTURE mode records gesture segment on pointer release`() {
         TouchRecordingManager.requestRecording(TouchRecordingMode.GESTURE)
 
-        TouchScreenObserver.onTouchEvent?.invoke(0, TouchAction.DOWN, 0.1f, 0.2f)
-        TouchScreenObserver.onTouchEvent?.invoke(0, TouchAction.MOVE, 0.3f, 0.4f)
-        TouchScreenObserver.onTouchEvent?.invoke(0, TouchAction.UP, 0.5f, 0.6f)
+        sendTouch(0, TouchAction.DOWN, 0.1f, 0.2f)
+        sendTouch(0, TouchAction.MOVE, 0.3f, 0.4f)
+        sendTouch(0, TouchAction.UP, 0.5f, 0.6f)
 
         val state = TouchRecordingManager.state.value as TouchRecordingState.Recording
         assertEquals(1, state.recordedGestureCount)
@@ -245,13 +239,10 @@ class TouchRecordingManagerTest {
     fun `onTouchEvent in GESTURE mode tracks simultaneous multi-touch pointers and maintains separate trails`() {
         TouchRecordingManager.requestRecording(TouchRecordingMode.GESTURE)
 
-        // Pointer 0 down and move
-        TouchScreenObserver.onTouchEvent?.invoke(0, TouchAction.DOWN, 0.1f, 0.2f)
-        TouchScreenObserver.onTouchEvent?.invoke(0, TouchAction.MOVE, 0.15f, 0.25f)
-
-        // Pointer 1 down and move
-        TouchScreenObserver.onTouchEvent?.invoke(1, TouchAction.DOWN, 0.8f, 0.9f)
-        TouchScreenObserver.onTouchEvent?.invoke(1, TouchAction.MOVE, 0.85f, 0.95f)
+        sendTouch(0, TouchAction.DOWN, 0.1f, 0.2f)
+        sendTouch(0, TouchAction.MOVE, 0.15f, 0.25f)
+        sendTouch(1, TouchAction.DOWN, 0.8f, 0.9f)
+        sendTouch(1, TouchAction.MOVE, 0.85f, 0.95f)
 
         val recordingState = TouchRecordingManager.state.value as TouchRecordingState.Recording
         assertEquals(2, recordingState.activePointersCount)
@@ -267,15 +258,13 @@ class TouchRecordingManagerTest {
         assertEquals(0.95f, p1.normY)
         assertEquals(2, p1.trail.size)
 
-        // Release pointer 0 first; pointer 1 is still down, so segment is not finished yet
-        TouchScreenObserver.onTouchEvent?.invoke(0, TouchAction.UP, 0.15f, 0.25f)
+        sendTouch(0, TouchAction.UP, 0.15f, 0.25f)
         val midState = TouchRecordingManager.state.value as TouchRecordingState.Recording
         assertEquals(1, midState.activePointersCount)
         assertEquals(1, midState.activePointers.size)
         assertEquals(0, midState.recordedGestureCount)
 
-        // Release pointer 1; all pointers lifted, gesture segment completes
-        TouchScreenObserver.onTouchEvent?.invoke(1, TouchAction.UP, 0.85f, 0.95f)
+        sendTouch(1, TouchAction.UP, 0.85f, 0.95f)
         val finalState = TouchRecordingManager.state.value as TouchRecordingState.Recording
         assertEquals(0, finalState.activePointersCount)
         assertEquals(1, finalState.recordedGestureCount)

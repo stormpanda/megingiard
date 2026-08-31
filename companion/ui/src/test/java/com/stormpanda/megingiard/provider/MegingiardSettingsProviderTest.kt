@@ -43,19 +43,22 @@ class MegingiardSettingsProviderTest {
         contentResolver = RuntimeEnvironment.getApplication().contentResolver
     }
 
+    private fun testIntegrationProfile(
+        profileId: String = UUID.randomUUID().toString(),
+        layoutId: String = UUID.randomUUID().toString(),
+        packageName: String = "com.test.targetapp",
+    ) = PadProfile(
+        id = profileId,
+        name = "Test Integration Profile",
+        layouts = listOf(PadLayout(id = layoutId, name = "Layout 1")),
+        activeLayoutId = layoutId,
+        association = ProfileAssociation(packageName = packageName),
+    )
+
     @Test
     fun `query profiles returns configured profiles cursor`() {
-        val profileId = UUID.randomUUID().toString()
-        val layoutId = UUID.randomUUID().toString()
-        val testProfile =
-            PadProfile(
-                id = profileId,
-                name = "Test Integration Profile",
-                layouts = listOf(PadLayout(id = layoutId, name = "Layout 1")),
-                activeLayoutId = layoutId,
-                association = ProfileAssociation(packageName = "com.test.targetapp"),
-            )
-        MacroPadState.loadFrom(listOf(testProfile), profileId)
+        val testProfile = testIntegrationProfile()
+        MacroPadState.loadFrom(listOf(testProfile), testProfile.id)
 
         val uri = Uri.parse("content://${MegingiardIpcContract.AUTHORITY}/profiles")
         val cursor: Cursor? = contentResolver.query(uri, null, null, null, null)

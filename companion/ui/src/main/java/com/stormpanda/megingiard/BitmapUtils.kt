@@ -10,6 +10,7 @@ import kotlin.math.max
 
 object BitmapUtils {
     private const val TAG = "BitmapUtils"
+    private const val DEFAULT_WEBP_QUALITY = 85
 
     fun getScreenTargetDimensions(context: Context): Pair<Int, Int> {
         val dm = context.resources.displayMetrics
@@ -96,7 +97,7 @@ object BitmapUtils {
             if (bitmap == null) return false
 
             destFile.outputStream().use { output ->
-                bitmap.compress(Bitmap.CompressFormat.WEBP_LOSSY, 85, output)
+                bitmap.compress(Bitmap.CompressFormat.WEBP_LOSSY, DEFAULT_WEBP_QUALITY, output)
             }
             bitmap.recycle()
             true

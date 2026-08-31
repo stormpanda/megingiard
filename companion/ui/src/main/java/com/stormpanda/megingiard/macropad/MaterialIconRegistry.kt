@@ -1,7 +1,5 @@
 package com.stormpanda.megingiard.macropad
 
-private const val TAG = "MaterialIconRegistry"
-
 /**
  * Registry for Material Symbol icon names used in the MacroPad feature.
  * Icons are rendered via [MaterialSymbol] using the bundled Material Symbols Rounded variable font.
@@ -14,6 +12,6 @@ internal object MaterialIconRegistry {
     fun searchIcons(query: String): List<String> {
         if (query.isBlank()) return ALL_ROUNDED_ICON_NAMES
         val lower = query.trim().lowercase()
-        return ALL_ROUNDED_ICON_NAMES.filter { it.contains(lower) }
+        return ALL_ROUNDED_ICON_NAMES.filter { lower in it }
     }
 }

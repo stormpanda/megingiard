@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.macropad
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.GamepadReorderDeck
@@ -11,6 +12,7 @@ internal fun ReorderProfilesSubPage(
     profiles: List<PadProfile>,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
     GamepadReorderDeck(
         breadcrumbs =
             listOf(
@@ -22,7 +24,7 @@ internal fun ReorderProfilesSubPage(
         itemTitle = { it.name },
         itemDescription = { profile ->
             profile.association?.packageName?.takeIf { it.isNotBlank() }
-                ?: if (profile.layouts.size == 1) "1 layout" else "${profile.layouts.size} layouts"
+                ?: context.getString(R.string.quick_menu_layouts_count, profile.layouts.size)
         },
         onReorder = { MacroPadState.reorderProfiles(it) },
         modifier = modifier,
@@ -34,6 +36,7 @@ internal fun ReorderLayoutsSubPage(
     layouts: List<PadLayout>,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
     GamepadReorderDeck(
         breadcrumbs =
             listOf(
@@ -44,7 +47,7 @@ internal fun ReorderLayoutsSubPage(
         itemKey = { it.id },
         itemTitle = { it.name },
         itemDescription = { layout ->
-            if (layout.buttons.size == 1) "1 button" else "${layout.buttons.size} buttons"
+            context.getString(R.string.quick_menu_buttons_count, layout.buttons.size)
         },
         onReorder = { MacroPadState.reorderLayouts(it) },
         modifier = modifier,

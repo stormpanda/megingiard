@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -112,17 +113,19 @@ fun QuickMenuBar(modifier: Modifier = Modifier) {
     fun getTargetOffset(type: SwipeGestureType): Dp {
         val currentActive = activeSwipe
         return if (currentActive != null && currentActive.type == type) {
-            val delta = with(density) { currentActive.deltaPx.toDp() }
-            val threshold = with(density) { currentActive.thresholdPx.toDp() }
-            val visualDelta = delta * GESTURE_VISUAL_MULTIPLIER
-            val visualThreshold = threshold * GESTURE_VISUAL_MULTIPLIER
-            val visual =
-                if (visualDelta < visualThreshold) {
-                    visualDelta
-                } else {
-                    visualThreshold + (visualDelta - visualThreshold) * GESTURE_RESISTANCE_FACTOR
-                }
-            visual.coerceAtMost(GESTURE_MAX_OFFSET)
+            with(density) {
+                val delta = currentActive.deltaPx.toDp()
+                val threshold = currentActive.thresholdPx.toDp()
+                val visualDelta = delta * GESTURE_VISUAL_MULTIPLIER
+                val visualThreshold = threshold * GESTURE_VISUAL_MULTIPLIER
+                val visual =
+                    if (visualDelta < visualThreshold) {
+                        visualDelta
+                    } else {
+                        visualThreshold + (visualDelta - visualThreshold) * GESTURE_RESISTANCE_FACTOR
+                    }
+                visual.coerceAtMost(GESTURE_MAX_OFFSET)
+            }
         } else {
             0.dp
         }
@@ -185,108 +188,79 @@ fun QuickMenuBar(modifier: Modifier = Modifier) {
         }
 
         // ─── Sliding gesture pills ───────────────────────────────────────────────
-        // Keyboard Sliding Pill
-        if (kbAnimatedOffsetDp > 0.dp) {
-            val isPastThreshold = activeSwipe?.let { it.type == SwipeGestureType.KEYBOARD && it.isPastThreshold } ?: false
-            val initialOffscreenOffset = QuickMenuBarLayout.SLIDING_PILL_SIZE + PILL_OFFSCREEN_PADDING
-            val yOffset = if (overlayAtBottom) initialOffscreenOffset - kbAnimatedOffsetDp else -initialOffscreenOffset + kbAnimatedOffsetDp
+        QuickMenuSlidingPill(
+            icon = Icons.Rounded.Keyboard,
+            animatedOffsetDp = kbAnimatedOffsetDp,
+            isPastThreshold = activeSwipe?.let { it.type == SwipeGestureType.KEYBOARD && it.isPastThreshold } ?: false,
+            overlayAtBottom = overlayAtBottom,
+            colors = colors,
+            modifier =
+                Modifier
+                    .align(if (overlayAtBottom) Alignment.BottomStart else Alignment.TopStart)
+                    .padding(start = QuickMenuBarLayout.SLIDING_PILL_PADDING),
+        )
 
-            Box(
-                modifier =
-                    Modifier
-                        .align(if (overlayAtBottom) Alignment.BottomStart else Alignment.TopStart)
-                        .offset(y = yOffset)
-                        .padding(start = QuickMenuBarLayout.SLIDING_PILL_PADDING)
-                        .shadow(elevation = PILL_SHADOW_ELEVATION, shape = CircleShape, clip = false)
-                        .size(QuickMenuBarLayout.SLIDING_PILL_SIZE)
-                        .background(color = if (isPastThreshold) colors.accent else colors.controlOverlay, shape = CircleShape)
-                        .border(
-                            width = PILL_BORDER_WIDTH,
-                            color = if (isPastThreshold) colors.accent else colors.controlOverlayBorder,
-                            shape = CircleShape,
-                        ),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Keyboard,
-                    contentDescription = null,
-                    tint = if (isPastThreshold) colors.onAccent else colors.onSurface,
-                    modifier = Modifier.size(PILL_ICON_SIZE),
-                )
-            }
-        }
+        QuickMenuSlidingPill(
+            icon = Icons.Rounded.Menu,
+            animatedOffsetDp = menuAnimatedOffsetDp,
+            isPastThreshold = activeSwipe?.let { it.type == SwipeGestureType.MENU && it.isPastThreshold } ?: false,
+            overlayAtBottom = overlayAtBottom,
+            colors = colors,
+            modifier = Modifier.align(if (overlayAtBottom) Alignment.BottomCenter else Alignment.TopCenter),
+        )
 
-        // Menu Sliding Pill
-        if (menuAnimatedOffsetDp > 0.dp) {
-            val isPastThreshold = activeSwipe?.let { it.type == SwipeGestureType.MENU && it.isPastThreshold } ?: false
-            val initialOffscreenOffset = QuickMenuBarLayout.SLIDING_PILL_SIZE + PILL_OFFSCREEN_PADDING
-            val yOffset =
-                if (overlayAtBottom) {
-                    initialOffscreenOffset - menuAnimatedOffsetDp
-                } else {
-                    -initialOffscreenOffset +
-                        menuAnimatedOffsetDp
-                }
-
-            Box(
-                modifier =
-                    Modifier
-                        .align(if (overlayAtBottom) Alignment.BottomCenter else Alignment.TopCenter)
-                        .offset(y = yOffset)
-                        .shadow(elevation = PILL_SHADOW_ELEVATION, shape = CircleShape, clip = false)
-                        .size(QuickMenuBarLayout.SLIDING_PILL_SIZE)
-                        .background(color = if (isPastThreshold) colors.accent else colors.controlOverlay, shape = CircleShape)
-                        .border(
-                            width = PILL_BORDER_WIDTH,
-                            color = if (isPastThreshold) colors.accent else colors.controlOverlayBorder,
-                            shape = CircleShape,
-                        ),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Menu,
-                    contentDescription = null,
-                    tint = if (isPastThreshold) colors.onAccent else colors.onSurface,
-                    modifier = Modifier.size(PILL_ICON_SIZE),
-                )
-            }
-        }
-
-        // Touchpad Sliding Pill
-        if (tpAnimatedOffsetDp > 0.dp) {
-            val isPastThreshold = activeSwipe?.let { it.type == SwipeGestureType.TOUCHPAD && it.isPastThreshold } ?: false
-            val initialOffscreenOffset = QuickMenuBarLayout.SLIDING_PILL_SIZE + PILL_OFFSCREEN_PADDING
-            val yOffset = if (overlayAtBottom) initialOffscreenOffset - tpAnimatedOffsetDp else -initialOffscreenOffset + tpAnimatedOffsetDp
-
-            Box(
-                modifier =
-                    Modifier
-                        .align(if (overlayAtBottom) Alignment.BottomEnd else Alignment.TopEnd)
-                        .offset(y = yOffset)
-                        .padding(end = QuickMenuBarLayout.SLIDING_PILL_PADDING)
-                        .shadow(elevation = PILL_SHADOW_ELEVATION, shape = CircleShape, clip = false)
-                        .size(QuickMenuBarLayout.SLIDING_PILL_SIZE)
-                        .background(color = if (isPastThreshold) colors.accent else colors.controlOverlay, shape = CircleShape)
-                        .border(
-                            width = PILL_BORDER_WIDTH,
-                            color = if (isPastThreshold) colors.accent else colors.controlOverlayBorder,
-                            shape = CircleShape,
-                        ),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Mouse,
-                    contentDescription = null,
-                    tint = if (isPastThreshold) colors.onAccent else colors.onSurface,
-                    modifier = Modifier.size(PILL_ICON_SIZE),
-                )
-            }
-        }
+        QuickMenuSlidingPill(
+            icon = Icons.Rounded.Mouse,
+            animatedOffsetDp = tpAnimatedOffsetDp,
+            isPastThreshold = activeSwipe?.let { it.type == SwipeGestureType.TOUCHPAD && it.isPastThreshold } ?: false,
+            overlayAtBottom = overlayAtBottom,
+            colors = colors,
+            modifier =
+                Modifier
+                    .align(if (overlayAtBottom) Alignment.BottomEnd else Alignment.TopEnd)
+                    .padding(end = QuickMenuBarLayout.SLIDING_PILL_PADDING),
+        )
 
         // Quick Menu overlay — rendered as a sibling so it covers MacroPadScreen
         QuickMenu(
             visible = isQuickMenuOpen,
-            onDismiss = { AppStateManager.closeQuickMenu() },
+            onDismiss = AppStateManager::closeQuickMenu,
+        )
+    }
+}
+
+@Composable
+private fun QuickMenuSlidingPill(
+    icon: ImageVector,
+    animatedOffsetDp: Dp,
+    isPastThreshold: Boolean,
+    overlayAtBottom: Boolean,
+    colors: AppColors,
+    modifier: Modifier = Modifier,
+) {
+    if (animatedOffsetDp <= 0.dp) return
+    val initialOffscreenOffset = QuickMenuBarLayout.SLIDING_PILL_SIZE + PILL_OFFSCREEN_PADDING
+    val yOffset = if (overlayAtBottom) initialOffscreenOffset - animatedOffsetDp else -initialOffscreenOffset + animatedOffsetDp
+
+    Box(
+        modifier =
+            modifier
+                .offset(y = yOffset)
+                .shadow(elevation = PILL_SHADOW_ELEVATION, shape = CircleShape, clip = false)
+                .size(QuickMenuBarLayout.SLIDING_PILL_SIZE)
+                .background(color = if (isPastThreshold) colors.accent else colors.controlOverlay, shape = CircleShape)
+                .border(
+                    width = PILL_BORDER_WIDTH,
+                    color = if (isPastThreshold) colors.accent else colors.controlOverlayBorder,
+                    shape = CircleShape,
+                ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = if (isPastThreshold) colors.onAccent else colors.onSurface,
+            modifier = Modifier.size(PILL_ICON_SIZE),
         )
     }
 }

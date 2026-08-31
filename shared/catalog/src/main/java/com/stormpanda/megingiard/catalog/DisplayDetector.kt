@@ -20,7 +20,7 @@ object DisplayDetector {
      * @return the secondary [Display], or null if only the default display exists.
      */
     fun findSecondaryDisplay(context: Context): Display? {
-        val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+        val displayManager = context.getSystemService(DisplayManager::class.java) ?: return null
         val secondary =
             displayManager
                 .getDisplays()

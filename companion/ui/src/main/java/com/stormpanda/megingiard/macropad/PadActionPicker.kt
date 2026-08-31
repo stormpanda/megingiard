@@ -2,28 +2,20 @@ package com.stormpanda.megingiard.macropad
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ViewQuilt
-import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Cast
 import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.firstDeckItem
 
-private const val TAG = "PadActionPicker"
-
 @Composable
 internal fun ActionPicker(
     current: PadAction,
-    accentColor: Color,
-    enableKeyboard: Boolean = true,
-    enableGamepad: Boolean = true,
-    enableMouse: Boolean = true,
     onOpenMacroPicker: (() -> Unit)? = null,
     onOpenAppPicker: (() -> Unit)? = null,
     onOpenKeyboardPicker: () -> Unit = {},
@@ -41,7 +33,7 @@ internal fun ActionPicker(
         }
 
         is PadAction.GamepadButton -> {
-            GamepadButtonPicker(current, onOpenGamepadPicker, onChange, isFirstItem = isFirstItem)
+            GamepadButtonPicker(current, onOpenGamepadPicker, isFirstItem = isFirstItem)
         }
 
         is PadAction.MouseButton,
@@ -122,7 +114,6 @@ internal fun ActionPicker(
         is PadAction.Macro -> {
             MacroPicker(
                 current = current,
-                accentColor = accentColor,
                 onOpenMacroPicker = onOpenMacroPicker ?: {},
                 isFirstItem = isFirstItem,
             )

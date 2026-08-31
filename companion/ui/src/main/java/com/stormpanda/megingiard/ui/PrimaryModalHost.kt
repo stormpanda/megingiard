@@ -8,15 +8,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.rounded.Tune
-import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material.icons.rounded.Widgets
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.focusProperties
@@ -28,7 +21,6 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.KeyboardSettingsOverlay
 import com.stormpanda.megingiard.macropad.MacroPadEditor
-import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.mirror.CropSelectorOverlay
 import com.stormpanda.megingiard.settings.GlobalSettingsScreen
 import com.stormpanda.megingiard.touchpad.TouchpadSettingsOverlay
@@ -36,6 +28,7 @@ import com.stormpanda.megingiard.touchpad.TouchpadSettingsOverlay
 private const val TAG = "PrimaryModalHost"
 private val PMH_KOFI_BUTTON_HEIGHT = 32.dp
 private val PMH_KOFI_CORNER = 8.dp
+private val PMH_KOFI_SHAPE = RoundedCornerShape(PMH_KOFI_CORNER)
 
 /**
  * Composable dispatcher that renders the appropriate content for a given [PrimaryModalConfig].
@@ -47,7 +40,6 @@ fun PrimaryModalHost(
     modifier: Modifier = Modifier,
 ) {
     AppLog.d(TAG, "PrimaryModalHost: dispatching modal type=${config.type}")
-    val colors = LocalAppColors.current
     val context = LocalContext.current
 
     when (config.type) {
@@ -64,7 +56,7 @@ fun PrimaryModalHost(
                         modifier =
                             Modifier
                                 .height(PMH_KOFI_BUTTON_HEIGHT)
-                                .clip(RoundedCornerShape(PMH_KOFI_CORNER))
+                                .clip(PMH_KOFI_SHAPE)
                                 .clickable {
                                     launchUrlOnPrimaryDisplay(context, "https://ko-fi.com/stormpanda")
                                     onDismiss()
@@ -85,9 +77,7 @@ fun PrimaryModalHost(
                 onDismiss = onDismiss,
                 modifier = modifier,
             ) {
-                KeyboardSettingsOverlay(
-                    onBack = onDismiss,
-                )
+                KeyboardSettingsOverlay()
             }
         }
 
@@ -98,9 +88,7 @@ fun PrimaryModalHost(
                 onDismiss = onDismiss,
                 modifier = modifier,
             ) {
-                TouchpadSettingsOverlay(
-                    onBack = onDismiss,
-                )
+                TouchpadSettingsOverlay()
             }
         }
 

@@ -31,13 +31,7 @@ fun injectActionDown(action: PadAction) {
 
         is PadAction.MouseButton -> {
             AppLog.d(TAG, "actionDown: MouseButton ${action.button}")
-            when (action.button) {
-                MouseButton.LEFT -> MouseInjector.leftDown()
-                MouseButton.RIGHT -> MouseInjector.rightDown()
-                MouseButton.MIDDLE -> MouseInjector.middleDown()
-                MouseButton.MOUSE4 -> MouseInjector.mouse4Down()
-                MouseButton.MOUSE5 -> MouseInjector.mouse5Down()
-            }
+            MouseInjector.buttonDown(action.button)
         }
 
         is PadAction.ScrollWheel -> { /* handled via drag events */ }
@@ -141,41 +135,9 @@ fun injectActionUp(action: PadAction) {
 
         is PadAction.MouseButton -> {
             AppLog.d(TAG, "actionUp: MouseButton ${action.button}")
-            when (action.button) {
-                MouseButton.LEFT -> MouseInjector.leftUp()
-                MouseButton.RIGHT -> MouseInjector.rightUp()
-                MouseButton.MIDDLE -> MouseInjector.middleUp()
-                MouseButton.MOUSE4 -> MouseInjector.mouse4Up()
-                MouseButton.MOUSE5 -> MouseInjector.mouse5Up()
-            }
+            MouseInjector.buttonUp(action.button)
         }
 
-        is PadAction.ScrollWheel -> { /* handled via drag events */ }
-
-        is PadAction.TrackpointMove -> { /* handled via drag events */ }
-
-        is PadAction.Macro -> { /* toggle on down; up is no-op */ }
-
-        is PadAction.BackgroundPeek -> { /* toggle on down; up is no-op */ }
-
-        is PadAction.LayoutNext -> { /* fires on down; up is no-op */ }
-
-        is PadAction.LayoutPrevious -> { /* fires on down; up is no-op */ }
-
-        is PadAction.ProfileSwitcher -> { /* fires on down; up is no-op */ }
-
-        is PadAction.FullScreenMouse -> { /* fires on down; up is no-op */ }
-
-        is PadAction.FullScreenKeyboard -> { /* fires on down; up is no-op */ }
-
-        is PadAction.MirrorPlayStop -> { /* fires on down; up is no-op */ }
-
-        is PadAction.MirrorFreeze -> { /* fires on down; up is no-op */ }
-
-        is PadAction.MirrorViewportEdit -> { /* fires on down; up is no-op */ }
-
-        is PadAction.MirrorTouchProjection -> { /* fires on down; up is no-op */ }
-
-        is PadAction.AppLauncher -> { /* fires on down; up is no-op */ }
+        else -> { /* All other action types fire or toggle on down; up is no-op */ }
     }
 }

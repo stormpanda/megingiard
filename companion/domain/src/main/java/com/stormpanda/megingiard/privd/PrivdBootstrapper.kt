@@ -30,22 +30,22 @@ private const val DAEMON_ASSET_NAME = "megingiard_privd_arm64"
 private const val PORT_RELEASE_START = 51234
 private const val PORT_DEBUG_START = 51244
 
-private fun getDaemonRemotePath(context: Context): String {
-    val isDebug = context.packageName.endsWith(".debug") || context.packageName.contains(".debug")
-    return if (isDebug) "/data/local/tmp/megingiard_privd_debug" else "/data/local/tmp/megingiard_privd"
-}
+private fun isDebugPackage(context: Context): Boolean = context.packageName.contains(".debug")
 
-private fun getDaemonProcessName(context: Context): String {
-    val isDebug = context.packageName.endsWith(".debug") || context.packageName.contains(".debug")
-    return if (isDebug) "megingiard_privd_debug" else "megingiard_privd"
-}
+private fun getDaemonRemotePath(context: Context): String =
+    if (isDebugPackage(context)) "/data/local/tmp/megingiard_privd_debug" else "/data/local/tmp/megingiard_privd"
+
+private fun getDaemonProcessName(context: Context): String = if (isDebugPackage(context)) "megingiard_privd_debug" else "megingiard_privd"
 
 private const val MIRROR_DEX_ASSET_NAME = "megingiard_mirror.dex"
 
-private fun getMirrorDexRemotePath(context: Context): String {
-    val isDebug = context.packageName.endsWith(".debug") || context.packageName.contains(".debug")
-    return if (isDebug) "/data/local/tmp/megingiard_mirror_debug.dex" else "/data/local/tmp/megingiard_mirror.dex"
-}
+private fun getMirrorDexRemotePath(context: Context): String =
+    if (isDebugPackage(context)) "/data/local/tmp/megingiard_mirror_debug.dex" else "/data/local/tmp/megingiard_mirror.dex"
+
+private fun getStateKeyFilePath(context: Context): String =
+    if (isDebugPackage(context)) "/data/local/tmp/megingiard_privd_debug.key" else "/data/local/tmp/megingiard_privd.key"
+
+private fun getPortStart(context: Context): Int = if (isDebugPackage(context)) PORT_DEBUG_START else PORT_RELEASE_START
 
 private const val MIRROR_DEX_REMOTE_MODE_RAW = 33188 // 0100644 = regular + rw-r--r--
 
@@ -704,9 +704,8 @@ object PrivdBootstrapper {
         appUid: Int,
     ): Boolean {
         val remotePath = getDaemonRemotePath(context)
-        val isDebug = context.packageName.endsWith(".debug") || context.packageName.contains(".debug")
-        val stateFilePath = if (isDebug) "/data/local/tmp/megingiard_privd_debug.key" else "/data/local/tmp/megingiard_privd.key"
-        val portStart = if (isDebug) PORT_DEBUG_START else PORT_RELEASE_START
+        val stateFilePath = getStateKeyFilePath(context)
+        val portStart = getPortStart(context)
         val cmd = "shell:$remotePath --keyfile $stateFilePath --port $portStart --provision $keyHex $appUid && echo $PROVISION_OK_MARKER"
         AppLog.d(TAG, "provision cmd issued (keyHex redacted, appUid=$appUid)")
         val stream = mgr.openStream(cmd) ?: return false
@@ -739,9 +738,8 @@ object PrivdBootstrapper {
         val processName = getDaemonProcessName(context)
         val remotePath = getDaemonRemotePath(context)
         val dexPath = getMirrorDexRemotePath(context)
-        val isDebug = context.packageName.endsWith(".debug") || context.packageName.contains(".debug")
-        val stateFilePath = if (isDebug) "/data/local/tmp/megingiard_privd_debug.key" else "/data/local/tmp/megingiard_privd.key"
-        val portStart = if (isDebug) PORT_DEBUG_START else PORT_RELEASE_START
+        val stateFilePath = getStateKeyFilePath(context)
+        val portStart = getPortStart(context)
         val killCmd = "kill -9 \$(pidof $processName 2>/dev/null) 2>/dev/null; sleep 1"
         // Run the daemon in the foreground. Since the daemon forks inside
         // detach_from_shell(), the parent exits immediately after writing the

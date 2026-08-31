@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.touchpad
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -11,166 +12,144 @@ import org.junit.Test
 class TouchpadGestureProcessorTest {
     private val testDispatcher = UnconfinedTestDispatcher()
 
+    private fun TestScope.createProcessor(
+        useMouse: () -> Boolean = { false },
+        tapToClick: Boolean = true,
+        tapDrag: Boolean = true,
+        twoFingerTap: Boolean = true,
+        threeFingerTap: Boolean = true,
+        naturalScrollEnabled: Boolean = true,
+        scrollSpeed: Float = 1.0f,
+        onHapticFeedback: () -> Unit = {},
+    ) = TouchpadGestureProcessor(
+        useMouse = useMouse,
+        scope = this,
+        sensitivity = { 1.0f },
+        twoFingerScrollEnabled = { true },
+        tapToClick = { tapToClick },
+        tapDrag = { tapDrag },
+        twoFingerTap = { twoFingerTap },
+        threeFingerTap = { threeFingerTap },
+        naturalScrollEnabled = { naturalScrollEnabled },
+        scrollSpeed = { scrollSpeed },
+        onHapticFeedback = onHapticFeedback,
+    )
+
+    private fun TouchpadGestureProcessor.press(
+        id: Long,
+        x: Float,
+        y: Float,
+        isHover: Boolean = false,
+    ) = onPress(id, x, y, 1000f, 1000f, isHover)
+
+    private fun TouchpadGestureProcessor.release(
+        id: Long,
+        x: Float,
+        y: Float,
+    ) = onRelease(id, x, y, 1000f, 1000f)
+
+    private fun TouchpadGestureProcessor.move(
+        id: Long,
+        x: Float,
+        y: Float,
+        dx: Float = 0f,
+        dy: Float = 0f,
+    ) = onMove(id, x, y, dx, dy, 1000f, 1000f)
+
     @Test
     fun `absolute mode updates touch positions`() =
         runTest(testDispatcher) {
-            val processor =
-                TouchpadGestureProcessor(
-                    useMouse = { false },
-                    scope = this,
-                    sensitivity = { 1.0f },
-                    twoFingerScrollEnabled = { true },
-                )
-
+            val processor = createProcessor()
             assertNull(processor.touchPos.value)
 
-            processor.onPress(1L, 100f, 200f, 1000f, 1000f, false)
+            processor.press(1L, 100f, 200f)
             assertEquals(Pair(100f, 200f), processor.touchPos.value)
 
-            processor.onMove(1L, 150f, 250f, 50f, 50f, 1000f, 1000f)
+            processor.move(1L, 150f, 250f, 50f, 50f)
             assertEquals(Pair(150f, 250f), processor.touchPos.value)
 
-            processor.onRelease(1L, 150f, 250f, 1000f, 1000f)
+            processor.release(1L, 150f, 250f)
             assertNull(processor.touchPos.value)
         }
 
     @Test
     fun `absolute mode multi touch allocates distinct slots`() =
         runTest(testDispatcher) {
-            val processor =
-                TouchpadGestureProcessor(
-                    useMouse = { false },
-                    scope = this,
-                    sensitivity = { 1.0f },
-                    twoFingerScrollEnabled = { true },
-                )
-
+            val processor = createProcessor()
             assertNull(processor.touchPos.value)
 
-            // Press first pointer (should be mapped to slot 0)
-            processor.onPress(1L, 100f, 200f, 1000f, 1000f, false)
+            processor.press(1L, 100f, 200f)
             assertEquals(Pair(100f, 200f), processor.touchPos.value)
 
-            // Press second pointer (should be mapped to slot 1)
-            processor.onPress(2L, 300f, 400f, 1000f, 1000f, false)
-            // Primary touch position should still be the first one
+            processor.press(2L, 300f, 400f)
             assertEquals(Pair(100f, 200f), processor.touchPos.value)
 
-            // Release first pointer
-            processor.onRelease(1L, 150f, 250f, 1000f, 1000f)
+            processor.release(1L, 150f, 250f)
             assertNull(processor.touchPos.value)
 
-            // Release second pointer
-            processor.onRelease(2L, 350f, 450f, 1000f, 1000f)
+            processor.release(2L, 350f, 450f)
             assertNull(processor.touchPos.value)
         }
 
     @Test
     fun `relative mode triple tap triggers middle click`() =
         runTest(testDispatcher) {
-            val processor =
-                TouchpadGestureProcessor(
-                    useMouse = { true },
-                    scope = this,
-                    sensitivity = { 1.0f },
-                    twoFingerScrollEnabled = { true },
-                    threeFingerTap = { true },
-                )
+            val processor = createProcessor(useMouse = { true }, threeFingerTap = true)
 
-            // Simulate three-finger tap
-            processor.onPress(1L, 100f, 200f, 1000f, 1000f, false)
-            processor.onPress(2L, 120f, 220f, 1000f, 1000f, false)
-            processor.onPress(3L, 140f, 240f, 1000f, 1000f, false)
+            processor.press(1L, 100f, 200f)
+            processor.press(2L, 120f, 220f)
+            processor.press(3L, 140f, 240f)
 
-            processor.onRelease(1L, 100f, 200f, 1000f, 1000f)
-            processor.onRelease(2L, 120f, 220f, 1000f, 1000f)
-            processor.onRelease(3L, 140f, 240f, 1000f, 1000f)
-
-            // No exception thrown
+            processor.release(1L, 100f, 200f)
+            processor.release(2L, 120f, 220f)
+            processor.release(3L, 140f, 240f)
         }
 
     @Test
     fun `relative mode double tap and hold triggers drag`() =
         runTest(testDispatcher) {
-            val processor =
-                TouchpadGestureProcessor(
-                    useMouse = { true },
-                    scope = this,
-                    sensitivity = { 1.0f },
-                    twoFingerScrollEnabled = { true },
-                    tapDrag = { true },
-                )
+            val processor = createProcessor(useMouse = { true }, tapDrag = true)
 
-            // First tap down and release
-            processor.onPress(1L, 100f, 200f, 1000f, 1000f, false)
-            processor.onRelease(1L, 100f, 200f, 1000f, 1000f)
+            processor.press(1L, 100f, 200f)
+            processor.release(1L, 100f, 200f)
 
-            // Second tap down and hold
-            processor.onPress(2L, 100f, 200f, 1000f, 1000f, false)
-            processor.onMove(2L, 150f, 250f, 50f, 50f, 1000f, 1000f)
-            processor.onRelease(2L, 150f, 250f, 1000f, 1000f)
-
-            // No exception thrown
+            processor.press(2L, 100f, 200f)
+            processor.move(2L, 150f, 250f, 50f, 50f)
+            processor.release(2L, 150f, 250f)
         }
 
     @Test
     fun `relative mode scroll handles speed and natural scrolling`() =
         runTest(testDispatcher) {
-            // Test traditional scrolling (naturalScrollEnabled = false, scrollSpeed = 1.0f)
             val traditionalProcessor =
-                TouchpadGestureProcessor(
+                createProcessor(
                     useMouse = { true },
-                    scope = this,
-                    sensitivity = { 1.0f },
-                    twoFingerScrollEnabled = { true },
-                    naturalScrollEnabled = { false },
-                    scrollSpeed = { 1.0f },
+                    naturalScrollEnabled = false,
+                    scrollSpeed = 1.0f,
                 )
+            traditionalProcessor.press(1L, 100f, 200f)
+            traditionalProcessor.press(2L, 120f, 220f)
+            traditionalProcessor.move(1L, 100f, 224f, 0f, 24f)
 
-            traditionalProcessor.onPress(1L, 100f, 200f, 1000f, 1000f, false)
-            traditionalProcessor.onPress(2L, 120f, 220f, 1000f, 1000f, false)
-
-            // Drag down 24px (should produce -2 scroll wheel units, traditional direction)
-            traditionalProcessor.onMove(1L, 100f, 224f, 0f, 24f, 1000f, 1000f)
-
-            // Test natural scrolling (naturalScrollEnabled = true, scrollSpeed = 2.0f)
             val naturalProcessor =
-                TouchpadGestureProcessor(
+                createProcessor(
                     useMouse = { true },
-                    scope = this,
-                    sensitivity = { 1.0f },
-                    twoFingerScrollEnabled = { true },
-                    naturalScrollEnabled = { true },
-                    scrollSpeed = { 2.0f },
+                    naturalScrollEnabled = true,
+                    scrollSpeed = 2.0f,
                 )
-
-            naturalProcessor.onPress(1L, 100f, 200f, 1000f, 1000f, false)
-            naturalProcessor.onPress(2L, 120f, 220f, 1000f, 1000f, false)
-
-            // Drag down 24px:
-            // scrollThreshold = 12f / 2.0f = 6f
-            // units = 24 / 6 = 4 units.
-            // directionMultiplier = 1 (natural scroll active).
-            // Should produce +4 scroll wheel units.
-            naturalProcessor.onMove(1L, 100f, 224f, 0f, 24f, 1000f, 1000f)
+            naturalProcessor.press(1L, 100f, 200f)
+            naturalProcessor.press(2L, 120f, 220f)
+            naturalProcessor.move(1L, 100f, 224f, 0f, 24f)
         }
 
     @Test
     fun `haptic feedback triggers on single tap`() =
         runTest(testDispatcher) {
             var hapticCount = 0
-            val processor =
-                TouchpadGestureProcessor(
-                    useMouse = { true },
-                    scope = this,
-                    sensitivity = { 1.0f },
-                    twoFingerScrollEnabled = { true },
-                    tapToClick = { true },
-                    onHapticFeedback = { hapticCount++ },
-                )
+            val processor = createProcessor(useMouse = { true }, tapToClick = true, onHapticFeedback = { hapticCount++ })
 
-            processor.onPress(1L, 100f, 200f, 1000f, 1000f, false)
-            processor.onRelease(1L, 100f, 200f, 1000f, 1000f)
+            processor.press(1L, 100f, 200f)
+            processor.release(1L, 100f, 200f)
             assertEquals(1, hapticCount)
         }
 
@@ -178,46 +157,28 @@ class TouchpadGestureProcessorTest {
     fun `haptic feedback triggers on drag start`() =
         runTest(testDispatcher) {
             var hapticCount = 0
-            val processor =
-                TouchpadGestureProcessor(
-                    useMouse = { true },
-                    scope = this,
-                    sensitivity = { 1.0f },
-                    twoFingerScrollEnabled = { true },
-                    tapDrag = { true },
-                    onHapticFeedback = { hapticCount++ },
-                )
+            val processor = createProcessor(useMouse = { true }, tapDrag = true, onHapticFeedback = { hapticCount++ })
 
-            // First tap
-            processor.onPress(1L, 100f, 200f, 1000f, 1000f, false)
-            processor.onRelease(1L, 100f, 200f, 1000f, 1000f)
+            processor.press(1L, 100f, 200f)
+            processor.release(1L, 100f, 200f)
             assertEquals(1, hapticCount)
 
-            // Second tap (drag start)
-            processor.onPress(2L, 100f, 200f, 1000f, 1000f, false)
+            processor.press(2L, 100f, 200f)
             assertEquals(2, hapticCount)
 
-            processor.onRelease(2L, 100f, 200f, 1000f, 1000f)
+            processor.release(2L, 100f, 200f)
         }
 
     @Test
     fun `haptic feedback triggers on two finger tap`() =
         runTest(testDispatcher) {
             var hapticCount = 0
-            val processor =
-                TouchpadGestureProcessor(
-                    useMouse = { true },
-                    scope = this,
-                    sensitivity = { 1.0f },
-                    twoFingerScrollEnabled = { true },
-                    twoFingerTap = { true },
-                    onHapticFeedback = { hapticCount++ },
-                )
+            val processor = createProcessor(useMouse = { true }, twoFingerTap = true, onHapticFeedback = { hapticCount++ })
 
-            processor.onPress(1L, 100f, 200f, 1000f, 1000f, false)
-            processor.onPress(2L, 120f, 220f, 1000f, 1000f, false)
-            processor.onRelease(1L, 100f, 200f, 1000f, 1000f)
-            processor.onRelease(2L, 120f, 220f, 1000f, 1000f)
+            processor.press(1L, 100f, 200f)
+            processor.press(2L, 120f, 220f)
+            processor.release(1L, 100f, 200f)
+            processor.release(2L, 120f, 220f)
             assertEquals(1, hapticCount)
         }
 
@@ -225,36 +186,23 @@ class TouchpadGestureProcessorTest {
     fun `haptic feedback triggers on three finger tap`() =
         runTest(testDispatcher) {
             var hapticCount = 0
-            val processor =
-                TouchpadGestureProcessor(
-                    useMouse = { true },
-                    scope = this,
-                    sensitivity = { 1.0f },
-                    twoFingerScrollEnabled = { true },
-                    threeFingerTap = { true },
-                    onHapticFeedback = { hapticCount++ },
-                )
+            val processor = createProcessor(useMouse = { true }, threeFingerTap = true, onHapticFeedback = { hapticCount++ })
 
-            processor.onPress(1L, 100f, 200f, 1000f, 1000f, false)
-            processor.onPress(2L, 120f, 220f, 1000f, 1000f, false)
-            processor.onPress(3L, 140f, 240f, 1000f, 1000f, false)
-            processor.onRelease(1L, 100f, 200f, 1000f, 1000f)
-            processor.onRelease(2L, 120f, 220f, 1000f, 1000f)
-            processor.onRelease(3L, 140f, 240f, 1000f, 1000f)
+            processor.press(1L, 100f, 200f)
+            processor.press(2L, 120f, 220f)
+            processor.press(3L, 140f, 240f)
+            processor.release(1L, 100f, 200f)
+            processor.release(2L, 120f, 220f)
+            processor.release(3L, 140f, 240f)
             assertEquals(1, hapticCount)
         }
 
     @Test
     fun `onCancel cleans absolute mode touch slots`() =
         runTest(testDispatcher) {
-            val processor =
-                TouchpadGestureProcessor(
-                    useMouse = { false },
-                    scope = this,
-                    sensitivity = { 1.0f },
-                )
+            val processor = createProcessor()
 
-            processor.onPress(1L, 100f, 200f, 1000f, 1000f, false)
+            processor.press(1L, 100f, 200f)
             assertEquals(Pair(100f, 200f), processor.touchPos.value)
 
             processor.onCancel()
@@ -265,21 +213,12 @@ class TouchpadGestureProcessorTest {
     fun `onCancel cleans absolute touch slots even after switching to mouse mode`() =
         runTest(testDispatcher) {
             var currentUseMouse = false
-            val processor =
-                TouchpadGestureProcessor(
-                    useMouse = { currentUseMouse },
-                    scope = this,
-                    sensitivity = { 1.0f },
-                )
+            val processor = createProcessor(useMouse = { currentUseMouse })
 
-            // Touch mode press
-            processor.onPress(1L, 100f, 200f, 1000f, 1000f, false)
+            processor.press(1L, 100f, 200f)
             assertEquals(Pair(100f, 200f), processor.touchPos.value)
 
-            // Dynamic mode switch to mouse mode while pointer is down
             currentUseMouse = true
-
-            // onCancel should clean up touch mode slots unconditionally
             processor.onCancel()
             assertNull(processor.touchPos.value)
         }

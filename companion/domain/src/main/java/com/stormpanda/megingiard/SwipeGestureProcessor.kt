@@ -15,7 +15,7 @@ class SwipeGestureProcessor(
     private val overlayAtBottom: Boolean,
     private val quickMenuBarZoneWidthPx: Float? = null,
     private val onTouchingChanged: (Boolean) -> Unit = {},
-    private val onEdgeSwipe: () -> Unit = { AppStateManager.handleEdgeSwipe() },
+    private val onEdgeSwipe: () -> Unit = AppStateManager::handleEdgeSwipe,
     private val customZoneCheck: ((pointerX: Float, containerWidth: Float) -> Boolean)? = null,
     private val onSwipeProgress: ((delta: Float, isPastThreshold: Boolean) -> Unit)? = null,
     private val onSwipeCancel: (() -> Unit)? = null,

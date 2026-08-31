@@ -7,6 +7,7 @@ import com.stormpanda.megingiard.macropad.PhysicalGamepadRecordingManager
 import com.stormpanda.megingiard.privd.BootstrapStage
 import com.stormpanda.megingiard.privd.EvdevEvent
 import com.stormpanda.megingiard.privd.PrivdAdbConnectionManager
+import com.stormpanda.megingiard.privd.PrivdBootstrapper
 import com.stormpanda.megingiard.privd.PrivdConnectionState
 import com.stormpanda.megingiard.privd.PrivdError
 import com.stormpanda.megingiard.privd.PrivdFeature
@@ -22,275 +23,194 @@ private const val EV_KEY = 1
 private const val EV_ABS = 3
 private const val ABS_HAT0X = 16
 
-/**
- * Sanity tests for the Privileged Mode subsystem.
- *
- * The runtime classes (`PrivdClient`, `PrivdManager`, `PrivdBootstrapper`)
- * depend on `android.net.LocalSocket`, `android.util.Log`, and the
- * `libadb-android` library, which are not available in the local JVM test
- * runtime and would require Robolectric. These tests therefore cover only
- * the pure-Kotlin surfaces — enum stability and feature-flag identity.
- * The full pair / push / spawn path is exercised by manual on-device
- * verification through the in-app setup wizard.
- */
 class PrivdSubsystemTest {
+    private fun evKey(
+        code: Int,
+        value: Int,
+    ) = EvdevEvent(EV_KEY, code, value)
+
+    private fun evAbs(
+        code: Int,
+        value: Int,
+    ) = EvdevEvent(EV_ABS, code, value)
+
+    private fun recordSession(
+        startMs: Long = 0L,
+        stopMs: Long = 100L,
+        events: List<Pair<Long, EvdevEvent>>,
+    ): List<MacroStep> {
+        PhysicalGamepadRecordingManager.startRecordingForTest(startElapsedMs = startMs)
+        for ((now, ev) in events) {
+            PhysicalGamepadRecordingManager.recordEvdevEvent(ev, now)
+        }
+        val steps = PhysicalGamepadRecordingManager.finishRecordingForTest(stopElapsedMs = stopMs)
+        PhysicalGamepadRecordingManager.resetState()
+        return steps
+    }
+
     @Test
     fun `PrivdConnectionState enum has stable shape`() {
-        assertEquals(3, PrivdConnectionState.entries.size)
-        assertNotNull(PrivdConnectionState.valueOf("DISCONNECTED"))
-        assertNotNull(PrivdConnectionState.valueOf("CONNECTING"))
-        assertNotNull(PrivdConnectionState.valueOf("CONNECTED"))
+        assertEquals(listOf("DISCONNECTED", "CONNECTING", "CONNECTED"), PrivdConnectionState.entries.map { it.name })
     }
 
     @Test
     fun `PrivdState enum has stable shape`() {
-        assertEquals(5, PrivdState.entries.size)
-        assertNotNull(PrivdState.valueOf("OFF"))
-        assertNotNull(PrivdState.valueOf("BOOTSTRAPPING"))
-        assertNotNull(PrivdState.valueOf("CONNECTING"))
-        assertNotNull(PrivdState.valueOf("RUNNING"))
-        assertNotNull(PrivdState.valueOf("FAILED"))
+        assertEquals(listOf("OFF", "BOOTSTRAPPING", "CONNECTING", "RUNNING", "FAILED"), PrivdState.entries.map { it.name })
     }
 
     @Test
     fun `PrivdFeature enum lists known features`() {
-        assertNotNull(PrivdFeature.valueOf("GAMEPAD_MERGE"))
-        assertNotNull(PrivdFeature.valueOf("GAMEPAD_RECORDING"))
-        assertNotNull(PrivdFeature.valueOf("MIRROR"))
-        assertEquals(3, PrivdFeature.entries.size)
+        assertEquals(listOf("GAMEPAD_MERGE", "GAMEPAD_RECORDING", "MIRROR"), PrivdFeature.entries.map { it.name })
+    }
+
+    @Test
+    fun `PrivdError enum covers all bootstrap failure modes`() {
+        val expected =
+            listOf(
+                "DAEMON_UNREACHABLE",
+                "PAIRING_FAILED",
+                "ADB_DISCOVERY_FAILED",
+                "ADB_CONNECT_FAILED",
+                "BOOTSTRAP_PUSH_FAILED",
+                "BOOTSTRAP_SPAWN_FAILED",
+                "BOOTSTRAP_PROVISION_FAILED",
+                "ADB_PAIRING_REQUIRED",
+                "VERSION_MISMATCH",
+            )
+        assertEquals(expected, PrivdError.entries.map { it.name })
+    }
+
+    @Test
+    fun `BootstrapStage enum has stable shape`() {
+        val expected = listOf("IDLE", "PAIRING", "CONNECTING_ADB", "PUSHING_BINARY", "SPAWNING_DAEMON", "VERIFYING", "DONE")
+        assertEquals(expected, BootstrapStage.entries.map { it.name })
     }
 
     @Test
     fun `physical gamepad recording converts button events into tap steps`() {
-        PhysicalGamepadRecordingManager.startRecordingForTest(startElapsedMs = 1_000L)
-        PhysicalGamepadRecordingManager.recordEvdevEvent(
-            event = EvdevEvent(EV_KEY, GamepadKeycodes.BTN_SOUTH, 1),
-            nowElapsedMs = 1_010L,
-        )
-        PhysicalGamepadRecordingManager.recordEvdevEvent(
-            event = EvdevEvent(EV_KEY, GamepadKeycodes.BTN_SOUTH, 0),
-            nowElapsedMs = 1_050L,
-        )
-
-        val steps = PhysicalGamepadRecordingManager.finishRecordingForTest(stopElapsedMs = 1_060L)
-
-        assertEquals(1, steps.size)
+        val steps =
+            recordSession(
+                startMs = 1_000L,
+                stopMs = 1_060L,
+                events = listOf(1_010L to evKey(GamepadKeycodes.BTN_SOUTH, 1), 1_050L to evKey(GamepadKeycodes.BTN_SOUTH, 0)),
+            )
         val step = steps.single() as MacroStep.GamepadButtonTap
         assertEquals(0L, step.startTimeMs)
         assertEquals(40L, step.durationMs)
         assertEquals(GamepadKeycodes.BTN_SOUTH, step.btnCode)
-        PhysicalGamepadRecordingManager.resetState()
     }
 
     @Test
     fun `physical gamepad recording converts hat events into dpad steps`() {
-        PhysicalGamepadRecordingManager.startRecordingForTest(startElapsedMs = 2_000L)
-        PhysicalGamepadRecordingManager.recordEvdevEvent(
-            event = EvdevEvent(EV_ABS, ABS_HAT0X, 1),
-            nowElapsedMs = 2_020L,
-        )
-        PhysicalGamepadRecordingManager.recordEvdevEvent(
-            event = EvdevEvent(EV_ABS, ABS_HAT0X, 0),
-            nowElapsedMs = 2_090L,
-        )
-
-        val steps = PhysicalGamepadRecordingManager.finishRecordingForTest(stopElapsedMs = 2_100L)
-
-        assertEquals(1, steps.size)
+        val steps =
+            recordSession(
+                startMs = 2_000L,
+                stopMs = 2_100L,
+                events = listOf(2_020L to evAbs(ABS_HAT0X, 1), 2_090L to evAbs(ABS_HAT0X, 0)),
+            )
         val step = steps.single() as MacroStep.DPadTap
         assertEquals(0L, step.startTimeMs)
         assertEquals(70L, step.durationMs)
         assertEquals(1, step.dirX)
         assertEquals(0, step.dirY)
-        PhysicalGamepadRecordingManager.resetState()
     }
 
     @Test
     fun `physical gamepad recording converts analog events into joystick path steps`() {
-        PhysicalGamepadRecordingManager.startRecordingForTest(startElapsedMs = 3_000L)
-        PhysicalGamepadRecordingManager.recordEvdevEvent(
-            event = EvdevEvent(EV_ABS, GamepadKeycodes.ABS_X, 16_384),
-            nowElapsedMs = 3_010L,
-        )
-        PhysicalGamepadRecordingManager.recordEvdevEvent(
-            event = EvdevEvent(EV_ABS, GamepadKeycodes.ABS_Y, 16_384),
-            nowElapsedMs = 3_040L,
-        )
-        PhysicalGamepadRecordingManager.recordEvdevEvent(
-            event = EvdevEvent(EV_ABS, GamepadKeycodes.ABS_X, 0),
-            nowElapsedMs = 3_080L,
-        )
-        PhysicalGamepadRecordingManager.recordEvdevEvent(
-            event = EvdevEvent(EV_ABS, GamepadKeycodes.ABS_Y, 0),
-            nowElapsedMs = 3_100L,
-        )
-
-        val steps = PhysicalGamepadRecordingManager.finishRecordingForTest(stopElapsedMs = 3_120L)
-
-        assertEquals(1, steps.size)
+        val steps =
+            recordSession(
+                startMs = 3_000L,
+                stopMs = 3_120L,
+                events =
+                    listOf(
+                        3_010L to evAbs(GamepadKeycodes.ABS_X, 16_384),
+                        3_040L to evAbs(GamepadKeycodes.ABS_Y, 16_384),
+                        3_080L to evAbs(GamepadKeycodes.ABS_X, 0),
+                        3_100L to evAbs(GamepadKeycodes.ABS_Y, 0),
+                    ),
+            )
         val step = steps.single() as MacroStep.JoystickPath
         assertEquals(0L, step.startTimeMs)
         assertEquals(JoystickStick.LEFT, step.stick)
         assertTrue(step.samples.isNotEmpty())
-        PhysicalGamepadRecordingManager.resetState()
     }
-
-    @Test
-    fun `PrivdError enum covers all bootstrap failure modes`() {
-        assertEquals(9, PrivdError.entries.size)
-        assertNotNull(PrivdError.valueOf("DAEMON_UNREACHABLE"))
-        assertNotNull(PrivdError.valueOf("PAIRING_FAILED"))
-        assertNotNull(PrivdError.valueOf("ADB_DISCOVERY_FAILED"))
-        assertNotNull(PrivdError.valueOf("ADB_CONNECT_FAILED"))
-        assertNotNull(PrivdError.valueOf("BOOTSTRAP_PUSH_FAILED"))
-        assertNotNull(PrivdError.valueOf("BOOTSTRAP_SPAWN_FAILED"))
-        assertNotNull(PrivdError.valueOf("BOOTSTRAP_PROVISION_FAILED"))
-        assertNotNull(PrivdError.valueOf("ADB_PAIRING_REQUIRED"))
-        assertNotNull(PrivdError.valueOf("VERSION_MISMATCH"))
-    }
-
-    @Test
-    fun `BootstrapStage enum has stable shape`() {
-        assertEquals(7, BootstrapStage.entries.size)
-        assertNotNull(BootstrapStage.valueOf("IDLE"))
-        assertNotNull(BootstrapStage.valueOf("PAIRING"))
-        assertNotNull(BootstrapStage.valueOf("CONNECTING_ADB"))
-        assertNotNull(BootstrapStage.valueOf("PUSHING_BINARY"))
-        assertNotNull(BootstrapStage.valueOf("SPAWNING_DAEMON"))
-        assertNotNull(BootstrapStage.valueOf("VERIFYING"))
-        assertNotNull(BootstrapStage.valueOf("DONE"))
-    }
-
-    // ── PhysicalGamepadRecordingManager — additional recording logic ──────────
 
     @Test
     fun `empty recording produces no steps`() {
-        PhysicalGamepadRecordingManager.startRecordingForTest(startElapsedMs = 0L)
-        val steps = PhysicalGamepadRecordingManager.finishRecordingForTest(stopElapsedMs = 500L)
-        assertTrue(steps.isEmpty())
-        PhysicalGamepadRecordingManager.resetState()
+        assertTrue(recordSession(0L, 500L, emptyList()).isEmpty())
     }
 
     @Test
     fun `leading idle is trimmed so first step startTimeMs is 0`() {
-        // Recording starts at 5000ms; the button press arrives 200ms later.
-        // After trimLeadingIdle() the step must start at 0.
-        PhysicalGamepadRecordingManager.startRecordingForTest(startElapsedMs = 5_000L)
-        PhysicalGamepadRecordingManager.recordEvdevEvent(
-            event = EvdevEvent(EV_KEY, GamepadKeycodes.BTN_SOUTH, 1),
-            nowElapsedMs = 5_200L,
-        )
-        PhysicalGamepadRecordingManager.recordEvdevEvent(
-            event = EvdevEvent(EV_KEY, GamepadKeycodes.BTN_SOUTH, 0),
-            nowElapsedMs = 5_300L,
-        )
-        val steps = PhysicalGamepadRecordingManager.finishRecordingForTest(stopElapsedMs = 5_400L)
+        val steps =
+            recordSession(
+                startMs = 5_000L,
+                stopMs = 5_400L,
+                events = listOf(5_200L to evKey(GamepadKeycodes.BTN_SOUTH, 1), 5_300L to evKey(GamepadKeycodes.BTN_SOUTH, 0)),
+            )
         assertEquals(1, steps.size)
         assertEquals(0L, steps.first().startTimeMs)
-        PhysicalGamepadRecordingManager.resetState()
     }
 
     @Test
     fun `closed joystick path durationMs is strictly greater than last sample offsetMs`() {
-        // R3 regression guard: recorder sets durationMs = lastSampleOffsetMs + 1
-        // so that no sample can land at the same timestamp as the end-of-step neutral reset.
-        PhysicalGamepadRecordingManager.startRecordingForTest(startElapsedMs = 0L)
-        // Push left stick above deadzone (16384 / 32767 ≈ 0.5 > 0.15 default deadzone)
-        PhysicalGamepadRecordingManager.recordEvdevEvent(
-            event = EvdevEvent(EV_ABS, GamepadKeycodes.ABS_X, 16_384),
-            nowElapsedMs = 10L,
-        )
-        // Return to neutral — closes the gesture normally
-        PhysicalGamepadRecordingManager.recordEvdevEvent(
-            event = EvdevEvent(EV_ABS, GamepadKeycodes.ABS_X, 0),
-            nowElapsedMs = 100L,
-        )
-        val steps = PhysicalGamepadRecordingManager.finishRecordingForTest(stopElapsedMs = 200L)
+        val steps =
+            recordSession(
+                startMs = 0L,
+                stopMs = 200L,
+                events = listOf(10L to evAbs(GamepadKeycodes.ABS_X, 16_384), 100L to evAbs(GamepadKeycodes.ABS_X, 0)),
+            )
         val path = steps.filterIsInstance<MacroStep.JoystickPath>().first()
         val lastOffset = path.samples.maxOf { it.offsetMs }
-        assertTrue(
-            "durationMs (${path.durationMs}) must be strictly greater than last sample offset ($lastOffset)",
-            path.durationMs > lastOffset,
-        )
-        PhysicalGamepadRecordingManager.resetState()
+        assertTrue(path.durationMs > lastOffset)
     }
 
     @Test
     fun `right stick ABS_Z events produce a JoystickPath with RIGHT stick`() {
-        PhysicalGamepadRecordingManager.startRecordingForTest(startElapsedMs = 0L)
-        PhysicalGamepadRecordingManager.recordEvdevEvent(
-            event = EvdevEvent(EV_ABS, GamepadKeycodes.ABS_Z, 16_384),
-            nowElapsedMs = 10L,
-        )
-        // Return to neutral — closes gesture
-        PhysicalGamepadRecordingManager.recordEvdevEvent(
-            event = EvdevEvent(EV_ABS, GamepadKeycodes.ABS_Z, 0),
-            nowElapsedMs = 80L,
-        )
-        val steps = PhysicalGamepadRecordingManager.finishRecordingForTest(stopElapsedMs = 100L)
+        val steps =
+            recordSession(
+                startMs = 0L,
+                stopMs = 100L,
+                events = listOf(10L to evAbs(GamepadKeycodes.ABS_Z, 16_384), 80L to evAbs(GamepadKeycodes.ABS_Z, 0)),
+            )
         val path = steps.filterIsInstance<MacroStep.JoystickPath>().first()
         assertEquals(JoystickStick.RIGHT, path.stick)
-        PhysicalGamepadRecordingManager.resetState()
     }
 
     @Test
     fun `stick still deflected at stop time is force-closed and emitted as JoystickPath`() {
-        // The stick goes above deadzone but never returns to neutral before finishRecording.
-        PhysicalGamepadRecordingManager.startRecordingForTest(startElapsedMs = 0L)
-        PhysicalGamepadRecordingManager.recordEvdevEvent(
-            event = EvdevEvent(EV_ABS, GamepadKeycodes.ABS_X, 16_384),
-            nowElapsedMs = 10L,
-        )
-        // No neutral event — finishRecording force-closes the open gesture.
-        val steps = PhysicalGamepadRecordingManager.finishRecordingForTest(stopElapsedMs = 200L)
-        val path = steps.filterIsInstance<MacroStep.JoystickPath>().singleOrNull()
-        assertNotNull("Expected a force-closed JoystickPath to be emitted", path)
-        PhysicalGamepadRecordingManager.resetState()
+        val steps = recordSession(startMs = 0L, stopMs = 200L, events = listOf(10L to evAbs(GamepadKeycodes.ABS_X, 16_384)))
+        assertNotNull(steps.filterIsInstance<MacroStep.JoystickPath>().singleOrNull())
     }
 
     @Test
     fun `concurrent button press and stick gesture produce two distinct steps`() {
-        PhysicalGamepadRecordingManager.startRecordingForTest(startElapsedMs = 0L)
-        // Button DOWN
-        PhysicalGamepadRecordingManager.recordEvdevEvent(
-            event = EvdevEvent(EV_KEY, GamepadKeycodes.BTN_SOUTH, 1),
-            nowElapsedMs = 10L,
-        )
-        // Stick deflects while button is still held
-        PhysicalGamepadRecordingManager.recordEvdevEvent(
-            event = EvdevEvent(EV_ABS, GamepadKeycodes.ABS_X, 16_384),
-            nowElapsedMs = 20L,
-        )
-        // Stick returns to neutral
-        PhysicalGamepadRecordingManager.recordEvdevEvent(
-            event = EvdevEvent(EV_ABS, GamepadKeycodes.ABS_X, 0),
-            nowElapsedMs = 80L,
-        )
-        // Button UP
-        PhysicalGamepadRecordingManager.recordEvdevEvent(
-            event = EvdevEvent(EV_KEY, GamepadKeycodes.BTN_SOUTH, 0),
-            nowElapsedMs = 100L,
-        )
-        val steps = PhysicalGamepadRecordingManager.finishRecordingForTest(stopElapsedMs = 110L)
+        val steps =
+            recordSession(
+                startMs = 0L,
+                stopMs = 110L,
+                events =
+                    listOf(
+                        10L to evKey(GamepadKeycodes.BTN_SOUTH, 1),
+                        20L to evAbs(GamepadKeycodes.ABS_X, 16_384),
+                        80L to evAbs(GamepadKeycodes.ABS_X, 0),
+                        100L to evKey(GamepadKeycodes.BTN_SOUTH, 0),
+                    ),
+            )
         assertEquals(2, steps.size)
         assertTrue(steps.any { it is MacroStep.GamepadButtonTap })
         assertTrue(steps.any { it is MacroStep.JoystickPath })
-        PhysicalGamepadRecordingManager.resetState()
     }
 
     @Test
     fun `readAdbTlsConnectPort handles missing getprop command gracefully without hanging`() {
-        val port =
-            com.stormpanda.megingiard.privd.PrivdBootstrapper
-                .readAdbTlsConnectPort()
-        assertTrue(port >= 0)
+        assertTrue(PrivdBootstrapper.readAdbTlsConnectPort() >= 0)
     }
 
     @Test
     fun `flushLibaDBCache clears static sslContext field in SslUtils`() {
         val clazz = Class.forName("io.github.muntashirakon.adb.SslUtils")
-        val field = clazz.getDeclaredField("sslContext")
-        field.isAccessible = true
+        val field = clazz.getDeclaredField("sslContext").apply { isAccessible = true }
 
         val dummyContext = SSLContext.getDefault()
         field.set(null, dummyContext)

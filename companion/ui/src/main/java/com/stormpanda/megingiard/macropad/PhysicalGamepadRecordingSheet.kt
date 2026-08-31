@@ -67,7 +67,6 @@ import kotlin.math.sqrt
 
 private const val TAG = "PhysGamepadRecordSheet"
 
-private const val PR_PULSE_ANIM_MS = 900
 private const val PR_TIMER_TICK_MS = 50L
 private const val PR_STICK_RADAR_SIZE_DP = 96
 private const val PR_STICK_THUMB_RADIUS_DP = 7f
@@ -77,6 +76,11 @@ private const val PR_CONTAINER_RADIUS_DP = 20
 private const val PR_BUTTON_RADIUS_DP = 12
 private const val PR_PILL_RADIUS_DP = 8
 
+private val PR_CONTAINER_SHAPE = RoundedCornerShape(PR_CONTAINER_RADIUS_DP.dp)
+private val PR_BUTTON_SHAPE = RoundedCornerShape(PR_BUTTON_RADIUS_DP.dp)
+private val PR_PILL_SHAPE = RoundedCornerShape(PR_PILL_RADIUS_DP.dp)
+private val PR_BADGE_SHAPE = RoundedCornerShape(6.dp)
+
 private val PR_PULSE_DOT_SIZE = 12.dp
 private val PR_SPACING_XS = 4.dp
 private val PR_SPACING_S = 8.dp
@@ -84,14 +88,6 @@ private val PR_SPACING_M = 10.dp
 private val PR_SPACING_L = 14.dp
 private val PR_CONTAINER_PADDING = 20.dp
 private val PR_BORDER_WIDTH = 1.dp
-
-private fun formatElapsedTime(elapsedMs: Long): String {
-    val totalSec = elapsedMs / 1000
-    val min = totalSec / 60
-    val sec = totalSec % 60
-    val tenth = (elapsedMs % 1000) / 100
-    return "%02d:%02d.%01d".format(min, sec, tenth)
-}
 
 private fun dpadArrowLabel(
     dirX: Int,
@@ -163,12 +159,12 @@ internal fun PhysicalGamepadRecordingSheet(
             modifier =
                 Modifier
                     .fillMaxWidth(0.92f)
-                    .clip(RoundedCornerShape(PR_CONTAINER_RADIUS_DP.dp))
+                    .clip(PR_CONTAINER_SHAPE)
                     .background(colors.surface)
                     .border(
                         width = 1.dp,
                         brush = bezelBrush,
-                        shape = RoundedCornerShape(PR_CONTAINER_RADIUS_DP.dp),
+                        shape = PR_CONTAINER_SHAPE,
                     ).padding(20.dp),
         ) {
             Column(
@@ -198,9 +194,9 @@ internal fun PhysicalGamepadRecordingSheet(
                     Box(
                         modifier =
                             Modifier
-                                .clip(RoundedCornerShape(PR_PILL_RADIUS_DP.dp))
+                                .clip(PR_PILL_SHAPE)
                                 .background(colors.surfaceVariant)
-                                .border(width = PR_BORDER_WIDTH, color = colors.divider, shape = RoundedCornerShape(PR_PILL_RADIUS_DP.dp))
+                                .border(width = PR_BORDER_WIDTH, color = colors.divider, shape = PR_PILL_SHAPE)
                                 .padding(horizontal = PR_SPACING_M, vertical = PR_SPACING_XS),
                     ) {
                         Text(
@@ -219,9 +215,9 @@ internal fun PhysicalGamepadRecordingSheet(
                     Box(
                         modifier =
                             Modifier
-                                .clip(RoundedCornerShape(PR_PILL_RADIUS_DP.dp))
+                                .clip(PR_PILL_SHAPE)
                                 .background(colors.surfaceVariant)
-                                .border(width = 1.dp, color = colors.divider, shape = RoundedCornerShape(PR_PILL_RADIUS_DP.dp))
+                                .border(width = 1.dp, color = colors.divider, shape = PR_PILL_SHAPE)
                                 .padding(horizontal = 10.dp, vertical = 4.dp),
                     ) {
                         Text(
@@ -247,10 +243,6 @@ internal fun PhysicalGamepadRecordingSheet(
                             label = stringResource(R.string.privd_recording_physical_stick_l_label),
                             x = recording.leftStickX,
                             y = recording.leftStickY,
-                            accentColor = colors.actionColorGamepad,
-                            borderColor = colors.divider,
-                            textColor = colors.onSurface,
-                            secondaryTextColor = colors.onSurfaceSecondary,
                         )
 
                         // Center: D-Pad Direction + Active Buttons cluster
@@ -265,13 +257,13 @@ internal fun PhysicalGamepadRecordingSheet(
                             Box(
                                 modifier =
                                     Modifier
-                                        .clip(RoundedCornerShape(PR_PILL_RADIUS_DP.dp))
+                                        .clip(PR_PILL_SHAPE)
                                         .background(
                                             if (isDpadActive) colors.actionColorSystem.copy(alpha = 0.2f) else colors.surfaceVariant,
                                         ).border(
                                             width = 1.dp,
                                             color = if (isDpadActive) colors.actionColorSystem else colors.divider,
-                                            shape = RoundedCornerShape(PR_PILL_RADIUS_DP.dp),
+                                            shape = PR_PILL_SHAPE,
                                         ).padding(horizontal = 10.dp, vertical = 4.dp),
                             ) {
                                 Text(
@@ -295,9 +287,9 @@ internal fun PhysicalGamepadRecordingSheet(
                                                 modifier =
                                                     Modifier
                                                         .padding(horizontal = 2.dp)
-                                                        .clip(RoundedCornerShape(6.dp))
+                                                        .clip(PR_BADGE_SHAPE)
                                                         .background(colors.accent.copy(alpha = 0.25f))
-                                                        .border(width = 1.dp, color = colors.accent, shape = RoundedCornerShape(6.dp))
+                                                        .border(width = 1.dp, color = colors.accent, shape = PR_BADGE_SHAPE)
                                                         .padding(horizontal = 8.dp, vertical = 2.dp),
                                             ) {
                                                 Text(
@@ -325,10 +317,6 @@ internal fun PhysicalGamepadRecordingSheet(
                             label = stringResource(R.string.privd_recording_physical_stick_r_label),
                             x = recording.rightStickX,
                             y = recording.rightStickY,
-                            accentColor = colors.actionColorGamepad,
-                            borderColor = colors.divider,
-                            textColor = colors.onSurface,
-                            secondaryTextColor = colors.onSurfaceSecondary,
                         )
                     }
 
@@ -351,7 +339,7 @@ internal fun PhysicalGamepadRecordingSheet(
                     OutlinedButton(
                         onClick = onCancel,
                         modifier = Modifier.weight(1f).height(46.dp),
-                        shape = RoundedCornerShape(PR_BUTTON_RADIUS_DP.dp),
+                        shape = PR_BUTTON_SHAPE,
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Close,
@@ -371,7 +359,7 @@ internal fun PhysicalGamepadRecordingSheet(
                         onClick = onStop,
                         modifier = Modifier.weight(1f).height(46.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = colors.error),
-                        shape = RoundedCornerShape(PR_BUTTON_RADIUS_DP.dp),
+                        shape = PR_BUTTON_SHAPE,
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Stop,
@@ -396,12 +384,13 @@ private fun StickRadar(
     label: String,
     x: Float,
     y: Float,
-    accentColor: Color,
-    borderColor: Color,
-    textColor: Color,
-    secondaryTextColor: Color,
     modifier: Modifier = Modifier,
 ) {
+    val colors = LocalAppColors.current
+    val accentColor = colors.actionColorGamepad
+    val borderColor = colors.divider
+    val textColor = colors.onSurface
+    val secondaryTextColor = colors.onSurfaceSecondary
     val mag = sqrt(x * x + y * y).coerceIn(0f, 1f)
     val magPercent = (mag * 100).roundToInt()
 
@@ -499,30 +488,4 @@ private fun StickRadar(
             fontWeight = if (magPercent > 5) FontWeight.Bold else FontWeight.Normal,
         )
     }
-}
-
-@Composable
-private fun PulsingRecordingDot(
-    color: Color,
-    modifier: Modifier = Modifier,
-) {
-    val pulseTransition = rememberInfiniteTransition(label = "recordingPulse")
-    val pulseAlpha by pulseTransition.animateFloat(
-        initialValue = 0.35f,
-        targetValue = 1f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(durationMillis = PR_PULSE_ANIM_MS, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "recordingDotPulse",
-    )
-
-    Box(
-        modifier =
-            modifier
-                .drawBehind {
-                    drawCircle(color = color.copy(alpha = pulseAlpha))
-                },
-    )
 }

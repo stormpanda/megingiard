@@ -13,35 +13,20 @@ class SteamGridDbClientTest {
 
     @Test
     fun testMapHttpError() {
-        // 401 -> Unauthorized
-        val err401Json = mapHttpError(401, """{"success":false,"errors":["Invalid API key"]}""")
-        assertTrue(err401Json is SteamGridDbException.Unauthorized)
-        assertEquals("Invalid API key", err401Json.message)
-
-        val err401Plain = mapHttpError(401, "")
-        assertTrue(err401Plain is SteamGridDbException.Unauthorized)
-        assertEquals("Invalid or unauthorized API key", err401Plain.message)
-
-        // 429 -> RateLimited
-        val err429 = mapHttpError(429, "Too many requests")
-        assertTrue(err429 is SteamGridDbException.RateLimited)
-
-        // 502, 503, 504 -> ServiceUnavailable
-        val err502 = mapHttpError(502, "Bad Gateway")
-        assertTrue(err502 is SteamGridDbException.ServiceUnavailable)
-        val err503 = mapHttpError(503, "Service Unavailable")
-        assertTrue(err503 is SteamGridDbException.ServiceUnavailable)
-        val err504 = mapHttpError(504, "Gateway Timeout")
-        assertTrue(err504 is SteamGridDbException.ServiceUnavailable)
-
-        // Other status codes -> ApiError
-        val err400 = mapHttpError(400, "Bad Request")
-        assertTrue(err400 is SteamGridDbException.ApiError)
-        assertEquals("HTTP 400: Bad Request", err400.message)
-
-        val err500 = mapHttpError(500, "Internal Server Error")
-        assertTrue(err500 is SteamGridDbException.ApiError)
-        assertEquals("HTTP 500: Internal Server Error", err500.message)
+        assertEquals(
+            "Invalid API key",
+            (mapHttpError(401, """{"success":false,"errors":["Invalid API key"]}""") as SteamGridDbException.Unauthorized).message,
+        )
+        assertEquals("Invalid or unauthorized API key", (mapHttpError(401, "") as SteamGridDbException.Unauthorized).message)
+        assertTrue(mapHttpError(429, "Too many requests") is SteamGridDbException.RateLimited)
+        listOf(502 to "Bad Gateway", 503 to "Service Unavailable", 504 to "Gateway Timeout").forEach { (code, body) ->
+            assertTrue(mapHttpError(code, body) is SteamGridDbException.ServiceUnavailable)
+        }
+        assertEquals("HTTP 400: Bad Request", (mapHttpError(400, "Bad Request") as SteamGridDbException.ApiError).message)
+        assertEquals(
+            "HTTP 500: Internal Server Error",
+            (mapHttpError(500, "Internal Server Error") as SteamGridDbException.ApiError).message,
+        )
     }
 
     @Test
@@ -54,21 +39,10 @@ class SteamGridDbClientTest {
 
     @Test
     fun testMapNetworkError() {
-        // UnknownHostException -> Offline
-        val errOffline = mapNetworkError(UnknownHostException("No address associated with hostname"))
-        assertTrue(errOffline is SteamGridDbException.Offline)
-
-        // ConnectException -> ServiceUnavailable
-        val errConnect = mapNetworkError(ConnectException("Connection refused"))
-        assertTrue(errConnect is SteamGridDbException.ServiceUnavailable)
-
-        // SocketTimeoutException -> ServiceUnavailable
-        val errTimeout = mapNetworkError(SocketTimeoutException("Read timed out"))
-        assertTrue(errTimeout is SteamGridDbException.ServiceUnavailable)
-
-        // Other exceptions -> Unknown
-        val genericErr = mapNetworkError(NullPointerException("Oops"))
-        assertTrue(genericErr is SteamGridDbException.Unknown)
+        assertTrue(mapNetworkError(UnknownHostException("No address")) is SteamGridDbException.Offline)
+        assertTrue(mapNetworkError(ConnectException("Connection refused")) is SteamGridDbException.ServiceUnavailable)
+        assertTrue(mapNetworkError(SocketTimeoutException("Read timed out")) is SteamGridDbException.ServiceUnavailable)
+        val genericErr = mapNetworkError(NullPointerException("Oops")) as SteamGridDbException.Unknown
         assertEquals("Oops", genericErr.cause?.message)
     }
 

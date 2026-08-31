@@ -20,7 +20,7 @@ object MegingiardThemeClient {
         return observeContentProvider(
             context = context,
             uri = MegingiardIpcContract.THEME_URI,
-            parser = { resolver, uri -> IpcThemeParser.parse(resolver, uri) },
+            parser = IpcThemeParser::parse,
         ).map { config ->
             Pair(
                 config.themeMode,

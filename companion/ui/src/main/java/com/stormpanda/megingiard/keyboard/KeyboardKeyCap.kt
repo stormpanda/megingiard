@@ -73,6 +73,7 @@ private val SPECIAL_KEY_IDS =
 // ---------------------------------------------------------------------------
 
 private val KEY_CORNER = 5.dp
+private val KEY_SHAPE = RoundedCornerShape(KEY_CORNER)
 private val KEY_PADDING_V = 3.dp
 
 private val KC_TRACKPOINT_SIZE = 16.dp
@@ -134,7 +135,7 @@ internal fun KeyCap(
             modifier
                 .padding(vertical = KEY_PADDING_V)
                 .fillMaxSize()
-                .clip(RoundedCornerShape(KEY_CORNER))
+                .clip(KEY_SHAPE)
                 .background(bg)
                 .onGloballyPositioned { coords ->
                     onBoundsUpdate(coords)

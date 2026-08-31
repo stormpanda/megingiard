@@ -317,25 +317,20 @@ object AppStateManager {
     private val _isQuickMenuOpen = MutableStateFlow(false)
     val isQuickMenuOpen: StateFlow<Boolean> = _isQuickMenuOpen.asStateFlow()
 
-    val isGlobalSettingsOpen: StateFlow<Boolean> =
+    private fun isPrimaryModalActive(type: PrimaryModalType): StateFlow<Boolean> =
         _activePrimaryModal
-            .map { it?.type == PrimaryModalType.GLOBAL_SETTINGS }
+            .map { it?.type == type }
             .stateIn(scope, SharingStarted.Eagerly, false)
 
-    val isKeyboardSettingsOpen: StateFlow<Boolean> =
-        _activePrimaryModal
-            .map { it?.type == PrimaryModalType.KEYBOARD_SETTINGS }
+    private fun isCompanionSurfaceActive(mode: CompanionSurfaceMode): StateFlow<Boolean> =
+        _companionSurfaceMode
+            .map { it == mode }
             .stateIn(scope, SharingStarted.Eagerly, false)
 
-    val isTouchpadSettingsOpen: StateFlow<Boolean> =
-        _activePrimaryModal
-            .map { it?.type == PrimaryModalType.TOUCHPAD_SETTINGS }
-            .stateIn(scope, SharingStarted.Eagerly, false)
-
-    val isBackgroundSettingsActive: StateFlow<Boolean> =
-        _activePrimaryModal
-            .map { it?.type == PrimaryModalType.BACKGROUND_SETTINGS }
-            .stateIn(scope, SharingStarted.Eagerly, false)
+    val isGlobalSettingsOpen: StateFlow<Boolean> = isPrimaryModalActive(PrimaryModalType.GLOBAL_SETTINGS)
+    val isKeyboardSettingsOpen: StateFlow<Boolean> = isPrimaryModalActive(PrimaryModalType.KEYBOARD_SETTINGS)
+    val isTouchpadSettingsOpen: StateFlow<Boolean> = isPrimaryModalActive(PrimaryModalType.TOUCHPAD_SETTINGS)
+    val isBackgroundSettingsActive: StateFlow<Boolean> = isPrimaryModalActive(PrimaryModalType.BACKGROUND_SETTINGS)
 
     val isEditorActive: StateFlow<Boolean> =
         _activePrimaryModal
@@ -347,20 +342,9 @@ object AppStateManager {
                     it?.type == PrimaryModalType.MACRO_TIMELINE_EDITOR
             }.stateIn(scope, SharingStarted.Eagerly, false)
 
-    val isViewportEditActive: StateFlow<Boolean> =
-        _companionSurfaceMode
-            .map { it == CompanionSurfaceMode.VIEWPORT_EDIT }
-            .stateIn(scope, SharingStarted.Eagerly, false)
-
-    val isFullscreenKeyboardActive: StateFlow<Boolean> =
-        _companionSurfaceMode
-            .map { it == CompanionSurfaceMode.KEYBOARD }
-            .stateIn(scope, SharingStarted.Eagerly, false)
-
-    val isFullscreenMouseActive: StateFlow<Boolean> =
-        _companionSurfaceMode
-            .map { it == CompanionSurfaceMode.TOUCHPAD }
-            .stateIn(scope, SharingStarted.Eagerly, false)
+    val isViewportEditActive: StateFlow<Boolean> = isCompanionSurfaceActive(CompanionSurfaceMode.VIEWPORT_EDIT)
+    val isFullscreenKeyboardActive: StateFlow<Boolean> = isCompanionSurfaceActive(CompanionSurfaceMode.KEYBOARD)
+    val isFullscreenMouseActive: StateFlow<Boolean> = isCompanionSurfaceActive(CompanionSurfaceMode.TOUCHPAD)
 
     fun openQuickMenu() {
         if (OnboardingWizardManager.isWizardActive.value || _isPrivdSetupWizardActive.value) {
@@ -459,11 +443,11 @@ object AppStateManager {
 
     fun resetPrivdPromptState() {
         AppLog.d(TAG, "resetPrivdPromptState")
-        _isPrivdPromptShowing.value = false
+        _isPrivdPromptActive.value = false
     }
 
-    private val _isPrivdPromptShowing = MutableStateFlow(false)
-    val isPrivdPromptActive: StateFlow<Boolean> = _isPrivdPromptShowing.asStateFlow()
+    private val _isPrivdPromptActive = MutableStateFlow(false)
+    val isPrivdPromptActive: StateFlow<Boolean> = _isPrivdPromptActive.asStateFlow()
 
     private val _isPrivdSetupWizardActive = MutableStateFlow(false)
     val isPrivdSetupWizardActive: StateFlow<Boolean> = _isPrivdSetupWizardActive.asStateFlow()
@@ -582,39 +566,38 @@ object AppStateManager {
         }
     }
 
-    fun setGlobalSettingsOpen(open: Boolean) {
-        AppLog.d(TAG, "setGlobalSettingsOpen($open)")
-        if (open) {
-            openPrimaryModal(PrimaryModalConfig(PrimaryModalType.GLOBAL_SETTINGS))
-        } else if (_activePrimaryModal.value?.type == PrimaryModalType.GLOBAL_SETTINGS) {
+    private fun setPrimaryModalActive(
+        type: PrimaryModalType,
+        active: Boolean,
+    ) {
+        if (active) {
+            openPrimaryModal(PrimaryModalConfig(type))
+        } else if (_activePrimaryModal.value?.type == type) {
             closePrimaryModal()
         }
+    }
+
+    fun setGlobalSettingsOpen(open: Boolean) {
+        AppLog.d(TAG, "setGlobalSettingsOpen($open)")
+        setPrimaryModalActive(PrimaryModalType.GLOBAL_SETTINGS, open)
     }
 
     fun setKeyboardSettingsOpen(open: Boolean) {
         AppLog.d(TAG, "setKeyboardSettingsOpen($open)")
-        if (open) {
-            openPrimaryModal(PrimaryModalConfig(PrimaryModalType.KEYBOARD_SETTINGS))
-        } else if (_activePrimaryModal.value?.type == PrimaryModalType.KEYBOARD_SETTINGS) {
-            closePrimaryModal()
-        }
+        setPrimaryModalActive(PrimaryModalType.KEYBOARD_SETTINGS, open)
     }
 
     fun setTouchpadSettingsOpen(open: Boolean) {
         AppLog.d(TAG, "setTouchpadSettingsOpen($open)")
-        if (open) {
-            openPrimaryModal(PrimaryModalConfig(PrimaryModalType.TOUCHPAD_SETTINGS))
-        } else if (_activePrimaryModal.value?.type == PrimaryModalType.TOUCHPAD_SETTINGS) {
-            closePrimaryModal()
-        }
+        setPrimaryModalActive(PrimaryModalType.TOUCHPAD_SETTINGS, open)
     }
 
     private val _fullscreenMouseSensitivity = MutableStateFlow(1.0f)
     val fullscreenMouseSensitivity: StateFlow<Float> = _fullscreenMouseSensitivity.asStateFlow()
 
-    private val _forcedKeyboardLayout = MutableStateFlow<KbLayout?>(null)
+    private val forcedKeyboardLayout = MutableStateFlow<KbLayout?>(null)
     val fullscreenKeyboardLayout: StateFlow<KbLayout> =
-        combine(_forcedKeyboardLayout, KeyboardSettings.kbLayout) { forced, settings ->
+        combine(forcedKeyboardLayout, KeyboardSettings.kbLayout) { forced, settings ->
             forced ?: settings
         }.stateIn(scope, SharingStarted.Eagerly, KeyboardSettings.kbLayout.value)
 
@@ -646,10 +629,10 @@ object AppStateManager {
         }
         AppLog.i(TAG, "setFullscreenKeyboardActive($active, layout=$layout)")
         if (active) {
-            _forcedKeyboardLayout.value = layout
+            forcedKeyboardLayout.value = layout
             _companionSurfaceMode.value = CompanionSurfaceMode.KEYBOARD
         } else {
-            _forcedKeyboardLayout.value = null
+            forcedKeyboardLayout.value = null
             if (_companionSurfaceMode.value == CompanionSurfaceMode.KEYBOARD) {
                 _companionSurfaceMode.value = CompanionSurfaceMode.MACROPAD
             }
@@ -775,11 +758,11 @@ object AppStateManager {
                 }
                 if (!accessibilityActive) {
                     MacroPadSettings.setPrivdPromptDismissed(false)
-                    _isPrivdPromptShowing.value = true
+                    _isPrivdPromptActive.value = true
                 } else if (dismissed || bgSettingsActive) {
-                    _isPrivdPromptShowing.value = false
+                    _isPrivdPromptActive.value = false
                 } else if (state == PrivdState.FAILED && hasCreds) {
-                    _isPrivdPromptShowing.value = true
+                    _isPrivdPromptActive.value = true
                 }
             }.collect {}
         }

@@ -57,7 +57,6 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.InputMode
@@ -83,6 +82,7 @@ private const val TAG = "GamepadScaffold"
 private val GS_SIDEBAR_WIDTH = 180.dp
 private val GS_SIDEBAR_ITEM_HEIGHT = 40.dp
 private val GS_SIDEBAR_CORNER = 10.dp
+private val GS_SIDEBAR_SHAPE = RoundedCornerShape(GS_SIDEBAR_CORNER)
 private val GS_SIDEBAR_ICON_SIZE = 20.dp
 private val GS_FOCUS_STROKE_WIDTH = 1.5.dp
 private val GS_ZERO_BORDER_WIDTH = 0.dp
@@ -330,8 +330,6 @@ fun GamepadCategoryTile(
         transferFocusToDeck?.invoke()
     }
 
-    val shape = RoundedCornerShape(GS_SIDEBAR_CORNER)
-
     Box(
         modifier =
             modifier
@@ -374,7 +372,7 @@ fun GamepadCategoryTile(
                     }
                 }.primaryOverlayFocusable(
                     onClick = wrappedOnClick,
-                    shape = shape,
+                    shape = GS_SIDEBAR_SHAPE,
                     borderWidth = GS_ZERO_BORDER_WIDTH,
                     interactionSource = interactionSource,
                 ),
@@ -675,13 +673,7 @@ fun GamepadTwoPaneScaffold(
                     .fillMaxSize()
                     .background(colors.appBackground)
                     .onKeyEvent { keyEvent ->
-                        if (keyEvent.type == KeyEventType.KeyDown &&
-                            (
-                                keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BUTTON_B ||
-                                    keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BACK ||
-                                    keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ESCAPE
-                            )
-                        ) {
+                        if (keyEvent.isBackKeyDown()) {
                             handleBackNavigation()
                         } else {
                             false

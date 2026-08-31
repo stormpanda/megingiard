@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Keyboard
-import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.SmartButton
 import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.runtime.Composable
@@ -14,14 +13,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.MacroPadSettings
+import com.stormpanda.megingiard.ui.BumperDirection
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
 import com.stormpanda.megingiard.ui.GamepadInfoBox
+import com.stormpanda.megingiard.ui.cycle
 import com.stormpanda.megingiard.ui.firstDeckItem
 
 private const val TAG = "PadActionSubPickers"
@@ -62,67 +62,53 @@ internal fun KeyboardKeyPicker(
     )
 
     val mod1Options = listOf<Int?>(null) + MODIFIER_PRESETS.map { it.first }.filter { it != mod2 }
-    val mod1Idx = mod1Options.indexOf(mod1).coerceAtLeast(0)
     GamepadChoiceCard(
         title = stringResource(R.string.macropad_picker_label_mod_1),
         description = stringResource(R.string.macropad_picker_label_mod_desc),
         selectedText = modifierLabel(mod1),
         icon = Icons.Rounded.Keyboard,
         onPrevious = {
-            val nextIdx = (mod1Idx - 1 + mod1Options.size) % mod1Options.size
-            val code = mod1Options[nextIdx]
+            val code = mod1Options.cycle(mod1, BumperDirection.PREV)
             mod1 = code
             emitChange(current.keycode, current.label, code, mod2)
         },
         onNext = {
-            val nextIdx = (mod1Idx + 1) % mod1Options.size
-            val code = mod1Options[nextIdx]
+            val code = mod1Options.cycle(mod1, BumperDirection.NEXT)
             mod1 = code
             emitChange(current.keycode, current.label, code, mod2)
         },
     )
 
     val mod2Options = listOf<Int?>(null) + MODIFIER_PRESETS.map { it.first }.filter { it != mod1 }
-    val mod2Idx = mod2Options.indexOf(mod2).coerceAtLeast(0)
     GamepadChoiceCard(
         title = stringResource(R.string.macropad_picker_label_mod_2),
         description = stringResource(R.string.macropad_picker_label_mod_desc),
         selectedText = modifierLabel(mod2),
         icon = Icons.Rounded.Keyboard,
         onPrevious = {
-            val nextIdx = (mod2Idx - 1 + mod2Options.size) % mod2Options.size
-            val code = mod2Options[nextIdx]
+            val code = mod2Options.cycle(mod2, BumperDirection.PREV)
             mod2 = code
             emitChange(current.keycode, current.label, mod1, code)
         },
         onNext = {
-            val nextIdx = (mod2Idx + 1) % mod2Options.size
-            val code = mod2Options[nextIdx]
+            val code = mod2Options.cycle(mod2, BumperDirection.NEXT)
             mod2 = code
             emitChange(current.keycode, current.label, mod1, code)
         },
     )
 }
 
-@Composable
-internal fun MouseButtonPicker(
-    current: PadAction.MouseButton,
-    onOpenPicker: () -> Unit,
-) {
-    GamepadActionCard(
-        title = stringResource(R.string.macropad_action_mouse_button),
-        description = stringResource(R.string.macropad_picker_mouse_button_desc),
-        actionText = current.button.displayLabel(),
-        icon = Icons.Rounded.Mouse,
-        onClick = onOpenPicker,
+private val EXTRA_SLOT_LABELS =
+    listOf(
+        R.string.macropad_picker_label_extra_1,
+        R.string.macropad_picker_label_extra_2,
+        R.string.macropad_picker_label_extra_3,
     )
-}
 
 @Composable
 internal fun GamepadButtonPicker(
     current: PadAction.GamepadButton,
     onOpenPicker: (slotIndex: Int) -> Unit,
-    onChange: (PadAction) -> Unit,
     isFirstItem: Boolean = false,
 ) {
     val noneLabel = stringResource(R.string.macropad_modifier_none)
@@ -138,10 +124,6 @@ internal fun GamepadButtonPicker(
             GamepadKeycodes.PRESETS.firstOrNull { it.code == c }?.localizedDisplayLabel(swapFaceButtons)
         } ?: noneLabel
 
-    val extra1 = current.extraBtnCodes.getOrNull(0)
-    val extra2 = current.extraBtnCodes.getOrNull(1)
-    val extra3 = current.extraBtnCodes.getOrNull(2)
-
     GamepadActionCard(
         title = stringResource(R.string.macropad_picker_label_button),
         description = stringResource(R.string.macropad_picker_label_button_desc),
@@ -151,35 +133,21 @@ internal fun GamepadButtonPicker(
         modifier = Modifier.firstDeckItem(isFirstItem),
     )
 
-    GamepadActionCard(
-        title = stringResource(R.string.macropad_picker_label_extra_1),
-        description = stringResource(R.string.macropad_picker_label_extra_desc),
-        actionText = presetLabel(extra1),
-        icon = Icons.Rounded.SportsEsports,
-        onClick = { onOpenPicker(1) },
-    )
-
-    GamepadActionCard(
-        title = stringResource(R.string.macropad_picker_label_extra_2),
-        description = stringResource(R.string.macropad_picker_label_extra_desc),
-        actionText = presetLabel(extra2),
-        icon = Icons.Rounded.SportsEsports,
-        onClick = { onOpenPicker(2) },
-    )
-
-    GamepadActionCard(
-        title = stringResource(R.string.macropad_picker_label_extra_3),
-        description = stringResource(R.string.macropad_picker_label_extra_desc),
-        actionText = presetLabel(extra3),
-        icon = Icons.Rounded.SportsEsports,
-        onClick = { onOpenPicker(3) },
-    )
+    EXTRA_SLOT_LABELS.forEachIndexed { idx, labelRes ->
+        val extraCode = current.extraBtnCodes.getOrNull(idx)
+        GamepadActionCard(
+            title = stringResource(labelRes),
+            description = stringResource(R.string.macropad_picker_label_extra_desc),
+            actionText = presetLabel(extraCode),
+            icon = Icons.Rounded.SportsEsports,
+            onClick = { onOpenPicker(idx + 1) },
+        )
+    }
 }
 
 @Composable
 internal fun MacroPicker(
     current: PadAction.Macro,
-    accentColor: Color,
     onOpenMacroPicker: () -> Unit,
     isFirstItem: Boolean = false,
 ) {

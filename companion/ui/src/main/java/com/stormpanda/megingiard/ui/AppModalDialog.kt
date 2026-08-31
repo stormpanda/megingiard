@@ -1,6 +1,5 @@
 package com.stormpanda.megingiard.ui
 
-import android.view.KeyEvent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,9 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -65,19 +62,14 @@ fun AppModalDialog(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = LocalAppColors.current
+    val shape = remember(cornerRadius) { RoundedCornerShape(cornerRadius) }
     Box(
         modifier =
             Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = scrimAlpha))
                 .onPreviewKeyEvent { keyEvent ->
-                    if (keyEvent.type == KeyEventType.KeyDown &&
-                        (
-                            keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BUTTON_B ||
-                                keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BACK ||
-                                keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ESCAPE
-                        )
-                    ) {
+                    if (keyEvent.isBackKeyDown()) {
                         onDismiss()
                         true
                     } else {
@@ -94,9 +86,9 @@ fun AppModalDialog(
             modifier =
                 modifier
                     .fillMaxWidth(widthFraction)
-                    .shadow(APP_DIALOG_ELEVATION, RoundedCornerShape(cornerRadius))
-                    .background(colors.surface, RoundedCornerShape(cornerRadius))
-                    .border(1.dp, brush = rememberBezelBrush(), shape = RoundedCornerShape(cornerRadius))
+                    .shadow(APP_DIALOG_ELEVATION, shape)
+                    .background(colors.surface, shape)
+                    .border(1.dp, brush = rememberBezelBrush(), shape = shape)
                     .blockPointerEvents()
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },

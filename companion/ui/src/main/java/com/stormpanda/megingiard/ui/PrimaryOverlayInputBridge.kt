@@ -20,6 +20,8 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.math.nextItem
+import com.stormpanda.megingiard.math.prevItem
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -42,6 +44,7 @@ private const val REPEAT_MIN_DELAY_MS = 60L
 private const val REPEAT_ACCEL_FACTOR = 0.90f
 private val FOCUS_BORDER_WIDTH = 2.dp
 private val FOCUS_CORNER_RADIUS = 8.dp
+private val DEFAULT_FOCUS_SHAPE = RoundedCornerShape(FOCUS_CORNER_RADIUS)
 
 /**
  * Direction for shoulder bumper tab navigation.
@@ -50,6 +53,18 @@ enum class BumperDirection {
     PREV,
     NEXT,
 }
+
+/**
+ * Cycles to previous or next item in the collection based on [BumperDirection].
+ */
+fun <T> List<T>.cycle(
+    currentItem: T,
+    direction: BumperDirection,
+): T =
+    when (direction) {
+        BumperDirection.PREV -> prevItem(currentItem)
+        BumperDirection.NEXT -> nextItem(currentItem)
+    }
 
 /**
  * Bridge singleton for dispatching gamepad events (bumpers, joystick translation)
@@ -177,7 +192,7 @@ object PrimaryOverlayInputBridge {
  */
 fun Modifier.primaryOverlayFocusable(
     onClick: (() -> Unit)? = null,
-    shape: Shape = RoundedCornerShape(FOCUS_CORNER_RADIUS),
+    shape: Shape = DEFAULT_FOCUS_SHAPE,
     borderWidth: Dp = FOCUS_BORDER_WIDTH,
     interactionSource: MutableInteractionSource? = null,
     enabled: Boolean = true,

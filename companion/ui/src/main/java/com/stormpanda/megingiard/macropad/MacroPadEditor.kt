@@ -9,7 +9,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
@@ -28,7 +27,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
@@ -42,14 +40,9 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Grid4x4
 import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.LinkOff
-import androidx.compose.material.icons.rounded.Lock
-import androidx.compose.material.icons.rounded.LockOpen
-import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.OpenWith
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.SmartButton
 import androidx.compose.material.icons.rounded.SportsEsports
@@ -77,8 +70,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.type
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -114,7 +106,10 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.PrimaryModalPayload
 import com.stormpanda.megingiard.ui.PrimaryModalType
 import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
+import com.stormpanda.megingiard.ui.cycle
 import com.stormpanda.megingiard.ui.firstDeckItem
+import com.stormpanda.megingiard.ui.handle2DAdjustmentKeyEvent
+import com.stormpanda.megingiard.ui.launchDirectionalRepeat
 import com.stormpanda.megingiard.ui.rememberGamepadBringIntoViewSpec
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -122,6 +117,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
+import java.util.Collections
 import java.util.UUID
 import kotlin.math.max
 
@@ -132,29 +128,47 @@ private const val MPE_BUTTON_HEADER_COUNT = 5
 private const val MPE_CANVAS_WIDTH_PX = 1240f
 private const val MPE_CANVAS_HEIGHT_PX = 1080f
 private const val MPE_EDGE_MARGIN = 0.05f
-private const val MPE_MOVE_INITIAL_DELAY_MS = 250L
-private const val MPE_MOVE_START_DELAY_MS = 80L
-private const val MPE_MOVE_MIN_DELAY_MS = 16L
-private const val MPE_MOVE_ACCEL_FACTOR = 0.88f
+
+private fun EditorSection.titleResId(): Int =
+    when (this) {
+        EditorSection.QUICK_ACTIONS -> R.string.quick_actions_title
+        EditorSection.PROFILES -> R.string.quick_menu_profile_label
+        EditorSection.LAYOUTS -> R.string.macropad_editor_section_layout
+        EditorSection.MIRROR -> R.string.quick_menu_screen_mirroring
+        EditorSection.BACKGROUND -> R.string.layout_settings_bg_section_title
+        EditorSection.BUTTONS -> R.string.macropad_editor_section_buttons
+        EditorSection.MACROS -> R.string.macropad_editor_manage_macros
+    }
+
+private fun EditorSection.icon(): ImageVector =
+    when (this) {
+        EditorSection.QUICK_ACTIONS -> Icons.Rounded.Bolt
+        EditorSection.PROFILES -> Icons.Rounded.Folder
+        EditorSection.LAYOUTS -> Icons.AutoMirrored.Rounded.ViewQuilt
+        EditorSection.MIRROR -> Icons.Rounded.Videocam
+        EditorSection.BACKGROUND -> Icons.Rounded.Wallpaper
+        EditorSection.BUTTONS -> Icons.Rounded.SmartButton
+        EditorSection.MACROS -> Icons.AutoMirrored.Rounded.PlaylistPlay
+    }
 
 private fun applyActionToDraftButton(
     draftButton: PadButton,
     newAction: PadAction,
-): PadButton {
-    var shape = draftButton.buttonShape
-    var size = draftButton.buttonSize
-
-    if (newAction is PadAction.ScrollWheel) {
-        size = ButtonSize.SIZE_1X2
-    } else if (newAction is PadAction.TrackpointMove) {
-        shape = ButtonShape.CIRCLE
-    }
-
-    return draftButton.copy(
+): PadButton =
+    draftButton.copy(
         action = newAction,
-        buttonShape = shape,
-        buttonSize = size,
+        buttonSize = if (newAction is PadAction.ScrollWheel) ButtonSize.SIZE_1X2 else draftButton.buttonSize,
     )
+
+private fun swapButtons(
+    layout: PadLayout?,
+    from: Int,
+    to: Int,
+) {
+    if (layout == null || from !in layout.buttons.indices || to !in layout.buttons.indices) return
+    val mutable = layout.buttons.toMutableList()
+    Collections.swap(mutable, from, to)
+    MacroPadState.updateLayout(layout.copy(buttons = mutable))
 }
 
 internal val MPE_PADDING = 16.dp
@@ -249,13 +263,7 @@ fun MacroPadEditor(
 
     LaunchedEffect(Unit) {
         PrimaryOverlayInputBridge.bumperEvents.collect { direction ->
-            val currentIndex = EditorSection.entries.indexOf(selectedSection)
-            val nextIndex =
-                when (direction) {
-                    BumperDirection.PREV -> (currentIndex - 1 + EditorSection.entries.size) % EditorSection.entries.size
-                    BumperDirection.NEXT -> (currentIndex + 1) % EditorSection.entries.size
-                }
-            MacroPadNavState.selectSection(EditorSection.entries[nextIndex])
+            MacroPadNavState.selectSection(EditorSection.entries.cycle(selectedSection, direction))
         }
     }
 
@@ -302,62 +310,16 @@ fun MacroPadEditor(
                     onRecordFocusedKey = { depth, key -> MacroPadNavState.recordFocusedKey(depth, key) },
                     onRemoveFocusedKey = { depth -> MacroPadNavState.removeFocusedKey(depth) },
                     sidebarContent = {
-                        GamepadCategoryTile(
-                            title = stringResource(R.string.quick_actions_title),
-                            icon = Icons.Rounded.Bolt,
-                            selected = selectedSection == EditorSection.QUICK_ACTIONS,
-                            onClick = {
-                                MacroPadNavState.selectSection(EditorSection.QUICK_ACTIONS)
-                            },
-                        )
-                        GamepadCategoryTile(
-                            title = stringResource(R.string.quick_menu_profile_label),
-                            icon = Icons.Rounded.Folder,
-                            selected = selectedSection == EditorSection.PROFILES,
-                            onClick = {
-                                MacroPadNavState.selectSection(EditorSection.PROFILES)
-                            },
-                        )
-                        GamepadCategoryTile(
-                            title = stringResource(R.string.macropad_editor_section_layout),
-                            icon = Icons.AutoMirrored.Rounded.ViewQuilt,
-                            selected = selectedSection == EditorSection.LAYOUTS,
-                            onClick = {
-                                MacroPadNavState.selectSection(EditorSection.LAYOUTS)
-                            },
-                        )
-                        GamepadCategoryTile(
-                            title = stringResource(R.string.quick_menu_screen_mirroring),
-                            icon = Icons.Rounded.Videocam,
-                            selected = selectedSection == EditorSection.MIRROR,
-                            onClick = {
-                                MacroPadNavState.selectSection(EditorSection.MIRROR)
-                            },
-                        )
-                        GamepadCategoryTile(
-                            title = stringResource(R.string.layout_settings_bg_section_title),
-                            icon = Icons.Rounded.Wallpaper,
-                            selected = selectedSection == EditorSection.BACKGROUND,
-                            onClick = {
-                                MacroPadNavState.selectSection(EditorSection.BACKGROUND)
-                            },
-                        )
-                        GamepadCategoryTile(
-                            title = stringResource(R.string.macropad_editor_section_buttons),
-                            icon = Icons.Rounded.SmartButton,
-                            selected = selectedSection == EditorSection.BUTTONS,
-                            onClick = {
-                                MacroPadNavState.selectSection(EditorSection.BUTTONS)
-                            },
-                        )
-                        GamepadCategoryTile(
-                            title = stringResource(R.string.macropad_editor_manage_macros),
-                            icon = Icons.AutoMirrored.Rounded.PlaylistPlay,
-                            selected = selectedSection == EditorSection.MACROS,
-                            onClick = {
-                                MacroPadNavState.selectSection(EditorSection.MACROS)
-                            },
-                        )
+                        EditorSection.entries.forEach { section ->
+                            GamepadCategoryTile(
+                                title = stringResource(section.titleResId()),
+                                icon = section.icon(),
+                                selected = selectedSection == section,
+                                onClick = {
+                                    MacroPadNavState.selectSection(section)
+                                },
+                            )
+                        }
                     },
                     content = {
                         AnimatedContent(
@@ -377,16 +339,7 @@ fun MacroPadEditor(
                         ) { stack ->
                             val currentSubPage = stack.lastOrNull()
                             if (currentSubPage == null) {
-                                val sectionTitle =
-                                    when (selectedSection) {
-                                        EditorSection.QUICK_ACTIONS -> stringResource(R.string.quick_actions_title)
-                                        EditorSection.PROFILES -> stringResource(R.string.quick_menu_profile_label)
-                                        EditorSection.LAYOUTS -> stringResource(R.string.macropad_editor_section_layout)
-                                        EditorSection.MIRROR -> stringResource(R.string.quick_menu_screen_mirroring)
-                                        EditorSection.BACKGROUND -> stringResource(R.string.layout_settings_bg_section_title)
-                                        EditorSection.BUTTONS -> stringResource(R.string.macropad_editor_section_buttons)
-                                        EditorSection.MACROS -> stringResource(R.string.macropad_editor_manage_macros)
-                                    }
+                                val sectionTitle = stringResource(selectedSection.titleResId())
                                 GamepadDeck(
                                     title = sectionTitle,
                                     scrollable = selectedSection != EditorSection.BUTTONS,
@@ -430,10 +383,10 @@ fun MacroPadEditor(
                                                     AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
                                                 },
                                                 onNewProfile = {
-                                                    MacroPadNavState.setStack(subPageStack + MacroPadSubPage.NewProfile())
+                                                    MacroPadNavState.push(MacroPadSubPage.NewProfile())
                                                 },
                                                 onEditProfile = {
-                                                    MacroPadNavState.setStack(subPageStack + MacroPadSubPage.EditProfile(profile.id))
+                                                    MacroPadNavState.push(MacroPadSubPage.EditProfile(profile.id))
                                                 },
                                                 onDuplicateProfile = {
                                                     val originalProfile = profile
@@ -461,7 +414,7 @@ fun MacroPadEditor(
                                                     }
                                                 },
                                                 onReorderProfiles = {
-                                                    MacroPadNavState.setStack(subPageStack + MacroPadSubPage.ReorderProfiles)
+                                                    MacroPadNavState.push(MacroPadSubPage.ReorderProfiles)
                                                 },
                                             )
                                         }
@@ -477,13 +430,11 @@ fun MacroPadEditor(
                                                 },
                                                 onEditLayout = {
                                                     if (activeLayout != null) {
-                                                        MacroPadNavState.setStack(
-                                                            subPageStack + MacroPadSubPage.EditLayout(activeLayout.id),
-                                                        )
+                                                        MacroPadNavState.push(MacroPadSubPage.EditLayout(activeLayout.id))
                                                     }
                                                 },
                                                 onNewLayout = {
-                                                    MacroPadNavState.setStack(subPageStack + MacroPadSubPage.NewLayout)
+                                                    MacroPadNavState.push(MacroPadSubPage.NewLayout)
                                                 },
                                                 onDuplicateLayout = {
                                                     val originalLayout = activeLayout
@@ -512,13 +463,11 @@ fun MacroPadEditor(
                                                 },
                                                 onCopyLayout = {
                                                     if (activeLayout != null) {
-                                                        MacroPadNavState.setStack(
-                                                            subPageStack + MacroPadSubPage.CopyLayout(activeLayout.id),
-                                                        )
+                                                        MacroPadNavState.push(MacroPadSubPage.CopyLayout(activeLayout.id))
                                                     }
                                                 },
                                                 onReorderLayouts = {
-                                                    MacroPadNavState.setStack(subPageStack + MacroPadSubPage.ReorderLayouts)
+                                                    MacroPadNavState.push(MacroPadSubPage.ReorderLayouts)
                                                 },
                                             )
                                         }
@@ -534,14 +483,10 @@ fun MacroPadEditor(
                                                         AppStateManager.setViewportEditActive(true)
                                                     },
                                                     onOpenAdvancedSettings = {
-                                                        MacroPadNavState.setStack(
-                                                            subPageStack + MacroPadSubPage.MirrorAdvancedSettings(activeLayout.id),
-                                                        )
+                                                        MacroPadNavState.push(MacroPadSubPage.MirrorAdvancedSettings(activeLayout.id))
                                                     },
                                                     onEditCutout = { cutout ->
-                                                        MacroPadNavState.setStack(
-                                                            subPageStack + MacroPadSubPage.CutoutSettings(cutout.id),
-                                                        )
+                                                        MacroPadNavState.push(MacroPadSubPage.CutoutSettings(cutout.id))
                                                     },
                                                 )
                                             }
@@ -554,9 +499,7 @@ fun MacroPadEditor(
                                                     profileName = profile.name,
                                                     accentColor = colors.accent,
                                                     onOpenScrape = {
-                                                        MacroPadNavState.setStack(
-                                                            subPageStack + MacroPadSubPage.SteamGridDbScrape(activeLayout.id),
-                                                        )
+                                                        MacroPadNavState.push(MacroPadSubPage.SteamGridDbScrape(activeLayout.id))
                                                     },
                                                     onDiscard = {
                                                         MacroPadState.clearPreviewLayout()
@@ -599,13 +542,13 @@ fun MacroPadEditor(
                                                 layout = activeLayout,
                                                 accentColor = colors.accent,
                                                 onEditButtonPositions = {
-                                                    MacroPadNavState.setStack(subPageStack + MacroPadSubPage.EditButtonPositions)
+                                                    MacroPadNavState.push(MacroPadSubPage.EditButtonPositions)
                                                 },
                                                 onAddButton = {
-                                                    MacroPadNavState.setStack(subPageStack + MacroPadSubPage.ChooseButtonType)
+                                                    MacroPadNavState.push(MacroPadSubPage.ChooseButtonType)
                                                 },
                                                 onEditButton = { btn ->
-                                                    MacroPadNavState.setStack(subPageStack + MacroPadSubPage.EditButton(btn))
+                                                    MacroPadNavState.push(MacroPadSubPage.EditButton(btn))
                                                 },
                                             )
                                         }
@@ -618,11 +561,11 @@ fun MacroPadEditor(
                                                     if (PrivdManager.state.value != PrivdState.RUNNING) {
                                                         DialogToastManager.show(context.getString(R.string.privd_error_daemon_unreachable))
                                                     } else {
-                                                        MacroPadNavState.setStack(subPageStack + MacroPadSubPage.ChooseMacroMode)
+                                                        MacroPadNavState.push(MacroPadSubPage.ChooseMacroMode)
                                                     }
                                                 },
                                                 onEditMacro = { macro ->
-                                                    MacroPadNavState.setStack(subPageStack + MacroPadSubPage.MacroTimeline(macro = macro))
+                                                    MacroPadNavState.push(MacroPadSubPage.MacroTimeline(macro = macro))
                                                 },
                                                 onDeleteMacro = { macro ->
                                                     val deletedName = macro.name
@@ -637,6 +580,52 @@ fun MacroPadEditor(
                                 }
                             } else {
                                 // ── In-Deck Sub-Pages ──────────────────────────────
+                                fun updateStackDraftMacro(
+                                    stack: List<MacroPadSubPage>,
+                                    updatedMacro: Macro,
+                                ): List<MacroPadSubPage> =
+                                    stack.map { page ->
+                                        when (page) {
+                                            is MacroPadSubPage.MacroTimeline -> page.copy(draftMacro = updatedMacro)
+                                            is MacroPadSubPage.ManualMacroSteps -> page.copy(draftMacro = updatedMacro)
+                                            is MacroPadSubPage.ReorderMacroSteps -> page.copy(draftMacro = updatedMacro)
+                                            else -> page
+                                        }
+                                    }
+
+                                fun updateParentDraftButton(updatedDraft: PadButton?) {
+                                    buttonDraft = updatedDraft
+                                    MacroPadNavState.setStack(
+                                        subPageStack.dropLast(1).map { subPage ->
+                                            if (subPage is MacroPadSubPage.EditButton) {
+                                                subPage.copy(draftButton = updatedDraft)
+                                            } else {
+                                                subPage
+                                            }
+                                        },
+                                    )
+                                }
+
+                                @Composable
+                                fun buttonBreadcrumbs(
+                                    effectiveButton: PadButton,
+                                    hasButton: Boolean,
+                                    title: String,
+                                ): List<String> =
+                                    listOf(
+                                        stringResource(R.string.macropad_editor_section_buttons),
+                                        effectiveButton.label.ifBlank {
+                                            stringResource(
+                                                if (hasButton) {
+                                                    R.string.macropad_editor_section_button_settings
+                                                } else {
+                                                    R.string.macropad_editor_add_button
+                                                },
+                                            )
+                                        },
+                                        title,
+                                    )
+
                                 when (currentSubPage) {
                                     is MacroPadSubPage.NewProfile -> {
                                         GamepadDeck(
@@ -823,14 +812,10 @@ fun MacroPadEditor(
                                                         }
                                                     },
                                                     onOpenColorSubMenu = { target ->
-                                                        MacroPadNavState.setStack(
-                                                            subPageStack + MacroPadSubPage.LayoutColor(lay.id, target),
-                                                        )
+                                                        MacroPadNavState.push(MacroPadSubPage.LayoutColor(lay.id, target))
                                                     },
                                                     onOpenTouchpadSettings = {
-                                                        MacroPadNavState.setStack(
-                                                            subPageStack + MacroPadSubPage.LayoutTouchpad(lay.id),
-                                                        )
+                                                        MacroPadNavState.push(MacroPadSubPage.LayoutTouchpad(lay.id))
                                                     },
                                                     onDeleteLayout = {
                                                         val deletedName = lay.name
@@ -871,18 +856,12 @@ fun MacroPadEditor(
                                         val lay = profile.layouts.firstOrNull { it.id == currentSubPage.layoutId } ?: activeLayout
                                         if (lay != null) {
                                             val currentDraft = appearanceDraft?.takeIf { it.id == lay.id } ?: lay
-                                            val targetTitle =
-                                                when (currentSubPage.target) {
-                                                    LayoutColorTarget.TEXT -> stringResource(R.string.layout_settings_color_text)
-                                                    LayoutColorTarget.BORDER -> stringResource(R.string.layout_settings_color_border)
-                                                    LayoutColorTarget.BG -> stringResource(R.string.layout_settings_color_bg)
-                                                }
                                             GamepadDeck(
                                                 breadcrumbs =
                                                     listOf(
                                                         stringResource(R.string.macropad_editor_section_layout),
                                                         stringResource(R.string.macropad_editor_edit_layout_title),
-                                                        targetTitle,
+                                                        stringResource(currentSubPage.target.titleResId),
                                                     ),
                                             ) {
                                                 LayoutColorSubPageContent(
@@ -891,49 +870,28 @@ fun MacroPadEditor(
                                                     target = currentSubPage.target,
                                                     accentColor = colors.accent,
                                                     onColorOptionChanged = { option ->
-                                                        val updatedDraft =
-                                                            when (currentSubPage.target) {
-                                                                LayoutColorTarget.TEXT -> currentDraft.copy(buttonTextColor = option)
-                                                                LayoutColorTarget.BORDER -> currentDraft.copy(buttonBorderColor = option)
-                                                                LayoutColorTarget.BG -> currentDraft.copy(buttonBgColor = option)
-                                                            }
+                                                        val updatedDraft = currentDraft.withColorOption(currentSubPage.target, option)
                                                         appearanceDraft = updatedDraft
                                                         MacroPadState.setPreviewLayout(updatedDraft)
                                                     },
                                                     onOpenColorWheel = { title, breadcrumbs, initialColor, inFlightLayout ->
-                                                        MacroPadNavState.setStack(
-                                                            subPageStack +
-                                                                MacroPadSubPage.ColorWheel(
-                                                                    title = title,
-                                                                    breadcrumbs = breadcrumbs,
-                                                                    initialColor = initialColor,
-                                                                    section = EditorSection.LAYOUTS,
-                                                                    onColorChange = { liveColor ->
-                                                                        val option = ColorOption.Custom(liveColor.toArgb())
-                                                                        val liveLayout =
-                                                                            when (currentSubPage.target) {
-                                                                                LayoutColorTarget.TEXT -> {
-                                                                                    inFlightLayout.copy(
-                                                                                        buttonTextColor = option,
-                                                                                    )
-                                                                                }
-
-                                                                                LayoutColorTarget.BORDER -> {
-                                                                                    inFlightLayout.copy(
-                                                                                        buttonBorderColor = option,
-                                                                                    )
-                                                                                }
-
-                                                                                LayoutColorTarget.BG -> {
-                                                                                    inFlightLayout.copy(
-                                                                                        buttonBgColor = option,
-                                                                                    )
-                                                                                }
-                                                                            }
-                                                                        appearanceDraft = liveLayout
-                                                                        MacroPadState.setPreviewLayout(liveLayout)
-                                                                    },
-                                                                ),
+                                                        MacroPadNavState.push(
+                                                            MacroPadSubPage.ColorWheel(
+                                                                title = title,
+                                                                breadcrumbs = breadcrumbs,
+                                                                initialColor = initialColor,
+                                                                section = EditorSection.LAYOUTS,
+                                                                onColorChange = { liveColor ->
+                                                                    val option = ColorOption.Custom(liveColor.toArgb())
+                                                                    val liveLayout =
+                                                                        inFlightLayout.withColorOption(
+                                                                            currentSubPage.target,
+                                                                            option,
+                                                                        )
+                                                                    appearanceDraft = liveLayout
+                                                                    MacroPadState.setPreviewLayout(liveLayout)
+                                                                },
+                                                            ),
                                                         )
                                                     },
                                                 )
@@ -1160,6 +1118,19 @@ fun MacroPadEditor(
                                     }
 
                                     is MacroPadSubPage.EditButton -> {
+                                        fun pushSubPageFromEdit(
+                                            currentDraft: PadButton,
+                                            subPage: MacroPadSubPage,
+                                        ) {
+                                            buttonDraft = currentDraft
+                                            MacroPadNavState.setStack(
+                                                subPageStack.dropLast(1) +
+                                                    MacroPadSubPage.EditButton(
+                                                        button = currentSubPage.button,
+                                                        draftButton = currentDraft,
+                                                    ) + subPage,
+                                            )
+                                        }
                                         val effectiveButton =
                                             buttonDraft?.takeIf { it.id == (currentSubPage.button?.id ?: currentSubPage.draftButton?.id) }
                                                 ?: currentSubPage.draftButton
@@ -1190,139 +1161,83 @@ fun MacroPadEditor(
                                                 savedButton = currentSubPage.button,
                                                 accentColor = colors.accent,
                                                 onOpenIconPicker = { currentDraft ->
-                                                    buttonDraft = currentDraft
-                                                    MacroPadNavState.setStack(
-                                                        subPageStack.dropLast(1) +
-                                                            MacroPadSubPage.EditButton(
-                                                                button = currentSubPage.button,
-                                                                draftButton = currentDraft,
-                                                            ) +
-                                                            MacroPadSubPage.ChooseIcon,
-                                                    )
+                                                    pushSubPageFromEdit(currentDraft, MacroPadSubPage.ChooseIcon)
                                                 },
                                                 onOpenAppPicker = { currentDraft ->
-                                                    buttonDraft = currentDraft
-                                                    MacroPadNavState.setStack(
-                                                        subPageStack.dropLast(1) +
-                                                            MacroPadSubPage.EditButton(
-                                                                button = currentSubPage.button,
-                                                                draftButton = currentDraft,
-                                                            ) +
-                                                            MacroPadSubPage.AppPicker,
-                                                    )
+                                                    pushSubPageFromEdit(currentDraft, MacroPadSubPage.AppPicker)
                                                 },
                                                 onOpenColorSubMenu = { currentDraft, target ->
-                                                    buttonDraft = currentDraft
-                                                    MacroPadNavState.setStack(
-                                                        subPageStack.dropLast(1) +
-                                                            MacroPadSubPage.EditButton(
-                                                                button = currentSubPage.button,
-                                                                draftButton = currentDraft,
-                                                            ) +
-                                                            MacroPadSubPage.ButtonColor(
-                                                                button = currentSubPage.button,
-                                                                draftButton = currentDraft,
-                                                                target = target,
-                                                            ),
+                                                    pushSubPageFromEdit(
+                                                        currentDraft,
+                                                        MacroPadSubPage.ButtonColor(
+                                                            button = currentSubPage.button,
+                                                            draftButton = currentDraft,
+                                                            target = target,
+                                                        ),
                                                     )
                                                 },
                                                 onOpenKeyboardPicker = { currentDraft ->
-                                                    buttonDraft = currentDraft
-                                                    MacroPadNavState.setStack(
-                                                        subPageStack.dropLast(1) +
-                                                            MacroPadSubPage.EditButton(
-                                                                button = currentSubPage.button,
-                                                                draftButton = currentDraft,
-                                                            ) +
-                                                            MacroPadSubPage.ChooseKeyboardKey(
-                                                                button = currentSubPage.button,
-                                                                draftButton = currentDraft,
-                                                            ),
+                                                    pushSubPageFromEdit(
+                                                        currentDraft,
+                                                        MacroPadSubPage.ChooseKeyboardKey(
+                                                            button = currentSubPage.button,
+                                                            draftButton = currentDraft,
+                                                        ),
                                                     )
                                                 },
                                                 onOpenGamepadPicker = { currentDraft, slotIndex ->
-                                                    buttonDraft = currentDraft
-                                                    MacroPadNavState.setStack(
-                                                        subPageStack.dropLast(1) +
-                                                            MacroPadSubPage.EditButton(
-                                                                button = currentSubPage.button,
-                                                                draftButton = currentDraft,
-                                                            ) +
-                                                            MacroPadSubPage.ChooseGamepadButton(
-                                                                button = currentSubPage.button,
-                                                                draftButton = currentDraft,
-                                                                slotIndex = slotIndex,
-                                                            ),
+                                                    pushSubPageFromEdit(
+                                                        currentDraft,
+                                                        MacroPadSubPage.ChooseGamepadButton(
+                                                            button = currentSubPage.button,
+                                                            draftButton = currentDraft,
+                                                            slotIndex = slotIndex,
+                                                        ),
                                                     )
                                                 },
                                                 onOpenMousePicker = { currentDraft ->
-                                                    buttonDraft = currentDraft
-                                                    MacroPadNavState.setStack(
-                                                        subPageStack.dropLast(1) +
-                                                            MacroPadSubPage.EditButton(
-                                                                button = currentSubPage.button,
-                                                                draftButton = currentDraft,
-                                                            ) +
-                                                            MacroPadSubPage.ChooseMouseAction(
-                                                                button = currentSubPage.button,
-                                                                draftButton = currentDraft,
-                                                            ),
+                                                    pushSubPageFromEdit(
+                                                        currentDraft,
+                                                        MacroPadSubPage.ChooseMouseAction(
+                                                            button = currentSubPage.button,
+                                                            draftButton = currentDraft,
+                                                        ),
                                                     )
                                                 },
                                                 onOpenMirrorPicker = { currentDraft ->
-                                                    buttonDraft = currentDraft
-                                                    MacroPadNavState.setStack(
-                                                        subPageStack.dropLast(1) +
-                                                            MacroPadSubPage.EditButton(
-                                                                button = currentSubPage.button,
-                                                                draftButton = currentDraft,
-                                                            ) +
-                                                            MacroPadSubPage.ChooseMirrorAction(
-                                                                button = currentSubPage.button,
-                                                                draftButton = currentDraft,
-                                                            ),
+                                                    pushSubPageFromEdit(
+                                                        currentDraft,
+                                                        MacroPadSubPage.ChooseMirrorAction(
+                                                            button = currentSubPage.button,
+                                                            draftButton = currentDraft,
+                                                        ),
                                                     )
                                                 },
                                                 onOpenOverlayPicker = { currentDraft ->
-                                                    buttonDraft = currentDraft
-                                                    MacroPadNavState.setStack(
-                                                        subPageStack.dropLast(1) +
-                                                            MacroPadSubPage.EditButton(
-                                                                button = currentSubPage.button,
-                                                                draftButton = currentDraft,
-                                                            ) +
-                                                            MacroPadSubPage.ChooseOverlayAction(
-                                                                button = currentSubPage.button,
-                                                                draftButton = currentDraft,
-                                                            ),
+                                                    pushSubPageFromEdit(
+                                                        currentDraft,
+                                                        MacroPadSubPage.ChooseOverlayAction(
+                                                            button = currentSubPage.button,
+                                                            draftButton = currentDraft,
+                                                        ),
                                                     )
                                                 },
                                                 onOpenLayoutPicker = { currentDraft ->
-                                                    buttonDraft = currentDraft
-                                                    MacroPadNavState.setStack(
-                                                        subPageStack.dropLast(1) +
-                                                            MacroPadSubPage.EditButton(
-                                                                button = currentSubPage.button,
-                                                                draftButton = currentDraft,
-                                                            ) +
-                                                            MacroPadSubPage.ChooseLayoutAction(
-                                                                button = currentSubPage.button,
-                                                                draftButton = currentDraft,
-                                                            ),
+                                                    pushSubPageFromEdit(
+                                                        currentDraft,
+                                                        MacroPadSubPage.ChooseLayoutAction(
+                                                            button = currentSubPage.button,
+                                                            draftButton = currentDraft,
+                                                        ),
                                                     )
                                                 },
                                                 onOpenMacroPicker = { currentDraft ->
-                                                    buttonDraft = currentDraft
-                                                    MacroPadNavState.setStack(
-                                                        subPageStack.dropLast(1) +
-                                                            MacroPadSubPage.EditButton(
-                                                                button = currentSubPage.button,
-                                                                draftButton = currentDraft,
-                                                            ) +
-                                                            MacroPadSubPage.ChooseMacroAction(
-                                                                button = currentSubPage.button,
-                                                                draftButton = currentDraft,
-                                                            ),
+                                                    pushSubPageFromEdit(
+                                                        currentDraft,
+                                                        MacroPadSubPage.ChooseMacroAction(
+                                                            button = currentSubPage.button,
+                                                            draftButton = currentDraft,
+                                                        ),
                                                     )
                                                 },
                                                 onDuplicate = { btn ->
@@ -1331,7 +1246,7 @@ fun MacroPadEditor(
                                                     MacroPadNavState.pop()
                                                 },
                                                 onCopyToLayout = { btn ->
-                                                    MacroPadNavState.setStack(subPageStack + MacroPadSubPage.CopyButton(btn))
+                                                    MacroPadNavState.push(MacroPadSubPage.CopyButton(btn))
                                                 },
                                                 onDelete = { btn ->
                                                     buttonDraft = null
@@ -1372,12 +1287,6 @@ fun MacroPadEditor(
                                         val effectiveButton =
                                             buttonDraft?.takeIf { it.id == (currentSubPage.button?.id ?: currentSubPage.draftButton.id) }
                                                 ?: currentSubPage.draftButton
-                                        val targetTitle =
-                                            when (currentSubPage.target) {
-                                                ButtonColorTarget.TEXT -> stringResource(R.string.layout_settings_color_text)
-                                                ButtonColorTarget.BORDER -> stringResource(R.string.layout_settings_color_border)
-                                                ButtonColorTarget.BG -> stringResource(R.string.layout_settings_color_bg)
-                                            }
                                         GamepadDeck(
                                             breadcrumbs =
                                                 listOf(
@@ -1391,7 +1300,7 @@ fun MacroPadEditor(
                                                             },
                                                         )
                                                     },
-                                                    targetTitle,
+                                                    stringResource(currentSubPage.target.titleResId),
                                                 ),
                                         ) {
                                             ButtonColorSubPageContent(
@@ -1401,51 +1310,26 @@ fun MacroPadEditor(
                                                 target = currentSubPage.target,
                                                 accentColor = colors.accent,
                                                 onColorOptionChanged = { option ->
-                                                    val updatedDraft =
-                                                        when (currentSubPage.target) {
-                                                            ButtonColorTarget.TEXT -> effectiveButton.copy(buttonTextColor = option)
-                                                            ButtonColorTarget.BORDER -> effectiveButton.copy(buttonBorderColor = option)
-                                                            ButtonColorTarget.BG -> effectiveButton.copy(buttonBgColor = option)
-                                                        }
+                                                    val updatedDraft = effectiveButton.withColorOption(currentSubPage.target, option)
                                                     buttonDraft = updatedDraft
                                                     MacroPadState.setPreviewButton(updatedDraft)
                                                 },
                                                 onOpenColorWheel = { title, breadcrumbs, initialColor, inFlightButton ->
                                                     buttonDraft = inFlightButton
-                                                    MacroPadNavState.setStack(
-                                                        subPageStack +
-                                                            MacroPadSubPage.ColorWheel(
-                                                                title = title,
-                                                                breadcrumbs = breadcrumbs,
-                                                                initialColor = initialColor,
-                                                                section = EditorSection.BUTTONS,
-                                                                onColorChange = { liveColor ->
-                                                                    val option = ColorOption.Custom(liveColor.toArgb())
-                                                                    val base = buttonDraft ?: inFlightButton
-                                                                    val liveButton =
-                                                                        when (currentSubPage.target) {
-                                                                            ButtonColorTarget.TEXT -> {
-                                                                                base.copy(
-                                                                                    buttonTextColor = option,
-                                                                                )
-                                                                            }
-
-                                                                            ButtonColorTarget.BORDER -> {
-                                                                                base.copy(
-                                                                                    buttonBorderColor = option,
-                                                                                )
-                                                                            }
-
-                                                                            ButtonColorTarget.BG -> {
-                                                                                base.copy(
-                                                                                    buttonBgColor = option,
-                                                                                )
-                                                                            }
-                                                                        }
-                                                                    buttonDraft = liveButton
-                                                                    MacroPadState.setPreviewButton(liveButton)
-                                                                },
-                                                            ),
+                                                    MacroPadNavState.push(
+                                                        MacroPadSubPage.ColorWheel(
+                                                            title = title,
+                                                            breadcrumbs = breadcrumbs,
+                                                            initialColor = initialColor,
+                                                            section = EditorSection.BUTTONS,
+                                                            onColorChange = { liveColor ->
+                                                                val option = ColorOption.Custom(liveColor.toArgb())
+                                                                val base = buttonDraft ?: inFlightButton
+                                                                val liveButton = base.withColorOption(currentSubPage.target, option)
+                                                                buttonDraft = liveButton
+                                                                MacroPadState.setPreviewButton(liveButton)
+                                                            },
+                                                        ),
                                                     )
                                                 },
                                             )
@@ -1847,20 +1731,22 @@ fun MacroPadEditor(
                                         val defaultMacroName = stringResource(R.string.macropad_macro_default_name)
                                         val existingMacroNames = profile.macros.map { it.name }
 
-                                        fun createNewMacro(): Macro {
-                                            val newMacroName = existingMacroNames.nextUniqueName(defaultMacroName)
-                                            return Macro(
-                                                id = UUID.randomUUID().toString(),
-                                                name = newMacroName,
-                                                steps = emptyList(),
-                                            )
-                                        }
-
-                                        fun applyNewMacroToStack(newMacro: Macro) {
+                                        fun handleCreateMacro(action: (Macro) -> Unit = {}) {
+                                            if (privdState != PrivdState.RUNNING) {
+                                                DialogToastManager.show(context.getString(R.string.privd_error_daemon_unreachable))
+                                                return
+                                            }
+                                            val newMacro =
+                                                Macro(
+                                                    id = UUID.randomUUID().toString(),
+                                                    name = existingMacroNames.nextUniqueName(defaultMacroName),
+                                                    steps = emptyList(),
+                                                )
                                             MacroPadNavState.setStack(
                                                 subPageStack.dropLast(1) +
                                                     MacroPadSubPage.MacroTimeline(macro = null, draftMacro = newMacro),
                                             )
+                                            action(newMacro)
                                         }
 
                                         val breadcrumbs =
@@ -1872,42 +1758,23 @@ fun MacroPadEditor(
                                         GamepadDeck(breadcrumbs = breadcrumbs) {
                                             ChooseMacroModeSubPageContent(
                                                 onRecordGamepad = {
-                                                    if (privdState != PrivdState.RUNNING) {
-                                                        DialogToastManager.show(context.getString(R.string.privd_error_daemon_unreachable))
-                                                        return@ChooseMacroModeSubPageContent
+                                                    handleCreateMacro {
+                                                        AppStateManager.suspendCurrentAndDismiss()
+                                                        PhysicalGamepadRecordingManager.startRecording()
                                                     }
-                                                    val newMacro = createNewMacro()
-                                                    applyNewMacroToStack(newMacro)
-                                                    AppStateManager.suspendCurrentAndDismiss()
-                                                    PhysicalGamepadRecordingManager.startRecording()
                                                 },
-                                                onBuildManual = {
-                                                    if (privdState != PrivdState.RUNNING) {
-                                                        DialogToastManager.show(context.getString(R.string.privd_error_daemon_unreachable))
-                                                        return@ChooseMacroModeSubPageContent
-                                                    }
-                                                    val newMacro = createNewMacro()
-                                                    applyNewMacroToStack(newMacro)
-                                                },
+                                                onBuildManual = { handleCreateMacro() },
                                                 onRecordTouchTap = {
-                                                    if (privdState != PrivdState.RUNNING) {
-                                                        DialogToastManager.show(context.getString(R.string.privd_error_daemon_unreachable))
-                                                        return@ChooseMacroModeSubPageContent
+                                                    handleCreateMacro {
+                                                        AppStateManager.suspendCurrentAndDismiss()
+                                                        TouchRecordingManager.requestRecording(TouchRecordingMode.TAP)
                                                     }
-                                                    val newMacro = createNewMacro()
-                                                    applyNewMacroToStack(newMacro)
-                                                    AppStateManager.suspendCurrentAndDismiss()
-                                                    TouchRecordingManager.requestRecording(TouchRecordingMode.TAP)
                                                 },
                                                 onRecordTouchGesture = {
-                                                    if (privdState != PrivdState.RUNNING) {
-                                                        DialogToastManager.show(context.getString(R.string.privd_error_daemon_unreachable))
-                                                        return@ChooseMacroModeSubPageContent
+                                                    handleCreateMacro {
+                                                        AppStateManager.suspendCurrentAndDismiss()
+                                                        TouchRecordingManager.requestRecording(TouchRecordingMode.GESTURE)
                                                     }
-                                                    val newMacro = createNewMacro()
-                                                    applyNewMacroToStack(newMacro)
-                                                    AppStateManager.suspendCurrentAndDismiss()
-                                                    TouchRecordingManager.requestRecording(TouchRecordingMode.GESTURE)
                                                 },
                                             )
                                         }
@@ -2071,24 +1938,7 @@ fun MacroPadEditor(
                                                         val updatedMacro = macro.copy(steps = updatedSteps)
                                                         val parentDepth = subPageStack.size - 1
                                                         MacroPadNavState.recordFocusedKey(parentDepth, "macro_manual_step_$targetIndex")
-                                                        val updatedStack =
-                                                            subPageStack.dropLast(1).map { page ->
-                                                                when (page) {
-                                                                    is MacroPadSubPage.MacroTimeline -> {
-                                                                        page.copy(draftMacro = updatedMacro)
-                                                                    }
-
-                                                                    is MacroPadSubPage.ManualMacroSteps -> {
-                                                                        page.copy(
-                                                                            draftMacro = updatedMacro,
-                                                                        )
-                                                                    }
-
-                                                                    else -> {
-                                                                        page
-                                                                    }
-                                                                }
-                                                            }
+                                                        val updatedStack = updateStackDraftMacro(subPageStack.dropLast(1), updatedMacro)
                                                         MacroPadNavState.setStack(updatedStack)
                                                         if (currentSubPage.macro != null) {
                                                             MacroPadState.updateMacro(updatedMacro)
@@ -2102,24 +1952,7 @@ fun MacroPadEditor(
                                                         val parentDepth = subPageStack.size - 1
                                                         val newIndex = macro.steps.size
                                                         MacroPadNavState.recordFocusedKey(parentDepth, "macro_manual_step_$newIndex")
-                                                        val updatedStack =
-                                                            subPageStack.dropLast(1).map { page ->
-                                                                when (page) {
-                                                                    is MacroPadSubPage.MacroTimeline -> {
-                                                                        page.copy(draftMacro = updatedMacro)
-                                                                    }
-
-                                                                    is MacroPadSubPage.ManualMacroSteps -> {
-                                                                        page.copy(
-                                                                            draftMacro = updatedMacro,
-                                                                        )
-                                                                    }
-
-                                                                    else -> {
-                                                                        page
-                                                                    }
-                                                                }
-                                                            }
+                                                        val updatedStack = updateStackDraftMacro(subPageStack.dropLast(1), updatedMacro)
                                                         MacroPadNavState.setStack(updatedStack)
                                                         if (currentSubPage.macro != null) {
                                                             MacroPadState.updateMacro(updatedMacro)
@@ -2151,26 +1984,7 @@ fun MacroPadEditor(
                                                             } else {
                                                                 MacroPadNavState.removeFocusedKey(parentDepth)
                                                             }
-                                                            val updatedStack =
-                                                                subPageStack.dropLast(1).map { page ->
-                                                                    when (page) {
-                                                                        is MacroPadSubPage.MacroTimeline -> {
-                                                                            page.copy(
-                                                                                draftMacro = updatedMacro,
-                                                                            )
-                                                                        }
-
-                                                                        is MacroPadSubPage.ManualMacroSteps -> {
-                                                                            page.copy(
-                                                                                draftMacro = updatedMacro,
-                                                                            )
-                                                                        }
-
-                                                                        else -> {
-                                                                            page
-                                                                        }
-                                                                    }
-                                                                }
+                                                            val updatedStack = updateStackDraftMacro(subPageStack.dropLast(1), updatedMacro)
                                                             MacroPadNavState.setStack(updatedStack)
                                                             if (currentSubPage.macro != null) {
                                                                 MacroPadState.updateMacro(updatedMacro)
@@ -2242,10 +2056,7 @@ fun MacroPadEditor(
                                             breadcrumbs = currentSubPage.breadcrumbs,
                                         ) {
                                             ColorWheelSubPageContent(
-                                                title = currentSubPage.title,
-                                                breadcrumbs = emptyList(),
                                                 initialColor = currentSubPage.initialColor,
-                                                accentColor = colors.accent,
                                                 showAlphaSlider = currentSubPage.showAlphaSlider,
                                                 onColorChange = currentSubPage.onColorChange,
                                             )
@@ -2277,20 +2088,13 @@ private fun ProfilesDeck(
     val scope = rememberCoroutineScope()
     val firstItemFocusRequester = remember { FocusRequester() }
 
-    val profileIdx = profiles.indexOf(activeProfile).coerceAtLeast(0)
     GamepadChoiceCard(
         title = stringResource(R.string.quick_menu_profile_label),
         description = stringResource(R.string.macropad_editor_active_profile_desc),
         selectedText = activeProfile.name,
         icon = Icons.Rounded.Folder,
-        onPrevious = {
-            val next = profiles[(profileIdx - 1 + profiles.size) % profiles.size]
-            onSelectProfile(next.id)
-        },
-        onNext = {
-            val next = profiles[(profileIdx + 1) % profiles.size]
-            onSelectProfile(next.id)
-        },
+        onPrevious = { onSelectProfile(profiles.cycle(activeProfile, BumperDirection.PREV).id) },
+        onNext = { onSelectProfile(profiles.cycle(activeProfile, BumperDirection.NEXT).id) },
         modifier = Modifier.firstDeckItem().focusRequester(firstItemFocusRequester),
     )
 
@@ -2347,7 +2151,6 @@ private fun LayoutsDeck(
     val firstItemFocusRequester = remember { FocusRequester() }
 
     val layouts = profile.layouts
-    val layoutIdx = layouts.indexOf(activeLayout).coerceAtLeast(0)
     GamepadChoiceCard(
         title = stringResource(R.string.macropad_editor_section_layout),
         description = stringResource(R.string.macropad_editor_active_layout_desc, profile.name),
@@ -2355,17 +2158,13 @@ private fun LayoutsDeck(
         icon = Icons.AutoMirrored.Rounded.ViewQuilt,
         enabled = layouts.isNotEmpty(),
         onPrevious = {
-            if (layouts.isNotEmpty()) {
-                val next = layouts[(layoutIdx - 1 + layouts.size) % layouts.size]
-                onSelectLayout(next.id)
+            if (layouts.isNotEmpty() &&
+                activeLayout != null
+            ) {
+                onSelectLayout(layouts.cycle(activeLayout, BumperDirection.PREV).id)
             }
         },
-        onNext = {
-            if (layouts.isNotEmpty()) {
-                val next = layouts[(layoutIdx + 1) % layouts.size]
-                onSelectLayout(next.id)
-            }
-        },
+        onNext = { if (layouts.isNotEmpty() && activeLayout != null) onSelectLayout(layouts.cycle(activeLayout, BumperDirection.NEXT).id) },
         modifier = Modifier.firstDeckItem().focusRequester(firstItemFocusRequester),
     )
 
@@ -2415,6 +2214,27 @@ private fun LayoutsDeck(
         enabled = layouts.size > 1,
         onClick = onReorderLayouts,
     )
+}
+
+@Composable
+private fun describePadButton(
+    btn: PadButton,
+    includeHaptic: Boolean = true,
+): String {
+    val hapticLabel = if (includeHaptic) stringResource(btn.hapticStrength.labelResId()) else null
+    return if (btn.action is PadAction.TrackpointMove) {
+        val sizeLabel = stringResource((btn.action as PadAction.TrackpointMove).size.labelResId())
+        listOfNotNull(sizeLabel, hapticLabel).joinToString(" • ")
+    } else {
+        val actionLabel = btn.action.displayLabel()
+        val sizeLabel =
+            if (btn.action !is PadAction.ScrollWheel) {
+                "${btn.buttonSize.cols}×${btn.buttonSize.rows}"
+            } else {
+                null
+            }
+        listOfNotNull(actionLabel, sizeLabel, hapticLabel).joinToString(" • ")
+    }
 }
 
 @Composable
@@ -2472,20 +2292,14 @@ private fun ButtonsDeck(
         }
 
         item {
-            val gridModes = listOf(GridMode.OFF, GridMode.RECTANGULAR, GridMode.RADIAL)
-            val gridIdx = gridModes.indexOf(gridMode).coerceAtLeast(0)
+            val gridModes = GridMode.entries
             GamepadChoiceCard(
                 title = stringResource(R.string.macropad_editor_snap_grid),
                 description = stringResource(R.string.macropad_editor_snap_grid_desc),
-                selectedText =
-                    when (gridMode) {
-                        GridMode.OFF -> stringResource(R.string.macropad_editor_grid_off_label)
-                        GridMode.RECTANGULAR -> stringResource(R.string.macropad_editor_grid_rectangular_label)
-                        GridMode.RADIAL -> stringResource(R.string.macropad_editor_grid_radial_label)
-                    },
+                selectedText = stringResource(gridMode.labelResId()),
                 icon = Icons.Rounded.Grid4x4,
-                onPrevious = { MacroPadState.setGridMode(gridModes[(gridIdx - 1 + gridModes.size) % gridModes.size]) },
-                onNext = { MacroPadState.setGridMode(gridModes[(gridIdx + 1) % gridModes.size]) },
+                onPrevious = { MacroPadState.setGridMode(gridModes.cycle(gridMode, BumperDirection.PREV)) },
+                onNext = { MacroPadState.setGridMode(gridModes.cycle(gridMode, BumperDirection.NEXT)) },
                 onFocusChanged = { if (it) MacroPadState.setSelectedButtonId(null) },
             )
         }
@@ -2537,38 +2351,9 @@ private fun ButtonsDeck(
             }
         } else if (!isReordering) {
             items(buttons, key = { it.id }) { btn ->
-                val isTrackpoint = btn.action is PadAction.TrackpointMove
-                val hapticLabel =
-                    when (btn.hapticStrength) {
-                        HapticStrength.OFF -> stringResource(R.string.macropad_haptic_off)
-                        HapticStrength.LIGHT -> stringResource(R.string.macropad_haptic_light)
-                        HapticStrength.MEDIUM -> stringResource(R.string.macropad_haptic_medium)
-                        HapticStrength.STRONG -> stringResource(R.string.macropad_haptic_strong)
-                        HapticStrength.CUSTOM -> stringResource(R.string.macropad_haptic_custom)
-                    }
-                val desc =
-                    if (isTrackpoint) {
-                        val sizeLabel =
-                            when ((btn.action as PadAction.TrackpointMove).size) {
-                                TrackpointSize.SMALL -> stringResource(R.string.macropad_trackpoint_size_small)
-                                TrackpointSize.MEDIUM -> stringResource(R.string.macropad_trackpoint_size_medium)
-                                TrackpointSize.LARGE -> stringResource(R.string.macropad_trackpoint_size_large)
-                            }
-                        listOf(sizeLabel, hapticLabel).joinToString(" • ")
-                    } else {
-                        val actionLabel = btn.action.displayLabel()
-                        val sizeLabel =
-                            if (btn.action !is PadAction.ScrollWheel) {
-                                "${btn.buttonSize.cols}×${btn.buttonSize.rows}"
-                            } else {
-                                null
-                            }
-                        listOfNotNull(actionLabel, sizeLabel, hapticLabel).joinToString(" • ")
-                    }
-
                 GamepadActionCard(
                     title = btn.label.ifBlank { btn.action.displayLabel() },
-                    description = desc,
+                    description = describePadButton(btn),
                     icon = btn.action.toCategory().icon(),
                     onClick = { onEditButton(btn) },
                     onFocusChanged = { isFocused ->
@@ -2583,20 +2368,7 @@ private fun ButtonsDeck(
                 val key = btn.id
                 ReorderableItem(reorderState, key = key) { isDragging ->
                     val isMoving = movingItemKey == key
-                    val isTrackpoint = btn.action is PadAction.TrackpointMove
-                    val desc =
-                        if (isTrackpoint) {
-                            stringResource(R.string.macropad_action_trackpoint)
-                        } else {
-                            val actionLabel = btn.action.displayLabel()
-                            val sizeLabel =
-                                if (btn.action !is PadAction.ScrollWheel) {
-                                    "${btn.buttonSize.cols}×${btn.buttonSize.rows}"
-                                } else {
-                                    null
-                                }
-                            listOfNotNull(actionLabel, sizeLabel).joinToString(" • ")
-                        }
+                    val desc = describePadButton(btn, includeHaptic = false)
 
                     GamepadReorderCard(
                         title = btn.label.ifBlank { btn.action.displayLabel() },
@@ -2609,20 +2381,8 @@ private fun ButtonsDeck(
                         onToggleMoving = {
                             movingItemKey = if (isMoving) null else key
                         },
-                        onMoveUp = {
-                            if (index > 0 && layout != null) {
-                                val mutable = buttons.toMutableList()
-                                java.util.Collections.swap(mutable, index, index - 1)
-                                MacroPadState.updateLayout(layout.copy(buttons = mutable))
-                            }
-                        },
-                        onMoveDown = {
-                            if (index < buttons.size - 1 && layout != null) {
-                                val mutable = buttons.toMutableList()
-                                java.util.Collections.swap(mutable, index, index + 1)
-                                MacroPadState.updateLayout(layout.copy(buttons = mutable))
-                            }
-                        },
+                        onMoveUp = { swapButtons(layout, index, index - 1) },
+                        onMoveDown = { swapButtons(layout, index, index + 1) },
                         dragHandleModifier = Modifier.draggableHandle(),
                         itemKey = key,
                         onFocusChanged = { isFocused ->
@@ -2715,21 +2475,16 @@ private fun EditButtonPositionsSubPageContent(
         dx: Int,
         dy: Int,
     ) {
-        if (activeDirectionKey == keyCode && activeRepeatJob?.isActive == true) {
-            return
-        }
+        if (activeDirectionKey == keyCode && activeRepeatJob?.isActive == true) return
         activeRepeatJob?.cancel()
         activeDirectionKey = keyCode
         moveButton(btnId, dx, dy)
         activeRepeatJob =
-            coroutineScope.launch {
-                delay(MPE_MOVE_INITIAL_DELAY_MS)
-                var delayMs = MPE_MOVE_START_DELAY_MS
-                while (isActive && activeDirectionKey == keyCode) {
-                    moveButton(btnId, dx, dy)
-                    delay(delayMs)
-                    delayMs = max(MPE_MOVE_MIN_DELAY_MS, (delayMs * MPE_MOVE_ACCEL_FACTOR).toLong())
-                }
+            coroutineScope.launchDirectionalRepeat(
+                keyCode = keyCode,
+                isActiveCheck = { activeDirectionKey == keyCode },
+            ) {
+                moveButton(btnId, dx, dy)
             }
     }
 
@@ -2762,34 +2517,7 @@ private fun EditButtonPositionsSubPageContent(
                 }
             }
             val isMoving = movingButtonId == btn.id
-            val isTrackpoint = btn.action is PadAction.TrackpointMove
-            val hapticLabel =
-                when (btn.hapticStrength) {
-                    HapticStrength.OFF -> stringResource(R.string.macropad_haptic_off)
-                    HapticStrength.LIGHT -> stringResource(R.string.macropad_haptic_light)
-                    HapticStrength.MEDIUM -> stringResource(R.string.macropad_haptic_medium)
-                    HapticStrength.STRONG -> stringResource(R.string.macropad_haptic_strong)
-                    HapticStrength.CUSTOM -> stringResource(R.string.macropad_haptic_custom)
-                }
-            val desc =
-                if (isTrackpoint) {
-                    val sizeLabel =
-                        when ((btn.action as PadAction.TrackpointMove).size) {
-                            TrackpointSize.SMALL -> stringResource(R.string.macropad_trackpoint_size_small)
-                            TrackpointSize.MEDIUM -> stringResource(R.string.macropad_trackpoint_size_medium)
-                            TrackpointSize.LARGE -> stringResource(R.string.macropad_trackpoint_size_large)
-                        }
-                    listOf(sizeLabel, hapticLabel).joinToString(" • ")
-                } else {
-                    val actionLabel = btn.action.displayLabel()
-                    val sizeLabel =
-                        if (btn.action !is PadAction.ScrollWheel) {
-                            "${btn.buttonSize.cols}×${btn.buttonSize.rows}"
-                        } else {
-                            null
-                        }
-                    listOfNotNull(actionLabel, sizeLabel, hapticLabel).joinToString(" • ")
-                }
+            val desc = describePadButton(btn)
 
             GamepadFocusCard(
                 cardFocusRequester = cardRequester,
@@ -2818,77 +2546,16 @@ private fun EditButtonPositionsSubPageContent(
                     }
                 },
                 onCustomKeyEvent = { keyEvent ->
-                    val keyCode = keyEvent.nativeKeyEvent.keyCode
-                    if (isMoving) {
-                        if (keyEvent.type == KeyEventType.KeyDown) {
-                            when (keyCode) {
-                                KeyEvent.KEYCODE_DPAD_UP -> {
-                                    startMoving(btn.id, keyCode, 0, -1)
-                                    true
-                                }
-
-                                KeyEvent.KEYCODE_DPAD_DOWN -> {
-                                    startMoving(btn.id, keyCode, 0, 1)
-                                    true
-                                }
-
-                                KeyEvent.KEYCODE_DPAD_LEFT -> {
-                                    startMoving(btn.id, keyCode, -1, 0)
-                                    true
-                                }
-
-                                KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                                    startMoving(btn.id, keyCode, 1, 0)
-                                    true
-                                }
-
-                                KeyEvent.KEYCODE_BUTTON_B,
-                                KeyEvent.KEYCODE_BACK,
-                                KeyEvent.KEYCODE_ESCAPE,
-                                KeyEvent.KEYCODE_BUTTON_A,
-                                KeyEvent.KEYCODE_DPAD_CENTER,
-                                KeyEvent.KEYCODE_ENTER,
-                                -> {
-                                    stopMovingImmediate()
-                                    movingButtonId = null
-                                    true
-                                }
-
-                                else -> {
-                                    false
-                                }
-                            }
-                        } else if (keyEvent.type == KeyEventType.KeyUp) {
-                            when (keyCode) {
-                                KeyEvent.KEYCODE_DPAD_UP,
-                                KeyEvent.KEYCODE_DPAD_DOWN,
-                                KeyEvent.KEYCODE_DPAD_LEFT,
-                                KeyEvent.KEYCODE_DPAD_RIGHT,
-                                -> {
-                                    stopMoving(keyCode)
-                                    true
-                                }
-
-                                KeyEvent.KEYCODE_BUTTON_B,
-                                KeyEvent.KEYCODE_BACK,
-                                KeyEvent.KEYCODE_ESCAPE,
-                                KeyEvent.KEYCODE_BUTTON_A,
-                                KeyEvent.KEYCODE_DPAD_CENTER,
-                                KeyEvent.KEYCODE_ENTER,
-                                -> {
-                                    true
-                                }
-
-                                else -> {
-                                    false
-                                }
-                            }
-                        } else {
-                            false
-                        }
-                    } else {
-                        false
-                    }
+                    handle2DAdjustmentKeyEvent(
+                        keyEvent = keyEvent,
+                        isAdjusting = isMoving,
+                        onStartAdjusting = { keyCode, dirX, dirY -> startMoving(btn.id, keyCode, dirX, dirY) },
+                        onStopAdjusting = { keyCode -> stopMoving(keyCode) },
+                        onDismissAdjustment = {
+                            stopMovingImmediate()
+                            movingButtonId = null
+                        },
+                    )
                 },
             ) { isFocused ->
                 GamepadCardRow(

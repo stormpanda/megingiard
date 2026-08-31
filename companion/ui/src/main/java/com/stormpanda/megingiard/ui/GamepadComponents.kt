@@ -78,6 +78,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawOutline
@@ -85,11 +87,16 @@ import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerId
+import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
@@ -108,12 +115,181 @@ import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.Locale
+import kotlin.math.max
+import kotlin.math.roundToInt
 import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 
 private const val TAG = "GamepadComponents"
+
+/** Returns true if the key code represents a back/escape/cancel action. */
+fun isBackKey(keyCode: Int): Boolean =
+    keyCode == KeyEvent.KEYCODE_BUTTON_B ||
+        keyCode == KeyEvent.KEYCODE_BACK ||
+        keyCode == KeyEvent.KEYCODE_ESCAPE
+
+/** Returns true if the key event is a KeyDown action representing back/escape/cancel. */
+fun ComposeKeyEvent.isBackKeyDown(): Boolean = type == KeyEventType.KeyDown && isBackKey(nativeKeyEvent.keyCode)
+
+/**
+ * Detects pointer press and release events in the [PointerEventPass.Initial] pass, ensuring
+ * pointer tracking is scoped to touches that originated inside the bounds of the component.
+ */
+suspend fun PointerInputScope.detectHoldPointerEvents(
+    onPress: () -> Unit,
+    onRelease: () -> Unit,
+) {
+    awaitPointerEventScope {
+        val activePids = mutableSetOf<PointerId>()
+        while (true) {
+            val event = awaitPointerEvent(PointerEventPass.Initial)
+            for (change in event.changes) {
+                val pid = change.id
+                when (event.type) {
+                    PointerEventType.Press -> {
+                        if (!change.previousPressed &&
+                            change.position.x in 0f..size.width.toFloat() &&
+                            change.position.y in 0f..size.height.toFloat()
+                        ) {
+                            activePids += pid
+                            onPress()
+                            change.consume()
+                        }
+                    }
+
+                    PointerEventType.Release -> {
+                        if (!change.pressed && pid in activePids) {
+                            activePids -= pid
+                            if (activePids.isEmpty()) onRelease()
+                            change.consume()
+                        }
+                    }
+
+                    PointerEventType.Move -> {
+                        if (pid in activePids) {
+                            change.consume()
+                        }
+                    }
+
+                    else -> {
+                        Unit
+                    }
+                }
+            }
+        }
+    }
+}
+
+const val GAMEPAD_REPEAT_INITIAL_DELAY_MS = 250L
+const val GAMEPAD_REPEAT_START_DELAY_MS = 100L
+const val GAMEPAD_REPEAT_MIN_DELAY_MS = 20L
+const val GAMEPAD_REPEAT_ACCEL_FACTOR = 0.85f
+
+/**
+ * Launches an accelerated repeating coroutine loop for directional D-pad holds.
+ */
+fun CoroutineScope.launchDirectionalRepeat(
+    keyCode: Int,
+    isActiveCheck: () -> Boolean,
+    action: () -> Unit,
+): Job =
+    launch {
+        delay(GAMEPAD_REPEAT_INITIAL_DELAY_MS)
+        var delayMs = GAMEPAD_REPEAT_START_DELAY_MS
+        while (isActive && isActiveCheck()) {
+            action()
+            delay(delayMs)
+            delayMs = max(GAMEPAD_REPEAT_MIN_DELAY_MS, (delayMs * GAMEPAD_REPEAT_ACCEL_FACTOR).toLong())
+        }
+    }
+
+/**
+ * Handles 2D directional adjustment and repeating key events (D-pad Up/Down/Left/Right, A/B/Enter/Back dismiss).
+ */
+internal fun handle2DAdjustmentKeyEvent(
+    keyEvent: ComposeKeyEvent,
+    isAdjusting: Boolean,
+    onStartAdjusting: (keyCode: Int, dirX: Int, dirY: Int) -> Unit,
+    onStopAdjusting: (keyCode: Int) -> Unit,
+    onDismissAdjustment: () -> Unit,
+    onModifierKeyDown: ((keyCode: Int) -> Boolean)? = null,
+    onModifierKeyUp: ((keyCode: Int) -> Boolean)? = null,
+): Boolean {
+    if (!isAdjusting) return false
+    val keyCode = keyEvent.nativeKeyEvent.keyCode
+    return if (keyEvent.type == KeyEventType.KeyDown) {
+        if (onModifierKeyDown?.invoke(keyCode) == true) return true
+        when (keyCode) {
+            KeyEvent.KEYCODE_DPAD_UP -> {
+                onStartAdjusting(keyCode, 0, -1)
+                true
+            }
+
+            KeyEvent.KEYCODE_DPAD_DOWN -> {
+                onStartAdjusting(keyCode, 0, 1)
+                true
+            }
+
+            KeyEvent.KEYCODE_DPAD_LEFT -> {
+                onStartAdjusting(keyCode, -1, 0)
+                true
+            }
+
+            KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                onStartAdjusting(keyCode, 1, 0)
+                true
+            }
+
+            KeyEvent.KEYCODE_BUTTON_B,
+            KeyEvent.KEYCODE_BACK,
+            KeyEvent.KEYCODE_ESCAPE,
+            KeyEvent.KEYCODE_BUTTON_A,
+            KeyEvent.KEYCODE_DPAD_CENTER,
+            KeyEvent.KEYCODE_ENTER,
+            -> {
+                onDismissAdjustment()
+                true
+            }
+
+            else -> {
+                false
+            }
+        }
+    } else if (keyEvent.type == KeyEventType.KeyUp) {
+        if (onModifierKeyUp?.invoke(keyCode) == true) return true
+        when (keyCode) {
+            KeyEvent.KEYCODE_DPAD_UP,
+            KeyEvent.KEYCODE_DPAD_DOWN,
+            KeyEvent.KEYCODE_DPAD_LEFT,
+            KeyEvent.KEYCODE_DPAD_RIGHT,
+            -> {
+                onStopAdjusting(keyCode)
+                true
+            }
+
+            KeyEvent.KEYCODE_BUTTON_B,
+            KeyEvent.KEYCODE_BACK,
+            KeyEvent.KEYCODE_ESCAPE,
+            KeyEvent.KEYCODE_BUTTON_A,
+            KeyEvent.KEYCODE_DPAD_CENTER,
+            KeyEvent.KEYCODE_ENTER,
+            -> {
+                true
+            }
+
+            else -> {
+                false
+            }
+        }
+    } else {
+        false
+    }
+}
 
 private val GC_CARD_CORNER = 12.dp
 private val GC_CARD_MIN_HEIGHT = 56.dp
@@ -178,6 +354,12 @@ private val GC_INFO_BOX_SPACING = 10.dp
 private val GC_INFO_BOX_ICON_SIZE = 20.dp
 private val GC_INFO_BOX_TEXT_SPACING = 2.dp
 
+private val GC_CARD_SHAPE = RoundedCornerShape(GC_CARD_CORNER)
+private val GC_CORNER_8_SHAPE = RoundedCornerShape(GC_CORNER_8)
+private val GC_STATUS_PILL_SHAPE = RoundedCornerShape(GC_STATUS_PILL_CORNER)
+private val GC_CORNER_4_SHAPE = RoundedCornerShape(GC_CORNER_4)
+private val GC_INFO_BOX_SHAPE = RoundedCornerShape(GC_INFO_BOX_RADIUS)
+
 /**
  * Base focusable gamepad card container with glowing accent bezel and spring focus transitions.
  */
@@ -188,7 +370,7 @@ fun GamepadFocusCard(
     cardFocusRequester: FocusRequester = remember { FocusRequester() },
     itemKey: Any? = null,
     enabled: Boolean = true,
-    shape: Shape = RoundedCornerShape(GC_CARD_CORNER),
+    shape: Shape = GC_CARD_SHAPE,
     cardBgColor: Color? = null,
     onCustomKeyEvent: ((ComposeKeyEvent) -> Boolean)? = null,
     onLeftKey: (() -> Unit)? = null,
@@ -457,7 +639,7 @@ fun GamepadCardIcon(
         modifier =
             modifier
                 .size(GC_ICON_BOX_SIZE)
-                .background(bg, RoundedCornerShape(GC_CORNER_8)),
+                .background(bg, GC_CORNER_8_SHAPE),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
@@ -491,7 +673,7 @@ fun GamepadPositionBadge(
         modifier =
             modifier
                 .size(GC_ICON_BOX_SIZE)
-                .background(bg, RoundedCornerShape(GC_CORNER_8)),
+                .background(bg, GC_CORNER_8_SHAPE),
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -546,47 +728,61 @@ fun GamepadCardText(
 fun GamepadPill(
     text: String,
     modifier: Modifier = Modifier,
+    leadingContent: (@Composable () -> Unit)? = null,
     isHighlighted: Boolean = false,
     isAccent: Boolean = false,
     isDestructive: Boolean = false,
+    isConfirming: Boolean = false,
+    enabled: Boolean = true,
 ) {
     val colors = LocalAppColors.current
     val pillBg =
         when {
+            isConfirming -> colors.error
             isDestructive -> colors.error.copy(alpha = GC_DESTRUCTIVE_BG_ALPHA)
             isAccent -> colors.accent
             isHighlighted -> colors.accent.copy(alpha = GC_ACCENT_TINT_ALPHA)
+            !enabled -> colors.surfaceVariant.copy(alpha = GC_DISABLED_CARD_ALPHA)
             else -> colors.surfaceVariant
         }
     val pillTextColor =
         when {
+            isConfirming -> colors.surface
             isDestructive -> colors.error
             isAccent -> colors.onAccent
             isHighlighted -> colors.accent
+            !enabled -> colors.onSurfaceSecondary
             else -> colors.onSurfaceSecondary
         }
     val pillBorderColor =
         when {
+            isConfirming -> colors.error
             isDestructive -> colors.error.copy(alpha = GC_DESTRUCTIVE_BORDER_ALPHA)
             isHighlighted -> colors.accent
+            !enabled -> colors.subduedBorder.copy(alpha = GC_DISABLED_CARD_ALPHA)
             else -> colors.subduedBorder
         }
     val pillBorderWidth = if (isHighlighted) 2.dp else 1.dp
 
-    Box(
+    val shape = GC_STATUS_PILL_SHAPE
+    Row(
         modifier =
             modifier
-                .background(pillBg, RoundedCornerShape(GC_STATUS_PILL_CORNER))
-                .border(pillBorderWidth, pillBorderColor, RoundedCornerShape(GC_STATUS_PILL_CORNER))
+                .background(pillBg, shape)
+                .border(pillBorderWidth, pillBorderColor, shape)
                 .padding(horizontal = GC_STATUS_PILL_H_PADDING, vertical = GC_STATUS_PILL_V_PADDING),
-        contentAlignment = Alignment.Center,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(GC_SPACING_6),
     ) {
-        Text(
-            text = text,
-            color = pillTextColor,
-            fontSize = GC_TEXT_SIZE_PILL,
-            fontWeight = FontWeight.Bold,
-        )
+        leadingContent?.invoke()
+        if (text.isNotEmpty()) {
+            Text(
+                text = text,
+                color = pillTextColor,
+                fontSize = GC_TEXT_SIZE_PILL,
+                fontWeight = FontWeight.Bold,
+            )
+        }
     }
 }
 
@@ -638,11 +834,11 @@ fun GamepadAdjustableCapsule(
     Row(
         modifier =
             modifier
-                .background(capsuleBg, RoundedCornerShape(GC_STATUS_PILL_CORNER))
+                .background(capsuleBg, GC_STATUS_PILL_SHAPE)
                 .border(
                     capsuleBorderWidth,
                     capsuleBorderColor,
-                    RoundedCornerShape(GC_STATUS_PILL_CORNER),
+                    GC_STATUS_PILL_SHAPE,
                 ).padding(horizontal = GC_SPACING_4, vertical = GC_SPACING_2),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -1268,49 +1464,21 @@ fun GamepadActionCard(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(GC_SPACING_8),
                         ) {
-                            if (actionLeadingContent != null) {
-                                actionLeadingContent()
-                            }
+                            actionLeadingContent?.invoke()
                             if (actionText != null || actionGlyph != null) {
-                                Row(
-                                    modifier =
-                                        Modifier
-                                            .background(
-                                                if (isDestructive) {
-                                                    colors.error.copy(
-                                                        alpha = GC_DESTRUCTIVE_BG_ALPHA,
-                                                    )
-                                                } else {
-                                                    colors.surfaceVariant
-                                                },
-                                                RoundedCornerShape(GC_STATUS_PILL_CORNER),
-                                            ).border(
-                                                GC_DEFAULT_BORDER_WIDTH,
-                                                if (isDestructive) {
-                                                    colors.error.copy(alpha = GC_DESTRUCTIVE_BORDER_ALPHA)
-                                                } else {
-                                                    colors.subduedBorder
-                                                },
-                                                RoundedCornerShape(GC_STATUS_PILL_CORNER),
-                                            ).padding(horizontal = GC_STATUS_PILL_H_PADDING, vertical = GC_STATUS_PILL_V_PADDING),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(GC_SPACING_6),
-                                ) {
-                                    if (actionGlyph != null) {
-                                        GamePadGlyphBadge(
-                                            glyph = actionGlyph,
-                                            tint = if (isDestructive) colors.error else colors.accent,
-                                        )
-                                    }
-                                    if (actionText != null) {
-                                        Text(
-                                            text = actionText,
-                                            color = if (isDestructive) colors.error else colors.onSurface,
-                                            fontSize = GC_TEXT_SIZE_PILL,
-                                            fontWeight = FontWeight.Bold,
-                                        )
-                                    }
-                                }
+                                GamepadPill(
+                                    text = actionText ?: "",
+                                    leadingContent =
+                                        actionGlyph?.let { glyph ->
+                                            {
+                                                GamePadGlyphBadge(
+                                                    glyph = glyph,
+                                                    tint = if (isDestructive) colors.error else colors.accent,
+                                                )
+                                            }
+                                        },
+                                    isDestructive = isDestructive,
+                                )
                             }
                         }
                     }
@@ -1660,16 +1828,8 @@ fun GamepadTwoStepConfirmCard(
             }
         },
         onCustomKeyEvent = { keyEvent ->
-            val keyCode = keyEvent.nativeKeyEvent.keyCode
-            if (isConfirming && (
-                    keyCode == KeyEvent.KEYCODE_BUTTON_B ||
-                        keyCode == KeyEvent.KEYCODE_BACK ||
-                        keyCode == KeyEvent.KEYCODE_ESCAPE
-                )
-            ) {
-                if (keyEvent.type == KeyEventType.KeyDown) {
-                    isConfirming = false
-                }
+            if (isConfirming && keyEvent.isBackKeyDown()) {
+                isConfirming = false
                 true
             } else {
                 false
@@ -1684,48 +1844,13 @@ fun GamepadTwoStepConfirmCard(
             isFocused = isFocused,
             isDestructive = isDestructive,
             trailingContent = {
-                Row(
-                    modifier =
-                        Modifier
-                            .background(
-                                color =
-                                    when {
-                                        isConfirming -> colors.error
-                                        isDestructive -> colors.error.copy(alpha = GC_DESTRUCTIVE_BG_ALPHA)
-                                        !enabled -> colors.surfaceVariant.copy(alpha = GC_DISABLED_CARD_ALPHA)
-                                        isFocused -> colors.accent
-                                        else -> colors.surfaceVariant
-                                    },
-                                shape = RoundedCornerShape(GC_STATUS_PILL_CORNER),
-                            ).border(
-                                width = GC_DEFAULT_BORDER_WIDTH,
-                                color =
-                                    when {
-                                        isConfirming -> colors.error
-                                        isDestructive -> colors.error.copy(alpha = GC_DESTRUCTIVE_BORDER_ALPHA)
-                                        !enabled -> colors.subduedBorder.copy(alpha = GC_DISABLED_CARD_ALPHA)
-                                        isFocused -> colors.accent
-                                        else -> colors.subduedBorder
-                                    },
-                                shape = RoundedCornerShape(GC_STATUS_PILL_CORNER),
-                            ).padding(horizontal = GC_STATUS_PILL_H_PADDING, vertical = GC_STATUS_PILL_V_PADDING),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(GC_SPACING_6),
-                ) {
-                    Text(
-                        text = if (isConfirming) confirmActionText else (actionText ?: stringResource(R.string.gamepad_action_delete)),
-                        color =
-                            when {
-                                isConfirming -> colors.surface
-                                isDestructive -> colors.error
-                                !enabled -> colors.onSurfaceSecondary
-                                isFocused -> colors.onAccent
-                                else -> colors.onSurfaceSecondary
-                            },
-                        fontSize = GC_TEXT_SIZE_PILL,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
+                GamepadPill(
+                    text = if (isConfirming) confirmActionText else (actionText ?: stringResource(R.string.gamepad_action_delete)),
+                    isConfirming = isConfirming,
+                    isDestructive = isDestructive,
+                    isAccent = isFocused && !isConfirming && !isDestructive,
+                    enabled = enabled,
+                )
             },
         )
     }
@@ -2094,11 +2219,11 @@ fun GamepadColorPaletteGrid(
         modifier =
             modifier
                 .fillMaxWidth()
-                .background(containerBg, RoundedCornerShape(GC_STATUS_PILL_CORNER))
+                .background(containerBg, GC_STATUS_PILL_SHAPE)
                 .border(
                     containerBorderWidth,
                     containerBorderColor,
-                    RoundedCornerShape(GC_STATUS_PILL_CORNER),
+                    GC_STATUS_PILL_SHAPE,
                 ).padding(
                     horizontal = GC_PALETTE_CONTAINER_H_PADDING,
                     vertical = GC_PALETTE_CONTAINER_V_PADDING,
@@ -2299,12 +2424,12 @@ fun GamepadSliderCard(
                             Modifier
                                 .fillMaxWidth()
                                 .height(GC_SLIDER_TRACK_HEIGHT)
-                                .clip(RoundedCornerShape(GC_CORNER_4))
+                                .clip(GC_CORNER_4_SHAPE)
                                 .background(trackBrush)
                                 .border(
                                     GC_DEFAULT_BORDER_WIDTH,
                                     Color.White.copy(alpha = GC_SLIDER_TRACK_BORDER_ALPHA),
-                                    RoundedCornerShape(GC_CORNER_4),
+                                    GC_CORNER_4_SHAPE,
                                 ),
                     )
 
@@ -2405,11 +2530,11 @@ fun GamepadInfoBox(
                 .fillMaxWidth()
                 .background(
                     color = colors.surface.copy(alpha = GC_INFO_BOX_BG_ALPHA),
-                    shape = RoundedCornerShape(GC_INFO_BOX_RADIUS),
+                    shape = GC_INFO_BOX_SHAPE,
                 ).border(
                     width = GC_INFO_BOX_BORDER_WIDTH,
                     color = colors.onSurfaceSecondary.copy(alpha = GC_INFO_BOX_BORDER_ALPHA),
-                    shape = RoundedCornerShape(GC_INFO_BOX_RADIUS),
+                    shape = GC_INFO_BOX_SHAPE,
                 ).padding(horizontal = GC_INFO_BOX_PADDING_H, vertical = GC_INFO_BOX_PADDING_V),
     ) {
         Row(
@@ -2447,4 +2572,42 @@ fun GamepadInfoBox(
             }
         }
     }
+}
+
+fun Color.toHexLabel(includeAlpha: Boolean = true): String =
+    if (includeAlpha && alpha < 0.99f) {
+        String.format("#%06X (%d%%)", 0xFFFFFF and toArgb(), (alpha * 100).roundToInt())
+    } else {
+        String.format("#%06X", 0xFFFFFF and toArgb())
+    }
+
+fun dimColorFilter(dim: Float): ColorFilter? {
+    if (dim <= 0f) return null
+    val brightness = (1f - dim).coerceIn(0f, 1f)
+    return ColorFilter.colorMatrix(
+        ColorMatrix(
+            floatArrayOf(
+                brightness,
+                0f,
+                0f,
+                0f,
+                0f,
+                0f,
+                brightness,
+                0f,
+                0f,
+                0f,
+                0f,
+                0f,
+                brightness,
+                0f,
+                0f,
+                0f,
+                0f,
+                0f,
+                1f,
+                0f,
+            ),
+        ),
+    )
 }

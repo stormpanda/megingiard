@@ -120,17 +120,12 @@ class MegingiardAccessibilityService : AccessibilityService() {
 
     private fun getSystemAutoSetupConfig(context: Context): AutoSetupLanguageConfig {
         val lmSysLoc =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                val lm = context.getSystemService(LocaleManager::class.java)
-                val sysLocales = lm?.systemLocales
-                if (sysLocales != null && sysLocales.size() > 0) {
-                    sysLocales.get(0)?.toLanguageTag()
-                } else {
-                    null
-                }
-            } else {
-                null
-            }
+            context
+                .getSystemService(LocaleManager::class.java)
+                ?.systemLocales
+                ?.takeIf { !it.isEmpty }
+                ?.get(0)
+                ?.toLanguageTag()
 
         val rawSysLocales = Settings.System.getString(context.contentResolver, "system_locales")
         val rawSysTag =
@@ -380,13 +375,17 @@ class MegingiardAccessibilityService : AccessibilityService() {
             }
     }
 
+    private fun AccessibilityNodeInfo.findNodesByStandardOrSettingsId(subId: String): List<AccessibilityNodeInfo> {
+        val std = findAccessibilityNodeInfosByViewId("android:id/$subId") ?: emptyList()
+        val settings = findAccessibilityNodeInfosByViewId("com.android.settings:id/$subId") ?: emptyList()
+        return (std + settings).distinct()
+    }
+
     private fun findAndClickAllowDialogButton(
         rootNode: AccessibilityNodeInfo,
         allowKeywords: List<String>,
     ): Boolean {
-        val buttonNodes = rootNode.findAccessibilityNodeInfosByViewId("android:id/button1") ?: emptyList()
-        val settingsButtonNodes = rootNode.findAccessibilityNodeInfosByViewId("com.android.settings:id/button1") ?: emptyList()
-        val allButtons = (buttonNodes + settingsButtonNodes).distinct()
+        val allButtons = rootNode.findNodesByStandardOrSettingsId("button1")
 
         for (btn in allButtons) {
             val text = btn.text?.toString() ?: ""
@@ -464,10 +463,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
             }
         }
 
-        val titleNodes = rootNode.findAccessibilityNodeInfosByViewId("android:id/title") ?: emptyList()
-        val settingsTitleNodes = rootNode.findAccessibilityNodeInfosByViewId("com.android.settings:id/title") ?: emptyList()
-        val allTitles = (titleNodes + settingsTitleNodes).distinct()
-
+        val allTitles = rootNode.findNodesByStandardOrSettingsId("title")
         val cleanKw = targetKeyword.lowercase()
 
         for (titleNode in allTitles) {
@@ -626,9 +622,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
         }
 
         // 3. Fallback: Keyword matching (multi-language fallback)
-        val titleNodes = rootNode.findAccessibilityNodeInfosByViewId("android:id/title") ?: emptyList()
-        val settingsTitleNodes = rootNode.findAccessibilityNodeInfosByViewId("com.android.settings:id/title") ?: emptyList()
-        val allTitles = (titleNodes + settingsTitleNodes).distinct()
+        val allTitles = rootNode.findNodesByStandardOrSettingsId("title")
 
         for (titleNode in allTitles) {
             val titleText = titleNode.text?.toString() ?: ""
@@ -675,9 +669,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
         rootNode: AccessibilityNodeInfo,
         targetKeyword: String,
     ): Boolean {
-        val titleNodes = rootNode.findAccessibilityNodeInfosByViewId("android:id/title") ?: emptyList()
-        val settingsTitleNodes = rootNode.findAccessibilityNodeInfosByViewId("com.android.settings:id/title") ?: emptyList()
-        val allTitles = (titleNodes + settingsTitleNodes).distinct()
+        val allTitles = rootNode.findNodesByStandardOrSettingsId("title")
 
         for (titleNode in allTitles) {
             val titleText = titleNode.text?.toString() ?: ""
@@ -694,7 +686,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
         config: AutoSetupLanguageConfig,
     ): Boolean {
         val sb = StringBuilder()
-        collectAllText(rootNode, sb)
+        collectNodeText(rootNode, sb)
         val allText = sb.toString().lowercase()
 
         val devOptionsKeywords = config.developerOptionsKeywords
@@ -707,9 +699,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
 
     private fun findAndToggleMainSwitchOnSubScreen(rootNode: AccessibilityNodeInfo): Boolean {
         val mainSwitches = rootNode.findAccessibilityNodeInfosByViewId("com.android.settings:id/main_switch") ?: emptyList()
-        val settingsSwitches = rootNode.findAccessibilityNodeInfosByViewId("com.android.settings:id/switch_widget") ?: emptyList()
-        val genericSwitches = rootNode.findAccessibilityNodeInfosByViewId("android:id/switch_widget") ?: emptyList()
-        val allSwitches = (mainSwitches + settingsSwitches + genericSwitches).distinct()
+        val allSwitches = (mainSwitches + rootNode.findNodesByStandardOrSettingsId("switch_widget")).distinct()
 
         for (switchNode in allSwitches) {
             if (switchNode.isCheckable) {
@@ -737,24 +727,6 @@ class MegingiardAccessibilityService : AccessibilityService() {
             }
         }
         return false
-    }
-
-    private fun collectAllText(
-        node: AccessibilityNodeInfo,
-        sb: StringBuilder,
-    ) {
-        val text = node.text?.toString()
-        if (!text.isNullOrBlank()) {
-            sb.append(text).append("\n")
-        }
-        val contentDesc = node.contentDescription?.toString()
-        if (!contentDesc.isNullOrBlank() && contentDesc != text) {
-            sb.append(contentDesc).append("\n")
-        }
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i) ?: continue
-            collectAllText(child, sb)
-        }
     }
 
     private fun getRootNodeForDisplay(targetDisplayId: Int): AccessibilityNodeInfo? {
@@ -810,38 +782,29 @@ class MegingiardAccessibilityService : AccessibilityService() {
          */
         fun getInstance(): MegingiardAccessibilityService? = instance
 
+        private fun getGlobalSettingBool(
+            context: Context,
+            key: String,
+        ): Boolean =
+            try {
+                Settings.Global.getInt(context.contentResolver, key, 0) != 0
+            } catch (e: Exception) {
+                false
+            }
+
         fun isWifiActive(context: Context): Boolean =
             try {
                 val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
                 wifiManager?.isWifiEnabled == true
             } catch (e: Exception) {
-                try {
-                    Settings.Global.getInt(context.contentResolver, Settings.Global.WIFI_ON, 0) != 0
-                } catch (e2: Exception) {
-                    false
-                }
+                getGlobalSettingBool(context, Settings.Global.WIFI_ON)
             }
 
-        fun isDevModeActive(context: Context): Boolean =
-            try {
-                Settings.Global.getInt(context.contentResolver, Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0) != 0
-            } catch (e: Exception) {
-                false
-            }
+        fun isDevModeActive(context: Context): Boolean = getGlobalSettingBool(context, Settings.Global.DEVELOPMENT_SETTINGS_ENABLED)
 
-        fun isWirelessDebuggingActive(context: Context): Boolean =
-            try {
-                Settings.Global.getInt(context.contentResolver, "adb_wifi_enabled", 0) != 0
-            } catch (e: Exception) {
-                false
-            }
+        fun isWirelessDebuggingActive(context: Context): Boolean = getGlobalSettingBool(context, "adb_wifi_enabled")
 
-        fun isUsbDebuggingActive(context: Context): Boolean =
-            try {
-                Settings.Global.getInt(context.contentResolver, Settings.Global.ADB_ENABLED, 0) != 0
-            } catch (e: Exception) {
-                false
-            }
+        fun isUsbDebuggingActive(context: Context): Boolean = getGlobalSettingBool(context, Settings.Global.ADB_ENABLED)
 
         fun isDevicePaired(context: Context): Boolean = PrivdBootstrapper.hasCredentials(context)
 
@@ -868,7 +831,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
         }
 
         fun clickPairDialogRow(
-            pairKeywords: List<String> = AutoSetupLanguageConfig.fromLocale(java.util.Locale.getDefault()).pairDeviceKeywords,
+            pairKeywords: List<String> = AutoSetupLanguageConfig.fromLocale(Locale.getDefault()).pairDeviceKeywords,
         ): Boolean {
             val inst = instance ?: return false
             val rootNode = inst.rootInActiveWindow ?: return false
@@ -902,7 +865,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
                 AppLog.i(TAG, "startMultiStageAutoSetup: No restorable top screen app running (foreground app: $currentForeground)")
             }
 
-            val displayOptions = ActivityOptions.makeBasic().setLaunchDisplayId(Display.DEFAULT_DISPLAY).toBundle()
+            val displayOptions = topScreenDisplayBundle()
 
             val inst = instance
             if (inst == null || !isEnabled(context)) {
@@ -988,11 +951,10 @@ class MegingiardAccessibilityService : AccessibilityService() {
             }
 
             val targetStage =
-                when {
-                    !devModeActive -> AutoSetupTargetStage.STAGE_C_PAIRING
-                    !wirelessActive && !paired -> AutoSetupTargetStage.STAGE_C_PAIRING
-                    !wirelessActive && paired -> AutoSetupTargetStage.STAGE_B_WIRELESS_DEBUG
-                    else -> AutoSetupTargetStage.STAGE_C_PAIRING
+                if (!wirelessActive && paired && devModeActive) {
+                    AutoSetupTargetStage.STAGE_B_WIRELESS_DEBUG
+                } else {
+                    AutoSetupTargetStage.STAGE_C_PAIRING
                 }
 
             val initialStage =
@@ -1007,23 +969,18 @@ class MegingiardAccessibilityService : AccessibilityService() {
             _isAutoSetupActive = true
 
             val actionToLaunch =
-                when (initialStage) {
-                    AutoToggleStage.ACTIVATE_DEV_MODE -> Settings.ACTION_DEVICE_INFO_SETTINGS
-                    AutoToggleStage.TOGGLE_USB_DEBUG -> Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS
-                    AutoToggleStage.TOGGLE_WIRELESS_DEBUG -> Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS
-                    else -> null
+                if (initialStage == AutoToggleStage.ACTIVATE_DEV_MODE) {
+                    Settings.ACTION_DEVICE_INFO_SETTINGS
+                } else {
+                    Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS
                 }
 
-            if (actionToLaunch != null) {
-                launchSettingsScreenWarmedUp(
-                    context,
-                    actionToLaunch,
-                    displayOptions,
-                    inst.serviceScope,
-                ) {
-                    inst.startAutoToggleLoop()
-                }
-            } else {
+            launchSettingsScreenWarmedUp(
+                context,
+                actionToLaunch,
+                displayOptions,
+                inst.serviceScope,
+            ) {
                 inst.startAutoToggleLoop()
             }
         }
@@ -1203,11 +1160,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
                     val intent = context.packageManager.getLaunchIntentForPackage(pkg)
                     if (intent != null) {
                         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
-                        val options =
-                            ActivityOptions.makeBasic().apply {
-                                setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-                            }
-                        context.startActivity(intent, options.toBundle())
+                        context.startActivity(intent, topScreenDisplayBundle())
                         AppLog.i(TAG, "restoreTopScreenApp: Reopened $pkg successfully on display ${Display.DEFAULT_DISPLAY}")
                     } else {
                         AppLog.w(TAG, "restoreTopScreenApp: No launch intent found for package $pkg, falling back to home screen")
@@ -1232,11 +1185,9 @@ class MegingiardAccessibilityService : AccessibilityService() {
                     addCategory(Intent.CATEGORY_HOME)
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
                 }
-            val options =
-                ActivityOptions.makeBasic().apply {
-                    setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-                }
-            context.startActivity(intent, options.toBundle())
+            context.startActivity(intent, topScreenDisplayBundle())
         }
+
+        private fun topScreenDisplayBundle(): Bundle = ActivityOptions.makeBasic().setLaunchDisplayId(Display.DEFAULT_DISPLAY).toBundle()
     }
 }

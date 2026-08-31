@@ -42,7 +42,7 @@ object AppLauncherManager {
 
             val options =
                 ActivityOptions.makeBasic().apply {
-                    this.launchDisplayId = displayId
+                    setLaunchDisplayId(displayId)
                 }
 
             AppLog.i(TAG, "Launching package $packageName on display $displayId touch=($touchX, $touchY)")

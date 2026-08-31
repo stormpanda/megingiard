@@ -1,7 +1,5 @@
 package com.stormpanda.megingiard.rom
 
-private const val TAG = "RomNameCleaner"
-
 private val BRACKET_REGEX = Regex("""\s*(\([^)]*\)|\[[^\]]*\])""")
 private val SHORT_DISC_REGEX = Regex("""(?i)\b(cd|d|s|p)\b\s*[0-9]+\b|\b(cd|d|s|p)[0-9]+\b""")
 
@@ -34,16 +32,9 @@ fun cleanRomName(name: String): String {
     return result.replace(Regex("""\s+"""), " ").trim()
 }
 
+private val DISC_KEYWORDS = listOf("disc", "disk", "side", "part", "track", "tape")
+
 private fun String.containsDiscIndicator(): Boolean {
     val lowercase = this.lowercase()
-    if (lowercase.contains("disc") ||
-        lowercase.contains("disk") ||
-        lowercase.contains("side") ||
-        lowercase.contains("part") ||
-        lowercase.contains("track") ||
-        lowercase.contains("tape")
-    ) {
-        return true
-    }
-    return SHORT_DISC_REGEX.containsMatchIn(this)
+    return DISC_KEYWORDS.any { it in lowercase } || SHORT_DISC_REGEX.containsMatchIn(this)
 }

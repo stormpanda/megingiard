@@ -119,26 +119,20 @@ object InjectorLifecycleManager {
                 promptInFlight ||
                 surfaceMode == CompanionSurfaceMode.VIEWPORT_EDIT
 
-        val hasKeyboardMacros =
-            activeLayout?.buttons?.any { it.action is PadAction.KeyboardKey } == true
-        val hasGamepadMacros =
-            activeLayout?.buttons?.any { it.action is PadAction.GamepadButton || it.action is PadAction.Macro } == true
+        val actions = activeLayout?.buttons?.map { it.action }.orEmpty()
+        val hasKeyboardMacros = actions.any { it is PadAction.KeyboardKey }
+        val hasGamepadMacros = actions.any { it is PadAction.GamepadButton || it is PadAction.Macro }
         val hasMouseMacros =
-            activeLayout?.buttons?.any {
-                it.action is PadAction.MouseButton ||
-                    it.action is PadAction.ScrollWheel ||
-                    (
-                        it.action is PadAction.TrackpointMove &&
-                            (it.action as PadAction.TrackpointMove).mode == TrackpointMode.PHYSICAL_MOUSE
-                    )
-            } == true || activeLayout?.backgroundTouchpad?.enabled == true
+            actions.any {
+                it is PadAction.MouseButton ||
+                    it is PadAction.ScrollWheel ||
+                    (it is PadAction.TrackpointMove && it.mode == TrackpointMode.PHYSICAL_MOUSE)
+            } || activeLayout?.backgroundTouchpad?.enabled == true
         val hasTouchMacros =
-            activeLayout?.buttons?.any {
-                (
-                    it.action is PadAction.TrackpointMove &&
-                        (it.action as PadAction.TrackpointMove).mode == TrackpointMode.VIRTUAL_TOUCH
-                ) || it.action is PadAction.Macro
-            } == true
+            actions.any {
+                (it is PadAction.TrackpointMove && it.mode == TrackpointMode.VIRTUAL_TOUCH) ||
+                    it is PadAction.Macro
+            }
 
         val startKeyboard = isFullscreenKb || (hasKeyboardMacros && !isBlockingMacroUse)
         val startMouse = isFullscreenMouse || (hasMouseMacros && !isBlockingMacroUse && !isFullscreenKb)

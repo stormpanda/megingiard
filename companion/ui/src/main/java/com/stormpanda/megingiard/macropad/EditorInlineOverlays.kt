@@ -45,6 +45,7 @@ import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
 private const val TAG = "EditorInlineOverlays"
 private val EIO_APP_ICON_SIZE = 36.dp
 private val EIO_APP_ICON_CORNER = 8.dp
+private val EIO_APP_ICON_SHAPE = RoundedCornerShape(EIO_APP_ICON_CORNER)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -272,7 +273,7 @@ internal fun AppPickerSubPageContent(
                                 modifier =
                                     Modifier
                                         .size(EIO_APP_ICON_SIZE)
-                                        .clip(RoundedCornerShape(EIO_APP_ICON_CORNER))
+                                        .clip(EIO_APP_ICON_SHAPE)
                                         .alpha(if (isAssigned) 0.38f else 1f),
                             )
                         },

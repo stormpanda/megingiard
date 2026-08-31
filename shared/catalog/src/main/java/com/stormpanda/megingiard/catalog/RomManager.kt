@@ -4,7 +4,6 @@ import android.content.Intent
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.rom.cleanRomName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -45,7 +44,6 @@ object RomManager {
     private const val FILE_ROM_FOLDERS = "gamefocus_rom_folders.json"
     private const val FILE_ROM_CLEANED_NAMES = "gamefocus_rom_names.json"
     private const val MAX_ZIP_PEEKS = 10
-    private val SD_CARD_VOLUME_REGEX = Regex("[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}")
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -57,47 +55,52 @@ object RomManager {
 
     private val _romCleanedNames = mutableMapOf<String, String>()
 
+    private inline fun <reified T> loadJsonFile(
+        context: Context,
+        filename: String,
+    ): T? {
+        val file = File(context.filesDir, filename)
+        if (!file.exists()) return null
+        return try {
+            Json.decodeFromString<T>(file.readText())
+        } catch (e: Exception) {
+            AppLog.w(TAG, "Failed to load $filename: ${e.message}")
+            null
+        }
+    }
+
+    private inline fun <reified T> saveJsonFile(
+        context: Context,
+        filename: String,
+        value: T,
+    ) {
+        try {
+            val file = File(context.filesDir, filename)
+            file.writeText(Json.encodeToString(value))
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Failed to save $filename: ${e.message}", e)
+        }
+    }
+
     fun loadRomFolders(context: Context) {
-        val file = File(context.filesDir, FILE_ROM_FOLDERS)
-        if (file.exists()) {
-            try {
-                val content = file.readText()
-                val folders = Json.decodeFromString<List<CustomRomFolder>>(content)
-                _romFolders.value = folders
-                AppLog.d(TAG, "Loaded ${folders.size} ROM folders from disk")
-            } catch (e: Exception) {
-                AppLog.w(TAG, "Failed to load ROM folders: ${e.message}")
-            }
+        loadJsonFile<List<CustomRomFolder>>(context, FILE_ROM_FOLDERS)?.let { folders ->
+            _romFolders.value = folders
+            AppLog.d(TAG, "Loaded ${folders.size} ROM folders from disk")
         }
 
-        val namesFile = File(context.filesDir, FILE_ROM_CLEANED_NAMES)
-        if (namesFile.exists()) {
-            try {
-                val content = namesFile.readText()
-                val map = Json.decodeFromString<Map<String, String>>(content)
-                synchronized(_romCleanedNames) {
-                    _romCleanedNames.clear()
-                    _romCleanedNames.putAll(map)
-                }
-                AppLog.d(TAG, "Loaded ${map.size} cleaned ROM names from disk")
-            } catch (e: Exception) {
-                AppLog.w(TAG, "Failed to load cleaned ROM names: ${e.message}")
+        loadJsonFile<Map<String, String>>(context, FILE_ROM_CLEANED_NAMES)?.let { map ->
+            synchronized(_romCleanedNames) {
+                _romCleanedNames.clear()
+                _romCleanedNames.putAll(map)
             }
+            AppLog.d(TAG, "Loaded ${map.size} cleaned ROM names from disk")
         }
     }
 
     private fun saveRomCleanedNames(context: Context) {
-        try {
-            val file = File(context.filesDir, FILE_ROM_CLEANED_NAMES)
-            val content =
-                synchronized(_romCleanedNames) {
-                    Json.encodeToString(_romCleanedNames)
-                }
-            file.writeText(content)
-            AppLog.d(TAG, "Saved cleaned ROM names to disk")
-        } catch (e: Exception) {
-            AppLog.e(TAG, "Failed to save cleaned ROM names: ${e.message}", e)
-        }
+        val content = synchronized(_romCleanedNames) { _romCleanedNames.toMap() }
+        saveJsonFile(context, FILE_ROM_CLEANED_NAMES, content)
+        AppLog.d(TAG, "Saved cleaned ROM names to disk")
     }
 
     private fun saveRomFolders(
@@ -105,14 +108,8 @@ object RomManager {
         folders: List<CustomRomFolder>,
     ) {
         _romFolders.value = folders
-        try {
-            val file = File(context.filesDir, FILE_ROM_FOLDERS)
-            val content = Json.encodeToString(folders)
-            file.writeText(content)
-            AppLog.d(TAG, "Saved ${folders.size} ROM folders to disk")
-        } catch (e: Exception) {
-            AppLog.e(TAG, "Failed to save ROM folders: ${e.message}", e)
-        }
+        saveJsonFile(context, FILE_ROM_FOLDERS, folders)
+        AppLog.d(TAG, "Saved ${folders.size} ROM folders to disk")
     }
 
     suspend fun addRomFolder(
@@ -173,14 +170,7 @@ object RomManager {
         folderUri: String,
         coreName: String?,
     ) {
-        val current =
-            _romFolders.value.map { folder ->
-                if (folder.uriString == folderUri) {
-                    folder.copy(retroArchCore = coreName)
-                } else {
-                    folder
-                }
-            }
+        val current = _romFolders.value.map { if (it.uriString == folderUri) it.copy(retroArchCore = coreName) else it }
         saveRomFolders(context, current)
         reloadRomApps(context)
     }
@@ -246,18 +236,13 @@ object RomManager {
                             if (isMatch) {
                                 val rawLabel = name.substringBeforeLast('.')
                                 val romUriStr = file.uri.toString()
-                                val romPath = getPhysicalPath(file.uri) ?: romUriStr
+                                val romPath = SafPathResolver.resolveFilePath(romUriStr) ?: romUriStr
 
                                 val label =
                                     synchronized(_romCleanedNames) {
-                                        val existing = _romCleanedNames[romUriStr]
-                                        if (existing != null) {
-                                            existing
-                                        } else {
-                                            val cleaned = cleanRomName(rawLabel)
-                                            _romCleanedNames[romUriStr] = cleaned
+                                        _romCleanedNames.getOrPut(romUriStr) {
                                             namesChanged = true
-                                            cleaned
+                                            cleanRomName(rawLabel)
                                         }
                                     }
 
@@ -302,43 +287,8 @@ object RomManager {
         packageName: String,
         coverPath: String?,
     ) {
-        _romApps.value =
-            _romApps.value.map { item ->
-                if (item.packageName == packageName) {
-                    item.copy(
-                        coverPath = coverPath,
-                        coverLastModified = System.currentTimeMillis(),
-                    )
-                } else {
-                    item
-                }
-            }
+        _romApps.value = _romApps.value.withUpdatedCover(packageName, coverPath)
         AppLog.i(TAG, "Updated in-memory ROM cover path for $packageName to $coverPath")
-    }
-
-    internal fun getPhysicalPath(uri: Uri): String? {
-        val decodedUri = Uri.decode(uri.toString())
-        val primaryIndex = decodedUri.lastIndexOf("primary:")
-        if (primaryIndex != -1) {
-            val relPath = decodedUri.substring(primaryIndex + "primary:".length)
-            return "/storage/emulated/0/$relPath"
-        }
-
-        // Handle external SD card
-        val pathSegment =
-            if (decodedUri.contains("/document/")) {
-                decodedUri.substringAfterLast("/document/")
-            } else {
-                decodedUri.substringAfterLast("/tree/")
-            }
-
-        val volumeId = pathSegment.substringBefore(":", "")
-        if (volumeId.isNotEmpty() && volumeId != "primary" && volumeId.matches(SD_CARD_VOLUME_REGEX)) {
-            val docId = pathSegment.substringAfter(":")
-            return "/storage/$volumeId/$docId"
-        }
-
-        return null
     }
 
     internal fun detectSystem(
@@ -373,20 +323,10 @@ object RomManager {
             }
         }
 
-        var bestSystemId: String? = null
-        var maxMatchCount = 0
-
-        for (system in SUPPORTED_SYSTEMS) {
-            var matchCount = 0
-            for (ext in system.extensions) {
-                matchCount += extensionCounts[ext] ?: 0
-            }
-            if (matchCount > maxMatchCount) {
-                maxMatchCount = matchCount
-                bestSystemId = system.id
-            }
-        }
-
-        return bestSystemId
+        return SUPPORTED_SYSTEMS
+            .map { system -> system.id to system.extensions.sumOf { ext -> extensionCounts[ext] ?: 0 } }
+            .filter { (_, count) -> count > 0 }
+            .maxByOrNull { (_, count) -> count }
+            ?.first
     }
 }

@@ -66,8 +66,8 @@ private const val HMAC_HEX_LEN = 64 // SHA-256 digest → 64 hex chars
  */
 object PrivdClient {
     init {
-        ProcessCmdlineProvider.runningProcessesProvider = { getRunningProcesses() }
-        ProcessCmdlineProvider.textFileReader = { path -> readTextFile(path) }
+        ProcessCmdlineProvider.runningProcessesProvider = ::getRunningProcesses
+        ProcessCmdlineProvider.textFileReader = ::readTextFile
     }
 
     private val _state = MutableStateFlow(PrivdConnectionState.DISCONNECTED)
@@ -120,7 +120,7 @@ object PrivdClient {
      * The decryption involves a short (~10 ms) hardware-backed Keystore operation.
      */
     fun setPackageName(name: String) {
-        val isDebug = name.endsWith(".debug") || name.contains(".debug")
+        val isDebug = name.contains(".debug")
         portStart = if (isDebug) PORT_DEBUG_START else PORT_RELEASE_START
         portEnd = portStart + 4
         AppLog.d(TAG, "setPackageName: $name -> port range $portStart..$portEnd")
@@ -456,9 +456,47 @@ object PrivdClient {
                     AppLog.w(TAG, "readerLoop failed: $e")
                     break
                 }
-            if (line == "PONG") {
-                pingDeferred?.complete(true)
-                continue
+            when (line) {
+                "PONG" -> {
+                    pingDeferred?.complete(true)
+                    continue
+                }
+
+                "MIRROR_STOPPED" -> {
+                    mirrorStopDeferred?.complete(true)
+                    continue
+                }
+
+                "SCREENSHOT_OK" -> {
+                    screenshotDeferred?.complete(true)
+                    continue
+                }
+
+                "READ_BEGIN" -> {
+                    isCapturingReadFile = true
+                    synchronized(dumpLock) { readFileDumpBuilder.clear() }
+                    continue
+                }
+
+                "READ_END" -> {
+                    isCapturingReadFile = false
+                    val content = synchronized(dumpLock) { readFileDumpBuilder.toString().also { readFileDumpBuilder.clear() } }
+                    readFileDeferred?.complete(content)
+                    continue
+                }
+
+                "PROC_BEGIN" -> {
+                    isCapturingProcesses = true
+                    synchronized(dumpLock) { processesDumpBuilder.clear() }
+                    continue
+                }
+
+                "PROC_END" -> {
+                    isCapturingProcesses = false
+                    val content = synchronized(dumpLock) { processesDumpBuilder.toString().also { processesDumpBuilder.clear() } }
+                    listProcessesDeferred?.complete(content)
+                    continue
+                }
             }
             if (line.startsWith("MIRROR_DIRECT_READY")) {
                 mirrorDirectStartDeferred?.complete(true)
@@ -468,23 +506,8 @@ object PrivdClient {
                 mirrorDirectStartDeferred?.complete(false)
                 continue
             }
-            if (line == "MIRROR_STOPPED") {
-                mirrorStopDeferred?.complete(true)
-                continue
-            }
-            if (line == "SCREENSHOT_OK") {
-                screenshotDeferred?.complete(true)
-                continue
-            }
             if (line.startsWith("SCREENSHOT_ERR")) {
                 screenshotDeferred?.complete(false)
-                continue
-            }
-            if (line == "READ_BEGIN") {
-                isCapturingReadFile = true
-                synchronized(dumpLock) {
-                    readFileDumpBuilder.clear()
-                }
                 continue
             }
             if (line.startsWith("READ_ERR")) {
@@ -492,50 +515,17 @@ object PrivdClient {
                 readFileDeferred?.complete(null)
                 continue
             }
-            if (line == "READ_END") {
-                isCapturingReadFile = false
-                val content =
-                    synchronized(dumpLock) {
-                        val res = readFileDumpBuilder.toString()
-                        readFileDumpBuilder.clear()
-                        res
-                    }
-                readFileDeferred?.complete(content)
-                continue
-            }
-            if (isCapturingReadFile) {
-                synchronized(dumpLock) {
-                    readFileDumpBuilder.append(line).append('\n')
-                }
-                continue
-            }
-            if (line == "PROC_BEGIN") {
-                isCapturingProcesses = true
-                synchronized(dumpLock) {
-                    processesDumpBuilder.clear()
-                }
-                continue
-            }
             if (line.startsWith("PROC_ERR")) {
                 isCapturingProcesses = false
                 listProcessesDeferred?.complete(null)
                 continue
             }
-            if (line == "PROC_END") {
-                isCapturingProcesses = false
-                val content =
-                    synchronized(dumpLock) {
-                        val res = processesDumpBuilder.toString()
-                        processesDumpBuilder.clear()
-                        res
-                    }
-                listProcessesDeferred?.complete(content)
+            if (isCapturingReadFile) {
+                synchronized(dumpLock) { readFileDumpBuilder.append(line).append('\n') }
                 continue
             }
             if (isCapturingProcesses) {
-                synchronized(dumpLock) {
-                    processesDumpBuilder.append(line).append('\n')
-                }
+                synchronized(dumpLock) { processesDumpBuilder.append(line).append('\n') }
                 continue
             }
             if (line.startsWith("EVT ")) {

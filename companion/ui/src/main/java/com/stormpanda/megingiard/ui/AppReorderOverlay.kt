@@ -25,6 +25,7 @@ import com.stormpanda.megingiard.R
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import java.util.Collections
+import kotlin.math.abs
 
 private const val TAG = "GamepadReorderDeck"
 private val RO_DECK_SPACING: Dp = 10.dp
@@ -93,7 +94,7 @@ fun <T> GamepadReorderDeck(
                         val canScrollUp = lazyListState.firstVisibleItemIndex > 0 || lazyListState.firstVisibleItemScrollOffset > 0
                         if (delta < 0 && !canScrollUp) {
                             // Already at the top boundary, avoid overscroll bounce
-                        } else if (kotlin.math.abs(delta) > RO_SCROLL_THRESHOLD_PX) {
+                        } else if (abs(delta) > RO_SCROLL_THRESHOLD_PX) {
                             AppLog.d(TAG, "GamepadReorderDeck: centering moving item at index $movingIndex (delta=$delta px)")
                             lazyListState.animateScrollBy(delta)
                         }

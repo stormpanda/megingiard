@@ -38,8 +38,6 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.MaterialSymbol
 
-private const val TAG = "QuickMenuMirrorCard"
-
 private val PM_CARDS_GAP = 8.dp
 private const val PM_MIRROR_CARD_WEIGHT = 2f
 private const val PM_SCREENSHOT_CARD_WEIGHT = 3f
@@ -54,6 +52,8 @@ private const val PM_DISABLED_LABEL_ALPHA = 0.4f
 private const val SYMBOL_SPLITSCREEN_BOTTOM = "splitscreen_bottom"
 private const val SYMBOL_SPLITSCREEN_TOP = "splitscreen_top"
 private const val SYMBOL_SPLITSCREEN = "splitscreen"
+
+private val PM_PANEL_SHAPE = RoundedCornerShape(PM_PANEL_CORNER)
 
 @Composable
 internal fun MirrorControlCard(
@@ -89,10 +89,10 @@ internal fun MirrorControlCard(
             modifier =
                 Modifier
                     .weight(PM_MIRROR_CARD_WEIGHT)
-                    .shadow(PM_ELEVATION, RoundedCornerShape(PM_PANEL_CORNER))
-                    .clip(RoundedCornerShape(PM_PANEL_CORNER))
+                    .shadow(PM_ELEVATION, PM_PANEL_SHAPE)
+                    .clip(PM_PANEL_SHAPE)
                     .background(colors.controlOverlay)
-                    .border(PM_BORDER_WIDTH, brush = menuBezelBrush, shape = RoundedCornerShape(PM_PANEL_CORNER))
+                    .border(PM_BORDER_WIDTH, brush = menuBezelBrush, shape = PM_PANEL_SHAPE)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
@@ -107,39 +107,20 @@ internal fun MirrorControlCard(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (isCapturing) {
-                    MirrorControlIconButton(
-                        icon = Icons.Rounded.Stop,
-                        contentDescription = stringResource(R.string.cd_stop_mirroring),
-                        label = stringResource(R.string.mirror_control_label_stop),
-                        tint = colors.onControlOverlay,
-                        enabled = isStartStopEnabled,
-                        colors = colors,
-                        onClick = onStop,
-                        modifier = Modifier.weight(1f),
-                    )
-                } else {
-                    MirrorControlIconButton(
-                        icon = Icons.Rounded.PlayArrow,
-                        contentDescription = stringResource(R.string.cd_start_mirroring),
-                        label = stringResource(R.string.mirror_control_label_start),
-                        tint = colors.onControlOverlay,
-                        enabled = isStartStopEnabled,
-                        colors = colors,
-                        onClick = onStart,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
+                MirrorControlIconButton(
+                    icon = if (isCapturing) Icons.Rounded.Stop else Icons.Rounded.PlayArrow,
+                    contentDescription = stringResource(if (isCapturing) R.string.cd_stop_mirroring else R.string.cd_start_mirroring),
+                    label = stringResource(if (isCapturing) R.string.mirror_control_label_stop else R.string.mirror_control_label_start),
+                    tint = colors.onControlOverlay,
+                    enabled = isStartStopEnabled,
+                    colors = colors,
+                    onClick = if (isCapturing) onStop else onStart,
+                    modifier = Modifier.weight(1f),
+                )
                 MirrorControlIconButton(
                     icon = if (isFrozen) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
-                    contentDescription =
-                        stringResource(
-                            if (isFrozen) R.string.cd_unfreeze else R.string.cd_freeze,
-                        ),
-                    label =
-                        stringResource(
-                            if (isFrozen) R.string.mirror_control_label_unfreeze else R.string.mirror_control_label_freeze,
-                        ),
+                    contentDescription = stringResource(if (isFrozen) R.string.cd_unfreeze else R.string.cd_freeze),
+                    label = stringResource(if (isFrozen) R.string.mirror_control_label_unfreeze else R.string.mirror_control_label_freeze),
                     tint = if (isFrozen) colors.accent else colors.onControlOverlay,
                     enabled = isPauseEnabled,
                     colors = colors,
@@ -154,10 +135,10 @@ internal fun MirrorControlCard(
             modifier =
                 Modifier
                     .weight(PM_SCREENSHOT_CARD_WEIGHT)
-                    .shadow(PM_ELEVATION, RoundedCornerShape(PM_PANEL_CORNER))
-                    .clip(RoundedCornerShape(PM_PANEL_CORNER))
+                    .shadow(PM_ELEVATION, PM_PANEL_SHAPE)
+                    .clip(PM_PANEL_SHAPE)
                     .background(colors.controlOverlay)
-                    .border(PM_BORDER_WIDTH, brush = menuBezelBrush, shape = RoundedCornerShape(PM_PANEL_CORNER))
+                    .border(PM_BORDER_WIDTH, brush = menuBezelBrush, shape = PM_PANEL_SHAPE)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
@@ -172,39 +153,27 @@ internal fun MirrorControlCard(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // Top screenshot button (splitscreen_bottom symbol per user specification)
-                MirrorControlIconButton(
-                    symbolName = SYMBOL_SPLITSCREEN_BOTTOM,
-                    contentDescription = stringResource(R.string.cd_screenshot_top),
-                    label = stringResource(R.string.quick_menu_screenshot_top),
-                    tint = colors.onControlOverlay,
-                    enabled = isTopScreenshotEnabled,
-                    colors = colors,
-                    onClick = onTakeTopScreenshot,
-                    modifier = Modifier.weight(1f),
-                )
-                // Bottom screenshot button (splitscreen_top symbol per user specification)
-                MirrorControlIconButton(
-                    symbolName = SYMBOL_SPLITSCREEN_TOP,
-                    contentDescription = stringResource(R.string.cd_screenshot_bottom),
-                    label = stringResource(R.string.quick_menu_screenshot_bottom),
-                    tint = colors.onControlOverlay,
-                    enabled = isBottomScreenshotEnabled,
-                    colors = colors,
-                    onClick = onTakeBottomScreenshot,
-                    modifier = Modifier.weight(1f),
-                )
-                // Both screens screenshot button (splitscreen symbol)
-                MirrorControlIconButton(
-                    symbolName = SYMBOL_SPLITSCREEN,
-                    contentDescription = stringResource(R.string.cd_screenshot_both),
-                    label = stringResource(R.string.quick_menu_screenshot_both),
-                    tint = colors.onControlOverlay,
-                    enabled = isBothScreenshotEnabled,
-                    colors = colors,
-                    onClick = onTakeBothScreenshot,
-                    modifier = Modifier.weight(1f),
-                )
+                listOf(
+                    Triple(SYMBOL_SPLITSCREEN_BOTTOM, R.string.cd_screenshot_top, R.string.quick_menu_screenshot_top) to
+                        (isTopScreenshotEnabled to onTakeTopScreenshot),
+                    Triple(SYMBOL_SPLITSCREEN_TOP, R.string.cd_screenshot_bottom, R.string.quick_menu_screenshot_bottom) to
+                        (isBottomScreenshotEnabled to onTakeBottomScreenshot),
+                    Triple(SYMBOL_SPLITSCREEN, R.string.cd_screenshot_both, R.string.quick_menu_screenshot_both) to
+                        (isBothScreenshotEnabled to onTakeBothScreenshot),
+                ).forEach { (meta, handler) ->
+                    val (symbol, cdRes, labelRes) = meta
+                    val (enabled, action) = handler
+                    MirrorControlIconButton(
+                        symbolName = symbol,
+                        contentDescription = stringResource(cdRes),
+                        label = stringResource(labelRes),
+                        tint = colors.onControlOverlay,
+                        enabled = enabled,
+                        colors = colors,
+                        onClick = action,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
         }
     }

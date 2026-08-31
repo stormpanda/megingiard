@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.abs
+import kotlin.math.sign
 
 private const val TAG = "HorizontalLetterCarousel"
 private val HLC_ITEM_WIDTH = 26.dp
@@ -60,24 +61,14 @@ fun HorizontalLetterCarousel(
     AnimatedContent(
         targetState = safeIndex,
         transitionSpec = {
-            val isMovingForward = targetState > initialState
-            if (isMovingForward) {
-                (
-                    slideInHorizontally(animationSpec = tween(HLC_ANIM_IN_MS)) { itemShiftPx } +
-                        fadeIn(animationSpec = tween(HLC_ANIM_IN_MS))
-                ).togetherWith(
-                    slideOutHorizontally(animationSpec = tween(HLC_ANIM_OUT_MS)) { -itemShiftPx } +
-                        fadeOut(animationSpec = tween(HLC_ANIM_OUT_MS)),
-                )
-            } else {
-                (
-                    slideInHorizontally(animationSpec = tween(HLC_ANIM_IN_MS)) { -itemShiftPx } +
-                        fadeIn(animationSpec = tween(HLC_ANIM_IN_MS))
-                ).togetherWith(
-                    slideOutHorizontally(animationSpec = tween(HLC_ANIM_OUT_MS)) { itemShiftPx } +
-                        fadeOut(animationSpec = tween(HLC_ANIM_OUT_MS)),
-                )
-            }
+            val direction = if (targetState > initialState) 1 else -1
+            (
+                slideInHorizontally(animationSpec = tween(HLC_ANIM_IN_MS)) { itemShiftPx * direction } +
+                    fadeIn(animationSpec = tween(HLC_ANIM_IN_MS))
+            ).togetherWith(
+                slideOutHorizontally(animationSpec = tween(HLC_ANIM_OUT_MS)) { -itemShiftPx * direction } +
+                    fadeOut(animationSpec = tween(HLC_ANIM_OUT_MS)),
+            )
         },
         label = "LetterCarouselHorizontalRollTransition",
         modifier = modifier,
@@ -113,18 +104,13 @@ fun HorizontalLetterCarousel(
                         }
 
                     val targetRotationY =
-                        when (offset) {
-                            -4 -> -50f
-                            -3 -> -40f
-                            -2 -> -28f
-                            -1 -> -15f
-                            0 -> 0f
+                        when (absOffset) {
                             1 -> 15f
                             2 -> 28f
                             3 -> 40f
                             4 -> 50f
                             else -> 0f
-                        }
+                        } * sign(offset.toFloat())
 
                     val textColor = if (isSelected) appColors.accent else appColors.onSurfaceSecondary
 

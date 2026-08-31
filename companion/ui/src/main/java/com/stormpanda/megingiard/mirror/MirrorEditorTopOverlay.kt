@@ -110,13 +110,19 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
+import com.stormpanda.megingiard.ui.BumperDirection
 import com.stormpanda.megingiard.ui.DialogToastManager
 import com.stormpanda.megingiard.ui.DialogToastPill
+import com.stormpanda.megingiard.ui.GamepadPill
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.LocalFirstContentRequester
 import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
+import com.stormpanda.megingiard.ui.cycle
 import com.stormpanda.megingiard.ui.firstDeckItem
+import com.stormpanda.megingiard.ui.handle2DAdjustmentKeyEvent
 import com.stormpanda.megingiard.ui.handleAdjustmentKeyEvent
+import com.stormpanda.megingiard.ui.isBackKey
+import com.stormpanda.megingiard.ui.launchDirectionalRepeat
 import com.stormpanda.megingiard.ui.rememberBezelBrush
 import com.stormpanda.megingiard.ui.rememberGamepadBringIntoViewSpec
 import kotlinx.coroutines.Job
@@ -133,6 +139,7 @@ private const val TAG = "MirrorEditorTopOverlay"
 // ── Proportional compact styling (25% smaller than default primary overlay cards) ──
 private val METO_TOOLBOX_WIDTH = 220.dp
 private val METO_CONTAINER_CORNER = 12.dp
+private val METO_CONTAINER_SHAPE = RoundedCornerShape(METO_CONTAINER_CORNER)
 private val METO_CONTAINER_ELEVATION = 16.dp
 private val METO_TOOLBOX_PADDING_START = 24.dp
 private val METO_TOOLBOX_PADDING_VERTICAL = 20.dp
@@ -144,6 +151,7 @@ private val METO_TOGGLE_BUTTON_SIZE = 20.dp
 private val METO_TOGGLE_ICON_SIZE = 14.dp
 
 private val METO_CARD_CORNER = 8.dp
+private val METO_CARD_SHAPE = RoundedCornerShape(METO_CARD_CORNER)
 private val METO_CARD_MIN_HEIGHT = 38.dp
 private val METO_CARD_PADDING_H = 8.dp
 private val METO_CARD_PADDING_V = 5.dp
@@ -151,11 +159,13 @@ private val METO_CARD_PADDING_V = 5.dp
 private val METO_ICON_BOX_SIZE = 26.dp
 private val METO_ICON_SIZE = 16.dp
 private val METO_ICON_BOX_CORNER = 6.dp
+private val METO_ICON_BOX_SHAPE = RoundedCornerShape(METO_ICON_BOX_CORNER)
 private val METO_ROW_SPACING = 8.dp
 
 private val METO_TEXT_SIZE_TITLE = 11.sp
 private val METO_TEXT_SIZE_PILL = 9.5.sp
 private val METO_PILL_CORNER = 12.dp
+private val METO_PILL_SHAPE = RoundedCornerShape(METO_PILL_CORNER)
 private val METO_PILL_PADDING_H = 7.dp
 private val METO_PILL_PADDING_V = 2.dp
 
@@ -169,10 +179,6 @@ private val METO_DEFAULT_BORDER_WIDTH = 1.dp
 private val METO_FOCUS_ELEVATION = 4.dp
 
 private const val METO_SURFACE_ALPHA = 0.70f
-private const val METO_MOVE_INITIAL_DELAY_MS = 250L
-private const val METO_MOVE_START_DELAY_MS = 80L
-private const val METO_MOVE_MIN_DELAY_MS = 16L
-private const val METO_MOVE_ACCEL_FACTOR = 0.88f
 private const val METO_INITIAL_FOCUS_DELAY_MS = 100L
 private val METO_SCROLL_EXTRA_PADDING = 0.dp
 
@@ -307,35 +313,38 @@ fun MirrorEditorTopOverlay(
     var bottomHToggle by remember(selectedCutout?.id) { mutableIntStateOf(0) }
     var bottomVToggle by remember(selectedCutout?.id) { mutableIntStateOf(0) }
 
-    fun moveTopCutout(
+    fun updateCutout(
         cutoutId: String,
-        dx: Int,
-        dy: Int,
+        transform: (ScreenCutout, List<ScreenCutout>) -> ScreenCutout?,
     ) {
         val currentProfile = MacroPadState.activeProfile.value ?: return
         val currentLayout = currentProfile.layouts.firstOrNull { it.id == currentProfile.activeLayoutId } ?: return
         val cur = currentLayout.mirrorCutouts.firstOrNull { it.id == cutoutId } ?: return
+        val others = currentLayout.mirrorCutouts.filter { it.id != cutoutId }
+        val updated = transform(cur, others) ?: return
+        if (updated == cur) return
+        val updatedList = currentLayout.mirrorCutouts.map { if (it.id == cur.id) updated else it }
+        MacroPadState.updateLayout(currentLayout.copy(mirrorCutouts = updatedList))
+    }
+
+    fun moveTopCutout(
+        cutoutId: String,
+        dx: Int,
+        dy: Int,
+    ) = updateCutout(cutoutId) { cur, _ ->
         val stepX = 1f / srcWidth
         val stepY = 1f / srcHeight
-        val newX = (cur.srcX + dx * stepX).coerceIn(0f, 1f - cur.srcWidth)
-        val newY = (cur.srcY + dy * stepY).coerceIn(0f, 1f - cur.srcHeight)
-        if (newX != cur.srcX || newY != cur.srcY) {
-            val updated = cur.copy(srcX = newX, srcY = newY)
-            val updatedList = currentLayout.mirrorCutouts.map { if (it.id == cur.id) updated else it }
-            MacroPadState.updateLayout(currentLayout.copy(mirrorCutouts = updatedList))
-        }
+        cur.copy(
+            srcX = (cur.srcX + dx * stepX).coerceIn(0f, 1f - cur.srcWidth),
+            srcY = (cur.srcY + dy * stepY).coerceIn(0f, 1f - cur.srcHeight),
+        )
     }
 
     fun resizeTopCutout(
         cutoutId: String,
         dx: Int,
         dy: Int,
-    ) {
-        val currentProfile = MacroPadState.activeProfile.value ?: return
-        val currentLayout = currentProfile.layouts.firstOrNull { it.id == currentProfile.activeLayoutId } ?: return
-        val cur = currentLayout.mirrorCutouts.firstOrNull { it.id == cutoutId } ?: return
-        val others = currentLayout.mirrorCutouts.filter { it.id != cutoutId }
-
+    ) = updateCutout(cutoutId) { cur, others ->
         if (cur.aspectRatioMode == AspectRatioMode.BOTTOM) {
             val stepDelta =
                 if (dx != 0) {
@@ -345,7 +354,7 @@ fun MirrorEditorTopOverlay(
                 } else {
                     0
                 }
-            if (stepDelta == 0) return
+            if (stepDelta == 0) return@updateCutout null
             val cutoutRatio = (cur.destWidth * secScreenW) / (cur.destHeight * secScreenH)
             val normCropRatio = cutoutRatio * (srcHeight / srcWidth)
             val geom =
@@ -359,13 +368,7 @@ fun MirrorEditorTopOverlay(
                     stepDelta = stepDelta,
                     targetNormRatio = normCropRatio,
                 )
-            if (geom.x == cur.srcX && geom.y == cur.srcY && geom.w == cur.srcWidth && geom.h == cur.srcHeight) {
-                return
-            }
-            val updated = cur.copy(srcX = geom.x, srcY = geom.y, srcWidth = geom.w, srcHeight = geom.h)
-            val updatedList = currentLayout.mirrorCutouts.map { if (it.id == cur.id) updated else it }
-            MacroPadState.updateLayout(currentLayout.copy(mirrorCutouts = updatedList))
-            return
+            return@updateCutout cur.copy(srcX = geom.x, srcY = geom.y, srcWidth = geom.w, srcHeight = geom.h)
         }
 
         val resized =
@@ -381,6 +384,8 @@ fun MirrorEditorTopOverlay(
                 hToggle = topHToggle,
                 vToggle = topVToggle,
             )
+        topHToggle = resized.hToggle
+        topVToggle = resized.vToggle
 
         var updated =
             cur.copy(
@@ -402,57 +407,39 @@ fun MirrorEditorTopOverlay(
                     screenH = secScreenH,
                 )
             if (!isCutoutGeometryValid(updated.destX, updated.destY, newDestW, newDestH, others)) {
-                return
+                return@updateCutout null
             }
             updated = updated.copy(destWidth = newDestW, destHeight = newDestH)
         }
-        topHToggle = resized.hToggle
-        topVToggle = resized.vToggle
-
-        val updatedList = currentLayout.mirrorCutouts.map { if (it.id == cur.id) updated else it }
-        MacroPadState.updateLayout(currentLayout.copy(mirrorCutouts = updatedList))
+        updated
     }
 
     fun moveBottomCutout(
         cutoutId: String,
         dx: Int,
         dy: Int,
-    ) {
-        val currentProfile = MacroPadState.activeProfile.value ?: return
-        val currentLayout = currentProfile.layouts.firstOrNull { it.id == currentProfile.activeLayoutId } ?: return
-        val cur = currentLayout.mirrorCutouts.firstOrNull { it.id == cutoutId } ?: return
+    ) = updateCutout(cutoutId) { cur, _ ->
         val stepX = 1f / secScreenW
         val stepY = 1f / secScreenH
-        val targetX = cur.destX + dx * stepX
-        val targetY = cur.destY + dy * stepY
         val (clampedX, clampedY) =
             clampCutoutDrag(
                 cutoutId = cur.id,
                 originalX = cur.destX,
                 originalY = cur.destY,
-                targetX = targetX,
-                targetY = targetY,
+                targetX = cur.destX + dx * stepX,
+                targetY = cur.destY + dy * stepY,
                 width = cur.destWidth,
                 height = cur.destHeight,
-                allCutouts = currentLayout.mirrorCutouts,
+                allCutouts = cutouts,
             )
-        if (clampedX != cur.destX || clampedY != cur.destY) {
-            val updated = cur.copy(destX = clampedX, destY = clampedY)
-            val updatedList = currentLayout.mirrorCutouts.map { if (it.id == cur.id) updated else it }
-            MacroPadState.updateLayout(currentLayout.copy(mirrorCutouts = updatedList))
-        }
+        cur.copy(destX = clampedX, destY = clampedY)
     }
 
     fun resizeBottomCutout(
         cutoutId: String,
         dx: Int,
         dy: Int,
-    ) {
-        val currentProfile = MacroPadState.activeProfile.value ?: return
-        val currentLayout = currentProfile.layouts.firstOrNull { it.id == currentProfile.activeLayoutId } ?: return
-        val cur = currentLayout.mirrorCutouts.firstOrNull { it.id == cutoutId } ?: return
-        val others = currentLayout.mirrorCutouts.filter { it.id != cutoutId }
-
+    ) = updateCutout(cutoutId) { cur, others ->
         if (cur.aspectRatioMode == AspectRatioMode.TOP) {
             val stepDelta =
                 if (dx != 0) {
@@ -462,7 +449,7 @@ fun MirrorEditorTopOverlay(
                 } else {
                     0
                 }
-            if (stepDelta == 0) return
+            if (stepDelta == 0) return@updateCutout null
             val cropRatio = (cur.srcWidth * srcWidth) / (cur.srcHeight * srcHeight)
             val normRatio = cropRatio * (secScreenH / secScreenW)
             val geom =
@@ -477,13 +464,7 @@ fun MirrorEditorTopOverlay(
                     targetNormRatio = normRatio,
                     others = others,
                 )
-            if (geom.x == cur.destX && geom.y == cur.destY && geom.w == cur.destWidth && geom.h == cur.destHeight) {
-                return
-            }
-            val updated = cur.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h)
-            val updatedList = currentLayout.mirrorCutouts.map { if (it.id == cur.id) updated else it }
-            MacroPadState.updateLayout(currentLayout.copy(mirrorCutouts = updatedList))
-            return
+            return@updateCutout cur.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h)
         }
 
         val resized =
@@ -503,12 +484,6 @@ fun MirrorEditorTopOverlay(
         bottomHToggle = resized.hToggle
         bottomVToggle = resized.vToggle
 
-        if (resized.x == cur.destX && resized.y == cur.destY &&
-            resized.width == cur.destWidth && resized.height == cur.destHeight
-        ) {
-            return
-        }
-
         var updated =
             cur.copy(
                 destX = resized.x,
@@ -526,17 +501,14 @@ fun MirrorEditorTopOverlay(
                     srcH = srcHeight,
                 )
         }
-        val updatedList = currentLayout.mirrorCutouts.map { if (it.id == cur.id) updated else it }
-        MacroPadState.updateLayout(currentLayout.copy(mirrorCutouts = updatedList))
+        updated
     }
 
     // Root key handler to reliably catch Controller B / Back button
     val rootKeyModifier =
         Modifier.onKeyEvent { keyEvent ->
             val keyCode = keyEvent.nativeKeyEvent.keyCode
-            if (keyEvent.type == KeyEventType.KeyUp &&
-                (keyCode == KeyEvent.KEYCODE_BUTTON_B || keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_ESCAPE)
-            ) {
+            if (keyEvent.type == KeyEventType.KeyUp && isBackKey(keyCode)) {
                 handleBackAction()
             } else {
                 false
@@ -588,12 +560,12 @@ fun MirrorEditorTopOverlay(
                         Modifier
                             .offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }
                             .width(METO_TOOLBOX_WIDTH)
-                            .shadow(METO_CONTAINER_ELEVATION, RoundedCornerShape(METO_CONTAINER_CORNER))
-                            .clip(RoundedCornerShape(METO_CONTAINER_CORNER))
+                            .shadow(METO_CONTAINER_ELEVATION, METO_CONTAINER_SHAPE)
+                            .clip(METO_CONTAINER_SHAPE)
                             .border(
                                 width = METO_DEFAULT_BORDER_WIDTH,
                                 brush = rememberBezelBrush(),
-                                shape = RoundedCornerShape(METO_CONTAINER_CORNER),
+                                shape = METO_CONTAINER_SHAPE,
                             ).animateContentSize(
                                 animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioNoBouncy),
                             ).onSizeChanged { size ->
@@ -604,7 +576,7 @@ fun MirrorEditorTopOverlay(
                                 }
                             },
                     color = colors.surface.copy(alpha = METO_SURFACE_ALPHA),
-                    shape = RoundedCornerShape(METO_CONTAINER_CORNER),
+                    shape = METO_CONTAINER_SHAPE,
                 ) {
                     Column(
                         modifier = Modifier.fillMaxWidth().padding(top = METO_INNER_PADDING_V),
@@ -866,7 +838,7 @@ private fun ToolboxDragHandle(
                 Modifier
                     .width(METO_HANDLE_WIDTH)
                     .height(METO_HANDLE_HEIGHT)
-                    .clip(RoundedCornerShape(50))
+                    .clip(CircleShape)
                     .background(colors.onSurfaceSecondary.copy(alpha = 0.4f)),
         )
 
@@ -1037,10 +1009,10 @@ private fun ToolboxCard(
                 .defaultMinSize(minHeight = METO_CARD_MIN_HEIGHT)
                 .graphicsLayer {
                     this.shadowElevation = animatedElevation.toPx()
-                    this.shape = RoundedCornerShape(METO_CARD_CORNER)
+                    this.shape = METO_CARD_SHAPE
                     this.clip = false
                 }.drawBehind {
-                    val outline = RoundedCornerShape(METO_CARD_CORNER).createOutline(size, layoutDirection, this)
+                    val outline = METO_CARD_SHAPE.createOutline(size, layoutDirection, this)
                     drawOutline(
                         outline = outline,
                         brush = SolidColor(animatedBgColor),
@@ -1085,7 +1057,7 @@ private fun ToolboxCard(
                 modifier =
                     Modifier
                         .size(METO_ICON_BOX_SIZE)
-                        .clip(RoundedCornerShape(METO_ICON_BOX_CORNER))
+                        .clip(METO_ICON_BOX_SHAPE)
                         .background(iconBg),
                 contentAlignment = Alignment.Center,
             ) {
@@ -1124,57 +1096,6 @@ private fun ToolboxCard(
     }
 }
 
-/**
- * Shared status, badge, or readout pill for toolbox cards.
- */
-@Composable
-private fun ToolboxPill(
-    text: String,
-    modifier: Modifier = Modifier,
-    isHighlighted: Boolean = false,
-    isAccent: Boolean = false,
-    isDestructive: Boolean = false,
-) {
-    val colors = LocalAppColors.current
-    val pillBg =
-        when {
-            isDestructive -> colors.error.copy(alpha = if (isHighlighted) 0.25f else 0.15f)
-            isAccent -> colors.accent
-            isHighlighted -> colors.accent.copy(alpha = 0.15f)
-            else -> colors.surfaceVariant
-        }
-    val pillTextColor =
-        when {
-            isDestructive -> colors.error
-            isAccent -> colors.onAccent
-            isHighlighted -> colors.accent
-            else -> colors.onSurfaceSecondary
-        }
-    val pillBorderColor =
-        when {
-            isDestructive -> colors.error.copy(alpha = 0.35f)
-            isHighlighted -> colors.accent
-            else -> colors.subduedBorder
-        }
-    val pillBorderWidth = if (isHighlighted) 1.5.dp else 1.dp
-
-    Box(
-        modifier =
-            modifier
-                .background(pillBg, RoundedCornerShape(METO_PILL_CORNER))
-                .border(pillBorderWidth, pillBorderColor, RoundedCornerShape(METO_PILL_CORNER))
-                .padding(horizontal = METO_PILL_PADDING_H, vertical = METO_PILL_PADDING_V),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = text,
-            color = pillTextColor,
-            fontSize = METO_TEXT_SIZE_PILL,
-            fontWeight = FontWeight.Bold,
-        )
-    }
-}
-
 @Composable
 private fun TargetCutoutCarouselCard(
     cutouts: List<ScreenCutout>,
@@ -1206,14 +1127,12 @@ private fun TargetCutoutCarouselCard(
 
     fun selectPrevious() {
         if (!hasCutouts) return
-        val prevIdx = if (currentIdx <= 0) cutouts.size - 1 else currentIdx - 1
-        onSelectCutout(cutouts[prevIdx].id)
+        selectedCutout?.let { onSelectCutout(cutouts.cycle(it, BumperDirection.PREV).id) }
     }
 
     fun selectNext() {
         if (!hasCutouts) return
-        val nextIdx = (currentIdx + 1) % cutouts.size
-        onSelectCutout(cutouts[nextIdx].id)
+        selectedCutout?.let { onSelectCutout(cutouts.cycle(it, BumperDirection.NEXT).id) }
     }
 
     ToolboxCard(
@@ -1254,8 +1173,8 @@ private fun TargetCutoutCarouselCard(
         Row(
             modifier =
                 Modifier
-                    .background(capsuleBg, RoundedCornerShape(METO_PILL_CORNER))
-                    .border(capsuleBorderWidth, capsuleBorderColor, RoundedCornerShape(METO_PILL_CORNER))
+                    .background(capsuleBg, METO_PILL_SHAPE)
+                    .border(capsuleBorderWidth, capsuleBorderColor, METO_PILL_SHAPE)
                     .padding(horizontal = 4.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -1327,20 +1246,8 @@ private fun AspectRatioCard(
 
     fun cycleMode(forward: Boolean) {
         val cutout = selectedCutout ?: return
-        val nextMode =
-            if (forward) {
-                when (cutout.aspectRatioMode) {
-                    AspectRatioMode.FREE -> AspectRatioMode.TOP
-                    AspectRatioMode.TOP -> AspectRatioMode.BOTTOM
-                    AspectRatioMode.BOTTOM -> AspectRatioMode.FREE
-                }
-            } else {
-                when (cutout.aspectRatioMode) {
-                    AspectRatioMode.FREE -> AspectRatioMode.BOTTOM
-                    AspectRatioMode.TOP -> AspectRatioMode.FREE
-                    AspectRatioMode.BOTTOM -> AspectRatioMode.TOP
-                }
-            }
+        val modes = AspectRatioMode.entries
+        val nextMode = modes.cycle(cutout.aspectRatioMode, if (forward) BumperDirection.NEXT else BumperDirection.PREV)
 
         var updatedCutout =
             cutout.copy(
@@ -1386,7 +1293,7 @@ private fun AspectRatioCard(
         title = stringResource(R.string.mirror_editor_aspect_ratio_mode),
         modifier = modifier,
     ) { isFocused ->
-        ToolboxPill(
+        GamepadPill(
             text = modeLabel,
             isHighlighted = isFocused,
         )
@@ -1426,7 +1333,7 @@ private fun ShapeToggleCard(
         title = stringResource(R.string.mirror_editor_shape_mode),
         modifier = modifier,
     ) { isFocused ->
-        ToolboxPill(
+        GamepadPill(
             text = shapeLabel,
             isHighlighted = isFocused,
         )
@@ -1486,21 +1393,16 @@ private fun AdjustCoordinatesCard(
         dirX: Int,
         dirY: Int,
     ) {
-        if (activeDirectionKey == keyCode && activeRepeatJob?.isActive == true) {
-            return
-        }
+        if (activeDirectionKey == keyCode && activeRepeatJob?.isActive == true) return
         activeRepeatJob?.cancel()
         activeDirectionKey = keyCode
         dispatchAction(dirX, dirY)
         activeRepeatJob =
-            coroutineScope.launch {
-                delay(METO_MOVE_INITIAL_DELAY_MS)
-                var delayMs = METO_MOVE_START_DELAY_MS
-                while (isActive && activeDirectionKey == keyCode) {
-                    dispatchAction(dirX, dirY)
-                    delay(delayMs)
-                    delayMs = max(METO_MOVE_MIN_DELAY_MS, (delayMs * METO_MOVE_ACCEL_FACTOR).toLong())
-                }
+            coroutineScope.launchDirectionalRepeat(
+                keyCode = keyCode,
+                isActiveCheck = { activeDirectionKey == keyCode },
+            ) {
+                dispatchAction(dirX, dirY)
             }
     }
 
@@ -1555,86 +1457,50 @@ private fun AdjustCoordinatesCard(
         icon = icon,
         title = title,
         onCustomKeyEvent = { event ->
-            if (!isAdjusting) return@ToolboxCard false
-            val keyCode = event.nativeKeyEvent.keyCode
-            if (event.type == KeyEventType.KeyDown) {
-                when (keyCode) {
-                    KeyEvent.KEYCODE_BUTTON_L2 -> {
-                        isL2Held = true
-                        true
-                    }
+            handle2DAdjustmentKeyEvent(
+                keyEvent = event,
+                isAdjusting = isAdjusting,
+                onStartAdjusting = { keyCode, dirX, dirY -> startAdjusting(keyCode, dirX, dirY) },
+                onStopAdjusting = { keyCode -> stopAdjusting(keyCode) },
+                onDismissAdjustment = {
+                    stopAdjustingImmediate()
+                    isAdjusting = false
+                },
+                onModifierKeyDown = { keyCode ->
+                    when (keyCode) {
+                        KeyEvent.KEYCODE_BUTTON_L2 -> {
+                            isL2Held = true
+                            true
+                        }
 
-                    KeyEvent.KEYCODE_BUTTON_R2 -> {
-                        isR2Held = true
-                        true
-                    }
+                        KeyEvent.KEYCODE_BUTTON_R2 -> {
+                            isR2Held = true
+                            true
+                        }
 
-                    KeyEvent.KEYCODE_DPAD_UP -> {
-                        startAdjusting(keyCode, 0, -1)
-                        true
+                        else -> {
+                            false
+                        }
                     }
+                },
+                onModifierKeyUp = { keyCode ->
+                    when (keyCode) {
+                        KeyEvent.KEYCODE_BUTTON_L2 -> {
+                            isL2Held = false
+                            true
+                        }
 
-                    KeyEvent.KEYCODE_DPAD_DOWN -> {
-                        startAdjusting(keyCode, 0, 1)
-                        true
-                    }
+                        KeyEvent.KEYCODE_BUTTON_R2 -> {
+                            isR2Held = false
+                            true
+                        }
 
-                    KeyEvent.KEYCODE_DPAD_LEFT -> {
-                        startAdjusting(keyCode, -1, 0)
-                        true
+                        else -> {
+                            false
+                        }
                     }
-
-                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                        startAdjusting(keyCode, 1, 0)
-                        true
-                    }
-
-                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_BUTTON_A,
-                    KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE,
-                    -> {
-                        stopAdjustingImmediate()
-                        isAdjusting = false
-                        true
-                    }
-
-                    else -> {
-                        true
-                    }
-                }
-            } else if (event.type == KeyEventType.KeyUp) {
-                when (keyCode) {
-                    KeyEvent.KEYCODE_BUTTON_L2 -> {
-                        isL2Held = false
-                        true
-                    }
-
-                    KeyEvent.KEYCODE_BUTTON_R2 -> {
-                        isR2Held = false
-                        true
-                    }
-
-                    KeyEvent.KEYCODE_DPAD_UP,
-                    KeyEvent.KEYCODE_DPAD_DOWN,
-                    KeyEvent.KEYCODE_DPAD_LEFT,
-                    KeyEvent.KEYCODE_DPAD_RIGHT,
-                    -> {
-                        stopAdjusting(keyCode)
-                        true
-                    }
-
-                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_BUTTON_A,
-                    KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE,
-                    -> {
-                        true
-                    }
-
-                    else -> {
-                        false
-                    }
-                }
-            } else {
-                false
-            }
+                },
+            )
         },
         modifier = modifier,
     )
@@ -1667,9 +1533,7 @@ private fun DeleteCutoutCard(
         },
         onFocusChanged = onFocusChanged,
         onCustomKeyEvent = { event ->
-            if (isConfirming &&
-                event.nativeKeyEvent.keyCode in listOf(KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE)
-            ) {
+            if (isConfirming && isBackKey(event.nativeKeyEvent.keyCode)) {
                 if (event.type == KeyEventType.KeyUp) {
                     isConfirming = false
                 }
@@ -1729,7 +1593,7 @@ private fun HideBackgroundCard(
         title = stringResource(R.string.mirror_editor_hide_background),
         modifier = modifier,
     ) { isFocused ->
-        ToolboxPill(
+        GamepadPill(
             text = label,
             isHighlighted = isFocused && hasBackground,
         )
@@ -1761,7 +1625,7 @@ private fun ToolboxActionCard(
         trailingContent =
             if (actionBadge != null) {
                 { isFocused ->
-                    ToolboxPill(
+                    GamepadPill(
                         text = actionBadge,
                         isAccent = isAccent,
                         isDestructive = isDestructive,

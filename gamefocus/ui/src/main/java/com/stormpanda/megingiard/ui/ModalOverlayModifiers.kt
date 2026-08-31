@@ -1,6 +1,11 @@
 package com.stormpanda.megingiard.ui
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 
 /**
@@ -44,29 +49,19 @@ fun Modifier.blockPointerEvents(): Modifier =
         }
     }
 
-@androidx.compose.runtime.Composable
-internal fun rememberBezelBrush(): androidx.compose.ui.graphics.Brush =
-    androidx.compose.runtime.remember {
-        androidx.compose.ui.graphics.Brush.linearGradient(
+@Composable
+internal fun rememberBezelBrush(): Brush =
+    remember {
+        Brush.linearGradient(
             colorStops =
                 arrayOf(
-                    0.0f to
-                        androidx.compose.ui.graphics.Color.White
-                            .copy(alpha = 0.25f),
-                    0.25f to
-                        androidx.compose.ui.graphics.Color.White
-                            .copy(alpha = 0.05f),
-                    0.5f to androidx.compose.ui.graphics.Color.Transparent,
-                    0.833f to
-                        androidx.compose.ui.graphics.Color.White
-                            .copy(alpha = 0.05f),
-                    1.0f to
-                        androidx.compose.ui.graphics.Color.White
-                            .copy(alpha = 0.25f),
+                    0.0f to Color.White.copy(alpha = 0.25f),
+                    0.25f to Color.White.copy(alpha = 0.05f),
+                    0.5f to Color.Transparent,
+                    0.833f to Color.White.copy(alpha = 0.05f),
+                    1.0f to Color.White.copy(alpha = 0.25f),
                 ),
-            start =
-                androidx.compose.ui.geometry
-                    .Offset(0f, 0f),
-            end = androidx.compose.ui.geometry.Offset.Infinite,
+            start = Offset(0f, 0f),
+            end = Offset.Infinite,
         )
     }

@@ -7,8 +7,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.RomLauncher
-import com.stormpanda.megingiard.catalog.RomSystemDef
 import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
+import com.stormpanda.megingiard.catalog.SafPathResolver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -18,6 +18,7 @@ private const val RETROARCH_MAIN_ACTIVITY = "com.retroarch.browser.retroactivity
 private const val RETROARCH_EXTRA_ROM = "ROM"
 private const val RETROARCH_EXTRA_LIBRETRO = "LIBRETRO"
 private const val RETROARCH_EXTRA_CONFIGFILE = "CONFIGFILE"
+private val RETROARCH_PACKAGES = listOf("com.retroarch.aarch64", "com.retroarch")
 
 class RetroArchLauncher : RomLauncher {
     override val id: String = "retroarch"
@@ -72,20 +73,22 @@ class RetroArchLauncher : RomLauncher {
     }
 
     private fun resolveConfigFile(packageName: String): String? {
-        val candidatePaths =
+        val relativeSubPaths =
             listOf(
-                "/storage/emulated/0/Android/data/$packageName/files/retroarch.cfg",
-                "/sdcard/Android/data/$packageName/files/retroarch.cfg",
-                "/storage/emulated/0/RetroArch/retroarch.cfg",
-                "/sdcard/RetroArch/retroarch.cfg",
+                "Android/data/$packageName/files/retroarch.cfg",
+                "RetroArch/retroarch.cfg",
             )
+        val candidatePaths =
+            SafPathResolver.getStorageVolumeRoots().flatMap { root ->
+                relativeSubPaths.map { subPath -> "$root/$subPath" }
+            }
         return candidatePaths.firstOrNull { File(it).exists() }
-            ?: "/storage/emulated/0/Android/data/$packageName/files/retroarch.cfg"
+            ?: candidatePaths.firstOrNull()
     }
 
     private fun getRetroArchPackageName(context: Context): String? {
         val pm = context.packageManager
-        return listOf("com.retroarch.aarch64", "com.retroarch").firstOrNull { pkg ->
+        return RETROARCH_PACKAGES.firstOrNull { pkg ->
             try {
                 pm.getPackageInfo(pkg, 0)
                 true

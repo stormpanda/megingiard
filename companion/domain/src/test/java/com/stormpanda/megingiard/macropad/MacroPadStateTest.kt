@@ -35,15 +35,100 @@ class MacroPadStateTest {
         Dispatchers.resetMain()
     }
 
+    private fun testButton(
+        id: String = "b1",
+        label: String = "B",
+        action: PadAction = PadAction.KeyboardKey(65, "A"),
+        posX: Float = 0.5f,
+        posY: Float = 0.5f,
+        buttonTextColor: ColorOption = ColorOption.Neutral,
+        buttonBgColor: ColorOption = ColorOption.Neutral,
+    ) = PadButton(
+        id = id,
+        label = label,
+        posX = posX,
+        posY = posY,
+        action = action,
+        buttonTextColor = buttonTextColor,
+        buttonBgColor = buttonBgColor,
+    )
+
+    private fun testLayout(
+        id: String = UUID.randomUUID().toString(),
+        name: String = "L1",
+        buttons: List<PadButton> = emptyList(),
+        backgroundTouchpad: BackgroundTouchpadConfig = BackgroundTouchpadConfig(),
+        mirrorCutouts: List<ScreenCutout> = emptyList(),
+        backgroundImagePath: String? = null,
+        useBackgroundImageAsMask: Boolean = false,
+        backgroundImageDim: Float = 0f,
+        ambientDim: Float = 0f,
+        bgImageScale: Float = 1f,
+        bgImageOffsetX: Float = 0f,
+        bgImageOffsetY: Float = 0f,
+        buttonTextColor: ColorOption = ColorOption.Neutral,
+        buttonBgColor: ColorOption = ColorOption.Neutral,
+        mirrorEdgeBlendWidth: Float = 0f,
+        mirrorConfigured: Boolean = false,
+    ) = PadLayout(
+        id = id,
+        name = name,
+        buttons = buttons,
+        backgroundTouchpad = backgroundTouchpad,
+        mirrorCutouts = mirrorCutouts,
+        backgroundImagePath = backgroundImagePath,
+        useBackgroundImageAsMask = useBackgroundImageAsMask,
+        backgroundImageDim = backgroundImageDim,
+        ambientDim = ambientDim,
+        bgImageScale = bgImageScale,
+        bgImageOffsetX = bgImageOffsetX,
+        bgImageOffsetY = bgImageOffsetY,
+        buttonTextColor = buttonTextColor,
+        buttonBgColor = buttonBgColor,
+        mirrorEdgeBlendWidth = mirrorEdgeBlendWidth,
+        mirrorConfigured = mirrorConfigured,
+    )
+
+    private fun testProfile(
+        id: String = UUID.randomUUID().toString(),
+        name: String = "P1",
+        layouts: List<PadLayout> = listOf(testLayout()),
+        activeLayoutId: String = layouts.firstOrNull()?.id ?: "",
+        macros: List<Macro> = emptyList(),
+        association: ProfileAssociation? = null,
+    ) = PadProfile(
+        id = id,
+        name = name,
+        layouts = layouts,
+        activeLayoutId = activeLayoutId,
+        macros = macros,
+        association = association,
+    )
+
+    private fun loadProfiles(
+        vararg profiles: PadProfile,
+        activeId: String? = profiles.firstOrNull()?.id,
+    ) {
+        MacroPadState.loadFrom(profiles.toList(), activeId)
+    }
+
+    private fun assertFlags(
+        kb: Boolean = false,
+        gp: Boolean = false,
+        ms: Boolean = false,
+        touch: Boolean = false,
+        profile: PadProfile = MacroPadState.activeProfile.value!!,
+    ) {
+        assertEquals(kb, profile.enableKeyboard)
+        assertEquals(gp, profile.enableGamepad)
+        assertEquals(ms, profile.enableMouse)
+        assertEquals(touch, profile.enableTouch)
+    }
+
     @Test
     fun `loadFrom with empty list generates default profile and layout`() {
-        // Given an empty list of profiles (clean install scenario)
-        val emptyProfiles = emptyList<PadProfile>()
+        MacroPadState.loadFrom(emptyList(), null)
 
-        // When loadFrom is invoked
-        MacroPadState.loadFrom(emptyProfiles, null)
-
-        // Then a default profile is created
         val profiles = MacroPadState.profiles.value
         assertEquals(1, profiles.size)
 
@@ -51,13 +136,11 @@ class MacroPadStateTest {
         assertEquals("Default", defaultProfile.name)
         assertNotNull(defaultProfile.id)
 
-        // And it contains a default layout
         assertEquals(1, defaultProfile.layouts.size)
         val defaultLayout = defaultProfile.layouts.first()
         assertEquals("Default", defaultLayout.name)
         assertNotNull(defaultLayout.id)
 
-        // And active IDs are resolved properly
         assertEquals(defaultProfile.id, MacroPadState.activeProfileId.value)
         assertEquals(defaultProfile, MacroPadState.activeProfile.value)
         assertEquals(defaultLayout, MacroPadState.activeLayout.value)
@@ -65,69 +148,47 @@ class MacroPadStateTest {
 
     @Test
     fun `loadFrom with existing profiles preserves them`() {
-        // Given existing profiles
         val profileId = UUID.randomUUID().toString()
         val layoutId = UUID.randomUUID().toString()
         val existingProfile =
-            PadProfile(
+            testProfile(
                 id = profileId,
                 name = "My Custom Profile",
-                layouts = listOf(PadLayout(id = layoutId, name = "My Layout")),
+                layouts = listOf(testLayout(id = layoutId, name = "My Layout")),
                 activeLayoutId = layoutId,
             )
-        val existingProfiles = listOf(existingProfile)
 
-        // When loadFrom is invoked
-        MacroPadState.loadFrom(existingProfiles, profileId)
+        loadProfiles(existingProfile, activeId = profileId)
 
-        // Then profiles are preserved
         val profiles = MacroPadState.profiles.value
         assertEquals(1, profiles.size)
         assertEquals(existingProfile.id, profiles.first().id)
         assertEquals("My Custom Profile", profiles.first().name)
-
-        // And active ID matches the existing profile
         assertEquals(profileId, MacroPadState.activeProfileId.value)
         assertEquals(layoutId, MacroPadState.activeLayout.value?.id)
     }
 
     @Test
     fun `loadFrom resolves null active ID to first profile`() {
-        // Given existing profiles and null active ID
-        val profileId1 = UUID.randomUUID().toString()
-        val profileId2 = UUID.randomUUID().toString()
-        val p1 = PadProfile(id = profileId1, name = "P1", layouts = listOf(PadLayout(id = "l1", name = "L1")), activeLayoutId = "l1")
-        val p2 = PadProfile(id = profileId2, name = "P2", layouts = listOf(PadLayout(id = "l2", name = "L2")), activeLayoutId = "l2")
-        val existingProfiles = listOf(p1, p2)
-
-        // When loadFrom is invoked with null active ID
-        MacroPadState.loadFrom(existingProfiles, null)
-
-        // Then it resolves active ID to the first profile's ID
-        assertEquals(profileId1, MacroPadState.activeProfileId.value)
+        val p1 = testProfile(id = "p1", name = "P1", layouts = listOf(testLayout(id = "l1")))
+        val p2 = testProfile(id = "p2", name = "P2", layouts = listOf(testLayout(id = "l2")))
+        MacroPadState.loadFrom(listOf(p1, p2), null)
+        assertEquals("p1", MacroPadState.activeProfileId.value)
     }
 
     @Test
     fun `loadFrom resolves mismatched active ID to first profile`() {
-        // Given existing profiles and a mismatching/invalid active ID
-        val profileId1 = UUID.randomUUID().toString()
-        val p1 = PadProfile(id = profileId1, name = "P1", layouts = listOf(PadLayout(id = "l1", name = "L1")), activeLayoutId = "l1")
-        val existingProfiles = listOf(p1)
-
-        // When loadFrom is invoked with an invalid active ID
-        MacroPadState.loadFrom(existingProfiles, "invalid-id")
-
-        // Then it resolves active ID to the first profile's ID
-        assertEquals(profileId1, MacroPadState.activeProfileId.value)
+        val p1 = testProfile(id = "p1", name = "P1", layouts = listOf(testLayout(id = "l1")))
+        MacroPadState.loadFrom(listOf(p1), "invalid-id")
+        assertEquals("p1", MacroPadState.activeProfileId.value)
     }
 
     @Test
     fun `renameProfile updates name and package mapping`() {
-        val p1Id = UUID.randomUUID().toString()
-        val p1 = PadProfile(id = p1Id, name = "P1", layouts = listOf(PadLayout(id = "l1", name = "L1")), activeLayoutId = "l1")
-        MacroPadState.loadFrom(listOf(p1), p1Id)
+        val p1 = testProfile(id = "p1", name = "P1", layouts = listOf(testLayout(id = "l1")))
+        loadProfiles(p1)
 
-        MacroPadState.renameProfile(p1Id, "New Name", ProfileAssociation(packageName = "com.example.app"))
+        MacroPadState.renameProfile("p1", "New Name", ProfileAssociation(packageName = "com.example.app"))
 
         val profile = MacroPadState.profiles.value.first()
         assertEquals("New Name", profile.name)
@@ -136,255 +197,116 @@ class MacroPadStateTest {
 
     @Test
     fun `renameProfile normalizes blank names and resolves duplicates`() {
-        val p1Id = UUID.randomUUID().toString()
-        val p2Id = UUID.randomUUID().toString()
         val p1 =
-            PadProfile(
-                id = p1Id,
+            testProfile(
+                id = "p1",
                 name = "Retro",
-                layouts = listOf(PadLayout(id = "l1", name = "L1")),
-                activeLayoutId = "l1",
+                layouts = listOf(testLayout(id = "l1")),
                 association = ProfileAssociation(packageName = "com.retroarch"),
             )
-        val p2 =
-            PadProfile(
-                id = p2Id,
-                name = "Citra",
-                layouts = listOf(PadLayout(id = "l2", name = "L2")),
-                activeLayoutId = "l2",
-            )
-        MacroPadState.loadFrom(listOf(p1, p2), p1Id)
+        val p2 = testProfile(id = "p2", name = "Citra", layouts = listOf(testLayout(id = "l2")))
+        loadProfiles(p1, p2, activeId = "p1")
 
         // Try to rename Retro to blank string -> should fallback to 'Profile' and preserve package
-        MacroPadState.renameProfile(p1Id, "   ")
-        val p1Profile = MacroPadState.profiles.value.first { it.id == p1Id }
+        MacroPadState.renameProfile("p1", "   ")
+        val p1Profile = MacroPadState.profiles.value.first { it.id == "p1" }
         assertEquals("Profile", p1Profile.name)
         assertEquals("com.retroarch", p1Profile.association?.packageName)
 
         // Try to rename Retro (now Profile) to "Citra" (which already exists) -> should resolve to "Citra (2)"
-        MacroPadState.renameProfile(p1Id, "Citra")
+        MacroPadState.renameProfile("p1", "Citra")
         assertEquals(
             "Citra (2)",
             MacroPadState.profiles.value
-                .first { it.id == p1Id }
+                .first { it.id == "p1" }
                 .name,
         )
     }
 
     @Test
     fun `withSyncedDeviceFlags synchronization rules`() {
-        val p1Id = UUID.randomUUID().toString()
-        val l1Id = UUID.randomUUID().toString()
-        val p1 =
-            PadProfile(
-                id = p1Id,
-                name = "Test Profile",
-                layouts = listOf(PadLayout(id = l1Id, name = "L1", buttons = emptyList())),
-                activeLayoutId = l1Id,
-            )
-        MacroPadState.loadFrom(listOf(p1), p1Id)
+        val p1 = testProfile(id = "p1", layouts = listOf(testLayout(id = "l1", buttons = emptyList())), activeLayoutId = "l1")
+        loadProfiles(p1)
 
         // 1. Empty button list -> all flags false
-        var active = MacroPadState.activeProfile.value!!
-        assertEquals(false, active.enableKeyboard)
-        assertEquals(false, active.enableGamepad)
-        assertEquals(false, active.enableMouse)
-        assertEquals(false, active.enableTouch)
+        assertFlags()
 
-        // 2. Add Keyboard button
-        val layoutWithKb =
-            active.layouts.first().copy(
-                buttons =
-                    listOf(
-                        PadButton(
-                            id = "b1",
-                            label = "A",
-                            posX = 0.5f,
-                            posY = 0.5f,
-                            action = PadAction.KeyboardKey(65, "A"),
-                        ),
-                    ),
-            )
-        MacroPadState.updateLayout(layoutWithKb)
-        active = MacroPadState.activeProfile.value!!
-        assertEquals(true, active.enableKeyboard)
-        assertEquals(false, active.enableGamepad)
-        assertEquals(false, active.enableMouse)
-        assertEquals(false, active.enableTouch)
+        fun updateWithAction(action: PadAction) {
+            val cur = MacroPadState.activeProfile.value!!
+            MacroPadState.updateLayout(cur.layouts.first().copy(buttons = listOf(testButton(action = action))))
+        }
 
-        // 3. Add Gamepad button
-        val layoutWithGp =
-            active.layouts.first().copy(
-                buttons =
-                    listOf(
-                        PadButton(
-                            id = "b1",
-                            label = "GP",
-                            posX = 0.5f,
-                            posY = 0.5f,
-                            action = PadAction.GamepadButton(96, "GP"),
-                        ),
-                    ),
-            )
-        MacroPadState.updateLayout(layoutWithGp)
-        active = MacroPadState.activeProfile.value!!
-        assertEquals(false, active.enableKeyboard)
-        assertEquals(true, active.enableGamepad)
-        assertEquals(false, active.enableMouse)
-        assertEquals(false, active.enableTouch)
+        // 2. Keyboard button
+        updateWithAction(PadAction.KeyboardKey(65, "A"))
+        assertFlags(kb = true)
 
-        // 4. Add Mouse button
-        val layoutWithMs =
-            active.layouts.first().copy(
-                buttons =
-                    listOf(
-                        PadButton(
-                            id = "b1",
-                            label = "MS",
-                            posX = 0.5f,
-                            posY = 0.5f,
-                            action = PadAction.MouseButton(MouseButton.LEFT),
-                        ),
-                    ),
-            )
-        MacroPadState.updateLayout(layoutWithMs)
-        active = MacroPadState.activeProfile.value!!
-        assertEquals(false, active.enableKeyboard)
-        assertEquals(false, active.enableGamepad)
-        assertEquals(true, active.enableMouse)
-        assertEquals(false, active.enableTouch)
+        // 3. Gamepad button
+        updateWithAction(PadAction.GamepadButton(96, "GP"))
+        assertFlags(gp = true)
 
-        // 5. Add Trackpoint VIRTUAL_TOUCH button
-        val layoutWithTouch =
-            active.layouts.first().copy(
-                buttons =
-                    listOf(
-                        PadButton(
-                            id = "b1",
-                            label = "Touch",
-                            posX = 0.5f,
-                            posY = 0.5f,
-                            action = PadAction.TrackpointMove(mode = TrackpointMode.VIRTUAL_TOUCH),
-                        ),
-                    ),
-            )
-        MacroPadState.updateLayout(layoutWithTouch)
-        active = MacroPadState.activeProfile.value!!
-        assertEquals(false, active.enableKeyboard)
-        assertEquals(false, active.enableGamepad)
-        assertEquals(false, active.enableMouse)
-        assertEquals(true, active.enableTouch)
+        // 4. Mouse button
+        updateWithAction(PadAction.MouseButton(MouseButton.LEFT))
+        assertFlags(ms = true)
 
-        // 6. Add MirrorTouchProjection button -> enableMouse and enableTouch should remain false!
-        val layoutWithProj =
-            active.layouts.first().copy(
-                buttons =
-                    listOf(
-                        PadButton(
-                            id = "b1",
-                            label = "Proj",
-                            posX = 0.5f,
-                            posY = 0.5f,
-                            action = PadAction.MirrorTouchProjection,
-                        ),
-                    ),
-            )
-        MacroPadState.updateLayout(layoutWithProj)
-        active = MacroPadState.activeProfile.value!!
-        assertEquals(false, active.enableKeyboard)
-        assertEquals(false, active.enableGamepad)
-        assertEquals(false, active.enableMouse)
-        assertEquals(false, active.enableTouch)
+        // 5. Trackpoint VIRTUAL_TOUCH button
+        updateWithAction(PadAction.TrackpointMove(mode = TrackpointMode.VIRTUAL_TOUCH))
+        assertFlags(touch = true)
 
-        // 7. Add Macro button -> all flags force-enabled (true)
-        val layoutWithMacro =
-            active.layouts.first().copy(
-                buttons =
-                    listOf(
-                        PadButton(
-                            id = "b1",
-                            label = "Macro",
-                            posX = 0.5f,
-                            posY = 0.5f,
-                            action = PadAction.Macro("macro-1"),
-                        ),
-                    ),
-            )
-        MacroPadState.updateLayout(layoutWithMacro)
-        active = MacroPadState.activeProfile.value!!
-        assertEquals(true, active.enableKeyboard)
-        assertEquals(true, active.enableGamepad)
-        assertEquals(true, active.enableMouse)
-        assertEquals(true, active.enableTouch)
+        // 6. MirrorTouchProjection button -> all injector flags remain false
+        updateWithAction(PadAction.MirrorTouchProjection)
+        assertFlags()
+
+        // 7. Macro button -> all flags force-enabled (true)
+        updateWithAction(PadAction.Macro("macro-1"))
+        assertFlags(kb = true, gp = true, ms = true, touch = true)
 
         // 8. Enable Background Touchpad -> enableMouse force-enabled
-        val layoutWithBgTouchpad =
+        val active = MacroPadState.activeProfile.value!!
+        MacroPadState.updateLayout(
             active.layouts.first().copy(
                 buttons = emptyList(),
                 backgroundTouchpad = BackgroundTouchpadConfig(enabled = true),
-            )
-        MacroPadState.updateLayout(layoutWithBgTouchpad)
-        active = MacroPadState.activeProfile.value!!
-        assertEquals(false, active.enableKeyboard)
-        assertEquals(false, active.enableGamepad)
-        assertEquals(true, active.enableMouse)
-        assertEquals(false, active.enableTouch)
+            ),
+        )
+        assertFlags(ms = true)
     }
 
     @Test
     fun `fullscreen keyboard and mouse actions do not enable background injector flags`() {
-        val p1Id = UUID.randomUUID().toString()
-        val l1Id = UUID.randomUUID().toString()
         val p1 =
-            PadProfile(
-                id = p1Id,
-                name = "P1",
+            testProfile(
+                id = "p1",
                 layouts =
                     listOf(
-                        PadLayout(
-                            id = l1Id,
-                            name = "L1",
+                        testLayout(
+                            id = "l1",
                             buttons =
                                 listOf(
-                                    PadButton(id = "b1", label = "KB", posX = 0.1f, posY = 0.1f, action = PadAction.FullScreenKeyboard()),
-                                    PadButton(id = "b2", label = "MS", posX = 0.2f, posY = 0.2f, action = PadAction.FullScreenMouse()),
+                                    testButton(id = "b1", action = PadAction.FullScreenKeyboard()),
+                                    testButton(id = "b2", action = PadAction.FullScreenMouse()),
                                 ),
                         ),
                     ),
-                activeLayoutId = l1Id,
             )
-        MacroPadState.loadFrom(listOf(p1), p1Id)
-        val active = MacroPadState.activeProfile.value!!
-        assertEquals(false, active.enableKeyboard)
-        assertEquals(false, active.enableMouse)
+        loadProfiles(p1)
+        assertFlags()
     }
 
     @Test
     fun `copyMacroToProfile clones macro to target profile with new ID and name on collision`() {
-        val p1Id = UUID.randomUUID().toString()
-        val p2Id = UUID.randomUUID().toString()
         val m1 = Macro(id = "m1", name = "Combo", steps = emptyList())
-        val p1 =
-            PadProfile(
-                id = p1Id,
-                name = "P1",
-                layouts = listOf(PadLayout(id = "l1", name = "L1")),
-                activeLayoutId = "l1",
-                macros = listOf(m1),
-            )
+        val p1 = testProfile(id = "p1", layouts = listOf(testLayout(id = "l1")), macros = listOf(m1))
         val p2 =
-            PadProfile(
-                id = p2Id,
-                name = "P2",
-                layouts = listOf(PadLayout(id = "l2", name = "L2")),
-                activeLayoutId = "l2",
+            testProfile(
+                id = "p2",
+                layouts = listOf(testLayout(id = "l2")),
                 macros = listOf(Macro(id = "m2", name = "Combo", steps = emptyList())),
             )
-        MacroPadState.loadFrom(listOf(p1, p2), p1Id)
+        loadProfiles(p1, p2, activeId = "p1")
 
-        MacroPadState.copyMacroToProfile(m1, p2Id)
+        MacroPadState.copyMacroToProfile(m1, "p2")
 
-        val target = MacroPadState.profiles.value.first { it.id == p2Id }
+        val target = MacroPadState.profiles.value.first { it.id == "p2" }
         assertEquals(2, target.macros.size)
         val copied = target.macros.first { it.id != "m2" }
         assertEquals("Combo (2)", copied.name)
@@ -392,38 +314,16 @@ class MacroPadStateTest {
 
     @Test
     fun `copyLayoutToProfile duplicates layout and maps referenced macros when cross-profile`() {
-        val p1Id = UUID.randomUUID().toString()
-        val p2Id = UUID.randomUUID().toString()
         val m1 = Macro(id = "macro-1", name = "Fire", steps = emptyList())
-        val btn =
-            PadButton(
-                id = "btn-1",
-                label = "B",
-                posX = 0.5f,
-                posY = 0.5f,
-                action = PadAction.Macro("macro-1"),
-            )
-        val l1 = PadLayout(id = "layout-1", name = "Lay1", buttons = listOf(btn))
-        val p1 =
-            PadProfile(
-                id = p1Id,
-                name = "P1",
-                layouts = listOf(l1),
-                activeLayoutId = "layout-1",
-                macros = listOf(m1),
-            )
-        val p2 =
-            PadProfile(
-                id = p2Id,
-                name = "P2",
-                layouts = listOf(PadLayout(id = "layout-2", name = "Lay2")),
-                activeLayoutId = "layout-2",
-            )
-        MacroPadState.loadFrom(listOf(p1, p2), p1Id)
+        val btn = testButton(id = "btn-1", action = PadAction.Macro("macro-1"))
+        val l1 = testLayout(id = "layout-1", name = "Lay1", buttons = listOf(btn))
+        val p1 = testProfile(id = "p1", layouts = listOf(l1), macros = listOf(m1))
+        val p2 = testProfile(id = "p2", layouts = listOf(testLayout(id = "layout-2", name = "Lay2")))
+        loadProfiles(p1, p2, activeId = "p1")
 
-        MacroPadState.copyLayoutToProfile(l1, p1Id, p2Id)
+        MacroPadState.copyLayoutToProfile(l1, "p1", "p2")
 
-        val targetProfile = MacroPadState.profiles.value.first { it.id == p2Id }
+        val targetProfile = MacroPadState.profiles.value.first { it.id == "p2" }
         assertEquals(2, targetProfile.layouts.size)
         val copiedLayout = targetProfile.layouts.first { it.id != "layout-2" }
         assertEquals("Lay1", copiedLayout.name)
@@ -440,37 +340,15 @@ class MacroPadStateTest {
 
     @Test
     fun `copyButtonToLayout duplicates button and copies referenced macro when cross-profile`() {
-        val p1Id = UUID.randomUUID().toString()
-        val p2Id = UUID.randomUUID().toString()
         val m1 = Macro(id = "macro-1", name = "Punch", steps = emptyList())
-        val btn =
-            PadButton(
-                id = "btn-1",
-                label = "B",
-                posX = 0.5f,
-                posY = 0.5f,
-                action = PadAction.Macro("macro-1"),
-            )
-        val p1 =
-            PadProfile(
-                id = p1Id,
-                name = "P1",
-                layouts = listOf(PadLayout(id = "l1", name = "L1")),
-                activeLayoutId = "l1",
-                macros = listOf(m1),
-            )
-        val p2 =
-            PadProfile(
-                id = p2Id,
-                name = "P2",
-                layouts = listOf(PadLayout(id = "l2", name = "L2")),
-                activeLayoutId = "l2",
-            )
-        MacroPadState.loadFrom(listOf(p1, p2), p1Id)
+        val btn = testButton(id = "btn-1", label = "B", action = PadAction.Macro("macro-1"))
+        val p1 = testProfile(id = "p1", layouts = listOf(testLayout(id = "l1")), macros = listOf(m1))
+        val p2 = testProfile(id = "p2", layouts = listOf(testLayout(id = "l2")))
+        loadProfiles(p1, p2, activeId = "p1")
 
-        MacroPadState.copyButtonToLayout(btn, p1Id, p2Id, "l2")
+        MacroPadState.copyButtonToLayout(btn, "p1", "p2", "l2")
 
-        val targetProfile = MacroPadState.profiles.value.first { it.id == p2Id }
+        val targetProfile = MacroPadState.profiles.value.first { it.id == "p2" }
         val targetLayout = targetProfile.layouts.first()
         assertEquals(1, targetLayout.buttons.size)
 
@@ -485,23 +363,9 @@ class MacroPadStateTest {
 
     @Test
     fun `duplicateButtonInLayout duplicates button in place with coordinate offset`() {
-        val p1Id = UUID.randomUUID().toString()
-        val btn =
-            PadButton(
-                id = "btn-1",
-                label = "B",
-                posX = 0.5f,
-                posY = 0.5f,
-                action = PadAction.KeyboardKey(65, "A"),
-            )
-        val p1 =
-            PadProfile(
-                id = p1Id,
-                name = "P1",
-                layouts = listOf(PadLayout(id = "l1", name = "L1", buttons = listOf(btn))),
-                activeLayoutId = "l1",
-            )
-        MacroPadState.loadFrom(listOf(p1), p1Id)
+        val btn = testButton(id = "btn-1", posX = 0.5f, posY = 0.5f, action = PadAction.KeyboardKey(65, "A"))
+        val p1 = testProfile(id = "p1", layouts = listOf(testLayout(id = "l1", buttons = listOf(btn))))
+        loadProfiles(p1)
 
         MacroPadState.duplicateButtonInLayout(btn, "l1")
 
@@ -517,15 +381,7 @@ class MacroPadStateTest {
 
     @Test
     fun `duplicateLayout duplicates active profile layout and resolves name collision`() {
-        val p1Id = UUID.randomUUID().toString()
-        val btn =
-            PadButton(
-                id = "btn-1",
-                label = "B",
-                posX = 0.5f,
-                posY = 0.5f,
-                action = PadAction.KeyboardKey(65, "A"),
-            )
+        val btn = testButton(id = "btn-1", action = PadAction.KeyboardKey(65, "A"))
         val cutout =
             ScreenCutout(
                 id = "cutout-1",
@@ -543,21 +399,14 @@ class MacroPadStateTest {
                 motionSmoothingStrength = 75,
             )
         val l1 =
-            PadLayout(
+            testLayout(
                 id = "layout-1",
                 name = "Lay1",
                 buttons = listOf(btn),
                 mirrorEdgeBlendWidth = 25f,
                 mirrorCutouts = listOf(cutout),
             )
-        val p1 =
-            PadProfile(
-                id = p1Id,
-                name = "P1",
-                layouts = listOf(l1),
-                activeLayoutId = "layout-1",
-            )
-        MacroPadState.loadFrom(listOf(p1), p1Id)
+        loadProfiles(testProfile(id = "p1", layouts = listOf(l1), activeLayoutId = "layout-1"))
 
         MacroPadState.duplicateLayout("layout-1")
 
@@ -570,7 +419,6 @@ class MacroPadStateTest {
         assertEquals("B", dupBtn.label)
         assertNotEquals("btn-1", dupBtn.id)
 
-        // Assert screen mirror settings copied & cutout IDs remapped
         assertEquals(25f, duplicated.mirrorEdgeBlendWidth)
         assertEquals(1, duplicated.mirrorCutouts.size)
         val dupCutout = duplicated.mirrorCutouts.first()
@@ -583,32 +431,16 @@ class MacroPadStateTest {
 
     @Test
     fun `duplicateProfile deep copies profile, layout buttons and macros`() {
-        val p1Id = UUID.randomUUID().toString()
         val m1 = Macro(id = "macro-1", name = "Slash", steps = emptyList())
-        val btn =
-            PadButton(
-                id = "btn-1",
-                label = "B",
-                posX = 0.5f,
-                posY = 0.5f,
-                action = PadAction.Macro("macro-1"),
-            )
-        val l1 = PadLayout(id = "layout-1", name = "Lay1", buttons = listOf(btn))
-        val p1 =
-            PadProfile(
-                id = p1Id,
-                name = "P1",
-                layouts = listOf(l1),
-                activeLayoutId = "layout-1",
-                macros = listOf(m1),
-            )
-        MacroPadState.loadFrom(listOf(p1), p1Id)
+        val btn = testButton(id = "btn-1", action = PadAction.Macro("macro-1"))
+        val l1 = testLayout(id = "layout-1", name = "Lay1", buttons = listOf(btn))
+        loadProfiles(testProfile(id = "p1", name = "P1", layouts = listOf(l1), macros = listOf(m1)))
 
-        MacroPadState.duplicateProfile(p1Id)
+        MacroPadState.duplicateProfile("p1")
 
         val profiles = MacroPadState.profiles.value
         assertEquals(2, profiles.size)
-        val duplicatedProfile = profiles.first { it.id != p1Id }
+        val duplicatedProfile = profiles.first { it.id != "p1" }
         assertEquals("P1 (2)", duplicatedProfile.name)
         assertEquals(1, duplicatedProfile.layouts.size)
         assertEquals(1, duplicatedProfile.macros.size)
@@ -628,140 +460,60 @@ class MacroPadStateTest {
 
     @Test
     fun `updateLayout preserves and updates backgroundImagePath`() {
-        val p1Id = UUID.randomUUID().toString()
-        val layoutId = "layout-1"
-        val l1 = PadLayout(id = layoutId, name = "Lay1", backgroundImagePath = null)
-        val p1 =
-            PadProfile(
-                id = p1Id,
-                name = "P1",
-                layouts = listOf(l1),
-                activeLayoutId = layoutId,
-            )
-        MacroPadState.loadFrom(listOf(p1), p1Id)
+        val l1 = testLayout(id = "layout-1", name = "Lay1", backgroundImagePath = null)
+        loadProfiles(testProfile(id = "p1", layouts = listOf(l1), activeLayoutId = "layout-1"))
 
-        // Verify initially null
         assertEquals(null, MacroPadState.activeLayout.value?.backgroundImagePath)
 
-        // When updating the layout with a background image path
         val updatedLayout = l1.copy(backgroundImagePath = "backgrounds/bg_layout-1")
         MacroPadState.updateLayout(updatedLayout)
-
-        // Then the background image path is preserved in state
         assertEquals("backgrounds/bg_layout-1", MacroPadState.activeLayout.value?.backgroundImagePath)
     }
 
     @Test
     fun `updateLayout preserves and updates useBackgroundImageAsMask`() {
-        val p1Id = UUID.randomUUID().toString()
-        val layoutId = "layout-1"
-        val l1 = PadLayout(id = layoutId, name = "Lay1", useBackgroundImageAsMask = false)
-        val p1 =
-            PadProfile(
-                id = p1Id,
-                name = "P1",
-                layouts = listOf(l1),
-                activeLayoutId = layoutId,
-            )
-        MacroPadState.loadFrom(listOf(p1), p1Id)
+        val l1 = testLayout(id = "layout-1", name = "Lay1", useBackgroundImageAsMask = false)
+        loadProfiles(testProfile(id = "p1", layouts = listOf(l1), activeLayoutId = "layout-1"))
 
-        // Verify initially false
         assertEquals(false, MacroPadState.activeLayout.value?.useBackgroundImageAsMask)
 
-        // When updating the layout with useBackgroundImageAsMask = true
-        val updatedLayout = l1.copy(useBackgroundImageAsMask = true)
-        MacroPadState.updateLayout(updatedLayout)
-
-        // Then it is preserved in state
+        MacroPadState.updateLayout(l1.copy(useBackgroundImageAsMask = true))
         assertEquals(true, MacroPadState.activeLayout.value?.useBackgroundImageAsMask)
     }
 
     @Test
     fun `updateLayout preserves and updates backgroundImageDim`() {
-        val p1Id = UUID.randomUUID().toString()
-        val layoutId = "layout-1"
-        val l1 = PadLayout(id = layoutId, name = "Lay1", backgroundImageDim = 0f)
-        val p1 =
-            PadProfile(
-                id = p1Id,
-                name = "P1",
-                layouts = listOf(l1),
-                activeLayoutId = layoutId,
-            )
-        MacroPadState.loadFrom(listOf(p1), p1Id)
+        val l1 = testLayout(id = "layout-1", name = "Lay1", backgroundImageDim = 0f)
+        loadProfiles(testProfile(id = "p1", layouts = listOf(l1), activeLayoutId = "layout-1"))
 
-        // Verify initially 0f
         assertEquals(0f, MacroPadState.activeLayout.value?.backgroundImageDim)
 
-        // When updating the layout with backgroundImageDim = 0.5f
-        val updatedLayout = l1.copy(backgroundImageDim = 0.5f)
-        MacroPadState.updateLayout(updatedLayout)
-
-        // Then it is preserved in state
+        MacroPadState.updateLayout(l1.copy(backgroundImageDim = 0.5f))
         assertEquals(0.5f, MacroPadState.activeLayout.value?.backgroundImageDim)
     }
 
     @Test
     fun `updateLayout preserves and updates ambientDim`() {
-        val p1Id = UUID.randomUUID().toString()
-        val layoutId = "layout-1"
-        val l1 = PadLayout(id = layoutId, name = "Lay1", ambientDim = 0f)
-        val p1 =
-            PadProfile(
-                id = p1Id,
-                name = "P1",
-                layouts = listOf(l1),
-                activeLayoutId = layoutId,
-            )
-        MacroPadState.loadFrom(listOf(p1), p1Id)
+        val l1 = testLayout(id = "layout-1", name = "Lay1", ambientDim = 0f)
+        loadProfiles(testProfile(id = "p1", layouts = listOf(l1), activeLayoutId = "layout-1"))
 
-        // Verify initially 0f
         assertEquals(0f, MacroPadState.activeLayout.value?.ambientDim)
 
-        // When updating the layout with ambientDim = 0.4f
-        val updatedLayout = l1.copy(ambientDim = 0.4f)
-        MacroPadState.updateLayout(updatedLayout)
-
-        // Then it is preserved in state
+        MacroPadState.updateLayout(l1.copy(ambientDim = 0.4f))
         assertEquals(0.4f, MacroPadState.activeLayout.value?.ambientDim)
     }
 
     @Test
     fun `updateLayout preserves and updates bgImageScale and offsets`() {
-        val p1Id = UUID.randomUUID().toString()
-        val layoutId = "layout-1"
-        val l1 =
-            PadLayout(
-                id = layoutId,
-                name = "Lay1",
-                bgImageScale = 1f,
-                bgImageOffsetX = 0f,
-                bgImageOffsetY = 0f,
-            )
-        val p1 =
-            PadProfile(
-                id = p1Id,
-                name = "P1",
-                layouts = listOf(l1),
-                activeLayoutId = layoutId,
-            )
-        MacroPadState.loadFrom(listOf(p1), p1Id)
+        val l1 = testLayout(id = "layout-1", name = "Lay1", bgImageScale = 1f, bgImageOffsetX = 0f, bgImageOffsetY = 0f)
+        loadProfiles(testProfile(id = "p1", layouts = listOf(l1), activeLayoutId = "layout-1"))
 
-        // Verify initially default
         assertEquals(1f, MacroPadState.activeLayout.value?.bgImageScale)
         assertEquals(0f, MacroPadState.activeLayout.value?.bgImageOffsetX)
         assertEquals(0f, MacroPadState.activeLayout.value?.bgImageOffsetY)
 
-        // When updating the layout with custom crop params
-        val updatedLayout =
-            l1.copy(
-                bgImageScale = 2.5f,
-                bgImageOffsetX = 0.2f,
-                bgImageOffsetY = -0.1f,
-            )
-        MacroPadState.updateLayout(updatedLayout)
+        MacroPadState.updateLayout(l1.copy(bgImageScale = 2.5f, bgImageOffsetX = 0.2f, bgImageOffsetY = -0.1f))
 
-        // Then it is preserved in state
         assertEquals(2.5f, MacroPadState.activeLayout.value?.bgImageScale)
         assertEquals(0.2f, MacroPadState.activeLayout.value?.bgImageOffsetX)
         assertEquals(-0.1f, MacroPadState.activeLayout.value?.bgImageOffsetY)
@@ -769,11 +521,11 @@ class MacroPadStateTest {
 
     @Test
     fun `reorderProfiles updates profile order in state`() {
-        val p1 = PadProfile(id = "p1", name = "Profile 1", layouts = listOf(PadLayout(id = "l1", name = "L1")), activeLayoutId = "l1")
-        val p2 = PadProfile(id = "p2", name = "Profile 2", layouts = listOf(PadLayout(id = "l2", name = "L2")), activeLayoutId = "l2")
-        val p3 = PadProfile(id = "p3", name = "Profile 3", layouts = listOf(PadLayout(id = "l3", name = "L3")), activeLayoutId = "l3")
+        val p1 = testProfile(id = "p1", name = "Profile 1", layouts = listOf(testLayout(id = "l1")))
+        val p2 = testProfile(id = "p2", name = "Profile 2", layouts = listOf(testLayout(id = "l2")))
+        val p3 = testProfile(id = "p3", name = "Profile 3", layouts = listOf(testLayout(id = "l3")))
 
-        MacroPadState.loadFrom(listOf(p1, p2, p3), "p1")
+        loadProfiles(p1, p2, p3, activeId = "p1")
         assertEquals(listOf("p1", "p2", "p3"), MacroPadState.profiles.value.map { it.id })
 
         MacroPadState.reorderProfiles(listOf(p3, p1, p2))
@@ -782,12 +534,12 @@ class MacroPadStateTest {
 
     @Test
     fun `reorderLayouts updates layout order in active profile`() {
-        val l1 = PadLayout(id = "l1", name = "Layout 1")
-        val l2 = PadLayout(id = "l2", name = "Layout 2")
-        val l3 = PadLayout(id = "l3", name = "Layout 3")
-        val p1 = PadProfile(id = "p1", name = "Profile 1", layouts = listOf(l1, l2, l3), activeLayoutId = "l1")
+        val l1 = testLayout(id = "l1", name = "Layout 1")
+        val l2 = testLayout(id = "l2", name = "Layout 2")
+        val l3 = testLayout(id = "l3", name = "Layout 3")
+        val p1 = testProfile(id = "p1", layouts = listOf(l1, l2, l3), activeLayoutId = "l1")
 
-        MacroPadState.loadFrom(listOf(p1), "p1")
+        loadProfiles(p1, activeId = "p1")
         assertEquals(
             listOf("l1", "l2", "l3"),
             MacroPadState.activeProfile.value
@@ -806,12 +558,9 @@ class MacroPadStateTest {
 
     @Test
     fun `isEditingButtonPositions defaults to false and updates correctly`() {
-        // Default is false (off by default)
         assertEquals(false, MacroPadState.isEditingButtonPositions.value)
-
         MacroPadState.setEditingButtonPositions(true)
         assertEquals(true, MacroPadState.isEditingButtonPositions.value)
-
         MacroPadState.setEditingButtonPositions(false)
         assertEquals(false, MacroPadState.isEditingButtonPositions.value)
     }
@@ -819,13 +568,10 @@ class MacroPadStateTest {
     @Test
     fun `gridMode defaults to OFF and updates correctly`() {
         assertEquals(GridMode.OFF, MacroPadState.gridMode.value)
-
         MacroPadState.setGridMode(GridMode.RECTANGULAR)
         assertEquals(GridMode.RECTANGULAR, MacroPadState.gridMode.value)
-
         MacroPadState.setGridMode(GridMode.RADIAL)
         assertEquals(GridMode.RADIAL, MacroPadState.gridMode.value)
-
         MacroPadState.setGridMode(GridMode.OFF)
         assertEquals(GridMode.OFF, MacroPadState.gridMode.value)
     }
@@ -833,32 +579,26 @@ class MacroPadStateTest {
     @Test
     fun `setSelectedButtonId updates selectedButtonId and setEditingButtonPositions resets it`() {
         assertEquals(null, MacroPadState.selectedButtonId.value)
-
         MacroPadState.setSelectedButtonId("btn-123")
         assertEquals("btn-123", MacroPadState.selectedButtonId.value)
-
         MacroPadState.setEditingButtonPositions(false)
         assertEquals(null, MacroPadState.selectedButtonId.value)
     }
 
     @Test
     fun `setPreviewLayout and clearPreviewLayout manage in-flight layout preview`() {
-        val p1Id = UUID.randomUUID().toString()
-        val l1Id = UUID.randomUUID().toString()
-        val savedLayout = PadLayout(id = l1Id, name = "Saved Layout", buttonTextColor = ColorOption.Neutral, mirrorConfigured = true)
-        val p1 = PadProfile(id = p1Id, name = "Profile 1", layouts = listOf(savedLayout), activeLayoutId = l1Id)
-        MacroPadState.loadFrom(listOf(p1), p1Id)
+        val savedLayout = testLayout(id = "l1", name = "Saved Layout", buttonTextColor = ColorOption.Neutral, mirrorConfigured = true)
+        val p1 = testProfile(id = "p1", layouts = listOf(savedLayout), activeLayoutId = "l1")
+        loadProfiles(p1)
 
         assertEquals(savedLayout, MacroPadState.activeLayout.value)
         assertEquals(null, MacroPadState.previewLayout.value)
 
-        // Set in-flight preview layout
         val previewLayout = savedLayout.copy(buttonTextColor = ColorOption.Accent)
         MacroPadState.setPreviewLayout(previewLayout)
 
         assertEquals(previewLayout, MacroPadState.previewLayout.value)
         assertEquals(previewLayout, MacroPadState.activeLayout.value)
-        // Underlying saved profiles list is unaffected
         assertEquals(
             ColorOption.Neutral,
             MacroPadState.profiles.value
@@ -868,7 +608,6 @@ class MacroPadStateTest {
                 .buttonTextColor,
         )
 
-        // Clear preview layout
         MacroPadState.clearPreviewLayout()
         assertEquals(null, MacroPadState.previewLayout.value)
         assertEquals(savedLayout, MacroPadState.activeLayout.value)
@@ -876,20 +615,10 @@ class MacroPadStateTest {
 
     @Test
     fun `setPreviewButton replaces existing button or appends new button in activeLayout preview`() {
-        val p1Id = UUID.randomUUID().toString()
-        val l1Id = UUID.randomUUID().toString()
-        val b1 =
-            PadButton(
-                id = "btn-1",
-                label = "A",
-                posX = 0.2f,
-                posY = 0.2f,
-                action = PadAction.KeyboardKey(65, "A"),
-                buttonTextColor = ColorOption.Neutral,
-            )
-        val savedLayout = PadLayout(id = l1Id, name = "Saved Layout", buttons = listOf(b1), mirrorConfigured = true)
-        val p1 = PadProfile(id = p1Id, name = "Profile 1", layouts = listOf(savedLayout), activeLayoutId = l1Id)
-        MacroPadState.loadFrom(listOf(p1), p1Id)
+        val b1 = testButton(id = "btn-1", label = "A", posX = 0.2f, posY = 0.2f, action = PadAction.KeyboardKey(65, "A"))
+        val savedLayout = testLayout(id = "l1", name = "Saved Layout", buttons = listOf(b1), mirrorConfigured = true)
+        val p1 = testProfile(id = "p1", layouts = listOf(savedLayout), activeLayoutId = "l1")
+        loadProfiles(p1)
 
         // 1. Modify existing button in preview
         val modifiedB1 = b1.copy(buttonTextColor = ColorOption.Accent)
@@ -899,7 +628,6 @@ class MacroPadStateTest {
         assertNotNull(preview1)
         assertEquals(1, preview1!!.buttons.size)
         assertEquals(ColorOption.Accent, preview1.buttons.first().buttonTextColor)
-        // Profiles list still has saved button
         assertEquals(
             ColorOption.Neutral,
             MacroPadState.profiles.value
@@ -913,7 +641,7 @@ class MacroPadStateTest {
 
         // 2. Add new button in preview
         val b2 =
-            PadButton(
+            testButton(
                 id = "btn-2",
                 label = "B",
                 posX = 0.4f,
@@ -936,52 +664,44 @@ class MacroPadStateTest {
 
     @Test
     fun `loadFrom migrates legacy full opacity custom buttonBgColor on layout and buttons`() {
-        val pId = UUID.randomUUID().toString()
-        val lId = UUID.randomUUID().toString()
         val b1 =
-            PadButton(
+            testButton(
                 id = "btn-1",
                 label = "Full Opacity Custom",
                 posX = 0.1f,
                 posY = 0.1f,
                 action = PadAction.KeyboardKey(65, "A"),
-                buttonBgColor = ColorOption.Custom(0xFFFF5500.toInt()), // Alpha = 0xFF (1.0f)
+                buttonBgColor = ColorOption.Custom(0xFFFF5500.toInt()),
             )
         val b2 =
-            PadButton(
+            testButton(
                 id = "btn-2",
                 label = "Existing Custom Alpha",
                 posX = 0.3f,
                 posY = 0.3f,
                 action = PadAction.KeyboardKey(66, "B"),
-                buttonBgColor = ColorOption.Custom(0x80FF5500.toInt()), // Alpha = 0x80 (~0.5f)
+                buttonBgColor = ColorOption.Custom(0x80FF5500.toInt()),
             )
         val layout =
-            PadLayout(
-                id = lId,
-                name = "Layout",
-                buttonBgColor = ColorOption.Custom(0xFF00FF00.toInt()), // Alpha = 0xFF (1.0f)
+            testLayout(
+                id = "l1",
+                buttonBgColor = ColorOption.Custom(0xFF00FF00.toInt()),
                 buttons = listOf(b1, b2),
                 mirrorConfigured = true,
             )
-        val profile = PadProfile(id = pId, name = "Profile", layouts = listOf(layout), activeLayoutId = lId)
+        loadProfiles(testProfile(id = "p1", layouts = listOf(layout), activeLayoutId = "l1"))
 
-        MacroPadState.loadFrom(listOf(profile), pId)
+        val loadedProfile = MacroPadState.profiles.value.first { it.id == "p1" }
+        val loadedLayout = loadedProfile.layouts.first { it.id == "l1" }
 
-        val loadedProfile = MacroPadState.profiles.value.first { it.id == pId }
-        val loadedLayout = loadedProfile.layouts.first { it.id == lId }
-
-        // Layout bg color migrated from 0xFF to 0xB3 (0.70f)
         val layoutBg = loadedLayout.buttonBgColor as ColorOption.Custom
         assertEquals(0xB3, (layoutBg.argb ushr 24) and 0xFF)
         assertEquals(0x00FF00, layoutBg.argb and 0x00FFFFFF)
 
-        // Button 1 bg color migrated from 0xFF to 0xB3 (0.70f)
         val btn1Bg = loadedLayout.buttons.first { it.id == "btn-1" }.buttonBgColor as ColorOption.Custom
         assertEquals(0xB3, (btn1Bg.argb ushr 24) and 0xFF)
         assertEquals(0xFF5500, btn1Bg.argb and 0x00FFFFFF)
 
-        // Button 2 bg color preserved at 0x80
         val btn2Bg = loadedLayout.buttons.first { it.id == "btn-2" }.buttonBgColor as ColorOption.Custom
         assertEquals(0x80, (btn2Bg.argb ushr 24) and 0xFF)
         assertEquals(0xFF5500, btn2Bg.argb and 0x00FFFFFF)
@@ -998,25 +718,18 @@ class MacroPadStateTest {
 
     @Test
     fun `updatePreviewBackgroundCrop updates preview layout scale and offsets`() {
-        val pId = UUID.randomUUID().toString()
-        val lId = UUID.randomUUID().toString()
-        val layout = PadLayout(id = lId, name = "Layout", bgImageScale = 1.0f, bgImageOffsetX = 0f, bgImageOffsetY = 0f)
-        val profile = PadProfile(id = pId, name = "Profile", layouts = listOf(layout), activeLayoutId = lId)
-        MacroPadState.loadFrom(listOf(profile), pId)
+        val layout = testLayout(id = "l1", name = "Layout")
+        loadProfiles(testProfile(id = "p1", layouts = listOf(layout), activeLayoutId = "l1"))
 
-        // Given a preview layout
         MacroPadState.setPreviewLayout(layout)
         assertEquals(1.0f, MacroPadState.previewLayout.value?.bgImageScale)
 
-        // When updatePreviewBackgroundCrop is called
         MacroPadState.updatePreviewBackgroundCrop(2.5f, 0.15f, -0.25f)
 
-        // Then previewLayout reflects the updated scale and offsets
         assertEquals(2.5f, MacroPadState.previewLayout.value?.bgImageScale)
         assertEquals(0.15f, MacroPadState.previewLayout.value?.bgImageOffsetX)
         assertEquals(-0.25f, MacroPadState.previewLayout.value?.bgImageOffsetY)
 
-        // And clearPreviewLayout resets previewLayout and isCroppingBackground
         MacroPadState.setCroppingBackground(true)
         MacroPadState.clearPreviewLayout()
         assertEquals(null, MacroPadState.previewLayout.value)
@@ -1025,74 +738,52 @@ class MacroPadStateTest {
 
     @Test
     fun `deleteLayout with multiple layouts removes target layout and returns true`() {
-        val pId = UUID.randomUUID().toString()
-        val l1Id = UUID.randomUUID().toString()
-        val l2Id = UUID.randomUUID().toString()
-        val layout1 = PadLayout(id = l1Id, name = "Layout 1")
-        val layout2 = PadLayout(id = l2Id, name = "Layout 2")
-        val profile = PadProfile(id = pId, name = "Profile", layouts = listOf(layout1, layout2), activeLayoutId = l1Id)
-        MacroPadState.loadFrom(listOf(profile), pId)
+        val layout1 = testLayout(id = "l1", name = "Layout 1")
+        val layout2 = testLayout(id = "l2", name = "Layout 2")
+        loadProfiles(testProfile(id = "p1", layouts = listOf(layout1, layout2), activeLayoutId = "l1"))
 
-        val result = MacroPadState.deleteLayout(l2Id)
-
-        assertTrue(result)
+        assertTrue(MacroPadState.deleteLayout("l2"))
         val updatedProfile = MacroPadState.activeProfile.value
         assertNotNull(updatedProfile)
         assertEquals(1, updatedProfile!!.layouts.size)
-        assertEquals(l1Id, updatedProfile.layouts.first().id)
+        assertEquals("l1", updatedProfile.layouts.first().id)
     }
 
     @Test
     fun `deleteLayout when active layout is deleted switches activeLayoutId to remaining layout`() {
-        val pId = UUID.randomUUID().toString()
-        val l1Id = UUID.randomUUID().toString()
-        val l2Id = UUID.randomUUID().toString()
-        val layout1 = PadLayout(id = l1Id, name = "Layout 1")
-        val layout2 = PadLayout(id = l2Id, name = "Layout 2")
-        val profile = PadProfile(id = pId, name = "Profile", layouts = listOf(layout1, layout2), activeLayoutId = l1Id)
-        MacroPadState.loadFrom(listOf(profile), pId)
+        val layout1 = testLayout(id = "l1", name = "Layout 1")
+        val layout2 = testLayout(id = "l2", name = "Layout 2")
+        loadProfiles(testProfile(id = "p1", layouts = listOf(layout1, layout2), activeLayoutId = "l1"))
 
-        val result = MacroPadState.deleteLayout(l1Id)
-
-        assertTrue(result)
+        assertTrue(MacroPadState.deleteLayout("l1"))
         val updatedProfile = MacroPadState.activeProfile.value
         assertNotNull(updatedProfile)
         assertEquals(1, updatedProfile!!.layouts.size)
-        assertEquals(l2Id, updatedProfile.layouts.first().id)
-        assertEquals(l2Id, updatedProfile.activeLayoutId)
+        assertEquals("l2", updatedProfile.layouts.first().id)
+        assertEquals("l2", updatedProfile.activeLayoutId)
     }
 
     @Test
     fun `deleteLayout with single layout returns false and preserves layout`() {
-        val pId = UUID.randomUUID().toString()
-        val l1Id = UUID.randomUUID().toString()
-        val layout1 = PadLayout(id = l1Id, name = "Only Layout")
-        val profile = PadProfile(id = pId, name = "Profile", layouts = listOf(layout1), activeLayoutId = l1Id)
-        MacroPadState.loadFrom(listOf(profile), pId)
+        val layout1 = testLayout(id = "l1", name = "Only Layout")
+        loadProfiles(testProfile(id = "p1", layouts = listOf(layout1), activeLayoutId = "l1"))
 
-        val result = MacroPadState.deleteLayout(l1Id)
-
-        assertFalse(result)
+        assertFalse(MacroPadState.deleteLayout("l1"))
         val updatedProfile = MacroPadState.activeProfile.value
         assertNotNull(updatedProfile)
         assertEquals(1, updatedProfile!!.layouts.size)
-        assertEquals(l1Id, updatedProfile.layouts.first().id)
+        assertEquals("l1", updatedProfile.layouts.first().id)
     }
 
     @Test
     fun `deleteLayout with non-existent layout returns false`() {
-        val pId = UUID.randomUUID().toString()
-        val l1Id = UUID.randomUUID().toString()
-        val layout1 = PadLayout(id = l1Id, name = "Only Layout")
-        val profile = PadProfile(id = pId, name = "Profile", layouts = listOf(layout1), activeLayoutId = l1Id)
-        MacroPadState.loadFrom(listOf(profile), pId)
+        val layout1 = testLayout(id = "l1", name = "Only Layout")
+        loadProfiles(testProfile(id = "p1", layouts = listOf(layout1), activeLayoutId = "l1"))
 
-        val result = MacroPadState.deleteLayout("non-existent-id")
-
-        assertFalse(result)
+        assertFalse(MacroPadState.deleteLayout("non-existent-id"))
         val updatedProfile = MacroPadState.activeProfile.value
         assertNotNull(updatedProfile)
         assertEquals(1, updatedProfile!!.layouts.size)
-        assertEquals(l1Id, updatedProfile.layouts.first().id)
+        assertEquals("l1", updatedProfile.layouts.first().id)
     }
 }

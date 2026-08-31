@@ -327,52 +327,50 @@ object ConfigManager {
         )
     }
 
-    private fun collectImageHashes(
+    private fun resolveLayoutBackgroundFile(
+        context: Context,
+        bgPath: String?,
+        layoutId: String,
+    ): File? {
+        if (bgPath.isNullOrEmpty()) return null
+        val fileByPath = File(context.filesDir, bgPath)
+        if (fileByPath.exists() && fileByPath.isFile) return fileByPath
+        val fileByLayoutId = File(File(context.filesDir, "backgrounds"), "bg_$layoutId")
+        if (fileByLayoutId.exists() && fileByLayoutId.isFile) return fileByLayoutId
+        return null
+    }
+
+    private fun collectLayoutBackgroundFiles(
         context: Context,
         profiles: List<PadProfile>,
-    ): Map<String, String> {
-        val result = mutableMapOf<String, String>()
-        val backgroundsDir = File(context.filesDir, "backgrounds")
-        for (profile in profiles) {
-            for (layout in profile.layouts) {
-                if (layout.backgroundImagePath.isNullOrEmpty()) continue
-                val bgPath = layout.backgroundImagePath!!
-                val fileByPath = File(context.filesDir, bgPath)
-                val fileByLayoutId = File(backgroundsDir, "bg_${layout.id}")
-                val file =
-                    if (fileByPath.exists() && fileByPath.isFile) {
-                        fileByPath
-                    } else if (fileByLayoutId.exists() && fileByLayoutId.isFile) {
-                        fileByLayoutId
-                    } else {
-                        null
+    ): Map<String, File> =
+        buildMap {
+            for (profile in profiles) {
+                for (layout in profile.layouts) {
+                    val file = resolveLayoutBackgroundFile(context, layout.backgroundImagePath, layout.id)
+                    if (file != null) {
+                        put("bg_${layout.id}", file)
                     }
-                if (file != null) {
-                    val bytes = file.readBytes()
-                    val hash =
-                        HmacUtil
-                            .sha256Hex(bytes)
-                            .lowercase()
-                    result["bg_${layout.id}"] = hash
                 }
             }
         }
-        return result
-    }
+
+    private fun collectImageHashes(
+        context: Context,
+        profiles: List<PadProfile>,
+    ): Map<String, String> =
+        collectLayoutBackgroundFiles(context, profiles).mapValues { (_, file) ->
+            HmacUtil.sha256Hex(file.readBytes()).lowercase()
+        }
 
     /** Creates pre-filled [ExportMetadata] with the app version and device info. */
     fun defaultMetadata(context: Context): ExportMetadata {
         val packageInfo =
             runCatching {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    context.packageManager.getPackageInfo(
-                        context.packageName,
-                        PackageManager.PackageInfoFlags.of(0),
-                    )
-                } else {
-                    @Suppress("DEPRECATION")
-                    context.packageManager.getPackageInfo(context.packageName, 0)
-                }
+                context.packageManager.getPackageInfo(
+                    context.packageName,
+                    PackageManager.PackageInfoFlags.of(0),
+                )
             }.getOrNull()
         return ExportMetadata(
             exportedAt = Instant.now().toString(),
@@ -391,44 +389,24 @@ object ConfigManager {
     ) {
         AppLog.i(TAG, "writeToUri: uri=$uri includeBackgrounds=$includeBackgrounds")
         val json = exportJson.encodeToString(export)
-        val backgroundsDir = File(context.filesDir, "backgrounds")
-        val imageFilesToBundle = mutableMapOf<String, File>()
-
-        if (includeBackgrounds) {
-            for (profile in export.profiles) {
-                for (layout in profile.layouts) {
-                    if (layout.backgroundImagePath.isNullOrEmpty()) continue
-                    val bgPath = layout.backgroundImagePath!!
-                    val fileByPath = File(context.filesDir, bgPath)
-                    val fileByLayoutId = File(backgroundsDir, "bg_${layout.id}")
-                    val file =
-                        if (fileByPath.exists() && fileByPath.isFile) {
-                            fileByPath
-                        } else if (fileByLayoutId.exists() && fileByLayoutId.isFile) {
-                            fileByLayoutId
-                        } else {
-                            null
-                        }
-                    if (file != null) {
-                        imageFilesToBundle["backgrounds/bg_${layout.id}"] = file
-                    }
-                }
+        val imageFilesToBundle =
+            if (includeBackgrounds) {
+                collectLayoutBackgroundFiles(context, export.profiles)
+            } else {
+                emptyMap()
             }
-        }
 
         context.contentResolver.openOutputStream(uri)?.use { out ->
-            if (includeBackgrounds && imageFilesToBundle.isNotEmpty()) {
+            if (imageFilesToBundle.isNotEmpty()) {
                 ZipOutputStream(out).use { zip ->
                     // 1. Write config.json
-                    val configEntry = ZipEntry("config.json")
-                    zip.putNextEntry(configEntry)
+                    zip.putNextEntry(ZipEntry("config.json"))
                     zip.write(json.toByteArray(Charsets.UTF_8))
                     zip.closeEntry()
 
                     // 2. Write background image entries
-                    for ((entryPath, file) in imageFilesToBundle) {
-                        val entry = ZipEntry(entryPath)
-                        zip.putNextEntry(entry)
+                    for ((entryName, file) in imageFilesToBundle) {
+                        zip.putNextEntry(ZipEntry("backgrounds/$entryName"))
                         zip.write(file.readBytes())
                         zip.closeEntry()
                     }

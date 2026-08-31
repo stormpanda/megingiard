@@ -2,6 +2,14 @@ package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.input.NativeBinaryInjector
 
+private val VALID_JOYSTICK_AXES =
+    setOf(
+        GamepadKeycodes.ABS_X,
+        GamepadKeycodes.ABS_Y,
+        GamepadKeycodes.ABS_Z,
+        GamepadKeycodes.ABS_RZ,
+    )
+
 /**
  * Injects gamepad button events by piping commands to the native
  * `gamepadinjector_arm64` binary, which creates a virtual gamepad via
@@ -68,7 +76,7 @@ internal object ShellGamepadInjector : NativeBinaryInjector<GamepadCommand>(
         axisCode: Int,
         value: Int,
     ) {
-        require(axisCode in setOf(GamepadKeycodes.ABS_X, GamepadKeycodes.ABS_Y, GamepadKeycodes.ABS_Z, GamepadKeycodes.ABS_RZ)) {
+        require(axisCode in VALID_JOYSTICK_AXES) {
             "axisCode must be one of ABS_X(0), ABS_Y(1), ABS_Z(2), or ABS_RZ(5)"
         }
         require(value in -32768..32767) { "value must be in int16 range -32768..32767" }

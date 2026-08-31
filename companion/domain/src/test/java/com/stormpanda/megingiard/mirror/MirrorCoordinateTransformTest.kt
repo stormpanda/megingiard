@@ -13,6 +13,193 @@ import org.junit.Test
 
 private const val EPS = 1e-3f
 
+private fun resizeBounds(
+    normX: Float,
+    normY: Float,
+    normW: Float,
+    normH: Float,
+    dx: Int = 0,
+    dy: Int = 0,
+    hToggle: Int = 0,
+    vToggle: Int = 0,
+    screenWidth: Float = 1000f,
+    screenHeight: Float = 1000f,
+    others: List<ScreenCutout> = emptyList(),
+) = calculateResizedBounds(
+    normX = normX,
+    normY = normY,
+    normW = normW,
+    normH = normH,
+    screenWidth = screenWidth,
+    screenHeight = screenHeight,
+    dx = dx,
+    dy = dy,
+    hToggle = hToggle,
+    vToggle = vToggle,
+    others = others,
+)
+
+private fun cutout(
+    id: String = "1",
+    destX: Float = 0f,
+    destY: Float = 0f,
+    destWidth: Float = 1f,
+    destHeight: Float = 1f,
+    srcX: Float = 0f,
+    srcY: Float = 0f,
+    srcWidth: Float = 1f,
+    srcHeight: Float = 1f,
+    name: String = "Test Cutout",
+    shape: CutoutShape = CutoutShape.RECTANGLE,
+    aspectRatioMode: AspectRatioMode = AspectRatioMode.TOP,
+    motionSmoothing: Boolean = false,
+    motionSmoothingStrength: Int = 85,
+) = ScreenCutout(
+    id = id,
+    name = name,
+    srcX = srcX,
+    srcY = srcY,
+    srcWidth = srcWidth,
+    srcHeight = srcHeight,
+    destX = destX,
+    destY = destY,
+    destWidth = destWidth,
+    destHeight = destHeight,
+    shape = shape,
+    aspectRatioMode = aspectRatioMode,
+    motionSmoothing = motionSmoothing,
+    motionSmoothingStrength = motionSmoothingStrength,
+)
+
+private fun assertProject(
+    touchX: Float,
+    touchY: Float,
+    expectedX: Float,
+    expectedY: Float,
+    scale: Float = 1f,
+    offsetX: Float = 0f,
+    offsetY: Float = 0f,
+    screenW: Float = 1920f,
+    screenH: Float = 1080f,
+    sw: Float = 1920f,
+    sh: Float = 1080f,
+    eps: Float = EPS,
+) {
+    val r = projectCoordinates(touchX, touchY, screenW, screenH, sw, sh, scale, offsetX, offsetY)
+    assertNotNull(r)
+    assertEquals(expectedX, r!!.first, eps)
+    assertEquals(expectedY, r.second, eps)
+}
+
+private fun assertCutoutProject(
+    touchX: Float,
+    touchY: Float,
+    expectedX: Float,
+    expectedY: Float,
+    destLeft: Float = 100f,
+    destTop: Float = 100f,
+    destWidth: Float = 100f,
+    destHeight: Float = 100f,
+    srcX: Float = 0.1f,
+    srcY: Float = 0.1f,
+    srcWidth: Float = 0.8f,
+    srcHeight: Float = 0.8f,
+    clampToEdge: Boolean = false,
+    eps: Float = EPS,
+) {
+    val r =
+        projectCutoutCoordinates(
+            touchX = touchX,
+            touchY = touchY,
+            destLeft = destLeft,
+            destTop = destTop,
+            destWidth = destWidth,
+            destHeight = destHeight,
+            srcX = srcX,
+            srcY = srcY,
+            srcWidth = srcWidth,
+            srcHeight = srcHeight,
+            clampToEdge = clampToEdge,
+        )
+    assertNotNull(r)
+    assertEquals(expectedX, r!!.first, eps)
+    assertEquals(expectedY, r.second, eps)
+}
+
+private fun assertCutoutDrag(
+    cutoutId: String,
+    originalX: Float,
+    originalY: Float,
+    targetX: Float,
+    targetY: Float,
+    width: Float,
+    height: Float,
+    allCutouts: List<ScreenCutout>,
+    expectedX: Float,
+    expectedY: Float,
+    eps: Float = EPS,
+) {
+    val (x, y) =
+        clampCutoutDrag(
+            cutoutId = cutoutId,
+            originalX = originalX,
+            originalY = originalY,
+            targetX = targetX,
+            targetY = targetY,
+            width = width,
+            height = height,
+            allCutouts = allCutouts,
+        )
+    assertEquals(expectedX, x, eps)
+    assertEquals(expectedY, y, eps)
+}
+
+private fun assertCutoutResize(
+    handle: ResizeHandle,
+    originalX: Float,
+    originalY: Float,
+    originalWidth: Float,
+    originalHeight: Float,
+    targetX: Float,
+    targetY: Float,
+    targetWidth: Float,
+    targetHeight: Float,
+    allCutouts: List<ScreenCutout>,
+    expectedX: Float? = null,
+    expectedY: Float? = null,
+    expectedW: Float? = null,
+    expectedH: Float? = null,
+    cutoutId: String = "1",
+    keepAspectRatio: Boolean = false,
+    cropRatio: Float = 1f,
+    screenW: Float = 1000f,
+    screenH: Float = 1000f,
+    eps: Float = EPS,
+) {
+    val geom =
+        clampCutoutResize(
+            cutoutId = cutoutId,
+            handle = handle,
+            originalX = originalX,
+            originalY = originalY,
+            originalWidth = originalWidth,
+            originalHeight = originalHeight,
+            targetX = targetX,
+            targetY = targetY,
+            targetWidth = targetWidth,
+            targetHeight = targetHeight,
+            allCutouts = allCutouts,
+            keepAspectRatio = keepAspectRatio,
+            cropRatio = cropRatio,
+            screenW = screenW,
+            screenH = screenH,
+        )
+    expectedX?.let { assertEquals(it, geom.x, eps) }
+    expectedY?.let { assertEquals(it, geom.y, eps) }
+    expectedW?.let { assertEquals(it, geom.w, eps) }
+    expectedH?.let { assertEquals(it, geom.h, eps) }
+}
+
 /**
  * Tests for [projectCoordinates].
  *
@@ -22,40 +209,12 @@ private const val EPS = 1e-3f
 class MirrorCoordinateTransformTest {
     @Test
     fun `center of screen at scale 1 maps to content center`() {
-        val r =
-            projectCoordinates(
-                touchX = 960f,
-                touchY = 540f,
-                screenW = 1920f,
-                screenH = 1080f,
-                sw = 1920f,
-                sh = 1080f,
-                scale = 1f,
-                offsetX = 0f,
-                offsetY = 0f,
-            )
-        assertNotNull(r)
-        assertEquals(0.5f, r!!.first, EPS)
-        assertEquals(0.5f, r.second, EPS)
+        assertProject(touchX = 960f, touchY = 540f, expectedX = 0.5f, expectedY = 0.5f)
     }
 
     @Test
     fun `top-left corner at scale 1 maps to (0,0)`() {
-        val r =
-            projectCoordinates(
-                touchX = 0f,
-                touchY = 0f,
-                screenW = 1920f,
-                screenH = 1080f,
-                sw = 1920f,
-                sh = 1080f,
-                scale = 1f,
-                offsetX = 0f,
-                offsetY = 0f,
-            )
-        assertNotNull(r)
-        assertEquals(0f, r!!.first, EPS)
-        assertEquals(0f, r.second, EPS)
+        assertProject(touchX = 0f, touchY = 0f, expectedX = 0f, expectedY = 0f)
     }
 
     @Test
@@ -80,63 +239,19 @@ class MirrorCoordinateTransformTest {
 
     @Test
     fun `2x zoom centered keeps screen center mapped to content center`() {
-        val r =
-            projectCoordinates(
-                touchX = 960f,
-                touchY = 540f,
-                screenW = 1920f,
-                screenH = 1080f,
-                sw = 1920f,
-                sh = 1080f,
-                scale = 2f,
-                offsetX = 0f,
-                offsetY = 0f,
-            )
-        assertNotNull(r)
-        assertEquals(0.5f, r!!.first, EPS)
-        assertEquals(0.5f, r.second, EPS)
+        assertProject(touchX = 960f, touchY = 540f, expectedX = 0.5f, expectedY = 0.5f, scale = 2f)
     }
 
     @Test
     fun `2x zoom narrows visible content - screen left edge maps to content quarter point`() {
         // At 2× zoom the visible content X range is 0.25..0.75 of the source.
-        val r =
-            projectCoordinates(
-                touchX = 0f,
-                touchY = 540f,
-                screenW = 1920f,
-                screenH = 1080f,
-                sw = 1920f,
-                sh = 1080f,
-                scale = 2f,
-                offsetX = 0f,
-                offsetY = 0f,
-            )
-        assertNotNull(r)
-        assertEquals(0.25f, r!!.first, EPS)
-        assertEquals(0.5f, r.second, EPS)
+        assertProject(touchX = 0f, touchY = 540f, expectedX = 0.25f, expectedY = 0.5f, scale = 2f)
     }
 
     @Test
     fun `pan offset shifts mapped content`() {
         // offsetX = +scale * sw/2 should move the screen center to the content's left edge.
-        // svX = (touchX - screenCenter - offsetX)/scale + svCenter
-        //     = (960 - 960 - 960) / 1 + 960 = 0  → nx = 0
-        val r =
-            projectCoordinates(
-                touchX = 960f,
-                touchY = 540f,
-                screenW = 1920f,
-                screenH = 1080f,
-                sw = 1920f,
-                sh = 1080f,
-                scale = 1f,
-                offsetX = 960f,
-                offsetY = 0f,
-            )
-        assertNotNull(r)
-        assertEquals(0f, r!!.first, EPS)
-        assertEquals(0.5f, r.second, EPS)
+        assertProject(touchX = 960f, touchY = 540f, expectedX = 0f, expectedY = 0.5f, offsetX = 960f)
     }
 
     @Test
@@ -179,22 +294,7 @@ class MirrorCoordinateTransformTest {
 
     @Test
     fun `letterboxed content - touch on visible content maps correctly`() {
-        // Same scenario, but touch at the content center (which is also the screen center).
-        val r =
-            projectCoordinates(
-                touchX = 960f,
-                touchY = 600f,
-                screenW = 1920f,
-                screenH = 1200f,
-                sw = 1920f,
-                sh = 1080f,
-                scale = 1f,
-                offsetX = 0f,
-                offsetY = 0f,
-            )
-        assertNotNull(r)
-        assertEquals(0.5f, r!!.first, EPS)
-        assertEquals(0.5f, r.second, EPS)
+        assertProject(touchX = 960f, touchY = 600f, expectedX = 0.5f, expectedY = 0.5f, screenH = 1200f)
     }
 
     @Test
@@ -212,22 +312,7 @@ class MirrorCoordinateTransformTest {
 
     @Test
     fun `projectCutoutCoordinates maps touch to primary display crop`() {
-        val r =
-            projectCutoutCoordinates(
-                touchX = 150f,
-                touchY = 150f,
-                destLeft = 100f,
-                destTop = 100f,
-                destWidth = 100f,
-                destHeight = 100f,
-                srcX = 0.1f,
-                srcY = 0.1f,
-                srcWidth = 0.8f,
-                srcHeight = 0.8f,
-            )
-        assertNotNull(r)
-        assertEquals(0.5f, r!!.first, EPS)
-        assertEquals(0.5f, r.second, EPS)
+        assertCutoutProject(touchX = 150f, touchY = 150f, expectedX = 0.5f, expectedY = 0.5f)
     }
 
     @Test
@@ -251,205 +336,49 @@ class MirrorCoordinateTransformTest {
 
     @Test
     fun `projectCutoutCoordinates outside dest bounds clamps to edge when clampToEdge is true`() {
-        val r =
-            projectCutoutCoordinates(
-                touchX = 50f,
-                touchY = 150f,
-                destLeft = 100f,
-                destTop = 100f,
-                destWidth = 100f,
-                destHeight = 100f,
-                srcX = 0.1f,
-                srcY = 0.1f,
-                srcWidth = 0.8f,
-                srcHeight = 0.8f,
-                clampToEdge = true,
-            )
-        assertNotNull(r)
-        assertEquals(0.1f, r!!.first, EPS)
-        assertEquals(0.5f, r.second, EPS)
+        assertCutoutProject(touchX = 50f, touchY = 150f, expectedX = 0.1f, expectedY = 0.5f, clampToEdge = true)
     }
 
     @Test
     fun `clampCutoutDrag allows drag without overlap`() {
         val allCutouts =
             listOf(
-                ScreenCutout(
-                    "1",
-                    destX = 0.1f,
-                    destY = 0.1f,
-                    destWidth = 0.3f,
-                    destHeight = 0.3f,
-                    srcX = 0f,
-                    srcY = 0f,
-                    srcWidth = 1f,
-                    srcHeight = 1f,
-                ),
-                ScreenCutout(
-                    "2",
-                    destX = 0.5f,
-                    destY = 0.5f,
-                    destWidth = 0.3f,
-                    destHeight = 0.3f,
-                    srcX = 0f,
-                    srcY = 0f,
-                    srcWidth = 1f,
-                    srcHeight = 1f,
-                ),
+                cutout("1", destX = 0.1f, destY = 0.1f, destWidth = 0.3f, destHeight = 0.3f),
+                cutout("2", destX = 0.5f, destY = 0.5f, destWidth = 0.3f, destHeight = 0.3f),
             )
-        val (x, y) =
-            clampCutoutDrag(
-                cutoutId = "1",
-                originalX = 0.1f,
-                originalY = 0.1f,
-                targetX = 0.15f,
-                targetY = 0.15f,
-                width = 0.3f,
-                height = 0.3f,
-                allCutouts = allCutouts,
-            )
-        assertEquals(0.15f, x, EPS)
-        assertEquals(0.15f, y, EPS)
+        assertCutoutDrag("1", 0.1f, 0.1f, 0.15f, 0.15f, 0.3f, 0.3f, allCutouts, 0.15f, 0.15f)
     }
 
     @Test
     fun `clampCutoutDrag prevents overlap and allows sliding`() {
         val allCutouts =
             listOf(
-                ScreenCutout(
-                    "1",
-                    destX = 0.1f,
-                    destY = 0.1f,
-                    destWidth = 0.3f,
-                    destHeight = 0.3f,
-                    srcX = 0f,
-                    srcY = 0f,
-                    srcWidth = 1f,
-                    srcHeight = 1f,
-                ),
-                ScreenCutout(
-                    "2",
-                    destX = 0.45f,
-                    destY = 0.1f,
-                    destWidth = 0.3f,
-                    destHeight = 0.3f,
-                    srcX = 0f,
-                    srcY = 0f,
-                    srcWidth = 1f,
-                    srcHeight = 1f,
-                ),
+                cutout("1", destX = 0.1f, destY = 0.1f, destWidth = 0.3f, destHeight = 0.3f),
+                cutout("2", destX = 0.45f, destY = 0.1f, destWidth = 0.3f, destHeight = 0.3f),
             )
-        val (x, y) =
-            clampCutoutDrag(
-                cutoutId = "1",
-                originalX = 0.1f,
-                originalY = 0.1f,
-                targetX = 0.25f,
-                targetY = 0.15f,
-                width = 0.3f,
-                height = 0.3f,
-                allCutouts = allCutouts,
-            )
-        assertEquals(0.15f, x, EPS)
-        assertEquals(0.15f, y, EPS)
+        assertCutoutDrag("1", 0.1f, 0.1f, 0.25f, 0.15f, 0.3f, 0.3f, allCutouts, 0.15f, 0.15f)
     }
 
     @Test
     fun `clampCutoutDrag selects closer candidate when sliding along either axis is valid`() {
         val allCutouts =
             listOf(
-                ScreenCutout(
-                    "1",
-                    destX = 0.35f,
-                    destY = 0.0f,
-                    destWidth = 0.2f,
-                    destHeight = 0.2f,
-                    srcX = 0f,
-                    srcY = 0f,
-                    srcWidth = 1f,
-                    srcHeight = 1f,
-                ),
-                ScreenCutout(
-                    "2",
-                    destX = 0.1f,
-                    destY = 0.3f,
-                    destWidth = 0.2f,
-                    destHeight = 0.2f,
-                    srcX = 0f,
-                    srcY = 0f,
-                    srcWidth = 1f,
-                    srcHeight = 1f,
-                ),
-            )
-        val (x, y) =
-            clampCutoutDrag(
-                cutoutId = "1",
-                originalX = 0.35f,
-                originalY = 0.0f,
-                targetX = 0.29f,
-                targetY = 0.36f,
-                width = 0.2f,
-                height = 0.2f,
-                allCutouts = allCutouts,
+                cutout("1", destX = 0.35f, destY = 0.0f, destWidth = 0.2f, destHeight = 0.2f),
+                cutout("2", destX = 0.1f, destY = 0.3f, destWidth = 0.2f, destHeight = 0.2f),
             )
         // Candidate 1 (slide X, keep target Y): (0.3f, 0.36f) -> distance to target is 0.01
-        // Candidate 2 (keep target X, slide Y): (0.29f, 0.1f) -> distance to target is 0.26
-        // Candidate 1 should be selected.
-        assertEquals(0.3f, x, EPS)
-        assertEquals(0.36f, y, EPS)
+        assertCutoutDrag("1", 0.35f, 0.0f, 0.29f, 0.36f, 0.2f, 0.2f, allCutouts, 0.3f, 0.36f)
     }
 
     @Test
     fun `clampCutoutDrag handles drag past obstacle without snapping back to starting position`() {
         val allCutouts =
             listOf(
-                ScreenCutout(
-                    "1",
-                    destX = 0.51f,
-                    destY = 0.3f,
-                    destWidth = 0.2f,
-                    destHeight = 0.2f,
-                    srcX = 0f,
-                    srcY = 0f,
-                    srcWidth = 1f,
-                    srcHeight = 1f,
-                ),
-                ScreenCutout(
-                    "2",
-                    destX = 0.3f,
-                    destY = 0.4f,
-                    destWidth = 0.2f,
-                    destHeight = 0.2f,
-                    srcX = 0f,
-                    srcY = 0f,
-                    srcWidth = 1f,
-                    srcHeight = 1f,
-                ),
-                ScreenCutout(
-                    "3",
-                    destX = 0.3f,
-                    destY = 0.1f,
-                    destWidth = 0.2f,
-                    destHeight = 0.2f,
-                    srcX = 0f,
-                    srcY = 0f,
-                    srcWidth = 1f,
-                    srcHeight = 1f,
-                ),
+                cutout("1", destX = 0.51f, destY = 0.3f, destWidth = 0.2f, destHeight = 0.2f),
+                cutout("2", destX = 0.3f, destY = 0.4f, destWidth = 0.2f, destHeight = 0.2f),
+                cutout("3", destX = 0.3f, destY = 0.1f, destWidth = 0.2f, destHeight = 0.2f),
             )
-        val (x, y) =
-            clampCutoutDrag(
-                cutoutId = "1",
-                originalX = 0.51f,
-                originalY = 0.3f,
-                targetX = 0.49f,
-                targetY = 0.3f,
-                width = 0.2f,
-                height = 0.2f,
-                allCutouts = allCutouts,
-            )
-        assertEquals(0.5f, x, EPS)
-        assertEquals(0.3f, y, EPS)
+        assertCutoutDrag("1", 0.51f, 0.3f, 0.49f, 0.3f, 0.2f, 0.2f, allCutouts, 0.5f, 0.3f)
     }
 
     @Test
@@ -472,138 +401,58 @@ class MirrorCoordinateTransformTest {
     fun `clampCutoutResize maintains aspect ratio during collision`() {
         val allCutouts =
             listOf(
-                ScreenCutout(
-                    "1",
-                    destX = 0.1f,
-                    destY = 0.1f,
-                    destWidth = 0.2f,
-                    destHeight = 0.2f,
-                    srcX = 0f,
-                    srcY = 0f,
-                    srcWidth = 1f,
-                    srcHeight = 1f,
-                ),
-                ScreenCutout(
-                    "2",
-                    destX = 0.45f,
-                    destY = 0.1f,
-                    destWidth = 0.2f,
-                    destHeight = 0.2f,
-                    srcX = 0f,
-                    srcY = 0f,
-                    srcWidth = 1f,
-                    srcHeight = 1f,
-                ),
+                cutout("1", destX = 0.1f, destY = 0.1f, destWidth = 0.2f, destHeight = 0.2f),
+                cutout("2", destX = 0.45f, destY = 0.1f, destWidth = 0.2f, destHeight = 0.2f),
             )
-        val geom =
-            clampCutoutResize(
-                cutoutId = "1",
-                handle = ResizeHandle.BOTTOM_RIGHT,
-                originalX = 0.1f,
-                originalY = 0.1f,
-                originalWidth = 0.2f,
-                originalHeight = 0.2f,
-                targetX = 0.1f,
-                targetY = 0.1f,
-                targetWidth = 0.4f,
-                targetHeight = 0.4f,
-                allCutouts = allCutouts,
-                keepAspectRatio = true,
-                cropRatio = 1f,
-                screenW = 1000f,
-                screenH = 1000f,
-            )
-        assertEquals(0.35f, geom.w, 0.002f)
-        assertEquals(0.35f, geom.h, 0.002f)
+        assertCutoutResize(
+            ResizeHandle.BOTTOM_RIGHT,
+            0.1f,
+            0.1f,
+            0.2f,
+            0.2f,
+            0.1f,
+            0.1f,
+            0.4f,
+            0.4f,
+            allCutouts,
+            expectedW = 0.35f,
+            expectedH = 0.35f,
+            keepAspectRatio = true,
+            cropRatio = 1f,
+            eps = 0.002f,
+        )
     }
 
     @Test
     fun `clampCutoutResize allows clear resize and clamps on collision`() {
         val allCutouts =
             listOf(
-                ScreenCutout(
-                    "1",
-                    destX = 0.1f,
-                    destY = 0.1f,
-                    destWidth = 0.3f,
-                    destHeight = 0.3f,
-                    srcX = 0f,
-                    srcY = 0f,
-                    srcWidth = 1f,
-                    srcHeight = 1f,
-                ),
-                ScreenCutout(
-                    "2",
-                    destX = 0.5f,
-                    destY = 0.1f,
-                    destWidth = 0.3f,
-                    destHeight = 0.3f,
-                    srcX = 0f,
-                    srcY = 0f,
-                    srcWidth = 1f,
-                    srcHeight = 1f,
-                ),
+                cutout("1", destX = 0.1f, destY = 0.1f, destWidth = 0.3f, destHeight = 0.3f),
+                cutout("2", destX = 0.5f, destY = 0.1f, destWidth = 0.3f, destHeight = 0.3f),
             )
-        val geomClear =
-            clampCutoutResize(
-                cutoutId = "1",
-                handle = ResizeHandle.BOTTOM_RIGHT,
-                originalX = 0.1f,
-                originalY = 0.1f,
-                originalWidth = 0.3f,
-                originalHeight = 0.3f,
-                targetX = 0.1f,
-                targetY = 0.1f,
-                targetWidth = 0.35f,
-                targetHeight = 0.35f,
-                allCutouts = allCutouts,
-            )
-        assertEquals(0.35f, geomClear.w, EPS)
-        assertEquals(0.35f, geomClear.h, EPS)
-
-        val geomCollision =
-            clampCutoutResize(
-                cutoutId = "1",
-                handle = ResizeHandle.BOTTOM_RIGHT,
-                originalX = 0.1f,
-                originalY = 0.1f,
-                originalWidth = 0.3f,
-                originalHeight = 0.3f,
-                targetX = 0.1f,
-                targetY = 0.1f,
-                targetWidth = 0.45f,
-                targetHeight = 0.3f,
-                allCutouts = allCutouts,
-            )
-        assertEquals(0.4f, geomCollision.w, EPS)
+        assertCutoutResize(
+            ResizeHandle.BOTTOM_RIGHT,
+            0.1f,
+            0.1f,
+            0.3f,
+            0.3f,
+            0.1f,
+            0.1f,
+            0.35f,
+            0.35f,
+            allCutouts,
+            expectedW = 0.35f,
+            expectedH = 0.35f,
+        )
+        assertCutoutResize(ResizeHandle.BOTTOM_RIGHT, 0.1f, 0.1f, 0.3f, 0.3f, 0.1f, 0.1f, 0.45f, 0.3f, allCutouts, expectedW = 0.4f)
     }
 
     @Test
     fun `clampCutoutResize clamps vertical scaling of lower cutout against upper cutout`() {
         val allCutouts =
             listOf(
-                ScreenCutout(
-                    "1",
-                    destX = 0.3f,
-                    destY = 0.4f,
-                    destWidth = 0.2f,
-                    destHeight = 0.2f,
-                    srcX = 0f,
-                    srcY = 0f,
-                    srcWidth = 1f,
-                    srcHeight = 1f,
-                ), // Lower cutout
-                ScreenCutout(
-                    "2",
-                    destX = 0.3f,
-                    destY = 0.1f,
-                    destWidth = 0.2f,
-                    destHeight = 0.2f,
-                    srcX = 0f,
-                    srcY = 0f,
-                    srcWidth = 1f,
-                    srcHeight = 1f,
-                ), // Upper cutout (bottom is 0.3)
+                cutout("1", destX = 0.3f, destY = 0.4f, destWidth = 0.2f, destHeight = 0.2f), // Lower cutout
+                cutout("2", destX = 0.3f, destY = 0.1f, destWidth = 0.2f, destHeight = 0.2f), // Upper cutout (bottom is 0.3)
             )
         val geom =
             clampCutoutResize(
@@ -627,282 +476,140 @@ class MirrorCoordinateTransformTest {
     fun `clampCutoutResize clamps vertical scaling of lower cutout with slight horizontal drift`() {
         val allCutouts =
             listOf(
-                ScreenCutout(
-                    "1",
-                    destX = 0.3f,
-                    destY = 0.4f,
-                    destWidth = 0.2f,
-                    destHeight = 0.2f,
-                    srcX = 0f,
-                    srcY = 0f,
-                    srcWidth = 1f,
-                    srcHeight = 1f,
-                ), // Lower cutout
-                ScreenCutout(
-                    "2",
-                    destX = 0.3f,
-                    destY = 0.1f,
-                    destWidth = 0.2f,
-                    destHeight = 0.2f,
-                    srcX = 0f,
-                    srcY = 0f,
-                    srcWidth = 1f,
-                    srcHeight = 1f,
-                ), // Upper cutout (bottom is 0.3)
+                cutout("1", destX = 0.3f, destY = 0.4f, destWidth = 0.2f, destHeight = 0.2f),
+                cutout("2", destX = 0.3f, destY = 0.1f, destWidth = 0.2f, destHeight = 0.2f),
             )
-        val geom =
-            clampCutoutResize(
-                cutoutId = "1",
-                handle = ResizeHandle.TOP_LEFT,
-                originalX = 0.3f,
-                originalY = 0.4f,
-                originalWidth = 0.2f,
-                originalHeight = 0.2f,
-                targetX = 0.29f,
-                targetY = 0.2f, // Drag top edge up past bottom (0.3) and left (0.3)
-                targetWidth = 0.21f,
-                targetHeight = 0.4f,
-                allCutouts = allCutouts,
-            )
-        assertEquals(0.3f, geom.y, EPS)
-        assertEquals(0.3f, geom.h, EPS)
+        assertCutoutResize(
+            ResizeHandle.TOP_LEFT,
+            0.3f,
+            0.4f,
+            0.2f,
+            0.2f,
+            0.29f,
+            0.2f,
+            0.21f,
+            0.4f,
+            allCutouts,
+            expectedY = 0.3f,
+            expectedH = 0.3f,
+        )
     }
 
     @Test
     fun `clampCutoutResize clamps horizontal scaling when target is taller and vertically overlaps`() {
         val allCutouts =
             listOf(
-                ScreenCutout(
-                    "1",
-                    destX = 0.5f,
-                    destY = 0.2f,
-                    destWidth = 0.2f,
-                    destHeight = 0.1f,
-                    srcX = 0f,
-                    srcY = 0f,
-                    srcWidth = 1f,
-                    srcHeight = 1f,
-                ), // Right cutout (b)
-                ScreenCutout(
-                    "2",
-                    destX = 0.2f,
-                    destY = 0.1f,
-                    destWidth = 0.2f,
-                    destHeight = 0.3f,
-                    srcX = 0f,
-                    srcY = 0f,
-                    srcWidth = 1f,
-                    srcHeight = 1f,
-                ), // Left cutout (a), right edge is 0.4, Y range [0.1, 0.4]
+                cutout("1", destX = 0.5f, destY = 0.2f, destWidth = 0.2f, destHeight = 0.1f),
+                cutout("2", destX = 0.2f, destY = 0.1f, destWidth = 0.2f, destHeight = 0.3f),
             )
-        val geom =
-            clampCutoutResize(
-                cutoutId = "1",
-                handle = ResizeHandle.BOTTOM_LEFT,
-                originalX = 0.5f,
-                originalY = 0.2f,
-                originalWidth = 0.2f,
-                originalHeight = 0.1f,
-                targetX = 0.38f,
-                targetY = 0.2f,
-                targetWidth = 0.32f,
-                targetHeight = 0.15f,
-                allCutouts = allCutouts,
-            )
-        assertEquals(0.4f, geom.x, EPS)
-        assertEquals(0.15f, geom.h, EPS)
+        assertCutoutResize(
+            ResizeHandle.BOTTOM_LEFT,
+            0.5f,
+            0.2f,
+            0.2f,
+            0.1f,
+            0.38f,
+            0.2f,
+            0.32f,
+            0.15f,
+            allCutouts,
+            expectedX = 0.4f,
+            expectedW = 0.3f,
+        )
     }
 
     @Test
     fun `clampCutoutResize clamps vertical scaling when target is wider and horizontally overlaps`() {
         val allCutouts =
             listOf(
-                ScreenCutout(
-                    "1",
-                    destX = 0.2f,
-                    destY = 0.4f,
-                    destWidth = 0.1f,
-                    destHeight = 0.1f,
-                    srcX = 0f,
-                    srcY = 0f,
-                    srcWidth = 1f,
-                    srcHeight = 1f,
-                ), // Lower cutout (b)
-                ScreenCutout(
-                    "2",
-                    destX = 0.1f,
-                    destY = 0.1f,
-                    destWidth = 0.3f,
-                    destHeight = 0.2f,
-                    srcX = 0f,
-                    srcY = 0f,
-                    srcWidth = 1f,
-                    srcHeight = 1f,
-                ), // Upper cutout (a), bottom is 0.3, X range [0.1, 0.4]
+                cutout("1", destX = 0.2f, destY = 0.4f, destWidth = 0.1f, destHeight = 0.1f),
+                cutout("2", destX = 0.1f, destY = 0.1f, destWidth = 0.3f, destHeight = 0.2f),
             )
-        val geom =
-            clampCutoutResize(
-                cutoutId = "1",
-                handle = ResizeHandle.TOP_LEFT,
-                originalX = 0.2f,
-                originalY = 0.4f,
-                originalWidth = 0.1f,
-                originalHeight = 0.1f,
-                targetX = 0.05f,
-                targetY = 0.25f,
-                targetWidth = 0.25f,
-                targetHeight = 0.25f,
-                allCutouts = allCutouts,
-            )
-        assertEquals(0.3f, geom.y, EPS) // clamped to bottom edge of a
-        assertEquals(0.25f, geom.w, EPS) // width remains 0.25f (x is 0.05f, not clamped)
+        assertCutoutResize(
+            ResizeHandle.TOP_LEFT,
+            0.2f,
+            0.4f,
+            0.1f,
+            0.1f,
+            0.05f,
+            0.25f,
+            0.25f,
+            0.25f,
+            allCutouts,
+            expectedY = 0.3f,
+            expectedW = 0.25f,
+        )
     }
 
     @Test
     fun `clampCutoutResize clamps top-left drag past corner without snapping back`() {
         val allCutouts =
             listOf(
-                ScreenCutout(
-                    "1",
-                    destX = 0.35f,
-                    destY = 0.42f,
-                    destWidth = 0.35f,
-                    destHeight = 0.23f,
-                    srcX = 0f,
-                    srcY = 0f,
-                    srcWidth = 1f,
-                    srcHeight = 1f,
-                ), // Right cutout (b) with prev state
-                ScreenCutout(
-                    "2",
-                    destX = 0.2f,
-                    destY = 0.2f,
-                    destWidth = 0.2f,
-                    destHeight = 0.2f,
-                    srcX = 0f,
-                    srcY = 0f,
-                    srcWidth = 1f,
-                    srcHeight = 1f,
-                ), // Left cutout (a)
+                cutout("1", destX = 0.35f, destY = 0.42f, destWidth = 0.35f, destHeight = 0.23f),
+                cutout("2", destX = 0.2f, destY = 0.2f, destWidth = 0.2f, destHeight = 0.2f),
             )
-        val geom =
-            clampCutoutResize(
-                cutoutId = "1",
-                handle = ResizeHandle.TOP_LEFT,
-                originalX = 0.5f,
-                originalY = 0.45f,
-                originalWidth = 0.2f,
-                originalHeight = 0.2f,
-                targetX = 0.35f,
-                targetY = 0.34f,
-                targetWidth = 0.35f,
-                targetHeight = 0.31f,
-                allCutouts = allCutouts,
-            )
-        assertEquals(0.35f, geom.x, EPS)
-        assertEquals(0.4f, geom.y, EPS)
+        assertCutoutResize(
+            ResizeHandle.TOP_LEFT,
+            0.5f,
+            0.45f,
+            0.2f,
+            0.2f,
+            0.35f,
+            0.34f,
+            0.35f,
+            0.31f,
+            allCutouts,
+            expectedX = 0.35f,
+            expectedY = 0.4f,
+        )
     }
 
     @Test
     fun `clampCutoutResize clamps top-left drag past corner without snapping back when starting adjacent`() {
         val allCutouts =
             listOf(
-                ScreenCutout(
-                    "1",
-                    destX = 0.35f,
-                    destY = 0.42f,
-                    destWidth = 0.35f,
-                    destHeight = 0.23f,
-                    srcX = 0f,
-                    srcY = 0f,
-                    srcWidth = 1f,
-                    srcHeight = 1f,
-                ), // prev state
-                ScreenCutout(
-                    "2",
-                    destX = 0.2f,
-                    destY = 0.2f,
-                    destWidth = 0.2f,
-                    destHeight = 0.2f,
-                    srcX = 0f,
-                    srcY = 0f,
-                    srcWidth = 1f,
-                    srcHeight = 1f,
-                ), // Left cutout
+                cutout("1", destX = 0.35f, destY = 0.42f, destWidth = 0.35f, destHeight = 0.23f),
+                cutout("2", destX = 0.2f, destY = 0.2f, destWidth = 0.2f, destHeight = 0.2f),
             )
-        val geom =
-            clampCutoutResize(
-                cutoutId = "1",
-                handle = ResizeHandle.TOP_LEFT,
-                originalX = 0.40f,
-                originalY = 0.45f, // Starts adjacent horizontally
-                originalWidth = 0.20f,
-                originalHeight = 0.20f,
-                targetX = 0.35f,
-                targetY = 0.34f,
-                targetWidth = 0.25f,
-                targetHeight = 0.31f,
-                allCutouts = allCutouts,
-            )
-        assertEquals(0.35f, geom.x, EPS)
-        assertEquals(0.40f, geom.y, EPS)
+        assertCutoutResize(
+            ResizeHandle.TOP_LEFT,
+            0.40f,
+            0.45f,
+            0.20f,
+            0.20f,
+            0.35f,
+            0.34f,
+            0.25f,
+            0.31f,
+            allCutouts,
+            expectedX = 0.35f,
+            expectedY = 0.40f,
+        )
     }
 
     @Test
     fun `clampCutoutResize clamps top-right drag against multiple cutouts correctly`() {
         val allCutouts =
             listOf(
-                ScreenCutout(
-                    "1",
-                    destX = 0.35f,
-                    destY = 0.42f,
-                    destWidth = 0.30f,
-                    destHeight = 0.23f,
-                    srcX = 0f,
-                    srcY = 0f,
-                    srcWidth = 1f,
-                    srcHeight = 1f,
-                ), // prev state of C (right is 0.65)
-                ScreenCutout(
-                    "2",
-                    destX = 0.30f,
-                    destY = 0.20f,
-                    destWidth = 0.30f,
-                    destHeight = 0.20f,
-                    srcX = 0f,
-                    srcY = 0f,
-                    srcWidth = 1f,
-                    srcHeight = 1f,
-                ), // A (above, bottom is 0.40)
-                ScreenCutout(
-                    "3",
-                    destX = 0.65f,
-                    destY = 0.30f,
-                    destWidth = 0.20f,
-                    destHeight = 0.20f,
-                    srcX = 0f,
-                    srcY = 0f,
-                    srcWidth = 1f,
-                    srcHeight = 1f,
-                ), // B (right, left is 0.65)
+                cutout("1", destX = 0.35f, destY = 0.42f, destWidth = 0.30f, destHeight = 0.23f),
+                cutout("2", destX = 0.30f, destY = 0.20f, destWidth = 0.30f, destHeight = 0.20f),
+                cutout("3", destX = 0.65f, destY = 0.30f, destWidth = 0.20f, destHeight = 0.20f),
             )
-        val geom =
-            clampCutoutResize(
-                cutoutId = "1",
-                handle = ResizeHandle.TOP_RIGHT,
-                originalX = 0.35f,
-                originalY = 0.42f,
-                originalWidth = 0.30f,
-                originalHeight = 0.23f,
-                targetX = 0.35f,
-                targetY = 0.30f,
-                targetWidth = 0.32f,
-                targetHeight = 0.35f, // tr = 0.67, ty = 0.30
-                allCutouts = allCutouts,
-            )
-        assertEquals(0.35f, geom.x, EPS)
-        assertEquals(0.40f, geom.y, EPS) // clamped to A's bottom (0.40)
-        assertEquals(0.30f, geom.w, EPS) // clamped to B's left (0.65), width is 0.65 - 0.35 = 0.30
+        assertCutoutResize(
+            ResizeHandle.TOP_RIGHT,
+            0.35f,
+            0.42f,
+            0.30f,
+            0.23f,
+            0.35f,
+            0.30f,
+            0.32f,
+            0.35f,
+            allCutouts,
+            expectedX = 0.35f,
+            expectedY = 0.40f,
+            expectedW = 0.30f,
+        )
     }
 
     @Test
@@ -1180,31 +887,18 @@ class MirrorCoordinateTransformTest {
 
         // Step 1: Expand right border (+1 px)
         val step1 =
-            calculateResizedBounds(
-                normX = initialX,
-                normY = initialY,
-                normW = initialW,
-                normH = initialH,
-                screenWidth = screenW,
-                screenHeight = screenH,
-                dx = 1,
-                dy = 0,
-                hToggle = 0,
-                vToggle = 0,
-            )
+            resizeBounds(normX = initialX, normY = initialY, normW = initialW, normH = initialH, dx = 1, dy = 0, hToggle = 0, vToggle = 0)
         assertEquals(0.100f, step1.x, EPS) // Left unchanged
         assertEquals(0.201f, step1.width, EPS) // Width +1
         assertEquals(1, step1.hToggle)
 
         // Step 2: Expand left border (+1 px)
         val step2 =
-            calculateResizedBounds(
+            resizeBounds(
                 normX = step1.x,
                 normY = step1.y,
                 normW = step1.width,
                 normH = step1.height,
-                screenWidth = screenW,
-                screenHeight = screenH,
                 dx = 1,
                 dy = 0,
                 hToggle = step1.hToggle,
@@ -1230,31 +924,18 @@ class MirrorCoordinateTransformTest {
 
         // Step 1: Shrink left border (-1 px)
         val step1 =
-            calculateResizedBounds(
-                normX = startX,
-                normY = startY,
-                normW = startW,
-                normH = startH,
-                screenWidth = screenW,
-                screenHeight = screenH,
-                dx = -1,
-                dy = 0,
-                hToggle = 0,
-                vToggle = 0,
-            )
+            resizeBounds(normX = startX, normY = startY, normW = startW, normH = startH, dx = -1, dy = 0, hToggle = 0, vToggle = 0)
         assertEquals(0.100f, step1.x, EPS) // Left shifted +1 px
         assertEquals(0.201f, step1.width, EPS) // Width -1 px
         assertEquals(1, step1.hToggle)
 
         // Step 2: Shrink right border (-1 px)
         val step2 =
-            calculateResizedBounds(
+            resizeBounds(
                 normX = step1.x,
                 normY = step1.y,
                 normW = step1.width,
                 normH = step1.height,
-                screenWidth = screenW,
-                screenHeight = screenH,
                 dx = -1,
                 dy = 0,
                 hToggle = step1.hToggle,
@@ -1276,31 +957,18 @@ class MirrorCoordinateTransformTest {
 
         // Step 1: Direction UP (dy = -1) -> Top border expands (-1 px top)
         val step1 =
-            calculateResizedBounds(
-                normX = initialX,
-                normY = initialY,
-                normW = initialW,
-                normH = initialH,
-                screenWidth = screenW,
-                screenHeight = screenH,
-                dx = 0,
-                dy = -1,
-                hToggle = 0,
-                vToggle = 0,
-            )
+            resizeBounds(normX = initialX, normY = initialY, normW = initialW, normH = initialH, dx = 0, dy = -1, hToggle = 0, vToggle = 0)
         assertEquals(0.099f, step1.y, EPS) // Top shifted -1 px
         assertEquals(0.201f, step1.height, EPS) // Height +1 px
         assertEquals(1, step1.vToggle)
 
         // Step 2: Direction UP (dy = -1) -> Bottom border expands (+1 px bottom)
         val step2 =
-            calculateResizedBounds(
+            resizeBounds(
                 normX = step1.x,
                 normY = step1.y,
                 normW = step1.width,
                 normH = step1.height,
-                screenWidth = screenW,
-                screenHeight = screenH,
                 dx = 0,
                 dy = -1,
                 hToggle = step1.hToggle,
@@ -1326,31 +994,18 @@ class MirrorCoordinateTransformTest {
 
         // Step 1: Direction DOWN (dy = 1) -> Bottom border shrinks (-1 px bottom)
         val step1 =
-            calculateResizedBounds(
-                normX = startX,
-                normY = startY,
-                normW = startW,
-                normH = startH,
-                screenWidth = screenW,
-                screenHeight = screenH,
-                dx = 0,
-                dy = 1,
-                hToggle = 0,
-                vToggle = 0,
-            )
+            resizeBounds(normX = startX, normY = startY, normW = startW, normH = startH, dx = 0, dy = 1, hToggle = 0, vToggle = 0)
         assertEquals(0.099f, step1.y, EPS) // Top unchanged
         assertEquals(0.201f, step1.height, EPS) // Height -1 px
         assertEquals(1, step1.vToggle)
 
         // Step 2: Direction DOWN (dy = 1) -> Top border shrinks (-1 px top)
         val step2 =
-            calculateResizedBounds(
+            resizeBounds(
                 normX = step1.x,
                 normY = step1.y,
                 normW = step1.width,
                 normH = step1.height,
-                screenWidth = screenW,
-                screenHeight = screenH,
                 dx = 0,
                 dy = 1,
                 hToggle = step1.hToggle,
@@ -1405,18 +1060,7 @@ class MirrorCoordinateTransformTest {
     @Test
     fun `isCutoutGeometryValid detects overlaps, boundaries and minimum sizes`() {
         val obstacle =
-            ScreenCutout(
-                id = "obs",
-                name = "Obs",
-                destX = 0.300f,
-                destY = 0.100f,
-                destWidth = 0.200f,
-                destHeight = 0.200f,
-                srcX = 0f,
-                srcY = 0f,
-                srcWidth = 1f,
-                srcHeight = 1f,
-            )
+            cutout(id = "obs", name = "Obs", destX = 0.300f, destY = 0.100f, destWidth = 0.200f, destHeight = 0.200f)
         val others = listOf(obstacle)
 
         // Non-overlapping rectangle
@@ -1441,18 +1085,7 @@ class MirrorCoordinateTransformTest {
         // Cutout A: X=0.080, W=0.200 (Right edge at 0.280)
         // Obstacle right: X=0.280, W=0.200
         val rightObstacle =
-            ScreenCutout(
-                id = "right",
-                name = "Right",
-                destX = 0.280f,
-                destY = 0.100f,
-                destWidth = 0.200f,
-                destHeight = 0.200f,
-                srcX = 0f,
-                srcY = 0f,
-                srcWidth = 1f,
-                srcHeight = 1f,
-            )
+            cutout(id = "right", name = "Right", destX = 0.280f, destY = 0.100f, destWidth = 0.200f, destHeight = 0.200f)
 
         // Expanding right border (hToggle=0) hits obstacle -> falls back to expanding left border
         val expandedLeftFallback =
@@ -1475,31 +1108,9 @@ class MirrorCoordinateTransformTest {
 
         // Obstacle on both left (X=0) and right (X=0.200)
         val leftObstacle =
-            ScreenCutout(
-                id = "left",
-                name = "Left",
-                destX = 0f,
-                destY = 0.100f,
-                destWidth = 0.100f,
-                destHeight = 0.200f,
-                srcX = 0f,
-                srcY = 0f,
-                srcWidth = 1f,
-                srcHeight = 1f,
-            )
+            cutout(id = "left", name = "Left", destX = 0f, destY = 0.100f, destWidth = 0.100f, destHeight = 0.200f)
         val rightObs2 =
-            ScreenCutout(
-                id = "right",
-                name = "Right",
-                destX = 0.300f,
-                destY = 0.100f,
-                destWidth = 0.200f,
-                destHeight = 0.200f,
-                srcX = 0f,
-                srcY = 0f,
-                srcWidth = 1f,
-                srcHeight = 1f,
-            )
+            cutout(id = "right", name = "Right", destX = 0.300f, destY = 0.100f, destWidth = 0.200f, destHeight = 0.200f)
 
         // Cutout bounded tightly: X=0.100, W=0.200 (from 0.100 to 0.300)
         val trapped =
@@ -1522,18 +1133,7 @@ class MirrorCoordinateTransformTest {
 
         // Vertical obstacle above (Y=0, H=0.100) -> Cutout at Y=0.100, H=0.200 (Y range 0.100 - 0.300)
         val topObstacle =
-            ScreenCutout(
-                id = "top",
-                name = "Top",
-                destX = 0.100f,
-                destY = 0f,
-                destWidth = 0.200f,
-                destHeight = 0.100f,
-                srcX = 0f,
-                srcY = 0f,
-                srcWidth = 1f,
-                srcHeight = 1f,
-            )
+            cutout(id = "top", name = "Top", destX = 0.100f, destY = 0f, destWidth = 0.200f, destHeight = 0.100f)
         val expandBottomFallback =
             calculateResizedBounds(
                 normX = 0.100f,
@@ -1555,114 +1155,82 @@ class MirrorCoordinateTransformTest {
 
     @Test
     fun `clampCutoutResize edge handles move only respective edge and clamp against collisions`() {
-        val obstacleTop =
-            ScreenCutout(
-                id = "obs_top",
-                name = "Obs Top",
-                destX = 0.2f,
-                destY = 0f,
-                destWidth = 0.4f,
-                destHeight = 0.2f,
-                srcX = 0f,
-                srcY = 0f,
-                srcWidth = 1f,
-                srcHeight = 1f,
-            )
-        val obstacleRight =
-            ScreenCutout(
-                id = "obs_right",
-                name = "Obs Right",
-                destX = 0.7f,
-                destY = 0.2f,
-                destWidth = 0.2f,
-                destHeight = 0.4f,
-                srcX = 0f,
-                srcY = 0f,
-                srcWidth = 1f,
-                srcHeight = 1f,
-            )
+        val obstacleTop = cutout(id = "obs_top", name = "Obs Top", destX = 0.2f, destY = 0f, destWidth = 0.4f, destHeight = 0.2f)
+        val obstacleRight = cutout(id = "obs_right", name = "Obs Right", destX = 0.7f, destY = 0.2f, destWidth = 0.2f, destHeight = 0.4f)
         val allCutouts = listOf(obstacleTop, obstacleRight)
 
-        // Initial cutout: X=0.2, Y=0.3, W=0.3, H=0.3
-        // 1. TOP Handle: drag upward towards Y=0.1. Should clamp against obstacleTop bottom (0.2)
-        val topGeom =
-            clampCutoutResize(
-                cutoutId = "test",
-                handle = ResizeHandle.TOP,
-                originalX = 0.2f,
-                originalY = 0.3f,
-                originalWidth = 0.3f,
-                originalHeight = 0.3f,
-                targetX = 0.2f,
-                targetY = 0.1f, // Wants to reach 0.1, but obstacleTop is at [0.0 - 0.2]
-                targetWidth = 0.3f,
-                targetHeight = 0.5f,
-                allCutouts = allCutouts,
-            )
-        assertEquals(0.2f, topGeom.x, EPS)
-        assertEquals(0.2f, topGeom.y, EPS) // Clamped to obstacle bottom (0.2)
-        assertEquals(0.3f, topGeom.w, EPS) // Width unchanged
-        assertEquals(0.4f, topGeom.h, EPS) // Height from 0.2 to 0.6 = 0.4
-
-        // 2. BOTTOM Handle: drag downward towards Y+H = 0.8
-        val bottomGeom =
-            clampCutoutResize(
-                cutoutId = "test",
-                handle = ResizeHandle.BOTTOM,
-                originalX = 0.2f,
-                originalY = 0.3f,
-                originalWidth = 0.3f,
-                originalHeight = 0.3f,
-                targetX = 0.2f,
-                targetY = 0.3f,
-                targetWidth = 0.3f,
-                targetHeight = 0.5f, // Target bottom = 0.3 + 0.5 = 0.8
-                allCutouts = allCutouts,
-            )
-        assertEquals(0.2f, bottomGeom.x, EPS)
-        assertEquals(0.3f, bottomGeom.y, EPS)
-        assertEquals(0.3f, bottomGeom.w, EPS)
-        assertEquals(0.5f, bottomGeom.h, EPS)
-
-        // 3. LEFT Handle: drag leftward towards X=0.05
-        val leftGeom =
-            clampCutoutResize(
-                cutoutId = "test",
-                handle = ResizeHandle.LEFT,
-                originalX = 0.2f,
-                originalY = 0.3f,
-                originalWidth = 0.3f,
-                originalHeight = 0.3f,
-                targetX = 0.05f,
-                targetY = 0.3f,
-                targetWidth = 0.45f,
-                targetHeight = 0.3f,
-                allCutouts = allCutouts,
-            )
-        assertEquals(0.05f, leftGeom.x, EPS)
-        assertEquals(0.3f, leftGeom.y, EPS)
-        assertEquals(0.45f, leftGeom.w, EPS) // 0.5 - 0.05 = 0.45
-        assertEquals(0.3f, leftGeom.h, EPS)
-
-        // 4. RIGHT Handle: drag rightward towards X+W = 0.85. Should clamp against obstacleRight left (0.7)
-        val rightGeom =
-            clampCutoutResize(
-                cutoutId = "test",
-                handle = ResizeHandle.RIGHT,
-                originalX = 0.2f,
-                originalY = 0.3f,
-                originalWidth = 0.3f,
-                originalHeight = 0.3f,
-                targetX = 0.2f,
-                targetY = 0.3f,
-                targetWidth = 0.65f, // Wants right to be 0.85, but obstacleRight starts at 0.7
-                targetHeight = 0.3f,
-                allCutouts = allCutouts,
-            )
-        assertEquals(0.2f, rightGeom.x, EPS)
-        assertEquals(0.3f, rightGeom.y, EPS)
-        assertEquals(0.5f, rightGeom.w, EPS) // Clamped to 0.7 - 0.2 = 0.5
-        assertEquals(0.3f, rightGeom.h, EPS)
+        // 1. TOP Handle
+        assertCutoutResize(
+            ResizeHandle.TOP,
+            0.2f,
+            0.3f,
+            0.3f,
+            0.3f,
+            0.2f,
+            0.1f,
+            0.3f,
+            0.5f,
+            allCutouts,
+            expectedX = 0.2f,
+            expectedY = 0.2f,
+            expectedW = 0.3f,
+            expectedH = 0.4f,
+            cutoutId = "test",
+        )
+        // 2. BOTTOM Handle
+        assertCutoutResize(
+            ResizeHandle.BOTTOM,
+            0.2f,
+            0.3f,
+            0.3f,
+            0.3f,
+            0.2f,
+            0.3f,
+            0.3f,
+            0.5f,
+            allCutouts,
+            expectedX = 0.2f,
+            expectedY = 0.3f,
+            expectedW = 0.3f,
+            expectedH = 0.5f,
+            cutoutId = "test",
+        )
+        // 3. LEFT Handle
+        assertCutoutResize(
+            ResizeHandle.LEFT,
+            0.2f,
+            0.3f,
+            0.3f,
+            0.3f,
+            0.05f,
+            0.3f,
+            0.45f,
+            0.3f,
+            allCutouts,
+            expectedX = 0.05f,
+            expectedY = 0.3f,
+            expectedW = 0.45f,
+            expectedH = 0.3f,
+            cutoutId = "test",
+        )
+        // 4. RIGHT Handle
+        assertCutoutResize(
+            ResizeHandle.RIGHT,
+            0.2f,
+            0.3f,
+            0.3f,
+            0.3f,
+            0.2f,
+            0.3f,
+            0.65f,
+            0.3f,
+            allCutouts,
+            expectedX = 0.2f,
+            expectedY = 0.3f,
+            expectedW = 0.5f,
+            expectedH = 0.3f,
+            cutoutId = "test",
+        )
     }
 
     @Test
@@ -1785,29 +1353,16 @@ class MirrorCoordinateTransformTest {
 
         // Initial cutout: X=0.200 (200px), Y=0.200 (200px), W=0.400 (400px), H=0.400 (400px)
         val resized10px =
-            calculateResizedBounds(
-                normX = 0.200f,
-                normY = 0.200f,
-                normW = 0.400f,
-                normH = 0.400f,
-                screenWidth = screenW,
-                screenHeight = screenH,
-                dx = 10,
-                dy = 0,
-                hToggle = 0,
-                vToggle = 0,
-            )
+            resizeBounds(normX = 0.200f, normY = 0.200f, normW = 0.400f, normH = 0.400f, dx = 10, dy = 0, hToggle = 0, vToggle = 0)
         // Expanded by exactly 10 pixels on width: 400px + 10px = 410px -> 0.410f
         assertEquals(0.410f, resized10px.width, EPS)
 
         val shrunk10px =
-            calculateResizedBounds(
+            resizeBounds(
                 normX = resized10px.x,
                 normY = resized10px.y,
                 normW = resized10px.width,
                 normH = resized10px.height,
-                screenWidth = screenW,
-                screenHeight = screenH,
                 dx = -10,
                 dy = 0,
                 hToggle = resized10px.hToggle,

@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.catalog
 
-import com.stormpanda.megingiard.math.floorMod
+import com.stormpanda.megingiard.math.nextItem
+import com.stormpanda.megingiard.math.prevItem
 
 /**
  * Tabs available in the Megingiard Game Focus Library view.
@@ -8,11 +9,11 @@ import com.stormpanda.megingiard.math.floorMod
 sealed class LibraryTab {
     abstract val id: String
 
-    object APPS : LibraryTab() {
+    data object APPS : LibraryTab() {
         override val id = "APPS"
     }
 
-    object GAMES : LibraryTab() {
+    data object GAMES : LibraryTab() {
         override val id = "GAMES"
     }
 
@@ -32,23 +33,7 @@ sealed class LibraryTab {
             is RomSystem -> apps.filter { it.isRom && it.systemId == this.systemId }
         }
 
-    /**
-     * Returns the previous tab in wrap-around order.
-     */
-    fun previous(tabs: List<LibraryTab>): LibraryTab {
-        val idx = tabs.indexOf(this)
-        if (idx == -1) return tabs.firstOrNull() ?: GAMES
-        val prevIdx = (idx - 1).floorMod(tabs.size)
-        return tabs[prevIdx]
-    }
+    fun previous(tabs: List<LibraryTab>): LibraryTab = tabs.prevItem(this)
 
-    /**
-     * Returns the next tab in wrap-around order.
-     */
-    fun next(tabs: List<LibraryTab>): LibraryTab {
-        val idx = tabs.indexOf(this)
-        if (idx == -1) return tabs.firstOrNull() ?: GAMES
-        val nextIdx = (idx + 1).floorMod(tabs.size)
-        return tabs[nextIdx]
-    }
+    fun next(tabs: List<LibraryTab>): LibraryTab = tabs.nextItem(this)
 }

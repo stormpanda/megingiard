@@ -13,13 +13,21 @@ import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
 class GamepadAdjustmentKeyEventTest {
-    private fun createKeyEvent(
-        action: Int,
+    private fun handleKey(
         keyCode: Int,
-    ): ComposeKeyEvent {
-        val nativeEvent = AndroidKeyEvent(action, keyCode)
-        return ComposeKeyEvent(nativeEvent)
-    }
+        action: Int = AndroidKeyEvent.ACTION_DOWN,
+        isAdjusting: Boolean = true,
+        onAdjustLeft: () -> Unit = {},
+        onAdjustRight: () -> Unit = {},
+        onDismissAdjustment: () -> Unit = {},
+    ): Boolean =
+        handleAdjustmentKeyEvent(
+            keyEvent = ComposeKeyEvent(AndroidKeyEvent(action, keyCode)),
+            isAdjusting = isAdjusting,
+            onAdjustLeft = onAdjustLeft,
+            onAdjustRight = onAdjustRight,
+            onDismissAdjustment = onDismissAdjustment,
+        )
 
     @Test
     fun `when not adjusting all keys return false`() {
@@ -27,10 +35,9 @@ class GamepadAdjustmentKeyEventTest {
         var rightCount = 0
         var dismissCount = 0
 
-        val downA = createKeyEvent(AndroidKeyEvent.ACTION_DOWN, AndroidKeyEvent.KEYCODE_BUTTON_A)
         val handled =
-            handleAdjustmentKeyEvent(
-                keyEvent = downA,
+            handleKey(
+                keyCode = AndroidKeyEvent.KEYCODE_BUTTON_A,
                 isAdjusting = false,
                 onAdjustLeft = { leftCount++ },
                 onAdjustRight = { rightCount++ },
@@ -49,31 +56,25 @@ class GamepadAdjustmentKeyEventTest {
         var rightCount = 0
         var dismissCount = 0
 
-        val downLeft = createKeyEvent(AndroidKeyEvent.ACTION_DOWN, AndroidKeyEvent.KEYCODE_DPAD_LEFT)
         val handledLeft =
-            handleAdjustmentKeyEvent(
-                keyEvent = downLeft,
-                isAdjusting = true,
+            handleKey(
+                keyCode = AndroidKeyEvent.KEYCODE_DPAD_LEFT,
                 onAdjustLeft = { leftCount++ },
                 onAdjustRight = { rightCount++ },
                 onDismissAdjustment = { dismissCount++ },
             )
-
         assertTrue(handledLeft)
         assertEquals(1, leftCount)
         assertEquals(0, rightCount)
         assertEquals(0, dismissCount)
 
-        val downRight = createKeyEvent(AndroidKeyEvent.ACTION_DOWN, AndroidKeyEvent.KEYCODE_DPAD_RIGHT)
         val handledRight =
-            handleAdjustmentKeyEvent(
-                keyEvent = downRight,
-                isAdjusting = true,
+            handleKey(
+                keyCode = AndroidKeyEvent.KEYCODE_DPAD_RIGHT,
                 onAdjustLeft = { leftCount++ },
                 onAdjustRight = { rightCount++ },
                 onDismissAdjustment = { dismissCount++ },
             )
-
         assertTrue(handledRight)
         assertEquals(1, leftCount)
         assertEquals(1, rightCount)
@@ -83,123 +84,128 @@ class GamepadAdjustmentKeyEventTest {
     @Test
     fun `when adjusting Button A dismisses adjustment mode and consumes event`() {
         var dismissCount = 0
-
-        val downA = createKeyEvent(AndroidKeyEvent.ACTION_DOWN, AndroidKeyEvent.KEYCODE_BUTTON_A)
-        val handledDownA =
-            handleAdjustmentKeyEvent(
-                keyEvent = downA,
-                isAdjusting = true,
-                onAdjustLeft = {},
-                onAdjustRight = {},
-                onDismissAdjustment = { dismissCount++ },
-            )
-
-        assertTrue(handledDownA)
+        assertTrue(handleKey(AndroidKeyEvent.KEYCODE_BUTTON_A, onDismissAdjustment = { dismissCount++ }))
         assertEquals(1, dismissCount)
 
-        val upA = createKeyEvent(AndroidKeyEvent.ACTION_UP, AndroidKeyEvent.KEYCODE_BUTTON_A)
-        val handledUpA =
-            handleAdjustmentKeyEvent(
-                keyEvent = upA,
-                isAdjusting = true,
-                onAdjustLeft = {},
-                onAdjustRight = {},
-                onDismissAdjustment = {},
-            )
-
-        assertTrue(handledUpA)
+        assertTrue(handleKey(AndroidKeyEvent.KEYCODE_BUTTON_A, action = AndroidKeyEvent.ACTION_UP))
     }
 
     @Test
     fun `when adjusting Dpad Center and Enter dismiss adjustment mode`() {
         var dismissCount = 0
-
-        val downCenter = createKeyEvent(AndroidKeyEvent.ACTION_DOWN, AndroidKeyEvent.KEYCODE_DPAD_CENTER)
-        val handledCenter =
-            handleAdjustmentKeyEvent(
-                keyEvent = downCenter,
-                isAdjusting = true,
-                onAdjustLeft = {},
-                onAdjustRight = {},
-                onDismissAdjustment = { dismissCount++ },
-            )
-
-        assertTrue(handledCenter)
+        assertTrue(handleKey(AndroidKeyEvent.KEYCODE_DPAD_CENTER, onDismissAdjustment = { dismissCount++ }))
         assertEquals(1, dismissCount)
 
-        val downEnter = createKeyEvent(AndroidKeyEvent.ACTION_DOWN, AndroidKeyEvent.KEYCODE_ENTER)
-        val handledEnter =
-            handleAdjustmentKeyEvent(
-                keyEvent = downEnter,
-                isAdjusting = true,
-                onAdjustLeft = {},
-                onAdjustRight = {},
-                onDismissAdjustment = { dismissCount++ },
-            )
-
-        assertTrue(handledEnter)
+        assertTrue(handleKey(AndroidKeyEvent.KEYCODE_ENTER, onDismissAdjustment = { dismissCount++ }))
         assertEquals(2, dismissCount)
     }
 
     @Test
     fun `when adjusting Button B and Back dismiss adjustment mode`() {
         var dismissCount = 0
-
-        val downB = createKeyEvent(AndroidKeyEvent.ACTION_DOWN, AndroidKeyEvent.KEYCODE_BUTTON_B)
-        val handledB =
-            handleAdjustmentKeyEvent(
-                keyEvent = downB,
-                isAdjusting = true,
-                onAdjustLeft = {},
-                onAdjustRight = {},
-                onDismissAdjustment = { dismissCount++ },
-            )
-
-        assertTrue(handledB)
+        assertTrue(handleKey(AndroidKeyEvent.KEYCODE_BUTTON_B, onDismissAdjustment = { dismissCount++ }))
         assertEquals(1, dismissCount)
 
-        val downBack = createKeyEvent(AndroidKeyEvent.ACTION_DOWN, AndroidKeyEvent.KEYCODE_BACK)
-        val handledBack =
-            handleAdjustmentKeyEvent(
-                keyEvent = downBack,
-                isAdjusting = true,
-                onAdjustLeft = {},
-                onAdjustRight = {},
-                onDismissAdjustment = { dismissCount++ },
-            )
-
-        assertTrue(handledBack)
+        assertTrue(handleKey(AndroidKeyEvent.KEYCODE_BACK, onDismissAdjustment = { dismissCount++ }))
         assertEquals(2, dismissCount)
     }
 
     @Test
-    fun `when adjusting Dpad Up and Down dismiss adjustment mode and return false for focus traversal`() {
+    fun `handle2DAdjustmentKeyEvent tests when not adjusting`() {
+        var startCount = 0
+        val handled =
+            handle2DAdjustmentKeyEvent(
+                keyEvent = ComposeKeyEvent(AndroidKeyEvent(AndroidKeyEvent.ACTION_DOWN, AndroidKeyEvent.KEYCODE_DPAD_UP)),
+                isAdjusting = false,
+                onStartAdjusting = { _, _, _ -> startCount++ },
+                onStopAdjusting = {},
+                onDismissAdjustment = {},
+            )
+        assertFalse(handled)
+        assertEquals(0, startCount)
+    }
+
+    @Test
+    fun `handle2DAdjustmentKeyEvent directional and dismiss key handling`() {
+        var startKeyCode = 0
+        var dirX = 0
+        var dirY = 0
+        var stopKeyCode = 0
         var dismissCount = 0
 
-        val downUp = createKeyEvent(AndroidKeyEvent.ACTION_DOWN, AndroidKeyEvent.KEYCODE_DPAD_UP)
-        val handledUp =
-            handleAdjustmentKeyEvent(
-                keyEvent = downUp,
+        fun test2D(
+            keyCode: Int,
+            action: Int = AndroidKeyEvent.ACTION_DOWN,
+            onModifierKeyDown: ((Int) -> Boolean)? = null,
+            onModifierKeyUp: ((Int) -> Boolean)? = null,
+        ): Boolean =
+            handle2DAdjustmentKeyEvent(
+                keyEvent = ComposeKeyEvent(AndroidKeyEvent(action, keyCode)),
                 isAdjusting = true,
-                onAdjustLeft = {},
-                onAdjustRight = {},
+                onStartAdjusting = { code, dx, dy ->
+                    startKeyCode = code
+                    dirX = dx
+                    dirY = dy
+                },
+                onStopAdjusting = { code -> stopKeyCode = code },
                 onDismissAdjustment = { dismissCount++ },
+                onModifierKeyDown = onModifierKeyDown,
+                onModifierKeyUp = onModifierKeyUp,
             )
 
-        assertFalse(handledUp)
+        // D-pad UP
+        assertTrue(test2D(AndroidKeyEvent.KEYCODE_DPAD_UP))
+        assertEquals(AndroidKeyEvent.KEYCODE_DPAD_UP, startKeyCode)
+        assertEquals(0, dirX)
+        assertEquals(-1, dirY)
+
+        // D-pad DOWN
+        assertTrue(test2D(AndroidKeyEvent.KEYCODE_DPAD_DOWN))
+        assertEquals(0, dirX)
+        assertEquals(1, dirY)
+
+        // D-pad LEFT
+        assertTrue(test2D(AndroidKeyEvent.KEYCODE_DPAD_LEFT))
+        assertEquals(-1, dirX)
+        assertEquals(0, dirY)
+
+        // D-pad RIGHT
+        assertTrue(test2D(AndroidKeyEvent.KEYCODE_DPAD_RIGHT))
+        assertEquals(1, dirX)
+        assertEquals(0, dirY)
+
+        // KeyUp on D-pad RIGHT
+        assertTrue(test2D(AndroidKeyEvent.KEYCODE_DPAD_RIGHT, action = AndroidKeyEvent.ACTION_UP))
+        assertEquals(AndroidKeyEvent.KEYCODE_DPAD_RIGHT, stopKeyCode)
+
+        // Dismiss via BUTTON_B
+        assertTrue(test2D(AndroidKeyEvent.KEYCODE_BUTTON_B))
         assertEquals(1, dismissCount)
 
-        val downDown = createKeyEvent(AndroidKeyEvent.ACTION_DOWN, AndroidKeyEvent.KEYCODE_DPAD_DOWN)
-        val handledDown =
-            handleAdjustmentKeyEvent(
-                keyEvent = downDown,
-                isAdjusting = true,
-                onAdjustLeft = {},
-                onAdjustRight = {},
-                onDismissAdjustment = { dismissCount++ },
-            )
+        // Modifiers
+        var l2Down = false
+        var l2Up = false
+        assertTrue(
+            test2D(
+                AndroidKeyEvent.KEYCODE_BUTTON_L2,
+                onModifierKeyDown = {
+                    l2Down = true
+                    true
+                },
+            ),
+        )
+        assertTrue(l2Down)
 
-        assertFalse(handledDown)
-        assertEquals(2, dismissCount)
+        assertTrue(
+            test2D(
+                AndroidKeyEvent.KEYCODE_BUTTON_L2,
+                action = AndroidKeyEvent.ACTION_UP,
+                onModifierKeyUp = {
+                    l2Up = true
+                    true
+                },
+            ),
+        )
+        assertTrue(l2Up)
     }
 }

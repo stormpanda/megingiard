@@ -52,6 +52,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -67,12 +68,12 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.blockPointerEvents
+import com.stormpanda.megingiard.ui.isBackKeyDown
 import com.stormpanda.megingiard.ui.rememberBezelBrush
 import kotlinx.coroutines.delay
 
 private const val TAG = "TouchRecordingSheet"
 
-private const val TRS_PULSE_ANIM_MS = 900
 private const val TRS_TIMER_TICK_MS = 50L
 private const val TRS_RADAR_ASPECT_RATIO = 16f / 9f
 private const val TRS_RADAR_CROSSHAIR_ALPHA = 0.25f
@@ -82,6 +83,11 @@ private const val TRS_CONTAINER_MAX_WIDTH_DP = 560
 private val TRS_CONTAINER_RADIUS = 20.dp
 private val TRS_BUTTON_RADIUS = 12.dp
 private val TRS_PILL_RADIUS = 8.dp
+
+private val TRS_CONTAINER_SHAPE = RoundedCornerShape(TRS_CONTAINER_RADIUS)
+private val TRS_BUTTON_SHAPE = RoundedCornerShape(TRS_BUTTON_RADIUS)
+private val TRS_PILL_SHAPE = RoundedCornerShape(TRS_PILL_RADIUS)
+
 private val TRS_CONTAINER_PADDING = 12.dp
 private val TRS_SCREEN_PADDING_H = 16.dp
 private val TRS_SCREEN_PADDING_V = 8.dp
@@ -123,14 +129,6 @@ private fun pointerColor(
     } else {
         TRS_POINTER_PALETTE[(slot - 1) % TRS_POINTER_PALETTE.size]
     }
-
-private fun formatElapsedTime(elapsedMs: Long): String {
-    val totalSec = elapsedMs / 1000
-    val min = totalSec / 60
-    val sec = totalSec % 60
-    val tenth = (elapsedMs % 1000) / 100
-    return "%02d:%02d.%01d".format(min, sec, tenth)
-}
 
 /**
  * Companion HUD rendered on Display 4 (Secondary Display) during a touch macro recording session.
@@ -178,25 +176,20 @@ internal fun TouchRecordingSheet(
                 .fillMaxSize()
                 .background(colors.appBackground)
                 .onPreviewKeyEvent { keyEvent ->
-                    if (keyEvent.type == KeyEventType.KeyDown) {
-                        when (keyEvent.nativeKeyEvent.keyCode) {
-                            KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> {
-                                onCancel()
-                                true
-                            }
-
-                            KeyEvent.KEYCODE_BUTTON_START, KeyEvent.KEYCODE_BUTTON_A -> {
-                                if (mode == TouchRecordingMode.GESTURE) {
-                                    onStop()
-                                    true
-                                } else {
-                                    false
-                                }
-                            }
-
-                            else -> {
-                                false
-                            }
+                    if (keyEvent.isBackKeyDown()) {
+                        onCancel()
+                        true
+                    } else if (keyEvent.type == KeyEventType.KeyDown &&
+                        (
+                            keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BUTTON_START ||
+                                keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BUTTON_A
+                        )
+                    ) {
+                        if (mode == TouchRecordingMode.GESTURE) {
+                            onStop()
+                            true
+                        } else {
+                            false
                         }
                     } else {
                         false
@@ -219,12 +212,12 @@ internal fun TouchRecordingSheet(
                     .widthIn(max = TRS_CONTAINER_MAX_WIDTH_DP.dp)
                     .fillMaxWidth()
                     .padding(horizontal = TRS_SCREEN_PADDING_H, vertical = TRS_SCREEN_PADDING_V)
-                    .clip(RoundedCornerShape(TRS_CONTAINER_RADIUS))
+                    .clip(TRS_CONTAINER_SHAPE)
                     .background(colors.surface)
                     .border(
                         width = 1.dp,
                         brush = bezelBrush,
-                        shape = RoundedCornerShape(TRS_CONTAINER_RADIUS),
+                        shape = TRS_CONTAINER_SHAPE,
                     ).padding(TRS_CONTAINER_PADDING),
         ) {
             Column(
@@ -280,9 +273,9 @@ internal fun TouchRecordingSheet(
                         modifier =
                             Modifier
                                 .height(TRS_BADGE_HEIGHT)
-                                .clip(RoundedCornerShape(TRS_PILL_RADIUS))
+                                .clip(TRS_PILL_SHAPE)
                                 .background(colors.accent.copy(alpha = 0.15f))
-                                .border(width = 1.dp, color = colors.accent, shape = RoundedCornerShape(TRS_PILL_RADIUS))
+                                .border(width = 1.dp, color = colors.accent, shape = TRS_PILL_SHAPE)
                                 .padding(horizontal = TRS_SPACING_L),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -310,9 +303,9 @@ internal fun TouchRecordingSheet(
                         modifier =
                             Modifier
                                 .height(TRS_BADGE_HEIGHT)
-                                .clip(RoundedCornerShape(TRS_PILL_RADIUS))
+                                .clip(TRS_PILL_SHAPE)
                                 .background(colors.surfaceVariant)
-                                .border(width = 1.dp, color = colors.divider, shape = RoundedCornerShape(TRS_PILL_RADIUS))
+                                .border(width = 1.dp, color = colors.divider, shape = TRS_PILL_SHAPE)
                                 .padding(horizontal = TRS_SPACING_L),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -330,9 +323,9 @@ internal fun TouchRecordingSheet(
                         modifier =
                             Modifier
                                 .height(TRS_BADGE_HEIGHT)
-                                .clip(RoundedCornerShape(TRS_PILL_RADIUS))
+                                .clip(TRS_PILL_SHAPE)
                                 .background(colors.surfaceVariant)
-                                .border(width = 1.dp, color = colors.divider, shape = RoundedCornerShape(TRS_PILL_RADIUS))
+                                .border(width = 1.dp, color = colors.divider, shape = TRS_PILL_SHAPE)
                                 .padding(horizontal = TRS_SPACING_L),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -425,7 +418,7 @@ internal fun TouchRecordingSheet(
                 ) {
                     OutlinedButton(
                         onClick = onCancel,
-                        shape = RoundedCornerShape(TRS_BUTTON_RADIUS),
+                        shape = TRS_BUTTON_SHAPE,
                         modifier = Modifier.height(TRS_BUTTON_HEIGHT),
                         contentPadding = PaddingValues(horizontal = TRS_BUTTON_PADDING_H, vertical = 0.dp),
                     ) {
@@ -447,7 +440,7 @@ internal fun TouchRecordingSheet(
                         Button(
                             onClick = onStop,
                             colors = ButtonDefaults.buttonColors(containerColor = colors.error),
-                            shape = RoundedCornerShape(TRS_BUTTON_RADIUS),
+                            shape = TRS_BUTTON_SHAPE,
                             modifier = Modifier.height(TRS_BUTTON_HEIGHT),
                             contentPadding = PaddingValues(horizontal = TRS_BUTTON_PADDING_H, vertical = 0.dp),
                         ) {
@@ -501,9 +494,9 @@ private fun TouchScreenRadar(
     Box(
         modifier =
             modifier
-                .clip(RoundedCornerShape(TRS_PILL_RADIUS))
+                .clip(TRS_PILL_SHAPE)
                 .background(surfaceVariant.copy(alpha = TRS_RADAR_BG_ALPHA))
-                .border(1.dp, dividerColor, RoundedCornerShape(TRS_PILL_RADIUS)),
+                .border(1.dp, dividerColor, TRS_PILL_SHAPE),
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val width = size.width
@@ -527,100 +520,26 @@ private fun TouchScreenRadar(
 
             val activePointers = recording?.activePointers ?: emptyList()
             if (activePointers.isNotEmpty()) {
-                // 1. Draw trails for each active pointer independently
                 for (pointer in activePointers) {
-                    val trail = pointer.trail
-                    if (trail.size >= 2) {
-                        val path = Path()
-                        trail.forEachIndexed { index, (nx, ny) ->
-                            val px = nx * width
-                            val py = ny * height
-                            if (index == 0) {
-                                path.moveTo(px, py)
-                            } else {
-                                path.lineTo(px, py)
-                            }
-                        }
-                        val color = pointerColor(pointer.slot, accentColor)
-                        drawPath(
-                            path = path,
-                            color = color.copy(alpha = 0.85f),
-                            style = Stroke(width = trailStrokeWidthPx),
-                        )
-                    }
-                }
-
-                // 2. Draw live indicator dots and pulse halos for each active pointer
-                for (pointer in activePointers) {
-                    val touchPx = pointer.normX * width
-                    val touchPy = pointer.normY * height
-                    val pColor = pointerColor(pointer.slot, accentColor)
-
-                    // Pulse halo
-                    drawCircle(
-                        color = pColor.copy(alpha = 0.35f),
-                        radius = touchPulseRadiusPx * livePulseScale,
-                        center = Offset(touchPx, touchPy),
-                    )
-
-                    // Outer circle
-                    drawCircle(
-                        color = pColor,
-                        radius = touchIndicatorRadiusPx,
-                        center = Offset(touchPx, touchPy),
-                    )
-
-                    // Center white dot
-                    drawCircle(
-                        color = Color.White,
-                        radius = touchIndicatorRadiusPx * 0.45f,
-                        center = Offset(touchPx, touchPy),
+                    val color = pointerColor(pointer.slot, accentColor)
+                    drawNormalizedTrail(pointer.trail, width, height, color, trailStrokeWidthPx)
+                    drawPointerDot(
+                        center = Offset(pointer.normX * width, pointer.normY * height),
+                        color = color,
+                        pulseRadius = touchPulseRadiusPx * livePulseScale,
+                        indicatorRadius = touchIndicatorRadiusPx,
                     )
                 }
             } else {
-                // Fallback for single pointer or legacy state if activePointers is empty
-                val trail = recording?.activeTrailPoints ?: emptyList()
-                if (trail.size >= 2) {
-                    val path = Path()
-                    trail.forEachIndexed { index, (nx, ny) ->
-                        val px = nx * width
-                        val py = ny * height
-                        if (index == 0) {
-                            path.moveTo(px, py)
-                        } else {
-                            path.lineTo(px, py)
-                        }
-                    }
-                    drawPath(
-                        path = path,
-                        color = accentColor.copy(alpha = 0.85f),
-                        style = Stroke(width = trailStrokeWidthPx),
-                    )
-                }
-
+                drawNormalizedTrail(recording?.activeTrailPoints ?: emptyList(), width, height, accentColor, trailStrokeWidthPx)
                 val liveX = recording?.liveNormX
                 val liveY = recording?.liveNormY
                 if (liveX != null && liveY != null) {
-                    val touchPx = liveX * width
-                    val touchPy = liveY * height
-
-                    if (recording.isTouchDown) {
-                        drawCircle(
-                            color = accentColor.copy(alpha = 0.35f),
-                            radius = touchPulseRadiusPx * livePulseScale,
-                            center = Offset(touchPx, touchPy),
-                        )
-                    }
-
-                    drawCircle(
+                    drawPointerDot(
+                        center = Offset(liveX * width, liveY * height),
                         color = accentColor,
-                        radius = touchIndicatorRadiusPx,
-                        center = Offset(touchPx, touchPy),
-                    )
-                    drawCircle(
-                        color = Color.White,
-                        radius = touchIndicatorRadiusPx * 0.45f,
-                        center = Offset(touchPx, touchPy),
+                        pulseRadius = if (recording.isTouchDown) touchPulseRadiusPx * livePulseScale else null,
+                        indicatorRadius = touchIndicatorRadiusPx,
                     )
                 }
             }
@@ -628,28 +547,32 @@ private fun TouchScreenRadar(
     }
 }
 
-@Composable
-private fun PulsingRecordingDot(
+private fun DrawScope.drawNormalizedTrail(
+    trail: List<Pair<Float, Float>>,
+    width: Float,
+    height: Float,
     color: Color,
-    modifier: Modifier = Modifier,
+    strokeWidthPx: Float,
 ) {
-    val pulseTransition = rememberInfiniteTransition(label = "touchRecordingDotPulse")
-    val pulseAlpha by pulseTransition.animateFloat(
-        initialValue = 0.35f,
-        targetValue = 1f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(durationMillis = TRS_PULSE_ANIM_MS, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "touchRecordingDotPulseAlpha",
-    )
+    if (trail.size < 2) return
+    val path = Path()
+    trail.forEachIndexed { index, (nx, ny) ->
+        val px = nx * width
+        val py = ny * height
+        if (index == 0) path.moveTo(px, py) else path.lineTo(px, py)
+    }
+    drawPath(path = path, color = color.copy(alpha = 0.85f), style = Stroke(width = strokeWidthPx))
+}
 
-    Box(
-        modifier =
-            modifier
-                .drawBehind {
-                    drawCircle(color = color.copy(alpha = pulseAlpha))
-                },
-    )
+private fun DrawScope.drawPointerDot(
+    center: Offset,
+    color: Color,
+    pulseRadius: Float?,
+    indicatorRadius: Float,
+) {
+    if (pulseRadius != null) {
+        drawCircle(color = color.copy(alpha = 0.35f), radius = pulseRadius, center = center)
+    }
+    drawCircle(color = color, radius = indicatorRadius, center = center)
+    drawCircle(color = Color.White, radius = indicatorRadius * 0.45f, center = center)
 }

@@ -2,8 +2,6 @@ package com.stormpanda.megingiard.onboarding
 
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
-import com.stormpanda.megingiard.onboarding.OnboardingStepId
-import com.stormpanda.megingiard.onboarding.OnboardingStepState
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

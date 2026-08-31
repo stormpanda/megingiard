@@ -8,10 +8,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -22,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,6 +30,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppLog
@@ -69,6 +69,7 @@ private val VGP_CENTER_CLEAR_SPACING = 106.dp
 private val VGP_MAIN_BODY_PADDING_TOP = 4.dp
 private val VGP_LABEL_SPACING = 4.dp
 private val VGP_CARD_CORNER = 8.dp
+private val VGP_CARD_SHAPE = RoundedCornerShape(VGP_CARD_CORNER)
 private const val VGP_SELECTED_ALPHA = 0.35f
 private val VGP_BORDER_WIDTH = 1.dp
 private val VGP_SELECTED_BORDER_WIDTH = 2.dp
@@ -83,6 +84,46 @@ private val VGP_COLOR_GREEN = Color(0xFF66BB6A)
 private val VGP_COLOR_RED = Color(0xFFEF5350)
 private val VGP_COLOR_YELLOW = Color(0xFFFFD54F)
 
+private fun preset(code: Int) = GamepadKeycodes.PRESETS.first { it.code == code }
+
+private data class StickCodes(
+    val upLeft: Int,
+    val up: Int,
+    val upRight: Int,
+    val left: Int,
+    val center: Int,
+    val right: Int,
+    val downLeft: Int,
+    val down: Int,
+    val downRight: Int,
+)
+
+private val LEFT_STICK_CODES =
+    StickCodes(
+        GamepadKeycodes.CODE_LS_UP_LEFT,
+        GamepadKeycodes.CODE_LS_UP,
+        GamepadKeycodes.CODE_LS_UP_RIGHT,
+        GamepadKeycodes.CODE_LS_LEFT,
+        GamepadKeycodes.BTN_THUMBL,
+        GamepadKeycodes.CODE_LS_RIGHT,
+        GamepadKeycodes.CODE_LS_DOWN_LEFT,
+        GamepadKeycodes.CODE_LS_DOWN,
+        GamepadKeycodes.CODE_LS_DOWN_RIGHT,
+    )
+
+private val RIGHT_STICK_CODES =
+    StickCodes(
+        GamepadKeycodes.CODE_RS_UP_LEFT,
+        GamepadKeycodes.CODE_RS_UP,
+        GamepadKeycodes.CODE_RS_UP_RIGHT,
+        GamepadKeycodes.CODE_RS_LEFT,
+        GamepadKeycodes.BTN_THUMBR,
+        GamepadKeycodes.CODE_RS_RIGHT,
+        GamepadKeycodes.CODE_RS_DOWN_LEFT,
+        GamepadKeycodes.CODE_RS_DOWN,
+        GamepadKeycodes.CODE_RS_DOWN_RIGHT,
+    )
+
 @Composable
 internal fun VisualGamepadPicker(
     selectedBtnCode: Int,
@@ -93,55 +134,6 @@ internal fun VisualGamepadPicker(
 ) {
     AppLog.d(TAG, "VisualGamepadPicker: selectedBtnCode=$selectedBtnCode")
     val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsState()
-
-    // Shoulder & Triggers
-    val l2Preset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.BTN_TL2 }
-    val l1Preset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.BTN_TL }
-    val r1Preset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.BTN_TR }
-    val r2Preset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.BTN_TR2 }
-
-    // System Buttons
-    val selectPreset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.BTN_SELECT }
-    val startPreset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.BTN_START }
-    val modePreset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.BTN_MODE }
-
-    // Left Stick Presets
-    val l3Preset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.BTN_THUMBL }
-    val lsUpPreset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.CODE_LS_UP }
-    val lsDownPreset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.CODE_LS_DOWN }
-    val lsLeftPreset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.CODE_LS_LEFT }
-    val lsRightPreset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.CODE_LS_RIGHT }
-    val lsUpLeftPreset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.CODE_LS_UP_LEFT }
-    val lsUpRightPreset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.CODE_LS_UP_RIGHT }
-    val lsDownLeftPreset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.CODE_LS_DOWN_LEFT }
-    val lsDownRightPreset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.CODE_LS_DOWN_RIGHT }
-
-    // D-Pad Presets
-    val dpadUpPreset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.BTN_DPAD_UP }
-    val dpadDownPreset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.BTN_DPAD_DOWN }
-    val dpadLeftPreset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.BTN_DPAD_LEFT }
-    val dpadRightPreset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.BTN_DPAD_RIGHT }
-    val dpadUpLeftPreset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.CODE_DPAD_UP_LEFT }
-    val dpadUpRightPreset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.CODE_DPAD_UP_RIGHT }
-    val dpadDownLeftPreset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.CODE_DPAD_DOWN_LEFT }
-    val dpadDownRightPreset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.CODE_DPAD_DOWN_RIGHT }
-
-    // Face Buttons Presets
-    val southPreset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.BTN_SOUTH }
-    val eastPreset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.BTN_EAST }
-    val northPreset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.BTN_NORTH }
-    val westPreset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.BTN_WEST }
-
-    // Right Stick Presets
-    val r3Preset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.BTN_THUMBR }
-    val rsUpPreset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.CODE_RS_UP }
-    val rsDownPreset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.CODE_RS_DOWN }
-    val rsLeftPreset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.CODE_RS_LEFT }
-    val rsRightPreset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.CODE_RS_RIGHT }
-    val rsUpLeftPreset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.CODE_RS_UP_LEFT }
-    val rsUpRightPreset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.CODE_RS_UP_RIGHT }
-    val rsDownLeftPreset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.CODE_RS_DOWN_LEFT }
-    val rsDownRightPreset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.CODE_RS_DOWN_RIGHT }
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -154,74 +146,42 @@ internal fun VisualGamepadPicker(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Left Shoulder / Trigger
+            ShoulderTriggerPair(
+                outerCode = GamepadKeycodes.BTN_TL2,
+                innerCode = GamepadKeycodes.BTN_TL,
+                isLeft = true,
+                selectedBtnCode = selectedBtnCode,
+                swapFaceButtons = swapFaceButtons,
+                accentColor = accentColor,
+                onSelectButton = onSelectButton,
+            )
+
             Row(horizontalArrangement = Arrangement.spacedBy(VGP_ROW_SPACING)) {
-                GamepadButtonTile(
-                    preset = l2Preset,
+                SystemButtonTile(
+                    code = GamepadKeycodes.BTN_SELECT,
                     selectedBtnCode = selectedBtnCode,
                     swapFaceButtons = swapFaceButtons,
                     accentColor = accentColor,
-                    width = VGP_TRIGGER_WIDTH,
-                    height = VGP_TRIGGER_HEIGHT,
-                    onClick = { onSelectButton(l2Preset) },
-                    modifier = Modifier.firstDeckItem(),
+                    onSelectButton = onSelectButton,
                 )
-                GamepadButtonTile(
-                    preset = l1Preset,
+                SystemButtonTile(
+                    code = GamepadKeycodes.BTN_START,
                     selectedBtnCode = selectedBtnCode,
                     swapFaceButtons = swapFaceButtons,
                     accentColor = accentColor,
-                    width = VGP_SHOULDER_WIDTH,
-                    height = VGP_SHOULDER_HEIGHT,
-                    onClick = { onSelectButton(l1Preset) },
+                    onSelectButton = onSelectButton,
                 )
             }
 
-            // Center Top System Buttons: Select & Start
-            Row(horizontalArrangement = Arrangement.spacedBy(VGP_ROW_SPACING)) {
-                GamepadButtonTile(
-                    preset = selectPreset,
-                    selectedBtnCode = selectedBtnCode,
-                    swapFaceButtons = swapFaceButtons,
-                    accentColor = accentColor,
-                    width = VGP_SYS_BTN_WIDTH,
-                    height = VGP_SYS_BTN_HEIGHT,
-                    fontSize = VGP_SYS_FONT_SIZE,
-                    onClick = { onSelectButton(selectPreset) },
-                )
-                GamepadButtonTile(
-                    preset = startPreset,
-                    selectedBtnCode = selectedBtnCode,
-                    swapFaceButtons = swapFaceButtons,
-                    accentColor = accentColor,
-                    width = VGP_SYS_BTN_WIDTH,
-                    height = VGP_SYS_BTN_HEIGHT,
-                    fontSize = VGP_SYS_FONT_SIZE,
-                    onClick = { onSelectButton(startPreset) },
-                )
-            }
-
-            // Right Shoulder / Trigger
-            Row(horizontalArrangement = Arrangement.spacedBy(VGP_ROW_SPACING)) {
-                GamepadButtonTile(
-                    preset = r1Preset,
-                    selectedBtnCode = selectedBtnCode,
-                    swapFaceButtons = swapFaceButtons,
-                    accentColor = accentColor,
-                    width = VGP_SHOULDER_WIDTH,
-                    height = VGP_SHOULDER_HEIGHT,
-                    onClick = { onSelectButton(r1Preset) },
-                )
-                GamepadButtonTile(
-                    preset = r2Preset,
-                    selectedBtnCode = selectedBtnCode,
-                    swapFaceButtons = swapFaceButtons,
-                    accentColor = accentColor,
-                    width = VGP_TRIGGER_WIDTH,
-                    height = VGP_TRIGGER_HEIGHT,
-                    onClick = { onSelectButton(r2Preset) },
-                )
-            }
+            ShoulderTriggerPair(
+                outerCode = GamepadKeycodes.BTN_TR2,
+                innerCode = GamepadKeycodes.BTN_TR,
+                isLeft = false,
+                selectedBtnCode = selectedBtnCode,
+                swapFaceButtons = swapFaceButtons,
+                accentColor = accentColor,
+                onSelectButton = onSelectButton,
+            )
         }
 
         // ── Main Body: Left Column (LS + D-Pad) vs Center (Home + Clear) vs Right (Face + RS)
@@ -230,39 +190,21 @@ internal fun VisualGamepadPicker(
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // ── Left Column: Left Stick Top, D-Pad Bottom ────────────────────
+            // Left Column: Left Stick Top, D-Pad Bottom
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(VGP_CLUSTER_SPACING),
             ) {
-                // Top: Left Stick 3x3 Grid
                 AnalogStick3x3Grid(
                     label = stringResource(R.string.macropad_macro_step_stick_left),
-                    centerPreset = l3Preset,
-                    upPreset = lsUpPreset,
-                    downPreset = lsDownPreset,
-                    leftPreset = lsLeftPreset,
-                    rightPreset = lsRightPreset,
-                    upLeftPreset = lsUpLeftPreset,
-                    upRightPreset = lsUpRightPreset,
-                    downLeftPreset = lsDownLeftPreset,
-                    downRightPreset = lsDownRightPreset,
+                    codes = LEFT_STICK_CODES,
                     selectedBtnCode = selectedBtnCode,
                     swapFaceButtons = swapFaceButtons,
                     accentColor = accentColor,
                     onSelectButton = onSelectButton,
                 )
 
-                // Bottom: D-Pad 3x3 Grid
                 DPad3x3Grid(
-                    upPreset = dpadUpPreset,
-                    downPreset = dpadDownPreset,
-                    leftPreset = dpadLeftPreset,
-                    rightPreset = dpadRightPreset,
-                    upLeftPreset = dpadUpLeftPreset,
-                    upRightPreset = dpadUpRightPreset,
-                    downLeftPreset = dpadDownLeftPreset,
-                    downRightPreset = dpadDownRightPreset,
                     selectedBtnCode = selectedBtnCode,
                     swapFaceButtons = swapFaceButtons,
                     accentColor = accentColor,
@@ -270,18 +212,14 @@ internal fun VisualGamepadPicker(
                 )
             }
 
-            // ── Center: Home / Guide Button & Clear Button ───────────────────
+            // Center: Home / Guide Button & Clear Button
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement =
-                    if (onClear != null) {
-                        Arrangement.spacedBy(VGP_CENTER_CLEAR_SPACING)
-                    } else {
-                        Arrangement.Center
-                    },
+                verticalArrangement = if (onClear != null) Arrangement.spacedBy(VGP_CENTER_CLEAR_SPACING) else Arrangement.Center,
             ) {
+                val mode = preset(GamepadKeycodes.BTN_MODE)
                 GamepadButtonTile(
-                    preset = modePreset,
+                    preset = mode,
                     selectedBtnCode = selectedBtnCode,
                     swapFaceButtons = swapFaceButtons,
                     accentColor = accentColor,
@@ -289,45 +227,29 @@ internal fun VisualGamepadPicker(
                     height = VGP_SYS_BTN_HEIGHT,
                     fontSize = VGP_SYS_FONT_SIZE,
                     icon = Icons.Rounded.Home,
-                    onClick = { onSelectButton(modePreset) },
+                    onClick = { onSelectButton(mode) },
                 )
 
                 if (onClear != null) {
-                    ClearButtonTile(
-                        onClick = onClear,
-                    )
+                    ClearButtonTile(onClick = onClear)
                 }
             }
 
-            // ── Right Column: Face Buttons Top, Right Stick Bottom ───────────
+            // Right Column: Face Buttons Top, Right Stick Bottom
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(VGP_CLUSTER_SPACING),
             ) {
-                // Top: Face Buttons 3x3 Grid
                 FaceButtons3x3Grid(
-                    northPreset = northPreset,
-                    westPreset = westPreset,
-                    eastPreset = eastPreset,
-                    southPreset = southPreset,
                     selectedBtnCode = selectedBtnCode,
                     swapFaceButtons = swapFaceButtons,
                     accentColor = accentColor,
                     onSelectButton = onSelectButton,
                 )
 
-                // Bottom: Right Stick 3x3 Grid
                 AnalogStick3x3Grid(
                     label = stringResource(R.string.macropad_macro_step_stick_right),
-                    centerPreset = r3Preset,
-                    upPreset = rsUpPreset,
-                    downPreset = rsDownPreset,
-                    leftPreset = rsLeftPreset,
-                    rightPreset = rsRightPreset,
-                    upLeftPreset = rsUpLeftPreset,
-                    upRightPreset = rsUpRightPreset,
-                    downLeftPreset = rsDownLeftPreset,
-                    downRightPreset = rsDownRightPreset,
+                    codes = RIGHT_STICK_CODES,
                     selectedBtnCode = selectedBtnCode,
                     swapFaceButtons = swapFaceButtons,
                     accentColor = accentColor,
@@ -338,20 +260,36 @@ internal fun VisualGamepadPicker(
     }
 }
 
+@Composable
+private fun <T> Grid3x3(
+    items: List<List<T>>,
+    modifier: Modifier = Modifier,
+    cellContent: @Composable (T) -> Unit,
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(VGP_GRID_INNER_SPACING),
+        modifier = modifier,
+    ) {
+        items.forEach { row ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(VGP_GRID_INNER_SPACING),
+            ) {
+                row.forEach { cell ->
+                    cellContent(cell)
+                }
+            }
+        }
+    }
+}
+
 // ── Analog Stick 3x3 Grid Interactive Widget ─────────────────────────────────
 
 @Composable
 private fun AnalogStick3x3Grid(
     label: String,
-    centerPreset: GamepadKeycodes.GamepadButtonPreset,
-    upPreset: GamepadKeycodes.GamepadButtonPreset,
-    downPreset: GamepadKeycodes.GamepadButtonPreset,
-    leftPreset: GamepadKeycodes.GamepadButtonPreset,
-    rightPreset: GamepadKeycodes.GamepadButtonPreset,
-    upLeftPreset: GamepadKeycodes.GamepadButtonPreset,
-    upRightPreset: GamepadKeycodes.GamepadButtonPreset,
-    downLeftPreset: GamepadKeycodes.GamepadButtonPreset,
-    downRightPreset: GamepadKeycodes.GamepadButtonPreset,
+    codes: StickCodes,
     selectedBtnCode: Int,
     swapFaceButtons: Boolean,
     accentColor: Color,
@@ -359,6 +297,14 @@ private fun AnalogStick3x3Grid(
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
+    val grid =
+        remember(codes) {
+            listOf(
+                listOf(codes.upLeft to "↖", codes.up to "▲", codes.upRight to "↗"),
+                listOf(codes.left to "◄", codes.center to null, codes.right to "►"),
+                listOf(codes.downLeft to "↙", codes.down to "▼", codes.downRight to "↘"),
+            )
+        }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -372,137 +318,22 @@ private fun AnalogStick3x3Grid(
             fontWeight = FontWeight.Medium,
         )
 
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(VGP_GRID_INNER_SPACING),
-        ) {
-            // Row 1: Up-Left, Up, Up-Right
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(VGP_GRID_INNER_SPACING),
-            ) {
-                GamepadButtonTile(
-                    preset = upLeftPreset,
-                    customLabel = "↖",
-                    selectedBtnCode = selectedBtnCode,
-                    swapFaceButtons = swapFaceButtons,
-                    accentColor = accentColor,
-                    width = VGP_GRID_BTN_SIZE,
-                    height = VGP_GRID_BTN_SIZE,
-                    fontSize = VGP_LABEL_FONT_SIZE,
-                    shapeCorner = VGP_GRID_CORNER,
-                    onClick = { onSelectButton(upLeftPreset) },
-                )
-                GamepadButtonTile(
-                    preset = upPreset,
-                    customLabel = "▲",
-                    selectedBtnCode = selectedBtnCode,
-                    swapFaceButtons = swapFaceButtons,
-                    accentColor = accentColor,
-                    width = VGP_GRID_BTN_SIZE,
-                    height = VGP_GRID_BTN_SIZE,
-                    fontSize = VGP_LABEL_FONT_SIZE,
-                    shapeCorner = VGP_GRID_CORNER,
-                    onClick = { onSelectButton(upPreset) },
-                )
-                GamepadButtonTile(
-                    preset = upRightPreset,
-                    customLabel = "↗",
-                    selectedBtnCode = selectedBtnCode,
-                    swapFaceButtons = swapFaceButtons,
-                    accentColor = accentColor,
-                    width = VGP_GRID_BTN_SIZE,
-                    height = VGP_GRID_BTN_SIZE,
-                    fontSize = VGP_LABEL_FONT_SIZE,
-                    shapeCorner = VGP_GRID_CORNER,
-                    onClick = { onSelectButton(upRightPreset) },
-                )
-            }
-
-            // Row 2: Left, Center Stick Click, Right
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(VGP_GRID_INNER_SPACING),
-            ) {
-                GamepadButtonTile(
-                    preset = leftPreset,
-                    customLabel = "◄",
-                    selectedBtnCode = selectedBtnCode,
-                    swapFaceButtons = swapFaceButtons,
-                    accentColor = accentColor,
-                    width = VGP_GRID_BTN_SIZE,
-                    height = VGP_GRID_BTN_SIZE,
-                    fontSize = VGP_LABEL_FONT_SIZE,
-                    shapeCorner = VGP_GRID_CORNER,
-                    onClick = { onSelectButton(leftPreset) },
-                )
-                GamepadButtonTile(
-                    preset = centerPreset,
-                    selectedBtnCode = selectedBtnCode,
-                    swapFaceButtons = swapFaceButtons,
-                    accentColor = accentColor,
-                    width = VGP_GRID_BTN_SIZE,
-                    height = VGP_GRID_BTN_SIZE,
-                    isCircle = true,
-                    fontSize = VGP_STICK_CENTER_FONT_SIZE,
-                    onClick = { onSelectButton(centerPreset) },
-                )
-                GamepadButtonTile(
-                    preset = rightPreset,
-                    customLabel = "►",
-                    selectedBtnCode = selectedBtnCode,
-                    swapFaceButtons = swapFaceButtons,
-                    accentColor = accentColor,
-                    width = VGP_GRID_BTN_SIZE,
-                    height = VGP_GRID_BTN_SIZE,
-                    fontSize = VGP_LABEL_FONT_SIZE,
-                    shapeCorner = VGP_GRID_CORNER,
-                    onClick = { onSelectButton(rightPreset) },
-                )
-            }
-
-            // Row 3: Down-Left, Down, Down-Right
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(VGP_GRID_INNER_SPACING),
-            ) {
-                GamepadButtonTile(
-                    preset = downLeftPreset,
-                    customLabel = "↙",
-                    selectedBtnCode = selectedBtnCode,
-                    swapFaceButtons = swapFaceButtons,
-                    accentColor = accentColor,
-                    width = VGP_GRID_BTN_SIZE,
-                    height = VGP_GRID_BTN_SIZE,
-                    fontSize = VGP_LABEL_FONT_SIZE,
-                    shapeCorner = VGP_GRID_CORNER,
-                    onClick = { onSelectButton(downLeftPreset) },
-                )
-                GamepadButtonTile(
-                    preset = downPreset,
-                    customLabel = "▼",
-                    selectedBtnCode = selectedBtnCode,
-                    swapFaceButtons = swapFaceButtons,
-                    accentColor = accentColor,
-                    width = VGP_GRID_BTN_SIZE,
-                    height = VGP_GRID_BTN_SIZE,
-                    fontSize = VGP_LABEL_FONT_SIZE,
-                    shapeCorner = VGP_GRID_CORNER,
-                    onClick = { onSelectButton(downPreset) },
-                )
-                GamepadButtonTile(
-                    preset = downRightPreset,
-                    customLabel = "↘",
-                    selectedBtnCode = selectedBtnCode,
-                    swapFaceButtons = swapFaceButtons,
-                    accentColor = accentColor,
-                    width = VGP_GRID_BTN_SIZE,
-                    height = VGP_GRID_BTN_SIZE,
-                    fontSize = VGP_LABEL_FONT_SIZE,
-                    shapeCorner = VGP_GRID_CORNER,
-                    onClick = { onSelectButton(downRightPreset) },
-                )
-            }
+        Grid3x3(grid) { (code, customLabel) ->
+            val preset = preset(code)
+            val isCenter = code == codes.center
+            GamepadButtonTile(
+                preset = preset,
+                customLabel = customLabel,
+                selectedBtnCode = selectedBtnCode,
+                swapFaceButtons = swapFaceButtons,
+                accentColor = accentColor,
+                width = VGP_GRID_BTN_SIZE,
+                height = VGP_GRID_BTN_SIZE,
+                isCircle = isCenter,
+                fontSize = if (isCenter) VGP_STICK_CENTER_FONT_SIZE else VGP_LABEL_FONT_SIZE,
+                shapeCorner = VGP_GRID_CORNER,
+                onClick = { onSelectButton(preset) },
+            )
         }
     }
 }
@@ -511,14 +342,6 @@ private fun AnalogStick3x3Grid(
 
 @Composable
 private fun DPad3x3Grid(
-    upPreset: GamepadKeycodes.GamepadButtonPreset,
-    downPreset: GamepadKeycodes.GamepadButtonPreset,
-    leftPreset: GamepadKeycodes.GamepadButtonPreset,
-    rightPreset: GamepadKeycodes.GamepadButtonPreset,
-    upLeftPreset: GamepadKeycodes.GamepadButtonPreset,
-    upRightPreset: GamepadKeycodes.GamepadButtonPreset,
-    downLeftPreset: GamepadKeycodes.GamepadButtonPreset,
-    downRightPreset: GamepadKeycodes.GamepadButtonPreset,
     selectedBtnCode: Int,
     swapFaceButtons: Boolean,
     accentColor: Color,
@@ -526,6 +349,22 @@ private fun DPad3x3Grid(
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
+    val grid =
+        remember {
+            listOf(
+                listOf(
+                    GamepadKeycodes.CODE_DPAD_UP_LEFT to "↖",
+                    GamepadKeycodes.BTN_DPAD_UP to "▲",
+                    GamepadKeycodes.CODE_DPAD_UP_RIGHT to "↗",
+                ),
+                listOf(GamepadKeycodes.BTN_DPAD_LEFT to "◄", null to "+", GamepadKeycodes.BTN_DPAD_RIGHT to "►"),
+                listOf(
+                    GamepadKeycodes.CODE_DPAD_DOWN_LEFT to "↙",
+                    GamepadKeycodes.BTN_DPAD_DOWN to "▼",
+                    GamepadKeycodes.CODE_DPAD_DOWN_RIGHT to "↘",
+                ),
+            )
+        }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -539,18 +378,12 @@ private fun DPad3x3Grid(
             fontWeight = FontWeight.Medium,
         )
 
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(VGP_GRID_INNER_SPACING),
-        ) {
-            // Row 1: Up-Left, Up, Up-Right
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(VGP_GRID_INNER_SPACING),
-            ) {
+        Grid3x3(grid) { (code, customLabel) ->
+            if (code != null) {
+                val preset = preset(code)
                 GamepadButtonTile(
-                    preset = upLeftPreset,
-                    customLabel = "↖",
+                    preset = preset,
+                    customLabel = customLabel,
                     selectedBtnCode = selectedBtnCode,
                     swapFaceButtons = swapFaceButtons,
                     accentColor = accentColor,
@@ -558,60 +391,16 @@ private fun DPad3x3Grid(
                     height = VGP_GRID_BTN_SIZE,
                     fontSize = VGP_LABEL_FONT_SIZE,
                     shapeCorner = VGP_GRID_CORNER,
-                    onClick = { onSelectButton(upLeftPreset) },
+                    onClick = { onSelectButton(preset) },
                 )
-                GamepadButtonTile(
-                    preset = upPreset,
-                    customLabel = "▲",
-                    selectedBtnCode = selectedBtnCode,
-                    swapFaceButtons = swapFaceButtons,
-                    accentColor = accentColor,
-                    width = VGP_GRID_BTN_SIZE,
-                    height = VGP_GRID_BTN_SIZE,
-                    fontSize = VGP_LABEL_FONT_SIZE,
-                    shapeCorner = VGP_GRID_CORNER,
-                    onClick = { onSelectButton(upPreset) },
-                )
-                GamepadButtonTile(
-                    preset = upRightPreset,
-                    customLabel = "↗",
-                    selectedBtnCode = selectedBtnCode,
-                    swapFaceButtons = swapFaceButtons,
-                    accentColor = accentColor,
-                    width = VGP_GRID_BTN_SIZE,
-                    height = VGP_GRID_BTN_SIZE,
-                    fontSize = VGP_LABEL_FONT_SIZE,
-                    shapeCorner = VGP_GRID_CORNER,
-                    onClick = { onSelectButton(upRightPreset) },
-                )
-            }
-
-            // Row 2: Left, Center Decorative Hub, Right
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(VGP_GRID_INNER_SPACING),
-            ) {
-                GamepadButtonTile(
-                    preset = leftPreset,
-                    customLabel = "◄",
-                    selectedBtnCode = selectedBtnCode,
-                    swapFaceButtons = swapFaceButtons,
-                    accentColor = accentColor,
-                    width = VGP_GRID_BTN_SIZE,
-                    height = VGP_GRID_BTN_SIZE,
-                    fontSize = VGP_LABEL_FONT_SIZE,
-                    shapeCorner = VGP_GRID_CORNER,
-                    onClick = { onSelectButton(leftPreset) },
-                )
-
-                // Center decorative D-Pad hub
+            } else {
                 Box(
                     modifier =
                         Modifier
                             .size(VGP_GRID_BTN_SIZE)
-                            .clip(RoundedCornerShape(VGP_GRID_CORNER))
+                            .clip(VGP_CARD_SHAPE)
                             .background(colors.surfaceVariant)
-                            .border(VGP_BORDER_WIDTH, colors.subduedBorder, RoundedCornerShape(VGP_GRID_CORNER)),
+                            .border(VGP_BORDER_WIDTH, colors.subduedBorder, VGP_CARD_SHAPE),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
@@ -621,62 +410,6 @@ private fun DPad3x3Grid(
                         fontWeight = FontWeight.Bold,
                     )
                 }
-
-                GamepadButtonTile(
-                    preset = rightPreset,
-                    customLabel = "►",
-                    selectedBtnCode = selectedBtnCode,
-                    swapFaceButtons = swapFaceButtons,
-                    accentColor = accentColor,
-                    width = VGP_GRID_BTN_SIZE,
-                    height = VGP_GRID_BTN_SIZE,
-                    fontSize = VGP_LABEL_FONT_SIZE,
-                    shapeCorner = VGP_GRID_CORNER,
-                    onClick = { onSelectButton(rightPreset) },
-                )
-            }
-
-            // Row 3: Down-Left, Down, Down-Right
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(VGP_GRID_INNER_SPACING),
-            ) {
-                GamepadButtonTile(
-                    preset = downLeftPreset,
-                    customLabel = "↙",
-                    selectedBtnCode = selectedBtnCode,
-                    swapFaceButtons = swapFaceButtons,
-                    accentColor = accentColor,
-                    width = VGP_GRID_BTN_SIZE,
-                    height = VGP_GRID_BTN_SIZE,
-                    fontSize = VGP_LABEL_FONT_SIZE,
-                    shapeCorner = VGP_GRID_CORNER,
-                    onClick = { onSelectButton(downLeftPreset) },
-                )
-                GamepadButtonTile(
-                    preset = downPreset,
-                    customLabel = "▼",
-                    selectedBtnCode = selectedBtnCode,
-                    swapFaceButtons = swapFaceButtons,
-                    accentColor = accentColor,
-                    width = VGP_GRID_BTN_SIZE,
-                    height = VGP_GRID_BTN_SIZE,
-                    fontSize = VGP_LABEL_FONT_SIZE,
-                    shapeCorner = VGP_GRID_CORNER,
-                    onClick = { onSelectButton(downPreset) },
-                )
-                GamepadButtonTile(
-                    preset = downRightPreset,
-                    customLabel = "↘",
-                    selectedBtnCode = selectedBtnCode,
-                    swapFaceButtons = swapFaceButtons,
-                    accentColor = accentColor,
-                    width = VGP_GRID_BTN_SIZE,
-                    height = VGP_GRID_BTN_SIZE,
-                    fontSize = VGP_LABEL_FONT_SIZE,
-                    shapeCorner = VGP_GRID_CORNER,
-                    onClick = { onSelectButton(downRightPreset) },
-                )
             }
         }
     }
@@ -686,10 +419,6 @@ private fun DPad3x3Grid(
 
 @Composable
 private fun FaceButtons3x3Grid(
-    northPreset: GamepadKeycodes.GamepadButtonPreset,
-    westPreset: GamepadKeycodes.GamepadButtonPreset,
-    eastPreset: GamepadKeycodes.GamepadButtonPreset,
-    southPreset: GamepadKeycodes.GamepadButtonPreset,
     selectedBtnCode: Int,
     swapFaceButtons: Boolean,
     accentColor: Color,
@@ -697,6 +426,14 @@ private fun FaceButtons3x3Grid(
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
+    val grid =
+        remember {
+            listOf(
+                listOf(null, GamepadKeycodes.BTN_NORTH to VGP_COLOR_BLUE, null),
+                listOf(GamepadKeycodes.BTN_WEST to VGP_COLOR_GREEN, null, GamepadKeycodes.BTN_EAST to VGP_COLOR_RED),
+                listOf(null, GamepadKeycodes.BTN_SOUTH to VGP_COLOR_YELLOW, null),
+            )
+        }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -710,77 +447,22 @@ private fun FaceButtons3x3Grid(
             fontWeight = FontWeight.Medium,
         )
 
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(VGP_GRID_INNER_SPACING),
-        ) {
-            // Row 1: Spacer, North (X / Y), Spacer
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(VGP_GRID_INNER_SPACING),
-            ) {
-                Spacer(modifier = Modifier.size(VGP_GRID_BTN_SIZE))
+        Grid3x3(grid) { item ->
+            if (item != null) {
+                val (code, color) = item
+                val preset = preset(code)
                 GamepadButtonTile(
-                    preset = northPreset,
+                    preset = preset,
                     selectedBtnCode = selectedBtnCode,
                     swapFaceButtons = swapFaceButtons,
                     accentColor = accentColor,
-                    customTextColor = VGP_COLOR_BLUE,
+                    customTextColor = color,
                     width = VGP_GRID_BTN_SIZE,
                     height = VGP_GRID_BTN_SIZE,
                     isCircle = true,
-                    onClick = { onSelectButton(northPreset) },
+                    onClick = { onSelectButton(preset) },
                 )
-                Spacer(modifier = Modifier.size(VGP_GRID_BTN_SIZE))
-            }
-
-            // Row 2: West (Y / X), Center Spacer, East (A / B)
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(VGP_GRID_INNER_SPACING),
-            ) {
-                GamepadButtonTile(
-                    preset = westPreset,
-                    selectedBtnCode = selectedBtnCode,
-                    swapFaceButtons = swapFaceButtons,
-                    accentColor = accentColor,
-                    customTextColor = VGP_COLOR_GREEN,
-                    width = VGP_GRID_BTN_SIZE,
-                    height = VGP_GRID_BTN_SIZE,
-                    isCircle = true,
-                    onClick = { onSelectButton(westPreset) },
-                )
-                Spacer(modifier = Modifier.size(VGP_GRID_BTN_SIZE))
-                GamepadButtonTile(
-                    preset = eastPreset,
-                    selectedBtnCode = selectedBtnCode,
-                    swapFaceButtons = swapFaceButtons,
-                    accentColor = accentColor,
-                    customTextColor = VGP_COLOR_RED,
-                    width = VGP_GRID_BTN_SIZE,
-                    height = VGP_GRID_BTN_SIZE,
-                    isCircle = true,
-                    onClick = { onSelectButton(eastPreset) },
-                )
-            }
-
-            // Row 3: Spacer, South (B / A), Spacer
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(VGP_GRID_INNER_SPACING),
-            ) {
-                Spacer(modifier = Modifier.size(VGP_GRID_BTN_SIZE))
-                GamepadButtonTile(
-                    preset = southPreset,
-                    selectedBtnCode = selectedBtnCode,
-                    swapFaceButtons = swapFaceButtons,
-                    accentColor = accentColor,
-                    customTextColor = VGP_COLOR_YELLOW,
-                    width = VGP_GRID_BTN_SIZE,
-                    height = VGP_GRID_BTN_SIZE,
-                    isCircle = true,
-                    onClick = { onSelectButton(southPreset) },
-                )
+            } else {
                 Spacer(modifier = Modifier.size(VGP_GRID_BTN_SIZE))
             }
         }
@@ -801,14 +483,14 @@ private fun GamepadButtonTile(
     modifier: Modifier = Modifier,
     customLabel: String? = null,
     customTextColor: Color? = null,
-    fontSize: androidx.compose.ui.unit.TextUnit = VGP_BTN_FONT_SIZE,
+    fontSize: TextUnit = VGP_BTN_FONT_SIZE,
     isCircle: Boolean = false,
     shapeCorner: Dp = VGP_CARD_CORNER,
     icon: ImageVector? = null,
 ) {
     val isSelected = preset.code == selectedBtnCode
     val colors = LocalAppColors.current
-    val shape = if (isCircle) CircleShape else RoundedCornerShape(shapeCorner)
+    val shape = if (isCircle) CircleShape else VGP_CARD_SHAPE
     val displayLabel = customLabel ?: preset.displayShortLabel(swapFaceButtons)
 
     Box(
@@ -853,7 +535,7 @@ private fun ClearButtonTile(
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
-    val shape = RoundedCornerShape(VGP_CARD_CORNER)
+    val shape = VGP_CARD_SHAPE
 
     Box(
         modifier =
@@ -892,4 +574,75 @@ private fun ClearButtonTile(
             )
         }
     }
+}
+
+@Composable
+private fun ShoulderTriggerPair(
+    outerCode: Int,
+    innerCode: Int,
+    isLeft: Boolean,
+    selectedBtnCode: Int,
+    swapFaceButtons: Boolean,
+    accentColor: Color,
+    onSelectButton: (preset: GamepadKeycodes.GamepadButtonPreset) -> Unit,
+) {
+    val outer = preset(outerCode)
+    val inner = preset(innerCode)
+
+    val triggerTile = @Composable { mod: Modifier ->
+        GamepadButtonTile(
+            preset = outer,
+            selectedBtnCode = selectedBtnCode,
+            swapFaceButtons = swapFaceButtons,
+            accentColor = accentColor,
+            width = VGP_TRIGGER_WIDTH,
+            height = VGP_TRIGGER_HEIGHT,
+            onClick = { onSelectButton(outer) },
+            modifier = mod,
+        )
+    }
+
+    val shoulderTile = @Composable { mod: Modifier ->
+        GamepadButtonTile(
+            preset = inner,
+            selectedBtnCode = selectedBtnCode,
+            swapFaceButtons = swapFaceButtons,
+            accentColor = accentColor,
+            width = VGP_SHOULDER_WIDTH,
+            height = VGP_SHOULDER_HEIGHT,
+            onClick = { onSelectButton(inner) },
+            modifier = mod,
+        )
+    }
+
+    Row(horizontalArrangement = Arrangement.spacedBy(VGP_ROW_SPACING)) {
+        if (isLeft) {
+            triggerTile(Modifier.firstDeckItem())
+            shoulderTile(Modifier)
+        } else {
+            shoulderTile(Modifier)
+            triggerTile(Modifier)
+        }
+    }
+}
+
+@Composable
+private fun SystemButtonTile(
+    code: Int,
+    selectedBtnCode: Int,
+    swapFaceButtons: Boolean,
+    accentColor: Color,
+    onSelectButton: (preset: GamepadKeycodes.GamepadButtonPreset) -> Unit,
+) {
+    val btnPreset = preset(code)
+    GamepadButtonTile(
+        preset = btnPreset,
+        selectedBtnCode = selectedBtnCode,
+        swapFaceButtons = swapFaceButtons,
+        accentColor = accentColor,
+        width = VGP_SYS_BTN_WIDTH,
+        height = VGP_SYS_BTN_HEIGHT,
+        fontSize = VGP_SYS_FONT_SIZE,
+        onClick = { onSelectButton(btnPreset) },
+    )
 }

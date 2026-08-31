@@ -25,11 +25,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -37,7 +34,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -52,7 +48,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -68,15 +63,11 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.catalog.InstalledAppsManager
-import com.stormpanda.megingiard.gamefocus.R
 import com.stormpanda.megingiard.math.floorMod
 import com.stormpanda.megingiard.media.SteamGridDbClient
-import com.stormpanda.megingiard.media.SteamGridDbException
 import com.stormpanda.megingiard.media.SteamGridDbGame
 import com.stormpanda.megingiard.media.SteamGridDbImage
 import com.stormpanda.megingiard.ui.AppModalDialog
-import com.stormpanda.megingiard.ui.CutoutLetterButton
-import com.stormpanda.megingiard.ui.CutoutLetterCircleIcon
 import com.stormpanda.megingiard.ui.ExpandableActionItem
 import com.stormpanda.megingiard.ui.ExpandableActionsMenu
 import com.stormpanda.megingiard.ui.GamePadButton
@@ -89,9 +80,12 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.net.URL
 
 private const val TAG = "GameFocusArtworkDialog"
+
+private val GAD_CHIP_SHAPE = RoundedCornerShape(20.dp)
+private val GAD_BADGE_SHAPE = RoundedCornerShape(6.dp)
+private val GAD_BUTTON_SHAPE = RoundedCornerShape(8.dp)
 
 @Composable
 fun GameFocusArtworkDialog(
@@ -134,9 +128,11 @@ fun GameFocusArtworkDialog(
     val useAppIcon =
         remember(appInfo.packageName) {
             {
-                val coversDir = File(context.cacheDir, "gamefocus_covers")
-                val targetFile = File(coversDir, "${appInfo.packageName}.png")
-                if (targetFile.exists()) targetFile.delete()
+                scope.launch(Dispatchers.IO) {
+                    val coversDir = File(context.cacheDir, "gamefocus_covers")
+                    val targetFile = File(coversDir, "${appInfo.packageName}.png")
+                    if (targetFile.exists()) targetFile.delete()
+                }
                 AppPaletteExtractor.invalidatePalette(appInfo.packageName)
                 InstalledAppsManager.updateAppCover(appInfo.packageName, null)
                 InstalledAppsManager.markAppAsScraped(context, appInfo.packageName)
@@ -236,13 +232,11 @@ fun GameFocusArtworkDialog(
                     selectingImage = imageItem
                     scope.launch(Dispatchers.IO) {
                         try {
-                            val tempRes = SteamGridDbClient.downloadImageToTempFile(imageItem.url, context.cacheDir)
-                            val tempFile = tempRes.getOrNull()
-                            if (tempFile != null) {
+                            val bytes = SteamGridDbClient.downloadImageBytes(imageItem.url).getOrNull()
+                            if (bytes != null) {
                                 val coversDir = File(context.cacheDir, "gamefocus_covers").apply { mkdirs() }
                                 val targetFile = File(coversDir, "${appInfo.packageName}.png")
-                                tempFile.copyTo(targetFile, overwrite = true)
-                                tempFile.delete()
+                                targetFile.writeBytes(bytes)
 
                                 // Scrape logo for ROMs
                                 if (appInfo.isRom && currentGame != null) {
@@ -250,13 +244,10 @@ fun GameFocusArtworkDialog(
                                         val logosRes = SteamGridDbClient.fetchImages(currentGame.id, "logos", apiKey)
                                         val logoUrl = logosRes.getOrNull()?.firstOrNull()?.url
                                         if (logoUrl != null) {
-                                            val tempLogoRes = SteamGridDbClient.downloadImageToTempFile(logoUrl, context.cacheDir)
-                                            val tempLogoFile = tempLogoRes.getOrNull()
-                                            if (tempLogoFile != null) {
+                                            val logoBytes = SteamGridDbClient.downloadImageBytes(logoUrl).getOrNull()
+                                            if (logoBytes != null) {
                                                 val logosDir = File(context.cacheDir, "gamefocus_logos").apply { mkdirs() }
-                                                val targetLogoFile = File(logosDir, "${appInfo.packageName}.png")
-                                                tempLogoFile.copyTo(targetLogoFile, overwrite = true)
-                                                tempLogoFile.delete()
+                                                File(logosDir, "${appInfo.packageName}.png").writeBytes(logoBytes)
                                                 AppLog.i(TAG, "Selected and updated logo for ROM: ${appInfo.packageName}")
                                             }
                                         }
@@ -316,6 +307,12 @@ fun GameFocusArtworkDialog(
 
             // Conditional Edit Search Term Input Field
             if (isEditingQuery) {
+                val commitSearch = {
+                    if (searchInputText.isNotBlank()) {
+                        searchQuery = searchInputText.trim()
+                        isEditingQuery = false
+                    }
+                }
                 Row(
                     modifier =
                         Modifier
@@ -346,28 +343,15 @@ fun GameFocusArtworkDialog(
                                 cursorColor = appColors.accent,
                             ),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                        keyboardActions =
-                            KeyboardActions(
-                                onSearch = {
-                                    if (searchInputText.isNotBlank()) {
-                                        searchQuery = searchInputText.trim()
-                                        isEditingQuery = false
-                                    }
-                                },
-                            ),
+                        keyboardActions = KeyboardActions(onSearch = { commitSearch() }),
                     )
 
                     IconButton(
-                        onClick = {
-                            if (searchInputText.isNotBlank()) {
-                                searchQuery = searchInputText.trim()
-                                isEditingQuery = false
-                            }
-                        },
+                        onClick = commitSearch,
                         modifier =
                             Modifier
                                 .size(40.dp)
-                                .clip(RoundedCornerShape(8.dp))
+                                .clip(GAD_BUTTON_SHAPE)
                                 .background(appColors.accent),
                     ) {
                         Icon(
@@ -546,25 +530,7 @@ private fun GameSelectionRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
-        // L1 Badge Indicator
-        Box(
-            modifier =
-                Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(appColors.surfaceVariant)
-                    .border(1.dp, appColors.divider, RoundedCornerShape(6.dp))
-                    .padding(horizontal = 7.dp, vertical = 4.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = "L1",
-                style =
-                    MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = appColors.accent,
-                    ),
-            )
-        }
+        ShoulderBadge(label = "L1")
 
         Spacer(modifier = Modifier.width(8.dp))
 
@@ -581,12 +547,12 @@ private fun GameSelectionRow(
                 Box(
                     modifier =
                         Modifier
-                            .clip(RoundedCornerShape(20.dp))
+                            .clip(GAD_CHIP_SHAPE)
                             .background(if (isSelected) appColors.accent else appColors.surfaceVariant)
                             .border(
                                 width = if (isSelected) 2.dp else 1.dp,
                                 color = if (isSelected) appColors.accent else appColors.divider,
-                                shape = RoundedCornerShape(20.dp),
+                                shape = GAD_CHIP_SHAPE,
                             ).clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
@@ -611,25 +577,33 @@ private fun GameSelectionRow(
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        // R1 Badge Indicator
-        Box(
-            modifier =
-                Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(appColors.surfaceVariant)
-                    .border(1.dp, appColors.divider, RoundedCornerShape(6.dp))
-                    .padding(horizontal = 7.dp, vertical = 4.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = "R1",
-                style =
-                    MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = appColors.accent,
-                    ),
-            )
-        }
+        ShoulderBadge(label = "R1")
+    }
+}
+
+@Composable
+private fun ShoulderBadge(
+    label: String,
+    modifier: Modifier = Modifier,
+) {
+    val appColors = LocalAppColors.current
+    Box(
+        modifier =
+            modifier
+                .clip(GAD_BADGE_SHAPE)
+                .background(appColors.surfaceVariant)
+                .border(1.dp, appColors.divider, GAD_BADGE_SHAPE)
+                .padding(horizontal = 7.dp, vertical = 4.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            style =
+                MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = appColors.accent,
+                ),
+        )
     }
 }
 
@@ -645,49 +619,27 @@ private fun ArtworkOptionItem(
 
     DisposableEffect(imageItem.thumb) {
         onDispose {
-            rawBitmap?.let { bmp ->
-                if (!bmp.isRecycled) {
-                    bmp.recycle()
-                }
-            }
+            rawBitmap?.takeUnless { it.isRecycled }?.recycle()
         }
     }
 
     LaunchedEffect(imageItem.thumb) {
-        withContext(Dispatchers.IO) {
-            try {
-                val url = URL(imageItem.thumb)
-                val connection = url.openConnection()
-                connection.connectTimeout = 5000
-                connection.readTimeout = 8000
-                val stream = connection.getInputStream()
-                val decoded = BitmapFactory.decodeStream(stream)
-                stream.close()
-                if (!isActive) {
-                    decoded?.let { if (!it.isRecycled) it.recycle() }
-                    return@withContext
-                }
-                rawBitmap = decoded
-                withContext(Dispatchers.Main) {
-                    bitmap = decoded?.asImageBitmap()
-                    isThumbLoading = false
-                }
-            } catch (e: Exception) {
-                AppLog.w(TAG, "Failed to load thumbnail from ${imageItem.thumb}: ${e.message}")
-                withContext(Dispatchers.Main) {
-                    isThumbLoading = false
-                }
-            }
-        }
+        val bytes = SteamGridDbClient.downloadImageBytes(imageItem.thumb).getOrNull()
+        if (!isActive) return@LaunchedEffect
+        val decoded = bytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
+        rawBitmap = decoded
+        bitmap = decoded?.asImageBitmap()
+        isThumbLoading = false
     }
 
     Box(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
-        if (bitmap != null) {
+        val currentBitmap = bitmap
+        if (currentBitmap != null) {
             Image(
-                bitmap = bitmap!!,
+                bitmap = currentBitmap,
                 contentDescription = stringResource(R.string.steamgriddb_cd_artwork_option),
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),

@@ -6,13 +6,13 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File
-import java.io.FileOutputStream
 import java.net.ConnectException
 import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
 import java.net.URL
 import java.net.URLEncoder
 import java.net.UnknownHostException
+import java.nio.charset.StandardCharsets
 
 private const val TAG = "SteamGridDbClient"
 private const val BASE_URL = "https://www.steamgriddb.com/api/v2"
@@ -23,11 +23,11 @@ sealed class SteamGridDbException(
     message: String,
     cause: Throwable? = null,
 ) : Exception(message, cause) {
-    object Offline : SteamGridDbException("Device is offline")
+    data object Offline : SteamGridDbException("Device is offline")
 
-    object RateLimited : SteamGridDbException("Rate limit exceeded")
+    data object RateLimited : SteamGridDbException("Rate limit exceeded")
 
-    object ServiceUnavailable : SteamGridDbException("SteamGridDB is unreachable")
+    data object ServiceUnavailable : SteamGridDbException("SteamGridDB is unreachable")
 
     class Unauthorized(
         message: String = "Invalid or unauthorized API key",
@@ -156,22 +156,27 @@ object SteamGridDbClient {
         return if (cleaned.isNotBlank()) cleaned else rawQuery.trim()
     }
 
-    suspend fun validateToken(apiKey: String): Result<Boolean> {
-        if (apiKey.isBlank()) {
-            return Result.failure(SteamGridDbException.Unauthorized("API key is missing"))
-        }
-        val urlString = "$BASE_URL/search/autocomplete/test"
-        return fetchString(urlString, apiKey)
+    private suspend inline fun <reified T> fetchApiResponse(
+        urlString: String,
+        apiKey: String,
+    ): Result<T> =
+        fetchString(urlString, apiKey)
             .mapCatching { jsonStr ->
-                val parsed = json.decodeFromString<SteamGridDbResponse<List<SteamGridDbGame>>>(jsonStr)
+                val parsed = json.decodeFromString<SteamGridDbResponse<T>>(jsonStr)
                 if (parsed.success) {
-                    true
+                    parsed.data
                 } else {
-                    throw Exception("API returned success=false")
+                    throw SteamGridDbException.ApiError("API returned success=false")
                 }
             }.recoverCatching { err ->
                 throw if (err is SteamGridDbException) err else mapNetworkError(err as Exception)
             }
+
+    suspend fun validateToken(apiKey: String): Result<Boolean> {
+        if (apiKey.isBlank()) {
+            return Result.failure(SteamGridDbException.Unauthorized("API key is missing"))
+        }
+        return fetchApiResponse<List<SteamGridDbGame>>("$BASE_URL/search/autocomplete/test", apiKey).map { true }
     }
 
     suspend fun searchGames(
@@ -185,20 +190,9 @@ object SteamGridDbClient {
         }
         val encodedQuery =
             withContext(Dispatchers.IO) {
-                URLEncoder.encode(cleanedQuery, "UTF-8").replace("+", "%20")
+                URLEncoder.encode(cleanedQuery, StandardCharsets.UTF_8).replace("+", "%20")
             }
-        val urlString = "$BASE_URL/search/autocomplete/$encodedQuery"
-        return fetchString(urlString, apiKey)
-            .mapCatching { jsonStr ->
-                val parsed = json.decodeFromString<SteamGridDbResponse<List<SteamGridDbGame>>>(jsonStr)
-                if (parsed.success) {
-                    parsed.data
-                } else {
-                    throw Exception("API returned success=false")
-                }
-            }.recoverCatching { err ->
-                throw if (err is SteamGridDbException) err else mapNetworkError(err as Exception)
-            }
+        return fetchApiResponse("$BASE_URL/search/autocomplete/$encodedQuery", apiKey)
     }
 
     suspend fun fetchImages(
@@ -213,73 +207,27 @@ object SteamGridDbClient {
         // Validate type against supported categories
         val validTypes = setOf("grids", "heroes", "logos", "icons")
         val resolvedType = if (type in validTypes) type else "grids"
-        val urlString = "$BASE_URL/$resolvedType/game/$gameId"
-        return fetchString(urlString, apiKey)
-            .mapCatching { jsonStr ->
-                val parsed = json.decodeFromString<SteamGridDbResponse<List<SteamGridDbImage>>>(jsonStr)
-                if (parsed.success) {
-                    parsed.data
-                } else {
-                    throw Exception("API returned success=false")
-                }
-            }.recoverCatching { err ->
-                throw if (err is SteamGridDbException) err else mapNetworkError(err as Exception)
-            }
+        return fetchApiResponse("$BASE_URL/$resolvedType/game/$gameId", apiKey)
     }
 
-    suspend fun downloadImageToTempFile(
-        imageUrl: String,
-        cacheDir: File,
-    ): Result<File> =
-        withContext(Dispatchers.IO) {
-            AppLog.d(TAG, "downloadImageToTempFile: url=$imageUrl")
-            var connection: HttpURLConnection? = null
-            try {
-                val url = URL(imageUrl)
-                connection = url.openConnection() as HttpURLConnection
-                connection.connectTimeout = TIMEOUT_CONNECT_MS
-                connection.readTimeout = TIMEOUT_READ_MS
-                val responseCode = connection.responseCode
-                if (responseCode == HttpURLConnection.HTTP_OK) {
-                    val tempFile = File(cacheDir, "steamgriddb_temp_${System.currentTimeMillis()}.png")
-                    connection.inputStream.use { input ->
-                        FileOutputStream(tempFile).use { output ->
-                            input.copyTo(output)
-                        }
-                    }
-                    Result.success(tempFile)
-                } else {
-                    val errorText = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
-                    AppLog.w(TAG, "Failed to download image from $imageUrl, response code: $responseCode, error: $errorText")
-                    Result.failure(mapHttpError(responseCode, errorText))
-                }
-            } catch (e: Exception) {
-                AppLog.e(TAG, "Error downloading image $imageUrl", e)
-                Result.failure(mapNetworkError(e))
-            } finally {
-                connection?.disconnect()
-            }
-        }
-
-    private suspend fun fetchString(
+    private suspend fun executeHttpRequest(
         urlString: String,
-        apiKey: String,
-    ): Result<String> =
+        authBearer: String? = null,
+        acceptHeader: String? = null,
+    ): Result<ByteArray> =
         withContext(Dispatchers.IO) {
             var connection: HttpURLConnection? = null
             try {
                 val url = URL(urlString)
                 connection = url.openConnection() as HttpURLConnection
-                connection.requestMethod = "GET"
                 connection.connectTimeout = TIMEOUT_CONNECT_MS
                 connection.readTimeout = TIMEOUT_READ_MS
-                connection.setRequestProperty("Authorization", "Bearer $apiKey")
-                connection.setRequestProperty("Accept", "application/json")
-
+                connection.instanceFollowRedirects = true
+                authBearer?.let { connection.setRequestProperty("Authorization", "Bearer $it") }
+                acceptHeader?.let { connection.setRequestProperty("Accept", it) }
                 val responseCode = connection.responseCode
                 if (responseCode == HttpURLConnection.HTTP_OK) {
-                    val responseText = connection.inputStream.bufferedReader().use { it.readText() }
-                    Result.success(responseText)
+                    Result.success(connection.inputStream.use { it.readBytes() })
                 } else {
                     val errorText = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
                     AppLog.w(TAG, "HTTP error $responseCode requesting $urlString: $errorText")
@@ -292,4 +240,26 @@ object SteamGridDbClient {
                 connection?.disconnect()
             }
         }
+
+    suspend fun downloadImageBytes(imageUrl: String): Result<ByteArray> {
+        AppLog.d(TAG, "downloadImageBytes: url=$imageUrl")
+        return executeHttpRequest(imageUrl)
+    }
+
+    suspend fun downloadImageToTempFile(
+        imageUrl: String,
+        cacheDir: File,
+    ): Result<File> =
+        downloadImageBytes(imageUrl).mapCatching { bytes ->
+            val tempFile = File(cacheDir, "steamgriddb_temp_${System.currentTimeMillis()}.png")
+            tempFile.writeBytes(bytes)
+            tempFile
+        }
+
+    private suspend fun fetchString(
+        urlString: String,
+        apiKey: String,
+    ): Result<String> =
+        executeHttpRequest(urlString, authBearer = apiKey, acceptHeader = "application/json")
+            .map { it.toString(Charsets.UTF_8) }
 }

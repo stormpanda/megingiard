@@ -17,6 +17,7 @@ import com.stormpanda.megingiard.keyboard.KeyboardMode
 import com.stormpanda.megingiard.keyboard.KeyboardState
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.keyboard.ModifierState
+import com.stormpanda.megingiard.math.nextItem
 import com.stormpanda.megingiard.settings.KeyboardSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.Dispatchers
@@ -50,45 +51,24 @@ class KeyboardViewModel(
         _keyboardMode.value = mode
     }
 
-    fun setKbTouchpadEnabled(value: Boolean) {
-        KeyboardSettings.setKbTouchpadEnabled(value)
-    }
+    fun setKbTouchpadEnabled(value: Boolean) = KeyboardSettings.setKbTouchpadEnabled(value)
 
-    fun selectAll() {
+    private fun sendCtrlCombo(keyCode: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
-            KeyInjector.keyDown(LinuxKeycodes.KEY_A)
-            KeyInjector.keyUp(LinuxKeycodes.KEY_A)
+            KeyInjector.keyDown(keyCode)
+            KeyInjector.keyUp(keyCode)
             KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
         }
     }
 
-    fun cut() {
-        viewModelScope.launch(Dispatchers.IO) {
-            KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
-            KeyInjector.keyDown(LinuxKeycodes.KEY_X)
-            KeyInjector.keyUp(LinuxKeycodes.KEY_X)
-            KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
-        }
-    }
+    fun selectAll() = sendCtrlCombo(LinuxKeycodes.KEY_A)
 
-    fun copy() {
-        viewModelScope.launch(Dispatchers.IO) {
-            KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
-            KeyInjector.keyDown(LinuxKeycodes.KEY_C)
-            KeyInjector.keyUp(LinuxKeycodes.KEY_C)
-            KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
-        }
-    }
+    fun cut() = sendCtrlCombo(LinuxKeycodes.KEY_X)
 
-    fun paste() {
-        viewModelScope.launch(Dispatchers.IO) {
-            KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
-            KeyInjector.keyDown(LinuxKeycodes.KEY_V)
-            KeyInjector.keyUp(LinuxKeycodes.KEY_V)
-            KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
-        }
-    }
+    fun copy() = sendCtrlCombo(LinuxKeycodes.KEY_C)
+
+    fun paste() = sendCtrlCombo(LinuxKeycodes.KEY_V)
 
     val controller = KeyRepeatController(viewModelScope)
     val gestureProcessor =
@@ -108,23 +88,16 @@ class KeyboardViewModel(
                     KeyboardState.stateFor("ralt").value != ModifierState.INACTIVE
             },
             initialDensity = 1f,
-            onInjectPopupSelection = { popupKeyDef, charToInject ->
-                injectPopupSelection(popupKeyDef, charToInject)
-            },
+            onInjectPopupSelection = ::injectPopupSelection,
         )
 
     fun closeQuickMenu() = AppStateManager.closeQuickMenu()
 
     fun cycleKbLayout() {
-        val current = kbLayout.value
-        val layouts = KbLayout.entries
-        val nextIndex = (layouts.indexOf(current) + 1) % layouts.size
-        KeyboardSettings.setKbLayout(layouts[nextIndex])
+        KeyboardSettings.setKbLayout(KbLayout.entries.nextItem(kbLayout.value))
     }
 
-    fun setKbLayout(value: KbLayout) {
-        KeyboardSettings.setKbLayout(value)
-    }
+    fun setKbLayout(value: KbLayout) = KeyboardSettings.setKbLayout(value)
 
     fun startInjectors(context: Context) {
         AppLog.i(TAG, "startInjectors called -> watching InjectorLifecycleManager")

@@ -52,12 +52,10 @@ fun CutoutLetterCircleIcon(
 ) {
     val isMultiChar = letter.length > 1
     val fontSizeFactor =
-        if (letter.length > 3) {
-            0.48f
-        } else if (isMultiChar) {
-            0.54f
-        } else {
-            0.65f
+        when {
+            letter.length > 3 -> 0.48f
+            isMultiChar -> 0.54f
+            else -> 0.65f
         }
     val horizontalPadding = if (isMultiChar) (size.value * 0.35f).dp else 0.dp
 

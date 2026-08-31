@@ -36,6 +36,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Cancel
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material3.Button
@@ -88,6 +89,8 @@ import kotlinx.coroutines.withContext
 private const val TAG = "PrivdSetupWizard"
 private val PRD_DIALOG_MAX_WIDTH = 480.dp
 private val PRD_DIALOG_CORNER_RADIUS = 16.dp
+private val PRD_DIALOG_SHAPE = RoundedCornerShape(PRD_DIALOG_CORNER_RADIUS)
+private val PRD_EXAMPLE_BOX_SHAPE = RoundedCornerShape(8.dp)
 private val PRD_DIALOG_BORDER_WIDTH = 2.dp
 private val PRD_DIALOG_SHADOW_ELEVATION = 12.dp
 private val PRD_DIALOG_PADDING_HORIZONTAL = 20.dp
@@ -217,13 +220,13 @@ internal fun PrivdSetupWizardDialog(
                     .animateContentSize(
                         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
                         alignment = Alignment.Center,
-                    ).shadow(PRD_DIALOG_SHADOW_ELEVATION, RoundedCornerShape(PRD_DIALOG_CORNER_RADIUS))
-                    .clip(RoundedCornerShape(PRD_DIALOG_CORNER_RADIUS))
+                    ).shadow(PRD_DIALOG_SHADOW_ELEVATION, PRD_DIALOG_SHAPE)
+                    .clip(PRD_DIALOG_SHAPE)
                     .background(colors.surface)
                     .border(
                         PRD_DIALOG_BORDER_WIDTH,
                         brush = rememberBezelBrush(),
-                        shape = RoundedCornerShape(PRD_DIALOG_CORNER_RADIUS),
+                        shape = PRD_DIALOG_SHAPE,
                     ).padding(
                         start = PRD_DIALOG_PADDING_HORIZONTAL,
                         end = PRD_DIALOG_PADDING_HORIZONTAL,
@@ -324,23 +327,21 @@ internal fun PrivdSetupWizardDialog(
                                         0,
                                     ) != 0
 
-                                val intentsToTry =
-                                    if (devOptionsEnabled) {
-                                        listOf(
-                                            Intent("android.service.quicksettings.action.QS_TILE_PREFERENCES").apply {
-                                                component =
-                                                    ComponentName(
-                                                        "com.android.settings",
-                                                        "com.android.settings.development.qstile.DevelopmentTiles\$WirelessDebugging",
-                                                    )
-                                            },
-                                            Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS),
-                                            Intent(Settings.ACTION_SETTINGS),
-                                        )
-                                    } else {
-                                        listOf(
-                                            Intent(Settings.ACTION_SETTINGS),
-                                        )
+                                val intents =
+                                    buildList {
+                                        if (devOptionsEnabled) {
+                                            add(
+                                                Intent("android.service.quicksettings.action.QS_TILE_PREFERENCES").apply {
+                                                    component =
+                                                        ComponentName(
+                                                            "com.android.settings",
+                                                            "com.android.settings.development.qstile.DevelopmentTiles\$WirelessDebugging",
+                                                        )
+                                                },
+                                            )
+                                            add(Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS))
+                                        }
+                                        add(Intent(Settings.ACTION_SETTINGS))
                                     }
 
                                 val options =
@@ -348,13 +349,12 @@ internal fun PrivdSetupWizardDialog(
                                         setLaunchDisplayId(Display.DEFAULT_DISPLAY)
                                     }
 
-                                for (intent in intentsToTry) {
-                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                intents.any { intent ->
                                     try {
-                                        context.startActivity(intent, options.toBundle())
-                                        break
-                                    } catch (e: Exception) {
-                                        // Fallback to next intent
+                                        context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), options.toBundle())
+                                        true
+                                    } catch (_: Exception) {
+                                        false
                                     }
                                 }
                             },
@@ -532,6 +532,20 @@ internal fun PrivdSetupWizardDialog(
 }
 
 @Composable
+private fun SubstepList(vararg stringResIds: Int) {
+    val colors = LocalAppColors.current
+    Column(verticalArrangement = Arrangement.spacedBy(SW_CHECKLIST_GAP)) {
+        stringResIds.forEach { resId ->
+            Text(
+                text = stringResource(resId),
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+    }
+}
+
+@Composable
 private fun Step1MenuDescription(error: Boolean) {
     val colors = LocalAppColors.current
     Column(verticalArrangement = Arrangement.spacedBy(SW_GAP)) {
@@ -547,33 +561,13 @@ private fun Step1MenuDescription(error: Boolean) {
             style = MaterialTheme.typography.labelLarge,
             modifier = Modifier.padding(top = SW_SECTION_GAP),
         )
-        Column(verticalArrangement = Arrangement.spacedBy(SW_CHECKLIST_GAP)) {
-            Text(
-                text = stringResource(R.string.privd_wizard_step1_substep_1),
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Text(
-                text = stringResource(R.string.privd_wizard_step1_substep_2),
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Text(
-                text = stringResource(R.string.privd_wizard_step1_substep_3),
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Text(
-                text = stringResource(R.string.privd_wizard_step1_substep_4),
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Text(
-                text = stringResource(R.string.privd_wizard_step1_substep_5),
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
+        SubstepList(
+            R.string.privd_wizard_step1_substep_1,
+            R.string.privd_wizard_step1_substep_2,
+            R.string.privd_wizard_step1_substep_3,
+            R.string.privd_wizard_step1_substep_4,
+            R.string.privd_wizard_step1_substep_5,
+        )
 
         Text(
             text = stringResource(R.string.privd_wizard_step1_variant_dev_enabled_title),
@@ -581,23 +575,11 @@ private fun Step1MenuDescription(error: Boolean) {
             style = MaterialTheme.typography.labelLarge,
             modifier = Modifier.padding(top = SW_SECTION_GAP),
         )
-        Column(verticalArrangement = Arrangement.spacedBy(SW_CHECKLIST_GAP)) {
-            Text(
-                text = stringResource(R.string.privd_wizard_step1_dev_enabled_substep_1),
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Text(
-                text = stringResource(R.string.privd_wizard_step1_dev_enabled_substep_2),
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Text(
-                text = stringResource(R.string.privd_wizard_step1_dev_enabled_substep_3),
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
+        SubstepList(
+            R.string.privd_wizard_step1_dev_enabled_substep_1,
+            R.string.privd_wizard_step1_dev_enabled_substep_2,
+            R.string.privd_wizard_step1_dev_enabled_substep_3,
+        )
 
         if (error) {
             Text(
@@ -639,7 +621,7 @@ private fun Step2ConnectPort(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .background(colors.surfaceVariant, RoundedCornerShape(8.dp))
+                    .background(colors.surfaceVariant, PRD_EXAMPLE_BOX_SHAPE)
                     .padding(horizontal = 12.dp, vertical = 8.dp),
         ) {
             Text(
@@ -719,7 +701,7 @@ private fun Step3Pairing(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .background(colors.surfaceVariant, RoundedCornerShape(8.dp))
+                        .background(colors.surfaceVariant, PRD_EXAMPLE_BOX_SHAPE)
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
@@ -765,27 +747,22 @@ private fun Step3Pairing(
         } else {
             val ord = stage.ordinal
             Column(verticalArrangement = Arrangement.spacedBy(SW_CHECKLIST_GAP)) {
-                ChecklistRow(
-                    label = stringResource(R.string.privd_wizard_checklist_adb),
-                    status = checklistStatus(ord, BootstrapStage.CONNECTING_ADB.ordinal),
-                )
-                ChecklistRow(
-                    label = stringResource(R.string.privd_wizard_checklist_push),
-                    status = checklistStatus(ord, BootstrapStage.PUSHING_BINARY.ordinal),
-                )
-                ChecklistRow(
-                    label = stringResource(R.string.privd_wizard_checklist_spawn),
-                    status = checklistStatus(ord, BootstrapStage.SPAWNING_DAEMON.ordinal),
-                )
-                ChecklistRow(
-                    label = stringResource(R.string.privd_wizard_checklist_verify),
-                    status = checklistStatus(ord, BootstrapStage.VERIFYING.ordinal),
-                )
+                listOf(
+                    R.string.privd_wizard_checklist_adb to BootstrapStage.CONNECTING_ADB,
+                    R.string.privd_wizard_checklist_push to BootstrapStage.PUSHING_BINARY,
+                    R.string.privd_wizard_checklist_spawn to BootstrapStage.SPAWNING_DAEMON,
+                    R.string.privd_wizard_checklist_verify to BootstrapStage.VERIFYING,
+                ).forEach { (resId, targetStage) ->
+                    PrivdChecklistRow(
+                        label = stringResource(resId),
+                        status = checklistStatus(ord, targetStage.ordinal),
+                    )
+                }
             }
         }
 
         if (hasAttemptedSubmit && error && !isProgressActive) {
-            val errorRes = errorStringResource(lastError) ?: R.string.privd_error_pairing_failed
+            val errorRes = lastError.descriptionResId() ?: R.string.privd_error_pairing_failed
             Text(
                 text = stringResource(errorRes),
                 color = colors.error,
@@ -796,52 +773,48 @@ private fun Step3Pairing(
 }
 
 /** Status of a single checklist row. */
-private enum class ChecklistStatus { PENDING, ACTIVE, DONE }
+enum class ChecklistStatus { PENDING, ACTIVE, DONE, FAILED }
 
 @Composable
-private fun ChecklistRow(
+fun PrivdChecklistRow(
     label: String,
     status: ChecklistStatus,
+    modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(SW_CHECKLIST_GAP),
+        modifier = modifier,
     ) {
-        when (status) {
-            ChecklistStatus.PENDING -> {
-                Icon(
-                    imageVector = Icons.Rounded.RadioButtonUnchecked,
-                    contentDescription = null,
-                    tint = colors.onSurfaceSecondary,
-                    modifier = Modifier.size(SW_CHECKLIST_ICON_SIZE),
-                )
-            }
-
-            ChecklistStatus.ACTIVE -> {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(SW_CHECKLIST_ICON_SIZE),
-                    strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
-
-            ChecklistStatus.DONE -> {
-                Icon(
-                    imageVector = Icons.Rounded.CheckCircle,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(SW_CHECKLIST_ICON_SIZE),
-                )
-            }
+        if (status == ChecklistStatus.ACTIVE) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(SW_CHECKLIST_ICON_SIZE),
+                strokeWidth = 2.dp,
+                color = colors.accent,
+            )
+        } else {
+            val (icon, tint) =
+                when (status) {
+                    ChecklistStatus.PENDING -> Icons.Rounded.RadioButtonUnchecked to colors.onSurfaceSecondary.copy(alpha = 0.6f)
+                    ChecklistStatus.DONE -> Icons.Rounded.CheckCircle to colors.accent
+                    ChecklistStatus.FAILED -> Icons.Rounded.Cancel to colors.error
+                    ChecklistStatus.ACTIVE -> error("unreachable")
+                }
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(SW_CHECKLIST_ICON_SIZE),
+            )
         }
         Text(
             text = label,
             color =
                 when (status) {
-                    ChecklistStatus.DONE -> colors.onSurface
-                    ChecklistStatus.ACTIVE -> colors.onSurface
+                    ChecklistStatus.DONE, ChecklistStatus.ACTIVE -> colors.onSurface
                     ChecklistStatus.PENDING -> colors.onSurfaceSecondary
+                    ChecklistStatus.FAILED -> colors.error
                 },
             style = MaterialTheme.typography.bodySmall,
         )
@@ -858,8 +831,8 @@ private fun checklistStatus(
         else -> ChecklistStatus.DONE
     }
 
-private fun errorStringResource(error: PrivdError?): Int? =
-    when (error) {
+fun PrivdError?.descriptionResId(): Int? =
+    when (this) {
         PrivdError.DAEMON_UNREACHABLE -> R.string.privd_error_daemon_unreachable
         PrivdError.PAIRING_FAILED -> R.string.privd_error_pairing_failed
         PrivdError.ADB_DISCOVERY_FAILED -> R.string.privd_error_adb_discovery_failed

@@ -7,7 +7,6 @@ import android.content.Intent
 import android.database.ContentObserver
 import android.os.Handler
 import android.os.Looper
-import android.os.Vibrator
 import android.provider.Settings
 import android.view.Display
 import android.view.accessibility.AccessibilityManager
@@ -115,6 +114,8 @@ private val MAS_ARROW_SIZE = 56.dp
 private const val MAS_ARROW_BOUNCE_PX = 24f
 private const val MAS_ARROW_BOUNCE_MS = 800
 private const val MAS_KB_SLIDE_ANIM_DURATION_MS = 300
+private val MAS_HELP_CONTAINER_SHAPE = RoundedCornerShape(12.dp)
+private val MAS_RETRY_BTN_SHAPE = RoundedCornerShape(8.dp)
 
 @Composable
 fun MainAppScreen() {
@@ -237,23 +238,34 @@ fun MainAppScreen() {
                         isPrivdSetupWizardActive,
                     ) {
                         if (!isGesturesEnabled || isWizardActive || isPrivdSetupWizardActive) return@pointerInput
+
+                        fun makeProgressHandler(type: SwipeGestureType) =
+                            { delta: Float, isPast: Boolean ->
+                                AppStateManager.updateActiveSwipe(
+                                    SwipeGestureProgress(type, delta, swipeThresholdPx, isPast),
+                                )
+                            }
+
+                        fun handleModalOrActivate(action: () -> Unit) {
+                            AppStateManager.updateActiveSwipe(null)
+                            if (AppStateManager.isAnyModalActive.value) {
+                                AppStateManager.closeActiveModal()
+                            } else if (AppStateManager.isQuickMenuOpen.value) {
+                                AppStateManager.closeQuickMenu()
+                            } else {
+                                action()
+                            }
+                        }
+
                         val qmSwipe =
                             SwipeGestureProcessor(
                                 edgeZonePx = edgeZonePx,
                                 swipeThresholdPx = swipeThresholdPx,
                                 overlayAtBottom = overlayAtBottom,
                                 quickMenuBarZoneWidthPx = quickMenuBarZoneWidthPx,
-                                onSwipeProgress = { delta, isPast ->
-                                    AppStateManager.updateActiveSwipe(
-                                        SwipeGestureProgress(SwipeGestureType.MENU, delta, swipeThresholdPx, isPast),
-                                    )
-                                },
-                                onSwipeCancel = {
-                                    AppStateManager.updateActiveSwipe(null)
-                                },
-                                onHapticTick = {
-                                    triggerHapticFeedback(context, HapticStrength.LIGHT)
-                                },
+                                onSwipeProgress = makeProgressHandler(SwipeGestureType.MENU),
+                                onSwipeCancel = { AppStateManager.updateActiveSwipe(null) },
+                                onHapticTick = { triggerHapticFeedback(context, HapticStrength.LIGHT) },
                                 onEdgeSwipe = {
                                     AppStateManager.updateActiveSwipe(null)
                                     AppStateManager.handleEdgeSwipe()
@@ -265,27 +277,10 @@ fun MainAppScreen() {
                                 swipeThresholdPx = swipeThresholdPx,
                                 overlayAtBottom = overlayAtBottom,
                                 customZoneCheck = { x, _ -> x >= kbBarMinX && x <= kbBarMaxX },
-                                onSwipeProgress = { delta, isPast ->
-                                    AppStateManager.updateActiveSwipe(
-                                        SwipeGestureProgress(SwipeGestureType.KEYBOARD, delta, swipeThresholdPx, isPast),
-                                    )
-                                },
-                                onSwipeCancel = {
-                                    AppStateManager.updateActiveSwipe(null)
-                                },
-                                onHapticTick = {
-                                    triggerHapticFeedback(context, HapticStrength.LIGHT)
-                                },
-                                onEdgeSwipe = {
-                                    AppStateManager.updateActiveSwipe(null)
-                                    if (AppStateManager.isAnyModalActive.value) {
-                                        AppStateManager.closeActiveModal()
-                                    } else if (AppStateManager.isQuickMenuOpen.value) {
-                                        AppStateManager.closeQuickMenu()
-                                    } else {
-                                        AppStateManager.setFullscreenKeyboardActive(true)
-                                    }
-                                },
+                                onSwipeProgress = makeProgressHandler(SwipeGestureType.KEYBOARD),
+                                onSwipeCancel = { AppStateManager.updateActiveSwipe(null) },
+                                onHapticTick = { triggerHapticFeedback(context, HapticStrength.LIGHT) },
+                                onEdgeSwipe = { handleModalOrActivate { AppStateManager.setFullscreenKeyboardActive(true) } },
                             )
                         val tpSwipe =
                             SwipeGestureProcessor(
@@ -293,35 +288,15 @@ fun MainAppScreen() {
                                 swipeThresholdPx = swipeThresholdPx,
                                 overlayAtBottom = overlayAtBottom,
                                 customZoneCheck = { x, width ->
-                                    val tpBarWidth = tpBarWidthPx
-                                    val tpBarEndPadding = tpBarEndPaddingPx
-                                    val tpBarZoneWidth = tpBarZoneWidthPx
-                                    val tpBarCenter = width - tpBarEndPadding - (tpBarWidth / 2f)
-                                    val tpBarMinX = tpBarCenter - (tpBarZoneWidth / 2f)
-                                    val tpBarMaxX = tpBarCenter + (tpBarZoneWidth / 2f)
+                                    val tpBarCenter = width - tpBarEndPaddingPx - (tpBarWidthPx / 2f)
+                                    val tpBarMinX = tpBarCenter - (tpBarZoneWidthPx / 2f)
+                                    val tpBarMaxX = tpBarCenter + (tpBarZoneWidthPx / 2f)
                                     x >= tpBarMinX && x <= tpBarMaxX
                                 },
-                                onSwipeProgress = { delta, isPast ->
-                                    AppStateManager.updateActiveSwipe(
-                                        SwipeGestureProgress(SwipeGestureType.TOUCHPAD, delta, swipeThresholdPx, isPast),
-                                    )
-                                },
-                                onSwipeCancel = {
-                                    AppStateManager.updateActiveSwipe(null)
-                                },
-                                onHapticTick = {
-                                    triggerHapticFeedback(context, HapticStrength.LIGHT)
-                                },
-                                onEdgeSwipe = {
-                                    AppStateManager.updateActiveSwipe(null)
-                                    if (AppStateManager.isAnyModalActive.value) {
-                                        AppStateManager.closeActiveModal()
-                                    } else if (AppStateManager.isQuickMenuOpen.value) {
-                                        AppStateManager.closeQuickMenu()
-                                    } else {
-                                        AppStateManager.setFullscreenMouseActive(true)
-                                    }
-                                },
+                                onSwipeProgress = makeProgressHandler(SwipeGestureType.TOUCHPAD),
+                                onSwipeCancel = { AppStateManager.updateActiveSwipe(null) },
+                                onHapticTick = { triggerHapticFeedback(context, HapticStrength.LIGHT) },
+                                onEdgeSwipe = { handleModalOrActivate { AppStateManager.setFullscreenMouseActive(true) } },
                             )
                         awaitPointerEventScope {
                             while (true) {
@@ -399,35 +374,34 @@ fun MainAppScreen() {
             val recordingRequested by TouchRecordingManager.recordingRequested.collectAsState()
             val touchRecordingState by TouchRecordingManager.state.collectAsState()
 
-            // Fullscreen modal overlays — rendered above MacroPad but below QuickMenuBar.
-            AnimatedVisibility(
-                visible = isFullscreenMouseActive,
-                enter =
+            val modalEnter =
+                remember(overlayAtBottom) {
                     slideInVertically(
                         animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS),
                         initialOffsetY = { if (overlayAtBottom) it else -it },
-                    ) + fadeIn(animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS)),
-                exit =
+                    ) + fadeIn(animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS))
+                }
+            val modalExit =
+                remember {
                     slideOutVertically(
                         animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS),
                         targetOffsetY = { it },
-                    ) + fadeOut(animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS)),
+                    ) + fadeOut(animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS))
+                }
+
+            // Fullscreen modal overlays — rendered above MacroPad but below QuickMenuBar.
+            AnimatedVisibility(
+                visible = isFullscreenMouseActive,
+                enter = modalEnter,
+                exit = modalExit,
                 modifier = Modifier.fillMaxSize(),
             ) {
                 FullscreenMouseOverlay()
             }
             AnimatedVisibility(
                 visible = isFullscreenKeyboardActive,
-                enter =
-                    slideInVertically(
-                        animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS),
-                        initialOffsetY = { if (overlayAtBottom) it else -it },
-                    ) + fadeIn(animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS)),
-                exit =
-                    slideOutVertically(
-                        animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS),
-                        targetOffsetY = { it },
-                    ) + fadeOut(animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS)),
+                enter = modalEnter,
+                exit = modalExit,
                 modifier = Modifier.fillMaxSize(),
             ) {
                 KeyboardScreen(
@@ -502,9 +476,8 @@ fun MainAppScreen() {
             val contentObserver =
                 object : ContentObserver(Handler(Looper.getMainLooper())) {
                     override fun onChange(selfChange: Boolean) {
-                        val active = MegingiardAccessibilityService.isEnabled(context)
-                        AppLog.d(TAG, "ContentObserver: ENABLED_ACCESSIBILITY_SERVICES changed, active=$active")
-                        AppStateManager.setAccessibilityActive(active)
+                        AppLog.d(TAG, "ContentObserver: ENABLED_ACCESSIBILITY_SERVICES changed")
+                        syncAccessibilityState(context)
                     }
                 }
 
@@ -512,18 +485,13 @@ fun MainAppScreen() {
             context.contentResolver.registerContentObserver(uri, false, contentObserver)
 
             val am = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
-            val listener =
-                AccessibilityManager.AccessibilityStateChangeListener { _ ->
-                    val active = MegingiardAccessibilityService.isEnabled(context)
-                    AppStateManager.setAccessibilityActive(active)
-                }
+            val listener = AccessibilityManager.AccessibilityStateChangeListener { syncAccessibilityState(context) }
             am?.addAccessibilityStateChangeListener(listener)
 
             val observer =
                 LifecycleEventObserver { _, event ->
                     if (event == Lifecycle.Event.ON_RESUME) {
-                        val active = MegingiardAccessibilityService.isEnabled(context)
-                        AppStateManager.setAccessibilityActive(active)
+                        syncAccessibilityState(context)
                     }
                 }
             lifecycleOwner.lifecycle.addObserver(observer)
@@ -540,8 +508,7 @@ fun MainAppScreen() {
                 overlayAtBottom = overlayAtBottom,
                 onDismiss = {
                     OnboardingWizardManager.finishWizard()
-                    val active = MegingiardAccessibilityService.isEnabled(context)
-                    AppStateManager.setAccessibilityActive(active)
+                    syncAccessibilityState(context)
                     AppStateManager.resetPrivdPromptState()
                 },
             )
@@ -550,13 +517,11 @@ fun MainAppScreen() {
         if (showPromptDialog && !isWizardActive) {
             PrivdReconnectPromptDialog(
                 onSkip = {
-                    val active = MegingiardAccessibilityService.isEnabled(context)
-                    AppStateManager.setAccessibilityActive(active)
+                    syncAccessibilityState(context)
                     AppStateManager.setPrivdPromptDismissed(true)
                 },
                 onDone = {
-                    val active = MegingiardAccessibilityService.isEnabled(context)
-                    AppStateManager.setAccessibilityActive(active)
+                    syncAccessibilityState(context)
                     AppStateManager.setPrivdPromptDismissed(true)
                 },
             )
@@ -673,7 +638,7 @@ private fun WrongScreenOverlay(
             Column(
                 modifier =
                     Modifier
-                        .background(colors.surface, shape = RoundedCornerShape(12.dp))
+                        .background(colors.surface, shape = MAS_HELP_CONTAINER_SHAPE)
                         .padding(20.dp)
                         .fillMaxWidth(0.9f),
             ) {
@@ -706,7 +671,7 @@ private fun WrongScreenOverlay(
 
             TextButton(
                 onClick = onRetry,
-                modifier = Modifier.background(colors.accent.copy(alpha = 0.1f), shape = RoundedCornerShape(8.dp)),
+                modifier = Modifier.background(colors.accent.copy(alpha = 0.1f), shape = MAS_RETRY_BTN_SHAPE),
             ) {
                 Text(
                     text = stringResource(R.string.wrong_screen_retry),
@@ -808,3 +773,7 @@ internal fun shouldShowCompanionHub(
     isViewportEditActive: Boolean,
     isBackgroundSettingsActive: Boolean,
 ): Boolean = showIntegrationHome && !isEditorActive && !isViewportEditActive && !isBackgroundSettingsActive
+
+private fun syncAccessibilityState(context: Context) {
+    AppStateManager.setAccessibilityActive(MegingiardAccessibilityService.isEnabled(context))
+}

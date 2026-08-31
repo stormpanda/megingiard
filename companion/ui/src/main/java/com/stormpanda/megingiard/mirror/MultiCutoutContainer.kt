@@ -117,56 +117,30 @@ internal class MultiCutoutContainer(
         parentH: Float,
     ) {
         val paint = if (bgImageDim > 0f) bgDimPaint else null
-        when (bgScaleMode) {
-            BackgroundScaleMode.STRETCH -> {
-                bgSrcRect.set(0, 0, bitmap.width, bitmap.height)
-                bgDestRect.set(0f, 0f, parentW, parentH)
-                canvas.drawBitmap(bitmap, bgSrcRect, bgDestRect, paint)
-            }
+        if (bgScaleMode == BackgroundScaleMode.STRETCH) {
+            bgSrcRect.set(0, 0, bitmap.width, bitmap.height)
+            bgDestRect.set(0f, 0f, parentW, parentH)
+            canvas.drawBitmap(bitmap, bgSrcRect, bgDestRect, paint)
+        } else {
+            canvas.save()
+            val iw = bitmap.width.toFloat()
+            val ih = bitmap.height.toFloat()
+            val scaleBase =
+                if (bgScaleMode == BackgroundScaleMode.FIT) {
+                    ViewportMath.calculateAspectFitScale(parentW, parentH, iw, ih)
+                } else {
+                    ViewportMath.calculateAspectFillScale(parentW, parentH, iw, ih)
+                }
+            val ws = iw * scaleBase
+            val hs = ih * scaleBase
 
-            BackgroundScaleMode.FIT -> {
-                canvas.save()
-                val scale = bgImageScale
-                val offsetX = bgImageOffsetX * parentW
-                val offsetY = bgImageOffsetY * parentH
-                val cw = parentW
-                val ch = parentH
-                val iw = bitmap.width.toFloat()
-                val ih = bitmap.height.toFloat()
-                val scaleBase = ViewportMath.calculateAspectFitScale(cw, ch, iw, ih)
-                val ws = iw * scaleBase
-                val hs = ih * scaleBase
+            canvas.translate(parentW / 2f + bgImageOffsetX * parentW, parentH / 2f + bgImageOffsetY * parentH)
+            canvas.scale(bgImageScale, bgImageScale)
 
-                canvas.translate(cw / 2f + offsetX, ch / 2f + offsetY)
-                canvas.scale(scale, scale)
-
-                bgSrcRect.set(0, 0, bitmap.width, bitmap.height)
-                bgDestRect.set(-ws / 2f, -hs / 2f, ws / 2f, hs / 2f)
-                canvas.drawBitmap(bitmap, bgSrcRect, bgDestRect, paint)
-                canvas.restore()
-            }
-
-            BackgroundScaleMode.FILL -> {
-                canvas.save()
-                val scale = bgImageScale
-                val offsetX = bgImageOffsetX * parentW
-                val offsetY = bgImageOffsetY * parentH
-                val cw = parentW
-                val ch = parentH
-                val iw = bitmap.width.toFloat()
-                val ih = bitmap.height.toFloat()
-                val scaleBase = ViewportMath.calculateAspectFillScale(cw, ch, iw, ih)
-                val ws = iw * scaleBase
-                val hs = ih * scaleBase
-
-                canvas.translate(cw / 2f + offsetX, ch / 2f + offsetY)
-                canvas.scale(scale, scale)
-
-                bgSrcRect.set(0, 0, bitmap.width, bitmap.height)
-                bgDestRect.set(-ws / 2f, -hs / 2f, ws / 2f, hs / 2f)
-                canvas.drawBitmap(bitmap, bgSrcRect, bgDestRect, paint)
-                canvas.restore()
-            }
+            bgSrcRect.set(0, 0, bitmap.width, bitmap.height)
+            bgDestRect.set(-ws / 2f, -hs / 2f, ws / 2f, hs / 2f)
+            canvas.drawBitmap(bitmap, bgSrcRect, bgDestRect, paint)
+            canvas.restore()
         }
     }
 
@@ -422,38 +396,24 @@ internal class MultiCutoutContainer(
                             blendPaint.shader = null
                         }
                     } else if (hasTouching) {
-                        if (touchesLeft) {
+                        fun drawEdgeBlend(
+                            shader: LinearGradient,
+                            scaleX: Float,
+                            scaleY: Float,
+                            transX: Float,
+                            transY: Float,
+                        ) {
                             shaderMatrix.reset()
-                            shaderMatrix.setScale(2f * leftExt, 1f)
-                            shaderMatrix.postTranslate(-leftExt, 0f)
-                            horizontalGradientShader.setLocalMatrix(shaderMatrix)
-                            blendPaint.shader = horizontalGradientShader
+                            shaderMatrix.setScale(scaleX, scaleY)
+                            shaderMatrix.postTranslate(transX, transY)
+                            shader.setLocalMatrix(shaderMatrix)
+                            blendPaint.shader = shader
                             canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
                         }
-                        if (touchesRight) {
-                            shaderMatrix.reset()
-                            shaderMatrix.setScale(2f * rightExt, 1f)
-                            shaderMatrix.postTranslate(dw - rightExt, 0f)
-                            horizontalReverseGradientShader.setLocalMatrix(shaderMatrix)
-                            blendPaint.shader = horizontalReverseGradientShader
-                            canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
-                        }
-                        if (touchesTop) {
-                            shaderMatrix.reset()
-                            shaderMatrix.setScale(1f, 2f * topExt)
-                            shaderMatrix.postTranslate(0f, -topExt)
-                            verticalGradientShader.setLocalMatrix(shaderMatrix)
-                            blendPaint.shader = verticalGradientShader
-                            canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
-                        }
-                        if (touchesBottom) {
-                            shaderMatrix.reset()
-                            shaderMatrix.setScale(1f, 2f * bottomExt)
-                            shaderMatrix.postTranslate(0f, dh - bottomExt)
-                            verticalReverseGradientShader.setLocalMatrix(shaderMatrix)
-                            blendPaint.shader = verticalReverseGradientShader
-                            canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
-                        }
+                        if (touchesLeft) drawEdgeBlend(horizontalGradientShader, 2f * leftExt, 1f, -leftExt, 0f)
+                        if (touchesRight) drawEdgeBlend(horizontalReverseGradientShader, 2f * rightExt, 1f, dw - rightExt, 0f)
+                        if (touchesTop) drawEdgeBlend(verticalGradientShader, 1f, 2f * topExt, 0f, -topExt)
+                        if (touchesBottom) drawEdgeBlend(verticalReverseGradientShader, 1f, 2f * bottomExt, 0f, dh - bottomExt)
                         blendPaint.shader = null
                     }
                 } finally {

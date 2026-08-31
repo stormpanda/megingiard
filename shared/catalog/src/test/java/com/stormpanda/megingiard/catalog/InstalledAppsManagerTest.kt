@@ -13,8 +13,6 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
-private const val TAG = "InstalledAppsManagerTest"
-
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
 class InstalledAppsManagerTest {
@@ -36,6 +34,15 @@ class InstalledAppsManagerTest {
 
         val gameApp = app.copy(isGame = true)
         assertEquals(true, gameApp.isGame)
+
+        val updated = app.withCover("/tmp/new_cover.png", 12345L)
+        assertEquals("/tmp/new_cover.png", updated.coverPath)
+        assertEquals(12345L, updated.coverLastModified)
+
+        val list = listOf(app, InstalledAppInfo(packageName = "com.other.app", activityName = "", label = "Other"))
+        val updatedList = list.withUpdatedCover("com.example.game", "/tmp/updated.png")
+        assertEquals("/tmp/updated.png", updatedList[0].coverPath)
+        assertNull(updatedList[1].coverPath)
     }
 
     @Test

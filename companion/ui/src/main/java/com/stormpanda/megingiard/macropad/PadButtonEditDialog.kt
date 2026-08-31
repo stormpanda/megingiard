@@ -1,6 +1,5 @@
 package com.stormpanda.megingiard.macropad
 
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -25,7 +24,6 @@ import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Share
-import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.Icon
@@ -43,7 +41,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -53,6 +50,7 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.ui.BumperDirection
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
 import com.stormpanda.megingiard.ui.GamepadColorSwatch
@@ -64,8 +62,10 @@ import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.GamepadTwoColumnGrid
 import com.stormpanda.megingiard.ui.GamepadTwoStepConfirmCard
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.cycle
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
+import com.stormpanda.megingiard.ui.toHexLabel
 import java.util.UUID
 import kotlin.math.roundToInt
 
@@ -73,16 +73,8 @@ private const val TAG = "PadButtonEditDialog"
 
 private val PBD_COLOR_PREVIEW_SIZE = 36.dp
 private val PBD_CORNER_RADIUS_DP = 6.dp
+private val PBD_CORNER_SHAPE = RoundedCornerShape(PBD_CORNER_RADIUS_DP)
 private val PBD_ICON_SIZE_DP = 20.dp
-
-internal fun MouseButton.labelRes(): Int =
-    when (this) {
-        MouseButton.LEFT -> R.string.macropad_mouse_btn_left
-        MouseButton.RIGHT -> R.string.macropad_mouse_btn_right
-        MouseButton.MIDDLE -> R.string.macropad_mouse_btn_middle
-        MouseButton.MOUSE4 -> R.string.macropad_mouse_btn_back
-        MouseButton.MOUSE5 -> R.string.macropad_mouse_btn_forward
-    }
 
 @Composable
 internal fun describeButtonColorOption(
@@ -90,25 +82,10 @@ internal fun describeButtonColorOption(
     resolvedColor: Color,
 ): String =
     when (option) {
-        null -> {
-            stringResource(R.string.layout_settings_color_layout_default)
-        }
-
-        is ColorOption.Neutral -> {
-            stringResource(R.string.layout_settings_color_neutral)
-        }
-
-        is ColorOption.Accent -> {
-            stringResource(R.string.layout_settings_color_accent)
-        }
-
-        is ColorOption.Custom -> {
-            if (resolvedColor.alpha < 0.99f) {
-                String.format("#%06X (%d%%)", 0xFFFFFF and resolvedColor.toArgb(), (resolvedColor.alpha * 100).roundToInt())
-            } else {
-                String.format("#%06X", 0xFFFFFF and resolvedColor.toArgb())
-            }
-        }
+        null -> stringResource(R.string.layout_settings_color_layout_default)
+        is ColorOption.Neutral -> stringResource(R.string.layout_settings_color_neutral)
+        is ColorOption.Accent -> stringResource(R.string.layout_settings_color_accent)
+        is ColorOption.Custom -> resolvedColor.toHexLabel()
     }
 
 /**
@@ -139,9 +116,9 @@ internal fun ChooseButtonTypeSubPageContent(
         items = availableGroups,
     ) { group, _, cardModifier ->
         GamepadActionCard(
-            title = stringResource(group.labelResId()),
-            description = stringResource(group.descriptionResId()),
-            icon = group.icon(),
+            title = stringResource(group.labelResId),
+            description = stringResource(group.descriptionResId),
+            icon = group.icon,
             alwaysShowFullDescription = true,
             onClick = { onSelectType(group) },
             modifier = cardModifier,
@@ -155,9 +132,6 @@ internal fun EditButtonSubPageContent(
     button: PadButton?, // null → create new
     savedButton: PadButton? = null,
     accentColor: Color,
-    enableKeyboard: Boolean = true,
-    enableGamepad: Boolean = true,
-    enableMouse: Boolean = true,
     initialAction: PadAction? = null,
     selectedIcon: String? = null,
     onOpenIconPicker: (currentDraft: PadButton) -> Unit,
@@ -208,21 +182,15 @@ internal fun EditButtonSubPageContent(
 
     var hapticCustomDurationMs by remember(button) {
         mutableIntStateOf(
-            when (button?.hapticStrength) {
-                HapticStrength.LIGHT, HapticStrength.MEDIUM, HapticStrength.STRONG -> HF_PRESET_DURATION_MS
-                else -> button?.hapticCustomDurationMs ?: HF_PRESET_DURATION_MS
+            if (button?.hapticStrength in listOf(HapticStrength.LIGHT, HapticStrength.MEDIUM, HapticStrength.STRONG)) {
+                HF_PRESET_DURATION_MS
+            } else {
+                button?.hapticCustomDurationMs ?: HF_PRESET_DURATION_MS
             },
         )
     }
     var hapticCustomAmplitude by remember(button) {
-        mutableIntStateOf(
-            when (button?.hapticStrength) {
-                HapticStrength.LIGHT -> HF_LIGHT_AMPLITUDE_USER
-                HapticStrength.MEDIUM -> HF_MEDIUM_AMPLITUDE_USER
-                HapticStrength.STRONG -> HF_STRONG_AMPLITUDE_USER
-                else -> button?.hapticCustomAmplitude ?: HF_LIGHT_AMPLITUDE_USER
-            },
-        )
+        mutableIntStateOf(button?.hapticStrength?.defaultCustomAmplitude() ?: (button?.hapticCustomAmplitude ?: HF_LIGHT_AMPLITUDE_USER))
     }
     var buttonTextColor by remember(button) { mutableStateOf(button?.buttonTextColor) }
     var buttonBorderColor by remember(button) { mutableStateOf(button?.buttonBorderColor) }
@@ -372,10 +340,6 @@ internal fun EditButtonSubPageContent(
 
     ActionPicker(
         current = action,
-        accentColor = accentColor,
-        enableKeyboard = enableKeyboard,
-        enableGamepad = enableGamepad,
-        enableMouse = enableMouse,
         isFirstItem = !showLabelAndIcon,
         onOpenMacroPicker = {
             onOpenMacroPicker?.invoke(currentButton)
@@ -410,38 +374,22 @@ internal fun EditButtonSubPageContent(
             color = accentColor,
         )
 
-        val shapeEntries = ButtonShape.entries
-        val shapeIdx = shapeEntries.indexOf(buttonShape).coerceAtLeast(0)
         GamepadChoiceCard(
             title = stringResource(R.string.macropad_editor_button_shape),
             description = stringResource(R.string.macropad_btn_shape_desc),
-            selectedText = shapeEntries[shapeIdx].displayLabel(),
+            selectedText = buttonShape.displayLabel(),
             icon = Icons.Rounded.CropFree,
-            onPrevious = {
-                val nextIdx = (shapeIdx - 1 + shapeEntries.size) % shapeEntries.size
-                buttonShape = shapeEntries[nextIdx]
-            },
-            onNext = {
-                val nextIdx = (shapeIdx + 1) % shapeEntries.size
-                buttonShape = shapeEntries[nextIdx]
-            },
+            onPrevious = { buttonShape = ButtonShape.entries.cycle(buttonShape, BumperDirection.PREV) },
+            onNext = { buttonShape = ButtonShape.entries.cycle(buttonShape, BumperDirection.NEXT) },
         )
 
-        val sizeEntries = ButtonSize.entries
-        val sizeIdx = sizeEntries.indexOf(buttonSize).coerceAtLeast(0)
         GamepadChoiceCard(
             title = stringResource(R.string.macropad_editor_button_size),
             description = stringResource(R.string.macropad_btn_size_desc),
-            selectedText = sizeEntries[sizeIdx].displayLabel(),
+            selectedText = buttonSize.displayLabel(),
             icon = Icons.Rounded.CropFree,
-            onPrevious = {
-                val nextIdx = (sizeIdx - 1 + sizeEntries.size) % sizeEntries.size
-                buttonSize = sizeEntries[nextIdx]
-            },
-            onNext = {
-                val nextIdx = (sizeIdx + 1) % sizeEntries.size
-                buttonSize = sizeEntries[nextIdx]
-            },
+            onPrevious = { buttonSize = ButtonSize.entries.cycle(buttonSize, BumperDirection.PREV) },
+            onNext = { buttonSize = ButtonSize.entries.cycle(buttonSize, BumperDirection.NEXT) },
         )
 
         GamepadSectionHeader(
@@ -449,67 +397,23 @@ internal fun EditButtonSubPageContent(
             color = accentColor,
         )
 
-        val hapticEntries = HapticStrength.entries
-        val hapticLabels =
-            listOf(
-                stringResource(R.string.macropad_haptic_off),
-                stringResource(R.string.macropad_haptic_light),
-                stringResource(R.string.macropad_haptic_medium),
-                stringResource(R.string.macropad_haptic_strong),
-                stringResource(R.string.macropad_haptic_custom),
-            )
-        val hapticIdx = hapticEntries.indexOf(hapticStrength).coerceAtLeast(0)
+        val applyHapticStrength: (HapticStrength) -> Unit = { selectedStrength ->
+            if (selectedStrength in listOf(HapticStrength.LIGHT, HapticStrength.MEDIUM, HapticStrength.STRONG)) {
+                hapticCustomDurationMs = HF_PRESET_DURATION_MS
+                hapticCustomAmplitude = selectedStrength.defaultCustomAmplitude()
+            }
+            hapticStrength = selectedStrength
+        }
+
+        val hapticSelectedText = stringResource(hapticStrength.labelResId())
+
         GamepadChoiceCard(
             title = stringResource(R.string.macropad_editor_section_haptic),
             description = stringResource(R.string.macropad_btn_haptic_desc),
-            selectedText = hapticLabels[hapticIdx],
+            selectedText = hapticSelectedText,
             icon = Icons.Rounded.Vibration,
-            onPrevious = {
-                val nextIdx = (hapticIdx - 1 + hapticEntries.size) % hapticEntries.size
-                val selectedStrength = hapticEntries[nextIdx]
-                when (selectedStrength) {
-                    HapticStrength.LIGHT -> {
-                        hapticCustomDurationMs = HF_PRESET_DURATION_MS
-                        hapticCustomAmplitude = HF_LIGHT_AMPLITUDE_USER
-                    }
-
-                    HapticStrength.MEDIUM -> {
-                        hapticCustomDurationMs = HF_PRESET_DURATION_MS
-                        hapticCustomAmplitude = HF_MEDIUM_AMPLITUDE_USER
-                    }
-
-                    HapticStrength.STRONG -> {
-                        hapticCustomDurationMs = HF_PRESET_DURATION_MS
-                        hapticCustomAmplitude = HF_STRONG_AMPLITUDE_USER
-                    }
-
-                    else -> {}
-                }
-                hapticStrength = selectedStrength
-            },
-            onNext = {
-                val nextIdx = (hapticIdx + 1) % hapticEntries.size
-                val selectedStrength = hapticEntries[nextIdx]
-                when (selectedStrength) {
-                    HapticStrength.LIGHT -> {
-                        hapticCustomDurationMs = HF_PRESET_DURATION_MS
-                        hapticCustomAmplitude = HF_LIGHT_AMPLITUDE_USER
-                    }
-
-                    HapticStrength.MEDIUM -> {
-                        hapticCustomDurationMs = HF_PRESET_DURATION_MS
-                        hapticCustomAmplitude = HF_MEDIUM_AMPLITUDE_USER
-                    }
-
-                    HapticStrength.STRONG -> {
-                        hapticCustomDurationMs = HF_PRESET_DURATION_MS
-                        hapticCustomAmplitude = HF_STRONG_AMPLITUDE_USER
-                    }
-
-                    else -> {}
-                }
-                hapticStrength = selectedStrength
-            },
+            onPrevious = { applyHapticStrength(HapticStrength.entries.cycle(hapticStrength, BumperDirection.PREV)) },
+            onNext = { applyHapticStrength(HapticStrength.entries.cycle(hapticStrength, BumperDirection.NEXT)) },
         )
 
         if (hapticStrength == HapticStrength.CUSTOM) {
@@ -546,21 +450,23 @@ internal fun EditButtonSubPageContent(
         )
 
         val previewLabel = stringResource(R.string.macropad_editor_button_preview_text)
+        val previewShape = if (buttonShape == ButtonShape.CIRCLE) CircleShape else PBD_CORNER_SHAPE
         val buttonPreviewLeading: (textColor: Color, borderColor: Color, bgColor: Color, isIconOnly: Boolean) -> @Composable () -> Unit =
             { tColor, bColor, bgCol, iconOnly ->
                 {
                     PadButtonFace(
                         width = PBD_COLOR_PREVIEW_SIZE,
                         height = PBD_COLOR_PREVIEW_SIZE,
-                        shape = if (buttonShape == ButtonShape.CIRCLE) CircleShape else RoundedCornerShape(PBD_CORNER_RADIUS_DP),
+                        shape = previewShape,
                         isIconOnly = iconOnly || buttonShape == ButtonShape.ICON_ONLY,
                         isDeviceDisabled = false,
                         borderColor = bColor,
                         bgColor = bgCol,
                     ) {
-                        if (iconName != null) {
+                        val currentIcon = iconName
+                        if (currentIcon != null) {
                             MaterialSymbol(
-                                name = iconName!!,
+                                name = currentIcon,
                                 size = PBD_ICON_SIZE_DP,
                                 tint = tColor,
                                 filled = iconFilled,
@@ -579,32 +485,35 @@ internal fun EditButtonSubPageContent(
                 }
             }
 
-        // ── Text Color Menu Item ────────────────────────────────────
-        GamepadActionCard(
-            title = stringResource(R.string.layout_settings_color_text),
-            description = describeButtonColorOption(buttonTextColor, currentText),
-            icon = Icons.Rounded.FormatColorText,
-            actionLeadingContent = buttonPreviewLeading(currentText, Color.Transparent, Color.Transparent, true),
-            onClick = { onOpenColorSubMenu(currentButton, ButtonColorTarget.TEXT) },
-        )
-
-        // ── Border Color Menu Item ──────────────────────────────────
-        GamepadActionCard(
-            title = stringResource(R.string.layout_settings_color_border),
-            description = describeButtonColorOption(buttonBorderColor, currentBorder),
-            icon = Icons.Rounded.Palette,
-            actionLeadingContent = buttonPreviewLeading(Color.Transparent, currentBorder, Color.Transparent, false),
-            onClick = { onOpenColorSubMenu(currentButton, ButtonColorTarget.BORDER) },
-        )
-
-        // ── Background / Fading Color Menu Item ─────────────────────
-        GamepadActionCard(
-            title = stringResource(R.string.layout_settings_color_bg),
-            description = describeButtonColorOption(buttonBgColor, currentBg),
-            icon = Icons.Rounded.FormatColorFill,
-            actionLeadingContent = buttonPreviewLeading(Color.Transparent, Color.Transparent, currentBg, false),
-            onClick = { onOpenColorSubMenu(currentButton, ButtonColorTarget.BG) },
-        )
+        listOf(
+            Triple(
+                ButtonColorTarget.TEXT,
+                Icons.Rounded.FormatColorText,
+                buttonPreviewLeading(currentText, Color.Transparent, Color.Transparent, true) to
+                    describeButtonColorOption(buttonTextColor, currentText),
+            ),
+            Triple(
+                ButtonColorTarget.BORDER,
+                Icons.Rounded.Palette,
+                buttonPreviewLeading(Color.Transparent, currentBorder, Color.Transparent, false) to
+                    describeButtonColorOption(buttonBorderColor, currentBorder),
+            ),
+            Triple(
+                ButtonColorTarget.BG,
+                Icons.Rounded.FormatColorFill,
+                buttonPreviewLeading(Color.Transparent, Color.Transparent, currentBg, false) to
+                    describeButtonColorOption(buttonBgColor, currentBg),
+            ),
+        ).forEach { (colorTarget, colorIcon, previewAndDesc) ->
+            val (preview, desc) = previewAndDesc
+            GamepadActionCard(
+                title = stringResource(colorTarget.titleResId),
+                description = desc,
+                icon = colorIcon,
+                actionLeadingContent = preview,
+                onClick = { onOpenColorSubMenu(currentButton, colorTarget) },
+            )
+        }
 
         GamepadSectionHeader(
             text = stringResource(R.string.macropad_editor_section_visibility_behavior),
@@ -707,144 +616,22 @@ internal fun ButtonColorSubPageContent(
     onColorOptionChanged: (ColorOption?) -> Unit,
     onOpenColorWheel: (title: String, breadcrumbs: List<String>, initialColor: Color, inFlightButton: PadButton) -> Unit,
 ) {
-    val globalAccentInt by SettingsManager.accentColor.collectAsState()
-    val globalAccentColor = Color(globalAccentInt)
-
-    val currentOption =
-        when (target) {
-            ButtonColorTarget.TEXT -> button.buttonTextColor
-            ButtonColorTarget.BORDER -> button.buttonBorderColor
-            ButtonColorTarget.BG -> button.buttonBgColor
-        }
-
-    val layoutDefaultOption =
-        when (target) {
-            ButtonColorTarget.TEXT -> activeLayout?.buttonTextColor ?: ColorOption.Neutral
-            ButtonColorTarget.BORDER -> activeLayout?.buttonBorderColor ?: ColorOption.Neutral
-            ButtonColorTarget.BG -> activeLayout?.buttonBgColor ?: ColorOption.Neutral
-        }
-
-    val defaultNeutralColor =
-        when (target) {
-            ButtonColorTarget.TEXT -> MP_AMBIENT_NEUTRAL_TEXT
-            ButtonColorTarget.BORDER -> MP_AMBIENT_NEUTRAL_BORDER
-            ButtonColorTarget.BG -> MP_AMBIENT_NEUTRAL_BG
-        }
-
-    val currentColor =
-        if (target == ButtonColorTarget.BG) {
-            resolveBgColorOption(currentOption ?: layoutDefaultOption, globalAccentColor)
-        } else {
-            resolveColorOption(currentOption ?: layoutDefaultOption, globalAccentColor, defaultNeutralColor)
-        }
-    val layoutResolvedColor =
-        if (target == ButtonColorTarget.BG) {
-            resolveBgColorOption(layoutDefaultOption, globalAccentColor)
-        } else {
-            resolveColorOption(layoutDefaultOption, globalAccentColor, defaultNeutralColor)
-        }
-
-    val targetTitle =
-        when (target) {
-            ButtonColorTarget.TEXT -> stringResource(R.string.layout_settings_color_text)
-            ButtonColorTarget.BORDER -> stringResource(R.string.layout_settings_color_border)
-            ButtonColorTarget.BG -> stringResource(R.string.layout_settings_color_bg)
-        }
-
-    val selectColorWheelTitle =
-        when (target) {
-            ButtonColorTarget.TEXT -> stringResource(R.string.layout_settings_select_text_color)
-            ButtonColorTarget.BORDER -> stringResource(R.string.layout_settings_select_border_color)
-            ButtonColorTarget.BG -> stringResource(R.string.layout_settings_select_bg_color)
-        }
-
-    val colorWheelBreadcrumbs =
-        listOf(
-            stringResource(R.string.macropad_editor_section_buttons),
-            button.label.ifBlank { stringResource(R.string.macropad_editor_section_button_settings) },
-            targetTitle,
-            stringResource(R.string.gamepad_action_custom_color),
-        )
-
-    val isDefaultSelected = currentOption == null
-    val isNeutralSelected = currentOption is ColorOption.Neutral
-    val isAccentSelected = currentOption is ColorOption.Accent
-    val isCustomSelected = currentOption is ColorOption.Custom
-
-    // Option 1: Layout Default
-    GamepadActionCard(
-        title = stringResource(R.string.layout_settings_color_layout_default),
-        description = stringResource(R.string.macropad_btn_color_layout_default_desc),
-        icon = Icons.Rounded.Sync,
-        actionLeadingContent = {
-            GamepadColorSwatch(
-                color = layoutResolvedColor,
-                isSelected = isDefaultSelected,
-            )
-        },
-        actionText = if (isDefaultSelected) stringResource(R.string.gamepad_color_selected) else null,
-        onClick = { onColorOptionChanged(null) },
-        modifier = Modifier.firstDeckItem(),
-    )
-
-    // Option 2: Theme Neutral
-    GamepadActionCard(
-        title = stringResource(R.string.layout_settings_color_neutral),
-        description = stringResource(R.string.macropad_editor_color_palette_desc),
-        icon = Icons.Rounded.FormatColorText,
-        actionLeadingContent = {
-            GamepadColorSwatch(
-                color = defaultNeutralColor,
-                isSelected = isNeutralSelected,
-            )
-        },
-        actionText = if (isNeutralSelected) stringResource(R.string.gamepad_color_selected) else null,
-        onClick = { onColorOptionChanged(ColorOption.Neutral) },
-    )
-
-    // Option 3: App Accent
-    GamepadActionCard(
-        title = stringResource(R.string.layout_settings_color_accent),
-        description = stringResource(R.string.settings_accent_color_desc),
-        icon = Icons.Rounded.Palette,
-        actionLeadingContent = {
-            GamepadColorSwatch(
-                color = globalAccentColor,
-                isSelected = isAccentSelected,
-            )
-        },
-        actionText = if (isAccentSelected) stringResource(R.string.gamepad_color_selected) else null,
-        onClick = { onColorOptionChanged(ColorOption.Accent) },
-    )
-
-    // Option 4: Custom Color (Color Wheel)
-    GamepadActionCard(
-        title = stringResource(R.string.gamepad_action_custom_color),
-        description =
-            if (isCustomSelected) {
-                if (currentColor.alpha < 0.99f) {
-                    String.format("#%06X (%d%%)", 0xFFFFFF and currentColor.toArgb(), (currentColor.alpha * 100).roundToInt())
-                } else {
-                    String.format("#%06X", 0xFFFFFF and currentColor.toArgb())
-                }
-            } else {
-                stringResource(R.string.macropad_editor_color_wheel_desc)
-            },
-        icon = Icons.Rounded.Colorize,
-        actionLeadingContent = {
-            GamepadColorSwatch(
-                color = if (isCustomSelected) currentColor else Color.Transparent,
-                isSelected = isCustomSelected,
-            )
-        },
-        actionText = if (isCustomSelected) stringResource(R.string.gamepad_color_selected) else null,
-        onClick = {
-            onOpenColorWheel(
-                selectColorWheelTitle,
-                colorWheelBreadcrumbs,
-                if (isCustomSelected) currentColor else layoutResolvedColor,
-                button,
-            )
+    ColorOptionSubPageContent(
+        currentOption = button.getColorOption(target),
+        layoutDefaultOption = activeLayout?.getColorOption(target) ?: ColorOption.Neutral,
+        defaultNeutralColor = target.defaultNeutralColor,
+        isBgTarget = target == EditorColorTarget.BG,
+        selectColorWheelTitle = stringResource(target.selectWheelTitleResId),
+        colorWheelBreadcrumbs =
+            listOf(
+                stringResource(R.string.macropad_editor_section_buttons),
+                button.label.ifBlank { stringResource(R.string.macropad_editor_section_button_settings) },
+                stringResource(target.titleResId),
+                stringResource(R.string.gamepad_action_custom_color),
+            ),
+        onColorOptionChanged = onColorOptionChanged,
+        onOpenColorWheel = { title, breadcrumbs, initialColor ->
+            onOpenColorWheel(title, breadcrumbs, initialColor, button)
         },
     )
 }

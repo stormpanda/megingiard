@@ -35,7 +35,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadInfoBox
 import com.stormpanda.megingiard.ui.GamepadTextFieldCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
@@ -53,6 +52,7 @@ private val IP_PREVIEW_ICON_SIZE = 24.dp
 private val IP_ICON_NAME_SIZE = 8.sp
 private const val IP_GRID_COLUMNS = 5
 private val IP_CELL_CORNER = 8.dp
+private val IP_CELL_SHAPE = RoundedCornerShape(IP_CELL_CORNER)
 private val IP_GRID_SPACING = 4.dp
 private val IP_GRID_VERTICAL_PADDING = 4.dp
 private val IP_GRID_4_ROWS_HEIGHT = (IP_ICON_CELL_SIZE * 4) + (IP_GRID_SPACING * 3) + (IP_GRID_VERTICAL_PADDING * 2)
@@ -109,9 +109,9 @@ internal fun ChooseIconSubPageContent(
                     modifier =
                         Modifier
                             .size(IP_PREVIEW_SIZE)
-                            .clip(RoundedCornerShape(IP_CELL_CORNER))
+                            .clip(IP_CELL_SHAPE)
                             .background(accentColor.copy(alpha = 0.2f))
-                            .border(2.dp, accentColor, RoundedCornerShape(IP_CELL_CORNER)),
+                            .border(2.dp, accentColor, IP_CELL_SHAPE),
                 ) {
                     MaterialSymbol(
                         name = currentIcon,
@@ -158,19 +158,19 @@ internal fun ChooseIconSubPageContent(
                         modifier =
                             Modifier
                                 .size(IP_ICON_CELL_SIZE)
-                                .clip(RoundedCornerShape(IP_CELL_CORNER))
+                                .clip(IP_CELL_SHAPE)
                                 .background(
                                     if (isSelected) accentColor.copy(alpha = 0.25f) else colors.surface,
                                 ).border(
                                     width = if (isSelected) 2.dp else 1.dp,
                                     color = if (isSelected) accentColor else colors.subduedBorder,
-                                    shape = RoundedCornerShape(IP_CELL_CORNER),
+                                    shape = IP_CELL_SHAPE,
                                 ).primaryOverlayFocusable(
                                     onClick = {
                                         pendingIcon = name
                                         onSelect(name)
                                     },
-                                    shape = RoundedCornerShape(IP_CELL_CORNER),
+                                    shape = IP_CELL_SHAPE,
                                 ),
                     ) {
                         Column(

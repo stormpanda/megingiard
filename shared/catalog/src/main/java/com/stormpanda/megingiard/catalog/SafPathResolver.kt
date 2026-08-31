@@ -1,9 +1,9 @@
-package com.stormpanda.megingiard.session
+package com.stormpanda.megingiard.catalog
 
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.catalog.RomManager
 import java.io.File
 import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
 
 private const val TAG = "SafPathResolver"
 
@@ -18,26 +18,13 @@ object SafPathResolver {
      * and any dynamically mounted external MicroSD card volumes (e.g. `/storage/A1B2-C3D4`).
      */
     fun getStorageVolumeRoots(): List<String> {
-        val roots =
-            mutableListOf(
-                "/storage/emulated/0",
-                "/sdcard",
-            )
-        val storageDir = File("/storage")
-        if (storageDir.exists() && storageDir.isDirectory) {
-            val volumes = storageDir.listFiles()
-            if (volumes != null) {
-                for (volume in volumes) {
-                    if (volume.isDirectory && volume.name != "emulated" && volume.name != "self") {
-                        val path = volume.absolutePath
-                        if (!roots.contains(path)) {
-                            roots.add(path)
-                        }
-                    }
-                }
-            }
-        }
-        return roots
+        val extraRoots =
+            File("/storage")
+                .listFiles()
+                ?.filter { it.isDirectory && it.name != "emulated" && it.name != "self" }
+                ?.map { it.absolutePath }
+                .orEmpty()
+        return (listOf("/storage/emulated/0", "/sdcard") + extraRoots).distinct()
     }
 
     /**
@@ -49,7 +36,7 @@ object SafPathResolver {
         if (uriStr.startsWith("/")) return uriStr
 
         return try {
-            val decoded = URLDecoder.decode(uriStr, "UTF-8")
+            val decoded = URLDecoder.decode(uriStr, StandardCharsets.UTF_8)
             val rawPath =
                 when {
                     decoded.contains("/document/") -> decoded.substringAfter("/document/")

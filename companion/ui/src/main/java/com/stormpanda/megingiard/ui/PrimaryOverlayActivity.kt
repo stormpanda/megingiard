@@ -25,12 +25,6 @@ import com.stormpanda.megingiard.macropad.EditorSection
 import com.stormpanda.megingiard.mirror.MirrorEditorTopOverlay
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.settings.SettingsManager
-import com.stormpanda.megingiard.ui.AppDimens
-import com.stormpanda.megingiard.ui.LocalAppColors
-import com.stormpanda.megingiard.ui.LocalAppDimens
-import com.stormpanda.megingiard.ui.colorSchemeFor
-import com.stormpanda.megingiard.ui.megingiardTypography
-import com.stormpanda.megingiard.ui.paletteFor
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
@@ -119,36 +113,31 @@ class PrimaryOverlayActivity : ComponentActivity() {
                     ) {
                         when {
                             isViewportEditActive -> {
+                                val closeViewportEdit = {
+                                    AppStateManager.setViewportEditActive(false)
+                                    AppStateManager.openPrimaryModal(
+                                        PrimaryModalConfig(
+                                            type = PrimaryModalType.MACROPAD_EDITOR,
+                                            payload = PrimaryModalPayload.MacroPad(section = EditorSection.MIRROR),
+                                        ),
+                                    )
+                                }
                                 MirrorEditorTopOverlay(
-                                    onDone = {
-                                        AppStateManager.setViewportEditActive(false)
-                                        AppStateManager.openPrimaryModal(
-                                            PrimaryModalConfig(
-                                                type = PrimaryModalType.MACROPAD_EDITOR,
-                                                payload = PrimaryModalPayload.MacroPad(section = EditorSection.MIRROR),
-                                            ),
-                                        )
-                                    },
-                                    onCancel = {
-                                        AppStateManager.setViewportEditActive(false)
-                                        AppStateManager.openPrimaryModal(
-                                            PrimaryModalConfig(
-                                                type = PrimaryModalType.MACROPAD_EDITOR,
-                                                payload = PrimaryModalPayload.MacroPad(section = EditorSection.MIRROR),
-                                            ),
-                                        )
-                                    },
+                                    onDone = closeViewportEdit,
+                                    onCancel = closeViewportEdit,
                                 )
                             }
 
-                            activeModal != null -> {
-                                PrimaryModalHost(
-                                    config = activeModal!!,
-                                    onDismiss = {
-                                        AppLog.d(TAG, "Dismissing primary modal: ${activeModal?.type}")
-                                        AppStateManager.closePrimaryModal()
-                                    },
-                                )
+                            else -> {
+                                activeModal?.let { modal ->
+                                    PrimaryModalHost(
+                                        config = modal,
+                                        onDismiss = {
+                                            AppLog.d(TAG, "Dismissing primary modal: ${modal.type}")
+                                            AppStateManager.closePrimaryModal()
+                                        },
+                                    )
+                                }
                             }
                         }
                     }
@@ -175,19 +164,18 @@ class PrimaryOverlayActivity : ComponentActivity() {
         keyCode: Int,
         event: KeyEvent?,
     ): Boolean {
-        when (keyCode) {
-            KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> {
-                AppLog.i(TAG, "onKeyDown: Back/B-Button pressed -> handling back")
-                if (onBackPressedDispatcher.hasEnabledCallbacks()) {
-                    onBackPressedDispatcher.onBackPressed()
-                } else {
-                    AppStateManager.closePrimaryModal()
-                    AppStateManager.setActiveCropCutoutId(null)
-                    AppStateManager.setSelectedCutoutId(null)
-                }
-                return true
+        if (isBackKey(keyCode)) {
+            AppLog.i(TAG, "onKeyDown: Back/B-Button pressed -> handling back")
+            if (onBackPressedDispatcher.hasEnabledCallbacks()) {
+                onBackPressedDispatcher.onBackPressed()
+            } else {
+                AppStateManager.closePrimaryModal()
+                AppStateManager.setActiveCropCutoutId(null)
+                AppStateManager.setSelectedCutoutId(null)
             }
-
+            return true
+        }
+        when (keyCode) {
             KeyEvent.KEYCODE_BUTTON_L1 -> {
                 AppLog.d(TAG, "onKeyDown: L1 pressed -> Bumper PREV")
                 PrimaryOverlayInputBridge.sendBumper(BumperDirection.PREV)

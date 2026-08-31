@@ -118,30 +118,42 @@ object MacroPadSettings {
         MacroPadState.loadFrom(profiles, activeId)
     }
 
+    private val optionalDataStore: DataStore<Preferences>?
+        get() = if (::dataStore.isInitialized) dataStore else null
+
+    private val optionalScope: CoroutineScope?
+        get() = if (::scope.isInitialized) scope else null
+
     fun setGamepadSwapFaceButtons(value: Boolean) {
-        AppLog.d(TAG, "setGamepadSwapFaceButtons($value)")
-        _gamepadSwapFaceButtons.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_GAMEPAD_SWAP_FACE_BUTTONS] = value } }
+        updateSettingPref(
+            KEY_GAMEPAD_SWAP_FACE_BUTTONS,
+            value,
+            _gamepadSwapFaceButtons,
+            optionalScope,
+            optionalDataStore,
+            TAG,
+            "setGamepadSwapFaceButtons",
+        )
     }
 
     fun setPrivdPromptDismissed(value: Boolean) {
-        AppLog.d(TAG, "setPrivdPromptDismissed($value)")
-        _privdPromptDismissed.value = value
-        if (::dataStore.isInitialized) {
-            scope.launch { dataStore.edit { prefs -> prefs[KEY_PRIVD_PROMPT_DISMISSED] = value } }
-        }
+        updateSettingPref(
+            KEY_PRIVD_PROMPT_DISMISSED,
+            value,
+            _privdPromptDismissed,
+            optionalScope,
+            optionalDataStore,
+            TAG,
+            "setPrivdPromptDismissed",
+        )
     }
 
     fun setDeadzoneLeft(value: Float) {
-        AppLog.d(TAG, "setDeadzoneLeft($value)")
-        _deadzoneLeft.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_PRIVD_DEADZONE_LEFT] = value } }
+        updateSettingPref(KEY_PRIVD_DEADZONE_LEFT, value, _deadzoneLeft, optionalScope, optionalDataStore, TAG, "setDeadzoneLeft")
     }
 
     fun setDeadzoneRight(value: Float) {
-        AppLog.d(TAG, "setDeadzoneRight($value)")
-        _deadzoneRight.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_PRIVD_DEADZONE_RIGHT] = value } }
+        updateSettingPref(KEY_PRIVD_DEADZONE_RIGHT, value, _deadzoneRight, optionalScope, optionalDataStore, TAG, "setDeadzoneRight")
     }
 
     /**

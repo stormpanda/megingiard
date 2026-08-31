@@ -1,8 +1,5 @@
 package com.stormpanda.megingiard.macropad
 
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.drawable.Drawable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -42,12 +39,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
@@ -80,6 +75,8 @@ private const val MP_BTN_RUNNING_PULSE_HIGH = 0.80f
 private const val MP_PULSE_HALF_PERIOD_MS = 600
 
 internal val MP_BTN_SQUARE_RADIUS = 4.dp
+internal val MP_BTN_SQUARE_SHAPE = RoundedCornerShape(MP_BTN_SQUARE_RADIUS)
+internal val MP_PILL_SHAPE = RoundedCornerShape(percent = 50)
 internal val MP_BTN_ICON_UNIT = 44.dp // icon size per grid unit (≈ 73 % of MP_BUTTON_UNIT_DP)
 
 private const val MP_PRESS_ANIM_MS = 80
@@ -193,14 +190,13 @@ internal fun PadButton(
         } else {
             when (btn.buttonShape) {
                 ButtonShape.SQUARE, ButtonShape.ICON_ONLY -> {
-                    RoundedCornerShape(MP_BTN_SQUARE_RADIUS)
+                    MP_BTN_SQUARE_SHAPE
                 }
 
                 ButtonShape.CIRCLE -> {
                     when (btn.buttonSize) {
-                        ButtonSize.SIZE_2X2 -> CircleShape
-                        ButtonSize.SIZE_2X1, ButtonSize.SIZE_1X2 -> RoundedCornerShape(percent = 50)
-                        ButtonSize.SIZE_1X1 -> CircleShape
+                        ButtonSize.SIZE_2X2, ButtonSize.SIZE_1X1 -> CircleShape
+                        ButtonSize.SIZE_2X1, ButtonSize.SIZE_1X2 -> MP_PILL_SHAPE
                     }
                 }
             }

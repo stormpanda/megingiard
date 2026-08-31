@@ -25,6 +25,8 @@ import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.rememberBezelBrush
 
+private val TPO_ROUNDED_8 = RoundedCornerShape(8.dp)
+
 @Composable
 internal fun TrackpointOverlay(
     trackpointVisible: Boolean,
@@ -47,8 +49,8 @@ internal fun TrackpointOverlay(
                     .fillMaxWidth()
                     .aspectRatio(16f / 9f)
                     .alpha(trackpointAlpha)
-                    .background(colors.keyBackground, RoundedCornerShape(8.dp))
-                    .border(1.dp, brush = rememberBezelBrush(), shape = RoundedCornerShape(8.dp)),
+                    .background(colors.keyBackground, TPO_ROUNDED_8)
+                    .border(1.dp, brush = rememberBezelBrush(), shape = TPO_ROUNDED_8),
             contentAlignment = Alignment.Center,
         ) {
             Text(
@@ -61,10 +63,10 @@ internal fun TrackpointOverlay(
                 if (kbMouseBtnPos == KbMouseBtnPos.LEFT || kbMouseBtnPos == KbMouseBtnPos.BOTH) {
                     MouseButtonColumn(
                         accentColor = accentColor,
-                        onLmbDown = { MouseInjector.leftDown() },
-                        onLmbUp = { MouseInjector.leftUp() },
-                        onRmbDown = { MouseInjector.rightDown() },
-                        onRmbUp = { MouseInjector.rightUp() },
+                        onLmbDown = MouseInjector::leftDown,
+                        onLmbUp = MouseInjector::leftUp,
+                        onRmbDown = MouseInjector::rightDown,
+                        onRmbUp = MouseInjector::rightUp,
                         modifier =
                             Modifier
                                 .align(Alignment.CenterStart)
@@ -74,10 +76,10 @@ internal fun TrackpointOverlay(
                 if (kbMouseBtnPos == KbMouseBtnPos.RIGHT || kbMouseBtnPos == KbMouseBtnPos.BOTH) {
                     MouseButtonColumn(
                         accentColor = accentColor,
-                        onLmbDown = { MouseInjector.leftDown() },
-                        onLmbUp = { MouseInjector.leftUp() },
-                        onRmbDown = { MouseInjector.rightDown() },
-                        onRmbUp = { MouseInjector.rightUp() },
+                        onLmbDown = MouseInjector::leftDown,
+                        onLmbUp = MouseInjector::leftUp,
+                        onRmbDown = MouseInjector::rightDown,
+                        onRmbUp = MouseInjector::rightUp,
                         mirrored = true,
                         modifier =
                             Modifier

@@ -24,7 +24,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.rounded.AutoFixHigh
-import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Gamepad
 import androidx.compose.material.icons.rounded.Pause
@@ -45,7 +44,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -53,14 +51,12 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.catalog.DisplayDetector
 import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenshotTarget
 import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdConnectionState
-import com.stormpanda.megingiard.ui.PrimaryModalConfig
-import com.stormpanda.megingiard.ui.PrimaryModalType
 
 private const val TAG = "QuickMenu"
 
@@ -79,15 +75,13 @@ internal val PM_CHIP_SPACING = 6.dp
 internal val PM_NAV_ICON_SIZE = 20.dp
 internal val PM_MIRROR_ICON_SIZE = 22.dp
 internal val PM_MIRROR_BUTTON_SIZE = 48.dp
-internal val PM_MIRROR_LABELED_BUTTON_WIDTH = 72.dp
-internal val PM_MIRROR_CARD_V_PADDING = 10.dp
-internal val PM_SCREEN_MIRRORING_ICON_SIZE = 16.dp
-internal val PM_SCREEN_MIRRORING_SPACER_W = 6.dp
 internal val PM_SECTION_TITLE_SPACING = 6.dp
 internal val PM_ACTION_ROW_SPACING = 8.dp
 internal const val PM_SCRIM_ALPHA = 0.55f
 internal const val PM_NAME_DIALOG_SCRIM_ALPHA = 0.5f
 internal const val PM_NAME_DIALOG_WIDTH_FRACTION = 0.85f
+
+private val PM_PANEL_SHAPE = RoundedCornerShape(PM_PANEL_CORNER)
 
 /**
  * Quick Menu overlay — appears when [AppStateManager.isQuickMenuOpen] transitions to true.
@@ -104,7 +98,6 @@ fun QuickMenu(
     visible: Boolean,
     onDismiss: () -> Unit,
 ) {
-    val context = LocalContext.current
     val colors = LocalAppColors.current
     val menuBezelBrush = rememberBezelBrush()
     val profiles by MacroPadState.profiles.collectAsState()
@@ -116,7 +109,6 @@ fun QuickMenu(
     val showIntegrationHome by AppStateManager.showIntegrationHome.collectAsState()
     val privdState by PrivdClient.state.collectAsState()
     val isPrivdConnected = privdState == PrivdConnectionState.CONNECTED
-    val showGlobalSettings by AppStateManager.isGlobalSettingsOpen.collectAsState()
     var showQuickMenuHelp by remember { mutableStateOf(false) }
     var showShutOffConfirm by remember { mutableStateOf(false) }
     var autoShimmerTrigger by remember { mutableIntStateOf(0) }
@@ -155,18 +147,28 @@ fun QuickMenu(
                             enter = slideInVertically { -it },
                             exit = slideOutVertically { -it },
                         ),
-                onStart = {
-                    AppStateManager.requestMirrorStart()
-                },
+                onStart = AppStateManager::requestMirrorStart,
                 onStop = {
                     AppStateManager.requestMirrorStop()
                     onDismiss()
                 },
-                onToggleFreeze = { ScreenCaptureManager.toggleFrozen() },
+                onToggleFreeze = ScreenCaptureManager::toggleFrozen,
                 onTakeTopScreenshot = { ScreenCaptureManager.requestScreenshot(ScreenshotTarget.TOP) },
                 onTakeBottomScreenshot = { ScreenCaptureManager.requestScreenshot(ScreenshotTarget.BOTTOM) },
                 onTakeBothScreenshot = { ScreenCaptureManager.requestScreenshot(ScreenshotTarget.BOTH) },
             )
+
+            fun ensureMacroPadModeForProfile(profile: PadProfile?) {
+                val matchesFocused =
+                    profile?.matches(
+                        AppStateManager.focusedAppPackageName.value,
+                        AppStateManager.focusedRomPath.value,
+                        isActiveProfile = true,
+                    ) == true
+                if (companionViewMode != CompanionViewMode.AUTO || !matchesFocused) {
+                    AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
+                }
+            }
 
             // ── Bottom card — Profiles / Layouts / Actions ─────────────────
             Column(
@@ -178,10 +180,10 @@ fun QuickMenu(
                             exit = slideOutVertically { it },
                         ).fillMaxWidth()
                         .padding(horizontal = PM_PANEL_H_PADDING, vertical = PM_PANEL_V_PADDING)
-                        .shadow(PM_ELEVATION, RoundedCornerShape(PM_PANEL_CORNER))
-                        .clip(RoundedCornerShape(PM_PANEL_CORNER))
+                        .shadow(PM_ELEVATION, PM_PANEL_SHAPE)
+                        .clip(PM_PANEL_SHAPE)
                         .background(colors.controlOverlay)
-                        .border(PM_BORDER_WIDTH, brush = menuBezelBrush, shape = RoundedCornerShape(PM_PANEL_CORNER))
+                        .border(PM_BORDER_WIDTH, brush = menuBezelBrush, shape = PM_PANEL_SHAPE)
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
@@ -198,13 +200,7 @@ fun QuickMenu(
                     onProfileSelected = { profile ->
                         AppLog.d(TAG, "profile selected: ${profile.id}")
                         MacroPadState.setActiveProfileId(profile.id)
-                        val currentMode = AppStateManager.companionViewMode.value
-                        val focusedPkg = AppStateManager.focusedAppPackageName.value
-                        val focusedRom = AppStateManager.focusedRomPath.value
-                        val matchesFocused = profile.matches(focusedPkg, focusedRom, isActiveProfile = true)
-                        if (currentMode != CompanionViewMode.AUTO || !matchesFocused) {
-                            AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
-                        }
+                        ensureMacroPadModeForProfile(profile)
                     },
                 )
 
@@ -220,14 +216,7 @@ fun QuickMenu(
                     onLayoutSelected = { layoutId ->
                         AppLog.d(TAG, "layout selected: $layoutId")
                         MacroPadState.setActiveLayoutId(layoutId)
-                        val profile = MacroPadState.activeProfile.value
-                        val currentMode = AppStateManager.companionViewMode.value
-                        val focusedPkg = AppStateManager.focusedAppPackageName.value
-                        val focusedRom = AppStateManager.focusedRomPath.value
-                        val matchesFocused = profile != null && profile.matches(focusedPkg, focusedRom, isActiveProfile = true)
-                        if (currentMode != CompanionViewMode.AUTO || !matchesFocused) {
-                            AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
-                        }
+                        ensureMacroPadModeForProfile(MacroPadState.activeProfile.value)
                     },
                 )
 
@@ -256,14 +245,7 @@ fun QuickMenu(
                             icon = Icons.Rounded.Gamepad,
                             colors = colors,
                             onClick = {
-                                val profile = MacroPadState.activeProfile.value
-                                val currentMode = AppStateManager.companionViewMode.value
-                                val focusedPkg = AppStateManager.focusedAppPackageName.value
-                                val focusedRom = AppStateManager.focusedRomPath.value
-                                val matchesFocused = profile != null && profile.matches(focusedPkg, focusedRom, isActiveProfile = true)
-                                if (currentMode != CompanionViewMode.AUTO || !matchesFocused) {
-                                    AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
-                                }
+                                ensureMacroPadModeForProfile(MacroPadState.activeProfile.value)
                             },
                             modifier = Modifier.weight(1f),
                         )

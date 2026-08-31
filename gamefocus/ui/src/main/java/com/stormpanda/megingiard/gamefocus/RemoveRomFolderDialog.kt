@@ -1,27 +1,18 @@
 package com.stormpanda.megingiard.gamefocus
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
@@ -34,8 +25,6 @@ import com.stormpanda.megingiard.ui.VerticalRollingCarousel
 
 private const val TAG = "RemoveRomFolderDialog"
 
-private val DIALOG_ITEM_PADDING_VERTICAL = 10.dp
-private val DIALOG_ITEM_PADDING_HORIZONTAL = 12.dp
 private val DIALOG_SPACING = 12.dp
 private val DIALOG_INNER_SPACING = 8.dp
 
@@ -98,9 +87,7 @@ fun RemoveRomFolderDialog(
                     button = GamePadButton.BUTTON_A,
                     text = stringResource(R.string.gamefocus_dialog_select),
                     onClick = {
-                        romFolders.getOrNull(selectedIndex)?.let {
-                            onSelectFolder(it)
-                        }
+                        romFolders.getOrNull(selectedIndex)?.let(onSelectFolder)
                     },
                 )
                 Spacer(modifier = Modifier.width(DIALOG_INNER_SPACING))

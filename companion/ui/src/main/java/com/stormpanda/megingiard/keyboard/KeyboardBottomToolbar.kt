@@ -39,10 +39,13 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.MaterialSymbol
 import com.stormpanda.megingiard.ui.LocalAppColors
 
+private val KB_ROUNDED_8 = RoundedCornerShape(8.dp)
+private val KB_ROUNDED_18 = RoundedCornerShape(18.dp)
+private val KB_ROUNDED_16 = RoundedCornerShape(16.dp)
+
 @Composable
 internal fun KeyboardBottomToolbar(
     keyboardMode: KeyboardMode,
-    accentColor: Color,
     onModeToggle: (KeyboardMode) -> Unit,
     onCollapseClick: () -> Unit,
     onSettingsClick: () -> Unit,
@@ -66,7 +69,7 @@ internal fun KeyboardBottomToolbar(
                     .fillMaxHeight()
                     .width(KB_GLOBE_BUTTON_WIDTH)
                     .offset(y = (-3).dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(KB_ROUNDED_8)
                     .background(if (isPressed) colors.keyPressed else Color.Transparent)
                     .clickable(
                         interactionSource = interactionSource,
@@ -93,7 +96,6 @@ internal fun KeyboardBottomToolbar(
                 val nextMode = if (isFullModeActive) KeyboardMode.LETTERS else KeyboardMode.FULL
                 onModeToggle(nextMode)
             },
-            accentColor = accentColor,
         )
 
         Spacer(modifier = Modifier.weight(1f))
@@ -106,7 +108,7 @@ internal fun KeyboardBottomToolbar(
                     .fillMaxHeight()
                     .width(KB_GLOBE_BUTTON_WIDTH)
                     .offset(y = (-3).dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(KB_ROUNDED_8)
                     .background(if (isSettingsPressed) colors.keyPressed else Color.Transparent)
                     .clickable(
                         interactionSource = interactionSourceSettings,
@@ -129,13 +131,11 @@ internal fun KeyboardBottomToolbar(
 private fun KeyboardModeToggleButton(
     isFullModeActive: Boolean,
     onToggle: () -> Unit,
-    accentColor: Color,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
     val containerBg = colors.keyBackground.copy(alpha = 0.5f)
     val thumbBg = colors.keyPressed.copy(alpha = 0.6f)
-    val shape = RoundedCornerShape(18.dp)
 
     val thumbWidth = 83.dp
     val thumbOffset by animateDpAsState(
@@ -152,7 +152,7 @@ private fun KeyboardModeToggleButton(
             modifier
                 .width(170.dp)
                 .height(36.dp)
-                .clip(shape)
+                .clip(KB_ROUNDED_18)
                 .background(containerBg)
                 .clickable(onClick = onToggle)
                 .padding(2.dp),
@@ -163,7 +163,7 @@ private fun KeyboardModeToggleButton(
                     .offset(x = thumbOffset)
                     .width(thumbWidth)
                     .fillMaxHeight()
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(KB_ROUNDED_16)
                     .background(thumbBg),
         )
 

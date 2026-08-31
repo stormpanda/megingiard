@@ -8,25 +8,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.ui.BumperDirection
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
 import com.stormpanda.megingiard.ui.GamepadDeck
 import com.stormpanda.megingiard.ui.GamepadToggleCard
+import com.stormpanda.megingiard.ui.cycle
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.viewmodel.KeyboardViewModel
 
 private const val TAG = "KbSettingsOverlay"
 
 @Composable
-fun KeyboardSettingsOverlay(
-    onBack: () -> Unit,
-    viewModel: KeyboardViewModel = viewModel(),
-) {
+fun KeyboardSettingsOverlay(viewModel: KeyboardViewModel = viewModel()) {
     val currentLayout by viewModel.kbLayout.collectAsState()
     val kbTouchpadEnabled by viewModel.kbTouchpadEnabled.collectAsState()
 
@@ -41,16 +39,13 @@ fun KeyboardSettingsOverlay(
         title = "",
         modifier = Modifier.fillMaxSize(),
     ) {
-        val allLayouts = remember { KbLayout.entries }
-        val currentIdx = allLayouts.indexOf(currentLayout)
-
         GamepadChoiceCard(
             title = stringResource(R.string.settings_kb_layout),
             description = stringResource(R.string.help_keyboard_settings_layout_desc),
             selectedText = currentLayout.name,
             icon = Icons.Rounded.Keyboard,
-            onPrevious = { viewModel.setKbLayout(allLayouts[(currentIdx - 1 + allLayouts.size) % allLayouts.size]) },
-            onNext = { viewModel.setKbLayout(allLayouts[(currentIdx + 1) % allLayouts.size]) },
+            onPrevious = { viewModel.setKbLayout(KbLayout.entries.cycle(currentLayout, BumperDirection.PREV)) },
+            onNext = { viewModel.setKbLayout(KbLayout.entries.cycle(currentLayout, BumperDirection.NEXT)) },
             modifier = Modifier.firstDeckItem(),
         )
 
@@ -59,7 +54,7 @@ fun KeyboardSettingsOverlay(
             description = stringResource(R.string.settings_kb_touchpad_desc),
             checked = kbTouchpadEnabled,
             icon = Icons.Rounded.Mouse,
-            onCheckedChange = { viewModel.setKbTouchpadEnabled(it) },
+            onCheckedChange = viewModel::setKbTouchpadEnabled,
         )
     }
 }
