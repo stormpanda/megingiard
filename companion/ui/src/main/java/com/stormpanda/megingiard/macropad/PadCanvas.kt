@@ -267,51 +267,40 @@ internal fun PadCanvas(
                 if (cw > 0f && ch > 0f && iw > 0f && ih > 0f) {
                     val currentLayout = MacroPadState.previewLayout.value ?: layout
                     val mode = currentLayout?.bgScaleMode ?: layout?.bgScaleMode ?: BackgroundScaleMode.FILL
-                    when (mode) {
-                        BackgroundScaleMode.STRETCH -> {
-                            drawImage(
-                                image = bgBitmap!!,
-                                dstOffset = IntOffset.Zero,
-                                dstSize = IntSize(cw.toInt(), ch.toInt()),
-                                colorFilter = bgImageDimFilter,
-                            )
+                    val (dstOffset, dstSize) =
+                        when (mode) {
+                            BackgroundScaleMode.STRETCH -> {
+                                IntOffset.Zero to IntSize(cw.toInt(), ch.toInt())
+                            }
+
+                            BackgroundScaleMode.FIT, BackgroundScaleMode.FILL -> {
+                                val scale = layout?.bgImageScale ?: 1f
+                                val scaleBase =
+                                    if (mode == BackgroundScaleMode.FIT) {
+                                        ViewportMath.calculateAspectFitScale(cw, ch, iw, ih)
+                                    } else {
+                                        ViewportMath.calculateAspectFillScale(cw, ch, iw, ih)
+                                    }
+                                val ws = iw * scaleBase
+                                val hs = ih * scaleBase
+
+                                val maxTx = ((ws * scale - cw) / 2f).coerceAtLeast(0f)
+                                val maxTy = ((hs * scale - ch) / 2f).coerceAtLeast(0f)
+                                val clampedX = ((layout?.bgImageOffsetX ?: 0f) * cw).coerceIn(-maxTx, maxTx)
+                                val clampedY = ((layout?.bgImageOffsetY ?: 0f) * ch).coerceIn(-maxTy, maxTy)
+
+                                IntOffset(
+                                    ((cw - ws * scale) / 2f + clampedX).toInt(),
+                                    ((ch - hs * scale) / 2f + clampedY).toInt(),
+                                ) to IntSize((ws * scale).toInt(), (hs * scale).toInt())
+                            }
                         }
-
-                        BackgroundScaleMode.FIT, BackgroundScaleMode.FILL -> {
-                            val scale = layout?.bgImageScale ?: 1f
-                            val ox = layout?.bgImageOffsetX ?: 0f
-                            val oy = layout?.bgImageOffsetY ?: 0f
-
-                            val scaleBase =
-                                if (mode == BackgroundScaleMode.FIT) {
-                                    ViewportMath.calculateAspectFitScale(cw, ch, iw, ih)
-                                } else {
-                                    ViewportMath.calculateAspectFillScale(cw, ch, iw, ih)
-                                }
-                            val ws = iw * scaleBase
-                            val hs = ih * scaleBase
-
-                            val maxTx = ((ws * scale - cw) / 2f).coerceAtLeast(0f)
-                            val maxTy = ((hs * scale - ch) / 2f).coerceAtLeast(0f)
-                            val clampedX = (ox * cw).coerceIn(-maxTx, maxTx)
-                            val clampedY = (oy * ch).coerceIn(-maxTy, maxTy)
-
-                            drawImage(
-                                image = bgBitmap!!,
-                                dstOffset =
-                                    IntOffset(
-                                        ((cw - ws * scale) / 2f + clampedX).toInt(),
-                                        ((ch - hs * scale) / 2f + clampedY).toInt(),
-                                    ),
-                                dstSize =
-                                    IntSize(
-                                        (ws * scale).toInt(),
-                                        (hs * scale).toInt(),
-                                    ),
-                                colorFilter = bgImageDimFilter,
-                            )
-                        }
-                    }
+                    drawImage(
+                        image = bgBitmap!!,
+                        dstOffset = dstOffset,
+                        dstSize = dstSize,
+                        colorFilter = bgImageDimFilter,
+                    )
                 }
             }
         }
