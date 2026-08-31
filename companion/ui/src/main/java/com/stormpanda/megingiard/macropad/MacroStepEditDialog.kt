@@ -25,6 +25,7 @@ import androidx.compose.ui.res.stringResource
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.MacroPadSettings
+import com.stormpanda.megingiard.ui.BumperDirection
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadCardRow
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
@@ -34,6 +35,7 @@ import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadSliderCard
 import com.stormpanda.megingiard.ui.GamepadTwoStepConfirmCard
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.cycle
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
 import kotlin.math.roundToInt
@@ -47,7 +49,16 @@ private const val MSD_MAX_DURATION_MS = 5000L
 private const val MSD_TIME_SLIDER_STEP = 25f
 private const val MSD_PERCENT_SLIDER_STEP = 5f
 
-private enum class StepType { GAMEPAD, JOYSTICK, JOYSTICK_PATH, DPAD, TOUCH, TOUCH_PATH }
+private enum class StepType(
+    val labelResId: Int,
+) {
+    GAMEPAD(R.string.macropad_macro_step_type_gamepad),
+    JOYSTICK(R.string.macropad_macro_step_type_joystick),
+    JOYSTICK_PATH(R.string.macropad_macro_step_type_joystick_path),
+    DPAD(R.string.macropad_macro_step_type_dpad),
+    TOUCH(R.string.macropad_macro_step_type_touch),
+    TOUCH_PATH(R.string.macropad_macro_step_type_touch_path),
+}
 
 private data class DirectionOption(
     val dirX: Int,
@@ -271,33 +282,15 @@ internal fun MacroStepEditSubPageContent(
                 initialType == StepType.TOUCH_PATH || initialType == StepType.JOYSTICK_PATH
             if (initialIsRecorded) type == initialType else type != StepType.TOUCH_PATH && type != StepType.JOYSTICK_PATH
         }
-    val currentTypeIdx = availableTypes.indexOf(stepType).coerceAtLeast(0)
-    val typeLabels =
-        availableTypes.map { type ->
-            when (type) {
-                StepType.GAMEPAD -> stringResource(R.string.macropad_macro_step_type_gamepad)
-                StepType.JOYSTICK -> stringResource(R.string.macropad_macro_step_type_joystick)
-                StepType.JOYSTICK_PATH -> stringResource(R.string.macropad_macro_step_type_joystick_path)
-                StepType.DPAD -> stringResource(R.string.macropad_macro_step_type_dpad)
-                StepType.TOUCH -> stringResource(R.string.macropad_macro_step_type_touch)
-                StepType.TOUCH_PATH -> stringResource(R.string.macropad_macro_step_type_touch_path)
-            }
-        }
 
     GamepadChoiceCard(
         title = stringResource(R.string.macro_step_action_type_title),
         description = stringResource(R.string.macro_step_action_type_desc),
-        selectedText = typeLabels[currentTypeIdx],
+        selectedText = stringResource(stepType.labelResId),
         icon = stepIcon(constructedStep),
         enabled = availableTypes.size > 1,
-        onPrevious = {
-            val nextIdx = (currentTypeIdx - 1 + availableTypes.size) % availableTypes.size
-            stepType = availableTypes[nextIdx]
-        },
-        onNext = {
-            val nextIdx = (currentTypeIdx + 1) % availableTypes.size
-            stepType = availableTypes[nextIdx]
-        },
+        onPrevious = { stepType = availableTypes.cycle(stepType, BumperDirection.PREV) },
+        onNext = { stepType = availableTypes.cycle(stepType, BumperDirection.NEXT) },
         modifier = Modifier.firstDeckItem(),
     )
 
@@ -310,20 +303,13 @@ internal fun MacroStepEditSubPageContent(
     when (stepType) {
         StepType.GAMEPAD -> {
             val presets = GamepadKeycodes.PRESETS
-            val presetIdx = presets.indexOf(selectedPreset).coerceAtLeast(0)
             GamepadChoiceCard(
                 title = stringResource(R.string.macro_step_gamepad_button_title),
                 description = stringResource(R.string.macro_step_gamepad_button_desc),
                 selectedText = selectedPreset.localizedDisplayLabel(swapFaceButtons),
                 icon = Icons.Rounded.SportsEsports,
-                onPrevious = {
-                    val nextIdx = (presetIdx - 1 + presets.size) % presets.size
-                    selectedPreset = presets[nextIdx]
-                },
-                onNext = {
-                    val nextIdx = (presetIdx + 1) % presets.size
-                    selectedPreset = presets[nextIdx]
-                },
+                onPrevious = { selectedPreset = presets.cycle(selectedPreset, BumperDirection.PREV) },
+                onNext = { selectedPreset = presets.cycle(selectedPreset, BumperDirection.NEXT) },
             )
         }
 
@@ -340,14 +326,8 @@ internal fun MacroStepEditSubPageContent(
                 description = stringResource(R.string.macro_step_target_stick_desc),
                 selectedText = stickLabels[stickIdx],
                 icon = Icons.Rounded.NearMe,
-                onPrevious = {
-                    val nextIdx = (stickIdx - 1 + sticks.size) % sticks.size
-                    joyStick = sticks[nextIdx]
-                },
-                onNext = {
-                    val nextIdx = (stickIdx + 1) % sticks.size
-                    joyStick = sticks[nextIdx]
-                },
+                onPrevious = { joyStick = sticks.cycle(joyStick, BumperDirection.PREV) },
+                onNext = { joyStick = sticks.cycle(joyStick, BumperDirection.NEXT) },
             )
 
             GamepadChoiceCard(
@@ -491,14 +471,8 @@ internal fun MacroStepEditSubPageContent(
             description = stringResource(R.string.macropad_macro_step_shift_desc),
             selectedText = shiftModeLabels[shiftIdx],
             icon = Icons.Rounded.Schedule,
-            onPrevious = {
-                val nextIdx = (shiftIdx - 1 + shiftModes.size) % shiftModes.size
-                shiftMode = shiftModes[nextIdx]
-            },
-            onNext = {
-                val nextIdx = (shiftIdx + 1) % shiftModes.size
-                shiftMode = shiftModes[nextIdx]
-            },
+            onPrevious = { shiftMode = shiftModes.cycle(shiftMode, BumperDirection.PREV) },
+            onNext = { shiftMode = shiftModes.cycle(shiftMode, BumperDirection.NEXT) },
         )
     }
 
