@@ -1,7 +1,6 @@
 package com.stormpanda.megingiard.security
 
 import com.stormpanda.megingiard.AppLog
-import java.security.MessageDigest
 
 private const val TAG = "BinaryIntegrity"
 

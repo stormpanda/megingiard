@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.security
 
+import java.security.MessageDigest
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
@@ -17,10 +18,7 @@ internal object HmacUtil {
 
     /** Computes the SHA-256 digest of [bytes] and returns a 64-character uppercase hex string. */
     fun sha256Hex(bytes: ByteArray): String {
-        val digest =
-            java.security.MessageDigest
-                .getInstance("SHA-256")
-                .digest(bytes)
+        val digest = MessageDigest.getInstance("SHA-256").digest(bytes)
         return bytesToHex(digest)
     }
 

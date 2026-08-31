@@ -155,9 +155,7 @@ class TouchpadGestureProcessor(
                         job.cancel()
                         pendingClickJob = null
                     } else {
-                        scope.launch {
-                            MouseInjector.leftDown()
-                        }
+                        MouseInjector.leftDown()
                     }
                 }
             }
@@ -272,9 +270,7 @@ class TouchpadGestureProcessor(
                 isDragging = false
                 resetMousePointers()
                 AppLog.d(TAG, "onRelease: ending drag lock")
-                scope.launch {
-                    MouseInjector.leftUp()
-                }
+                MouseInjector.leftUp()
                 return
             }
 
