@@ -116,6 +116,7 @@ private val FTL_ICON_SIZE = 72.dp
 private val FTL_GALLERY_TOP_OFFSET = 10.dp
 private val FTL_TITLE_GAP = 25.dp
 private val FTL_ROM_ICON_CORNER_RADIUS = 14.dp
+private val FTL_ROM_ICON_SHAPE = RoundedCornerShape(FTL_ROM_ICON_CORNER_RADIUS)
 private val FTL_FALLBACK_ICON_SIZE = 48.dp
 private val FTL_BADGE_PADDING = 10.dp
 private val FTL_BADGE_ICON_SIZE = 22.dp
@@ -1192,12 +1193,11 @@ private fun PosterCardContent(
                         .aspectRatio(1f),
             )
         } else {
-            val romIconShape = remember { RoundedCornerShape(FTL_ROM_ICON_CORNER_RADIUS) }
             Box(
                 modifier =
                     Modifier
                         .size(FTL_ICON_SIZE)
-                        .clip(romIconShape)
+                        .clip(FTL_ROM_ICON_SHAPE)
                         .background(appColors.surface),
                 contentAlignment = Alignment.Center,
             ) {

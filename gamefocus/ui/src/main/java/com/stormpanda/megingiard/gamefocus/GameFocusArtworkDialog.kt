@@ -93,6 +93,9 @@ import java.net.URL
 
 private const val TAG = "GameFocusArtworkDialog"
 
+private val GAD_CHIP_SHAPE = RoundedCornerShape(20.dp)
+private val GAD_BADGE_SHAPE = RoundedCornerShape(6.dp)
+
 @Composable
 fun GameFocusArtworkDialog(
     appInfo: InstalledAppInfo,
@@ -521,7 +524,6 @@ private fun GameSelectionRow(
 ) {
     val appColors = LocalAppColors.current
     val listState = rememberLazyListState()
-    val chipShape = remember { RoundedCornerShape(20.dp) }
 
     // Smoothly scroll LazyRow to keep the L1/R1 selected item visible on screen
     LaunchedEffect(selectedIndex) {
@@ -552,12 +554,12 @@ private fun GameSelectionRow(
                 Box(
                     modifier =
                         Modifier
-                            .clip(chipShape)
+                            .clip(GAD_CHIP_SHAPE)
                             .background(if (isSelected) appColors.accent else appColors.surfaceVariant)
                             .border(
                                 width = if (isSelected) 2.dp else 1.dp,
                                 color = if (isSelected) appColors.accent else appColors.divider,
-                                shape = chipShape,
+                                shape = GAD_CHIP_SHAPE,
                             ).clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
@@ -592,13 +594,12 @@ private fun ShoulderBadge(
     modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
-    val badgeShape = remember { RoundedCornerShape(6.dp) }
     Box(
         modifier =
             modifier
-                .clip(badgeShape)
+                .clip(GAD_BADGE_SHAPE)
                 .background(appColors.surfaceVariant)
-                .border(1.dp, appColors.divider, badgeShape)
+                .border(1.dp, appColors.divider, GAD_BADGE_SHAPE)
                 .padding(horizontal = 7.dp, vertical = 4.dp),
         contentAlignment = Alignment.Center,
     ) {
