@@ -91,6 +91,11 @@ private val TP_BOTTOM_BAR_HEIGHT = 50.dp
 private val TP_GLOBE_BUTTON_WIDTH = 72.dp
 private val TP_ICON_SIZE_MEDIUM = 24.dp
 
+private val TP_ROUNDED_12 = RoundedCornerShape(12.dp)
+private val TP_ROUNDED_8 = RoundedCornerShape(8.dp)
+private val TP_ROUNDED_18 = RoundedCornerShape(18.dp)
+private val TP_ROUNDED_16 = RoundedCornerShape(16.dp)
+
 // Mouse 4 & 5 buttons layout dimensions
 private val TP_MOUSE_4_5_MARGIN_HORIZONTAL = 4.dp
 
@@ -344,12 +349,12 @@ fun FullscreenMouseOverlay() {
                                             end = 8.dp,
                                         ).fillMaxSize()
                                         .onGloballyPositioned { innerCoords = it }
-                                        .clip(RoundedCornerShape(12.dp))
+                                        .clip(TP_ROUNDED_12)
                                         .background(colors.appBackground)
                                         .border(
                                             width = 1.dp,
                                             brush = insetBezelBrush,
-                                            shape = RoundedCornerShape(12.dp),
+                                            shape = TP_ROUNDED_12,
                                         ),
                                 contentAlignment = Alignment.Center,
                             ) {
@@ -421,12 +426,12 @@ fun FullscreenMouseOverlay() {
                                             end = 8.dp,
                                         ).aspectRatio(16f / 9f)
                                         .onGloballyPositioned { innerCoords = it }
-                                        .clip(RoundedCornerShape(12.dp))
+                                        .clip(TP_ROUNDED_12)
                                         .background(if (isMirroringActive) Color.Transparent else colors.appBackground)
                                         .border(
                                             width = 1.dp,
                                             brush = insetBezelBrush,
-                                            shape = RoundedCornerShape(12.dp),
+                                            shape = TP_ROUNDED_12,
                                         ),
                                 contentAlignment = Alignment.Center,
                             ) {
@@ -528,7 +533,7 @@ private fun TouchpadToolbarButton(
                 .fillMaxHeight()
                 .width(TP_GLOBE_BUTTON_WIDTH)
                 .offset(y = (-3).dp)
-                .clip(RoundedCornerShape(8.dp))
+                .clip(TP_ROUNDED_8)
                 .background(if (isPressed) colors.keyPressed else Color.Transparent)
                 .clickable(
                     enabled = enabled,
@@ -559,7 +564,6 @@ private fun TouchpadMouseButton(
     val vibrator = remember { context.getSystemService(Vibrator::class.java) }
     val touchpadHapticsEnabled by TouchpadSettings.touchpadHapticsEnabled.collectAsState()
     val colors = LocalAppColors.current
-    val buttonShape = RoundedCornerShape(8.dp)
     val surfaceColor = if (pressed) colors.keyPressed else colors.keyBackground
     val depthColor = Color.Black.copy(alpha = 0.55f)
 
@@ -589,7 +593,7 @@ private fun TouchpadMouseButton(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .background(depthColor, buttonShape),
+                    .background(depthColor, TP_ROUNDED_8),
         )
 
         // 2. Active button surface layer (animated translation)
@@ -599,11 +603,11 @@ private fun TouchpadMouseButton(
                 Modifier
                     .fillMaxSize()
                     .offset(y = offsetY)
-                    .background(surfaceColor, buttonShape)
+                    .background(surfaceColor, TP_ROUNDED_8)
                     .border(
                         width = 0.5.dp,
                         brush = buttonBezelBrush,
-                        shape = buttonShape,
+                        shape = TP_ROUNDED_8,
                     ),
             contentAlignment = Alignment.Center,
         ) {
@@ -627,7 +631,6 @@ private fun ModeToggleButton(
     val colors = LocalAppColors.current
     val containerBg = colors.keyBackground.copy(alpha = 0.5f)
     val thumbBg = colors.keyPressed.copy(alpha = 0.6f)
-    val shape = RoundedCornerShape(18.dp)
 
     val thumbWidth = 83.dp
     val thumbOffset by animateDpAsState(
@@ -644,7 +647,7 @@ private fun ModeToggleButton(
             modifier
                 .width(170.dp)
                 .height(36.dp)
-                .clip(shape)
+                .clip(TP_ROUNDED_18)
                 .background(containerBg)
                 .clickable(onClick = onToggle)
                 .padding(2.dp),
@@ -655,7 +658,7 @@ private fun ModeToggleButton(
                     .offset(x = thumbOffset)
                     .width(thumbWidth)
                     .fillMaxHeight()
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(TP_ROUNDED_16)
                     .background(thumbBg),
         )
 
