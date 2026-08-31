@@ -6,7 +6,6 @@ import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -31,6 +30,34 @@ private data class MacroChoiceItem(
     val icon: ImageVector,
 )
 
+private val MACRO_CHOICE_ITEMS =
+    listOf(
+        MacroChoiceItem(
+            choice = MacroCreationChoice.RECORD_GAMEPAD,
+            titleRes = R.string.macropad_macro_create_record_gamepad_title,
+            descRes = R.string.macropad_macro_create_record_gamepad_desc,
+            icon = Icons.Rounded.SportsEsports,
+        ),
+        MacroChoiceItem(
+            choice = MacroCreationChoice.BUILD_MANUAL,
+            titleRes = R.string.macropad_macro_create_manual_title,
+            descRes = R.string.macropad_macro_create_manual_desc,
+            icon = Icons.Rounded.Tune,
+        ),
+        MacroChoiceItem(
+            choice = MacroCreationChoice.RECORD_TOUCH_TAP,
+            titleRes = R.string.macropad_macro_create_record_touch_tap_title,
+            descRes = R.string.macropad_macro_create_record_touch_tap_desc,
+            icon = Icons.Rounded.TouchApp,
+        ),
+        MacroChoiceItem(
+            choice = MacroCreationChoice.RECORD_TOUCH_GESTURE,
+            titleRes = R.string.macropad_macro_create_record_touch_gesture_title,
+            descRes = R.string.macropad_macro_create_record_touch_gesture_desc,
+            icon = Icons.Rounded.Gesture,
+        ),
+    )
+
 @Composable
 internal fun ChooseMacroModeSubPageContent(
     onRecordGamepad: () -> Unit,
@@ -41,38 +68,8 @@ internal fun ChooseMacroModeSubPageContent(
 ) {
     AppLog.d(TAG, "ChooseMacroModeSubPageContent rendered")
 
-    val items =
-        remember {
-            listOf(
-                MacroChoiceItem(
-                    choice = MacroCreationChoice.RECORD_GAMEPAD,
-                    titleRes = R.string.macropad_macro_create_record_gamepad_title,
-                    descRes = R.string.macropad_macro_create_record_gamepad_desc,
-                    icon = Icons.Rounded.SportsEsports,
-                ),
-                MacroChoiceItem(
-                    choice = MacroCreationChoice.BUILD_MANUAL,
-                    titleRes = R.string.macropad_macro_create_manual_title,
-                    descRes = R.string.macropad_macro_create_manual_desc,
-                    icon = Icons.Rounded.Tune,
-                ),
-                MacroChoiceItem(
-                    choice = MacroCreationChoice.RECORD_TOUCH_TAP,
-                    titleRes = R.string.macropad_macro_create_record_touch_tap_title,
-                    descRes = R.string.macropad_macro_create_record_touch_tap_desc,
-                    icon = Icons.Rounded.TouchApp,
-                ),
-                MacroChoiceItem(
-                    choice = MacroCreationChoice.RECORD_TOUCH_GESTURE,
-                    titleRes = R.string.macropad_macro_create_record_touch_gesture_title,
-                    descRes = R.string.macropad_macro_create_record_touch_gesture_desc,
-                    icon = Icons.Rounded.Gesture,
-                ),
-            )
-        }
-
     GamepadTwoColumnGrid(
-        items = items,
+        items = MACRO_CHOICE_ITEMS,
         modifier = modifier,
     ) { item, _, cardModifier ->
         GamepadActionCard(
