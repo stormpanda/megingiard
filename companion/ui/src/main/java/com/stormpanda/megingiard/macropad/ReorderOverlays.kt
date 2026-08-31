@@ -22,7 +22,7 @@ internal fun ReorderProfilesSubPage(
         itemTitle = { it.name },
         itemDescription = { profile ->
             profile.association?.packageName?.takeIf { it.isNotBlank() }
-                ?: if (profile.layouts.size == 1) "1 layout" else "${profile.layouts.size} layouts"
+                ?: stringResource(R.string.quick_menu_layouts_count, profile.layouts.size)
         },
         onReorder = { MacroPadState.reorderProfiles(it) },
         modifier = modifier,
@@ -44,7 +44,7 @@ internal fun ReorderLayoutsSubPage(
         itemKey = { it.id },
         itemTitle = { it.name },
         itemDescription = { layout ->
-            if (layout.buttons.size == 1) "1 button" else "${layout.buttons.size} buttons"
+            stringResource(R.string.quick_menu_buttons_count, layout.buttons.size)
         },
         onReorder = { MacroPadState.reorderLayouts(it) },
         modifier = modifier,
