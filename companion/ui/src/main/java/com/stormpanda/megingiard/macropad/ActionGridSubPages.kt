@@ -109,16 +109,17 @@ private val LAYOUT_ACTION_ITEMS =
     )
 
 @Composable
-internal fun MirrorActionPickerSubPageContent(
+private fun GenericActionGridPickerSubPageContent(
+    tag: String,
+    items: List<ActionGridItem>,
     currentAction: PadAction,
-    accentColor: Color,
     onSelectAction: (action: PadAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    AppLog.d(TAG, "MirrorActionPickerSubPageContent: currentAction=$currentAction")
+    AppLog.d(TAG, "$tag: currentAction=$currentAction")
 
     GamepadTwoColumnGrid(
-        items = MIRROR_ACTION_ITEMS,
+        items = items,
         modifier = modifier,
     ) { item, _, cardModifier ->
         val isSelected = currentAction::class == item.action::class
@@ -133,6 +134,22 @@ internal fun MirrorActionPickerSubPageContent(
             modifier = cardModifier,
         )
     }
+}
+
+@Composable
+internal fun MirrorActionPickerSubPageContent(
+    currentAction: PadAction,
+    accentColor: Color,
+    onSelectAction: (action: PadAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    GenericActionGridPickerSubPageContent(
+        tag = "MirrorActionPickerSubPageContent",
+        items = MIRROR_ACTION_ITEMS,
+        currentAction = currentAction,
+        onSelectAction = onSelectAction,
+        modifier = modifier,
+    )
 }
 
 @Composable
@@ -142,24 +159,13 @@ internal fun OverlayActionPickerSubPageContent(
     onSelectAction: (action: PadAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    AppLog.d(TAG, "OverlayActionPickerSubPageContent: currentAction=$currentAction")
-
-    GamepadTwoColumnGrid(
+    GenericActionGridPickerSubPageContent(
+        tag = "OverlayActionPickerSubPageContent",
         items = OVERLAY_ACTION_ITEMS,
+        currentAction = currentAction,
+        onSelectAction = onSelectAction,
         modifier = modifier,
-    ) { item, _, cardModifier ->
-        val isSelected = currentAction::class == item.action::class
-
-        GamepadActionCard(
-            title = stringResource(item.titleRes),
-            description = stringResource(item.descRes),
-            icon = item.icon,
-            actionText = if (isSelected) stringResource(R.string.gamepad_color_selected) else null,
-            alwaysShowFullDescription = true,
-            onClick = { onSelectAction(item.action) },
-            modifier = cardModifier,
-        )
-    }
+    )
 }
 
 @Composable
@@ -169,24 +175,13 @@ internal fun LayoutActionPickerSubPageContent(
     onSelectAction: (action: PadAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    AppLog.d(TAG, "LayoutActionPickerSubPageContent: currentAction=$currentAction")
-
-    GamepadTwoColumnGrid(
+    GenericActionGridPickerSubPageContent(
+        tag = "LayoutActionPickerSubPageContent",
         items = LAYOUT_ACTION_ITEMS,
+        currentAction = currentAction,
+        onSelectAction = onSelectAction,
         modifier = modifier,
-    ) { item, _, cardModifier ->
-        val isSelected = currentAction::class == item.action::class
-
-        GamepadActionCard(
-            title = stringResource(item.titleRes),
-            description = stringResource(item.descRes),
-            icon = item.icon,
-            actionText = if (isSelected) stringResource(R.string.gamepad_color_selected) else null,
-            alwaysShowFullDescription = true,
-            onClick = { onSelectAction(item.action) },
-            modifier = cardModifier,
-        )
-    }
+    )
 }
 
 @Composable
