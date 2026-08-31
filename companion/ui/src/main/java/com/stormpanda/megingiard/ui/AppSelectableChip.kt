@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 // ─────────────────────────────────────────────────────────────────────────────
 
 private val CHIP_CORNER = 20.dp
+private val CHIP_SHAPE = RoundedCornerShape(CHIP_CORNER)
 private val CHIP_H_PADDING = 12.dp
 private val CHIP_V_PADDING = 6.dp
 private val CHIP_CONTENT_SPACING = 6.dp
@@ -73,7 +74,6 @@ fun AppSelectableChip(
             alpha =
                 (if (selected) 0.85f else 0.5f) * effectiveAlpha,
         )
-    val shape = RoundedCornerShape(CHIP_CORNER)
 
     Box(
         modifier =
@@ -81,12 +81,12 @@ fun AppSelectableChip(
                 .semantics {
                     this.selected = selected
                     this.contentDescription = contentDescription ?: text
-                }.clip(shape)
+                }.clip(CHIP_SHAPE)
                 .background(chipBgColor)
-                .border(1.dp, chipBorderColor, shape)
+                .border(1.dp, chipBorderColor, CHIP_SHAPE)
                 .primaryOverlayFocusable(
                     onClick = if (enabled) onClick else null,
-                    shape = shape,
+                    shape = CHIP_SHAPE,
                 ).padding(horizontal = CHIP_H_PADDING, vertical = CHIP_V_PADDING),
     ) {
         val labelText = @Composable {
