@@ -53,7 +53,7 @@ object RomManager {
     private val _romApps = MutableStateFlow<List<InstalledAppInfo>>(emptyList())
     val romApps: StateFlow<List<InstalledAppInfo>> = _romApps.asStateFlow()
 
-    private val _romCleanedNames = mutableMapOf<String, String>()
+    private val romCleanedNames = mutableMapOf<String, String>()
 
     private inline fun <reified T> loadJsonFile(
         context: Context,
@@ -89,16 +89,16 @@ object RomManager {
         }
 
         loadJsonFile<Map<String, String>>(context, FILE_ROM_CLEANED_NAMES)?.let { map ->
-            synchronized(_romCleanedNames) {
-                _romCleanedNames.clear()
-                _romCleanedNames.putAll(map)
+            synchronized(romCleanedNames) {
+                romCleanedNames.clear()
+                romCleanedNames.putAll(map)
             }
             AppLog.d(TAG, "Loaded ${map.size} cleaned ROM names from disk")
         }
     }
 
     private fun saveRomCleanedNames(context: Context) {
-        val content = synchronized(_romCleanedNames) { _romCleanedNames.toMap() }
+        val content = synchronized(romCleanedNames) { romCleanedNames.toMap() }
         saveJsonFile(context, FILE_ROM_CLEANED_NAMES, content)
         AppLog.d(TAG, "Saved cleaned ROM names to disk")
     }
@@ -202,13 +202,13 @@ object RomManager {
         saveRomFolders(context, current)
 
         val namesChanged =
-            synchronized(_romCleanedNames) {
+            synchronized(romCleanedNames) {
                 val keysToRemove =
-                    _romCleanedNames.keys.filter { romUriStr ->
+                    romCleanedNames.keys.filter { romUriStr ->
                         romUriStr.startsWith(folder.uriString) || romUriStr.contains(folder.uriString)
                     }
                 if (keysToRemove.isNotEmpty()) {
-                    keysToRemove.forEach { _romCleanedNames.remove(it) }
+                    keysToRemove.forEach { romCleanedNames.remove(it) }
                     true
                 } else {
                     false
@@ -263,8 +263,8 @@ object RomManager {
                                 val romPath = SafPathResolver.resolveFilePath(romUriStr) ?: romUriStr
 
                                 val label =
-                                    synchronized(_romCleanedNames) {
-                                        _romCleanedNames.getOrPut(romUriStr) {
+                                    synchronized(romCleanedNames) {
+                                        romCleanedNames.getOrPut(romUriStr) {
                                             namesChanged = true
                                             cleanRomName(rawLabel)
                                         }
