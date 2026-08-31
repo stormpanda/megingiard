@@ -459,21 +459,23 @@ internal fun EditButtonSubPageContent(
         )
 
         val previewLabel = stringResource(R.string.macropad_editor_button_preview_text)
+        val previewShape = if (buttonShape == ButtonShape.CIRCLE) CircleShape else RoundedCornerShape(PBD_CORNER_RADIUS_DP)
         val buttonPreviewLeading: (textColor: Color, borderColor: Color, bgColor: Color, isIconOnly: Boolean) -> @Composable () -> Unit =
             { tColor, bColor, bgCol, iconOnly ->
                 {
                     PadButtonFace(
                         width = PBD_COLOR_PREVIEW_SIZE,
                         height = PBD_COLOR_PREVIEW_SIZE,
-                        shape = if (buttonShape == ButtonShape.CIRCLE) CircleShape else RoundedCornerShape(PBD_CORNER_RADIUS_DP),
+                        shape = previewShape,
                         isIconOnly = iconOnly || buttonShape == ButtonShape.ICON_ONLY,
                         isDeviceDisabled = false,
                         borderColor = bColor,
                         bgColor = bgCol,
                     ) {
-                        if (iconName != null) {
+                        val currentIcon = iconName
+                        if (currentIcon != null) {
                             MaterialSymbol(
-                                name = iconName!!,
+                                name = currentIcon,
                                 size = PBD_ICON_SIZE_DP,
                                 tint = tColor,
                                 filled = iconFilled,
