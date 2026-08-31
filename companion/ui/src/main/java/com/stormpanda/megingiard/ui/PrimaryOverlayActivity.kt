@@ -175,19 +175,18 @@ class PrimaryOverlayActivity : ComponentActivity() {
         keyCode: Int,
         event: KeyEvent?,
     ): Boolean {
-        when (keyCode) {
-            KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> {
-                AppLog.i(TAG, "onKeyDown: Back/B-Button pressed -> handling back")
-                if (onBackPressedDispatcher.hasEnabledCallbacks()) {
-                    onBackPressedDispatcher.onBackPressed()
-                } else {
-                    AppStateManager.closePrimaryModal()
-                    AppStateManager.setActiveCropCutoutId(null)
-                    AppStateManager.setSelectedCutoutId(null)
-                }
-                return true
+        if (isBackKey(keyCode)) {
+            AppLog.i(TAG, "onKeyDown: Back/B-Button pressed -> handling back")
+            if (onBackPressedDispatcher.hasEnabledCallbacks()) {
+                onBackPressedDispatcher.onBackPressed()
+            } else {
+                AppStateManager.closePrimaryModal()
+                AppStateManager.setActiveCropCutoutId(null)
+                AppStateManager.setSelectedCutoutId(null)
             }
-
+            return true
+        }
+        when (keyCode) {
             KeyEvent.KEYCODE_BUTTON_L1 -> {
                 AppLog.d(TAG, "onKeyDown: L1 pressed -> Bumper PREV")
                 PrimaryOverlayInputBridge.sendBumper(BumperDirection.PREV)

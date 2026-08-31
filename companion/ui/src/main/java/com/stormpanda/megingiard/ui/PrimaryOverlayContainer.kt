@@ -163,13 +163,7 @@ fun PrimaryOverlayContainer(
                     .fillMaxSize()
                     .background(Color.Black.copy(alpha = POC_SCRIM_ALPHA))
                     .onKeyEvent { keyEvent ->
-                        if (keyEvent.type == KeyEventType.KeyDown &&
-                            (
-                                keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BUTTON_B ||
-                                    keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BACK ||
-                                    keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ESCAPE
-                            )
-                        ) {
+                        if (keyEvent.isBackKeyDown()) {
                             handleDismiss()
                             true
                         } else {

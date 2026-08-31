@@ -121,6 +121,7 @@ import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.handle2DAdjustmentKeyEvent
 import com.stormpanda.megingiard.ui.handleAdjustmentKeyEvent
+import com.stormpanda.megingiard.ui.isBackKey
 import com.stormpanda.megingiard.ui.launchDirectionalRepeat
 import com.stormpanda.megingiard.ui.rememberBezelBrush
 import com.stormpanda.megingiard.ui.rememberGamepadBringIntoViewSpec
@@ -503,9 +504,7 @@ fun MirrorEditorTopOverlay(
     val rootKeyModifier =
         Modifier.onKeyEvent { keyEvent ->
             val keyCode = keyEvent.nativeKeyEvent.keyCode
-            if (keyEvent.type == KeyEventType.KeyUp &&
-                (keyCode == KeyEvent.KEYCODE_BUTTON_B || keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_ESCAPE)
-            ) {
+            if (keyEvent.type == KeyEventType.KeyUp && isBackKey(keyCode)) {
                 handleBackAction()
             } else {
                 false
@@ -1530,9 +1529,7 @@ private fun DeleteCutoutCard(
         },
         onFocusChanged = onFocusChanged,
         onCustomKeyEvent = { event ->
-            if (isConfirming &&
-                event.nativeKeyEvent.keyCode in listOf(KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE)
-            ) {
+            if (isConfirming && isBackKey(event.nativeKeyEvent.keyCode)) {
                 if (event.type == KeyEventType.KeyUp) {
                     isConfirming = false
                 }

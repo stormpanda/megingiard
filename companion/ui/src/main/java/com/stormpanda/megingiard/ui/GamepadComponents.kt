@@ -127,6 +127,15 @@ import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 
 private const val TAG = "GamepadComponents"
 
+/** Returns true if the key code represents a back/escape/cancel action. */
+fun isBackKey(keyCode: Int): Boolean =
+    keyCode == KeyEvent.KEYCODE_BUTTON_B ||
+        keyCode == KeyEvent.KEYCODE_BACK ||
+        keyCode == KeyEvent.KEYCODE_ESCAPE
+
+/** Returns true if the key event is a KeyDown action representing back/escape/cancel. */
+fun ComposeKeyEvent.isBackKeyDown(): Boolean = type == KeyEventType.KeyDown && isBackKey(nativeKeyEvent.keyCode)
+
 /**
  * Detects pointer press and release events in the [PointerEventPass.Initial] pass, ensuring
  * pointer tracking is scoped to touches that originated inside the bounds of the component.
@@ -1812,16 +1821,8 @@ fun GamepadTwoStepConfirmCard(
             }
         },
         onCustomKeyEvent = { keyEvent ->
-            val keyCode = keyEvent.nativeKeyEvent.keyCode
-            if (isConfirming && (
-                    keyCode == KeyEvent.KEYCODE_BUTTON_B ||
-                        keyCode == KeyEvent.KEYCODE_BACK ||
-                        keyCode == KeyEvent.KEYCODE_ESCAPE
-                )
-            ) {
-                if (keyEvent.type == KeyEventType.KeyDown) {
-                    isConfirming = false
-                }
+            if (isConfirming && keyEvent.isBackKeyDown()) {
+                isConfirming = false
                 true
             } else {
                 false

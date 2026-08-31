@@ -71,13 +71,7 @@ fun AppModalDialog(
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = scrimAlpha))
                 .onPreviewKeyEvent { keyEvent ->
-                    if (keyEvent.type == KeyEventType.KeyDown &&
-                        (
-                            keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BUTTON_B ||
-                                keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BACK ||
-                                keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ESCAPE
-                        )
-                    ) {
+                    if (keyEvent.isBackKeyDown()) {
                         onDismiss()
                         true
                     } else {
