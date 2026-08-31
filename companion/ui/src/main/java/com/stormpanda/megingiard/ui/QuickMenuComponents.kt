@@ -81,19 +81,22 @@ internal fun SectionLabel(
 }
 
 @Composable
-internal fun ProfileRow(
-    profiles: List<PadProfile>,
-    activeProfile: PadProfile?,
+private fun <T> ScrollableSelectionRow(
+    items: List<T>,
+    selectedId: String?,
+    itemId: (T) -> String,
+    itemName: (T) -> String,
     colors: AppColors,
-    onProfileSelected: (PadProfile) -> Unit,
+    onItemSelected: (T) -> Unit,
 ) {
     val listState = rememberLazyListState()
 
-    LaunchedEffect(activeProfile?.id, profiles) {
-        val activeId = activeProfile?.id ?: return@LaunchedEffect
-        val index = profiles.indexOfFirst { it.id == activeId }
-        if (index >= 0) {
-            listState.animateScrollToItem(index)
+    LaunchedEffect(selectedId, items) {
+        if (selectedId != null) {
+            val index = items.indexOfFirst { itemId(it) == selectedId }
+            if (index >= 0) {
+                listState.animateScrollToItem(index)
+            }
         }
     }
 
@@ -102,17 +105,34 @@ internal fun ProfileRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(PM_CHIP_SPACING),
     ) {
-        items(profiles, key = { it.id }) { profile ->
-            val isActive = profile.id == activeProfile?.id
-            SelectableChip(
-                text = profile.name,
-                isSelected = isActive,
-                colors = colors,
-                contentDescription = profile.name,
-                onClick = { onProfileSelected(profile) },
+        items(items, key = { itemId(it) }) { item ->
+            val name = itemName(item)
+            AppSelectableChip(
+                text = name,
+                selected = itemId(item) == selectedId,
+                onClick = { onItemSelected(item) },
+                contentDescription = name,
+                unselectedContentColor = colors.accent,
             )
         }
     }
+}
+
+@Composable
+internal fun ProfileRow(
+    profiles: List<PadProfile>,
+    activeProfile: PadProfile?,
+    colors: AppColors,
+    onProfileSelected: (PadProfile) -> Unit,
+) {
+    ScrollableSelectionRow(
+        items = profiles,
+        selectedId = activeProfile?.id,
+        itemId = { it.id },
+        itemName = { it.name },
+        colors = colors,
+        onItemSelected = onProfileSelected,
+    )
 }
 
 @Composable
@@ -122,32 +142,14 @@ internal fun LayoutRow(
     colors: AppColors,
     onLayoutSelected: (String) -> Unit,
 ) {
-    val layouts = activeProfile?.layouts ?: emptyList()
-    val listState = rememberLazyListState()
-
-    LaunchedEffect(activeLayout?.id, layouts) {
-        val activeId = activeLayout?.id ?: return@LaunchedEffect
-        val index = layouts.indexOfFirst { it.id == activeId }
-        if (index >= 0) {
-            listState.animateScrollToItem(index)
-        }
-    }
-
-    LazyRow(
-        state = listState,
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(PM_CHIP_SPACING),
-    ) {
-        items(layouts, key = { it.id }) { layout ->
-            SelectableChip(
-                text = layout.name,
-                isSelected = layout.id == activeLayout?.id,
-                colors = colors,
-                contentDescription = layout.name,
-                onClick = { onLayoutSelected(layout.id) },
-            )
-        }
-    }
+    ScrollableSelectionRow(
+        items = activeProfile?.layouts ?: emptyList(),
+        selectedId = activeLayout?.id,
+        itemId = { it.id },
+        itemName = { it.name },
+        colors = colors,
+        onItemSelected = { onLayoutSelected(it.id) },
+    )
 }
 
 @Composable
@@ -401,22 +403,5 @@ internal fun ShutOffIconButton(
         onClick = onClick,
         modifier = modifier,
         tint = colors.accent,
-    )
-}
-
-@Composable
-private fun SelectableChip(
-    text: String,
-    isSelected: Boolean,
-    colors: AppColors,
-    contentDescription: String? = null,
-    onClick: () -> Unit,
-) {
-    AppSelectableChip(
-        text = text,
-        selected = isSelected,
-        onClick = onClick,
-        contentDescription = contentDescription,
-        unselectedContentColor = colors.accent,
     )
 }
