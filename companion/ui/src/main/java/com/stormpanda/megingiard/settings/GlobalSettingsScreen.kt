@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.settings
 
+import android.content.Context
 import android.view.KeyEvent
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
@@ -842,19 +843,13 @@ fun GlobalSettingsScreen(
                                                     }
                                                 }
                                             }.onSuccess {
-                                                when (mode) {
-                                                    ConfigManager.ImportMode.BACKUP_RESTORE -> {
-                                                        DialogToastManager.show(
-                                                            context.getString(R.string.config_import_success),
-                                                        )
+                                                val msgRes =
+                                                    if (mode == ConfigManager.ImportMode.BACKUP_RESTORE) {
+                                                        R.string.config_import_success
+                                                    } else {
+                                                        R.string.config_profile_import_success
                                                     }
-
-                                                    ConfigManager.ImportMode.PROFILE_SHARE -> {
-                                                        DialogToastManager.show(
-                                                            context.getString(R.string.config_profile_import_success),
-                                                        )
-                                                    }
-                                                }
+                                                DialogToastManager.show(context.getString(msgRes))
                                             }.onFailure { e ->
                                                 importError =
                                                     e.message?.takeIf { it.isNotBlank() }
@@ -1085,6 +1080,16 @@ private fun ExportMetadataForm(
     )
 }
 
+private fun buildExportMetadata(
+    context: Context,
+    author: String,
+    description: String,
+): ExportMetadata =
+    ConfigManager.defaultMetadata(context).copy(
+        author = author.trim().ifEmpty { null },
+        description = description.trim().ifEmpty { null },
+    )
+
 @Composable
 private fun CreateBackupSubPage(onExport: (ExportMetadata, Boolean) -> Unit) {
     val context = LocalContext.current
@@ -1107,12 +1112,7 @@ private fun CreateBackupSubPage(onExport: (ExportMetadata, Boolean) -> Unit) {
         description = stringResource(R.string.help_settings_export_desc),
         icon = Icons.Rounded.FileDownload,
         onClick = {
-            val metadata =
-                ConfigManager.defaultMetadata(context).copy(
-                    author = author.trim().ifEmpty { null },
-                    description = description.trim().ifEmpty { null },
-                )
-            onExport(metadata, includeBackgrounds)
+            onExport(buildExportMetadata(context, author, description), includeBackgrounds)
         },
     )
 }
@@ -1161,12 +1161,7 @@ private fun ShareProfileSubPage(onExportProfile: (ExportMetadata, PadProfile, Bo
         enabled = currentProfile != null,
         onClick = {
             val targetProfile = currentProfile ?: return@GamepadActionCard
-            val metadata =
-                ConfigManager.defaultMetadata(context).copy(
-                    author = author.trim().ifEmpty { null },
-                    description = description.trim().ifEmpty { null },
-                )
-            onExportProfile(metadata, targetProfile, includeBackgrounds)
+            onExportProfile(buildExportMetadata(context, author, description), targetProfile, includeBackgrounds)
         },
     )
 }
