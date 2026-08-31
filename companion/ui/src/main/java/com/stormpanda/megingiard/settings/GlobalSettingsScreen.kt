@@ -101,6 +101,8 @@ import com.stormpanda.megingiard.config.buildProfileExportFilename
 import com.stormpanda.megingiard.log.LogReportManager
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadProfile
+import com.stormpanda.megingiard.math.nextItem
+import com.stormpanda.megingiard.math.prevItem
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.PrivdConstants
 import com.stormpanda.megingiard.privd.PrivdState
@@ -377,8 +379,6 @@ fun GlobalSettingsScreen(
                                     },
                                 )
 
-                                val allLangs = remember { AppLanguage.entries }
-                                val currentLangIdx = allLangs.indexOf(appLanguage)
                                 val currentLangName =
                                     when (appLanguage) {
                                         AppLanguage.SYSTEM -> stringResource(R.string.settings_language_system)
@@ -392,12 +392,8 @@ fun GlobalSettingsScreen(
                                     description = stringResource(R.string.help_settings_language_desc),
                                     selectedText = currentLangName,
                                     icon = Icons.Rounded.Language,
-                                    onPrevious = {
-                                        viewModel.setAppLanguage(
-                                            allLangs[(currentLangIdx - 1 + allLangs.size) % allLangs.size],
-                                        )
-                                    },
-                                    onNext = { viewModel.setAppLanguage(allLangs[(currentLangIdx + 1) % allLangs.size]) },
+                                    onPrevious = { viewModel.setAppLanguage(AppLanguage.entries.prevItem(appLanguage)) },
+                                    onNext = { viewModel.setAppLanguage(AppLanguage.entries.nextItem(appLanguage)) },
                                 )
 
                                 GamepadToggleCard(
@@ -448,21 +444,13 @@ fun GlobalSettingsScreen(
 
                             // APPEARANCE
                             if (selectedCategory == SettingsCategory.APPEARANCE) {
-                                val allThemes = remember { ThemeMode.entries }
-                                val currentThemeIdx = allThemes.indexOf(themeMode)
-                                val themeDisplayName = stringResource(themeMode.displayNameResId())
-
                                 GamepadChoiceCard(
                                     title = stringResource(R.string.settings_theme),
                                     description = stringResource(R.string.help_settings_theme_desc),
-                                    selectedText = themeDisplayName,
+                                    selectedText = stringResource(themeMode.displayNameResId()),
                                     icon = Icons.Rounded.Palette,
-                                    onPrevious = {
-                                        viewModel.setThemeMode(
-                                            allThemes[(currentThemeIdx - 1 + allThemes.size) % allThemes.size],
-                                        )
-                                    },
-                                    onNext = { viewModel.setThemeMode(allThemes[(currentThemeIdx + 1) % allThemes.size]) },
+                                    onPrevious = { viewModel.setThemeMode(ThemeMode.entries.prevItem(themeMode)) },
+                                    onNext = { viewModel.setThemeMode(ThemeMode.entries.nextItem(themeMode)) },
                                     modifier = Modifier.firstDeckItem(isFirst = selectedCategory == SettingsCategory.APPEARANCE),
                                 )
 
@@ -724,23 +712,13 @@ fun GlobalSettingsScreen(
 
                             // DIAGNOSTICS
                             if (selectedCategory == SettingsCategory.DIAGNOSTICS) {
-                                val allLogLevels = remember { AppLog.Level.entries }
-                                val currentLogLevelIdx = allLogLevels.indexOf(logLevel)
-
                                 GamepadChoiceCard(
                                     title = stringResource(R.string.settings_log_level),
                                     description = stringResource(R.string.help_settings_log_level_desc),
                                     selectedText = logLevel.name,
                                     icon = Icons.Rounded.BugReport,
-                                    onPrevious = {
-                                        viewModel.setLogLevel(
-                                            allLogLevels[
-                                                (currentLogLevelIdx - 1 + allLogLevels.size) %
-                                                    allLogLevels.size,
-                                            ],
-                                        )
-                                    },
-                                    onNext = { viewModel.setLogLevel(allLogLevels[(currentLogLevelIdx + 1) % allLogLevels.size]) },
+                                    onPrevious = { viewModel.setLogLevel(AppLog.Level.entries.prevItem(logLevel)) },
+                                    onNext = { viewModel.setLogLevel(AppLog.Level.entries.nextItem(logLevel)) },
                                     modifier = Modifier.firstDeckItem(isFirst = selectedCategory == SettingsCategory.DIAGNOSTICS),
                                 )
 
@@ -1063,46 +1041,34 @@ private fun SteamGridDbTokenSubPage(
         modifier = Modifier.firstDeckItem(),
     )
 
-    val statusBadge: @Composable () -> Unit =
+    val badgeTextRes =
         when (testStatus) {
-            SteamGridDbTestStatus.IDLE -> {
-                { GamepadPill(text = stringResource(R.string.settings_steamgriddb_test_btn)) }
-            }
-
-            SteamGridDbTestStatus.TESTING -> {
-                { GamepadPill(text = stringResource(R.string.settings_steamgriddb_status_testing), isHighlighted = true) }
-            }
-
-            SteamGridDbTestStatus.CONNECTED -> {
-                { GamepadPill(text = stringResource(R.string.settings_steamgriddb_status_connected), isAccent = true) }
-            }
-
-            SteamGridDbTestStatus.INVALID_TOKEN -> {
-                { GamepadPill(text = stringResource(R.string.settings_steamgriddb_status_invalid), isDestructive = true) }
-            }
-
-            SteamGridDbTestStatus.OFFLINE -> {
-                { GamepadPill(text = stringResource(R.string.settings_steamgriddb_status_offline), isDestructive = true) }
-            }
-
-            SteamGridDbTestStatus.RATE_LIMITED -> {
-                { GamepadPill(text = stringResource(R.string.settings_steamgriddb_status_rate_limited), isDestructive = true) }
-            }
-
-            SteamGridDbTestStatus.UNREACHABLE -> {
-                { GamepadPill(text = stringResource(R.string.settings_steamgriddb_status_unreachable), isDestructive = true) }
-            }
-
-            SteamGridDbTestStatus.ERROR -> {
-                { GamepadPill(text = stringResource(R.string.settings_steamgriddb_status_error), isDestructive = true) }
-            }
+            SteamGridDbTestStatus.IDLE -> R.string.settings_steamgriddb_test_btn
+            SteamGridDbTestStatus.TESTING -> R.string.settings_steamgriddb_status_testing
+            SteamGridDbTestStatus.CONNECTED -> R.string.settings_steamgriddb_status_connected
+            SteamGridDbTestStatus.INVALID_TOKEN -> R.string.settings_steamgriddb_status_invalid
+            SteamGridDbTestStatus.OFFLINE -> R.string.settings_steamgriddb_status_offline
+            SteamGridDbTestStatus.RATE_LIMITED -> R.string.settings_steamgriddb_status_rate_limited
+            SteamGridDbTestStatus.UNREACHABLE -> R.string.settings_steamgriddb_status_unreachable
+            SteamGridDbTestStatus.ERROR -> R.string.settings_steamgriddb_status_error
         }
+    val isDestructive =
+        testStatus != SteamGridDbTestStatus.IDLE &&
+            testStatus != SteamGridDbTestStatus.TESTING &&
+            testStatus != SteamGridDbTestStatus.CONNECTED
 
     GamepadActionCard(
         title = stringResource(R.string.settings_steamgriddb_test_title),
         description = stringResource(R.string.settings_steamgriddb_test_desc),
         icon = Icons.Rounded.Sensors,
-        actionLeadingContent = statusBadge,
+        actionLeadingContent = {
+            GamepadPill(
+                text = stringResource(badgeTextRes),
+                isAccent = testStatus == SteamGridDbTestStatus.CONNECTED,
+                isHighlighted = testStatus == SteamGridDbTestStatus.TESTING,
+                isDestructive = isDestructive,
+            )
+        },
         enabled = true,
         onClick = {
             if (token.isNotBlank() && testStatus != SteamGridDbTestStatus.TESTING) {
@@ -1198,11 +1164,10 @@ private fun ShareProfileSubPage(onExportProfile: (ExportMetadata, PadProfile, Bo
     val rawProfiles by MacroPadState.profiles.collectAsState()
     val profiles = remember(rawProfiles) { rawProfiles.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name }) }
     val activeProfile by MacroPadState.activeProfile.collectAsState()
-    var selectedProfileIdx by rememberSaveable(profiles) {
-        val initialIdx = profiles.indexOfFirst { it.id == activeProfile?.id }.coerceAtLeast(0)
-        mutableStateOf(initialIdx)
+    var selectedProfile by remember(profiles, activeProfile) {
+        mutableStateOf(profiles.firstOrNull { it.id == activeProfile?.id } ?: activeProfile ?: profiles.firstOrNull())
     }
-    val currentProfile = profiles.getOrNull(selectedProfileIdx) ?: activeProfile ?: profiles.firstOrNull()
+    val currentProfile = selectedProfile ?: activeProfile ?: profiles.firstOrNull()
 
     var author by rememberSaveable { mutableStateOf("") }
     var description by rememberSaveable { mutableStateOf("") }
@@ -1213,16 +1178,8 @@ private fun ShareProfileSubPage(onExportProfile: (ExportMetadata, PadProfile, Bo
             title = stringResource(R.string.config_profile_export_select),
             description = stringResource(R.string.config_profile_export_select_desc),
             selectedText = currentProfile?.name ?: "",
-            onPrevious = {
-                if (profiles.isNotEmpty()) {
-                    selectedProfileIdx = (selectedProfileIdx - 1 + profiles.size) % profiles.size
-                }
-            },
-            onNext = {
-                if (profiles.isNotEmpty()) {
-                    selectedProfileIdx = (selectedProfileIdx + 1) % profiles.size
-                }
-            },
+            onPrevious = { currentProfile?.let { selectedProfile = profiles.prevItem(it) } },
+            onNext = { currentProfile?.let { selectedProfile = profiles.nextItem(it) } },
             icon = Icons.Rounded.SportsEsports,
             modifier = Modifier.firstDeckItem(),
         )

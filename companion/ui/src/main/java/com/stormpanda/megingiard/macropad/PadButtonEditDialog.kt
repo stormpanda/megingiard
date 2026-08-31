@@ -50,6 +50,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.math.nextItem
+import com.stormpanda.megingiard.math.prevItem
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.settings.SettingsManager
@@ -410,38 +412,22 @@ internal fun EditButtonSubPageContent(
             color = accentColor,
         )
 
-        val shapeEntries = ButtonShape.entries
-        val shapeIdx = shapeEntries.indexOf(buttonShape).coerceAtLeast(0)
         GamepadChoiceCard(
             title = stringResource(R.string.macropad_editor_button_shape),
             description = stringResource(R.string.macropad_btn_shape_desc),
-            selectedText = shapeEntries[shapeIdx].displayLabel(),
+            selectedText = buttonShape.displayLabel(),
             icon = Icons.Rounded.CropFree,
-            onPrevious = {
-                val nextIdx = (shapeIdx - 1 + shapeEntries.size) % shapeEntries.size
-                buttonShape = shapeEntries[nextIdx]
-            },
-            onNext = {
-                val nextIdx = (shapeIdx + 1) % shapeEntries.size
-                buttonShape = shapeEntries[nextIdx]
-            },
+            onPrevious = { buttonShape = ButtonShape.entries.prevItem(buttonShape) },
+            onNext = { buttonShape = ButtonShape.entries.nextItem(buttonShape) },
         )
 
-        val sizeEntries = ButtonSize.entries
-        val sizeIdx = sizeEntries.indexOf(buttonSize).coerceAtLeast(0)
         GamepadChoiceCard(
             title = stringResource(R.string.macropad_editor_button_size),
             description = stringResource(R.string.macropad_btn_size_desc),
-            selectedText = sizeEntries[sizeIdx].displayLabel(),
+            selectedText = buttonSize.displayLabel(),
             icon = Icons.Rounded.CropFree,
-            onPrevious = {
-                val nextIdx = (sizeIdx - 1 + sizeEntries.size) % sizeEntries.size
-                buttonSize = sizeEntries[nextIdx]
-            },
-            onNext = {
-                val nextIdx = (sizeIdx + 1) % sizeEntries.size
-                buttonSize = sizeEntries[nextIdx]
-            },
+            onPrevious = { buttonSize = ButtonSize.entries.prevItem(buttonSize) },
+            onNext = { buttonSize = ButtonSize.entries.nextItem(buttonSize) },
         )
 
         GamepadSectionHeader(
@@ -449,67 +435,44 @@ internal fun EditButtonSubPageContent(
             color = accentColor,
         )
 
-        val hapticEntries = HapticStrength.entries
-        val hapticLabels =
-            listOf(
-                stringResource(R.string.macropad_haptic_off),
-                stringResource(R.string.macropad_haptic_light),
-                stringResource(R.string.macropad_haptic_medium),
-                stringResource(R.string.macropad_haptic_strong),
-                stringResource(R.string.macropad_haptic_custom),
-            )
-        val hapticIdx = hapticEntries.indexOf(hapticStrength).coerceAtLeast(0)
+        val applyHapticStrength: (HapticStrength) -> Unit = { selectedStrength ->
+            when (selectedStrength) {
+                HapticStrength.LIGHT -> {
+                    hapticCustomDurationMs = HF_PRESET_DURATION_MS
+                    hapticCustomAmplitude = HF_LIGHT_AMPLITUDE_USER
+                }
+
+                HapticStrength.MEDIUM -> {
+                    hapticCustomDurationMs = HF_PRESET_DURATION_MS
+                    hapticCustomAmplitude = HF_MEDIUM_AMPLITUDE_USER
+                }
+
+                HapticStrength.STRONG -> {
+                    hapticCustomDurationMs = HF_PRESET_DURATION_MS
+                    hapticCustomAmplitude = HF_STRONG_AMPLITUDE_USER
+                }
+
+                else -> {}
+            }
+            hapticStrength = selectedStrength
+        }
+
+        val hapticSelectedText =
+            when (hapticStrength) {
+                HapticStrength.OFF -> stringResource(R.string.macropad_haptic_off)
+                HapticStrength.LIGHT -> stringResource(R.string.macropad_haptic_light)
+                HapticStrength.MEDIUM -> stringResource(R.string.macropad_haptic_medium)
+                HapticStrength.STRONG -> stringResource(R.string.macropad_haptic_strong)
+                HapticStrength.CUSTOM -> stringResource(R.string.macropad_haptic_custom)
+            }
+
         GamepadChoiceCard(
             title = stringResource(R.string.macropad_editor_section_haptic),
             description = stringResource(R.string.macropad_btn_haptic_desc),
-            selectedText = hapticLabels[hapticIdx],
+            selectedText = hapticSelectedText,
             icon = Icons.Rounded.Vibration,
-            onPrevious = {
-                val nextIdx = (hapticIdx - 1 + hapticEntries.size) % hapticEntries.size
-                val selectedStrength = hapticEntries[nextIdx]
-                when (selectedStrength) {
-                    HapticStrength.LIGHT -> {
-                        hapticCustomDurationMs = HF_PRESET_DURATION_MS
-                        hapticCustomAmplitude = HF_LIGHT_AMPLITUDE_USER
-                    }
-
-                    HapticStrength.MEDIUM -> {
-                        hapticCustomDurationMs = HF_PRESET_DURATION_MS
-                        hapticCustomAmplitude = HF_MEDIUM_AMPLITUDE_USER
-                    }
-
-                    HapticStrength.STRONG -> {
-                        hapticCustomDurationMs = HF_PRESET_DURATION_MS
-                        hapticCustomAmplitude = HF_STRONG_AMPLITUDE_USER
-                    }
-
-                    else -> {}
-                }
-                hapticStrength = selectedStrength
-            },
-            onNext = {
-                val nextIdx = (hapticIdx + 1) % hapticEntries.size
-                val selectedStrength = hapticEntries[nextIdx]
-                when (selectedStrength) {
-                    HapticStrength.LIGHT -> {
-                        hapticCustomDurationMs = HF_PRESET_DURATION_MS
-                        hapticCustomAmplitude = HF_LIGHT_AMPLITUDE_USER
-                    }
-
-                    HapticStrength.MEDIUM -> {
-                        hapticCustomDurationMs = HF_PRESET_DURATION_MS
-                        hapticCustomAmplitude = HF_MEDIUM_AMPLITUDE_USER
-                    }
-
-                    HapticStrength.STRONG -> {
-                        hapticCustomDurationMs = HF_PRESET_DURATION_MS
-                        hapticCustomAmplitude = HF_STRONG_AMPLITUDE_USER
-                    }
-
-                    else -> {}
-                }
-                hapticStrength = selectedStrength
-            },
+            onPrevious = { applyHapticStrength(HapticStrength.entries.prevItem(hapticStrength)) },
+            onNext = { applyHapticStrength(HapticStrength.entries.nextItem(hapticStrength)) },
         )
 
         if (hapticStrength == HapticStrength.CUSTOM) {

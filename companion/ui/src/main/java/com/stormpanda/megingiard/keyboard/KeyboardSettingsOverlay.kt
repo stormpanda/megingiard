@@ -14,6 +14,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.math.nextItem
+import com.stormpanda.megingiard.math.prevItem
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
 import com.stormpanda.megingiard.ui.GamepadDeck
 import com.stormpanda.megingiard.ui.GamepadToggleCard
@@ -41,16 +43,13 @@ fun KeyboardSettingsOverlay(
         title = "",
         modifier = Modifier.fillMaxSize(),
     ) {
-        val allLayouts = remember { KbLayout.entries }
-        val currentIdx = allLayouts.indexOf(currentLayout)
-
         GamepadChoiceCard(
             title = stringResource(R.string.settings_kb_layout),
             description = stringResource(R.string.help_keyboard_settings_layout_desc),
             selectedText = currentLayout.name,
             icon = Icons.Rounded.Keyboard,
-            onPrevious = { viewModel.setKbLayout(allLayouts[(currentIdx - 1 + allLayouts.size) % allLayouts.size]) },
-            onNext = { viewModel.setKbLayout(allLayouts[(currentIdx + 1) % allLayouts.size]) },
+            onPrevious = { viewModel.setKbLayout(KbLayout.entries.prevItem(currentLayout)) },
+            onNext = { viewModel.setKbLayout(KbLayout.entries.nextItem(currentLayout)) },
             modifier = Modifier.firstDeckItem(),
         )
 

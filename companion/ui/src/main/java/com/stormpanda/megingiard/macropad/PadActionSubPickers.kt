@@ -18,6 +18,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.math.nextItem
+import com.stormpanda.megingiard.math.prevItem
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
@@ -62,42 +64,36 @@ internal fun KeyboardKeyPicker(
     )
 
     val mod1Options = listOf<Int?>(null) + MODIFIER_PRESETS.map { it.first }.filter { it != mod2 }
-    val mod1Idx = mod1Options.indexOf(mod1).coerceAtLeast(0)
     GamepadChoiceCard(
         title = stringResource(R.string.macropad_picker_label_mod_1),
         description = stringResource(R.string.macropad_picker_label_mod_desc),
         selectedText = modifierLabel(mod1),
         icon = Icons.Rounded.Keyboard,
         onPrevious = {
-            val nextIdx = (mod1Idx - 1 + mod1Options.size) % mod1Options.size
-            val code = mod1Options[nextIdx]
+            val code = mod1Options.prevItem(mod1)
             mod1 = code
             emitChange(current.keycode, current.label, code, mod2)
         },
         onNext = {
-            val nextIdx = (mod1Idx + 1) % mod1Options.size
-            val code = mod1Options[nextIdx]
+            val code = mod1Options.nextItem(mod1)
             mod1 = code
             emitChange(current.keycode, current.label, code, mod2)
         },
     )
 
     val mod2Options = listOf<Int?>(null) + MODIFIER_PRESETS.map { it.first }.filter { it != mod1 }
-    val mod2Idx = mod2Options.indexOf(mod2).coerceAtLeast(0)
     GamepadChoiceCard(
         title = stringResource(R.string.macropad_picker_label_mod_2),
         description = stringResource(R.string.macropad_picker_label_mod_desc),
         selectedText = modifierLabel(mod2),
         icon = Icons.Rounded.Keyboard,
         onPrevious = {
-            val nextIdx = (mod2Idx - 1 + mod2Options.size) % mod2Options.size
-            val code = mod2Options[nextIdx]
+            val code = mod2Options.prevItem(mod2)
             mod2 = code
             emitChange(current.keycode, current.label, mod1, code)
         },
         onNext = {
-            val nextIdx = (mod2Idx + 1) % mod2Options.size
-            val code = mod2Options[nextIdx]
+            val code = mod2Options.nextItem(mod2)
             mod2 = code
             emitChange(current.keycode, current.label, mod1, code)
         },

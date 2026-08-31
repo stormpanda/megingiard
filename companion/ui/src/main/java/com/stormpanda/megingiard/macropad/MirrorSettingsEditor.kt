@@ -25,6 +25,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.math.nextItem
+import com.stormpanda.megingiard.math.prevItem
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.ui.GamepadActionCard
@@ -206,36 +208,26 @@ internal fun CutoutSettingsSubPageContent(
             0
         }
 
+    val applySmoothIdx: (Int) -> Unit = { newIdx ->
+        val isSmooth = newIdx > 0
+        val strength =
+            when (newIdx) {
+                1 -> MSE_SMOOTHING_VAL_LIGHT
+                2 -> MSE_SMOOTHING_VAL_MEDIUM
+                3 -> MSE_SMOOTHING_VAL_STRONG
+                else -> MSE_SMOOTHING_VAL_MEDIUM
+            }
+        onUpdateCutout(cutout.copy(motionSmoothing = isSmooth, motionSmoothingStrength = strength), false)
+    }
+
     GamepadChoiceCard(
         title = stringResource(R.string.settings_mirror_follow_smoothing),
         description = stringResource(R.string.settings_mirror_follow_smoothing_desc),
         selectedText = smoothingModes[currentSmoothIdx],
         icon = Icons.Rounded.Grain,
         itemKey = "cutout_${cutout.id}_smoothing",
-        onPrevious = {
-            val newIdx = (currentSmoothIdx - 1 + smoothingModes.size) % smoothingModes.size
-            val isSmooth = newIdx > 0
-            val strength =
-                when (newIdx) {
-                    1 -> MSE_SMOOTHING_VAL_LIGHT
-                    2 -> MSE_SMOOTHING_VAL_MEDIUM
-                    3 -> MSE_SMOOTHING_VAL_STRONG
-                    else -> MSE_SMOOTHING_VAL_MEDIUM
-                }
-            onUpdateCutout(cutout.copy(motionSmoothing = isSmooth, motionSmoothingStrength = strength), false)
-        },
-        onNext = {
-            val newIdx = (currentSmoothIdx + 1) % smoothingModes.size
-            val isSmooth = newIdx > 0
-            val strength =
-                when (newIdx) {
-                    1 -> MSE_SMOOTHING_VAL_LIGHT
-                    2 -> MSE_SMOOTHING_VAL_MEDIUM
-                    3 -> MSE_SMOOTHING_VAL_STRONG
-                    else -> MSE_SMOOTHING_VAL_MEDIUM
-                }
-            onUpdateCutout(cutout.copy(motionSmoothing = isSmooth, motionSmoothingStrength = strength), false)
-        },
+        onPrevious = { applySmoothIdx((currentSmoothIdx - 1 + smoothingModes.size) % smoothingModes.size) },
+        onNext = { applySmoothIdx((currentSmoothIdx + 1) % smoothingModes.size) },
     )
 
     // 3. Touch Projection
