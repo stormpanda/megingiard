@@ -965,19 +965,14 @@ internal object FocusImageCache {
         }
 
         return withContext(Dispatchers.IO) {
-            val file =
-                if (appInfo.isRom) {
-                    val logosDir = File(context.cacheDir, "gamefocus_logos").apply { mkdirs() }
-                    File(logosDir, "${appInfo.packageName}.png")
-                } else {
-                    val iconsDir = File(context.cacheDir, "gamefocus_icons").apply { mkdirs() }
-                    File(iconsDir, "${appInfo.packageName}.png")
-                }
-            if (file.exists() && file.length() > 0) {
+            val subDirName = if (appInfo.isRom) "gamefocus_logos" else "gamefocus_icons"
+            val fileDir = File(context.cacheDir, subDirName).apply { mkdirs() }
+            val iconFile = File(fileDir, "${appInfo.packageName}.png")
+            if (iconFile.exists() && iconFile.length() > 0) {
                 val startTime = System.currentTimeMillis()
                 val diskBitmap =
                     try {
-                        BitmapFactory.decodeFile(file.absolutePath)?.asImageBitmap()
+                        BitmapFactory.decodeFile(iconFile.absolutePath)?.asImageBitmap()
                     } catch (e: Exception) {
                         null
                     }
@@ -1001,13 +996,6 @@ internal object FocusImageCache {
             iconCache.put(cacheKey, imageBitmap)
 
             try {
-                val fileDir =
-                    if (appInfo.isRom) {
-                        File(context.cacheDir, "gamefocus_logos").apply { mkdirs() }
-                    } else {
-                        File(context.cacheDir, "gamefocus_icons").apply { mkdirs() }
-                    }
-                val iconFile = File(fileDir, "${appInfo.packageName}.png")
                 FileOutputStream(iconFile).use { out ->
                     androidBmp.compress(Bitmap.CompressFormat.PNG, 90, out)
                 }
@@ -1164,32 +1152,6 @@ private fun PosterCardContent(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
-        } else if (appInfo.isRom) {
-            if (currentIcon != null) {
-                Image(
-                    bitmap = currentIcon,
-                    contentDescription = appInfo.label,
-                    modifier =
-                        Modifier
-                            .size(FTL_ICON_SIZE)
-                            .aspectRatio(1f),
-                )
-            } else {
-                Box(
-                    modifier =
-                        Modifier
-                            .size(FTL_ICON_SIZE)
-                            .clip(RoundedCornerShape(FTL_ROM_ICON_CORNER_RADIUS))
-                            .background(appColors.surface),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    MaterialSymbol(
-                        name = "sports_esports",
-                        size = FTL_FALLBACK_ICON_SIZE,
-                        tint = appColors.accent,
-                    )
-                }
-            }
         } else if (currentIcon != null) {
             Image(
                 bitmap = currentIcon,
@@ -1208,12 +1170,20 @@ private fun PosterCardContent(
                         .background(appColors.surface),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    imageVector = Icons.Default.Apps,
-                    contentDescription = appInfo.label,
-                    tint = appColors.accent,
-                    modifier = Modifier.size(FTL_FALLBACK_ICON_SIZE),
-                )
+                if (appInfo.isRom) {
+                    MaterialSymbol(
+                        name = "sports_esports",
+                        size = FTL_FALLBACK_ICON_SIZE,
+                        tint = appColors.accent,
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Apps,
+                        contentDescription = appInfo.label,
+                        tint = appColors.accent,
+                        modifier = Modifier.size(FTL_FALLBACK_ICON_SIZE),
+                    )
+                }
             }
         }
 
