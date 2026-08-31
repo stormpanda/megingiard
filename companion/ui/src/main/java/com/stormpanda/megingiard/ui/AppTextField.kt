@@ -12,6 +12,20 @@ import com.stormpanda.megingiard.AppLog
 private const val TAG = "AppTextField"
 
 @Composable
+private fun appTextFieldColors(): androidx.compose.material3.TextFieldColors {
+    val colors = LocalAppColors.current
+    return OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = colors.accent,
+        unfocusedBorderColor = colors.subduedBorder,
+        focusedTextColor = colors.onSurface,
+        unfocusedTextColor = colors.onSurface,
+        cursorColor = colors.accent,
+        errorBorderColor = colors.error,
+        errorCursorColor = colors.error,
+    )
+}
+
+@Composable
 internal fun AppTextField(
     value: String,
     onValueChange: (String) -> Unit,
@@ -28,8 +42,6 @@ internal fun AppTextField(
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
 ) {
-    val colors = LocalAppColors.current
-    val accentColor = colors.accent
     OutlinedTextField(
         value = value,
         onValueChange = {
@@ -48,16 +60,7 @@ internal fun AppTextField(
         readOnly = readOnly,
         keyboardOptions = keyboardOptions,
         keyboardActions = keyboardActions,
-        colors =
-            OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = accentColor,
-                unfocusedBorderColor = colors.subduedBorder,
-                focusedTextColor = colors.onSurface,
-                unfocusedTextColor = colors.onSurface,
-                cursorColor = accentColor,
-                errorBorderColor = colors.error,
-                errorCursorColor = colors.error,
-            ),
+        colors = appTextFieldColors(),
     )
 }
 
@@ -78,8 +81,6 @@ internal fun AppTextField(
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
 ) {
-    val colors = LocalAppColors.current
-    val accentColor = colors.accent
     OutlinedTextField(
         value = value,
         onValueChange = {
@@ -98,15 +99,6 @@ internal fun AppTextField(
         readOnly = readOnly,
         keyboardOptions = keyboardOptions,
         keyboardActions = keyboardActions,
-        colors =
-            OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = accentColor,
-                unfocusedBorderColor = colors.subduedBorder,
-                focusedTextColor = colors.onSurface,
-                unfocusedTextColor = colors.onSurface,
-                cursorColor = accentColor,
-                errorBorderColor = colors.error,
-                errorCursorColor = colors.error,
-            ),
+        colors = appTextFieldColors(),
     )
 }
