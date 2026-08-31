@@ -877,18 +877,10 @@ private fun LibraryGridItem(
                         contentScale = ContentScale.Fit,
                         modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(FLS_ROM_ICON_CORNER_RADIUS)),
                     )
-                } else if (appInfo.isRom) {
-                    MaterialSymbol(
-                        name = "sports_esports",
-                        size = FLS_FALLBACK_ICON_SIZE,
-                        tint = appColors.accent,
-                    )
                 } else {
-                    Icon(
-                        imageVector = Icons.Default.Apps,
-                        contentDescription = appInfo.label,
-                        tint = appColors.accent,
-                        modifier = Modifier.size(FLS_FALLBACK_ICON_SIZE),
+                    GameFocusFallbackIcon(
+                        appInfo = appInfo,
+                        size = FLS_FALLBACK_ICON_SIZE,
                     )
                 }
             }

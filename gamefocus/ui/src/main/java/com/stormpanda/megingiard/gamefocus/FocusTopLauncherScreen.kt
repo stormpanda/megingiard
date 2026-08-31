@@ -64,6 +64,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -1040,6 +1041,30 @@ internal fun Modifier.noFocusClickable(
 internal fun Modifier.noFocusClickable(onClick: () -> Unit): Modifier = noFocusClickable(enabled = true, onClick = onClick)
 
 @Composable
+internal fun GameFocusFallbackIcon(
+    appInfo: InstalledAppInfo,
+    size: androidx.compose.ui.unit.Dp,
+    modifier: Modifier = Modifier,
+    tint: Color = LocalAppColors.current.accent,
+) {
+    if (appInfo.isRom) {
+        MaterialSymbol(
+            name = "sports_esports",
+            size = size,
+            tint = tint,
+            modifier = modifier,
+        )
+    } else {
+        Icon(
+            imageVector = Icons.Default.Apps,
+            contentDescription = appInfo.label,
+            tint = tint,
+            modifier = modifier.size(size),
+        )
+    }
+}
+
+@Composable
 internal fun rememberCoverBitmap(appInfo: InstalledAppInfo): ImageBitmap? {
     val state =
         produceState<ImageBitmap?>(
@@ -1170,20 +1195,10 @@ private fun PosterCardContent(
                         .background(appColors.surface),
                 contentAlignment = Alignment.Center,
             ) {
-                if (appInfo.isRom) {
-                    MaterialSymbol(
-                        name = "sports_esports",
-                        size = FTL_FALLBACK_ICON_SIZE,
-                        tint = appColors.accent,
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.Apps,
-                        contentDescription = appInfo.label,
-                        tint = appColors.accent,
-                        modifier = Modifier.size(FTL_FALLBACK_ICON_SIZE),
-                    )
-                }
+                GameFocusFallbackIcon(
+                    appInfo = appInfo,
+                    size = FTL_FALLBACK_ICON_SIZE,
+                )
             }
         }
 
