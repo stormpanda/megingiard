@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.math.ViewportMath
 import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.ui.BumperDirection
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
 import com.stormpanda.megingiard.ui.GamepadFocusCard
@@ -56,6 +57,7 @@ import com.stormpanda.megingiard.ui.GamepadSliderCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.GamepadTwoStepConfirmCard
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.cycle
 import com.stormpanda.megingiard.ui.dimColorFilter
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
@@ -65,6 +67,13 @@ import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
 private const val TAG = "BackgroundSettingsEditor"
+
+private fun BackgroundScaleMode.labelResId(): Int =
+    when (this) {
+        BackgroundScaleMode.FILL -> R.string.bg_scale_mode_fill
+        BackgroundScaleMode.FIT -> R.string.bg_scale_mode_fit
+        BackgroundScaleMode.STRETCH -> R.string.bg_scale_mode_stretch
+    }
 
 private const val BSE_DIM_MAX = 0.95f
 private const val BSE_DIM_STEP = 0.05f
@@ -215,68 +224,37 @@ internal fun LayoutBackgroundSubPageContent(
                             val iw = bitmap.width.toFloat()
                             val ih = bitmap.height.toFloat()
                             if (cw > 0f && ch > 0f && iw > 0f && ih > 0f) {
-                                when (bgScaleMode) {
-                                    BackgroundScaleMode.STRETCH -> {
-                                        drawImage(
-                                            image = bitmap,
-                                            dstOffset = IntOffset.Zero,
-                                            dstSize = IntSize(cw.toInt(), ch.toInt()),
-                                            colorFilter = bgImageDimFilter,
-                                        )
+                                val (dstOffset, dstSize) =
+                                    when (bgScaleMode) {
+                                        BackgroundScaleMode.STRETCH -> {
+                                            IntOffset.Zero to IntSize(cw.toInt(), ch.toInt())
+                                        }
+
+                                        BackgroundScaleMode.FIT, BackgroundScaleMode.FILL -> {
+                                            val scaleBase =
+                                                if (bgScaleMode == BackgroundScaleMode.FIT) {
+                                                    ViewportMath.calculateAspectFitScale(cw, ch, iw, ih)
+                                                } else {
+                                                    ViewportMath.calculateAspectFillScale(cw, ch, iw, ih)
+                                                }
+                                            val ws = iw * scaleBase
+                                            val hs = ih * scaleBase
+                                            val maxTx = ((ws * bgScale - cw) / 2f).coerceAtLeast(0f)
+                                            val maxTy = ((hs * bgScale - ch) / 2f).coerceAtLeast(0f)
+                                            val clampedX = (bgOffsetX * cw).coerceIn(-maxTx, maxTx)
+                                            val clampedY = (bgOffsetY * ch).coerceIn(-maxTy, maxTy)
+                                            IntOffset(
+                                                ((cw - ws * bgScale) / 2f + clampedX).toInt(),
+                                                ((ch - hs * bgScale) / 2f + clampedY).toInt(),
+                                            ) to IntSize((ws * bgScale).toInt(), (hs * bgScale).toInt())
+                                        }
                                     }
-
-                                    BackgroundScaleMode.FIT -> {
-                                        val scaleBase = ViewportMath.calculateAspectFitScale(cw, ch, iw, ih)
-                                        val ws = iw * scaleBase
-                                        val hs = ih * scaleBase
-
-                                        val maxTx = ((ws * bgScale - cw) / 2f).coerceAtLeast(0f)
-                                        val maxTy = ((hs * bgScale - ch) / 2f).coerceAtLeast(0f)
-                                        val clampedX = (bgOffsetX * cw).coerceIn(-maxTx, maxTx)
-                                        val clampedY = (bgOffsetY * ch).coerceIn(-maxTy, maxTy)
-
-                                        drawImage(
-                                            image = bitmap,
-                                            dstOffset =
-                                                IntOffset(
-                                                    ((cw - ws * bgScale) / 2f + clampedX).toInt(),
-                                                    ((ch - hs * bgScale) / 2f + clampedY).toInt(),
-                                                ),
-                                            dstSize =
-                                                IntSize(
-                                                    (ws * bgScale).toInt(),
-                                                    (hs * bgScale).toInt(),
-                                                ),
-                                            colorFilter = bgImageDimFilter,
-                                        )
-                                    }
-
-                                    BackgroundScaleMode.FILL -> {
-                                        val scaleBase = ViewportMath.calculateAspectFillScale(cw, ch, iw, ih)
-                                        val ws = iw * scaleBase
-                                        val hs = ih * scaleBase
-
-                                        val maxTx = ((ws * bgScale - cw) / 2f).coerceAtLeast(0f)
-                                        val maxTy = ((hs * bgScale - ch) / 2f).coerceAtLeast(0f)
-                                        val clampedX = (bgOffsetX * cw).coerceIn(-maxTx, maxTx)
-                                        val clampedY = (bgOffsetY * ch).coerceIn(-maxTy, maxTy)
-
-                                        drawImage(
-                                            image = bitmap,
-                                            dstOffset =
-                                                IntOffset(
-                                                    ((cw - ws * bgScale) / 2f + clampedX).toInt(),
-                                                    ((ch - hs * bgScale) / 2f + clampedY).toInt(),
-                                                ),
-                                            dstSize =
-                                                IntSize(
-                                                    (ws * bgScale).toInt(),
-                                                    (hs * bgScale).toInt(),
-                                                ),
-                                            colorFilter = bgImageDimFilter,
-                                        )
-                                    }
-                                }
+                                drawImage(
+                                    image = bitmap,
+                                    dstOffset = dstOffset,
+                                    dstSize = dstSize,
+                                    colorFilter = bgImageDimFilter,
+                                )
                             }
                         }
                     } else {
@@ -324,31 +302,20 @@ internal fun LayoutBackgroundSubPageContent(
             color = accentColor,
         )
 
-        val scaleModeLabel =
-            when (bgScaleMode) {
-                BackgroundScaleMode.FILL -> stringResource(R.string.bg_scale_mode_fill)
-                BackgroundScaleMode.FIT -> stringResource(R.string.bg_scale_mode_fit)
-                BackgroundScaleMode.STRETCH -> stringResource(R.string.bg_scale_mode_stretch)
-            }
-
         GamepadChoiceCard(
             title = stringResource(R.string.layout_settings_bg_scale_mode),
             description = stringResource(R.string.layout_settings_bg_scale_mode_desc),
-            selectedText = scaleModeLabel,
+            selectedText = stringResource(bgScaleMode.labelResId()),
             icon = Icons.Rounded.AspectRatio,
             onPrevious = {
-                val modes = BackgroundScaleMode.entries
-                val idx = modes.indexOf(bgScaleMode)
-                val newMode = modes[(idx - 1 + modes.size) % modes.size]
+                val newMode = BackgroundScaleMode.entries.cycle(bgScaleMode, BumperDirection.PREV)
                 bgScaleMode = newMode
                 if (newMode == BackgroundScaleMode.STRETCH) {
                     isCropActive = false
                 }
             },
             onNext = {
-                val modes = BackgroundScaleMode.entries
-                val idx = modes.indexOf(bgScaleMode)
-                val newMode = modes[(idx + 1) % modes.size]
+                val newMode = BackgroundScaleMode.entries.cycle(bgScaleMode, BumperDirection.NEXT)
                 bgScaleMode = newMode
                 if (newMode == BackgroundScaleMode.STRETCH) {
                     isCropActive = false
