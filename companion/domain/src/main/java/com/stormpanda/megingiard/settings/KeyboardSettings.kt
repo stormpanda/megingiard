@@ -2,7 +2,6 @@ package com.stormpanda.megingiard.settings
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.keyboard.KbMouseBtnPos
@@ -10,7 +9,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
 private const val TAG = "KeyboardSettings"
 
