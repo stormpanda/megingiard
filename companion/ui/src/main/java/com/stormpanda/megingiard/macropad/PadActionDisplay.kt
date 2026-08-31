@@ -28,7 +28,6 @@ import androidx.compose.ui.res.stringResource
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
-import com.stormpanda.megingiard.macropad.displayShortLabel
 import com.stormpanda.megingiard.settings.MacroPadSettings
 
 private const val TAG = "PadActionDisplay"
