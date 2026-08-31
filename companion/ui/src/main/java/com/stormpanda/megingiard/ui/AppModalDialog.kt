@@ -65,6 +65,7 @@ fun AppModalDialog(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = LocalAppColors.current
+    val shape = RoundedCornerShape(cornerRadius)
     Box(
         modifier =
             Modifier
@@ -88,9 +89,9 @@ fun AppModalDialog(
             modifier =
                 modifier
                     .fillMaxWidth(widthFraction)
-                    .shadow(APP_DIALOG_ELEVATION, RoundedCornerShape(cornerRadius))
-                    .background(colors.surface, RoundedCornerShape(cornerRadius))
-                    .border(1.dp, brush = rememberBezelBrush(), shape = RoundedCornerShape(cornerRadius))
+                    .shadow(APP_DIALOG_ELEVATION, shape)
+                    .background(colors.surface, shape)
+                    .border(1.dp, brush = rememberBezelBrush(), shape = shape)
                     .blockPointerEvents()
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
