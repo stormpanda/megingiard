@@ -1,6 +1,5 @@
 package com.stormpanda.megingiard.ui
 
-import android.content.Context
 import android.os.Vibrator
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
