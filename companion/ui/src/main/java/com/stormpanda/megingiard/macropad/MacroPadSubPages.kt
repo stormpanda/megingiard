@@ -9,14 +9,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material.icons.rounded.Colorize
+import androidx.compose.material.icons.rounded.FormatColorText
 import androidx.compose.material.icons.rounded.Opacity
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Save
+import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -32,6 +35,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.GamePadGlyph
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadCardText
@@ -488,4 +492,105 @@ internal fun ColorWheelSubPageContent(
             },
         )
     }
+}
+
+/**
+ * Shared sub-page for choosing between Layout Default (optional), Theme Neutral, App Accent, and Custom Color.
+ */
+@Composable
+internal fun ColorOptionSubPageContent(
+    currentOption: ColorOption?,
+    layoutDefaultOption: ColorOption? = null,
+    defaultNeutralColor: Color,
+    isBgTarget: Boolean = false,
+    selectColorWheelTitle: String,
+    colorWheelBreadcrumbs: List<String>,
+    onColorOptionChanged: (ColorOption?) -> Unit,
+    onOpenColorWheel: (title: String, breadcrumbs: List<String>, initialColor: Color) -> Unit,
+) {
+    val globalAccentInt by SettingsManager.accentColor.collectAsState()
+    val globalAccentColor = Color(globalAccentInt)
+
+    val currentColor =
+        if (isBgTarget) {
+            resolveBgColorOption(currentOption ?: layoutDefaultOption ?: ColorOption.Neutral, globalAccentColor)
+        } else {
+            resolveColorOption(currentOption ?: layoutDefaultOption ?: ColorOption.Neutral, globalAccentColor, defaultNeutralColor)
+        }
+
+    val layoutResolvedColor =
+        layoutDefaultOption?.let {
+            if (isBgTarget) resolveBgColorOption(it, globalAccentColor) else resolveColorOption(it, globalAccentColor, defaultNeutralColor)
+        }
+
+    val isDefaultSelected = currentOption == null
+    val isNeutralSelected = currentOption is ColorOption.Neutral
+    val isAccentSelected = currentOption is ColorOption.Accent
+    val isCustomSelected = currentOption is ColorOption.Custom
+
+    if (layoutDefaultOption != null && layoutResolvedColor != null) {
+        GamepadActionCard(
+            title = stringResource(R.string.layout_settings_color_layout_default),
+            description = stringResource(R.string.macropad_btn_color_layout_default_desc),
+            icon = Icons.Rounded.Sync,
+            actionLeadingContent = {
+                GamepadColorSwatch(
+                    color = layoutResolvedColor,
+                    isSelected = isDefaultSelected,
+                )
+            },
+            actionText = if (isDefaultSelected) stringResource(R.string.gamepad_color_selected) else null,
+            onClick = { onColorOptionChanged(null) },
+            modifier = Modifier.firstDeckItem(),
+        )
+    }
+
+    GamepadActionCard(
+        title = stringResource(R.string.layout_settings_color_neutral),
+        description = stringResource(R.string.macropad_editor_color_palette_desc),
+        icon = Icons.Rounded.FormatColorText,
+        actionLeadingContent = {
+            GamepadColorSwatch(
+                color = defaultNeutralColor,
+                isSelected = isNeutralSelected,
+            )
+        },
+        actionText = if (isNeutralSelected) stringResource(R.string.gamepad_color_selected) else null,
+        onClick = { onColorOptionChanged(ColorOption.Neutral) },
+        modifier = if (layoutDefaultOption == null) Modifier.firstDeckItem() else Modifier,
+    )
+
+    GamepadActionCard(
+        title = stringResource(R.string.layout_settings_color_accent),
+        description = stringResource(R.string.settings_accent_color_desc),
+        icon = Icons.Rounded.Palette,
+        actionLeadingContent = {
+            GamepadColorSwatch(
+                color = globalAccentColor,
+                isSelected = isAccentSelected,
+            )
+        },
+        actionText = if (isAccentSelected) stringResource(R.string.gamepad_color_selected) else null,
+        onClick = { onColorOptionChanged(ColorOption.Accent) },
+    )
+
+    GamepadActionCard(
+        title = stringResource(R.string.gamepad_action_custom_color),
+        description = if (isCustomSelected) currentColor.toHexLabel() else stringResource(R.string.macropad_editor_color_wheel_desc),
+        icon = Icons.Rounded.Colorize,
+        actionLeadingContent = {
+            GamepadColorSwatch(
+                color = if (isCustomSelected) currentColor else Color.Transparent,
+                isSelected = isCustomSelected,
+            )
+        },
+        actionText = if (isCustomSelected) stringResource(R.string.gamepad_color_selected) else null,
+        onClick = {
+            onOpenColorWheel(
+                selectColorWheelTitle,
+                colorWheelBreadcrumbs,
+                if (isCustomSelected) currentColor else (layoutResolvedColor ?: defaultNeutralColor),
+            )
+        },
+    )
 }

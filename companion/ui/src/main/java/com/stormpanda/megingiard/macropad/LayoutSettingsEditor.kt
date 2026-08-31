@@ -284,9 +284,6 @@ internal fun LayoutColorSubPageContent(
     onColorOptionChanged: (ColorOption) -> Unit,
     onOpenColorWheel: (title: String, breadcrumbs: List<String>, initialColor: Color, inFlightLayout: PadLayout) -> Unit,
 ) {
-    val globalAccentInt by SettingsManager.accentColor.collectAsState()
-    val globalAccentColor = Color(globalAccentInt)
-
     val currentOption =
         when (target) {
             LayoutColorTarget.TEXT -> layout.buttonTextColor
@@ -299,13 +296,6 @@ internal fun LayoutColorSubPageContent(
             LayoutColorTarget.TEXT -> MP_AMBIENT_NEUTRAL_TEXT
             LayoutColorTarget.BORDER -> MP_AMBIENT_NEUTRAL_BORDER
             LayoutColorTarget.BG -> MP_AMBIENT_NEUTRAL_BG
-        }
-
-    val currentColor =
-        if (target == LayoutColorTarget.BG) {
-            resolveBgColorOption(currentOption, globalAccentColor)
-        } else {
-            resolveColorOption(currentOption, globalAccentColor, defaultNeutralColor)
         }
 
     val targetTitle =
@@ -330,60 +320,16 @@ internal fun LayoutColorSubPageContent(
             stringResource(R.string.gamepad_action_custom_color),
         )
 
-    val isNeutralSelected = currentOption is ColorOption.Neutral
-    val isAccentSelected = currentOption is ColorOption.Accent
-    val isCustomSelected = currentOption is ColorOption.Custom
-
-    // Option 1: Theme Neutral
-    GamepadActionCard(
-        title = stringResource(R.string.layout_settings_color_neutral),
-        description = stringResource(R.string.macropad_editor_color_palette_desc),
-        icon = Icons.Rounded.FormatColorText,
-        actionLeadingContent = {
-            GamepadColorSwatch(
-                color = defaultNeutralColor,
-                isSelected = isNeutralSelected,
-            )
-        },
-        actionText = if (isNeutralSelected) stringResource(R.string.gamepad_color_selected) else null,
-        onClick = { onColorOptionChanged(ColorOption.Neutral) },
-        modifier = Modifier.firstDeckItem(),
-    )
-
-    // Option 2: App Accent
-    GamepadActionCard(
-        title = stringResource(R.string.layout_settings_color_accent),
-        description = stringResource(R.string.settings_accent_color_desc),
-        icon = Icons.Rounded.Palette,
-        actionLeadingContent = {
-            GamepadColorSwatch(
-                color = globalAccentColor,
-                isSelected = isAccentSelected,
-            )
-        },
-        actionText = if (isAccentSelected) stringResource(R.string.gamepad_color_selected) else null,
-        onClick = { onColorOptionChanged(ColorOption.Accent) },
-    )
-
-    // Option 3: Custom Color (Color Wheel)
-    GamepadActionCard(
-        title = stringResource(R.string.gamepad_action_custom_color),
-        description = if (isCustomSelected) currentColor.toHexLabel() else stringResource(R.string.macropad_editor_color_wheel_desc),
-        icon = Icons.Rounded.Colorize,
-        actionLeadingContent = {
-            GamepadColorSwatch(
-                color = if (isCustomSelected) currentColor else Color.Transparent,
-                isSelected = isCustomSelected,
-            )
-        },
-        actionText = if (isCustomSelected) stringResource(R.string.gamepad_color_selected) else null,
-        onClick = {
-            onOpenColorWheel(
-                selectColorWheelTitle,
-                colorWheelBreadcrumbs,
-                currentColor,
-                layout,
-            )
+    ColorOptionSubPageContent(
+        currentOption = currentOption,
+        layoutDefaultOption = null,
+        defaultNeutralColor = defaultNeutralColor,
+        isBgTarget = target == LayoutColorTarget.BG,
+        selectColorWheelTitle = selectColorWheelTitle,
+        colorWheelBreadcrumbs = colorWheelBreadcrumbs,
+        onColorOptionChanged = { option -> option?.let(onColorOptionChanged) },
+        onOpenColorWheel = { title, breadcrumbs, initialColor ->
+            onOpenColorWheel(title, breadcrumbs, initialColor, layout)
         },
     )
 }
