@@ -52,6 +52,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -67,6 +68,7 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.blockPointerEvents
+import com.stormpanda.megingiard.ui.isBackKeyDown
 import com.stormpanda.megingiard.ui.rememberBezelBrush
 import kotlinx.coroutines.delay
 
@@ -169,25 +171,20 @@ internal fun TouchRecordingSheet(
                 .fillMaxSize()
                 .background(colors.appBackground)
                 .onPreviewKeyEvent { keyEvent ->
-                    if (keyEvent.type == KeyEventType.KeyDown) {
-                        when (keyEvent.nativeKeyEvent.keyCode) {
-                            KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> {
-                                onCancel()
-                                true
-                            }
-
-                            KeyEvent.KEYCODE_BUTTON_START, KeyEvent.KEYCODE_BUTTON_A -> {
-                                if (mode == TouchRecordingMode.GESTURE) {
-                                    onStop()
-                                    true
-                                } else {
-                                    false
-                                }
-                            }
-
-                            else -> {
-                                false
-                            }
+                    if (keyEvent.isBackKeyDown()) {
+                        onCancel()
+                        true
+                    } else if (keyEvent.type == KeyEventType.KeyDown &&
+                        (
+                            keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BUTTON_START ||
+                                keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BUTTON_A
+                        )
+                    ) {
+                        if (mode == TouchRecordingMode.GESTURE) {
+                            onStop()
+                            true
+                        } else {
+                            false
                         }
                     } else {
                         false
@@ -518,103 +515,59 @@ private fun TouchScreenRadar(
 
             val activePointers = recording?.activePointers ?: emptyList()
             if (activePointers.isNotEmpty()) {
-                // 1. Draw trails for each active pointer independently
                 for (pointer in activePointers) {
-                    val trail = pointer.trail
-                    if (trail.size >= 2) {
-                        val path = Path()
-                        trail.forEachIndexed { index, (nx, ny) ->
-                            val px = nx * width
-                            val py = ny * height
-                            if (index == 0) {
-                                path.moveTo(px, py)
-                            } else {
-                                path.lineTo(px, py)
-                            }
-                        }
-                        val color = pointerColor(pointer.slot, accentColor)
-                        drawPath(
-                            path = path,
-                            color = color.copy(alpha = 0.85f),
-                            style = Stroke(width = trailStrokeWidthPx),
-                        )
-                    }
-                }
-
-                // 2. Draw live indicator dots and pulse halos for each active pointer
-                for (pointer in activePointers) {
-                    val touchPx = pointer.normX * width
-                    val touchPy = pointer.normY * height
-                    val pColor = pointerColor(pointer.slot, accentColor)
-
-                    // Pulse halo
-                    drawCircle(
-                        color = pColor.copy(alpha = 0.35f),
-                        radius = touchPulseRadiusPx * livePulseScale,
-                        center = Offset(touchPx, touchPy),
-                    )
-
-                    // Outer circle
-                    drawCircle(
-                        color = pColor,
-                        radius = touchIndicatorRadiusPx,
-                        center = Offset(touchPx, touchPy),
-                    )
-
-                    // Center white dot
-                    drawCircle(
-                        color = Color.White,
-                        radius = touchIndicatorRadiusPx * 0.45f,
-                        center = Offset(touchPx, touchPy),
+                    val color = pointerColor(pointer.slot, accentColor)
+                    drawNormalizedTrail(pointer.trail, width, height, color, trailStrokeWidthPx)
+                    drawPointerDot(
+                        center = Offset(pointer.normX * width, pointer.normY * height),
+                        color = color,
+                        pulseRadius = touchPulseRadiusPx * livePulseScale,
+                        indicatorRadius = touchIndicatorRadiusPx,
                     )
                 }
             } else {
-                // Fallback for single pointer or legacy state if activePointers is empty
-                val trail = recording?.activeTrailPoints ?: emptyList()
-                if (trail.size >= 2) {
-                    val path = Path()
-                    trail.forEachIndexed { index, (nx, ny) ->
-                        val px = nx * width
-                        val py = ny * height
-                        if (index == 0) {
-                            path.moveTo(px, py)
-                        } else {
-                            path.lineTo(px, py)
-                        }
-                    }
-                    drawPath(
-                        path = path,
-                        color = accentColor.copy(alpha = 0.85f),
-                        style = Stroke(width = trailStrokeWidthPx),
-                    )
-                }
-
+                drawNormalizedTrail(recording?.activeTrailPoints ?: emptyList(), width, height, accentColor, trailStrokeWidthPx)
                 val liveX = recording?.liveNormX
                 val liveY = recording?.liveNormY
                 if (liveX != null && liveY != null) {
-                    val touchPx = liveX * width
-                    val touchPy = liveY * height
-
-                    if (recording.isTouchDown) {
-                        drawCircle(
-                            color = accentColor.copy(alpha = 0.35f),
-                            radius = touchPulseRadiusPx * livePulseScale,
-                            center = Offset(touchPx, touchPy),
-                        )
-                    }
-
-                    drawCircle(
+                    drawPointerDot(
+                        center = Offset(liveX * width, liveY * height),
                         color = accentColor,
-                        radius = touchIndicatorRadiusPx,
-                        center = Offset(touchPx, touchPy),
-                    )
-                    drawCircle(
-                        color = Color.White,
-                        radius = touchIndicatorRadiusPx * 0.45f,
-                        center = Offset(touchPx, touchPy),
+                        pulseRadius = if (recording.isTouchDown) touchPulseRadiusPx * livePulseScale else null,
+                        indicatorRadius = touchIndicatorRadiusPx,
                     )
                 }
             }
         }
     }
+}
+
+private fun DrawScope.drawNormalizedTrail(
+    trail: List<Pair<Float, Float>>,
+    width: Float,
+    height: Float,
+    color: Color,
+    strokeWidthPx: Float,
+) {
+    if (trail.size < 2) return
+    val path = Path()
+    trail.forEachIndexed { index, (nx, ny) ->
+        val px = nx * width
+        val py = ny * height
+        if (index == 0) path.moveTo(px, py) else path.lineTo(px, py)
+    }
+    drawPath(path = path, color = color.copy(alpha = 0.85f), style = Stroke(width = strokeWidthPx))
+}
+
+private fun DrawScope.drawPointerDot(
+    center: Offset,
+    color: Color,
+    pulseRadius: Float?,
+    indicatorRadius: Float,
+) {
+    if (pulseRadius != null) {
+        drawCircle(color = color.copy(alpha = 0.35f), radius = pulseRadius, center = center)
+    }
+    drawCircle(color = color, radius = indicatorRadius, center = center)
+    drawCircle(color = Color.White, radius = indicatorRadius * 0.45f, center = center)
 }

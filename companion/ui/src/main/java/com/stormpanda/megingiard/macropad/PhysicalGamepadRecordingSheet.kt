@@ -238,10 +238,6 @@ internal fun PhysicalGamepadRecordingSheet(
                             label = stringResource(R.string.privd_recording_physical_stick_l_label),
                             x = recording.leftStickX,
                             y = recording.leftStickY,
-                            accentColor = colors.actionColorGamepad,
-                            borderColor = colors.divider,
-                            textColor = colors.onSurface,
-                            secondaryTextColor = colors.onSurfaceSecondary,
                         )
 
                         // Center: D-Pad Direction + Active Buttons cluster
@@ -316,10 +312,6 @@ internal fun PhysicalGamepadRecordingSheet(
                             label = stringResource(R.string.privd_recording_physical_stick_r_label),
                             x = recording.rightStickX,
                             y = recording.rightStickY,
-                            accentColor = colors.actionColorGamepad,
-                            borderColor = colors.divider,
-                            textColor = colors.onSurface,
-                            secondaryTextColor = colors.onSurfaceSecondary,
                         )
                     }
 
@@ -387,12 +379,13 @@ private fun StickRadar(
     label: String,
     x: Float,
     y: Float,
-    accentColor: Color,
-    borderColor: Color,
-    textColor: Color,
-    secondaryTextColor: Color,
     modifier: Modifier = Modifier,
 ) {
+    val colors = LocalAppColors.current
+    val accentColor = colors.actionColorGamepad
+    val borderColor = colors.divider
+    val textColor = colors.onSurface
+    val secondaryTextColor = colors.onSurfaceSecondary
     val mag = sqrt(x * x + y * y).coerceIn(0f, 1f)
     val magPercent = (mag * 100).roundToInt()
 
