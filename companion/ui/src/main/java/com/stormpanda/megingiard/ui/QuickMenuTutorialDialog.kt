@@ -537,7 +537,7 @@ private fun QuickMenuArrowHint(
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            if (!overlayAtBottom) {
+            val label: @Composable () -> Unit = {
                 Text(
                     text = text,
                     color = colors.accent,
@@ -545,6 +545,9 @@ private fun QuickMenuArrowHint(
                     maxLines = 1,
                     softWrap = false,
                 )
+            }
+            if (!overlayAtBottom) {
+                label()
                 Spacer(Modifier.height(4.dp))
             }
             Icon(
@@ -558,13 +561,7 @@ private fun QuickMenuArrowHint(
             )
             if (overlayAtBottom) {
                 Spacer(Modifier.height(4.dp))
-                Text(
-                    text = text,
-                    color = colors.accent,
-                    style = MaterialTheme.typography.labelMedium,
-                    maxLines = 1,
-                    softWrap = false,
-                )
+                label()
             }
         }
     }
