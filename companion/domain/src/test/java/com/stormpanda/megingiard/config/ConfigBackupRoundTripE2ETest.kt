@@ -277,8 +277,7 @@ class ConfigBackupRoundTripE2ETest {
                     name = "Original Tamper Target",
                     layouts = listOf(PadLayout(id = "l1", name = "Default")),
                 )
-            MacroPadState.loadFrom(listOf(testProfile), testProfile.id)
-            val export = ConfigManager.buildExport(testMetadata, context, includeBackgrounds = false)
+            val export = ConfigManager.buildProfileExport(testMetadata, testProfile, includeBackgrounds = false)
 
             // Serialize export to JSON
             val validJson = jsonCodec.encodeToString(export)
