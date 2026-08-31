@@ -545,14 +545,9 @@ fun FocusTopLauncherScreen(
                             AnimatedContent(
                                 targetState = selectedCategory,
                                 transitionSpec = {
-                                    val isMovingDown = initialState.next(categories) == targetState
-                                    if (isMovingDown) {
-                                        (slideInVertically { height -> height } + fadeIn())
-                                            .togetherWith(slideOutVertically { height -> -height } + fadeOut())
-                                    } else {
-                                        (slideInVertically { height -> -height } + fadeIn())
-                                            .togetherWith(slideOutVertically { height -> height } + fadeOut())
-                                    }
+                                    val direction = if (initialState.next(categories) == targetState) 1 else -1
+                                    (slideInVertically { height -> height * direction } + fadeIn())
+                                        .togetherWith(slideOutVertically { height -> -height * direction } + fadeOut())
                                 },
                                 label = "CarouselCategoryTransition",
                                 modifier = Modifier.fillMaxSize(),
@@ -606,15 +601,13 @@ fun FocusTopLauncherScreen(
                                                 posterCornerRadius = FTL_POSTER_CORNER_RADIUS,
                                                 cardBackgroundColor = { actualIndex, isSelected ->
                                                     val appInfo = currentCategoryApps.getOrNull(actualIndex)
-                                                    if (appInfo != null) {
-                                                        val palette = AppPaletteExtractor.getCachedColorsOrNull(appInfo)
-                                                        if (palette != null && palette.isExtracted) {
-                                                            palette.darkenedPrimaryColor
-                                                        } else {
-                                                            if (isSelected) appColors.surfaceVariant else appColors.surface
-                                                        }
+                                                    val palette = appInfo?.let { AppPaletteExtractor.getCachedColorsOrNull(it) }
+                                                    if (palette != null && palette.isExtracted) {
+                                                        palette.darkenedPrimaryColor
+                                                    } else if (isSelected) {
+                                                        appColors.surfaceVariant
                                                     } else {
-                                                        if (isSelected) appColors.surfaceVariant else appColors.surface
+                                                        appColors.surface
                                                     }
                                                 },
                                                 isHidden = { actualIndex ->
@@ -1199,11 +1192,12 @@ private fun PosterCardContent(
                         .aspectRatio(1f),
             )
         } else {
+            val romIconShape = remember { RoundedCornerShape(FTL_ROM_ICON_CORNER_RADIUS) }
             Box(
                 modifier =
                     Modifier
                         .size(FTL_ICON_SIZE)
-                        .clip(RoundedCornerShape(FTL_ROM_ICON_CORNER_RADIUS))
+                        .clip(romIconShape)
                         .background(appColors.surface),
                 contentAlignment = Alignment.Center,
             ) {
