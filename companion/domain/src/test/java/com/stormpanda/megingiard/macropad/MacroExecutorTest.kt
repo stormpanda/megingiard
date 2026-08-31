@@ -1,6 +1,5 @@
 package com.stormpanda.megingiard.macropad
 
-import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.ui.PrimaryModalConfig
@@ -16,19 +15,39 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-
-private const val TAG = "MacroExecutorTest"
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MacroExecutorTest {
     private val testDispatcher = UnconfinedTestDispatcher()
 
+    private fun testMacro(
+        id: String = "test-macro",
+        durationMs: Long = 5L,
+    ) = Macro(
+        id = id,
+        name = "Test Macro",
+        steps = listOf(MacroStep.GamepadButtonTap(startTimeMs = 0L, durationMs = durationMs, btnCode = 96, label = "A")),
+    )
+
+    private suspend fun waitUntil(
+        timeoutMs: Long = 1000L,
+        condition: suspend () -> Boolean,
+    ): Boolean =
+        withTimeoutOrNull(timeoutMs) {
+            while (!condition()) {
+                delay(5)
+            }
+            true
+        } ?: false
+
     @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         PrivdClient.isConnectedForTest = true
+        MacroExecutor.setRunningMacroIdsForTest(emptySet())
     }
 
     @After
@@ -41,157 +60,45 @@ class MacroExecutorTest {
     fun testMacroExecutionRejectedWhenPrivdDisconnected() =
         runBlocking {
             PrivdClient.isConnectedForTest = false
-            MacroExecutor.setRunningMacroIdsForTest(emptySet())
-
-            val macro =
-                Macro(
-                    id = "unprivileged-macro",
-                    name = "Unprivileged Macro",
-                    steps =
-                        listOf(
-                            MacroStep.GamepadButtonTap(
-                                startTimeMs = 0L,
-                                durationMs = 5L,
-                                btnCode = 96,
-                                label = "A",
-                            ),
-                        ),
-                )
+            val macro = testMacro("unprivileged-macro")
 
             MacroExecutor.execute(macro)
-            assertFalse("Macro should not start when Privileged Mode is disconnected", MacroExecutor.isRunning(macro.id))
+            assertFalse(MacroExecutor.isRunning(macro.id))
 
             var testRunSuccess: Boolean? = null
-            MacroExecutor.runTest(
-                macro = macro,
-                onComplete = { success ->
-                    testRunSuccess = success
-                },
-            )
-            assertEquals("Test run should immediately fail when Privileged Mode is disconnected", false, testRunSuccess)
+            MacroExecutor.runTest(macro = macro, onComplete = { testRunSuccess = it })
+            assertEquals(false, testRunSuccess)
         }
 
     @Test
     fun testMacroExecutionCompletesAndClearsRunningId() =
         runBlocking {
-            val macro =
-                Macro(
-                    id = "test-macro",
-                    name = "Test Macro",
-                    steps =
-                        listOf(
-                            MacroStep.GamepadButtonTap(
-                                startTimeMs = 0L,
-                                durationMs = 5L,
-                                btnCode = 96,
-                                label = "A",
-                            ),
-                        ),
-                )
-
-            // Reset state before running
-            MacroExecutor.setRunningMacroIdsForTest(emptySet())
-
-            AppLog.d(TAG, "testMacroExecutionCompletesAndClearsRunningId: starting execute")
-            // Execute macro
+            val macro = testMacro()
             MacroExecutor.execute(macro)
 
-            // Ensure it has started running
-            val started =
-                withTimeoutOrNull(500) {
-                    while (!MacroExecutor.isRunning(macro.id)) {
-                        delay(5)
-                    }
-                    true
-                }
-            assertEquals("Macro should start running", true, started)
-
-            // Wait/poll for the macro to finish executing
-            val success =
-                withTimeoutOrNull(1000) {
-                    while (MacroExecutor.isRunning(macro.id)) {
-                        delay(5)
-                    }
-                    true
-                }
-
-            assertEquals("Macro should complete within timeout", true, success)
-            assertFalse("Running ID should be cleared from MacroExecutor state", MacroExecutor.isRunning(macro.id))
+            assertTrue(waitUntil(500) { MacroExecutor.isRunning(macro.id) })
+            assertTrue(waitUntil(1000) { !MacroExecutor.isRunning(macro.id) })
+            assertFalse(MacroExecutor.isRunning(macro.id))
         }
 
     @Test
     fun testMacroStopClearsRunningId() =
         runBlocking {
-            val macro =
-                Macro(
-                    id = "long-macro",
-                    name = "Long Macro",
-                    steps =
-                        listOf(
-                            MacroStep.GamepadButtonTap(
-                                startTimeMs = 0L,
-                                durationMs = 500L,
-                                btnCode = 96,
-                                label = "A",
-                            ),
-                        ),
-                )
-
-            // Reset state before running
-            MacroExecutor.setRunningMacroIdsForTest(emptySet())
-
-            AppLog.d(TAG, "testMacroStopClearsRunningId: starting execute")
-            // Execute macro
+            val macro = testMacro("long-macro", durationMs = 500L)
             MacroExecutor.execute(macro)
 
-            // Ensure it has started running
-            val started =
-                withTimeoutOrNull(200) {
-                    while (!MacroExecutor.isRunning(macro.id)) {
-                        delay(5)
-                    }
-                    true
-                }
-            assertEquals("Macro should start running", true, started)
-
-            // Stop the macro
+            assertTrue(waitUntil(200) { MacroExecutor.isRunning(macro.id) })
             MacroExecutor.stop(macro.id)
-
-            // Wait/poll for the macro to stop and clear its state
-            val stopped =
-                withTimeoutOrNull(200) {
-                    while (MacroExecutor.isRunning(macro.id)) {
-                        delay(5)
-                    }
-                    true
-                }
-
-            assertEquals("Macro should stop within timeout", true, stopped)
-            assertFalse("Running ID should be cleared after stopping", MacroExecutor.isRunning(macro.id))
+            assertTrue(waitUntil(200) { !MacroExecutor.isRunning(macro.id) })
+            assertFalse(MacroExecutor.isRunning(macro.id))
         }
 
     @Test
     fun testExecuteAndWaitSuspendsUntilMacroFinishes() =
         runBlocking {
-            val macro =
-                Macro(
-                    id = "sync-macro",
-                    name = "Sync Macro",
-                    steps =
-                        listOf(
-                            MacroStep.GamepadButtonTap(
-                                startTimeMs = 0L,
-                                durationMs = 20L,
-                                btnCode = 96,
-                                label = "A",
-                            ),
-                        ),
-                )
-
-            MacroExecutor.setRunningMacroIdsForTest(emptySet())
+            val macro = testMacro("sync-macro", durationMs = 20L)
             MacroExecutor.executeAndWait(macro)
-
-            assertFalse("Macro should have finished and cleared running status", MacroExecutor.isRunning(macro.id))
+            assertFalse(MacroExecutor.isRunning(macro.id))
         }
 
     @Test
@@ -201,41 +108,17 @@ class MacroExecutorTest {
             AppStateManager.openPrimaryModal(modalConfig)
             assertEquals(modalConfig, AppStateManager.activePrimaryModal.value)
 
-            val macro =
-                Macro(
-                    id = "test-run-macro",
-                    name = "Test Run Macro",
-                    steps =
-                        listOf(
-                            MacroStep.GamepadButtonTap(
-                                startTimeMs = 0L,
-                                durationMs = 10L,
-                                btnCode = 96,
-                                label = "A",
-                            ),
-                        ),
-                )
-
+            val macro = testMacro("test-run-macro", durationMs = 10L)
             var completedSuccess: Boolean? = null
             MacroExecutor.runTest(
                 macro = macro,
                 preDelayMs = 5L,
                 postDelayMs = 5L,
-                onComplete = { success ->
-                    completedSuccess = success
-                },
+                onComplete = { completedSuccess = it },
             )
 
-            val finished =
-                withTimeoutOrNull(1000) {
-                    while (completedSuccess == null) {
-                        delay(10)
-                    }
-                    true
-                }
-
-            assertEquals("Test run should complete", true, finished)
-            assertEquals("Test run should be marked successful", true, completedSuccess)
-            assertEquals("Modal should be resumed after test run", modalConfig, AppStateManager.activePrimaryModal.value)
+            assertTrue(waitUntil(1000) { completedSuccess != null })
+            assertEquals(true, completedSuccess)
+            assertEquals(modalConfig, AppStateManager.activePrimaryModal.value)
         }
 }
