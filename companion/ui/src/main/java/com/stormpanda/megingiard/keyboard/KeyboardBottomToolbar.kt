@@ -46,7 +46,6 @@ private val KB_ROUNDED_16 = RoundedCornerShape(16.dp)
 @Composable
 internal fun KeyboardBottomToolbar(
     keyboardMode: KeyboardMode,
-    accentColor: Color,
     onModeToggle: (KeyboardMode) -> Unit,
     onCollapseClick: () -> Unit,
     onSettingsClick: () -> Unit,
@@ -97,7 +96,6 @@ internal fun KeyboardBottomToolbar(
                 val nextMode = if (isFullModeActive) KeyboardMode.LETTERS else KeyboardMode.FULL
                 onModeToggle(nextMode)
             },
-            accentColor = accentColor,
         )
 
         Spacer(modifier = Modifier.weight(1f))
@@ -133,7 +131,6 @@ internal fun KeyboardBottomToolbar(
 private fun KeyboardModeToggleButton(
     isFullModeActive: Boolean,
     onToggle: () -> Unit,
-    accentColor: Color,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current

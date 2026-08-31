@@ -373,7 +373,6 @@ fun KeyboardScreen(
 
             KeyboardBottomToolbar(
                 keyboardMode = keyboardMode,
-                accentColor = accentColor,
                 onModeToggle = { nextMode ->
                     viewModel.setKeyboardMode(nextMode)
                     KeyboardState.reset()
