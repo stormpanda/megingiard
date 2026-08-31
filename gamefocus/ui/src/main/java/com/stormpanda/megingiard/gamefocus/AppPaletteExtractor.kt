@@ -8,7 +8,6 @@ import android.graphics.drawable.Drawable
 import android.util.LruCache
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.core.graphics.drawable.toBitmap
 import androidx.palette.graphics.Palette
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
