@@ -201,23 +201,7 @@ object AppPaletteExtractor {
         appInfo: InstalledAppInfo,
         defaultPrimary: Color,
         defaultSecondary: Color,
-    ): ExtractedAppPalette =
-        withContext(Dispatchers.Default) {
-            val startTime = System.currentTimeMillis()
-            val cacheKey = getCacheKey(appInfo)
-            val cached = paletteCache.get(cacheKey)
-            if (cached != null) {
-                AppLog.d(TAG, "Palette cache HIT for ${appInfo.label} [0ms]")
-                return@withContext cached
-            }
-
-            val palette = extractColorsInternal(appInfo, defaultPrimary, defaultSecondary)
-            paletteCache.put(cacheKey, palette)
-            persistPalette(cacheKey, palette)
-            val elapsed = System.currentTimeMillis() - startTime
-            AppLog.d(TAG, "Palette extracted for ${appInfo.label} in ${elapsed}ms")
-            palette
-        }
+    ): ExtractedAppPalette = withContext(Dispatchers.Default) { extractColors(appInfo, defaultPrimary, defaultSecondary) }
 
     fun extractColors(
         appInfo: InstalledAppInfo,

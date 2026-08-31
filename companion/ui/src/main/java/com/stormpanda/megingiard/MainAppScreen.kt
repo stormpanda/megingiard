@@ -115,6 +115,8 @@ private val MAS_ARROW_SIZE = 56.dp
 private const val MAS_ARROW_BOUNCE_PX = 24f
 private const val MAS_ARROW_BOUNCE_MS = 800
 private const val MAS_KB_SLIDE_ANIM_DURATION_MS = 300
+private val MAS_HELP_CONTAINER_SHAPE = RoundedCornerShape(12.dp)
+private val MAS_RETRY_BTN_SHAPE = RoundedCornerShape(8.dp)
 
 @Composable
 fun MainAppScreen() {
@@ -637,7 +639,7 @@ private fun WrongScreenOverlay(
             Column(
                 modifier =
                     Modifier
-                        .background(colors.surface, shape = RoundedCornerShape(12.dp))
+                        .background(colors.surface, shape = MAS_HELP_CONTAINER_SHAPE)
                         .padding(20.dp)
                         .fillMaxWidth(0.9f),
             ) {
@@ -670,7 +672,7 @@ private fun WrongScreenOverlay(
 
             TextButton(
                 onClick = onRetry,
-                modifier = Modifier.background(colors.accent.copy(alpha = 0.1f), shape = RoundedCornerShape(8.dp)),
+                modifier = Modifier.background(colors.accent.copy(alpha = 0.1f), shape = MAS_RETRY_BTN_SHAPE),
             ) {
                 Text(
                     text = stringResource(R.string.wrong_screen_retry),

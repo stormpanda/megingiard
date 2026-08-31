@@ -118,9 +118,9 @@ internal fun ChooseButtonTypeSubPageContent(
         items = availableGroups,
     ) { group, _, cardModifier ->
         GamepadActionCard(
-            title = stringResource(group.labelResId()),
-            description = stringResource(group.descriptionResId()),
-            icon = group.icon(),
+            title = stringResource(group.labelResId),
+            description = stringResource(group.descriptionResId),
+            icon = group.icon,
             alwaysShowFullDescription = true,
             onClick = { onSelectType(group) },
             modifier = cardModifier,

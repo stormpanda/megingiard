@@ -80,12 +80,6 @@ internal enum class ActionGroup(
     ),
     ;
 
-    fun icon(): ImageVector = icon
-
-    fun labelResId(): Int = labelResId
-
-    fun descriptionResId(): Int = descriptionResId
-
     fun actions(): List<ActionCategory> = ActionCategory.entries.filter { it.group == this }
 }
 
