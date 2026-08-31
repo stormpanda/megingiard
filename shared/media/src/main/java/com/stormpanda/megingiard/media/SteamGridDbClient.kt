@@ -12,6 +12,7 @@ import java.net.SocketTimeoutException
 import java.net.URL
 import java.net.URLEncoder
 import java.net.UnknownHostException
+import java.nio.charset.StandardCharsets
 
 private const val TAG = "SteamGridDbClient"
 private const val BASE_URL = "https://www.steamgriddb.com/api/v2"
@@ -189,7 +190,7 @@ object SteamGridDbClient {
         }
         val encodedQuery =
             withContext(Dispatchers.IO) {
-                URLEncoder.encode(cleanedQuery, "UTF-8").replace("+", "%20")
+                URLEncoder.encode(cleanedQuery, StandardCharsets.UTF_8).replace("+", "%20")
             }
         return fetchApiResponse("$BASE_URL/search/autocomplete/$encodedQuery", apiKey)
     }
