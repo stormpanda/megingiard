@@ -60,7 +60,7 @@ internal fun PadButtonFace(
         remember {
             Paint().apply {
                 colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
-                this.alpha = PBF_DISABLED_ALPHA
+                alpha = PBF_DISABLED_ALPHA
             }
         }
 
