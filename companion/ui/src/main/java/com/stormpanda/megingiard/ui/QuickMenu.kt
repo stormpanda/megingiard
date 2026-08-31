@@ -60,8 +60,6 @@ import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenshotTarget
 import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdConnectionState
-import com.stormpanda.megingiard.ui.PrimaryModalConfig
-import com.stormpanda.megingiard.ui.PrimaryModalType
 
 private const val TAG = "QuickMenu"
 

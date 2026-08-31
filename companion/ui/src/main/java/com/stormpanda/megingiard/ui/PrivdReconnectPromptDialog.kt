@@ -72,6 +72,7 @@ private const val TAG = "PrivdPromptDialog"
 
 private val PRD_DIALOG_MAX_WIDTH = 480.dp
 private val PRD_DIALOG_CORNER_RADIUS = 16.dp
+private val PRD_DIALOG_SHAPE = RoundedCornerShape(PRD_DIALOG_CORNER_RADIUS)
 private val PRD_DIALOG_BORDER_WIDTH = 2.dp
 private val PRD_DIALOG_SHADOW_ELEVATION = 12.dp
 private val PRD_DIALOG_PADDING_HORIZONTAL = 20.dp
@@ -245,13 +246,13 @@ fun PrivdReconnectPromptDialog(
                     .animateContentSize(
                         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
                         alignment = Alignment.Center,
-                    ).shadow(PRD_DIALOG_SHADOW_ELEVATION, RoundedCornerShape(PRD_DIALOG_CORNER_RADIUS))
-                    .clip(RoundedCornerShape(PRD_DIALOG_CORNER_RADIUS))
+                    ).shadow(PRD_DIALOG_SHADOW_ELEVATION, PRD_DIALOG_SHAPE)
+                    .clip(PRD_DIALOG_SHAPE)
                     .background(colors.surface)
                     .border(
                         PRD_DIALOG_BORDER_WIDTH,
                         brush = rememberBezelBrush(),
-                        shape = RoundedCornerShape(PRD_DIALOG_CORNER_RADIUS),
+                        shape = PRD_DIALOG_SHAPE,
                     ).padding(
                         start = PRD_DIALOG_PADDING_HORIZONTAL,
                         end = PRD_DIALOG_PADDING_HORIZONTAL,
