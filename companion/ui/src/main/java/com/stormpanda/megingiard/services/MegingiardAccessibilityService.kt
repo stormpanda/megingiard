@@ -375,13 +375,17 @@ class MegingiardAccessibilityService : AccessibilityService() {
             }
     }
 
+    private fun AccessibilityNodeInfo.findNodesByStandardOrSettingsId(subId: String): List<AccessibilityNodeInfo> {
+        val std = findAccessibilityNodeInfosByViewId("android:id/$subId") ?: emptyList()
+        val settings = findAccessibilityNodeInfosByViewId("com.android.settings:id/$subId") ?: emptyList()
+        return (std + settings).distinct()
+    }
+
     private fun findAndClickAllowDialogButton(
         rootNode: AccessibilityNodeInfo,
         allowKeywords: List<String>,
     ): Boolean {
-        val buttonNodes = rootNode.findAccessibilityNodeInfosByViewId("android:id/button1") ?: emptyList()
-        val settingsButtonNodes = rootNode.findAccessibilityNodeInfosByViewId("com.android.settings:id/button1") ?: emptyList()
-        val allButtons = (buttonNodes + settingsButtonNodes).distinct()
+        val allButtons = rootNode.findNodesByStandardOrSettingsId("button1")
 
         for (btn in allButtons) {
             val text = btn.text?.toString() ?: ""
@@ -459,10 +463,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
             }
         }
 
-        val titleNodes = rootNode.findAccessibilityNodeInfosByViewId("android:id/title") ?: emptyList()
-        val settingsTitleNodes = rootNode.findAccessibilityNodeInfosByViewId("com.android.settings:id/title") ?: emptyList()
-        val allTitles = (titleNodes + settingsTitleNodes).distinct()
-
+        val allTitles = rootNode.findNodesByStandardOrSettingsId("title")
         val cleanKw = targetKeyword.lowercase()
 
         for (titleNode in allTitles) {
@@ -621,9 +622,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
         }
 
         // 3. Fallback: Keyword matching (multi-language fallback)
-        val titleNodes = rootNode.findAccessibilityNodeInfosByViewId("android:id/title") ?: emptyList()
-        val settingsTitleNodes = rootNode.findAccessibilityNodeInfosByViewId("com.android.settings:id/title") ?: emptyList()
-        val allTitles = (titleNodes + settingsTitleNodes).distinct()
+        val allTitles = rootNode.findNodesByStandardOrSettingsId("title")
 
         for (titleNode in allTitles) {
             val titleText = titleNode.text?.toString() ?: ""
@@ -670,9 +669,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
         rootNode: AccessibilityNodeInfo,
         targetKeyword: String,
     ): Boolean {
-        val titleNodes = rootNode.findAccessibilityNodeInfosByViewId("android:id/title") ?: emptyList()
-        val settingsTitleNodes = rootNode.findAccessibilityNodeInfosByViewId("com.android.settings:id/title") ?: emptyList()
-        val allTitles = (titleNodes + settingsTitleNodes).distinct()
+        val allTitles = rootNode.findNodesByStandardOrSettingsId("title")
 
         for (titleNode in allTitles) {
             val titleText = titleNode.text?.toString() ?: ""
@@ -702,9 +699,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
 
     private fun findAndToggleMainSwitchOnSubScreen(rootNode: AccessibilityNodeInfo): Boolean {
         val mainSwitches = rootNode.findAccessibilityNodeInfosByViewId("com.android.settings:id/main_switch") ?: emptyList()
-        val settingsSwitches = rootNode.findAccessibilityNodeInfosByViewId("com.android.settings:id/switch_widget") ?: emptyList()
-        val genericSwitches = rootNode.findAccessibilityNodeInfosByViewId("android:id/switch_widget") ?: emptyList()
-        val allSwitches = (mainSwitches + settingsSwitches + genericSwitches).distinct()
+        val allSwitches = (mainSwitches + rootNode.findNodesByStandardOrSettingsId("switch_widget")).distinct()
 
         for (switchNode in allSwitches) {
             if (switchNode.isCheckable) {
@@ -805,38 +800,29 @@ class MegingiardAccessibilityService : AccessibilityService() {
          */
         fun getInstance(): MegingiardAccessibilityService? = instance
 
+        private fun getGlobalSettingBool(
+            context: Context,
+            key: String,
+        ): Boolean =
+            try {
+                Settings.Global.getInt(context.contentResolver, key, 0) != 0
+            } catch (e: Exception) {
+                false
+            }
+
         fun isWifiActive(context: Context): Boolean =
             try {
                 val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
                 wifiManager?.isWifiEnabled == true
             } catch (e: Exception) {
-                try {
-                    Settings.Global.getInt(context.contentResolver, Settings.Global.WIFI_ON, 0) != 0
-                } catch (e2: Exception) {
-                    false
-                }
+                getGlobalSettingBool(context, Settings.Global.WIFI_ON)
             }
 
-        fun isDevModeActive(context: Context): Boolean =
-            try {
-                Settings.Global.getInt(context.contentResolver, Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0) != 0
-            } catch (e: Exception) {
-                false
-            }
+        fun isDevModeActive(context: Context): Boolean = getGlobalSettingBool(context, Settings.Global.DEVELOPMENT_SETTINGS_ENABLED)
 
-        fun isWirelessDebuggingActive(context: Context): Boolean =
-            try {
-                Settings.Global.getInt(context.contentResolver, "adb_wifi_enabled", 0) != 0
-            } catch (e: Exception) {
-                false
-            }
+        fun isWirelessDebuggingActive(context: Context): Boolean = getGlobalSettingBool(context, "adb_wifi_enabled")
 
-        fun isUsbDebuggingActive(context: Context): Boolean =
-            try {
-                Settings.Global.getInt(context.contentResolver, Settings.Global.ADB_ENABLED, 0) != 0
-            } catch (e: Exception) {
-                false
-            }
+        fun isUsbDebuggingActive(context: Context): Boolean = getGlobalSettingBool(context, Settings.Global.ADB_ENABLED)
 
         fun isDevicePaired(context: Context): Boolean = PrivdBootstrapper.hasCredentials(context)
 
