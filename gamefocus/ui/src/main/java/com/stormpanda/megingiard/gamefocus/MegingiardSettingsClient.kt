@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.Bundle
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.catalog.EMULATOR_ID_RETROARCH
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.catalog.RomManager
 import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
@@ -107,7 +108,7 @@ object MegingiardSettingsClient {
         if (systemId == null) return "com.retroarch.aarch64"
         val systemDef = SUPPORTED_SYSTEMS.find { it.id == systemId }
         val candidates =
-            if (systemDef?.emulatorId == "retroarch" || systemDef?.emulatorId == null) {
+            if (systemDef?.emulatorId == EMULATOR_ID_RETROARCH || systemDef?.emulatorId == null) {
                 listOf("com.retroarch.aarch64", "com.retroarch")
             } else {
                 GameNativeDetector.supportedPackages
