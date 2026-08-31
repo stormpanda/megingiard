@@ -1,5 +1,11 @@
 package com.stormpanda.megingiard.macropad
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -19,8 +25,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -131,4 +139,40 @@ internal fun ColorPreviewInfoBox(
             }
         }
     }
+}
+
+private const val PULSE_ANIM_MS = 900
+
+internal fun formatElapsedTime(elapsedMs: Long): String {
+    val totalSec = elapsedMs / 1000
+    val min = totalSec / 60
+    val sec = totalSec % 60
+    val tenth = (elapsedMs % 1000) / 100
+    return "%02d:%02d.%01d".format(min, sec, tenth)
+}
+
+@Composable
+internal fun PulsingRecordingDot(
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    val pulseTransition = rememberInfiniteTransition(label = "recordingPulse")
+    val pulseAlpha by pulseTransition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 1f,
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(durationMillis = PULSE_ANIM_MS, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "recordingDotPulse",
+    )
+
+    Box(
+        modifier =
+            modifier
+                .drawBehind {
+                    drawCircle(color = color.copy(alpha = pulseAlpha))
+                },
+    )
 }

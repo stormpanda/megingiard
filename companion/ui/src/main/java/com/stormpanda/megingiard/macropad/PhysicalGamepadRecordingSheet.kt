@@ -67,7 +67,6 @@ import kotlin.math.sqrt
 
 private const val TAG = "PhysGamepadRecordSheet"
 
-private const val PR_PULSE_ANIM_MS = 900
 private const val PR_TIMER_TICK_MS = 50L
 private const val PR_STICK_RADAR_SIZE_DP = 96
 private const val PR_STICK_THUMB_RADIUS_DP = 7f
@@ -84,14 +83,6 @@ private val PR_SPACING_M = 10.dp
 private val PR_SPACING_L = 14.dp
 private val PR_CONTAINER_PADDING = 20.dp
 private val PR_BORDER_WIDTH = 1.dp
-
-private fun formatElapsedTime(elapsedMs: Long): String {
-    val totalSec = elapsedMs / 1000
-    val min = totalSec / 60
-    val sec = totalSec % 60
-    val tenth = (elapsedMs % 1000) / 100
-    return "%02d:%02d.%01d".format(min, sec, tenth)
-}
 
 private fun dpadArrowLabel(
     dirX: Int,
@@ -499,30 +490,4 @@ private fun StickRadar(
             fontWeight = if (magPercent > 5) FontWeight.Bold else FontWeight.Normal,
         )
     }
-}
-
-@Composable
-private fun PulsingRecordingDot(
-    color: Color,
-    modifier: Modifier = Modifier,
-) {
-    val pulseTransition = rememberInfiniteTransition(label = "recordingPulse")
-    val pulseAlpha by pulseTransition.animateFloat(
-        initialValue = 0.35f,
-        targetValue = 1f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(durationMillis = PR_PULSE_ANIM_MS, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "recordingDotPulse",
-    )
-
-    Box(
-        modifier =
-            modifier
-                .drawBehind {
-                    drawCircle(color = color.copy(alpha = pulseAlpha))
-                },
-    )
 }

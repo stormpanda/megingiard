@@ -72,7 +72,6 @@ import kotlinx.coroutines.delay
 
 private const val TAG = "TouchRecordingSheet"
 
-private const val TRS_PULSE_ANIM_MS = 900
 private const val TRS_TIMER_TICK_MS = 50L
 private const val TRS_RADAR_ASPECT_RATIO = 16f / 9f
 private const val TRS_RADAR_CROSSHAIR_ALPHA = 0.25f
@@ -123,14 +122,6 @@ private fun pointerColor(
     } else {
         TRS_POINTER_PALETTE[(slot - 1) % TRS_POINTER_PALETTE.size]
     }
-
-private fun formatElapsedTime(elapsedMs: Long): String {
-    val totalSec = elapsedMs / 1000
-    val min = totalSec / 60
-    val sec = totalSec % 60
-    val tenth = (elapsedMs % 1000) / 100
-    return "%02d:%02d.%01d".format(min, sec, tenth)
-}
 
 /**
  * Companion HUD rendered on Display 4 (Secondary Display) during a touch macro recording session.
@@ -626,30 +617,4 @@ private fun TouchScreenRadar(
             }
         }
     }
-}
-
-@Composable
-private fun PulsingRecordingDot(
-    color: Color,
-    modifier: Modifier = Modifier,
-) {
-    val pulseTransition = rememberInfiniteTransition(label = "touchRecordingDotPulse")
-    val pulseAlpha by pulseTransition.animateFloat(
-        initialValue = 0.35f,
-        targetValue = 1f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(durationMillis = TRS_PULSE_ANIM_MS, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "touchRecordingDotPulseAlpha",
-    )
-
-    Box(
-        modifier =
-            modifier
-                .drawBehind {
-                    drawCircle(color = color.copy(alpha = pulseAlpha))
-                },
-    )
 }
