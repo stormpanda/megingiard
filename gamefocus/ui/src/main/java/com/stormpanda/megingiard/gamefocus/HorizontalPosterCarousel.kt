@@ -42,6 +42,7 @@ import com.stormpanda.megingiard.math.floorMod
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
+import kotlin.math.sign
 import android.graphics.Paint as NativePaint
 
 private val HPC_DEFAULT_POSTER_WIDTH = 175.dp
@@ -142,7 +143,7 @@ fun HorizontalPosterCarousel(
                             val pageOffset = rawOffset.absoluteValue
                             val s = (1.18f - (pageOffset * 0.33f)).coerceIn(0.85f, 1.18f)
                             val a = (1.0f - (pageOffset * 0.45f)).coerceIn(0.55f, 1.0f)
-                            val sign = kotlin.math.sign(rawOffset)
+                            val sign = sign(rawOffset)
                             val neighborFactor = (1.0f - (rawOffset.absoluteValue - 1.0f).absoluteValue).coerceIn(0.0f, 1.0f)
 
                             scaleX = s
