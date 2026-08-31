@@ -25,12 +25,6 @@ import com.stormpanda.megingiard.macropad.EditorSection
 import com.stormpanda.megingiard.mirror.MirrorEditorTopOverlay
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.settings.SettingsManager
-import com.stormpanda.megingiard.ui.AppDimens
-import com.stormpanda.megingiard.ui.LocalAppColors
-import com.stormpanda.megingiard.ui.LocalAppDimens
-import com.stormpanda.megingiard.ui.colorSchemeFor
-import com.stormpanda.megingiard.ui.megingiardTypography
-import com.stormpanda.megingiard.ui.paletteFor
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
