@@ -170,17 +170,8 @@ object InstalledAppsManager {
     private fun loadScrapedPackages(context: Context): Set<String> =
         synchronized(scrapedPackages) {
             if (!isScrapedPackagesLoaded) {
-                val file = File(context.filesDir, FILE_SCRAPED_APPS)
-                if (file.exists()) {
-                    try {
-                        file.readLines().map { it.trim() }.filter { it.isNotEmpty() }.forEach {
-                            scrapedPackages.add(it)
-                        }
-                        AppLog.d(TAG, "Loaded ${scrapedPackages.size} scraped package records from disk")
-                    } catch (e: Exception) {
-                        AppLog.w(TAG, "Failed to read scraped packages file: ${e.message}")
-                    }
-                }
+                scrapedPackages.addAll(loadStringSet(context, FILE_SCRAPED_APPS))
+                AppLog.d(TAG, "Loaded ${scrapedPackages.size} scraped package records from disk")
                 isScrapedPackagesLoaded = true
             }
             scrapedPackages
@@ -196,17 +187,8 @@ object InstalledAppsManager {
                 scrapedPackages.add(packageName)
             }
         if (needsWrite) {
-            scope.launch {
-                synchronized(scrapedPackages) {
-                    try {
-                        val file = File(context.filesDir, FILE_SCRAPED_APPS)
-                        file.writeText(scrapedPackages.joinToString("\n"))
-                        AppLog.i(TAG, "Persisted $packageName to scraped packages registry")
-                    } catch (e: Exception) {
-                        AppLog.e(TAG, "Failed to persist scraped packages file: ${e.message}", e)
-                    }
-                }
-            }
+            persistLines(context, FILE_SCRAPED_APPS, synchronized(scrapedPackages) { scrapedPackages.toList() })
+            AppLog.i(TAG, "Persisted $packageName to scraped packages registry")
         }
     }
 
@@ -214,17 +196,10 @@ object InstalledAppsManager {
     fun isPackageAGame(
         appInfo: ApplicationInfo,
         gamePackagesFromIntent: Set<String> = emptySet(),
-    ): Boolean {
-        if (gamePackagesFromIntent.contains(appInfo.packageName)) {
-            return true
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            if (appInfo.category == ApplicationInfo.CATEGORY_GAME) {
-                return true
-            }
-        }
-        return (appInfo.flags and ApplicationInfo.FLAG_IS_GAME) != 0
-    }
+    ): Boolean =
+        gamePackagesFromIntent.contains(appInfo.packageName) ||
+            appInfo.category == ApplicationInfo.CATEGORY_GAME ||
+            (appInfo.flags and ApplicationInfo.FLAG_IS_GAME) != 0
 
     @Suppress("DEPRECATION")
     fun loadInstalledApps(context: Context) {
@@ -429,11 +404,9 @@ object InstalledAppsManager {
                         val images = imagesResult.getOrNull()
                         val imageUrl = images?.firstOrNull()?.url
                         if (imageUrl != null) {
-                            val tempResult = SteamGridDbClient.downloadImageToTempFile(imageUrl, context.cacheDir)
-                            val tempFile = tempResult.getOrNull()
-                            if (tempFile != null) {
-                                tempFile.copyTo(coverFile, overwrite = true)
-                                tempFile.delete()
+                            val bytes = SteamGridDbClient.downloadImageBytes(imageUrl).getOrNull()
+                            if (bytes != null) {
+                                coverFile.writeBytes(bytes)
                                 updateAppCover(app.packageName, coverFile.absolutePath)
                                 AppLog.i(TAG, "Successfully scraped SteamGridDB cover for ${app.label}")
                             }
@@ -451,11 +424,9 @@ object InstalledAppsManager {
                                 val logos = logosResult.getOrNull()
                                 val logoUrl = logos?.firstOrNull()?.url
                                 if (logoUrl != null) {
-                                    val tempLogoRes = SteamGridDbClient.downloadImageToTempFile(logoUrl, context.cacheDir)
-                                    val tempLogoFile = tempLogoRes.getOrNull()
-                                    if (tempLogoFile != null) {
-                                        tempLogoFile.copyTo(logoFile, overwrite = true)
-                                        tempLogoFile.delete()
+                                    val logoBytes = SteamGridDbClient.downloadImageBytes(logoUrl).getOrNull()
+                                    if (logoBytes != null) {
+                                        logoFile.writeBytes(logoBytes)
                                         AppLog.i(TAG, "Successfully scraped SteamGridDB logo for ROM: ${app.label}")
                                     }
                                 }
