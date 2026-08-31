@@ -78,39 +78,24 @@ fun ExpandableActionsMenu(
                     button = GamePadButton.BUTTON_Y,
                     onClick = { onExpandedChange(false) },
                 )
-            val hasClose =
-                actions.any {
-                    it.button == GamePadButton.BUTTON_Y ||
-                        it.button == GamePadButton.SELECT ||
-                        it.label.equals(closeLabel, ignoreCase = true) ||
-                        it.label.equals("Close", ignoreCase = true)
-                }
+
+            fun isCloseItem(item: ExpandableActionItem): Boolean =
+                item.button == GamePadButton.BUTTON_Y ||
+                    item.button == GamePadButton.SELECT ||
+                    item.label.equals(closeLabel, ignoreCase = true) ||
+                    item.label.equals("Close", ignoreCase = true)
+
+            val hasClose = actions.any(::isCloseItem)
             if (orientation == ExpandableMenuOrientation.HORIZONTAL) {
-                if (!hasClose) {
-                    listOf(closeItem) + actions
-                } else {
-                    actions
-                }
+                if (!hasClose) listOf(closeItem) + actions else actions
             } else {
                 // VERTICAL (to the top)
                 // The close action must be the lowest one (last item in vertical stack)
                 if (!hasClose) {
                     actions + listOf(closeItem)
                 } else {
-                    val otherActions =
-                        actions.filterNot {
-                            it.button == GamePadButton.BUTTON_Y ||
-                                it.button == GamePadButton.SELECT ||
-                                it.label.equals(closeLabel, ignoreCase = true) ||
-                                it.label.equals("Close", ignoreCase = true)
-                        }
-                    val existingClose =
-                        actions.firstOrNull {
-                            it.button == GamePadButton.BUTTON_Y ||
-                                it.button == GamePadButton.SELECT ||
-                                it.label.equals(closeLabel, ignoreCase = true) ||
-                                it.label.equals("Close", ignoreCase = true)
-                        } ?: closeItem
+                    val otherActions = actions.filterNot(::isCloseItem)
+                    val existingClose = actions.firstOrNull(::isCloseItem) ?: closeItem
                     otherActions + listOf(existingClose)
                 }
             }
