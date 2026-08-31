@@ -50,9 +50,7 @@ class KeyboardViewModel(
         _keyboardMode.value = mode
     }
 
-    fun setKbTouchpadEnabled(value: Boolean) {
-        KeyboardSettings.setKbTouchpadEnabled(value)
-    }
+    fun setKbTouchpadEnabled(value: Boolean) = KeyboardSettings.setKbTouchpadEnabled(value)
 
     private fun sendCtrlCombo(keyCode: Int) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -89,9 +87,7 @@ class KeyboardViewModel(
                     KeyboardState.stateFor("ralt").value != ModifierState.INACTIVE
             },
             initialDensity = 1f,
-            onInjectPopupSelection = { popupKeyDef, charToInject ->
-                injectPopupSelection(popupKeyDef, charToInject)
-            },
+            onInjectPopupSelection = ::injectPopupSelection,
         )
 
     fun closeQuickMenu() = AppStateManager.closeQuickMenu()
@@ -103,9 +99,7 @@ class KeyboardViewModel(
         KeyboardSettings.setKbLayout(layouts[nextIndex])
     }
 
-    fun setKbLayout(value: KbLayout) {
-        KeyboardSettings.setKbLayout(value)
-    }
+    fun setKbLayout(value: KbLayout) = KeyboardSettings.setKbLayout(value)
 
     fun startInjectors(context: Context) {
         AppLog.i(TAG, "startInjectors called -> watching InjectorLifecycleManager")
