@@ -47,6 +47,10 @@ fun RomFolderCoreChooserDialog(
         remember(folder.systemId) {
             SUPPORTED_SYSTEMS.find { it.id == folder.systemId }
         }
+    val cores =
+        remember(systemDef) {
+            if (systemDef != null) listOf(null) + systemDef.retroArchCoreAlternatives else emptyList()
+        }
 
     LaunchedEffect(folder) {
         AppLog.d(TAG, "Showing core chooser dialog for folder: ${folder.folderPath}, recognized system: ${folder.systemId}")
@@ -60,7 +64,6 @@ fun RomFolderCoreChooserDialog(
                 AppLog.i(TAG, "Confirming native emulation dialog via trigger")
                 onConfirm(null)
             } else {
-                val cores = listOf(null) + systemDef.retroArchCoreAlternatives
                 val safeIdx = selectedIndex.coerceIn(0, cores.lastIndex)
                 AppLog.i(TAG, "Confirming RetroArch core selection via trigger: index=$safeIdx, core='${cores[safeIdx]}'")
                 onConfirm(cores[safeIdx])
@@ -141,11 +144,6 @@ fun RomFolderCoreChooserDialog(
                 color = appColors.onSurface,
                 modifier = Modifier.padding(bottom = DIALOG_TITLE_PADDING_BOTTOM),
             )
-
-            val cores =
-                remember(systemDef) {
-                    listOf(null) + systemDef.retroArchCoreAlternatives
-                }
 
             VerticalRollingCarousel(
                 selectedIndex = selectedIndex,
