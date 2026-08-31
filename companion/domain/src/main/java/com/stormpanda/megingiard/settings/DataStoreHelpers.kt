@@ -16,14 +16,14 @@ fun <T> updateSettingPref(
     key: Preferences.Key<T>,
     value: T,
     stateFlow: MutableStateFlow<T>,
-    scope: CoroutineScope,
+    scope: CoroutineScope?,
     dataStore: DataStore<Preferences>?,
     tag: String,
     methodName: String = key.name,
 ) {
     AppLog.d(tag, "$methodName($value)")
     stateFlow.value = value
-    if (dataStore != null) {
+    if (dataStore != null && scope != null) {
         scope.launch {
             try {
                 dataStore.edit { prefs ->

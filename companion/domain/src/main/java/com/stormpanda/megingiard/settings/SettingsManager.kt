@@ -194,20 +194,7 @@ object SettingsManager {
                     val backupsJsonStr = prefs[KEY_INTERNAL_BACKUPS]
                     if (backupsJsonStr != lastBackupsJsonStr) {
                         lastBackupsJsonStr = backupsJsonStr
-                        _internalBackups.value =
-                            if (backupsJsonStr != null) {
-                                runCatching {
-                                    backupsJson.decodeFromString<List<InternalBackup>>(backupsJsonStr)
-                                }.getOrElse { e ->
-                                    AppLog.w(
-                                        TAG,
-                                        "Failed to decode internal backups list: invalid JSON: ${e.javaClass.simpleName} - ${e.message}",
-                                    )
-                                    emptyList()
-                                }
-                            } else {
-                                emptyList()
-                            }
+                        _internalBackups.value = decodeBackups(backupsJsonStr)
                     }
 
                     if (!autoBackupTriggered) {
@@ -292,16 +279,16 @@ object SettingsManager {
     }
 
     fun setSteamGridDbApiToken(value: String) {
-        AppLog.d(TAG, "setSteamGridDbApiToken(redacted)")
-        _steamGridDbApiToken.value = value
+        updateSettingPref(
+            KEY_STEAMGRIDDB_API_TOKEN,
+            value,
+            _steamGridDbApiToken,
+            scope,
+            optionalDataStore,
+            TAG,
+            "setSteamGridDbApiToken(redacted)",
+        )
         onSettingsChangedListener?.invoke()
-        scope.launch {
-            if (::dataStore.isInitialized) {
-                dataStore.edit { prefs ->
-                    prefs[KEY_STEAMGRIDDB_API_TOKEN] = value
-                }
-            }
-        }
     }
 
     // Mirror setters + session save/restore live in [MirrorSettings].
@@ -413,24 +400,20 @@ object SettingsManager {
         }
     }
 
+    private fun decodeBackups(jsonStr: String?): List<InternalBackup> {
+        if (jsonStr == null) return emptyList()
+        return runCatching {
+            backupsJson.decodeFromString<List<InternalBackup>>(jsonStr)
+        }.getOrElse { e ->
+            AppLog.w(TAG, "Failed to decode internal backups list: ${e.javaClass.simpleName} - ${e.message}")
+            emptyList()
+        }
+    }
+
     suspend fun saveBackup(backup: InternalBackup) {
         AppLog.d(TAG, "saveBackup: date=${backup.dateString}")
         dataStore.edit { prefs ->
-            val currentJson = prefs[KEY_INTERNAL_BACKUPS]
-            val currentList =
-                if (currentJson != null) {
-                    runCatching {
-                        backupsJson.decodeFromString<List<InternalBackup>>(currentJson)
-                    }.getOrElse { e ->
-                        AppLog.w(
-                            TAG,
-                            "Failed to decode existing internal backups JSON during save: ${e.javaClass.simpleName} - ${e.message}",
-                        )
-                        emptyList()
-                    }
-                } else {
-                    emptyList()
-                }
+            val currentList = decodeBackups(prefs[KEY_INTERNAL_BACKUPS])
             val newList =
                 (currentList.filter { it.dateString != backup.dateString } + backup)
                     .sortedByDescending { it.timestampMs }

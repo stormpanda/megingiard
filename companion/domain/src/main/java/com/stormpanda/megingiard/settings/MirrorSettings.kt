@@ -55,22 +55,30 @@ object MirrorSettings {
         _rememberProjection.value = prefs[KEY_REMEMBER_PROJECTION] ?: false
     }
 
+    private val optionalDataStore: DataStore<Preferences>?
+        get() = if (::dataStore.isInitialized) dataStore else null
+
+    private val optionalScope: CoroutineScope?
+        get() = if (::scope.isInitialized) scope else null
+
     fun setRememberViewport(value: Boolean) {
-        AppLog.d(TAG, "setRememberViewport($value)")
-        _rememberViewport.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_REMEMBER_VIEWPORT] = value } }
+        updateSettingPref(KEY_REMEMBER_VIEWPORT, value, _rememberViewport, optionalScope, optionalDataStore, TAG, "setRememberViewport")
     }
 
     fun setRememberLock(value: Boolean) {
-        AppLog.d(TAG, "setRememberLock($value)")
-        _rememberLock.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_REMEMBER_LOCK] = value } }
+        updateSettingPref(KEY_REMEMBER_LOCK, value, _rememberLock, optionalScope, optionalDataStore, TAG, "setRememberLock")
     }
 
     fun setRememberProjection(value: Boolean) {
-        AppLog.d(TAG, "setRememberProjection($value)")
-        _rememberProjection.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_REMEMBER_PROJECTION] = value } }
+        updateSettingPref(
+            KEY_REMEMBER_PROJECTION,
+            value,
+            _rememberProjection,
+            optionalScope,
+            optionalDataStore,
+            TAG,
+            "setRememberProjection",
+        )
     }
 
     /** Persists the current mirror session state for aspects the user opted to remember. */
@@ -83,8 +91,8 @@ object MirrorSettings {
         val projection = ScreenCaptureManager.isTouchProjectionActive.value
         val rememberLock = _rememberLock.value
         val rememberProjection = _rememberProjection.value
-        scope.launch {
-            dataStore.edit { prefs ->
+        optionalScope?.launch {
+            optionalDataStore?.edit { prefs ->
                 if (rememberLock) {
                     prefs[KEY_SAVED_LOCKED] = locked
                 }

@@ -68,39 +68,45 @@ object KeyboardSettings {
         _kbTouchpadEnabled.value = prefs[KEY_KB_TOUCHPAD_ENABLED] ?: true
     }
 
+    private val optionalDataStore: DataStore<Preferences>?
+        get() = if (::dataStore.isInitialized) dataStore else null
+
+    private val optionalScope: CoroutineScope?
+        get() = if (::scope.isInitialized) scope else null
+
     fun setKbLayout(value: KbLayout) {
         AppLog.d(TAG, "setKbLayout($value)")
         _kbLayout.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_KB_LAYOUT] = value.name } }
+        optionalScope?.launch { optionalDataStore?.edit { prefs -> prefs[KEY_KB_LAYOUT] = value.name } }
     }
 
     fun setKbTrackpointEnabled(value: Boolean) {
-        AppLog.d(TAG, "setKbTrackpointEnabled($value)")
-        _kbTrackpointEnabled.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_KB_TRACKPOINT_ENABLED] = value } }
+        updateSettingPref(
+            KEY_KB_TRACKPOINT_ENABLED,
+            value,
+            _kbTrackpointEnabled,
+            optionalScope,
+            optionalDataStore,
+            TAG,
+            "setKbTrackpointEnabled",
+        )
     }
 
     fun setKbRepeatEnabled(value: Boolean) {
-        AppLog.d(TAG, "setKbRepeatEnabled($value)")
-        _kbRepeatEnabled.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_KB_REPEAT_ENABLED] = value } }
+        updateSettingPref(KEY_KB_REPEAT_ENABLED, value, _kbRepeatEnabled, optionalScope, optionalDataStore, TAG, "setKbRepeatEnabled")
     }
 
     fun setKbFullscreen(value: Boolean) {
-        AppLog.d(TAG, "setKbFullscreen($value)")
-        _kbFullscreen.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_KB_FULLSCREEN] = value } }
+        updateSettingPref(KEY_KB_FULLSCREEN, value, _kbFullscreen, optionalScope, optionalDataStore, TAG, "setKbFullscreen")
     }
 
     fun setKbMouseBtnPos(value: KbMouseBtnPos) {
         AppLog.d(TAG, "setKbMouseBtnPos($value)")
         _kbMouseBtnPos.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_KB_MOUSE_BTN_POS] = value.name } }
+        optionalScope?.launch { optionalDataStore?.edit { prefs -> prefs[KEY_KB_MOUSE_BTN_POS] = value.name } }
     }
 
     fun setKbTouchpadEnabled(value: Boolean) {
-        AppLog.d(TAG, "setKbTouchpadEnabled($value)")
-        _kbTouchpadEnabled.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_KB_TOUCHPAD_ENABLED] = value } }
+        updateSettingPref(KEY_KB_TOUCHPAD_ENABLED, value, _kbTouchpadEnabled, optionalScope, optionalDataStore, TAG, "setKbTouchpadEnabled")
     }
 }
