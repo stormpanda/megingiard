@@ -1,7 +1,9 @@
 package com.stormpanda.megingiard.config
 
 import android.content.Context
+import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.Preferences
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
@@ -61,6 +63,110 @@ class ConfigExportImportStructureTest {
             id = "profile-uuid-test",
             name = "SharedProfile",
         )
+
+    private fun invokeComputeChecksum(
+        settings: Map<String, Any> = emptyMap(),
+        profiles: List<PadProfile> = emptyList(),
+        imageHashes: Map<String, String> = emptyMap(),
+    ): String {
+        val checksumMethod =
+            ConfigManager::class.java
+                .getDeclaredMethod(
+                    "computeChecksum",
+                    Map::class.java,
+                    List::class.java,
+                    Map::class.java,
+                ).apply { isAccessible = true }
+        @Suppress("UNCHECKED_CAST")
+        return checksumMethod.invoke(ConfigManager, settings, profiles, imageHashes) as String
+    }
+
+    private fun setupTestDataStore(prefix: String): DataStore<Preferences> {
+        val tempFile = File.createTempFile(prefix, ".preferences_pb").apply { deleteOnExit() }
+        val testDataStore = PreferenceDataStoreFactory.create(produceFile = { tempFile })
+        SettingsManager::class.java.getDeclaredField("dataStore").apply {
+            isAccessible = true
+            set(SettingsManager, testDataStore)
+        }
+        SettingsManager::class.java.getDeclaredField("initialized").apply {
+            isAccessible = true
+            set(SettingsManager, true)
+        }
+        return testDataStore
+    }
+
+    private fun zipArchive(
+        jsonStr: String,
+        images: Map<String, ByteArray>,
+    ): ByteArray {
+        val baos = ByteArrayOutputStream()
+        ZipOutputStream(baos).use { zos ->
+            zos.putNextEntry(ZipEntry("config.json"))
+            zos.write(jsonStr.toByteArray(Charsets.UTF_8))
+            zos.closeEntry()
+            images.forEach { (path, bytes) ->
+                zos.putNextEntry(ZipEntry(path))
+                zos.write(bytes)
+                zos.closeEntry()
+            }
+        }
+        return baos.toByteArray()
+    }
+
+    private fun unzipArchive(zipBytes: ByteArray): Pair<String?, Map<String, ByteArray>> {
+        var extractedJson: String? = null
+        val extractedImages = mutableMapOf<String, ByteArray>()
+        ZipInputStream(ByteArrayInputStream(zipBytes)).use { zis ->
+            var entry = zis.nextEntry
+            while (entry != null) {
+                if (entry.name == "config.json") {
+                    extractedJson = zis.readBytes().toString(Charsets.UTF_8)
+                } else if (entry.name.startsWith("backgrounds/")) {
+                    extractedImages[entry.name] = zis.readBytes()
+                }
+                zis.closeEntry()
+                entry = zis.nextEntry
+            }
+        }
+        return Pair(extractedJson, extractedImages)
+    }
+
+    private suspend fun assertBackgroundRestoration(
+        isProfileImport: Boolean,
+        layoutId: String,
+        profileName: String,
+        imageKey: String,
+    ) {
+        val context: Context = RuntimeEnvironment.getApplication()
+        val mockImageBytes = "mock_bytes_$layoutId".toByteArray(Charsets.UTF_8)
+        val bgLayout = PadLayout(id = layoutId, name = "LayoutWithBg", backgroundImagePath = "backgrounds/bg_$layoutId")
+        val bgProfile = PadProfile(id = "p-$layoutId", name = profileName, layouts = listOf(bgLayout))
+        val export =
+            MegingiardExport(
+                schemaVersion = SCHEMA_VERSION,
+                metadata = testMetadata,
+                checksum = "dummy",
+                settings = emptyMap(),
+                profiles = listOf(bgProfile),
+            )
+        val imagesMap = mapOf(imageKey to mockImageBytes)
+
+        if (isProfileImport) {
+            ConfigManager.applyProfileImport(context, export, imagesMap)
+        } else {
+            ConfigManager.applyImport(context, export, imagesMap)
+        }
+
+        val importedProfile = MacroPadState.profiles.value.find { it.name == profileName }
+        assertNotNull(importedProfile)
+        val importedLayout = importedProfile!!.layouts.first()
+        assertNotNull(importedLayout.backgroundImagePath)
+        assertTrue(importedLayout.backgroundImagePath!!.startsWith("backgrounds/bg_"))
+
+        val savedFile = File(context.filesDir, importedLayout.backgroundImagePath!!)
+        assertTrue(savedFile.exists())
+        assertTrue(savedFile.readBytes().contentEquals(mockImageBytes))
+    }
 
     // ── ImportMode enum ───────────────────────────────────────────────────────
 
@@ -127,34 +233,16 @@ class ConfigExportImportStructureTest {
 
     @Test
     fun testParseAndVerifyPlainJson() {
-        val export =
+        val validChecksum = invokeComputeChecksum(profiles = listOf(testProfile))
+        val validExport =
             MegingiardExport(
                 schemaVersion = 4,
                 metadata = testMetadata,
-                checksum = "placeholder",
+                checksum = validChecksum,
                 settings = emptyMap(),
                 profiles = listOf(testProfile),
             )
-        // Compute valid checksum
-        val checksumMethod =
-            ConfigManager::class.java.getDeclaredMethod(
-                "computeChecksum",
-                Map::class.java,
-                List::class.java,
-                Map::class.java,
-            )
-        checksumMethod.isAccessible = true
-        val validChecksum =
-            checksumMethod.invoke(
-                ConfigManager,
-                emptyMap<String, Map<String, Any>>(),
-                listOf(testProfile),
-                emptyMap<String, String>(),
-            ) as String
-
-        val validExport = export.copy(checksum = validChecksum)
         val jsonStr = testJson.encodeToString(MegingiardExport.serializer(), validExport)
-
         val parsed = ConfigManager.parseAndVerify(jsonStr)
         assertEquals(validExport.schemaVersion, parsed.schemaVersion)
         assertEquals(validExport.checksum, parsed.checksum)
@@ -167,10 +255,7 @@ class ConfigExportImportStructureTest {
         val imageHashesJson = "{}"
 
         val payload = """{"settings":$legacySettingsJson,"profiles":$legacyProfilesJson,"imageHashes":$imageHashesJson}"""
-        val hex =
-            HmacUtil
-                .sha256Hex(payload.toByteArray(Charsets.UTF_8))
-                .lowercase()
+        val hex = HmacUtil.sha256Hex(payload.toByteArray(Charsets.UTF_8)).lowercase()
         val expectedChecksum = "sha256:$hex"
 
         val legacyExportJson =
@@ -201,21 +286,7 @@ class ConfigExportImportStructureTest {
             val testDispatcher = StandardTestDispatcher()
             Dispatchers.setMain(testDispatcher)
             try {
-                val tempFile = File.createTempFile("datastore_test", ".preferences_pb")
-                tempFile.deleteOnExit()
-                val testDataStore =
-                    PreferenceDataStoreFactory.create(
-                        produceFile = { tempFile },
-                    )
-
-                val smStore = SettingsManager::class.java.getDeclaredField("dataStore")
-                smStore.isAccessible = true
-                smStore.set(SettingsManager, testDataStore)
-
-                val smInit = SettingsManager::class.java.getDeclaredField("initialized")
-                smInit.isAccessible = true
-                smInit.set(SettingsManager, true)
-
+                val testDataStore = setupTestDataStore("datastore_test")
                 val importPayload =
                     mapOf(
                         "global" to
@@ -232,7 +303,6 @@ class ConfigExportImportStructureTest {
                     )
 
                 SettingsManager.importGroupedSettingsAwait(importPayload)
-
                 val firstPrefs = testDataStore.data.first()
 
                 assertTrue(firstPrefs[KEY_ACCENT_COLOR] is Int)
@@ -259,22 +329,7 @@ class ConfigExportImportStructureTest {
             val testDispatcher = StandardTestDispatcher()
             Dispatchers.setMain(testDispatcher)
             try {
-                val tempFile = File.createTempFile("datastore_full_nobg", ".preferences_pb")
-                tempFile.deleteOnExit()
-                val testDataStore =
-                    PreferenceDataStoreFactory.create(
-                        produceFile = { tempFile },
-                    )
-
-                val smStore = SettingsManager::class.java.getDeclaredField("dataStore")
-                smStore.isAccessible = true
-                smStore.set(SettingsManager, testDataStore)
-
-                val smInit = SettingsManager::class.java.getDeclaredField("initialized")
-                smInit.isAccessible = true
-                smInit.set(SettingsManager, true)
-
-                // Set initial settings
+                val testDataStore = setupTestDataStore("datastore_full_nobg")
                 val initialSettings =
                     mapOf(
                         "global" to
@@ -285,20 +340,15 @@ class ConfigExportImportStructureTest {
                     )
                 SettingsManager.importGroupedSettingsAwait(initialSettings)
 
-                // Build full export snapshot without backgrounds
                 val export = ConfigManager.buildExport(metadata = testMetadata, includeBackgrounds = false)
-
-                // Serialize to plain JSON string & parse back
                 val jsonStr = testJson.encodeToString(MegingiardExport.serializer(), export)
                 val parsed = ConfigManager.parseAndVerify(jsonStr)
 
-                // Structural assertions
                 assertEquals(export.schemaVersion, parsed.schemaVersion)
                 assertEquals(export.checksum, parsed.checksum)
                 assertEquals(export.metadata.appVersionName, parsed.metadata.appVersionName)
                 assertTrue(parsed.settings.containsKey("global"))
 
-                // Re-hydrate settings into DataStore
                 SettingsManager.importGroupedSettingsAwait(parsed.settings)
                 val restoredPrefs = testDataStore.data.first()
                 assertEquals(-16743169, restoredPrefs[KEY_ACCENT_COLOR])
@@ -314,45 +364,12 @@ class ConfigExportImportStructureTest {
     fun testFullBackupWithBackgroundsRoundTrip() {
         val mockImageBytes = "fake_webp_image_bytes_full_backup".toByteArray(Charsets.UTF_8)
         val layoutId = "layout-full-bg-1"
-
-        val bgLayout =
-            PadLayout(
-                id = layoutId,
-                name = "LayoutWithBg",
-                backgroundImagePath = "backgrounds/bg_$layoutId",
-            )
-        val bgProfile =
-            PadProfile(
-                id = "profile-full-bg",
-                name = "FullBackupProfile",
-                layouts = listOf(bgLayout),
-            )
-
+        val bgLayout = PadLayout(id = layoutId, name = "LayoutWithBg", backgroundImagePath = "backgrounds/bg_$layoutId")
+        val bgProfile = PadProfile(id = "profile-full-bg", name = "FullBackupProfile", layouts = listOf(bgLayout))
         val settingsMap = mapOf("global" to mapOf("accent_color" to kotlinx.serialization.json.JsonPrimitive(-16743169)))
+        val imageHashes = mapOf("bg_$layoutId" to HmacUtil.sha256Hex(mockImageBytes).lowercase())
 
-        val imageHash =
-            HmacUtil
-                .sha256Hex(mockImageBytes)
-                .lowercase()
-        val imageHashes = mapOf("bg_$layoutId" to imageHash)
-
-        // Compute valid checksum
-        val checksumMethod =
-            ConfigManager::class.java.getDeclaredMethod(
-                "computeChecksum",
-                Map::class.java,
-                List::class.java,
-                Map::class.java,
-            )
-        checksumMethod.isAccessible = true
-        val validChecksum =
-            checksumMethod.invoke(
-                ConfigManager,
-                settingsMap,
-                listOf(bgProfile),
-                imageHashes,
-            ) as String
-
+        val validChecksum = invokeComputeChecksum(settingsMap, listOf(bgProfile), imageHashes)
         val export =
             MegingiardExport(
                 schemaVersion = SCHEMA_VERSION,
@@ -363,45 +380,16 @@ class ConfigExportImportStructureTest {
             )
 
         val jsonStr = testJson.encodeToString(MegingiardExport.serializer(), export)
+        val zipBytes = zipArchive(jsonStr, mapOf("backgrounds/bg_$layoutId" to mockImageBytes))
 
-        // Package into ZIP container stream
-        val baos = ByteArrayOutputStream()
-        ZipOutputStream(baos).use { zos ->
-            zos.putNextEntry(ZipEntry("config.json"))
-            zos.write(jsonStr.toByteArray(Charsets.UTF_8))
-            zos.closeEntry()
-
-            zos.putNextEntry(ZipEntry("backgrounds/bg_$layoutId"))
-            zos.write(mockImageBytes)
-            zos.closeEntry()
-        }
-
-        val zipBytes = baos.toByteArray()
         assertTrue(zipBytes.size > 4)
-        assertEquals(0x50.toByte(), zipBytes[0]) // 'P'
-        assertEquals(0x4B.toByte(), zipBytes[1]) // 'K'
+        assertEquals(0x50.toByte(), zipBytes[0])
+        assertEquals(0x4B.toByte(), zipBytes[1])
 
-        // Parse ZIP container back
-        var extractedJson: String? = null
-        val extractedImages = mutableMapOf<String, ByteArray>()
-        ZipInputStream(ByteArrayInputStream(zipBytes)).use { zis ->
-            var entry = zis.nextEntry
-            while (entry != null) {
-                if (entry.name == "config.json") {
-                    extractedJson = zis.readBytes().toString(Charsets.UTF_8)
-                } else if (entry.name.startsWith("backgrounds/")) {
-                    extractedImages[entry.name] = zis.readBytes()
-                }
-                zis.closeEntry()
-                entry = zis.nextEntry
-            }
-        }
-
+        val (extractedJson, extractedImages) = unzipArchive(zipBytes)
         assertTrue(extractedJson != null)
-        assertTrue(extractedImages.containsKey("backgrounds/bg_$layoutId"))
         assertTrue(extractedImages["backgrounds/bg_$layoutId"]!!.contentEquals(mockImageBytes))
 
-        // Verify parsed config & checksum
         val parsed = ConfigManager.parseAndVerify(extractedJson!!, extractedImages)
         assertEquals(validChecksum, parsed.checksum)
         assertEquals(1, parsed.profiles.size)
@@ -420,16 +408,13 @@ class ConfigExportImportStructureTest {
                     includeBackgrounds = false,
                 )
 
-            // Settings MUST be empty for profile-share exports
             assertTrue(export.settings.isEmpty())
             assertEquals(1, export.profiles.size)
             assertEquals(testProfile.name, export.profiles[0].name)
 
-            // Serialize to plain JSON string & parse back
             val jsonStr = testJson.encodeToString(MegingiardExport.serializer(), export)
             val parsed = ConfigManager.parseAndVerify(jsonStr)
 
-            // Assert settings map remains empty and profile is intact
             assertTrue(parsed.settings.isEmpty())
             assertEquals(export.checksum, parsed.checksum)
             assertEquals(testProfile.id, parsed.profiles[0].id)
@@ -442,42 +427,11 @@ class ConfigExportImportStructureTest {
     fun testProfileShareWithBackgroundsRoundTrip() {
         val mockImageBytes = "fake_webp_image_bytes_profile_share".toByteArray(Charsets.UTF_8)
         val layoutId = "layout-profile-share-bg"
+        val bgLayout = PadLayout(id = layoutId, name = "SharedLayoutWithBg", backgroundImagePath = "backgrounds/bg_$layoutId")
+        val bgProfile = PadProfile(id = "profile-share-bg", name = "SharedProfileWithBg", layouts = listOf(bgLayout))
+        val imageHashes = mapOf("bg_$layoutId" to HmacUtil.sha256Hex(mockImageBytes).lowercase())
 
-        val bgLayout =
-            PadLayout(
-                id = layoutId,
-                name = "SharedLayoutWithBg",
-                backgroundImagePath = "backgrounds/bg_$layoutId",
-            )
-        val bgProfile =
-            PadProfile(
-                id = "profile-share-bg",
-                name = "SharedProfileWithBg",
-                layouts = listOf(bgLayout),
-            )
-
-        val imageHash =
-            HmacUtil
-                .sha256Hex(mockImageBytes)
-                .lowercase()
-        val imageHashes = mapOf("bg_$layoutId" to imageHash)
-
-        val checksumMethod =
-            ConfigManager::class.java.getDeclaredMethod(
-                "computeChecksum",
-                Map::class.java,
-                List::class.java,
-                Map::class.java,
-            )
-        checksumMethod.isAccessible = true
-        val validChecksum =
-            checksumMethod.invoke(
-                ConfigManager,
-                emptyMap<String, Map<String, Any>>(),
-                listOf(bgProfile),
-                imageHashes,
-            ) as String
-
+        val validChecksum = invokeComputeChecksum(emptyMap(), listOf(bgProfile), imageHashes)
         val export =
             MegingiardExport(
                 schemaVersion = SCHEMA_VERSION,
@@ -488,44 +442,15 @@ class ConfigExportImportStructureTest {
             )
 
         val jsonStr = testJson.encodeToString(MegingiardExport.serializer(), export)
+        val zipBytes = zipArchive(jsonStr, mapOf("backgrounds/bg_$layoutId" to mockImageBytes))
 
-        // Package into ZIP container stream
-        val baos = ByteArrayOutputStream()
-        ZipOutputStream(baos).use { zos ->
-            zos.putNextEntry(ZipEntry("config.json"))
-            zos.write(jsonStr.toByteArray(Charsets.UTF_8))
-            zos.closeEntry()
-
-            zos.putNextEntry(ZipEntry("backgrounds/bg_$layoutId"))
-            zos.write(mockImageBytes)
-            zos.closeEntry()
-        }
-
-        val zipBytes = baos.toByteArray()
         assertTrue(zipBytes.size > 4)
         assertEquals(0x50.toByte(), zipBytes[0])
 
-        // Parse ZIP container back
-        var extractedJson: String? = null
-        val extractedImages = mutableMapOf<String, ByteArray>()
-        ZipInputStream(ByteArrayInputStream(zipBytes)).use { zis ->
-            var entry = zis.nextEntry
-            while (entry != null) {
-                if (entry.name == "config.json") {
-                    extractedJson = zis.readBytes().toString(Charsets.UTF_8)
-                } else if (entry.name.startsWith("backgrounds/")) {
-                    extractedImages[entry.name] = zis.readBytes()
-                }
-                zis.closeEntry()
-                entry = zis.nextEntry
-            }
-        }
-
+        val (extractedJson, extractedImages) = unzipArchive(zipBytes)
         assertTrue(extractedJson != null)
-        assertTrue(extractedImages.containsKey("backgrounds/bg_$layoutId"))
         assertTrue(extractedImages["backgrounds/bg_$layoutId"]!!.contentEquals(mockImageBytes))
 
-        // Verify parsed profile-share config & checksum
         val parsed = ConfigManager.parseAndVerify(extractedJson!!, extractedImages)
         assertTrue(parsed.settings.isEmpty())
         assertEquals(validChecksum, parsed.checksum)
@@ -544,15 +469,12 @@ class ConfigExportImportStructureTest {
                 profiles = listOf(testProfile),
             )
 
-        // Set in-app parsed import
         ConfigManager.setInAppParsedImport(testExport)
         assertEquals(testExport, ConfigManager.pendingInAppParsedImport.value)
 
-        // Set in-app error
         ConfigManager.setInAppImportError("Corrupted archive")
         assertEquals("Corrupted archive", ConfigManager.inAppImportError.value)
 
-        // Clear in-app pending import
         ConfigManager.clearInAppPendingImport()
         assertEquals(null, ConfigManager.pendingInAppParsedImport.value)
         assertEquals(null, ConfigManager.inAppImportError.value)
@@ -564,88 +486,22 @@ class ConfigExportImportStructureTest {
     @Test
     fun testApplyImportRestoresBackgroundImagesWithExplicitMap() =
         runBlocking {
-            val context: Context = RuntimeEnvironment.getApplication()
-            val layoutId = "layout-bg-import-1"
-            val mockImageBytes = "mock_background_bytes_12345".toByteArray(Charsets.UTF_8)
-
-            val bgLayout =
-                PadLayout(
-                    id = layoutId,
-                    name = "LayoutWithBg",
-                    backgroundImagePath = "backgrounds/bg_$layoutId",
-                )
-            val bgProfile =
-                PadProfile(
-                    id = "profile-bg-import",
-                    name = "ProfileToImport",
-                    layouts = listOf(bgLayout),
-                )
-
-            val export =
-                MegingiardExport(
-                    schemaVersion = SCHEMA_VERSION,
-                    metadata = testMetadata,
-                    checksum = "dummy",
-                    settings = emptyMap(),
-                    profiles = listOf(bgProfile),
-                )
-
-            val imagesMap = mapOf(layoutId to mockImageBytes)
-
-            ConfigManager.applyImport(context, export, imagesMap)
-
-            val importedProfile = MacroPadState.profiles.value.find { it.name == "ProfileToImport" }
-            assertNotNull(importedProfile)
-            val importedLayout = importedProfile!!.layouts.first()
-            assertNotNull(importedLayout.backgroundImagePath)
-            assertTrue(importedLayout.backgroundImagePath!!.startsWith("backgrounds/bg_"))
-
-            val savedFile = File(context.filesDir, importedLayout.backgroundImagePath!!)
-            assertTrue(savedFile.exists())
-            assertTrue(savedFile.readBytes().contentEquals(mockImageBytes))
+            assertBackgroundRestoration(
+                isProfileImport = false,
+                layoutId = "layout-bg-import-1",
+                profileName = "ProfileToImport",
+                imageKey = "layout-bg-import-1",
+            )
         }
 
     @Test
     fun testApplyProfileImportRestoresBackgroundImagesWithExplicitMap() =
         runBlocking {
-            val context: Context = RuntimeEnvironment.getApplication()
-            val layoutId = "layout-profile-share-bg-1"
-            val mockImageBytes = "mock_profile_share_background_bytes_67890".toByteArray(Charsets.UTF_8)
-
-            val bgLayout =
-                PadLayout(
-                    id = layoutId,
-                    name = "ProfileShareLayout",
-                    backgroundImagePath = "backgrounds/bg_$layoutId",
-                )
-            val bgProfile =
-                PadProfile(
-                    id = "profile-share-bg-import",
-                    name = "ProfileShareToImport",
-                    layouts = listOf(bgLayout),
-                )
-
-            val export =
-                MegingiardExport(
-                    schemaVersion = SCHEMA_VERSION,
-                    metadata = testMetadata,
-                    checksum = "dummy",
-                    settings = emptyMap(),
-                    profiles = listOf(bgProfile),
-                )
-
-            val imagesMap = mapOf("bg_$layoutId" to mockImageBytes)
-
-            ConfigManager.applyProfileImport(context, export, imagesMap)
-
-            val importedProfile = MacroPadState.profiles.value.find { it.name == "ProfileShareToImport" }
-            assertNotNull(importedProfile)
-            val importedLayout = importedProfile!!.layouts.first()
-            assertNotNull(importedLayout.backgroundImagePath)
-            assertTrue(importedLayout.backgroundImagePath!!.startsWith("backgrounds/bg_"))
-
-            val savedFile = File(context.filesDir, importedLayout.backgroundImagePath!!)
-            assertTrue(savedFile.exists())
-            assertTrue(savedFile.readBytes().contentEquals(mockImageBytes))
+            assertBackgroundRestoration(
+                isProfileImport = true,
+                layoutId = "layout-profile-share-bg-1",
+                profileName = "ProfileShareToImport",
+                imageKey = "bg_layout-profile-share-bg-1",
+            )
         }
 }
