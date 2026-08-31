@@ -37,8 +37,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
@@ -58,6 +56,7 @@ import com.stormpanda.megingiard.ui.GamepadSliderCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.GamepadTwoStepConfirmCard
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.dimColorFilter
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
 import kotlinx.coroutines.Dispatchers
@@ -139,33 +138,7 @@ internal fun LayoutBackgroundSubPageContent(
 
     val bgImageDimFilter =
         remember(bgImageDim) {
-            val brightness = 1f - bgImageDim
-            val matrix =
-                ColorMatrix(
-                    floatArrayOf(
-                        brightness,
-                        0f,
-                        0f,
-                        0f,
-                        0f,
-                        0f,
-                        brightness,
-                        0f,
-                        0f,
-                        0f,
-                        0f,
-                        0f,
-                        brightness,
-                        0f,
-                        0f,
-                        0f,
-                        0f,
-                        0f,
-                        1f,
-                        0f,
-                    ),
-                )
-            ColorFilter.colorMatrix(matrix)
+            dimColorFilter(bgImageDim)
         }
 
     LaunchedEffect(pendingImageUri, currentBgPath) {

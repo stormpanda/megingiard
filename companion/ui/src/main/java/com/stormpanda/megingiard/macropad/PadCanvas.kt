@@ -50,8 +50,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -70,6 +68,7 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.BitmapUtils
 import com.stormpanda.megingiard.math.ViewportMath
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.dimColorFilter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -174,38 +173,7 @@ internal fun PadCanvas(
 
     val bgImageDimFilter =
         remember(layout?.backgroundImageDim) {
-            val dim = layout?.backgroundImageDim ?: 0f
-            if (dim > 0f) {
-                val scale = 1f - dim
-                ColorFilter.colorMatrix(
-                    ColorMatrix(
-                        floatArrayOf(
-                            scale,
-                            0f,
-                            0f,
-                            0f,
-                            0f,
-                            0f,
-                            scale,
-                            0f,
-                            0f,
-                            0f,
-                            0f,
-                            0f,
-                            scale,
-                            0f,
-                            0f,
-                            0f,
-                            0f,
-                            0f,
-                            1f,
-                            0f,
-                        ),
-                    ),
-                )
-            } else {
-                null
-            }
+            dimColorFilter(layout?.backgroundImageDim ?: 0f)
         }
 
     var lockSymbolVisible by remember { mutableStateOf(false) }

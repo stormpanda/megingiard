@@ -78,6 +78,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawOutline
@@ -2407,3 +2409,34 @@ fun Color.toHexLabel(includeAlpha: Boolean = true): String =
     } else {
         String.format("#%06X", 0xFFFFFF and toArgb())
     }
+
+fun dimColorFilter(dim: Float): ColorFilter? {
+    if (dim <= 0f) return null
+    val brightness = (1f - dim).coerceIn(0f, 1f)
+    return ColorFilter.colorMatrix(
+        ColorMatrix(
+            floatArrayOf(
+                brightness,
+                0f,
+                0f,
+                0f,
+                0f,
+                0f,
+                brightness,
+                0f,
+                0f,
+                0f,
+                0f,
+                0f,
+                brightness,
+                0f,
+                0f,
+                0f,
+                0f,
+                0f,
+                1f,
+                0f,
+            ),
+        ),
+    )
+}

@@ -47,8 +47,6 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.asImageBitmap
@@ -85,6 +83,7 @@ import com.stormpanda.megingiard.touchpad.TouchpadGestureProcessor
 import com.stormpanda.megingiard.ui.DialogToastManager
 import com.stormpanda.megingiard.ui.DialogToastPill
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.dimColorFilter
 import com.stormpanda.megingiard.ui.rememberBezelBrush
 import com.stormpanda.megingiard.ui.rememberQuickMenuGestureMetrics
 import com.stormpanda.megingiard.viewmodel.MacroPadViewModel
@@ -281,38 +280,7 @@ internal fun PadSurface(
 
     val bgImageDimFilter =
         remember(layout.backgroundImageDim) {
-            val dim = layout.backgroundImageDim
-            if (dim > 0f) {
-                val scale = 1f - dim
-                ColorFilter.colorMatrix(
-                    ColorMatrix(
-                        floatArrayOf(
-                            scale,
-                            0f,
-                            0f,
-                            0f,
-                            0f,
-                            0f,
-                            scale,
-                            0f,
-                            0f,
-                            0f,
-                            0f,
-                            0f,
-                            scale,
-                            0f,
-                            0f,
-                            0f,
-                            0f,
-                            0f,
-                            1f,
-                            0f,
-                        ),
-                    ),
-                )
-            } else {
-                null
-            }
+            dimColorFilter(layout.backgroundImageDim)
         }
 
     // Create hit-test engine with density-aware dp→px converter and haptic callback
