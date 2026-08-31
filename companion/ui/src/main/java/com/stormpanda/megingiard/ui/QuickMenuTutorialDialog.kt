@@ -93,6 +93,7 @@ private val QM_DIALOG_PADDING_TOP = 20.dp
 private val QM_DIALOG_PADDING_BOTTOM = 16.dp
 private val QM_DIALOG_SHADOW_ELEVATION = 8.dp
 private val QM_DIALOG_CORNER_RADIUS = 28.dp
+private val QM_DIALOG_SHAPE = RoundedCornerShape(QM_DIALOG_CORNER_RADIUS)
 private val QM_DIALOG_BORDER_WIDTH = 1.dp
 private val QM_TITLE_BODY_SPACING = 12.dp
 private val QM_BODY_BUTTON_SPACING = 12.dp
@@ -477,13 +478,13 @@ fun QuickMenuTutorialDialog(
                 Modifier
                     .widthIn(max = QM_DIALOG_MAX_WIDTH)
                     .padding(horizontal = 16.dp)
-                    .shadow(QM_DIALOG_SHADOW_ELEVATION, RoundedCornerShape(QM_DIALOG_CORNER_RADIUS))
-                    .clip(RoundedCornerShape(QM_DIALOG_CORNER_RADIUS))
+                    .shadow(QM_DIALOG_SHADOW_ELEVATION, QM_DIALOG_SHAPE)
+                    .clip(QM_DIALOG_SHAPE)
                     .background(colors.surface)
                     .border(
                         QM_DIALOG_BORDER_WIDTH,
                         brush = rememberBezelBrush(),
-                        shape = RoundedCornerShape(QM_DIALOG_CORNER_RADIUS),
+                        shape = QM_DIALOG_SHAPE,
                     ).padding(
                         start = QM_DIALOG_PADDING_HORIZONTAL,
                         end = QM_DIALOG_PADDING_HORIZONTAL,
