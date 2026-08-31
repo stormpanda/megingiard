@@ -218,14 +218,9 @@ fun FocusLibraryScreen(
         AnimatedContent(
             targetState = selectedTab,
             transitionSpec = {
-                val isMovingNext = initialState.next(tabs) == targetState
-                if (isMovingNext) {
-                    (slideInHorizontally { width -> width } + fadeIn())
-                        .togetherWith(slideOutHorizontally { width -> -width } + fadeOut())
-                } else {
-                    (slideInHorizontally { width -> -width } + fadeIn())
-                        .togetherWith(slideOutHorizontally { width -> width } + fadeOut())
-                }
+                val direction = if (initialState.next(tabs) == targetState) 1 else -1
+                (slideInHorizontally { width -> width * direction } + fadeIn())
+                    .togetherWith(slideOutHorizontally { width -> -width * direction } + fadeOut())
             },
             label = "LibraryCategoryTransition",
             modifier = Modifier.fillMaxSize(),
@@ -690,14 +685,9 @@ private fun InteractiveLibraryCategoryHeader(
         AnimatedContent(
             targetState = selectedTab,
             transitionSpec = {
-                val isMovingNext = initialState.next(tabs) == targetState
-                if (isMovingNext) {
-                    (slideInHorizontally { width -> width / 3 } + fadeIn())
-                        .togetherWith(slideOutHorizontally { width -> -width / 3 } + fadeOut())
-                } else {
-                    (slideInHorizontally { width -> -width / 3 } + fadeIn())
-                        .togetherWith(slideOutHorizontally { width -> width / 3 } + fadeOut())
-                }
+                val direction = if (initialState.next(tabs) == targetState) 1 else -1
+                (slideInHorizontally { width -> (width / 3) * direction } + fadeIn())
+                    .togetherWith(slideOutHorizontally { width -> -(width / 3) * direction } + fadeOut())
             },
             label = "LibraryHorizontalCategoryTransition",
         ) { currentTab ->
@@ -805,6 +795,9 @@ private fun LibraryGridItem(
         label = "LibraryVisibilityOffAlpha",
     )
 
+    val cardShape = remember { RoundedCornerShape(FLS_CORNER_RADIUS) }
+    val romIconShape = remember { RoundedCornerShape(FLS_ROM_ICON_CORNER_RADIUS) }
+
     Box(
         modifier =
             modifier
@@ -812,7 +805,7 @@ private fun LibraryGridItem(
                     scaleX = cardScale
                     scaleY = cardScale
                     alpha = cardAlpha
-                }.clip(RoundedCornerShape(FLS_CORNER_RADIUS))
+                }.clip(cardShape)
                 .drawBehind {
                     drawRect(animatedCardBg)
                 }.noFocusClickable(onClickTop),
@@ -838,7 +831,7 @@ private fun LibraryGridItem(
                         bitmap = currentBitmap,
                         contentDescription = appInfo.label,
                         contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(FLS_ROM_ICON_CORNER_RADIUS)),
+                        modifier = Modifier.fillMaxSize().clip(romIconShape),
                     )
                 } else {
                     GameFocusFallbackIcon(
