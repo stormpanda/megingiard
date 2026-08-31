@@ -57,47 +57,52 @@ object RomManager {
 
     private val _romCleanedNames = mutableMapOf<String, String>()
 
+    private inline fun <reified T> loadJsonFile(
+        context: Context,
+        filename: String,
+    ): T? {
+        val file = File(context.filesDir, filename)
+        if (!file.exists()) return null
+        return try {
+            Json.decodeFromString<T>(file.readText())
+        } catch (e: Exception) {
+            AppLog.w(TAG, "Failed to load $filename: ${e.message}")
+            null
+        }
+    }
+
+    private inline fun <reified T> saveJsonFile(
+        context: Context,
+        filename: String,
+        value: T,
+    ) {
+        try {
+            val file = File(context.filesDir, filename)
+            file.writeText(Json.encodeToString(value))
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Failed to save $filename: ${e.message}", e)
+        }
+    }
+
     fun loadRomFolders(context: Context) {
-        val file = File(context.filesDir, FILE_ROM_FOLDERS)
-        if (file.exists()) {
-            try {
-                val content = file.readText()
-                val folders = Json.decodeFromString<List<CustomRomFolder>>(content)
-                _romFolders.value = folders
-                AppLog.d(TAG, "Loaded ${folders.size} ROM folders from disk")
-            } catch (e: Exception) {
-                AppLog.w(TAG, "Failed to load ROM folders: ${e.message}")
-            }
+        loadJsonFile<List<CustomRomFolder>>(context, FILE_ROM_FOLDERS)?.let { folders ->
+            _romFolders.value = folders
+            AppLog.d(TAG, "Loaded ${folders.size} ROM folders from disk")
         }
 
-        val namesFile = File(context.filesDir, FILE_ROM_CLEANED_NAMES)
-        if (namesFile.exists()) {
-            try {
-                val content = namesFile.readText()
-                val map = Json.decodeFromString<Map<String, String>>(content)
-                synchronized(_romCleanedNames) {
-                    _romCleanedNames.clear()
-                    _romCleanedNames.putAll(map)
-                }
-                AppLog.d(TAG, "Loaded ${map.size} cleaned ROM names from disk")
-            } catch (e: Exception) {
-                AppLog.w(TAG, "Failed to load cleaned ROM names: ${e.message}")
+        loadJsonFile<Map<String, String>>(context, FILE_ROM_CLEANED_NAMES)?.let { map ->
+            synchronized(_romCleanedNames) {
+                _romCleanedNames.clear()
+                _romCleanedNames.putAll(map)
             }
+            AppLog.d(TAG, "Loaded ${map.size} cleaned ROM names from disk")
         }
     }
 
     private fun saveRomCleanedNames(context: Context) {
-        try {
-            val file = File(context.filesDir, FILE_ROM_CLEANED_NAMES)
-            val content =
-                synchronized(_romCleanedNames) {
-                    Json.encodeToString(_romCleanedNames)
-                }
-            file.writeText(content)
-            AppLog.d(TAG, "Saved cleaned ROM names to disk")
-        } catch (e: Exception) {
-            AppLog.e(TAG, "Failed to save cleaned ROM names: ${e.message}", e)
-        }
+        val content = synchronized(_romCleanedNames) { _romCleanedNames.toMap() }
+        saveJsonFile(context, FILE_ROM_CLEANED_NAMES, content)
+        AppLog.d(TAG, "Saved cleaned ROM names to disk")
     }
 
     private fun saveRomFolders(
@@ -105,14 +110,8 @@ object RomManager {
         folders: List<CustomRomFolder>,
     ) {
         _romFolders.value = folders
-        try {
-            val file = File(context.filesDir, FILE_ROM_FOLDERS)
-            val content = Json.encodeToString(folders)
-            file.writeText(content)
-            AppLog.d(TAG, "Saved ${folders.size} ROM folders to disk")
-        } catch (e: Exception) {
-            AppLog.e(TAG, "Failed to save ROM folders: ${e.message}", e)
-        }
+        saveJsonFile(context, FILE_ROM_FOLDERS, folders)
+        AppLog.d(TAG, "Saved ${folders.size} ROM folders to disk")
     }
 
     suspend fun addRomFolder(
