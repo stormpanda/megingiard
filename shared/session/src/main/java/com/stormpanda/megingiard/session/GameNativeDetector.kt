@@ -7,6 +7,17 @@ private const val TAG = "GameNativeDetector"
 private const val PROC_SPLIT_LIMIT = 4
 private const val PROC_INDEX_UID = 2
 private const val PROC_INDEX_CMDLINE = 3
+private val SYSTEM_HELPERS =
+    setOf(
+        "wineserver",
+        "services.exe",
+        "winedevice.exe",
+        "explorer.exe",
+        "winhandler.exe",
+        "tabtip.exe",
+        "steamclient_loader_x64.exe",
+        "pulseaudio",
+    )
 
 /**
  * Detector implementation for GameNative instances.
@@ -64,19 +75,6 @@ object GameNativeDetector : EmulatorDetector {
             return null
         }
 
-        // Find running .exe under that UID which is not a known system process
-        val systemHelpers =
-            setOf(
-                "wineserver",
-                "services.exe",
-                "winedevice.exe",
-                "explorer.exe",
-                "winhandler.exe",
-                "tabtip.exe",
-                "steamclient_loader_x64.exe",
-                "pulseaudio",
-            )
-
         for (line in lines) {
             if (line.startsWith("PROC ")) {
                 val parts = line.split(' ', limit = PROC_SPLIT_LIMIT)
@@ -89,7 +87,7 @@ object GameNativeDetector : EmulatorDetector {
                             val lastSlash = normalizedCmd.lastIndexOf('\\')
                             val exeName = if (lastSlash != -1) normalizedCmd.substring(lastSlash + 1) else normalizedCmd
 
-                            if (systemHelpers.any { helper ->
+                            if (SYSTEM_HELPERS.any { helper ->
                                     exeName.equals(helper, ignoreCase = true) ||
                                         normalizedCmd.contains(helper, ignoreCase = true)
                                 }
