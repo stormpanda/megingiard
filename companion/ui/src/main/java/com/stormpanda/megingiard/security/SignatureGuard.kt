@@ -37,9 +37,9 @@ private const val TAG = "SignatureGuard"
  */
 object SignatureGuard {
     sealed class Result {
-        object Ok : Result()
+        data object Ok : Result()
 
-        object Skipped : Result()
+        data object Skipped : Result()
 
         data class Tampered(
             val expected: String,

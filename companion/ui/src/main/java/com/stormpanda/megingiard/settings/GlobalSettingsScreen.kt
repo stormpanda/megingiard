@@ -75,13 +75,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.AppLog
@@ -159,7 +157,6 @@ private val GS_ACCENT_PALETTE_PRESETS =
         Color(0xFFEC407A), // Pink
     )
 
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun GlobalSettingsScreen(
     onBack: () -> Unit,

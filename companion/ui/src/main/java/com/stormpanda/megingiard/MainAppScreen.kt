@@ -7,7 +7,6 @@ import android.content.Intent
 import android.database.ContentObserver
 import android.os.Handler
 import android.os.Looper
-import android.os.Vibrator
 import android.provider.Settings
 import android.view.Display
 import android.view.accessibility.AccessibilityManager
