@@ -90,6 +90,8 @@ internal const val PM_SCRIM_ALPHA = 0.55f
 internal const val PM_NAME_DIALOG_SCRIM_ALPHA = 0.5f
 internal const val PM_NAME_DIALOG_WIDTH_FRACTION = 0.85f
 
+private val PM_PANEL_SHAPE = RoundedCornerShape(PM_PANEL_CORNER)
+
 /**
  * Quick Menu overlay — appears when [AppStateManager.isQuickMenuOpen] transitions to true.
  *
@@ -169,8 +171,6 @@ fun QuickMenu(
                 onTakeBothScreenshot = { ScreenCaptureManager.requestScreenshot(ScreenshotTarget.BOTH) },
             )
 
-            val panelShape = RoundedCornerShape(PM_PANEL_CORNER)
-
             fun ensureMacroPadModeForProfile(profile: PadProfile?) {
                 val matchesFocused =
                     profile?.matches(
@@ -193,10 +193,10 @@ fun QuickMenu(
                             exit = slideOutVertically { it },
                         ).fillMaxWidth()
                         .padding(horizontal = PM_PANEL_H_PADDING, vertical = PM_PANEL_V_PADDING)
-                        .shadow(PM_ELEVATION, panelShape)
-                        .clip(panelShape)
+                        .shadow(PM_ELEVATION, PM_PANEL_SHAPE)
+                        .clip(PM_PANEL_SHAPE)
                         .background(colors.controlOverlay)
-                        .border(PM_BORDER_WIDTH, brush = menuBezelBrush, shape = panelShape)
+                        .border(PM_BORDER_WIDTH, brush = menuBezelBrush, shape = PM_PANEL_SHAPE)
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
