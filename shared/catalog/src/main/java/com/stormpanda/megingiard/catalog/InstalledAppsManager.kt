@@ -44,10 +44,10 @@ private const val THOR_SECONDARY_DISPLAY_FALLBACK_ID = 4
 object InstalledAppsManager {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    private val _installedAndroidApps = MutableStateFlow<List<InstalledAppInfo>>(emptyList())
+    private val installedAndroidAppsFlow = MutableStateFlow<List<InstalledAppInfo>>(emptyList())
     val installedApps: StateFlow<List<InstalledAppInfo>> =
         combine(
-            _installedAndroidApps,
+            installedAndroidAppsFlow,
             RomManager.romApps,
         ) { androidApps, romApps ->
             (androidApps + romApps).sortedBy { it.label.lowercase() }
@@ -285,7 +285,7 @@ object InstalledAppsManager {
                         )
                     }.sortedBy { it.label.lowercase() }
 
-            _installedAndroidApps.value = apps
+            installedAndroidAppsFlow.value = apps
             val gameCount = apps.count { it.isGame }
             AppLog.d(TAG, "Loaded ${apps.size} installed apps ($gameCount games, ${apps.size - gameCount} apps) for launcher browser")
 
@@ -302,8 +302,8 @@ object InstalledAppsManager {
             RomManager.updateRomCover(packageName, coverPath)
             return
         }
-        _installedAndroidApps.value =
-            _installedAndroidApps.value.map { item ->
+        installedAndroidAppsFlow.value =
+            installedAndroidAppsFlow.value.map { item ->
                 if (item.packageName == packageName) {
                     item.copy(
                         coverPath = coverPath,
