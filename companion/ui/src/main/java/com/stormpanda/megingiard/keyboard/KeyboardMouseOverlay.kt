@@ -92,8 +92,8 @@ internal fun MouseButtonColumn(
             MouseButton(
                 label = stringResource(R.string.kb_mouse_btn_middle),
                 accentColor = accentColor,
-                onDown = { MouseInjector.middleDown() },
-                onUp = { MouseInjector.middleUp() },
+                onDown = MouseInjector::middleDown,
+                onUp = MouseInjector::middleUp,
                 width = KB_MOUSE_BTN_1X1,
                 height = KB_MOUSE_BTN_1X1,
                 shape = CircleShape,
@@ -114,8 +114,8 @@ internal fun MouseButtonColumn(
             MouseButton(
                 label = stringResource(R.string.kb_mouse_btn_4),
                 accentColor = accentColor,
-                onDown = { MouseInjector.mouse4Down() },
-                onUp = { MouseInjector.mouse4Up() },
+                onDown = MouseInjector::mouse4Down,
+                onUp = MouseInjector::mouse4Up,
                 width = KB_MOUSE_BTN_1X1,
                 height = KB_MOUSE_BTN_1X1,
                 shape = CircleShape,
@@ -124,8 +124,8 @@ internal fun MouseButtonColumn(
             MouseButton(
                 label = stringResource(R.string.kb_mouse_btn_5),
                 accentColor = accentColor,
-                onDown = { MouseInjector.mouse5Down() },
-                onUp = { MouseInjector.mouse5Up() },
+                onDown = MouseInjector::mouse5Down,
+                onUp = MouseInjector::mouse5Up,
                 width = KB_MOUSE_BTN_1X1,
                 height = KB_MOUSE_BTN_1X1,
                 shape = CircleShape,

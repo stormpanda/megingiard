@@ -63,10 +63,10 @@ internal fun TrackpointOverlay(
                 if (kbMouseBtnPos == KbMouseBtnPos.LEFT || kbMouseBtnPos == KbMouseBtnPos.BOTH) {
                     MouseButtonColumn(
                         accentColor = accentColor,
-                        onLmbDown = { MouseInjector.leftDown() },
-                        onLmbUp = { MouseInjector.leftUp() },
-                        onRmbDown = { MouseInjector.rightDown() },
-                        onRmbUp = { MouseInjector.rightUp() },
+                        onLmbDown = MouseInjector::leftDown,
+                        onLmbUp = MouseInjector::leftUp,
+                        onRmbDown = MouseInjector::rightDown,
+                        onRmbUp = MouseInjector::rightUp,
                         modifier =
                             Modifier
                                 .align(Alignment.CenterStart)
@@ -76,10 +76,10 @@ internal fun TrackpointOverlay(
                 if (kbMouseBtnPos == KbMouseBtnPos.RIGHT || kbMouseBtnPos == KbMouseBtnPos.BOTH) {
                     MouseButtonColumn(
                         accentColor = accentColor,
-                        onLmbDown = { MouseInjector.leftDown() },
-                        onLmbUp = { MouseInjector.leftUp() },
-                        onRmbDown = { MouseInjector.rightDown() },
-                        onRmbUp = { MouseInjector.rightUp() },
+                        onLmbDown = MouseInjector::leftDown,
+                        onLmbUp = MouseInjector::leftUp,
+                        onRmbDown = MouseInjector::rightDown,
+                        onRmbUp = MouseInjector::rightUp,
                         mirrored = true,
                         modifier =
                             Modifier
