@@ -15,251 +15,103 @@ class MirrorRuntimePolicyTest {
         const val LAYOUT_A = "layout-a"
     }
 
+    private fun policyState(
+        promptInFlight: Boolean = false,
+        isOnValidScreen: Boolean = true,
+        isCapturing: Boolean = false,
+        layoutId: String? = LAYOUT_A,
+        layoutWantsMirror: Boolean = true,
+        privdMirrorConnecting: Boolean = false,
+        tutorialsActive: Boolean = false,
+    ) = MirrorRuntimePolicyState(
+        promptInFlight = promptInFlight,
+        isOnValidScreen = isOnValidScreen,
+        isCapturing = isCapturing,
+        layoutId = layoutId,
+        layoutWantsMirror = layoutWantsMirror,
+        privdMirrorConnecting = privdMirrorConnecting,
+        tutorialsActive = tutorialsActive,
+    )
+
+    private fun checkConnecting(
+        privdState: PrivdState,
+        promptActive: Boolean = false,
+        hasCreds: Boolean = true,
+        dismissed: Boolean = false,
+        isManuallyDisconnected: Boolean = false,
+    ) = isPrivdMirrorConnecting(
+        privdState = privdState,
+        promptActive = promptActive,
+        hasCreds = hasCreds,
+        dismissed = dismissed,
+        isManuallyDisconnected = isManuallyDisconnected,
+    )
+
     @Test
     fun `starts when active layout wants mirror and no capture is running`() {
-        val decision =
-            decideMirrorRuntimeAction(
-                MirrorRuntimePolicyState(
-                    promptInFlight = false,
-                    isOnValidScreen = true,
-                    isCapturing = false,
-                    layoutId = LAYOUT_A,
-                    layoutWantsMirror = true,
-                ),
-            )
-
-        assertEquals(MirrorRuntimeAction.START, decision)
+        assertEquals(MirrorRuntimeAction.START, decideMirrorRuntimeAction(policyState()))
     }
 
     @Test
     fun `stops when active layout does not want mirror while capture is running`() {
-        val decision =
-            decideMirrorRuntimeAction(
-                MirrorRuntimePolicyState(
-                    promptInFlight = false,
-                    isOnValidScreen = true,
-                    isCapturing = true,
-                    layoutId = LAYOUT_A,
-                    layoutWantsMirror = false,
-                ),
-            )
-
-        assertEquals(MirrorRuntimeAction.STOP, decision)
+        assertEquals(MirrorRuntimeAction.STOP, decideMirrorRuntimeAction(policyState(isCapturing = true, layoutWantsMirror = false)))
     }
 
     @Test
     fun `does nothing when active layout wants mirror while capture is already running`() {
-        val decision =
-            decideMirrorRuntimeAction(
-                MirrorRuntimePolicyState(
-                    promptInFlight = false,
-                    isOnValidScreen = true,
-                    isCapturing = true,
-                    layoutId = LAYOUT_A,
-                    layoutWantsMirror = true,
-                ),
-            )
-
-        assertEquals(MirrorRuntimeAction.NONE, decision)
+        assertEquals(MirrorRuntimeAction.NONE, decideMirrorRuntimeAction(policyState(isCapturing = true)))
     }
 
     @Test
     fun `does nothing when active layout does not want mirror and capture is stopped`() {
-        val decision =
-            decideMirrorRuntimeAction(
-                MirrorRuntimePolicyState(
-                    promptInFlight = false,
-                    isOnValidScreen = true,
-                    isCapturing = false,
-                    layoutId = LAYOUT_A,
-                    layoutWantsMirror = false,
-                ),
-            )
-
-        assertEquals(MirrorRuntimeAction.NONE, decision)
+        assertEquals(MirrorRuntimeAction.NONE, decideMirrorRuntimeAction(policyState(layoutWantsMirror = false)))
     }
 
     @Test
     fun `does not start while prompt is already in flight`() {
-        val decision =
-            decideMirrorRuntimeAction(
-                MirrorRuntimePolicyState(
-                    promptInFlight = true,
-                    isOnValidScreen = true,
-                    isCapturing = false,
-                    layoutId = LAYOUT_A,
-                    layoutWantsMirror = true,
-                ),
-            )
-
-        assertEquals(MirrorRuntimeAction.NONE, decision)
+        assertEquals(MirrorRuntimeAction.NONE, decideMirrorRuntimeAction(policyState(promptInFlight = true)))
     }
 
     @Test
     fun `does nothing when not on valid screen even if layout wants mirror`() {
-        val decision =
-            decideMirrorRuntimeAction(
-                MirrorRuntimePolicyState(
-                    promptInFlight = false,
-                    isOnValidScreen = false,
-                    isCapturing = false,
-                    layoutId = LAYOUT_A,
-                    layoutWantsMirror = true,
-                ),
-            )
-
-        assertEquals(MirrorRuntimeAction.NONE, decision)
+        assertEquals(MirrorRuntimeAction.NONE, decideMirrorRuntimeAction(policyState(isOnValidScreen = false)))
     }
 
     @Test
     fun `does nothing when no layout is active even if capture is running`() {
-        val decision =
-            decideMirrorRuntimeAction(
-                MirrorRuntimePolicyState(
-                    promptInFlight = false,
-                    isOnValidScreen = true,
-                    isCapturing = true,
-                    layoutId = null,
-                    layoutWantsMirror = false,
-                ),
-            )
-
-        assertEquals(MirrorRuntimeAction.NONE, decision)
+        assertEquals(
+            MirrorRuntimeAction.NONE,
+            decideMirrorRuntimeAction(policyState(layoutId = null, isCapturing = true, layoutWantsMirror = false)),
+        )
     }
 
     @Test
     fun `does not start while privd mirror daemon is connecting`() {
-        val decision =
-            decideMirrorRuntimeAction(
-                MirrorRuntimePolicyState(
-                    promptInFlight = false,
-                    isOnValidScreen = true,
-                    isCapturing = false,
-                    layoutId = LAYOUT_A,
-                    layoutWantsMirror = true,
-                    privdMirrorConnecting = true,
-                ),
-            )
-
-        assertEquals(MirrorRuntimeAction.NONE, decision)
+        assertEquals(MirrorRuntimeAction.NONE, decideMirrorRuntimeAction(policyState(privdMirrorConnecting = true)))
     }
 
     @Test
     fun `starts when privd mirror daemon is settled (not connecting)`() {
-        val decision =
-            decideMirrorRuntimeAction(
-                MirrorRuntimePolicyState(
-                    promptInFlight = false,
-                    isOnValidScreen = true,
-                    isCapturing = false,
-                    layoutId = LAYOUT_A,
-                    layoutWantsMirror = true,
-                    privdMirrorConnecting = false,
-                ),
-            )
-
-        assertEquals(MirrorRuntimeAction.START, decision)
+        assertEquals(MirrorRuntimeAction.START, decideMirrorRuntimeAction(policyState(privdMirrorConnecting = false)))
     }
 
     @Test
     fun `does not start when onboarding tutorials are active`() {
-        val decision =
-            decideMirrorRuntimeAction(
-                MirrorRuntimePolicyState(
-                    promptInFlight = false,
-                    isOnValidScreen = true,
-                    isCapturing = false,
-                    layoutId = LAYOUT_A,
-                    layoutWantsMirror = true,
-                    tutorialsActive = true,
-                ),
-            )
-
-        assertEquals(MirrorRuntimeAction.NONE, decision)
+        assertEquals(MirrorRuntimeAction.NONE, decideMirrorRuntimeAction(policyState(tutorialsActive = true)))
     }
 
     @Test
     fun `isPrivdMirrorConnecting blocks during race window and allows once dismissed`() {
-        // 1. Race window: daemon failed, prompt is not yet active (async delay), but user has creds
-        assertTrue(
-            isPrivdMirrorConnecting(
-                privdState = PrivdState.FAILED,
-                promptActive = false,
-                hasCreds = true,
-                dismissed = false,
-                isManuallyDisconnected = false,
-            ),
-        )
+        assertTrue(checkConnecting(PrivdState.FAILED, hasCreds = true, dismissed = false))
+        assertFalse(checkConnecting(PrivdState.FAILED, hasCreds = true, dismissed = true))
 
-        // 2. User clicked Done/Skip (dismissed = true) -> should not block anymore
-        assertFalse(
-            isPrivdMirrorConnecting(
-                privdState = PrivdState.FAILED,
-                promptActive = false,
-                hasCreds = true,
-                dismissed = true,
-                isManuallyDisconnected = false,
-            ),
-        )
+        assertTrue(checkConnecting(PrivdState.CONNECTING))
+        assertTrue(checkConnecting(PrivdState.BOOTSTRAPPING))
 
-        // 3. Normal active connecting states should block
-        assertTrue(
-            isPrivdMirrorConnecting(
-                privdState = PrivdState.CONNECTING,
-                promptActive = false,
-                hasCreds = true,
-                dismissed = false,
-                isManuallyDisconnected = false,
-            ),
-        )
-        assertTrue(
-            isPrivdMirrorConnecting(
-                privdState = PrivdState.BOOTSTRAPPING,
-                promptActive = false,
-                hasCreds = true,
-                dismissed = false,
-                isManuallyDisconnected = false,
-            ),
-        )
+        assertTrue(checkConnecting(PrivdState.OFF, hasCreds = true))
+        assertTrue(checkConnecting(PrivdState.OFF, hasCreds = false))
 
-        // 4. Active connection pending on OFF state should block even if hasCreds is false
-        assertTrue(
-            isPrivdMirrorConnecting(
-                privdState = PrivdState.OFF,
-                promptActive = false,
-                hasCreds = true,
-                dismissed = false,
-                isManuallyDisconnected = false,
-            ),
-        )
-        assertTrue(
-            isPrivdMirrorConnecting(
-                privdState = PrivdState.OFF,
-                promptActive = false,
-                hasCreds = false,
-                dismissed = false,
-                isManuallyDisconnected = false,
-            ),
-        )
-
-        // 5. OFF state after manual disconnect should not block
-        assertFalse(
-            isPrivdMirrorConnecting(
-                privdState = PrivdState.OFF,
-                promptActive = false,
-                hasCreds = true,
-                dismissed = false,
-                isManuallyDisconnected = true,
-            ),
-        )
-        assertFalse(
-            isPrivdMirrorConnecting(
-                privdState = PrivdState.OFF,
-                promptActive = false,
-                hasCreds = false,
-                dismissed = false,
-                isManuallyDisconnected = true,
-            ),
-        )
+        assertFalse(checkConnecting(PrivdState.OFF, hasCreds = true, isManuallyDisconnected = true))
+        assertFalse(checkConnecting(PrivdState.OFF, hasCreds = false, isManuallyDisconnected = true))
     }
 }
