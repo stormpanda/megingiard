@@ -196,10 +196,10 @@ class FocusTopLauncherActivity : ComponentActivity() {
             val isLibraryOpen = isLibraryOpenState.value
 
             SideEffect {
-                if (!categories.contains(selectedCategory)) {
+                if (selectedCategory !in categories) {
                     selectedCategoryState.value = GameFocusCategory.LAST_USED
                 }
-                if (!libraryTabs.contains(librarySelectedTabState.value)) {
+                if (librarySelectedTabState.value !in libraryTabs) {
                     librarySelectedTabState.value = LibraryTab.GAMES
                 }
             }
