@@ -45,7 +45,6 @@ object RomManager {
     private const val FILE_ROM_FOLDERS = "gamefocus_rom_folders.json"
     private const val FILE_ROM_CLEANED_NAMES = "gamefocus_rom_names.json"
     private const val MAX_ZIP_PEEKS = 10
-    private val SD_CARD_VOLUME_REGEX = Regex("[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}")
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -238,7 +237,7 @@ object RomManager {
                             if (isMatch) {
                                 val rawLabel = name.substringBeforeLast('.')
                                 val romUriStr = file.uri.toString()
-                                val romPath = getPhysicalPath(file.uri) ?: romUriStr
+                                val romPath = SafPathResolver.resolveFilePath(romUriStr) ?: romUriStr
 
                                 val label =
                                     synchronized(_romCleanedNames) {
@@ -291,29 +290,6 @@ object RomManager {
     ) {
         _romApps.value = _romApps.value.withUpdatedCover(packageName, coverPath)
         AppLog.i(TAG, "Updated in-memory ROM cover path for $packageName to $coverPath")
-    }
-
-    internal fun getPhysicalPath(uri: Uri): String? {
-        val decodedUri = Uri.decode(uri.toString())
-        val primaryIndex = decodedUri.lastIndexOf("primary:")
-        if (primaryIndex != -1) {
-            return "/storage/emulated/0/${decodedUri.substring(primaryIndex + "primary:".length)}"
-        }
-
-        val pathSegment =
-            if (decodedUri.contains(
-                    "/document/",
-                )
-            ) {
-                decodedUri.substringAfterLast("/document/")
-            } else {
-                decodedUri.substringAfterLast("/tree/")
-            }
-        val volumeId = pathSegment.substringBefore(":", "")
-        if (volumeId.isNotEmpty() && volumeId != "primary" && volumeId.matches(SD_CARD_VOLUME_REGEX)) {
-            return "/storage/$volumeId/${pathSegment.substringAfter(":")}"
-        }
-        return null
     }
 
     internal fun detectSystem(

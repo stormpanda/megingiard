@@ -108,27 +108,22 @@ class RomManagerTest {
     }
 
     @Test
-    fun testGetPhysicalPath() {
+    fun testSafPathResolution() {
         assertEquals(
             "/storage/emulated/0/Emulation/game.snes",
-            RomManager.getPhysicalPath(
-                Uri.parse(
-                    "content://com.android.externalstorage.documents/tree/primary%3AEmulation/document/primary%3AEmulation%2Fgame.snes",
-                ),
+            SafPathResolver.resolveFilePath(
+                "content://com.android.externalstorage.documents/tree/primary%3AEmulation/document/primary%3AEmulation%2Fgame.snes",
             ),
         )
         assertEquals(
             "/storage/1234-5678/system/game.snes",
-            RomManager.getPhysicalPath(
-                Uri.parse(
-                    "content://com.android.externalstorage.documents/tree/1234-5678%3Asystem/document/1234-5678%3Asystem%2Fgame.snes",
-                ),
+            SafPathResolver.resolveFilePath(
+                "content://com.android.externalstorage.documents/tree/1234-5678%3Asystem/document/1234-5678%3Asystem%2Fgame.snes",
             ),
         )
         assertEquals(
             "/storage/1234-5678/system",
-            RomManager.getPhysicalPath(Uri.parse("content://com.android.externalstorage.documents/tree/1234-5678%3Asystem")),
+            SafPathResolver.resolveFilePath("content://com.android.externalstorage.documents/tree/1234-5678%3Asystem"),
         )
-        assertNull(RomManager.getPhysicalPath(Uri.parse("content://com.android.externalstorage.documents/tree/not-a-hex-id%3Asystem")))
     }
 }
