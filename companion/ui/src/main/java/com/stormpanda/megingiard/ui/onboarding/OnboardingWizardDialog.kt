@@ -786,22 +786,17 @@ fun PrivilegedStepContent(
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                PrivdChecklistRow(
-                    label = stringResource(R.string.onboarding_privd_stage_dev),
-                    status = devStatus,
-                )
-                PrivdChecklistRow(
-                    label = stringResource(R.string.onboarding_privd_stage_wireless),
-                    status = wirelessStatus,
-                )
-                PrivdChecklistRow(
-                    label = stringResource(R.string.onboarding_privd_stage_pairing),
-                    status = pairingStatus,
-                )
-                PrivdChecklistRow(
-                    label = stringResource(R.string.onboarding_privd_stage_daemon),
-                    status = daemonStatus,
-                )
+                listOf(
+                    R.string.onboarding_privd_stage_dev to devStatus,
+                    R.string.onboarding_privd_stage_wireless to wirelessStatus,
+                    R.string.onboarding_privd_stage_pairing to pairingStatus,
+                    R.string.onboarding_privd_stage_daemon to daemonStatus,
+                ).forEach { (resId, status) ->
+                    PrivdChecklistRow(
+                        label = stringResource(resId),
+                        status = status,
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -827,33 +822,7 @@ fun PrivilegedStepContent(
                     )
                 }
             } else if (!isWifiActive) {
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .background(colors.error.copy(alpha = OW_WARNING_ALPHA_BG), RoundedCornerShape(OW_WARNING_CORNER_RADIUS))
-                            .border(
-                                OW_WARNING_BORDER_WIDTH,
-                                colors.error.copy(alpha = OW_WARNING_ALPHA_BORDER),
-                                RoundedCornerShape(OW_WARNING_CORNER_RADIUS),
-                            ).padding(OW_WARNING_PADDING),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(OW_WARNING_SPACED_BY_SMALL),
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Warning,
-                        contentDescription = null,
-                        tint = colors.error,
-                        modifier = Modifier.size(OW_WARNING_ICON_SIZE),
-                    )
-                    Text(
-                        text = stringResource(R.string.onboarding_privd_wifi_warning),
-                        color = colors.error,
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
+                OnboardingWarningBanner(text = stringResource(R.string.onboarding_privd_wifi_warning))
             } else if (privdState == PrivdState.FAILED && !isAutoSetupActive && hasAutoSetupBeenStarted) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
@@ -861,33 +830,9 @@ fun PrivilegedStepContent(
                     verticalArrangement = Arrangement.spacedBy(OW_WARNING_SPACED_BY_MEDIUM),
                 ) {
                     val errorRes = lastError.descriptionResId()
-                    Row(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .background(colors.error.copy(alpha = OW_WARNING_ALPHA_BG), RoundedCornerShape(OW_WARNING_CORNER_RADIUS))
-                                .border(
-                                    OW_WARNING_BORDER_WIDTH,
-                                    colors.error.copy(alpha = OW_WARNING_ALPHA_BORDER),
-                                    RoundedCornerShape(OW_WARNING_CORNER_RADIUS),
-                                ).padding(OW_WARNING_PADDING),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(OW_WARNING_SPACED_BY_SMALL),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Warning,
-                            contentDescription = null,
-                            tint = colors.error,
-                            modifier = Modifier.size(OW_WARNING_ICON_SIZE),
-                        )
-                        Text(
-                            text = if (errorRes != null) stringResource(errorRes) else "Daemon connection failed.",
-                            color = colors.error,
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
+                    OnboardingWarningBanner(
+                        text = if (errorRes != null) stringResource(errorRes) else "Daemon connection failed.",
+                    )
                     AppMagicalButton(
                         onClick = {
                             hasAutoSetupBeenStarted = true
@@ -932,6 +877,41 @@ fun PrivilegedStepContent(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun OnboardingWarningBanner(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalAppColors.current
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .background(colors.error.copy(alpha = OW_WARNING_ALPHA_BG), RoundedCornerShape(OW_WARNING_CORNER_RADIUS))
+                .border(
+                    OW_WARNING_BORDER_WIDTH,
+                    colors.error.copy(alpha = OW_WARNING_ALPHA_BORDER),
+                    RoundedCornerShape(OW_WARNING_CORNER_RADIUS),
+                ).padding(OW_WARNING_PADDING),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(OW_WARNING_SPACED_BY_SMALL),
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.Warning,
+            contentDescription = null,
+            tint = colors.error,
+            modifier = Modifier.size(OW_WARNING_ICON_SIZE),
+        )
+        Text(
+            text = text,
+            color = colors.error,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.weight(1f),
+        )
     }
 }
 

@@ -325,23 +325,21 @@ internal fun PrivdSetupWizardDialog(
                                         0,
                                     ) != 0
 
-                                val intentsToTry =
-                                    if (devOptionsEnabled) {
-                                        listOf(
-                                            Intent("android.service.quicksettings.action.QS_TILE_PREFERENCES").apply {
-                                                component =
-                                                    ComponentName(
-                                                        "com.android.settings",
-                                                        "com.android.settings.development.qstile.DevelopmentTiles\$WirelessDebugging",
-                                                    )
-                                            },
-                                            Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS),
-                                            Intent(Settings.ACTION_SETTINGS),
-                                        )
-                                    } else {
-                                        listOf(
-                                            Intent(Settings.ACTION_SETTINGS),
-                                        )
+                                val intents =
+                                    buildList {
+                                        if (devOptionsEnabled) {
+                                            add(
+                                                Intent("android.service.quicksettings.action.QS_TILE_PREFERENCES").apply {
+                                                    component =
+                                                        ComponentName(
+                                                            "com.android.settings",
+                                                            "com.android.settings.development.qstile.DevelopmentTiles\$WirelessDebugging",
+                                                        )
+                                                },
+                                            )
+                                            add(Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS))
+                                        }
+                                        add(Intent(Settings.ACTION_SETTINGS))
                                     }
 
                                 val options =
@@ -349,13 +347,12 @@ internal fun PrivdSetupWizardDialog(
                                         setLaunchDisplayId(Display.DEFAULT_DISPLAY)
                                     }
 
-                                for (intent in intentsToTry) {
-                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                intents.any { intent ->
                                     try {
-                                        context.startActivity(intent, options.toBundle())
-                                        break
-                                    } catch (e: Exception) {
-                                        // Fallback to next intent
+                                        context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), options.toBundle())
+                                        true
+                                    } catch (_: Exception) {
+                                        false
                                     }
                                 }
                             },
@@ -533,6 +530,20 @@ internal fun PrivdSetupWizardDialog(
 }
 
 @Composable
+private fun SubstepList(vararg stringResIds: Int) {
+    val colors = LocalAppColors.current
+    Column(verticalArrangement = Arrangement.spacedBy(SW_CHECKLIST_GAP)) {
+        stringResIds.forEach { resId ->
+            Text(
+                text = stringResource(resId),
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+    }
+}
+
+@Composable
 private fun Step1MenuDescription(error: Boolean) {
     val colors = LocalAppColors.current
     Column(verticalArrangement = Arrangement.spacedBy(SW_GAP)) {
@@ -548,33 +559,13 @@ private fun Step1MenuDescription(error: Boolean) {
             style = MaterialTheme.typography.labelLarge,
             modifier = Modifier.padding(top = SW_SECTION_GAP),
         )
-        Column(verticalArrangement = Arrangement.spacedBy(SW_CHECKLIST_GAP)) {
-            Text(
-                text = stringResource(R.string.privd_wizard_step1_substep_1),
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Text(
-                text = stringResource(R.string.privd_wizard_step1_substep_2),
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Text(
-                text = stringResource(R.string.privd_wizard_step1_substep_3),
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Text(
-                text = stringResource(R.string.privd_wizard_step1_substep_4),
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Text(
-                text = stringResource(R.string.privd_wizard_step1_substep_5),
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
+        SubstepList(
+            R.string.privd_wizard_step1_substep_1,
+            R.string.privd_wizard_step1_substep_2,
+            R.string.privd_wizard_step1_substep_3,
+            R.string.privd_wizard_step1_substep_4,
+            R.string.privd_wizard_step1_substep_5,
+        )
 
         Text(
             text = stringResource(R.string.privd_wizard_step1_variant_dev_enabled_title),
@@ -582,23 +573,11 @@ private fun Step1MenuDescription(error: Boolean) {
             style = MaterialTheme.typography.labelLarge,
             modifier = Modifier.padding(top = SW_SECTION_GAP),
         )
-        Column(verticalArrangement = Arrangement.spacedBy(SW_CHECKLIST_GAP)) {
-            Text(
-                text = stringResource(R.string.privd_wizard_step1_dev_enabled_substep_1),
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Text(
-                text = stringResource(R.string.privd_wizard_step1_dev_enabled_substep_2),
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Text(
-                text = stringResource(R.string.privd_wizard_step1_dev_enabled_substep_3),
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
+        SubstepList(
+            R.string.privd_wizard_step1_dev_enabled_substep_1,
+            R.string.privd_wizard_step1_dev_enabled_substep_2,
+            R.string.privd_wizard_step1_dev_enabled_substep_3,
+        )
 
         if (error) {
             Text(
@@ -766,22 +745,17 @@ private fun Step3Pairing(
         } else {
             val ord = stage.ordinal
             Column(verticalArrangement = Arrangement.spacedBy(SW_CHECKLIST_GAP)) {
-                PrivdChecklistRow(
-                    label = stringResource(R.string.privd_wizard_checklist_adb),
-                    status = checklistStatus(ord, BootstrapStage.CONNECTING_ADB.ordinal),
-                )
-                PrivdChecklistRow(
-                    label = stringResource(R.string.privd_wizard_checklist_push),
-                    status = checklistStatus(ord, BootstrapStage.PUSHING_BINARY.ordinal),
-                )
-                PrivdChecklistRow(
-                    label = stringResource(R.string.privd_wizard_checklist_spawn),
-                    status = checklistStatus(ord, BootstrapStage.SPAWNING_DAEMON.ordinal),
-                )
-                PrivdChecklistRow(
-                    label = stringResource(R.string.privd_wizard_checklist_verify),
-                    status = checklistStatus(ord, BootstrapStage.VERIFYING.ordinal),
-                )
+                listOf(
+                    R.string.privd_wizard_checklist_adb to BootstrapStage.CONNECTING_ADB,
+                    R.string.privd_wizard_checklist_push to BootstrapStage.PUSHING_BINARY,
+                    R.string.privd_wizard_checklist_spawn to BootstrapStage.SPAWNING_DAEMON,
+                    R.string.privd_wizard_checklist_verify to BootstrapStage.VERIFYING,
+                ).forEach { (resId, targetStage) ->
+                    PrivdChecklistRow(
+                        label = stringResource(resId),
+                        status = checklistStatus(ord, targetStage.ordinal),
+                    )
+                }
             }
         }
 
