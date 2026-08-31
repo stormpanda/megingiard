@@ -13,8 +13,6 @@ import androidx.compose.ui.res.stringResource
 import com.stormpanda.megingiard.R
 import kotlin.math.sqrt
 
-private const val TAG = "MacroStepListItem"
-
 private fun dirArrow(
     dirX: Int,
     dirY: Int,
