@@ -18,6 +18,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.CustomRomFolder
+import com.stormpanda.megingiard.catalog.EMULATOR_ID_RETROARCH
 import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
 import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.GamePadButton
@@ -60,7 +61,7 @@ fun RomFolderCoreChooserDialog(
         if (confirmTrigger > 0) {
             if (systemDef == null) {
                 onDismiss()
-            } else if (systemDef.emulatorId != "retroarch") {
+            } else if (systemDef.emulatorId != EMULATOR_ID_RETROARCH) {
                 AppLog.i(TAG, "Confirming native emulation dialog via trigger")
                 onConfirm(null)
             } else {
@@ -116,7 +117,7 @@ fun RomFolderCoreChooserDialog(
             modifier = Modifier.padding(bottom = DIALOG_SPACING),
         )
 
-        if (systemDef.emulatorId != "retroarch") {
+        if (systemDef.emulatorId != EMULATOR_ID_RETROARCH) {
             Text(
                 text = stringResource(R.string.gamefocus_dialog_core_native_msg),
                 style = MaterialTheme.typography.bodyMedium,

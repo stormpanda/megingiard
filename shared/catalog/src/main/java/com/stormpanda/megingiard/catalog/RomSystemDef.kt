@@ -4,6 +4,10 @@ import com.stormpanda.megingiard.AppLog
 
 private const val TAG = "RomSystemDef"
 
+const val EMULATOR_ID_RETROARCH = "retroarch"
+const val EMULATOR_ID_GAMENATIVE = "gamenative"
+const val EMULATOR_ID_YUZU = "yuzu"
+
 /**
  * Definition of a gaming system supported for ROM browsing.
  */
@@ -27,7 +31,7 @@ val SUPPORTED_SYSTEMS =
                 id = "snes",
                 displayName = "SNES",
                 extensions = setOf("sfc", "smc", "snes"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "bsnes_libretro_android.so",
                 retroArchCoreAlternatives =
                     setOf(
@@ -40,7 +44,7 @@ val SUPPORTED_SYSTEMS =
                 id = "nes",
                 displayName = "NES",
                 extensions = setOf("nes"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "mesen_libretro_android.so",
                 retroArchCoreAlternatives =
                     setOf(
@@ -52,7 +56,7 @@ val SUPPORTED_SYSTEMS =
                 id = "gba",
                 displayName = "GBA",
                 extensions = setOf("gba"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "mgba_libretro_android.so",
                 retroArchCoreAlternatives =
                     setOf(
@@ -64,7 +68,7 @@ val SUPPORTED_SYSTEMS =
                 id = "gb",
                 displayName = "GB",
                 extensions = setOf("gb", "gbc"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "sameboy_libretro_android.so",
                 retroArchCoreAlternatives =
                     setOf(
@@ -76,7 +80,7 @@ val SUPPORTED_SYSTEMS =
                 id = "n64",
                 displayName = "N64",
                 extensions = setOf("n64", "z64", "v64"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "mupen64plus_next_libretro_android.so",
                 retroArchCoreAlternatives =
                     setOf(
@@ -87,7 +91,7 @@ val SUPPORTED_SYSTEMS =
                 id = "nds",
                 displayName = "Nintendo DS",
                 extensions = setOf("nds"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "melonds_libretro_android.so",
                 retroArchCoreAlternatives =
                     setOf(
@@ -98,35 +102,35 @@ val SUPPORTED_SYSTEMS =
                 id = "virtualboy",
                 displayName = "Virtual Boy",
                 extensions = setOf("vb"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "beetle_vb_libretro_android.so",
             ),
             RomSystemDef(
                 id = "pokemini",
                 displayName = "Pokémon Mini",
                 extensions = setOf("min"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "pokemini_libretro_android.so",
             ),
             RomSystemDef(
                 id = "gamecube",
                 displayName = "GameCube/Wii",
                 extensions = setOf("iso", "gcm", "wbfs", "rvz"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "dolphin_libretro_android.so",
             ),
             RomSystemDef(
                 id = "n3ds",
                 displayName = "Nintendo 3DS",
                 extensions = setOf("3ds", "cia"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "citra_libretro_android.so",
             ),
             RomSystemDef(
                 id = "sms",
                 displayName = "Master System",
                 extensions = setOf("sms", "gg"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "genesis_plus_gx_libretro_android.so",
                 retroArchCoreAlternatives =
                     setOf(
@@ -137,7 +141,7 @@ val SUPPORTED_SYSTEMS =
                 id = "genesis",
                 displayName = "Genesis",
                 extensions = setOf("md", "smd", "gen", "bin", "cue", "chd"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "genesis_plus_gx_libretro_android.so",
                 retroArchCoreAlternatives =
                     setOf(
@@ -149,14 +153,14 @@ val SUPPORTED_SYSTEMS =
                 id = "sega32x",
                 displayName = "Sega 32X",
                 extensions = setOf("32x"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "picodrive_libretro_android.so",
             ),
             RomSystemDef(
                 id = "saturn",
                 displayName = "Sega Saturn",
                 extensions = setOf("cue", "bin", "chd"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "beetle_saturn_libretro_android.so",
                 retroArchCoreAlternatives =
                     setOf(
@@ -168,14 +172,14 @@ val SUPPORTED_SYSTEMS =
                 id = "dreamcast",
                 displayName = "Dreamcast",
                 extensions = setOf("gdi", "cdi", "chd"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "flycast_libretro_android.so",
             ),
             RomSystemDef(
                 id = "ps1",
                 displayName = "PlayStation",
                 extensions = setOf("cue", "bin", "chd", "pbp"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "beetle_psx_hw_libretro_android.so",
                 retroArchCoreAlternatives =
                     setOf(
@@ -187,21 +191,21 @@ val SUPPORTED_SYSTEMS =
                 id = "psp",
                 displayName = "PSP",
                 extensions = setOf("iso", "cso"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "ppsspp_libretro_android.so",
             ),
             RomSystemDef(
                 id = "ps2",
                 displayName = "PlayStation 2",
                 extensions = setOf("iso", "chd"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "play_libretro_android.so",
             ),
             RomSystemDef(
                 id = "arcade",
                 displayName = "Arcade",
                 extensions = setOf("zip", "7z"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "fbneo_libretro_android.so",
                 retroArchCoreAlternatives =
                     setOf(
@@ -212,7 +216,7 @@ val SUPPORTED_SYSTEMS =
                 id = "mame",
                 displayName = "MAME",
                 extensions = setOf("zip", "7z"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "mame_libretro_android.so",
                 retroArchCoreAlternatives =
                     setOf(
@@ -224,7 +228,7 @@ val SUPPORTED_SYSTEMS =
                 id = "ngp",
                 displayName = "Neo Geo Pocket",
                 extensions = setOf("ngp", "ngc"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "mednafen_ngp_libretro_android.so",
                 retroArchCoreAlternatives =
                     setOf(
@@ -235,7 +239,7 @@ val SUPPORTED_SYSTEMS =
                 id = "atari2600",
                 displayName = "Atari 2600",
                 extensions = setOf("a26", "bin"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "stella_libretro_android.so",
                 retroArchCoreAlternatives =
                     setOf(
@@ -246,7 +250,7 @@ val SUPPORTED_SYSTEMS =
                 id = "atari5200",
                 displayName = "Atari 5200",
                 extensions = setOf("a52", "bin"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "a5200_libretro_android.so",
                 retroArchCoreAlternatives =
                     setOf(
@@ -257,14 +261,14 @@ val SUPPORTED_SYSTEMS =
                 id = "atari7800",
                 displayName = "Atari 7800",
                 extensions = setOf("a78", "bin"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "prosystem_libretro_android.so",
             ),
             RomSystemDef(
                 id = "lynx",
                 displayName = "Atari Lynx",
                 extensions = setOf("lnx"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "handy_libretro_android.so",
                 retroArchCoreAlternatives =
                     setOf(
@@ -275,14 +279,14 @@ val SUPPORTED_SYSTEMS =
                 id = "jaguar",
                 displayName = "Atari Jaguar",
                 extensions = setOf("j64", "jag"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "virtualjaguar_libretro_android.so",
             ),
             RomSystemDef(
                 id = "dos",
                 displayName = "MS-DOS",
                 extensions = setOf("exe", "com", "bat", "conf"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "dosbox_pure_libretro_android.so",
                 retroArchCoreAlternatives =
                     setOf(
@@ -294,7 +298,7 @@ val SUPPORTED_SYSTEMS =
                 id = "msx",
                 displayName = "MSX",
                 extensions = setOf("rom", "mx1", "mx2"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "fmsx_libretro_android.so",
                 retroArchCoreAlternatives =
                     setOf(
@@ -305,7 +309,7 @@ val SUPPORTED_SYSTEMS =
                 id = "c64",
                 displayName = "Commodore 64",
                 extensions = setOf("d64", "g64", "prg", "t64"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "vice_x64sc_libretro_android.so",
                 retroArchCoreAlternatives =
                     setOf(
@@ -316,21 +320,21 @@ val SUPPORTED_SYSTEMS =
                 id = "amiga",
                 displayName = "Amiga",
                 extensions = setOf("adf", "dms", "ipf", "lha"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "puae_libretro_android.so",
             ),
             RomSystemDef(
                 id = "zxspectrum",
                 displayName = "ZX Spectrum",
                 extensions = setOf("tzx", "tap", "z80", "scl", "trd"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "fuse_libretro_android.so",
             ),
             RomSystemDef(
                 id = "pce",
                 displayName = "PC Engine",
                 extensions = setOf("pce", "sgx", "cue"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "mednafen_pce_fast_libretro_android.so",
                 retroArchCoreAlternatives =
                     setOf(
@@ -342,14 +346,14 @@ val SUPPORTED_SYSTEMS =
                 id = "pcfx",
                 displayName = "PC-FX",
                 extensions = setOf("cue", "bin"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "mednafen_pcfx_libretro_android.so",
             ),
             RomSystemDef(
                 id = "colecovision",
                 displayName = "ColecoVision",
                 extensions = setOf("col", "bin"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "gearcoleco_libretro_android.so",
                 retroArchCoreAlternatives =
                     setOf(
@@ -360,41 +364,41 @@ val SUPPORTED_SYSTEMS =
                 id = "vectrex",
                 displayName = "Vectrex",
                 extensions = setOf("vec", "bin"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "vecx_libretro_android.so",
             ),
             RomSystemDef(
                 id = "wswan",
                 displayName = "WonderSwan",
                 extensions = setOf("ws", "wsc"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "mednafen_wswan_libretro_android.so",
             ),
             RomSystemDef(
                 id = "neogeocd",
                 displayName = "Neo Geo CD",
                 extensions = setOf("cue", "chd"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "neocd_libretro_android.so",
             ),
             RomSystemDef(
                 id = "scummvm",
                 displayName = "ScummVM",
                 extensions = setOf("scummvm"),
-                emulatorId = "retroarch",
+                emulatorId = EMULATOR_ID_RETROARCH,
                 retroArchCore = "scummvm_libretro_android.so",
             ),
             RomSystemDef(
                 id = "pc",
                 displayName = "PC",
                 extensions = setOf("steam", "steamappid"),
-                emulatorId = "gamenative",
+                emulatorId = EMULATOR_ID_GAMENATIVE,
             ),
             RomSystemDef(
                 id = "switch",
                 displayName = "Nintendo Switch",
                 extensions = setOf("nsp", "xci", "nca", "xcz", "nsz"),
-                emulatorId = "yuzu",
+                emulatorId = EMULATOR_ID_YUZU,
             ),
         )
     }
