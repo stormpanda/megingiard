@@ -654,31 +654,12 @@ private fun ArtworkOptionItem(
     }
 
     LaunchedEffect(imageItem.thumb) {
-        withContext(Dispatchers.IO) {
-            try {
-                val url = URL(imageItem.thumb)
-                val connection = url.openConnection()
-                connection.connectTimeout = 5000
-                connection.readTimeout = 8000
-                val stream = connection.getInputStream()
-                val decoded = BitmapFactory.decodeStream(stream)
-                stream.close()
-                if (!isActive) {
-                    decoded?.let { if (!it.isRecycled) it.recycle() }
-                    return@withContext
-                }
-                rawBitmap = decoded
-                withContext(Dispatchers.Main) {
-                    bitmap = decoded?.asImageBitmap()
-                    isThumbLoading = false
-                }
-            } catch (e: Exception) {
-                AppLog.w(TAG, "Failed to load thumbnail from ${imageItem.thumb}: ${e.message}")
-                withContext(Dispatchers.Main) {
-                    isThumbLoading = false
-                }
-            }
-        }
+        val bytes = SteamGridDbClient.downloadImageBytes(imageItem.thumb).getOrNull()
+        if (!isActive) return@LaunchedEffect
+        val decoded = bytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
+        rawBitmap = decoded
+        bitmap = decoded?.asImageBitmap()
+        isThumbLoading = false
     }
 
     Box(

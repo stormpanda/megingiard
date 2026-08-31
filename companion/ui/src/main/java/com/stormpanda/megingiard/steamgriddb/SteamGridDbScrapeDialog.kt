@@ -548,25 +548,8 @@ private fun SteamGridDbImageThumbnail(
     LaunchedEffect(url) {
         isLoading = true
         isError = false
-        val decoded =
-            withContext(Dispatchers.IO) {
-                try {
-                    val connection = URL(url).openConnection() as HttpURLConnection
-                    connection.connectTimeout = THUMB_CONNECT_TIMEOUT_MS
-                    connection.readTimeout = THUMB_READ_TIMEOUT_MS
-                    val responseCode = connection.responseCode
-                    if (responseCode == HttpURLConnection.HTTP_OK) {
-                        connection.inputStream.use { input ->
-                            BitmapFactory.decodeStream(input)
-                        }
-                    } else {
-                        null
-                    }
-                } catch (e: Exception) {
-                    AppLog.e(TAG, "Failed to load thumb $url", e)
-                    null
-                }
-            }
+        val bytes = SteamGridDbClient.downloadImageBytes(url).getOrNull()
+        val decoded = bytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
         if (decoded != null) {
             bitmap = decoded.asImageBitmap()
         } else {

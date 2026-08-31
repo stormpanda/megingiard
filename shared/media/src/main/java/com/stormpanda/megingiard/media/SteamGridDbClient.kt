@@ -227,27 +227,20 @@ object SteamGridDbClient {
             }
     }
 
-    suspend fun downloadImageToTempFile(
-        imageUrl: String,
-        cacheDir: File,
-    ): Result<File> =
+    suspend fun downloadImageBytes(imageUrl: String): Result<ByteArray> =
         withContext(Dispatchers.IO) {
-            AppLog.d(TAG, "downloadImageToTempFile: url=$imageUrl")
+            AppLog.d(TAG, "downloadImageBytes: url=$imageUrl")
             var connection: HttpURLConnection? = null
             try {
                 val url = URL(imageUrl)
                 connection = url.openConnection() as HttpURLConnection
                 connection.connectTimeout = TIMEOUT_CONNECT_MS
                 connection.readTimeout = TIMEOUT_READ_MS
+                connection.instanceFollowRedirects = true
                 val responseCode = connection.responseCode
                 if (responseCode == HttpURLConnection.HTTP_OK) {
-                    val tempFile = File(cacheDir, "steamgriddb_temp_${System.currentTimeMillis()}.png")
-                    connection.inputStream.use { input ->
-                        FileOutputStream(tempFile).use { output ->
-                            input.copyTo(output)
-                        }
-                    }
-                    Result.success(tempFile)
+                    val bytes = connection.inputStream.use { it.readBytes() }
+                    Result.success(bytes)
                 } else {
                     val errorText = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
                     AppLog.w(TAG, "Failed to download image from $imageUrl, response code: $responseCode, error: $errorText")
@@ -259,6 +252,16 @@ object SteamGridDbClient {
             } finally {
                 connection?.disconnect()
             }
+        }
+
+    suspend fun downloadImageToTempFile(
+        imageUrl: String,
+        cacheDir: File,
+    ): Result<File> =
+        downloadImageBytes(imageUrl).mapCatching { bytes ->
+            val tempFile = File(cacheDir, "steamgriddb_temp_${System.currentTimeMillis()}.png")
+            tempFile.writeBytes(bytes)
+            tempFile
         }
 
     private suspend fun fetchString(
