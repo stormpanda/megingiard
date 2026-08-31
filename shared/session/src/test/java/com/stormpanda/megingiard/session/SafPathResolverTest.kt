@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.session
 
+import com.stormpanda.megingiard.catalog.SafPathResolver
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
