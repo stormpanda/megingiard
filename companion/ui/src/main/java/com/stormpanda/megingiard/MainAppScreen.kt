@@ -502,9 +502,8 @@ fun MainAppScreen() {
             val contentObserver =
                 object : ContentObserver(Handler(Looper.getMainLooper())) {
                     override fun onChange(selfChange: Boolean) {
-                        val active = MegingiardAccessibilityService.isEnabled(context)
-                        AppLog.d(TAG, "ContentObserver: ENABLED_ACCESSIBILITY_SERVICES changed, active=$active")
-                        AppStateManager.setAccessibilityActive(active)
+                        AppLog.d(TAG, "ContentObserver: ENABLED_ACCESSIBILITY_SERVICES changed")
+                        syncAccessibilityState(context)
                     }
                 }
 
@@ -512,18 +511,13 @@ fun MainAppScreen() {
             context.contentResolver.registerContentObserver(uri, false, contentObserver)
 
             val am = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
-            val listener =
-                AccessibilityManager.AccessibilityStateChangeListener { _ ->
-                    val active = MegingiardAccessibilityService.isEnabled(context)
-                    AppStateManager.setAccessibilityActive(active)
-                }
+            val listener = AccessibilityManager.AccessibilityStateChangeListener { syncAccessibilityState(context) }
             am?.addAccessibilityStateChangeListener(listener)
 
             val observer =
                 LifecycleEventObserver { _, event ->
                     if (event == Lifecycle.Event.ON_RESUME) {
-                        val active = MegingiardAccessibilityService.isEnabled(context)
-                        AppStateManager.setAccessibilityActive(active)
+                        syncAccessibilityState(context)
                     }
                 }
             lifecycleOwner.lifecycle.addObserver(observer)
@@ -540,8 +534,7 @@ fun MainAppScreen() {
                 overlayAtBottom = overlayAtBottom,
                 onDismiss = {
                     OnboardingWizardManager.finishWizard()
-                    val active = MegingiardAccessibilityService.isEnabled(context)
-                    AppStateManager.setAccessibilityActive(active)
+                    syncAccessibilityState(context)
                     AppStateManager.resetPrivdPromptState()
                 },
             )
@@ -550,13 +543,11 @@ fun MainAppScreen() {
         if (showPromptDialog && !isWizardActive) {
             PrivdReconnectPromptDialog(
                 onSkip = {
-                    val active = MegingiardAccessibilityService.isEnabled(context)
-                    AppStateManager.setAccessibilityActive(active)
+                    syncAccessibilityState(context)
                     AppStateManager.setPrivdPromptDismissed(true)
                 },
                 onDone = {
-                    val active = MegingiardAccessibilityService.isEnabled(context)
-                    AppStateManager.setAccessibilityActive(active)
+                    syncAccessibilityState(context)
                     AppStateManager.setPrivdPromptDismissed(true)
                 },
             )
@@ -808,3 +799,7 @@ internal fun shouldShowCompanionHub(
     isViewportEditActive: Boolean,
     isBackgroundSettingsActive: Boolean,
 ): Boolean = showIntegrationHome && !isEditorActive && !isViewportEditActive && !isBackgroundSettingsActive
+
+private fun syncAccessibilityState(context: Context) {
+    AppStateManager.setAccessibilityActive(MegingiardAccessibilityService.isEnabled(context))
+}
