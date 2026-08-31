@@ -663,57 +663,67 @@ private fun ModeToggleButton(
             modifier = Modifier.fillMaxSize(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                modifier =
-                    Modifier
-                        .weight(1f)
-                        .fillMaxHeight(),
-                contentAlignment = Alignment.Center,
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                ) {
-                    Text(
-                        text = "Mouse",
-                        color = mouseColor,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Icon(
-                        imageVector = Icons.Rounded.Mouse,
-                        contentDescription = stringResource(R.string.cd_touchpad_relative_mouse_mode),
-                        tint = mouseColor,
-                        modifier = Modifier.size(16.dp),
-                    )
-                }
+            ModeSegment(
+                text = "Mouse",
+                icon = Icons.Rounded.Mouse,
+                contentDescription = stringResource(R.string.cd_touchpad_relative_mouse_mode),
+                color = mouseColor,
+                iconAfterText = true,
+                modifier = Modifier.weight(1f),
+            )
+            ModeSegment(
+                text = "Touch",
+                icon = Icons.Rounded.TouchApp,
+                contentDescription = stringResource(R.string.cd_touchpad_absolute_touch_mode),
+                color = touchColor,
+                iconAfterText = false,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ModeSegment(
+    text: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    color: Color,
+    iconAfterText: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier.fillMaxHeight(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            val label: @Composable () -> Unit = {
+                Text(
+                    text = text,
+                    color = color,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                )
             }
-            Box(
-                modifier =
-                    Modifier
-                        .weight(1f)
-                        .fillMaxHeight(),
-                contentAlignment = Alignment.Center,
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.TouchApp,
-                        contentDescription = stringResource(R.string.cd_touchpad_absolute_touch_mode),
-                        tint = touchColor,
-                        modifier = Modifier.size(16.dp),
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Touch",
-                        color = touchColor,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                    )
-                }
+            val iconWidget: @Composable () -> Unit = {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = contentDescription,
+                    tint = color,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+            if (iconAfterText) {
+                label()
+                Spacer(modifier = Modifier.width(6.dp))
+                iconWidget()
+            } else {
+                iconWidget()
+                Spacer(modifier = Modifier.width(6.dp))
+                label()
             }
         }
     }
