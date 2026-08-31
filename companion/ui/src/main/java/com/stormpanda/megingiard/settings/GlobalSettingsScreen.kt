@@ -375,18 +375,10 @@ fun GlobalSettingsScreen(
                                     },
                                 )
 
-                                val currentLangName =
-                                    when (appLanguage) {
-                                        AppLanguage.SYSTEM -> stringResource(R.string.settings_language_system)
-                                        AppLanguage.EN -> stringResource(R.string.settings_language_en)
-                                        AppLanguage.DE -> stringResource(R.string.settings_language_de)
-                                        AppLanguage.ZH_TW -> stringResource(R.string.settings_language_zh_tw)
-                                    }
-
                                 GamepadChoiceCard(
                                     title = stringResource(R.string.settings_language),
                                     description = stringResource(R.string.help_settings_language_desc),
-                                    selectedText = currentLangName,
+                                    selectedText = stringResource(appLanguage.displayNameResId()),
                                     icon = Icons.Rounded.Language,
                                     onPrevious = { viewModel.setAppLanguage(AppLanguage.entries.prevItem(appLanguage)) },
                                     onNext = { viewModel.setAppLanguage(AppLanguage.entries.nextItem(appLanguage)) },

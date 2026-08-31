@@ -173,18 +173,6 @@ private suspend fun scrollToFocusedItem(
 }
 
 @Composable
-private fun Modifier.noFocusClickable(onClick: () -> Unit): Modifier {
-    val interactionSource = remember { MutableInteractionSource() }
-    return this
-        .focusProperties { canFocus = false }
-        .clickable(
-            interactionSource = interactionSource,
-            indication = null,
-            onClick = onClick,
-        )
-}
-
-@Composable
 fun FocusLibraryScreen(
     allApps: List<InstalledAppInfo>,
     selectedTab: LibraryTab,
@@ -812,18 +800,7 @@ private fun LibraryGridItem(
     modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
-    val context = LocalContext.current
-
-    val iconBitmap by produceState<ImageBitmap?>(
-        initialValue = FocusImageCache.getCachedIconBitmap(appInfo.packageName),
-        key1 = appInfo.packageName,
-        key2 = appInfo.coverLastModified,
-    ) {
-        value = FocusImageCache.getCachedIconBitmap(appInfo.packageName)
-        if (value == null) {
-            value = FocusImageCache.getIconBitmapAsync(context, appInfo)
-        }
-    }
+    val iconBitmap = rememberIconBitmap(appInfo)
 
     val palette =
         remember(appInfo.packageName, appInfo.coverPath, appInfo.coverLastModified) {

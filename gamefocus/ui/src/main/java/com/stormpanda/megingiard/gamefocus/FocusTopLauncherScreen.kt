@@ -1033,7 +1033,7 @@ internal object FocusImageCache {
 }
 
 @Composable
-private fun Modifier.noFocusClickable(
+internal fun Modifier.noFocusClickable(
     enabled: Boolean = true,
     onClick: () -> Unit,
 ): Modifier {
@@ -1046,6 +1046,50 @@ private fun Modifier.noFocusClickable(
             indication = null,
             onClick = onClick,
         )
+}
+
+@Composable
+internal fun Modifier.noFocusClickable(onClick: () -> Unit): Modifier = noFocusClickable(enabled = true, onClick = onClick)
+
+@Composable
+internal fun rememberCoverBitmap(appInfo: InstalledAppInfo): ImageBitmap? {
+    val state =
+        produceState<ImageBitmap?>(
+            initialValue = FocusImageCache.getCoverBitmap(appInfo),
+            key1 = appInfo.packageName,
+            key2 = appInfo.coverLastModified,
+        ) {
+            value = FocusImageCache.getCoverBitmap(appInfo)
+            if (appInfo.coverPath != null && value == null) {
+                value = FocusImageCache.getCoverBitmapAsync(appInfo)
+            }
+        }
+    return state.value
+}
+
+@Composable
+internal fun rememberIconBitmap(
+    appInfo: InstalledAppInfo,
+    enabled: Boolean = true,
+): ImageBitmap? {
+    val context = LocalContext.current
+    val state =
+        produceState<ImageBitmap?>(
+            initialValue = FocusImageCache.getCachedIconBitmap(appInfo.packageName),
+            key1 = appInfo.packageName,
+            key2 = appInfo.coverLastModified,
+            key3 = enabled,
+        ) {
+            if (!enabled) {
+                value = null
+                return@produceState
+            }
+            value = FocusImageCache.getCachedIconBitmap(appInfo.packageName)
+            if (value == null) {
+                value = FocusImageCache.getIconBitmapAsync(context, appInfo)
+            }
+        }
+    return state.value
 }
 
 @Composable
@@ -1098,29 +1142,8 @@ private fun PosterCardContent(
     modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
-    val context = LocalContext.current
-
-    val coverBitmap by produceState<ImageBitmap?>(
-        initialValue = FocusImageCache.getCoverBitmap(appInfo),
-        key1 = appInfo.packageName,
-        key2 = appInfo.coverLastModified,
-    ) {
-        value = FocusImageCache.getCoverBitmap(appInfo)
-        if (appInfo.coverPath != null && value == null) {
-            value = FocusImageCache.getCoverBitmapAsync(appInfo)
-        }
-    }
-
-    val iconBitmap by produceState<ImageBitmap?>(
-        initialValue = FocusImageCache.getCachedIconBitmap(appInfo.packageName),
-        key1 = appInfo.packageName,
-        key2 = appInfo.coverLastModified,
-    ) {
-        value = FocusImageCache.getCachedIconBitmap(appInfo.packageName)
-        if (coverBitmap == null && value == null) {
-            value = FocusImageCache.getIconBitmapAsync(context, appInfo)
-        }
-    }
+    val coverBitmap = rememberCoverBitmap(appInfo)
+    val iconBitmap = rememberIconBitmap(appInfo, enabled = coverBitmap == null)
 
     val visibilityOffAlpha by animateFloatAsState(
         targetValue = if (isHidden) FTL_HIDDEN_BADGE_ALPHA else FTL_VISIBLE_BADGE_ALPHA,
