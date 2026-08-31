@@ -55,8 +55,7 @@ class MacroPadViewModel(
 
     override fun onCleared() {
         super.onCleared()
-        AppLog.i(TAG, "onCleared → all injectors stopped")
-        InjectorLifecycleManager.stopAll()
-        MacroPadState.resetPeek()
+        AppLog.i(TAG, "onCleared")
+        stopInjectors()
     }
 }
