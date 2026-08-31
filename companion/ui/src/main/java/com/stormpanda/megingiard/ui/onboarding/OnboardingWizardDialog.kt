@@ -119,6 +119,7 @@ private const val TAG = "OnboardingWizardDialog"
 
 private val OW_DIALOG_MAX_WIDTH = 480.dp
 private val OW_DIALOG_CORNER_RADIUS = 16.dp
+private val OW_DIALOG_SHAPE = RoundedCornerShape(OW_DIALOG_CORNER_RADIUS)
 private val OW_DIALOG_BORDER_WIDTH = 2.dp
 private val OW_DIALOG_SHADOW_ELEVATION = 12.dp
 private val OW_DIALOG_PADDING_HORIZONTAL = 20.dp
@@ -128,6 +129,8 @@ private val OW_DIALOG_PADDING_BOTTOM = 16.dp
 private val OW_STEPPER_DOT_SIZE = 24.dp
 
 private val OW_WARNING_CORNER_RADIUS = 12.dp
+private val OW_CARD_SHAPE_12 = RoundedCornerShape(OW_WARNING_CORNER_RADIUS)
+private val OW_PROGRESS_TRACK_SHAPE = RoundedCornerShape(1.dp)
 private val OW_WARNING_BORDER_WIDTH = 1.dp
 private val OW_WARNING_PADDING = 12.dp
 private val OW_WARNING_SPACED_BY_SMALL = 8.dp
@@ -253,7 +256,6 @@ fun OnboardingWizardDialog(
     }
 
     val wizardCardContent: @Composable () -> Unit = {
-        val dialogShape = remember { RoundedCornerShape(OW_DIALOG_CORNER_RADIUS) }
         Column(
             modifier =
                 Modifier
@@ -262,13 +264,13 @@ fun OnboardingWizardDialog(
                     .animateContentSize(
                         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
                         alignment = Alignment.Center,
-                    ).shadow(OW_DIALOG_SHADOW_ELEVATION, dialogShape)
-                    .clip(dialogShape)
+                    ).shadow(OW_DIALOG_SHADOW_ELEVATION, OW_DIALOG_SHAPE)
+                    .clip(OW_DIALOG_SHAPE)
                     .background(colors.surface)
                     .border(
                         OW_DIALOG_BORDER_WIDTH,
                         brush = rememberBezelBrush(),
-                        shape = dialogShape,
+                        shape = OW_DIALOG_SHAPE,
                     ).padding(
                         start = OW_DIALOG_PADDING_HORIZONTAL,
                         end = OW_DIALOG_PADDING_HORIZONTAL,
@@ -468,13 +470,12 @@ fun ThemeStepContent() {
         Spacer(modifier = Modifier.height(20.dp))
 
         // Theme Selector Container with Arrow Buttons & Subdued Fading Labels
-        val containerShape = remember { RoundedCornerShape(12.dp) }
         Row(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .background(colors.surfaceVariant, containerShape)
-                    .border(1.dp, colors.controlOverlayBorder, containerShape)
+                    .background(colors.surfaceVariant, OW_CARD_SHAPE_12)
+                    .border(1.dp, colors.controlOverlayBorder, OW_CARD_SHAPE_12)
                     .padding(horizontal = 4.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -691,8 +692,8 @@ fun PrivilegedStepContent(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .background(colors.surfaceVariant, RoundedCornerShape(12.dp))
-                        .border(1.dp, colors.controlOverlayBorder, RoundedCornerShape(12.dp))
+                        .background(colors.surfaceVariant, OW_CARD_SHAPE_12)
+                        .border(1.dp, colors.controlOverlayBorder, OW_CARD_SHAPE_12)
                         .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
@@ -756,13 +757,12 @@ fun PrivilegedStepContent(
                 }
 
             // Multi-stage status checklist
-            val checklistCardShape = remember { RoundedCornerShape(12.dp) }
             Column(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .background(colors.surfaceVariant, checklistCardShape)
-                        .border(1.dp, colors.controlOverlayBorder, checklistCardShape)
+                        .background(colors.surfaceVariant, OW_CARD_SHAPE_12)
+                        .border(1.dp, colors.controlOverlayBorder, OW_CARD_SHAPE_12)
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
@@ -866,16 +866,15 @@ private fun OnboardingWarningBanner(
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
-    val bannerShape = remember { RoundedCornerShape(OW_WARNING_CORNER_RADIUS) }
     Row(
         modifier =
             modifier
                 .fillMaxWidth()
-                .background(colors.error.copy(alpha = OW_WARNING_ALPHA_BG), bannerShape)
+                .background(colors.error.copy(alpha = OW_WARNING_ALPHA_BG), OW_CARD_SHAPE_12)
                 .border(
                     OW_WARNING_BORDER_WIDTH,
                     colors.error.copy(alpha = OW_WARNING_ALPHA_BORDER),
-                    bannerShape,
+                    OW_CARD_SHAPE_12,
                 ).padding(OW_WARNING_PADDING),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(OW_WARNING_SPACED_BY_SMALL),
@@ -986,7 +985,7 @@ fun OnboardingStepper(
                             .weight(1f)
                             .height(2.dp)
                             .padding(horizontal = 4.dp)
-                            .clip(RoundedCornerShape(1.dp))
+                            .clip(OW_PROGRESS_TRACK_SHAPE)
                             .background(color = colors.onSurfaceSecondary.copy(alpha = 0.25f)),
                 ) {
                     if (lineProgress > 0f) {
@@ -1036,7 +1035,7 @@ fun AccessibilityStepContent(
 
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
+            shape = OW_CARD_SHAPE_12,
             color = colors.surfaceVariant,
         ) {
             Row(
