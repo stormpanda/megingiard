@@ -77,6 +77,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
@@ -136,6 +137,28 @@ private const val MPE_CANVAS_WIDTH_PX = 1240f
 private const val MPE_CANVAS_HEIGHT_PX = 1080f
 private const val MPE_EDGE_MARGIN = 0.05f
 
+private fun EditorSection.titleResId(): Int =
+    when (this) {
+        EditorSection.QUICK_ACTIONS -> R.string.quick_actions_title
+        EditorSection.PROFILES -> R.string.quick_menu_profile_label
+        EditorSection.LAYOUTS -> R.string.macropad_editor_section_layout
+        EditorSection.MIRROR -> R.string.quick_menu_screen_mirroring
+        EditorSection.BACKGROUND -> R.string.layout_settings_bg_section_title
+        EditorSection.BUTTONS -> R.string.macropad_editor_section_buttons
+        EditorSection.MACROS -> R.string.macropad_editor_manage_macros
+    }
+
+private fun EditorSection.icon(): ImageVector =
+    when (this) {
+        EditorSection.QUICK_ACTIONS -> Icons.Rounded.Bolt
+        EditorSection.PROFILES -> Icons.Rounded.Folder
+        EditorSection.LAYOUTS -> Icons.AutoMirrored.Rounded.ViewQuilt
+        EditorSection.MIRROR -> Icons.Rounded.Videocam
+        EditorSection.BACKGROUND -> Icons.Rounded.Wallpaper
+        EditorSection.BUTTONS -> Icons.Rounded.SmartButton
+        EditorSection.MACROS -> Icons.AutoMirrored.Rounded.PlaylistPlay
+    }
+
 private fun applyActionToDraftButton(
     draftButton: PadButton,
     newAction: PadAction,
@@ -154,6 +177,17 @@ private fun applyActionToDraftButton(
         buttonShape = shape,
         buttonSize = size,
     )
+}
+
+private fun swapButtons(
+    layout: PadLayout?,
+    from: Int,
+    to: Int,
+) {
+    if (layout == null || from !in layout.buttons.indices || to !in layout.buttons.indices) return
+    val mutable = layout.buttons.toMutableList()
+    java.util.Collections.swap(mutable, from, to)
+    MacroPadState.updateLayout(layout.copy(buttons = mutable))
 }
 
 internal val MPE_PADDING = 16.dp
@@ -295,62 +329,16 @@ fun MacroPadEditor(
                     onRecordFocusedKey = { depth, key -> MacroPadNavState.recordFocusedKey(depth, key) },
                     onRemoveFocusedKey = { depth -> MacroPadNavState.removeFocusedKey(depth) },
                     sidebarContent = {
-                        GamepadCategoryTile(
-                            title = stringResource(R.string.quick_actions_title),
-                            icon = Icons.Rounded.Bolt,
-                            selected = selectedSection == EditorSection.QUICK_ACTIONS,
-                            onClick = {
-                                MacroPadNavState.selectSection(EditorSection.QUICK_ACTIONS)
-                            },
-                        )
-                        GamepadCategoryTile(
-                            title = stringResource(R.string.quick_menu_profile_label),
-                            icon = Icons.Rounded.Folder,
-                            selected = selectedSection == EditorSection.PROFILES,
-                            onClick = {
-                                MacroPadNavState.selectSection(EditorSection.PROFILES)
-                            },
-                        )
-                        GamepadCategoryTile(
-                            title = stringResource(R.string.macropad_editor_section_layout),
-                            icon = Icons.AutoMirrored.Rounded.ViewQuilt,
-                            selected = selectedSection == EditorSection.LAYOUTS,
-                            onClick = {
-                                MacroPadNavState.selectSection(EditorSection.LAYOUTS)
-                            },
-                        )
-                        GamepadCategoryTile(
-                            title = stringResource(R.string.quick_menu_screen_mirroring),
-                            icon = Icons.Rounded.Videocam,
-                            selected = selectedSection == EditorSection.MIRROR,
-                            onClick = {
-                                MacroPadNavState.selectSection(EditorSection.MIRROR)
-                            },
-                        )
-                        GamepadCategoryTile(
-                            title = stringResource(R.string.layout_settings_bg_section_title),
-                            icon = Icons.Rounded.Wallpaper,
-                            selected = selectedSection == EditorSection.BACKGROUND,
-                            onClick = {
-                                MacroPadNavState.selectSection(EditorSection.BACKGROUND)
-                            },
-                        )
-                        GamepadCategoryTile(
-                            title = stringResource(R.string.macropad_editor_section_buttons),
-                            icon = Icons.Rounded.SmartButton,
-                            selected = selectedSection == EditorSection.BUTTONS,
-                            onClick = {
-                                MacroPadNavState.selectSection(EditorSection.BUTTONS)
-                            },
-                        )
-                        GamepadCategoryTile(
-                            title = stringResource(R.string.macropad_editor_manage_macros),
-                            icon = Icons.AutoMirrored.Rounded.PlaylistPlay,
-                            selected = selectedSection == EditorSection.MACROS,
-                            onClick = {
-                                MacroPadNavState.selectSection(EditorSection.MACROS)
-                            },
-                        )
+                        EditorSection.entries.forEach { section ->
+                            GamepadCategoryTile(
+                                title = stringResource(section.titleResId()),
+                                icon = section.icon(),
+                                selected = selectedSection == section,
+                                onClick = {
+                                    MacroPadNavState.selectSection(section)
+                                },
+                            )
+                        }
                     },
                     content = {
                         AnimatedContent(
@@ -370,16 +358,7 @@ fun MacroPadEditor(
                         ) { stack ->
                             val currentSubPage = stack.lastOrNull()
                             if (currentSubPage == null) {
-                                val sectionTitle =
-                                    when (selectedSection) {
-                                        EditorSection.QUICK_ACTIONS -> stringResource(R.string.quick_actions_title)
-                                        EditorSection.PROFILES -> stringResource(R.string.quick_menu_profile_label)
-                                        EditorSection.LAYOUTS -> stringResource(R.string.macropad_editor_section_layout)
-                                        EditorSection.MIRROR -> stringResource(R.string.quick_menu_screen_mirroring)
-                                        EditorSection.BACKGROUND -> stringResource(R.string.layout_settings_bg_section_title)
-                                        EditorSection.BUTTONS -> stringResource(R.string.macropad_editor_section_buttons)
-                                        EditorSection.MACROS -> stringResource(R.string.macropad_editor_manage_macros)
-                                    }
+                                val sectionTitle = stringResource(selectedSection.titleResId())
                                 GamepadDeck(
                                     title = sectionTitle,
                                     scrollable = selectedSection != EditorSection.BUTTONS,
@@ -2421,20 +2400,8 @@ private fun ButtonsDeck(
                         onToggleMoving = {
                             movingItemKey = if (isMoving) null else key
                         },
-                        onMoveUp = {
-                            if (index > 0 && layout != null) {
-                                val mutable = buttons.toMutableList()
-                                java.util.Collections.swap(mutable, index, index - 1)
-                                MacroPadState.updateLayout(layout.copy(buttons = mutable))
-                            }
-                        },
-                        onMoveDown = {
-                            if (index < buttons.size - 1 && layout != null) {
-                                val mutable = buttons.toMutableList()
-                                java.util.Collections.swap(mutable, index, index + 1)
-                                MacroPadState.updateLayout(layout.copy(buttons = mutable))
-                            }
-                        },
+                        onMoveUp = { swapButtons(layout, index, index - 1) },
+                        onMoveDown = { swapButtons(layout, index, index + 1) },
                         dragHandleModifier = Modifier.draggableHandle(),
                         itemKey = key,
                         onFocusChanged = { isFocused ->
