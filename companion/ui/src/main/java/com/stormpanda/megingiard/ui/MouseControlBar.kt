@@ -24,6 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+private val TMB_DEFAULT_SHAPE = RoundedCornerShape(8.dp)
+
 /**
  * Reusable touchable mouse button component for touchpad and virtual keyboard overlays.
  *
@@ -34,7 +36,7 @@ import androidx.compose.ui.unit.sp
  * @param modifier Modifier applied to the button container.
  * @param text Optional text label to display on the button.
  * @param accentColor Primary accent color used for borders and pressed highlight.
- * @param shape Shape of the button card (default: RoundedCornerShape(8.dp)).
+ * @param shape Shape of the button card (default: [TMB_DEFAULT_SHAPE]).
  */
 @Composable
 fun TouchpadMouseButton(
@@ -43,7 +45,7 @@ fun TouchpadMouseButton(
     modifier: Modifier = Modifier,
     text: String? = null,
     accentColor: Color = LocalAppColors.current.accent,
-    shape: Shape = RoundedCornerShape(8.dp),
+    shape: Shape = TMB_DEFAULT_SHAPE,
 ) {
     val view = LocalView.current
     val colors = LocalAppColors.current
