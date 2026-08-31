@@ -835,17 +835,42 @@ object MacroPadState {
         updateProfile(updatedTargetProfile.copy(layouts = updatedLayouts))
     }
 
+    private inline fun updateLayoutInProfiles(
+        layoutId: String,
+        transform: (PadLayout) -> PadLayout?,
+    ): Boolean {
+        var changed = false
+        val updatedProfiles =
+            _profiles.value.map { profile ->
+                var profileChanged = false
+                val updatedLayouts =
+                    profile.layouts.map { layout ->
+                        if (layout.id != layoutId) return@map layout
+                        val updated = transform(layout)
+                        if (updated != null && updated != layout) {
+                            changed = true
+                            profileChanged = true
+                            updated
+                        } else {
+                            layout
+                        }
+                    }
+                if (profileChanged) profile.copy(layouts = updatedLayouts) else profile
+            }
+        if (changed) {
+            _profiles.value = updatedProfiles
+            MacroPadSettings.saveMacroPadData()
+        }
+        return changed
+    }
+
     /** Duplicate a button in the current layout, shifting its position slightly to prevent perfect overlap. */
     fun duplicateButtonInLayout(
         button: PadButton,
         layoutId: String,
     ) {
-        val profile = activeProfile.value ?: return
-        val layout = profile.layouts.firstOrNull { it.id == layoutId } ?: return
-
         val newPosX = (button.posX + DUPLICATE_BUTTON_OFFSET).coerceIn(0f, 1f)
         val newPosY = (button.posY + DUPLICATE_BUTTON_OFFSET).coerceIn(0f, 1f)
-
         val clonedButton =
             button.copy(
                 id = UUID.randomUUID().toString(),
@@ -853,17 +878,13 @@ object MacroPadState {
                 posY = newPosY,
             )
 
-        val updatedLayouts =
-            profile.layouts.map { lay ->
-                if (lay.id == layoutId) {
-                    lay.copy(buttons = lay.buttons + clonedButton)
-                } else {
-                    lay
-                }
+        val changed =
+            updateLayoutInProfiles(layoutId) { layout ->
+                layout.copy(buttons = layout.buttons + clonedButton)
             }
-
-        AppLog.d(TAG, "duplicateButtonInLayout buttonId=${button.id} layoutId=$layoutId offset to ($newPosX, $newPosY)")
-        updateProfile(profile.copy(layouts = updatedLayouts))
+        if (changed) {
+            AppLog.d(TAG, "duplicateButtonInLayout buttonId=${button.id} layoutId=$layoutId offset to ($newPosX, $newPosY)")
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -899,62 +920,42 @@ object MacroPadState {
         offsetX: Float,
         offsetY: Float,
     ) {
-        var changed = false
-        val updatedProfiles =
-            _profiles.value.map { profile ->
-                var profileChanged = false
-                val updatedLayouts =
-                    profile.layouts.map { layout ->
-                        if (layout.id != layoutId) return@map layout
-                        if (layout.mirrorSavedScale == scale &&
-                            layout.mirrorSavedOffsetX == offsetX &&
-                            layout.mirrorSavedOffsetY == offsetY
-                        ) {
-                            layout
-                        } else {
-                            changed = true
-                            profileChanged = true
-                            layout.copy(
-                                mirrorSavedScale = scale,
-                                mirrorSavedOffsetX = offsetX,
-                                mirrorSavedOffsetY = offsetY,
-                                mirrorConfigured = true,
-                            )
-                        }
-                    }
-                if (profileChanged) profile.copy(layouts = updatedLayouts) else profile
+        val changed =
+            updateLayoutInProfiles(layoutId) { layout ->
+                if (layout.mirrorSavedScale == scale &&
+                    layout.mirrorSavedOffsetX == offsetX &&
+                    layout.mirrorSavedOffsetY == offsetY
+                ) {
+                    null
+                } else {
+                    layout.copy(
+                        mirrorSavedScale = scale,
+                        mirrorSavedOffsetX = offsetX,
+                        mirrorSavedOffsetY = offsetY,
+                        mirrorConfigured = true,
+                    )
+                }
             }
-        if (!changed) return
-        AppLog.d(TAG, "saveMirrorViewport layoutId=$layoutId scale=$scale offset=($offsetX,$offsetY)")
-        _profiles.value = updatedProfiles
-        MacroPadSettings.saveMacroPadData()
+        if (changed) {
+            AppLog.d(TAG, "saveMirrorViewport layoutId=$layoutId scale=$scale offset=($offsetX,$offsetY)")
+        }
     }
 
     fun saveMirrorCutouts(
         layoutId: String,
         cutouts: List<ScreenCutout>,
     ) {
-        var changed = false
-        val updatedProfiles =
-            _profiles.value.map { profile ->
-                var profileChanged = false
-                val updatedLayouts =
-                    profile.layouts.map { layout ->
-                        if (layout.id != layoutId) return@map layout
-                        if (layout.mirrorCutouts == cutouts && layout.mirrorConfigured) {
-                            layout
-                        } else {
-                            changed = true
-                            profileChanged = true
-                            layout.copy(mirrorCutouts = cutouts, mirrorConfigured = true)
-                        }
-                    }
-                if (profileChanged) profile.copy(layouts = updatedLayouts) else profile
+        val changed =
+            updateLayoutInProfiles(layoutId) { layout ->
+                if (layout.mirrorCutouts == cutouts && layout.mirrorConfigured) {
+                    null
+                } else {
+                    layout.copy(mirrorCutouts = cutouts, mirrorConfigured = true)
+                }
             }
-        if (!changed) return
-        AppLog.d(TAG, "saveMirrorCutouts layoutId=$layoutId count=${cutouts.size}")
-        _profiles.value = updatedProfiles
-        MacroPadSettings.saveMacroPadData()
+        if (changed) {
+            AppLog.d(TAG, "saveMirrorCutouts layoutId=$layoutId count=${cutouts.size}")
+        }
     }
 
     /**
@@ -968,23 +969,13 @@ object MacroPadState {
         layoutId: String,
         value: Boolean,
     ) {
-        var changed = false
-        val updatedProfiles =
-            _profiles.value.map { profile ->
-                var profileChanged = false
-                val updatedLayouts =
-                    profile.layouts.map { layout ->
-                        if (layout.id != layoutId || layout.mirrorAutoStart == value) return@map layout
-                        changed = true
-                        profileChanged = true
-                        layout.copy(mirrorAutoStart = value)
-                    }
-                if (profileChanged) profile.copy(layouts = updatedLayouts) else profile
+        val changed =
+            updateLayoutInProfiles(layoutId) { layout ->
+                if (layout.mirrorAutoStart == value) null else layout.copy(mirrorAutoStart = value)
             }
-        if (!changed) return
-        AppLog.d(TAG, "setLayoutMirrorAutoStart layoutId=$layoutId value=$value")
-        _profiles.value = updatedProfiles
-        MacroPadSettings.saveMacroPadData()
+        if (changed) {
+            AppLog.d(TAG, "setLayoutMirrorAutoStart layoutId=$layoutId value=$value")
+        }
     }
 
     /**
@@ -995,23 +986,13 @@ object MacroPadState {
         layoutId: String,
         value: Boolean,
     ) {
-        var changed = false
-        val updatedProfiles =
-            _profiles.value.map { profile ->
-                var profileChanged = false
-                val updatedLayouts =
-                    profile.layouts.map { layout ->
-                        if (layout.id != layoutId || layout.mirrorFollowActive == value) return@map layout
-                        changed = true
-                        profileChanged = true
-                        layout.copy(mirrorFollowActive = value)
-                    }
-                if (profileChanged) profile.copy(layouts = updatedLayouts) else profile
+        val changed =
+            updateLayoutInProfiles(layoutId) { layout ->
+                if (layout.mirrorFollowActive == value) null else layout.copy(mirrorFollowActive = value)
             }
-        if (!changed) return
-        AppLog.d(TAG, "setLayoutMirrorFollowActive layoutId=$layoutId value=$value")
-        _profiles.value = updatedProfiles
-        MacroPadSettings.saveMacroPadData()
+        if (changed) {
+            AppLog.d(TAG, "setLayoutMirrorFollowActive layoutId=$layoutId value=$value")
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
