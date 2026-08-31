@@ -89,12 +89,14 @@ private const val TAG = "PadCanvas"
 
 private val ED_BUTTON_UNIT_DP = 60.dp
 private val ED_BTN_SQUARE_RADIUS = 4.dp
+private val ED_BTN_SQUARE_SHAPE = RoundedCornerShape(ED_BTN_SQUARE_RADIUS)
 
 private const val ED_EDGE_MARGIN = 0.05f
 
 // Highlight border when button positioning is unlocked or cropping background
 private val PC_HIGHLIGHT_BORDER_WIDTH = 2.dp
 private val PC_HIGHLIGHT_BORDER_RADIUS = 10.dp
+private val PC_HIGHLIGHT_BORDER_SHAPE = RoundedCornerShape(PC_HIGHLIGHT_BORDER_RADIUS)
 private const val PC_HIGHLIGHT_BORDER_ALPHA = 0.85f
 
 // Background image cropping scale limits
@@ -107,6 +109,8 @@ private const val PC_LOCK_ANIM_IN_MS = 150
 private const val PC_LOCK_ANIM_OUT_MS = 250
 private val PC_LOCK_BADGE_SIZE = 72.dp
 private val PC_LOCK_BADGE_CORNER = 16.dp
+private val PC_LOCK_BADGE_SHAPE = RoundedCornerShape(PC_LOCK_BADGE_CORNER)
+private val PC_PILL_SHAPE = RoundedCornerShape(percent = 50)
 private val PC_LOCK_ICON_SIZE = 40.dp
 
 // Grid: half a button unit — two steps apart = buttons touch exactly
@@ -200,14 +204,14 @@ internal fun PadCanvas(
     val padModifier =
         modifier
             .fillMaxSize()
-            .clip(RoundedCornerShape(PC_HIGHLIGHT_BORDER_RADIUS))
+            .clip(PC_HIGHLIGHT_BORDER_SHAPE)
             .background(if (transparentBackground) Color.Transparent else Color.Black)
             .then(
                 if (!isLocked || isCropping) {
                     Modifier.border(
                         width = PC_HIGHLIGHT_BORDER_WIDTH,
                         color = accentColor.copy(alpha = PC_HIGHLIGHT_BORDER_ALPHA),
-                        shape = RoundedCornerShape(PC_HIGHLIGHT_BORDER_RADIUS),
+                        shape = PC_HIGHLIGHT_BORDER_SHAPE,
                     )
                 } else {
                     Modifier
@@ -439,11 +443,11 @@ internal fun PadCanvas(
                         .size(PC_LOCK_BADGE_SIZE)
                         .background(
                             color = Color.Black.copy(alpha = 0.75f),
-                            shape = RoundedCornerShape(PC_LOCK_BADGE_CORNER),
+                            shape = PC_LOCK_BADGE_SHAPE,
                         ).border(
                             width = 1.dp,
                             color = if (!lockSymbolLocked) accentColor else Color.White.copy(alpha = 0.2f),
-                            shape = RoundedCornerShape(PC_LOCK_BADGE_CORNER),
+                            shape = PC_LOCK_BADGE_SHAPE,
                         ),
                 contentAlignment = Alignment.Center,
             ) {
@@ -531,14 +535,14 @@ private fun DraggableButton(
         } else {
             when (btn.buttonShape) {
                 ButtonShape.SQUARE, ButtonShape.ICON_ONLY -> {
-                    RoundedCornerShape(ED_BTN_SQUARE_RADIUS)
+                    ED_BTN_SQUARE_SHAPE
                 }
 
                 ButtonShape.CIRCLE -> {
                     if (btn.buttonSize == ButtonSize.SIZE_2X1 ||
                         btn.buttonSize == ButtonSize.SIZE_1X2
                     ) {
-                        RoundedCornerShape(percent = 50)
+                        PC_PILL_SHAPE
                     } else {
                         CircleShape
                     }
