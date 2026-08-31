@@ -83,6 +83,7 @@ private const val TAG = "GamepadScaffold"
 private val GS_SIDEBAR_WIDTH = 180.dp
 private val GS_SIDEBAR_ITEM_HEIGHT = 40.dp
 private val GS_SIDEBAR_CORNER = 10.dp
+private val GS_SIDEBAR_SHAPE = RoundedCornerShape(GS_SIDEBAR_CORNER)
 private val GS_SIDEBAR_ICON_SIZE = 20.dp
 private val GS_FOCUS_STROKE_WIDTH = 1.5.dp
 private val GS_ZERO_BORDER_WIDTH = 0.dp
@@ -330,8 +331,6 @@ fun GamepadCategoryTile(
         transferFocusToDeck?.invoke()
     }
 
-    val shape = remember { RoundedCornerShape(GS_SIDEBAR_CORNER) }
-
     Box(
         modifier =
             modifier
@@ -374,7 +373,7 @@ fun GamepadCategoryTile(
                     }
                 }.primaryOverlayFocusable(
                     onClick = wrappedOnClick,
-                    shape = shape,
+                    shape = GS_SIDEBAR_SHAPE,
                     borderWidth = GS_ZERO_BORDER_WIDTH,
                     interactionSource = interactionSource,
                 ),
