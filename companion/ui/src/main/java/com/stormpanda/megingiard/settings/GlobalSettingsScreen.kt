@@ -130,6 +130,7 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.LocalFirstContentRequester
 import com.stormpanda.megingiard.ui.PrimaryModalPayload
 import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
+import com.stormpanda.megingiard.ui.cycle
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.launchUrlOnPrimaryDisplay
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
@@ -274,13 +275,7 @@ fun GlobalSettingsScreen(
 
     LaunchedEffect(Unit) {
         PrimaryOverlayInputBridge.bumperEvents.collect { direction ->
-            val currentIndex = categoryList.indexOf(selectedCategory).coerceAtLeast(0)
-            val nextIndex =
-                when (direction) {
-                    BumperDirection.PREV -> (currentIndex - 1 + categoryList.size) % categoryList.size
-                    BumperDirection.NEXT -> (currentIndex + 1) % categoryList.size
-                }
-            selectedCategory = categoryList[nextIndex]
+            selectedCategory = categoryList.cycle(selectedCategory, direction)
             subPageStack = emptyList()
         }
     }

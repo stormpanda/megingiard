@@ -172,4 +172,15 @@ class PrimaryOverlayInputBridgeTest {
             assertFalse(handledRelease)
             assertEquals(listOf(KeyEvent.ACTION_UP to KeyEvent.KEYCODE_BUTTON_L2), eventsRelease)
         }
+
+    @Test
+    fun testListCycleWithBumperDirection() {
+        val items = listOf("A", "B", "C")
+        assertEquals("B", items.cycle("A", BumperDirection.NEXT))
+        assertEquals("C", items.cycle("B", BumperDirection.NEXT))
+        assertEquals("A", items.cycle("C", BumperDirection.NEXT))
+        assertEquals("C", items.cycle("A", BumperDirection.PREV))
+        assertEquals("B", items.cycle("C", BumperDirection.PREV))
+        assertEquals("A", items.cycle("B", BumperDirection.PREV))
+    }
 }

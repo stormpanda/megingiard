@@ -114,6 +114,7 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.PrimaryModalPayload
 import com.stormpanda.megingiard.ui.PrimaryModalType
 import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
+import com.stormpanda.megingiard.ui.cycle
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.handle2DAdjustmentKeyEvent
 import com.stormpanda.megingiard.ui.launchDirectionalRepeat
@@ -247,13 +248,7 @@ fun MacroPadEditor(
 
     LaunchedEffect(Unit) {
         PrimaryOverlayInputBridge.bumperEvents.collect { direction ->
-            val currentIndex = EditorSection.entries.indexOf(selectedSection)
-            val nextIndex =
-                when (direction) {
-                    BumperDirection.PREV -> (currentIndex - 1 + EditorSection.entries.size) % EditorSection.entries.size
-                    BumperDirection.NEXT -> (currentIndex + 1) % EditorSection.entries.size
-                }
-            MacroPadNavState.selectSection(EditorSection.entries[nextIndex])
+            MacroPadNavState.selectSection(EditorSection.entries.cycle(selectedSection, direction))
         }
     }
 

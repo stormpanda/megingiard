@@ -20,6 +20,8 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.math.nextItem
+import com.stormpanda.megingiard.math.prevItem
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -50,6 +52,18 @@ enum class BumperDirection {
     PREV,
     NEXT,
 }
+
+/**
+ * Cycles to previous or next item in the collection based on [BumperDirection].
+ */
+fun <T> List<T>.cycle(
+    currentItem: T,
+    direction: BumperDirection,
+): T =
+    when (direction) {
+        BumperDirection.PREV -> prevItem(currentItem)
+        BumperDirection.NEXT -> nextItem(currentItem)
+    }
 
 /**
  * Bridge singleton for dispatching gamepad events (bumpers, joystick translation)
