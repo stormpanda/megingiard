@@ -103,8 +103,6 @@ import com.stormpanda.megingiard.log.LogReportManager
 import com.stormpanda.megingiard.macropad.ColorWheelSubPageContent
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadProfile
-import com.stormpanda.megingiard.math.nextItem
-import com.stormpanda.megingiard.math.prevItem
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.PrivdConstants
 import com.stormpanda.megingiard.privd.PrivdState
@@ -385,8 +383,12 @@ fun GlobalSettingsScreen(
                                         description = stringResource(R.string.help_settings_language_desc),
                                         selectedText = stringResource(appLanguage.displayNameResId()),
                                         icon = Icons.Rounded.Language,
-                                        onPrevious = { viewModel.setAppLanguage(AppLanguage.entries.prevItem(appLanguage)) },
-                                        onNext = { viewModel.setAppLanguage(AppLanguage.entries.nextItem(appLanguage)) },
+                                        onPrevious = {
+                                            viewModel.setAppLanguage(
+                                                AppLanguage.entries.cycle(appLanguage, BumperDirection.PREV),
+                                            )
+                                        },
+                                        onNext = { viewModel.setAppLanguage(AppLanguage.entries.cycle(appLanguage, BumperDirection.NEXT)) },
                                     )
 
                                     GamepadToggleCard(
@@ -440,8 +442,8 @@ fun GlobalSettingsScreen(
                                         description = stringResource(R.string.help_settings_theme_desc),
                                         selectedText = stringResource(themeMode.displayNameResId()),
                                         icon = Icons.Rounded.Palette,
-                                        onPrevious = { viewModel.setThemeMode(ThemeMode.entries.prevItem(themeMode)) },
-                                        onNext = { viewModel.setThemeMode(ThemeMode.entries.nextItem(themeMode)) },
+                                        onPrevious = { viewModel.setThemeMode(ThemeMode.entries.cycle(themeMode, BumperDirection.PREV)) },
+                                        onNext = { viewModel.setThemeMode(ThemeMode.entries.cycle(themeMode, BumperDirection.NEXT)) },
                                         modifier = Modifier.firstDeckItem(),
                                     )
 
@@ -666,8 +668,8 @@ fun GlobalSettingsScreen(
                                         description = stringResource(R.string.help_settings_log_level_desc),
                                         selectedText = logLevel.name,
                                         icon = Icons.Rounded.BugReport,
-                                        onPrevious = { viewModel.setLogLevel(AppLog.Level.entries.prevItem(logLevel)) },
-                                        onNext = { viewModel.setLogLevel(AppLog.Level.entries.nextItem(logLevel)) },
+                                        onPrevious = { viewModel.setLogLevel(AppLog.Level.entries.cycle(logLevel, BumperDirection.PREV)) },
+                                        onNext = { viewModel.setLogLevel(AppLog.Level.entries.cycle(logLevel, BumperDirection.NEXT)) },
                                         modifier = Modifier.firstDeckItem(),
                                     )
 
@@ -1137,8 +1139,8 @@ private fun ShareProfileSubPage(onExportProfile: (ExportMetadata, PadProfile, Bo
             title = stringResource(R.string.config_profile_export_select),
             description = stringResource(R.string.config_profile_export_select_desc),
             selectedText = currentProfile?.name ?: "",
-            onPrevious = { currentProfile?.let { selectedProfile = profiles.prevItem(it) } },
-            onNext = { currentProfile?.let { selectedProfile = profiles.nextItem(it) } },
+            onPrevious = { currentProfile?.let { selectedProfile = profiles.cycle(it, BumperDirection.PREV) } },
+            onNext = { currentProfile?.let { selectedProfile = profiles.cycle(it, BumperDirection.NEXT) } },
             icon = Icons.Rounded.SportsEsports,
             modifier = Modifier.firstDeckItem(),
         )
