@@ -60,24 +60,14 @@ fun HorizontalLetterCarousel(
     AnimatedContent(
         targetState = safeIndex,
         transitionSpec = {
-            val isMovingForward = targetState > initialState
-            if (isMovingForward) {
-                (
-                    slideInHorizontally(animationSpec = tween(HLC_ANIM_IN_MS)) { itemShiftPx } +
-                        fadeIn(animationSpec = tween(HLC_ANIM_IN_MS))
-                ).togetherWith(
-                    slideOutHorizontally(animationSpec = tween(HLC_ANIM_OUT_MS)) { -itemShiftPx } +
-                        fadeOut(animationSpec = tween(HLC_ANIM_OUT_MS)),
-                )
-            } else {
-                (
-                    slideInHorizontally(animationSpec = tween(HLC_ANIM_IN_MS)) { -itemShiftPx } +
-                        fadeIn(animationSpec = tween(HLC_ANIM_IN_MS))
-                ).togetherWith(
-                    slideOutHorizontally(animationSpec = tween(HLC_ANIM_OUT_MS)) { itemShiftPx } +
-                        fadeOut(animationSpec = tween(HLC_ANIM_OUT_MS)),
-                )
-            }
+            val direction = if (targetState > initialState) 1 else -1
+            (
+                slideInHorizontally(animationSpec = tween(HLC_ANIM_IN_MS)) { itemShiftPx * direction } +
+                    fadeIn(animationSpec = tween(HLC_ANIM_IN_MS))
+            ).togetherWith(
+                slideOutHorizontally(animationSpec = tween(HLC_ANIM_OUT_MS)) { -itemShiftPx * direction } +
+                    fadeOut(animationSpec = tween(HLC_ANIM_OUT_MS)),
+            )
         },
         label = "LetterCarouselHorizontalRollTransition",
         modifier = modifier,

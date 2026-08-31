@@ -80,6 +80,11 @@ fun HorizontalPosterCarousel(
     val appColors = LocalAppColors.current
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
+    val extraPushPx =
+        remember(density) {
+            with(density) { HPC_EXTRA_PUSH_DP.toPx() }
+        }
+    val posterShape = remember(posterCornerRadius) { RoundedCornerShape(posterCornerRadius) }
 
     BoxWithConstraints(
         modifier =
@@ -117,11 +122,6 @@ fun HorizontalPosterCarousel(
             val resolvedCardBg =
                 cardBackgroundColor?.invoke(actualIndex, isSelected)
                     ?: if (isSelected) appColors.surfaceVariant else appColors.surface
-
-            val extraPushPx =
-                remember(density) {
-                    with(density) { HPC_EXTRA_PUSH_DP.toPx() }
-                }
 
             Box(
                 modifier =
@@ -181,11 +181,11 @@ fun HorizontalPosterCarousel(
                                 color = resolvedCardBg.copy(alpha = cardHiddenAlpha),
                                 cornerRadius = CornerRadius(cornerRadiusPx, cornerRadiusPx),
                             )
-                        }.clip(RoundedCornerShape(posterCornerRadius))
+                        }.clip(posterShape)
                         .border(
                             width = if (isSelected) 3.dp else 1.dp,
                             color = if (isSelected) appColors.accent else appColors.divider,
-                            shape = RoundedCornerShape(posterCornerRadius),
+                            shape = posterShape,
                         ).noFocusClickable {
                             if (isSelected) {
                                 onItemClick(actualIndex)
