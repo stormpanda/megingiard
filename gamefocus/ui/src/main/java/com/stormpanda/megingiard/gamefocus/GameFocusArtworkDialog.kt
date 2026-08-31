@@ -236,13 +236,11 @@ fun GameFocusArtworkDialog(
                     selectingImage = imageItem
                     scope.launch(Dispatchers.IO) {
                         try {
-                            val tempRes = SteamGridDbClient.downloadImageToTempFile(imageItem.url, context.cacheDir)
-                            val tempFile = tempRes.getOrNull()
-                            if (tempFile != null) {
+                            val bytes = SteamGridDbClient.downloadImageBytes(imageItem.url).getOrNull()
+                            if (bytes != null) {
                                 val coversDir = File(context.cacheDir, "gamefocus_covers").apply { mkdirs() }
                                 val targetFile = File(coversDir, "${appInfo.packageName}.png")
-                                tempFile.copyTo(targetFile, overwrite = true)
-                                tempFile.delete()
+                                targetFile.writeBytes(bytes)
 
                                 // Scrape logo for ROMs
                                 if (appInfo.isRom && currentGame != null) {
@@ -250,13 +248,10 @@ fun GameFocusArtworkDialog(
                                         val logosRes = SteamGridDbClient.fetchImages(currentGame.id, "logos", apiKey)
                                         val logoUrl = logosRes.getOrNull()?.firstOrNull()?.url
                                         if (logoUrl != null) {
-                                            val tempLogoRes = SteamGridDbClient.downloadImageToTempFile(logoUrl, context.cacheDir)
-                                            val tempLogoFile = tempLogoRes.getOrNull()
-                                            if (tempLogoFile != null) {
+                                            val logoBytes = SteamGridDbClient.downloadImageBytes(logoUrl).getOrNull()
+                                            if (logoBytes != null) {
                                                 val logosDir = File(context.cacheDir, "gamefocus_logos").apply { mkdirs() }
-                                                val targetLogoFile = File(logosDir, "${appInfo.packageName}.png")
-                                                tempLogoFile.copyTo(targetLogoFile, overwrite = true)
-                                                tempLogoFile.delete()
+                                                File(logosDir, "${appInfo.packageName}.png").writeBytes(logoBytes)
                                                 AppLog.i(TAG, "Selected and updated logo for ROM: ${appInfo.packageName}")
                                             }
                                         }
@@ -546,25 +541,7 @@ private fun GameSelectionRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
-        // L1 Badge Indicator
-        Box(
-            modifier =
-                Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(appColors.surfaceVariant)
-                    .border(1.dp, appColors.divider, RoundedCornerShape(6.dp))
-                    .padding(horizontal = 7.dp, vertical = 4.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = "L1",
-                style =
-                    MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = appColors.accent,
-                    ),
-            )
-        }
+        ShoulderBadge(label = "L1")
 
         Spacer(modifier = Modifier.width(8.dp))
 
@@ -611,25 +588,33 @@ private fun GameSelectionRow(
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        // R1 Badge Indicator
-        Box(
-            modifier =
-                Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(appColors.surfaceVariant)
-                    .border(1.dp, appColors.divider, RoundedCornerShape(6.dp))
-                    .padding(horizontal = 7.dp, vertical = 4.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = "R1",
-                style =
-                    MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = appColors.accent,
-                    ),
-            )
-        }
+        ShoulderBadge(label = "R1")
+    }
+}
+
+@Composable
+private fun ShoulderBadge(
+    label: String,
+    modifier: Modifier = Modifier,
+) {
+    val appColors = LocalAppColors.current
+    Box(
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(6.dp))
+                .background(appColors.surfaceVariant)
+                .border(1.dp, appColors.divider, RoundedCornerShape(6.dp))
+                .padding(horizontal = 7.dp, vertical = 4.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            style =
+                MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = appColors.accent,
+                ),
+        )
     }
 }
 
