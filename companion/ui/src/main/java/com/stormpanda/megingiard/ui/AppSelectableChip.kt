@@ -67,8 +67,13 @@ fun AppSelectableChip(
     val colors = LocalAppColors.current
     val contentColor = if (selected) selectedContentColor else unselectedContentColor
     val effectiveAlpha = if (enabled) 1f else 0.38f
-
     val chipBorderColor = (if (selected) colors.accent else colors.controlOverlayBorder).copy(alpha = effectiveAlpha)
+    val chipBgColor =
+        (if (selected) colors.accent else colors.navQuickMenuBody).copy(
+            alpha =
+                (if (selected) 0.85f else 0.5f) * effectiveAlpha,
+        )
+    val shape = RoundedCornerShape(CHIP_CORNER)
 
     Box(
         modifier =
@@ -76,41 +81,15 @@ fun AppSelectableChip(
                 .semantics {
                     this.selected = selected
                     this.contentDescription = contentDescription ?: text
-                }.clip(RoundedCornerShape(CHIP_CORNER))
-                .background(
-                    (
-                        if (selected) {
-                            colors.accent.copy(alpha = 0.85f)
-                        } else {
-                            colors.navQuickMenuBody.copy(alpha = 0.5f)
-                        }
-                    ).copy(alpha = (if (selected) 0.85f else 0.5f) * effectiveAlpha),
-                ).border(
-                    1.dp,
-                    chipBorderColor,
-                    RoundedCornerShape(CHIP_CORNER),
-                ).primaryOverlayFocusable(
+                }.clip(shape)
+                .background(chipBgColor)
+                .border(1.dp, chipBorderColor, shape)
+                .primaryOverlayFocusable(
                     onClick = if (enabled) onClick else null,
-                    shape = RoundedCornerShape(CHIP_CORNER),
+                    shape = shape,
                 ).padding(horizontal = CHIP_H_PADDING, vertical = CHIP_V_PADDING),
     ) {
-        if (leadingIcon != null || trailingContent != null) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(CHIP_CONTENT_SPACING),
-            ) {
-                leadingIcon?.invoke(contentColor.copy(alpha = effectiveAlpha))
-                Text(
-                    text = text,
-                    color = contentColor.copy(alpha = effectiveAlpha),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                trailingContent?.invoke(contentColor.copy(alpha = effectiveAlpha))
-            }
-        } else {
+        val labelText = @Composable {
             Text(
                 text = text,
                 color = contentColor.copy(alpha = effectiveAlpha),
@@ -119,6 +98,19 @@ fun AppSelectableChip(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+        }
+
+        if (leadingIcon != null || trailingContent != null) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(CHIP_CONTENT_SPACING),
+            ) {
+                leadingIcon?.invoke(contentColor.copy(alpha = effectiveAlpha))
+                labelText()
+                trailingContent?.invoke(contentColor.copy(alpha = effectiveAlpha))
+            }
+        } else {
+            labelText()
         }
     }
 }
