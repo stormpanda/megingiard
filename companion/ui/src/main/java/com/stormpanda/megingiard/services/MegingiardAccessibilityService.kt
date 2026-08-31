@@ -969,11 +969,10 @@ class MegingiardAccessibilityService : AccessibilityService() {
             }
 
             val targetStage =
-                when {
-                    !devModeActive -> AutoSetupTargetStage.STAGE_C_PAIRING
-                    !wirelessActive && !paired -> AutoSetupTargetStage.STAGE_C_PAIRING
-                    !wirelessActive && paired -> AutoSetupTargetStage.STAGE_B_WIRELESS_DEBUG
-                    else -> AutoSetupTargetStage.STAGE_C_PAIRING
+                if (!wirelessActive && paired && devModeActive) {
+                    AutoSetupTargetStage.STAGE_B_WIRELESS_DEBUG
+                } else {
+                    AutoSetupTargetStage.STAGE_C_PAIRING
                 }
 
             val initialStage =
@@ -988,23 +987,18 @@ class MegingiardAccessibilityService : AccessibilityService() {
             _isAutoSetupActive = true
 
             val actionToLaunch =
-                when (initialStage) {
-                    AutoToggleStage.ACTIVATE_DEV_MODE -> Settings.ACTION_DEVICE_INFO_SETTINGS
-                    AutoToggleStage.TOGGLE_USB_DEBUG -> Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS
-                    AutoToggleStage.TOGGLE_WIRELESS_DEBUG -> Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS
-                    else -> null
+                if (initialStage == AutoToggleStage.ACTIVATE_DEV_MODE) {
+                    Settings.ACTION_DEVICE_INFO_SETTINGS
+                } else {
+                    Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS
                 }
 
-            if (actionToLaunch != null) {
-                launchSettingsScreenWarmedUp(
-                    context,
-                    actionToLaunch,
-                    displayOptions,
-                    inst.serviceScope,
-                ) {
-                    inst.startAutoToggleLoop()
-                }
-            } else {
+            launchSettingsScreenWarmedUp(
+                context,
+                actionToLaunch,
+                displayOptions,
+                inst.serviceScope,
+            ) {
                 inst.startAutoToggleLoop()
             }
         }
