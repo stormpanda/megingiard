@@ -722,59 +722,40 @@ fun PrivilegedStepContent(
             }
         } else {
             // Sequential status checklist calculation
-            val devStatus: ChecklistStatus
-            val wirelessStatus: ChecklistStatus
-            val pairingStatus: ChecklistStatus
-            val daemonStatus: ChecklistStatus
+            val isPendingAll = !isAllSet && (!isWifiActive || !hasAutoSetupBeenStarted)
 
-            if (isAllSet) {
-                devStatus = ChecklistStatus.DONE
-                wirelessStatus = ChecklistStatus.DONE
-                pairingStatus = ChecklistStatus.DONE
-                daemonStatus = ChecklistStatus.DONE
-            } else if (!isWifiActive || !hasAutoSetupBeenStarted) {
-                devStatus = ChecklistStatus.PENDING
-                wirelessStatus = ChecklistStatus.PENDING
-                pairingStatus = ChecklistStatus.PENDING
-                daemonStatus = ChecklistStatus.PENDING
-            } else {
-                devStatus = if (isDevModeActive) ChecklistStatus.DONE else ChecklistStatus.ACTIVE
+            val devStatus =
+                when {
+                    isAllSet -> ChecklistStatus.DONE
+                    isPendingAll -> ChecklistStatus.PENDING
+                    isDevModeActive -> ChecklistStatus.DONE
+                    else -> ChecklistStatus.ACTIVE
+                }
 
-                wirelessStatus =
-                    if (devStatus == ChecklistStatus.DONE) {
-                        if (isWirelessActive && isUsbActive) ChecklistStatus.DONE else ChecklistStatus.ACTIVE
-                    } else {
-                        ChecklistStatus.PENDING
-                    }
+            val wirelessStatus =
+                when {
+                    isAllSet -> ChecklistStatus.DONE
+                    isPendingAll || devStatus != ChecklistStatus.DONE -> ChecklistStatus.PENDING
+                    isWirelessActive && isUsbActive -> ChecklistStatus.DONE
+                    else -> ChecklistStatus.ACTIVE
+                }
 
-                pairingStatus =
-                    if (devStatus == ChecklistStatus.DONE && wirelessStatus == ChecklistStatus.DONE) {
-                        if (isDevicePaired) ChecklistStatus.DONE else ChecklistStatus.ACTIVE
-                    } else {
-                        ChecklistStatus.PENDING
-                    }
+            val pairingStatus =
+                when {
+                    isAllSet -> ChecklistStatus.DONE
+                    isPendingAll || wirelessStatus != ChecklistStatus.DONE -> ChecklistStatus.PENDING
+                    isDevicePaired -> ChecklistStatus.DONE
+                    else -> ChecklistStatus.ACTIVE
+                }
 
-                daemonStatus =
-                    if (devStatus == ChecklistStatus.DONE && wirelessStatus == ChecklistStatus.DONE &&
-                        pairingStatus == ChecklistStatus.DONE
-                    ) {
-                        when (privdState) {
-                            PrivdState.RUNNING -> {
-                                ChecklistStatus.DONE
-                            }
-
-                            PrivdState.FAILED -> {
-                                if (isAutoSetupActive) ChecklistStatus.ACTIVE else ChecklistStatus.FAILED
-                            }
-
-                            else -> {
-                                ChecklistStatus.ACTIVE
-                            }
-                        }
-                    } else {
-                        ChecklistStatus.PENDING
-                    }
-            }
+            val daemonStatus =
+                when {
+                    isAllSet -> ChecklistStatus.DONE
+                    isPendingAll || pairingStatus != ChecklistStatus.DONE -> ChecklistStatus.PENDING
+                    privdState == PrivdState.RUNNING -> ChecklistStatus.DONE
+                    privdState == PrivdState.FAILED -> if (isAutoSetupActive) ChecklistStatus.ACTIVE else ChecklistStatus.FAILED
+                    else -> ChecklistStatus.ACTIVE
+                }
 
             // Multi-stage status checklist
             Column(
