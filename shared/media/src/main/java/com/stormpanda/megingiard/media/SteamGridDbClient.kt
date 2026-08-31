@@ -156,22 +156,27 @@ object SteamGridDbClient {
         return if (cleaned.isNotBlank()) cleaned else rawQuery.trim()
     }
 
-    suspend fun validateToken(apiKey: String): Result<Boolean> {
-        if (apiKey.isBlank()) {
-            return Result.failure(SteamGridDbException.Unauthorized("API key is missing"))
-        }
-        val urlString = "$BASE_URL/search/autocomplete/test"
-        return fetchString(urlString, apiKey)
+    private suspend inline fun <reified T> fetchApiResponse(
+        urlString: String,
+        apiKey: String,
+    ): Result<T> =
+        fetchString(urlString, apiKey)
             .mapCatching { jsonStr ->
-                val parsed = json.decodeFromString<SteamGridDbResponse<List<SteamGridDbGame>>>(jsonStr)
+                val parsed = json.decodeFromString<SteamGridDbResponse<T>>(jsonStr)
                 if (parsed.success) {
-                    true
+                    parsed.data
                 } else {
-                    throw Exception("API returned success=false")
+                    throw SteamGridDbException.ApiError("API returned success=false")
                 }
             }.recoverCatching { err ->
                 throw if (err is SteamGridDbException) err else mapNetworkError(err as Exception)
             }
+
+    suspend fun validateToken(apiKey: String): Result<Boolean> {
+        if (apiKey.isBlank()) {
+            return Result.failure(SteamGridDbException.Unauthorized("API key is missing"))
+        }
+        return fetchApiResponse<List<SteamGridDbGame>>("$BASE_URL/search/autocomplete/test", apiKey).map { true }
     }
 
     suspend fun searchGames(
@@ -187,18 +192,7 @@ object SteamGridDbClient {
             withContext(Dispatchers.IO) {
                 URLEncoder.encode(cleanedQuery, "UTF-8").replace("+", "%20")
             }
-        val urlString = "$BASE_URL/search/autocomplete/$encodedQuery"
-        return fetchString(urlString, apiKey)
-            .mapCatching { jsonStr ->
-                val parsed = json.decodeFromString<SteamGridDbResponse<List<SteamGridDbGame>>>(jsonStr)
-                if (parsed.success) {
-                    parsed.data
-                } else {
-                    throw Exception("API returned success=false")
-                }
-            }.recoverCatching { err ->
-                throw if (err is SteamGridDbException) err else mapNetworkError(err as Exception)
-            }
+        return fetchApiResponse("$BASE_URL/search/autocomplete/$encodedQuery", apiKey)
     }
 
     suspend fun fetchImages(
@@ -213,18 +207,7 @@ object SteamGridDbClient {
         // Validate type against supported categories
         val validTypes = setOf("grids", "heroes", "logos", "icons")
         val resolvedType = if (type in validTypes) type else "grids"
-        val urlString = "$BASE_URL/$resolvedType/game/$gameId"
-        return fetchString(urlString, apiKey)
-            .mapCatching { jsonStr ->
-                val parsed = json.decodeFromString<SteamGridDbResponse<List<SteamGridDbImage>>>(jsonStr)
-                if (parsed.success) {
-                    parsed.data
-                } else {
-                    throw Exception("API returned success=false")
-                }
-            }.recoverCatching { err ->
-                throw if (err is SteamGridDbException) err else mapNetworkError(err as Exception)
-            }
+        return fetchApiResponse("$BASE_URL/$resolvedType/game/$gameId", apiKey)
     }
 
     suspend fun downloadImageBytes(imageUrl: String): Result<ByteArray> =
