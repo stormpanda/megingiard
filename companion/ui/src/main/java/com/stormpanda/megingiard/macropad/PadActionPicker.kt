@@ -41,7 +41,7 @@ internal fun ActionPicker(
         }
 
         is PadAction.GamepadButton -> {
-            GamepadButtonPicker(current, onOpenGamepadPicker, onChange, isFirstItem = isFirstItem)
+            GamepadButtonPicker(current, onOpenGamepadPicker, isFirstItem = isFirstItem)
         }
 
         is PadAction.MouseButton,
