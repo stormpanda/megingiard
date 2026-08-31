@@ -111,12 +111,101 @@ class GamepadAdjustmentKeyEventTest {
     }
 
     @Test
-    fun `when adjusting Dpad Up and Down dismiss adjustment mode and return false for focus traversal`() {
+    fun `handle2DAdjustmentKeyEvent tests when not adjusting`() {
+        var startCount = 0
+        val handled =
+            handle2DAdjustmentKeyEvent(
+                keyEvent = ComposeKeyEvent(AndroidKeyEvent(AndroidKeyEvent.ACTION_DOWN, AndroidKeyEvent.KEYCODE_DPAD_UP)),
+                isAdjusting = false,
+                onStartAdjusting = { _, _, _ -> startCount++ },
+                onStopAdjusting = {},
+                onDismissAdjustment = {},
+            )
+        assertFalse(handled)
+        assertEquals(0, startCount)
+    }
+
+    @Test
+    fun `handle2DAdjustmentKeyEvent directional and dismiss key handling`() {
+        var startKeyCode = 0
+        var dirX = 0
+        var dirY = 0
+        var stopKeyCode = 0
         var dismissCount = 0
-        assertFalse(handleKey(AndroidKeyEvent.KEYCODE_DPAD_UP, onDismissAdjustment = { dismissCount++ }))
+
+        fun test2D(
+            keyCode: Int,
+            action: Int = AndroidKeyEvent.ACTION_DOWN,
+            onModifierKeyDown: ((Int) -> Boolean)? = null,
+            onModifierKeyUp: ((Int) -> Boolean)? = null,
+        ): Boolean =
+            handle2DAdjustmentKeyEvent(
+                keyEvent = ComposeKeyEvent(AndroidKeyEvent(action, keyCode)),
+                isAdjusting = true,
+                onStartAdjusting = { code, dx, dy ->
+                    startKeyCode = code
+                    dirX = dx
+                    dirY = dy
+                },
+                onStopAdjusting = { code -> stopKeyCode = code },
+                onDismissAdjustment = { dismissCount++ },
+                onModifierKeyDown = onModifierKeyDown,
+                onModifierKeyUp = onModifierKeyUp,
+            )
+
+        // D-pad UP
+        assertTrue(test2D(AndroidKeyEvent.KEYCODE_DPAD_UP))
+        assertEquals(AndroidKeyEvent.KEYCODE_DPAD_UP, startKeyCode)
+        assertEquals(0, dirX)
+        assertEquals(-1, dirY)
+
+        // D-pad DOWN
+        assertTrue(test2D(AndroidKeyEvent.KEYCODE_DPAD_DOWN))
+        assertEquals(0, dirX)
+        assertEquals(1, dirY)
+
+        // D-pad LEFT
+        assertTrue(test2D(AndroidKeyEvent.KEYCODE_DPAD_LEFT))
+        assertEquals(-1, dirX)
+        assertEquals(0, dirY)
+
+        // D-pad RIGHT
+        assertTrue(test2D(AndroidKeyEvent.KEYCODE_DPAD_RIGHT))
+        assertEquals(1, dirX)
+        assertEquals(0, dirY)
+
+        // KeyUp on D-pad RIGHT
+        assertTrue(test2D(AndroidKeyEvent.KEYCODE_DPAD_RIGHT, action = AndroidKeyEvent.ACTION_UP))
+        assertEquals(AndroidKeyEvent.KEYCODE_DPAD_RIGHT, stopKeyCode)
+
+        // Dismiss via BUTTON_B
+        assertTrue(test2D(AndroidKeyEvent.KEYCODE_BUTTON_B))
         assertEquals(1, dismissCount)
 
-        assertFalse(handleKey(AndroidKeyEvent.KEYCODE_DPAD_DOWN, onDismissAdjustment = { dismissCount++ }))
-        assertEquals(2, dismissCount)
+        // Modifiers
+        var l2Down = false
+        var l2Up = false
+        assertTrue(
+            test2D(
+                AndroidKeyEvent.KEYCODE_BUTTON_L2,
+                onModifierKeyDown = {
+                    l2Down = true
+                    true
+                },
+            ),
+        )
+        assertTrue(l2Down)
+
+        assertTrue(
+            test2D(
+                AndroidKeyEvent.KEYCODE_BUTTON_L2,
+                action = AndroidKeyEvent.ACTION_UP,
+                onModifierKeyUp = {
+                    l2Up = true
+                    true
+                },
+            ),
+        )
+        assertTrue(l2Up)
     }
 }
