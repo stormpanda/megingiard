@@ -1,7 +1,5 @@
 package com.stormpanda.megingiard.rom
 
-private const val TAG = "RomNameCleaner"
-
 private val BRACKET_REGEX = Regex("""\s*(\([^)]*\)|\[[^\]]*\])""")
 private val SHORT_DISC_REGEX = Regex("""(?i)\b(cd|d|s|p)\b\s*[0-9]+\b|\b(cd|d|s|p)[0-9]+\b""")
 
