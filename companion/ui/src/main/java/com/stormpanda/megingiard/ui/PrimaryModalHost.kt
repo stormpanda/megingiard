@@ -12,11 +12,6 @@ import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material.icons.rounded.Widgets
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.focusProperties
@@ -36,6 +31,7 @@ import com.stormpanda.megingiard.touchpad.TouchpadSettingsOverlay
 private const val TAG = "PrimaryModalHost"
 private val PMH_KOFI_BUTTON_HEIGHT = 32.dp
 private val PMH_KOFI_CORNER = 8.dp
+private val PMH_KOFI_SHAPE = RoundedCornerShape(PMH_KOFI_CORNER)
 
 /**
  * Composable dispatcher that renders the appropriate content for a given [PrimaryModalConfig].
@@ -63,7 +59,7 @@ fun PrimaryModalHost(
                         modifier =
                             Modifier
                                 .height(PMH_KOFI_BUTTON_HEIGHT)
-                                .clip(RoundedCornerShape(PMH_KOFI_CORNER))
+                                .clip(PMH_KOFI_SHAPE)
                                 .clickable {
                                     launchUrlOnPrimaryDisplay(context, "https://ko-fi.com/stormpanda")
                                     onDismiss()
