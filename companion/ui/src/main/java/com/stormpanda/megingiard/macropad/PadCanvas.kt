@@ -130,6 +130,12 @@ private const val PC_POINTER_ROTATION_BOTTOM = 180f
 private const val PC_POINTER_ROTATION_LEFT = 270f
 private const val PC_POINTER_ROTATION_RIGHT = 90f
 
+private data class HandlePosition(
+    val leftPx: Float,
+    val topPx: Float,
+    val rotation: Float,
+)
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Pad canvas — drag buttons to reposition
 // ─────────────────────────────────────────────────────────────────────────────
@@ -271,42 +277,17 @@ internal fun PadCanvas(
                             )
                         }
 
-                        BackgroundScaleMode.FIT -> {
+                        BackgroundScaleMode.FIT, BackgroundScaleMode.FILL -> {
                             val scale = layout?.bgImageScale ?: 1f
                             val ox = layout?.bgImageOffsetX ?: 0f
                             val oy = layout?.bgImageOffsetY ?: 0f
 
-                            val scaleBase = ViewportMath.calculateAspectFitScale(cw, ch, iw, ih)
-                            val ws = iw * scaleBase
-                            val hs = ih * scaleBase
-
-                            val maxTx = ((ws * scale - cw) / 2f).coerceAtLeast(0f)
-                            val maxTy = ((hs * scale - ch) / 2f).coerceAtLeast(0f)
-                            val clampedX = (ox * cw).coerceIn(-maxTx, maxTx)
-                            val clampedY = (oy * ch).coerceIn(-maxTy, maxTy)
-
-                            drawImage(
-                                image = bgBitmap!!,
-                                dstOffset =
-                                    IntOffset(
-                                        ((cw - ws * scale) / 2f + clampedX).toInt(),
-                                        ((ch - hs * scale) / 2f + clampedY).toInt(),
-                                    ),
-                                dstSize =
-                                    IntSize(
-                                        (ws * scale).toInt(),
-                                        (hs * scale).toInt(),
-                                    ),
-                                colorFilter = bgImageDimFilter,
-                            )
-                        }
-
-                        BackgroundScaleMode.FILL -> {
-                            val scale = layout?.bgImageScale ?: 1f
-                            val ox = layout?.bgImageOffsetX ?: 0f
-                            val oy = layout?.bgImageOffsetY ?: 0f
-
-                            val scaleBase = ViewportMath.calculateAspectFillScale(cw, ch, iw, ih)
+                            val scaleBase =
+                                if (mode == BackgroundScaleMode.FIT) {
+                                    ViewportMath.calculateAspectFitScale(cw, ch, iw, ih)
+                                } else {
+                                    ViewportMath.calculateAspectFillScale(cw, ch, iw, ih)
+                                }
                             val ws = iw * scaleBase
                             val hs = ih * scaleBase
 
@@ -415,118 +396,41 @@ internal fun PadCanvas(
             val handleSizePx = with(density) { PC_HANDLE_SIZE.toPx() }
             val paddingPx = with(density) { PC_HANDLE_PADDING.toPx() }
 
-            val topHandleLeft = centerX - handleSizePx / 2f
-            val topHandleTop = centerY - halfH - paddingPx - handleSizePx
-
-            val bottomHandleLeft = centerX - handleSizePx / 2f
-            val bottomHandleTop = centerY + halfH + paddingPx
-
-            val leftHandleLeft = centerX - halfW - paddingPx - handleSizePx
-            val leftHandleTop = centerY - handleSizePx / 2f
-
-            val rightHandleLeft = centerX + halfW + paddingPx
-            val rightHandleTop = centerY - handleSizePx / 2f
+            val handles =
+                listOf(
+                    HandlePosition(centerX - handleSizePx / 2f, centerY - halfH - paddingPx - handleSizePx, PC_POINTER_ROTATION_TOP),
+                    HandlePosition(centerX - handleSizePx / 2f, centerY + halfH + paddingPx, PC_POINTER_ROTATION_BOTTOM),
+                    HandlePosition(centerX - halfW - paddingPx - handleSizePx, centerY - handleSizePx / 2f, PC_POINTER_ROTATION_LEFT),
+                    HandlePosition(centerX + halfW + paddingPx, centerY - handleSizePx / 2f, PC_POINTER_ROTATION_RIGHT),
+                )
 
             if (!isLocked && !isCropping) {
-                // Top handle
-                DragHandle(
-                    buttonId = activeBtn.id,
-                    leftPx = topHandleLeft,
-                    topPx = topHandleTop,
-                    handleSize = PC_HANDLE_SIZE,
-                    buttonPosX = activeBtn.posX,
-                    buttonPosY = activeBtn.posY,
-                    w = w,
-                    h = h,
-                    gridMode = gridMode,
-                    gridStepPx = gridStepPx,
-                    layoutId = layout?.id,
-                    accentColor = accentColor,
-                )
-
-                // Bottom handle
-                DragHandle(
-                    buttonId = activeBtn.id,
-                    leftPx = bottomHandleLeft,
-                    topPx = bottomHandleTop,
-                    handleSize = PC_HANDLE_SIZE,
-                    buttonPosX = activeBtn.posX,
-                    buttonPosY = activeBtn.posY,
-                    w = w,
-                    h = h,
-                    gridMode = gridMode,
-                    gridStepPx = gridStepPx,
-                    layoutId = layout?.id,
-                    accentColor = accentColor,
-                )
-
-                // Left handle
-                DragHandle(
-                    buttonId = activeBtn.id,
-                    leftPx = leftHandleLeft,
-                    topPx = leftHandleTop,
-                    handleSize = PC_HANDLE_SIZE,
-                    buttonPosX = activeBtn.posX,
-                    buttonPosY = activeBtn.posY,
-                    w = w,
-                    h = h,
-                    gridMode = gridMode,
-                    gridStepPx = gridStepPx,
-                    layoutId = layout?.id,
-                    accentColor = accentColor,
-                )
-
-                // Right handle
-                DragHandle(
-                    buttonId = activeBtn.id,
-                    leftPx = rightHandleLeft,
-                    topPx = rightHandleTop,
-                    handleSize = PC_HANDLE_SIZE,
-                    buttonPosX = activeBtn.posX,
-                    buttonPosY = activeBtn.posY,
-                    w = w,
-                    h = h,
-                    gridMode = gridMode,
-                    gridStepPx = gridStepPx,
-                    layoutId = layout?.id,
-                    accentColor = accentColor,
-                )
+                handles.forEach { pos ->
+                    DragHandle(
+                        buttonId = activeBtn.id,
+                        leftPx = pos.leftPx,
+                        topPx = pos.topPx,
+                        handleSize = PC_HANDLE_SIZE,
+                        buttonPosX = activeBtn.posX,
+                        buttonPosY = activeBtn.posY,
+                        w = w,
+                        h = h,
+                        gridMode = gridMode,
+                        gridStepPx = gridStepPx,
+                        layoutId = layout?.id,
+                        accentColor = accentColor,
+                    )
+                }
             } else {
-                // Top pointer (points DOWN towards the button)
-                HighlightPointer(
-                    leftPx = topHandleLeft,
-                    topPx = topHandleTop,
-                    handleSize = PC_HANDLE_SIZE,
-                    rotation = PC_POINTER_ROTATION_TOP,
-                    accentColor = accentColor,
-                )
-
-                // Bottom pointer (points UP towards the button)
-                HighlightPointer(
-                    leftPx = bottomHandleLeft,
-                    topPx = bottomHandleTop,
-                    handleSize = PC_HANDLE_SIZE,
-                    rotation = PC_POINTER_ROTATION_BOTTOM,
-                    accentColor = accentColor,
-                )
-
-                // Left pointer (points RIGHT towards the button)
-                HighlightPointer(
-                    leftPx = leftHandleLeft,
-                    topPx = leftHandleTop,
-                    handleSize = PC_HANDLE_SIZE,
-                    rotation = PC_POINTER_ROTATION_LEFT,
-                    accentColor = accentColor,
-                )
-
-                // Right pointer (points LEFT towards the button)
-                HighlightPointer(
-                    leftPx = rightHandleLeft,
-                    topPx = rightHandleTop,
-                    handleSize = PC_HANDLE_SIZE,
-                    rotation = PC_POINTER_ROTATION_RIGHT,
-                    accentColor = accentColor,
-                )
+                handles.forEach { pos ->
+                    HighlightPointer(
+                        leftPx = pos.leftPx,
+                        topPx = pos.topPx,
+                        handleSize = PC_HANDLE_SIZE,
+                        rotation = pos.rotation,
+                        accentColor = accentColor,
+                    )
+                }
             }
         }
 
@@ -610,72 +514,18 @@ private fun DraggableButton(
     val isTrackpoint = btn.action is PadAction.TrackpointMove
     val isDeviceDisabled =
         when (val act = btn.action) {
-            is PadAction.KeyboardKey -> {
-                !enableKeyboard
-            }
-
-            is PadAction.GamepadButton -> {
-                !enableGamepad
-            }
-
-            is PadAction.MouseButton,
-            is PadAction.ScrollWheel,
-            -> {
-                !enableMouse
-            }
-
-            is PadAction.TrackpointMove -> {
-                if (act.mode == TrackpointMode.VIRTUAL_TOUCH) !enableTouch else !enableMouse
-            }
-
-            is PadAction.Macro -> {
-                !enableGamepad
-            }
-
-            is PadAction.BackgroundPeek -> {
-                false
-            }
-
-            is PadAction.LayoutNext,
-            is PadAction.LayoutPrevious,
-            is PadAction.ProfileSwitcher,
-            is PadAction.MirrorPlayStop,
-            is PadAction.MirrorFreeze,
-            is PadAction.MirrorViewportEdit,
-            is PadAction.MirrorTouchProjection,
-            -> {
-                false
-            }
-
-            is PadAction.FullScreenMouse -> {
-                !enableMouse
-            }
-
-            is PadAction.FullScreenKeyboard -> {
-                !enableKeyboard
-            }
-
-            is PadAction.AppLauncher -> {
-                false
-            }
+            is PadAction.KeyboardKey, is PadAction.FullScreenKeyboard -> !enableKeyboard
+            is PadAction.GamepadButton, is PadAction.Macro -> !enableGamepad
+            is PadAction.MouseButton, is PadAction.ScrollWheel, is PadAction.FullScreenMouse -> !enableMouse
+            is PadAction.TrackpointMove -> if (act.mode == TrackpointMode.VIRTUAL_TOUCH) !enableTouch else !enableMouse
+            else -> false
         }
+
     val tpMultiplier = if (isTrackpoint) (btn.action as PadAction.TrackpointMove).size.multiplier else 1f
-    val chipWidthPx =
-        with(density) {
-            if (isTrackpoint) {
-                (ED_BUTTON_UNIT_DP * tpMultiplier).toPx()
-            } else {
-                (ED_BUTTON_UNIT_DP * btn.buttonSize.cols).toPx()
-            }
-        }
-    val chipHeightPx =
-        with(density) {
-            if (isTrackpoint) {
-                (ED_BUTTON_UNIT_DP * tpMultiplier).toPx()
-            } else {
-                (ED_BUTTON_UNIT_DP * btn.buttonSize.rows).toPx()
-            }
-        }
+    val btnWidthDp = ED_BUTTON_UNIT_DP * (if (isTrackpoint) tpMultiplier else btn.buttonSize.cols.toFloat())
+    val btnHeightDp = ED_BUTTON_UNIT_DP * (if (isTrackpoint) tpMultiplier else btn.buttonSize.rows.toFloat())
+    val chipWidthPx = with(density) { btnWidthDp.toPx() }
+    val chipHeightPx = with(density) { btnHeightDp.toPx() }
 
     val w = canvasSize.width.toFloat().coerceAtLeast(1f)
     val h = canvasSize.height.toFloat().coerceAtLeast(1f)
@@ -685,9 +535,6 @@ private fun DraggableButton(
     val top = btn.posY * h - chipHeightPx / 2f
 
     val isIconOnly = btn.buttonShape == ButtonShape.ICON_ONLY
-
-    val btnWidthDp = if (isTrackpoint) ED_BUTTON_UNIT_DP * tpMultiplier else ED_BUTTON_UNIT_DP * btn.buttonSize.cols
-    val btnHeightDp = if (isTrackpoint) ED_BUTTON_UNIT_DP * tpMultiplier else ED_BUTTON_UNIT_DP * btn.buttonSize.rows
 
     val chipShape =
         if (isTrackpoint) {
@@ -699,10 +546,12 @@ private fun DraggableButton(
                 }
 
                 ButtonShape.CIRCLE -> {
-                    when (btn.buttonSize) {
-                        ButtonSize.SIZE_2X2 -> CircleShape
-                        ButtonSize.SIZE_2X1, ButtonSize.SIZE_1X2 -> RoundedCornerShape(percent = 50)
-                        ButtonSize.SIZE_1X1 -> CircleShape
+                    if (btn.buttonSize == ButtonSize.SIZE_2X1 ||
+                        btn.buttonSize == ButtonSize.SIZE_1X2
+                    ) {
+                        RoundedCornerShape(percent = 50)
+                    } else {
+                        CircleShape
                     }
                 }
             }
