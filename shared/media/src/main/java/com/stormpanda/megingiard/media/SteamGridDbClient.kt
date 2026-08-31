@@ -6,7 +6,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File
-import java.io.FileOutputStream
 import java.net.ConnectException
 import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
@@ -210,32 +209,41 @@ object SteamGridDbClient {
         return fetchApiResponse("$BASE_URL/$resolvedType/game/$gameId", apiKey)
     }
 
-    suspend fun downloadImageBytes(imageUrl: String): Result<ByteArray> =
+    private suspend fun executeHttpRequest(
+        urlString: String,
+        authBearer: String? = null,
+        acceptHeader: String? = null,
+    ): Result<ByteArray> =
         withContext(Dispatchers.IO) {
-            AppLog.d(TAG, "downloadImageBytes: url=$imageUrl")
             var connection: HttpURLConnection? = null
             try {
-                val url = URL(imageUrl)
+                val url = URL(urlString)
                 connection = url.openConnection() as HttpURLConnection
                 connection.connectTimeout = TIMEOUT_CONNECT_MS
                 connection.readTimeout = TIMEOUT_READ_MS
                 connection.instanceFollowRedirects = true
+                authBearer?.let { connection.setRequestProperty("Authorization", "Bearer $it") }
+                acceptHeader?.let { connection.setRequestProperty("Accept", it) }
                 val responseCode = connection.responseCode
                 if (responseCode == HttpURLConnection.HTTP_OK) {
-                    val bytes = connection.inputStream.use { it.readBytes() }
-                    Result.success(bytes)
+                    Result.success(connection.inputStream.use { it.readBytes() })
                 } else {
                     val errorText = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
-                    AppLog.w(TAG, "Failed to download image from $imageUrl, response code: $responseCode, error: $errorText")
+                    AppLog.w(TAG, "HTTP error $responseCode requesting $urlString: $errorText")
                     Result.failure(mapHttpError(responseCode, errorText))
                 }
             } catch (e: Exception) {
-                AppLog.e(TAG, "Error downloading image $imageUrl", e)
+                AppLog.e(TAG, "Network error requesting $urlString", e)
                 Result.failure(mapNetworkError(e))
             } finally {
                 connection?.disconnect()
             }
         }
+
+    suspend fun downloadImageBytes(imageUrl: String): Result<ByteArray> {
+        AppLog.d(TAG, "downloadImageBytes: url=$imageUrl")
+        return executeHttpRequest(imageUrl)
+    }
 
     suspend fun downloadImageToTempFile(
         imageUrl: String,
@@ -251,31 +259,6 @@ object SteamGridDbClient {
         urlString: String,
         apiKey: String,
     ): Result<String> =
-        withContext(Dispatchers.IO) {
-            var connection: HttpURLConnection? = null
-            try {
-                val url = URL(urlString)
-                connection = url.openConnection() as HttpURLConnection
-                connection.requestMethod = "GET"
-                connection.connectTimeout = TIMEOUT_CONNECT_MS
-                connection.readTimeout = TIMEOUT_READ_MS
-                connection.setRequestProperty("Authorization", "Bearer $apiKey")
-                connection.setRequestProperty("Accept", "application/json")
-
-                val responseCode = connection.responseCode
-                if (responseCode == HttpURLConnection.HTTP_OK) {
-                    val responseText = connection.inputStream.bufferedReader().use { it.readText() }
-                    Result.success(responseText)
-                } else {
-                    val errorText = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
-                    AppLog.w(TAG, "HTTP error $responseCode requesting $urlString: $errorText")
-                    Result.failure(mapHttpError(responseCode, errorText))
-                }
-            } catch (e: Exception) {
-                AppLog.e(TAG, "Network error requesting $urlString", e)
-                Result.failure(mapNetworkError(e))
-            } finally {
-                connection?.disconnect()
-            }
-        }
+        executeHttpRequest(urlString, authBearer = apiKey, acceptHeader = "application/json")
+            .map { it.toString(Charsets.UTF_8) }
 }
