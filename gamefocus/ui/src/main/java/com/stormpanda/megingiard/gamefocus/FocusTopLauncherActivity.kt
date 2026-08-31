@@ -537,6 +537,57 @@ class FocusTopLauncherActivity : ComponentActivity() {
         }
     }
 
+    private fun stepDirectionalAction(direction: ScrollDirection) {
+        if (newlyAddedFolderState.value != null) {
+            stepCoreChooserFocus(direction)
+            return
+        }
+        if (isRemoveRomFolderDialogOpenState.value) {
+            stepRemoveRomFolderFocus(direction)
+            return
+        }
+        if (isLibraryOpenState.value) {
+            stepLibraryFocus(direction)
+            return
+        }
+        if (editingAppInfoState.value != null) {
+            when (direction) {
+                ScrollDirection.LEFT -> dialogVirtualIndexState.intValue--
+                ScrollDirection.RIGHT -> dialogVirtualIndexState.intValue++
+                else -> Unit
+            }
+            return
+        }
+
+        when (direction) {
+            ScrollDirection.LEFT -> {
+                dpadLeftTriggerState.intValue++
+                AppLog.d(TAG, "dpadLeftTriggerState = ${dpadLeftTriggerState.intValue}")
+            }
+
+            ScrollDirection.RIGHT -> {
+                dpadStepRightTriggerState.intValue++
+                AppLog.d(TAG, "dpadStepRightTriggerState = ${dpadStepRightTriggerState.intValue}")
+            }
+
+            ScrollDirection.UP -> {
+                val prevCategory = selectedCategoryState.value.previous(activeCategories)
+                AppLog.i(TAG, "Category UP -> switching launcher category to ${prevCategory.id}")
+                selectedCategoryState.value = prevCategory
+            }
+
+            ScrollDirection.DOWN -> {
+                val nextCategory = selectedCategoryState.value.next(activeCategories)
+                AppLog.i(TAG, "Category DOWN -> switching launcher category to ${nextCategory.id}")
+                selectedCategoryState.value = nextCategory
+            }
+
+            ScrollDirection.NONE -> {
+                Unit
+            }
+        }
+    }
+
     private fun startRepeat(direction: ScrollDirection) {
         if (currentDirection == direction) return
 
@@ -545,102 +596,12 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
         if (direction == ScrollDirection.NONE) return
 
-        if (newlyAddedFolderState.value != null) {
-            stepCoreChooserFocus(direction)
-            repeatJob =
-                lifecycleScope.launch {
-                    delay(INITIAL_REPEAT_DELAY_MS)
-                    while (isActive && currentDirection == direction) {
-                        stepCoreChooserFocus(direction)
-                        delay(REPEAT_INTERVAL_MS)
-                    }
-                }
-            return
-        }
-
-        if (isRemoveRomFolderDialogOpenState.value) {
-            stepRemoveRomFolderFocus(direction)
-            repeatJob =
-                lifecycleScope.launch {
-                    delay(INITIAL_REPEAT_DELAY_MS)
-                    while (isActive && currentDirection == direction) {
-                        stepRemoveRomFolderFocus(direction)
-                        delay(REPEAT_INTERVAL_MS)
-                    }
-                }
-            return
-        }
-
-        if (isLibraryOpenState.value) {
-            stepLibraryFocus(direction)
-            repeatJob =
-                lifecycleScope.launch {
-                    delay(INITIAL_REPEAT_DELAY_MS)
-                    while (isActive && currentDirection == direction) {
-                        stepLibraryFocus(direction)
-                        delay(REPEAT_INTERVAL_MS)
-                    }
-                }
-            return
-        }
-
-        if (editingAppInfoState.value != null) {
-            if (direction == ScrollDirection.LEFT) {
-                dialogVirtualIndexState.intValue--
-            } else if (direction == ScrollDirection.RIGHT) {
-                dialogVirtualIndexState.intValue++
-            }
-            repeatJob =
-                lifecycleScope.launch {
-                    delay(INITIAL_REPEAT_DELAY_MS)
-                    while (isActive && currentDirection == direction) {
-                        if (direction == ScrollDirection.LEFT) {
-                            dialogVirtualIndexState.intValue--
-                        } else if (direction == ScrollDirection.RIGHT) {
-                            dialogVirtualIndexState.intValue++
-                        }
-                        delay(REPEAT_INTERVAL_MS)
-                    }
-                }
-            return
-        }
-
-        AppLog.d(TAG, "startRepeat: direction=$direction")
-        if (direction == ScrollDirection.LEFT) {
-            dpadLeftTriggerState.intValue++
-            AppLog.d(TAG, "Incremented dpadLeftTriggerState to ${dpadLeftTriggerState.intValue}")
-        } else if (direction == ScrollDirection.RIGHT) {
-            dpadStepRightTriggerState.intValue++
-            AppLog.d(TAG, "Incremented dpadStepRightTriggerState to ${dpadStepRightTriggerState.intValue}")
-        } else if (direction == ScrollDirection.UP) {
-            val prevCategory = selectedCategoryState.value.previous(activeCategories)
-            AppLog.i(TAG, "Category UP button clicked -> switching launcher category to ${prevCategory.id}")
-            selectedCategoryState.value = prevCategory
-        } else if (direction == ScrollDirection.DOWN) {
-            val nextCategory = selectedCategoryState.value.next(activeCategories)
-            AppLog.i(TAG, "Category DOWN button clicked -> switching launcher category to ${nextCategory.id}")
-            selectedCategoryState.value = nextCategory
-        }
-
+        stepDirectionalAction(direction)
         repeatJob =
             lifecycleScope.launch {
                 delay(INITIAL_REPEAT_DELAY_MS)
                 while (isActive && currentDirection == direction) {
-                    if (direction == ScrollDirection.LEFT) {
-                        dpadLeftTriggerState.intValue++
-                        AppLog.d(TAG, "Repeat tick: dpadLeftTriggerState = ${dpadLeftTriggerState.intValue}")
-                    } else if (direction == ScrollDirection.RIGHT) {
-                        dpadStepRightTriggerState.intValue++
-                        AppLog.d(TAG, "Repeat tick: dpadStepRightTriggerState = ${dpadStepRightTriggerState.intValue}")
-                    } else if (direction == ScrollDirection.UP) {
-                        val prevCategory = selectedCategoryState.value.previous(activeCategories)
-                        AppLog.i(TAG, "Category UP repeat tick -> switching launcher category to ${prevCategory.id}")
-                        selectedCategoryState.value = prevCategory
-                    } else if (direction == ScrollDirection.DOWN) {
-                        val nextCategory = selectedCategoryState.value.next(activeCategories)
-                        AppLog.i(TAG, "Category DOWN repeat tick -> switching launcher category to ${nextCategory.id}")
-                        selectedCategoryState.value = nextCategory
-                    }
+                    stepDirectionalAction(direction)
                     delay(REPEAT_INTERVAL_MS)
                 }
             }
