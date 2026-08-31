@@ -111,13 +111,123 @@ import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.Locale
+import kotlin.math.max
 import kotlin.math.roundToInt
 import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 
 private const val TAG = "GamepadComponents"
+
+const val GAMEPAD_REPEAT_INITIAL_DELAY_MS = 250L
+const val GAMEPAD_REPEAT_START_DELAY_MS = 100L
+const val GAMEPAD_REPEAT_MIN_DELAY_MS = 20L
+const val GAMEPAD_REPEAT_ACCEL_FACTOR = 0.85f
+
+/**
+ * Launches an accelerated repeating coroutine loop for directional D-pad holds.
+ */
+fun CoroutineScope.launchDirectionalRepeat(
+    keyCode: Int,
+    isActiveCheck: () -> Boolean,
+    action: () -> Unit,
+): Job =
+    launch {
+        delay(GAMEPAD_REPEAT_INITIAL_DELAY_MS)
+        var delayMs = GAMEPAD_REPEAT_START_DELAY_MS
+        while (isActive && isActiveCheck()) {
+            action()
+            delay(delayMs)
+            delayMs = max(GAMEPAD_REPEAT_MIN_DELAY_MS, (delayMs * GAMEPAD_REPEAT_ACCEL_FACTOR).toLong())
+        }
+    }
+
+/**
+ * Handles 2D directional adjustment and repeating key events (D-pad Up/Down/Left/Right, A/B/Enter/Back dismiss).
+ */
+internal fun handle2DAdjustmentKeyEvent(
+    keyEvent: ComposeKeyEvent,
+    isAdjusting: Boolean,
+    onStartAdjusting: (keyCode: Int, dirX: Int, dirY: Int) -> Unit,
+    onStopAdjusting: (keyCode: Int) -> Unit,
+    onDismissAdjustment: () -> Unit,
+    onModifierKeyDown: ((keyCode: Int) -> Boolean)? = null,
+    onModifierKeyUp: ((keyCode: Int) -> Boolean)? = null,
+): Boolean {
+    if (!isAdjusting) return false
+    val keyCode = keyEvent.nativeKeyEvent.keyCode
+    return if (keyEvent.type == KeyEventType.KeyDown) {
+        if (onModifierKeyDown?.invoke(keyCode) == true) return true
+        when (keyCode) {
+            KeyEvent.KEYCODE_DPAD_UP -> {
+                onStartAdjusting(keyCode, 0, -1)
+                true
+            }
+
+            KeyEvent.KEYCODE_DPAD_DOWN -> {
+                onStartAdjusting(keyCode, 0, 1)
+                true
+            }
+
+            KeyEvent.KEYCODE_DPAD_LEFT -> {
+                onStartAdjusting(keyCode, -1, 0)
+                true
+            }
+
+            KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                onStartAdjusting(keyCode, 1, 0)
+                true
+            }
+
+            KeyEvent.KEYCODE_BUTTON_B,
+            KeyEvent.KEYCODE_BACK,
+            KeyEvent.KEYCODE_ESCAPE,
+            KeyEvent.KEYCODE_BUTTON_A,
+            KeyEvent.KEYCODE_DPAD_CENTER,
+            KeyEvent.KEYCODE_ENTER,
+            -> {
+                onDismissAdjustment()
+                true
+            }
+
+            else -> {
+                false
+            }
+        }
+    } else if (keyEvent.type == KeyEventType.KeyUp) {
+        if (onModifierKeyUp?.invoke(keyCode) == true) return true
+        when (keyCode) {
+            KeyEvent.KEYCODE_DPAD_UP,
+            KeyEvent.KEYCODE_DPAD_DOWN,
+            KeyEvent.KEYCODE_DPAD_LEFT,
+            KeyEvent.KEYCODE_DPAD_RIGHT,
+            -> {
+                onStopAdjusting(keyCode)
+                true
+            }
+
+            KeyEvent.KEYCODE_BUTTON_B,
+            KeyEvent.KEYCODE_BACK,
+            KeyEvent.KEYCODE_ESCAPE,
+            KeyEvent.KEYCODE_BUTTON_A,
+            KeyEvent.KEYCODE_DPAD_CENTER,
+            KeyEvent.KEYCODE_ENTER,
+            -> {
+                true
+            }
+
+            else -> {
+                false
+            }
+        }
+    } else {
+        false
+    }
+}
 
 private val GC_CARD_CORNER = 12.dp
 private val GC_CARD_MIN_HEIGHT = 56.dp

@@ -118,7 +118,9 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.LocalFirstContentRequester
 import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
 import com.stormpanda.megingiard.ui.firstDeckItem
+import com.stormpanda.megingiard.ui.handle2DAdjustmentKeyEvent
 import com.stormpanda.megingiard.ui.handleAdjustmentKeyEvent
+import com.stormpanda.megingiard.ui.launchDirectionalRepeat
 import com.stormpanda.megingiard.ui.rememberBezelBrush
 import com.stormpanda.megingiard.ui.rememberGamepadBringIntoViewSpec
 import kotlinx.coroutines.Job
@@ -171,10 +173,6 @@ private val METO_DEFAULT_BORDER_WIDTH = 1.dp
 private val METO_FOCUS_ELEVATION = 4.dp
 
 private const val METO_SURFACE_ALPHA = 0.70f
-private const val METO_MOVE_INITIAL_DELAY_MS = 250L
-private const val METO_MOVE_START_DELAY_MS = 80L
-private const val METO_MOVE_MIN_DELAY_MS = 16L
-private const val METO_MOVE_ACCEL_FACTOR = 0.88f
 private const val METO_INITIAL_FOCUS_DELAY_MS = 100L
 private val METO_SCROLL_EXTRA_PADDING = 0.dp
 
@@ -1474,21 +1472,16 @@ private fun AdjustCoordinatesCard(
         dirX: Int,
         dirY: Int,
     ) {
-        if (activeDirectionKey == keyCode && activeRepeatJob?.isActive == true) {
-            return
-        }
+        if (activeDirectionKey == keyCode && activeRepeatJob?.isActive == true) return
         activeRepeatJob?.cancel()
         activeDirectionKey = keyCode
         dispatchAction(dirX, dirY)
         activeRepeatJob =
-            coroutineScope.launch {
-                delay(METO_MOVE_INITIAL_DELAY_MS)
-                var delayMs = METO_MOVE_START_DELAY_MS
-                while (isActive && activeDirectionKey == keyCode) {
-                    dispatchAction(dirX, dirY)
-                    delay(delayMs)
-                    delayMs = max(METO_MOVE_MIN_DELAY_MS, (delayMs * METO_MOVE_ACCEL_FACTOR).toLong())
-                }
+            coroutineScope.launchDirectionalRepeat(
+                keyCode = keyCode,
+                isActiveCheck = { activeDirectionKey == keyCode },
+            ) {
+                dispatchAction(dirX, dirY)
             }
     }
 
@@ -1543,86 +1536,50 @@ private fun AdjustCoordinatesCard(
         icon = icon,
         title = title,
         onCustomKeyEvent = { event ->
-            if (!isAdjusting) return@ToolboxCard false
-            val keyCode = event.nativeKeyEvent.keyCode
-            if (event.type == KeyEventType.KeyDown) {
-                when (keyCode) {
-                    KeyEvent.KEYCODE_BUTTON_L2 -> {
-                        isL2Held = true
-                        true
-                    }
+            handle2DAdjustmentKeyEvent(
+                keyEvent = event,
+                isAdjusting = isAdjusting,
+                onStartAdjusting = { keyCode, dirX, dirY -> startAdjusting(keyCode, dirX, dirY) },
+                onStopAdjusting = { keyCode -> stopAdjusting(keyCode) },
+                onDismissAdjustment = {
+                    stopAdjustingImmediate()
+                    isAdjusting = false
+                },
+                onModifierKeyDown = { keyCode ->
+                    when (keyCode) {
+                        KeyEvent.KEYCODE_BUTTON_L2 -> {
+                            isL2Held = true
+                            true
+                        }
 
-                    KeyEvent.KEYCODE_BUTTON_R2 -> {
-                        isR2Held = true
-                        true
-                    }
+                        KeyEvent.KEYCODE_BUTTON_R2 -> {
+                            isR2Held = true
+                            true
+                        }
 
-                    KeyEvent.KEYCODE_DPAD_UP -> {
-                        startAdjusting(keyCode, 0, -1)
-                        true
+                        else -> {
+                            false
+                        }
                     }
+                },
+                onModifierKeyUp = { keyCode ->
+                    when (keyCode) {
+                        KeyEvent.KEYCODE_BUTTON_L2 -> {
+                            isL2Held = false
+                            true
+                        }
 
-                    KeyEvent.KEYCODE_DPAD_DOWN -> {
-                        startAdjusting(keyCode, 0, 1)
-                        true
-                    }
+                        KeyEvent.KEYCODE_BUTTON_R2 -> {
+                            isR2Held = false
+                            true
+                        }
 
-                    KeyEvent.KEYCODE_DPAD_LEFT -> {
-                        startAdjusting(keyCode, -1, 0)
-                        true
+                        else -> {
+                            false
+                        }
                     }
-
-                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                        startAdjusting(keyCode, 1, 0)
-                        true
-                    }
-
-                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_BUTTON_A,
-                    KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE,
-                    -> {
-                        stopAdjustingImmediate()
-                        isAdjusting = false
-                        true
-                    }
-
-                    else -> {
-                        true
-                    }
-                }
-            } else if (event.type == KeyEventType.KeyUp) {
-                when (keyCode) {
-                    KeyEvent.KEYCODE_BUTTON_L2 -> {
-                        isL2Held = false
-                        true
-                    }
-
-                    KeyEvent.KEYCODE_BUTTON_R2 -> {
-                        isR2Held = false
-                        true
-                    }
-
-                    KeyEvent.KEYCODE_DPAD_UP,
-                    KeyEvent.KEYCODE_DPAD_DOWN,
-                    KeyEvent.KEYCODE_DPAD_LEFT,
-                    KeyEvent.KEYCODE_DPAD_RIGHT,
-                    -> {
-                        stopAdjusting(keyCode)
-                        true
-                    }
-
-                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_BUTTON_A,
-                    KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE,
-                    -> {
-                        true
-                    }
-
-                    else -> {
-                        false
-                    }
-                }
-            } else {
-                false
-            }
+                },
+            )
         },
         modifier = modifier,
     )

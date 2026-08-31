@@ -115,6 +115,8 @@ import com.stormpanda.megingiard.ui.PrimaryModalPayload
 import com.stormpanda.megingiard.ui.PrimaryModalType
 import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
 import com.stormpanda.megingiard.ui.firstDeckItem
+import com.stormpanda.megingiard.ui.handle2DAdjustmentKeyEvent
+import com.stormpanda.megingiard.ui.launchDirectionalRepeat
 import com.stormpanda.megingiard.ui.rememberGamepadBringIntoViewSpec
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -132,10 +134,6 @@ private const val MPE_BUTTON_HEADER_COUNT = 5
 private const val MPE_CANVAS_WIDTH_PX = 1240f
 private const val MPE_CANVAS_HEIGHT_PX = 1080f
 private const val MPE_EDGE_MARGIN = 0.05f
-private const val MPE_MOVE_INITIAL_DELAY_MS = 250L
-private const val MPE_MOVE_START_DELAY_MS = 80L
-private const val MPE_MOVE_MIN_DELAY_MS = 16L
-private const val MPE_MOVE_ACCEL_FACTOR = 0.88f
 
 private fun applyActionToDraftButton(
     draftButton: PadButton,
@@ -2608,21 +2606,16 @@ private fun EditButtonPositionsSubPageContent(
         dx: Int,
         dy: Int,
     ) {
-        if (activeDirectionKey == keyCode && activeRepeatJob?.isActive == true) {
-            return
-        }
+        if (activeDirectionKey == keyCode && activeRepeatJob?.isActive == true) return
         activeRepeatJob?.cancel()
         activeDirectionKey = keyCode
         moveButton(btnId, dx, dy)
         activeRepeatJob =
-            coroutineScope.launch {
-                delay(MPE_MOVE_INITIAL_DELAY_MS)
-                var delayMs = MPE_MOVE_START_DELAY_MS
-                while (isActive && activeDirectionKey == keyCode) {
-                    moveButton(btnId, dx, dy)
-                    delay(delayMs)
-                    delayMs = max(MPE_MOVE_MIN_DELAY_MS, (delayMs * MPE_MOVE_ACCEL_FACTOR).toLong())
-                }
+            coroutineScope.launchDirectionalRepeat(
+                keyCode = keyCode,
+                isActiveCheck = { activeDirectionKey == keyCode },
+            ) {
+                moveButton(btnId, dx, dy)
             }
     }
 
@@ -2684,77 +2677,16 @@ private fun EditButtonPositionsSubPageContent(
                     }
                 },
                 onCustomKeyEvent = { keyEvent ->
-                    val keyCode = keyEvent.nativeKeyEvent.keyCode
-                    if (isMoving) {
-                        if (keyEvent.type == KeyEventType.KeyDown) {
-                            when (keyCode) {
-                                KeyEvent.KEYCODE_DPAD_UP -> {
-                                    startMoving(btn.id, keyCode, 0, -1)
-                                    true
-                                }
-
-                                KeyEvent.KEYCODE_DPAD_DOWN -> {
-                                    startMoving(btn.id, keyCode, 0, 1)
-                                    true
-                                }
-
-                                KeyEvent.KEYCODE_DPAD_LEFT -> {
-                                    startMoving(btn.id, keyCode, -1, 0)
-                                    true
-                                }
-
-                                KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                                    startMoving(btn.id, keyCode, 1, 0)
-                                    true
-                                }
-
-                                KeyEvent.KEYCODE_BUTTON_B,
-                                KeyEvent.KEYCODE_BACK,
-                                KeyEvent.KEYCODE_ESCAPE,
-                                KeyEvent.KEYCODE_BUTTON_A,
-                                KeyEvent.KEYCODE_DPAD_CENTER,
-                                KeyEvent.KEYCODE_ENTER,
-                                -> {
-                                    stopMovingImmediate()
-                                    movingButtonId = null
-                                    true
-                                }
-
-                                else -> {
-                                    false
-                                }
-                            }
-                        } else if (keyEvent.type == KeyEventType.KeyUp) {
-                            when (keyCode) {
-                                KeyEvent.KEYCODE_DPAD_UP,
-                                KeyEvent.KEYCODE_DPAD_DOWN,
-                                KeyEvent.KEYCODE_DPAD_LEFT,
-                                KeyEvent.KEYCODE_DPAD_RIGHT,
-                                -> {
-                                    stopMoving(keyCode)
-                                    true
-                                }
-
-                                KeyEvent.KEYCODE_BUTTON_B,
-                                KeyEvent.KEYCODE_BACK,
-                                KeyEvent.KEYCODE_ESCAPE,
-                                KeyEvent.KEYCODE_BUTTON_A,
-                                KeyEvent.KEYCODE_DPAD_CENTER,
-                                KeyEvent.KEYCODE_ENTER,
-                                -> {
-                                    true
-                                }
-
-                                else -> {
-                                    false
-                                }
-                            }
-                        } else {
-                            false
-                        }
-                    } else {
-                        false
-                    }
+                    handle2DAdjustmentKeyEvent(
+                        keyEvent = keyEvent,
+                        isAdjusting = isMoving,
+                        onStartAdjusting = { keyCode, dirX, dirY -> startMoving(btn.id, keyCode, dirX, dirY) },
+                        onStopAdjusting = { keyCode -> stopMoving(keyCode) },
+                        onDismissAdjustment = {
+                            stopMovingImmediate()
+                            movingButtonId = null
+                        },
+                    )
                 },
             ) { isFocused ->
                 GamepadCardRow(
