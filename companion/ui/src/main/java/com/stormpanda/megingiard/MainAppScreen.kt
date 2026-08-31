@@ -237,23 +237,34 @@ fun MainAppScreen() {
                         isPrivdSetupWizardActive,
                     ) {
                         if (!isGesturesEnabled || isWizardActive || isPrivdSetupWizardActive) return@pointerInput
+
+                        fun makeProgressHandler(type: SwipeGestureType) =
+                            { delta: Float, isPast: Boolean ->
+                                AppStateManager.updateActiveSwipe(
+                                    SwipeGestureProgress(type, delta, swipeThresholdPx, isPast),
+                                )
+                            }
+
+                        fun handleModalOrActivate(action: () -> Unit) {
+                            AppStateManager.updateActiveSwipe(null)
+                            if (AppStateManager.isAnyModalActive.value) {
+                                AppStateManager.closeActiveModal()
+                            } else if (AppStateManager.isQuickMenuOpen.value) {
+                                AppStateManager.closeQuickMenu()
+                            } else {
+                                action()
+                            }
+                        }
+
                         val qmSwipe =
                             SwipeGestureProcessor(
                                 edgeZonePx = edgeZonePx,
                                 swipeThresholdPx = swipeThresholdPx,
                                 overlayAtBottom = overlayAtBottom,
                                 quickMenuBarZoneWidthPx = quickMenuBarZoneWidthPx,
-                                onSwipeProgress = { delta, isPast ->
-                                    AppStateManager.updateActiveSwipe(
-                                        SwipeGestureProgress(SwipeGestureType.MENU, delta, swipeThresholdPx, isPast),
-                                    )
-                                },
-                                onSwipeCancel = {
-                                    AppStateManager.updateActiveSwipe(null)
-                                },
-                                onHapticTick = {
-                                    triggerHapticFeedback(context, HapticStrength.LIGHT)
-                                },
+                                onSwipeProgress = makeProgressHandler(SwipeGestureType.MENU),
+                                onSwipeCancel = { AppStateManager.updateActiveSwipe(null) },
+                                onHapticTick = { triggerHapticFeedback(context, HapticStrength.LIGHT) },
                                 onEdgeSwipe = {
                                     AppStateManager.updateActiveSwipe(null)
                                     AppStateManager.handleEdgeSwipe()
@@ -265,27 +276,10 @@ fun MainAppScreen() {
                                 swipeThresholdPx = swipeThresholdPx,
                                 overlayAtBottom = overlayAtBottom,
                                 customZoneCheck = { x, _ -> x >= kbBarMinX && x <= kbBarMaxX },
-                                onSwipeProgress = { delta, isPast ->
-                                    AppStateManager.updateActiveSwipe(
-                                        SwipeGestureProgress(SwipeGestureType.KEYBOARD, delta, swipeThresholdPx, isPast),
-                                    )
-                                },
-                                onSwipeCancel = {
-                                    AppStateManager.updateActiveSwipe(null)
-                                },
-                                onHapticTick = {
-                                    triggerHapticFeedback(context, HapticStrength.LIGHT)
-                                },
-                                onEdgeSwipe = {
-                                    AppStateManager.updateActiveSwipe(null)
-                                    if (AppStateManager.isAnyModalActive.value) {
-                                        AppStateManager.closeActiveModal()
-                                    } else if (AppStateManager.isQuickMenuOpen.value) {
-                                        AppStateManager.closeQuickMenu()
-                                    } else {
-                                        AppStateManager.setFullscreenKeyboardActive(true)
-                                    }
-                                },
+                                onSwipeProgress = makeProgressHandler(SwipeGestureType.KEYBOARD),
+                                onSwipeCancel = { AppStateManager.updateActiveSwipe(null) },
+                                onHapticTick = { triggerHapticFeedback(context, HapticStrength.LIGHT) },
+                                onEdgeSwipe = { handleModalOrActivate { AppStateManager.setFullscreenKeyboardActive(true) } },
                             )
                         val tpSwipe =
                             SwipeGestureProcessor(
@@ -293,35 +287,15 @@ fun MainAppScreen() {
                                 swipeThresholdPx = swipeThresholdPx,
                                 overlayAtBottom = overlayAtBottom,
                                 customZoneCheck = { x, width ->
-                                    val tpBarWidth = tpBarWidthPx
-                                    val tpBarEndPadding = tpBarEndPaddingPx
-                                    val tpBarZoneWidth = tpBarZoneWidthPx
-                                    val tpBarCenter = width - tpBarEndPadding - (tpBarWidth / 2f)
-                                    val tpBarMinX = tpBarCenter - (tpBarZoneWidth / 2f)
-                                    val tpBarMaxX = tpBarCenter + (tpBarZoneWidth / 2f)
+                                    val tpBarCenter = width - tpBarEndPaddingPx - (tpBarWidthPx / 2f)
+                                    val tpBarMinX = tpBarCenter - (tpBarZoneWidthPx / 2f)
+                                    val tpBarMaxX = tpBarCenter + (tpBarZoneWidthPx / 2f)
                                     x >= tpBarMinX && x <= tpBarMaxX
                                 },
-                                onSwipeProgress = { delta, isPast ->
-                                    AppStateManager.updateActiveSwipe(
-                                        SwipeGestureProgress(SwipeGestureType.TOUCHPAD, delta, swipeThresholdPx, isPast),
-                                    )
-                                },
-                                onSwipeCancel = {
-                                    AppStateManager.updateActiveSwipe(null)
-                                },
-                                onHapticTick = {
-                                    triggerHapticFeedback(context, HapticStrength.LIGHT)
-                                },
-                                onEdgeSwipe = {
-                                    AppStateManager.updateActiveSwipe(null)
-                                    if (AppStateManager.isAnyModalActive.value) {
-                                        AppStateManager.closeActiveModal()
-                                    } else if (AppStateManager.isQuickMenuOpen.value) {
-                                        AppStateManager.closeQuickMenu()
-                                    } else {
-                                        AppStateManager.setFullscreenMouseActive(true)
-                                    }
-                                },
+                                onSwipeProgress = makeProgressHandler(SwipeGestureType.TOUCHPAD),
+                                onSwipeCancel = { AppStateManager.updateActiveSwipe(null) },
+                                onHapticTick = { triggerHapticFeedback(context, HapticStrength.LIGHT) },
+                                onEdgeSwipe = { handleModalOrActivate { AppStateManager.setFullscreenMouseActive(true) } },
                             )
                         awaitPointerEventScope {
                             while (true) {
@@ -399,35 +373,34 @@ fun MainAppScreen() {
             val recordingRequested by TouchRecordingManager.recordingRequested.collectAsState()
             val touchRecordingState by TouchRecordingManager.state.collectAsState()
 
-            // Fullscreen modal overlays — rendered above MacroPad but below QuickMenuBar.
-            AnimatedVisibility(
-                visible = isFullscreenMouseActive,
-                enter =
+            val modalEnter =
+                remember(overlayAtBottom) {
                     slideInVertically(
                         animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS),
                         initialOffsetY = { if (overlayAtBottom) it else -it },
-                    ) + fadeIn(animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS)),
-                exit =
+                    ) + fadeIn(animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS))
+                }
+            val modalExit =
+                remember {
                     slideOutVertically(
                         animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS),
                         targetOffsetY = { it },
-                    ) + fadeOut(animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS)),
+                    ) + fadeOut(animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS))
+                }
+
+            // Fullscreen modal overlays — rendered above MacroPad but below QuickMenuBar.
+            AnimatedVisibility(
+                visible = isFullscreenMouseActive,
+                enter = modalEnter,
+                exit = modalExit,
                 modifier = Modifier.fillMaxSize(),
             ) {
                 FullscreenMouseOverlay()
             }
             AnimatedVisibility(
                 visible = isFullscreenKeyboardActive,
-                enter =
-                    slideInVertically(
-                        animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS),
-                        initialOffsetY = { if (overlayAtBottom) it else -it },
-                    ) + fadeIn(animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS)),
-                exit =
-                    slideOutVertically(
-                        animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS),
-                        targetOffsetY = { it },
-                    ) + fadeOut(animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS)),
+                enter = modalEnter,
+                exit = modalExit,
                 modifier = Modifier.fillMaxSize(),
             ) {
                 KeyboardScreen(
