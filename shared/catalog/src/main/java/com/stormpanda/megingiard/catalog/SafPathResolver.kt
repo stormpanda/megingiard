@@ -3,6 +3,7 @@ package com.stormpanda.megingiard.catalog
 import com.stormpanda.megingiard.AppLog
 import java.io.File
 import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
 
 private const val TAG = "SafPathResolver"
 
@@ -35,7 +36,7 @@ object SafPathResolver {
         if (uriStr.startsWith("/")) return uriStr
 
         return try {
-            val decoded = URLDecoder.decode(uriStr, "UTF-8")
+            val decoded = URLDecoder.decode(uriStr, StandardCharsets.UTF_8)
             val rawPath =
                 when {
                     decoded.contains("/document/") -> decoded.substringAfter("/document/")
