@@ -311,6 +311,12 @@ fun GameFocusArtworkDialog(
 
             // Conditional Edit Search Term Input Field
             if (isEditingQuery) {
+                val commitSearch = {
+                    if (searchInputText.isNotBlank()) {
+                        searchQuery = searchInputText.trim()
+                        isEditingQuery = false
+                    }
+                }
                 Row(
                     modifier =
                         Modifier
@@ -341,24 +347,11 @@ fun GameFocusArtworkDialog(
                                 cursorColor = appColors.accent,
                             ),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                        keyboardActions =
-                            KeyboardActions(
-                                onSearch = {
-                                    if (searchInputText.isNotBlank()) {
-                                        searchQuery = searchInputText.trim()
-                                        isEditingQuery = false
-                                    }
-                                },
-                            ),
+                        keyboardActions = KeyboardActions(onSearch = { commitSearch() }),
                     )
 
                     IconButton(
-                        onClick = {
-                            if (searchInputText.isNotBlank()) {
-                                searchQuery = searchInputText.trim()
-                                isEditingQuery = false
-                            }
-                        },
+                        onClick = commitSearch,
                         modifier =
                             Modifier
                                 .size(40.dp)
@@ -528,6 +521,7 @@ private fun GameSelectionRow(
 ) {
     val appColors = LocalAppColors.current
     val listState = rememberLazyListState()
+    val chipShape = remember { RoundedCornerShape(20.dp) }
 
     // Smoothly scroll LazyRow to keep the L1/R1 selected item visible on screen
     LaunchedEffect(selectedIndex) {
@@ -555,7 +549,6 @@ private fun GameSelectionRow(
         ) {
             itemsIndexed(games, key = { _, game -> game.id }) { index, game ->
                 val isSelected = index == selectedIndex
-                val chipShape = RoundedCornerShape(20.dp)
                 Box(
                     modifier =
                         Modifier
@@ -599,7 +592,7 @@ private fun ShoulderBadge(
     modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
-    val badgeShape = RoundedCornerShape(6.dp)
+    val badgeShape = remember { RoundedCornerShape(6.dp) }
     Box(
         modifier =
             modifier
