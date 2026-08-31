@@ -289,17 +289,7 @@ object RomManager {
         packageName: String,
         coverPath: String?,
     ) {
-        _romApps.value =
-            _romApps.value.map { item ->
-                if (item.packageName == packageName) {
-                    item.copy(
-                        coverPath = coverPath,
-                        coverLastModified = System.currentTimeMillis(),
-                    )
-                } else {
-                    item
-                }
-            }
+        _romApps.value = _romApps.value.withUpdatedCover(packageName, coverPath)
         AppLog.i(TAG, "Updated in-memory ROM cover path for $packageName to $coverPath")
     }
 

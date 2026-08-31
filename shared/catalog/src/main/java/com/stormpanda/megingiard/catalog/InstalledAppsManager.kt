@@ -296,17 +296,7 @@ object InstalledAppsManager {
             RomManager.updateRomCover(packageName, coverPath)
             return
         }
-        installedAndroidAppsFlow.value =
-            installedAndroidAppsFlow.value.map { item ->
-                if (item.packageName == packageName) {
-                    item.copy(
-                        coverPath = coverPath,
-                        coverLastModified = System.currentTimeMillis(),
-                    )
-                } else {
-                    item
-                }
-            }
+        installedAndroidAppsFlow.value = installedAndroidAppsFlow.value.withUpdatedCover(packageName, coverPath)
         AppLog.i(TAG, "Updated in-memory cover path for $packageName to $coverPath")
     }
 

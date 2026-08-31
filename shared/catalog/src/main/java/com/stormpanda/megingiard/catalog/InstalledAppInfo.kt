@@ -11,4 +11,14 @@ data class InstalledAppInfo(
     val systemId: String? = null,
     val retroArchCore: String? = null,
     val coverLastModified: Long = 0L,
-)
+) {
+    fun withCover(
+        coverPath: String?,
+        lastModified: Long = System.currentTimeMillis(),
+    ): InstalledAppInfo = copy(coverPath = coverPath, coverLastModified = lastModified)
+}
+
+fun List<InstalledAppInfo>.withUpdatedCover(
+    packageName: String,
+    coverPath: String?,
+): List<InstalledAppInfo> = map { if (it.packageName == packageName) it.withCover(coverPath) else it }
