@@ -17,6 +17,7 @@ import com.stormpanda.megingiard.keyboard.KeyboardMode
 import com.stormpanda.megingiard.keyboard.KeyboardState
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.keyboard.ModifierState
+import com.stormpanda.megingiard.math.nextItem
 import com.stormpanda.megingiard.settings.KeyboardSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.Dispatchers
@@ -93,10 +94,7 @@ class KeyboardViewModel(
     fun closeQuickMenu() = AppStateManager.closeQuickMenu()
 
     fun cycleKbLayout() {
-        val current = kbLayout.value
-        val layouts = KbLayout.entries
-        val nextIndex = (layouts.indexOf(current) + 1) % layouts.size
-        KeyboardSettings.setKbLayout(layouts[nextIndex])
+        KeyboardSettings.setKbLayout(KbLayout.entries.nextItem(kbLayout.value))
     }
 
     fun setKbLayout(value: KbLayout) = KeyboardSettings.setKbLayout(value)
