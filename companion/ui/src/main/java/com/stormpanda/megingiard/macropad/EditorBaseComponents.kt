@@ -35,8 +35,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.ui.LocalAppColors
 
-private const val TAG = "EditorBaseComponents"
-
 internal val EBC_PREVIEW_DEFAULT_SIZE = 36.dp
 private val EBC_PREVIEW_ICON_SIZE = 20.dp
 
