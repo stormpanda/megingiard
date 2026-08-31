@@ -24,7 +24,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.rounded.AutoFixHigh
-import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Gamepad
 import androidx.compose.material.icons.rounded.Pause
@@ -45,7 +44,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -53,7 +51,6 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.catalog.DisplayDetector
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
@@ -105,7 +102,6 @@ fun QuickMenu(
     visible: Boolean,
     onDismiss: () -> Unit,
 ) {
-    val context = LocalContext.current
     val colors = LocalAppColors.current
     val menuBezelBrush = rememberBezelBrush()
     val profiles by MacroPadState.profiles.collectAsState()
@@ -117,7 +113,6 @@ fun QuickMenu(
     val showIntegrationHome by AppStateManager.showIntegrationHome.collectAsState()
     val privdState by PrivdClient.state.collectAsState()
     val isPrivdConnected = privdState == PrivdConnectionState.CONNECTED
-    val showGlobalSettings by AppStateManager.isGlobalSettingsOpen.collectAsState()
     var showQuickMenuHelp by remember { mutableStateOf(false) }
     var showShutOffConfirm by remember { mutableStateOf(false) }
     var autoShimmerTrigger by remember { mutableIntStateOf(0) }
@@ -156,14 +151,12 @@ fun QuickMenu(
                             enter = slideInVertically { -it },
                             exit = slideOutVertically { -it },
                         ),
-                onStart = {
-                    AppStateManager.requestMirrorStart()
-                },
+                onStart = AppStateManager::requestMirrorStart,
                 onStop = {
                     AppStateManager.requestMirrorStop()
                     onDismiss()
                 },
-                onToggleFreeze = { ScreenCaptureManager.toggleFrozen() },
+                onToggleFreeze = ScreenCaptureManager::toggleFrozen,
                 onTakeTopScreenshot = { ScreenCaptureManager.requestScreenshot(ScreenshotTarget.TOP) },
                 onTakeBottomScreenshot = { ScreenCaptureManager.requestScreenshot(ScreenshotTarget.BOTTOM) },
                 onTakeBothScreenshot = { ScreenCaptureManager.requestScreenshot(ScreenshotTarget.BOTH) },

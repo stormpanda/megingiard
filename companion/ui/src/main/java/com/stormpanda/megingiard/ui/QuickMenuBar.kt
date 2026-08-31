@@ -224,7 +224,7 @@ fun QuickMenuBar(modifier: Modifier = Modifier) {
         // Quick Menu overlay — rendered as a sibling so it covers MacroPadScreen
         QuickMenu(
             visible = isQuickMenuOpen,
-            onDismiss = { AppStateManager.closeQuickMenu() },
+            onDismiss = AppStateManager::closeQuickMenu,
         )
     }
 }
