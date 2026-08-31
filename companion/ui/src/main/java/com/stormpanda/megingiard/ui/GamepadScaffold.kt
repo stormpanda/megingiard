@@ -330,7 +330,7 @@ fun GamepadCategoryTile(
         transferFocusToDeck?.invoke()
     }
 
-    val shape = RoundedCornerShape(GS_SIDEBAR_CORNER)
+    val shape = remember { RoundedCornerShape(GS_SIDEBAR_CORNER) }
 
     Box(
         modifier =
