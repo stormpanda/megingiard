@@ -443,11 +443,11 @@ object AppStateManager {
 
     fun resetPrivdPromptState() {
         AppLog.d(TAG, "resetPrivdPromptState")
-        _isPrivdPromptShowing.value = false
+        _isPrivdPromptActive.value = false
     }
 
-    private val _isPrivdPromptShowing = MutableStateFlow(false)
-    val isPrivdPromptActive: StateFlow<Boolean> = _isPrivdPromptShowing.asStateFlow()
+    private val _isPrivdPromptActive = MutableStateFlow(false)
+    val isPrivdPromptActive: StateFlow<Boolean> = _isPrivdPromptActive.asStateFlow()
 
     private val _isPrivdSetupWizardActive = MutableStateFlow(false)
     val isPrivdSetupWizardActive: StateFlow<Boolean> = _isPrivdSetupWizardActive.asStateFlow()
@@ -595,9 +595,9 @@ object AppStateManager {
     private val _fullscreenMouseSensitivity = MutableStateFlow(1.0f)
     val fullscreenMouseSensitivity: StateFlow<Float> = _fullscreenMouseSensitivity.asStateFlow()
 
-    private val _forcedKeyboardLayout = MutableStateFlow<KbLayout?>(null)
+    private val forcedKeyboardLayout = MutableStateFlow<KbLayout?>(null)
     val fullscreenKeyboardLayout: StateFlow<KbLayout> =
-        combine(_forcedKeyboardLayout, KeyboardSettings.kbLayout) { forced, settings ->
+        combine(forcedKeyboardLayout, KeyboardSettings.kbLayout) { forced, settings ->
             forced ?: settings
         }.stateIn(scope, SharingStarted.Eagerly, KeyboardSettings.kbLayout.value)
 
@@ -629,10 +629,10 @@ object AppStateManager {
         }
         AppLog.i(TAG, "setFullscreenKeyboardActive($active, layout=$layout)")
         if (active) {
-            _forcedKeyboardLayout.value = layout
+            forcedKeyboardLayout.value = layout
             _companionSurfaceMode.value = CompanionSurfaceMode.KEYBOARD
         } else {
-            _forcedKeyboardLayout.value = null
+            forcedKeyboardLayout.value = null
             if (_companionSurfaceMode.value == CompanionSurfaceMode.KEYBOARD) {
                 _companionSurfaceMode.value = CompanionSurfaceMode.MACROPAD
             }
