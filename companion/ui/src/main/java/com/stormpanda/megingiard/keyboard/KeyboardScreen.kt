@@ -204,12 +204,12 @@ fun KeyboardScreen(
                             Modifier
                                 .fillMaxSize()
                                 .padding(KB_TOUCHPAD_PADDING)
-                                .clip(RoundedCornerShape(KB_TOUCHPAD_CORNER_RADIUS))
+                                .clip(KB_TOUCHPAD_SHAPE)
                                 .background(colors.appBackground)
                                 .border(
                                     width = KB_TOUCHPAD_BORDER_WIDTH,
                                     brush = insetBezelBrush,
-                                    shape = RoundedCornerShape(KB_TOUCHPAD_CORNER_RADIUS),
+                                    shape = KB_TOUCHPAD_SHAPE,
                                 ).onGloballyPositioned { touchpadCoords = it }
                                 .pointerInput(processor) {
                                     try {

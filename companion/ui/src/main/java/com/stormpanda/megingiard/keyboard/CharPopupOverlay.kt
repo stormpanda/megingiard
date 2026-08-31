@@ -24,6 +24,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.ui.LocalAppColors
 
+private val KB_POPUP_SHAPE = RoundedCornerShape(12.dp)
+
 @Composable
 internal fun CharPopupOverlay(
     popup: PopupState,
@@ -58,9 +60,9 @@ internal fun CharPopupOverlay(
                 .offset(x = popupLeft, y = popupTop)
                 .width(popupWidth)
                 .height(popupHeight)
-                .clip(RoundedCornerShape(12.dp))
+                .clip(KB_POPUP_SHAPE)
                 .background(colors.surfaceVariant)
-                .border(1.dp, colors.onSurface.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                .border(1.dp, colors.onSurface.copy(alpha = 0.15f), KB_POPUP_SHAPE)
                 .padding(8.dp),
         contentAlignment = Alignment.Center,
     ) {

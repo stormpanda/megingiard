@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.keyboard
 
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
 
 internal val KB_KEY_PADDING_H = 2.dp
@@ -18,5 +19,6 @@ internal val KB_CLOSE_BUTTON_SIZE = 44.dp
 internal val KB_ICON_SIZE_MEDIUM = 24.dp
 
 internal val KB_TOUCHPAD_CORNER_RADIUS = 12.dp
+internal val KB_TOUCHPAD_SHAPE = RoundedCornerShape(KB_TOUCHPAD_CORNER_RADIUS)
 internal val KB_TOUCHPAD_BORDER_WIDTH = 1.dp
 internal val KB_TOUCHPAD_PADDING = 8.dp

@@ -57,6 +57,8 @@ import com.stormpanda.megingiard.viewmodel.KeyboardViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+private val KTT_BUTTON_SHAPE = RoundedCornerShape(4.dp)
+
 @Composable
 internal fun KeyboardTopToolbar(
     activeState: KeyboardLayoutState,
@@ -258,8 +260,8 @@ private fun BaseToolbarButton(
                 .border(
                     width = 1.dp,
                     color = borderColor,
-                    shape = RoundedCornerShape(4.dp),
-                ).clip(RoundedCornerShape(4.dp))
+                    shape = KTT_BUTTON_SHAPE,
+                ).clip(KTT_BUTTON_SHAPE)
                 .background(bg)
                 .pointerInput(onPress) {
                     detectTapGestures(onPress = onPress)
