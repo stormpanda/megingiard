@@ -9,11 +9,11 @@ import com.stormpanda.megingiard.math.prevItem
 sealed class LibraryTab {
     abstract val id: String
 
-    object APPS : LibraryTab() {
+    data object APPS : LibraryTab() {
         override val id = "APPS"
     }
 
-    object GAMES : LibraryTab() {
+    data object GAMES : LibraryTab() {
         override val id = "GAMES"
     }
 
