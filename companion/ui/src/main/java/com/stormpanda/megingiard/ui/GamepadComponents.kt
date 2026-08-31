@@ -354,6 +354,12 @@ private val GC_INFO_BOX_SPACING = 10.dp
 private val GC_INFO_BOX_ICON_SIZE = 20.dp
 private val GC_INFO_BOX_TEXT_SPACING = 2.dp
 
+private val GC_CARD_SHAPE = RoundedCornerShape(GC_CARD_CORNER)
+private val GC_CORNER_8_SHAPE = RoundedCornerShape(GC_CORNER_8)
+private val GC_STATUS_PILL_SHAPE = RoundedCornerShape(GC_STATUS_PILL_CORNER)
+private val GC_CORNER_4_SHAPE = RoundedCornerShape(GC_CORNER_4)
+private val GC_INFO_BOX_SHAPE = RoundedCornerShape(GC_INFO_BOX_RADIUS)
+
 /**
  * Base focusable gamepad card container with glowing accent bezel and spring focus transitions.
  */
@@ -364,7 +370,7 @@ fun GamepadFocusCard(
     cardFocusRequester: FocusRequester = remember { FocusRequester() },
     itemKey: Any? = null,
     enabled: Boolean = true,
-    shape: Shape = RoundedCornerShape(GC_CARD_CORNER),
+    shape: Shape = GC_CARD_SHAPE,
     cardBgColor: Color? = null,
     onCustomKeyEvent: ((ComposeKeyEvent) -> Boolean)? = null,
     onLeftKey: (() -> Unit)? = null,
@@ -633,7 +639,7 @@ fun GamepadCardIcon(
         modifier =
             modifier
                 .size(GC_ICON_BOX_SIZE)
-                .background(bg, RoundedCornerShape(GC_CORNER_8)),
+                .background(bg, GC_CORNER_8_SHAPE),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
@@ -667,7 +673,7 @@ fun GamepadPositionBadge(
         modifier =
             modifier
                 .size(GC_ICON_BOX_SIZE)
-                .background(bg, RoundedCornerShape(GC_CORNER_8)),
+                .background(bg, GC_CORNER_8_SHAPE),
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -758,7 +764,7 @@ fun GamepadPill(
         }
     val pillBorderWidth = if (isHighlighted) 2.dp else 1.dp
 
-    val shape = RoundedCornerShape(GC_STATUS_PILL_CORNER)
+    val shape = GC_STATUS_PILL_SHAPE
     Row(
         modifier =
             modifier
@@ -828,11 +834,11 @@ fun GamepadAdjustableCapsule(
     Row(
         modifier =
             modifier
-                .background(capsuleBg, RoundedCornerShape(GC_STATUS_PILL_CORNER))
+                .background(capsuleBg, GC_STATUS_PILL_SHAPE)
                 .border(
                     capsuleBorderWidth,
                     capsuleBorderColor,
-                    RoundedCornerShape(GC_STATUS_PILL_CORNER),
+                    GC_STATUS_PILL_SHAPE,
                 ).padding(horizontal = GC_SPACING_4, vertical = GC_SPACING_2),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -2213,11 +2219,11 @@ fun GamepadColorPaletteGrid(
         modifier =
             modifier
                 .fillMaxWidth()
-                .background(containerBg, RoundedCornerShape(GC_STATUS_PILL_CORNER))
+                .background(containerBg, GC_STATUS_PILL_SHAPE)
                 .border(
                     containerBorderWidth,
                     containerBorderColor,
-                    RoundedCornerShape(GC_STATUS_PILL_CORNER),
+                    GC_STATUS_PILL_SHAPE,
                 ).padding(
                     horizontal = GC_PALETTE_CONTAINER_H_PADDING,
                     vertical = GC_PALETTE_CONTAINER_V_PADDING,
@@ -2418,12 +2424,12 @@ fun GamepadSliderCard(
                             Modifier
                                 .fillMaxWidth()
                                 .height(GC_SLIDER_TRACK_HEIGHT)
-                                .clip(RoundedCornerShape(GC_CORNER_4))
+                                .clip(GC_CORNER_4_SHAPE)
                                 .background(trackBrush)
                                 .border(
                                     GC_DEFAULT_BORDER_WIDTH,
                                     Color.White.copy(alpha = GC_SLIDER_TRACK_BORDER_ALPHA),
-                                    RoundedCornerShape(GC_CORNER_4),
+                                    GC_CORNER_4_SHAPE,
                                 ),
                     )
 
@@ -2524,11 +2530,11 @@ fun GamepadInfoBox(
                 .fillMaxWidth()
                 .background(
                     color = colors.surface.copy(alpha = GC_INFO_BOX_BG_ALPHA),
-                    shape = RoundedCornerShape(GC_INFO_BOX_RADIUS),
+                    shape = GC_INFO_BOX_SHAPE,
                 ).border(
                     width = GC_INFO_BOX_BORDER_WIDTH,
                     color = colors.onSurfaceSecondary.copy(alpha = GC_INFO_BOX_BORDER_ALPHA),
-                    shape = RoundedCornerShape(GC_INFO_BOX_RADIUS),
+                    shape = GC_INFO_BOX_SHAPE,
                 ).padding(horizontal = GC_INFO_BOX_PADDING_H, vertical = GC_INFO_BOX_PADDING_V),
     ) {
         Row(
