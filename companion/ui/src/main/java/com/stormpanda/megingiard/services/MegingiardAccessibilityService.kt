@@ -686,7 +686,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
         config: AutoSetupLanguageConfig,
     ): Boolean {
         val sb = StringBuilder()
-        collectAllText(rootNode, sb)
+        collectNodeText(rootNode, sb)
         val allText = sb.toString().lowercase()
 
         val devOptionsKeywords = config.developerOptionsKeywords
@@ -727,24 +727,6 @@ class MegingiardAccessibilityService : AccessibilityService() {
             }
         }
         return false
-    }
-
-    private fun collectAllText(
-        node: AccessibilityNodeInfo,
-        sb: StringBuilder,
-    ) {
-        val text = node.text?.toString()
-        if (!text.isNullOrBlank()) {
-            sb.append(text).append("\n")
-        }
-        val contentDesc = node.contentDescription?.toString()
-        if (!contentDesc.isNullOrBlank() && contentDesc != text) {
-            sb.append(contentDesc).append("\n")
-        }
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i) ?: continue
-            collectAllText(child, sb)
-        }
     }
 
     private fun getRootNodeForDisplay(targetDisplayId: Int): AccessibilityNodeInfo? {
@@ -883,7 +865,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
                 AppLog.i(TAG, "startMultiStageAutoSetup: No restorable top screen app running (foreground app: $currentForeground)")
             }
 
-            val displayOptions = ActivityOptions.makeBasic().setLaunchDisplayId(Display.DEFAULT_DISPLAY).toBundle()
+            val displayOptions = topScreenDisplayBundle()
 
             val inst = instance
             if (inst == null || !isEnabled(context)) {
@@ -1178,11 +1160,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
                     val intent = context.packageManager.getLaunchIntentForPackage(pkg)
                     if (intent != null) {
                         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
-                        val options =
-                            ActivityOptions.makeBasic().apply {
-                                setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-                            }
-                        context.startActivity(intent, options.toBundle())
+                        context.startActivity(intent, topScreenDisplayBundle())
                         AppLog.i(TAG, "restoreTopScreenApp: Reopened $pkg successfully on display ${Display.DEFAULT_DISPLAY}")
                     } else {
                         AppLog.w(TAG, "restoreTopScreenApp: No launch intent found for package $pkg, falling back to home screen")
@@ -1207,11 +1185,9 @@ class MegingiardAccessibilityService : AccessibilityService() {
                     addCategory(Intent.CATEGORY_HOME)
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
                 }
-            val options =
-                ActivityOptions.makeBasic().apply {
-                    setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-                }
-            context.startActivity(intent, options.toBundle())
+            context.startActivity(intent, topScreenDisplayBundle())
         }
+
+        private fun topScreenDisplayBundle(): Bundle = ActivityOptions.makeBasic().setLaunchDisplayId(Display.DEFAULT_DISPLAY).toBundle()
     }
 }
