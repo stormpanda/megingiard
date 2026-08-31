@@ -1,6 +1,5 @@
 package com.stormpanda.megingiard.macropad
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
@@ -59,7 +58,6 @@ private fun describeColorOption(
         is ColorOption.Custom -> resolvedColor.toHexLabel()
     }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun EditLayoutSubPageContent(
     layout: PadLayout,
@@ -284,7 +282,6 @@ internal fun LayoutColorSubPageContent(
     )
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun NewLayoutSubPageContent(
     existingNames: List<String>,
