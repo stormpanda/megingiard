@@ -24,6 +24,52 @@ internal data class MouseActionItem(
     val icon: ImageVector,
 )
 
+private val MOUSE_ACTION_ITEMS =
+    listOf(
+        MouseActionItem(
+            PadAction.MouseButton(MouseButton.LEFT),
+            R.string.macropad_mouse_btn_left,
+            R.string.macropad_mouse_btn_left_desc,
+            Icons.Rounded.Mouse,
+        ),
+        MouseActionItem(
+            PadAction.MouseButton(MouseButton.RIGHT),
+            R.string.macropad_mouse_btn_right,
+            R.string.macropad_mouse_btn_right_desc,
+            Icons.Rounded.Mouse,
+        ),
+        MouseActionItem(
+            PadAction.MouseButton(MouseButton.MIDDLE),
+            R.string.macropad_mouse_btn_middle,
+            R.string.macropad_mouse_btn_middle_desc,
+            Icons.Rounded.Mouse,
+        ),
+        MouseActionItem(
+            PadAction.MouseButton(MouseButton.MOUSE4),
+            R.string.macropad_mouse_btn_back,
+            R.string.macropad_mouse_btn_back_desc,
+            Icons.Rounded.Mouse,
+        ),
+        MouseActionItem(
+            PadAction.MouseButton(MouseButton.MOUSE5),
+            R.string.macropad_mouse_btn_forward,
+            R.string.macropad_mouse_btn_forward_desc,
+            Icons.Rounded.Mouse,
+        ),
+        MouseActionItem(
+            PadAction.ScrollWheel,
+            R.string.macropad_action_scroll_wheel,
+            R.string.macropad_mouse_btn_scroll_desc,
+            Icons.Rounded.SwapVert,
+        ),
+        MouseActionItem(
+            PadAction.TrackpointMove(),
+            R.string.macropad_action_trackpoint,
+            R.string.macropad_mouse_btn_trackpoint_desc,
+            Icons.Rounded.ControlCamera,
+        ),
+    )
+
 @Composable
 internal fun VisualMousePicker(
     currentAction: PadAction,
@@ -33,56 +79,8 @@ internal fun VisualMousePicker(
 ) {
     AppLog.d(TAG, "VisualMousePicker: currentAction=$currentAction")
 
-    val items =
-        remember {
-            listOf(
-                MouseActionItem(
-                    PadAction.MouseButton(MouseButton.LEFT),
-                    R.string.macropad_mouse_btn_left,
-                    R.string.macropad_mouse_btn_left_desc,
-                    Icons.Rounded.Mouse,
-                ),
-                MouseActionItem(
-                    PadAction.MouseButton(MouseButton.RIGHT),
-                    R.string.macropad_mouse_btn_right,
-                    R.string.macropad_mouse_btn_right_desc,
-                    Icons.Rounded.Mouse,
-                ),
-                MouseActionItem(
-                    PadAction.MouseButton(MouseButton.MIDDLE),
-                    R.string.macropad_mouse_btn_middle,
-                    R.string.macropad_mouse_btn_middle_desc,
-                    Icons.Rounded.Mouse,
-                ),
-                MouseActionItem(
-                    PadAction.MouseButton(MouseButton.MOUSE4),
-                    R.string.macropad_mouse_btn_back,
-                    R.string.macropad_mouse_btn_back_desc,
-                    Icons.Rounded.Mouse,
-                ),
-                MouseActionItem(
-                    PadAction.MouseButton(MouseButton.MOUSE5),
-                    R.string.macropad_mouse_btn_forward,
-                    R.string.macropad_mouse_btn_forward_desc,
-                    Icons.Rounded.Mouse,
-                ),
-                MouseActionItem(
-                    PadAction.ScrollWheel,
-                    R.string.macropad_action_scroll_wheel,
-                    R.string.macropad_mouse_btn_scroll_desc,
-                    Icons.Rounded.SwapVert,
-                ),
-                MouseActionItem(
-                    PadAction.TrackpointMove(),
-                    R.string.macropad_action_trackpoint,
-                    R.string.macropad_mouse_btn_trackpoint_desc,
-                    Icons.Rounded.ControlCamera,
-                ),
-            )
-        }
-
     GamepadTwoColumnGrid(
-        items = items,
+        items = MOUSE_ACTION_ITEMS,
         modifier = modifier,
     ) { item, _, cardModifier ->
         val isSelected =
