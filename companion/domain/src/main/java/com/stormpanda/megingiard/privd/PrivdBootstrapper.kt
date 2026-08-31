@@ -30,7 +30,7 @@ private const val DAEMON_ASSET_NAME = "megingiard_privd_arm64"
 private const val PORT_RELEASE_START = 51234
 private const val PORT_DEBUG_START = 51244
 
-private fun isDebugPackage(context: Context): Boolean = context.packageName.endsWith(".debug") || context.packageName.contains(".debug")
+private fun isDebugPackage(context: Context): Boolean = context.packageName.contains(".debug")
 
 private fun getDaemonRemotePath(context: Context): String =
     if (isDebugPackage(context)) "/data/local/tmp/megingiard_privd_debug" else "/data/local/tmp/megingiard_privd"

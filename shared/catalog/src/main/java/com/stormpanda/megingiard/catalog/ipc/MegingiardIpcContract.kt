@@ -46,7 +46,7 @@ object MegingiardIpcContract {
         if (isInitialized) return
 
         val pm = context.packageManager
-        val isDebug = context.packageName.endsWith(".debug") || context.packageName.contains(".debug")
+        val isDebug = context.packageName.contains(".debug")
 
         val isHostCompanionApp =
             context.packageName == "com.stormpanda.megingiard" || context.packageName == "com.stormpanda.megingiard.debug"

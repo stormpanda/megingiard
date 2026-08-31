@@ -120,7 +120,7 @@ object PrivdClient {
      * The decryption involves a short (~10 ms) hardware-backed Keystore operation.
      */
     fun setPackageName(name: String) {
-        val isDebug = name.endsWith(".debug") || name.contains(".debug")
+        val isDebug = name.contains(".debug")
         portStart = if (isDebug) PORT_DEBUG_START else PORT_RELEASE_START
         portEnd = portStart + 4
         AppLog.d(TAG, "setPackageName: $name -> port range $portStart..$portEnd")
