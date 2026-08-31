@@ -476,75 +476,69 @@ class MirrorCoordinateTransformTest {
     fun `clampCutoutResize clamps vertical scaling of lower cutout with slight horizontal drift`() {
         val allCutouts =
             listOf(
-                cutout("1", destX = 0.3f, destY = 0.4f, destWidth = 0.2f, destHeight = 0.2f), // Lower cutout
-                cutout("2", destX = 0.3f, destY = 0.1f, destWidth = 0.2f, destHeight = 0.2f), // Upper cutout (bottom is 0.3)
+                cutout("1", destX = 0.3f, destY = 0.4f, destWidth = 0.2f, destHeight = 0.2f),
+                cutout("2", destX = 0.3f, destY = 0.1f, destWidth = 0.2f, destHeight = 0.2f),
             )
-        val geom =
-            clampCutoutResize(
-                cutoutId = "1",
-                handle = ResizeHandle.TOP_LEFT,
-                originalX = 0.3f,
-                originalY = 0.4f,
-                originalWidth = 0.2f,
-                originalHeight = 0.2f,
-                targetX = 0.29f,
-                targetY = 0.2f, // Drag top edge up past bottom (0.3) and left (0.3)
-                targetWidth = 0.21f,
-                targetHeight = 0.4f,
-                allCutouts = allCutouts,
-            )
-        assertEquals(0.3f, geom.y, EPS)
-        assertEquals(0.3f, geom.h, EPS)
+        assertCutoutResize(
+            ResizeHandle.TOP_LEFT,
+            0.3f,
+            0.4f,
+            0.2f,
+            0.2f,
+            0.29f,
+            0.2f,
+            0.21f,
+            0.4f,
+            allCutouts,
+            expectedY = 0.3f,
+            expectedH = 0.3f,
+        )
     }
 
     @Test
     fun `clampCutoutResize clamps horizontal scaling when target is taller and vertically overlaps`() {
         val allCutouts =
             listOf(
-                cutout("1", destX = 0.5f, destY = 0.2f, destWidth = 0.2f, destHeight = 0.1f), // Right cutout (b)
-                cutout("2", destX = 0.2f, destY = 0.1f, destWidth = 0.2f, destHeight = 0.3f), // Left cutout (a), right edge is 0.4, Y range [0.1, 0.4]
+                cutout("1", destX = 0.5f, destY = 0.2f, destWidth = 0.2f, destHeight = 0.1f),
+                cutout("2", destX = 0.2f, destY = 0.1f, destWidth = 0.2f, destHeight = 0.3f),
             )
-        val geom =
-            clampCutoutResize(
-                cutoutId = "1",
-                handle = ResizeHandle.BOTTOM_LEFT,
-                originalX = 0.5f,
-                originalY = 0.2f,
-                originalWidth = 0.2f,
-                originalHeight = 0.1f,
-                targetX = 0.38f,
-                targetY = 0.2f,
-                targetWidth = 0.32f,
-                targetHeight = 0.15f,
-                allCutouts = allCutouts,
-            )
-        assertEquals(0.4f, geom.x, EPS)
-        assertEquals(0.15f, geom.h, EPS)
+        assertCutoutResize(
+            ResizeHandle.BOTTOM_LEFT,
+            0.5f,
+            0.2f,
+            0.2f,
+            0.1f,
+            0.38f,
+            0.2f,
+            0.32f,
+            0.15f,
+            allCutouts,
+            expectedX = 0.4f,
+            expectedW = 0.3f,
+        )
     }
 
     @Test
     fun `clampCutoutResize clamps vertical scaling when target is wider and horizontally overlaps`() {
         val allCutouts =
             listOf(
-                cutout("1", destX = 0.2f, destY = 0.4f, destWidth = 0.1f, destHeight = 0.1f), // Lower cutout (b)
-                cutout("2", destX = 0.1f, destY = 0.1f, destWidth = 0.3f, destHeight = 0.2f), // Upper cutout (a), bottom is 0.3, X range [0.1, 0.4]
+                cutout("1", destX = 0.2f, destY = 0.4f, destWidth = 0.1f, destHeight = 0.1f),
+                cutout("2", destX = 0.1f, destY = 0.1f, destWidth = 0.3f, destHeight = 0.2f),
             )
-        val geom =
-            clampCutoutResize(
-                cutoutId = "1",
-                handle = ResizeHandle.TOP_LEFT,
-                originalX = 0.2f,
-                originalY = 0.4f,
-                originalWidth = 0.1f,
-                originalHeight = 0.1f,
-                targetX = 0.05f,
-                targetY = 0.25f,
-                targetWidth = 0.25f,
-                targetHeight = 0.25f,
-                allCutouts = allCutouts,
-            )
-        assertEquals(0.3f, geom.y, EPS) // clamped to bottom edge of a
-        assertEquals(0.25f, geom.w, EPS) // width remains 0.25f (x is 0.05f, not clamped)
+        assertCutoutResize(
+            ResizeHandle.TOP_LEFT,
+            0.2f,
+            0.4f,
+            0.1f,
+            0.1f,
+            0.05f,
+            0.25f,
+            0.25f,
+            0.25f,
+            allCutouts,
+            expectedY = 0.3f,
+            expectedW = 0.25f,
+        )
     }
 
     @Test
