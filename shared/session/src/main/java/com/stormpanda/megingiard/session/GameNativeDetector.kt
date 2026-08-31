@@ -33,7 +33,7 @@ object GameNativeDetector : EmulatorDetector {
     override val systemId: String = "pc"
 
     override suspend fun detectActiveSession(packageName: String): ActiveGameSession? {
-        if (!supportedPackages.contains(packageName)) return null
+        if (packageName !in supportedPackages) return null
 
         val procList = ProcessCmdlineProvider.getRunningProcesses()
         if (!procList.isNullOrBlank()) {
