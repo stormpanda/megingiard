@@ -975,35 +975,30 @@ private fun rememberBatteryState(): BatteryState {
     var batteryState by remember { mutableStateOf(BatteryState(IH_BATTERY_MAX, false)) }
 
     DisposableEffect(context) {
+        fun extractBatteryState(intent: Intent?): BatteryState {
+            if (intent == null) return BatteryState(IH_BATTERY_MAX, false)
+            val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+            val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+            val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+            val isCharging =
+                status == BatteryManager.BATTERY_STATUS_CHARGING ||
+                    status == BatteryManager.BATTERY_STATUS_FULL
+            val pct = if (level >= 0 && scale > 0) (level * IH_BATTERY_MAX / scale) else IH_BATTERY_MAX
+            return BatteryState(pct, isCharging)
+        }
+
         val receiver =
             object : BroadcastReceiver() {
                 override fun onReceive(
                     context: Context,
                     intent: Intent,
                 ) {
-                    val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
-                    val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
-                    val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
-                    val isCharging =
-                        status == BatteryManager.BATTERY_STATUS_CHARGING ||
-                            status == BatteryManager.BATTERY_STATUS_FULL
-
-                    val pct = if (level >= 0 && scale > 0) (level * IH_BATTERY_MAX / scale) else IH_BATTERY_MAX
-                    batteryState = BatteryState(pct, isCharging)
+                    batteryState = extractBatteryState(intent)
                 }
             }
         val filter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
         val stickyIntent = context.registerReceiver(receiver, filter)
-        if (stickyIntent != null) {
-            val level = stickyIntent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
-            val scale = stickyIntent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
-            val status = stickyIntent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
-            val isCharging =
-                status == BatteryManager.BATTERY_STATUS_CHARGING ||
-                    status == BatteryManager.BATTERY_STATUS_FULL
-            val pct = if (level >= 0 && scale > 0) (level * IH_BATTERY_MAX / scale) else IH_BATTERY_MAX
-            batteryState = BatteryState(pct, isCharging)
-        }
+        batteryState = extractBatteryState(stickyIntent)
         onDispose {
             context.unregisterReceiver(receiver)
         }
