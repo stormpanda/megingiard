@@ -41,25 +41,21 @@ private fun migrateButtonBgColorOption(option: ColorOption?): ColorOption? {
  * are started only when needed.
  */
 private fun PadProfile.withSyncedDeviceFlags(): PadProfile {
-    val allButtons = layouts.flatMap { it.buttons }
-    val hasMacro = allButtons.any { it.action is PadAction.Macro }
-    val kb =
-        hasMacro ||
-            allButtons.any {
-                it.action is PadAction.KeyboardKey
-            }
-    val gp = hasMacro || allButtons.any { it.action is PadAction.GamepadButton }
+    val allActions = layouts.flatMap { it.buttons }.map { it.action }
+    val hasMacro = allActions.any { it is PadAction.Macro }
+    val kb = hasMacro || allActions.any { it is PadAction.KeyboardKey }
+    val gp = hasMacro || allActions.any { it is PadAction.GamepadButton }
     val ms =
         hasMacro ||
-            allButtons.any {
-                it.action is PadAction.MouseButton ||
-                    it.action is PadAction.ScrollWheel ||
-                    (it.action is PadAction.TrackpointMove && it.action.mode == TrackpointMode.PHYSICAL_MOUSE)
+            allActions.any {
+                it is PadAction.MouseButton ||
+                    it is PadAction.ScrollWheel ||
+                    (it is PadAction.TrackpointMove && it.mode == TrackpointMode.PHYSICAL_MOUSE)
             } || layouts.any { it.backgroundTouchpad.enabled }
     val ts =
         hasMacro ||
-            allButtons.any {
-                it.action is PadAction.TrackpointMove && it.action.mode == TrackpointMode.VIRTUAL_TOUCH
+            allActions.any {
+                it is PadAction.TrackpointMove && it.mode == TrackpointMode.VIRTUAL_TOUCH
             }
     return if (enableKeyboard == kb && enableGamepad == gp && enableMouse == ms && enableTouch == ts) {
         this
