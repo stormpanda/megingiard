@@ -14,22 +14,22 @@ sealed class GameFocusCategory {
     @get:StringRes abstract val stringResId: Int
     open val displayName: String? = null
 
-    object GAMES : GameFocusCategory() {
+    data object GAMES : GameFocusCategory() {
         override val id = "GAMES"
         override val stringResId = R.string.gamefocus_header_android_games
     }
 
-    object APPS : GameFocusCategory() {
+    data object APPS : GameFocusCategory() {
         override val id = "APPS"
         override val stringResId = R.string.gamefocus_header_android_apps
     }
 
-    object FAVORITES : GameFocusCategory() {
+    data object FAVORITES : GameFocusCategory() {
         override val id = "FAVORITES"
         override val stringResId = R.string.gamefocus_cat_favorites
     }
 
-    object LAST_USED : GameFocusCategory() {
+    data object LAST_USED : GameFocusCategory() {
         override val id = "LAST_USED"
         override val stringResId = R.string.gamefocus_cat_last_used
     }
@@ -54,11 +54,11 @@ sealed class GameFocusCategory {
         lastUsed: List<String> = emptyList(),
     ): List<InstalledAppInfo> =
         when (this) {
-            GAMES -> allApps.filter { it.isGame && !it.isRom && !hidden.contains(it.packageName) }
-            APPS -> allApps.filter { !it.isGame && !it.isRom && !hidden.contains(it.packageName) }
-            FAVORITES -> allApps.filter { favorites.contains(it.packageName) }
-            LAST_USED -> lastUsed.mapNotNull { pkg -> allApps.find { it.packageName == pkg } }.filter { !hidden.contains(it.packageName) }
-            is RomSystem -> allApps.filter { it.isRom && it.systemId == this.systemId && !hidden.contains(it.packageName) }
+            GAMES -> allApps.filter { it.isGame && !it.isRom && it.packageName !in hidden }
+            APPS -> allApps.filter { !it.isGame && !it.isRom && it.packageName !in hidden }
+            FAVORITES -> allApps.filter { it.packageName in favorites }
+            LAST_USED -> lastUsed.mapNotNull { pkg -> allApps.find { it.packageName == pkg } }.filter { it.packageName !in hidden }
+            is RomSystem -> allApps.filter { it.isRom && it.systemId == this.systemId && it.packageName !in hidden }
         }
 
     fun previous(categories: List<GameFocusCategory>): GameFocusCategory = categories.prevItem(this)
