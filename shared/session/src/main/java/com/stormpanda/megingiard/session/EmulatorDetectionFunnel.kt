@@ -47,7 +47,7 @@ object EmulatorDetectionFunnel {
             }.toMap()
     }
 
-    fun isRegisteredEmulator(packageName: String): Boolean = packageMap.containsKey(packageName)
+    fun isRegisteredEmulator(packageName: String): Boolean = packageName in packageMap
 
     /**
      * Called whenever a new application package enters the foreground.
