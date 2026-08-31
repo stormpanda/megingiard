@@ -67,104 +67,91 @@ object InstalledAppsManager {
     private val _lastUsed = MutableStateFlow<List<String>>(emptyList())
     val lastUsed: StateFlow<List<String>> = _lastUsed.asStateFlow()
 
-    private fun loadFavorites(context: Context) {
-        val file = File(context.filesDir, FILE_FAVORITES)
-        if (file.exists()) {
+    private fun loadStringList(
+        context: Context,
+        filename: String,
+        limit: Int = Int.MAX_VALUE,
+    ): List<String> {
+        val file = File(context.filesDir, filename)
+        if (!file.exists()) return emptyList()
+        return try {
+            file
+                .readLines()
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+                .take(limit)
+        } catch (e: Exception) {
+            AppLog.w(TAG, "Failed to load $filename: ${e.message}")
+            emptyList()
+        }
+    }
+
+    private fun loadStringSet(
+        context: Context,
+        filename: String,
+    ): Set<String> = loadStringList(context, filename).toSet()
+
+    private fun persistLines(
+        context: Context,
+        filename: String,
+        lines: Iterable<String>,
+    ) {
+        scope.launch {
             try {
-                val set =
-                    file
-                        .readLines()
-                        .map { it.trim() }
-                        .filter { it.isNotEmpty() }
-                        .toSet()
-                _favorites.value = set
-                AppLog.d(TAG, "Loaded ${set.size} favorite apps from disk")
+                val file = File(context.filesDir, filename)
+                file.writeText(lines.joinToString("\n"))
             } catch (e: Exception) {
-                AppLog.w(TAG, "Failed to load favorites file: ${e.message}")
+                AppLog.e(TAG, "Failed to persist $filename: ${e.message}", e)
             }
         }
+    }
+
+    private fun toggleInSet(
+        context: Context,
+        filename: String,
+        stateFlow: MutableStateFlow<Set<String>>,
+        item: String,
+        label: String,
+    ) {
+        val current = stateFlow.value.toMutableSet()
+        if (current.contains(item)) {
+            current.remove(item)
+            AppLog.i(TAG, "Removed $item from $label")
+        } else {
+            current.add(item)
+            AppLog.i(TAG, "Added $item to $label")
+        }
+        stateFlow.value = current
+        persistLines(context, filename, current)
+    }
+
+    private fun loadFavorites(context: Context) {
+        _favorites.value = loadStringSet(context, FILE_FAVORITES)
+        AppLog.d(TAG, "Loaded ${_favorites.value.size} favorite apps from disk")
     }
 
     fun toggleFavorite(
         context: Context,
         packageName: String,
     ) {
-        val current = _favorites.value.toMutableSet()
-        if (current.contains(packageName)) {
-            current.remove(packageName)
-            AppLog.i(TAG, "Removed $packageName from favorites")
-        } else {
-            current.add(packageName)
-            AppLog.i(TAG, "Added $packageName to favorites")
-        }
-        _favorites.value = current
-        scope.launch {
-            try {
-                val file = File(context.filesDir, FILE_FAVORITES)
-                file.writeText(current.joinToString("\n"))
-            } catch (e: Exception) {
-                AppLog.e(TAG, "Failed to persist favorites: ${e.message}", e)
-            }
-        }
+        toggleInSet(context, FILE_FAVORITES, _favorites, packageName, "favorites")
     }
 
     private fun loadHidden(context: Context) {
-        val file = File(context.filesDir, FILE_HIDDEN)
-        if (file.exists()) {
-            try {
-                val set =
-                    file
-                        .readLines()
-                        .map { it.trim() }
-                        .filter { it.isNotEmpty() }
-                        .toSet()
-                _hiddenApps.value = set
-                AppLog.d(TAG, "Loaded ${set.size} hidden apps from disk")
-            } catch (e: Exception) {
-                AppLog.w(TAG, "Failed to load hidden apps file: ${e.message}")
-            }
-        }
+        _hiddenApps.value = loadStringSet(context, FILE_HIDDEN)
+        AppLog.d(TAG, "Loaded ${_hiddenApps.value.size} hidden apps from disk")
     }
 
     fun toggleHidden(
         context: Context,
         packageName: String,
     ) {
-        val current = _hiddenApps.value.toMutableSet()
-        if (current.contains(packageName)) {
-            current.remove(packageName)
-            AppLog.i(TAG, "Removed $packageName from hidden apps")
-        } else {
-            current.add(packageName)
-            AppLog.i(TAG, "Added $packageName to hidden apps")
-        }
-        _hiddenApps.value = current
-        scope.launch {
-            try {
-                val file = File(context.filesDir, FILE_HIDDEN)
-                file.writeText(current.joinToString("\n"))
-            } catch (e: Exception) {
-                AppLog.e(TAG, "Failed to persist hidden apps: ${e.message}", e)
-            }
-        }
+        toggleInSet(context, FILE_HIDDEN, _hiddenApps, packageName, "hidden apps")
     }
 
     private fun loadLastUsed(context: Context) {
-        val file = File(context.filesDir, FILE_LAST_USED)
-        if (file.exists()) {
-            try {
-                val list =
-                    file
-                        .readLines()
-                        .map { it.trim() }
-                        .filter { it.isNotEmpty() }
-                        .take(MAX_RECENT_APPS)
-                _lastUsed.value = list
-                AppLog.d(TAG, "Loaded ${list.size} last used apps from disk")
-            } catch (e: Exception) {
-                AppLog.w(TAG, "Failed to load last used file: ${e.message}")
-            }
-        }
+        _lastUsed.value = loadStringList(context, FILE_LAST_USED, MAX_RECENT_APPS)
+        AppLog.d(TAG, "Loaded ${_lastUsed.value.size} last used apps from disk")
     }
 
     fun recordAppLaunch(
@@ -176,15 +163,8 @@ object InstalledAppsManager {
         list.add(0, packageName)
         val trimmed = list.take(MAX_RECENT_APPS)
         _lastUsed.value = trimmed
-        scope.launch {
-            try {
-                val file = File(context.filesDir, FILE_LAST_USED)
-                file.writeText(trimmed.joinToString("\n"))
-                AppLog.i(TAG, "Recorded launch for $packageName (recent count=${trimmed.size})")
-            } catch (e: Exception) {
-                AppLog.e(TAG, "Failed to persist last used apps: ${e.message}", e)
-            }
-        }
+        persistLines(context, FILE_LAST_USED, trimmed)
+        AppLog.i(TAG, "Recorded launch for $packageName (recent count=${trimmed.size})")
     }
 
     private fun loadScrapedPackages(context: Context): Set<String> =
