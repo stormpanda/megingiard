@@ -229,28 +229,20 @@ object InstalledAppsManager {
                 }
 
             val resolveInfoList: List<ResolveInfo> =
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    packageManager.queryIntentActivities(
-                        mainIntent,
-                        PackageManager.ResolveInfoFlags.of(0L),
-                    )
-                } else {
-                    packageManager.queryIntentActivities(mainIntent, 0)
-                }
+                packageManager.queryIntentActivities(
+                    mainIntent,
+                    PackageManager.ResolveInfoFlags.of(0L),
+                )
 
             val gameResolveList: List<ResolveInfo> =
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                packageManager.queryIntentActivities(
+                    gameIntent,
+                    PackageManager.ResolveInfoFlags.of(0L),
+                ) +
                     packageManager.queryIntentActivities(
-                        gameIntent,
+                        appGamesIntent,
                         PackageManager.ResolveInfoFlags.of(0L),
-                    ) +
-                        packageManager.queryIntentActivities(
-                            appGamesIntent,
-                            PackageManager.ResolveInfoFlags.of(0L),
-                        )
-                } else {
-                    packageManager.queryIntentActivities(gameIntent, 0) + packageManager.queryIntentActivities(appGamesIntent, 0)
-                }
+                    )
             val gamePackagesFromIntent = gameResolveList.map { it.activityInfo.packageName }.toSet()
 
             val coversDir = File(context.cacheDir, DIR_COVERS).apply { mkdirs() }

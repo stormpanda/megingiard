@@ -120,17 +120,12 @@ class MegingiardAccessibilityService : AccessibilityService() {
 
     private fun getSystemAutoSetupConfig(context: Context): AutoSetupLanguageConfig {
         val lmSysLoc =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                val lm = context.getSystemService(LocaleManager::class.java)
-                val sysLocales = lm?.systemLocales
-                if (sysLocales != null && sysLocales.size() > 0) {
-                    sysLocales.get(0)?.toLanguageTag()
-                } else {
-                    null
-                }
-            } else {
-                null
-            }
+            context
+                .getSystemService(LocaleManager::class.java)
+                ?.systemLocales
+                ?.takeIf { !it.isEmpty }
+                ?.get(0)
+                ?.toLanguageTag()
 
         val rawSysLocales = Settings.System.getString(context.contentResolver, "system_locales")
         val rawSysTag =

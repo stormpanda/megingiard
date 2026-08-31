@@ -102,21 +102,14 @@ fun triggerHaptic(
 }
 
 /**
- * Context-aware haptic trigger helper that automatically manages VibratorManager (API 31+)
- * vs Vibrator (legacy) and handles system service resolution internally.
+ * Context-aware haptic trigger helper that manages VibratorManager
+ * and handles system service resolution internally.
  */
 fun triggerHapticFeedback(
     context: Context,
     strength: HapticStrength = HapticStrength.LIGHT,
 ) {
-    val vibrator =
-        if (Build.VERSION.SDK_INT >= 31) {
-            val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
-            vibratorManager?.defaultVibrator
-        } else {
-            @Suppress("DEPRECATION")
-            context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-        }
+    val vibrator = context.getSystemService(VibratorManager::class.java)?.defaultVibrator
     vibrator?.let { triggerHaptic(it, strength) }
 }
 

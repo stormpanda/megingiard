@@ -88,6 +88,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.math.nextItem
+import com.stormpanda.megingiard.math.prevItem
 import com.stormpanda.megingiard.onboarding.OnboardingStepId
 import com.stormpanda.megingiard.onboarding.OnboardingStepState
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
@@ -433,12 +435,7 @@ fun ThemeStepContent() {
     val colors = LocalAppColors.current
     val currentThemeMode by SettingsManager.themeMode.collectAsState()
     val themes = remember { ThemeMode.entries }
-    val currentIndex = themes.indexOf(currentThemeMode).coerceAtLeast(0)
-
     var isNextAnimation by remember { mutableStateOf(true) }
-
-    val prevIndex = if (currentIndex > 0) currentIndex - 1 else themes.size - 1
-    val nextIndex = if (currentIndex < themes.size - 1) currentIndex + 1 else 0
 
     val edgeFadeMask =
         remember {
@@ -483,7 +480,7 @@ fun ThemeStepContent() {
             IconButton(
                 onClick = {
                     isNextAnimation = false
-                    SettingsManager.setThemeMode(themes[prevIndex])
+                    SettingsManager.setThemeMode(themes.prevItem(currentThemeMode))
                 },
             ) {
                 Icon(
@@ -517,10 +514,6 @@ fun ThemeStepContent() {
                     },
                     label = "theme-carousel-animation",
                 ) { targetTheme ->
-                    val targetIdx = themes.indexOf(targetTheme).coerceAtLeast(0)
-                    val pIdx = if (targetIdx > 0) targetIdx - 1 else themes.size - 1
-                    val nIdx = if (targetIdx < themes.size - 1) targetIdx + 1 else 0
-
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -528,7 +521,7 @@ fun ThemeStepContent() {
                     ) {
                         // Previous Theme (subdued, left aligned)
                         Text(
-                            text = stringResource(themes[pIdx].displayNameResId()),
+                            text = stringResource(themes.prevItem(targetTheme).displayNameResId()),
                             color = colors.onSurfaceSecondary.copy(alpha = 0.5f),
                             style = MaterialTheme.typography.bodySmall,
                             maxLines = 1,
@@ -550,7 +543,7 @@ fun ThemeStepContent() {
 
                         // Next Theme (subdued, right aligned)
                         Text(
-                            text = stringResource(themes[nIdx].displayNameResId()),
+                            text = stringResource(themes.nextItem(targetTheme).displayNameResId()),
                             color = colors.onSurfaceSecondary.copy(alpha = 0.5f),
                             style = MaterialTheme.typography.bodySmall,
                             maxLines = 1,
@@ -565,7 +558,7 @@ fun ThemeStepContent() {
             IconButton(
                 onClick = {
                     isNextAnimation = true
-                    SettingsManager.setThemeMode(themes[nextIndex])
+                    SettingsManager.setThemeMode(themes.nextItem(currentThemeMode))
                 },
             ) {
                 Icon(
@@ -639,22 +632,12 @@ fun PrivilegedStepContent(
     val lastError by PrivdManager.lastError.collectAsState()
     val systemLocale =
         remember {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                val lm = context.getSystemService(LocaleManager::class.java)
-                val locales = lm?.systemLocales
-                if (locales != null && !locales.isEmpty) {
-                    locales.get(0)
-                } else {
-                    Locale.getDefault()
-                }
+            val lm = context.getSystemService(LocaleManager::class.java)
+            val locales = lm?.systemLocales
+            if (locales != null && !locales.isEmpty) {
+                locales.get(0)
             } else {
-                val systemLocalesSetting = Settings.System.getString(context.contentResolver, "system_locales")
-                if (!systemLocalesSetting.isNullOrBlank()) {
-                    val firstTag = systemLocalesSetting.split(",").firstOrNull()
-                    if (!firstTag.isNullOrBlank()) Locale.forLanguageTag(firstTag) else Locale.getDefault()
-                } else {
-                    Locale.getDefault()
-                }
+                Locale.getDefault()
             }
         }
 

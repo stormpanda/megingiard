@@ -1102,12 +1102,7 @@ private fun resolveAppLabel(
     if (packageName == null) return null
     return try {
         val pm = context.packageManager
-        val appInfo =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                pm.getApplicationInfo(packageName, PackageManager.ApplicationInfoFlags.of(0L))
-            } else {
-                pm.getApplicationInfo(packageName, 0)
-            }
+        val appInfo = pm.getApplicationInfo(packageName, PackageManager.ApplicationInfoFlags.of(0L))
         pm.getApplicationLabel(appInfo).toString()
     } catch (e: Exception) {
         packageName

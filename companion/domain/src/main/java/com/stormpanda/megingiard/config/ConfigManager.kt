@@ -367,15 +367,10 @@ object ConfigManager {
     fun defaultMetadata(context: Context): ExportMetadata {
         val packageInfo =
             runCatching {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    context.packageManager.getPackageInfo(
-                        context.packageName,
-                        PackageManager.PackageInfoFlags.of(0),
-                    )
-                } else {
-                    @Suppress("DEPRECATION")
-                    context.packageManager.getPackageInfo(context.packageName, 0)
-                }
+                context.packageManager.getPackageInfo(
+                    context.packageName,
+                    PackageManager.PackageInfoFlags.of(0),
+                )
             }.getOrNull()
         return ExportMetadata(
             exportedAt = Instant.now().toString(),
