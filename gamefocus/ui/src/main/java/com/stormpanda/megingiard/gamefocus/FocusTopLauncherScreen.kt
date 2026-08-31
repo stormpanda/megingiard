@@ -228,95 +228,35 @@ fun FocusTopLauncherScreen(
                     }.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.displayName })
         }
 
-    val gamesApps =
-        remember(allApps, frozenHiddenSet) {
-            allApps.filter {
-                it.isGame && !it.isRom &&
-                    !frozenHiddenSet.contains(it.packageName)
-            }
-        }
-    val appsApps =
-        remember(allApps, frozenHiddenSet) {
-            allApps.filter {
-                !it.isGame && !it.isRom &&
-                    !frozenHiddenSet.contains(it.packageName)
-            }
-        }
-    val favoritesApps = remember(allApps, favoritesSet) { allApps.filter { favoritesSet.contains(it.packageName) } }
-    val lastUsedApps =
-        remember(allApps, frozenHiddenSet, lastUsed) {
-            lastUsed
-                .mapNotNull { pkg -> allApps.find { it.packageName == pkg } }
-                .filter { !frozenHiddenSet.contains(it.packageName) }
-        }
-
     fun getAppsForCategory(cat: GameFocusCategory): List<InstalledAppInfo> =
-        when (cat) {
-            GameFocusCategory.GAMES -> {
-                gamesApps
-            }
-
-            GameFocusCategory.APPS -> {
-                appsApps
-            }
-
-            GameFocusCategory.FAVORITES -> {
-                favoritesApps
-            }
-
-            GameFocusCategory.LAST_USED -> {
-                lastUsedApps
-            }
-
-            is GameFocusCategory.RomSystem -> {
-                allApps.filter {
-                    it.isRom && it.systemId == cat.systemId &&
-                        !frozenHiddenSet.contains(it.packageName)
-                }
-            }
-        }
+        cat.filterApps(allApps, favoritesSet, frozenHiddenSet, lastUsed)
 
     val categoryApps = getAppsForCategory(selectedCategory)
-
     val uniqueLetters = remember(categoryApps) { LetterNavigationHelper.getUniqueStartingLetters(categoryApps) }
 
     var showApiTokenMissingDialog by remember { mutableStateOf(false) }
+    var lastHighlightedPackages by remember { mutableStateOf<Map<GameFocusCategory, String>>(emptyMap()) }
 
-    var lastHighlightedPackages by remember {
-        mutableStateOf<Map<GameFocusCategory, String>>(emptyMap())
-    }
-
-    val gamesPagerState = rememberPagerState(initialPage = 0) { gamesApps.size }
-    val appsPagerState = rememberPagerState(initialPage = 0) { appsApps.size }
-    val favoritesPagerState = rememberPagerState(initialPage = 0) { favoritesApps.size }
-    val lastUsedPagerState = rememberPagerState(initialPage = 0) { lastUsedApps.size }
+    val gamesPagerState = rememberPagerState(initialPage = 0) { getAppsForCategory(GameFocusCategory.GAMES).size }
+    val appsPagerState = rememberPagerState(initialPage = 0) { getAppsForCategory(GameFocusCategory.APPS).size }
+    val favoritesPagerState = rememberPagerState(initialPage = 0) { getAppsForCategory(GameFocusCategory.FAVORITES).size }
+    val lastUsedPagerState = rememberPagerState(initialPage = 0) { getAppsForCategory(GameFocusCategory.LAST_USED).size }
 
     val romPagerStates = remember { mutableMapOf<String, PagerState>() }
 
-    val activePagerState =
-        when (selectedCategory) {
-            GameFocusCategory.GAMES -> {
-                gamesPagerState
-            }
-
-            GameFocusCategory.APPS -> {
-                appsPagerState
-            }
-
-            GameFocusCategory.FAVORITES -> {
-                favoritesPagerState
-            }
-
-            GameFocusCategory.LAST_USED -> {
-                lastUsedPagerState
-            }
-
-            is GameFocusCategory.RomSystem -> {
-                romPagerStates.getOrPut(selectedCategory.id) {
-                    RomPagerState(0, 0f) { categoryApps.size }
-                }
-            }
+    fun getPagerStateForCategory(
+        cat: GameFocusCategory,
+        size: Int,
+    ): PagerState =
+        when (cat) {
+            GameFocusCategory.GAMES -> gamesPagerState
+            GameFocusCategory.APPS -> appsPagerState
+            GameFocusCategory.FAVORITES -> favoritesPagerState
+            GameFocusCategory.LAST_USED -> lastUsedPagerState
+            is GameFocusCategory.RomSystem -> romPagerStates.getOrPut(cat.id) { RomPagerState(0, 0f) { size } }
         }
+
+    val activePagerState = getPagerStateForCategory(selectedCategory, categoryApps.size)
 
     // Clamp active pager state if list shrinks (e.g. app hidden)
     LaunchedEffect(categoryApps) {
@@ -647,30 +587,7 @@ fun FocusTopLauncherScreen(
                                             horizontalAlignment = Alignment.CenterHorizontally,
                                         ) {
                                             // Carousel
-                                            val categoryPagerState =
-                                                when (category) {
-                                                    GameFocusCategory.GAMES -> {
-                                                        gamesPagerState
-                                                    }
-
-                                                    GameFocusCategory.APPS -> {
-                                                        appsPagerState
-                                                    }
-
-                                                    GameFocusCategory.FAVORITES -> {
-                                                        favoritesPagerState
-                                                    }
-
-                                                    GameFocusCategory.LAST_USED -> {
-                                                        lastUsedPagerState
-                                                    }
-
-                                                    is GameFocusCategory.RomSystem -> {
-                                                        romPagerStates.getOrPut(category.id) {
-                                                            RomPagerState(0, 0f) { currentCategoryApps.size }
-                                                        }
-                                                    }
-                                                }
+                                            val categoryPagerState = getPagerStateForCategory(category, currentCategoryApps.size)
                                             HorizontalPosterCarousel(
                                                 itemCount = currentCategoryApps.size,
                                                 pagerState = categoryPagerState,

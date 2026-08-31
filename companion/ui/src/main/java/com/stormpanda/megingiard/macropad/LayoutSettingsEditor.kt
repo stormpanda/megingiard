@@ -44,8 +44,8 @@ import com.stormpanda.megingiard.ui.GamepadTwoStepConfirmCard
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
+import com.stormpanda.megingiard.ui.toHexLabel
 import kotlinx.coroutines.flow.collectLatest
-import kotlin.math.roundToInt
 
 private const val TAG = "LayoutSettingsEditor"
 
@@ -55,21 +55,9 @@ private fun describeColorOption(
     resolvedColor: Color,
 ): String =
     when (option) {
-        is ColorOption.Neutral -> {
-            stringResource(R.string.layout_settings_color_neutral)
-        }
-
-        is ColorOption.Accent -> {
-            stringResource(R.string.layout_settings_color_accent)
-        }
-
-        is ColorOption.Custom -> {
-            if (resolvedColor.alpha < 0.99f) {
-                String.format("#%06X (%d%%)", 0xFFFFFF and resolvedColor.toArgb(), (resolvedColor.alpha * 100).roundToInt())
-            } else {
-                String.format("#%06X", 0xFFFFFF and resolvedColor.toArgb())
-            }
-        }
+        is ColorOption.Neutral -> stringResource(R.string.layout_settings_color_neutral)
+        is ColorOption.Accent -> stringResource(R.string.layout_settings_color_accent)
+        is ColorOption.Custom -> resolvedColor.toHexLabel()
     }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -380,16 +368,7 @@ internal fun LayoutColorSubPageContent(
     // Option 3: Custom Color (Color Wheel)
     GamepadActionCard(
         title = stringResource(R.string.gamepad_action_custom_color),
-        description =
-            if (isCustomSelected) {
-                if (currentColor.alpha < 0.99f) {
-                    String.format("#%06X (%d%%)", 0xFFFFFF and currentColor.toArgb(), (currentColor.alpha * 100).roundToInt())
-                } else {
-                    String.format("#%06X", 0xFFFFFF and currentColor.toArgb())
-                }
-            } else {
-                stringResource(R.string.macropad_editor_color_wheel_desc)
-            },
+        description = if (isCustomSelected) currentColor.toHexLabel() else stringResource(R.string.macropad_editor_color_wheel_desc),
         icon = Icons.Rounded.Colorize,
         actionLeadingContent = {
             GamepadColorSwatch(

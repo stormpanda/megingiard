@@ -39,6 +39,7 @@ import com.stormpanda.megingiard.ui.GamepadColorSwatch
 import com.stormpanda.megingiard.ui.GamepadSliderCard
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.firstDeckItem
+import com.stormpanda.megingiard.ui.toHexLabel
 import kotlinx.coroutines.flow.collectLatest
 import kotlin.math.roundToInt
 import android.graphics.Color as AndroidColor
@@ -363,12 +364,7 @@ internal fun ColorWheelSubPageContent(
             )
         }
 
-    val hex =
-        if (showAlphaSlider && workingColor.alpha < 0.99f) {
-            String.format("#%06X (%d%%)", 0xFFFFFF and workingColor.toArgb(), (workingColor.alpha * 100).roundToInt())
-        } else {
-            String.format("#%06X", 0xFFFFFF and workingColor.toArgb())
-        }
+    val hex = workingColor.toHexLabel(showAlphaSlider)
 
     GamepadSliderCard(
         title = stringResource(R.string.settings_color_hue),
@@ -428,12 +424,7 @@ internal fun ColorWheelSubPageContent(
 
     val colors = LocalAppColors.current
     val hasChanges = remember(workingColor, initialColor) { workingColor.toArgb() != initialColor.toArgb() }
-    val initialHex =
-        if (showAlphaSlider && initialColor.alpha < 0.99f) {
-            String.format("#%06X (%d%%)", 0xFFFFFF and initialColor.toArgb(), (initialColor.alpha * 100).roundToInt())
-        } else {
-            String.format("#%06X", 0xFFFFFF and initialColor.toArgb())
-        }
+    val initialHex = initialColor.toHexLabel(showAlphaSlider)
 
     // ── Revert / Undo Changes Card ───────────────────────────────────
     GamepadActionCard(

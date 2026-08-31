@@ -211,39 +211,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 if (!hasSetStartupCategory && allApps.isNotEmpty()) {
                     val startupCat =
                         categories.firstOrNull { cat ->
-                            val appsForCat =
-                                when (cat) {
-                                    GameFocusCategory.LAST_USED -> {
-                                        lastUsed
-                                            .mapNotNull { pkg ->
-                                                allApps.find { it.packageName == pkg }
-                                            }.filter { !currentHidden.contains(it.packageName) }
-                                    }
-
-                                    GameFocusCategory.FAVORITES -> {
-                                        allApps.filter { favorites.contains(it.packageName) }
-                                    }
-
-                                    GameFocusCategory.GAMES -> {
-                                        allApps.filter { it.isGame && !it.isRom && !currentHidden.contains(it.packageName) }
-                                    }
-
-                                    GameFocusCategory.APPS -> {
-                                        allApps.filter { !it.isGame && !it.isRom && !currentHidden.contains(it.packageName) }
-                                    }
-
-                                    is GameFocusCategory.RomSystem -> {
-                                        allApps.filter {
-                                            it.isRom && it.systemId == cat.systemId &&
-                                                !currentHidden.contains(it.packageName)
-                                        }
-                                    }
-
-                                    else -> {
-                                        emptyList()
-                                    }
-                                }
-                            appsForCat.isNotEmpty()
+                            cat.filterApps(allApps, favorites, currentHidden, lastUsed).isNotEmpty()
                         }
                     if (startupCat != null) {
                         selectedCategoryState.value = startupCat
@@ -259,35 +227,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
             val displayedApps =
                 remember(allApps, favorites, frozenHidden, lastUsed, selectedCategory) {
-                    when (selectedCategory) {
-                        GameFocusCategory.GAMES -> {
-                            allApps.filter { it.isGame && !it.isRom && !frozenHidden.contains(it.packageName) }
-                        }
-
-                        GameFocusCategory.APPS -> {
-                            allApps.filter { !it.isGame && !it.isRom && !frozenHidden.contains(it.packageName) }
-                        }
-
-                        GameFocusCategory.FAVORITES -> {
-                            allApps.filter { favorites.contains(it.packageName) }
-                        }
-
-                        GameFocusCategory.LAST_USED -> {
-                            lastUsed
-                                .mapNotNull { pkg ->
-                                    allApps.find { it.packageName == pkg }
-                                }.filter { !frozenHidden.contains(it.packageName) }
-                        }
-
-                        is GameFocusCategory.RomSystem -> {
-                            allApps.filter {
-                                it.isRom && it.systemId == selectedCategory.systemId &&
-                                    !frozenHidden.contains(
-                                        it.packageName,
-                                    )
-                            }
-                        }
-                    }
+                    selectedCategory.filterApps(allApps, favorites, frozenHidden, lastUsed)
                 }
 
             val editingApp = editingAppInfoState.value

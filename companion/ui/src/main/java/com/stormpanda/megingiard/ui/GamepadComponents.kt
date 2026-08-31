@@ -85,6 +85,7 @@ import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.KeyEventType
@@ -111,6 +112,7 @@ import com.stormpanda.megingiard.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
+import kotlin.math.roundToInt
 import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 
 private const val TAG = "GamepadComponents"
@@ -2398,3 +2400,10 @@ fun GamepadInfoBox(
         }
     }
 }
+
+fun Color.toHexLabel(includeAlpha: Boolean = true): String =
+    if (includeAlpha && alpha < 0.99f) {
+        String.format("#%06X (%d%%)", 0xFFFFFF and toArgb(), (alpha * 100).roundToInt())
+    } else {
+        String.format("#%06X", 0xFFFFFF and toArgb())
+    }
