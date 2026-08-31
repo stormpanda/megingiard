@@ -38,8 +38,6 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.MaterialSymbol
 
-private const val TAG = "QuickMenuMirrorCard"
-
 private val PM_CARDS_GAP = 8.dp
 private const val PM_MIRROR_CARD_WEIGHT = 2f
 private const val PM_SCREENSHOT_CARD_WEIGHT = 3f
