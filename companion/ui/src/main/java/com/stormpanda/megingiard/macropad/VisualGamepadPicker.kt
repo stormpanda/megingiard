@@ -586,46 +586,40 @@ private fun ShoulderTriggerPair(
 ) {
     val outer = preset(outerCode)
     val inner = preset(innerCode)
+
+    val triggerTile = @Composable { mod: Modifier ->
+        GamepadButtonTile(
+            preset = outer,
+            selectedBtnCode = selectedBtnCode,
+            swapFaceButtons = swapFaceButtons,
+            accentColor = accentColor,
+            width = VGP_TRIGGER_WIDTH,
+            height = VGP_TRIGGER_HEIGHT,
+            onClick = { onSelectButton(outer) },
+            modifier = mod,
+        )
+    }
+
+    val shoulderTile = @Composable { mod: Modifier ->
+        GamepadButtonTile(
+            preset = inner,
+            selectedBtnCode = selectedBtnCode,
+            swapFaceButtons = swapFaceButtons,
+            accentColor = accentColor,
+            width = VGP_SHOULDER_WIDTH,
+            height = VGP_SHOULDER_HEIGHT,
+            onClick = { onSelectButton(inner) },
+            modifier = mod,
+        )
+    }
+
     Row(horizontalArrangement = Arrangement.spacedBy(VGP_ROW_SPACING)) {
         if (isLeft) {
-            GamepadButtonTile(
-                preset = outer,
-                selectedBtnCode = selectedBtnCode,
-                swapFaceButtons = swapFaceButtons,
-                accentColor = accentColor,
-                width = VGP_TRIGGER_WIDTH,
-                height = VGP_TRIGGER_HEIGHT,
-                onClick = { onSelectButton(outer) },
-                modifier = Modifier.firstDeckItem(),
-            )
-            GamepadButtonTile(
-                preset = inner,
-                selectedBtnCode = selectedBtnCode,
-                swapFaceButtons = swapFaceButtons,
-                accentColor = accentColor,
-                width = VGP_SHOULDER_WIDTH,
-                height = VGP_SHOULDER_HEIGHT,
-                onClick = { onSelectButton(inner) },
-            )
+            triggerTile(Modifier.firstDeckItem())
+            shoulderTile(Modifier)
         } else {
-            GamepadButtonTile(
-                preset = inner,
-                selectedBtnCode = selectedBtnCode,
-                swapFaceButtons = swapFaceButtons,
-                accentColor = accentColor,
-                width = VGP_SHOULDER_WIDTH,
-                height = VGP_SHOULDER_HEIGHT,
-                onClick = { onSelectButton(inner) },
-            )
-            GamepadButtonTile(
-                preset = outer,
-                selectedBtnCode = selectedBtnCode,
-                swapFaceButtons = swapFaceButtons,
-                accentColor = accentColor,
-                width = VGP_TRIGGER_WIDTH,
-                height = VGP_TRIGGER_HEIGHT,
-                onClick = { onSelectButton(outer) },
-            )
+            shoulderTile(Modifier)
+            triggerTile(Modifier)
         }
     }
 }
