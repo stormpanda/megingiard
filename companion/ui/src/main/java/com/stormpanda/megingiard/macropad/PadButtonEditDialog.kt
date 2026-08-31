@@ -492,32 +492,35 @@ internal fun EditButtonSubPageContent(
                 }
             }
 
-        // ── Text Color Menu Item ────────────────────────────────────
-        GamepadActionCard(
-            title = stringResource(R.string.layout_settings_color_text),
-            description = describeButtonColorOption(buttonTextColor, currentText),
-            icon = Icons.Rounded.FormatColorText,
-            actionLeadingContent = buttonPreviewLeading(currentText, Color.Transparent, Color.Transparent, true),
-            onClick = { onOpenColorSubMenu(currentButton, ButtonColorTarget.TEXT) },
-        )
-
-        // ── Border Color Menu Item ──────────────────────────────────
-        GamepadActionCard(
-            title = stringResource(R.string.layout_settings_color_border),
-            description = describeButtonColorOption(buttonBorderColor, currentBorder),
-            icon = Icons.Rounded.Palette,
-            actionLeadingContent = buttonPreviewLeading(Color.Transparent, currentBorder, Color.Transparent, false),
-            onClick = { onOpenColorSubMenu(currentButton, ButtonColorTarget.BORDER) },
-        )
-
-        // ── Background / Fading Color Menu Item ─────────────────────
-        GamepadActionCard(
-            title = stringResource(R.string.layout_settings_color_bg),
-            description = describeButtonColorOption(buttonBgColor, currentBg),
-            icon = Icons.Rounded.FormatColorFill,
-            actionLeadingContent = buttonPreviewLeading(Color.Transparent, Color.Transparent, currentBg, false),
-            onClick = { onOpenColorSubMenu(currentButton, ButtonColorTarget.BG) },
-        )
+        listOf(
+            Triple(
+                ButtonColorTarget.TEXT,
+                Icons.Rounded.FormatColorText,
+                buttonPreviewLeading(currentText, Color.Transparent, Color.Transparent, true) to
+                    describeButtonColorOption(buttonTextColor, currentText),
+            ),
+            Triple(
+                ButtonColorTarget.BORDER,
+                Icons.Rounded.Palette,
+                buttonPreviewLeading(Color.Transparent, currentBorder, Color.Transparent, false) to
+                    describeButtonColorOption(buttonBorderColor, currentBorder),
+            ),
+            Triple(
+                ButtonColorTarget.BG,
+                Icons.Rounded.FormatColorFill,
+                buttonPreviewLeading(Color.Transparent, Color.Transparent, currentBg, false) to
+                    describeButtonColorOption(buttonBgColor, currentBg),
+            ),
+        ).forEach { (colorTarget, colorIcon, previewAndDesc) ->
+            val (preview, desc) = previewAndDesc
+            GamepadActionCard(
+                title = stringResource(colorTarget.titleResId),
+                description = desc,
+                icon = colorIcon,
+                actionLeadingContent = preview,
+                onClick = { onOpenColorSubMenu(currentButton, colorTarget) },
+            )
+        }
 
         GamepadSectionHeader(
             text = stringResource(R.string.macropad_editor_section_visibility_behavior),
