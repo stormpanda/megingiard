@@ -758,11 +758,12 @@ fun GamepadPill(
         }
     val pillBorderWidth = if (isHighlighted) 2.dp else 1.dp
 
+    val shape = RoundedCornerShape(GC_STATUS_PILL_CORNER)
     Row(
         modifier =
             modifier
-                .background(pillBg, RoundedCornerShape(GC_STATUS_PILL_CORNER))
-                .border(pillBorderWidth, pillBorderColor, RoundedCornerShape(GC_STATUS_PILL_CORNER))
+                .background(pillBg, shape)
+                .border(pillBorderWidth, pillBorderColor, shape)
                 .padding(horizontal = GC_STATUS_PILL_H_PADDING, vertical = GC_STATUS_PILL_V_PADDING),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(GC_SPACING_6),
