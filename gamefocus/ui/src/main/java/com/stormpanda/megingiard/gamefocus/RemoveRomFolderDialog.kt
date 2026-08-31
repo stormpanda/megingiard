@@ -87,9 +87,7 @@ fun RemoveRomFolderDialog(
                     button = GamePadButton.BUTTON_A,
                     text = stringResource(R.string.gamefocus_dialog_select),
                     onClick = {
-                        romFolders.getOrNull(selectedIndex)?.let {
-                            onSelectFolder(it)
-                        }
+                        romFolders.getOrNull(selectedIndex)?.let(onSelectFolder)
                     },
                 )
                 Spacer(modifier = Modifier.width(DIALOG_INNER_SPACING))
