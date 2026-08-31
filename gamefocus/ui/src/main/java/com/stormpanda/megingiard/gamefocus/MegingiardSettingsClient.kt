@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.Bundle
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.catalog.RomManager
 import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
 import com.stormpanda.megingiard.ipc.IpcSettingsParser
@@ -23,14 +24,15 @@ object MegingiardSettingsClient {
             context = context,
             uri = MegingiardIpcContract.SETTINGS_URI,
             parser = { resolver, uri -> IpcSettingsParser.parse(resolver, uri) },
-        ).map { ipcConfig ->
-            if (ipcConfig.steamGridDbApiToken.isNotBlank()) {
-                ipcConfig.steamGridDbApiToken
-            } else {
-                ""
-            }
-        }
+        ).map { it.steamGridDbApiToken }
     }
+
+    private fun resolveRomApp(pkg: String?): InstalledAppInfo? =
+        if (pkg != null && pkg.startsWith("rom.")) {
+            RomManager.romApps.value.firstOrNull { it.packageName == pkg }
+        } else {
+            null
+        }
 
     fun updateClientState(
         context: Context,
@@ -49,23 +51,13 @@ object MegingiardSettingsClient {
         MegingiardIpcContract.init(context)
 
         // Translate pseudo-packages to actual emulator packages and attach ROM metadata
-        val focusedRomApp =
-            if (focusedPackage != null && focusedPackage.startsWith("rom.")) {
-                RomManager.romApps.value.firstOrNull { it.packageName == focusedPackage }
-            } else {
-                null
-            }
+        val focusedRomApp = resolveRomApp(focusedPackage)
         val finalFocusedPackage = focusedRomApp?.let { getActualPackageName(context, it.systemId) } ?: focusedPackage
         val finalFocusedRomPath = focusedRomApp?.romPath ?: focusedRomPath
         val finalFocusedRomIdentifier =
             focusedRomIdentifier ?: finalFocusedRomPath?.let { File(it).name }
 
-        val hoveredRomApp =
-            if (hoveredPackage != null && hoveredPackage.startsWith("rom.")) {
-                RomManager.romApps.value.firstOrNull { it.packageName == hoveredPackage }
-            } else {
-                null
-            }
+        val hoveredRomApp = resolveRomApp(hoveredPackage)
         val finalHoveredPackage = hoveredRomApp?.let { getActualPackageName(context, it.systemId) } ?: hoveredPackage
         val finalHoveredRomPath = hoveredRomApp?.romPath ?: hoveredRomPath
         val finalHoveredRomIdentifier =
