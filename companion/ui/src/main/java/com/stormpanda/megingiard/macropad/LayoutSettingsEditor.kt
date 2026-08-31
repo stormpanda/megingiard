@@ -145,53 +145,34 @@ internal fun EditLayoutSubPageContent(
         color = accentColor,
     )
 
-    // ── Text Color Menu Item ────────────────────────────────────
-    GamepadActionCard(
-        title = stringResource(R.string.layout_settings_color_text),
-        description = describeColorOption(layout.buttonTextColor, currentResolvedText),
-        icon = Icons.Rounded.FormatColorText,
-        actionLeadingContent = {
-            SwordsButtonPreview(
-                textColor = currentResolvedText,
-                borderColor = Color.Transparent,
-                bgColor = Color.Transparent,
-                isIconOnly = true,
-            )
-        },
-        onClick = { onOpenColorSubMenu(LayoutColorTarget.TEXT) },
+    data class TargetConfig(
+        val target: EditorColorTarget,
+        val colorOption: ColorOption,
+        val resolvedColor: Color,
+        val icon: androidx.compose.ui.graphics.vector.ImageVector,
     )
-
-    // ── Border Color Menu Item ──────────────────────────────────
-    GamepadActionCard(
-        title = stringResource(R.string.layout_settings_color_border),
-        description = describeColorOption(layout.buttonBorderColor, currentResolvedBorder),
-        icon = Icons.Rounded.Palette,
-        actionLeadingContent = {
-            SwordsButtonPreview(
-                textColor = Color.Transparent,
-                borderColor = currentResolvedBorder,
-                bgColor = Color.Transparent,
-                isIconOnly = false,
-            )
-        },
-        onClick = { onOpenColorSubMenu(LayoutColorTarget.BORDER) },
-    )
-
-    // ── Background / Fading Color Menu Item ─────────────────────
-    GamepadActionCard(
-        title = stringResource(R.string.layout_settings_color_bg),
-        description = describeColorOption(layout.buttonBgColor, currentResolvedBg),
-        icon = Icons.Rounded.FormatColorFill,
-        actionLeadingContent = {
-            SwordsButtonPreview(
-                textColor = Color.Transparent,
-                borderColor = Color.Transparent,
-                bgColor = currentResolvedBg,
-                isIconOnly = false,
-            )
-        },
-        onClick = { onOpenColorSubMenu(LayoutColorTarget.BG) },
-    )
+    val colorTargets =
+        listOf(
+            TargetConfig(EditorColorTarget.TEXT, layout.buttonTextColor, currentResolvedText, Icons.Rounded.FormatColorText),
+            TargetConfig(EditorColorTarget.BORDER, layout.buttonBorderColor, currentResolvedBorder, Icons.Rounded.Palette),
+            TargetConfig(EditorColorTarget.BG, layout.buttonBgColor, currentResolvedBg, Icons.Rounded.FormatColorFill),
+        )
+    colorTargets.forEach { item ->
+        GamepadActionCard(
+            title = stringResource(item.target.titleResId),
+            description = describeColorOption(item.colorOption, item.resolvedColor),
+            icon = item.icon,
+            actionLeadingContent = {
+                SwordsButtonPreview(
+                    textColor = if (item.target == EditorColorTarget.TEXT) item.resolvedColor else Color.Transparent,
+                    borderColor = if (item.target == EditorColorTarget.BORDER) item.resolvedColor else Color.Transparent,
+                    bgColor = if (item.target == EditorColorTarget.BG) item.resolvedColor else Color.Transparent,
+                    isIconOnly = item.target == EditorColorTarget.TEXT,
+                )
+            },
+            onClick = { onOpenColorSubMenu(item.target) },
+        )
+    }
 
     ColorPreviewInfoBox(
         title = stringResource(R.string.macropad_editor_color_preview_title),
