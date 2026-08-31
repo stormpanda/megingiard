@@ -161,22 +161,12 @@ private fun EditorSection.icon(): ImageVector =
 private fun applyActionToDraftButton(
     draftButton: PadButton,
     newAction: PadAction,
-): PadButton {
-    var shape = draftButton.buttonShape
-    var size = draftButton.buttonSize
-
-    if (newAction is PadAction.ScrollWheel) {
-        size = ButtonSize.SIZE_1X2
-    } else if (newAction is PadAction.TrackpointMove) {
-        shape = ButtonShape.CIRCLE
-    }
-
-    return draftButton.copy(
+): PadButton =
+    draftButton.copy(
         action = newAction,
-        buttonShape = shape,
-        buttonSize = size,
+        buttonShape = if (newAction is PadAction.TrackpointMove) ButtonShape.CIRCLE else draftButton.buttonShape,
+        buttonSize = if (newAction is PadAction.ScrollWheel) ButtonSize.SIZE_1X2 else draftButton.buttonSize,
     )
-}
 
 private fun swapButtons(
     layout: PadLayout?,
