@@ -242,14 +242,9 @@ object RomManager {
 
                                 val label =
                                     synchronized(_romCleanedNames) {
-                                        val existing = _romCleanedNames[romUriStr]
-                                        if (existing != null) {
-                                            existing
-                                        } else {
-                                            val cleaned = cleanRomName(rawLabel)
-                                            _romCleanedNames[romUriStr] = cleaned
+                                        _romCleanedNames.getOrPut(romUriStr) {
                                             namesChanged = true
-                                            cleaned
+                                            cleanRomName(rawLabel)
                                         }
                                     }
 
