@@ -135,9 +135,6 @@ internal fun EditButtonSubPageContent(
     button: PadButton?, // null → create new
     savedButton: PadButton? = null,
     accentColor: Color,
-    enableKeyboard: Boolean = true,
-    enableGamepad: Boolean = true,
-    enableMouse: Boolean = true,
     initialAction: PadAction? = null,
     selectedIcon: String? = null,
     onOpenIconPicker: (currentDraft: PadButton) -> Unit,
@@ -346,10 +343,6 @@ internal fun EditButtonSubPageContent(
 
     ActionPicker(
         current = action,
-        accentColor = accentColor,
-        enableKeyboard = enableKeyboard,
-        enableGamepad = enableGamepad,
-        enableMouse = enableMouse,
         isFirstItem = !showLabelAndIcon,
         onOpenMacroPicker = {
             onOpenMacroPicker?.invoke(currentButton)

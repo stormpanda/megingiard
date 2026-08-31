@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Keyboard
-import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.SmartButton
 import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.runtime.Composable
@@ -14,7 +13,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
@@ -100,20 +98,6 @@ internal fun KeyboardKeyPicker(
     )
 }
 
-@Composable
-internal fun MouseButtonPicker(
-    current: PadAction.MouseButton,
-    onOpenPicker: () -> Unit,
-) {
-    GamepadActionCard(
-        title = stringResource(R.string.macropad_action_mouse_button),
-        description = stringResource(R.string.macropad_picker_mouse_button_desc),
-        actionText = current.button.displayLabel,
-        icon = Icons.Rounded.Mouse,
-        onClick = onOpenPicker,
-    )
-}
-
 private val EXTRA_SLOT_LABELS =
     listOf(
         R.string.macropad_picker_label_extra_1,
@@ -164,7 +148,6 @@ internal fun GamepadButtonPicker(
 @Composable
 internal fun MacroPicker(
     current: PadAction.Macro,
-    accentColor: Color,
     onOpenMacroPicker: () -> Unit,
     isFirstItem: Boolean = false,
 ) {
