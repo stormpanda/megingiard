@@ -1,13 +1,10 @@
 package com.stormpanda.megingiard.macropad
 
 import android.content.Context
-import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import com.stormpanda.megingiard.R
-
-private const val TAG = "HapticFeedback"
 
 // ─── Vibration parameters ────────────────────────────────────────────────────
 // Duration / amplitude pairs tuned to feel like a very brief, subtle "tick".
