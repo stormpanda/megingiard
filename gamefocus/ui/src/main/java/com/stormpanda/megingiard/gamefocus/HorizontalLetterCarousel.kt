@@ -113,18 +113,13 @@ fun HorizontalLetterCarousel(
                         }
 
                     val targetRotationY =
-                        when (offset) {
-                            -4 -> -50f
-                            -3 -> -40f
-                            -2 -> -28f
-                            -1 -> -15f
-                            0 -> 0f
+                        when (absOffset) {
                             1 -> 15f
                             2 -> 28f
                             3 -> 40f
                             4 -> 50f
                             else -> 0f
-                        }
+                        } * kotlin.math.sign(offset.toFloat())
 
                     val textColor = if (isSelected) appColors.accent else appColors.onSurfaceSecondary
 

@@ -186,10 +186,7 @@ fun HorizontalPosterCarousel(
                             width = if (isSelected) 3.dp else 1.dp,
                             color = if (isSelected) appColors.accent else appColors.divider,
                             shape = RoundedCornerShape(posterCornerRadius),
-                        ).clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                        ) {
+                        ).noFocusClickable {
                             if (isSelected) {
                                 onItemClick(actualIndex)
                             } else {

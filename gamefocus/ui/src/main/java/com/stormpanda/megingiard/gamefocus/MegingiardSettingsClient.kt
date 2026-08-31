@@ -114,27 +114,20 @@ object MegingiardSettingsClient {
     ): String {
         if (systemId == null) return "com.retroarch.aarch64"
         val systemDef = SUPPORTED_SYSTEMS.find { it.id == systemId }
-        val emulatorId = systemDef?.emulatorId ?: "retroarch"
-        return if (emulatorId == "retroarch") {
-            val pm = context.packageManager
-            listOf("com.retroarch.aarch64", "com.retroarch").firstOrNull { pkg ->
-                try {
-                    pm.getPackageInfo(pkg, 0)
-                    true
-                } catch (e: Exception) {
-                    false
-                }
-            } ?: "com.retroarch.aarch64"
-        } else {
-            val pm = context.packageManager
-            GameNativeDetector.supportedPackages.firstOrNull { pkg ->
-                try {
-                    pm.getPackageInfo(pkg, 0)
-                    true
-                } catch (e: Exception) {
-                    false
-                }
-            } ?: "app.gamenative"
-        }
+        val candidates =
+            if (systemDef?.emulatorId == "retroarch" || systemDef?.emulatorId == null) {
+                listOf("com.retroarch.aarch64", "com.retroarch")
+            } else {
+                GameNativeDetector.supportedPackages
+            }
+        val pm = context.packageManager
+        return candidates.firstOrNull { pkg ->
+            try {
+                pm.getPackageInfo(pkg, 0)
+                true
+            } catch (_: Exception) {
+                false
+            }
+        } ?: candidates.first()
     }
 }
