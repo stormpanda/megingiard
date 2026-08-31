@@ -114,6 +114,7 @@ import com.stormpanda.megingiard.math.nextItem
 import com.stormpanda.megingiard.math.prevItem
 import com.stormpanda.megingiard.ui.DialogToastManager
 import com.stormpanda.megingiard.ui.DialogToastPill
+import com.stormpanda.megingiard.ui.GamepadPill
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.LocalFirstContentRequester
 import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
@@ -307,35 +308,38 @@ fun MirrorEditorTopOverlay(
     var bottomHToggle by remember(selectedCutout?.id) { mutableIntStateOf(0) }
     var bottomVToggle by remember(selectedCutout?.id) { mutableIntStateOf(0) }
 
-    fun moveTopCutout(
+    fun updateCutout(
         cutoutId: String,
-        dx: Int,
-        dy: Int,
+        transform: (ScreenCutout, List<ScreenCutout>) -> ScreenCutout?,
     ) {
         val currentProfile = MacroPadState.activeProfile.value ?: return
         val currentLayout = currentProfile.layouts.firstOrNull { it.id == currentProfile.activeLayoutId } ?: return
         val cur = currentLayout.mirrorCutouts.firstOrNull { it.id == cutoutId } ?: return
+        val others = currentLayout.mirrorCutouts.filter { it.id != cutoutId }
+        val updated = transform(cur, others) ?: return
+        if (updated == cur) return
+        val updatedList = currentLayout.mirrorCutouts.map { if (it.id == cur.id) updated else it }
+        MacroPadState.updateLayout(currentLayout.copy(mirrorCutouts = updatedList))
+    }
+
+    fun moveTopCutout(
+        cutoutId: String,
+        dx: Int,
+        dy: Int,
+    ) = updateCutout(cutoutId) { cur, _ ->
         val stepX = 1f / srcWidth
         val stepY = 1f / srcHeight
-        val newX = (cur.srcX + dx * stepX).coerceIn(0f, 1f - cur.srcWidth)
-        val newY = (cur.srcY + dy * stepY).coerceIn(0f, 1f - cur.srcHeight)
-        if (newX != cur.srcX || newY != cur.srcY) {
-            val updated = cur.copy(srcX = newX, srcY = newY)
-            val updatedList = currentLayout.mirrorCutouts.map { if (it.id == cur.id) updated else it }
-            MacroPadState.updateLayout(currentLayout.copy(mirrorCutouts = updatedList))
-        }
+        cur.copy(
+            srcX = (cur.srcX + dx * stepX).coerceIn(0f, 1f - cur.srcWidth),
+            srcY = (cur.srcY + dy * stepY).coerceIn(0f, 1f - cur.srcHeight),
+        )
     }
 
     fun resizeTopCutout(
         cutoutId: String,
         dx: Int,
         dy: Int,
-    ) {
-        val currentProfile = MacroPadState.activeProfile.value ?: return
-        val currentLayout = currentProfile.layouts.firstOrNull { it.id == currentProfile.activeLayoutId } ?: return
-        val cur = currentLayout.mirrorCutouts.firstOrNull { it.id == cutoutId } ?: return
-        val others = currentLayout.mirrorCutouts.filter { it.id != cutoutId }
-
+    ) = updateCutout(cutoutId) { cur, others ->
         if (cur.aspectRatioMode == AspectRatioMode.BOTTOM) {
             val stepDelta =
                 if (dx != 0) {
@@ -345,7 +349,7 @@ fun MirrorEditorTopOverlay(
                 } else {
                     0
                 }
-            if (stepDelta == 0) return
+            if (stepDelta == 0) return@updateCutout null
             val cutoutRatio = (cur.destWidth * secScreenW) / (cur.destHeight * secScreenH)
             val normCropRatio = cutoutRatio * (srcHeight / srcWidth)
             val geom =
@@ -359,13 +363,7 @@ fun MirrorEditorTopOverlay(
                     stepDelta = stepDelta,
                     targetNormRatio = normCropRatio,
                 )
-            if (geom.x == cur.srcX && geom.y == cur.srcY && geom.w == cur.srcWidth && geom.h == cur.srcHeight) {
-                return
-            }
-            val updated = cur.copy(srcX = geom.x, srcY = geom.y, srcWidth = geom.w, srcHeight = geom.h)
-            val updatedList = currentLayout.mirrorCutouts.map { if (it.id == cur.id) updated else it }
-            MacroPadState.updateLayout(currentLayout.copy(mirrorCutouts = updatedList))
-            return
+            return@updateCutout cur.copy(srcX = geom.x, srcY = geom.y, srcWidth = geom.w, srcHeight = geom.h)
         }
 
         val resized =
@@ -381,6 +379,8 @@ fun MirrorEditorTopOverlay(
                 hToggle = topHToggle,
                 vToggle = topVToggle,
             )
+        topHToggle = resized.hToggle
+        topVToggle = resized.vToggle
 
         var updated =
             cur.copy(
@@ -402,57 +402,39 @@ fun MirrorEditorTopOverlay(
                     screenH = secScreenH,
                 )
             if (!isCutoutGeometryValid(updated.destX, updated.destY, newDestW, newDestH, others)) {
-                return
+                return@updateCutout null
             }
             updated = updated.copy(destWidth = newDestW, destHeight = newDestH)
         }
-        topHToggle = resized.hToggle
-        topVToggle = resized.vToggle
-
-        val updatedList = currentLayout.mirrorCutouts.map { if (it.id == cur.id) updated else it }
-        MacroPadState.updateLayout(currentLayout.copy(mirrorCutouts = updatedList))
+        updated
     }
 
     fun moveBottomCutout(
         cutoutId: String,
         dx: Int,
         dy: Int,
-    ) {
-        val currentProfile = MacroPadState.activeProfile.value ?: return
-        val currentLayout = currentProfile.layouts.firstOrNull { it.id == currentProfile.activeLayoutId } ?: return
-        val cur = currentLayout.mirrorCutouts.firstOrNull { it.id == cutoutId } ?: return
+    ) = updateCutout(cutoutId) { cur, _ ->
         val stepX = 1f / secScreenW
         val stepY = 1f / secScreenH
-        val targetX = cur.destX + dx * stepX
-        val targetY = cur.destY + dy * stepY
         val (clampedX, clampedY) =
             clampCutoutDrag(
                 cutoutId = cur.id,
                 originalX = cur.destX,
                 originalY = cur.destY,
-                targetX = targetX,
-                targetY = targetY,
+                targetX = cur.destX + dx * stepX,
+                targetY = cur.destY + dy * stepY,
                 width = cur.destWidth,
                 height = cur.destHeight,
-                allCutouts = currentLayout.mirrorCutouts,
+                allCutouts = cutouts,
             )
-        if (clampedX != cur.destX || clampedY != cur.destY) {
-            val updated = cur.copy(destX = clampedX, destY = clampedY)
-            val updatedList = currentLayout.mirrorCutouts.map { if (it.id == cur.id) updated else it }
-            MacroPadState.updateLayout(currentLayout.copy(mirrorCutouts = updatedList))
-        }
+        cur.copy(destX = clampedX, destY = clampedY)
     }
 
     fun resizeBottomCutout(
         cutoutId: String,
         dx: Int,
         dy: Int,
-    ) {
-        val currentProfile = MacroPadState.activeProfile.value ?: return
-        val currentLayout = currentProfile.layouts.firstOrNull { it.id == currentProfile.activeLayoutId } ?: return
-        val cur = currentLayout.mirrorCutouts.firstOrNull { it.id == cutoutId } ?: return
-        val others = currentLayout.mirrorCutouts.filter { it.id != cutoutId }
-
+    ) = updateCutout(cutoutId) { cur, others ->
         if (cur.aspectRatioMode == AspectRatioMode.TOP) {
             val stepDelta =
                 if (dx != 0) {
@@ -462,7 +444,7 @@ fun MirrorEditorTopOverlay(
                 } else {
                     0
                 }
-            if (stepDelta == 0) return
+            if (stepDelta == 0) return@updateCutout null
             val cropRatio = (cur.srcWidth * srcWidth) / (cur.srcHeight * srcHeight)
             val normRatio = cropRatio * (secScreenH / secScreenW)
             val geom =
@@ -477,13 +459,7 @@ fun MirrorEditorTopOverlay(
                     targetNormRatio = normRatio,
                     others = others,
                 )
-            if (geom.x == cur.destX && geom.y == cur.destY && geom.w == cur.destWidth && geom.h == cur.destHeight) {
-                return
-            }
-            val updated = cur.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h)
-            val updatedList = currentLayout.mirrorCutouts.map { if (it.id == cur.id) updated else it }
-            MacroPadState.updateLayout(currentLayout.copy(mirrorCutouts = updatedList))
-            return
+            return@updateCutout cur.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h)
         }
 
         val resized =
@@ -503,12 +479,6 @@ fun MirrorEditorTopOverlay(
         bottomHToggle = resized.hToggle
         bottomVToggle = resized.vToggle
 
-        if (resized.x == cur.destX && resized.y == cur.destY &&
-            resized.width == cur.destWidth && resized.height == cur.destHeight
-        ) {
-            return
-        }
-
         var updated =
             cur.copy(
                 destX = resized.x,
@@ -526,8 +496,7 @@ fun MirrorEditorTopOverlay(
                     srcH = srcHeight,
                 )
         }
-        val updatedList = currentLayout.mirrorCutouts.map { if (it.id == cur.id) updated else it }
-        MacroPadState.updateLayout(currentLayout.copy(mirrorCutouts = updatedList))
+        updated
     }
 
     // Root key handler to reliably catch Controller B / Back button
@@ -1124,57 +1093,6 @@ private fun ToolboxCard(
     }
 }
 
-/**
- * Shared status, badge, or readout pill for toolbox cards.
- */
-@Composable
-private fun ToolboxPill(
-    text: String,
-    modifier: Modifier = Modifier,
-    isHighlighted: Boolean = false,
-    isAccent: Boolean = false,
-    isDestructive: Boolean = false,
-) {
-    val colors = LocalAppColors.current
-    val pillBg =
-        when {
-            isDestructive -> colors.error.copy(alpha = if (isHighlighted) 0.25f else 0.15f)
-            isAccent -> colors.accent
-            isHighlighted -> colors.accent.copy(alpha = 0.15f)
-            else -> colors.surfaceVariant
-        }
-    val pillTextColor =
-        when {
-            isDestructive -> colors.error
-            isAccent -> colors.onAccent
-            isHighlighted -> colors.accent
-            else -> colors.onSurfaceSecondary
-        }
-    val pillBorderColor =
-        when {
-            isDestructive -> colors.error.copy(alpha = 0.35f)
-            isHighlighted -> colors.accent
-            else -> colors.subduedBorder
-        }
-    val pillBorderWidth = if (isHighlighted) 1.5.dp else 1.dp
-
-    Box(
-        modifier =
-            modifier
-                .background(pillBg, RoundedCornerShape(METO_PILL_CORNER))
-                .border(pillBorderWidth, pillBorderColor, RoundedCornerShape(METO_PILL_CORNER))
-                .padding(horizontal = METO_PILL_PADDING_H, vertical = METO_PILL_PADDING_V),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = text,
-            color = pillTextColor,
-            fontSize = METO_TEXT_SIZE_PILL,
-            fontWeight = FontWeight.Bold,
-        )
-    }
-}
-
 @Composable
 private fun TargetCutoutCarouselCard(
     cutouts: List<ScreenCutout>,
@@ -1372,7 +1290,7 @@ private fun AspectRatioCard(
         title = stringResource(R.string.mirror_editor_aspect_ratio_mode),
         modifier = modifier,
     ) { isFocused ->
-        ToolboxPill(
+        GamepadPill(
             text = modeLabel,
             isHighlighted = isFocused,
         )
@@ -1412,7 +1330,7 @@ private fun ShapeToggleCard(
         title = stringResource(R.string.mirror_editor_shape_mode),
         modifier = modifier,
     ) { isFocused ->
-        ToolboxPill(
+        GamepadPill(
             text = shapeLabel,
             isHighlighted = isFocused,
         )
@@ -1674,7 +1592,7 @@ private fun HideBackgroundCard(
         title = stringResource(R.string.mirror_editor_hide_background),
         modifier = modifier,
     ) { isFocused ->
-        ToolboxPill(
+        GamepadPill(
             text = label,
             isHighlighted = isFocused && hasBackground,
         )
@@ -1706,7 +1624,7 @@ private fun ToolboxActionCard(
         trailingContent =
             if (actionBadge != null) {
                 { isFocused ->
-                    ToolboxPill(
+                    GamepadPill(
                         text = actionBadge,
                         isAccent = isAccent,
                         isDestructive = isDestructive,
