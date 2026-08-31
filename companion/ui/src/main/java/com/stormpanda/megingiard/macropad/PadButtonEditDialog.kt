@@ -50,11 +50,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.math.nextItem
-import com.stormpanda.megingiard.math.prevItem
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.ui.BumperDirection
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
 import com.stormpanda.megingiard.ui.GamepadColorSwatch
@@ -66,6 +65,7 @@ import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.GamepadTwoColumnGrid
 import com.stormpanda.megingiard.ui.GamepadTwoStepConfirmCard
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.cycle
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
 import com.stormpanda.megingiard.ui.toHexLabel
@@ -388,8 +388,8 @@ internal fun EditButtonSubPageContent(
             description = stringResource(R.string.macropad_btn_shape_desc),
             selectedText = buttonShape.displayLabel(),
             icon = Icons.Rounded.CropFree,
-            onPrevious = { buttonShape = ButtonShape.entries.prevItem(buttonShape) },
-            onNext = { buttonShape = ButtonShape.entries.nextItem(buttonShape) },
+            onPrevious = { buttonShape = ButtonShape.entries.cycle(buttonShape, BumperDirection.PREV) },
+            onNext = { buttonShape = ButtonShape.entries.cycle(buttonShape, BumperDirection.NEXT) },
         )
 
         GamepadChoiceCard(
@@ -397,8 +397,8 @@ internal fun EditButtonSubPageContent(
             description = stringResource(R.string.macropad_btn_size_desc),
             selectedText = buttonSize.displayLabel(),
             icon = Icons.Rounded.CropFree,
-            onPrevious = { buttonSize = ButtonSize.entries.prevItem(buttonSize) },
-            onNext = { buttonSize = ButtonSize.entries.nextItem(buttonSize) },
+            onPrevious = { buttonSize = ButtonSize.entries.cycle(buttonSize, BumperDirection.PREV) },
+            onNext = { buttonSize = ButtonSize.entries.cycle(buttonSize, BumperDirection.NEXT) },
         )
 
         GamepadSectionHeader(
@@ -421,8 +421,8 @@ internal fun EditButtonSubPageContent(
             description = stringResource(R.string.macropad_btn_haptic_desc),
             selectedText = hapticSelectedText,
             icon = Icons.Rounded.Vibration,
-            onPrevious = { applyHapticStrength(HapticStrength.entries.prevItem(hapticStrength)) },
-            onNext = { applyHapticStrength(HapticStrength.entries.nextItem(hapticStrength)) },
+            onPrevious = { applyHapticStrength(HapticStrength.entries.cycle(hapticStrength, BumperDirection.PREV)) },
+            onNext = { applyHapticStrength(HapticStrength.entries.cycle(hapticStrength, BumperDirection.NEXT)) },
         )
 
         if (hapticStrength == HapticStrength.CUSTOM) {
