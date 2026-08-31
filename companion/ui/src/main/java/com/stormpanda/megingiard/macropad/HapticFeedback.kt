@@ -5,6 +5,7 @@ import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import com.stormpanda.megingiard.R
 
 private const val TAG = "HapticFeedback"
 
@@ -110,3 +111,19 @@ fun triggerHapticFeedback(
         }
     vibrator?.let { triggerHaptic(it, strength) }
 }
+
+fun HapticStrength.labelResId(): Int =
+    when (this) {
+        HapticStrength.OFF -> R.string.macropad_haptic_off
+        HapticStrength.LIGHT -> R.string.macropad_haptic_light
+        HapticStrength.MEDIUM -> R.string.macropad_haptic_medium
+        HapticStrength.STRONG -> R.string.macropad_haptic_strong
+        HapticStrength.CUSTOM -> R.string.macropad_haptic_custom
+    }
+
+fun TrackpointSize.labelResId(): Int =
+    when (this) {
+        TrackpointSize.SMALL -> R.string.macropad_trackpoint_size_small
+        TrackpointSize.MEDIUM -> R.string.macropad_trackpoint_size_medium
+        TrackpointSize.LARGE -> R.string.macropad_trackpoint_size_large
+    }

@@ -2332,6 +2332,27 @@ private fun LayoutsDeck(
 }
 
 @Composable
+private fun describePadButton(
+    btn: PadButton,
+    includeHaptic: Boolean = true,
+): String {
+    val hapticLabel = if (includeHaptic) stringResource(btn.hapticStrength.labelResId()) else null
+    return if (btn.action is PadAction.TrackpointMove) {
+        val sizeLabel = stringResource((btn.action as PadAction.TrackpointMove).size.labelResId())
+        listOfNotNull(sizeLabel, hapticLabel).joinToString(" • ")
+    } else {
+        val actionLabel = btn.action.displayLabel()
+        val sizeLabel =
+            if (btn.action !is PadAction.ScrollWheel) {
+                "${btn.buttonSize.cols}×${btn.buttonSize.rows}"
+            } else {
+                null
+            }
+        listOfNotNull(actionLabel, sizeLabel, hapticLabel).joinToString(" • ")
+    }
+}
+
+@Composable
 private fun ButtonsDeck(
     profile: PadProfile,
     layout: PadLayout?,
@@ -2451,38 +2472,9 @@ private fun ButtonsDeck(
             }
         } else if (!isReordering) {
             items(buttons, key = { it.id }) { btn ->
-                val isTrackpoint = btn.action is PadAction.TrackpointMove
-                val hapticLabel =
-                    when (btn.hapticStrength) {
-                        HapticStrength.OFF -> stringResource(R.string.macropad_haptic_off)
-                        HapticStrength.LIGHT -> stringResource(R.string.macropad_haptic_light)
-                        HapticStrength.MEDIUM -> stringResource(R.string.macropad_haptic_medium)
-                        HapticStrength.STRONG -> stringResource(R.string.macropad_haptic_strong)
-                        HapticStrength.CUSTOM -> stringResource(R.string.macropad_haptic_custom)
-                    }
-                val desc =
-                    if (isTrackpoint) {
-                        val sizeLabel =
-                            when ((btn.action as PadAction.TrackpointMove).size) {
-                                TrackpointSize.SMALL -> stringResource(R.string.macropad_trackpoint_size_small)
-                                TrackpointSize.MEDIUM -> stringResource(R.string.macropad_trackpoint_size_medium)
-                                TrackpointSize.LARGE -> stringResource(R.string.macropad_trackpoint_size_large)
-                            }
-                        listOf(sizeLabel, hapticLabel).joinToString(" • ")
-                    } else {
-                        val actionLabel = btn.action.displayLabel()
-                        val sizeLabel =
-                            if (btn.action !is PadAction.ScrollWheel) {
-                                "${btn.buttonSize.cols}×${btn.buttonSize.rows}"
-                            } else {
-                                null
-                            }
-                        listOfNotNull(actionLabel, sizeLabel, hapticLabel).joinToString(" • ")
-                    }
-
                 GamepadActionCard(
                     title = btn.label.ifBlank { btn.action.displayLabel() },
-                    description = desc,
+                    description = describePadButton(btn),
                     icon = btn.action.toCategory().icon(),
                     onClick = { onEditButton(btn) },
                     onFocusChanged = { isFocused ->
@@ -2497,20 +2489,7 @@ private fun ButtonsDeck(
                 val key = btn.id
                 ReorderableItem(reorderState, key = key) { isDragging ->
                     val isMoving = movingItemKey == key
-                    val isTrackpoint = btn.action is PadAction.TrackpointMove
-                    val desc =
-                        if (isTrackpoint) {
-                            stringResource(R.string.macropad_action_trackpoint)
-                        } else {
-                            val actionLabel = btn.action.displayLabel()
-                            val sizeLabel =
-                                if (btn.action !is PadAction.ScrollWheel) {
-                                    "${btn.buttonSize.cols}×${btn.buttonSize.rows}"
-                                } else {
-                                    null
-                                }
-                            listOfNotNull(actionLabel, sizeLabel).joinToString(" • ")
-                        }
+                    val desc = describePadButton(btn, includeHaptic = false)
 
                     GamepadReorderCard(
                         title = btn.label.ifBlank { btn.action.displayLabel() },
@@ -2676,34 +2655,7 @@ private fun EditButtonPositionsSubPageContent(
                 }
             }
             val isMoving = movingButtonId == btn.id
-            val isTrackpoint = btn.action is PadAction.TrackpointMove
-            val hapticLabel =
-                when (btn.hapticStrength) {
-                    HapticStrength.OFF -> stringResource(R.string.macropad_haptic_off)
-                    HapticStrength.LIGHT -> stringResource(R.string.macropad_haptic_light)
-                    HapticStrength.MEDIUM -> stringResource(R.string.macropad_haptic_medium)
-                    HapticStrength.STRONG -> stringResource(R.string.macropad_haptic_strong)
-                    HapticStrength.CUSTOM -> stringResource(R.string.macropad_haptic_custom)
-                }
-            val desc =
-                if (isTrackpoint) {
-                    val sizeLabel =
-                        when ((btn.action as PadAction.TrackpointMove).size) {
-                            TrackpointSize.SMALL -> stringResource(R.string.macropad_trackpoint_size_small)
-                            TrackpointSize.MEDIUM -> stringResource(R.string.macropad_trackpoint_size_medium)
-                            TrackpointSize.LARGE -> stringResource(R.string.macropad_trackpoint_size_large)
-                        }
-                    listOf(sizeLabel, hapticLabel).joinToString(" • ")
-                } else {
-                    val actionLabel = btn.action.displayLabel()
-                    val sizeLabel =
-                        if (btn.action !is PadAction.ScrollWheel) {
-                            "${btn.buttonSize.cols}×${btn.buttonSize.rows}"
-                        } else {
-                            null
-                        }
-                    listOfNotNull(actionLabel, sizeLabel, hapticLabel).joinToString(" • ")
-                }
+            val desc = describePadButton(btn)
 
             GamepadFocusCard(
                 cardFocusRequester = cardRequester,

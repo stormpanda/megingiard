@@ -443,14 +443,7 @@ internal fun EditButtonSubPageContent(
             hapticStrength = selectedStrength
         }
 
-        val hapticSelectedText =
-            when (hapticStrength) {
-                HapticStrength.OFF -> stringResource(R.string.macropad_haptic_off)
-                HapticStrength.LIGHT -> stringResource(R.string.macropad_haptic_light)
-                HapticStrength.MEDIUM -> stringResource(R.string.macropad_haptic_medium)
-                HapticStrength.STRONG -> stringResource(R.string.macropad_haptic_strong)
-                HapticStrength.CUSTOM -> stringResource(R.string.macropad_haptic_custom)
-            }
+        val hapticSelectedText = stringResource(hapticStrength.labelResId())
 
         GamepadChoiceCard(
             title = stringResource(R.string.macropad_editor_section_haptic),
