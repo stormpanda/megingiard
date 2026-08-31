@@ -7,7 +7,6 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Grain
 import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.Opacity
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.Tune
