@@ -555,15 +555,16 @@ private fun GameSelectionRow(
         ) {
             itemsIndexed(games, key = { _, game -> game.id }) { index, game ->
                 val isSelected = index == selectedIndex
+                val chipShape = RoundedCornerShape(20.dp)
                 Box(
                     modifier =
                         Modifier
-                            .clip(RoundedCornerShape(20.dp))
+                            .clip(chipShape)
                             .background(if (isSelected) appColors.accent else appColors.surfaceVariant)
                             .border(
                                 width = if (isSelected) 2.dp else 1.dp,
                                 color = if (isSelected) appColors.accent else appColors.divider,
-                                shape = RoundedCornerShape(20.dp),
+                                shape = chipShape,
                             ).clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
@@ -598,12 +599,13 @@ private fun ShoulderBadge(
     modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
+    val badgeShape = RoundedCornerShape(6.dp)
     Box(
         modifier =
             modifier
-                .clip(RoundedCornerShape(6.dp))
+                .clip(badgeShape)
                 .background(appColors.surfaceVariant)
-                .border(1.dp, appColors.divider, RoundedCornerShape(6.dp))
+                .border(1.dp, appColors.divider, badgeShape)
                 .padding(horizontal = 7.dp, vertical = 4.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -630,11 +632,7 @@ private fun ArtworkOptionItem(
 
     DisposableEffect(imageItem.thumb) {
         onDispose {
-            rawBitmap?.let { bmp ->
-                if (!bmp.isRecycled) {
-                    bmp.recycle()
-                }
-            }
+            rawBitmap?.takeUnless { it.isRecycled }?.recycle()
         }
     }
 
@@ -651,9 +649,10 @@ private fun ArtworkOptionItem(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
-        if (bitmap != null) {
+        val currentBitmap = bitmap
+        if (currentBitmap != null) {
             Image(
-                bitmap = bitmap!!,
+                bitmap = currentBitmap,
                 contentDescription = stringResource(R.string.steamgriddb_cd_artwork_option),
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
