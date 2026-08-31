@@ -83,6 +83,11 @@ private const val TRS_CONTAINER_MAX_WIDTH_DP = 560
 private val TRS_CONTAINER_RADIUS = 20.dp
 private val TRS_BUTTON_RADIUS = 12.dp
 private val TRS_PILL_RADIUS = 8.dp
+
+private val TRS_CONTAINER_SHAPE = RoundedCornerShape(TRS_CONTAINER_RADIUS)
+private val TRS_BUTTON_SHAPE = RoundedCornerShape(TRS_BUTTON_RADIUS)
+private val TRS_PILL_SHAPE = RoundedCornerShape(TRS_PILL_RADIUS)
+
 private val TRS_CONTAINER_PADDING = 12.dp
 private val TRS_SCREEN_PADDING_H = 16.dp
 private val TRS_SCREEN_PADDING_V = 8.dp
@@ -207,12 +212,12 @@ internal fun TouchRecordingSheet(
                     .widthIn(max = TRS_CONTAINER_MAX_WIDTH_DP.dp)
                     .fillMaxWidth()
                     .padding(horizontal = TRS_SCREEN_PADDING_H, vertical = TRS_SCREEN_PADDING_V)
-                    .clip(RoundedCornerShape(TRS_CONTAINER_RADIUS))
+                    .clip(TRS_CONTAINER_SHAPE)
                     .background(colors.surface)
                     .border(
                         width = 1.dp,
                         brush = bezelBrush,
-                        shape = RoundedCornerShape(TRS_CONTAINER_RADIUS),
+                        shape = TRS_CONTAINER_SHAPE,
                     ).padding(TRS_CONTAINER_PADDING),
         ) {
             Column(
@@ -268,9 +273,9 @@ internal fun TouchRecordingSheet(
                         modifier =
                             Modifier
                                 .height(TRS_BADGE_HEIGHT)
-                                .clip(RoundedCornerShape(TRS_PILL_RADIUS))
+                                .clip(TRS_PILL_SHAPE)
                                 .background(colors.accent.copy(alpha = 0.15f))
-                                .border(width = 1.dp, color = colors.accent, shape = RoundedCornerShape(TRS_PILL_RADIUS))
+                                .border(width = 1.dp, color = colors.accent, shape = TRS_PILL_SHAPE)
                                 .padding(horizontal = TRS_SPACING_L),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -298,9 +303,9 @@ internal fun TouchRecordingSheet(
                         modifier =
                             Modifier
                                 .height(TRS_BADGE_HEIGHT)
-                                .clip(RoundedCornerShape(TRS_PILL_RADIUS))
+                                .clip(TRS_PILL_SHAPE)
                                 .background(colors.surfaceVariant)
-                                .border(width = 1.dp, color = colors.divider, shape = RoundedCornerShape(TRS_PILL_RADIUS))
+                                .border(width = 1.dp, color = colors.divider, shape = TRS_PILL_SHAPE)
                                 .padding(horizontal = TRS_SPACING_L),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -318,9 +323,9 @@ internal fun TouchRecordingSheet(
                         modifier =
                             Modifier
                                 .height(TRS_BADGE_HEIGHT)
-                                .clip(RoundedCornerShape(TRS_PILL_RADIUS))
+                                .clip(TRS_PILL_SHAPE)
                                 .background(colors.surfaceVariant)
-                                .border(width = 1.dp, color = colors.divider, shape = RoundedCornerShape(TRS_PILL_RADIUS))
+                                .border(width = 1.dp, color = colors.divider, shape = TRS_PILL_SHAPE)
                                 .padding(horizontal = TRS_SPACING_L),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -413,7 +418,7 @@ internal fun TouchRecordingSheet(
                 ) {
                     OutlinedButton(
                         onClick = onCancel,
-                        shape = RoundedCornerShape(TRS_BUTTON_RADIUS),
+                        shape = TRS_BUTTON_SHAPE,
                         modifier = Modifier.height(TRS_BUTTON_HEIGHT),
                         contentPadding = PaddingValues(horizontal = TRS_BUTTON_PADDING_H, vertical = 0.dp),
                     ) {
@@ -435,7 +440,7 @@ internal fun TouchRecordingSheet(
                         Button(
                             onClick = onStop,
                             colors = ButtonDefaults.buttonColors(containerColor = colors.error),
-                            shape = RoundedCornerShape(TRS_BUTTON_RADIUS),
+                            shape = TRS_BUTTON_SHAPE,
                             modifier = Modifier.height(TRS_BUTTON_HEIGHT),
                             contentPadding = PaddingValues(horizontal = TRS_BUTTON_PADDING_H, vertical = 0.dp),
                         ) {
@@ -489,9 +494,9 @@ private fun TouchScreenRadar(
     Box(
         modifier =
             modifier
-                .clip(RoundedCornerShape(TRS_PILL_RADIUS))
+                .clip(TRS_PILL_SHAPE)
                 .background(surfaceVariant.copy(alpha = TRS_RADAR_BG_ALPHA))
-                .border(1.dp, dividerColor, RoundedCornerShape(TRS_PILL_RADIUS)),
+                .border(1.dp, dividerColor, TRS_PILL_SHAPE),
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val width = size.width

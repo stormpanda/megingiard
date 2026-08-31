@@ -69,6 +69,9 @@ private const val CLE_ROTATION_BL = 45f
 private const val CLE_ROTATION_BR = -45f
 
 private val CLE_RECT_CORNER = 4.dp
+private val CLE_RECT_SHAPE = RoundedCornerShape(CLE_RECT_CORNER)
+private val CLE_EDGE_HANDLE_SHAPE = RoundedCornerShape(CLE_EDGE_HANDLE_CORNER)
+private val CLE_BADGE_SHAPE = RoundedCornerShape(4.dp)
 private const val CLE_UNSELECTED_BG_ALPHA = 0.05f
 private const val CLE_UNSELECTED_BORDER_ALPHA = 0.15f
 private const val CLE_SELECTED_BORDER_ALPHA = 0.75f
@@ -194,11 +197,11 @@ fun CutoutLayoutEditor() {
                                         .fillMaxSize()
                                         .background(
                                             color = Color.White.copy(alpha = CLE_UNSELECTED_BG_ALPHA),
-                                            shape = RoundedCornerShape(CLE_RECT_CORNER),
+                                            shape = CLE_RECT_SHAPE,
                                         ).border(
                                             width = CLE_BORDER_WIDTH,
                                             color = Color.White.copy(alpha = CLE_UNSELECTED_BORDER_ALPHA),
-                                            shape = RoundedCornerShape(CLE_RECT_CORNER),
+                                            shape = CLE_RECT_SHAPE,
                                         ),
                             )
                         }
@@ -238,7 +241,7 @@ fun CutoutLayoutEditor() {
                                             } else {
                                                 Color.White.copy(alpha = CLE_UNSELECTED_BG_ALPHA)
                                             },
-                                        shape = RoundedCornerShape(CLE_RECT_CORNER),
+                                        shape = CLE_RECT_SHAPE,
                                     ).border(
                                         width = if (isSelected) CLE_SELECTED_BORDER_WIDTH else CLE_BORDER_WIDTH,
                                         color =
@@ -247,7 +250,7 @@ fun CutoutLayoutEditor() {
                                             } else {
                                                 Color.White.copy(alpha = CLE_UNSELECTED_BORDER_ALPHA)
                                             },
-                                        shape = RoundedCornerShape(CLE_RECT_CORNER),
+                                        shape = CLE_RECT_SHAPE,
                                     ),
                         )
                     }
@@ -258,7 +261,7 @@ fun CutoutLayoutEditor() {
                         modifier =
                             Modifier
                                 .align(Alignment.Center)
-                                .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
+                                .background(Color.Black.copy(alpha = 0.5f), CLE_BADGE_SHAPE)
                                 .padding(horizontal = 6.dp, vertical = 2.dp),
                     )
                 }
@@ -653,7 +656,7 @@ private fun ResizeHandleView(
                 Modifier
                     .size(width = handleWidth, height = handleHeight)
                     .graphicsLayer { rotationZ = rotation }
-                    .background(color.copy(alpha = 0.75f), RoundedCornerShape(CLE_EDGE_HANDLE_CORNER)),
+                    .background(color.copy(alpha = 0.75f), CLE_EDGE_HANDLE_SHAPE),
         )
     }
 }

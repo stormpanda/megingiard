@@ -76,6 +76,11 @@ private const val PR_CONTAINER_RADIUS_DP = 20
 private const val PR_BUTTON_RADIUS_DP = 12
 private const val PR_PILL_RADIUS_DP = 8
 
+private val PR_CONTAINER_SHAPE = RoundedCornerShape(PR_CONTAINER_RADIUS_DP.dp)
+private val PR_BUTTON_SHAPE = RoundedCornerShape(PR_BUTTON_RADIUS_DP.dp)
+private val PR_PILL_SHAPE = RoundedCornerShape(PR_PILL_RADIUS_DP.dp)
+private val PR_BADGE_SHAPE = RoundedCornerShape(6.dp)
+
 private val PR_PULSE_DOT_SIZE = 12.dp
 private val PR_SPACING_XS = 4.dp
 private val PR_SPACING_S = 8.dp
@@ -154,12 +159,12 @@ internal fun PhysicalGamepadRecordingSheet(
             modifier =
                 Modifier
                     .fillMaxWidth(0.92f)
-                    .clip(RoundedCornerShape(PR_CONTAINER_RADIUS_DP.dp))
+                    .clip(PR_CONTAINER_SHAPE)
                     .background(colors.surface)
                     .border(
                         width = 1.dp,
                         brush = bezelBrush,
-                        shape = RoundedCornerShape(PR_CONTAINER_RADIUS_DP.dp),
+                        shape = PR_CONTAINER_SHAPE,
                     ).padding(20.dp),
         ) {
             Column(
@@ -189,9 +194,9 @@ internal fun PhysicalGamepadRecordingSheet(
                     Box(
                         modifier =
                             Modifier
-                                .clip(RoundedCornerShape(PR_PILL_RADIUS_DP.dp))
+                                .clip(PR_PILL_SHAPE)
                                 .background(colors.surfaceVariant)
-                                .border(width = PR_BORDER_WIDTH, color = colors.divider, shape = RoundedCornerShape(PR_PILL_RADIUS_DP.dp))
+                                .border(width = PR_BORDER_WIDTH, color = colors.divider, shape = PR_PILL_SHAPE)
                                 .padding(horizontal = PR_SPACING_M, vertical = PR_SPACING_XS),
                     ) {
                         Text(
@@ -210,9 +215,9 @@ internal fun PhysicalGamepadRecordingSheet(
                     Box(
                         modifier =
                             Modifier
-                                .clip(RoundedCornerShape(PR_PILL_RADIUS_DP.dp))
+                                .clip(PR_PILL_SHAPE)
                                 .background(colors.surfaceVariant)
-                                .border(width = 1.dp, color = colors.divider, shape = RoundedCornerShape(PR_PILL_RADIUS_DP.dp))
+                                .border(width = 1.dp, color = colors.divider, shape = PR_PILL_SHAPE)
                                 .padding(horizontal = 10.dp, vertical = 4.dp),
                     ) {
                         Text(
@@ -252,13 +257,13 @@ internal fun PhysicalGamepadRecordingSheet(
                             Box(
                                 modifier =
                                     Modifier
-                                        .clip(RoundedCornerShape(PR_PILL_RADIUS_DP.dp))
+                                        .clip(PR_PILL_SHAPE)
                                         .background(
                                             if (isDpadActive) colors.actionColorSystem.copy(alpha = 0.2f) else colors.surfaceVariant,
                                         ).border(
                                             width = 1.dp,
                                             color = if (isDpadActive) colors.actionColorSystem else colors.divider,
-                                            shape = RoundedCornerShape(PR_PILL_RADIUS_DP.dp),
+                                            shape = PR_PILL_SHAPE,
                                         ).padding(horizontal = 10.dp, vertical = 4.dp),
                             ) {
                                 Text(
@@ -282,9 +287,9 @@ internal fun PhysicalGamepadRecordingSheet(
                                                 modifier =
                                                     Modifier
                                                         .padding(horizontal = 2.dp)
-                                                        .clip(RoundedCornerShape(6.dp))
+                                                        .clip(PR_BADGE_SHAPE)
                                                         .background(colors.accent.copy(alpha = 0.25f))
-                                                        .border(width = 1.dp, color = colors.accent, shape = RoundedCornerShape(6.dp))
+                                                        .border(width = 1.dp, color = colors.accent, shape = PR_BADGE_SHAPE)
                                                         .padding(horizontal = 8.dp, vertical = 2.dp),
                                             ) {
                                                 Text(
@@ -334,7 +339,7 @@ internal fun PhysicalGamepadRecordingSheet(
                     OutlinedButton(
                         onClick = onCancel,
                         modifier = Modifier.weight(1f).height(46.dp),
-                        shape = RoundedCornerShape(PR_BUTTON_RADIUS_DP.dp),
+                        shape = PR_BUTTON_SHAPE,
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Close,
@@ -354,7 +359,7 @@ internal fun PhysicalGamepadRecordingSheet(
                         onClick = onStop,
                         modifier = Modifier.weight(1f).height(46.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = colors.error),
-                        shape = RoundedCornerShape(PR_BUTTON_RADIUS_DP.dp),
+                        shape = PR_BUTTON_SHAPE,
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Stop,

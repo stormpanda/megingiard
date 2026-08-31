@@ -42,6 +42,7 @@ private val CS_EDGE_HANDLE_MARGIN = 6.dp
 private val CS_EDGE_TOUCH_LENGTH = 56.dp
 private val CS_EDGE_TOUCH_THICKNESS = 36.dp
 private val CS_EDGE_HANDLE_CORNER = 3.dp
+private val CS_EDGE_HANDLE_SHAPE = RoundedCornerShape(CS_EDGE_HANDLE_CORNER)
 
 private val CS_CORNER_TOUCH_SIZE = 56.dp
 private val CS_CORNER_HANDLE_MARGIN = 6.dp
@@ -454,7 +455,7 @@ private fun ResizeHandleView(
                 Modifier
                     .size(width = handleWidth, height = handleHeight)
                     .graphicsLayer { rotationZ = rotation }
-                    .background(color.copy(alpha = 0.75f), RoundedCornerShape(CS_EDGE_HANDLE_CORNER)),
+                    .background(color.copy(alpha = 0.75f), CS_EDGE_HANDLE_SHAPE),
         )
     }
 }
