@@ -51,6 +51,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
@@ -123,6 +124,24 @@ private const val MP_EMPTY_DASH_OFF = 8f
 private const val MP_EMPTY_MAX_TAP_DISPLACEMENT_PX = 24f
 
 private const val TAG = "MacroPadScreen"
+
+private fun DisabledReason.feedbackTextResId(): Int =
+    when (this) {
+        DisabledReason.KEYBOARD -> R.string.macropad_device_disabled_keyboard
+        DisabledReason.GAMEPAD -> R.string.macropad_device_disabled_gamepad
+        DisabledReason.MOUSE -> R.string.macropad_device_disabled_mouse
+        DisabledReason.TOUCH -> R.string.macropad_device_disabled_touch
+        DisabledReason.MACRO_PRIVD -> R.string.macropad_device_disabled_macro_privd
+    }
+
+private fun DisabledReason.feedbackIcon(): ImageVector =
+    when (this) {
+        DisabledReason.KEYBOARD -> Icons.Rounded.Keyboard
+        DisabledReason.GAMEPAD -> Icons.Rounded.SportsEsports
+        DisabledReason.MOUSE -> Icons.Rounded.Mouse
+        DisabledReason.TOUCH -> Icons.Rounded.TouchApp
+        DisabledReason.MACRO_PRIVD -> Icons.Rounded.Warning
+    }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Entry point
@@ -203,25 +222,9 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
                     val now = SystemClock.elapsedRealtime()
                     if (now - lastFeedbackAtMs < MP_DISABLED_FEEDBACK_RATE_LIMIT_MS) return@PadSurface
                     lastFeedbackAtMs = now
-                    val feedbackText =
-                        when (reason) {
-                            DisabledReason.KEYBOARD -> context.getString(R.string.macropad_device_disabled_keyboard)
-                            DisabledReason.GAMEPAD -> context.getString(R.string.macropad_device_disabled_gamepad)
-                            DisabledReason.MOUSE -> context.getString(R.string.macropad_device_disabled_mouse)
-                            DisabledReason.TOUCH -> context.getString(R.string.macropad_device_disabled_touch)
-                            DisabledReason.MACRO_PRIVD -> context.getString(R.string.macropad_device_disabled_macro_privd)
-                        }
-                    val feedbackIcon =
-                        when (reason) {
-                            DisabledReason.KEYBOARD -> Icons.Rounded.Keyboard
-                            DisabledReason.GAMEPAD -> Icons.Rounded.SportsEsports
-                            DisabledReason.MOUSE -> Icons.Rounded.Mouse
-                            DisabledReason.TOUCH -> Icons.Rounded.TouchApp
-                            DisabledReason.MACRO_PRIVD -> Icons.Rounded.Warning
-                        }
                     DialogToastManager.show(
-                        message = feedbackText,
-                        icon = feedbackIcon,
+                        message = context.getString(reason.feedbackTextResId()),
+                        icon = reason.feedbackIcon(),
                     )
                     AppLog.d(TAG, "show disabled action feedback: $reason")
                 },
@@ -598,76 +601,38 @@ internal fun PadSurface(
                     val iw = bgBitmap!!.width.toFloat()
                     val ih = bgBitmap!!.height.toFloat()
                     if (cw > 0f && ch > 0f && iw > 0f && ih > 0f) {
-                        when (layout.bgScaleMode) {
-                            BackgroundScaleMode.STRETCH -> {
-                                drawImage(
-                                    image = bgBitmap!!,
-                                    dstOffset = IntOffset.Zero,
-                                    dstSize = IntSize(cw.toInt(), ch.toInt()),
-                                    colorFilter = bgImageDimFilter,
-                                )
+                        val (dstOffset, dstSize) =
+                            when (layout.bgScaleMode) {
+                                BackgroundScaleMode.STRETCH -> {
+                                    IntOffset.Zero to IntSize(cw.toInt(), ch.toInt())
+                                }
+
+                                BackgroundScaleMode.FIT, BackgroundScaleMode.FILL -> {
+                                    val userScale = layout.bgImageScale
+                                    val scaleBase =
+                                        if (layout.bgScaleMode == BackgroundScaleMode.FIT) {
+                                            ViewportMath.calculateAspectFitScale(cw, ch, iw, ih)
+                                        } else {
+                                            ViewportMath.calculateAspectFillScale(cw, ch, iw, ih)
+                                        }
+                                    val ws = iw * scaleBase
+                                    val hs = ih * scaleBase
+                                    val maxTx = ((ws * userScale - cw) / 2f).coerceAtLeast(0f)
+                                    val maxTy = ((hs * userScale - ch) / 2f).coerceAtLeast(0f)
+                                    val clampedX = (layout.bgImageOffsetX * cw).coerceIn(-maxTx, maxTx)
+                                    val clampedY = (layout.bgImageOffsetY * ch).coerceIn(-maxTy, maxTy)
+                                    IntOffset(
+                                        ((cw - ws * userScale) / 2f + clampedX).toInt(),
+                                        ((ch - hs * userScale) / 2f + clampedY).toInt(),
+                                    ) to IntSize((ws * userScale).toInt(), (hs * userScale).toInt())
+                                }
                             }
-
-                            BackgroundScaleMode.FIT -> {
-                                val userScale = layout.bgImageScale
-                                val ox = layout.bgImageOffsetX
-                                val oy = layout.bgImageOffsetY
-
-                                val scaleBase = ViewportMath.calculateAspectFitScale(cw, ch, iw, ih)
-                                val ws = iw * scaleBase
-                                val hs = ih * scaleBase
-
-                                val maxTx = ((ws * userScale - cw) / 2f).coerceAtLeast(0f)
-                                val maxTy = ((hs * userScale - ch) / 2f).coerceAtLeast(0f)
-                                val clampedX = (ox * cw).coerceIn(-maxTx, maxTx)
-                                val clampedY = (oy * ch).coerceIn(-maxTy, maxTy)
-
-                                drawImage(
-                                    image = bgBitmap!!,
-                                    dstOffset =
-                                        IntOffset(
-                                            ((cw - ws * userScale) / 2f + clampedX).toInt(),
-                                            ((ch - hs * userScale) / 2f + clampedY).toInt(),
-                                        ),
-                                    dstSize =
-                                        IntSize(
-                                            (ws * userScale).toInt(),
-                                            (hs * userScale).toInt(),
-                                        ),
-                                    colorFilter = bgImageDimFilter,
-                                )
-                            }
-
-                            BackgroundScaleMode.FILL -> {
-                                val userScale = layout.bgImageScale
-                                val ox = layout.bgImageOffsetX
-                                val oy = layout.bgImageOffsetY
-
-                                val scaleBase = ViewportMath.calculateAspectFillScale(cw, ch, iw, ih)
-                                val ws = iw * scaleBase
-                                val hs = ih * scaleBase
-
-                                val maxTx = ((ws * userScale - cw) / 2f).coerceAtLeast(0f)
-                                val maxTy = ((hs * userScale - ch) / 2f).coerceAtLeast(0f)
-                                val clampedX = (ox * cw).coerceIn(-maxTx, maxTx)
-                                val clampedY = (oy * ch).coerceIn(-maxTy, maxTy)
-
-                                drawImage(
-                                    image = bgBitmap!!,
-                                    dstOffset =
-                                        IntOffset(
-                                            ((cw - ws * userScale) / 2f + clampedX).toInt(),
-                                            ((ch - hs * userScale) / 2f + clampedY).toInt(),
-                                        ),
-                                    dstSize =
-                                        IntSize(
-                                            (ws * userScale).toInt(),
-                                            (hs * userScale).toInt(),
-                                        ),
-                                    colorFilter = bgImageDimFilter,
-                                )
-                            }
-                        }
+                        drawImage(
+                            image = bgBitmap!!,
+                            dstOffset = dstOffset,
+                            dstSize = dstSize,
+                            colorFilter = bgImageDimFilter,
+                        )
                     }
                 }
             }
