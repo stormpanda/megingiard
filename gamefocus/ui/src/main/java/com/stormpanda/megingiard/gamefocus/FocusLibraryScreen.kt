@@ -570,34 +570,13 @@ fun FocusLibraryScreen(
             }
 
             // Lower Right: Subdued touch launch buttons
-            Row(
+            DualScreenLaunchButtons(
+                appInfo = focusedApp,
+                enabled = enabled && !isOptionsMenuExpanded,
+                onLaunchTop = onAppClickTop,
+                onLaunchBottom = onAppClickBottom,
                 modifier = Modifier.align(Alignment.BottomEnd),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                GamePadButtonAction(
-                    button = GamePadButton.BUTTON_A,
-                    text = stringResource(R.string.gamefocus_launch_top),
-                    enabled = enabled && !isOptionsMenuExpanded,
-                    onClick = {
-                        if (focusedApp != null) {
-                            onAppClickTop(focusedApp)
-                        }
-                    },
-                )
-
-                Spacer(modifier = Modifier.width(FLS_BUTTON_GAP_SMALL))
-
-                GamePadButtonAction(
-                    button = GamePadButton.BUTTON_X,
-                    text = stringResource(R.string.gamefocus_launch_bottom),
-                    enabled = enabled && !isOptionsMenuExpanded,
-                    onClick = {
-                        if (focusedApp != null) {
-                            onAppClickBottom(focusedApp)
-                        }
-                    },
-                )
-            }
+            )
         }
 
         if (isRemoveRomFolderDialogOpen) {
@@ -741,41 +720,25 @@ private fun InteractiveLibraryCategoryHeader(
                     modifier = Modifier.noFocusClickable { onTabSelected(currentTab) },
                 )
 
-                // Next category 1 (middle, curved Y-axis roll)
-                Text(
-                    text = getTabName(next1),
-                    style =
-                        MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = appColors.onSurfaceSecondary.copy(alpha = 0.45f),
-                        ),
-                    maxLines = 1,
-                    modifier =
-                        Modifier
-                            .noFocusClickable { onTabSelected(next1) }
-                            .graphicsLayer {
-                                rotationY = FLS_CATEGORY_ROLL_Y_ANGLE_DEG * 0.7f
-                                cameraDistance = 16 * density.density
-                            },
-                )
-
-                // Next category 2 (rightmost, deeper Y-axis roll)
-                Text(
-                    text = getTabName(next2),
-                    style =
-                        MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = appColors.onSurfaceSecondary.copy(alpha = 0.25f),
-                        ),
-                    maxLines = 1,
-                    modifier =
-                        Modifier
-                            .noFocusClickable { onTabSelected(next2) }
-                            .graphicsLayer {
-                                rotationY = FLS_CATEGORY_ROLL_Y_ANGLE_DEG * 1.4f
-                                cameraDistance = 16 * density.density
-                            },
-                )
+                listOf(next1 to (0.45f to 0.7f), next2 to (0.25f to 1.4f)).forEach { (tab, style) ->
+                    val (alpha, angleFactor) = style
+                    Text(
+                        text = getTabName(tab),
+                        style =
+                            MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = appColors.onSurfaceSecondary.copy(alpha = alpha),
+                            ),
+                        maxLines = 1,
+                        modifier =
+                            Modifier
+                                .noFocusClickable { onTabSelected(tab) }
+                                .graphicsLayer {
+                                    rotationY = FLS_CATEGORY_ROLL_Y_ANGLE_DEG * angleFactor
+                                    cameraDistance = 16 * density.density
+                                },
+                    )
+                }
             }
         }
 

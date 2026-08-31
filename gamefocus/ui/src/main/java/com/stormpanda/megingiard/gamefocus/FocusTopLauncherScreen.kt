@@ -780,38 +780,16 @@ fun FocusTopLauncherScreen(
                         }
 
                         // Bottom-Right subdued touch buttons hovering over the gallery plane
-                        val isBottomBarEnabled = isControlsEnabled && !isMainOptionsMenuExpanded
-                        Row(
+                        DualScreenLaunchButtons(
+                            appInfo = currentApp,
+                            enabled = isControlsEnabled && !isMainOptionsMenuExpanded,
+                            onLaunchTop = onAppClickTop,
+                            onLaunchBottom = onAppClickBottom,
                             modifier =
                                 Modifier
                                     .align(Alignment.BottomEnd)
                                     .padding(end = FTL_BOTTOM_BAR_PADDING_END, bottom = FTL_BOTTOM_BAR_PADDING_BOTTOM),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            GamePadButtonAction(
-                                button = GamePadButton.BUTTON_A,
-                                text = stringResource(R.string.gamefocus_launch_top),
-                                enabled = isBottomBarEnabled,
-                                onClick = {
-                                    if (currentApp != null) {
-                                        onAppClickTop(currentApp)
-                                    }
-                                },
-                            )
-
-                            Spacer(modifier = Modifier.width(FTL_BUTTON_GAP))
-
-                            GamePadButtonAction(
-                                button = GamePadButton.BUTTON_X,
-                                text = stringResource(R.string.gamefocus_launch_bottom),
-                                enabled = isBottomBarEnabled,
-                                onClick = {
-                                    if (currentApp != null) {
-                                        onAppClickBottom(currentApp)
-                                    }
-                                },
-                            )
-                        }
+                        )
                     }
 
                     // Custom Megingiard Artwork Selection Modal Dialog
@@ -1060,6 +1038,40 @@ internal fun GameFocusFallbackIcon(
             contentDescription = appInfo.label,
             tint = tint,
             modifier = modifier.size(size),
+        )
+    }
+}
+
+@Composable
+internal fun DualScreenLaunchButtons(
+    appInfo: InstalledAppInfo?,
+    enabled: Boolean,
+    onLaunchTop: (InstalledAppInfo) -> Unit,
+    onLaunchBottom: (InstalledAppInfo) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        GamePadButtonAction(
+            button = GamePadButton.BUTTON_A,
+            text = stringResource(R.string.gamefocus_launch_top),
+            enabled = enabled,
+            onClick = {
+                if (appInfo != null) onLaunchTop(appInfo)
+            },
+        )
+
+        Spacer(modifier = Modifier.width(2.dp))
+
+        GamePadButtonAction(
+            button = GamePadButton.BUTTON_X,
+            text = stringResource(R.string.gamefocus_launch_bottom),
+            enabled = enabled,
+            onClick = {
+                if (appInfo != null) onLaunchBottom(appInfo)
+            },
         )
     }
 }
