@@ -1110,20 +1110,23 @@ private fun DeadzonesSubPage(
 }
 
 @Composable
-private fun CreateBackupSubPage(onExport: (ExportMetadata, Boolean) -> Unit) {
-    val context = LocalContext.current
-    var author by rememberSaveable { mutableStateOf("") }
-    var description by rememberSaveable { mutableStateOf("") }
-    var includeBackgrounds by rememberSaveable { mutableStateOf(true) }
-
+private fun ExportMetadataForm(
+    author: String,
+    onAuthorChange: (String) -> Unit,
+    description: String,
+    onDescriptionChange: (String) -> Unit,
+    includeBackgrounds: Boolean,
+    onIncludeBackgroundsChange: (Boolean) -> Unit,
+    isFirstDeckItem: Boolean = false,
+) {
     GamepadTextFieldCard(
         title = stringResource(R.string.config_export_author),
         description = stringResource(R.string.config_export_author_desc),
         placeholder = stringResource(R.string.config_export_author),
         value = author,
-        onValueChange = { author = it },
+        onValueChange = onAuthorChange,
         icon = Icons.Rounded.Person,
-        modifier = Modifier.firstDeckItem(),
+        modifier = Modifier.firstDeckItem(isFirst = isFirstDeckItem),
     )
 
     GamepadTextFieldCard(
@@ -1131,7 +1134,7 @@ private fun CreateBackupSubPage(onExport: (ExportMetadata, Boolean) -> Unit) {
         description = stringResource(R.string.config_export_description_desc),
         placeholder = stringResource(R.string.config_export_description),
         value = description,
-        onValueChange = { description = it },
+        onValueChange = onDescriptionChange,
         icon = Icons.AutoMirrored.Rounded.Notes,
     )
 
@@ -1139,8 +1142,26 @@ private fun CreateBackupSubPage(onExport: (ExportMetadata, Boolean) -> Unit) {
         title = stringResource(R.string.config_export_include_backgrounds),
         description = stringResource(R.string.config_export_include_backgrounds_desc),
         checked = includeBackgrounds,
-        onCheckedChange = { includeBackgrounds = it },
+        onCheckedChange = onIncludeBackgroundsChange,
         icon = Icons.Rounded.Wallpaper,
+    )
+}
+
+@Composable
+private fun CreateBackupSubPage(onExport: (ExportMetadata, Boolean) -> Unit) {
+    val context = LocalContext.current
+    var author by rememberSaveable { mutableStateOf("") }
+    var description by rememberSaveable { mutableStateOf("") }
+    var includeBackgrounds by rememberSaveable { mutableStateOf(true) }
+
+    ExportMetadataForm(
+        author = author,
+        onAuthorChange = { author = it },
+        description = description,
+        onDescriptionChange = { description = it },
+        includeBackgrounds = includeBackgrounds,
+        onIncludeBackgroundsChange = { includeBackgrounds = it },
+        isFirstDeckItem = true,
     )
 
     GamepadActionCard(
@@ -1185,31 +1206,14 @@ private fun ShareProfileSubPage(onExportProfile: (ExportMetadata, PadProfile, Bo
         )
     }
 
-    GamepadTextFieldCard(
-        title = stringResource(R.string.config_export_author),
-        description = stringResource(R.string.config_export_author_desc),
-        placeholder = stringResource(R.string.config_export_author),
-        value = author,
-        onValueChange = { author = it },
-        icon = Icons.Rounded.Person,
-        modifier = if (profiles.size <= 1) Modifier.firstDeckItem() else Modifier,
-    )
-
-    GamepadTextFieldCard(
-        title = stringResource(R.string.config_export_description),
-        description = stringResource(R.string.config_export_description_desc),
-        placeholder = stringResource(R.string.config_export_description),
-        value = description,
-        onValueChange = { description = it },
-        icon = Icons.AutoMirrored.Rounded.Notes,
-    )
-
-    GamepadToggleCard(
-        title = stringResource(R.string.config_export_include_backgrounds),
-        description = stringResource(R.string.config_export_include_backgrounds_desc),
-        checked = includeBackgrounds,
-        onCheckedChange = { includeBackgrounds = it },
-        icon = Icons.Rounded.Wallpaper,
+    ExportMetadataForm(
+        author = author,
+        onAuthorChange = { author = it },
+        description = description,
+        onDescriptionChange = { description = it },
+        includeBackgrounds = includeBackgrounds,
+        onIncludeBackgroundsChange = { includeBackgrounds = it },
+        isFirstDeckItem = profiles.size <= 1,
     )
 
     GamepadActionCard(
