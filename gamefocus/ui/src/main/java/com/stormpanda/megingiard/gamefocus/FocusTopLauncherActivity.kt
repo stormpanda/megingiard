@@ -39,6 +39,7 @@ import com.stormpanda.megingiard.catalog.InstalledAppsManager
 import com.stormpanda.megingiard.catalog.LibraryTab
 import com.stormpanda.megingiard.catalog.RomManager
 import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
+import com.stormpanda.megingiard.gamefocus.domain.initGameFocusLaunchers
 import com.stormpanda.megingiard.math.floorMod
 import com.stormpanda.megingiard.settings.ThemeMode
 import com.stormpanda.megingiard.ui.AppDimens
@@ -138,8 +139,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
         AppLog.i(TAG, "FocusTopLauncherActivity created on primary display (fullscreen)")
 
-        com.stormpanda.megingiard.gamefocus.domain
-            .initGameFocusLaunchers()
+        initGameFocusLaunchers()
         InstalledAppsManager.loadInstalledApps(this)
 
         setContent {
