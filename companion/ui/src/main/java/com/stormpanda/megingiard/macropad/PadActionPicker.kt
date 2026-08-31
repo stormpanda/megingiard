@@ -2,7 +2,6 @@ package com.stormpanda.megingiard.macropad
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ViewQuilt
-import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Cast
 import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.Mouse
@@ -13,8 +12,6 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.firstDeckItem
-
-private const val TAG = "PadActionPicker"
 
 @Composable
 internal fun ActionPicker(
