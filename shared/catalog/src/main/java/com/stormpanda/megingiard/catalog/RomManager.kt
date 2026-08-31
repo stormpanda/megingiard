@@ -172,14 +172,7 @@ object RomManager {
         folderUri: String,
         coreName: String?,
     ) {
-        val current =
-            _romFolders.value.map { folder ->
-                if (folder.uriString == folderUri) {
-                    folder.copy(retroArchCore = coreName)
-                } else {
-                    folder
-                }
-            }
+        val current = _romFolders.value.map { if (it.uriString == folderUri) it.copy(retroArchCore = coreName) else it }
         saveRomFolders(context, current)
         reloadRomApps(context)
     }
@@ -319,24 +312,22 @@ object RomManager {
         val decodedUri = Uri.decode(uri.toString())
         val primaryIndex = decodedUri.lastIndexOf("primary:")
         if (primaryIndex != -1) {
-            val relPath = decodedUri.substring(primaryIndex + "primary:".length)
-            return "/storage/emulated/0/$relPath"
+            return "/storage/emulated/0/${decodedUri.substring(primaryIndex + "primary:".length)}"
         }
 
-        // Handle external SD card
         val pathSegment =
-            if (decodedUri.contains("/document/")) {
+            if (decodedUri.contains(
+                    "/document/",
+                )
+            ) {
                 decodedUri.substringAfterLast("/document/")
             } else {
                 decodedUri.substringAfterLast("/tree/")
             }
-
         val volumeId = pathSegment.substringBefore(":", "")
         if (volumeId.isNotEmpty() && volumeId != "primary" && volumeId.matches(SD_CARD_VOLUME_REGEX)) {
-            val docId = pathSegment.substringAfter(":")
-            return "/storage/$volumeId/$docId"
+            return "/storage/$volumeId/${pathSegment.substringAfter(":")}"
         }
-
         return null
     }
 
@@ -372,20 +363,10 @@ object RomManager {
             }
         }
 
-        var bestSystemId: String? = null
-        var maxMatchCount = 0
-
-        for (system in SUPPORTED_SYSTEMS) {
-            var matchCount = 0
-            for (ext in system.extensions) {
-                matchCount += extensionCounts[ext] ?: 0
-            }
-            if (matchCount > maxMatchCount) {
-                maxMatchCount = matchCount
-                bestSystemId = system.id
-            }
-        }
-
-        return bestSystemId
+        return SUPPORTED_SYSTEMS
+            .map { system -> system.id to system.extensions.sumOf { ext -> extensionCounts[ext] ?: 0 } }
+            .filter { (_, count) -> count > 0 }
+            .maxByOrNull { (_, count) -> count }
+            ?.first
     }
 }
