@@ -307,9 +307,8 @@ object InstalledAppsManager {
             observeContentProvider(
                 context,
                 MegingiardIpcContract.SETTINGS_URI,
-            ) { resolver, uri ->
-                IpcSettingsParser.parse(resolver, uri)
-            }.collect { config ->
+                IpcSettingsParser::parse,
+            ).collect { config ->
                 if (config.steamGridDbApiToken.isNotBlank()) {
                     AppLog.i(TAG, "SteamGridDB API key updated via IPC ContentObserver -> triggering cover scraping")
                     triggerSteamGridDbScraping(context, coversDir)
