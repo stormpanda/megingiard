@@ -47,7 +47,6 @@ fun PrimaryModalHost(
     modifier: Modifier = Modifier,
 ) {
     AppLog.d(TAG, "PrimaryModalHost: dispatching modal type=${config.type}")
-    val colors = LocalAppColors.current
     val context = LocalContext.current
 
     when (config.type) {
