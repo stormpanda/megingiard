@@ -81,10 +81,7 @@ private val MSD_DIRECTIONS =
 private fun findDirectionIndex(
     x: Int,
     y: Int,
-): Int {
-    val idx = MSD_DIRECTIONS.indexOfFirst { it.dirX == x && it.dirY == y }
-    return if (idx >= 0) idx else 0
-}
+): Int = MSD_DIRECTIONS.indexOfFirst { it.dirX == x && it.dirY == y }.coerceAtLeast(0)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
