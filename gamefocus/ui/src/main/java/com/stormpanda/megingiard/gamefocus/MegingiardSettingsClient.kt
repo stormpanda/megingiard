@@ -23,7 +23,7 @@ object MegingiardSettingsClient {
         return observeContentProvider(
             context = context,
             uri = MegingiardIpcContract.SETTINGS_URI,
-            parser = { resolver, uri -> IpcSettingsParser.parse(resolver, uri) },
+            parser = IpcSettingsParser::parse,
         ).map { it.steamGridDbApiToken }
     }
 
