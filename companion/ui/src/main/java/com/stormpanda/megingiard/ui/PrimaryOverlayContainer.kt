@@ -88,6 +88,14 @@ private const val POC_TITLE_FONT_SIZE_SP = 18
 private const val POC_SUBTITLE_FONT_SIZE_SP = 14
 private const val POC_SUBTITLE_DOT = "•"
 
+private val POC_SHEET_SHAPE =
+    RoundedCornerShape(
+        topStart = POC_CARD_CORNER,
+        topEnd = POC_CARD_CORNER,
+        bottomStart = POC_BOTTOM_CORNER_ZERO,
+        bottomEnd = POC_BOTTOM_CORNER_ZERO,
+    )
+
 /**
  * 16:9 Widescreen Master Container for Primary Display (Display 0) overlays.
  *
@@ -176,14 +184,6 @@ fun PrimaryOverlayContainer(
                     ),
             contentAlignment = Alignment.BottomCenter,
         ) {
-            val sheetShape =
-                RoundedCornerShape(
-                    topStart = POC_CARD_CORNER,
-                    topEnd = POC_CARD_CORNER,
-                    bottomStart = POC_BOTTOM_CORNER_ZERO,
-                    bottomEnd = POC_BOTTOM_CORNER_ZERO,
-                )
-
             Surface(
                 modifier =
                     modifier
@@ -192,8 +192,8 @@ fun PrimaryOverlayContainer(
                         .animateEnterExit(
                             enter = modalOverlaySheetEnter(),
                             exit = modalOverlaySheetExit(),
-                        ).shadow(POC_CARD_ELEVATION, sheetShape)
-                        .clip(sheetShape)
+                        ).shadow(POC_CARD_ELEVATION, POC_SHEET_SHAPE)
+                        .clip(POC_SHEET_SHAPE)
                         .topAndSideBezelBorder(
                             strokeWidth = POC_BORDER_WIDTH,
                             brush = rememberBezelBrush(),
@@ -201,7 +201,7 @@ fun PrimaryOverlayContainer(
                         ).pointerInput(Unit) {
                             detectTapGestures { } // Prevent scrim dismissal when clicking inside the card without stealing focus
                         },
-                shape = sheetShape,
+                shape = POC_SHEET_SHAPE,
                 color = colors.surface.copy(alpha = POC_CARD_SURFACE_ALPHA),
             ) {
                 Column(modifier = Modifier.fillMaxSize()) {
