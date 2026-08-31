@@ -303,16 +303,10 @@ fun GlobalSettingsScreen(
             AnimatedContent(
                 targetState = subPageStack,
                 transitionSpec = {
-                    val isBackTransition = targetState.size < initialState.size
-                    if (isBackTransition) {
-                        slideInHorizontally { width -> -width }.togetherWith(
-                            slideOutHorizontally { width -> width },
-                        )
-                    } else {
-                        slideInHorizontally { width -> width }.togetherWith(
-                            slideOutHorizontally { width -> -width },
-                        )
-                    }
+                    val direction = if (targetState.size < initialState.size) -1 else 1
+                    slideInHorizontally { width -> width * direction }.togetherWith(
+                        slideOutHorizontally { width -> -width * direction },
+                    )
                 },
                 label = "SettingsSubPageAnimation",
             ) { stack ->
