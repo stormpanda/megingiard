@@ -119,12 +119,10 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
                 valueText = "%.1fx".format(Locale.US, touchpadScrollSpeed),
                 icon = Icons.Rounded.Speed,
                 onDecrement = {
-                    val newVal = ((touchpadScrollSpeed - 0.1f) * 10f).roundToInt() / 10f
-                    TouchpadSettings.setTouchpadScrollSpeed(newVal.coerceAtLeast(0.5f))
+                    TouchpadSettings.setTouchpadScrollSpeed((((touchpadScrollSpeed - 0.1f) * 10f).roundToInt() / 10f).coerceAtLeast(0.5f))
                 },
                 onIncrement = {
-                    val newVal = ((touchpadScrollSpeed + 0.1f) * 10f).roundToInt() / 10f
-                    TouchpadSettings.setTouchpadScrollSpeed(newVal.coerceAtMost(3.0f))
+                    TouchpadSettings.setTouchpadScrollSpeed((((touchpadScrollSpeed + 0.1f) * 10f).roundToInt() / 10f).coerceAtMost(3.0f))
                 },
             )
         }
@@ -135,12 +133,10 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
             valueText = "%.1fx".format(Locale.US, touchpadSensitivity),
             icon = Icons.Rounded.Speed,
             onDecrement = {
-                val newVal = ((touchpadSensitivity - 0.1f) * 10f).roundToInt() / 10f
-                TouchpadSettings.setTouchpadSensitivity(newVal.coerceAtLeast(0.2f))
+                TouchpadSettings.setTouchpadSensitivity((((touchpadSensitivity - 0.1f) * 10f).roundToInt() / 10f).coerceAtLeast(0.2f))
             },
             onIncrement = {
-                val newVal = ((touchpadSensitivity + 0.1f) * 10f).roundToInt() / 10f
-                TouchpadSettings.setTouchpadSensitivity(newVal.coerceAtMost(3.0f))
+                TouchpadSettings.setTouchpadSensitivity((((touchpadSensitivity + 0.1f) * 10f).roundToInt() / 10f).coerceAtMost(3.0f))
             },
         )
 
