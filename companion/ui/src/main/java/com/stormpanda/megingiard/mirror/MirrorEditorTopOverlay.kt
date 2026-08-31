@@ -110,14 +110,14 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
-import com.stormpanda.megingiard.math.nextItem
-import com.stormpanda.megingiard.math.prevItem
+import com.stormpanda.megingiard.ui.BumperDirection
 import com.stormpanda.megingiard.ui.DialogToastManager
 import com.stormpanda.megingiard.ui.DialogToastPill
 import com.stormpanda.megingiard.ui.GamepadPill
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.LocalFirstContentRequester
 import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
+import com.stormpanda.megingiard.ui.cycle
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.handle2DAdjustmentKeyEvent
 import com.stormpanda.megingiard.ui.handleAdjustmentKeyEvent
@@ -1123,12 +1123,12 @@ private fun TargetCutoutCarouselCard(
 
     fun selectPrevious() {
         if (!hasCutouts) return
-        selectedCutout?.let { onSelectCutout(cutouts.prevItem(it).id) }
+        selectedCutout?.let { onSelectCutout(cutouts.cycle(it, BumperDirection.PREV).id) }
     }
 
     fun selectNext() {
         if (!hasCutouts) return
-        selectedCutout?.let { onSelectCutout(cutouts.nextItem(it).id) }
+        selectedCutout?.let { onSelectCutout(cutouts.cycle(it, BumperDirection.NEXT).id) }
     }
 
     ToolboxCard(
@@ -1243,7 +1243,7 @@ private fun AspectRatioCard(
     fun cycleMode(forward: Boolean) {
         val cutout = selectedCutout ?: return
         val modes = AspectRatioMode.entries
-        val nextMode = if (forward) modes.nextItem(cutout.aspectRatioMode) else modes.prevItem(cutout.aspectRatioMode)
+        val nextMode = modes.cycle(cutout.aspectRatioMode, if (forward) BumperDirection.NEXT else BumperDirection.PREV)
 
         var updatedCutout =
             cutout.copy(

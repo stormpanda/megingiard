@@ -14,11 +14,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.math.nextItem
-import com.stormpanda.megingiard.math.prevItem
+import com.stormpanda.megingiard.ui.BumperDirection
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
 import com.stormpanda.megingiard.ui.GamepadDeck
 import com.stormpanda.megingiard.ui.GamepadToggleCard
+import com.stormpanda.megingiard.ui.cycle
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.viewmodel.KeyboardViewModel
 
@@ -48,8 +48,8 @@ fun KeyboardSettingsOverlay(
             description = stringResource(R.string.help_keyboard_settings_layout_desc),
             selectedText = currentLayout.name,
             icon = Icons.Rounded.Keyboard,
-            onPrevious = { viewModel.setKbLayout(KbLayout.entries.prevItem(currentLayout)) },
-            onNext = { viewModel.setKbLayout(KbLayout.entries.nextItem(currentLayout)) },
+            onPrevious = { viewModel.setKbLayout(KbLayout.entries.cycle(currentLayout, BumperDirection.PREV)) },
+            onNext = { viewModel.setKbLayout(KbLayout.entries.cycle(currentLayout, BumperDirection.NEXT)) },
             modifier = Modifier.firstDeckItem(),
         )
 

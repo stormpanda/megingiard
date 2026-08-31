@@ -18,12 +18,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.math.nextItem
-import com.stormpanda.megingiard.math.prevItem
 import com.stormpanda.megingiard.settings.MacroPadSettings
+import com.stormpanda.megingiard.ui.BumperDirection
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
 import com.stormpanda.megingiard.ui.GamepadInfoBox
+import com.stormpanda.megingiard.ui.cycle
 import com.stormpanda.megingiard.ui.firstDeckItem
 
 private const val TAG = "PadActionSubPickers"
@@ -70,12 +70,12 @@ internal fun KeyboardKeyPicker(
         selectedText = modifierLabel(mod1),
         icon = Icons.Rounded.Keyboard,
         onPrevious = {
-            val code = mod1Options.prevItem(mod1)
+            val code = mod1Options.cycle(mod1, BumperDirection.PREV)
             mod1 = code
             emitChange(current.keycode, current.label, code, mod2)
         },
         onNext = {
-            val code = mod1Options.nextItem(mod1)
+            val code = mod1Options.cycle(mod1, BumperDirection.NEXT)
             mod1 = code
             emitChange(current.keycode, current.label, code, mod2)
         },
@@ -88,12 +88,12 @@ internal fun KeyboardKeyPicker(
         selectedText = modifierLabel(mod2),
         icon = Icons.Rounded.Keyboard,
         onPrevious = {
-            val code = mod2Options.prevItem(mod2)
+            val code = mod2Options.cycle(mod2, BumperDirection.PREV)
             mod2 = code
             emitChange(current.keycode, current.label, mod1, code)
         },
         onNext = {
-            val code = mod2Options.nextItem(mod2)
+            val code = mod2Options.cycle(mod2, BumperDirection.NEXT)
             mod2 = code
             emitChange(current.keycode, current.label, mod1, code)
         },
