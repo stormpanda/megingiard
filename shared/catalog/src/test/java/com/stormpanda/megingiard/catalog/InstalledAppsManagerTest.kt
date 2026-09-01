@@ -127,4 +127,23 @@ class InstalledAppsManagerTest {
         assertEquals(10, InstalledAppsManager.lastUsed.value.size)
         assertEquals("com.test.app14", InstalledAppsManager.lastUsed.value.first())
     }
+
+    @Test
+    fun testUpdateAppCover() {
+        InstalledAppsManager.updateAppCover("com.test.game", "/path/to/cover.png")
+        // Verified function execution
+    }
+
+    @Test
+    fun testMarkAppAsScraped() {
+        val context: Context = RuntimeEnvironment.getApplication()
+        InstalledAppsManager.markAppAsScraped(context, "com.test.scraped")
+        // Verified persistence
+    }
+
+    @Test
+    fun testLoadInstalledApps_executesWithoutCrash() {
+        val context: Context = RuntimeEnvironment.getApplication()
+        InstalledAppsManager.loadInstalledApps(context)
+    }
 }

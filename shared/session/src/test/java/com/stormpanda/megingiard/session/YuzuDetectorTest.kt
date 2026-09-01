@@ -77,4 +77,19 @@ class YuzuDetectorTest {
         val session = YuzuDetector.parseSessionFromLog("org.citron.citron_emu", logSample)
         assertNull(session)
     }
+
+    @Test
+    fun detectActiveSession_supportedPackage_resolvesFromLog() =
+        runTest {
+            val logSample =
+                """
+                [   4.649822] Core <Info> core/core.cpp:Load:402: Loading Super Mario Odyssey (0100000000010000) ...
+                """.trimIndent()
+            ProcessCmdlineProvider.textFileReader = { logSample }
+            val session = YuzuDetector.detectActiveSession("org.yuzu.yuzu_emu")
+            assertNotNull(session)
+            assertEquals("Super Mario Odyssey", session?.gameTitle)
+            assertEquals("switch", session?.systemId)
+            assertEquals("0100000000010000", session?.titleId)
+        }
 }

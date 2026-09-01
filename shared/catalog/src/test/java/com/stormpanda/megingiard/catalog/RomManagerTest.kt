@@ -108,6 +108,31 @@ class RomManagerTest {
     }
 
     @Test
+    fun testRemoveRomFolder() {
+        val folder =
+            CustomRomFolder(
+                uriString = "content://test/folder",
+                folderPath = "folder",
+                systemId = "snes",
+                systemName = "SNES",
+            )
+        val file = File(context.filesDir, "gamefocus_rom_folders.json")
+        file.writeText("""[{"uriString":"content://test/folder","folderPath":"folder","systemId":"snes","systemName":"SNES"}]""")
+        RomManager.loadRomFolders(context)
+        assertEquals(1, RomManager.romFolders.value.size)
+
+        RomManager.removeRomFolder(context, folder)
+        assertTrue(RomManager.romFolders.value.isEmpty())
+        file.delete()
+    }
+
+    @Test
+    fun testUpdateRomCover() {
+        RomManager.updateRomCover("test.rom.pkg", "/path/to/cover.png")
+        // Verified function execution without crash
+    }
+
+    @Test
     fun testSafPathResolution() {
         assertEquals(
             "/storage/emulated/0/Emulation/game.snes",

@@ -65,4 +65,10 @@ class DisplayDetectorTest {
         assertTrue(DisplayDetector.isValidScreen(SECONDARY_DISPLAY_ID))
         assertTrue(DisplayDetector.isValidScreen(TERTIARY_DISPLAY_ID))
     }
+
+    @Test
+    fun testUpdateDisplayValidity() {
+        DisplayDetector.updateDisplayValidity(PRIMARY_DISPLAY_ID)
+        DisplayDetector.updateDisplayValidity(SECONDARY_DISPLAY_ID)
+    }
 }

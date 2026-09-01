@@ -68,4 +68,19 @@ class EmulatorDetectionFunnelTest {
             EmulatorDetectionFunnel.clearSession()
             assertNull(EmulatorDetectionFunnel.activeSession.value)
         }
+
+    @Test
+    fun isRegisteredEmulator_knownEmulators_returnsTrue() {
+        org.junit.Assert.assertTrue(EmulatorDetectionFunnel.isRegisteredEmulator("com.retroarch"))
+        org.junit.Assert.assertTrue(EmulatorDetectionFunnel.isRegisteredEmulator("org.ppsspp.ppsspp"))
+        org.junit.Assert.assertTrue(EmulatorDetectionFunnel.isRegisteredEmulator("xyz.aethersx2.android"))
+        org.junit.Assert.assertTrue(EmulatorDetectionFunnel.isRegisteredEmulator("org.yuzu.yuzu_emu"))
+        org.junit.Assert.assertTrue(EmulatorDetectionFunnel.isRegisteredEmulator("app.gamenative"))
+    }
+
+    @Test
+    fun isRegisteredEmulator_unknownApp_returnsFalse() {
+        org.junit.Assert.assertFalse(EmulatorDetectionFunnel.isRegisteredEmulator("com.android.chrome"))
+        org.junit.Assert.assertFalse(EmulatorDetectionFunnel.isRegisteredEmulator("com.stormpanda.megingiard"))
+    }
 }
