@@ -20,13 +20,23 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
 class SettingsManagerTest {
+    private val testDispatcher = UnconfinedTestDispatcher()
+
     @Before
     fun setUp() {
-        SettingsManager.init(RuntimeEnvironment.getApplication())
+        Dispatchers.setMain(testDispatcher)
+        SettingsManager.resetForTesting(RuntimeEnvironment.getApplication())
+        testDispatcher.scheduler.advanceUntilIdle()
         SettingsManager.resetAllTutorials()
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
     }
 
     @Test
