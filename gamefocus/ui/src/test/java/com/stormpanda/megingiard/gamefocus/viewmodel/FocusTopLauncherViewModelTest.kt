@@ -196,6 +196,55 @@ class FocusTopLauncherViewModelTest {
     }
 
     @Test
+    fun testStepCoreChooserFocus() {
+        viewModel.setCoreChooserDialogSelectedIndex(0)
+
+        // Step down with 3 cores -> 1
+        viewModel.stepCoreChooserFocus(LauncherScrollDirection.DOWN, coreCount = 3)
+        assertEquals(1, viewModel.coreChooserDialogSelectedIndex.value)
+
+        // Step down again -> 2
+        viewModel.stepCoreChooserFocus(LauncherScrollDirection.DOWN, coreCount = 3)
+        assertEquals(2, viewModel.coreChooserDialogSelectedIndex.value)
+
+        // Step down wraps to 0
+        viewModel.stepCoreChooserFocus(LauncherScrollDirection.DOWN, coreCount = 3)
+        assertEquals(0, viewModel.coreChooserDialogSelectedIndex.value)
+
+        // Step up wraps to 2
+        viewModel.stepCoreChooserFocus(LauncherScrollDirection.UP, coreCount = 3)
+        assertEquals(2, viewModel.coreChooserDialogSelectedIndex.value)
+    }
+
+    @Test
+    fun testStepRemoveRomFolderFocus() {
+        viewModel.setRemoveRomFolderDialogSelectedIndex(0)
+
+        // Step down with 2 folders -> 1
+        viewModel.stepRemoveRomFolderFocus(LauncherScrollDirection.DOWN, foldersCount = 2)
+        assertEquals(1, viewModel.removeRomFolderDialogSelectedIndex.value)
+
+        // Step down wraps to 0
+        viewModel.stepRemoveRomFolderFocus(LauncherScrollDirection.DOWN, foldersCount = 2)
+        assertEquals(0, viewModel.removeRomFolderDialogSelectedIndex.value)
+
+        // Step up wraps to 1
+        viewModel.stepRemoveRomFolderFocus(LauncherScrollDirection.UP, foldersCount = 2)
+        assertEquals(1, viewModel.removeRomFolderDialogSelectedIndex.value)
+    }
+
+    @Test
+    fun testStepArtworkDialogVirtualIndex() {
+        viewModel.setDialogVirtualIndex(INITIAL_LOOP_OFFSET)
+
+        viewModel.stepArtworkDialogVirtualIndex(1)
+        assertEquals(INITIAL_LOOP_OFFSET + 1, viewModel.dialogVirtualIndex.value)
+
+        viewModel.stepArtworkDialogVirtualIndex(-2)
+        assertEquals(INITIAL_LOOP_OFFSET - 1, viewModel.dialogVirtualIndex.value)
+    }
+
+    @Test
     fun testResetToGallery() {
         assertFalse(viewModel.resetToGallery())
 

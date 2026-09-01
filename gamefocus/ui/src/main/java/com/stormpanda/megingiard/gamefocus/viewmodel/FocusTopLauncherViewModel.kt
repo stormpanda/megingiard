@@ -6,6 +6,7 @@ import com.stormpanda.megingiard.catalog.CustomRomFolder
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.catalog.LibraryTab
 import com.stormpanda.megingiard.gamefocus.GameFocusCategory
+import com.stormpanda.megingiard.math.floorMod
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -296,6 +297,50 @@ class FocusTopLauncherViewModel : ViewModel() {
 
             LauncherScrollDirection.NONE -> {}
         }
+    }
+
+    fun stepCoreChooserFocus(
+        direction: LauncherScrollDirection,
+        coreCount: Int,
+    ) {
+        if (coreCount > 0) {
+            val current = _coreChooserDialogSelectedIndex.value
+            when (direction) {
+                LauncherScrollDirection.UP -> {
+                    _coreChooserDialogSelectedIndex.value = (current - 1).floorMod(coreCount)
+                }
+
+                LauncherScrollDirection.DOWN -> {
+                    _coreChooserDialogSelectedIndex.value = (current + 1).floorMod(coreCount)
+                }
+
+                else -> {}
+            }
+        }
+    }
+
+    fun stepRemoveRomFolderFocus(
+        direction: LauncherScrollDirection,
+        foldersCount: Int,
+    ) {
+        if (foldersCount > 0) {
+            val current = _removeRomFolderDialogSelectedIndex.value
+            when (direction) {
+                LauncherScrollDirection.UP -> {
+                    _removeRomFolderDialogSelectedIndex.value = (current - 1).floorMod(foldersCount)
+                }
+
+                LauncherScrollDirection.DOWN -> {
+                    _removeRomFolderDialogSelectedIndex.value = (current + 1).floorMod(foldersCount)
+                }
+
+                else -> {}
+            }
+        }
+    }
+
+    fun stepArtworkDialogVirtualIndex(delta: Int) {
+        _dialogVirtualIndex.value += delta
     }
 
     fun resetToGallery(): Boolean {
