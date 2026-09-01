@@ -78,6 +78,7 @@ android {
 
 dependencies {
     implementation(project(":gamefocus:domain"))
+    implementation(project(":shared:ui"))
     implementation(project(":shared:catalog"))
     implementation(project(":shared:media"))
     implementation(project(":shared:session"))

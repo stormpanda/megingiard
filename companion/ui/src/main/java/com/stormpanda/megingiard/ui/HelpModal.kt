@@ -51,7 +51,6 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.macropad.MaterialSymbol
 import kotlinx.coroutines.launch
 import java.util.Locale
 import kotlin.math.roundToInt

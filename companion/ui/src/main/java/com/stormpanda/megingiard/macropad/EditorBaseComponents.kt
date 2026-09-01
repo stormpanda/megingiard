@@ -34,6 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.MaterialSymbol
 
 internal val EBC_PREVIEW_DEFAULT_SIZE = 36.dp
 private val EBC_PREVIEW_ICON_SIZE = 20.dp

@@ -51,6 +51,7 @@ import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.AppDimens
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.LocalAppDimens
+import com.stormpanda.megingiard.ui.MaterialSymbol
 import com.stormpanda.megingiard.ui.WindowOverlayLifecycleOwner
 import com.stormpanda.megingiard.ui.colorSchemeFor
 import com.stormpanda.megingiard.ui.megingiardTypography

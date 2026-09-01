@@ -30,6 +30,7 @@ dependencyResolutionManagement {
 rootProject.name = "Megingiard"
 
 include(":shared:core")
+include(":shared:ui")
 include(":shared:catalog")
 include(":shared:media")
 include(":shared:session")

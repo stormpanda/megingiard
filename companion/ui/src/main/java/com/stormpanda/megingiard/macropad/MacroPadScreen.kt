@@ -84,6 +84,7 @@ import com.stormpanda.megingiard.touchpad.TouchpadGestureProcessor
 import com.stormpanda.megingiard.ui.DialogToastManager
 import com.stormpanda.megingiard.ui.DialogToastPill
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.MaterialSymbol
 import com.stormpanda.megingiard.ui.dimColorFilter
 import com.stormpanda.megingiard.ui.rememberBezelBrush
 import com.stormpanda.megingiard.ui.rememberQuickMenuGestureMetrics

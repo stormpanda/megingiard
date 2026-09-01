@@ -36,8 +36,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.macropad.MaterialSymbol
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.MaterialSymbol
 
 private val KB_ROUNDED_8 = RoundedCornerShape(8.dp)
 private val KB_ROUNDED_18 = RoundedCornerShape(18.dp)

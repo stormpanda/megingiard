@@ -64,6 +64,7 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.BitmapUtils
 import com.stormpanda.megingiard.math.ViewportMath
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.MaterialSymbol
 import com.stormpanda.megingiard.ui.dimColorFilter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
