@@ -12,7 +12,7 @@ This document provides a high-level overview of the system architecture and key 
 
 ## Modular Architecture
 
-Megingiard is structured as a **Feature-First Modular Architecture** split across 9 focused Gradle modules:
+Megingiard is structured as a **Feature-First Modular Architecture** split across 10 focused Gradle modules:
 
 ```
                   ┌─────────────────┐       ┌─────────────────┐
@@ -26,14 +26,14 @@ Megingiard is structured as a **Feature-First Modular Architecture** split acros
          ┌─────────────────┼─────────────────────────┼─────────────────┐
          │                 │                         │                 │
 ┌────────▼────────┐┌───────▼────────┐       ┌────────▼────────┐┌───────▼────────┐
-│ :shared:catalog ││ :shared:media  │       │ :shared:session ││ :mirrorserver  │
-└────────┬────────┘└───────┬────────┘       └────────┬────────┘└────────────────┘
-         │                 │                         │
-         └─────────────────┼─────────────────────────┘
+│ :shared:catalog ││ :shared:media  │       │ :shared:session ││  :shared:ui    │
+└────────┬────────┘└───────┬────────┘       └────────┬────────┘└───────┬────────┘
+         │                 │                         │                 │
+         └─────────────────┼─────────────────────────┴─────────────────┘
                            │
-                  ┌────────▼────────┐
-                  │  :shared:core   │
-                  └─────────────────┘
+                  ┌────────▼────────┐       ┌─────────────────┐
+                  │  :shared:core   │       │ :mirrorserver   │
+                  └─────────────────┘       └─────────────────┘
 ```
 
 ### Module Responsibilities
@@ -46,7 +46,8 @@ Megingiard is structured as a **Feature-First Modular Architecture** split acros
    - **`:companion:domain`** — Companion business logic, device managers, input injection facades (Touchpad, MacroPad, Keyboard, Mirror, Privd).
    - **`:gamefocus:domain`** — Standalone launcher domain logic and ROM launcher implementations (`RetroArchLauncher`, `GameNativeLauncher`).
 
-3. **Shared Domain & Core Modules**
+3. **Shared UI, Domain & Core Modules**
+   - **`:shared:ui`** — App-wide design system tokens, themes (`AppColors`, `AppTheme`), modal dialogs (`AppModalDialog`), overlay modifiers, button glyphs (`GamePadButton`), and Material Symbol font resources.
    - **`:shared:catalog`** — Installed app index, ROM file scanning, system definitions (`InstalledAppsManager`, `RomManager`, `DisplayDetector`, `RomLauncherRegistry`).
    - **`:shared:media`** — External artwork fetchers, HTTP clients, and caching layers (`SteamGridDbClient`).
    - **`:shared:session`** — Active game detection engines (`EmulatorDetectionFunnel`, `GameNativeDetector`, `RetroArchDetector`, `Pcsx2AndroidDetector`, `YuzuDetector`, `PpssppDetector`).
