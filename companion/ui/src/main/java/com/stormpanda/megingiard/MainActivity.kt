@@ -220,6 +220,13 @@ class MainActivity : ComponentActivity() {
         val currentDisplayId = display?.displayId ?: Display.DEFAULT_DISPLAY
         val isValid = DisplayDetector.isValidScreen(currentDisplayId)
         AppStateManager.setOnValidScreen(isValid)
+        AppStateManager.setActivityResumed(true)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        AppLog.i(TAG, "onStop")
+        AppStateManager.setActivityResumed(false)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -396,27 +403,6 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
-
-            val lifecycleOwner = LocalLifecycleOwner.current
-            LaunchedEffect(lifecycleOwner) {
-                val observer =
-                    LifecycleEventObserver { _, event ->
-                        when (event) {
-                            Lifecycle.Event.ON_RESUME -> {
-                                AppLog.i(TAG, "ON_RESUME isValid=${AppStateManager.isOnValidScreen.value}")
-                                AppStateManager.setActivityResumed(true)
-                            }
-
-                            Lifecycle.Event.ON_STOP -> {
-                                AppLog.i(TAG, "ON_STOP")
-                                AppStateManager.setActivityResumed(false)
-                            }
-
-                            else -> {}
-                        }
-                    }
-                lifecycleOwner.lifecycle.addObserver(observer)
-            }
 
             // Synchronous display evaluation gets correct value on frame 0
             val context = LocalContext.current

@@ -290,7 +290,7 @@ internal fun PadSurface(
 
     // Create hit-test engine with density-aware dp→px converter and haptic callback
     val engine =
-        remember(profile, layout) {
+        remember(viewModel, density, vibrator) {
             viewModel.createHitTestEngine(
                 buttonUnitDpToPx = { dpValue -> with(density) { dpValue.dp.toPx() } },
                 onHapticFeedback = { buttonId, strength, customDurationMs, customAmplitude, magnitude ->
