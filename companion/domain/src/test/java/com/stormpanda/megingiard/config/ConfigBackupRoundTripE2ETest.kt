@@ -65,7 +65,7 @@ class ConfigBackupRoundTripE2ETest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         context = RuntimeEnvironment.getApplication()
-        SettingsManager.init(context)
+        SettingsManager.resetForTesting(context)
 
         tempFile = File(context.cacheDir, "test_export_${UUID.randomUUID()}.mgrd")
     }
@@ -80,13 +80,15 @@ class ConfigBackupRoundTripE2ETest {
 
     @Test
     fun testFullBackupExportAndRestoreRoundTripE2E() =
-        runTest {
+        runTest(testDispatcher) {
             // 1. Setup rich settings state
             SettingsManager.setThemeMode(ThemeMode.VALHALLA)
             SettingsManager.setAccentColor(0xFF11AAFF.toInt())
             SettingsManager.setSteamGridDbApiToken("sgdb_e2e_token_987654")
             SettingsManager.setOverlayAtBottom(true)
             SettingsManager.setOverlayFadeOut(true)
+            testScheduler.advanceUntilIdle()
+            Thread.sleep(100)
 
             // 2. Setup rich MacroPad profile state with layouts, buttons, macros, and background images
             val macro1 =
@@ -185,6 +187,8 @@ class ConfigBackupRoundTripE2ETest {
             SettingsManager.setSteamGridDbApiToken("")
             SettingsManager.setOverlayAtBottom(false)
             SettingsManager.setOverlayFadeOut(false)
+            testScheduler.advanceUntilIdle()
+            Thread.sleep(100)
             MacroPadState.loadFrom(
                 listOf(
                     PadProfile(
@@ -203,6 +207,8 @@ class ConfigBackupRoundTripE2ETest {
 
             // 7. Apply import
             ConfigManager.applyImport(context, parsedExport, extractedImages)
+            testScheduler.advanceUntilIdle()
+            Thread.sleep(100)
 
             // 8. Verify all settings and profiles are restored
             assertEquals(ThemeMode.VALHALLA, SettingsManager.themeMode.value)
@@ -230,7 +236,7 @@ class ConfigBackupRoundTripE2ETest {
 
     @Test
     fun testSingleProfileExportAndImportE2E() =
-        runTest {
+        runTest(testDispatcher) {
             // 1. Prepare single profile to share
             val macro =
                 Macro(

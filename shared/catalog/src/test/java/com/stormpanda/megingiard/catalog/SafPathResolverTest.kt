@@ -43,5 +43,27 @@ class SafPathResolverTest {
         assertEquals("Super Mario World", SafPathResolver.deriveGameTitle("/storage/emulated/0/ROMs/snes/Super Mario World.sfc"))
         assertEquals("Chrono Trigger", SafPathResolver.deriveGameTitle("Chrono Trigger.sfc"))
         assertNotNull(SafPathResolver.deriveGameTitle("/path/to/game.iso"))
+
+        // derive with content URI and rawUri
+        val contentTitle =
+            SafPathResolver.deriveGameTitle(
+                romPath = "content://com.android.externalstorage.documents/document/primary%3AGames%2FMetroid.gba",
+                rawUri = "content://com.android.externalstorage.documents/document/primary%3AGames%2FMetroid.gba",
+            )
+        assertEquals("Metroid", contentTitle)
+
+        // derive with RomManager catalog match
+        val dummyRomApp =
+            InstalledAppInfo(
+                packageName = "rom.snes.smw",
+                activityName = "MainActivity",
+                label = "Super Mario World (Custom Label)",
+                isRom = true,
+                romPath = "/storage/emulated/0/ROMs/snes/smw.smc",
+            )
+        RomManager.setRomAppsForTesting(listOf(dummyRomApp))
+        val matchedTitle = SafPathResolver.deriveGameTitle("/storage/emulated/0/ROMs/snes/smw.smc")
+        assertEquals("Super Mario World (Custom Label)", matchedTitle)
+        RomManager.setRomAppsForTesting(emptyList())
     }
 }

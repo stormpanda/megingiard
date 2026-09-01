@@ -108,34 +108,44 @@ object MacroPadState {
     private val _activeProfileId = MutableStateFlow<String?>(null)
     val activeProfileId: StateFlow<String?> = _activeProfileId.asStateFlow()
 
-    /** Derived: the currently active profile (falls back to first if ID not found). */
-    val activeProfile: StateFlow<PadProfile?> =
-        combine(_profiles, _activeProfileId) { ps, id ->
-            ps.firstOrNull { it.id == id } ?: ps.firstOrNull()
-        }.stateIn(scope, SharingStarted.Eagerly, null)
-
     private val _previewLayout = MutableStateFlow<PadLayout?>(null)
     val previewLayout: StateFlow<PadLayout?> = _previewLayout.asStateFlow()
 
-    /** Derived: the currently active layout within the active profile (or preview layout if set). */
-    val activeLayout: StateFlow<PadLayout?> =
-        combine(activeProfile, _previewLayout) { profile, preview ->
-            if (preview != null) return@combine preview
-            if (profile == null) return@combine null
-            val layoutId = profile.activeLayoutId
-            profile.layouts.firstOrNull { it.id == layoutId }
-                ?: profile.layouts.firstOrNull()
-        }.stateIn(scope, SharingStarted.Eagerly, null)
+    private val _activeProfile = MutableStateFlow<PadProfile?>(null)
+    val activeProfile: StateFlow<PadProfile?> = _activeProfile.asStateFlow()
+
+    private val _activeLayout = MutableStateFlow<PadLayout?>(null)
+    val activeLayout: StateFlow<PadLayout?> = _activeLayout.asStateFlow()
+
+    private fun recomputeActiveState() {
+        val ps = _profiles.value
+        val profId = _activeProfileId.value
+        val prof = ps.firstOrNull { it.id == profId } ?: ps.firstOrNull()
+        _activeProfile.value = prof
+
+        val preview = _previewLayout.value
+        _activeLayout.value =
+            if (preview != null) {
+                preview
+            } else if (prof == null) {
+                null
+            } else {
+                val layId = prof.activeLayoutId
+                prof.layouts.firstOrNull { it.id == layId } ?: prof.layouts.firstOrNull()
+            }
+    }
 
     fun setPreviewLayout(layout: PadLayout?) {
         AppLog.d(TAG, "setPreviewLayout(${layout?.id}, name='${layout?.name}')")
         _previewLayout.value = layout
+        recomputeActiveState()
     }
 
     fun clearPreviewLayout() {
         AppLog.d(TAG, "clearPreviewLayout()")
         _previewLayout.value = null
         _isCroppingBackground.value = false
+        recomputeActiveState()
     }
 
     fun setPreviewButton(button: PadButton?) {
@@ -169,6 +179,7 @@ object MacroPadState {
                 bgImageOffsetX = offsetX,
                 bgImageOffsetY = offsetY,
             )
+        recomputeActiveState()
     }
 
     private val _selectedButtonId = MutableStateFlow<String?>(null)
@@ -357,6 +368,7 @@ object MacroPadState {
                 activeProfileId
             }
         _activeProfileId.value = resolvedActiveId
+        recomputeActiveState()
 
         AppLog.d(TAG, "loadFrom: ${withFlags.size} profiles, activeId=$resolvedActiveId, needsSave=$needsSave")
         if (needsSave) MacroPadSettings.saveMacroPadData()
@@ -377,6 +389,7 @@ object MacroPadState {
         AppLog.d(TAG, "addProfile id=${normalizedProfile.id} name='${normalizedProfile.name}'")
         _profiles.value = _profiles.value + normalizedProfile
         if (_activeProfileId.value == null) _activeProfileId.value = normalizedProfile.id
+        recomputeActiveState()
         MacroPadSettings.saveMacroPadData()
     }
 
@@ -384,6 +397,7 @@ object MacroPadState {
         val synced = profile.withSyncedDeviceFlags()
         AppLog.d(TAG, "updateProfile id=${synced.id} (kb=${synced.enableKeyboard} gp=${synced.enableGamepad} ms=${synced.enableMouse})")
         _profiles.value = _profiles.value.map { if (it.id == synced.id) synced else it }
+        recomputeActiveState()
         MacroPadSettings.saveMacroPadData()
     }
 
@@ -393,6 +407,7 @@ object MacroPadState {
         if (_activeProfileId.value == profileId) {
             _activeProfileId.value = remaining.firstOrNull()?.id
         }
+        recomputeActiveState()
         AppLog.d(TAG, "deleteProfile id=$profileId → activeId=${_activeProfileId.value}")
         MacroPadSettings.saveMacroPadData()
     }
@@ -425,6 +440,7 @@ object MacroPadState {
             _profiles.value.map {
                 if (it.id == profileId) it.copy(name = uniqueName, association = association) else it
             }
+        recomputeActiveState()
         MacroPadSettings.saveMacroPadData()
     }
 
@@ -432,6 +448,7 @@ object MacroPadState {
         AppLog.i(TAG, "setActiveProfileId: $id")
         _previewLayout.value = null
         _activeProfileId.value = id
+        recomputeActiveState()
         MacroPadSettings.saveMacroPadData()
     }
 
@@ -448,6 +465,7 @@ object MacroPadState {
             )
         _profiles.value = listOf(defaultProfile)
         _activeProfileId.value = defaultId
+        recomputeActiveState()
         AppLog.i(TAG, "restoreDefaults: created default profile $defaultId")
         MacroPadSettings.saveMacroPadData()
     }
@@ -455,6 +473,7 @@ object MacroPadState {
     fun reorderProfiles(newOrder: List<PadProfile>) {
         AppLog.d(TAG, "reorderProfiles count=${newOrder.size}")
         _profiles.value = newOrder
+        recomputeActiveState()
         MacroPadSettings.saveMacroPadData()
     }
 
@@ -507,6 +526,7 @@ object MacroPadState {
 
         AppLog.d(TAG, "duplicateProfile originalId=$profileId newId=$newProfileId name='$uniqueName'")
         _profiles.value = _profiles.value + duplicated
+        recomputeActiveState()
         MacroPadSettings.saveMacroPadData()
         return layoutMapping
     }
@@ -855,6 +875,7 @@ object MacroPadState {
             }
         if (changed) {
             _profiles.value = updatedProfiles
+            recomputeActiveState()
             MacroPadSettings.saveMacroPadData()
         }
         return changed

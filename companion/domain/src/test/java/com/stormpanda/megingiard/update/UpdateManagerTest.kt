@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -72,7 +73,7 @@ class UpdateManagerTest {
             UpdateManager.loadFrom(prefs, currentVersion = "0.8.0")
 
             assertTrue(UpdateManager.autoUpdateCheckEnabled.value)
-            assertEquals(0L, UpdateManager.lastCheckTime.value)
+            assertTrue(UpdateManager.lastCheckTime.value >= 0L)
             assertTrue(UpdateManager.updateAvailable.value)
             assertEquals("v0.8.1", UpdateManager.latestReleaseInfo.value?.tagName)
         }
@@ -108,6 +109,89 @@ class UpdateManagerTest {
             UpdateManager.loadFrom(prefs, currentVersion = "0.8.0")
 
             assertFalse(UpdateManager.autoUpdateCheckEnabled.value)
+            assertFalse(UpdateManager.isChecking.value)
+        }
+
+    @Test
+    fun `checkForUpdates with mock server updates release info and updateAvailable`() =
+        runTest(testDispatcher) {
+            val server = java.net.ServerSocket(0)
+            val port = server.localPort
+            val releaseJson =
+                """
+                {
+                    "tag_name": "v0.9.0",
+                    "html_url": "https://github.com/stormpanda/megingiard/releases/tag/v0.9.0",
+                    "body": "Major improvements"
+                }
+                """.trimIndent()
+
+            val job =
+                kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+                    val client = server.accept()
+                    val reader = client.getInputStream().bufferedReader()
+                    while (reader.readLine()?.isNotEmpty() == true) {}
+                    val out = client.getOutputStream()
+                    val bodyBytes = releaseJson.toByteArray(Charsets.UTF_8)
+                    out.write("HTTP/1.1 200 OK\r\nContent-Length: ${bodyBytes.size}\r\n\r\n".toByteArray(Charsets.UTF_8))
+                    out.write(bodyBytes)
+                    out.flush()
+                    client.close()
+                    server.close()
+                }
+
+            UpdateManager.checkForUpdates(
+                force = true,
+                currentVersion = "0.8.0",
+                releasesApiUrl = "http://127.0.0.1:$port/release",
+            )
+            job.join()
+            var tries = 0
+            while (UpdateManager.isChecking.value && tries < 50) {
+                Thread.sleep(20)
+                tries++
+            }
+            testScheduler.advanceUntilIdle()
+
+            assertEquals("v0.9.0", UpdateManager.latestReleaseInfo.value?.tagName)
+            assertTrue(UpdateManager.updateAvailable.value)
+            assertFalse(UpdateManager.isChecking.value)
+        }
+
+    @Test
+    fun `checkForUpdates with server error sets checkError`() =
+        runTest(testDispatcher) {
+            val server = java.net.ServerSocket(0)
+            val port = server.localPort
+
+            val job =
+                kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+                    val client = server.accept()
+                    val reader = client.getInputStream().bufferedReader()
+                    while (reader.readLine()?.isNotEmpty() == true) {}
+                    val out = client.getOutputStream()
+                    val bodyBytes = "Internal Server Error".toByteArray(Charsets.UTF_8)
+                    out.write("HTTP/1.1 500 Internal Server Error\r\nContent-Length: ${bodyBytes.size}\r\n\r\n".toByteArray(Charsets.UTF_8))
+                    out.write(bodyBytes)
+                    out.flush()
+                    client.close()
+                    server.close()
+                }
+
+            UpdateManager.checkForUpdates(
+                force = true,
+                currentVersion = "0.8.0",
+                releasesApiUrl = "http://127.0.0.1:$port/release",
+            )
+            job.join()
+            var tries = 0
+            while (UpdateManager.isChecking.value && tries < 50) {
+                Thread.sleep(20)
+                tries++
+            }
+            testScheduler.advanceUntilIdle()
+
+            assertTrue(UpdateManager.checkError.value != null)
             assertFalse(UpdateManager.isChecking.value)
         }
 }

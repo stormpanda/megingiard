@@ -11,19 +11,45 @@ import com.stormpanda.megingiard.privd.PrivdBootstrapper
 import com.stormpanda.megingiard.privd.PrivdConnectionState
 import com.stormpanda.megingiard.privd.PrivdError
 import com.stormpanda.megingiard.privd.PrivdFeature
+import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import javax.net.ssl.SSLContext
 
 private const val EV_KEY = 1
 private const val EV_ABS = 3
 private const val ABS_HAT0X = 16
 
+@OptIn(ExperimentalCoroutinesApi::class)
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [33])
 class PrivdSubsystemTest {
+    private val testDispatcher = UnconfinedTestDispatcher()
+
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(testDispatcher)
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
     private fun evKey(
         code: Int,
         value: Int,
@@ -219,5 +245,30 @@ class PrivdSubsystemTest {
         PrivdAdbConnectionManager.flushLibaDBCache()
 
         assertNull(field.get(null))
+    }
+
+    @Test
+    fun `PrivdManager state transitions and disconnect`() {
+        PrivdManager.setStateForTesting(PrivdState.OFF)
+        assertEquals(PrivdState.OFF, PrivdManager.state.value)
+
+        PrivdManager.reportBootstrapStart()
+        assertEquals(PrivdState.BOOTSTRAPPING, PrivdManager.state.value)
+        assertNull(PrivdManager.lastError.value)
+
+        PrivdManager.reportBootstrapFailure(PrivdError.DAEMON_UNREACHABLE)
+        assertEquals(PrivdState.FAILED, PrivdManager.state.value)
+        assertEquals(PrivdError.DAEMON_UNREACHABLE, PrivdManager.lastError.value)
+
+        PrivdManager.disconnect()
+        assertEquals(PrivdState.OFF, PrivdManager.state.value)
+        assertNull(PrivdManager.lastError.value)
+        assertTrue(PrivdManager.isManuallyDisconnected)
+    }
+
+    @Test
+    fun `PhysicalGamepadRecordingManager cancelRecording resets state to Idle`() {
+        PhysicalGamepadRecordingManager.cancelRecording()
+        assertEquals(com.stormpanda.megingiard.macropad.GamepadRecordingState.Idle, PhysicalGamepadRecordingManager.state.value)
     }
 }

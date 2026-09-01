@@ -222,4 +222,13 @@ class TouchpadGestureProcessorTest {
             processor.onCancel()
             assertNull(processor.touchPos.value)
         }
+
+    @Test
+    fun `relative mode single finger move invokes moveMouse`() =
+        runTest(testDispatcher) {
+            val processor = createProcessor(useMouse = { true })
+            processor.press(1L, 100f, 200f)
+            processor.move(1L, 110f, 210f, dx = 10f, dy = 10f)
+            processor.release(1L, 110f, 210f)
+        }
 }

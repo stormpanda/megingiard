@@ -1,29 +1,44 @@
 package com.stormpanda.megingiard.settings
 
+import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.config.InternalBackup
+import com.stormpanda.megingiard.config.MegingiardExport
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
+import kotlinx.serialization.json.JsonPrimitive
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.annotation.Config
 
 @OptIn(ExperimentalCoroutinesApi::class)
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [33])
 class SettingsManagerTest {
     private val testDispatcher = UnconfinedTestDispatcher()
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
+        SettingsManager.scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + testDispatcher)
+        SettingsManager.resetForTesting(RuntimeEnvironment.getApplication())
+        testDispatcher.scheduler.advanceUntilIdle()
         SettingsManager.resetAllTutorials()
+        testDispatcher.scheduler.advanceUntilIdle()
     }
 
     @After
     fun tearDown() {
+        SettingsManager.scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
         Dispatchers.resetMain()
     }
 
@@ -59,5 +74,40 @@ class SettingsManagerTest {
         SettingsManager.setAccentColor(testPresetColor)
         assertEquals(testPresetColor, SettingsManager.accentColor.value)
         assertEquals(testCustomColor, SettingsManager.customAccentColor.value)
+    }
+
+    @Test
+    fun testThemeModeAndOverlaySetters() {
+        SettingsManager.setThemeMode(ThemeMode.VALHALLA)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(ThemeMode.VALHALLA, SettingsManager.themeMode.value)
+
+        SettingsManager.setOverlayAtBottom(true)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue(SettingsManager.overlayAtBottom.value)
+
+        SettingsManager.setOverlayFadeOut(true)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue(SettingsManager.overlayFadeOut.value)
+
+        SettingsManager.setExcludeFromRecents(true)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue(SettingsManager.excludeFromRecents.value)
+    }
+
+    @Test
+    fun testSteamGridDbTokenAndAppLanguageAndLogLevel() {
+        SettingsManager.setSteamGridDbApiToken("test_token_sgdb")
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals("test_token_sgdb", SettingsManager.steamGridDbApiToken.value)
+
+        SettingsManager.setAppLanguage(AppLanguage.DE)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(AppLanguage.DE, SettingsManager.appLanguage.value)
+
+        SettingsManager.setLogLevel(AppLog.Level.DEBUG)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(AppLog.Level.DEBUG, SettingsManager.logLevel.value)
+        assertEquals(AppLog.Level.DEBUG, AppLog.level)
     }
 }

@@ -786,4 +786,128 @@ class MacroPadStateTest {
         assertEquals(1, updatedProfile!!.layouts.size)
         assertEquals("l1", updatedProfile.layouts.first().id)
     }
+
+    @Test
+    fun `nextLayout and previousLayout cycle through layouts correctly`() {
+        val l1 = testLayout(id = "l1", name = "Layout 1")
+        val l2 = testLayout(id = "l2", name = "Layout 2")
+        val l3 = testLayout(id = "l3", name = "Layout 3")
+        loadProfiles(testProfile(id = "p1", layouts = listOf(l1, l2, l3), activeLayoutId = "l1"))
+
+        assertEquals("l1", MacroPadState.activeLayout.value?.id)
+
+        MacroPadState.nextLayout()
+        assertEquals("l2", MacroPadState.activeLayout.value?.id)
+
+        MacroPadState.nextLayout()
+        assertEquals("l3", MacroPadState.activeLayout.value?.id)
+
+        MacroPadState.nextLayout()
+        assertEquals("l1", MacroPadState.activeLayout.value?.id)
+
+        MacroPadState.previousLayout()
+        assertEquals("l3", MacroPadState.activeLayout.value?.id)
+
+        MacroPadState.previousLayout()
+        assertEquals("l2", MacroPadState.activeLayout.value?.id)
+    }
+
+    @Test
+    fun `reorderProfiles, reorderLayouts, and reorderMacros update state correctly`() {
+        val m1 = Macro(id = "m1", name = "Macro 1")
+        val m2 = Macro(id = "m2", name = "Macro 2")
+        val l1 = testLayout(id = "l1", name = "Layout 1")
+        val l2 = testLayout(id = "l2", name = "Layout 2")
+        val p1 = testProfile(id = "p1", name = "P1", layouts = listOf(l1, l2), macros = listOf(m1, m2))
+        val p2 = testProfile(id = "p2", name = "P2")
+        loadProfiles(p1, p2)
+
+        MacroPadState.reorderProfiles(listOf(p2, p1))
+        assertEquals(listOf("p2", "p1"), MacroPadState.profiles.value.map { it.id })
+
+        MacroPadState.reorderLayouts(listOf(l2, l1))
+        assertEquals(
+            listOf("l2", "l1"),
+            MacroPadState.activeProfile.value
+                ?.layouts
+                ?.map { it.id },
+        )
+
+        MacroPadState.reorderMacros(listOf(m2, m1))
+        assertEquals(
+            listOf("m2", "m1"),
+            MacroPadState.activeProfile.value
+                ?.macros
+                ?.map { it.id },
+        )
+    }
+
+    @Test
+    fun `copyMacroToActiveProfile and copyMacroToProfile duplicate macros with new IDs`() {
+        val m1 = Macro(id = "m1", name = "MyMacro")
+        val p1 = testProfile(id = "p1", macros = listOf(m1))
+        val p2 = testProfile(id = "p2", macros = emptyList())
+        loadProfiles(p1, p2)
+
+        MacroPadState.setActiveProfileId("p1")
+        MacroPadState.copyMacroToActiveProfile(m1)
+        val p1Macros = MacroPadState.activeProfile.value?.macros ?: emptyList()
+        assertEquals(2, p1Macros.size)
+        assertTrue(p1Macros.any { it.name.startsWith("MyMacro") && it.id != "m1" })
+
+        MacroPadState.copyMacroToProfile(m1, "p2")
+        val p2Profile = MacroPadState.profiles.value.first { it.id == "p2" }
+        assertEquals(1, p2Profile.macros.size)
+        assertEquals("MyMacro", p2Profile.macros.first().name)
+        assertNotEquals("m1", p2Profile.macros.first().id)
+    }
+
+    @Test
+    fun `setPreviewButton adds new button or updates existing button in preview`() {
+        val b1 = testButton(id = "b1", label = "B1")
+        val l1 = testLayout(id = "l1", buttons = listOf(b1))
+        loadProfiles(testProfile(id = "p1", layouts = listOf(l1), activeLayoutId = "l1"))
+
+        // Update existing button
+        val updatedB1 = b1.copy(label = "B1 Updated")
+        MacroPadState.setPreviewButton(updatedB1)
+        assertEquals(
+            "B1 Updated",
+            MacroPadState.previewLayout.value
+                ?.buttons
+                ?.first { it.id == "b1" }
+                ?.label,
+        )
+
+        // Add new button
+        val b2 = testButton(id = "b2", label = "B2")
+        MacroPadState.setPreviewButton(b2)
+        assertEquals(
+            2,
+            MacroPadState.previewLayout.value
+                ?.buttons
+                ?.size,
+        )
+
+        // Null button clears preview
+        MacroPadState.setPreviewButton(null)
+        assertEquals(null, MacroPadState.previewLayout.value)
+    }
+
+    @Test
+    fun `editing mode and grid mode state setters`() {
+        MacroPadState.setEditingButtonPositions(true)
+        assertTrue(MacroPadState.isEditingButtonPositions.value)
+        MacroPadState.setSelectedButtonId("btn-test")
+        assertEquals("btn-test", MacroPadState.selectedButtonId.value)
+
+        MacroPadState.setEditingButtonPositions(false)
+        assertFalse(MacroPadState.isEditingButtonPositions.value)
+        assertEquals(null, MacroPadState.selectedButtonId.value)
+
+        MacroPadState.setGridMode(GridMode.RECTANGULAR)
+        assertEquals(GridMode.RECTANGULAR, MacroPadState.gridMode.value)
+        MacroPadState.setGridMode(GridMode.OFF)
+        assertEquals(GridMode.OFF, MacroPadState.gridMode.value)
+    }
 }

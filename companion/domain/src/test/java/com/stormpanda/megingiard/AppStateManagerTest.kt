@@ -1054,4 +1054,55 @@ class AppStateManagerTest {
             AppStateManager.closePrimaryModal()
             assertFalse(AppStateManager.isMirrorEditorBackgroundHidden.value)
         }
+
+    @Test
+    fun `requestAppLaunch and consumeAppLaunchRequest`() =
+        runTest {
+            AppStateManager.requestAppLaunch("com.test.app", 100f, 200f)
+            val req = AppStateManager.pendingAppLaunchRequest.value
+            assertEquals("com.test.app", req?.packageName)
+            assertEquals(100f, req?.touchX)
+            assertEquals(200f, req?.touchY)
+
+            AppStateManager.consumeAppLaunchRequest()
+            assertEquals(null, AppStateManager.pendingAppLaunchRequest.value)
+        }
+
+    @Test
+    fun `requestMirrorStart and requestMirrorStop and requestShutOff`() =
+        runTest {
+            AppStateManager.requestMirrorStart()
+            assertTrue(AppStateManager.mirrorStartRequested.value)
+            AppStateManager.consumeMirrorStartRequest()
+            assertFalse(AppStateManager.mirrorStartRequested.value)
+
+            AppStateManager.requestMirrorStop()
+            assertTrue(AppStateManager.mirrorStopRequested.value)
+            AppStateManager.consumeMirrorStopRequest()
+            assertFalse(AppStateManager.mirrorStopRequested.value)
+
+            AppStateManager.requestShutOff()
+            assertTrue(AppStateManager.shutOffRequested.value)
+            AppStateManager.consumeShutOffRequest()
+            assertFalse(AppStateManager.shutOffRequested.value)
+        }
+
+    @Test
+    fun `activity lifecycle and screen state setters`() =
+        runTest {
+            AppStateManager.setActivityResumed(false)
+            assertFalse(AppStateManager.isActivityResumed.value)
+            AppStateManager.setActivityResumed(true)
+            assertTrue(AppStateManager.isActivityResumed.value)
+
+            AppStateManager.setOnValidScreen(false)
+            assertFalse(AppStateManager.isOnValidScreen.value)
+            AppStateManager.setOnValidScreen(true)
+            assertTrue(AppStateManager.isOnValidScreen.value)
+
+            AppStateManager.setPromptInFlight(true)
+            assertTrue(AppStateManager.promptInFlight.value)
+            AppStateManager.setPromptInFlight(false)
+            assertFalse(AppStateManager.promptInFlight.value)
+        }
 }

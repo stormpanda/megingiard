@@ -64,6 +64,16 @@ object InstalledAppsManager {
     private val _lastUsed = MutableStateFlow<List<String>>(emptyList())
     val lastUsed: StateFlow<List<String>> = _lastUsed.asStateFlow()
 
+    internal fun resetForTesting() {
+        installedAndroidAppsFlow.value = emptyList()
+        _favorites.value = emptySet()
+        _hiddenApps.value = emptySet()
+        _lastUsed.value = emptyList()
+        synchronized(scrapedPackages) { scrapedPackages.clear() }
+        isScrapedPackagesLoaded = false
+        isSettingsObserverRegistered = false
+    }
+
     private fun loadStringList(
         context: Context,
         filename: String,

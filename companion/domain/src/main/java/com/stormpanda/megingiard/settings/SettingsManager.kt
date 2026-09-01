@@ -66,7 +66,7 @@ object SettingsManager {
 
     // App-lifetime scope: intentionally never cancelled — this singleton lives for the
     // duration of the process. Cancellation is handled by process termination.
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    internal var scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private lateinit var dataStore: DataStore<Preferences>
     private var initialized = false
 
@@ -119,6 +119,13 @@ object SettingsManager {
     // Logging
     private val _logLevel = MutableStateFlow(AppLog.Level.WARN)
     val logLevel: StateFlow<AppLog.Level> = _logLevel.asStateFlow()
+
+    internal fun resetForTesting(context: Context? = null) {
+        initialized = false
+        if (context != null) {
+            init(context)
+        }
+    }
 
     fun init(context: Context) {
         if (initialized) return

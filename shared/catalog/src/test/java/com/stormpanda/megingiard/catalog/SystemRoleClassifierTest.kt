@@ -2,10 +2,17 @@ package com.stormpanda.megingiard.catalog
 
 import org.junit.After
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.annotation.Config
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [33])
 class SystemRoleClassifierTest {
     @Before
     fun setUp() {
@@ -15,6 +22,13 @@ class SystemRoleClassifierTest {
     @After
     fun tearDown() {
         SystemRoleClassifier.resetForTesting()
+    }
+
+    @Test
+    fun testInitAndRefreshWithContext() {
+        val context = RuntimeEnvironment.getApplication()
+        SystemRoleClassifier.init(context)
+        assertNotNull(SystemRoleClassifier.launcherPackages.value)
     }
 
     @Test

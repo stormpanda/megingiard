@@ -36,11 +36,19 @@ class TouchpadSettingsTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
+        TouchpadSettings.loadFrom(
+            androidx.datastore.preferences.core
+                .emptyPreferences(),
+        )
         tempFile = File.createTempFile("touchpad_settings_test", ".preferences_pb").apply { deleteOnExit() }
     }
 
     @After
     fun tearDown() {
+        TouchpadSettings.loadFrom(
+            androidx.datastore.preferences.core
+                .emptyPreferences(),
+        )
         Dispatchers.resetMain()
         tempFile.delete()
     }

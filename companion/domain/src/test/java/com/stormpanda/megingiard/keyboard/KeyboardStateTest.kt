@@ -147,4 +147,36 @@ class KeyboardStateTest {
         assertState("caps", ModifierState.INACTIVE)
         assertEquals(listOf(LinuxKeycodes.KEY_LEFTSHIFT), up2)
     }
+
+    @Test
+    fun testActiveModifierKeycodesFor_handlesKeyDef() {
+        val keyDef = KeyDef("a", "a", LinuxKeycodes.KEY_A, type = KeyType.NORMAL)
+        val layout = listOf(listOf(keyDef))
+
+        KeyboardState.onModifierTouchDown("ctrl")
+        KeyboardState.onModifierTouchUp("ctrl", LinuxKeycodes.KEY_LEFTCTRL)
+
+        val codes = KeyboardState.activeModifierKeycodesFor(keyDef, layout)
+        assertTrue(LinuxKeycodes.KEY_LEFTCTRL in codes)
+    }
+
+    @Test
+    fun testModifierQueries() {
+        KeyboardState.onModifierTouchDown("ctrl")
+        KeyboardState.onModifierTouchUp("ctrl", LinuxKeycodes.KEY_LEFTCTRL)
+        assertEquals(ModifierState.STICKY, KeyboardState.stateFor("ctrl").value)
+
+        KeyboardState.onModifierTouchDown("alt")
+        KeyboardState.onModifierTouchUp("alt", LinuxKeycodes.KEY_LEFTALT)
+        assertEquals(ModifierState.STICKY, KeyboardState.stateFor("alt").value)
+
+        KeyboardState.onModifierTouchDown("meta")
+        KeyboardState.onModifierTouchUp("meta", LinuxKeycodes.KEY_LEFTMETA)
+        assertEquals(ModifierState.STICKY, KeyboardState.stateFor("meta").value)
+
+        KeyboardState.reset()
+        assertEquals(ModifierState.INACTIVE, KeyboardState.stateFor("ctrl").value)
+        assertEquals(ModifierState.INACTIVE, KeyboardState.stateFor("alt").value)
+        assertEquals(ModifierState.INACTIVE, KeyboardState.stateFor("meta").value)
+    }
 }

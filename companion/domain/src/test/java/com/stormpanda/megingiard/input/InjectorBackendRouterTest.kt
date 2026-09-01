@@ -45,4 +45,21 @@ class InjectorBackendRouterTest {
         assertFalse(fallbackChecked)
         assertFalse(isRunning)
     }
+
+    @Test
+    fun testDispatchExecutesCorrectBranch() {
+        val router = InjectorBackendRouter("TestTag")
+        router.resolveBackend()
+
+        var privdRan = false
+        var shellRan = false
+
+        router.dispatch(
+            privdAction = { privdRan = true },
+            shellAction = { shellRan = true },
+        )
+
+        assertFalse(privdRan)
+        assertTrue(shellRan)
+    }
 }

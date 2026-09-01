@@ -53,6 +53,11 @@ object RomManager {
     private val _romApps = MutableStateFlow<List<InstalledAppInfo>>(emptyList())
     val romApps: StateFlow<List<InstalledAppInfo>> = _romApps.asStateFlow()
 
+    @androidx.annotation.VisibleForTesting
+    fun setRomAppsForTesting(apps: List<InstalledAppInfo>) {
+        _romApps.value = apps
+    }
+
     private val romCleanedNames = mutableMapOf<String, String>()
 
     private inline fun <reified T> loadJsonFile(

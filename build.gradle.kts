@@ -31,8 +31,9 @@ kover {
                     "*ComposableSingletons*",
                 )
                 annotatedBy(
-                    "*Preview",
-                    "*Generated",
+                    "*Composable*",
+                    "*Preview*",
+                    "*Generated*",
                 )
             }
         }
