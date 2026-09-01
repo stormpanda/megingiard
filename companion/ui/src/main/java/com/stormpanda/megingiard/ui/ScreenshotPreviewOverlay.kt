@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,6 +30,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import kotlinx.coroutines.delay
@@ -68,7 +68,7 @@ private const val SS_FADE_OUT_DURATION_MS = 400
 
 @Composable
 fun ScreenshotPreviewOverlay(modifier: Modifier = Modifier) {
-    val previewBitmap by ScreenCaptureManager.screenshotPreview.collectAsState()
+    val previewBitmap by ScreenCaptureManager.screenshotPreview.collectAsStateWithLifecycle()
     var isPreviewVisible by remember { mutableStateOf(false) }
     val sweepOffset = remember { Animatable(SS_GLARE_START_OFFSET) }
 

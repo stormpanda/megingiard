@@ -65,7 +65,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -81,6 +80,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
@@ -162,43 +162,43 @@ fun GlobalSettingsScreen(
     onBack: () -> Unit,
     viewModel: GlobalSettingsViewModel = viewModel(),
 ) {
-    val accentColorArgb by viewModel.accentColor.collectAsState()
+    val accentColorArgb by viewModel.accentColor.collectAsStateWithLifecycle()
     val accentColor = Color(accentColorArgb)
-    val customAccentColorArgb by viewModel.customAccentColor.collectAsState()
+    val customAccentColorArgb by viewModel.customAccentColor.collectAsStateWithLifecycle()
     val customAccentColor = Color(customAccentColorArgb)
-    val overlayAtBottom by viewModel.overlayAtBottom.collectAsState()
-    val overlayFadeOut by viewModel.overlayFadeOut.collectAsState()
-    val themeMode by viewModel.themeMode.collectAsState()
-    val appLanguage by viewModel.appLanguage.collectAsState()
-    val logLevel by viewModel.logLevel.collectAsState()
-    val excludeFromRecents by viewModel.excludeFromRecents.collectAsState()
-    val gamepadSwapFaceButtons by viewModel.gamepadSwapFaceButtons.collectAsState()
-    val privdState by viewModel.privdState.collectAsState()
-    val deadzoneLeft by viewModel.privdDeadzoneLeft.collectAsState()
-    val deadzoneRight by viewModel.privdDeadzoneRight.collectAsState()
-    val steamGridDbApiToken by viewModel.steamGridDbApiToken.collectAsState()
-    val steamGridDbTestStatus by viewModel.steamGridDbTestStatus.collectAsState()
-    val internalBackups by viewModel.internalBackups.collectAsState()
+    val overlayAtBottom by viewModel.overlayAtBottom.collectAsStateWithLifecycle()
+    val overlayFadeOut by viewModel.overlayFadeOut.collectAsStateWithLifecycle()
+    val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+    val appLanguage by viewModel.appLanguage.collectAsStateWithLifecycle()
+    val logLevel by viewModel.logLevel.collectAsStateWithLifecycle()
+    val excludeFromRecents by viewModel.excludeFromRecents.collectAsStateWithLifecycle()
+    val gamepadSwapFaceButtons by viewModel.gamepadSwapFaceButtons.collectAsStateWithLifecycle()
+    val privdState by viewModel.privdState.collectAsStateWithLifecycle()
+    val deadzoneLeft by viewModel.privdDeadzoneLeft.collectAsStateWithLifecycle()
+    val deadzoneRight by viewModel.privdDeadzoneRight.collectAsStateWithLifecycle()
+    val steamGridDbApiToken by viewModel.steamGridDbApiToken.collectAsStateWithLifecycle()
+    val steamGridDbTestStatus by viewModel.steamGridDbTestStatus.collectAsStateWithLifecycle()
+    val internalBackups by viewModel.internalBackups.collectAsStateWithLifecycle()
 
-    val autoUpdateCheckEnabled by viewModel.autoUpdateCheckEnabled.collectAsState()
-    val updateAvailable by viewModel.updateAvailable.collectAsState()
-    val latestReleaseInfo by viewModel.latestReleaseInfo.collectAsState()
-    val isCheckingUpdates by viewModel.isCheckingUpdates.collectAsState()
-    val lastUpdateCheckTime by viewModel.lastUpdateCheckTime.collectAsState()
-    val updateCheckError by viewModel.updateCheckError.collectAsState()
+    val autoUpdateCheckEnabled by viewModel.autoUpdateCheckEnabled.collectAsStateWithLifecycle()
+    val updateAvailable by viewModel.updateAvailable.collectAsStateWithLifecycle()
+    val latestReleaseInfo by viewModel.latestReleaseInfo.collectAsStateWithLifecycle()
+    val isCheckingUpdates by viewModel.isCheckingUpdates.collectAsStateWithLifecycle()
+    val lastUpdateCheckTime by viewModel.lastUpdateCheckTime.collectAsStateWithLifecycle()
+    val updateCheckError by viewModel.updateCheckError.collectAsStateWithLifecycle()
 
     val colors = LocalAppColors.current
     val effectiveAccent = colors.accent
 
-    val exportResult by ConfigManager.exportResult.collectAsState()
-    val logReportSaveResult by LogReportManager.saveResult.collectAsState()
+    val exportResult by ConfigManager.exportResult.collectAsStateWithLifecycle()
+    val logReportSaveResult by LogReportManager.saveResult.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
     var subPageStack by rememberSaveable { mutableStateOf<List<SettingsSubPage>>(emptyList()) }
     val currentSubPage = subPageStack.lastOrNull()
     var showImportPreviewDialog by remember { mutableStateOf<MegingiardExport?>(null) }
-    val pendingInAppParsedImport by ConfigManager.pendingInAppParsedImport.collectAsState()
-    val configImportError by ConfigManager.inAppImportError.collectAsState()
+    val pendingInAppParsedImport by ConfigManager.pendingInAppParsedImport.collectAsStateWithLifecycle()
+    val configImportError by ConfigManager.inAppImportError.collectAsStateWithLifecycle()
     val activeImportPreview = showImportPreviewDialog ?: pendingInAppParsedImport
     var lastReviewExport by remember { mutableStateOf<MegingiardExport?>(null) }
     LaunchedEffect(activeImportPreview) {
@@ -217,7 +217,7 @@ fun GlobalSettingsScreen(
         }
     }
     var importError by rememberSaveable { mutableStateOf<String?>(null) }
-    val pendingInAppImportMode by ConfigManager.pendingInAppImportMode.collectAsState()
+    val pendingInAppImportMode by ConfigManager.pendingInAppImportMode.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
     var selectedCategory by remember { mutableStateOf(SettingsCategory.GENERAL) }
 
@@ -245,7 +245,7 @@ fun GlobalSettingsScreen(
     }
 
     val categoryList = remember { SettingsCategory.entries }
-    val activePrimaryModal by AppStateManager.activePrimaryModal.collectAsState()
+    val activePrimaryModal by AppStateManager.activePrimaryModal.collectAsStateWithLifecycle()
 
     LaunchedEffect(activePrimaryModal) {
         val payload = activePrimaryModal?.payload as? PrimaryModalPayload.GlobalSettings
@@ -1106,9 +1106,9 @@ private fun CreateBackupSubPage(onExport: (ExportMetadata, Boolean) -> Unit) {
 @Composable
 private fun ShareProfileSubPage(onExportProfile: (ExportMetadata, PadProfile, Boolean) -> Unit) {
     val context = LocalContext.current
-    val rawProfiles by MacroPadState.profiles.collectAsState()
+    val rawProfiles by MacroPadState.profiles.collectAsStateWithLifecycle()
     val profiles = remember(rawProfiles) { rawProfiles.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name }) }
-    val activeProfile by MacroPadState.activeProfile.collectAsState()
+    val activeProfile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
     var selectedProfile by remember(profiles, activeProfile) {
         mutableStateOf(profiles.firstOrNull { it.id == activeProfile?.id } ?: activeProfile ?: profiles.firstOrNull())
     }

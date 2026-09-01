@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -25,6 +24,7 @@ import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 internal fun KeyboardLayoutGrid(
@@ -390,7 +390,7 @@ private fun KeyboardKey(
     modifier: Modifier = Modifier,
     onBoundsUpdate: (LayoutCoordinates) -> Unit = {},
 ) {
-    val modState by KeyboardState.stateFor(keyDef.id).collectAsState()
+    val modState by KeyboardState.stateFor(keyDef.id).collectAsStateWithLifecycle()
     KeyCap(
         keyDef = keyDef,
         isPressed = isPressed,

@@ -20,13 +20,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
@@ -289,13 +289,13 @@ object PrimaryOverlayManager {
                     }
 
                     setContent {
-                        val themeMode by SettingsManager.themeMode.collectAsState()
-                        val userAccentArgb by SettingsManager.accentColor.collectAsState()
+                        val themeMode by SettingsManager.themeMode.collectAsStateWithLifecycle()
+                        val userAccentArgb by SettingsManager.accentColor.collectAsStateWithLifecycle()
                         val appColors = paletteFor(themeMode, Color(userAccentArgb))
-                        val activeModal by AppStateManager.activePrimaryModal.collectAsState()
-                        val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
+                        val activeModal by AppStateManager.activePrimaryModal.collectAsStateWithLifecycle()
+                        val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsStateWithLifecycle()
 
-                        val appLanguage by SettingsManager.appLanguage.collectAsState()
+                        val appLanguage by SettingsManager.appLanguage.collectAsStateWithLifecycle()
                         val localeContext =
                             remember(appLanguage) {
                                 val locale: Locale =

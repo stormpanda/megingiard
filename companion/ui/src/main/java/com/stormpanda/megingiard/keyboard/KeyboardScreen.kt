@@ -21,7 +21,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -42,6 +41,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
@@ -64,27 +64,27 @@ fun KeyboardScreen(
     val viewModel: KeyboardViewModel = viewModel()
     val context = LocalContext.current
     val density = LocalDensity.current
-    val kbLayoutSetting by viewModel.kbLayout.collectAsState()
+    val kbLayoutSetting by viewModel.kbLayout.collectAsStateWithLifecycle()
     val kbLayout = forcedLayout ?: kbLayoutSetting
-    val kbRepeatEnabled by viewModel.kbRepeatEnabled.collectAsState()
-    val kbTrackpointEnabled by viewModel.kbTrackpointEnabled.collectAsState()
-    val kbFullscreen by viewModel.kbFullscreen.collectAsState()
-    val kbMouseBtnPos by viewModel.kbMouseBtnPos.collectAsState()
-    val isQuickMenuOpen by viewModel.isQuickMenuOpen.collectAsState()
+    val kbRepeatEnabled by viewModel.kbRepeatEnabled.collectAsStateWithLifecycle()
+    val kbTrackpointEnabled by viewModel.kbTrackpointEnabled.collectAsStateWithLifecycle()
+    val kbFullscreen by viewModel.kbFullscreen.collectAsStateWithLifecycle()
+    val kbMouseBtnPos by viewModel.kbMouseBtnPos.collectAsStateWithLifecycle()
+    val isQuickMenuOpen by viewModel.isQuickMenuOpen.collectAsStateWithLifecycle()
     val colors = LocalAppColors.current
     val accentColor = colors.accent
     val controller = viewModel.controller
 
-    val kbTouchpadEnabled by viewModel.kbTouchpadEnabled.collectAsState()
-    val tapToClick by TouchpadSettings.touchpadTapToClick.collectAsState()
-    val twoFingerTap by TouchpadSettings.touchpadTwoFingerTap.collectAsState()
-    val threeFingerTap by TouchpadSettings.touchpadThreeFingerTap.collectAsState()
-    val tapDrag by TouchpadSettings.touchpadTapDrag.collectAsState()
-    val twoFingerScroll by TouchpadSettings.touchpadTwoFingerScroll.collectAsState()
-    val touchpadNaturalScroll by TouchpadSettings.touchpadNaturalScroll.collectAsState()
-    val touchpadScrollSpeed by TouchpadSettings.touchpadScrollSpeed.collectAsState()
-    val touchpadSensitivity by TouchpadSettings.touchpadSensitivity.collectAsState()
-    val touchpadHapticsEnabled by TouchpadSettings.touchpadHapticsEnabled.collectAsState()
+    val kbTouchpadEnabled by viewModel.kbTouchpadEnabled.collectAsStateWithLifecycle()
+    val tapToClick by TouchpadSettings.touchpadTapToClick.collectAsStateWithLifecycle()
+    val twoFingerTap by TouchpadSettings.touchpadTwoFingerTap.collectAsStateWithLifecycle()
+    val threeFingerTap by TouchpadSettings.touchpadThreeFingerTap.collectAsStateWithLifecycle()
+    val tapDrag by TouchpadSettings.touchpadTapDrag.collectAsStateWithLifecycle()
+    val twoFingerScroll by TouchpadSettings.touchpadTwoFingerScroll.collectAsStateWithLifecycle()
+    val touchpadNaturalScroll by TouchpadSettings.touchpadNaturalScroll.collectAsStateWithLifecycle()
+    val touchpadScrollSpeed by TouchpadSettings.touchpadScrollSpeed.collectAsStateWithLifecycle()
+    val touchpadSensitivity by TouchpadSettings.touchpadSensitivity.collectAsStateWithLifecycle()
+    val touchpadHapticsEnabled by TouchpadSettings.touchpadHapticsEnabled.collectAsStateWithLifecycle()
     val vibrator = remember { context.getSystemService(Vibrator::class.java) }
 
     val currentOnHapticFeedback by rememberUpdatedState {
@@ -94,7 +94,7 @@ fun KeyboardScreen(
     }
 
     // Sub-mode and layout tracking
-    val keyboardMode by viewModel.keyboardMode.collectAsState()
+    val keyboardMode by viewModel.keyboardMode.collectAsStateWithLifecycle()
     val targetContainerHeight = if (keyboardMode == KeyboardMode.FULL) 270.dp else 262.dp
     val animatedContainerHeight by animateDpAsState(
         targetValue = targetContainerHeight,
@@ -103,10 +103,10 @@ fun KeyboardScreen(
     )
 
     // Modifier states for dynamic label rendering
-    val lshiftState by KeyboardState.stateFor("lshift").collectAsState()
-    val rshiftState by KeyboardState.stateFor("rshift").collectAsState()
-    val capsState by KeyboardState.stateFor("caps").collectAsState()
-    val altGrState by KeyboardState.stateFor("ralt").collectAsState()
+    val lshiftState by KeyboardState.stateFor("lshift").collectAsStateWithLifecycle()
+    val rshiftState by KeyboardState.stateFor("rshift").collectAsStateWithLifecycle()
+    val capsState by KeyboardState.stateFor("caps").collectAsStateWithLifecycle()
+    val altGrState by KeyboardState.stateFor("ralt").collectAsStateWithLifecycle()
     val isShiftActive = lshiftState != ModifierState.INACTIVE || rshiftState != ModifierState.INACTIVE
     val isCapsActive = capsState != ModifierState.INACTIVE
     val isAltGrActive = altGrState != ModifierState.INACTIVE
@@ -136,8 +136,8 @@ fun KeyboardScreen(
         }
 
     val coroutineScope = rememberCoroutineScope()
-    val pressedKeys by controller.pressedKeys.collectAsState()
-    val trackpointVisible by controller.trackpointVisible.collectAsState()
+    val pressedKeys by controller.pressedKeys.collectAsStateWithLifecycle()
+    val trackpointVisible by controller.trackpointVisible.collectAsStateWithLifecycle()
 
     val gestureProcessor = viewModel.gestureProcessor
     val densityVal = density.density
@@ -145,7 +145,7 @@ fun KeyboardScreen(
         gestureProcessor.density = densityVal
     }
 
-    val activePopupState by gestureProcessor.activePopupState.collectAsState()
+    val activePopupState by gestureProcessor.activePopupState.collectAsStateWithLifecycle()
     var boxCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
 
     Column(
@@ -165,7 +165,7 @@ fun KeyboardScreen(
                 val tapDragState = rememberUpdatedState(tapDrag)
                 val twoFingerScrollState = rememberUpdatedState(twoFingerScroll)
 
-                val globalSensitivity by AppStateManager.fullscreenMouseSensitivity.collectAsState()
+                val globalSensitivity by AppStateManager.fullscreenMouseSensitivity.collectAsStateWithLifecycle()
                 val kbFinalSensitivity = touchpadSensitivity * globalSensitivity
 
                 val processor =

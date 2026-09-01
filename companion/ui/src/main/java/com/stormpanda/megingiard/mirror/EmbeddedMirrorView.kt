@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -20,6 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.macropad.BackgroundScaleMode
@@ -42,22 +42,22 @@ fun EmbeddedMirrorView(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    val capturing by ScreenCaptureManager.isCapturing.collectAsState()
-    val isFrozen by ScreenCaptureManager.isFrozen.collectAsState()
-    val frozenBitmap by ScreenCaptureManager.frozenBitmap.collectAsState()
-    val cutouts by ScreenCaptureManager.cutouts.collectAsState()
-    val edgeBlendWidthDp by ScreenCaptureManager.edgeBlendWidthDp.collectAsState()
-    val maxFps by ScreenCaptureManager.maxFps.collectAsState()
-    val scale by ScreenCaptureManager.scale.collectAsState()
-    val offsetX by ScreenCaptureManager.offsetX.collectAsState()
-    val offsetY by ScreenCaptureManager.offsetY.collectAsState()
-    val srcWidth by ScreenCaptureManager.captureSourceWidth.collectAsState()
-    val srcHeight by ScreenCaptureManager.captureSourceHeight.collectAsState()
-    val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsState()
-    val isMirrorEditorBackgroundHidden by AppStateManager.isMirrorEditorBackgroundHidden.collectAsState()
-    val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
-    val layout by MacroPadState.activeLayout.collectAsState()
-    val screenshotRequested by ScreenCaptureManager.screenshotRequested.collectAsState()
+    val capturing by ScreenCaptureManager.isCapturing.collectAsStateWithLifecycle()
+    val isFrozen by ScreenCaptureManager.isFrozen.collectAsStateWithLifecycle()
+    val frozenBitmap by ScreenCaptureManager.frozenBitmap.collectAsStateWithLifecycle()
+    val cutouts by ScreenCaptureManager.cutouts.collectAsStateWithLifecycle()
+    val edgeBlendWidthDp by ScreenCaptureManager.edgeBlendWidthDp.collectAsStateWithLifecycle()
+    val maxFps by ScreenCaptureManager.maxFps.collectAsStateWithLifecycle()
+    val scale by ScreenCaptureManager.scale.collectAsStateWithLifecycle()
+    val offsetX by ScreenCaptureManager.offsetX.collectAsStateWithLifecycle()
+    val offsetY by ScreenCaptureManager.offsetY.collectAsStateWithLifecycle()
+    val srcWidth by ScreenCaptureManager.captureSourceWidth.collectAsStateWithLifecycle()
+    val srcHeight by ScreenCaptureManager.captureSourceHeight.collectAsStateWithLifecycle()
+    val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsStateWithLifecycle()
+    val isMirrorEditorBackgroundHidden by AppStateManager.isMirrorEditorBackgroundHidden.collectAsStateWithLifecycle()
+    val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsStateWithLifecycle()
+    val layout by MacroPadState.activeLayout.collectAsStateWithLifecycle()
+    val screenshotRequested by ScreenCaptureManager.screenshotRequested.collectAsStateWithLifecycle()
 
     val effectiveCutouts = overrideCutouts ?: cutouts
     val effectiveShowLayoutBackground = showLayoutBackground && !(isViewportEditActive && isMirrorEditorBackgroundHidden)

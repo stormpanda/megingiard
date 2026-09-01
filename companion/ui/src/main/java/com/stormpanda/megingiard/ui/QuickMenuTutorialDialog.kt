@@ -46,7 +46,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -67,6 +66,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.SwipeGestureType
@@ -114,7 +114,7 @@ private data class PostReleasePillState(
 @Composable
 fun QuickMenuStepContent(overlayAtBottom: Boolean) {
     val colors = LocalAppColors.current
-    val overlayFadeOut by SettingsManager.overlayFadeOut.collectAsState()
+    val overlayFadeOut by SettingsManager.overlayFadeOut.collectAsStateWithLifecycle()
 
     Column {
         Text(

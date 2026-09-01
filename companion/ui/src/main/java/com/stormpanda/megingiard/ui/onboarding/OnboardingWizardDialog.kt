@@ -58,7 +58,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -82,6 +81,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
@@ -149,8 +149,8 @@ fun OnboardingWizardDialog(
 ) {
     val context = LocalContext.current
     val colors = LocalAppColors.current
-    val steps by OnboardingWizardManager.steps.collectAsState()
-    val activeStepIndex by OnboardingWizardManager.activeStepIndex.collectAsState()
+    val steps by OnboardingWizardManager.steps.collectAsStateWithLifecycle()
+    val activeStepIndex by OnboardingWizardManager.activeStepIndex.collectAsStateWithLifecycle()
 
     val currentStepState = steps.getOrNull(activeStepIndex) ?: return
     val totalSteps = steps.size
@@ -165,7 +165,7 @@ fun OnboardingWizardDialog(
     val isAccessibilityStep = currentStepState.id == OnboardingStepId.ACCESSIBILITY
 
     val isPrivilegedStep = currentStepState.id == OnboardingStepId.PRIVILEGED
-    val privdState by PrivdManager.state.collectAsState()
+    val privdState by PrivdManager.state.collectAsStateWithLifecycle()
     var isWifiActive by remember { mutableStateOf(MegingiardAccessibilityService.isWifiActive(context)) }
     var isDevModeActive by remember { mutableStateOf(MegingiardAccessibilityService.isDevModeActive(context)) }
     var isUsbActive by remember { mutableStateOf(MegingiardAccessibilityService.isUsbDebuggingActive(context)) }
@@ -433,7 +433,7 @@ fun OnboardingWizardDialog(
 @Composable
 fun ThemeStepContent() {
     val colors = LocalAppColors.current
-    val currentThemeMode by SettingsManager.themeMode.collectAsState()
+    val currentThemeMode by SettingsManager.themeMode.collectAsStateWithLifecycle()
     val themes = remember { ThemeMode.entries }
     var isNextAnimation by remember { mutableStateOf(true) }
 
@@ -625,7 +625,7 @@ fun PrivilegedStepContent(
 ) {
     val context = LocalContext.current
     val colors = LocalAppColors.current
-    val lastError by PrivdManager.lastError.collectAsState()
+    val lastError by PrivdManager.lastError.collectAsStateWithLifecycle()
     val systemLocale =
         remember {
             val lm = context.getSystemService(LocaleManager::class.java)

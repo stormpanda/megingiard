@@ -25,7 +25,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,6 +40,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
@@ -198,8 +198,8 @@ object FloatingBubbleOverlay {
             }
 
             view.setContent {
-                val themeMode by SettingsManager.themeMode.collectAsState()
-                val userAccentArgb by SettingsManager.accentColor.collectAsState()
+                val themeMode by SettingsManager.themeMode.collectAsStateWithLifecycle()
+                val userAccentArgb by SettingsManager.accentColor.collectAsStateWithLifecycle()
                 val appColors = paletteFor(themeMode, Color(userAccentArgb))
 
                 MaterialTheme(

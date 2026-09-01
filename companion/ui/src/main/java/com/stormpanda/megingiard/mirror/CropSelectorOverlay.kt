@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -27,6 +26,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -63,20 +63,20 @@ fun CropSelectorOverlay(
 ) {
     AppLog.d(TAG, "CropSelectorOverlay composed for cutoutId=$cutoutId")
     val colors = LocalAppColors.current
-    val activeLayout by MacroPadState.activeLayout.collectAsState()
+    val activeLayout by MacroPadState.activeLayout.collectAsStateWithLifecycle()
     val layout = activeLayout ?: return
     val cutout = layout.mirrorCutouts.find { it.id == cutoutId } ?: return
     val currentCutoutState = rememberUpdatedState(cutout)
     val currentLayoutState = rememberUpdatedState(layout)
     val density = LocalDensity.current
 
-    val captureSourceWidth by ScreenCaptureManager.captureSourceWidth.collectAsState()
-    val captureSourceHeight by ScreenCaptureManager.captureSourceHeight.collectAsState()
+    val captureSourceWidth by ScreenCaptureManager.captureSourceWidth.collectAsStateWithLifecycle()
+    val captureSourceHeight by ScreenCaptureManager.captureSourceHeight.collectAsStateWithLifecycle()
     val srcWidth = if (captureSourceWidth > 0) captureSourceWidth.toFloat() else CS_FALLBACK_SRC_WIDTH
     val srcHeight = if (captureSourceHeight > 0) captureSourceHeight.toFloat() else CS_FALLBACK_SRC_HEIGHT
 
-    val surfaceWidth by ScreenCaptureManager.surfaceWidth.collectAsState()
-    val surfaceHeight by ScreenCaptureManager.surfaceHeight.collectAsState()
+    val surfaceWidth by ScreenCaptureManager.surfaceWidth.collectAsStateWithLifecycle()
+    val surfaceHeight by ScreenCaptureManager.surfaceHeight.collectAsStateWithLifecycle()
     val secScreenW = if (surfaceWidth > 0f) surfaceWidth else CS_FALLBACK_SEC_WIDTH
     val secScreenH = if (surfaceHeight > 0f) surfaceHeight else CS_FALLBACK_SEC_HEIGHT
 

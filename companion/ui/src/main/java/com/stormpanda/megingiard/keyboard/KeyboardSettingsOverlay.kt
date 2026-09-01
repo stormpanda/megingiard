@@ -6,10 +6,10 @@ import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
@@ -25,8 +25,8 @@ private const val TAG = "KbSettingsOverlay"
 
 @Composable
 fun KeyboardSettingsOverlay(viewModel: KeyboardViewModel = viewModel()) {
-    val currentLayout by viewModel.kbLayout.collectAsState()
-    val kbTouchpadEnabled by viewModel.kbTouchpadEnabled.collectAsState()
+    val currentLayout by viewModel.kbLayout.collectAsStateWithLifecycle()
+    val kbTouchpadEnabled by viewModel.kbTouchpadEnabled.collectAsStateWithLifecycle()
 
     DisposableEffect(Unit) {
         AppLog.d(TAG, "KeyboardSettingsOverlay composed")

@@ -38,7 +38,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -65,6 +64,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
@@ -112,24 +112,25 @@ fun FullscreenMouseOverlay() {
     var outerCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
     var innerCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
 
-    val touchpadUseMouse by TouchpadSettings.touchpadUseMouse.collectAsState()
-    val sensitivity by AppStateManager.fullscreenMouseSensitivity.collectAsState()
-    val touchpadSensitivity by TouchpadSettings.touchpadSensitivity.collectAsState()
-    val tapToClick by TouchpadSettings.touchpadTapToClick.collectAsState()
-    val twoFingerTap by TouchpadSettings.touchpadTwoFingerTap.collectAsState()
-    val threeFingerTap by TouchpadSettings.touchpadThreeFingerTap.collectAsState()
-    val twoFingerScroll by TouchpadSettings.touchpadTwoFingerScroll.collectAsState()
-    val tapDrag by TouchpadSettings.touchpadTapDrag.collectAsState()
-    val touchpadMouse45Enabled by TouchpadSettings.touchpadMouse45Enabled.collectAsState()
-    val touchpadNaturalScroll by TouchpadSettings.touchpadNaturalScroll.collectAsState()
-    val touchpadScrollSpeed by TouchpadSettings.touchpadScrollSpeed.collectAsState()
-    val touchpadHapticsEnabled by TouchpadSettings.touchpadHapticsEnabled.collectAsState()
+    val touchpadUseMouse by TouchpadSettings.touchpadUseMouse.collectAsStateWithLifecycle()
+    val sensitivity by AppStateManager.fullscreenMouseSensitivity.collectAsStateWithLifecycle()
+    val touchpadSensitivity by TouchpadSettings.touchpadSensitivity.collectAsStateWithLifecycle()
+    val tapToClick by TouchpadSettings.touchpadTapToClick.collectAsStateWithLifecycle()
+    val twoFingerTap by TouchpadSettings.touchpadTwoFingerTap.collectAsStateWithLifecycle()
+    val threeFingerTap by TouchpadSettings.touchpadThreeFingerTap.collectAsStateWithLifecycle()
+    val twoFingerScroll by TouchpadSettings.touchpadTwoFingerScroll.collectAsStateWithLifecycle()
+    val tapDrag by TouchpadSettings.touchpadTapDrag.collectAsStateWithLifecycle()
+    val touchpadMouse45Enabled by TouchpadSettings.touchpadMouse45Enabled.collectAsStateWithLifecycle()
+    val touchpadNaturalScroll by TouchpadSettings.touchpadNaturalScroll.collectAsStateWithLifecycle()
+    val touchpadScrollSpeed by TouchpadSettings.touchpadScrollSpeed.collectAsStateWithLifecycle()
+    val touchpadHapticsEnabled by TouchpadSettings.touchpadHapticsEnabled.collectAsStateWithLifecycle()
     val vibrator = remember { context.getSystemService(Vibrator::class.java) }
-    val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
-    val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsState()
-    val touchpadMirroringEnabled by TouchpadSettings.touchpadMirroringEnabled.collectAsState()
-    val touchpadMirrorDim by TouchpadSettings.touchpadMirrorDim.collectAsState()
-    val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
+
+    val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsStateWithLifecycle()
+    val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsStateWithLifecycle()
+    val touchpadMirroringEnabled by TouchpadSettings.touchpadMirroringEnabled.collectAsStateWithLifecycle()
+    val touchpadMirrorDim by TouchpadSettings.touchpadMirrorDim.collectAsStateWithLifecycle()
+    val isCapturing by ScreenCaptureManager.isCapturing.collectAsStateWithLifecycle()
     val isMirroringActive = !touchpadUseMouse && touchpadMirroringEnabled && isCapturing
 
     val useMouseState = rememberUpdatedState(touchpadUseMouse)
@@ -562,7 +563,7 @@ private fun TouchpadMouseButton(
     var pressed by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val vibrator = remember { context.getSystemService(Vibrator::class.java) }
-    val touchpadHapticsEnabled by TouchpadSettings.touchpadHapticsEnabled.collectAsState()
+    val touchpadHapticsEnabled by TouchpadSettings.touchpadHapticsEnabled.collectAsStateWithLifecycle()
     val colors = LocalAppColors.current
     val surfaceColor = if (pressed) colors.keyPressed else colors.keyBackground
     val depthColor = Color.Black.copy(alpha = 0.55f)

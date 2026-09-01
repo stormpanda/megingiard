@@ -11,13 +11,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
@@ -93,11 +93,11 @@ class PrimaryOverlayActivity : ComponentActivity() {
         }
 
         setContent {
-            val themeMode by SettingsManager.themeMode.collectAsState()
-            val userAccentArgb by SettingsManager.accentColor.collectAsState()
+            val themeMode by SettingsManager.themeMode.collectAsStateWithLifecycle()
+            val userAccentArgb by SettingsManager.accentColor.collectAsStateWithLifecycle()
             val appColors = paletteFor(themeMode, Color(userAccentArgb))
-            val activeModal by AppStateManager.activePrimaryModal.collectAsState()
-            val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
+            val activeModal by AppStateManager.activePrimaryModal.collectAsStateWithLifecycle()
+            val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsStateWithLifecycle()
 
             MaterialTheme(
                 colorScheme = colorSchemeFor(appColors, themeMode),

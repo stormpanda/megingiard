@@ -32,7 +32,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -45,6 +44,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.privd.PrivdManager
@@ -99,9 +99,9 @@ internal fun ChooseButtonTypeSubPageContent(
     enableMouse: Boolean = true,
     onSelectType: (ActionGroup) -> Unit,
 ) {
-    val privdState by PrivdManager.state.collectAsState()
+    val privdState by PrivdManager.state.collectAsStateWithLifecycle()
     val isPrivdRunning = privdState == PrivdState.RUNNING
-    val profile by MacroPadState.activeProfile.collectAsState()
+    val profile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
     val hasMacros = isPrivdRunning && (profile?.macros?.isNotEmpty() == true)
     val availableGroups =
         remember(hasMacros, enableKeyboard, enableGamepad, enableMouse, isPrivdRunning) {
@@ -153,7 +153,7 @@ internal fun EditButtonSubPageContent(
 ) {
     val context = LocalContext.current
     val colors = LocalAppColors.current
-    val activeLayout = MacroPadState.activeLayout.collectAsState().value
+    val activeLayout by MacroPadState.activeLayout.collectAsStateWithLifecycle()
     val stableButtonId = remember(button?.id) { button?.id ?: UUID.randomUUID().toString() }
 
     DisposableEffect(stableButtonId) {
@@ -198,10 +198,10 @@ internal fun EditButtonSubPageContent(
     var buttonBgColor by remember(button) { mutableStateOf(button?.buttonBgColor) }
     var invisible by remember(button) { mutableStateOf(button?.invisible ?: (activeLayout?.invisibleButtons ?: false)) }
 
-    val globalAccentInt by SettingsManager.accentColor.collectAsState()
+    val globalAccentInt by SettingsManager.accentColor.collectAsStateWithLifecycle()
     val globalAccentColor = Color(globalAccentInt)
 
-    val profile by MacroPadState.activeProfile.collectAsState()
+    val profile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
     val macros = profile?.macros ?: emptyList()
 
     LaunchedEffect(macros) {
