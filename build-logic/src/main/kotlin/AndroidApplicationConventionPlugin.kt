@@ -12,6 +12,7 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
                 apply("com.android.application")
                 apply("org.jetbrains.kotlin.android")
                 apply("megingiard.architecture.verifier")
+                apply("org.jetbrains.kotlinx.kover")
             }
 
             extensions.configure<ApplicationExtension> {
@@ -29,6 +30,10 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
 
             extensions.configure<KotlinAndroidProjectExtension> {
                 jvmToolchain(17)
+            }
+
+            tasks.matching { it.name == "testReleaseUnitTest" }.configureEach {
+                enabled = false
             }
         }
     }

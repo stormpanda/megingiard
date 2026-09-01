@@ -118,9 +118,15 @@ Before submitting a translation Pull Request, you **must** manually verify that 
    git merge upstream/main
    ```
 2. **Implement:** Write your code following the guidelines in [AGENTS.md](AGENTS.md).
-3. **Mandatory Testing:** Run the unit tests locally before submitting any contribution to ensure there are no regressions:
+3. **Mandatory Testing & Coverage:** Run the unit tests and coverage report locally before submitting any contribution to ensure there are no regressions:
    ```bash
-   ./gradlew test
+   # Run all unit tests
+   ./gradlew :shared:core:test :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:ui:testDebugUnitTest
+
+   # Generate consolidated test coverage report
+   ./gradlew koverHtmlReport
+   # View console coverage summary
+   ./gradlew koverLog
    ```
 4. **Mandatory Documentation Sync:**
    - If your changes affect a feature's behavior or settings, you **must** update the corresponding `docs/features/<feature>/FEATURE.md` documentation.

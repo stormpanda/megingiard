@@ -9,6 +9,7 @@ class KotlinJvmConventionPlugin : Plugin<Project> {
             with(pluginManager) {
                 apply("org.jetbrains.kotlin.jvm")
                 apply("megingiard.architecture.verifier")
+                apply("org.jetbrains.kotlinx.kover")
             }
 
             extensions.configure<KotlinJvmProjectExtension> {
