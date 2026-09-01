@@ -68,7 +68,7 @@ The current automated coverage focuses on pure cryptographic primitives:
 
 - `BinaryIntegrityTest` covers SHA-256 known-answer vectors and sensitivity to byte changes.
 - `HmacUtilTest` covers HMAC-SHA256 RFC 4231 vectors and the constant-time hex MAC comparison used for daemon `PROOF` verification.
-- Agents must run `./gradlew :core:test :domain:test` after implementation changes that affect pure `:core` or `:domain` logic.
+- Agents must run `./gradlew :shared:core:test :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:ui:testDebugUnitTest` after implementation changes that affect pure `:shared:core` or `:companion:domain` logic.
 - Native C source changes must be followed by the matching build script; see [Build Native](docs/BUILD_NATIVE.md#native-rebuild-policy).
 
 Runtime Android branches such as `SignatureGuard.verify()` and the full `LocalSocket` handshake currently require manual device validation or future Robolectric / instrumentation coverage.
