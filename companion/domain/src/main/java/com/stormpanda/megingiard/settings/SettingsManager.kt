@@ -122,6 +122,26 @@ object SettingsManager {
 
     internal fun resetForTesting(context: Context? = null) {
         initialized = false
+        _themeMode.value = ThemeMode.DARK
+        _accentColor.value = DEFAULT_ACCENT_COLOR
+        _customAccentColor.value = DEFAULT_ACCENT_COLOR
+        _overlayAtBottom.value = false
+        _overlayFadeOut.value = false
+        _excludeFromRecents.value = false
+        _steamGridDbApiToken.value = ""
+        _appLanguage.value = AppLanguage.SYSTEM
+        _logLevel.value = AppLog.Level.WARN
+        _welcomeTourCompletedVersion.value = 0
+        _showMacroEditorTutorial.value = true
+        _internalBackups.value = emptyList()
+        if (::dataStore.isInitialized) {
+            runBlocking {
+                try {
+                    dataStore.edit { it.clear() }
+                } catch (_: Exception) {
+                }
+            }
+        }
         if (context != null) {
             init(context)
         }

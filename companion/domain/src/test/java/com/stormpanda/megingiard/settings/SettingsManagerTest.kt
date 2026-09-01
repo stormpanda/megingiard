@@ -20,26 +20,13 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
-@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
 class SettingsManagerTest {
-    private val testDispatcher = UnconfinedTestDispatcher()
-
     @Before
     fun setUp() {
-        Dispatchers.setMain(testDispatcher)
-        SettingsManager.scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + testDispatcher)
-        SettingsManager.resetForTesting(RuntimeEnvironment.getApplication())
-        testDispatcher.scheduler.advanceUntilIdle()
+        SettingsManager.init(RuntimeEnvironment.getApplication())
         SettingsManager.resetAllTutorials()
-        testDispatcher.scheduler.advanceUntilIdle()
-    }
-
-    @After
-    fun tearDown() {
-        SettingsManager.scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
-        Dispatchers.resetMain()
     }
 
     @Test
@@ -79,34 +66,27 @@ class SettingsManagerTest {
     @Test
     fun testThemeModeAndOverlaySetters() {
         SettingsManager.setThemeMode(ThemeMode.VALHALLA)
-        testDispatcher.scheduler.advanceUntilIdle()
         assertEquals(ThemeMode.VALHALLA, SettingsManager.themeMode.value)
 
         SettingsManager.setOverlayAtBottom(true)
-        testDispatcher.scheduler.advanceUntilIdle()
         assertTrue(SettingsManager.overlayAtBottom.value)
 
         SettingsManager.setOverlayFadeOut(true)
-        testDispatcher.scheduler.advanceUntilIdle()
         assertTrue(SettingsManager.overlayFadeOut.value)
 
         SettingsManager.setExcludeFromRecents(true)
-        testDispatcher.scheduler.advanceUntilIdle()
         assertTrue(SettingsManager.excludeFromRecents.value)
     }
 
     @Test
     fun testSteamGridDbTokenAndAppLanguageAndLogLevel() {
         SettingsManager.setSteamGridDbApiToken("test_token_sgdb")
-        testDispatcher.scheduler.advanceUntilIdle()
         assertEquals("test_token_sgdb", SettingsManager.steamGridDbApiToken.value)
 
         SettingsManager.setAppLanguage(AppLanguage.DE)
-        testDispatcher.scheduler.advanceUntilIdle()
         assertEquals(AppLanguage.DE, SettingsManager.appLanguage.value)
 
         SettingsManager.setLogLevel(AppLog.Level.DEBUG)
-        testDispatcher.scheduler.advanceUntilIdle()
         assertEquals(AppLog.Level.DEBUG, SettingsManager.logLevel.value)
         assertEquals(AppLog.Level.DEBUG, AppLog.level)
     }
