@@ -23,4 +23,10 @@ class KeyInjectorTest {
         // Valid keycode 30 (KEY_A)
         KeyInjector.keyTap(30)
     }
+
+    @Test
+    fun testStopWhenNotStarted() {
+        KeyInjector.stop()
+        assertFalse(KeyInjector.isRunning)
+    }
 }

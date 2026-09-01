@@ -72,4 +72,25 @@ class GameNativeDetectorTest {
 
         assertNull(session)
     }
+
+    @Test
+    fun detectActiveSession_unsupportedPackage_returnsNull() =
+        kotlinx.coroutines.test.runTest {
+            assertNull(GameNativeDetector.detectActiveSession("com.unsupported.pkg"))
+        }
+
+    @Test
+    fun detectActiveSession_supportedPackage_readsProcessesAndResolves() =
+        kotlinx.coroutines.test.runTest {
+            ProcessCmdlineProvider.runningProcessesProvider = {
+                """
+                PROC 29091 10142 app.gamenative
+                PROC 30101 10142 C:\Steam\steamapps\common\Celeste\Celeste.exe
+                """.trimIndent()
+            }
+            val session = GameNativeDetector.detectActiveSession("app.gamenative")
+            assertNotNull(session)
+            assertEquals("Celeste", session?.gameTitle)
+            assertEquals("pc", session?.systemId)
+        }
 }

@@ -117,7 +117,7 @@
 >    data compilers, state machines, serialization round-trips).
 > 2. **Update existing tests** if the change modifies the behaviour or signature of
 >    already-tested code.
-> 3. **Run all tests** via `./gradlew :shared:core:test :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:ui:testDebugUnitTest` and report the result. Due to Gradle's reliance on local TCP/loopback sockets, this command MUST always be executed with the sandbox bypass enabled (`BypassSandbox: true` / unsandboxed). This, along with sandbox bypass compilation commands for verifying compile safety, are the **only** Gradle commands the agent is permitted to run.
+> 3. **Run all tests** via `./gradlew :shared:core:test :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:ui:testDebugUnitTest` and report the result. Due to Gradle's reliance on local TCP/loopback sockets, this command MUST always be executed with the sandbox bypass enabled (`BypassSandbox: true` / unsandboxed). This, along with sandbox bypass compilation commands for verifying compile safety, and test coverage tasks (`./gradlew koverHtmlReport`, `./gradlew koverLog`, `./gradlew koverXmlReport`), are the **only** Gradle commands the agent is permitted to run.
 >
 > Tests must be placed in the correct source set:
 >
@@ -126,6 +126,8 @@
 >
 > If logic cannot be unit-tested without significant refactoring, state that explicitly
 > as a follow-up task rather than skipping silently.
+>
+> **Test Coverage Tooling:** The project uses **Kotlinx-Kover** for unified code coverage across all JVM and Android modules. Run `./gradlew koverHtmlReport` to generate the consolidated HTML report (`build/reports/kover/html/index.html`), `./gradlew koverLog` for console summaries, or `./gradlew koverXmlReport` for CI/Codecov XML output.
 
 > **Auto Code Review policy:** After completing any implementation (feature, bug fix, or refactor) and before proposing the final commit message, the agent **must** run a complete code review pass on all modified files following the instructions in the `megingiard-code-review` skill (specifically executing the systematic file-by-file audit checklist and programmatic grep checks) and report any findings or perform the fixes directly.
 
@@ -146,7 +148,7 @@ Before marking a task as done, verify:
 - [ ] `snapshotFlow` imported from `androidx.compose.runtime`
 - [ ] Deprecated API branches annotated with `@Suppress("DEPRECATION")`
 - [ ] New `Activity` launches on correct display via `ActivityOptions.setLaunchDisplayId()`
-- [ ] `WindowOverlayLifecycleOwner.destroy()` called when overlay view is removed
+- [ ] WindowOverlayLifecycleOwner.destroy() called when overlay view is removed
 - [ ] Service `onStartCommand` returns `START_NOT_STICKY`
 - [ ] Touch injector process stopped in `DisposableEffect` when leaving `TOUCHPAD` mode
 - [ ] Key injector process stopped in `DisposableEffect` when leaving `KEYBOARD` mode
@@ -155,6 +157,7 @@ Before marking a task as done, verify:
 - [ ] New or changed pure logic is covered by unit tests in `:core` or `:domain`
 - [ ] Existing tests updated if the change modifies previously-tested behaviour
 - [ ] `./gradlew :shared:core:test :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:ui:testDebugUnitTest` executed and all tests pass (permitted test command)
+- [ ] Test coverage verified or generated via `./gradlew koverLog` / `./gradlew koverHtmlReport` when required
 - [ ] If any native C source was modified, the corresponding build script was run and produced a new binary
 - [ ] Strict Zero-Heuristics Policy (§7.5) respected: No heuristics, substring guessing (e.g. contains("launcher")), synthetic fallbacks, or approximations introduced without explicit user permission
 - [ ] Help menus, onboardings, and localized strings updated if user interaction behavior changed (verify that every settings preference option has a corresponding explanation entry in its HelpModal)

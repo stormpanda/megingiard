@@ -208,4 +208,58 @@ class MacroPadHitTestEngineTest {
         assertFalse(MacroPadHitTestEngine.isDeviceDisabled(macroAction, enabledProfile))
         assertNull(MacroPadHitTestEngine.deviceDisabledReason(macroAction, enabledProfile))
     }
+
+    @Test
+    fun `deviceDisabledReason returns correct reason for each disabled device type`() {
+        val kbAction = PadAction.KeyboardKey(keycode = 1, label = "K")
+        val gpAction = PadAction.GamepadButton(btnCode = 304, label = "A")
+        val mouseAction = PadAction.MouseButton(button = MouseButton.LEFT)
+
+        val disabledKbProfile = enabledProfile.copy(enableKeyboard = false)
+        val disabledGpProfile = enabledProfile.copy(enableGamepad = false)
+        val disabledMouseProfile = enabledProfile.copy(enableMouse = false)
+
+        assertEquals(DisabledReason.KEYBOARD, MacroPadHitTestEngine.deviceDisabledReason(kbAction, disabledKbProfile))
+        assertEquals(DisabledReason.GAMEPAD, MacroPadHitTestEngine.deviceDisabledReason(gpAction, disabledGpProfile))
+        assertEquals(DisabledReason.MOUSE, MacroPadHitTestEngine.deviceDisabledReason(mouseAction, disabledMouseProfile))
+    }
+
+    @Test
+    fun `scroll wheel button handles press, drag, and release`() {
+        val scrollBtn = centeredButton(PadAction.ScrollWheel)
+        engine.onPress(10L, 500f, 500f, canvasW, canvasH, listOf(scrollBtn), enabledProfile, false)
+        assertTrue(engine.isPointerTracked(10L))
+
+        engine.onMove(10L, 500f, 450f, 0f, -50f, listOf(scrollBtn), enabledProfile)
+        engine.onMove(10L, 500f, 550f, 0f, 100f, listOf(scrollBtn), enabledProfile)
+
+        engine.onRelease(10L, listOf(scrollBtn), enabledProfile)
+        assertFalse(engine.isPointerTracked(10L))
+    }
+
+    @Test
+    fun `haptic callback is invoked on button press with non-off strength`() {
+        var hapticTriggered = false
+        val engineWithHaptic =
+            MacroPadHitTestEngine(
+                buttonUnitDpToPx = { it },
+                onHapticFeedback = { id, strength, duration, amplitude, magnitude ->
+                    hapticTriggered = true
+                    assertEquals("btn-haptic", id)
+                    assertEquals(HapticStrength.MEDIUM, strength)
+                },
+            )
+        val hapticBtn =
+            PadButton(
+                id = "btn-haptic",
+                label = "H",
+                posX = 0.5f,
+                posY = 0.5f,
+                action = PadAction.KeyboardKey(keycode = 30, label = "H"),
+                hapticStrength = HapticStrength.MEDIUM,
+            )
+
+        engineWithHaptic.onPress(5L, 500f, 500f, canvasW, canvasH, listOf(hapticBtn), enabledProfile, false)
+        assertTrue(hapticTriggered)
+    }
 }

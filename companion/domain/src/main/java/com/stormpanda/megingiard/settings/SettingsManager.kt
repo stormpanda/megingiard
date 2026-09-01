@@ -66,7 +66,7 @@ object SettingsManager {
 
     // App-lifetime scope: intentionally never cancelled — this singleton lives for the
     // duration of the process. Cancellation is handled by process termination.
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    internal var scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private lateinit var dataStore: DataStore<Preferences>
     private var initialized = false
 
@@ -119,6 +119,33 @@ object SettingsManager {
     // Logging
     private val _logLevel = MutableStateFlow(AppLog.Level.WARN)
     val logLevel: StateFlow<AppLog.Level> = _logLevel.asStateFlow()
+
+    internal fun resetForTesting(context: Context? = null) {
+        initialized = false
+        _themeMode.value = ThemeMode.DARK
+        _accentColor.value = DEFAULT_ACCENT_COLOR
+        _customAccentColor.value = DEFAULT_ACCENT_COLOR
+        _overlayAtBottom.value = false
+        _overlayFadeOut.value = false
+        _excludeFromRecents.value = false
+        _steamGridDbApiToken.value = ""
+        _appLanguage.value = AppLanguage.SYSTEM
+        _logLevel.value = AppLog.Level.WARN
+        _welcomeTourCompletedVersion.value = 0
+        _showMacroEditorTutorial.value = true
+        _internalBackups.value = emptyList()
+        if (::dataStore.isInitialized) {
+            runBlocking {
+                try {
+                    dataStore.edit { it.clear() }
+                } catch (_: Exception) {
+                }
+            }
+        }
+        if (context != null) {
+            init(context)
+        }
+    }
 
     fun init(context: Context) {
         if (initialized) return

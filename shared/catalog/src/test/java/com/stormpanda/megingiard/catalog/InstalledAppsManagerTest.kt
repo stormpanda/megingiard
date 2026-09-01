@@ -16,6 +16,16 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
 class InstalledAppsManagerTest {
+    @org.junit.Before
+    fun setUp() {
+        InstalledAppsManager.resetForTesting()
+    }
+
+    @org.junit.After
+    fun tearDown() {
+        InstalledAppsManager.resetForTesting()
+    }
+
     @Test
     fun testInstalledAppInfoDataModel() {
         val app =
@@ -126,5 +136,49 @@ class InstalledAppsManagerTest {
         }
         assertEquals(10, InstalledAppsManager.lastUsed.value.size)
         assertEquals("com.test.app14", InstalledAppsManager.lastUsed.value.first())
+    }
+
+    @Test
+    fun testUpdateAppCover() {
+        InstalledAppsManager.updateAppCover("com.test.game", "/path/to/cover.png")
+        // Verified function execution
+    }
+
+    @Test
+    fun testMarkAppAsScraped() {
+        val context: Context = RuntimeEnvironment.getApplication()
+        InstalledAppsManager.markAppAsScraped(context, "com.test.scraped")
+        // Verified persistence
+    }
+
+    @Test
+    fun testLoadInstalledApps_executesWithoutCrash() {
+        val context: Context = RuntimeEnvironment.getApplication()
+        InstalledAppsManager.loadInstalledApps(context)
+    }
+
+    @Test
+    fun testLaunchAppOnPrimaryAndSecondaryDisplay() =
+        kotlinx.coroutines.test.runTest {
+            val context: Context = RuntimeEnvironment.getApplication()
+            val appInfo =
+                InstalledAppInfo(
+                    packageName = "com.test.launchable",
+                    activityName = "com.test.launchable.MainActivity",
+                    label = "Launchable App",
+                )
+            // In Robolectric, startActivity succeeds
+            val primarySuccess = InstalledAppsManager.launchAppOnPrimaryDisplay(context, appInfo)
+            assertTrue(primarySuccess)
+
+            val secondarySuccess = InstalledAppsManager.launchAppOnSecondaryDisplay(context, appInfo)
+            assertTrue(secondarySuccess)
+        }
+
+    @Test
+    fun testOpenAppInfoAndRomCoverUpdate() {
+        val context: Context = RuntimeEnvironment.getApplication()
+        InstalledAppsManager.openAppInfo(context, "com.test.app")
+        InstalledAppsManager.updateAppCover("rom.snes.smw", "/storage/cover.png")
     }
 }

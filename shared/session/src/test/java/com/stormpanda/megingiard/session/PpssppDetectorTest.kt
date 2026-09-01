@@ -55,4 +55,28 @@ class PpssppDetectorTest {
         val activeTitle = "God of War: Chains of Olympus"
         assertFalse(PpssppDetector.isTitleMatching(candidate, activeTitle))
     }
+
+    @Test
+    fun isTitleMatching_blankInputs_returnsFalse() {
+        assertFalse(PpssppDetector.isTitleMatching("", "God of War"))
+        assertFalse(PpssppDetector.isTitleMatching("game.iso", ""))
+        assertFalse(PpssppDetector.isTitleMatching("   ", "   "))
+    }
+
+    @Test
+    fun isTitleMatching_exactAndSubstringMatch_returnsTrue() {
+        assertTrue(PpssppDetector.isTitleMatching("Crisis Core - Final Fantasy VII.iso", "Crisis Core"))
+        assertTrue(PpssppDetector.isTitleMatching("Persona 3 Portable.iso", "Persona 3"))
+    }
+
+    @Test
+    fun isTitleMatching_specialCharactersAndPunctuation_returnsTrue() {
+        assertTrue(PpssppDetector.isTitleMatching("Monster Hunter Freedom Unite (USA).iso", "Monster Hunter: Freedom Unite"))
+    }
+
+    @Test
+    fun readRecentPathFromIni_whenNoIniFile_returnsNull() {
+        val result = PpssppDetector.readRecentPathFromIni("org.ppsspp.ppsspp", "Nonexistent")
+        assertNull(result)
+    }
 }

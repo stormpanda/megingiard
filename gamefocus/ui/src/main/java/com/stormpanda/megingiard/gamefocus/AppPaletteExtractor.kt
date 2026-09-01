@@ -103,10 +103,16 @@ object AppPaletteExtractor {
     private var appContext: Context? = null
 
     fun init(context: Context) {
-        if (isInitialized) return
+        if (isInitialized && appContext == context.applicationContext) return
         appContext = context.applicationContext
         loadPersistedPalettes(context.applicationContext)
         isInitialized = true
+    }
+
+    internal fun resetForTesting() {
+        paletteCache.evictAll()
+        isInitialized = false
+        appContext = null
     }
 
     private fun loadPersistedPalettes(context: Context) {

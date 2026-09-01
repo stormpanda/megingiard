@@ -53,7 +53,12 @@ object RomManager {
     private val _romApps = MutableStateFlow<List<InstalledAppInfo>>(emptyList())
     val romApps: StateFlow<List<InstalledAppInfo>> = _romApps.asStateFlow()
 
-    private val _romCleanedNames = mutableMapOf<String, String>()
+    @androidx.annotation.VisibleForTesting
+    fun setRomAppsForTesting(apps: List<InstalledAppInfo>) {
+        _romApps.value = apps
+    }
+
+    private val romCleanedNames = mutableMapOf<String, String>()
 
     private inline fun <reified T> loadJsonFile(
         context: Context,
@@ -89,16 +94,16 @@ object RomManager {
         }
 
         loadJsonFile<Map<String, String>>(context, FILE_ROM_CLEANED_NAMES)?.let { map ->
-            synchronized(_romCleanedNames) {
-                _romCleanedNames.clear()
-                _romCleanedNames.putAll(map)
+            synchronized(romCleanedNames) {
+                romCleanedNames.clear()
+                romCleanedNames.putAll(map)
             }
             AppLog.d(TAG, "Loaded ${map.size} cleaned ROM names from disk")
         }
     }
 
     private fun saveRomCleanedNames(context: Context) {
-        val content = synchronized(_romCleanedNames) { _romCleanedNames.toMap() }
+        val content = synchronized(romCleanedNames) { romCleanedNames.toMap() }
         saveJsonFile(context, FILE_ROM_CLEANED_NAMES, content)
         AppLog.d(TAG, "Saved cleaned ROM names to disk")
     }
@@ -110,6 +115,24 @@ object RomManager {
         _romFolders.value = folders
         saveJsonFile(context, FILE_ROM_FOLDERS, folders)
         AppLog.d(TAG, "Saved ${folders.size} ROM folders to disk")
+    }
+
+    private fun resolveDocumentFile(
+        context: Context,
+        uri: Uri,
+    ): DocumentFile? {
+        if (uri.scheme == "file" || (uri.scheme == null && uri.path?.startsWith("/") == true)) {
+            val path = uri.path ?: uri.toString().removePrefix("file://")
+            val file = File(path)
+            if (file.exists()) return DocumentFile.fromFile(file)
+        }
+        return try {
+            DocumentFile.fromTreeUri(context, uri)
+        } catch (e: Exception) {
+            val path = uri.path ?: uri.toString().removePrefix("file://")
+            val file = File(path)
+            if (file.exists()) DocumentFile.fromFile(file) else null
+        }
     }
 
     suspend fun addRomFolder(
@@ -128,7 +151,7 @@ object RomManager {
             }
 
             // 2. Scan files to recognize system
-            val documentFile = DocumentFile.fromTreeUri(context, uri)
+            val documentFile = resolveDocumentFile(context, uri)
             if (documentFile == null || !documentFile.exists()) {
                 AppLog.w(TAG, "Selected document tree does not exist")
                 return@withContext AddRomFolderResult.Error("Folder does not exist or is inaccessible.")
@@ -161,7 +184,7 @@ object RomManager {
             saveRomFolders(context, current)
 
             // 4. Reload ROM apps
-            reloadRomApps(context)
+            reloadRomAppsSuspend(context)
             AddRomFolderResult.Success(newFolder)
         }
 
@@ -184,13 +207,13 @@ object RomManager {
         saveRomFolders(context, current)
 
         val namesChanged =
-            synchronized(_romCleanedNames) {
+            synchronized(romCleanedNames) {
                 val keysToRemove =
-                    _romCleanedNames.keys.filter { romUriStr ->
+                    romCleanedNames.keys.filter { romUriStr ->
                         romUriStr.startsWith(folder.uriString) || romUriStr.contains(folder.uriString)
                     }
                 if (keysToRemove.isNotEmpty()) {
-                    keysToRemove.forEach { _romCleanedNames.remove(it) }
+                    keysToRemove.forEach { romCleanedNames.remove(it) }
                     true
                 } else {
                     false
@@ -215,13 +238,19 @@ object RomManager {
 
     fun reloadRomApps(context: Context) {
         scope.launch {
+            reloadRomAppsSuspend(context)
+        }
+    }
+
+    suspend fun reloadRomAppsSuspend(context: Context) =
+        withContext(Dispatchers.IO) {
             val coversDir = File(context.cacheDir, "gamefocus_covers").apply { mkdirs() }
             var namesChanged = false
             val allRomApps =
                 buildList {
                     for (folder in _romFolders.value) {
                         val uri = Uri.parse(folder.uriString)
-                        val documentFile = DocumentFile.fromTreeUri(context, uri) ?: continue
+                        val documentFile = resolveDocumentFile(context, uri) ?: continue
                         if (!documentFile.exists()) continue
 
                         val systemDef = SUPPORTED_SYSTEMS.find { it.id == folder.systemId } ?: continue
@@ -239,8 +268,8 @@ object RomManager {
                                 val romPath = SafPathResolver.resolveFilePath(romUriStr) ?: romUriStr
 
                                 val label =
-                                    synchronized(_romCleanedNames) {
-                                        _romCleanedNames.getOrPut(romUriStr) {
+                                    synchronized(romCleanedNames) {
+                                        romCleanedNames.getOrPut(romUriStr) {
                                             namesChanged = true
                                             cleanRomName(rawLabel)
                                         }
@@ -281,7 +310,6 @@ object RomManager {
                 saveRomCleanedNames(context)
             }
         }
-    }
 
     fun updateRomCover(
         packageName: String,
