@@ -10,6 +10,7 @@ import android.content.pm.ResolveInfo
 import android.net.Uri
 import android.provider.Settings
 import android.view.Display
+import androidx.core.util.AtomicFile
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.ipc.IpcSettingsParser
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
@@ -81,14 +82,15 @@ object InstalledAppsManager {
     ): List<String> {
         val file = File(context.filesDir, filename)
         if (!file.exists()) return emptyList()
+        val atomicFile = AtomicFile(file)
         return try {
-            file.useLines { lines ->
-                lines
-                    .map { it.trim() }
-                    .filter { it.isNotEmpty() }
-                    .take(limit)
-                    .toList()
-            }
+            val text = atomicFile.readFully().toString(Charsets.UTF_8)
+            text
+                .lineSequence()
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+                .take(limit)
+                .toList()
         } catch (e: Exception) {
             AppLog.w(TAG, "Failed to load $filename: ${e.message}")
             emptyList()
@@ -106,10 +108,22 @@ object InstalledAppsManager {
         lines: Iterable<String>,
     ) {
         scope.launch {
+            val file = File(context.filesDir, filename)
+            val atomicFile = AtomicFile(file)
+            var fos: java.io.FileOutputStream? = null
             try {
-                val file = File(context.filesDir, filename)
-                file.writeText(lines.joinToString("\n"))
+                fos = atomicFile.startWrite()
+                fos.bufferedWriter(Charsets.UTF_8).use { writer ->
+                    for (line in lines) {
+                        writer.write(line)
+                        writer.newLine()
+                    }
+                }
+                atomicFile.finishWrite(fos)
             } catch (e: Exception) {
+                if (fos != null) {
+                    atomicFile.failWrite(fos)
+                }
                 AppLog.e(TAG, "Failed to persist $filename: ${e.message}", e)
             }
         }
