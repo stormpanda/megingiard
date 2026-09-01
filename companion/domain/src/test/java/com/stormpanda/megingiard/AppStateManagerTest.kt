@@ -3,6 +3,7 @@ package com.stormpanda.megingiard
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.emptyPreferences
+import app.cash.turbine.test
 import com.stormpanda.megingiard.catalog.SystemRoleClassifier
 import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.macropad.AutoSwitchCoordinator
@@ -1104,5 +1105,44 @@ class AppStateManagerTest {
             assertTrue(AppStateManager.promptInFlight.value)
             AppStateManager.setPromptInFlight(false)
             assertFalse(AppStateManager.promptInFlight.value)
+        }
+
+    @Test
+    fun `showIntegrationHome flow updates reactively across viewMode and focus changes`() =
+        runTest {
+            AppStateManager.showIntegrationHome.test {
+                // Initial state in setUp() is AUTO with null focus -> true
+                assertTrue(awaitItem())
+
+                // Switching to MACROPAD mode -> false
+                AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
+                assertFalse(awaitItem())
+
+                // Switching to DASHBOARD mode -> true
+                AppStateManager.setCompanionViewMode(CompanionViewMode.DASHBOARD)
+                assertTrue(awaitItem())
+
+                // Switching back to AUTO mode -> true (no focused app)
+                AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
+                // If value unchanged (true -> true), no new emission or same item
+                expectNoEvents()
+
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `autoSwitchOffToastEvent emits unit when switching away from AUTO mode`() =
+        runTest {
+            AppStateManager.autoSwitchOffToastEvent.test {
+                AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
+                expectNoEvents()
+
+                // Transitioning from AUTO to MACROPAD triggers the event
+                AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD, isAutoSwitchButton = false)
+                assertEquals(Unit, awaitItem())
+
+                cancelAndIgnoreRemainingEvents()
+            }
         }
 }

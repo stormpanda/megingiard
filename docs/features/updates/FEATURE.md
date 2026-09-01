@@ -73,4 +73,5 @@ GlobalSettingsViewModel / GlobalSettingsScreen (:companion:ui)
 | `AppReleaseInfo.kt` | Data model for GitHub release JSON responses |
 | `SemVerComparator.kt` | Version string parser and semver comparison logic |
 | `UpdateManager.kt` | Background fetcher, rate-limiter, and DataStore state persistence |
-| `GlobalSettingsScreen.kt` | Renders update checking controls, update available banner, and `UpdateAvailableSubPage` in Global Settings |
+| `GlobalSettingsScreen.kt` | Renders top-level navigation scaffold and delegates to tab composables in Global Settings |
+| `settings/tabs/UpdatesSettingsTab.kt` | Renders update checking controls, update available banner, and `UpdateAvailableSubPage` in Global Settings |

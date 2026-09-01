@@ -3,6 +3,7 @@ package com.stormpanda.megingiard.settings
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.config.InternalBackup
 import com.stormpanda.megingiard.config.MegingiardExport
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -29,7 +30,7 @@ class SettingsManagerTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        SettingsManager.resetForTesting(RuntimeEnvironment.getApplication())
+        SettingsManager.resetForTesting(RuntimeEnvironment.getApplication(), CoroutineScope(testDispatcher))
         testDispatcher.scheduler.advanceUntilIdle()
         SettingsManager.resetAllTutorials()
     }
