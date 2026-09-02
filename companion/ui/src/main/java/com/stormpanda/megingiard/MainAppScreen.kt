@@ -47,7 +47,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -66,6 +65,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.SwipeGestureProcessor
 import com.stormpanda.megingiard.catalog.DisplayDetector
@@ -119,24 +119,24 @@ private val MAS_RETRY_BTN_SHAPE = RoundedCornerShape(8.dp)
 
 @Composable
 fun MainAppScreen() {
-    val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
-    val isValidScreen by AppStateManager.isOnValidScreen.collectAsState()
+    val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsStateWithLifecycle()
+    val isValidScreen by AppStateManager.isOnValidScreen.collectAsStateWithLifecycle()
     val colors = LocalAppColors.current
 
-    val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsState()
-    val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsState()
-    val fullscreenKeyboardLayout by AppStateManager.fullscreenKeyboardLayout.collectAsState()
-    val isEditorActive by AppStateManager.isEditorActive.collectAsState()
-    val isBackgroundSettingsActive by AppStateManager.isBackgroundSettingsActive.collectAsState()
+    val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsStateWithLifecycle()
+    val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsStateWithLifecycle()
+    val fullscreenKeyboardLayout by AppStateManager.fullscreenKeyboardLayout.collectAsStateWithLifecycle()
+    val isEditorActive by AppStateManager.isEditorActive.collectAsStateWithLifecycle()
+    val isBackgroundSettingsActive by AppStateManager.isBackgroundSettingsActive.collectAsStateWithLifecycle()
 
-    val isAnyMenuOpen by AppStateManager.isAnyMenuOpen.collectAsState()
-    val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
+    val isAnyMenuOpen by AppStateManager.isAnyMenuOpen.collectAsStateWithLifecycle()
+    val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsStateWithLifecycle()
     val isGesturesEnabled = !isAnyMenuOpen && !isFullscreenKeyboardActive && !isFullscreenMouseActive && !isViewportEditActive
 
-    val showPromptDialog by AppStateManager.isPrivdPromptActive.collectAsState()
-    val physicalRecordingState by PhysicalGamepadRecordingManager.state.collectAsState()
-    val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsState()
-    val welcomeTourCompletedVersion by SettingsManager.welcomeTourCompletedVersion.collectAsState()
+    val showPromptDialog by AppStateManager.isPrivdPromptActive.collectAsStateWithLifecycle()
+    val physicalRecordingState by PhysicalGamepadRecordingManager.state.collectAsStateWithLifecycle()
+    val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsStateWithLifecycle()
+    val welcomeTourCompletedVersion by SettingsManager.welcomeTourCompletedVersion.collectAsStateWithLifecycle()
 
     val (
         edgeZonePx,
@@ -152,9 +152,9 @@ fun MainAppScreen() {
     val context = LocalContext.current
     var showExitDialog by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
-    val pendingImportUri by ConfigManager.pendingUri.collectAsState()
-    val pendingImport by ConfigManager.pendingParsedImport.collectAsState()
-    val pendingInAppUri by ConfigManager.pendingInAppUri.collectAsState()
+    val pendingImportUri by ConfigManager.pendingUri.collectAsStateWithLifecycle()
+    val pendingImport by ConfigManager.pendingParsedImport.collectAsStateWithLifecycle()
+    val pendingInAppUri by ConfigManager.pendingInAppUri.collectAsStateWithLifecycle()
     var importError by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(pendingImportUri) {
@@ -221,8 +221,8 @@ fun MainAppScreen() {
     } else {
         BackHandler { showExitDialog = true }
 
-        val isWizardActive by OnboardingWizardManager.isWizardActive.collectAsState()
-        val isPrivdSetupWizardActive by AppStateManager.isPrivdSetupWizardActive.collectAsState()
+        val isWizardActive by OnboardingWizardManager.isWizardActive.collectAsStateWithLifecycle()
+        val isPrivdSetupWizardActive by AppStateManager.isPrivdSetupWizardActive.collectAsStateWithLifecycle()
 
         Box(
             modifier =
@@ -357,7 +357,7 @@ fun MainAppScreen() {
                         }
                     },
         ) {
-            val showIntegrationHome by AppStateManager.showIntegrationHome.collectAsState()
+            val showIntegrationHome by AppStateManager.showIntegrationHome.collectAsStateWithLifecycle()
 
             if (shouldShowCompanionHub(
                     showIntegrationHome = showIntegrationHome,
@@ -371,8 +371,8 @@ fun MainAppScreen() {
                 MacroPadScreen()
             }
 
-            val recordingRequested by TouchRecordingManager.recordingRequested.collectAsState()
-            val touchRecordingState by TouchRecordingManager.state.collectAsState()
+            val recordingRequested by TouchRecordingManager.recordingRequested.collectAsStateWithLifecycle()
+            val touchRecordingState by TouchRecordingManager.state.collectAsStateWithLifecycle()
 
             val modalEnter =
                 remember(overlayAtBottom) {

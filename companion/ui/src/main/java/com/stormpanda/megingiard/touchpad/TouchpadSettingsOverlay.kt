@@ -12,10 +12,10 @@ import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.TouchpadSettings
@@ -34,18 +34,18 @@ private const val TAG = "TouchpadSettingsOverlay"
 fun TouchpadSettingsOverlay() {
     val colors = LocalAppColors.current
 
-    val touchpadTapToClick by TouchpadSettings.touchpadTapToClick.collectAsState()
-    val touchpadTwoFingerTap by TouchpadSettings.touchpadTwoFingerTap.collectAsState()
-    val touchpadThreeFingerTap by TouchpadSettings.touchpadThreeFingerTap.collectAsState()
-    val touchpadTapDrag by TouchpadSettings.touchpadTapDrag.collectAsState()
-    val touchpadTwoFingerScroll by TouchpadSettings.touchpadTwoFingerScroll.collectAsState()
-    val touchpadMouse45Enabled by TouchpadSettings.touchpadMouse45Enabled.collectAsState()
-    val touchpadMirroringEnabled by TouchpadSettings.touchpadMirroringEnabled.collectAsState()
-    val touchpadMirrorDim by TouchpadSettings.touchpadMirrorDim.collectAsState()
-    val touchpadSensitivity by TouchpadSettings.touchpadSensitivity.collectAsState()
-    val touchpadNaturalScroll by TouchpadSettings.touchpadNaturalScroll.collectAsState()
-    val touchpadScrollSpeed by TouchpadSettings.touchpadScrollSpeed.collectAsState()
-    val touchpadHapticsEnabled by TouchpadSettings.touchpadHapticsEnabled.collectAsState()
+    val touchpadTapToClick by TouchpadSettings.touchpadTapToClick.collectAsStateWithLifecycle()
+    val touchpadTwoFingerTap by TouchpadSettings.touchpadTwoFingerTap.collectAsStateWithLifecycle()
+    val touchpadThreeFingerTap by TouchpadSettings.touchpadThreeFingerTap.collectAsStateWithLifecycle()
+    val touchpadTapDrag by TouchpadSettings.touchpadTapDrag.collectAsStateWithLifecycle()
+    val touchpadTwoFingerScroll by TouchpadSettings.touchpadTwoFingerScroll.collectAsStateWithLifecycle()
+    val touchpadMouse45Enabled by TouchpadSettings.touchpadMouse45Enabled.collectAsStateWithLifecycle()
+    val touchpadMirroringEnabled by TouchpadSettings.touchpadMirroringEnabled.collectAsStateWithLifecycle()
+    val touchpadMirrorDim by TouchpadSettings.touchpadMirrorDim.collectAsStateWithLifecycle()
+    val touchpadSensitivity by TouchpadSettings.touchpadSensitivity.collectAsStateWithLifecycle()
+    val touchpadNaturalScroll by TouchpadSettings.touchpadNaturalScroll.collectAsStateWithLifecycle()
+    val touchpadScrollSpeed by TouchpadSettings.touchpadScrollSpeed.collectAsStateWithLifecycle()
+    val touchpadHapticsEnabled by TouchpadSettings.touchpadHapticsEnabled.collectAsStateWithLifecycle()
 
     DisposableEffect(Unit) {
         AppLog.d(TAG, "TouchpadSettingsOverlay composed")

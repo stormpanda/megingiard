@@ -25,11 +25,11 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-internal val APP_DIALOG_CORNER = 16.dp
-internal val APP_DIALOG_ELEVATION = 8.dp
-internal val APP_DIALOG_PADDING = 20.dp
-internal const val APP_DIALOG_SCRIM_ALPHA = 0.5f
-internal const val APP_DIALOG_WIDTH_FRACTION = 0.85f
+val APP_DIALOG_CORNER = 16.dp
+val APP_DIALOG_ELEVATION = 8.dp
+val APP_DIALOG_PADDING = 20.dp
+const val APP_DIALOG_SCRIM_ALPHA = 0.5f
+const val APP_DIALOG_WIDTH_FRACTION = 0.85f
 
 private val APP_DIALOG_ICON_BOTTOM_PADDING = 12.dp
 private val APP_DIALOG_TITLE_BOTTOM_PADDING = 12.dp

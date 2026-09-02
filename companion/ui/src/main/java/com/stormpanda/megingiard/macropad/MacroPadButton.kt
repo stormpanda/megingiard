@@ -30,7 +30,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,7 +52,9 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.ui.MaterialSymbol
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
@@ -454,7 +455,7 @@ internal fun ScrollWheelFace(accentColor: Color) {
 
 @Composable
 internal fun BackgroundPeekFace(accentColor: Color) {
-    val isPeekActive by MacroPadState.isPeekActive.collectAsState()
+    val isPeekActive by MacroPadState.isPeekActive.collectAsStateWithLifecycle()
     Icon(
         imageVector = if (isPeekActive) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
         contentDescription = null,

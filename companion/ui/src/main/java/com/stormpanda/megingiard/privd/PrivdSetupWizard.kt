@@ -50,7 +50,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -72,6 +71,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
@@ -124,8 +124,8 @@ internal fun PrivdSetupWizardDialog(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val colors = LocalAppColors.current
-    val stage by viewModel.privdBootstrapStage.collectAsState()
-    val lastError by viewModel.privdLastError.collectAsState()
+    val stage by viewModel.privdBootstrapStage.collectAsStateWithLifecycle()
+    val lastError by viewModel.privdLastError.collectAsStateWithLifecycle()
 
     var step by rememberSaveable { mutableStateOf(0) }
     var isNextAnimation by remember { mutableStateOf(true) }

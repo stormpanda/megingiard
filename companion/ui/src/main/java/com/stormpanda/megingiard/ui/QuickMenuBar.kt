@@ -21,7 +21,6 @@ import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -32,6 +31,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.SwipeGestureType
@@ -77,17 +77,17 @@ private val PILL_ICON_SIZE = 24.dp
  */
 @Composable
 fun QuickMenuBar(modifier: Modifier = Modifier) {
-    val previewConfig by AmbientPreviewManager.config.collectAsState()
-    val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
-    val isWizardActive by OnboardingWizardManager.isWizardActive.collectAsState()
-    val isPrivdSetupWizardActive by AppStateManager.isPrivdSetupWizardActive.collectAsState()
+    val previewConfig by AmbientPreviewManager.config.collectAsStateWithLifecycle()
+    val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsStateWithLifecycle()
+    val isWizardActive by OnboardingWizardManager.isWizardActive.collectAsStateWithLifecycle()
+    val isPrivdSetupWizardActive by AppStateManager.isPrivdSetupWizardActive.collectAsStateWithLifecycle()
     if (previewConfig != null || isViewportEditActive || isWizardActive || isPrivdSetupWizardActive) return
 
-    val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
-    val overlayFadeOut by SettingsManager.overlayFadeOut.collectAsState()
-    val isQuickMenuOpen by AppStateManager.isQuickMenuOpen.collectAsState()
-    val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsState()
-    val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsState()
+    val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsStateWithLifecycle()
+    val overlayFadeOut by SettingsManager.overlayFadeOut.collectAsStateWithLifecycle()
+    val isQuickMenuOpen by AppStateManager.isQuickMenuOpen.collectAsStateWithLifecycle()
+    val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsStateWithLifecycle()
+    val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsStateWithLifecycle()
     val colors = LocalAppColors.current
 
     val alpha = remember { Animatable(QM_BAR_ALPHA_VISIBLE) }
@@ -102,7 +102,7 @@ fun QuickMenuBar(modifier: Modifier = Modifier) {
         }
     }
 
-    val activeSwipe by AppStateManager.activeSwipe.collectAsState()
+    val activeSwipe by AppStateManager.activeSwipe.collectAsStateWithLifecycle()
     val swipeAlpha by animateFloatAsState(
         targetValue = if (activeSwipe != null) 0f else 1f,
         label = "swipeAlpha",

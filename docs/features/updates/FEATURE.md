@@ -48,9 +48,9 @@ The Automatic Update Check feature periodically and silently queries the GitHub 
 GitHub Releases API
        │ (HTTP GET)
        ▼
-  UpdateManager (Singleton in :domain)
+  UpdateManager (Singleton in :companion:domain)
        │
-       ├── Parses release tag & evaluates SemVerComparator (:core)
+       ├── Parses release tag & evaluates SemVerComparator (:shared:core)
        ├── Persists check timestamp & release data in DataStore
        ▼
 GlobalSettingsViewModel / GlobalSettingsScreen (:companion:ui)
@@ -61,9 +61,9 @@ GlobalSettingsViewModel / GlobalSettingsScreen (:companion:ui)
 
 ### Component Details
 
-- **`AppReleaseInfo` (`:core`)**: Lightweight `@Serializable` data model for GitHub release payloads.
-- **`SemVerComparator` (`:core`)**: Semantic version string comparison logic handling `'v'` prefixes, `-SNAPSHOT` pre-release tags, and `major.minor.patch` numerical ordering.
-- **`UpdateManager` (`:domain`)**: Singleton managing background network calls on `Dispatchers.IO`, 24-hour rate limiting, and DataStore state persistence.
+- **`AppReleaseInfo` (`:shared:core`)**: Lightweight `@Serializable` data model for GitHub release payloads.
+- **`SemVerComparator` (`:shared:core`)**: Semantic version string comparison logic handling `'v'` prefixes, `-SNAPSHOT` pre-release tags, and `major.minor.patch` numerical ordering.
+- **`UpdateManager` (`:companion:domain`)**: Singleton managing background network calls on `Dispatchers.IO`, 24-hour rate limiting, and DataStore state persistence.
 - **`SettingsSubPage.UPDATE_AVAILABLE` (`:companion:ui`)**: Dedicated in-tree gamepad sub-page offering configuration backup prior to opening the web browser on the top display.
 
 ### Source Files
@@ -73,4 +73,5 @@ GlobalSettingsViewModel / GlobalSettingsScreen (:companion:ui)
 | `AppReleaseInfo.kt` | Data model for GitHub release JSON responses |
 | `SemVerComparator.kt` | Version string parser and semver comparison logic |
 | `UpdateManager.kt` | Background fetcher, rate-limiter, and DataStore state persistence |
-| `GlobalSettingsScreen.kt` | Renders update checking controls, update available banner, and `UpdateAvailableSubPage` in Global Settings |
+| `GlobalSettingsScreen.kt` | Renders top-level navigation scaffold and delegates to tab composables in Global Settings |
+| `settings/tabs/UpdatesSettingsTab.kt` | Renders update checking controls, update available banner, and `UpdateAvailableSubPage` in Global Settings |

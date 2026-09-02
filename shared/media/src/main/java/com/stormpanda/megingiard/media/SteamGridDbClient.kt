@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.media
 
 import com.stormpanda.megingiard.AppLog
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -233,6 +234,8 @@ object SteamGridDbClient {
                     AppLog.w(TAG, "HTTP error $responseCode requesting $urlString: $errorText")
                     Result.failure(mapHttpError(responseCode, errorText))
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 AppLog.e(TAG, "Network error requesting $urlString", e)
                 Result.failure(mapNetworkError(e))

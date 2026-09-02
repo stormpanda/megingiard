@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.session
 
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.SafPathResolver
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -98,6 +99,8 @@ object PpssppWebSocketClient {
                     coreOrBackend = "PPSSPP",
                     titleId = discId,
                 )
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 AppLog.d(TAG, "queryActiveSession: websocket query to 127.0.0.1:$port failed - $e")
                 null

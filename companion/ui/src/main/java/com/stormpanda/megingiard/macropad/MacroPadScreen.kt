@@ -32,7 +32,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -67,6 +66,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
@@ -84,6 +84,7 @@ import com.stormpanda.megingiard.touchpad.TouchpadGestureProcessor
 import com.stormpanda.megingiard.ui.DialogToastManager
 import com.stormpanda.megingiard.ui.DialogToastPill
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.MaterialSymbol
 import com.stormpanda.megingiard.ui.dimColorFilter
 import com.stormpanda.megingiard.ui.rememberBezelBrush
 import com.stormpanda.megingiard.ui.rememberQuickMenuGestureMetrics
@@ -153,13 +154,13 @@ private fun DisabledReason.feedbackIcon(): ImageVector =
 fun MacroPadScreen(modifier: Modifier = Modifier) {
     val viewModel: MacroPadViewModel = viewModel()
     val context = LocalContext.current
-    val profile by viewModel.activeProfile.collectAsState()
-    val layout by viewModel.activeLayout.collectAsState()
-    val isEditorActive by AppStateManager.isEditorActive.collectAsState()
-    val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
-    val isEditingPositions by MacroPadState.isEditingButtonPositions.collectAsState()
-    val isCroppingBackground by MacroPadState.isCroppingBackground.collectAsState()
-    val gridMode by MacroPadState.gridMode.collectAsState()
+    val profile by viewModel.activeProfile.collectAsStateWithLifecycle()
+    val layout by viewModel.activeLayout.collectAsStateWithLifecycle()
+    val isEditorActive by AppStateManager.isEditorActive.collectAsStateWithLifecycle()
+    val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsStateWithLifecycle()
+    val isEditingPositions by MacroPadState.isEditingButtonPositions.collectAsStateWithLifecycle()
+    val isCroppingBackground by MacroPadState.isCroppingBackground.collectAsStateWithLifecycle()
+    val gridMode by MacroPadState.gridMode.collectAsStateWithLifecycle()
     val colors = LocalAppColors.current
     var lastFeedbackAtMs by remember { mutableLongStateOf(0L) }
 
@@ -175,8 +176,8 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
         }
     }
 
-    val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
-    val cutouts by ScreenCaptureManager.cutouts.collectAsState()
+    val isCapturing by ScreenCaptureManager.isCapturing.collectAsStateWithLifecycle()
+    val cutouts by ScreenCaptureManager.cutouts.collectAsStateWithLifecycle()
     val hasCutouts = cutouts.isNotEmpty()
     val showEmbeddedMirror = isCapturing && hasCutouts
 
@@ -233,7 +234,7 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
             )
         }
 
-        val activeToast by DialogToastManager.currentToast.collectAsState()
+        val activeToast by DialogToastManager.currentToast.collectAsStateWithLifecycle()
         if (!isEditorActive && !isViewportEditActive) {
             DialogToastPill(
                 toast = activeToast,
@@ -290,7 +291,7 @@ internal fun PadSurface(
 
     // Create hit-test engine with density-aware dp→px converter and haptic callback
     val engine =
-        remember(profile, layout) {
+        remember(viewModel, density, vibrator) {
             viewModel.createHitTestEngine(
                 buttonUnitDpToPx = { dpValue -> with(density) { dpValue.dp.toPx() } },
                 onHapticFeedback = { buttonId, strength, customDurationMs, customAmplitude, magnitude ->
@@ -316,14 +317,14 @@ internal fun PadSurface(
         }
 
     // Track which button IDs are currently pressed (from engine)
-    val pressedIds by engine.pressedIds.collectAsState()
+    val pressedIds by engine.pressedIds.collectAsStateWithLifecycle()
     // Track running macro IDs to drive the pulse animation
-    val runningMacroIds by MacroExecutor.runningMacroIds.collectAsState()
+    val runningMacroIds by MacroExecutor.runningMacroIds.collectAsStateWithLifecycle()
 
-    val isTouchProjectionActive by ScreenCaptureManager.isTouchProjectionActive.collectAsState()
-    val isFollowActive by ScreenCaptureManager.isFollowActive.collectAsState()
-    val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
-    val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
+    val isTouchProjectionActive by ScreenCaptureManager.isTouchProjectionActive.collectAsStateWithLifecycle()
+    val isFollowActive by ScreenCaptureManager.isFollowActive.collectAsStateWithLifecycle()
+    val isCapturing by ScreenCaptureManager.isCapturing.collectAsStateWithLifecycle()
+    val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsStateWithLifecycle()
     val (
         edgeZonePx,
         _,

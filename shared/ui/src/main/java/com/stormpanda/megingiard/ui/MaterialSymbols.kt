@@ -12,7 +12,7 @@ import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
-import com.stormpanda.megingiard.gamefocus.R
+import com.stormpanda.megingiard.shared.ui.R
 
 private const val TAG = "MaterialSymbols"
 
@@ -24,7 +24,7 @@ private const val MS_OPT_SIZE = 24f
 
 /** [FontFamily] backed by the bundled Material Symbols Rounded variable font — filled variant (FILL=1). */
 @OptIn(ExperimentalTextApi::class)
-internal val MaterialSymbolsFamily: FontFamily =
+val MaterialSymbolsFamily: FontFamily =
     FontFamily(
         Font(
             resId = R.font.material_symbols_rounded,
@@ -41,7 +41,7 @@ internal val MaterialSymbolsFamily: FontFamily =
 
 /** [FontFamily] backed by the bundled Material Symbols Rounded variable font — outline variant (FILL=0). */
 @OptIn(ExperimentalTextApi::class)
-internal val MaterialSymbolsOutlineFamily: FontFamily =
+val MaterialSymbolsOutlineFamily: FontFamily =
     FontFamily(
         Font(
             resId = R.font.material_symbols_rounded,
@@ -63,7 +63,7 @@ internal val MaterialSymbolsOutlineFamily: FontFamily =
  * @param filled `true` (default) renders the filled variant; `false` renders the outline variant.
  */
 @Composable
-internal fun MaterialSymbol(
+fun MaterialSymbol(
     name: String,
     size: Dp,
     tint: Color,

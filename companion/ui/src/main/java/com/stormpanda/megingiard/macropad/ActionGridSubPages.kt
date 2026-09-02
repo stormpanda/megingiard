@@ -15,12 +15,12 @@ import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.GamepadActionCard
@@ -192,7 +192,7 @@ internal fun MacroActionPickerSubPageContent(
     modifier: Modifier = Modifier,
 ) {
     AppLog.d(TAG, "MacroActionPickerSubPageContent: currentAction=$currentAction")
-    val profile by MacroPadState.activeProfile.collectAsState()
+    val profile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
     val macros = profile?.macros ?: emptyList()
 
     if (macros.isEmpty()) {

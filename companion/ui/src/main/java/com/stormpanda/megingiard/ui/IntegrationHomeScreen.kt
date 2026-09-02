@@ -52,7 +52,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -69,6 +68,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CompanionViewMode
@@ -77,7 +77,6 @@ import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.catalog.InstalledAppsManager
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import com.stormpanda.megingiard.macropad.MacroPadState
-import com.stormpanda.megingiard.macropad.MaterialSymbol
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.macropad.ProfileAssociation
 import com.stormpanda.megingiard.session.ActiveGameSession
@@ -131,27 +130,27 @@ private val IH_BATTERY_LOW_COLOR = Color(0xFFE57373)
 fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
     val colors = LocalAppColors.current
 
-    val clientPackage by AppStateManager.externalClientPackage.collectAsState()
-    val isClientActive by AppStateManager.isExternalClientActive.collectAsState()
-    val activeProfile by MacroPadState.activeProfile.collectAsState()
-    val hoveredAppLabel by AppStateManager.hoveredAppLabel.collectAsState()
+    val clientPackage by AppStateManager.externalClientPackage.collectAsStateWithLifecycle()
+    val isClientActive by AppStateManager.isExternalClientActive.collectAsStateWithLifecycle()
+    val activeProfile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
+    val hoveredAppLabel by AppStateManager.hoveredAppLabel.collectAsStateWithLifecycle()
 
-    val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsState()
-    val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsState()
-    val isGlobalSettingsOpen by AppStateManager.isGlobalSettingsOpen.collectAsState()
-    val isUpdateAvailable by UpdateManager.updateAvailable.collectAsState()
+    val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsStateWithLifecycle()
+    val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsStateWithLifecycle()
+    val isGlobalSettingsOpen by AppStateManager.isGlobalSettingsOpen.collectAsStateWithLifecycle()
+    val isUpdateAvailable by UpdateManager.updateAvailable.collectAsStateWithLifecycle()
 
-    val hoveredPrimaryColor by AppStateManager.hoveredAppPrimaryColor.collectAsState()
-    val hoveredSecondaryColor by AppStateManager.hoveredAppSecondaryColor.collectAsState()
-    val hoveredPackage by AppStateManager.hoveredAppPackageName.collectAsState()
-    val hoveredRomPath by AppStateManager.hoveredRomPath.collectAsState()
-    val hoveredRomIdentifier by AppStateManager.hoveredRomIdentifier.collectAsState()
-    val hoveredSystemId by AppStateManager.hoveredSystemId.collectAsState()
-    val activeSession by EmulatorDetectionFunnel.activeSession.collectAsState()
-    val lastDetectedSession by EmulatorDetectionFunnel.lastDetectedSession.collectAsState()
-    val focusedAppPackageName by AppStateManager.focusedAppPackageName.collectAsState()
-    val focusedRomPath by AppStateManager.focusedRomPath.collectAsState()
-    val focusedRomIdentifier by AppStateManager.focusedRomIdentifier.collectAsState()
+    val hoveredPrimaryColor by AppStateManager.hoveredAppPrimaryColor.collectAsStateWithLifecycle()
+    val hoveredSecondaryColor by AppStateManager.hoveredAppSecondaryColor.collectAsStateWithLifecycle()
+    val hoveredPackage by AppStateManager.hoveredAppPackageName.collectAsStateWithLifecycle()
+    val hoveredRomPath by AppStateManager.hoveredRomPath.collectAsStateWithLifecycle()
+    val hoveredRomIdentifier by AppStateManager.hoveredRomIdentifier.collectAsStateWithLifecycle()
+    val hoveredSystemId by AppStateManager.hoveredSystemId.collectAsStateWithLifecycle()
+    val activeSession by EmulatorDetectionFunnel.activeSession.collectAsStateWithLifecycle()
+    val lastDetectedSession by EmulatorDetectionFunnel.lastDetectedSession.collectAsStateWithLifecycle()
+    val focusedAppPackageName by AppStateManager.focusedAppPackageName.collectAsStateWithLifecycle()
+    val focusedRomPath by AppStateManager.focusedRomPath.collectAsStateWithLifecycle()
+    val focusedRomIdentifier by AppStateManager.focusedRomIdentifier.collectAsStateWithLifecycle()
 
     val isGameFocus = isClientActive && clientPackage?.startsWith(MegingiardIpcContract.GAMEFOCUS_PACKAGE) == true
 
@@ -313,8 +312,8 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
             ) {
                 // 1. Featured Hero Game / Companion Card
                 val context = LocalContext.current
-                val profiles by MacroPadState.profiles.collectAsState()
-                val installedApps by InstalledAppsManager.installedApps.collectAsState()
+                val profiles by MacroPadState.profiles.collectAsStateWithLifecycle()
+                val installedApps by InstalledAppsManager.installedApps.collectAsStateWithLifecycle()
 
                 val targetInfo =
                     remember(

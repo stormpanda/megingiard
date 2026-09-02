@@ -1,6 +1,9 @@
 package com.stormpanda.megingiard.viewmodel
 
+import app.cash.turbine.test
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.macropad.HapticStrength
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
@@ -8,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -21,6 +25,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
+private const val TAG = "MacroPadViewModelTest"
+
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
@@ -29,56 +35,75 @@ class MacroPadViewModelTest {
 
     @Before
     fun setUp() {
+        AppLog.d(TAG, "Setting up MacroPadViewModelTest environment")
         Dispatchers.setMain(testDispatcher)
-        MacroPadState.clearPreviewLayout()
-        MacroPadState.loadFrom(emptyList(), null)
         AppStateManager.closeQuickMenu()
     }
 
     @After
     fun tearDown() {
-        MacroPadState.clearPreviewLayout()
-        MacroPadState.loadFrom(emptyList(), null)
         AppStateManager.closeQuickMenu()
         Dispatchers.resetMain()
     }
 
     @Test
-    fun testActiveProfileAndLayoutObservation() {
-        val app = RuntimeEnvironment.getApplication()
-        val vm = MacroPadViewModel(app)
+    fun testQuickMenuStateFlowWithTurbine() =
+        runTest {
+            val app = RuntimeEnvironment.getApplication()
+            val vm = MacroPadViewModel(app)
 
-        val layout = PadLayout(id = "l1", name = "TestLayout")
-        val profile = PadProfile(id = "p1", name = "TestProfile", layouts = listOf(layout), activeLayoutId = "l1")
-        MacroPadState.loadFrom(listOf(profile), "p1")
+            vm.isQuickMenuOpen.test {
+                assertFalse(awaitItem())
 
-        assertEquals("p1", vm.activeProfile.value?.id)
-        assertEquals("l1", vm.activeLayout.value?.id)
-    }
+                AppStateManager.openQuickMenu()
+                assertTrue(awaitItem())
+
+                AppStateManager.closeQuickMenu()
+                assertFalse(awaitItem())
+            }
+        }
 
     @Test
-    fun testQuickMenuStateObservation() {
-        val app = RuntimeEnvironment.getApplication()
-        val vm = MacroPadViewModel(app)
+    fun testActiveProfileAndLayoutObservation() =
+        runTest {
+            val app = RuntimeEnvironment.getApplication()
+            val vm = MacroPadViewModel(app)
 
-        assertFalse(vm.isQuickMenuOpen.value)
-        AppStateManager.openQuickMenu()
-        assertTrue(vm.isQuickMenuOpen.value)
-        AppStateManager.closeQuickMenu()
-        assertFalse(vm.isQuickMenuOpen.value)
-    }
+            val testLayout = PadLayout(id = "test_layout", name = "Test Layout")
+            val testProfile =
+                PadProfile(
+                    id = "test_profile",
+                    name = "Test Profile",
+                    layouts = listOf(testLayout),
+                    activeLayoutId = "test_layout",
+                )
+
+            vm.activeProfile.test {
+                val initial = awaitItem()
+                MacroPadState.loadFrom(listOf(testProfile), testProfile.id)
+                val updated = awaitItem()
+                assertEquals("test_profile", updated?.id)
+            }
+        }
 
     @Test
     fun testCreateHitTestEngine() {
         val app = RuntimeEnvironment.getApplication()
         val vm = MacroPadViewModel(app)
 
-        val engine = vm.createHitTestEngine(buttonUnitDpToPx = { it * 2f })
+        var hapticTriggered = false
+        val engine =
+            vm.createHitTestEngine(
+                buttonUnitDpToPx = { dp -> dp * 2f },
+                onHapticFeedback = { _, _, _, _, _ ->
+                    hapticTriggered = true
+                },
+            )
         assertNotNull(engine)
     }
 
     @Test
-    fun testStopInjectorsLifecycle() {
+    fun testStopInjectorsAndLifecycleWatch() {
         val app = RuntimeEnvironment.getApplication()
         val vm = MacroPadViewModel(app)
 

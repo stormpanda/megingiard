@@ -21,22 +21,22 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Dp
 
-internal const val MODAL_OVERLAY_ANIMATION_DURATION_MS = 250
+const val MODAL_OVERLAY_ANIMATION_DURATION_MS = 250
 
 /**
  * Standard enter transition for modal scrims.
  */
-internal fun modalOverlayScrimEnter(): EnterTransition = fadeIn(animationSpec = tween(MODAL_OVERLAY_ANIMATION_DURATION_MS))
+fun modalOverlayScrimEnter(): EnterTransition = fadeIn(animationSpec = tween(MODAL_OVERLAY_ANIMATION_DURATION_MS))
 
 /**
  * Standard exit transition for modal scrims.
  */
-internal fun modalOverlayScrimExit(): ExitTransition = fadeOut(animationSpec = tween(MODAL_OVERLAY_ANIMATION_DURATION_MS))
+fun modalOverlayScrimExit(): ExitTransition = fadeOut(animationSpec = tween(MODAL_OVERLAY_ANIMATION_DURATION_MS))
 
 /**
  * Standard bottom-sheet slide-up and fade-in enter transition.
  */
-internal fun modalOverlaySheetEnter(): EnterTransition =
+fun modalOverlaySheetEnter(): EnterTransition =
     slideInVertically(
         initialOffsetY = { it },
         animationSpec = tween(MODAL_OVERLAY_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing),
@@ -45,7 +45,7 @@ internal fun modalOverlaySheetEnter(): EnterTransition =
 /**
  * Standard bottom-sheet slide-down and fade-out exit transition.
  */
-internal fun modalOverlaySheetExit(): ExitTransition =
+fun modalOverlaySheetExit(): ExitTransition =
     slideOutVertically(
         targetOffsetY = { it },
         animationSpec = tween(MODAL_OVERLAY_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing),
@@ -99,7 +99,7 @@ fun Modifier.blockPointerEvents(): Modifier =
  * white highlight (1.0f) fading through semi-transparent midtones.
  */
 @Composable
-internal fun rememberBezelBrush(): Brush =
+fun rememberBezelBrush(): Brush =
     remember {
         Brush.linearGradient(
             colorStops =
@@ -119,7 +119,7 @@ internal fun rememberBezelBrush(): Brush =
  * Draws a 3-sided bezel border (left, top-left arc, top, top-right arc, right) leaving the
  * bottom edge open. Used so bottom sheets sit flush with the bottom screen edge.
  */
-internal fun Modifier.topAndSideBezelBorder(
+fun Modifier.topAndSideBezelBorder(
     strokeWidth: Dp,
     brush: Brush,
     topCornerRadius: Dp,

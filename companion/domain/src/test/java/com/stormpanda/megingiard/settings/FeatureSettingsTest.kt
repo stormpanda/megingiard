@@ -1,9 +1,13 @@
 package com.stormpanda.megingiard.settings
 
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.emptyPreferences
 import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.keyboard.KbMouseBtnPos
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -17,24 +21,25 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
+import java.io.File
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
 class FeatureSettingsTest {
     private val testDispatcher = UnconfinedTestDispatcher()
-    private lateinit var tempFile: java.io.File
+    private lateinit var tempFile: File
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         tempFile =
-            java.io.File
+            File
                 .createTempFile("feat_settings_test", ".preferences_pb")
                 .apply { deleteOnExit() }
-        val testScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + testDispatcher)
+        val testScope = CoroutineScope(SupervisorJob() + testDispatcher)
         val testDataStore =
-            androidx.datastore.preferences.core.PreferenceDataStoreFactory.create(
+            PreferenceDataStoreFactory.create(
                 produceFile = { tempFile },
                 scope = testScope,
             )
@@ -47,22 +52,10 @@ class FeatureSettingsTest {
 
     @After
     fun tearDown() {
-        TouchpadSettings.loadFrom(
-            androidx.datastore.preferences.core
-                .emptyPreferences(),
-        )
-        KeyboardSettings.loadFrom(
-            androidx.datastore.preferences.core
-                .emptyPreferences(),
-        )
-        MirrorSettings.loadFrom(
-            androidx.datastore.preferences.core
-                .emptyPreferences(),
-        )
-        MacroPadSettings.loadFrom(
-            androidx.datastore.preferences.core
-                .emptyPreferences(),
-        )
+        TouchpadSettings.loadFrom(emptyPreferences())
+        KeyboardSettings.loadFrom(emptyPreferences())
+        MirrorSettings.loadFrom(emptyPreferences())
+        MacroPadSettings.loadFrom(emptyPreferences())
         SettingsManager.resetForTesting(RuntimeEnvironment.getApplication())
         Dispatchers.resetMain()
         tempFile.delete()

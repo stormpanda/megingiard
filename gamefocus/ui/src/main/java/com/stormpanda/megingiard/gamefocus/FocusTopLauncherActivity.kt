@@ -10,15 +10,14 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -27,6 +26,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.AddRomFolderResult
@@ -37,6 +37,10 @@ import com.stormpanda.megingiard.catalog.LibraryTab
 import com.stormpanda.megingiard.catalog.RomManager
 import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
 import com.stormpanda.megingiard.gamefocus.domain.initGameFocusLaunchers
+import com.stormpanda.megingiard.gamefocus.viewmodel.DEFAULT_LIBRARY_GRID_COLUMNS
+import com.stormpanda.megingiard.gamefocus.viewmodel.FocusTopLauncherViewModel
+import com.stormpanda.megingiard.gamefocus.viewmodel.INITIAL_LOOP_OFFSET
+import com.stormpanda.megingiard.gamefocus.viewmodel.LauncherScrollDirection
 import com.stormpanda.megingiard.math.floorMod
 import com.stormpanda.megingiard.settings.ThemeMode
 import com.stormpanda.megingiard.ui.AppDimens
@@ -52,52 +56,18 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 private const val TAG = "FocusTopLauncherActivity"
-private const val INITIAL_LOOP_OFFSET = 10_000
 private const val INITIAL_REPEAT_DELAY_MS = 300L
 private const val REPEAT_INTERVAL_MS = 100L
 
-private enum class ScrollDirection { NONE, LEFT, RIGHT, UP, DOWN }
-
 class FocusTopLauncherActivity : ComponentActivity() {
-    private val dialogVirtualIndexState = mutableIntStateOf(INITIAL_LOOP_OFFSET)
-    private val confirmDialogTriggerState = mutableIntStateOf(0)
-    private val dialogL1TriggerState = mutableIntStateOf(0)
-    private val dialogR1TriggerState = mutableIntStateOf(0)
-    private val prevLetterTriggerState = mutableIntStateOf(0)
-    private val nextLetterTriggerState = mutableIntStateOf(0)
+    private val viewModel: FocusTopLauncherViewModel by viewModels()
 
-    private val selectedCategoryState = mutableStateOf<GameFocusCategory>(GameFocusCategory.LAST_USED)
-    private val isMainOptionsMenuExpandedState = mutableStateOf(false)
-    private val newlyAddedFolderState = mutableStateOf<CustomRomFolder?>(null)
-    private val isRemoveRomFolderDialogOpenState = mutableStateOf(false)
-    private val removeRomFolderDialogSelectedIndexState = mutableIntStateOf(0)
-    private val folderToRemoveState = mutableStateOf<CustomRomFolder?>(null)
-    private val coreChooserDialogSelectedIndexState = mutableIntStateOf(0)
-    private val confirmCoreChooserTriggerState = mutableIntStateOf(0)
-
-    private val isOptionsMenuExpandedState = mutableStateOf(false)
-    private val dpadUpOptionsTriggerState = mutableIntStateOf(0)
-    private val dpadRightOptionsTriggerState = mutableIntStateOf(0)
-
-    private val editingAppInfoState = mutableStateOf<InstalledAppInfo?>(null)
-
-    private val isLibraryOpenState = mutableStateOf(false)
-    private val librarySelectedTabState = mutableStateOf<LibraryTab>(LibraryTab.GAMES)
     private var activeLibraryTabs: List<LibraryTab> = listOf(LibraryTab.GAMES, LibraryTab.APPS)
-    private val libraryFocusedIndexState = mutableIntStateOf(0)
-    private val isLibraryOptionsMenuExpandedState = mutableStateOf(false)
-
-    private var currentDirection = ScrollDirection.NONE
+    private var currentDirection = LauncherScrollDirection.NONE
     private var repeatJob: Job? = null
-
-    private val dpadLeftTriggerState = mutableIntStateOf(0)
-    private val dpadStepRightTriggerState = mutableIntStateOf(0)
-    private val focusedAppState = mutableStateOf<InstalledAppInfo?>(null)
 
     private var activeCategories: List<GameFocusCategory> = GameFocusCategory.builtIns
     private var launchedTopScreenPackage: String? = null
-    private val isResumedState = mutableStateOf(false)
-    private val isStartedState = mutableStateOf(false)
 
     private val openDocumentTreeLauncher =
         registerForActivityResult(
@@ -107,9 +77,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 lifecycleScope.launch {
                     when (val result = RomManager.addRomFolder(this@FocusTopLauncherActivity, uri)) {
                         is AddRomFolderResult.Success -> {
-                            coreChooserDialogSelectedIndexState.intValue = 0
-                            confirmCoreChooserTriggerState.intValue = 0
-                            newlyAddedFolderState.value = result.folder
+                            viewModel.setCoreChooserDialogSelectedIndex(0)
+                            viewModel.setNewlyAddedFolder(result.folder)
                         }
 
                         is AddRomFolderResult.Error -> {
@@ -143,19 +112,46 @@ class FocusTopLauncherActivity : ComponentActivity() {
             val remoteThemeState by MegingiardThemeClient
                 .observeTheme(
                     this,
-                ).collectAsState(initial = Pair(ThemeMode.DARK, null))
+                ).collectAsStateWithLifecycle(initialValue = Pair(ThemeMode.DARK, null))
             val (themeMode, userAccent) = remoteThemeState
             val appColors = paletteFor(themeMode, userAccent)
 
             val themeUpdateTrigger by MegingiardThemeClient
                 .observeThemeUpdates(this)
-                .collectAsState(initial = 0)
+                .collectAsStateWithLifecycle(initialValue = 0)
 
-            val allApps by InstalledAppsManager.installedApps.collectAsState()
-            val favorites by InstalledAppsManager.favorites.collectAsState()
-            val hidden by InstalledAppsManager.hiddenApps.collectAsState()
-            val lastUsed by InstalledAppsManager.lastUsed.collectAsState()
-            val customRomFolders by RomManager.romFolders.collectAsState()
+            val allApps by InstalledAppsManager.installedApps.collectAsStateWithLifecycle()
+            val favorites by InstalledAppsManager.favorites.collectAsStateWithLifecycle()
+            val hidden by InstalledAppsManager.hiddenApps.collectAsStateWithLifecycle()
+            val lastUsed by InstalledAppsManager.lastUsed.collectAsStateWithLifecycle()
+            val customRomFolders by RomManager.romFolders.collectAsStateWithLifecycle()
+
+            val selectedCategory by viewModel.selectedCategory.collectAsStateWithLifecycle()
+            val isLibraryOpen by viewModel.isLibraryOpen.collectAsStateWithLifecycle()
+            val librarySelectedTab by viewModel.librarySelectedTab.collectAsStateWithLifecycle()
+            val libraryFocusedIndex by viewModel.libraryFocusedIndex.collectAsStateWithLifecycle()
+            val isMainOptionsMenuExpanded by viewModel.isMainOptionsMenuExpanded.collectAsStateWithLifecycle()
+            val isOptionsMenuExpanded by viewModel.isOptionsMenuExpanded.collectAsStateWithLifecycle()
+            val isLibraryOptionsMenuExpanded by viewModel.isLibraryOptionsMenuExpanded.collectAsStateWithLifecycle()
+            val newlyAddedFolder by viewModel.newlyAddedFolder.collectAsStateWithLifecycle()
+            val isRemoveRomFolderDialogOpen by viewModel.isRemoveRomFolderDialogOpen.collectAsStateWithLifecycle()
+            val removeRomFolderDialogSelectedIndex by viewModel.removeRomFolderDialogSelectedIndex.collectAsStateWithLifecycle()
+            val folderToRemove by viewModel.folderToRemove.collectAsStateWithLifecycle()
+            val coreChooserDialogSelectedIndex by viewModel.coreChooserDialogSelectedIndex.collectAsStateWithLifecycle()
+            val confirmCoreChooserTrigger by viewModel.confirmCoreChooserTrigger.collectAsStateWithLifecycle()
+            val editingAppInfo by viewModel.editingAppInfo.collectAsStateWithLifecycle()
+            val dialogVirtualIndex by viewModel.dialogVirtualIndex.collectAsStateWithLifecycle()
+            val confirmDialogTrigger by viewModel.confirmDialogTrigger.collectAsStateWithLifecycle()
+            val dialogL1Trigger by viewModel.dialogL1Trigger.collectAsStateWithLifecycle()
+            val dialogR1Trigger by viewModel.dialogR1Trigger.collectAsStateWithLifecycle()
+            val prevLetterTrigger by viewModel.prevLetterTrigger.collectAsStateWithLifecycle()
+            val nextLetterTrigger by viewModel.nextLetterTrigger.collectAsStateWithLifecycle()
+            val dpadUpOptionsTrigger by viewModel.dpadUpOptionsTrigger.collectAsStateWithLifecycle()
+            val dpadRightOptionsTrigger by viewModel.dpadRightOptionsTrigger.collectAsStateWithLifecycle()
+            val dpadLeftTrigger by viewModel.dpadLeftTrigger.collectAsStateWithLifecycle()
+            val dpadStepRightTrigger by viewModel.dpadStepRightTrigger.collectAsStateWithLifecycle()
+            val focusedApp by viewModel.focusedApp.collectAsStateWithLifecycle()
+            val isStarted by viewModel.isStarted.collectAsStateWithLifecycle()
 
             val categories =
                 remember(customRomFolders) {
@@ -189,15 +185,12 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 activeLibraryTabs = libraryTabs
             }
 
-            val selectedCategory = selectedCategoryState.value
-            val isLibraryOpen = isLibraryOpenState.value
-
             SideEffect {
                 if (selectedCategory !in categories) {
-                    selectedCategoryState.value = GameFocusCategory.LAST_USED
+                    viewModel.setSelectedCategory(GameFocusCategory.LAST_USED)
                 }
-                if (librarySelectedTabState.value !in libraryTabs) {
-                    librarySelectedTabState.value = LibraryTab.GAMES
+                if (librarySelectedTab !in libraryTabs) {
+                    viewModel.setLibrarySelectedTab(LibraryTab.GAMES)
                 }
             }
 
@@ -211,7 +204,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             cat.filterApps(allApps, favorites, currentHidden, lastUsed).isNotEmpty()
                         }
                     if (startupCat != null) {
-                        selectedCategoryState.value = startupCat
+                        viewModel.setSelectedCategory(startupCat)
                         hasSetStartupCategory = true
                     }
                 }
@@ -227,8 +220,6 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     selectedCategory.filterApps(allApps, favorites, frozenHidden, lastUsed)
                 }
 
-            val editingApp = editingAppInfoState.value
-
             MaterialTheme(
                 colorScheme = colorSchemeFor(appColors, themeMode),
                 typography = megingiardTypography,
@@ -239,22 +230,22 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 ) {
                     val currentHoveredApp =
                         remember(
-                            isLibraryOpenState.value,
-                            focusedAppState.value,
-                            libraryFocusedIndexState.intValue,
-                            librarySelectedTabState.value,
+                            isLibraryOpen,
+                            focusedApp,
+                            libraryFocusedIndex,
+                            librarySelectedTab,
                             allApps,
                         ) {
-                            if (isLibraryOpenState.value) {
-                                val activeApps = librarySelectedTabState.value.filterApps(allApps)
-                                activeApps.getOrNull(libraryFocusedIndexState.intValue.coerceAtLeast(0))
+                            if (isLibraryOpen) {
+                                val activeApps = librarySelectedTab.filterApps(allApps)
+                                activeApps.getOrNull(libraryFocusedIndex.coerceAtLeast(0))
                             } else {
-                                focusedAppState.value
+                                focusedApp
                             }
                         }
 
-                    LaunchedEffect(currentHoveredApp, isStartedState.value, themeUpdateTrigger) {
-                        if (isStartedState.value && launchedTopScreenPackage == null) {
+                    LaunchedEffect(currentHoveredApp, isStarted, themeUpdateTrigger) {
+                        if (isStarted && launchedTopScreenPackage == null) {
                             val palette =
                                 currentHoveredApp?.let { app ->
                                     AppPaletteExtractor.extractColorsAsync(app, appColors.accent, appColors.appBackground)
@@ -307,84 +298,66 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             },
                             selectedCategory = selectedCategory,
                             categories = categories,
-                            onCategoryUp = {
-                                val prevCategory = selectedCategoryState.value.previous(categories)
-                                AppLog.i(TAG, "Category UP button clicked -> switching launcher category to ${prevCategory.id}")
-                                selectedCategoryState.value = prevCategory
-                            },
-                            onCategoryDown = {
-                                val nextCategory = selectedCategoryState.value.next(categories)
-                                AppLog.i(TAG, "Category DOWN button clicked -> switching launcher category to ${nextCategory.id}")
-                                selectedCategoryState.value = nextCategory
-                            },
+                            onCategoryUp = { viewModel.cycleCategoryUp(categories) },
+                            onCategoryDown = { viewModel.cycleCategoryDown(categories) },
                             favoritesSet = favorites,
                             hiddenSet = hidden,
-                            isMainOptionsMenuExpanded = isMainOptionsMenuExpandedState.value,
-                            onMainOptionsMenuExpandedChange = { isMainOptionsMenuExpandedState.value = it },
+                            isMainOptionsMenuExpanded = isMainOptionsMenuExpanded,
+                            onMainOptionsMenuExpandedChange = { viewModel.setMainOptionsMenuExpanded(it) },
                             onToggleFavorite = { appInfo ->
                                 InstalledAppsManager.toggleFavorite(this, appInfo.packageName)
                             },
                             onToggleHidden = { appInfo ->
                                 InstalledAppsManager.toggleHidden(this, appInfo.packageName)
                             },
-                            onEditArtwork = { appInfo ->
-                                AppLog.i(TAG, "Opening artwork edit dialog for ${appInfo.label}")
-                                dialogVirtualIndexState.intValue = INITIAL_LOOP_OFFSET
-                                confirmDialogTriggerState.intValue = 0
-                                dialogL1TriggerState.intValue = 0
-                                dialogR1TriggerState.intValue = 0
-                                isOptionsMenuExpandedState.value = false
-                                dpadUpOptionsTriggerState.intValue = 0
-                                dpadRightOptionsTriggerState.intValue = 0
-                                editingAppInfoState.value = appInfo
-                            },
+                            onEditArtwork = { appInfo -> viewModel.openArtworkDialog(appInfo) },
                             onOpenAppInfo = { appInfo ->
                                 InstalledAppsManager.openAppInfo(this, appInfo.packageName)
                             },
                             onAddRomFolder = { openDocumentTreeLauncher.launch(null) },
                             onRemoveRomFolder = { folder -> RomManager.removeRomFolder(this, folder) },
-                            editingAppInfo = editingApp,
-                            dialogVirtualIndex = dialogVirtualIndexState.intValue,
-                            onDialogVirtualIndexChange = { dialogVirtualIndexState.intValue = it },
-                            confirmDialogTrigger = confirmDialogTriggerState.intValue,
-                            dialogL1Trigger = dialogL1TriggerState.intValue,
-                            dialogR1Trigger = dialogR1TriggerState.intValue,
-                            prevLetterTrigger = prevLetterTriggerState.intValue,
-                            nextLetterTrigger = nextLetterTriggerState.intValue,
-                            isOptionsMenuExpanded = isOptionsMenuExpandedState.value,
-                            onOptionsMenuExpandedChange = { isOptionsMenuExpandedState.value = it },
-                            dpadUpTrigger = dpadUpOptionsTriggerState.intValue,
-                            dpadRightTrigger = dpadRightOptionsTriggerState.intValue,
-                            dpadLeftTrigger = dpadLeftTriggerState.intValue,
-                            dpadStepRightTrigger = dpadStepRightTriggerState.intValue,
-                            onFocusedAppChanged = { focusedAppState.value = it },
-                            onDismissEditingApp = { editingAppInfoState.value = null },
-                            newlyAddedFolder = newlyAddedFolderState.value,
-                            onDismissNewlyAddedFolder = { newlyAddedFolderState.value = null },
+                            editingAppInfo = editingAppInfo,
+                            dialogVirtualIndex = dialogVirtualIndex,
+                            onDialogVirtualIndexChange = { viewModel.setDialogVirtualIndex(it) },
+                            confirmDialogTrigger = confirmDialogTrigger,
+                            dialogL1Trigger = dialogL1Trigger,
+                            dialogR1Trigger = dialogR1Trigger,
+                            prevLetterTrigger = prevLetterTrigger,
+                            nextLetterTrigger = nextLetterTrigger,
+                            isOptionsMenuExpanded = isOptionsMenuExpanded,
+                            onOptionsMenuExpandedChange = { viewModel.setOptionsMenuExpanded(it) },
+                            dpadUpTrigger = dpadUpOptionsTrigger,
+                            dpadRightTrigger = dpadRightOptionsTrigger,
+                            dpadLeftTrigger = dpadLeftTrigger,
+                            dpadStepRightTrigger = dpadStepRightTrigger,
+                            onFocusedAppChanged = { viewModel.setFocusedApp(it) },
+                            onDismissEditingApp = { viewModel.setEditingAppInfo(null) },
+                            newlyAddedFolder = newlyAddedFolder,
+                            onDismissNewlyAddedFolder = { viewModel.setNewlyAddedFolder(null) },
                             onConfirmNewlyAddedFolderCore = { folder, core ->
                                 RomManager.updateRomFolderCore(this, folder.uriString, core)
-                                newlyAddedFolderState.value = null
+                                viewModel.setNewlyAddedFolder(null)
                             },
-                            coreChooserDialogSelectedIndex = coreChooserDialogSelectedIndexState.intValue,
-                            onCoreChooserDialogSelectedIndexChange = { coreChooserDialogSelectedIndexState.intValue = it },
-                            confirmCoreChooserTrigger = confirmCoreChooserTriggerState.intValue,
-                            isRemoveRomFolderDialogOpen = isRemoveRomFolderDialogOpenState.value,
-                            onRemoveRomFolderDialogOpenChange = { isRemoveRomFolderDialogOpenState.value = it },
-                            removeRomFolderDialogSelectedIndex = removeRomFolderDialogSelectedIndexState.intValue,
-                            onRemoveRomFolderDialogSelectedIndexChange = { removeRomFolderDialogSelectedIndexState.intValue = it },
-                            folderToRemove = folderToRemoveState.value,
-                            onFolderToRemoveChange = { folderToRemoveState.value = it },
+                            coreChooserDialogSelectedIndex = coreChooserDialogSelectedIndex,
+                            onCoreChooserDialogSelectedIndexChange = { viewModel.setCoreChooserDialogSelectedIndex(it) },
+                            confirmCoreChooserTrigger = confirmCoreChooserTrigger,
+                            isRemoveRomFolderDialogOpen = isRemoveRomFolderDialogOpen,
+                            onRemoveRomFolderDialogOpenChange = { viewModel.setRemoveRomFolderDialogOpen(it) },
+                            removeRomFolderDialogSelectedIndex = removeRomFolderDialogSelectedIndex,
+                            onRemoveRomFolderDialogSelectedIndexChange = { viewModel.setRemoveRomFolderDialogSelectedIndex(it) },
+                            folderToRemove = folderToRemove,
+                            onFolderToRemoveChange = { viewModel.setFolderToRemove(it) },
                             allApps = allApps,
                             lastUsed = lastUsed,
-                            isLibraryOpen = isLibraryOpenState.value,
-                            librarySelectedTab = librarySelectedTabState.value,
-                            onLibraryTabSelected = { librarySelectedTabState.value = it },
-                            libraryFocusedIndex = libraryFocusedIndexState.intValue,
-                            onLibraryFocusedIndexChange = { libraryFocusedIndexState.intValue = it },
-                            isLibraryOptionsMenuExpanded = isLibraryOptionsMenuExpandedState.value,
-                            onLibraryOptionsMenuExpandedChange = { isLibraryOptionsMenuExpandedState.value = it },
-                            onOpenLibrary = { isLibraryOpenState.value = true },
-                            onCloseLibrary = { isLibraryOpenState.value = false },
+                            isLibraryOpen = isLibraryOpen,
+                            librarySelectedTab = librarySelectedTab,
+                            onLibraryTabSelected = { viewModel.setLibrarySelectedTab(it) },
+                            libraryFocusedIndex = libraryFocusedIndex,
+                            onLibraryFocusedIndexChange = { viewModel.setLibraryFocusedIndex(it) },
+                            isLibraryOptionsMenuExpanded = isLibraryOptionsMenuExpanded,
+                            onLibraryOptionsMenuExpandedChange = { viewModel.setLibraryOptionsMenuExpanded(it) },
+                            onOpenLibrary = { viewModel.setLibraryOpen(true) },
+                            onCloseLibrary = { viewModel.setLibraryOpen(false) },
                         )
                     }
                 }
@@ -400,7 +373,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        isStartedState.value = true
+        viewModel.setStarted(true)
     }
 
     override fun onResume() {
@@ -408,18 +381,18 @@ class FocusTopLauncherActivity : ComponentActivity() {
         AppLog.d(TAG, "FocusTopLauncherActivity resumed, refreshing installed apps")
         InstalledAppsManager.loadInstalledApps(this)
         launchedTopScreenPackage = null
-        isResumedState.value = true
+        viewModel.setResumed(true)
     }
 
     override fun onPause() {
         super.onPause()
         stopRepeat()
-        isResumedState.value = false
+        viewModel.setResumed(false)
     }
 
     override fun onStop() {
         super.onStop()
-        isStartedState.value = false
+        viewModel.setStarted(false)
         if (launchedTopScreenPackage == null) {
             MegingiardSettingsClient.updateClientState(this, isActive = false, focusedPackage = null)
         }
@@ -434,74 +407,19 @@ class FocusTopLauncherActivity : ComponentActivity() {
         packageName.startsWith("com.stormpanda.megingiard") && !packageName.contains("gamefocus")
 
     private fun resetToGallery(): Boolean {
-        val wasNotInGallery =
-            isLibraryOpenState.value ||
-                editingAppInfoState.value != null ||
-                isMainOptionsMenuExpandedState.value ||
-                isOptionsMenuExpandedState.value ||
-                isLibraryOptionsMenuExpandedState.value ||
-                isRemoveRomFolderDialogOpenState.value ||
-                folderToRemoveState.value != null ||
-                newlyAddedFolderState.value != null
-
-        if (wasNotInGallery) {
-            AppLog.i(TAG, "Resetting view state to main gallery")
-            stopRepeat()
-            isLibraryOpenState.value = false
-            editingAppInfoState.value = null
-            isMainOptionsMenuExpandedState.value = false
-            isOptionsMenuExpandedState.value = false
-            isLibraryOptionsMenuExpandedState.value = false
-            isRemoveRomFolderDialogOpenState.value = false
-            folderToRemoveState.value = null
-            newlyAddedFolderState.value = null
-            return true
-        }
-        return false
+        stopRepeat()
+        return viewModel.resetToGallery()
     }
 
-    private fun stepLibraryFocus(direction: ScrollDirection) {
+    private fun stepLibraryFocus(direction: LauncherScrollDirection) {
         val allApps = InstalledAppsManager.installedApps.value
-        val currentTab = librarySelectedTabState.value
+        val currentTab = viewModel.librarySelectedTab.value
         val filteredApps = currentTab.filterApps(allApps)
-        val total = filteredApps.size
-        val current = libraryFocusedIndexState.intValue.coerceAtLeast(0)
-
-        when (direction) {
-            ScrollDirection.LEFT -> {
-                if (current > 0) {
-                    libraryFocusedIndexState.intValue = current - 1
-                }
-            }
-
-            ScrollDirection.RIGHT -> {
-                if (total > 0 && current < total - 1) {
-                    libraryFocusedIndexState.intValue = current + 1
-                }
-            }
-
-            ScrollDirection.UP -> {
-                if (current >= FLS_GRID_COLUMNS) {
-                    libraryFocusedIndexState.intValue = current - FLS_GRID_COLUMNS
-                }
-            }
-
-            ScrollDirection.DOWN -> {
-                if (total > 0) {
-                    if (current + FLS_GRID_COLUMNS < total) {
-                        libraryFocusedIndexState.intValue = current + FLS_GRID_COLUMNS
-                    } else if (current < total - 1) {
-                        libraryFocusedIndexState.intValue = total - 1
-                    }
-                }
-            }
-
-            ScrollDirection.NONE -> {}
-        }
+        viewModel.stepLibraryFocus(direction, filteredApps.size, DEFAULT_LIBRARY_GRID_COLUMNS)
     }
 
-    private fun stepCoreChooserFocus(direction: ScrollDirection) {
-        val folder = newlyAddedFolderState.value ?: return
+    private fun stepCoreChooserFocus(direction: LauncherScrollDirection) {
+        val folder = viewModel.newlyAddedFolder.value ?: return
         val systemDef = SUPPORTED_SYSTEMS.find { it.id == folder.systemId }
         val hasCores = systemDef != null && systemDef.emulatorId == "retroarch"
         val coreCount =
@@ -510,88 +428,68 @@ class FocusTopLauncherActivity : ComponentActivity() {
             } else {
                 0
             }
-
-        if (hasCores && coreCount > 0) {
-            val current = coreChooserDialogSelectedIndexState.intValue
-            if (direction == ScrollDirection.UP) {
-                coreChooserDialogSelectedIndexState.intValue = (current - 1).floorMod(coreCount)
-            } else if (direction == ScrollDirection.DOWN) {
-                coreChooserDialogSelectedIndexState.intValue = (current + 1).floorMod(coreCount)
-            }
-        }
+        viewModel.stepCoreChooserFocus(direction, coreCount)
     }
 
-    private fun stepRemoveRomFolderFocus(direction: ScrollDirection) {
+    private fun stepRemoveRomFolderFocus(direction: LauncherScrollDirection) {
         val folders = RomManager.romFolders.value
-        val foldersCount = folders.size
-        if (foldersCount > 0) {
-            val current = removeRomFolderDialogSelectedIndexState.intValue
-            if (direction == ScrollDirection.UP) {
-                removeRomFolderDialogSelectedIndexState.intValue = (current - 1).floorMod(foldersCount)
-            } else if (direction == ScrollDirection.DOWN) {
-                removeRomFolderDialogSelectedIndexState.intValue = (current + 1).floorMod(foldersCount)
-            }
-        }
+        viewModel.stepRemoveRomFolderFocus(direction, folders.size)
     }
 
-    private fun stepDirectionalAction(direction: ScrollDirection) {
-        if (newlyAddedFolderState.value != null) {
+    private fun stepDirectionalAction(direction: LauncherScrollDirection) {
+        if (viewModel.newlyAddedFolder.value != null) {
             stepCoreChooserFocus(direction)
             return
         }
-        if (isRemoveRomFolderDialogOpenState.value) {
+        if (viewModel.isRemoveRomFolderDialogOpen.value) {
             stepRemoveRomFolderFocus(direction)
             return
         }
-        if (isLibraryOpenState.value) {
+        if (viewModel.isLibraryOpen.value) {
             stepLibraryFocus(direction)
             return
         }
-        if (editingAppInfoState.value != null) {
+        if (viewModel.editingAppInfo.value != null) {
             when (direction) {
-                ScrollDirection.LEFT -> dialogVirtualIndexState.intValue--
-                ScrollDirection.RIGHT -> dialogVirtualIndexState.intValue++
+                LauncherScrollDirection.LEFT -> viewModel.stepArtworkDialogVirtualIndex(-1)
+                LauncherScrollDirection.RIGHT -> viewModel.stepArtworkDialogVirtualIndex(1)
                 else -> Unit
             }
             return
         }
 
         when (direction) {
-            ScrollDirection.LEFT -> {
-                dpadLeftTriggerState.intValue++
-                AppLog.d(TAG, "dpadLeftTriggerState = ${dpadLeftTriggerState.intValue}")
+            LauncherScrollDirection.LEFT -> {
+                viewModel.triggerDpadLeft()
+                AppLog.d(TAG, "dpadLeftTrigger = ${viewModel.dpadLeftTrigger.value}")
             }
 
-            ScrollDirection.RIGHT -> {
-                dpadStepRightTriggerState.intValue++
-                AppLog.d(TAG, "dpadStepRightTriggerState = ${dpadStepRightTriggerState.intValue}")
+            LauncherScrollDirection.RIGHT -> {
+                viewModel.triggerDpadStepRight()
+                AppLog.d(TAG, "dpadStepRightTrigger = ${viewModel.dpadStepRightTrigger.value}")
             }
 
-            ScrollDirection.UP -> {
-                val prevCategory = selectedCategoryState.value.previous(activeCategories)
-                AppLog.i(TAG, "Category UP -> switching launcher category to ${prevCategory.id}")
-                selectedCategoryState.value = prevCategory
+            LauncherScrollDirection.UP -> {
+                viewModel.cycleCategoryUp(activeCategories)
             }
 
-            ScrollDirection.DOWN -> {
-                val nextCategory = selectedCategoryState.value.next(activeCategories)
-                AppLog.i(TAG, "Category DOWN -> switching launcher category to ${nextCategory.id}")
-                selectedCategoryState.value = nextCategory
+            LauncherScrollDirection.DOWN -> {
+                viewModel.cycleCategoryDown(activeCategories)
             }
 
-            ScrollDirection.NONE -> {
+            LauncherScrollDirection.NONE -> {
                 Unit
             }
         }
     }
 
-    private fun startRepeat(direction: ScrollDirection) {
+    private fun startRepeat(direction: LauncherScrollDirection) {
         if (currentDirection == direction) return
 
         currentDirection = direction
         repeatJob?.cancel()
 
-        if (direction == ScrollDirection.NONE) return
+        if (direction == LauncherScrollDirection.NONE) return
 
         stepDirectionalAction(direction)
         repeatJob =
@@ -606,7 +504,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
     private fun stopRepeat() {
         AppLog.d(TAG, "stopRepeat: currentDirection was $currentDirection")
-        currentDirection = ScrollDirection.NONE
+        currentDirection = LauncherScrollDirection.NONE
         repeatJob?.cancel()
         repeatJob = null
     }
@@ -621,27 +519,27 @@ class FocusTopLauncherActivity : ComponentActivity() {
             return true
         }
 
-        if (newlyAddedFolderState.value != null) {
+        if (viewModel.newlyAddedFolder.value != null) {
             return when {
                 isUpKey(keyCode) -> {
-                    startRepeat(ScrollDirection.UP)
+                    startRepeat(LauncherScrollDirection.UP)
                     true
                 }
 
                 isDownKey(keyCode) -> {
-                    startRepeat(ScrollDirection.DOWN)
+                    startRepeat(LauncherScrollDirection.DOWN)
                     true
                 }
 
                 isConfirmKey(keyCode) -> {
                     AppLog.i(TAG, "Confirming core chooser dialog via gamepad A")
-                    confirmCoreChooserTriggerState.intValue++
+                    viewModel.triggerConfirmCoreChooser()
                     true
                 }
 
                 isDismissKey(keyCode) -> {
                     AppLog.i(TAG, "Dismissing core chooser dialog via gamepad B")
-                    newlyAddedFolderState.value = null
+                    viewModel.setNewlyAddedFolder(null)
                     true
                 }
 
@@ -651,19 +549,19 @@ class FocusTopLauncherActivity : ComponentActivity() {
             }
         }
 
-        if (folderToRemoveState.value != null) {
-            val folder = folderToRemoveState.value!!
+        if (viewModel.folderToRemove.value != null) {
+            val folder = viewModel.folderToRemove.value!!
             return when {
                 isConfirmKey(keyCode) -> {
                     AppLog.i(TAG, "Confirming removal of ROM folder via gamepad A: ${folder.systemName}")
                     RomManager.removeRomFolder(this, folder)
-                    folderToRemoveState.value = null
+                    viewModel.setFolderToRemove(null)
                     true
                 }
 
                 isDismissKey(keyCode) -> {
                     AppLog.i(TAG, "Cancelling folder removal via gamepad B")
-                    folderToRemoveState.value = null
+                    viewModel.setFolderToRemove(null)
                     true
                 }
 
@@ -673,34 +571,34 @@ class FocusTopLauncherActivity : ComponentActivity() {
             }
         }
 
-        if (isRemoveRomFolderDialogOpenState.value) {
+        if (viewModel.isRemoveRomFolderDialogOpen.value) {
             val folders = RomManager.romFolders.value
             return when {
                 isUpKey(keyCode) -> {
-                    startRepeat(ScrollDirection.UP)
+                    startRepeat(LauncherScrollDirection.UP)
                     true
                 }
 
                 isDownKey(keyCode) -> {
-                    startRepeat(ScrollDirection.DOWN)
+                    startRepeat(LauncherScrollDirection.DOWN)
                     true
                 }
 
                 isConfirmKey(keyCode) -> {
                     if (folders.isNotEmpty()) {
-                        val selectedFolder = folders.getOrNull(removeRomFolderDialogSelectedIndexState.intValue)
+                        val selectedFolder = folders.getOrNull(viewModel.removeRomFolderDialogSelectedIndex.value)
                         if (selectedFolder != null) {
                             AppLog.i(TAG, "Selected folder to remove via gamepad A: ${selectedFolder.systemName}")
-                            folderToRemoveState.value = selectedFolder
+                            viewModel.setFolderToRemove(selectedFolder)
                         }
                     }
-                    isRemoveRomFolderDialogOpenState.value = false
+                    viewModel.setRemoveRomFolderDialogOpen(false)
                     true
                 }
 
                 isDismissKey(keyCode) -> {
                     AppLog.i(TAG, "Closing Remove ROM Folder dialog via gamepad B")
-                    isRemoveRomFolderDialogOpenState.value = false
+                    viewModel.setRemoveRomFolderDialogOpen(false)
                     true
                 }
 
@@ -710,27 +608,27 @@ class FocusTopLauncherActivity : ComponentActivity() {
             }
         }
 
-        if (editingAppInfoState.value != null) {
+        if (viewModel.editingAppInfo.value != null) {
             // Strict Input Isolation: Traps all inputs while modal artwork dialog is open
-            if (isOptionsMenuExpandedState.value) {
+            if (viewModel.isOptionsMenuExpanded.value) {
                 return when {
                     keyCode == KeyEvent.KEYCODE_DPAD_UP -> {
                         AppLog.i(TAG, "Dpad UP pressed while options menu expanded -> Change Search Term")
-                        dpadUpOptionsTriggerState.intValue++
-                        isOptionsMenuExpandedState.value = false
+                        viewModel.triggerDpadUpOptions()
+                        viewModel.setOptionsMenuExpanded(false)
                         true
                     }
 
                     keyCode == KeyEvent.KEYCODE_DPAD_RIGHT -> {
                         AppLog.i(TAG, "Dpad RIGHT pressed while options menu expanded -> Use App Icon")
-                        dpadRightOptionsTriggerState.intValue++
-                        isOptionsMenuExpandedState.value = false
+                        viewModel.triggerDpadRightOptions()
+                        viewModel.setOptionsMenuExpanded(false)
                         true
                     }
 
                     isMenuKey(keyCode) || isDismissKey(keyCode) -> {
                         AppLog.i(TAG, "Closing options menu")
-                        isOptionsMenuExpandedState.value = false
+                        viewModel.setOptionsMenuExpanded(false)
                         true
                     }
 
@@ -744,41 +642,41 @@ class FocusTopLauncherActivity : ComponentActivity() {
             return when {
                 isMenuKey(keyCode) -> {
                     AppLog.i(TAG, "Gamepad Y/Menu pressed -> Opening options menu")
-                    isOptionsMenuExpandedState.value = true
+                    viewModel.setOptionsMenuExpanded(true)
                     true
                 }
 
                 isLeftKey(keyCode) -> {
-                    startRepeat(ScrollDirection.LEFT)
+                    startRepeat(LauncherScrollDirection.LEFT)
                     true
                 }
 
                 isRightKey(keyCode) -> {
-                    startRepeat(ScrollDirection.RIGHT)
+                    startRepeat(LauncherScrollDirection.RIGHT)
                     true
                 }
 
                 keyCode == GamePadButton.BUTTON_L1.keyCode -> {
                     AppLog.i(TAG, "Gamepad L1 pressed inside artwork dialog")
-                    dialogL1TriggerState.intValue++
+                    viewModel.triggerDialogL1()
                     true
                 }
 
                 keyCode == GamePadButton.BUTTON_R1.keyCode -> {
                     AppLog.i(TAG, "Gamepad R1 pressed inside artwork dialog")
-                    dialogR1TriggerState.intValue++
+                    viewModel.triggerDialogR1()
                     true
                 }
 
                 isConfirmKey(keyCode) -> {
                     AppLog.i(TAG, "Gamepad select key pressed inside artwork dialog")
-                    confirmDialogTriggerState.intValue++
+                    viewModel.triggerConfirmDialog()
                     true
                 }
 
                 isDismissKey(keyCode) -> {
                     AppLog.i(TAG, "Gamepad back key pressed, closing artwork dialog")
-                    editingAppInfoState.value = null
+                    viewModel.setEditingAppInfo(null)
                     true
                 }
 
@@ -789,13 +687,13 @@ class FocusTopLauncherActivity : ComponentActivity() {
         }
 
         // Library Navigation Mode
-        if (isLibraryOpenState.value) {
+        if (viewModel.isLibraryOpen.value) {
             val allApps = InstalledAppsManager.installedApps.value
-            val currentTab = librarySelectedTabState.value
+            val currentTab = viewModel.librarySelectedTab.value
             val filteredApps = currentTab.filterApps(allApps)
-            val focusedLibraryApp = filteredApps.getOrNull(libraryFocusedIndexState.intValue.coerceAtLeast(0))
+            val focusedLibraryApp = filteredApps.getOrNull(viewModel.libraryFocusedIndex.value.coerceAtLeast(0))
 
-            if (isLibraryOptionsMenuExpandedState.value) {
+            if (viewModel.isLibraryOptionsMenuExpanded.value) {
                 stopRepeat()
                 return when {
                     isLeftKey(keyCode) -> {
@@ -806,14 +704,14 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             )
                             InstalledAppsManager.toggleHidden(this, focusedLibraryApp.packageName)
                         }
-                        isLibraryOptionsMenuExpandedState.value = false
+                        viewModel.setLibraryOptionsMenuExpanded(false)
                         true
                     }
 
                     isUpKey(keyCode) -> {
                         AppLog.i(TAG, "D-pad UP pressed while Library options menu expanded -> Adding ROM folder")
                         openDocumentTreeLauncher.launch(null)
-                        isLibraryOptionsMenuExpandedState.value = false
+                        viewModel.setLibraryOptionsMenuExpanded(false)
                         true
                     }
 
@@ -821,16 +719,16 @@ class FocusTopLauncherActivity : ComponentActivity() {
                         val folders = RomManager.romFolders.value
                         if (folders.isNotEmpty()) {
                             AppLog.i(TAG, "D-pad DOWN pressed while Library options menu expanded -> Manage ROM folders")
-                            removeRomFolderDialogSelectedIndexState.intValue = 0
-                            isRemoveRomFolderDialogOpenState.value = true
+                            viewModel.setRemoveRomFolderDialogSelectedIndex(0)
+                            viewModel.setRemoveRomFolderDialogOpen(true)
                         }
-                        isLibraryOptionsMenuExpandedState.value = false
+                        viewModel.setLibraryOptionsMenuExpanded(false)
                         true
                     }
 
                     isMenuKey(keyCode) || isDismissKey(keyCode) -> {
                         AppLog.i(TAG, "Closing Library options menu")
-                        isLibraryOptionsMenuExpandedState.value = false
+                        viewModel.setLibraryOptionsMenuExpanded(false)
                         true
                     }
 
@@ -844,7 +742,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 isMenuKey(keyCode) -> {
                     if (focusedLibraryApp != null) {
                         AppLog.i(TAG, "Gamepad Y/Menu pressed in Library -> Opening Library options menu for ${focusedLibraryApp.label}")
-                        isLibraryOptionsMenuExpandedState.value = true
+                        viewModel.setLibraryOptionsMenuExpanded(true)
                     }
                     true
                 }
@@ -852,48 +750,44 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 keyCode == GamePadButton.BUTTON_R2.keyCode || isDismissKey(keyCode) -> {
                     AppLog.i(TAG, "Closing Library section")
                     stopRepeat()
-                    isLibraryOpenState.value = false
+                    viewModel.setLibraryOpen(false)
                     true
                 }
 
                 keyCode == GamePadButton.BUTTON_L1.keyCode -> {
-                    val prevTab = currentTab.previous(activeLibraryTabs)
-                    AppLog.i(TAG, "Library L1 pressed -> switching tab to ${prevTab.id}")
-                    librarySelectedTabState.value = prevTab
-                    libraryFocusedIndexState.intValue = 0
+                    viewModel.cycleLibraryTabUp(activeLibraryTabs)
+                    viewModel.setLibraryFocusedIndex(0)
                     true
                 }
 
                 keyCode == GamePadButton.BUTTON_R1.keyCode -> {
-                    val nextTab = currentTab.next(activeLibraryTabs)
-                    AppLog.i(TAG, "Library R1 pressed -> switching tab to ${nextTab.id}")
-                    librarySelectedTabState.value = nextTab
-                    libraryFocusedIndexState.intValue = 0
+                    viewModel.cycleLibraryTabDown(activeLibraryTabs)
+                    viewModel.setLibraryFocusedIndex(0)
                     true
                 }
 
                 isLeftKey(keyCode) -> {
-                    startRepeat(ScrollDirection.LEFT)
+                    startRepeat(LauncherScrollDirection.LEFT)
                     true
                 }
 
                 isRightKey(keyCode) -> {
-                    startRepeat(ScrollDirection.RIGHT)
+                    startRepeat(LauncherScrollDirection.RIGHT)
                     true
                 }
 
                 isUpKey(keyCode) -> {
-                    startRepeat(ScrollDirection.UP)
+                    startRepeat(LauncherScrollDirection.UP)
                     true
                 }
 
                 isDownKey(keyCode) -> {
-                    startRepeat(ScrollDirection.DOWN)
+                    startRepeat(LauncherScrollDirection.DOWN)
                     true
                 }
 
                 isConfirmKey(keyCode) -> {
-                    val targetApp = filteredApps.getOrNull(libraryFocusedIndexState.intValue.coerceAtLeast(0))
+                    val targetApp = filteredApps.getOrNull(viewModel.libraryFocusedIndex.value.coerceAtLeast(0))
                     if (targetApp != null) {
                         AppLog.i(TAG, "Library launch on top display: ${targetApp.label}")
                         launchedTopScreenPackage = targetApp.packageName
@@ -906,8 +800,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 }
 
                 keyCode == GamePadButton.BUTTON_X.keyCode || keyCode == KeyEvent.KEYCODE_X -> {
-                    if (libraryFocusedIndexState.intValue >= 0) {
-                        val targetApp = filteredApps.getOrNull(libraryFocusedIndexState.intValue)
+                    if (viewModel.libraryFocusedIndex.value >= 0) {
+                        val targetApp = filteredApps.getOrNull(viewModel.libraryFocusedIndex.value)
                         if (targetApp != null) {
                             AppLog.i(TAG, "Library launch on bottom display: ${targetApp.label}")
                             if (!isCompanionApp(targetApp.packageName)) {
@@ -932,34 +826,27 @@ class FocusTopLauncherActivity : ComponentActivity() {
         val favorites = InstalledAppsManager.favorites.value
         val hidden = frozenHiddenSetForInput
         val lastUsed = InstalledAppsManager.lastUsed.value
-        val selectedCategory = selectedCategoryState.value
+        val selectedCategory = viewModel.selectedCategory.value
         val apps = selectedCategory.filterApps(allApps, favorites, hidden, lastUsed)
 
-        if (isMainOptionsMenuExpandedState.value) {
+        if (viewModel.isMainOptionsMenuExpanded.value) {
             stopRepeat()
-            val targetApp = focusedAppState.value
+            val targetApp = viewModel.focusedApp.value
             return when {
                 isUpKey(keyCode) -> {
                     if (targetApp != null) {
                         InstalledAppsManager.toggleFavorite(this, targetApp.packageName)
                     }
-                    isMainOptionsMenuExpandedState.value = false
+                    viewModel.setMainOptionsMenuExpanded(false)
                     true
                 }
 
                 isRightKey(keyCode) -> {
                     if (targetApp != null) {
                         AppLog.i(TAG, "D-pad RIGHT pressed while options menu expanded -> Editing artwork for ${targetApp.label}")
-                        dialogVirtualIndexState.intValue = INITIAL_LOOP_OFFSET
-                        confirmDialogTriggerState.intValue = 0
-                        dialogL1TriggerState.intValue = 0
-                        dialogR1TriggerState.intValue = 0
-                        isOptionsMenuExpandedState.value = false
-                        dpadUpOptionsTriggerState.intValue = 0
-                        dpadRightOptionsTriggerState.intValue = 0
-                        editingAppInfoState.value = targetApp
+                        viewModel.openArtworkDialog(targetApp)
                     }
-                    isMainOptionsMenuExpandedState.value = false
+                    viewModel.setMainOptionsMenuExpanded(false)
                     true
                 }
 
@@ -968,7 +855,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                         AppLog.i(TAG, "D-pad DOWN pressed while options menu expanded -> Opening native app info for ${targetApp.label}")
                         InstalledAppsManager.openAppInfo(this, targetApp.packageName)
                     }
-                    isMainOptionsMenuExpandedState.value = false
+                    viewModel.setMainOptionsMenuExpanded(false)
                     true
                 }
 
@@ -977,12 +864,12 @@ class FocusTopLauncherActivity : ComponentActivity() {
                         AppLog.i(TAG, "D-pad LEFT pressed while options menu expanded -> Toggling hidden state for ${targetApp.label}")
                         InstalledAppsManager.toggleHidden(this, targetApp.packageName)
                     }
-                    isMainOptionsMenuExpandedState.value = false
+                    viewModel.setMainOptionsMenuExpanded(false)
                     true
                 }
 
                 isMenuKey(keyCode) || isDismissKey(keyCode) -> {
-                    isMainOptionsMenuExpandedState.value = false
+                    viewModel.setMainOptionsMenuExpanded(false)
                     true
                 }
 
@@ -996,33 +883,33 @@ class FocusTopLauncherActivity : ComponentActivity() {
             isMenuKey(keyCode) -> {
                 if (apps.isNotEmpty()) {
                     stopRepeat()
-                    isMainOptionsMenuExpandedState.value = true
+                    viewModel.setMainOptionsMenuExpanded(true)
                 }
                 return true
             }
 
             isUpKey(keyCode) -> {
-                startRepeat(ScrollDirection.UP)
+                startRepeat(LauncherScrollDirection.UP)
                 return true
             }
 
             isDownKey(keyCode) -> {
-                startRepeat(ScrollDirection.DOWN)
+                startRepeat(LauncherScrollDirection.DOWN)
                 return true
             }
 
             isLeftKey(keyCode) -> {
-                if (apps.isNotEmpty()) startRepeat(ScrollDirection.LEFT)
+                if (apps.isNotEmpty()) startRepeat(LauncherScrollDirection.LEFT)
                 return true
             }
 
             isRightKey(keyCode) -> {
-                if (apps.isNotEmpty()) startRepeat(ScrollDirection.RIGHT)
+                if (apps.isNotEmpty()) startRepeat(LauncherScrollDirection.RIGHT)
                 return true
             }
 
             isConfirmKey(keyCode) -> {
-                val targetApp = focusedAppState.value
+                val targetApp = viewModel.focusedApp.value
                 if (targetApp != null) {
                     AppLog.i(TAG, "Gamepad A button / launch key pressed for: ${targetApp.label} -> Launching on Top Display")
                     launchedTopScreenPackage = targetApp.packageName
@@ -1035,7 +922,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
             }
 
             keyCode == GamePadButton.BUTTON_X.keyCode || keyCode == KeyEvent.KEYCODE_X -> {
-                val targetApp = focusedAppState.value
+                val targetApp = viewModel.focusedApp.value
                 if (targetApp != null) {
                     AppLog.i(TAG, "Gamepad X button pressed for: ${targetApp.label} -> Launching on Bottom Display")
                     if (!isCompanionApp(targetApp.packageName)) {
@@ -1051,7 +938,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
             keyCode == GamePadButton.BUTTON_L1.keyCode -> {
                 if (apps.isNotEmpty()) {
                     AppLog.i(TAG, "Gamepad L1 pressed -> skipping to previous starting letter")
-                    prevLetterTriggerState.intValue++
+                    viewModel.triggerPrevLetter()
                 }
                 return true
             }
@@ -1059,15 +946,15 @@ class FocusTopLauncherActivity : ComponentActivity() {
             keyCode == GamePadButton.BUTTON_R1.keyCode -> {
                 if (apps.isNotEmpty()) {
                     AppLog.i(TAG, "Gamepad R1 pressed -> skipping to next starting letter")
-                    nextLetterTriggerState.intValue++
+                    viewModel.triggerNextLetter()
                 }
                 return true
             }
 
             keyCode == GamePadButton.BUTTON_R2.keyCode -> {
                 AppLog.i(TAG, "Gamepad R2 pressed -> Opening Library section")
-                isLibraryOpenState.value = true
-                libraryFocusedIndexState.intValue = 0
+                viewModel.setLibraryOpen(true)
+                viewModel.setLibraryFocusedIndex(0)
                 return true
             }
         }
@@ -1087,10 +974,10 @@ class FocusTopLauncherActivity : ComponentActivity() {
             return true
         }
 
-        if (editingAppInfoState.value != null ||
-            newlyAddedFolderState.value != null ||
-            folderToRemoveState.value != null ||
-            isRemoveRomFolderDialogOpenState.value
+        if (viewModel.editingAppInfo.value != null ||
+            viewModel.newlyAddedFolder.value != null ||
+            viewModel.folderToRemove.value != null ||
+            viewModel.isRemoveRomFolderDialogOpen.value
         ) {
             return true
         }
@@ -1108,107 +995,100 @@ class FocusTopLauncherActivity : ComponentActivity() {
             val x = if (axisHatX != 0f) axisHatX else axisX
             val y = if (axisHatY != 0f) axisHatY else axisY
 
-            if (newlyAddedFolderState.value != null ||
-                isRemoveRomFolderDialogOpenState.value
+            if (viewModel.newlyAddedFolder.value != null ||
+                viewModel.isRemoveRomFolderDialogOpen.value
             ) {
                 if (y < -0.5f) {
-                    startRepeat(ScrollDirection.UP)
+                    startRepeat(LauncherScrollDirection.UP)
                     return true
                 } else if (y > 0.5f) {
-                    startRepeat(ScrollDirection.DOWN)
+                    startRepeat(LauncherScrollDirection.DOWN)
                     return true
                 } else {
-                    if (currentDirection == ScrollDirection.UP || currentDirection == ScrollDirection.DOWN) {
+                    if (currentDirection == LauncherScrollDirection.UP || currentDirection == LauncherScrollDirection.DOWN) {
                         stopRepeat()
                     }
                 }
                 return true
             }
 
-            if (editingAppInfoState.value != null ||
-                folderToRemoveState.value != null
+            if (viewModel.editingAppInfo.value != null ||
+                viewModel.folderToRemove.value != null
             ) {
-                if (editingAppInfoState.value != null && isOptionsMenuExpandedState.value) {
+                if (viewModel.editingAppInfo.value != null && viewModel.isOptionsMenuExpanded.value) {
                     if (y < -0.5f) {
                         AppLog.i(TAG, "Joystick Hat/Stick UP pressed while options expanded -> Change Search Term")
-                        dpadUpOptionsTriggerState.intValue++
-                        isOptionsMenuExpandedState.value = false
+                        viewModel.triggerDpadUpOptions()
+                        viewModel.setOptionsMenuExpanded(false)
                         return true
                     } else if (x > 0.5f) {
                         AppLog.i(TAG, "Joystick Hat/Stick RIGHT pressed while options expanded -> Use App Icon")
-                        dpadRightOptionsTriggerState.intValue++
-                        isOptionsMenuExpandedState.value = false
+                        viewModel.triggerDpadRightOptions()
+                        viewModel.setOptionsMenuExpanded(false)
                         return true
                     }
                     return true
                 }
 
                 if (x < -0.5f) {
-                    startRepeat(ScrollDirection.LEFT)
+                    startRepeat(LauncherScrollDirection.LEFT)
                     return true
                 } else if (x > 0.5f) {
-                    startRepeat(ScrollDirection.RIGHT)
+                    startRepeat(LauncherScrollDirection.RIGHT)
                     return true
                 } else {
-                    if (currentDirection != ScrollDirection.NONE) {
+                    if (currentDirection != LauncherScrollDirection.NONE) {
                         stopRepeat()
                     }
                 }
                 return true
             }
 
-            if (isMainOptionsMenuExpandedState.value) {
+            if (viewModel.isMainOptionsMenuExpanded.value) {
                 stopRepeat()
 
                 if (y < -0.5f) {
-                    val targetApp = focusedAppState.value
+                    val targetApp = viewModel.focusedApp.value
                     if (targetApp != null) {
                         InstalledAppsManager.toggleFavorite(this, targetApp.packageName)
                     }
-                    isMainOptionsMenuExpandedState.value = false
+                    viewModel.setMainOptionsMenuExpanded(false)
                     return true
                 } else if (x > 0.5f) {
-                    val targetApp = focusedAppState.value
+                    val targetApp = viewModel.focusedApp.value
                     if (targetApp != null) {
                         AppLog.i(TAG, "Joystick RIGHT pressed while options menu expanded -> Edit artwork for ${targetApp.label}")
-                        dialogVirtualIndexState.intValue = INITIAL_LOOP_OFFSET
-                        confirmDialogTriggerState.intValue = 0
-                        dialogL1TriggerState.intValue = 0
-                        dialogR1TriggerState.intValue = 0
-                        isOptionsMenuExpandedState.value = false
-                        dpadUpOptionsTriggerState.intValue = 0
-                        dpadRightOptionsTriggerState.intValue = 0
-                        editingAppInfoState.value = targetApp
+                        viewModel.openArtworkDialog(targetApp)
                     }
-                    isMainOptionsMenuExpandedState.value = false
+                    viewModel.setMainOptionsMenuExpanded(false)
                     return true
                 } else if (y > 0.5f) {
-                    val targetApp = focusedAppState.value
+                    val targetApp = viewModel.focusedApp.value
                     if (targetApp != null) {
                         AppLog.i(TAG, "Joystick DOWN pressed while options menu expanded -> Opening native app info for ${targetApp.label}")
                         InstalledAppsManager.openAppInfo(this, targetApp.packageName)
                     }
-                    isMainOptionsMenuExpandedState.value = false
+                    viewModel.setMainOptionsMenuExpanded(false)
                     return true
                 } else if (x < -0.5f) {
-                    val targetApp = focusedAppState.value
+                    val targetApp = viewModel.focusedApp.value
                     if (targetApp != null) {
                         AppLog.i(TAG, "Joystick LEFT pressed while options menu expanded -> Toggling hidden for ${targetApp.label}")
                         InstalledAppsManager.toggleHidden(this, targetApp.packageName)
                     }
-                    isMainOptionsMenuExpandedState.value = false
+                    viewModel.setMainOptionsMenuExpanded(false)
                     return true
                 }
                 return true
             }
 
-            if (isLibraryOptionsMenuExpandedState.value) {
+            if (viewModel.isLibraryOptionsMenuExpanded.value) {
                 stopRepeat()
                 if (x < -0.5f) {
                     val allApps = InstalledAppsManager.installedApps.value
-                    val currentTab = librarySelectedTabState.value
+                    val currentTab = viewModel.librarySelectedTab.value
                     val filteredApps = currentTab.filterApps(allApps)
-                    val focusedLibraryApp = filteredApps.getOrNull(libraryFocusedIndexState.intValue.coerceAtLeast(0))
+                    val focusedLibraryApp = filteredApps.getOrNull(viewModel.libraryFocusedIndex.value.coerceAtLeast(0))
                     if (focusedLibraryApp != null) {
                         AppLog.i(
                             TAG,
@@ -1216,41 +1096,41 @@ class FocusTopLauncherActivity : ComponentActivity() {
                         )
                         InstalledAppsManager.toggleHidden(this, focusedLibraryApp.packageName)
                     }
-                    isLibraryOptionsMenuExpandedState.value = false
+                    viewModel.setLibraryOptionsMenuExpanded(false)
                     return true
                 } else if (y < -0.5f) {
                     AppLog.i(TAG, "Joystick UP pressed while Library options menu expanded -> Adding ROM folder")
                     openDocumentTreeLauncher.launch(null)
-                    isLibraryOptionsMenuExpandedState.value = false
+                    viewModel.setLibraryOptionsMenuExpanded(false)
                     return true
                 } else if (y > 0.5f) {
                     val folders = RomManager.romFolders.value
                     if (folders.isNotEmpty()) {
                         AppLog.i(TAG, "Joystick DOWN pressed while Library options menu expanded -> Manage ROM folders")
-                        removeRomFolderDialogSelectedIndexState.intValue = 0
-                        isRemoveRomFolderDialogOpenState.value = true
+                        viewModel.setRemoveRomFolderDialogSelectedIndex(0)
+                        viewModel.setRemoveRomFolderDialogOpen(true)
                     }
-                    isLibraryOptionsMenuExpandedState.value = false
+                    viewModel.setLibraryOptionsMenuExpanded(false)
                     return true
                 }
                 return true
             }
 
-            if (isLibraryOpenState.value) {
+            if (viewModel.isLibraryOpen.value) {
                 if (x < -0.5f) {
-                    startRepeat(ScrollDirection.LEFT)
+                    startRepeat(LauncherScrollDirection.LEFT)
                     return true
                 } else if (x > 0.5f) {
-                    startRepeat(ScrollDirection.RIGHT)
+                    startRepeat(LauncherScrollDirection.RIGHT)
                     return true
                 } else if (y < -0.5f) {
-                    startRepeat(ScrollDirection.UP)
+                    startRepeat(LauncherScrollDirection.UP)
                     return true
                 } else if (y > 0.5f) {
-                    startRepeat(ScrollDirection.DOWN)
+                    startRepeat(LauncherScrollDirection.DOWN)
                     return true
                 } else {
-                    if (currentDirection != ScrollDirection.NONE) {
+                    if (currentDirection != LauncherScrollDirection.NONE) {
                         stopRepeat()
                     }
                 }
@@ -1258,18 +1138,18 @@ class FocusTopLauncherActivity : ComponentActivity() {
             }
 
             if (x < -0.5f) {
-                startRepeat(ScrollDirection.LEFT)
+                startRepeat(LauncherScrollDirection.LEFT)
                 return true
             } else if (x > 0.5f) {
-                startRepeat(ScrollDirection.RIGHT)
+                startRepeat(LauncherScrollDirection.RIGHT)
                 return true
             } else {
-                if (currentDirection != ScrollDirection.NONE) {
+                if (currentDirection != LauncherScrollDirection.NONE) {
                     stopRepeat()
                 }
             }
         }
-        return if (editingAppInfoState.value != null) true else super.onGenericMotionEvent(event)
+        return if (viewModel.editingAppInfo.value != null) true else super.onGenericMotionEvent(event)
     }
 }
 

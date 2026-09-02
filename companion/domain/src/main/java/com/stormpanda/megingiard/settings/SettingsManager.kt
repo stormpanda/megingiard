@@ -13,7 +13,10 @@ import com.stormpanda.megingiard.config.InternalBackup
 import com.stormpanda.megingiard.update.UpdateManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -120,7 +123,12 @@ object SettingsManager {
     private val _logLevel = MutableStateFlow(AppLog.Level.WARN)
     val logLevel: StateFlow<AppLog.Level> = _logLevel.asStateFlow()
 
-    internal fun resetForTesting(context: Context? = null) {
+    internal fun resetForTesting(
+        context: Context? = null,
+        testScope: CoroutineScope? = null,
+    ) {
+        scope.cancel()
+        scope = testScope ?: CoroutineScope(SupervisorJob() + Dispatchers.IO)
         initialized = false
         _themeMode.value = ThemeMode.DARK
         _accentColor.value = DEFAULT_ACCENT_COLOR
@@ -131,6 +139,7 @@ object SettingsManager {
         _steamGridDbApiToken.value = ""
         _appLanguage.value = AppLanguage.SYSTEM
         _logLevel.value = AppLog.Level.WARN
+        AppLog.level = AppLog.Level.WARN
         _welcomeTourCompletedVersion.value = 0
         _showMacroEditorTutorial.value = true
         _internalBackups.value = emptyList()
@@ -138,6 +147,7 @@ object SettingsManager {
             runBlocking {
                 try {
                     dataStore.edit { it.clear() }
+                    dataStore.data.first()
                 } catch (_: Exception) {
                 }
             }
@@ -199,22 +209,27 @@ object SettingsManager {
                 .collect { prefs ->
                     AppLog.i(TAG, "settings loaded from DataStore")
 
-                    _excludeFromRecents.value = prefs[KEY_EXCLUDE_FROM_RECENTS] ?: false
-                    _accentColor.value = prefs[KEY_ACCENT_COLOR] ?: DEFAULT_ACCENT_COLOR
-                    _customAccentColor.value = prefs[KEY_CUSTOM_ACCENT_COLOR] ?: prefs[KEY_ACCENT_COLOR] ?: DEFAULT_ACCENT_COLOR
-                    _themeMode.value = ThemeMode.entries.firstOrNull { it.name == prefs[KEY_THEME_MODE] } ?: ThemeMode.DARK
-                    _overlayAtBottom.value = prefs[KEY_OVERLAY_AT_BOTTOM] ?: false
-                    _overlayFadeOut.value = prefs[KEY_OVERLAY_FADE_OUT] ?: false
-                    _steamGridDbApiToken.value = prefs[KEY_STEAMGRIDDB_API_TOKEN] ?: ""
+                    prefs[KEY_EXCLUDE_FROM_RECENTS]?.let { _excludeFromRecents.value = it }
+                    prefs[KEY_ACCENT_COLOR]?.let { _accentColor.value = it }
+                    prefs[KEY_CUSTOM_ACCENT_COLOR]?.let { _customAccentColor.value = it }
+                    prefs[KEY_THEME_MODE]?.let { name -> ThemeMode.entries.firstOrNull { it.name == name } }?.let { _themeMode.value = it }
+                    prefs[KEY_OVERLAY_AT_BOTTOM]?.let { _overlayAtBottom.value = it }
+                    prefs[KEY_OVERLAY_FADE_OUT]?.let { _overlayFadeOut.value = it }
+                    prefs[KEY_STEAMGRIDDB_API_TOKEN]?.let { _steamGridDbApiToken.value = it }
 
-                    _showMacroEditorTutorial.value = prefs[KEY_SHOW_MACRO_EDITOR_TUTORIAL] ?: true
-                    _welcomeTourCompletedVersion.value = prefs[KEY_WELCOME_TOUR_COMPLETED_VERSION] ?: 0
+                    prefs[KEY_SHOW_MACRO_EDITOR_TUTORIAL]?.let { _showMacroEditorTutorial.value = it }
+                    prefs[KEY_WELCOME_TOUR_COMPLETED_VERSION]?.let { _welcomeTourCompletedVersion.value = it }
                     MirrorSettings.loadFrom(prefs)
                     KeyboardSettings.loadFrom(prefs)
                     TouchpadSettings.loadFrom(prefs)
-                    _appLanguage.value = AppLanguage.entries.firstOrNull { it.name == prefs[KEY_APP_LANGUAGE] } ?: AppLanguage.SYSTEM
-                    _logLevel.value = AppLog.Level.entries.firstOrNull { it.name == prefs[KEY_LOG_LEVEL] } ?: AppLog.Level.WARN
-                    AppLog.level = _logLevel.value
+                    prefs[KEY_APP_LANGUAGE]?.let { name -> AppLanguage.entries.firstOrNull { it.name == name } }?.let {
+                        _appLanguage.value =
+                            it
+                    }
+                    prefs[KEY_LOG_LEVEL]?.let { name -> AppLog.Level.entries.firstOrNull { it.name == name } }?.let {
+                        _logLevel.value = it
+                        AppLog.level = it
+                    }
                     MacroPadSettings.loadFrom(prefs)
                     UpdateManager.loadFrom(prefs)
 

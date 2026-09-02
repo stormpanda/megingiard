@@ -7,13 +7,13 @@ import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.SmartButton
 import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.MacroPadSettings
@@ -112,7 +112,7 @@ internal fun GamepadButtonPicker(
     isFirstItem: Boolean = false,
 ) {
     val noneLabel = stringResource(R.string.macropad_modifier_none)
-    val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsState()
+    val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsStateWithLifecycle()
 
     val currentPreset =
         GamepadKeycodes.PRESETS.firstOrNull { it.code == current.btnCode }
@@ -151,7 +151,7 @@ internal fun MacroPicker(
     onOpenMacroPicker: () -> Unit,
     isFirstItem: Boolean = false,
 ) {
-    val profile by MacroPadState.activeProfile.collectAsState()
+    val profile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
     val macros = profile?.macros ?: emptyList()
 
     val selectedMacro =

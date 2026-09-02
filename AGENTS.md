@@ -210,7 +210,7 @@ affect runtime behaviour or user-facing interactions.
 
 ## 6 Package Structure
 
-The project is structured into 9 Feature-First Gradle modules:
+The project is structured into 10 Feature-First Gradle modules:
 
 ### App Modules (Executables)
 * **`:companion:ui`** — Main Android companion app UI layer (`com.stormpanda.megingiard`). Contains Activities, viewmodels, custom Compose views, and secondary screen presentations.
@@ -220,7 +220,8 @@ The project is structured into 9 Feature-First Gradle modules:
 * **`:companion:domain`** — Companion business logic, device managers, input injection facades (Touchpad, MacroPad, Keyboard, Mirror, Privd).
 * **`:gamefocus:domain`** — Standalone launcher domain logic and ROM launcher implementations (`RetroArchLauncher`, `GameNativeLauncher`).
 
-### Shared Domain & Core Modules
+### Shared UI, Domain & Core Modules
+* **`:shared:ui`** — App-wide design system tokens, themes (`AppColors`, `AppTheme`), modal dialogs (`AppModalDialog`), overlay modifiers, button glyphs (`GamePadButton`), and Material Symbol font resources.
 * **`:shared:catalog`** — Installed app index, ROM file scanning, system definitions (`InstalledAppsManager`, `RomManager`, `DisplayDetector`, `RomLauncherRegistry`).
 * **`:shared:media`** — External artwork fetchers, HTTP clients, and caching layers (`SteamGridDbClient`).
 * **`:shared:session`** — Active game detection engines (`EmulatorDetectionFunnel`, `GameNativeDetector`, `RetroArchDetector`, `Pcsx2AndroidDetector`, `YuzuDetector`).

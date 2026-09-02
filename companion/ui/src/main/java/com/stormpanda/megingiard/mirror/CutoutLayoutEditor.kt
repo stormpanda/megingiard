@@ -22,7 +22,6 @@ import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -39,6 +38,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
@@ -79,15 +79,15 @@ private const val CLE_SELECTED_BORDER_ALPHA = 0.75f
 @Composable
 fun CutoutLayoutEditor() {
     val colors = LocalAppColors.current
-    val activeLayout by MacroPadState.activeLayout.collectAsState()
+    val activeLayout by MacroPadState.activeLayout.collectAsStateWithLifecycle()
     val layout = activeLayout ?: return
 
-    val selectedCutoutId by AppStateManager.selectedCutoutId.collectAsState()
+    val selectedCutoutId by AppStateManager.selectedCutoutId.collectAsStateWithLifecycle()
     val density = LocalDensity.current
-    val surfaceWidth by ScreenCaptureManager.surfaceWidth.collectAsState()
-    val surfaceHeight by ScreenCaptureManager.surfaceHeight.collectAsState()
-    val captureSourceWidth by ScreenCaptureManager.captureSourceWidth.collectAsState()
-    val captureSourceHeight by ScreenCaptureManager.captureSourceHeight.collectAsState()
+    val surfaceWidth by ScreenCaptureManager.surfaceWidth.collectAsStateWithLifecycle()
+    val surfaceHeight by ScreenCaptureManager.surfaceHeight.collectAsStateWithLifecycle()
+    val captureSourceWidth by ScreenCaptureManager.captureSourceWidth.collectAsStateWithLifecycle()
+    val captureSourceHeight by ScreenCaptureManager.captureSourceHeight.collectAsStateWithLifecycle()
     val srcWidth = if (captureSourceWidth > 0) captureSourceWidth.toFloat() else 1920f
     val srcHeight = if (captureSourceHeight > 0) captureSourceHeight.toFloat() else 1080f
 

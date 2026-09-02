@@ -14,7 +14,6 @@ import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -24,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
@@ -99,11 +99,11 @@ internal fun MacroTimelineSubPageContent(
             },
         )
 
-    val touchRecordingState by TouchRecordingManager.state.collectAsState()
-    val physicalRecordingState by PhysicalGamepadRecordingManager.state.collectAsState()
-    val privdState by PrivdManager.state.collectAsState()
+    val touchRecordingState by TouchRecordingManager.state.collectAsStateWithLifecycle()
+    val physicalRecordingState by PhysicalGamepadRecordingManager.state.collectAsStateWithLifecycle()
+    val privdState by PrivdManager.state.collectAsStateWithLifecycle()
     val physicalRecordingAvailable = privdState == PrivdState.RUNNING
-    val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsState()
+    val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsStateWithLifecycle()
 
     fun syncDraftToNavState(draft: Macro) {
         val updatedStack =

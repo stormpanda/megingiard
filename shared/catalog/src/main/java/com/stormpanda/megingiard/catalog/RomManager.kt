@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.catalog
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.core.util.AtomicFile
 import androidx.documentfile.provider.DocumentFile
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.rom.cleanRomName
@@ -17,6 +18,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
+import java.io.FileOutputStream
 import java.util.zip.ZipInputStream
 import kotlin.math.absoluteValue
 
@@ -66,8 +68,10 @@ object RomManager {
     ): T? {
         val file = File(context.filesDir, filename)
         if (!file.exists()) return null
+        val atomicFile = AtomicFile(file)
         return try {
-            Json.decodeFromString<T>(file.readText())
+            val text = atomicFile.readFully().toString(Charsets.UTF_8)
+            Json.decodeFromString<T>(text)
         } catch (e: Exception) {
             AppLog.w(TAG, "Failed to load $filename: ${e.message}")
             null
@@ -79,10 +83,20 @@ object RomManager {
         filename: String,
         value: T,
     ) {
+        val file = File(context.filesDir, filename)
+        val atomicFile = AtomicFile(file)
+        var fos: FileOutputStream? = null
         try {
-            val file = File(context.filesDir, filename)
-            file.writeText(Json.encodeToString(value))
+            val jsonText = Json.encodeToString(value)
+            fos = atomicFile.startWrite()
+            fos.bufferedWriter(Charsets.UTF_8).use { writer ->
+                writer.write(jsonText)
+            }
+            atomicFile.finishWrite(fos)
         } catch (e: Exception) {
+            if (fos != null) {
+                atomicFile.failWrite(fos)
+            }
             AppLog.e(TAG, "Failed to save $filename: ${e.message}", e)
         }
     }

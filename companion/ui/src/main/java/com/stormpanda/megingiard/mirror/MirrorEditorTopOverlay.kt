@@ -62,7 +62,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -105,6 +104,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
@@ -209,7 +209,7 @@ fun MirrorEditorTopOverlay(
     val colors = LocalAppColors.current
     val context = LocalContext.current
     val density = LocalDensity.current
-    val activeLayout by MacroPadState.activeLayout.collectAsState()
+    val activeLayout by MacroPadState.activeLayout.collectAsStateWithLifecycle()
     val layout = activeLayout ?: return
 
     // Track baseline saved state; all modifications are in-flight until explicitly saved
@@ -217,7 +217,7 @@ fun MirrorEditorTopOverlay(
     val currentCutouts = layout.mirrorCutouts
     val hasChanges = currentCutouts != savedCutouts
 
-    val selectedCutoutId by AppStateManager.selectedCutoutId.collectAsState()
+    val selectedCutoutId by AppStateManager.selectedCutoutId.collectAsStateWithLifecycle()
     val cutouts = layout.mirrorCutouts
     val selectedCutout = cutouts.find { it.id == selectedCutoutId } ?: cutouts.firstOrNull()
 
@@ -297,14 +297,14 @@ fun MirrorEditorTopOverlay(
         }
     }
 
-    val activeToast by DialogToastManager.currentToast.collectAsState()
-    val captureSourceWidth by ScreenCaptureManager.captureSourceWidth.collectAsState()
-    val captureSourceHeight by ScreenCaptureManager.captureSourceHeight.collectAsState()
+    val activeToast by DialogToastManager.currentToast.collectAsStateWithLifecycle()
+    val captureSourceWidth by ScreenCaptureManager.captureSourceWidth.collectAsStateWithLifecycle()
+    val captureSourceHeight by ScreenCaptureManager.captureSourceHeight.collectAsStateWithLifecycle()
     val srcWidth = if (captureSourceWidth > 0) captureSourceWidth.toFloat() else METO_FALLBACK_SRC_WIDTH
     val srcHeight = if (captureSourceHeight > 0) captureSourceHeight.toFloat() else METO_FALLBACK_SRC_HEIGHT
 
-    val surfaceWidth by ScreenCaptureManager.surfaceWidth.collectAsState()
-    val surfaceHeight by ScreenCaptureManager.surfaceHeight.collectAsState()
+    val surfaceWidth by ScreenCaptureManager.surfaceWidth.collectAsStateWithLifecycle()
+    val surfaceHeight by ScreenCaptureManager.surfaceHeight.collectAsStateWithLifecycle()
     val secScreenW = if (surfaceWidth > 0f) surfaceWidth else METO_FALLBACK_SEC_WIDTH
     val secScreenH = if (surfaceHeight > 0f) surfaceHeight else METO_FALLBACK_SEC_HEIGHT
 
@@ -1565,7 +1565,7 @@ private fun HideBackgroundCard(
     cardFocusRequester: FocusRequester = remember { FocusRequester() },
     onFocusChanged: ((Boolean) -> Unit)? = null,
 ) {
-    val isHidden by AppStateManager.isMirrorEditorBackgroundHidden.collectAsState()
+    val isHidden by AppStateManager.isMirrorEditorBackgroundHidden.collectAsStateWithLifecycle()
     val hasBackground = !layout?.backgroundImagePath.isNullOrEmpty()
 
     val label =

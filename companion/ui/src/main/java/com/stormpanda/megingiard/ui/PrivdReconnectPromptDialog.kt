@@ -36,7 +36,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.onboarding.OnboardingStepId
@@ -136,7 +136,7 @@ fun PrivdReconnectPromptDialog(
     var isAccessibilityActive by remember { mutableStateOf(MegingiardAccessibilityService.isEnabled(context)) }
     val isAccessibilityStep = currentStepState.id == OnboardingStepId.ACCESSIBILITY
     val isPrivilegedStep = currentStepState.id == OnboardingStepId.PRIVILEGED
-    val privdState by PrivdManager.state.collectAsState()
+    val privdState by PrivdManager.state.collectAsStateWithLifecycle()
     var isWifiActive by remember { mutableStateOf(MegingiardAccessibilityService.isWifiActive(context)) }
     var isDevModeActive by remember { mutableStateOf(MegingiardAccessibilityService.isDevModeActive(context)) }
     var isWirelessActive by remember { mutableStateOf(MegingiardAccessibilityService.isWirelessDebuggingActive(context)) }

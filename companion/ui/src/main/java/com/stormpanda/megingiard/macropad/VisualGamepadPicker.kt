@@ -18,7 +18,6 @@ import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -33,6 +32,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.MacroPadSettings
@@ -133,7 +133,7 @@ internal fun VisualGamepadPicker(
     onClear: (() -> Unit)? = null,
 ) {
     AppLog.d(TAG, "VisualGamepadPicker: selectedBtnCode=$selectedBtnCode")
-    val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsState()
+    val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsStateWithLifecycle()
 
     Column(
         modifier = modifier.fillMaxWidth(),

@@ -32,7 +32,6 @@ import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -47,6 +46,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CompanionViewMode
@@ -100,14 +100,14 @@ fun QuickMenu(
 ) {
     val colors = LocalAppColors.current
     val menuBezelBrush = rememberBezelBrush()
-    val profiles by MacroPadState.profiles.collectAsState()
-    val activeProfile by MacroPadState.activeProfile.collectAsState()
-    val activeLayout by MacroPadState.activeLayout.collectAsState()
-    val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
-    val isFrozen by ScreenCaptureManager.isFrozen.collectAsState()
-    val companionViewMode by AppStateManager.companionViewMode.collectAsState()
-    val showIntegrationHome by AppStateManager.showIntegrationHome.collectAsState()
-    val privdState by PrivdClient.state.collectAsState()
+    val profiles by MacroPadState.profiles.collectAsStateWithLifecycle()
+    val activeProfile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
+    val activeLayout by MacroPadState.activeLayout.collectAsStateWithLifecycle()
+    val isCapturing by ScreenCaptureManager.isCapturing.collectAsStateWithLifecycle()
+    val isFrozen by ScreenCaptureManager.isFrozen.collectAsStateWithLifecycle()
+    val companionViewMode by AppStateManager.companionViewMode.collectAsStateWithLifecycle()
+    val showIntegrationHome by AppStateManager.showIntegrationHome.collectAsStateWithLifecycle()
+    val privdState by PrivdClient.state.collectAsStateWithLifecycle()
     val isPrivdConnected = privdState == PrivdConnectionState.CONNECTED
     var showQuickMenuHelp by remember { mutableStateOf(false) }
     var showShutOffConfirm by remember { mutableStateOf(false) }

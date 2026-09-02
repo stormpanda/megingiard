@@ -36,7 +36,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.macropad.MaterialSymbol
 
 private val PM_CARDS_GAP = 8.dp
 private const val PM_MIRROR_CARD_WEIGHT = 2f

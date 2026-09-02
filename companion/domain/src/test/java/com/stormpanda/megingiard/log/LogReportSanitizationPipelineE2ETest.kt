@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.log
 
 import android.content.Context
 import android.net.Uri
+import android.os.Process
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -104,7 +105,7 @@ class LogReportSanitizationPipelineE2ETest {
                     appVersion = "1.0.0",
                     deviceModel = "AYN Thor",
                     androidVersion = "14",
-                    pid = android.os.Process.myPid(),
+                    pid = Process.myPid(),
                 )
 
             // In Robolectric/JVM, reading real process logcat may throw or succeed based on environment
