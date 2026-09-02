@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.ui
 
 import androidx.compose.ui.graphics.Color
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.settings.ThemeMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -11,6 +12,7 @@ private const val TAG = "AppThemeTest"
 class AppThemeTest {
     @Test
     fun testPaletteFor_returnsAppropriatePalette() {
+        AppLog.d(TAG, "Testing paletteFor returns appropriate palette across ThemeMode presets")
         val darkPalette = paletteFor(ThemeMode.DARK, null)
         assertNotNull(darkPalette)
         assertEquals(Color(0xFF121212), darkPalette.appBackground)

@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.File
+import java.io.FileOutputStream
 
 private const val TAG = "InstalledAppsManager"
 private const val FILE_FAVORITES = "gamefocus_favorites.txt"
@@ -110,7 +111,7 @@ object InstalledAppsManager {
         scope.launch {
             val file = File(context.filesDir, filename)
             val atomicFile = AtomicFile(file)
-            var fos: java.io.FileOutputStream? = null
+            var fos: FileOutputStream? = null
             try {
                 fos = atomicFile.startWrite()
                 fos.bufferedWriter(Charsets.UTF_8).use { writer ->

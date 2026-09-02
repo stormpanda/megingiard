@@ -18,6 +18,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
+import java.io.FileOutputStream
 import java.util.zip.ZipInputStream
 import kotlin.math.absoluteValue
 
@@ -84,7 +85,7 @@ object RomManager {
     ) {
         val file = File(context.filesDir, filename)
         val atomicFile = AtomicFile(file)
-        var fos: java.io.FileOutputStream? = null
+        var fos: FileOutputStream? = null
         try {
             val jsonText = Json.encodeToString(value)
             fos = atomicFile.startWrite()

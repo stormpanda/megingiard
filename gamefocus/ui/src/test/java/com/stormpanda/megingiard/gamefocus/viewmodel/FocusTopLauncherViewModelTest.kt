@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.gamefocus.viewmodel
 
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.CustomRomFolder
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.catalog.LibraryTab
@@ -18,6 +19,7 @@ class FocusTopLauncherViewModelTest {
 
     @Before
     fun setUp() {
+        AppLog.d(TAG, "Setting up FocusTopLauncherViewModelTest")
         viewModel = FocusTopLauncherViewModel()
     }
 

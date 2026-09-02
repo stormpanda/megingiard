@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.viewmodel
 
 import app.cash.turbine.test
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.macropad.HapticStrength
 import com.stormpanda.megingiard.macropad.MacroPadState
@@ -34,6 +35,7 @@ class MacroPadViewModelTest {
 
     @Before
     fun setUp() {
+        AppLog.d(TAG, "Setting up MacroPadViewModelTest environment")
         Dispatchers.setMain(testDispatcher)
         AppStateManager.closeQuickMenu()
     }
