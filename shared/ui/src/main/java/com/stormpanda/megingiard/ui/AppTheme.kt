@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -109,6 +110,8 @@ data class AppColors(
 
 // Default accent for Dark/Light — overridden at runtime by SettingsManager.accentColor.
 private val DEFAULT_DARK_LIGHT_ACCENT = Color(0xFFCC0000)
+private const val LUMINANCE_CONTRAST_THRESHOLD = 0.45f
+private val DEFAULT_CONTRAST_DARK_TEXT = Color(0xFF121212)
 
 private val darkPalette =
     AppColors(
@@ -247,6 +250,18 @@ private val royalAsgardPalette =
 // ─── Palette selector ─────────────────────────────────────────────────────────
 
 /**
+ * Calculates a high-contrast content color (text, icon) for this background color based on its
+ * relative luminance per WCAG standards.
+ *
+ * @param dark The color to return if this background is bright (luminance > [LUMINANCE_CONTRAST_THRESHOLD]).
+ * @param light The color to return if this background is dark (luminance <= [LUMINANCE_CONTRAST_THRESHOLD]).
+ */
+fun Color.contrastingContentColor(
+    dark: Color = DEFAULT_CONTRAST_DARK_TEXT,
+    light: Color = Color.White,
+): Color = if (luminance() > LUMINANCE_CONTRAST_THRESHOLD) dark else light
+
+/**
  * Returns the [AppColors] palette for [mode], optionally overriding the accent
  * token with a user-chosen colour. The override is only applied when
  * [ThemeMode.supportsCustomAccent] is true; fixed themes ignore it.
@@ -268,8 +283,12 @@ fun paletteFor(
         }
     return if (mode.supportsCustomAccent) {
         val eff = userAccent ?: base.accent
+        val effOnAccent = eff.contrastingContentColor(dark = base.appBackground, light = Color.White)
         base.copy(
             accent = eff,
+            onAccent = effOnAccent,
+            buttonIconTint = effOnAccent,
+            controlIndicatorActive = effOnAccent,
             navQuickMenuBody = eff,
             buttonBody = eff,
             sectionHeaderColor = eff,

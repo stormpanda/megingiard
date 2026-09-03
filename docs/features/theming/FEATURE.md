@@ -28,7 +28,7 @@ Megingiard supports user-selectable colour themes. The app provides three themes
 - All screen and component colours MUST be expressed through the 35 semantic tokens defined in `AppColors`.
 - Screens MUST NOT use hardcoded `Color.Black`, `Color.White`, or other literal `Color` values for surface, background, or text colours. Exceptions are permitted for:
   - HSV color-wheel and slider rendering math in `MacroPadSubPages.kt` and `GlobalSettingsScreen.kt` (hue, saturation, brightness, and opacity gradients, selector thumb color).
-  - Text / icon content placed on `accentColor` container surfaces — the `onAccent` token defines theming-appropriate contrast colour.
+  - Text / icon content placed on `accentColor` container surfaces — the `onAccent` token defines theming-appropriate contrast colour (dynamically calculated based on relative luminance when custom accent colors are applied).
   - Standard dialog scrim overlays (`Color.Black.copy(alpha = 0.5f)` behind modal panels).
   - Material 3 component internal styling (`SwitchDefaults.colors`, `CheckboxDefaults.colors`) where tokens do not apply.
   - Explicit slider track colours (`Color.LightGray` / `Color.DarkGray` in `MediaScreen`).
@@ -71,15 +71,15 @@ Thirty-five semantic `AppColors` tokens cover all theming needs:
 | `pickerBackground`       | Color-picker dialog background                                                                                                     |
 | `accentBorder`           | Accent-colour swatch border                                                                                                        |
 | `accent`                 | Primary interactive accent colour (user-overridable or fixed per theme)                                                            |
-| `onAccent`               | Text / icons on accent / highlighted button backgrounds (theme-defined)                                                            |
+| `onAccent`               | Text / icons on accent / highlighted button backgrounds (theme-defined; dynamically resolved via relative luminance for custom accents) |
 | `quickMenuBarIdleColor`  | Always-visible pull-tab quick menu bar colour                                                                                      |
-| `controlIndicatorActive` | Active mode indicator dot in the navigation bar                                                                                   |
+| `controlIndicatorActive` | Active mode indicator dot in the navigation bar (tracks `onAccent` in custom-accent themes)                                        |
 | `navQuickMenuBody`       | Navigation bar background (tracks accent in custom-accent themes)                                                                 |
 | `buttonBody`             | Mirror control button background (tracks accent in custom-accent themes)                                                          |
 | `controlOverlayBorder`   | Border/outline of the carousel control overlay container                                                                           |
 | `navQuickMenuBorder`     | Border/outline of the navigation bar                                                                                               |
 | `mirrorQuickMenuBorder`  | Border/outline of the mirror control bar                                                                                           |
-| `buttonIconTint`         | Icon tint on mirror control buttons                                                                                                |
+| `buttonIconTint`         | Icon tint on mirror control buttons (tracks `onAccent` in custom-accent themes)                                                    |
 | `error`                  | Destructive/error action color                                                                                                     |
 | `onError`                | Text/icons on error-colored surfaces                                                                                               |
 | `actionColorGamepad`     | Badge tint for gamepad/joystick macro step chips                                                                                   |
