@@ -56,6 +56,15 @@ Megingiard is structured as a **Feature-First Modular Architecture** split acros
 4. **Auxiliary Standalone Modules**
    - **`:mirrorserver`** — Standalone shell-UID DEX executable loaded via `/system/bin/app_process` for un-throttled privileged display mirroring.
 
+### Application Independence & Decoupling Principle
+
+Megingiard Companion (`:companion:ui`, `:companion:domain`) is the core standalone product and is distributed to end users. Game Focus (`:gamefocus:ui`, `:gamefocus:domain`) is an optional top-screen launcher that is **currently not released to the public**. Users are never required or forced to use Game Focus, and frequently run standard or third-party Android launchers (such as Nova, Daijisho, Beacon, or ES-DE).
+
+Consequently:
+- **Zero Runtime Dependencies:** Megingiard Companion must function with 100% stability and correctness without Game Focus installed or running.
+- **Strict Bug Resolution Policy:** Any bug, crash, focus conflict, or unexpected behavior in Megingiard Companion must be diagnosed and resolved strictly within Megingiard Companion (`:companion:*`) or shared modules (`:shared:*`). Fixing or mitigating Megingiard Companion bugs by altering Game Focus code is strictly forbidden.
+- **Decoupled Inter-Process Architecture:** Any inter-process communication (such as theme synchronization via `MegingiardThemeProvider`) treats Megingiard Companion as the authoritative standalone host and Game Focus as an optional passive consumer. Companion never assumes Game Focus state or existence.
+
 ---
 
 ## Dual-Display Layout

@@ -39,3 +39,7 @@ Pure SHA-256 and HMAC-SHA256 logic MUST remain covered by local JVM tests in `:d
 ### Code Quality
 
 State management must be centrally orchestrated via asynchronous Kotlin flows (`MutableStateFlow`) to maintain a strict separation of concerns between the UI and the Background Service. All conventions are specified in [AGENTS.md](../AGENTS.md).
+
+### Standalone Companion Autonomy (Zero Game Focus Dependency)
+
+Megingiard Companion is a completely standalone application with zero dependencies on Game Focus. Game Focus is an optional top-screen launcher currently not released to the public. Users are not required to use Game Focus and may use stock or third-party launchers. Any bugs affecting Megingiard Companion must be addressed strictly within Megingiard Companion and shared modules, never via Game Focus.

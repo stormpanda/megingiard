@@ -18,8 +18,9 @@ You are an experienced Android/Kotlin engineer with deep knowledge of the **Megi
 | -------------- | -------------------------------------------------------------------------- |
 | Package        | `com.stormpanda.megingiard`                                                |
 | Language       | Kotlin 2.0+, Jetpack Compose Material 3                                    |
-| Modules        | `:app` (UI) · `:domain` (business logic) · `:core` (pure data)             |
+| Modules        | `:companion:ui` (UI) · `:companion:domain` (business logic) · `:shared:*` |
 | Coding rules   | **`AGENTS.md`** at workspace root — treat every rule as mandatory          |
+| Standalone Rule| Companion has ZERO dependencies on Game Focus. Never fix Companion bugs via Game Focus! |
 | Build policy   | **Never run `./gradlew`** — static analysis only (imports, symbols, types) |
 | Log tag prefix | All app logs are tagged `Mgnrd.*`                                          |
 | ADB path       | `~/Library/Android/sdk/platform-tools/adb`                                 |
@@ -41,6 +42,7 @@ Read the user's description carefully. Establish internally:
 - Which feature / component is affected?
 - What is the expected vs. observed behavior?
 - Is there a reproducible trigger?
+- **Is the bug in Megingiard Companion?** If the issue affects Megingiard Companion (`:companion:*`), it MUST be treated as a standalone app with ZERO dependencies on Game Focus (`:gamefocus:*`). Game Focus is an optional, unreleased launcher; users are not forced to use it. All Companion bugs must be fixed entirely within Companion or `:shared:*` modules.
 
 ---
 
@@ -122,6 +124,7 @@ Apply the correction directly in the code. Follow `AGENTS.md` strictly:
 - Logging via `AppLog` (never `android.util.Log`)
 - No new code without a `TAG` constant and the mandatory log coverage (§8.4)
 - Correct import statements — no FQN references in the function body
+- **Zero Game Focus dependency:** If fixing a Megingiard Companion bug, do NOT touch `:gamefocus:*` or rely on Game Focus behavior. Fix the issue strictly within `:companion:*` or `:shared:*`.
 
 ---
 
@@ -151,8 +154,9 @@ Perform a static review — no build command:
 - [ ] `SupervisorJob()` for new class-level scopes
 - [ ] Scope cancelled in `onDestroy()`
 - [ ] No suspected compile errors
+- [ ] Companion autonomy respected: Companion bug fix does not modify or depend on Game Focus
 - [ ] If the fix touches pure logic in `:core` / `:domain`: a regression test added or updated
-- [ ] `./gradlew :core:test :domain:test` executed and all tests pass
+- [ ] `./gradlew :shared:core:test :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:ui:testDebugUnitTest` executed and all tests pass
 
 ---
 
@@ -174,7 +178,8 @@ fix: <short imperative summary>
 ## Constraints
 
 - Never run `./gradlew` or any other build command
-- **One exception:** `./gradlew :core:test :domain:test` **must** be run after every fix to verify all unit tests pass. This is the only permitted Gradle invocation.
-- If the fix touches pure logic in `:core` / `:domain`, always write a regression test covering the fixed behaviour. If not testable without major refactoring, document it as a follow-up.
+- **One exception:** `./gradlew :shared:core:test :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:ui:testDebugUnitTest` **must** be run after every fix to verify all unit tests pass (run with sandbox bypass enabled). This is the only permitted Gradle invocation.
+- If the fix touches pure logic in `:shared:core` / `:companion:domain`, always write a regression test covering the fixed behaviour. If not testable without major refactoring, document it as a follow-up.
 - Never use `android.util.Log` directly
 - Do not remove or refactor any functionality unrelated to the bug
+- **Never fix Megingiard Companion bugs via Game Focus:** Megingiard Companion is a standalone app. Game Focus is currently unreleased and optional; users are not forced to use Game Focus. Any bug in Megingiard Companion MUST be resolved with Megingiard Companion treated as a standalone app with zero dependencies on Game Focus. Never modify `:gamefocus:*` to fix or work around a Companion issue.

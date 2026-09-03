@@ -10,6 +10,13 @@
 
 Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpanda.megingiard.gamefocus`) providing a dual-screen experience on handheld devices such as the AYN Thor. It displays an endless 2:3 vertical poster carousel of all installed applications on the primary top display (Display 0) while maintaining the full Megingiard companion controls (MacroPad, Touchpad, Keyboard, Mirror Card, Quick Menu) on the secondary bottom display (Display 4).
 
+> [!IMPORTANT]
+> **Release Status & Companion Decoupling Principle**
+>
+> - **Not Released to the Public:** Megingiard Game Focus is currently an experimental, unreleased build variant.
+> - **Optional Usage:** Users are **never** required or forced to use Game Focus. Megingiard Companion runs standalone and works with stock Android, Thor/Odin launchers, or any third-party launcher (Nova, Daijisho, Beacon, ES-DE, etc.).
+> - **Zero Dependency & Bug Fixing Rule:** Megingiard Companion has zero runtime dependencies on Game Focus. Any bug, crash, or unexpected behavior occurring in Megingiard Companion MUST be fixed entirely within Megingiard Companion (`:companion:*`) or shared modules (`:shared:*`). Fixing or partially fixing Companion bugs via changes in Game Focus is strictly prohibited.
+
 ### FR-GF1: Dual-Screen Execution
 
 - Megingiard Game Focus MUST run its companion utility interface on the bottom screen (Display 4).
@@ -73,10 +80,11 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 - On-screen touch buttons (`ExpandableActionsMenu`, Top Screen A, Bottom Screen X) MUST have D-pad focusability disabled (`canFocus = false`) and focus indications removed to prevent buttons from taking D-pad or Joystick focus during launcher navigation.
 - Favorites (`filesDir/gamefocus_favorites.txt`), Hidden apps (`filesDir/gamefocus_hidden.txt`), and Recently Used launch history (`filesDir/gamefocus_last_used.txt`) MUST be persisted to disk across application restarts.
 
-#### FR-GF8: Coexistence
+#### FR-GF8: Coexistence & Strict Decoupling
 
 - Megingiard Game Focus MUST have application ID `com.stormpanda.megingiard.gamefocus` (`.debug` for debug builds).
 - It MUST be installable alongside the standard Megingiard app without package or state conflicts.
+- Megingiard Companion MUST maintain 100% standalone functionality and zero runtime dependency on Game Focus. Companion bugs must NEVER be delegated to, worked around, or fixed by altering Game Focus.
 
 ### FR-GF9: Library View & R2 Slide Transition
 
