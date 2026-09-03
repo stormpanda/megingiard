@@ -3,6 +3,7 @@ package com.stormpanda.megingiard
 import android.content.Intent
 import android.net.Uri
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -32,5 +33,9 @@ class LaunchTrampolineActivityTest {
         val startedIntent = shadowActivity.nextStartedActivity
         assertTrue(startedIntent != null)
         assertEquals(MainActivity::class.java.name, startedIntent?.component?.className)
+        assertFalse(
+            "FLAG_ACTIVITY_REORDER_TO_FRONT must not be set to avoid reordering display stack",
+            ((startedIntent?.flags ?: 0) and Intent.FLAG_ACTIVITY_REORDER_TO_FRONT) != 0,
+        )
     }
 }

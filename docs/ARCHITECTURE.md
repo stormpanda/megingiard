@@ -87,11 +87,12 @@ The MacroPad macro editor utilizes dual-screen coordination for transient record
 
 `MainActivity` is intended to execute on the **secondary (bottom) display** (`displayId != Display.DEFAULT_DISPLAY`). To ensure seamless placement on dual-screen hardware such as the AYN Thor:
 
-1. **Launch Routing via `LaunchTrampolineActivity`**:
+1. **Launch Routing via `LaunchTrampolineActivity` and Primary Focus Anchor**:
    - The application launcher entry point (`CATEGORY_LAUNCHER` and `ACTION_VIEW`) is registered as `LaunchTrampolineActivity`, a translucent no-history activity (`Theme.Translucent.NoTitleBar`).
    - When tapped from any launcher (on the top or bottom screen), `LaunchTrampolineActivity` inspects the hardware topology via `DisplayDetector.findSecondaryDisplay(context)`.
-   - It dispatches an explicit intent to `MainActivity` with `ActivityOptions.setLaunchDisplayId(secondaryDisplay.displayId)` and `FLAG_ACTIVITY_NEW_TASK or FLAG_ACTIVITY_REORDER_TO_FRONT or FLAG_ACTIVITY_SINGLE_TOP`, and finishes immediately without drawing any window on the primary display.
-   - `MainActivity` is declared with `android:launchMode="singleTask"`. If already running on the bottom screen, Android smoothly brings the existing instance to the foreground on the secondary display without spawning a duplicate task on the top display.
+   - It dispatches an explicit intent to `MainActivity` with `ActivityOptions.setLaunchDisplayId(secondaryDisplay.displayId)` and `FLAG_ACTIVITY_NEW_TASK or FLAG_ACTIVITY_SINGLE_TOP` (omitting `FLAG_ACTIVITY_REORDER_TO_FRONT` to prevent reordering the display stack).
+   - Because `MainActivity` applies `FLAG_NOT_FOCUSABLE` (so bottom-screen macro touches never steal window focus from top-screen games), `LaunchTrampolineActivity` immediately triggers `PrimaryFocusAnchorActivity` on `Display.DEFAULT_DISPLAY` (Display 0). This lightweight, translucent anchor activity finishes immediately (<5ms, zero animation), guaranteeing that Android WindowManager and `InputDispatcher` always evaluate Display 0 as `FocusedDisplayId`. This eliminates "Application does not have a focused window" ANR timeouts following a launch or debug deploy while strictly preserving top-screen gamepad macro routing.
+   - `MainActivity` is declared with `android:launchMode="singleTask"`. If already running on the bottom screen, Android smoothly brings the existing instance to the foreground on the secondary display without spawning a duplicate task on the top display. On cold launch, `MainActivity` also invokes `PrimaryFocusAnchorActivity.anchorPrimaryFocus(this)` as a defensive safeguard against direct ADB launches targeting Display 4.
 
 2. **Foreground Validation & Wrong-Screen Overlay**:
    - In `MainActivity.onConfigurationChanged()` and `MainActivity.onResume()`, the active display ID is continuously validated via `DisplayDetector.isValidScreen(currentDisplayId)` and updated in `AppStateManager.isOnValidScreen`.

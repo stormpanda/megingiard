@@ -233,6 +233,10 @@ class MainActivity : ComponentActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
         super.onCreate(savedInstanceState)
 
+        if (savedInstanceState == null && display?.displayId != Display.DEFAULT_DISPLAY) {
+            PrimaryFocusAnchorActivity.anchorPrimaryFocus(this)
+        }
+
         // Init settings first so the persisted log level is active before anything
         // else runs (including SignatureGuard below). SettingsManager.init() reads
         // just the log level synchronously from DataStore then continues async.

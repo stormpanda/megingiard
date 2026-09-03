@@ -36,7 +36,7 @@ class LaunchTrampolineActivity : Activity() {
                     type = intent?.type
                     intent?.clipData?.let { clipData = it }
                     intent?.extras?.let { putExtras(it) }
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                     intent?.flags?.let { originalFlags ->
                         if ((originalFlags and Intent.FLAG_GRANT_READ_URI_PERMISSION) != 0) {
                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -47,6 +47,10 @@ class LaunchTrampolineActivity : Activity() {
                     }
                 }
             startActivity(targetIntent, options.toBundle())
+
+            if (targetDisplayId != Display.DEFAULT_DISPLAY) {
+                PrimaryFocusAnchorActivity.anchorPrimaryFocus(this)
+            }
         } catch (e: Exception) {
             AppLog.e(TAG, "Failed to route launch intent to MainActivity", e)
         } finally {
