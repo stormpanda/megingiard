@@ -93,4 +93,86 @@ class GameNativeDetectorTest {
             assertEquals("Celeste", session?.gameTitle)
             assertEquals("pc", session?.systemId)
         }
+
+    @Test
+    fun parseSessionFromProcesses_wineSystemDaemons_ignoresPlugplayAndRpcssAndResolvesGame() {
+        val procList =
+            """
+            PROC 20932 10120 app.gamenative
+            PROC 29680 10120 start.exe /exec explorer /desktop=shell,1280x720 winhandler.exe
+            PROC 29714 10120 C:\windows\system32\services.exe
+            PROC 29721 10120 C:\windows\system32\winedevice.exe
+            PROC 29745 10120 C:\windows\system32\plugplay.exe
+            PROC 29755 10120 C:\windows\system32\svchost.exe -k LocalServiceNetworkRestricted
+            PROC 29766 10120 C:\windows\system32\winedevice.exe
+            PROC 29785 10120 C:\windows\system32\explorer.exe /desktop=shell,1280x720 winhandler.exe "A:/Boltgun/Binaries/Win64/Boltgun-Win64-Shipping.exe"
+            PROC 29795 10120 winhandler.exe "A:/Boltgun/Binaries/Win64/Boltgun-Win64-Shipping.exe"
+            PROC 29803 10120 C:\windows\system32\rpcss.exe
+            PROC 29816 10120 C:\windows\system32\tabtip.exe
+            PROC 29828 10120 A:\Boltgun\Binaries\Win64\Boltgun-Win64-Shipping.exe
+            """.trimIndent()
+
+        val session = GameNativeDetector.parseSessionFromProcesses("app.gamenative", procList)
+
+        assertNotNull(session)
+        assertEquals("app.gamenative", session?.packageName)
+        assertEquals("pc", session?.systemId)
+        assertNull(session?.romPath)
+        assertEquals("Boltgun.steam", session?.romIdentifier)
+        assertEquals("Boltgun", session?.gameTitle)
+    }
+
+    @Test
+    fun parseSessionFromProcesses_gameWithCommandLineArguments_returnsCorrectSession() {
+        val procList =
+            """
+            PROC 29091 10142 app.gamenative
+            PROC 30101 10142 "C:\Program Files (x86)\Steam\steamapps\common\Hollow Knight\hollow_knight.exe" -popupwindow -screen-fullscreen 1
+            """.trimIndent()
+
+        val session = GameNativeDetector.parseSessionFromProcesses("app.gamenative", procList)
+
+        assertNotNull(session)
+        assertEquals("app.gamenative", session?.packageName)
+        assertEquals("pc", session?.systemId)
+        assertNull(session?.romPath)
+        assertEquals("Hollow Knight.steam", session?.romIdentifier)
+        assertEquals("Hollow Knight", session?.gameTitle)
+    }
+
+    @Test
+    fun parseSessionFromProcesses_unrealShippingSuffixWithoutFolder_cleansSuffix() {
+        val procList =
+            """
+            PROC 29091 10142 app.gamenative
+            PROC 30101 10142 A:\Binaries\Win64\Boltgun-Win64-Shipping.exe
+            """.trimIndent()
+
+        val session = GameNativeDetector.parseSessionFromProcesses("app.gamenative", procList)
+
+        assertNotNull(session)
+        assertEquals("app.gamenative", session?.packageName)
+        assertEquals("pc", session?.systemId)
+        assertNull(session?.romPath)
+        assertEquals("Boltgun.steam", session?.romIdentifier)
+        assertEquals("Boltgun", session?.gameTitle)
+    }
+
+    @Test
+    fun parseSessionFromProcesses_genericGamesFolder_resolvesSubFolder() {
+        val procList =
+            """
+            PROC 29091 10142 app.gamenative
+            PROC 30101 10142 C:\Games\Witcher 3\bin\x64\witcher3.exe
+            """.trimIndent()
+
+        val session = GameNativeDetector.parseSessionFromProcesses("app.gamenative", procList)
+
+        assertNotNull(session)
+        assertEquals("app.gamenative", session?.packageName)
+        assertEquals("pc", session?.systemId)
+        assertNull(session?.romPath)
+        assertEquals("Witcher 3.steam", session?.romIdentifier)
+        assertEquals("Witcher 3", session?.gameTitle)
+    }
 }
