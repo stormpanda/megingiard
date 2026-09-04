@@ -644,11 +644,13 @@ private fun HeroCompanionCard(
                         Row(horizontalArrangement = Arrangement.spacedBy(IH_BUTTON_SPACING)) {
                             Button(
                                 onClick = {
+                                    val targetRom = targetRomIdentifier ?: targetRomPath
+                                    val romFileName = targetRom?.substringAfterLast('/')?.substringAfterLast('\\')
                                     val assoc =
                                         ProfileAssociation(
                                             packageName = targetPackage,
                                             systemId = targetSystemId,
-                                            romFileName = targetRomPath?.substringAfterLast('/'),
+                                            romFileName = romFileName,
                                         )
                                     AppStateManager.openPrimaryModal(
                                         PrimaryModalConfig(
@@ -735,11 +737,13 @@ private fun HeroCompanionCard(
                                                 text = { Text(profile.name, color = colors.onSurface) },
                                                 onClick = {
                                                     expandedDropdown = false
+                                                    val targetRom = targetRomIdentifier ?: targetRomPath
+                                                    val romFileName = targetRom?.substringAfterLast('/')?.substringAfterLast('\\')
                                                     val assoc =
                                                         ProfileAssociation(
                                                             packageName = targetPackage,
                                                             systemId = targetSystemId,
-                                                            romFileName = targetRomPath?.substringAfterLast('/'),
+                                                            romFileName = romFileName,
                                                         )
                                                     val updatedProfile = profile.copy(association = assoc)
                                                     MacroPadState.updateProfile(updatedProfile)

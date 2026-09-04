@@ -394,4 +394,104 @@ class AutoSwitchCoordinatorTest {
             assertEquals("com.citra.emu", AppStateManager.focusedAppPackageName.value)
             assertFalse(AppStateManager.showIntegrationHome.value)
         }
+
+    @Test
+    fun `closing emulator session switches back to generic emulator profile`() =
+        runTest {
+            val genericProfile =
+                testProfile(
+                    name = "Generic RetroArch",
+                    packageName = "com.retroarch",
+                )
+            val romProfile =
+                testProfile(
+                    name = "Super Mario World",
+                    packageName = "com.retroarch",
+                    systemId = "snes",
+                    romFileName = "Super Mario World.sfc",
+                )
+            val defaultProfile =
+                testProfile(
+                    name = "Default",
+                )
+            MacroPadState.loadFrom(listOf(defaultProfile, genericProfile, romProfile), defaultProfile.id)
+
+            AutoSwitchCoordinator.onPackageChanged("com.retroarch")
+            EmulatorDetectionFunnel.setActiveSessionForTesting(
+                ActiveGameSession(
+                    packageName = "com.retroarch",
+                    systemId = "snes",
+                    romPath = "/roms/snes/Super Mario World.sfc",
+                    gameTitle = "Super Mario World",
+                ),
+            )
+            delay(150)
+            assertEquals(romProfile.id, MacroPadState.activeProfileId.value)
+
+            // When game session ends (game closed in emulator):
+            EmulatorDetectionFunnel.setActiveSessionForTesting(null)
+            delay(150)
+
+            // Then profile switches to generic emulator profile
+            assertEquals(genericProfile.id, MacroPadState.activeProfileId.value)
+        }
+
+    @Test
+    fun `closing emulator session without generic profile reverts to default profile`() =
+        runTest {
+            val romProfile =
+                testProfile(
+                    name = "Boltgun",
+                    packageName = "app.gamenative",
+                    systemId = "pc",
+                    romFileName = "Boltgun.steam",
+                )
+            val defaultProfile =
+                testProfile(
+                    name = "Default",
+                )
+            MacroPadState.loadFrom(listOf(defaultProfile, romProfile), defaultProfile.id)
+
+            AutoSwitchCoordinator.onPackageChanged("app.gamenative")
+            EmulatorDetectionFunnel.setActiveSessionForTesting(
+                ActiveGameSession(
+                    packageName = "app.gamenative",
+                    systemId = "pc",
+                    romPath = null,
+                    romIdentifier = "Boltgun.steam",
+                    gameTitle = "Boltgun",
+                ),
+            )
+            delay(150)
+            assertEquals(romProfile.id, MacroPadState.activeProfileId.value)
+
+            // When game session ends (game closed in GameNative):
+            EmulatorDetectionFunnel.setActiveSessionForTesting(null)
+            delay(150)
+
+            // Then profile reverts to Default profile
+            assertEquals(defaultProfile.id, MacroPadState.activeProfileId.value)
+        }
+
+    @Test
+    fun `reevaluateAutoState on emulator with no ROM session reverts to default profile if no generic profile`() =
+        runTest {
+            val romProfile =
+                testProfile(
+                    name = "Boltgun",
+                    packageName = "app.gamenative",
+                    systemId = "pc",
+                    romFileName = "Boltgun.steam",
+                )
+            val defaultProfile =
+                testProfile(
+                    name = "Default",
+                )
+            MacroPadState.loadFrom(listOf(defaultProfile, romProfile), romProfile.id)
+            AppStateManager.setStandaloneForegroundState("app.gamenative", null)
+
+            AutoSwitchCoordinator.reevaluateAutoState()
+
+            assertEquals(defaultProfile.id, MacroPadState.activeProfileId.value)
+        }
 }

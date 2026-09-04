@@ -19,6 +19,7 @@ import java.util.UUID
 private const val TAG = "MacroPadState"
 private const val MP_DEFAULT_PROFILE_NAME = "Profile"
 private const val MP_DEFAULT_LAYOUT_NAME = "Layout"
+private const val DEFAULT_PROFILE_NAME = "Default"
 private const val DUPLICATE_BUTTON_OFFSET = 0.05f
 private const val MP_LEGACY_BG_ALPHA_MIGRATION = 0xB3 // 70% opacity in hex (matching previous default resting level)
 
@@ -238,6 +239,17 @@ object MacroPadState {
         }
     }
 
+    /**
+     * Returns the designated default profile (`isDefault == true`), or the profile named "Default"
+     * (case-insensitive), or the first profile in the list as a fallback.
+     */
+    fun getDefaultOrFirstProfile(): PadProfile? {
+        val currentProfiles = _profiles.value
+        return currentProfiles.firstOrNull { it.isDefault }
+            ?: currentProfiles.firstOrNull { it.name.equals(DEFAULT_PROFILE_NAME, ignoreCase = true) }
+            ?: currentProfiles.firstOrNull()
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // Load hook (called by MacroPadSettings.loadFrom)
     // ─────────────────────────────────────────────────────────────────────────
@@ -263,10 +275,10 @@ object MacroPadState {
                 listOf(
                     PadProfile(
                         id = defaultId,
-                        name = "Default",
+                        name = DEFAULT_PROFILE_NAME,
                         layouts =
                             listOf(
-                                PadLayout(id = defaultLayoutId, name = "Default"),
+                                PadLayout(id = defaultLayoutId, name = DEFAULT_PROFILE_NAME),
                             ),
                         activeLayoutId = defaultLayoutId,
                     ),

@@ -46,6 +46,7 @@ class IntegrationHomeScreenTargetInfoTest {
         lastDetectedSession: ActiveGameSession? = null,
         focusedAppPackageName: String? = null,
         focusedRomPath: String? = null,
+        focusedRomIdentifier: String? = null,
         installedApps: List<InstalledAppInfo> = listOf(testApp),
         resolveAppLabel: (String) -> String? = { null },
     ) = resolveTargetAppInfo(
@@ -58,6 +59,7 @@ class IntegrationHomeScreenTargetInfoTest {
         lastDetectedSession = lastDetectedSession,
         focusedAppPackageName = focusedAppPackageName,
         focusedRomPath = focusedRomPath,
+        focusedRomIdentifier = focusedRomIdentifier,
         installedApps = installedApps,
         resolveAppLabel = resolveAppLabel,
     )
@@ -174,5 +176,24 @@ class IntegrationHomeScreenTargetInfoTest {
         assertNull(target.label)
         assertNull(target.romPath)
         assertNull(target.systemId)
+    }
+
+    @Test
+    fun resolveTargetAppInfo_gameNativeSessionWithRomIdentifier() {
+        val session =
+            ActiveGameSession(
+                packageName = "app.gamenative",
+                gameTitle = "Boltgun",
+                romPath = null,
+                romIdentifier = "Boltgun.steam",
+                systemId = "pc",
+            )
+        val target = resolve(activeSession = session)
+
+        assertEquals("app.gamenative", target.pkg)
+        assertEquals("Boltgun", target.label)
+        assertNull(target.romPath)
+        assertEquals("Boltgun.steam", target.romIdentifier)
+        assertEquals("pc", target.systemId)
     }
 }
