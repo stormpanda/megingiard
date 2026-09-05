@@ -426,7 +426,13 @@ internal class MultiCutoutContainer(
                     }
 
                     if (hasTransparencyMask) {
-                        val maskBitmap = CutoutMaskManager.getMask(context, cutout.id, cutout.maskFeathering)
+                        val maskBitmap =
+                            CutoutMaskManager.getMask(
+                                context = context,
+                                cutoutId = cutout.id,
+                                translucency = cutout.maskTranslucency,
+                                featheringPx = cutout.maskFeathering,
+                            )
                         if (maskBitmap != null && !maskBitmap.isRecycled) {
                             maskDestRect.set(0f, 0f, dw, dh)
                             canvas.drawBitmap(maskBitmap, null, maskDestRect, transparencyMaskPaint)

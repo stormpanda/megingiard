@@ -626,6 +626,9 @@ Open Settings to create a layout.</string>
     <string name="settings_mirror_hud_auto_tune_desc">Profiles this cutout for 6 seconds while you move in-game to isolate the HUD</string>
     <string name="settings_mirror_hud_clear_mask_title">Clear Transparency Mask</string>
     <string name="settings_mirror_hud_clear_mask_desc">Remove the auto-tuned mask and restore unmasked raw video</string>
+    <string name="settings_mirror_hud_translucency_title">HUD Translucency</string>
+    <string name="settings_mirror_hud_translucency_desc">Recovers semi-transparent HUD elements, inner dials, and glass panels</string>
+    <string name="settings_mirror_hud_translucency_off">Off</string>
     <string name="settings_mirror_hud_feathering_title">HUD Edge Feathering</string>
     <string name="settings_mirror_hud_feathering_desc">Restores cut pixels along HUD borders with decreasing opacity falloff</string>
     <string name="settings_mirror_hud_feathering_off">Off</string>

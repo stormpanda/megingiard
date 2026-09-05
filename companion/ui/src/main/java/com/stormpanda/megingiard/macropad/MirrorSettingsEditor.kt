@@ -6,6 +6,7 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Grain
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.Opacity
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.Tune
@@ -29,7 +30,9 @@ import com.stormpanda.megingiard.math.nextItem
 import com.stormpanda.megingiard.mirror.CutoutMaskManager
 import com.stormpanda.megingiard.mirror.HudAutoTuneCoordinator
 import com.stormpanda.megingiard.mirror.MAX_FEATHERING_PX
+import com.stormpanda.megingiard.mirror.MAX_TRANSLUCENCY
 import com.stormpanda.megingiard.mirror.MIN_FEATHERING_PX
+import com.stormpanda.megingiard.mirror.MIN_TRANSLUCENCY
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.ui.GamepadActionCard
@@ -66,6 +69,10 @@ private const val MSE_TOP_DIM_FINE_STEP = 0.01f
 private const val MSE_FEATHERING_MIN = 0f
 private const val MSE_FEATHERING_MAX = 10f
 private const val MSE_FEATHERING_STEP = 1f
+
+private const val MSE_TRANSLUCENCY_MIN = 0f
+private const val MSE_TRANSLUCENCY_MAX = 10f
+private const val MSE_TRANSLUCENCY_STEP = 1f
 
 @Composable
 internal fun MirrorDeck(
@@ -297,6 +304,28 @@ internal fun CutoutSettingsSubPageContent(
         )
 
         if (cutout.hasTransparencyMask) {
+            val translucencyLabel =
+                if (cutout.maskTranslucency > 0) {
+                    "${cutout.maskTranslucency}"
+                } else {
+                    stringResource(R.string.settings_mirror_hud_translucency_off)
+                }
+            GamepadSliderCard(
+                title = stringResource(R.string.settings_mirror_hud_translucency_title),
+                description = stringResource(R.string.settings_mirror_hud_translucency_desc),
+                value = cutout.maskTranslucency.toFloat(),
+                valueRange = MSE_TRANSLUCENCY_MIN..MSE_TRANSLUCENCY_MAX,
+                step = MSE_TRANSLUCENCY_STEP,
+                fineStep = MSE_TRANSLUCENCY_STEP,
+                icon = Icons.Rounded.Layers,
+                valueLabel = translucencyLabel,
+                onValueChange = { newVal ->
+                    val newTranslucency = newVal.roundToInt().coerceIn(MIN_TRANSLUCENCY, MAX_TRANSLUCENCY)
+                    AppLog.d(TAG, "Updating cutout ${cutout.id} maskTranslucency: $newTranslucency")
+                    onUpdateCutout(cutout.copy(maskTranslucency = newTranslucency), false)
+                },
+            )
+
             val featheringLabel =
                 if (cutout.maskFeathering > 0) {
                     "${cutout.maskFeathering} px"
@@ -326,7 +355,14 @@ internal fun CutoutSettingsSubPageContent(
                 itemKey = "cutout_${cutout.id}_clear_mask",
                 onClick = {
                     CutoutMaskManager.deleteMask(context, cutout.id)
-                    onUpdateCutout(cutout.copy(hasTransparencyMask = false, maskFeathering = 0), false)
+                    onUpdateCutout(
+                        cutout.copy(
+                            hasTransparencyMask = false,
+                            maskFeathering = 0,
+                            maskTranslucency = 0,
+                        ),
+                        false,
+                    )
                 },
             )
         }

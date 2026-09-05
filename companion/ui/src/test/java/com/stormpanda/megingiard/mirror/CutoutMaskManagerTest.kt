@@ -56,15 +56,67 @@ class CutoutMaskManagerTest {
 
         CutoutMaskManager.saveMask(context, cutoutId, bitmap)
 
-        val unfeathered = CutoutMaskManager.getMask(context, cutoutId, 0)
+        val unfeathered = CutoutMaskManager.getMask(context, cutoutId, translucency = 0, featheringPx = 0)
         assertNotNull(unfeathered)
         assertEquals(0x00000000, unfeathered!!.getPixel(11, 10))
 
-        val feathered = CutoutMaskManager.getMask(context, cutoutId, 3)
+        val feathered = CutoutMaskManager.getMask(context, cutoutId, translucency = 0, featheringPx = 3)
         assertNotNull(feathered)
         assertEquals(0xFFFFFFFF.toInt(), feathered!!.getPixel(10, 10))
         val neighborAlpha = (feathered.getPixel(11, 10) ushr 24) and 0xFF
         assertTrue("Feathered neighbor should have opacity > 0", neighborAlpha > 0)
+
+        // Cleanup
+        CutoutMaskManager.deleteMask(context, cutoutId)
+        assertNull(CutoutMaskManager.getMask(context, cutoutId))
+    }
+
+    @Test
+    fun `saveMask with varianceMap persists variance and getVarianceMap retrieves it`() {
+        val context = RuntimeEnvironment.getApplication()
+        val cutoutId = "test_var_cutout"
+        val bitmap = Bitmap.createBitmap(10, 10, Bitmap.Config.ARGB_8888)
+        val varianceMap = ByteArray(100) { (it % 50).toByte() }
+
+        CutoutMaskManager.saveMask(context, cutoutId, bitmap, varianceMap)
+        val retrievedVar = CutoutMaskManager.getVarianceMap(context, cutoutId)
+        assertNotNull(retrievedVar)
+        assertEquals(100, retrievedVar!!.size)
+        assertEquals(varianceMap[25], retrievedVar[25])
+
+        // Cleanup
+        CutoutMaskManager.deleteMask(context, cutoutId)
+        assertNull(CutoutMaskManager.getVarianceMap(context, cutoutId))
+    }
+
+    @Test
+    fun `getMask with translucency dynamically generates tuned mask via variance map`() {
+        val context = RuntimeEnvironment.getApplication()
+        val cutoutId = "test_translucent_cutout"
+        val width = 20
+        val height = 20
+        val pixelCount = width * height
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+
+        // Variance map: core anchor at (8..11, 8..11) with variance 5, neighbor with variance 30
+        val varianceMap = ByteArray(pixelCount) { 30.toByte() }
+        for (y in 8..11) {
+            for (x in 8..11) {
+                varianceMap[y * width + x] = 5.toByte()
+            }
+        }
+
+        CutoutMaskManager.saveMask(context, cutoutId, bitmap, varianceMap)
+
+        // At translucency 0, neighbor (7, 8) with variance 30 is transparent
+        val baseMask = CutoutMaskManager.getMask(context, cutoutId, translucency = 0, featheringPx = 0)
+        assertNotNull(baseMask)
+
+        // At translucency 6, neighbor (7, 8) within halo is dynamically recovered
+        val tunedMask = CutoutMaskManager.getMask(context, cutoutId, translucency = 6, featheringPx = 0)
+        assertNotNull(tunedMask)
+        val neighborAlpha = (tunedMask!!.getPixel(7, 8) ushr 24) and 0xFF
+        assertTrue("Neighbor within halo should have recovered alpha", neighborAlpha > 0)
 
         // Cleanup
         CutoutMaskManager.deleteMask(context, cutoutId)

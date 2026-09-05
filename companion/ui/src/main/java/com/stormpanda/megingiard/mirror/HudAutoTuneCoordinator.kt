@@ -132,13 +132,20 @@ internal object HudAutoTuneCoordinator {
                                     result.maskHeight,
                                     Bitmap.Config.ARGB_8888,
                                 )
-                            CutoutMaskManager.saveMask(context.applicationContext, cutout.id, maskBitmap)
+                            CutoutMaskManager.saveMask(
+                                context = context.applicationContext,
+                                cutoutId = cutout.id,
+                                bitmap = maskBitmap,
+                                varianceMap = result.varianceMap,
+                            )
                         }
 
                         val hasMask = mask != null && !result.isStaticScene
                         val updatedCutout =
                             cutout.copy(
                                 hasTransparencyMask = hasMask,
+                                maskFeathering = 0,
+                                maskTranslucency = 0,
                             )
                         MacroPadState.updateCutout(updatedCutout)
                         _lastTunedPercent.value = if (hasMask) result.transparentPercent else null

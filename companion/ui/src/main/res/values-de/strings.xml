@@ -626,6 +626,9 @@ Open Settings to create a layout.</string>
     <string name="settings_mirror_hud_auto_tune_desc">Analysiert den Ausschnitt 6 Sekunden lang, während du dich im Spiel bewegst</string>
     <string name="settings_mirror_hud_clear_mask_title">Transparenzmaske löschen</string>
     <string name="settings_mirror_hud_clear_mask_desc">Entfernt die kalibrierte Maske und stellt unmaskiertes Rohvideo wieder her</string>
+    <string name="settings_mirror_hud_translucency_title">HUD-Transluzenz</string>
+    <string name="settings_mirror_hud_translucency_desc">Stellt halbtransparente HUD-Elemente, innere Anzeigen und Glaspanele wieder her</string>
+    <string name="settings_mirror_hud_translucency_off">Aus</string>
     <string name="settings_mirror_hud_feathering_title">HUD-Kanten abfedern</string>
     <string name="settings_mirror_hud_feathering_desc">Stellt abgeschnittene Pixel entlang der HUD-Ränder mit abnehmender Deckkraft wieder her</string>
     <string name="settings_mirror_hud_feathering_off">Aus</string>

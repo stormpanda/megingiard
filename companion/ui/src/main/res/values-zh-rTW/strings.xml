@@ -626,6 +626,9 @@ Open Settings to create a layout.</string>
     <string name="settings_mirror_hud_auto_tune_desc">在您於遊戲中移動時對此局部畫面進行 6 秒分析，以自動隔離 HUD</string>
     <string name="settings_mirror_hud_clear_mask_title">清除透明遮罩</string>
     <string name="settings_mirror_hud_clear_mask_desc">移除自動微調的遮罩並恢復未遮罩的原始畫面</string>
+    <string name="settings_mirror_hud_translucency_title">HUD 半透明補償</string>
+    <string name="settings_mirror_hud_translucency_desc">恢復半透明 HUD 元素、內部轉盤與玻璃面板</string>
+    <string name="settings_mirror_hud_translucency_off">關閉</string>
     <string name="settings_mirror_hud_feathering_title">HUD 邊緣羽化</string>
     <string name="settings_mirror_hud_feathering_desc">以遞減的不透明度恢復 HUD 邊緣被剪除的像素</string>
     <string name="settings_mirror_hud_feathering_off">關閉</string>

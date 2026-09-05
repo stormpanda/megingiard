@@ -235,4 +235,80 @@ class HudAutoTunerTest {
         // Distance 4: (14, 10) is beyond featheringPx=3, must be 100% transparent
         assertEquals("Distance 4 is beyond featheringPx and must remain transparent", MASK_PIXEL_TRANSPARENT, feathered[10 * width + 14])
     }
+
+    @Test
+    fun `buildMask with translucency 0 isolates solid HUD and makes moving background transparent`() {
+        // 20x20 test image:
+        // Rows 0..4 have variance 5 (solid HUD)
+        // Rows 5..19 have variance 50 (moving background)
+        val varianceMap =
+            ByteArray(pixelCount) { i ->
+                if (i < 100) 5.toByte() else 50.toByte()
+            }
+
+        val mask = HudAutoTuner.buildMask(varianceMap, width, height, translucency = 0, featheringPx = 0)
+        assertEquals(pixelCount, mask.size)
+
+        // Deep solid HUD pixels (e.g. row 2) must be fully opaque
+        assertEquals(MASK_PIXEL_OPAQUE, mask[2 * width + 10])
+
+        // Moving background pixels (e.g. row 10) must be transparent
+        assertEquals(MASK_PIXEL_TRANSPARENT, mask[10 * width + 10])
+    }
+
+    @Test
+    fun `buildMask with translucency greater than 0 recovers enclosed cavity pixels`() {
+        // Create an enclosed square border of solid HUD anchors at x in 4..15, y in 4..15:
+        // Border pixels have variance 5 (solid HUD)
+        // Inside cavity (x in 6..13, y in 6..13) has variance 45 (damped background through translucent dial/disc)
+        // Outside (border touching edges) has variance 45
+        val varianceMap = ByteArray(pixelCount) { 45.toByte() }
+
+        for (y in 4..15) {
+            for (x in 4..15) {
+                val isBorder = x == 4 || x == 15 || y == 4 || y == 15 || x == 5 || x == 14 || y == 5 || y == 14
+                if (isBorder) {
+                    varianceMap[y * width + x] = 5.toByte() // Solid core border
+                }
+            }
+        }
+
+        // With translucency = 0: the inner cavity with variance 45 is CUT (transparent)
+        val maskBase = HudAutoTuner.buildMask(varianceMap, width, height, translucency = 0)
+        assertEquals("At translucency 0, inner cavity pixel should be cut", MASK_PIXEL_TRANSPARENT, maskBase[10 * width + 10])
+
+        // With translucency = 5: the inner cavity is enclosed and recovered!
+        val maskTuned = HudAutoTuner.buildMask(varianceMap, width, height, translucency = 5)
+        val cavityAlpha = (maskTuned[10 * width + 10] ushr 24) and 0xFF
+        assertTrue("At translucency 5, inner cavity should be recovered with high alpha", cavityAlpha > 200)
+
+        // Outside pixel (e.g. at (1, 1)) must remain transparent!
+        assertEquals("Exterior pixel must remain transparent", MASK_PIXEL_TRANSPARENT, maskTuned[1 * width + 1])
+    }
+
+    @Test
+    fun `buildMask with translucency greater than 0 relaxes variance for pixels in proximity halo around core anchors`() {
+        // Solid core anchor block at x in 8..11, y in 8..11 with variance 5
+        // Adjacent pixels at distance 1 with variance 30 (semi-transparent glow/faint dial)
+        // Distant pixels with variance 30
+        val varianceMap = ByteArray(pixelCount) { 30.toByte() }
+        for (y in 8..11) {
+            for (x in 8..11) {
+                varianceMap[y * width + x] = 5.toByte()
+            }
+        }
+
+        // At translucency 0: pixel at (5, 8) (distance 3) is outside Gaussian AA blur and transparent
+        val maskBase = HudAutoTuner.buildMask(varianceMap, width, height, translucency = 0)
+        assertEquals(MASK_PIXEL_TRANSPARENT, maskBase[8 * width + 5])
+        assertEquals(MASK_PIXEL_TRANSPARENT, maskBase[1 * width + 1])
+
+        // At translucency 6: pixel at (5, 8) is inside halo radius (d=3 <= 8) and recovered!
+        val maskTuned = HudAutoTuner.buildMask(varianceMap, width, height, translucency = 6)
+        val haloAlpha = (maskTuned[8 * width + 5] ushr 24) and 0xFF
+        assertTrue("Halo pixel should have alpha > 0", haloAlpha > 0)
+
+        // Distant pixel at (1, 1) is outside halo and remains transparent
+        assertEquals("Distant pixel outside halo must remain transparent", MASK_PIXEL_TRANSPARENT, maskTuned[1 * width + 1])
+    }
 }

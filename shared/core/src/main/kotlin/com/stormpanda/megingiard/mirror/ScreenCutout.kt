@@ -37,6 +37,7 @@ enum class AspectRatioMode {
  * @param aspectRatioMode The mode specifying how aspect ratio is locked between top crop and bottom bounds.
  * @param hasTransparencyMask Whether an auto-tuned transparency mask bitmap is present for this cutout.
  * @param maskFeathering Outward edge expansion radius in pixels (0..10) with decreasing opacity falloff.
+ * @param maskTranslucency Semi-transparent HUD capture sensitivity level (0..10), preserving dials and glows.
  */
 @Serializable
 data class ScreenCutout(
@@ -60,6 +61,7 @@ data class ScreenCutout(
     val aspectRatioMode: AspectRatioMode = if (keepAspectRatio) AspectRatioMode.TOP else AspectRatioMode.BOTTOM,
     val hasTransparencyMask: Boolean = false,
     val maskFeathering: Int = 0,
+    val maskTranslucency: Int = 0,
 ) {
     companion object {
         val FULLSCREEN =
