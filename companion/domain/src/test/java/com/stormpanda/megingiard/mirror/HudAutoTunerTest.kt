@@ -191,4 +191,48 @@ class HudAutoTunerTest {
             assertTrue("Boundary minimap pixel $i must have anti-aliased high alpha", alpha > 100)
         }
     }
+
+    @Test
+    fun `applyEdgeFeathering with 0 px returns original mask unchanged`() {
+        val baseMask = IntArray(pixelCount) { if (it < 100) MASK_PIXEL_OPAQUE else MASK_PIXEL_TRANSPARENT }
+        val feathered = HudAutoTuner.applyEdgeFeathering(baseMask, width, height, 0)
+        assertEquals(baseMask, feathered)
+    }
+
+    @Test
+    fun `applyEdgeFeathering leaves already visible pixels completely unaffected`() {
+        val baseMask = IntArray(pixelCount) { if (it < 100) colorArgb(200, 100, 50) else MASK_PIXEL_TRANSPARENT }
+        val feathered = HudAutoTuner.applyEdgeFeathering(baseMask, width, height, 4)
+        for (i in 0 until 100) {
+            assertEquals("Already visible pixel $i should not change", baseMask[i], feathered[i])
+        }
+    }
+
+    @Test
+    fun `applyEdgeFeathering restores cut pixels with decreasing opacity falloff based on distance`() {
+        // Center pixel at (10, 10) is visible, all others transparent
+        val baseMask = IntArray(pixelCount) { MASK_PIXEL_TRANSPARENT }
+        baseMask[10 * width + 10] = MASK_PIXEL_OPAQUE
+
+        val featheringPx = 3
+        val feathered = HudAutoTuner.applyEdgeFeathering(baseMask, width, height, featheringPx)
+
+        // Center pixel remains untouched opaque
+        assertEquals(MASK_PIXEL_OPAQUE, feathered[10 * width + 10])
+
+        // Distance 1: (11, 10)
+        val alphaDist1 = (feathered[10 * width + 11] ushr 24) and 0xFF
+        assertTrue("Distance 1 should be restored with high opacity", alphaDist1 > 150)
+
+        // Distance 2: (12, 10)
+        val alphaDist2 = (feathered[10 * width + 12] ushr 24) and 0xFF
+        assertTrue("Distance 2 should have lower opacity than distance 1", alphaDist2 in 1 until alphaDist1)
+
+        // Distance 3: (13, 10)
+        val alphaDist3 = (feathered[10 * width + 13] ushr 24) and 0xFF
+        assertTrue("Distance 3 should have lower opacity than distance 2", alphaDist3 in 1 until alphaDist2)
+
+        // Distance 4: (14, 10) is beyond featheringPx=3, must be 100% transparent
+        assertEquals("Distance 4 is beyond featheringPx and must remain transparent", MASK_PIXEL_TRANSPARENT, feathered[10 * width + 14])
+    }
 }

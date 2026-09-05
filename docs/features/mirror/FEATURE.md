@@ -175,10 +175,11 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
   - **Morphological Despeckling & Gaussian Anti-Aliasing:** Isolated noise specks (such as static wall textures) are wiped out via morphological opening. The alpha channel is then filtered using a 2-pass separable Gaussian blur (`[1, 2, 1] / 4`), producing clean, anti-aliased sub-pixel edges around delicate icons and numbers with zero color fringing.
   - **Automated Commit & Mask Persistence:** Upon 6-second completion, the generated mask bitmap is saved under `context.filesDir/cutout_masks/mask_<cutoutId>.png` by `CutoutMaskManager`, the cutout is updated with `hasTransparencyMask = true`, and `AppStateManager.resumeSuspended()` automatically reopens `MacroPadEditor` on Display 0 right back to the Cutout Settings subpage with the auto-tuned mask active.
   - If a stationary scene is detected (player did not move in-game), the tuner warns with a helpful hint toast.
-  - **Clear Mask Action:** When a mask is active (`cutout.hasTransparencyMask`), the user can clear it at any time via a dedicated "Clear Transparency Mask" action card.
+  - **HUD Edge Feathering Slider:** When a transparency mask is active (`cutout.hasTransparencyMask`), a dedicated "HUD Edge Feathering" slider (`0` to `10 px`, default `0 px` / Off) is displayed in the cutout settings deck. Feathering applies outward Euclidean edge dilation with distance-based linear opacity falloff: cut transparent pixels along the HUD perimeter are restored pixel-by-pixel with decreasing opacity outward, recovering clipped anti-aliased edges, glows, and shadows while leaving already-visible HUD pixels completely unaffected. Changes apply in real-time without re-calibrating.
+  - **Clear Mask Action:** When a mask is active (`cutout.hasTransparencyMask`), the user can clear it at any time via a dedicated "Clear Transparency Mask" action card, which unloads the mask, deletes it from disk, and resets `maskFeathering` to `0`.
 - **Zero-Configuration UI:**
-  - The cutout settings editor contains exclusively the [ Auto-Tune HUD ] button and the [ Clear Transparency Mask ] button when a mask is present, avoiding complex manual sliders or keying formulas.
-- Mask state is persisted per-cutout in `ScreenCutout` (`hasTransparencyMask`).
+  - The cutout settings editor contains exclusively the [ Auto-Tune HUD ] button, the [ HUD Edge Feathering ] slider (when a mask is present), and the [ Clear Transparency Mask ] button, avoiding complex manual keying formulas.
+- Mask state is persisted per-cutout in `ScreenCutout` (`hasTransparencyMask: Boolean`, `maskFeathering: Int = 0`).
 
 ### FR-M18: Display 0 HUD Dimming Scrim (Veil)
 
@@ -510,6 +511,7 @@ HUD isolation is implemented via hardware-accelerated transparency mask blending
    - `CutoutMaskManager` loads the cached mask PNG from `context.filesDir/cutout_masks/mask_<cutoutId>.png`.
    - In `MultiCutoutContainer`, when `cutout.hasTransparencyMask` is true, the cutout is drawn into a compositing layer (`canvas.saveLayer(...)`).
    - The transparency mask bitmap is composited directly over the rendered cutout using `Paint` with `PorterDuff.Mode.DST_IN` and bilinear filtering (`isFilterBitmap = true`).
+   - Dynamic Edge Feathering: `CutoutMaskManager.getMask(context, cutout.id, cutout.maskFeathering)` caches feathered mask variants in memory keyed by `"$cutoutId:$featheringPx"`. When `cutout.maskFeathering > 0`, it applies `HudAutoTuner.applyEdgeFeathering` (multi-source Euclidean distance transform with linear opacity falloff) in ~1-2ms on CPU, giving instant interactive feedback as the slider is dragged.
    - Stationary HUD graphics remain 100% visible and render live at 60/120 FPS with zero copy overhead, while moving background pixels become 100% transparent.
 2. **Primary Display HUD Dim Scrim (`PrimaryHudDimOverlayManager.kt`)**:
    - Manages a system overlay window on Display 0 via `WindowManager.addView()`.

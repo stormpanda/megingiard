@@ -1,6 +1,8 @@
 package com.stormpanda.megingiard.mirror
 
 import com.stormpanda.megingiard.AppLog
+import kotlin.math.roundToInt
+import kotlin.math.sqrt
 
 private const val TAG = "HudAutoTuner"
 
@@ -21,6 +23,8 @@ private const val PERCENT_MULTIPLIER = 100
 
 const val MASK_PIXEL_TRANSPARENT = 0x00000000
 const val MASK_PIXEL_OPAQUE = -1 // 0xFFFFFFFF.toInt()
+const val MIN_FEATHERING_PX = 0
+const val MAX_FEATHERING_PX = 10
 
 /**
  * Result returned by [HudAutoTuner.analyze].
@@ -206,5 +210,125 @@ object HudAutoTuner {
             isStaticScene = false,
             summary = "Tuned: $finalTransparentPct% background made transparent.",
         )
+    }
+
+    /**
+     * Applies outward edge feathering to [baseMask] of size [width] x [height].
+     *
+     * Restores pixels that were cut (transparent) immediately adjacent to the HUD boundary
+     * with decreasing opacity based on Euclidean distance up to [featheringPx].
+     * Pixels that are already set to be visible in [baseMask] (alpha > 0) remain completely unaffected.
+     */
+    fun applyEdgeFeathering(
+        baseMask: IntArray,
+        width: Int,
+        height: Int,
+        featheringPx: Int,
+    ): IntArray {
+        val clampedFeathering = featheringPx.coerceIn(MIN_FEATHERING_PX, MAX_FEATHERING_PX)
+        if (clampedFeathering <= 0 || width <= 0 || height <= 0 || baseMask.size != width * height) {
+            return baseMask
+        }
+
+        val pixelCount = width * height
+        val result = baseMask.clone()
+
+        val nearestX = ShortArray(pixelCount) { -1 }
+        val nearestY = ShortArray(pixelCount) { -1 }
+        val distSq = FloatArray(pixelCount) { Float.MAX_VALUE }
+
+        val queue = IntArray(pixelCount)
+        var head = 0
+        var tail = 0
+
+        // Find initial cut pixels directly adjacent to visible pixels
+        for (y in 0 until height) {
+            val rowOffset = y * width
+            for (x in 0 until width) {
+                val idx = rowOffset + x
+                val alpha = (baseMask[idx] ushr ALPHA_SHIFT) and COLOR_BYTE_MASK
+                if (alpha == 0) continue
+
+                for (dy in -1..1) {
+                    val ny = y + dy
+                    if (ny !in 0 until height) continue
+                    val nRowOffset = ny * width
+
+                    for (dx in -1..1) {
+                        if (dx == 0 && dy == 0) continue
+                        val nx = x + dx
+                        if (nx !in 0 until width) continue
+
+                        val nIdx = nRowOffset + nx
+                        val nAlpha = (baseMask[nIdx] ushr ALPHA_SHIFT) and COLOR_BYTE_MASK
+                        if (nAlpha == 0) {
+                            val d = sqrt((dx * dx + dy * dy).toFloat())
+                            if (d < distSq[nIdx]) {
+                                if (distSq[nIdx] == Float.MAX_VALUE) {
+                                    queue[tail++] = nIdx
+                                }
+                                distSq[nIdx] = d
+                                nearestX[nIdx] = x.toShort()
+                                nearestY[nIdx] = y.toShort()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        val maxFeatherDist = clampedFeathering.toFloat()
+
+        // Propagate outward up to clampedFeathering
+        while (head < tail) {
+            val currIdx = queue[head++]
+            val cx = currIdx % width
+            val cy = currIdx / width
+            val sx = nearestX[currIdx].toInt()
+            val sy = nearestY[currIdx].toInt()
+
+            for (dy in -1..1) {
+                val ny = cy + dy
+                if (ny !in 0 until height) continue
+                val nRowOffset = ny * width
+
+                for (dx in -1..1) {
+                    if (dx == 0 && dy == 0) continue
+                    val nx = cx + dx
+                    if (nx !in 0 until width) continue
+
+                    val nIdx = nRowOffset + nx
+                    val nAlpha = (baseMask[nIdx] ushr ALPHA_SHIFT) and COLOR_BYTE_MASK
+                    if (nAlpha == 0) {
+                        val diffX = nx - sx
+                        val diffY = ny - sy
+                        val d = sqrt((diffX * diffX + diffY * diffY).toFloat())
+                        if (d <= maxFeatherDist && d < distSq[nIdx]) {
+                            if (distSq[nIdx] == Float.MAX_VALUE) {
+                                queue[tail++] = nIdx
+                            }
+                            distSq[nIdx] = d
+                            nearestX[nIdx] = sx.toShort()
+                            nearestY[nIdx] = sy.toShort()
+                        }
+                    }
+                }
+            }
+        }
+
+        // Apply decreased opacity to restored cut pixels
+        val divisor = maxFeatherDist + 1.0f
+        for (i in 0 until pixelCount) {
+            val d = distSq[i]
+            if (d <= maxFeatherDist) {
+                val falloff = (1.0f - (d / divisor)).coerceIn(0f, 1f)
+                val restoredAlpha = (falloff * FULL_ALPHA_BYTE).roundToInt()
+                if (restoredAlpha > 0) {
+                    result[i] = (restoredAlpha shl ALPHA_SHIFT) or RGB_WHITE_MASK
+                }
+            }
+        }
+
+        return result
     }
 }

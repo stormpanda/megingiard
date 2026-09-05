@@ -28,6 +28,8 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.math.nextItem
 import com.stormpanda.megingiard.mirror.CutoutMaskManager
 import com.stormpanda.megingiard.mirror.HudAutoTuneCoordinator
+import com.stormpanda.megingiard.mirror.MAX_FEATHERING_PX
+import com.stormpanda.megingiard.mirror.MIN_FEATHERING_PX
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.ui.GamepadActionCard
@@ -60,6 +62,10 @@ private const val MSE_TOP_DIM_MIN = 0.10f
 private const val MSE_TOP_DIM_MAX = 0.95f
 private const val MSE_TOP_DIM_STEP = 0.05f
 private const val MSE_TOP_DIM_FINE_STEP = 0.01f
+
+private const val MSE_FEATHERING_MIN = 0f
+private const val MSE_FEATHERING_MAX = 10f
+private const val MSE_FEATHERING_STEP = 1f
 
 @Composable
 internal fun MirrorDeck(
@@ -291,6 +297,28 @@ internal fun CutoutSettingsSubPageContent(
         )
 
         if (cutout.hasTransparencyMask) {
+            val featheringLabel =
+                if (cutout.maskFeathering > 0) {
+                    "${cutout.maskFeathering} px"
+                } else {
+                    stringResource(R.string.settings_mirror_hud_feathering_off)
+                }
+            GamepadSliderCard(
+                title = stringResource(R.string.settings_mirror_hud_feathering_title),
+                description = stringResource(R.string.settings_mirror_hud_feathering_desc),
+                value = cutout.maskFeathering.toFloat(),
+                valueRange = MSE_FEATHERING_MIN..MSE_FEATHERING_MAX,
+                step = MSE_FEATHERING_STEP,
+                fineStep = MSE_FEATHERING_STEP,
+                icon = Icons.Rounded.Grain,
+                valueLabel = featheringLabel,
+                onValueChange = { newVal ->
+                    val newFeathering = newVal.roundToInt().coerceIn(MIN_FEATHERING_PX, MAX_FEATHERING_PX)
+                    AppLog.d(TAG, "Updating cutout ${cutout.id} maskFeathering: $newFeathering")
+                    onUpdateCutout(cutout.copy(maskFeathering = newFeathering), false)
+                },
+            )
+
             GamepadActionCard(
                 title = stringResource(R.string.settings_mirror_hud_clear_mask_title),
                 description = stringResource(R.string.settings_mirror_hud_clear_mask_desc),
@@ -298,7 +326,7 @@ internal fun CutoutSettingsSubPageContent(
                 itemKey = "cutout_${cutout.id}_clear_mask",
                 onClick = {
                     CutoutMaskManager.deleteMask(context, cutout.id)
-                    onUpdateCutout(cutout.copy(hasTransparencyMask = false), false)
+                    onUpdateCutout(cutout.copy(hasTransparencyMask = false, maskFeathering = 0), false)
                 },
             )
         }
