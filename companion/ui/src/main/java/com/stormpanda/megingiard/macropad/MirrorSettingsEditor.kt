@@ -71,8 +71,8 @@ private const val MSE_FEATHERING_MAX = 10f
 private const val MSE_FEATHERING_STEP = 1f
 
 private const val MSE_TRANSLUCENCY_MIN = 0f
-private const val MSE_TRANSLUCENCY_MAX = 10f
-private const val MSE_TRANSLUCENCY_STEP = 1f
+private const val MSE_TRANSLUCENCY_MAX = 100f
+private const val MSE_TRANSLUCENCY_STEP = 5f
 
 @Composable
 internal fun MirrorDeck(
@@ -306,7 +306,7 @@ internal fun CutoutSettingsSubPageContent(
         if (cutout.hasTransparencyMask) {
             val translucencyLabel =
                 if (cutout.maskTranslucency > 0) {
-                    "${cutout.maskTranslucency}"
+                    "${cutout.maskTranslucency}%"
                 } else {
                     stringResource(R.string.settings_mirror_hud_translucency_off)
                 }
@@ -321,7 +321,7 @@ internal fun CutoutSettingsSubPageContent(
                 valueLabel = translucencyLabel,
                 onValueChange = { newVal ->
                     val newTranslucency = newVal.roundToInt().coerceIn(MIN_TRANSLUCENCY, MAX_TRANSLUCENCY)
-                    AppLog.d(TAG, "Updating cutout ${cutout.id} maskTranslucency: $newTranslucency")
+                    AppLog.d(TAG, "Updating cutout ${cutout.id} maskTranslucency: $newTranslucency%")
                     onUpdateCutout(cutout.copy(maskTranslucency = newTranslucency), false)
                 },
             )

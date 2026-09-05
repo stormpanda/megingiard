@@ -33,7 +33,7 @@ class ScreenCutoutHudFilterTest {
                 destHeight = 0.4f,
                 hasTransparencyMask = true,
                 maskFeathering = 4,
-                maskTranslucency = 6,
+                maskTranslucency = 65,
             )
 
         val serialized = json.encodeToString(ScreenCutout.serializer(), original)
@@ -45,7 +45,7 @@ class ScreenCutoutHudFilterTest {
         assertEquals(original, deserialized)
         assertTrue(deserialized.hasTransparencyMask)
         assertEquals(4, deserialized.maskFeathering)
-        assertEquals(6, deserialized.maskTranslucency)
+        assertEquals(65, deserialized.maskTranslucency)
     }
 
     @Test

@@ -112,8 +112,8 @@ class CutoutMaskManagerTest {
         val baseMask = CutoutMaskManager.getMask(context, cutoutId, translucency = 0, featheringPx = 0)
         assertNotNull(baseMask)
 
-        // At translucency 6, neighbor (7, 8) within halo is dynamically recovered
-        val tunedMask = CutoutMaskManager.getMask(context, cutoutId, translucency = 6, featheringPx = 0)
+        // At translucency 60%, neighbor (7, 8) within halo is dynamically recovered
+        val tunedMask = CutoutMaskManager.getMask(context, cutoutId, translucency = 60, featheringPx = 0)
         assertNotNull(tunedMask)
         val neighborAlpha = (tunedMask!!.getPixel(7, 8) ushr 24) and 0xFF
         assertTrue("Neighbor within halo should have recovered alpha", neighborAlpha > 0)

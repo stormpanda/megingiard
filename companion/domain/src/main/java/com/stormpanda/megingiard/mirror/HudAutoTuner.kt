@@ -26,13 +26,14 @@ const val MASK_PIXEL_OPAQUE = -1 // 0xFFFFFFFF.toInt()
 const val MIN_FEATHERING_PX = 0
 const val MAX_FEATHERING_PX = 10
 const val MIN_TRANSLUCENCY = 0
-const val MAX_TRANSLUCENCY = 10
+const val MAX_TRANSLUCENCY = 100
 
+private const val MIN_HALO_RADIUS = 4
+private const val MAX_HALO_RADIUS = 48
+private const val MAX_HALO_VARIANCE_BOOST = 165
 private const val ENCLOSED_BASE_THRESHOLD = 30
-private const val ENCLOSED_STEP_MULTIPLIER = 8
-private const val MIN_HALO_RADIUS = 3
-private const val MAX_HALO_RADIUS = 12
-private const val HALO_VARIANCE_MULTIPLIER = 6
+private const val ENCLOSED_MAX_VARIANCE_BOOST = 120
+private const val ENCLOSED_MAX_BARRIER_BOOST = 55
 private const val MIN_PARTIAL_ALPHA = 40
 
 /**
@@ -229,7 +230,11 @@ object HudAutoTuner {
 
         // 2. Translucency recovery (Enclosure infill & Proximity halo)
         if (clampedTranslucency > 0) {
-            // A. Geometric Enclosure Infill: Flood fill from borders to identify exterior background
+            // A. Geometric Enclosure Infill: Flood fill from borders to identify exterior background.
+            // A soft barrier threshold allows semi-transparent outer boundary rings (e.g. dial circles) to seal the interior cavity.
+            val barrierThreshold =
+                colorChangeThreshold + (clampedTranslucency * ENCLOSED_MAX_BARRIER_BOOST) / MAX_TRANSLUCENCY
+
             val exteriorQueue = IntArray(pixelCount)
             var extHead = 0
             var extTail = 0
@@ -242,7 +247,7 @@ object HudAutoTuner {
                 val idx = y * width + x
                 if (!isExterior[idx]) {
                     val v = varianceMap[idx].toInt() and COLOR_BYTE_MASK
-                    if (v > colorChangeThreshold) {
+                    if (v > barrierThreshold) {
                         isExterior[idx] = true
                         exteriorQueue[extTail++] = idx
                     }
@@ -265,35 +270,36 @@ object HudAutoTuner {
 
                 if (cx > 0) {
                     val n = curr - 1
-                    if (!isExterior[n] && (varianceMap[n].toInt() and COLOR_BYTE_MASK) > colorChangeThreshold) {
+                    if (!isExterior[n] && (varianceMap[n].toInt() and COLOR_BYTE_MASK) > barrierThreshold) {
                         isExterior[n] = true
                         exteriorQueue[extTail++] = n
                     }
                 }
                 if (cx < width - 1) {
                     val n = curr + 1
-                    if (!isExterior[n] && (varianceMap[n].toInt() and COLOR_BYTE_MASK) > colorChangeThreshold) {
+                    if (!isExterior[n] && (varianceMap[n].toInt() and COLOR_BYTE_MASK) > barrierThreshold) {
                         isExterior[n] = true
                         exteriorQueue[extTail++] = n
                     }
                 }
                 if (cy > 0) {
                     val n = curr - width
-                    if (!isExterior[n] && (varianceMap[n].toInt() and COLOR_BYTE_MASK) > colorChangeThreshold) {
+                    if (!isExterior[n] && (varianceMap[n].toInt() and COLOR_BYTE_MASK) > barrierThreshold) {
                         isExterior[n] = true
                         exteriorQueue[extTail++] = n
                     }
                 }
                 if (cy < height - 1) {
                     val n = curr + width
-                    if (!isExterior[n] && (varianceMap[n].toInt() and COLOR_BYTE_MASK) > colorChangeThreshold) {
+                    if (!isExterior[n] && (varianceMap[n].toInt() and COLOR_BYTE_MASK) > barrierThreshold) {
                         isExterior[n] = true
                         exteriorQueue[extTail++] = n
                     }
                 }
             }
 
-            val cavityThreshold = ENCLOSED_BASE_THRESHOLD + clampedTranslucency * ENCLOSED_STEP_MULTIPLIER
+            val cavityThreshold =
+                ENCLOSED_BASE_THRESHOLD + (clampedTranslucency * ENCLOSED_MAX_VARIANCE_BOOST) / MAX_TRANSLUCENCY
             for (i in 0 until pixelCount) {
                 if (!isExterior[i] && candidateAlpha[i] == 0) {
                     val v = varianceMap[i].toInt() and COLOR_BYTE_MASK
@@ -306,6 +312,7 @@ object HudAutoTuner {
             // B. Proximity Halo: Outward distance expansion from core anchors
             val haloRadius =
                 MIN_HALO_RADIUS + (clampedTranslucency * (MAX_HALO_RADIUS - MIN_HALO_RADIUS)) / MAX_TRANSLUCENCY
+            val maxVarianceBoost = (clampedTranslucency * MAX_HALO_VARIANCE_BOOST) / MAX_TRANSLUCENCY
             val haloDist = ShortArray(pixelCount) { -1 }
             val haloQueue = IntArray(pixelCount)
             var haloHead = 0
@@ -341,12 +348,12 @@ object HudAutoTuner {
                         haloQueue[haloTail++] = n
 
                         val v = varianceMap[n].toInt() and COLOR_BYTE_MASK
-                        val allowedVariance =
-                            colorChangeThreshold +
-                                (clampedTranslucency * HALO_VARIANCE_MULTIPLIER * (haloRadius - nd + 1)) / (haloRadius + 1)
+                        val distFactor = (haloRadius - nd + 1).toFloat() / (haloRadius + 1).toFloat()
+                        val allowedVariance = colorChangeThreshold + (maxVarianceBoost * distFactor).roundToInt()
                         if (v <= allowedVariance) {
                             val alpha =
-                                ((FULL_ALPHA_BYTE * (haloRadius - nd + 1)) / (haloRadius + 1))
+                                (FULL_ALPHA_BYTE * distFactor)
+                                    .roundToInt()
                                     .coerceIn(MIN_PARTIAL_ALPHA, FULL_ALPHA_BYTE)
                             if (alpha > candidateAlpha[n]) {
                                 candidateAlpha[n] = alpha
