@@ -35,6 +35,7 @@ enum class AspectRatioMode {
  * @param opacity     Transparency level [0.0, 1.0] of this cutout.
  * @param shape       The visual shape of this cutout (rectangle or circle).
  * @param aspectRatioMode The mode specifying how aspect ratio is locked between top crop and bottom bounds.
+ * @param hasTransparencyMask Whether an auto-tuned transparency mask bitmap is present for this cutout.
  */
 @Serializable
 data class ScreenCutout(
@@ -56,6 +57,7 @@ data class ScreenCutout(
     val touchProjectionEnabled: Boolean = false,
     val shape: CutoutShape = CutoutShape.RECTANGLE,
     val aspectRatioMode: AspectRatioMode = if (keepAspectRatio) AspectRatioMode.TOP else AspectRatioMode.BOTTOM,
+    val hasTransparencyMask: Boolean = false,
 ) {
     companion object {
         val FULLSCREEN =

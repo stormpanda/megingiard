@@ -1,6 +1,5 @@
 package com.stormpanda.megingiard.macropad
 
-import com.stormpanda.megingiard.macropad.ProfileAssociation
 import com.stormpanda.megingiard.mirror.ScreenCutout
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -966,5 +965,53 @@ class MacroPadStateTest {
 
         val result = MacroPadState.getDefaultOrFirstProfile()
         assertEquals(p1.id, result?.id)
+    }
+
+    @Test
+    fun `updateCutout updates existing cutout in active layout`() {
+        val cutout1 =
+            ScreenCutout(
+                id = "c1",
+                name = "Map",
+                srcX = 0f,
+                srcY = 0f,
+                srcWidth = 0.5f,
+                srcHeight = 0.5f,
+                destX = 0f,
+                destY = 0f,
+                destWidth = 0.5f,
+                destHeight = 0.5f,
+                hasTransparencyMask = false,
+            )
+        val cutout2 =
+            ScreenCutout(
+                id = "c2",
+                name = "HP",
+                srcX = 0.5f,
+                srcY = 0.5f,
+                srcWidth = 0.5f,
+                srcHeight = 0.5f,
+                destX = 0.5f,
+                destY = 0.5f,
+                destWidth = 0.5f,
+                destHeight = 0.5f,
+                hasTransparencyMask = false,
+            )
+        val layout = testLayout(id = "l1", mirrorCutouts = listOf(cutout1, cutout2))
+        val profile = testProfile(id = "p1", layouts = listOf(layout), activeLayoutId = "l1")
+        loadProfiles(profile)
+
+        val updatedCutout = cutout1.copy(hasTransparencyMask = true, opacity = 0.85f)
+        MacroPadState.updateCutout(updatedCutout)
+
+        val cutouts = MacroPadState.activeLayout.value?.mirrorCutouts
+        assertNotNull(cutouts)
+        assertEquals(2, cutouts?.size)
+        val resultCutout = cutouts?.first { it.id == "c1" }
+        assertEquals(true, resultCutout?.hasTransparencyMask)
+        assertEquals(0.85f, resultCutout?.opacity)
+        // Verify untouched cutout2 is preserved
+        val untouched = cutouts?.first { it.id == "c2" }
+        assertEquals(false, untouched?.hasTransparencyMask)
     }
 }

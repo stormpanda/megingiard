@@ -607,6 +607,15 @@ object MacroPadState {
         )
     }
 
+    fun updateCutout(updatedCutout: ScreenCutout) {
+        val layout = activeLayout.value ?: return
+        val updatedList =
+            layout.mirrorCutouts.map {
+                if (it.id == updatedCutout.id) updatedCutout else it
+            }
+        updateLayout(layout.copy(mirrorCutouts = updatedList))
+    }
+
     fun deleteLayout(layoutId: String): Boolean {
         val profile = activeProfile.value ?: return false
         val layoutExists = profile.layouts.any { it.id == layoutId }

@@ -163,6 +163,31 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - The toggle button MUST look like the other buttons, switch between a rectangle and circle icon, and use the same active accent color in both states.
 - The Aspect Ratio lock button MUST also be updated to use the active accent color in both states.
 
+### FR-M17: HUD Isolation Filter Modes (Transparency Mask, Smart Auto, Luma Key, Chroma Key, Temporal Variance) & Auto-Tune HUD
+
+- The user MUST be able to configure HUD isolation post-processing on a per-cutout level in the Screen Mirroring Cutout Settings sub-page (`CutoutSettingsSubPageContent`).
+- HUD Isolation extracts HUD elements (minimaps, health bars, skill cooldown icons, meters) from the live game stream and composites them with synthetic alpha transparency over the secondary display canvas, completely eliminating opaque game background scenery.
+- **Automated HUD Isolation via Pixel-Level Color Change (`HudAutoTuneCoordinator`, `HudAutoTuner`, `CutoutMaskManager`)**:
+  - The user can isolate any in-game HUD element without manual threshold or color tuning by tapping the prominent **[ Auto-Tune HUD ]** action card in the cutout settings editor.
+  - **Dual-Screen Overlay Suspension & Gamepad Freedom:** When calibration begins, `HudAutoTuneCoordinator` automatically suspends and dismisses the primary modal overlay on Display 0 via `AppStateManager.suspendCurrentAndDismiss()`, unfreezing live mirror capture (`ScreenCaptureManager.setFrozen(false)`) and suppressing any active top-screen HUD dim scrim. This leaves the primary screen 100% unobstructed, responsive to gamepad and touch inputs, and running natively at 120Hz so the user can freely move and rotate the camera in-game.
+  - **Secondary Companion Display HUD (`HudAutoTuneCalibrationSheet`):** While Display 0 is unobstructed, Display 4 renders a non-blocking companion HUD sheet over the live video stream featuring a pulsing accent dot, live countdown timer ("%ds left"), progress bar (0% to 100%), actionable guidance prompt ("The top screen is unobstructed. Move your character or rotate the camera in-game now so the algorithm can isolate static HUD elements from the moving background"), and an Outlined Cancel button (also cancelable via `BackHandler`).
+  - **Pixel-Level Color Change Tracking & High-Definition Sampling:** Calibration runs for **6 seconds** at native top-screen resolution (1920x1080). For every pixel in the cutout crop, the engine tracks channel min/max ($R, G, B$) across time. Any pixel that changed color (above video compression noise threshold) is identified as moving 3D scenery and marked transparent. Any pixel that remained constant is identified as stationary HUD and remains opaque.
+  - **Morphological Despeckling & Gaussian Anti-Aliasing:** Isolated noise specks (such as static wall textures) are wiped out via morphological opening. The alpha channel is then filtered using a 2-pass separable Gaussian blur (`[1, 2, 1] / 4`), producing clean, anti-aliased sub-pixel edges around delicate icons and numbers with zero color fringing.
+  - **Automated Commit & Mask Persistence:** Upon 6-second completion, the generated mask bitmap is saved under `context.filesDir/cutout_masks/mask_<cutoutId>.png` by `CutoutMaskManager`, the cutout is updated with `hasTransparencyMask = true`, and `AppStateManager.resumeSuspended()` automatically reopens `MacroPadEditor` on Display 0 right back to the Cutout Settings subpage with the auto-tuned mask active.
+  - If a stationary scene is detected (player did not move in-game), the tuner warns with a helpful hint toast.
+  - **Clear Mask Action:** When a mask is active (`cutout.hasTransparencyMask`), the user can clear it at any time via a dedicated "Clear Transparency Mask" action card.
+- **Zero-Configuration UI:**
+  - The cutout settings editor contains exclusively the [ Auto-Tune HUD ] button and the [ Clear Transparency Mask ] button when a mask is present, avoiding complex manual sliders or keying formulas.
+- Mask state is persisted per-cutout in `ScreenCutout` (`hasTransparencyMask`).
+
+### FR-M18: Display 0 HUD Dimming Scrim (Veil)
+
+- The user MUST be able to enable an ambient dark veil over cutout source crop regions on Display 0 via **Screen Mirroring → Advanced Settings** ("Dim Primary Screen HUD" toggle, stored in `MacroPadLayout.dimTopScreenHud`).
+- When enabled and screen mirroring is actively capturing, a non-interactive, non-focusable overlay window (`PrimaryHudDimOverlayManager`) renders semi-transparent dark feathered rectangles over each active cutout's source crop area on the primary display.
+- The scrim subtly darkens HUD regions on the handheld screen so the user's focus is naturally drawn to the companion display, while ensuring primary gameplay and touch input remain 100% unhindered (`FLAG_NOT_FOCUSABLE or FLAG_NOT_TOUCHABLE or FLAG_LAYOUT_IN_SCREEN or FLAG_LAYOUT_NO_LIMITS`).
+- The dimming opacity MUST be adjustable via a slider ("Primary HUD Dimming Opacity", `0%` to `100%`, default `60%`, stored in `MacroPadLayout.topScreenHudDimOpacity`).
+- When mirroring is stopped or paused, the scrim automatically hides.
+
 ---
 
 ## Technical Implementation
@@ -477,6 +502,21 @@ To stabilize mirrored UI elements against fast-moving backgrounds, we support 10
 3. **Temporal FBO Blending (>0%)**:
    When motion smoothing is active (e.g. 75%, 80%, 85%), `GpuMotionSmoother` blends incoming OES frames with previous frame textures inside GPU VRAM using an OpenGL ES 2.0 ping-pong FBO pipeline before outputting the smoothed result to `masterSurface`.
 
+### Automated HUD Isolation & Hardware Transparency Mask Pipeline
+
+HUD isolation is implemented via hardware-accelerated transparency mask blending:
+
+1. **Hardware-Accelerated Mask Blending (`MultiCutoutContainer.kt`, `CutoutMaskManager.kt`)**:
+   - `CutoutMaskManager` loads the cached mask PNG from `context.filesDir/cutout_masks/mask_<cutoutId>.png`.
+   - In `MultiCutoutContainer`, when `cutout.hasTransparencyMask` is true, the cutout is drawn into a compositing layer (`canvas.saveLayer(...)`).
+   - The transparency mask bitmap is composited directly over the rendered cutout using `Paint` with `PorterDuff.Mode.DST_IN` and bilinear filtering (`isFilterBitmap = true`).
+   - Stationary HUD graphics remain 100% visible and render live at 60/120 FPS with zero copy overhead, while moving background pixels become 100% transparent.
+2. **Primary Display HUD Dim Scrim (`PrimaryHudDimOverlayManager.kt`)**:
+   - Manages a system overlay window on Display 0 via `WindowManager.addView()`.
+   - Uses layout parameters `TYPE_APPLICATION_OVERLAY`, `FLAG_NOT_FOCUSABLE`, `FLAG_NOT_TOUCHABLE`, `FLAG_LAYOUT_IN_SCREEN`, `FLAG_LAYOUT_NO_LIMITS` with format `TRANSLUCENT`.
+   - Observes `ScreenCaptureManager.isCapturing`, `ScreenCaptureManager.dimTopScreenHud`, `ScreenCaptureManager.topScreenHudDimOpacity`, and `ScreenCaptureManager.cutouts`.
+   - Custom `HudDimCanvasView` paints soft, rounded-rect dark veils (`Color.BLACK` with `alpha = topScreenHudDimOpacity`) over the exact source pixel coordinates `(srcX, srcY, srcWidth, srcHeight)` of each active cutout.
+
 ### Source Files
 
 | File                                  | Responsibility                                                                                             |
@@ -484,12 +524,17 @@ To stabilize mirrored UI elements against fast-moving backgrounds, we support 10
 | `ScreenCaptureService.kt`             | Foreground service; `MediaProjection` token; `VirtualDisplay` lifecycle                                    |
 | `EmbeddedMirrorView.kt`               | Main Compose embedded mirror view hosting `MultiCutoutContainer`                                           |
 | `MasterSurfaceRegistry.kt`            | Process-wide master surface holder bridging `ThrottledTextureView` to `ScreenCaptureService`               |
-| `MultiCutoutContainer.kt`             | Multi-cutout canvas rendering, clipping, and hybrid edge blending                                          |
+| `MultiCutoutContainer.kt`             | Multi-cutout canvas rendering, clipping, hybrid edge blending, and PorterDuff DST_IN transparency masking   |
+| `CutoutMaskManager.kt`                | Manages disk persistence and in-memory bitmap cache for cutout transparency masks                          |
+| `HudAutoTuner.kt`                     | Computer vision engine for pixel-level color change detection, despeckling, and Gaussian anti-aliasing      |
+| `HudAutoTuneCoordinator.kt`           | Orchestrates 6-second calibration lifecycle, frame sampling, overlay suspension, and mask generation       |
+| `HudAutoTuneCalibrationSheet.kt`      | Secondary screen live calibration HUD with countdown timer, progress bar, and cancellation action          |
+| `PrimaryHudDimOverlayManager.kt`      | Display 0 non-interactive WindowManager overlay rendering ambient dark veils over HUD source regions       |
 | `ScreenCaptureManager.kt`             | Singleton state: scale, offset, freeze, lock, touch-projection state, frozen bitmap, follow state          |
 | `TouchScreenObserver.kt`              | Listens to raw `/dev/input/event6` touchscreen events in background thread and maps coordinates            |
 | `CropSelectorOverlay.kt`              | Primary display crop selector overlay Composable UI                                                        |
 | `CropSelectorActivity.kt`             | Translucent Activity hosting CropSelectorOverlay on the primary display                                    |
 | `CutoutLayoutEditor.kt`               | Secondary display cutout placement arrange editor                                                          |
-| `ScreenCutout.kt`                     | Serializable data model representing a crop/placement pair                                                 |
+| `ScreenCutout.kt`                     | Serializable data model representing a crop/placement pair with HUD isolation filter configuration        |
 | `../input/TouchInjector.kt`           | Shared injection facade (also used by Touchpad)                                                            |
 | `../input/ShellInputInjector.kt`      | Shared native binary lifecycle and command queue                                                           |

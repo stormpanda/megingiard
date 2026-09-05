@@ -106,7 +106,7 @@ fun EmbeddedMirrorView(
                     val effectiveStrength = smoothingCutout?.motionSmoothingStrength ?: 0
 
                     var smoother = gpuMotionSmoother
-                    if (smoother == null && width > 0 && height > 0) {
+                    if (smoother == null && width > 0 && height > 0 && effectiveStrength > 0) {
                         AppLog.i(
                             TAG,
                             "[$surfaceOwner] Initializing GpuMotionSmoother unified pipeline for master Surface (strength=$effectiveStrength)",
@@ -184,6 +184,7 @@ fun EmbeddedMirrorView(
             MasterSurfaceRegistry.unregisterMasterSurface(surfaceOwner, surfaceToClear)
             containerHolder.masterSurface?.release()
             containerHolder.masterSurface = null
+            containerHolder.textureView?.let { MirrorFrameSampler.unregisterTextureView(it) }
         }
     }
 
@@ -222,6 +223,7 @@ fun EmbeddedMirrorView(
                         width: Int,
                         height: Int,
                     ) {
+                        MirrorFrameSampler.registerTextureView(tv)
                         val currentSrcW =
                             if (ScreenCaptureManager.captureSourceWidth.value >
                                 0
@@ -265,6 +267,7 @@ fun EmbeddedMirrorView(
 
                     override fun onSurfaceTextureDestroyed(st: SurfaceTexture): Boolean {
                         AppLog.d(TAG, "master TextureView surface destroyed for $surfaceOwner")
+                        MirrorFrameSampler.unregisterTextureView(tv)
                         val surfaceToClear = containerHolder.currentRoutedSurface ?: containerHolder.masterSurface
                         containerHolder.gpuMotionSmoother?.release()
                         containerHolder.gpuMotionSmoother = null

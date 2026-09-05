@@ -204,6 +204,13 @@ internal class MultiCutoutContainer(
         Paint().apply {
             color = Color.BLACK
         }
+    private val transparencyMaskPaint =
+        Paint().apply {
+            isAntiAlias = true
+            isFilterBitmap = true
+            xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
+        }
+    private val maskDestRect = RectF()
 
     init {
         clipChildren = true
@@ -306,9 +313,10 @@ internal class MultiCutoutContainer(
                 val topExt = if (touchesTop) (blendW / 2f).roundToInt().toFloat() else 0f
                 val bottomExt = if (touchesBottom) (blendW / 2f).roundToInt().toFloat() else 0f
                 val hasTouching = leftExt > 0f || rightExt > 0f || topExt > 0f || bottomExt > 0f
+                val hasTransparencyMask = cutout.hasTransparencyMask && CutoutMaskManager.hasMask(context, cutout.id)
 
                 val saveCount =
-                    if (cutout.opacity < 1f || hasTouching) {
+                    if (cutout.opacity < 1f || hasTouching || hasTransparencyMask) {
                         cutoutPaint.alpha = (cutout.opacity * 255).toInt()
                         if (hasTouching) {
                             cutoutPaint.xfermode = addXfermode
@@ -416,8 +424,16 @@ internal class MultiCutoutContainer(
                         if (touchesBottom) drawEdgeBlend(verticalReverseGradientShader, 1f, 2f * bottomExt, 0f, dh - bottomExt)
                         blendPaint.shader = null
                     }
+
+                    if (hasTransparencyMask) {
+                        val maskBitmap = CutoutMaskManager.getMask(context, cutout.id)
+                        if (maskBitmap != null && !maskBitmap.isRecycled) {
+                            maskDestRect.set(0f, 0f, dw, dh)
+                            canvas.drawBitmap(maskBitmap, null, maskDestRect, transparencyMaskPaint)
+                        }
+                    }
                 } finally {
-                    if (cutout.opacity < 1f || hasTouching) {
+                    if (cutout.opacity < 1f || hasTouching || hasTransparencyMask) {
                         canvas.restoreToCount(saveCount)
                     } else {
                         canvas.restore()

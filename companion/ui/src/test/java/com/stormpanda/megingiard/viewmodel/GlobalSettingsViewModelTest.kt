@@ -6,6 +6,7 @@ import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.KeyboardSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.settings.ThemeMode
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -32,7 +33,10 @@ class GlobalSettingsViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        SettingsManager.init(RuntimeEnvironment.getApplication())
+        SettingsManager.resetForTesting(
+            RuntimeEnvironment.getApplication(),
+            CoroutineScope(testDispatcher),
+        )
         testDispatcher.scheduler.advanceUntilIdle()
     }
 

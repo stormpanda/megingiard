@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.mirror
 
+import com.stormpanda.megingiard.macropad.DEFAULT_HUD_DIM_OPACITY
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -96,5 +97,18 @@ class ScreenCaptureManagerTest {
         ScreenCaptureManager.resetMirrorSessionState()
         assertFalse(ScreenCaptureManager.isLocked.value)
         assertFalse(ScreenCaptureManager.isFrozen.value)
+    }
+
+    @Test
+    fun testHudDimmingState() {
+        ScreenCaptureManager.setDimTopScreenHud(false)
+        assertFalse(ScreenCaptureManager.dimTopScreenHud.value)
+        assertEquals(DEFAULT_HUD_DIM_OPACITY, ScreenCaptureManager.topScreenHudDimOpacity.value, 0.001f)
+
+        ScreenCaptureManager.setDimTopScreenHud(true)
+        assertTrue(ScreenCaptureManager.dimTopScreenHud.value)
+
+        ScreenCaptureManager.setTopScreenHudDimOpacity(0.5f)
+        assertEquals(0.5f, ScreenCaptureManager.topScreenHudDimOpacity.value, 0.001f)
     }
 }

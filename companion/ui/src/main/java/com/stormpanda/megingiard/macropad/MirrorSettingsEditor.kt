@@ -20,11 +20,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.math.nextItem
-import com.stormpanda.megingiard.math.prevItem
+import com.stormpanda.megingiard.mirror.CutoutMaskManager
+import com.stormpanda.megingiard.mirror.HudAutoTuneCoordinator
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.ui.GamepadActionCard
@@ -52,6 +55,11 @@ private const val MSE_EDGE_BLEND_STEP = 5f
 private const val MSE_SMOOTHING_VAL_LIGHT = 75
 private const val MSE_SMOOTHING_VAL_MEDIUM = 80
 private const val MSE_SMOOTHING_VAL_STRONG = 85
+
+private const val MSE_TOP_DIM_MIN = 0.10f
+private const val MSE_TOP_DIM_MAX = 0.95f
+private const val MSE_TOP_DIM_STEP = 0.05f
+private const val MSE_TOP_DIM_FINE_STEP = 0.01f
 
 @Composable
 internal fun MirrorDeck(
@@ -121,12 +129,28 @@ internal fun MirrorDeck(
                     stringResource(R.string.settings_mirror_projection_off)
                 }
 
+            val hudFilterText =
+                if (cutout.hasTransparencyMask) {
+                    stringResource(R.string.settings_mirror_hud_filter_transparency_mask)
+                } else {
+                    null
+                }
+
             val summaryDesc =
-                stringResource(
-                    R.string.settings_mirror_cutout_summary_fmt,
-                    smoothingText,
-                    projectionText,
-                )
+                if (hudFilterText != null) {
+                    stringResource(
+                        R.string.settings_mirror_cutout_summary_with_hud_fmt,
+                        smoothingText,
+                        hudFilterText,
+                        projectionText,
+                    )
+                } else {
+                    stringResource(
+                        R.string.settings_mirror_cutout_summary_fmt,
+                        smoothingText,
+                        projectionText,
+                    )
+                }
 
             GamepadActionCard(
                 title = cutoutTitle,
@@ -228,7 +252,59 @@ internal fun CutoutSettingsSubPageContent(
         onNext = { applySmoothIdx((currentSmoothIdx + 1) % smoothingModes.size) },
     )
 
-    // 3. Touch Projection
+    // 3. HUD Isolation Filter
+    val context = LocalContext.current
+    val isCalibrating by HudAutoTuneCoordinator.isCalibrating.collectAsStateWithLifecycle()
+    val calibrateProgress by HudAutoTuneCoordinator.progress.collectAsStateWithLifecycle()
+    val remainingSeconds by HudAutoTuneCoordinator.remainingSeconds.collectAsStateWithLifecycle()
+    val lastTunedPercent by HudAutoTuneCoordinator.lastTunedPercent.collectAsStateWithLifecycle()
+
+    // 3a. Auto-Tune HUD Action Card
+    if (isCalibrating) {
+        val pct = (calibrateProgress * MSE_PERCENT_DIVISOR).roundToInt()
+        GamepadActionCard(
+            title = stringResource(R.string.settings_mirror_hud_auto_tuning_prompt, remainingSeconds),
+            description = stringResource(R.string.settings_mirror_hud_auto_tune_success, "$pct%"),
+            icon = Icons.Rounded.Tune,
+            itemKey = "cutout_${cutout.id}_auto_tune_active",
+            onClick = { HudAutoTuneCoordinator.cancelCalibration() },
+        )
+    } else {
+        val autoTuneDesc =
+            if (cutout.hasTransparencyMask) {
+                val statusStr = lastTunedPercent?.let { "$it%" } ?: stringResource(R.string.settings_mirror_projection_on)
+                stringResource(R.string.settings_mirror_hud_auto_tune_success, statusStr)
+            } else {
+                stringResource(R.string.settings_mirror_hud_auto_tune_desc)
+            }
+
+        GamepadActionCard(
+            title = stringResource(R.string.settings_mirror_hud_auto_tune_title),
+            description = autoTuneDesc,
+            icon = Icons.Rounded.Tune,
+            itemKey = "cutout_${cutout.id}_auto_tune",
+            onClick = {
+                HudAutoTuneCoordinator.startCalibration(context, cutout) { updatedCutout, _ ->
+                    onUpdateCutout(updatedCutout, false)
+                }
+            },
+        )
+
+        if (cutout.hasTransparencyMask) {
+            GamepadActionCard(
+                title = stringResource(R.string.settings_mirror_hud_clear_mask_title),
+                description = stringResource(R.string.settings_mirror_hud_clear_mask_desc),
+                icon = Icons.Rounded.Delete,
+                itemKey = "cutout_${cutout.id}_clear_mask",
+                onClick = {
+                    CutoutMaskManager.deleteMask(context, cutout.id)
+                    onUpdateCutout(cutout.copy(hasTransparencyMask = false), false)
+                },
+            )
+        }
+    }
+
+    // 4. Touch Projection
     if (!cutout.touchProjectionEnabled && layout.backgroundTouchpad.enabled) {
         GamepadTwoStepConfirmCard(
             title = stringResource(R.string.settings_mirror_touch_projection),
@@ -377,4 +453,36 @@ internal fun MirrorAdvancedSettingsSubPageContent(
             }
         },
     )
+
+    // 4. Primary Screen HUD Dimming
+    GamepadToggleCard(
+        title = stringResource(R.string.settings_mirror_dim_top_screen_hud_title),
+        description = stringResource(R.string.settings_mirror_dim_top_screen_hud_desc),
+        checked = layout.dimTopScreenHud,
+        icon = Icons.Rounded.Opacity,
+        itemKey = "mirror_dim_top_screen_hud",
+        onCheckedChange = { isChecked ->
+            AppLog.d(TAG, "Toggling dimTopScreenHud: $isChecked")
+            commitLayout { copy(dimTopScreenHud = isChecked) }
+            ScreenCaptureManager.setDimTopScreenHud(isChecked)
+        },
+    )
+
+    if (layout.dimTopScreenHud) {
+        GamepadSliderCard(
+            title = stringResource(R.string.settings_mirror_dim_top_screen_hud_opacity),
+            description = stringResource(R.string.settings_mirror_dim_top_screen_hud_opacity_desc),
+            value = layout.topScreenHudDimOpacity,
+            valueRange = MSE_TOP_DIM_MIN..MSE_TOP_DIM_MAX,
+            step = MSE_TOP_DIM_STEP,
+            fineStep = MSE_TOP_DIM_FINE_STEP,
+            icon = Icons.Rounded.Opacity,
+            valueLabel = "${(layout.topScreenHudDimOpacity * MSE_PERCENT_DIVISOR).roundToInt()}%",
+            onValueChange = { newVal ->
+                AppLog.d(TAG, "Updating topScreenHudDimOpacity: $newVal")
+                commitLayout { copy(topScreenHudDimOpacity = newVal) }
+                ScreenCaptureManager.setTopScreenHudDimOpacity(newVal)
+            },
+        )
+    }
 }

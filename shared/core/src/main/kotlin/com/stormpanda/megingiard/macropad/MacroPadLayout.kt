@@ -398,6 +398,8 @@ data class BackgroundTouchpadConfig(
  *                                    (ambient overlay). Defaults to [ButtonColorStyle.NEUTRAL].
  * @param backgroundTouchpad          Per-layout background touchpad settings for relative mouse.
  */
+const val DEFAULT_HUD_DIM_OPACITY = 0.60f
+
 @Serializable
 data class PadLayout(
     val id: String,
@@ -434,6 +436,8 @@ data class PadLayout(
     val backgroundImageDim: Float = 0f,
     val bgScaleMode: BackgroundScaleMode = BackgroundScaleMode.FILL,
     val backgroundTouchpad: BackgroundTouchpadConfig = BackgroundTouchpadConfig(),
+    val dimTopScreenHud: Boolean = false,
+    val topScreenHudDimOpacity: Float = DEFAULT_HUD_DIM_OPACITY,
 )
 
 /**

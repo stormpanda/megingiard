@@ -3,6 +3,7 @@ package com.stormpanda.megingiard.mirror
 import android.graphics.Bitmap
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.macropad.DEFAULT_HUD_DIM_OPACITY
 import com.stormpanda.megingiard.macropad.MacroExecutor
 import com.stormpanda.megingiard.macropad.MacroPadState
 import kotlinx.coroutines.CoroutineScope
@@ -55,6 +56,12 @@ object ScreenCaptureManager {
     private val _isFrozen = MutableStateFlow(false)
     val isFrozen: StateFlow<Boolean> = _isFrozen.asStateFlow()
 
+    private val _dimTopScreenHud = MutableStateFlow(false)
+    val dimTopScreenHud: StateFlow<Boolean> = _dimTopScreenHud.asStateFlow()
+
+    private val _topScreenHudDimOpacity = MutableStateFlow(DEFAULT_HUD_DIM_OPACITY)
+    val topScreenHudDimOpacity: StateFlow<Float> = _topScreenHudDimOpacity.asStateFlow()
+
     private val _frozenBitmap = MutableStateFlow<Bitmap?>(null)
     val frozenBitmap: StateFlow<Bitmap?> = _frozenBitmap.asStateFlow()
 
@@ -105,10 +112,14 @@ object ScreenCaptureManager {
                         _edgeBlendWidthDp.value = layout.mirrorEdgeBlendWidth
                         _maxFps.value = layout.mirrorMaxFps
                         _cutouts.value = layout.mirrorCutouts
+                        _dimTopScreenHud.value = layout.dimTopScreenHud
+                        _topScreenHudDimOpacity.value = layout.topScreenHudDimOpacity
                     } else {
                         _edgeBlendWidthDp.value = 0f
                         _maxFps.value = 60
                         _cutouts.value = emptyList()
+                        _dimTopScreenHud.value = false
+                        _topScreenHudDimOpacity.value = DEFAULT_HUD_DIM_OPACITY
                     }
                 }
             }
@@ -187,6 +198,16 @@ object ScreenCaptureManager {
         val next = !_isFrozen.value
         AppLog.d(TAG, "toggleFrozen → $next")
         _isFrozen.value = next
+    }
+
+    fun setDimTopScreenHud(dim: Boolean) {
+        AppLog.d(TAG, "setDimTopScreenHud($dim)")
+        _dimTopScreenHud.value = dim
+    }
+
+    fun setTopScreenHudDimOpacity(opacity: Float) {
+        AppLog.d(TAG, "setTopScreenHudDimOpacity($opacity)")
+        _topScreenHudDimOpacity.value = opacity
     }
 
     fun requestScreenshot(target: ScreenshotTarget = ScreenshotTarget.TOP) {
