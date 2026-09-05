@@ -22,8 +22,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlin.math.sqrt
 
-private const val TAG = "PadButtonFace"
-
 private const val PBF_DISABLED_ALPHA = 0.38f
 private val PBF_BACKING_COLOR = Color(0x80121212)
 private val PBF_BORDER_WIDTH = 1.dp
@@ -37,19 +35,17 @@ internal fun PadButtonFace(
     isDeviceDisabled: Boolean,
     borderColor: Color,
     bgColor: Color,
-    bgAlpha: Float,
-    gradientScale: Float = 2.8f,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
     val density = LocalDensity.current
 
     val bgBrush =
-        remember(bgColor, bgAlpha, gradientScale, width, height, density) {
+        remember(bgColor, width, height, density) {
             val wPx = with(density) { width.toPx() }
             val hPx = with(density) { height.toPx() }
             val halfDiag = sqrt(wPx * wPx + hPx * hPx) / 2f
-            val maxAlpha = (bgAlpha * gradientScale).coerceIn(0f, 1f)
+            val maxAlpha = bgColor.alpha.coerceIn(0f, 1f)
             Brush.radialGradient(
                 0.00f to bgColor.copy(alpha = 0f),
                 0.50f to bgColor.copy(alpha = maxAlpha * 0.25f),
@@ -64,7 +60,7 @@ internal fun PadButtonFace(
         remember {
             Paint().apply {
                 colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
-                this.alpha = PBF_DISABLED_ALPHA
+                alpha = PBF_DISABLED_ALPHA
             }
         }
 
@@ -78,14 +74,15 @@ internal fun PadButtonFace(
                     if (isIconOnly) {
                         drawContent()
                     } else {
+                        val effectiveBackingColor = PBF_BACKING_COLOR.copy(alpha = PBF_BACKING_COLOR.alpha * bgColor.alpha)
                         if (isDeviceDisabled) {
                             drawContext.canvas.saveLayer(Rect(0f, 0f, size.width, size.height), disabledPaint)
-                            drawRect(color = PBF_BACKING_COLOR)
+                            drawRect(color = effectiveBackingColor)
                             drawRect(brush = bgBrush)
                             drawContent()
                             drawContext.canvas.restore()
                         } else {
-                            drawRect(color = PBF_BACKING_COLOR)
+                            drawRect(color = effectiveBackingColor)
                             drawRect(brush = bgBrush)
                             drawContent()
                         }

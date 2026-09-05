@@ -16,7 +16,7 @@
 | **Min SDK**       | 33 — **must not be raised**                                                                                                                                                                            |
 | **Target SDK**    | 35                                                                                                                                                                                                     |
 | **Build System**  | Gradle (Kotlin DSL), version catalog `libs.versions.toml`                                                                                                                                              |
-| **Device Target** | AYN Thor dual-screen Android handheld                                                                                                                                                                  |
+| **Device Target** | AYN Thor dual-screen Android handheld (**Dual-screen only — single-screen is permanently unsupported**) |
 
 ---
 
@@ -30,6 +30,7 @@
 | `SECURITY_CONCEPT.md`                      | Security concept overview, threat model, hardening layers, and links to detailed docs    |
 | `docs/ARCHITECTURE.md`                     | System architecture overview & key design decisions                                      |
 | `docs/BUILD_NATIVE.md`                     | Build setup, instructions, and protocol specifications for native C binaries             |
+| `docs/GAMEPAD_NAVIGATION.md`               | Gamepad Navigation & Focus Architecture — 2D focus traversal, focus isolation & recovery |
 | `docs/MANUAL_VERIFICATION.md`              | Manual Verification Guide — step-by-step manual regression tests and PR sanity checklists |
 | `docs/REQUIREMENTS.md`                     | Requirements overview & non-functional requirements                                      |
 | `docs/features/config/FEATURE.md`          | Configuration Export/Import — portable `.mgrd` app-wide backup and profile sharing       |
@@ -116,15 +117,17 @@
 >    data compilers, state machines, serialization round-trips).
 > 2. **Update existing tests** if the change modifies the behaviour or signature of
 >    already-tested code.
-> 3. **Run all tests** via `./gradlew :core:test :domain:test :app:testDebugUnitTest :gamefocus:testDebugUnitTest` and report the result. Due to Gradle's reliance on local TCP/loopback sockets, this command MUST always be executed with the sandbox bypass enabled (`BypassSandbox: true` / unsandboxed). This, along with sandbox bypass compilation commands for verifying compile safety, are the **only** Gradle commands the agent is permitted to run.
+> 3. **Run all tests** via `./gradlew :shared:core:test :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:ui:testDebugUnitTest` and report the result. Due to Gradle's reliance on local TCP/loopback sockets, this command MUST always be executed with the sandbox bypass enabled (`BypassSandbox: true` / unsandboxed). This, along with sandbox bypass compilation commands for verifying compile safety, and test coverage tasks (`./gradlew koverHtmlReport`, `./gradlew koverLog`, `./gradlew koverXmlReport`), are the **only** Gradle commands the agent is permitted to run.
 >
 > Tests must be placed in the correct source set:
 >
-> - `:core` pure-JVM tests → `shared/core/src/test/kotlin/`
-> - `:domain` local tests → `companion/domain/src/test/java/`
+> - `:shared:core` pure-JVM tests → `shared/core/src/test/kotlin/`
+> - `:companion:domain` local tests → `companion/domain/src/test/java/`
 >
 > If logic cannot be unit-tested without significant refactoring, state that explicitly
 > as a follow-up task rather than skipping silently.
+>
+> **Test Coverage Tooling:** The project uses **Kotlinx-Kover** for unified code coverage across all JVM and Android modules. Run `./gradlew koverHtmlReport` to generate the consolidated HTML report (`build/reports/kover/html/index.html`), `./gradlew koverLog` for console summaries, or `./gradlew koverXmlReport` for CI/Codecov XML output.
 
 > **Auto Code Review policy:** After completing any implementation (feature, bug fix, or refactor) and before proposing the final commit message, the agent **must** run a complete code review pass on all modified files following the instructions in the `megingiard-code-review` skill (specifically executing the systematic file-by-file audit checklist and programmatic grep checks) and report any findings or perform the fixes directly.
 
@@ -145,19 +148,19 @@ Before marking a task as done, verify:
 - [ ] `snapshotFlow` imported from `androidx.compose.runtime`
 - [ ] Deprecated API branches annotated with `@Suppress("DEPRECATION")`
 - [ ] New `Activity` launches on correct display via `ActivityOptions.setLaunchDisplayId()`
-- [ ] `Presentation` mode switching uses `hide()`/`show()`, not `dismiss()` (except in `onDestroy()`)
-- [ ] `MirrorPresentationLifecycleOwner.destroy()` called in `setOnDismissListener`
-- [ ] `SurfaceView` receiving `VirtualDisplay` output has `setZOrderMediaOverlay(true)`
+- [ ] WindowOverlayLifecycleOwner.destroy() called when overlay view is removed
 - [ ] Service `onStartCommand` returns `START_NOT_STICKY`
-- [ ] `MirrorPresentation` show/hide reacts to presentation visibility conditions
 - [ ] Touch injector process stopped in `DisposableEffect` when leaving `TOUCHPAD` mode
 - [ ] Key injector process stopped in `DisposableEffect` when leaving `KEYBOARD` mode
 - [ ] No suspected compile errors (verified via static analysis or build compiles)
 - [ ] All modal dialogs and non-fullscreen popups use the centralized AppModalDialog / AppAlertDialog container or rememberBezelBrush() border
 - [ ] New or changed pure logic is covered by unit tests in `:core` or `:domain`
 - [ ] Existing tests updated if the change modifies previously-tested behaviour
-- [ ] `./gradlew :core:test :domain:test` executed and all tests pass (permitted test command)
+- [ ] `./gradlew :shared:core:test :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:ui:testDebugUnitTest` executed and all tests pass (permitted test command)
+- [ ] Test coverage verified or generated via `./gradlew koverLog` / `./gradlew koverHtmlReport` when required
 - [ ] If any native C source was modified, the corresponding build script was run and produced a new binary
+- [ ] Strict Zero-Heuristics Policy (§7.5) respected: No heuristics, substring guessing (e.g. contains("launcher")), synthetic fallbacks, or approximations introduced without explicit user permission
+- [ ] Standalone Companion Autonomy respected: Megingiard Companion bugs are resolved strictly within Companion / shared modules — zero dependency on or delegation to Game Focus (§6.1)
 - [ ] Help menus, onboardings, and localized strings updated if user interaction behavior changed (verify that every settings preference option has a corresponding explanation entry in its HelpModal)
 
 ---
@@ -208,7 +211,7 @@ affect runtime behaviour or user-facing interactions.
 
 ## 6 Package Structure
 
-The project is structured into 9 Feature-First Gradle modules:
+The project is structured into 10 Feature-First Gradle modules:
 
 ### App Modules (Executables)
 * **`:companion:ui`** — Main Android companion app UI layer (`com.stormpanda.megingiard`). Contains Activities, viewmodels, custom Compose views, and secondary screen presentations.
@@ -218,7 +221,8 @@ The project is structured into 9 Feature-First Gradle modules:
 * **`:companion:domain`** — Companion business logic, device managers, input injection facades (Touchpad, MacroPad, Keyboard, Mirror, Privd).
 * **`:gamefocus:domain`** — Standalone launcher domain logic and ROM launcher implementations (`RetroArchLauncher`, `GameNativeLauncher`).
 
-### Shared Domain & Core Modules
+### Shared UI, Domain & Core Modules
+* **`:shared:ui`** — App-wide design system tokens, themes (`AppColors`, `AppTheme`), modal dialogs (`AppModalDialog`), overlay modifiers, button glyphs (`GamePadButton`), and Material Symbol font resources.
 * **`:shared:catalog`** — Installed app index, ROM file scanning, system definitions (`InstalledAppsManager`, `RomManager`, `DisplayDetector`, `RomLauncherRegistry`).
 * **`:shared:media`** — External artwork fetchers, HTTP clients, and caching layers (`SteamGridDbClient`).
 * **`:shared:session`** — Active game detection engines (`EmulatorDetectionFunnel`, `GameNativeDetector`, `RetroArchDetector`, `Pcsx2AndroidDetector`, `YuzuDetector`).
@@ -237,6 +241,16 @@ Across all modules, files are organized into feature-centric packages. Keep thes
 * `ui/` — Design system constants, AppTheme palette factories, and reusable edge overlay quick menu bars.
 
 **Rule:** Shared business logic belongs in `:shared:catalog`, `:shared:media`, or `:shared:session`. Pure data types, math helpers, and logging facades belong in `:shared:core`. Feature-specific app logic belongs in `:companion:domain` or `:gamefocus:domain`. UI components belong in `:companion:ui` or `:gamefocus:ui`.
+
+### 6.1 Strict Decoupling: Megingiard Companion vs. Game Focus
+
+> [!CAUTION]
+> **CRITICAL ARCHITECTURAL RULE: MEGNINGIARD COMPANION IS A FULLY STANDALONE APP WITH ZERO DEPENDENCY ON GAME FOCUS.**
+>
+> 1. **Public vs. Unreleased:** Megingiard Companion (`:companion:ui`, `:companion:domain`, `:mirrorserver`, and `:shared:*`) is the primary standalone product distributed to users. **Game Focus (`:gamefocus:ui`, `:gamefocus:domain`) is currently NOT released to the public.**
+> 2. **Optional Usage:** Users are **never** forced or required to use Game Focus. Users may use stock Android, Odin/Thor launcher, Nova, Daijisho, ES-DE, Beacon, or any other third-party launcher on the top screen.
+> 3. **NO COMPANION BUGS FIXED IN GAME FOCUS:** Whenever an issue, bug, crash, focus glitch, lifecycle collision, or unexpected behavior occurs in Megingiard Companion, AI agents must **NEVER** assume that fixing or modifying Game Focus is a valid solution. Megingiard Companion must function with 100% stability and correctness completely on its own.
+> 4. **Strict Architectural Independence:** Megingiard Companion must have zero runtime dependencies on Game Focus. It must never assume Game Focus is installed, running, active in the foreground, or managing top-screen window state. Any inter-process integration (such as theme synchronization via `MegingiardThemeProvider`) is strictly optional and one-way: Companion acts as the independent authority/host, while Game Focus acts as an optional passive consumer.
 
 ---
 
@@ -292,6 +306,23 @@ PixelCopy.request(sv, bitmap, { result ->
 ### 7.4 Active Game Session Integrity
 
 - **NO SYNTHETIC FALLBACK ROM PATHS EVER:** When constructing an `ActiveGameSession`, `ActiveGameSession.romPath` MUST contain either an exact, verified file path/name (e.g. `Tactics Ogre (USA).iso` or `/storage/.../game.iso`) or `null` if the exact file path cannot be resolved directly from the emulator or SAF URI. **Never** populate `romPath` with synthetic, guessed, or fake fallback filenames (such as `"$derivedTitle.iso"`).
+
+### 7.5 Zero-Heuristics & Strict Determinism Policy
+
+> [!CAUTION]
+> **ABSOLUTE RULE: ZERO HEURISTICS WITHOUT EXPLICIT HUMAN OPERATOR PERMISSION.**
+>
+> AI coding agents and developers are **STRICTLY PROHIBITED** from introducing ANY heuristics, fuzzy matching, guessing algorithms, loose substring deductions, synthetic fallbacks, or probabilistic approximations anywhere in the codebase without the human operator's prior explicit approval.
+
+- **Mandatory Strict Determinism:** Every state transition, app detection, package classification, path resolution, input routing, and configuration decision MUST be 100% deterministic and backed by:
+  1. **Canonical Operating System APIs:** (e.g. Android `PackageManager` intent resolution `Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)`, official lifecycle callbacks, verified system services).
+  2. **Explicit Contracts & Constants:** (e.g. verified IPC contracts like `MegingiardIpcContract.GAMEFOCUS_PACKAGE`, explicit package constants, exact system package IDs).
+  3. **Exact User Configuration / Verified Data:** (e.g. exact user-configured profile associations, exact filesystem paths confirmed to exist).
+- **Prohibited Patterns (Non-Exhaustive Examples):**
+  - ❌ **No substring guessing for roles or types:** Never use `packageName.contains("launcher")`, `packageName.contains("home")`, `packageName.contains("game")`, `title.contains("...")`, etc. to infer system roles or app categories. Substring checks cause severe false positives (e.g. `com.playrix.homescapes`, `net.kdt.pojavlaunch`, `com.ea.gp.homeworld`).
+  - ❌ **No synthetic fallback data:** Never invent guessed or synthetic paths, filenames, or IDs (e.g. `"$title.iso"`) when exact data cannot be resolved (per §7.4).
+  - ❌ **No heuristic fallback defaults:** If an entity, role, or state cannot be resolved with certainty through canonical APIs or exact data, return `null`, empty, or no-op. Never approximate or guess.
+- **Seeking Permission for Edge Cases:** If a technical requirement genuinely lacks a canonical API and appears to require a heuristic, the agent MUST pause, explain the limitation to the user, propose the approach, and obtain their explicit written approval before writing any heuristic code.
 
 ---
 
@@ -446,6 +477,15 @@ The coroutine is automatically cancelled when the key (`isActive`) changes to `f
 
 Never call `.collectAsState()` outside a Composable; never call raw `.collect {}` inside a Composable when the result drives UI.
 
+### 9.6 Gamepad & Settings UI Conventions
+
+- **No Controller Button Prompts in Settings / Editor Menus:** Controller button prompt glyphs (e.g. `GamePadGlyph` badges for A/B/X/Y or footer prompt bars) must **NEVER** be displayed inside Megingiard Companion settings screens or MacroPad editor menus. Button prompt glyphs are exclusively reserved for Game Focus launcher UI.
+- **In-Place Two-Step Confirmation for Destructive Actions:** Never launch modal window dialogs (`Dialog`, `AlertDialog`) from within overlay window contexts or editor menus (prevents window type mismatch crashes on overlay contexts). Instead, destructive actions (e.g. deleting profiles, layouts, buttons, macros) must use in-place two-step confirmation (`GamepadTwoStepConfirmCard`):
+  1. Activating the item (Button A / touch click) changes its headline to a confirmation prompt (e.g. *"Really delete 'Profile'?"*) and changes the badge to *"Confirm"*.
+  2. Activating again executes the action and resets state.
+  3. Pressing Button B or navigating away (losing focus) cancels the confirmation state.
+  4. Upon deletion, focus switches back to the primary selection item in the deck (e.g. profile choice card) and a toast notification confirms the deletion.
+
 ---
 
 ## 10 Coroutines & Lifecycle
@@ -588,6 +628,10 @@ These constraints are non-negotiable:
    that achieves zero-latency DRM-free mirroring on the AYN Thor.
 5. **Synthetic LifecycleOwner in Presentation** — required for Compose
    inside the background-service window.
+6. **Megingiard Companion Autonomy & Zero Game Focus Dependency** — Megingiard
+   Companion is a completely standalone application with zero dependencies on
+   Game Focus. Bugs in Companion must NEVER be fixed or mitigated by altering
+   Game Focus.
 
 ---
 

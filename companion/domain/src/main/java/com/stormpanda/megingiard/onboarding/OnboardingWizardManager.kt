@@ -2,8 +2,6 @@ package com.stormpanda.megingiard.onboarding
 
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
-import com.stormpanda.megingiard.onboarding.OnboardingStepId
-import com.stormpanda.megingiard.onboarding.OnboardingStepState
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -86,7 +84,8 @@ object OnboardingWizardManager {
     }
 
     fun skipWizard() {
-        AppLog.d(TAG, "Dismissing onboarding wizard without storing completion")
+        AppLog.d(TAG, "Dismissing onboarding wizard and marking completed")
+        SettingsManager.setWelcomeTourCompletedVersion(SettingsManager.CURRENT_WELCOME_TOUR_VERSION)
         _isWizardActive.value = false
     }
 

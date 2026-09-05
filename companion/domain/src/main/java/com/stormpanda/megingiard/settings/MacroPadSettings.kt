@@ -56,12 +56,6 @@ object MacroPadSettings {
     private var lastLoadedActiveProfileId: String? = null
     private var hasLoadedOnce = false
 
-    private val _skipTouchRecordDialog = MutableStateFlow(false)
-    val skipTouchRecordDialog: StateFlow<Boolean> = _skipTouchRecordDialog.asStateFlow()
-
-    private val _skipGamepadRecordDialog = MutableStateFlow(false)
-    val skipGamepadRecordDialog: StateFlow<Boolean> = _skipGamepadRecordDialog.asStateFlow()
-
     private val _gamepadSwapFaceButtons = MutableStateFlow(false)
     val gamepadSwapFaceButtons: StateFlow<Boolean> = _gamepadSwapFaceButtons.asStateFlow()
 
@@ -80,9 +74,6 @@ object MacroPadSettings {
     /** Dead zone radius for the right analog stick during physical gamepad recording (0.0–1.0). */
     val deadzoneRight: StateFlow<Float> = _deadzoneRight.asStateFlow()
 
-    private val _recentColors = MutableStateFlow<List<Int>>(emptyList())
-    val recentColors: StateFlow<List<Int>> = _recentColors.asStateFlow()
-
     internal fun init(
         dataStore: DataStore<Preferences>,
         scope: CoroutineScope,
@@ -100,20 +91,10 @@ object MacroPadSettings {
     }
 
     internal fun loadFrom(prefs: Preferences) {
-        _skipTouchRecordDialog.value = prefs[KEY_SKIP_TOUCH_RECORD_DIALOG] ?: false
-        _skipGamepadRecordDialog.value = prefs[KEY_SKIP_GAMEPAD_RECORD_DIALOG] ?: false
         _gamepadSwapFaceButtons.value = prefs[KEY_GAMEPAD_SWAP_FACE_BUTTONS] ?: false
         _privdPromptDismissed.value = prefs[KEY_PRIVD_PROMPT_DISMISSED] ?: false
         _deadzoneLeft.value = prefs[KEY_PRIVD_DEADZONE_LEFT] ?: PRIVD_DEFAULT_DEADZONE
         _deadzoneRight.value = prefs[KEY_PRIVD_DEADZONE_RIGHT] ?: PRIVD_DEFAULT_DEADZONE
-
-        val colorsStr = prefs[KEY_MACROPAD_RECENT_COLORS] ?: ""
-        _recentColors.value =
-            if (colorsStr.isBlank()) {
-                emptyList()
-            } else {
-                colorsStr.split(",").mapNotNull { it.toIntOrNull() }
-            }
 
         // MacroPad profiles
         val macropadProfilesJson = prefs[KEY_MACROPAD_PROFILES]
@@ -137,58 +118,42 @@ object MacroPadSettings {
         MacroPadState.loadFrom(profiles, activeId)
     }
 
-    fun setSkipTouchRecordDialog(value: Boolean) {
-        AppLog.d(TAG, "setSkipTouchRecordDialog($value)")
-        _skipTouchRecordDialog.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_SKIP_TOUCH_RECORD_DIALOG] = value } }
-    }
+    private val optionalDataStore: DataStore<Preferences>?
+        get() = if (::dataStore.isInitialized) dataStore else null
 
-    fun setSkipGamepadRecordDialog(value: Boolean) {
-        AppLog.d(TAG, "setSkipGamepadRecordDialog($value)")
-        _skipGamepadRecordDialog.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_SKIP_GAMEPAD_RECORD_DIALOG] = value } }
-    }
+    private val optionalScope: CoroutineScope?
+        get() = if (::scope.isInitialized) scope else null
 
     fun setGamepadSwapFaceButtons(value: Boolean) {
-        AppLog.d(TAG, "setGamepadSwapFaceButtons($value)")
-        _gamepadSwapFaceButtons.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_GAMEPAD_SWAP_FACE_BUTTONS] = value } }
+        updateSettingPref(
+            KEY_GAMEPAD_SWAP_FACE_BUTTONS,
+            value,
+            _gamepadSwapFaceButtons,
+            optionalScope,
+            optionalDataStore,
+            TAG,
+            "setGamepadSwapFaceButtons",
+        )
     }
 
     fun setPrivdPromptDismissed(value: Boolean) {
-        AppLog.d(TAG, "setPrivdPromptDismissed($value)")
-        _privdPromptDismissed.value = value
-        if (::dataStore.isInitialized) {
-            scope.launch { dataStore.edit { prefs -> prefs[KEY_PRIVD_PROMPT_DISMISSED] = value } }
-        }
+        updateSettingPref(
+            KEY_PRIVD_PROMPT_DISMISSED,
+            value,
+            _privdPromptDismissed,
+            optionalScope,
+            optionalDataStore,
+            TAG,
+            "setPrivdPromptDismissed",
+        )
     }
 
     fun setDeadzoneLeft(value: Float) {
-        AppLog.d(TAG, "setDeadzoneLeft($value)")
-        _deadzoneLeft.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_PRIVD_DEADZONE_LEFT] = value } }
+        updateSettingPref(KEY_PRIVD_DEADZONE_LEFT, value, _deadzoneLeft, optionalScope, optionalDataStore, TAG, "setDeadzoneLeft")
     }
 
     fun setDeadzoneRight(value: Float) {
-        AppLog.d(TAG, "setDeadzoneRight($value)")
-        _deadzoneRight.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_PRIVD_DEADZONE_RIGHT] = value } }
-    }
-
-    fun addRecentColor(color: Int) {
-        val current = _recentColors.value.toMutableList()
-        current.remove(color)
-        current.add(0, color)
-        if (current.size > 10) {
-            current.removeAt(current.lastIndex)
-        }
-        _recentColors.value = current
-        val colorsStr = current.joinToString(",")
-        scope.launch {
-            dataStore.edit { prefs ->
-                prefs[KEY_MACROPAD_RECENT_COLORS] = colorsStr
-            }
-        }
+        updateSettingPref(KEY_PRIVD_DEADZONE_RIGHT, value, _deadzoneRight, optionalScope, optionalDataStore, TAG, "setDeadzoneRight")
     }
 
     /**

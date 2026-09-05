@@ -1,0 +1,639 @@
+package com.stormpanda.megingiard.macropad
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.automirrored.rounded.Undo
+import androidx.compose.material.icons.rounded.Colorize
+import androidx.compose.material.icons.rounded.FormatColorText
+import androidx.compose.material.icons.rounded.Opacity
+import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Sync
+import androidx.compose.material3.Icon
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.ui.GamepadActionCard
+import com.stormpanda.megingiard.ui.GamepadColorSwatch
+import com.stormpanda.megingiard.ui.GamepadSliderCard
+import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.firstDeckItem
+import com.stormpanda.megingiard.ui.toHexLabel
+import kotlinx.coroutines.flow.collectLatest
+import kotlin.math.roundToInt
+import android.graphics.Color as AndroidColor
+
+private const val TAG = "MacroPadSubPages"
+private val MPS_UNDO_ARROW_SIZE = 12.dp
+private const val MPS_UNDO_ARROW_ALPHA = 0.6f
+private val MPS_UNDO_SWATCH_SPACING = 6.dp
+
+internal enum class EditorColorTarget(
+    val titleResId: Int,
+    val selectWheelTitleResId: Int,
+    val defaultNeutralColor: Color,
+) {
+    TEXT(
+        titleResId = R.string.layout_settings_color_text,
+        selectWheelTitleResId = R.string.layout_settings_select_text_color,
+        defaultNeutralColor = MP_AMBIENT_NEUTRAL_TEXT,
+    ),
+    BORDER(
+        titleResId = R.string.layout_settings_color_border,
+        selectWheelTitleResId = R.string.layout_settings_select_border_color,
+        defaultNeutralColor = MP_AMBIENT_NEUTRAL_BORDER,
+    ),
+    BG(
+        titleResId = R.string.layout_settings_color_bg,
+        selectWheelTitleResId = R.string.layout_settings_select_bg_color,
+        defaultNeutralColor = MP_AMBIENT_NEUTRAL_BG,
+    ),
+}
+
+internal typealias LayoutColorTarget = EditorColorTarget
+internal typealias ButtonColorTarget = EditorColorTarget
+
+internal fun PadLayout.getColorOption(target: EditorColorTarget): ColorOption =
+    when (target) {
+        EditorColorTarget.TEXT -> buttonTextColor
+        EditorColorTarget.BORDER -> buttonBorderColor
+        EditorColorTarget.BG -> buttonBgColor
+    }
+
+internal fun PadLayout.withColorOption(
+    target: EditorColorTarget,
+    option: ColorOption,
+): PadLayout =
+    when (target) {
+        EditorColorTarget.TEXT -> copy(buttonTextColor = option)
+        EditorColorTarget.BORDER -> copy(buttonBorderColor = option)
+        EditorColorTarget.BG -> copy(buttonBgColor = option)
+    }
+
+internal fun PadButton.getColorOption(target: EditorColorTarget): ColorOption? =
+    when (target) {
+        EditorColorTarget.TEXT -> buttonTextColor
+        EditorColorTarget.BORDER -> buttonBorderColor
+        EditorColorTarget.BG -> buttonBgColor
+    }
+
+internal fun PadButton.withColorOption(
+    target: EditorColorTarget,
+    option: ColorOption?,
+): PadButton =
+    when (target) {
+        EditorColorTarget.TEXT -> copy(buttonTextColor = option)
+        EditorColorTarget.BORDER -> copy(buttonBorderColor = option)
+        EditorColorTarget.BG -> copy(buttonBgColor = option)
+    }
+
+internal sealed interface MacroPadSubPage {
+    val parentSection: EditorSection
+
+    data class NewProfile(
+        val presetName: String? = null,
+        val association: ProfileAssociation? = null,
+    ) : MacroPadSubPage {
+        override val parentSection = EditorSection.PROFILES
+    }
+
+    data class EditProfile(
+        val profileId: String,
+    ) : MacroPadSubPage {
+        override val parentSection = EditorSection.PROFILES
+    }
+
+    data object AppPicker : MacroPadSubPage {
+        override val parentSection = EditorSection.BUTTONS
+    }
+
+    data object ReorderProfiles : MacroPadSubPage {
+        override val parentSection = EditorSection.PROFILES
+    }
+
+    data object NewLayout : MacroPadSubPage {
+        override val parentSection = EditorSection.LAYOUTS
+    }
+
+    data class EditLayout(
+        val layoutId: String,
+    ) : MacroPadSubPage {
+        override val parentSection = EditorSection.LAYOUTS
+    }
+
+    data class LayoutColor(
+        val layoutId: String,
+        val target: LayoutColorTarget,
+    ) : MacroPadSubPage {
+        override val parentSection = EditorSection.LAYOUTS
+    }
+
+    data class SteamGridDbScrape(
+        val layoutId: String,
+    ) : MacroPadSubPage {
+        override val parentSection = EditorSection.BACKGROUND
+    }
+
+    data class CutoutSettings(
+        val cutoutId: String,
+    ) : MacroPadSubPage {
+        override val parentSection = EditorSection.MIRROR
+    }
+
+    data class MirrorAdvancedSettings(
+        val layoutId: String,
+    ) : MacroPadSubPage {
+        override val parentSection = EditorSection.MIRROR
+    }
+
+    data class LayoutTouchpad(
+        val layoutId: String,
+    ) : MacroPadSubPage {
+        override val parentSection = EditorSection.LAYOUTS
+    }
+
+    data class CopyLayout(
+        val layoutId: String,
+    ) : MacroPadSubPage {
+        override val parentSection = EditorSection.LAYOUTS
+    }
+
+    data object ReorderLayouts : MacroPadSubPage {
+        override val parentSection = EditorSection.LAYOUTS
+    }
+
+    data object ChooseButtonType : MacroPadSubPage {
+        override val parentSection = EditorSection.BUTTONS
+    }
+
+    data object EditButtonPositions : MacroPadSubPage {
+        override val parentSection = EditorSection.BUTTONS
+    }
+
+    data class EditButton(
+        val button: PadButton?,
+        val draftButton: PadButton? = null,
+    ) : MacroPadSubPage {
+        override val parentSection = EditorSection.BUTTONS
+    }
+
+    data class ButtonColor(
+        val button: PadButton?,
+        val draftButton: PadButton,
+        val target: ButtonColorTarget,
+    ) : MacroPadSubPage {
+        override val parentSection = EditorSection.BUTTONS
+    }
+
+    data class ChooseKeyboardKey(
+        val button: PadButton?,
+        val draftButton: PadButton,
+    ) : MacroPadSubPage {
+        override val parentSection = EditorSection.BUTTONS
+    }
+
+    data class ChooseGamepadButton(
+        val button: PadButton?,
+        val draftButton: PadButton,
+        val slotIndex: Int = 0,
+    ) : MacroPadSubPage {
+        override val parentSection = EditorSection.BUTTONS
+    }
+
+    data class ChooseMouseAction(
+        val button: PadButton?,
+        val draftButton: PadButton,
+    ) : MacroPadSubPage {
+        override val parentSection = EditorSection.BUTTONS
+    }
+
+    data class ChooseMirrorAction(
+        val button: PadButton?,
+        val draftButton: PadButton,
+    ) : MacroPadSubPage {
+        override val parentSection = EditorSection.BUTTONS
+    }
+
+    data class ChooseOverlayAction(
+        val button: PadButton?,
+        val draftButton: PadButton,
+    ) : MacroPadSubPage {
+        override val parentSection = EditorSection.BUTTONS
+    }
+
+    data class ChooseLayoutAction(
+        val button: PadButton?,
+        val draftButton: PadButton,
+    ) : MacroPadSubPage {
+        override val parentSection = EditorSection.BUTTONS
+    }
+
+    data object ChooseIcon : MacroPadSubPage {
+        override val parentSection = EditorSection.BUTTONS
+    }
+
+    data class CopyButton(
+        val button: PadButton,
+    ) : MacroPadSubPage {
+        override val parentSection = EditorSection.BUTTONS
+    }
+
+    data class ChooseMacroAction(
+        val button: PadButton?,
+        val draftButton: PadButton,
+    ) : MacroPadSubPage {
+        override val parentSection = EditorSection.BUTTONS
+    }
+
+    data object ChooseMacroMode : MacroPadSubPage {
+        override val parentSection = EditorSection.MACROS
+    }
+
+    data class MacroTimeline(
+        val macro: Macro? = null,
+        val draftMacro: Macro? = null,
+        val macroId: String = draftMacro?.id ?: macro?.id ?: "",
+    ) : MacroPadSubPage {
+        constructor(macroId: String) : this(macro = null, draftMacro = null, macroId = macroId)
+
+        val effectiveMacro: Macro? get() = draftMacro ?: macro
+        override val parentSection = EditorSection.MACROS
+    }
+
+    data class ManualMacroSteps(
+        val macro: Macro? = null,
+        val draftMacro: Macro? = null,
+        val macroId: String = draftMacro?.id ?: macro?.id ?: "",
+    ) : MacroPadSubPage {
+        constructor(macroId: String) : this(macro = null, draftMacro = null, macroId = macroId)
+
+        val effectiveMacro: Macro? get() = draftMacro ?: macro
+        override val parentSection = EditorSection.MACROS
+    }
+
+    data class MacroStepEdit(
+        val macro: Macro? = null,
+        val draftMacro: Macro? = null,
+        val macroId: String = draftMacro?.id ?: macro?.id ?: "",
+        val stepIndex: Int? = null,
+    ) : MacroPadSubPage {
+        constructor(macroId: String, stepIndex: Int?) : this(macro = null, draftMacro = null, macroId = macroId, stepIndex = stepIndex)
+
+        val effectiveMacro: Macro? get() = draftMacro ?: macro
+        override val parentSection = EditorSection.MACROS
+    }
+
+    data class ReorderMacroSteps(
+        val macro: Macro? = null,
+        val draftMacro: Macro? = null,
+        val macroId: String = draftMacro?.id ?: macro?.id ?: "",
+    ) : MacroPadSubPage {
+        constructor(macroId: String) : this(macro = null, draftMacro = null, macroId = macroId)
+
+        val effectiveMacro: Macro? get() = draftMacro ?: macro
+        override val parentSection = EditorSection.MACROS
+    }
+
+    data class ColorWheel(
+        val title: String,
+        val breadcrumbs: List<String>,
+        val initialColor: Color,
+        val section: EditorSection,
+        val showAlphaSlider: Boolean = true,
+        val onColorChange: ((Color) -> Unit)? = null,
+    ) : MacroPadSubPage {
+        override val parentSection = section
+    }
+}
+
+@Composable
+internal fun ColorWheelSubPageContent(
+    initialColor: Color,
+    showAlphaSlider: Boolean = true,
+    onColorChange: ((Color) -> Unit)? = null,
+    onSaveColor: ((Color) -> Unit)? = null,
+) {
+    val initHsv =
+        remember(initialColor) {
+            FloatArray(3).also { AndroidColor.colorToHSV(initialColor.toArgb(), it) }
+        }
+    var hue by rememberSaveable(initialColor) { mutableFloatStateOf(initHsv[0]) }
+    var sat by rememberSaveable(initialColor) { mutableFloatStateOf(initHsv[1]) }
+    var bri by rememberSaveable(initialColor) { mutableFloatStateOf(initHsv[2]) }
+    var alpha by rememberSaveable(initialColor) {
+        mutableFloatStateOf(if (showAlphaSlider) initialColor.alpha.coerceIn(0.1f, 1f) else 1f)
+    }
+
+    val workingColor by remember {
+        derivedStateOf {
+            val base = Color(AndroidColor.HSVToColor(floatArrayOf(hue, sat, bri)))
+            if (showAlphaSlider) base.copy(alpha = alpha) else base
+        }
+    }
+
+    LaunchedEffect(initialColor) {
+        AppLog.d(TAG, "ColorWheelSubPageContent opened (initialColor=$initialColor)")
+    }
+
+    LaunchedEffect(Unit) {
+        snapshotFlow { workingColor }
+            .collectLatest { color ->
+                onColorChange?.invoke(color)
+            }
+    }
+
+    val hueGradient =
+        remember {
+            Brush.horizontalGradient(
+                colors =
+                    listOf(
+                        Color(0xFFFF0000),
+                        Color(0xFFFFFF00),
+                        Color(0xFF00FF00),
+                        Color(0xFF00FFFF),
+                        Color(0xFF0000FF),
+                        Color(0xFFFF00FF),
+                        Color(0xFFFF0000),
+                    ),
+            )
+        }
+
+    val saturationGradient =
+        remember(hue, bri) {
+            Brush.horizontalGradient(
+                colors =
+                    listOf(
+                        Color(AndroidColor.HSVToColor(floatArrayOf(hue, 0f, bri))),
+                        Color(AndroidColor.HSVToColor(floatArrayOf(hue, 1f, bri))),
+                    ),
+            )
+        }
+
+    val brightnessGradient =
+        remember(hue, sat) {
+            Brush.horizontalGradient(
+                colors =
+                    listOf(
+                        Color.Black,
+                        Color(AndroidColor.HSVToColor(floatArrayOf(hue, sat, 1f))),
+                    ),
+            )
+        }
+
+    val opacityGradient =
+        remember(hue, sat, bri) {
+            val baseRgb = Color(AndroidColor.HSVToColor(floatArrayOf(hue, sat, bri)))
+            Brush.horizontalGradient(
+                colors =
+                    listOf(
+                        baseRgb.copy(alpha = 0.1f),
+                        baseRgb.copy(alpha = 1f),
+                    ),
+            )
+        }
+
+    val hex = workingColor.toHexLabel(showAlphaSlider)
+
+    GamepadSliderCard(
+        title = stringResource(R.string.settings_color_hue),
+        description = stringResource(R.string.settings_color_hue_desc),
+        value = hue,
+        valueRange = 0f..360f,
+        onValueChange = { hue = it },
+        valueLabel = "${hue.roundToInt()}°",
+        step = 5f,
+        fineStep = 1f,
+        trackBrush = hueGradient,
+        thumbColor = Color(AndroidColor.HSVToColor(floatArrayOf(hue, 1f, 1f))),
+        modifier = Modifier.firstDeckItem(),
+    )
+
+    GamepadSliderCard(
+        title = stringResource(R.string.settings_color_saturation),
+        description = stringResource(R.string.settings_color_saturation_desc),
+        value = sat,
+        valueRange = 0f..1f,
+        onValueChange = { sat = it },
+        valueLabel = "${(sat * 100).roundToInt()}%",
+        step = 0.02f,
+        fineStep = 0.01f,
+        trackBrush = saturationGradient,
+        thumbColor = workingColor,
+    )
+
+    GamepadSliderCard(
+        title = stringResource(R.string.settings_color_brightness),
+        description = stringResource(R.string.settings_color_brightness_desc),
+        value = bri,
+        valueRange = 0f..1f,
+        onValueChange = { bri = it },
+        valueLabel = "${(bri * 100).roundToInt()}%",
+        step = 0.02f,
+        fineStep = 0.01f,
+        trackBrush = brightnessGradient,
+        thumbColor = workingColor,
+    )
+
+    if (showAlphaSlider) {
+        GamepadSliderCard(
+            title = stringResource(R.string.layout_settings_color_opacity),
+            description = stringResource(R.string.settings_color_opacity_desc),
+            value = alpha,
+            valueRange = 0.1f..1f,
+            onValueChange = { alpha = it },
+            valueLabel = "${(alpha * 100).roundToInt()}%",
+            step = 0.02f,
+            fineStep = 0.01f,
+            trackBrush = opacityGradient,
+            thumbColor = workingColor,
+            icon = Icons.Rounded.Opacity,
+        )
+    }
+
+    val colors = LocalAppColors.current
+    val hasChanges = remember(workingColor, initialColor) { workingColor.toArgb() != initialColor.toArgb() }
+    val initialHex = initialColor.toHexLabel(showAlphaSlider)
+
+    // ── Revert / Undo Changes Card ───────────────────────────────────
+    GamepadActionCard(
+        title = stringResource(R.string.macropad_editor_color_wheel_undo_title),
+        description =
+            if (hasChanges) {
+                stringResource(R.string.macropad_editor_color_wheel_undo_desc, "$hex → $initialHex")
+            } else {
+                stringResource(R.string.macropad_editor_color_wheel_undo_desc_no_changes)
+            },
+        icon = Icons.AutoMirrored.Rounded.Undo,
+        actionLeadingContent = {
+            if (hasChanges) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(MPS_UNDO_SWATCH_SPACING),
+                ) {
+                    GamepadColorSwatch(
+                        color = workingColor,
+                        isSelected = true,
+                    )
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+                        contentDescription = null,
+                        tint = colors.onSurfaceSecondary.copy(alpha = MPS_UNDO_ARROW_ALPHA),
+                        modifier = Modifier.size(MPS_UNDO_ARROW_SIZE),
+                    )
+                    GamepadColorSwatch(
+                        color = initialColor,
+                        isSelected = false,
+                    )
+                }
+            } else {
+                GamepadColorSwatch(
+                    color = initialColor,
+                    isSelected = true,
+                )
+            }
+        },
+        actionText = if (hasChanges) stringResource(R.string.macropad_macro_editor_undo) else null,
+        enabled = hasChanges,
+        onClick = {
+            hue = initHsv[0]
+            sat = initHsv[1]
+            bri = initHsv[2]
+            alpha = if (showAlphaSlider) initialColor.alpha.coerceIn(0.1f, 1f) else 1f
+        },
+    )
+
+    if (onSaveColor != null) {
+        GamepadActionCard(
+            title = stringResource(R.string.settings_color_save_title),
+            description = stringResource(R.string.settings_color_save_desc),
+            icon = Icons.Rounded.Colorize,
+            actionLeadingContent = {
+                GamepadColorSwatch(
+                    color = workingColor,
+                    isSelected = false,
+                )
+            },
+            onClick = {
+                onSaveColor(workingColor)
+            },
+        )
+    }
+}
+
+/**
+ * Shared sub-page for choosing between Layout Default (optional), Theme Neutral, App Accent, and Custom Color.
+ */
+@Composable
+internal fun ColorOptionSubPageContent(
+    currentOption: ColorOption?,
+    layoutDefaultOption: ColorOption? = null,
+    defaultNeutralColor: Color,
+    isBgTarget: Boolean = false,
+    selectColorWheelTitle: String,
+    colorWheelBreadcrumbs: List<String>,
+    onColorOptionChanged: (ColorOption?) -> Unit,
+    onOpenColorWheel: (title: String, breadcrumbs: List<String>, initialColor: Color) -> Unit,
+) {
+    val globalAccentInt by SettingsManager.accentColor.collectAsStateWithLifecycle()
+    val globalAccentColor = Color(globalAccentInt)
+
+    fun resolve(opt: ColorOption): Color =
+        if (isBgTarget) resolveBgColorOption(opt, globalAccentColor) else resolveColorOption(opt, globalAccentColor, defaultNeutralColor)
+
+    val currentColor = resolve(currentOption ?: layoutDefaultOption ?: ColorOption.Neutral)
+    val layoutResolvedColor = layoutDefaultOption?.let(::resolve)
+
+    LaunchedEffect(selectColorWheelTitle) {
+        AppLog.d(TAG, "ColorOptionSubPageContent opened: $selectColorWheelTitle")
+    }
+
+    val isDefaultSelected = currentOption == null
+    val isNeutralSelected = currentOption is ColorOption.Neutral
+    val isAccentSelected = currentOption is ColorOption.Accent
+    val isCustomSelected = currentOption is ColorOption.Custom
+
+    if (layoutDefaultOption != null && layoutResolvedColor != null) {
+        GamepadActionCard(
+            title = stringResource(R.string.layout_settings_color_layout_default),
+            description = stringResource(R.string.macropad_btn_color_layout_default_desc),
+            icon = Icons.Rounded.Sync,
+            actionLeadingContent = {
+                GamepadColorSwatch(
+                    color = layoutResolvedColor,
+                    isSelected = isDefaultSelected,
+                )
+            },
+            actionText = if (isDefaultSelected) stringResource(R.string.gamepad_color_selected) else null,
+            onClick = { onColorOptionChanged(null) },
+            modifier = Modifier.firstDeckItem(),
+        )
+    }
+
+    GamepadActionCard(
+        title = stringResource(R.string.layout_settings_color_neutral),
+        description = stringResource(R.string.macropad_editor_color_palette_desc),
+        icon = Icons.Rounded.FormatColorText,
+        actionLeadingContent = {
+            GamepadColorSwatch(
+                color = defaultNeutralColor,
+                isSelected = isNeutralSelected,
+            )
+        },
+        actionText = if (isNeutralSelected) stringResource(R.string.gamepad_color_selected) else null,
+        onClick = { onColorOptionChanged(ColorOption.Neutral) },
+        modifier = if (layoutDefaultOption == null) Modifier.firstDeckItem() else Modifier,
+    )
+
+    GamepadActionCard(
+        title = stringResource(R.string.layout_settings_color_accent),
+        description = stringResource(R.string.settings_accent_color_desc),
+        icon = Icons.Rounded.Palette,
+        actionLeadingContent = {
+            GamepadColorSwatch(
+                color = globalAccentColor,
+                isSelected = isAccentSelected,
+            )
+        },
+        actionText = if (isAccentSelected) stringResource(R.string.gamepad_color_selected) else null,
+        onClick = { onColorOptionChanged(ColorOption.Accent) },
+    )
+
+    GamepadActionCard(
+        title = stringResource(R.string.gamepad_action_custom_color),
+        description = if (isCustomSelected) currentColor.toHexLabel() else stringResource(R.string.macropad_editor_color_wheel_desc),
+        icon = Icons.Rounded.Colorize,
+        actionLeadingContent = {
+            GamepadColorSwatch(
+                color = if (isCustomSelected) currentColor else Color.Transparent,
+                isSelected = isCustomSelected,
+            )
+        },
+        actionText = if (isCustomSelected) stringResource(R.string.gamepad_color_selected) else null,
+        onClick = {
+            onOpenColorWheel(
+                selectColorWheelTitle,
+                colorWheelBreadcrumbs,
+                if (isCustomSelected) currentColor else (layoutResolvedColor ?: defaultNeutralColor),
+            )
+        },
+    )
+}

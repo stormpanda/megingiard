@@ -8,7 +8,6 @@ import android.graphics.drawable.Drawable
 import android.util.LruCache
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.core.graphics.drawable.toBitmap
 import androidx.palette.graphics.Palette
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
@@ -104,10 +103,16 @@ object AppPaletteExtractor {
     private var appContext: Context? = null
 
     fun init(context: Context) {
-        if (isInitialized) return
+        if (isInitialized && appContext == context.applicationContext) return
         appContext = context.applicationContext
         loadPersistedPalettes(context.applicationContext)
         isInitialized = true
+    }
+
+    internal fun resetForTesting() {
+        paletteCache.evictAll()
+        isInitialized = false
+        appContext = null
     }
 
     private fun loadPersistedPalettes(context: Context) {
@@ -201,23 +206,7 @@ object AppPaletteExtractor {
         appInfo: InstalledAppInfo,
         defaultPrimary: Color,
         defaultSecondary: Color,
-    ): ExtractedAppPalette =
-        withContext(Dispatchers.Default) {
-            val startTime = System.currentTimeMillis()
-            val cacheKey = getCacheKey(appInfo)
-            val cached = paletteCache.get(cacheKey)
-            if (cached != null) {
-                AppLog.d(TAG, "Palette cache HIT for ${appInfo.label} [0ms]")
-                return@withContext cached
-            }
-
-            val palette = extractColorsInternal(appInfo, defaultPrimary, defaultSecondary)
-            paletteCache.put(cacheKey, palette)
-            persistPalette(cacheKey, palette)
-            val elapsed = System.currentTimeMillis() - startTime
-            AppLog.d(TAG, "Palette extracted for ${appInfo.label} in ${elapsed}ms")
-            palette
-        }
+    ): ExtractedAppPalette = withContext(Dispatchers.Default) { extractColors(appInfo, defaultPrimary, defaultSecondary) }
 
     fun extractColors(
         appInfo: InstalledAppInfo,

@@ -4,22 +4,35 @@ import android.content.Context
 import android.graphics.BitmapFactory
 import android.os.SystemClock
 import android.os.Vibrator
+import android.view.KeyEvent
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Keyboard
+import androidx.compose.material.icons.rounded.Mouse
+import androidx.compose.material.icons.rounded.SportsEsports
+import androidx.compose.material.icons.rounded.TouchApp
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,12 +42,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -47,16 +66,28 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.BitmapUtils
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.macropad.ButtonColorStyle
-import com.stormpanda.megingiard.macropad.HapticStrength
-import com.stormpanda.megingiard.macropad.MacroExecutor
+import com.stormpanda.megingiard.input.TouchInjector
+import com.stormpanda.megingiard.math.ViewportMath
+import com.stormpanda.megingiard.mirror.EmbeddedMirrorView
+import com.stormpanda.megingiard.mirror.MasterSurfaceRegistry
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.mirror.TouchProjectionController
+import com.stormpanda.megingiard.mirror.TouchScreenObserver
+import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.touchpad.TouchpadGestureProcessor
+import com.stormpanda.megingiard.ui.DialogToastManager
+import com.stormpanda.megingiard.ui.DialogToastPill
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.MaterialSymbol
+import com.stormpanda.megingiard.ui.dimColorFilter
+import com.stormpanda.megingiard.ui.rememberBezelBrush
+import com.stormpanda.megingiard.ui.rememberQuickMenuGestureMetrics
 import com.stormpanda.megingiard.viewmodel.MacroPadViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -66,11 +97,11 @@ import java.io.File
 // ─────────────────────────────────────────────────────────────────────────────
 
 private val MP_CORNER_RADIUS = 0.dp
+private val MP_SCREEN_SHAPE = RoundedCornerShape(MP_CORNER_RADIUS)
 
 // Shared with PadCanvas so the editor canvas is pixel-identical to use mode.
 internal val MP_SCREEN_PADDING = 0.dp
 
-private const val MP_DISABLED_FEEDBACK_HIDE_MS = 1800L
 private const val MP_DISABLED_FEEDBACK_RATE_LIMIT_MS = 650L
 
 // Dynamic haptic interval bounds: faster movement → shorter interval
@@ -78,7 +109,42 @@ private const val MP_HAPTIC_MIN_INTERVAL_MS = 50L
 private const val MP_HAPTIC_MAX_INTERVAL_MS = 333L
 private const val MP_HAPTIC_BASE_SPEED = 2000f
 
+private val MP_EMPTY_PILL_CORNER_RADIUS = 24.dp
+private val MP_EMPTY_PILL_SHAPE = RoundedCornerShape(MP_EMPTY_PILL_CORNER_RADIUS)
+private val MP_EMPTY_CANVAS_PADDING = 16.dp
+private val MP_EMPTY_BORDER_STROKE_DP = 1.5.dp
+private val MP_EMPTY_BORDER_CORNER_RADIUS_DP = 16.dp
+private val MP_EMPTY_PILL_HORIZONTAL_PADDING = 24.dp
+private val MP_EMPTY_PILL_VERTICAL_PADDING = 14.dp
+private val MP_EMPTY_PILL_SPACING = 14.dp
+private val MP_EMPTY_PILL_TITLE_HINT_SPACING = 2.dp
+private val MP_EMPTY_BORDER_BEZEL_WIDTH = 1.dp
+private const val MP_EMPTY_BORDER_ALPHA = 0.14f
+private const val MP_EMPTY_PILL_BG_ALPHA = 0.88f
+private val MP_EMPTY_ICON_SIZE_DP = 24.dp
+private const val MP_EMPTY_DASH_ON = 12f
+private const val MP_EMPTY_DASH_OFF = 8f
+private const val MP_EMPTY_MAX_TAP_DISPLACEMENT_PX = 24f
+
 private const val TAG = "MacroPadScreen"
+
+private fun DisabledReason.feedbackTextResId(): Int =
+    when (this) {
+        DisabledReason.KEYBOARD -> R.string.macropad_device_disabled_keyboard
+        DisabledReason.GAMEPAD -> R.string.macropad_device_disabled_gamepad
+        DisabledReason.MOUSE -> R.string.macropad_device_disabled_mouse
+        DisabledReason.TOUCH -> R.string.macropad_device_disabled_touch
+        DisabledReason.MACRO_PRIVD -> R.string.macropad_device_disabled_macro_privd
+    }
+
+private fun DisabledReason.feedbackIcon(): ImageVector =
+    when (this) {
+        DisabledReason.KEYBOARD -> Icons.Rounded.Keyboard
+        DisabledReason.GAMEPAD -> Icons.Rounded.SportsEsports
+        DisabledReason.MOUSE -> Icons.Rounded.Mouse
+        DisabledReason.TOUCH -> Icons.Rounded.TouchApp
+        DisabledReason.MACRO_PRIVD -> Icons.Rounded.Warning
+    }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Entry point
@@ -88,11 +154,14 @@ private const val TAG = "MacroPadScreen"
 fun MacroPadScreen(modifier: Modifier = Modifier) {
     val viewModel: MacroPadViewModel = viewModel()
     val context = LocalContext.current
-    val profile by viewModel.activeProfile.collectAsState()
-    val layout by viewModel.activeLayout.collectAsState()
+    val profile by viewModel.activeProfile.collectAsStateWithLifecycle()
+    val layout by viewModel.activeLayout.collectAsStateWithLifecycle()
+    val isEditorActive by AppStateManager.isEditorActive.collectAsStateWithLifecycle()
+    val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsStateWithLifecycle()
+    val isEditingPositions by MacroPadState.isEditingButtonPositions.collectAsStateWithLifecycle()
+    val isCroppingBackground by MacroPadState.isCroppingBackground.collectAsStateWithLifecycle()
+    val gridMode by MacroPadState.gridMode.collectAsStateWithLifecycle()
     val colors = LocalAppColors.current
-    var disabledFeedback by remember { mutableStateOf<DisabledReason?>(null) }
-    var disabledFeedbackTrigger by remember { mutableIntStateOf(0) }
     var lastFeedbackAtMs by remember { mutableLongStateOf(0L) }
 
     // Single watcher that starts/stops injectors reactively based on all modal flags
@@ -107,10 +176,23 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
         }
     }
 
+    val isCapturing by ScreenCaptureManager.isCapturing.collectAsStateWithLifecycle()
+    val cutouts by ScreenCaptureManager.cutouts.collectAsStateWithLifecycle()
+    val hasCutouts = cutouts.isNotEmpty()
+    val showEmbeddedMirror = isCapturing && hasCutouts
+
     Box(
         modifier = modifier.fillMaxSize().background(colors.appBackground).padding(MP_SCREEN_PADDING),
         contentAlignment = Alignment.Center,
     ) {
+        if (showEmbeddedMirror) {
+            EmbeddedMirrorView(
+                modifier = Modifier.fillMaxSize(),
+                surfaceOwner = MasterSurfaceRegistry.OWNER_MACROPAD,
+                surfacePriority = MasterSurfaceRegistry.PRIORITY_MACROPAD,
+            )
+        }
+
         val p = profile
         val l = layout
         if (p == null || l == null) {
@@ -122,51 +204,46 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(32.dp),
             )
+        } else if (isEditorActive || isViewportEditActive) {
+            PadCanvas(
+                profile = p,
+                layout = l,
+                accentColor = colors.accent,
+                gridMode = gridMode,
+                isLocked = !isEditingPositions,
+                isCropping = isCroppingBackground,
+                transparentBackground = showEmbeddedMirror,
+                modifier = Modifier.fillMaxSize(),
+            )
         } else {
             PadSurface(
                 profile = p,
                 layout = l,
                 accentColor = colors.accent,
+                transparentBackground = showEmbeddedMirror,
                 onDisabledActionFeedback = { reason ->
                     val now = SystemClock.elapsedRealtime()
                     if (now - lastFeedbackAtMs < MP_DISABLED_FEEDBACK_RATE_LIMIT_MS) return@PadSurface
                     lastFeedbackAtMs = now
-                    disabledFeedback = reason
-                    disabledFeedbackTrigger += 1
+                    DialogToastManager.show(
+                        message = context.getString(reason.feedbackTextResId()),
+                        icon = reason.feedbackIcon(),
+                    )
                     AppLog.d(TAG, "show disabled action feedback: $reason")
                 },
             )
         }
 
-        val reason = disabledFeedback
-        if (reason != null) {
-            val feedbackText =
-                when (reason) {
-                    DisabledReason.KEYBOARD -> stringResource(R.string.macropad_device_disabled_keyboard)
-                    DisabledReason.GAMEPAD -> stringResource(R.string.macropad_device_disabled_gamepad)
-                    DisabledReason.MOUSE -> stringResource(R.string.macropad_device_disabled_mouse)
-                    DisabledReason.TOUCH -> stringResource(R.string.macropad_device_disabled_touch)
-                }
-            Text(
-                text = feedbackText,
-                color = colors.onSurface,
-                style = MaterialTheme.typography.bodySmall,
-                textAlign = TextAlign.Center,
+        val activeToast by DialogToastManager.currentToast.collectAsStateWithLifecycle()
+        if (!isEditorActive && !isViewportEditActive) {
+            DialogToastPill(
+                toast = activeToast,
                 modifier =
                     Modifier
                         .align(Alignment.TopCenter)
-                        .padding(top = 12.dp)
-                        .fillMaxWidth(0.8f)
-                        .background(colors.surface.copy(alpha = 0.92f), RoundedCornerShape(12.dp))
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                        .padding(top = 12.dp, start = 24.dp, end = 24.dp),
             )
         }
-    }
-
-    LaunchedEffect(disabledFeedbackTrigger) {
-        if (disabledFeedbackTrigger == 0) return@LaunchedEffect
-        delay(MP_DISABLED_FEEDBACK_HIDE_MS)
-        disabledFeedback = null
     }
 }
 
@@ -188,7 +265,7 @@ internal fun PadSurface(
     val colors = LocalAppColors.current
     val context = LocalContext.current
     val vibrator = remember { context.getSystemService(Vibrator::class.java) }
-    val canvasSizeState = remember { androidx.compose.runtime.mutableStateOf(IntSize.Zero) }
+    val canvasSizeState = remember { mutableStateOf(IntSize.Zero) }
     val hapticLastMsByButton = remember { mutableMapOf<String, Long>() }
 
     var bgBitmap by remember(layout.backgroundImagePath, layout.backgroundImageVersion) { mutableStateOf<ImageBitmap?>(null) }
@@ -209,43 +286,12 @@ internal fun PadSurface(
 
     val bgImageDimFilter =
         remember(layout.backgroundImageDim) {
-            val dim = layout.backgroundImageDim
-            if (dim > 0f) {
-                val scale = 1f - dim
-                ColorFilter.colorMatrix(
-                    ColorMatrix(
-                        floatArrayOf(
-                            scale,
-                            0f,
-                            0f,
-                            0f,
-                            0f,
-                            0f,
-                            scale,
-                            0f,
-                            0f,
-                            0f,
-                            0f,
-                            0f,
-                            scale,
-                            0f,
-                            0f,
-                            0f,
-                            0f,
-                            0f,
-                            1f,
-                            0f,
-                        ),
-                    ),
-                )
-            } else {
-                null
-            }
+            dimColorFilter(layout.backgroundImageDim)
         }
 
     // Create hit-test engine with density-aware dp→px converter and haptic callback
     val engine =
-        remember(profile, layout) {
+        remember(viewModel, density, vibrator) {
             viewModel.createHitTestEngine(
                 buttonUnitDpToPx = { dpValue -> with(density) { dpValue.dp.toPx() } },
                 onHapticFeedback = { buttonId, strength, customDurationMs, customAmplitude, magnitude ->
@@ -271,11 +317,57 @@ internal fun PadSurface(
         }
 
     // Track which button IDs are currently pressed (from engine)
-    val pressedIds by engine.pressedIds.collectAsState()
+    val pressedIds by engine.pressedIds.collectAsStateWithLifecycle()
     // Track running macro IDs to drive the pulse animation
-    val runningMacroIds by MacroExecutor.runningMacroIds.collectAsState()
+    val runningMacroIds by MacroExecutor.runningMacroIds.collectAsStateWithLifecycle()
 
-    val isTouchProjectionActive by ScreenCaptureManager.isTouchProjectionActive.collectAsState()
+    val isTouchProjectionActive by ScreenCaptureManager.isTouchProjectionActive.collectAsStateWithLifecycle()
+    val isFollowActive by ScreenCaptureManager.isFollowActive.collectAsStateWithLifecycle()
+    val isCapturing by ScreenCaptureManager.isCapturing.collectAsStateWithLifecycle()
+    val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsStateWithLifecycle()
+    val (
+        edgeZonePx,
+        _,
+        _,
+        _,
+        _,
+        _,
+        _,
+        _,
+    ) = rememberQuickMenuGestureMetrics()
+
+    val projectionController =
+        remember(edgeZonePx, overlayAtBottom) {
+            TouchProjectionController(edgeZonePx, overlayAtBottom)
+        }
+
+    LaunchedEffect(isTouchProjectionActive) {
+        if (isTouchProjectionActive) {
+            TouchInjector.start(context, "TouchProjection")
+        } else {
+            TouchInjector.stop("TouchProjection")
+        }
+    }
+
+    LaunchedEffect(isFollowActive, isCapturing) {
+        if (isFollowActive && isCapturing) {
+            TouchScreenObserver.onTouchNormalized = { nx, ny ->
+                ScreenCaptureManager.onTouchReceived(nx, ny)
+            }
+            TouchScreenObserver.start("MacroPadScreen_FollowMode")
+        } else {
+            TouchScreenObserver.stop("MacroPadScreen_FollowMode")
+            TouchScreenObserver.onTouchNormalized = null
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            TouchInjector.stop("TouchProjection")
+            TouchScreenObserver.stop("MacroPadScreen_FollowMode")
+        }
+    }
+
     val bgTouchpadActive = layout.backgroundTouchpad.enabled && !isTouchProjectionActive
     val coroutineScope = rememberCoroutineScope()
     val bgTouchpadProcessor =
@@ -307,12 +399,21 @@ internal fun PadSurface(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .clip(RoundedCornerShape(MP_CORNER_RADIUS))
+                    .clip(MP_SCREEN_SHAPE)
                     .background(if (transparentBackground) Color.Transparent else Color.Black)
                     .onSizeChanged { canvasSizeState.value = it }
-                    .pointerInput(profile, layout, canvasSizeState.value, bgTouchpadActive) {
+                    .pointerInput(
+                        profile,
+                        layout,
+                        canvasSizeState.value,
+                        bgTouchpadActive,
+                        isTouchProjectionActive,
+                        overlayAtBottom,
+                        edgeZonePx,
+                    ) {
                         try {
                             awaitPointerEventScope {
+                                var pointerStartPos: Offset? = null
                                 while (true) {
                                     val event = awaitPointerEvent(PointerEventPass.Main)
                                     val canvasSize = canvasSizeState.value
@@ -334,9 +435,37 @@ internal fun PadSurface(
                                             if (engine.isPointerTracked(id)) {
                                                 engine.onRelease(id, layout.buttons, profile)
                                                 change.consume()
+                                            } else if (isTouchProjectionActive) {
+                                                projectionController.onRelease(
+                                                    pointerId = id,
+                                                    x = change.position.x,
+                                                    y = change.position.y,
+                                                    boxW = w,
+                                                    boxH = h,
+                                                )
                                             } else if (bgTouchpadActive) {
                                                 bgTouchpadProcessor.onRelease(id, change.position.x, change.position.y, w, h)
                                                 change.consume()
+                                            } else if (layout.isEmpty()) {
+                                                val start = pointerStartPos
+                                                if (start != null) {
+                                                    val dx = change.position.x - start.x
+                                                    val dy = change.position.y - start.y
+                                                    val distSq = dx * dx + dy * dy
+                                                    val nearEdge =
+                                                        if (overlayAtBottom) {
+                                                            start.y >= h - edgeZonePx || change.position.y >= h - edgeZonePx
+                                                        } else {
+                                                            start.y <= edgeZonePx || change.position.y <= edgeZonePx
+                                                        }
+                                                    if (!nearEdge &&
+                                                        distSq <= MP_EMPTY_MAX_TAP_DISPLACEMENT_PX * MP_EMPTY_MAX_TAP_DISPLACEMENT_PX
+                                                    ) {
+                                                        AppStateManager.setEditorActive(true)
+                                                        change.consume()
+                                                    }
+                                                }
+                                                pointerStartPos = null
                                             }
                                             return@forEach
                                         }
@@ -346,6 +475,9 @@ internal fun PadSurface(
                                         when (event.type) {
                                             PointerEventType.Press -> {
                                                 if (!change.previousPressed) {
+                                                    if (layout.isEmpty()) {
+                                                        pointerStartPos = change.position
+                                                    }
                                                     val isHit =
                                                         engine.hitTest(
                                                             change.position.x,
@@ -378,6 +510,24 @@ internal fun PadSurface(
                                                             }
                                                         }
                                                         change.consume()
+                                                    } else if (isTouchProjectionActive) {
+                                                        val nearEdge =
+                                                            if (overlayAtBottom) {
+                                                                change.position.y >= h - edgeZonePx
+                                                            } else {
+                                                                change.position.y <= edgeZonePx
+                                                            }
+                                                        if (!nearEdge) {
+                                                            projectionController.onPress(
+                                                                pointerId = id,
+                                                                x = change.position.x,
+                                                                y = change.position.y,
+                                                                boxW = w,
+                                                                boxH = h,
+                                                                isConsumed = change.isConsumed,
+                                                                pointerCount = event.changes.size,
+                                                            )
+                                                        }
                                                     } else if (bgTouchpadActive) {
                                                         bgTouchpadProcessor.onPress(
                                                             id,
@@ -405,6 +555,15 @@ internal fun PadSurface(
                                                         profile,
                                                     )
                                                     change.consume()
+                                                } else if (isTouchProjectionActive) {
+                                                    projectionController.onMove(
+                                                        pointerId = id,
+                                                        x = change.position.x,
+                                                        y = change.position.y,
+                                                        boxW = w,
+                                                        boxH = h,
+                                                        isConsumed = change.isConsumed,
+                                                    )
                                                 } else if (bgTouchpadActive) {
                                                     val delta = change.positionChange()
                                                     bgTouchpadProcessor.onMove(
@@ -429,6 +588,9 @@ internal fun PadSurface(
                             }
                         } finally {
                             engine.releaseAll(layout.buttons)
+                            if (isTouchProjectionActive) {
+                                projectionController.reset()
+                            }
                             if (bgTouchpadActive) {
                                 bgTouchpadProcessor.onCancel()
                             }
@@ -442,35 +604,47 @@ internal fun PadSurface(
                     val iw = bgBitmap!!.width.toFloat()
                     val ih = bgBitmap!!.height.toFloat()
                     if (cw > 0f && ch > 0f && iw > 0f && ih > 0f) {
-                        val userScale = layout.bgImageScale
-                        val ox = layout.bgImageOffsetX
-                        val oy = layout.bgImageOffsetY
+                        val (dstOffset, dstSize) =
+                            when (layout.bgScaleMode) {
+                                BackgroundScaleMode.STRETCH -> {
+                                    IntOffset.Zero to IntSize(cw.toInt(), ch.toInt())
+                                }
 
-                        val scaleBase = maxOf(cw / iw, ch / ih)
-                        val ws = iw * scaleBase
-                        val hs = ih * scaleBase
-
-                        val maxTx = ((ws * userScale - cw) / 2f).coerceAtLeast(0f)
-                        val maxTy = ((hs * userScale - ch) / 2f).coerceAtLeast(0f)
-                        val clampedX = (ox * cw).coerceIn(-maxTx, maxTx)
-                        val clampedY = (oy * ch).coerceIn(-maxTy, maxTy)
-
+                                BackgroundScaleMode.FIT, BackgroundScaleMode.FILL -> {
+                                    val userScale = layout.bgImageScale
+                                    val scaleBase =
+                                        if (layout.bgScaleMode == BackgroundScaleMode.FIT) {
+                                            ViewportMath.calculateAspectFitScale(cw, ch, iw, ih)
+                                        } else {
+                                            ViewportMath.calculateAspectFillScale(cw, ch, iw, ih)
+                                        }
+                                    val ws = iw * scaleBase
+                                    val hs = ih * scaleBase
+                                    val maxTx = ((ws * userScale - cw) / 2f).coerceAtLeast(0f)
+                                    val maxTy = ((hs * userScale - ch) / 2f).coerceAtLeast(0f)
+                                    val clampedX = (layout.bgImageOffsetX * cw).coerceIn(-maxTx, maxTx)
+                                    val clampedY = (layout.bgImageOffsetY * ch).coerceIn(-maxTy, maxTy)
+                                    IntOffset(
+                                        ((cw - ws * userScale) / 2f + clampedX).toInt(),
+                                        ((ch - hs * userScale) / 2f + clampedY).toInt(),
+                                    ) to IntSize((ws * userScale).toInt(), (hs * userScale).toInt())
+                                }
+                            }
                         drawImage(
                             image = bgBitmap!!,
-                            dstOffset =
-                                IntOffset(
-                                    ((cw - ws * userScale) / 2f + clampedX).toInt(),
-                                    ((ch - hs * userScale) / 2f + clampedY).toInt(),
-                                ),
-                            dstSize =
-                                IntSize(
-                                    (ws * userScale).toInt(),
-                                    (hs * userScale).toInt(),
-                                ),
+                            dstOffset = dstOffset,
+                            dstSize = dstSize,
                             colorFilter = bgImageDimFilter,
                         )
                     }
                 }
+            }
+
+            if (layout.isEmpty() && !transparentBackground) {
+                EmptyLayoutPlaceholder(
+                    accentColor = accentColor,
+                    onOpenEditor = { AppStateManager.setEditorActive(true) },
+                )
             }
 
             // Render buttons (filtered by peek state)
@@ -495,6 +669,107 @@ internal fun PadSurface(
                     isDeviceDisabled = isDeviceDisabled,
                     isRunning = isRunning,
                 )
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Empty Layout Minimalist Ambient Placeholder
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun EmptyLayoutPlaceholder(
+    accentColor: Color,
+    onOpenEditor: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalAppColors.current
+    val bezelBrush = rememberBezelBrush()
+
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center,
+    ) {
+        // Dashed ambient canvas border
+        val borderColor = colors.onSurface.copy(alpha = MP_EMPTY_BORDER_ALPHA)
+        Canvas(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(MP_EMPTY_CANVAS_PADDING),
+        ) {
+            val strokeWidth = MP_EMPTY_BORDER_STROKE_DP.toPx()
+            val dashPathEffect = PathEffect.dashPathEffect(floatArrayOf(MP_EMPTY_DASH_ON, MP_EMPTY_DASH_OFF), 0f)
+            val cornerRadius = MP_EMPTY_BORDER_CORNER_RADIUS_DP.toPx()
+            drawRoundRect(
+                color = borderColor,
+                topLeft = Offset.Zero,
+                size = size,
+                cornerRadius = CornerRadius(cornerRadius, cornerRadius),
+                style =
+                    Stroke(
+                        width = strokeWidth,
+                        pathEffect = dashPathEffect,
+                    ),
+            )
+        }
+
+        // Central Minimalist Ambient Pill
+        Box(
+            modifier =
+                Modifier
+                    .clip(MP_EMPTY_PILL_SHAPE)
+                    .background(colors.surface.copy(alpha = MP_EMPTY_PILL_BG_ALPHA))
+                    .border(
+                        width = MP_EMPTY_BORDER_BEZEL_WIDTH,
+                        brush = bezelBrush,
+                        shape = MP_EMPTY_PILL_SHAPE,
+                    ).clickable(onClick = onOpenEditor)
+                    .focusable()
+                    .onKeyEvent { keyEvent ->
+                        if (keyEvent.type == KeyEventType.KeyDown &&
+                            (
+                                keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+                                    keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BUTTON_A ||
+                                    keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ENTER
+                            )
+                        ) {
+                            onOpenEditor()
+                            true
+                        } else {
+                            false
+                        }
+                    }.padding(
+                        horizontal = MP_EMPTY_PILL_HORIZONTAL_PADDING,
+                        vertical = MP_EMPTY_PILL_VERTICAL_PADDING,
+                    ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(MP_EMPTY_PILL_SPACING),
+            ) {
+                MaterialSymbol(
+                    name = "dashboard_customize",
+                    size = MP_EMPTY_ICON_SIZE_DP,
+                    tint = accentColor,
+                )
+                Column(
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Text(
+                        text = stringResource(R.string.macropad_empty_layout_pill_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = colors.onSurface,
+                    )
+                    Spacer(modifier = Modifier.height(MP_EMPTY_PILL_TITLE_HINT_SPACING))
+                    Text(
+                        text = stringResource(R.string.macropad_empty_layout_pill_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colors.onSurfaceSecondary,
+                    )
+                }
             }
         }
     }

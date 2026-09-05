@@ -4,7 +4,6 @@ import com.stormpanda.megingiard.onboarding.OnboardingStepId
 import com.stormpanda.megingiard.settings.SettingsManager
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -12,6 +11,7 @@ import org.junit.Test
 class OnboardingWizardManagerTest {
     @Before
     fun setUp() {
+        SettingsManager.setWelcomeTourCompletedVersion(0)
         OnboardingWizardManager.resetWizardForTest()
     }
 
@@ -25,13 +25,32 @@ class OnboardingWizardManagerTest {
     fun `shouldAutoStartWizard compares against CURRENT_WELCOME_TOUR_VERSION`() {
         assertTrue(OnboardingWizardManager.shouldAutoStartWizard())
         assertEquals(1, SettingsManager.CURRENT_WELCOME_TOUR_VERSION)
+
+        SettingsManager.setWelcomeTourCompletedVersion(1)
+        assertFalse(OnboardingWizardManager.shouldAutoStartWizard())
+    }
+
+    @Test
+    fun `startWizard with force or auto`() {
+        SettingsManager.setWelcomeTourCompletedVersion(1)
+        OnboardingWizardManager.startWizard(force = false)
+        assertFalse(OnboardingWizardManager.isWizardActive.value)
+
+        OnboardingWizardManager.startWizard(force = true)
+        assertTrue(OnboardingWizardManager.isWizardActive.value)
+        assertEquals(0, OnboardingWizardManager.activeStepIndex.value)
     }
 
     @Test
     fun `finishWizard and skipWizard set isWizardActive to false`() {
+        OnboardingWizardManager.startWizard(force = true)
+        assertTrue(OnboardingWizardManager.isWizardActive.value)
+
         OnboardingWizardManager.finishWizard()
         assertFalse(OnboardingWizardManager.isWizardActive.value)
+        assertEquals(SettingsManager.CURRENT_WELCOME_TOUR_VERSION, SettingsManager.welcomeTourCompletedVersion.value)
 
+        OnboardingWizardManager.startWizard(force = true)
         OnboardingWizardManager.skipWizard()
         assertFalse(OnboardingWizardManager.isWizardActive.value)
     }
@@ -39,7 +58,7 @@ class OnboardingWizardManagerTest {
     @Test
     fun `backward navigation resets completion state of future steps`() {
         // Reset and initialize at step 0
-        OnboardingWizardManager.resetWizardForTest()
+        OnboardingWizardManager.startWizard(force = true)
         assertEquals(0, OnboardingWizardManager.activeStepIndex.value)
 
         // Advance to step 2 (index 2)

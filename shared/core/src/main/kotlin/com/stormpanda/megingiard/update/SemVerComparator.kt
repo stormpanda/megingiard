@@ -27,7 +27,7 @@ object SemVerComparator {
         val cleanCurrentRaw = currentVersion.trim().removePrefix("v").removePrefix("V")
         val cleanLatestRaw = latestTag.trim().removePrefix("v").removePrefix("V")
 
-        val isCurrentPreRelease = cleanCurrentRaw.contains("-")
+        val isCurrentPreRelease = "-" in cleanCurrentRaw
         val currentCoreVersion = cleanCurrentRaw.substringBefore("-")
         val latestCoreVersion = cleanLatestRaw.substringBefore("-")
 
@@ -44,7 +44,7 @@ object SemVerComparator {
 
         // Numerical core components are identical (e.g. 0.8.0 vs 0.8.0).
         // If current is a pre-release build and latest is a full release, the release is newer.
-        return isCurrentPreRelease && !cleanLatestRaw.contains("-")
+        return isCurrentPreRelease && "-" !in cleanLatestRaw
     }
 
     private fun parseVersionComponents(versionString: String): List<Int> =

@@ -2,13 +2,11 @@ package com.stormpanda.megingiard.settings
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
 import com.stormpanda.megingiard.AppLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
 private const val TAG = "TouchpadSettings"
 
@@ -100,84 +98,149 @@ object TouchpadSettings {
         _touchpadHapticsEnabled.value = prefs[KEY_TOUCHPAD_HAPTICS_ENABLED] ?: true
     }
 
+    private val optionalDataStore: DataStore<Preferences>?
+        get() = if (::dataStore.isInitialized) dataStore else null
+
+    private val optionalScope: CoroutineScope?
+        get() = if (::scope.isInitialized) scope else null
+
     fun setTouchpadUseMouse(value: Boolean) {
-        AppLog.d(TAG, "setTouchpadUseMouse($value)")
-        _touchpadUseMouse.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_USE_MOUSE] = value } }
+        updateSettingPref(KEY_TOUCHPAD_USE_MOUSE, value, _touchpadUseMouse, optionalScope, optionalDataStore, TAG, "setTouchpadUseMouse")
     }
 
     fun setTouchpadTapToClick(value: Boolean) {
-        AppLog.d(TAG, "setTouchpadTapToClick($value)")
-        _touchpadTapToClick.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_TAP_TO_CLICK] = value } }
+        updateSettingPref(
+            KEY_TOUCHPAD_TAP_TO_CLICK,
+            value,
+            _touchpadTapToClick,
+            optionalScope,
+            optionalDataStore,
+            TAG,
+            "setTouchpadTapToClick",
+        )
     }
 
     fun setTouchpadTwoFingerTap(value: Boolean) {
-        AppLog.d(TAG, "setTouchpadTwoFingerTap($value)")
-        _touchpadTwoFingerTap.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_TWO_FINGER_TAP] = value } }
+        updateSettingPref(
+            KEY_TOUCHPAD_TWO_FINGER_TAP,
+            value,
+            _touchpadTwoFingerTap,
+            optionalScope,
+            optionalDataStore,
+            TAG,
+            "setTouchpadTwoFingerTap",
+        )
     }
 
     fun setTouchpadThreeFingerTap(value: Boolean) {
-        AppLog.d(TAG, "setTouchpadThreeFingerTap($value)")
-        _touchpadThreeFingerTap.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_THREE_FINGER_TAP] = value } }
+        updateSettingPref(
+            KEY_TOUCHPAD_THREE_FINGER_TAP,
+            value,
+            _touchpadThreeFingerTap,
+            optionalScope,
+            optionalDataStore,
+            TAG,
+            "setTouchpadThreeFingerTap",
+        )
     }
 
     fun setTouchpadTapDrag(value: Boolean) {
-        AppLog.d(TAG, "setTouchpadTapDrag($value)")
-        _touchpadTapDrag.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_TAP_DRAG] = value } }
+        updateSettingPref(KEY_TOUCHPAD_TAP_DRAG, value, _touchpadTapDrag, optionalScope, optionalDataStore, TAG, "setTouchpadTapDrag")
     }
 
     fun setTouchpadTwoFingerScroll(value: Boolean) {
-        AppLog.d(TAG, "setTouchpadTwoFingerScroll($value)")
-        _touchpadTwoFingerScroll.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_TWO_FINGER_SCROLL] = value } }
+        updateSettingPref(
+            KEY_TOUCHPAD_TWO_FINGER_SCROLL,
+            value,
+            _touchpadTwoFingerScroll,
+            optionalScope,
+            optionalDataStore,
+            TAG,
+            "setTouchpadTwoFingerScroll",
+        )
     }
 
     fun setTouchpadMirroringEnabled(value: Boolean) {
-        AppLog.d(TAG, "setTouchpadMirroringEnabled($value)")
-        _touchpadMirroringEnabled.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_MIRRORING_ENABLED] = value } }
+        updateSettingPref(
+            KEY_TOUCHPAD_MIRRORING_ENABLED,
+            value,
+            _touchpadMirroringEnabled,
+            optionalScope,
+            optionalDataStore,
+            TAG,
+            "setTouchpadMirroringEnabled",
+        )
     }
 
     fun setTouchpadMirrorDim(value: Int) {
-        val clamped = value.coerceIn(0, 90)
-        AppLog.d(TAG, "setTouchpadMirrorDim($clamped)")
-        _touchpadMirrorDim.value = clamped
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_MIRROR_DIM] = clamped } }
+        updateSettingPref(
+            KEY_TOUCHPAD_MIRROR_DIM,
+            value.coerceIn(0, 90),
+            _touchpadMirrorDim,
+            optionalScope,
+            optionalDataStore,
+            TAG,
+            "setTouchpadMirrorDim",
+        )
     }
 
     fun setTouchpadMouse45Enabled(value: Boolean) {
-        AppLog.d(TAG, "setTouchpadMouse45Enabled($value)")
-        _touchpadMouse45Enabled.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_MOUSE_4_5_ENABLED] = value } }
+        updateSettingPref(
+            KEY_TOUCHPAD_MOUSE_4_5_ENABLED,
+            value,
+            _touchpadMouse45Enabled,
+            optionalScope,
+            optionalDataStore,
+            TAG,
+            "setTouchpadMouse45Enabled",
+        )
     }
 
     fun setTouchpadSensitivity(value: Float) {
-        val clamped = value.coerceIn(0.1f, 3.0f)
-        AppLog.d(TAG, "setTouchpadSensitivity($clamped)")
-        _touchpadSensitivity.value = clamped
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_SENSITIVITY] = clamped } }
+        updateSettingPref(
+            KEY_TOUCHPAD_SENSITIVITY,
+            value.coerceIn(0.1f, 3.0f),
+            _touchpadSensitivity,
+            optionalScope,
+            optionalDataStore,
+            TAG,
+            "setTouchpadSensitivity",
+        )
     }
 
     fun setTouchpadNaturalScroll(value: Boolean) {
-        AppLog.d(TAG, "setTouchpadNaturalScroll($value)")
-        _touchpadNaturalScroll.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_NATURAL_SCROLL] = value } }
+        updateSettingPref(
+            KEY_TOUCHPAD_NATURAL_SCROLL,
+            value,
+            _touchpadNaturalScroll,
+            optionalScope,
+            optionalDataStore,
+            TAG,
+            "setTouchpadNaturalScroll",
+        )
     }
 
     fun setTouchpadScrollSpeed(value: Float) {
-        val clamped = value.coerceIn(0.5f, 3.0f)
-        AppLog.d(TAG, "setTouchpadScrollSpeed($clamped)")
-        _touchpadScrollSpeed.value = clamped
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_SCROLL_SPEED] = clamped } }
+        updateSettingPref(
+            KEY_TOUCHPAD_SCROLL_SPEED,
+            value.coerceIn(0.5f, 3.0f),
+            _touchpadScrollSpeed,
+            optionalScope,
+            optionalDataStore,
+            TAG,
+            "setTouchpadScrollSpeed",
+        )
     }
 
     fun setTouchpadHapticsEnabled(value: Boolean) {
-        AppLog.d(TAG, "setTouchpadHapticsEnabled($value)")
-        _touchpadHapticsEnabled.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_HAPTICS_ENABLED] = value } }
+        updateSettingPref(
+            KEY_TOUCHPAD_HAPTICS_ENABLED,
+            value,
+            _touchpadHapticsEnabled,
+            optionalScope,
+            optionalDataStore,
+            TAG,
+            "setTouchpadHapticsEnabled",
+        )
     }
 }

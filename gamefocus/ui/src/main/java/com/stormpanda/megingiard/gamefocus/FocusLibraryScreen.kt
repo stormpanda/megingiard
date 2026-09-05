@@ -42,12 +42,8 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Apps
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -64,8 +60,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -90,7 +84,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.CustomRomFolder
@@ -98,8 +91,6 @@ import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.catalog.LibraryTab
 import com.stormpanda.megingiard.catalog.RomManager
 import com.stormpanda.megingiard.ui.AppAlertDialog
-import com.stormpanda.megingiard.ui.AppModalDialog
-import com.stormpanda.megingiard.ui.CutoutLetterCircleIcon
 import com.stormpanda.megingiard.ui.ExpandableActionItem
 import com.stormpanda.megingiard.ui.ExpandableActionsMenu
 import com.stormpanda.megingiard.ui.ExpandableMenuOrientation
@@ -114,6 +105,9 @@ private const val TAG = "FocusLibraryScreen"
 
 internal const val FLS_GRID_COLUMNS = 6
 private val FLS_CORNER_RADIUS = 16.dp
+private val FLS_CARD_SHAPE = RoundedCornerShape(FLS_CORNER_RADIUS)
+private val FLS_ROM_ICON_CORNER_RADIUS = 14.dp
+private val FLS_ROM_ICON_SHAPE = RoundedCornerShape(FLS_ROM_ICON_CORNER_RADIUS)
 private val FLS_ICON_SIZE = 64.dp
 private val FLS_GRID_PADDING = 16.dp
 private val FLS_GRID_SPACING = 12.dp
@@ -124,13 +118,6 @@ private val FLS_GRID_CONTENT_PADDING_TOP = 112.dp
 private val FLS_GRID_CONTENT_PADDING_BOTTOM = 112.dp
 private val FLS_BOTTOM_GRADIENT_HEIGHT = 96.dp
 private val FLS_TOP_GRADIENT_HEIGHT = 112.dp
-
-private val FLS_DIALOG_PADDING_BOTTOM_LARGE = 12.dp
-private val FLS_DIALOG_PADDING_BOTTOM_SMALL = 8.dp
-private val FLS_DIALOG_LIST_MAX_HEIGHT = 200.dp
-private val FLS_DIALOG_ROW_PADDING_VERTICAL = 10.dp
-private val FLS_DIALOG_ROW_PADDING_HORIZONTAL = 4.dp
-private val FLS_ROM_ICON_CORNER_RADIUS = 14.dp
 private val FLS_FALLBACK_ICON_SIZE = 36.dp
 private val FLS_LABEL_GAP = 6.dp
 private val FLS_SHADOW_BLUR_RADIUS = 16.dp
@@ -175,18 +162,6 @@ private suspend fun scrollToFocusedItem(
     val firstItemOfRow = targetRow * columns
     val scrollOffset = if (targetRow == 0) 0 else -peekOffsetPx
     gridState.animateScrollToItem(index = firstItemOfRow, scrollOffset = scrollOffset)
-}
-
-@Composable
-private fun Modifier.noFocusClickable(onClick: () -> Unit): Modifier {
-    val interactionSource = remember { MutableInteractionSource() }
-    return this
-        .focusProperties { canFocus = false }
-        .clickable(
-            interactionSource = interactionSource,
-            indication = null,
-            onClick = onClick,
-        )
 }
 
 @Composable
@@ -235,14 +210,9 @@ fun FocusLibraryScreen(
         AnimatedContent(
             targetState = selectedTab,
             transitionSpec = {
-                val isMovingNext = initialState.next(tabs) == targetState
-                if (isMovingNext) {
-                    (slideInHorizontally { width -> width } + fadeIn())
-                        .togetherWith(slideOutHorizontally { width -> -width } + fadeOut())
-                } else {
-                    (slideInHorizontally { width -> -width } + fadeIn())
-                        .togetherWith(slideOutHorizontally { width -> width } + fadeOut())
-                }
+                val direction = if (initialState.next(tabs) == targetState) 1 else -1
+                (slideInHorizontally { width -> width * direction } + fadeIn())
+                    .togetherWith(slideOutHorizontally { width -> -width * direction } + fadeOut())
             },
             label = "LibraryCategoryTransition",
             modifier = Modifier.fillMaxSize(),
@@ -455,7 +425,7 @@ fun FocusLibraryScreen(
                                     }.border(
                                         width = FLS_FOCUS_BORDER_WIDTH,
                                         color = appColors.accent,
-                                        shape = RoundedCornerShape(FLS_CORNER_RADIUS),
+                                        shape = FLS_CARD_SHAPE,
                                     ),
                         )
                     }
@@ -587,34 +557,13 @@ fun FocusLibraryScreen(
             }
 
             // Lower Right: Subdued touch launch buttons
-            Row(
+            DualScreenLaunchButtons(
+                appInfo = focusedApp,
+                enabled = enabled && !isOptionsMenuExpanded,
+                onLaunchTop = onAppClickTop,
+                onLaunchBottom = onAppClickBottom,
                 modifier = Modifier.align(Alignment.BottomEnd),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                GamePadButtonAction(
-                    button = GamePadButton.BUTTON_A,
-                    text = stringResource(R.string.gamefocus_launch_top),
-                    enabled = enabled && !isOptionsMenuExpanded,
-                    onClick = {
-                        if (focusedApp != null) {
-                            onAppClickTop(focusedApp)
-                        }
-                    },
-                )
-
-                Spacer(modifier = Modifier.width(FLS_BUTTON_GAP_SMALL))
-
-                GamePadButtonAction(
-                    button = GamePadButton.BUTTON_X,
-                    text = stringResource(R.string.gamefocus_launch_bottom),
-                    enabled = enabled && !isOptionsMenuExpanded,
-                    onClick = {
-                        if (focusedApp != null) {
-                            onAppClickBottom(focusedApp)
-                        }
-                    },
-                )
-            }
+            )
         }
 
         if (isRemoveRomFolderDialogOpen) {
@@ -728,14 +677,9 @@ private fun InteractiveLibraryCategoryHeader(
         AnimatedContent(
             targetState = selectedTab,
             transitionSpec = {
-                val isMovingNext = initialState.next(tabs) == targetState
-                if (isMovingNext) {
-                    (slideInHorizontally { width -> width / 3 } + fadeIn())
-                        .togetherWith(slideOutHorizontally { width -> -width / 3 } + fadeOut())
-                } else {
-                    (slideInHorizontally { width -> -width / 3 } + fadeIn())
-                        .togetherWith(slideOutHorizontally { width -> width / 3 } + fadeOut())
-                }
+                val direction = if (initialState.next(tabs) == targetState) 1 else -1
+                (slideInHorizontally { width -> (width / 3) * direction } + fadeIn())
+                    .togetherWith(slideOutHorizontally { width -> -(width / 3) * direction } + fadeOut())
             },
             label = "LibraryHorizontalCategoryTransition",
         ) { currentTab ->
@@ -758,41 +702,25 @@ private fun InteractiveLibraryCategoryHeader(
                     modifier = Modifier.noFocusClickable { onTabSelected(currentTab) },
                 )
 
-                // Next category 1 (middle, curved Y-axis roll)
-                Text(
-                    text = getTabName(next1),
-                    style =
-                        MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = appColors.onSurfaceSecondary.copy(alpha = 0.45f),
-                        ),
-                    maxLines = 1,
-                    modifier =
-                        Modifier
-                            .noFocusClickable { onTabSelected(next1) }
-                            .graphicsLayer {
-                                rotationY = FLS_CATEGORY_ROLL_Y_ANGLE_DEG * 0.7f
-                                cameraDistance = 16 * density.density
-                            },
-                )
-
-                // Next category 2 (rightmost, deeper Y-axis roll)
-                Text(
-                    text = getTabName(next2),
-                    style =
-                        MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = appColors.onSurfaceSecondary.copy(alpha = 0.25f),
-                        ),
-                    maxLines = 1,
-                    modifier =
-                        Modifier
-                            .noFocusClickable { onTabSelected(next2) }
-                            .graphicsLayer {
-                                rotationY = FLS_CATEGORY_ROLL_Y_ANGLE_DEG * 1.4f
-                                cameraDistance = 16 * density.density
-                            },
-                )
+                listOf(next1 to (0.45f to 0.7f), next2 to (0.25f to 1.4f)).forEach { (tab, style) ->
+                    val (alpha, angleFactor) = style
+                    Text(
+                        text = getTabName(tab),
+                        style =
+                            MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = appColors.onSurfaceSecondary.copy(alpha = alpha),
+                            ),
+                        maxLines = 1,
+                        modifier =
+                            Modifier
+                                .noFocusClickable { onTabSelected(tab) }
+                                .graphicsLayer {
+                                    rotationY = FLS_CATEGORY_ROLL_Y_ANGLE_DEG * angleFactor
+                                    cameraDistance = 16 * density.density
+                                },
+                    )
+                }
             }
         }
 
@@ -817,18 +745,7 @@ private fun LibraryGridItem(
     modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
-    val context = LocalContext.current
-
-    val iconBitmap by produceState<ImageBitmap?>(
-        initialValue = FocusImageCache.getCachedIconBitmap(appInfo.packageName),
-        key1 = appInfo.packageName,
-        key2 = appInfo.coverLastModified,
-    ) {
-        value = FocusImageCache.getCachedIconBitmap(appInfo.packageName)
-        if (value == null) {
-            value = FocusImageCache.getIconBitmapAsync(context, appInfo)
-        }
-    }
+    val iconBitmap = rememberIconBitmap(appInfo)
 
     val palette =
         remember(appInfo.packageName, appInfo.coverPath, appInfo.coverLastModified) {
@@ -877,7 +794,7 @@ private fun LibraryGridItem(
                     scaleX = cardScale
                     scaleY = cardScale
                     alpha = cardAlpha
-                }.clip(RoundedCornerShape(FLS_CORNER_RADIUS))
+                }.clip(FLS_CARD_SHAPE)
                 .drawBehind {
                     drawRect(animatedCardBg)
                 }.noFocusClickable(onClickTop),
@@ -903,20 +820,12 @@ private fun LibraryGridItem(
                         bitmap = currentBitmap,
                         contentDescription = appInfo.label,
                         contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(FLS_ROM_ICON_CORNER_RADIUS)),
-                    )
-                } else if (appInfo.isRom) {
-                    MaterialSymbol(
-                        name = "sports_esports",
-                        size = FLS_FALLBACK_ICON_SIZE,
-                        tint = appColors.accent,
+                        modifier = Modifier.fillMaxSize().clip(FLS_ROM_ICON_SHAPE),
                     )
                 } else {
-                    Icon(
-                        imageVector = Icons.Default.Apps,
-                        contentDescription = appInfo.label,
-                        tint = appColors.accent,
-                        modifier = Modifier.size(FLS_FALLBACK_ICON_SIZE),
+                    GameFocusFallbackIcon(
+                        appInfo = appInfo,
+                        size = FLS_FALLBACK_ICON_SIZE,
                     )
                 }
             }

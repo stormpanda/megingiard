@@ -23,56 +23,31 @@ import java.util.zip.ZipOutputStream
 class RomManagerTest {
     private val context: Context = RuntimeEnvironment.getApplication()
 
+    private fun docFiles(vararg names: String): Array<DocumentFile> = names.map { DocumentFile.fromFile(File(it)) }.toTypedArray()
+
     @Test
     fun testDetectSystem_snes() {
-        val files =
-            arrayOf<DocumentFile>(
-                DocumentFile.fromFile(File("Super Mario World.sfc")),
-                DocumentFile.fromFile(File("Zelda.smc")),
-                DocumentFile.fromFile(File("otherfile.txt")),
-            )
-        val systemId = RomManager.detectSystem(context, files)
-        assertEquals("snes", systemId)
+        assertEquals("snes", RomManager.detectSystem(context, docFiles("Super Mario World.sfc", "Zelda.smc", "otherfile.txt")))
     }
 
     @Test
     fun testDetectSystem_gba() {
-        val files =
-            arrayOf<DocumentFile>(
-                DocumentFile.fromFile(File("Pokemon Emerald.gba")),
-                DocumentFile.fromFile(File("Mario Kart.gba")),
-            )
-        val systemId = RomManager.detectSystem(context, files)
-        assertEquals("gba", systemId)
+        assertEquals("gba", RomManager.detectSystem(context, docFiles("Pokemon Emerald.gba", "Mario Kart.gba")))
     }
 
     @Test
     fun testDetectSystem_unknown() {
-        val files =
-            arrayOf<DocumentFile>(
-                DocumentFile.fromFile(File("unknown.xyz")),
-                DocumentFile.fromFile(File("document.pdf")),
-            )
-        val systemId = RomManager.detectSystem(context, files)
-        assertNull(systemId)
+        assertNull(RomManager.detectSystem(context, docFiles("unknown.xyz", "document.pdf")))
     }
 
     @Test
     fun testDetectSystem_empty() {
-        val files = emptyArray<DocumentFile>()
-        val systemId = RomManager.detectSystem(context, files)
-        assertNull(systemId)
+        assertNull(RomManager.detectSystem(context, emptyArray()))
     }
 
     @Test
     fun testDetectSystem_pc() {
-        val files =
-            arrayOf<DocumentFile>(
-                DocumentFile.fromFile(File("Cyberpunk.steam")),
-                DocumentFile.fromFile(File("Portal.steamappid")),
-            )
-        val systemId = RomManager.detectSystem(context, files)
-        assertEquals("pc", systemId)
+        assertEquals("pc", RomManager.detectSystem(context, docFiles("Cyberpunk.steam", "Portal.steamappid")))
     }
 
     @Test
@@ -93,8 +68,7 @@ class RomManagerTest {
                 docFile.uri,
                 FileInputStream(zipFile),
             )
-            val files = arrayOf<DocumentFile>(docFile)
-            val systemId = RomManager.detectSystem(context, files)
+            val systemId = RomManager.detectSystem(context, arrayOf(docFile))
             assertEquals("gba", systemId)
         } finally {
             zipFile.delete()
@@ -134,36 +108,47 @@ class RomManagerTest {
     }
 
     @Test
-    fun testGetPhysicalPath_primary() {
-        val uri =
-            Uri.parse(
+    fun testRemoveRomFolder() {
+        val folder =
+            CustomRomFolder(
+                uriString = "content://test/folder",
+                folderPath = "folder",
+                systemId = "snes",
+                systemName = "SNES",
+            )
+        val file = File(context.filesDir, "gamefocus_rom_folders.json")
+        file.writeText("""[{"uriString":"content://test/folder","folderPath":"folder","systemId":"snes","systemName":"SNES"}]""")
+        RomManager.loadRomFolders(context)
+        assertEquals(1, RomManager.romFolders.value.size)
+
+        RomManager.removeRomFolder(context, folder)
+        assertTrue(RomManager.romFolders.value.isEmpty())
+        file.delete()
+    }
+
+    @Test
+    fun testUpdateRomCover() {
+        RomManager.updateRomCover("test.rom.pkg", "/path/to/cover.png")
+        // Verified function execution without crash
+    }
+
+    @Test
+    fun testSafPathResolution() {
+        assertEquals(
+            "/storage/emulated/0/Emulation/game.snes",
+            SafPathResolver.resolveFilePath(
                 "content://com.android.externalstorage.documents/tree/primary%3AEmulation/document/primary%3AEmulation%2Fgame.snes",
-            )
-        val path = RomManager.getPhysicalPath(uri)
-        assertEquals("/storage/emulated/0/Emulation/game.snes", path)
-    }
-
-    @Test
-    fun testGetPhysicalPath_sdcard_document() {
-        val uri =
-            Uri.parse(
+            ),
+        )
+        assertEquals(
+            "/storage/1234-5678/system/game.snes",
+            SafPathResolver.resolveFilePath(
                 "content://com.android.externalstorage.documents/tree/1234-5678%3Asystem/document/1234-5678%3Asystem%2Fgame.snes",
-            )
-        val path = RomManager.getPhysicalPath(uri)
-        assertEquals("/storage/1234-5678/system/game.snes", path)
-    }
-
-    @Test
-    fun testGetPhysicalPath_sdcard_tree() {
-        val uri = Uri.parse("content://com.android.externalstorage.documents/tree/1234-5678%3Asystem")
-        val path = RomManager.getPhysicalPath(uri)
-        assertEquals("/storage/1234-5678/system", path)
-    }
-
-    @Test
-    fun testGetPhysicalPath_invalid() {
-        val uri = Uri.parse("content://com.android.externalstorage.documents/tree/not-a-hex-id%3Asystem")
-        val path = RomManager.getPhysicalPath(uri)
-        assertNull(path)
+            ),
+        )
+        assertEquals(
+            "/storage/1234-5678/system",
+            SafPathResolver.resolveFilePath("content://com.android.externalstorage.documents/tree/1234-5678%3Asystem"),
+        )
     }
 }

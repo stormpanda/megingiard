@@ -12,7 +12,7 @@ This document provides a high-level overview of the system architecture and key 
 
 ## Modular Architecture
 
-Megingiard is structured as a **Feature-First Modular Architecture** split across 9 focused Gradle modules:
+Megingiard is structured as a **Feature-First Modular Architecture** split across 10 focused Gradle modules:
 
 ```
                   ┌─────────────────┐       ┌─────────────────┐
@@ -26,14 +26,14 @@ Megingiard is structured as a **Feature-First Modular Architecture** split acros
          ┌─────────────────┼─────────────────────────┼─────────────────┐
          │                 │                         │                 │
 ┌────────▼────────┐┌───────▼────────┐       ┌────────▼────────┐┌───────▼────────┐
-│ :shared:catalog ││ :shared:media  │       │ :shared:session ││ :mirrorserver  │
-└────────┬────────┘└───────┬────────┘       └────────┬────────┘└────────────────┘
-         │                 │                         │
-         └─────────────────┼─────────────────────────┘
+│ :shared:catalog ││ :shared:media  │       │ :shared:session ││  :shared:ui    │
+└────────┬────────┘└───────┬────────┘       └────────┬────────┘└───────┬────────┘
+         │                 │                         │                 │
+         └─────────────────┼─────────────────────────┴─────────────────┘
                            │
-                  ┌────────▼────────┐
-                  │  :shared:core   │
-                  └─────────────────┘
+                  ┌────────▼────────┐       ┌─────────────────┐
+                  │  :shared:core   │       │ :mirrorserver   │
+                  └─────────────────┘       └─────────────────┘
 ```
 
 ### Module Responsibilities
@@ -46,7 +46,8 @@ Megingiard is structured as a **Feature-First Modular Architecture** split acros
    - **`:companion:domain`** — Companion business logic, device managers, input injection facades (Touchpad, MacroPad, Keyboard, Mirror, Privd).
    - **`:gamefocus:domain`** — Standalone launcher domain logic and ROM launcher implementations (`RetroArchLauncher`, `GameNativeLauncher`).
 
-3. **Shared Domain & Core Modules**
+3. **Shared UI, Domain & Core Modules**
+   - **`:shared:ui`** — App-wide design system tokens, themes (`AppColors`, `AppTheme`), modal dialogs (`AppModalDialog`), overlay modifiers, button glyphs (`GamePadButton`), and Material Symbol font resources.
    - **`:shared:catalog`** — Installed app index, ROM file scanning, system definitions (`InstalledAppsManager`, `RomManager`, `DisplayDetector`, `RomLauncherRegistry`).
    - **`:shared:media`** — External artwork fetchers, HTTP clients, and caching layers (`SteamGridDbClient`).
    - **`:shared:session`** — Active game detection engines (`EmulatorDetectionFunnel`, `GameNativeDetector`, `RetroArchDetector`, `Pcsx2AndroidDetector`, `YuzuDetector`, `PpssppDetector`).
@@ -55,37 +56,62 @@ Megingiard is structured as a **Feature-First Modular Architecture** split acros
 4. **Auxiliary Standalone Modules**
    - **`:mirrorserver`** — Standalone shell-UID DEX executable loaded via `/system/bin/app_process` for un-throttled privileged display mirroring.
 
+### Application Independence & Decoupling Principle
+
+Megingiard Companion (`:companion:ui`, `:companion:domain`) is the core standalone product and is distributed to end users. Game Focus (`:gamefocus:ui`, `:gamefocus:domain`) is an optional top-screen launcher that is **currently not released to the public**. Users are never required or forced to use Game Focus, and frequently run standard or third-party Android launchers (such as Nova, Daijisho, Beacon, or ES-DE).
+
+Consequently:
+- **Zero Runtime Dependencies:** Megingiard Companion must function with 100% stability and correctness without Game Focus installed or running.
+- **Strict Bug Resolution Policy:** Any bug, crash, focus conflict, or unexpected behavior in Megingiard Companion must be diagnosed and resolved strictly within Megingiard Companion (`:companion:*`) or shared modules (`:shared:*`). Fixing or mitigating Megingiard Companion bugs by altering Game Focus code is strictly forbidden.
+- **Decoupled Inter-Process Architecture:** Any inter-process communication (such as theme synchronization via `MegingiardThemeProvider`) treats Megingiard Companion as the authoritative standalone host and Game Focus as an optional passive consumer. Companion never assumes Game Focus state or existence.
+
 ---
 
 ## Dual-Display Layout
 
 Megingiard runs on the AYN Thor, an Android gaming handheld with two physical displays. The app lives on the **secondary (bottom) display** and provides tools that assist the user while the primary (top) display runs games or other applications.
 
+> [!IMPORTANT]
+> **Strict Hardware Target: Dual-Screen Handhelds Only.**
+> Megingiard is architected exclusively for dual-screen devices (AYN Thor). Single-screen devices (standard smartphones, single-screen tablets, and single-screen emulators) are **permanently unsupported**. The system architecture requires concurrent top-screen display and bottom-screen companion presentation and intentionally omits single-screen fallback modes.
+
 ```
-Primary Display (DEFAULT_DISPLAY) — top screen, game display
-  └─ [running games / other apps — captured by MediaProjection]
+Primary Display (DEFAULT_DISPLAY) — top screen, game display & deep configuration overlays
+  ├─ [running games / other apps — captured by MediaProjection]
+  └─ PrimaryOverlayManager / PrimaryOverlayActivity (translucent 16:9 widescreen settings, inspectors, crop selector, & tutorials)
 
-Secondary Display (non-default displayId) — bottom screen, Megingiard UI
-  ├─ MainActivity → MainAppScreen (Jetpack Compose)
-  │    └─ MacroPad-centric main content
-  └─ MirrorPresentation (android.app.Presentation — ambient mirroring modes)
-       ├─ TextureView / SurfaceView: hardware VirtualDisplay output (mirrors primary display)
-       └─ ComposeView → BackgroundMacroPadOverlay / MirrorScreen
+Secondary Display (non-default displayId) — bottom screen, interactive deck & tools
+  └─ MainActivity → MainAppScreen (Jetpack Compose)
+       ├─ MacroPad canvas, Quick Menu, Keyboard, Touchpad, Dashboard
+       └─ EmbeddedMirrorView (MultiCutoutContainer + ThrottledTextureView)
 ```
 
-`MainActivity` and `MainAppScreen` run on the **secondary (bottom) display** (`displayId != Display.DEFAULT_DISPLAY`). `MirrorPresentation` is layered on top of `MainAppScreen` on the same secondary display when ambient mirroring is active and hidden (`hide()`) when it is not needed.
+`MainActivity` and `MainAppScreen` run on the **secondary (bottom) display** (`displayId != Display.DEFAULT_DISPLAY`). Screen mirroring renders directly embedded inside `MainAppScreen` via `EmbeddedMirrorView` under `MacroPadScreen`, removing secondary-display `Presentation` window Z-order conflicts and allowing Compose modals, editors, and Quick Menu overlays to composite directly in the standard UI hierarchy.
 
-The MacroPad macro editor also uses **inline full-screen overlays in the same secondary-display window** for transient recording workflows. Touch-tap recording opens a dedicated `RecordingMirrorPresentation`, while gamepad macro recording renders an in-app `GamepadRecordingOverlay` directly above `MacroTimelineEditor`. The gamepad overlay intentionally captures input from on-screen touch surfaces instead of listening to the physical controller device, so recording works without root-only device snooping while still forwarding events live through the existing virtual gamepad injector.
+Configuration menus (Global Settings, MacroPad button/layout inspector, Background Settings, Touchpad/Keyboard settings, Setup Wizards, and Tutorials) open as translucent widescreen overlays on the **primary (top) display** via `PrimaryOverlayActivity` (`ActivityOptions.setLaunchDisplayId(Display.DEFAULT_DISPLAY)`). This allows the secondary display to remain an unobstructed, live interactive action deck.
 
-### Wrong-Screen Overlay
+The MacroPad macro editor utilizes dual-screen coordination for transient recording workflows: `TouchScreenObserver` captures touch tap and gesture paths passively from `/dev/input/event6` on Display 0 directly over the active game/emulator with native 120Hz responsiveness and zero lag, while gamepad macro recording uses physical pass-through capture via `PhysicalGamepadRecordingManager` and `megingiard_privd`. When recording begins from the top-screen macro editor, the top overlay is suspended (`AppStateManager.suspendCurrentAndDismiss()`) so the active game is completely visible, and the bottom secondary display displays `TouchRecordingSheet` or `PhysicalGamepadRecordingSheet` with live telemetry (radars, compass, button chips) and touch Stop/Cancel actions which automatically resume the suspended editor upon completion.
 
-When `MainActivity` detects that it is running on the **primary display** (`displayId == Display.DEFAULT_DISPLAY`) — either because the app was launched there or moved there at runtime — a global full-screen blocking overlay is shown in `MainAppScreen` on top of all content. The overlay:
+### Display Enforcement & Launch Routing
 
-- Displays a plain-language message instructing the user to move the app to the bottom screen.
-- Shows an animated, vertically bouncing downward arrow (`KeyboardArrowDown`) as a directional hint.
-- Consumes all pointer events, preventing interaction with any underlying controls.
+`MainActivity` is intended to execute on the **secondary (bottom) display** (`displayId != Display.DEFAULT_DISPLAY`). To ensure seamless placement on dual-screen hardware such as the AYN Thor:
 
-Display detection is performed synchronously in `MainActivity`'s Compose tree via `LocalContext.current.display?.displayId` and stored in `AppStateManager.isOnValidScreen`. All capture auto-start paths (auto-start on resume, MacroPad ambient auto-trigger) are gated on `isOnValidScreen` to prevent a `MediaProjection` consent dialog from appearing while the app is on the primary display.
+1. **Launch Routing via `LaunchTrampolineActivity` and Primary Focus Anchor**:
+   - The application launcher entry point (`CATEGORY_LAUNCHER` and `ACTION_VIEW`) is registered as `LaunchTrampolineActivity`, a translucent no-history activity (`Theme.Translucent.NoTitleBar`).
+   - When tapped from any launcher (on the top or bottom screen), `LaunchTrampolineActivity` inspects the hardware topology via `DisplayDetector.findSecondaryDisplay(context)`.
+   - It dispatches an explicit intent to `MainActivity` with `ActivityOptions.setLaunchDisplayId(secondaryDisplay.displayId)` and `FLAG_ACTIVITY_NEW_TASK or FLAG_ACTIVITY_SINGLE_TOP` (omitting `FLAG_ACTIVITY_REORDER_TO_FRONT` to prevent reordering the display stack).
+   - Because `MainActivity` applies `FLAG_NOT_FOCUSABLE` (so bottom-screen macro touches never steal window focus from top-screen games), `LaunchTrampolineActivity` immediately triggers `PrimaryFocusAnchorActivity` on `Display.DEFAULT_DISPLAY` (Display 0). This lightweight, translucent anchor activity finishes immediately (<5ms, zero animation), guaranteeing that Android WindowManager and `InputDispatcher` always evaluate Display 0 as `FocusedDisplayId`. This eliminates "Application does not have a focused window" ANR timeouts following a launch or debug deploy while strictly preserving top-screen gamepad macro routing.
+   - `MainActivity` is declared with `android:launchMode="singleTask"`. If already running on the bottom screen, Android smoothly brings the existing instance to the foreground on the secondary display without spawning a duplicate task on the top display. On cold launch, `MainActivity` also invokes `PrimaryFocusAnchorActivity.anchorPrimaryFocus(this)` as a defensive safeguard against direct ADB launches targeting Display 4.
+
+2. **Foreground Validation & Wrong-Screen Overlay**:
+   - In `MainActivity.onConfigurationChanged()` and `MainActivity.onResume()`, the active display ID is continuously validated via `DisplayDetector.isValidScreen(currentDisplayId)` and updated in `AppStateManager.isOnValidScreen`.
+   - When running on the primary display (e.g. if launched incorrectly on Display 0), a global full-screen blocking overlay (`WrongScreenOverlay`) is rendered in `MainAppScreen`.
+   - Displays a plain-language message instructing the user to place the app on the bottom screen.
+   - Shows an animated, vertically bouncing downward arrow (`KeyboardArrowDown`) as a directional hint.
+   - Consumes all pointer events, preventing interaction with underlying controls.
+   - Tapping "Retry detection" triggers an explicit retarget attempt to the secondary display.
+
+Display detection is performed synchronously via `DisplayDetector.isValidScreen(currentDisplayId)` and stored in `AppStateManager.isOnValidScreen`. All capture auto-start paths (auto-start on resume, MacroPad ambient auto-trigger) are gated on `isOnValidScreen` to prevent a `MediaProjection` consent dialog from appearing while the app is on the primary display.
 
 ---
 
@@ -119,14 +145,13 @@ Release builds enable R8 minification and resource shrinking. This is not the pr
 
 | Decision                                                 | Rationale                                                                                                                                                                                                 | Details                                                                                        |
 | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `android.app.Presentation` for secondary display         | Only reliable Android API for anchoring an independent window to a specific physical display                                                                                                              | [mirror/FEATURE.md](features/mirror/FEATURE.md#architecture-capture-pipeline)                  |
-| `MediaProjection` + `VirtualDisplay` → `SurfaceView`     | Hardware buffer routing bypasses CPU/DRM; zero-copy rendering via Hardware Composer                                                                                                                       | [mirror/FEATURE.md](features/mirror/FEATURE.md#architecture-capture-pipeline)                  |
-| Privileged mirror direct-to-Surface transport            | Privileged mirror renders the shell-owned virtual display directly into the app's `MirrorPresentation` cutout surfaces; if direct setup fails, the app falls back to the normal MediaProjection consent path. | [mirror/FEATURE.md](features/mirror/FEATURE.md#architecture-privileged-capture-pipeline-fr-m9) |
-| `MirrorPresentationLifecycleOwner` (synthetic)           | Bridges Jetpack Compose lifecycle and ViewModel requirements into a service-backed `Presentation` window                                                                                                  | [mirror/FEATURE.md](features/mirror/FEATURE.md#synthetic-lifecycle-owner)                      |
-| `show()` / `hide()` for mode switching (not `dismiss()`) | Avoids destroying the capture session on mode switch; `dismiss()` only in `onDestroy()`                                                                                                                   | [mirror/FEATURE.md](features/mirror/FEATURE.md#mode-switching-show--hide-vs-dismiss)           |
+| Embedded mirror in `MainActivity` Compose tree           | Eliminates `Presentation` window Z-order conflicts and enables unified, seamless layering of all overlays, dialogs, and tools in Compose                                                                  | [mirror/FEATURE.md](features/mirror/FEATURE.md#architecture-capture-pipeline)                  |
+| `MediaProjection` + `VirtualDisplay` → `TextureView`     | Hardware buffer routing bypasses CPU/DRM; zero-copy rendering via Hardware Composer                                                                                                                       | [mirror/FEATURE.md](features/mirror/FEATURE.md#architecture-capture-pipeline)                  |
+| Privileged mirror direct-to-Surface transport            | Privileged mirror renders the shell-owned virtual display directly into the app's master cutout surface; if direct setup fails, the app falls back to the normal MediaProjection consent path.            | [mirror/FEATURE.md](features/mirror/FEATURE.md#architecture-privileged-capture-pipeline-fr-m9) |
+| `WindowOverlayLifecycleOwner` (synthetic)                | Bridges Jetpack Compose lifecycle and ViewModel requirements into WindowManager-backed primary screen overlays                                                                                            | [mirror/FEATURE.md](features/mirror/FEATURE.md#synthetic-lifecycle-owner-for-primary-screen-overlays) |
 | Native binary for touch injection                        | Direct `/dev/input/event6` writes: < 1 ms latency vs. ~7 ms for Binder IPC                                                                                                                                | [touchpad/FEATURE.md](features/touchpad/FEATURE.md#why-a-native-binary)                        |
 | Native binary for key injection (`keyinjector_arm64`)    | Reuses `ShellKeyInjector` pattern; direct `/dev/uinput` writes for < 1 ms key latency; independent process                                                                                                | [keyboard/FEATURE.md](features/keyboard/FEATURE.md#native-binary-deployment--lifecycle)        |
-| Inline gamepad recording overlay                         | Records macro-ready gamepad input from touch surfaces in the macro editor and forwards it live through `GamepadInjector`                                                                                  | [macropad/FEATURE.md](features/macropad/FEATURE.md#fr-p7-macros)                               |
+| Inline gamepad and touch recording overlays              | Records macro-ready gamepad & touch input from Compose overlays in the macro editor and forwards them live through injectors                                                                              | [macropad/FEATURE.md](features/macropad/FEATURE.md#fr-p7-macros)                               |
 | Privileged Mode daemon (`megingiard_privd`)              | On-device helper running under shell UID via ADB Wireless Debugging; lets the app write to `/dev/input/event*` nodes that the `untrusted_app` sandbox cannot reach. Per-feature opt-in.                   | [privileged-mode/FEATURE.md](features/privileged-mode/FEATURE.md)                              |
 | `StateFlow` singletons for all shared state              | Decouples UI from services; mutable backing fields are always `private`; UI reads via read-only `StateFlow`                                                                                               | [AGENTS.md](../AGENTS.md#7-state-management)                                                   |
 | `snapshotFlow` for animation sync                        | Avoids restarting `LaunchedEffect` on every animation frame; single-launch reactive collection                                                                                                            | [mirror/FEATURE.md](features/mirror/FEATURE.md#pan--zoom)                                      |

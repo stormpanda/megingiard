@@ -1,61 +1,25 @@
 package com.stormpanda.megingiard.settings
 
-import android.app.ActivityOptions
-import android.content.Intent
-import android.net.Uri
-import android.provider.Settings
-import android.view.Display
-import android.widget.Toast
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.automirrored.rounded.ArrowForward
-import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
@@ -67,804 +31,611 @@ import com.stormpanda.megingiard.config.buildProfileExportFilename
 import com.stormpanda.megingiard.log.LogReportManager
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
-import com.stormpanda.megingiard.privd.DeadzoneDialog
-import com.stormpanda.megingiard.privd.PrivdDeadzoneSettingsRow
-import com.stormpanda.megingiard.privd.PrivdSettingsCard
-import com.stormpanda.megingiard.privd.PrivdSetupWizardDialog
-import com.stormpanda.megingiard.ui.AppDivider
-import com.stormpanda.megingiard.ui.AppSettingsRow
-import com.stormpanda.megingiard.ui.AppTextField
-import com.stormpanda.megingiard.ui.HelpEntry
-import com.stormpanda.megingiard.ui.HelpIconButton
-import com.stormpanda.megingiard.ui.HelpIntro
-import com.stormpanda.megingiard.ui.HelpModal
-import com.stormpanda.megingiard.ui.HelpSection
+import com.stormpanda.megingiard.settings.tabs.AppearanceSettingsTab
+import com.stormpanda.megingiard.settings.tabs.ConfigurationSettingsTab
+import com.stormpanda.megingiard.settings.tabs.CreateBackupSubPage
+import com.stormpanda.megingiard.settings.tabs.CustomAccentSubPage
+import com.stormpanda.megingiard.settings.tabs.DeadzonesSubPage
+import com.stormpanda.megingiard.settings.tabs.DiagnosticsSettingsTab
+import com.stormpanda.megingiard.settings.tabs.GS_OBTAINIUM_FALLBACK_URL
+import com.stormpanda.megingiard.settings.tabs.GS_OBTAINIUM_REPO_URL
+import com.stormpanda.megingiard.settings.tabs.GeneralSettingsTab
+import com.stormpanda.megingiard.settings.tabs.InputSettingsTab
+import com.stormpanda.megingiard.settings.tabs.RestoreBackupSubPage
+import com.stormpanda.megingiard.settings.tabs.RestoreReviewSubPage
+import com.stormpanda.megingiard.settings.tabs.ScrapingSettingsTab
+import com.stormpanda.megingiard.settings.tabs.ShareProfileSubPage
+import com.stormpanda.megingiard.settings.tabs.SteamGridDbTokenSubPage
+import com.stormpanda.megingiard.settings.tabs.UpdateAvailableSubPage
+import com.stormpanda.megingiard.settings.tabs.UpdatesSettingsTab
+import com.stormpanda.megingiard.ui.DialogToastManager
+import com.stormpanda.megingiard.ui.GamepadCategoryTile
+import com.stormpanda.megingiard.ui.GamepadDeck
+import com.stormpanda.megingiard.ui.GamepadTwoPaneScaffold
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.PrimaryModalPayload
+import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
+import com.stormpanda.megingiard.ui.cycle
+import com.stormpanda.megingiard.ui.launchUrlOnPrimaryDisplay
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 private const val TAG = "GlobalSettingsScreen"
 
 private const val GS_RESTORE_COUNTDOWN_SECONDS = 5
 private const val GS_RESTORE_COUNTDOWN_INTERVAL_MS = 1_000L
+private const val GS_RESTORE_CONFIRM_TIMEOUT_MS = 8_000L
 
-private const val GS_OBTAINIUM_REPO_URL = "https://github.com/stormpanda/megingiard"
-private const val GS_OBTAINIUM_FALLBACK_URL = "https://github.com/ImranR98/Obtainium"
-
-private val GS_KOFI_BUTTON_HEIGHT = 32.dp
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GlobalSettingsScreen(
     onBack: () -> Unit,
     viewModel: GlobalSettingsViewModel = viewModel(),
 ) {
-    val accentColorArgb by viewModel.accentColor.collectAsState()
-    val accentColor = Color(accentColorArgb)
-    val overlayAtBottom by viewModel.overlayAtBottom.collectAsState()
-    val overlayFadeOut by viewModel.overlayFadeOut.collectAsState()
-    val themeMode by viewModel.themeMode.collectAsState()
-    val appLanguage by viewModel.appLanguage.collectAsState()
-    val logLevel by viewModel.logLevel.collectAsState()
-    val excludeFromRecents by viewModel.excludeFromRecents.collectAsState()
-    val gamepadSwapFaceButtons by viewModel.gamepadSwapFaceButtons.collectAsState()
-    val deadzoneLeft by viewModel.privdDeadzoneLeft.collectAsState()
-    val deadzoneRight by viewModel.privdDeadzoneRight.collectAsState()
-    val steamGridDbApiToken by viewModel.steamGridDbApiToken.collectAsState()
-    val internalBackups by viewModel.internalBackups.collectAsState()
+    val accentColorArgb by viewModel.accentColor.collectAsStateWithLifecycle()
+    val customAccentColorArgb by viewModel.customAccentColor.collectAsStateWithLifecycle()
+    val overlayAtBottom by viewModel.overlayAtBottom.collectAsStateWithLifecycle()
+    val overlayFadeOut by viewModel.overlayFadeOut.collectAsStateWithLifecycle()
+    val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+    val appLanguage by viewModel.appLanguage.collectAsStateWithLifecycle()
+    val logLevel by viewModel.logLevel.collectAsStateWithLifecycle()
+    val excludeFromRecents by viewModel.excludeFromRecents.collectAsStateWithLifecycle()
+    val gamepadSwapFaceButtons by viewModel.gamepadSwapFaceButtons.collectAsStateWithLifecycle()
+    val privdState by viewModel.privdState.collectAsStateWithLifecycle()
+    val deadzoneLeft by viewModel.privdDeadzoneLeft.collectAsStateWithLifecycle()
+    val deadzoneRight by viewModel.privdDeadzoneRight.collectAsStateWithLifecycle()
+    val steamGridDbApiToken by viewModel.steamGridDbApiToken.collectAsStateWithLifecycle()
+    val steamGridDbTestStatus by viewModel.steamGridDbTestStatus.collectAsStateWithLifecycle()
+    val internalBackups by viewModel.internalBackups.collectAsStateWithLifecycle()
 
-    val autoUpdateCheckEnabled by viewModel.autoUpdateCheckEnabled.collectAsState()
-    val updateAvailable by viewModel.updateAvailable.collectAsState()
-    val latestReleaseInfo by viewModel.latestReleaseInfo.collectAsState()
-    val isCheckingUpdates by viewModel.isCheckingUpdates.collectAsState()
+    val autoUpdateCheckEnabled by viewModel.autoUpdateCheckEnabled.collectAsStateWithLifecycle()
+    val updateAvailable by viewModel.updateAvailable.collectAsStateWithLifecycle()
+    val latestReleaseInfo by viewModel.latestReleaseInfo.collectAsStateWithLifecycle()
+    val isCheckingUpdates by viewModel.isCheckingUpdates.collectAsStateWithLifecycle()
+    val updateCheckError by viewModel.updateCheckError.collectAsStateWithLifecycle()
 
     val colors = LocalAppColors.current
     val effectiveAccent = colors.accent
 
-    var showRestoreBackupDialog by rememberSaveable { mutableStateOf(false) }
-    var showUpdatePromptDialog by rememberSaveable { mutableStateOf(false) }
-
-    var showColorPicker by rememberSaveable { mutableStateOf(false) }
-    var showPresetPaletteDialog by rememberSaveable { mutableStateOf(false) }
-    val exportResult by ConfigManager.exportResult.collectAsState()
-    val logReportSaveResult by LogReportManager.saveResult.collectAsState()
+    val exportResult by ConfigManager.exportResult.collectAsStateWithLifecycle()
+    val logReportSaveResult by LogReportManager.saveResult.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
-    var showExportMetadataDialog by rememberSaveable { mutableStateOf(false) }
-    var showPrivdWizard by rememberSaveable { mutableStateOf(false) }
-    var showDeadzoneDialog by rememberSaveable { mutableStateOf(false) }
+    var subPageStack by rememberSaveable { mutableStateOf<List<SettingsSubPage>>(emptyList()) }
+    val currentSubPage = subPageStack.lastOrNull()
     var showImportPreviewDialog by remember { mutableStateOf<MegingiardExport?>(null) }
+    val pendingInAppParsedImport by ConfigManager.pendingInAppParsedImport.collectAsStateWithLifecycle()
+    val configImportError by ConfigManager.inAppImportError.collectAsStateWithLifecycle()
+    val activeImportPreview = showImportPreviewDialog ?: pendingInAppParsedImport
+    var lastReviewExport by remember { mutableStateOf<MegingiardExport?>(null) }
+    LaunchedEffect(activeImportPreview) {
+        if (activeImportPreview != null) {
+            lastReviewExport = activeImportPreview
+        }
+    }
+    var pendingUpdateReleaseUrl by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(subPageStack) {
+        if (SettingsSubPage.RESTORE_REVIEW !in subPageStack) {
+            showImportPreviewDialog = null
+            ConfigManager.clearInAppPendingImport()
+        }
+        if (SettingsSubPage.CREATE_BACKUP !in subPageStack) {
+            pendingUpdateReleaseUrl = null
+        }
+    }
     var importError by rememberSaveable { mutableStateOf<String?>(null) }
-    var importSuccess by rememberSaveable { mutableStateOf(false) }
-    var showProfileExportDialog by rememberSaveable { mutableStateOf(false) }
-    var profileImportSuccess by rememberSaveable { mutableStateOf(false) }
-    val pendingInAppImportMode by ConfigManager.pendingInAppImportMode.collectAsState()
+    val pendingInAppImportMode by ConfigManager.pendingInAppImportMode.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
+    var selectedCategory by remember { mutableStateOf(SettingsCategory.GENERAL) }
 
-    var showRestoreDefaultsConfirm by rememberSaveable { mutableStateOf(false) }
-    var restoreCountdown by rememberSaveable { mutableStateOf(GS_RESTORE_COUNTDOWN_SECONDS) }
+    var deleteCountdown by rememberSaveable(selectedCategory, subPageStack) { mutableIntStateOf(-1) }
+    var isDeleteCountingDown by rememberSaveable(selectedCategory, subPageStack) { mutableStateOf(false) }
 
-    var showSettingsHelp by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(showRestoreDefaultsConfirm) {
-        if (showRestoreDefaultsConfirm) {
-            restoreCountdown = GS_RESTORE_COUNTDOWN_SECONDS
-            while (restoreCountdown > 0) {
+    LaunchedEffect(isDeleteCountingDown) {
+        if (isDeleteCountingDown) {
+            deleteCountdown = GS_RESTORE_COUNTDOWN_SECONDS
+            while (deleteCountdown > 0) {
                 delay(GS_RESTORE_COUNTDOWN_INTERVAL_MS)
-                restoreCountdown--
+                deleteCountdown--
+            }
+            isDeleteCountingDown = false
+        }
+    }
+
+    LaunchedEffect(deleteCountdown) {
+        if (deleteCountdown == 0) {
+            delay(GS_RESTORE_CONFIRM_TIMEOUT_MS)
+            if (deleteCountdown == 0) {
+                deleteCountdown = -1
             }
         }
     }
 
-    var selectedSectionFilter by remember { mutableStateOf<SettingsSectionFilter?>(null) }
+    val categoryList = remember { SettingsCategory.entries }
+    val activePrimaryModal by AppStateManager.activePrimaryModal.collectAsStateWithLifecycle()
 
-    Box(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(colors.appBackground),
-    ) {
-        Scaffold(
-            containerColor = Color.Transparent,
-            topBar = {
-                TopAppBar(
-                    title = {
-                        Text(
-                            text = stringResource(R.string.settings_global_title),
-                            color = colors.onSurface,
-                        )
+    LaunchedEffect(activePrimaryModal) {
+        val payload = activePrimaryModal?.payload as? PrimaryModalPayload.GlobalSettings
+        if (payload != null) {
+            selectedCategory = payload.category
+            subPageStack = payload.subPage?.let { listOf(it) } ?: emptyList()
+        }
+    }
+
+    LaunchedEffect(pendingInAppParsedImport) {
+        if (pendingInAppParsedImport != null) {
+            selectedCategory = SettingsCategory.CONFIGURATION
+            subPageStack = listOf(SettingsSubPage.RESTORE_BACKUP, SettingsSubPage.RESTORE_REVIEW)
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        PrimaryOverlayInputBridge.bumperEvents.collect { direction ->
+            selectedCategory = categoryList.cycle(selectedCategory, direction)
+            subPageStack = emptyList()
+        }
+    }
+
+    GamepadTwoPaneScaffold(
+        scrollableDeck = false,
+        isCustomBackActive = subPageStack.isNotEmpty(),
+        onCustomBack = {
+            subPageStack = subPageStack.dropLast(1)
+        },
+        navigationKey = subPageStack,
+        sidebarContent = {
+            SettingsCategory.entries.forEach { category ->
+                GamepadCategoryTile(
+                    title = stringResource(category.titleResId),
+                    icon = category.icon,
+                    selected = (currentSubPage?.parentCategory ?: selectedCategory) == category,
+                    onClick = {
+                        selectedCategory = category
+                        subPageStack = emptyList()
                     },
-                    navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                                contentDescription = stringResource(R.string.settings_back),
-                                tint = colors.onSurface,
+                )
+            }
+        },
+        content = {
+            AnimatedContent(
+                targetState = subPageStack,
+                transitionSpec = {
+                    val direction = if (targetState.size < initialState.size) -1 else 1
+                    slideInHorizontally { width -> width * direction }.togetherWith(
+                        slideOutHorizontally { width -> -width * direction },
+                    )
+                },
+                label = "SettingsSubPageAnimation",
+            ) { stack ->
+                val subPage = stack.lastOrNull()
+                when (subPage) {
+                    null -> {
+                        val categoryTitle = stringResource(selectedCategory.titleResId)
+                        GamepadDeck(
+                            title = categoryTitle,
+                            accentColor = effectiveAccent,
+                        ) {
+                            when (selectedCategory) {
+                                SettingsCategory.GENERAL -> {
+                                    GeneralSettingsTab(
+                                        updateAvailable = updateAvailable,
+                                        latestReleaseInfo = latestReleaseInfo,
+                                        privdState = privdState,
+                                        appLanguage = appLanguage,
+                                        excludeFromRecents = excludeFromRecents,
+                                        onNavigateToSubPage = { subPageStack = listOf(it) },
+                                        onStartWelcomeTour = {
+                                            AppStateManager.closeActiveModal()
+                                            OnboardingWizardManager.startWizard(force = true)
+                                            onBack()
+                                        },
+                                        onOpenPrivdSetup = {
+                                            AppStateManager.closeActiveModal()
+                                            AppStateManager.setPrivdSetupWizardOpen(true)
+                                            onBack()
+                                        },
+                                        onLanguageChange = { viewModel.setAppLanguage(it) },
+                                        onExcludeFromRecentsChange = { viewModel.setExcludeFromRecents(it) },
+                                        onResetTutorials = {
+                                            viewModel.resetAllTutorials()
+                                            DialogToastManager.show(
+                                                context.getString(R.string.settings_reset_tutorials_toast),
+                                            )
+                                        },
+                                    )
+                                }
+
+                                SettingsCategory.INPUT -> {
+                                    InputSettingsTab(
+                                        gamepadSwapFaceButtons = gamepadSwapFaceButtons,
+                                        deadzoneLeft = deadzoneLeft,
+                                        deadzoneRight = deadzoneRight,
+                                        onGamepadSwapFaceButtonsChange = { viewModel.setGamepadSwapFaceButtons(it) },
+                                        onOpenDeadzones = { subPageStack = listOf(SettingsSubPage.DEADZONES) },
+                                    )
+                                }
+
+                                SettingsCategory.APPEARANCE -> {
+                                    AppearanceSettingsTab(
+                                        themeMode = themeMode,
+                                        accentColorArgb = accentColorArgb,
+                                        customAccentColorArgb = customAccentColorArgb,
+                                        overlayAtBottom = overlayAtBottom,
+                                        overlayFadeOut = overlayFadeOut,
+                                        onThemeModeChange = { viewModel.setThemeMode(it) },
+                                        onAccentColorChange = { viewModel.setAccentColor(it) },
+                                        onOpenCustomAccent = { subPageStack = listOf(SettingsSubPage.CUSTOM_ACCENT) },
+                                        onOverlayAtBottomChange = { viewModel.setOverlayAtBottom(it) },
+                                        onOverlayFadeOutChange = { viewModel.setOverlayFadeOut(it) },
+                                    )
+                                }
+
+                                SettingsCategory.CONFIGURATION -> {
+                                    ConfigurationSettingsTab(
+                                        deleteCountdown = deleteCountdown,
+                                        onExportBackup = { subPageStack = listOf(SettingsSubPage.CREATE_BACKUP) },
+                                        onRestoreBackup = { subPageStack = listOf(SettingsSubPage.RESTORE_BACKUP) },
+                                        onShareProfile = { subPageStack = listOf(SettingsSubPage.SHARE_PROFILE) },
+                                        onImportProfile = {
+                                            ConfigManager.requestImport(ConfigManager.ImportMode.PROFILE_SHARE)
+                                        },
+                                        onDeleteCountdownClick = {
+                                            when {
+                                                deleteCountdown > 0 -> {}
+
+                                                deleteCountdown == 0 -> {
+                                                    MacroPadState.restoreDefaults()
+                                                    DialogToastManager.show(
+                                                        context.getString(R.string.settings_restore_defaults_toast),
+                                                    )
+                                                    deleteCountdown = -1
+                                                }
+
+                                                else -> {
+                                                    isDeleteCountingDown = true
+                                                }
+                                            }
+                                        },
+                                    )
+                                }
+
+                                SettingsCategory.SCRAPING -> {
+                                    ScrapingSettingsTab(
+                                        steamGridDbApiToken = steamGridDbApiToken,
+                                        onOpenTokenSubPage = { subPageStack = listOf(SettingsSubPage.STEAMGRIDDB_TOKEN) },
+                                    )
+                                }
+
+                                SettingsCategory.UPDATES -> {
+                                    var hasTriggeredManualCheck by rememberSaveable(selectedCategory) {
+                                        mutableStateOf(false)
+                                    }
+
+                                    UpdatesSettingsTab(
+                                        autoUpdateCheckEnabled = autoUpdateCheckEnabled,
+                                        updateAvailable = updateAvailable,
+                                        latestReleaseInfo = latestReleaseInfo,
+                                        isCheckingUpdates = isCheckingUpdates,
+                                        updateCheckError = updateCheckError,
+                                        hasTriggeredManualCheck = hasTriggeredManualCheck,
+                                        onAutoUpdateCheckEnabledChange = { viewModel.setAutoUpdateCheckEnabled(it) },
+                                        onManualCheckClick = {
+                                            if (isCheckingUpdates) return@UpdatesSettingsTab
+
+                                            if (hasTriggeredManualCheck && updateAvailable) {
+                                                subPageStack = listOf(SettingsSubPage.UPDATE_AVAILABLE)
+                                            } else {
+                                                hasTriggeredManualCheck = true
+                                                viewModel.checkForUpdatesManually()
+                                            }
+                                        },
+                                        onOpenObtainium = {
+                                            val deepLink = "obtainium://add/${GS_OBTAINIUM_REPO_URL}"
+                                            try {
+                                                launchUrlOnPrimaryDisplay(context, deepLink)
+                                            } catch (e: Exception) {
+                                                AppLog.w(TAG, "Obtainium deep link failed: ${e.message}, falling back to browser")
+                                                launchUrlOnPrimaryDisplay(context, GS_OBTAINIUM_FALLBACK_URL)
+                                            }
+                                            AppStateManager.closeActiveModal()
+                                            onBack()
+                                        },
+                                    )
+                                }
+
+                                SettingsCategory.DIAGNOSTICS -> {
+                                    DiagnosticsSettingsTab(
+                                        logLevel = logLevel,
+                                        onLogLevelChange = { viewModel.setLogLevel(it) },
+                                        onSaveLogReport = { viewModel.requestSaveLogReport() },
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    SettingsSubPage.DEADZONES -> {
+                        GamepadDeck(
+                            breadcrumbs =
+                                listOf(
+                                    stringResource(R.string.settings_section_input),
+                                    stringResource(R.string.privd_deadzone_title),
+                                ),
+                            accentColor = effectiveAccent,
+                        ) {
+                            DeadzonesSubPage(
+                                deadzoneLeft = deadzoneLeft,
+                                deadzoneRight = deadzoneRight,
+                                onLeftChange = { viewModel.setPrivdDeadzoneLeft(it) },
+                                onRightChange = { viewModel.setPrivdDeadzoneRight(it) },
                             )
                         }
-                    },
-                    actions = {
-                        Image(
-                            painter = painterResource(R.drawable.support_me_on_kofi_dark),
-                            contentDescription = stringResource(R.string.settings_support_app),
-                            modifier =
-                                Modifier
-                                    .height(GS_KOFI_BUTTON_HEIGHT)
-                                    .clickable {
-                                        val url = "https://ko-fi.com/stormpanda"
-                                        try {
-                                            val intent =
-                                                Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-                                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+
+                    SettingsSubPage.STEAMGRIDDB_TOKEN -> {
+                        GamepadDeck(
+                            breadcrumbs =
+                                listOf(
+                                    stringResource(R.string.settings_section_scraping),
+                                    stringResource(R.string.settings_steamgriddb_token),
+                                ),
+                            accentColor = effectiveAccent,
+                        ) {
+                            SteamGridDbTokenSubPage(
+                                token = steamGridDbApiToken,
+                                onTokenChange = { viewModel.setSteamGridDbApiToken(it) },
+                                testStatus = steamGridDbTestStatus,
+                                onTestConnection = { viewModel.testSteamGridDbConnection(steamGridDbApiToken) },
+                            )
+                        }
+                    }
+
+                    SettingsSubPage.CUSTOM_ACCENT -> {
+                        GamepadDeck(
+                            breadcrumbs =
+                                listOf(
+                                    stringResource(R.string.settings_section_appearance),
+                                    stringResource(R.string.settings_accent_custom_title),
+                                ),
+                            accentColor = effectiveAccent,
+                        ) {
+                            CustomAccentSubPage(
+                                initialColor = Color(customAccentColorArgb),
+                                onSaveColor = { newColor ->
+                                    val argb = newColor.toArgb()
+                                    viewModel.setCustomAccentColor(argb)
+                                    viewModel.setAccentColor(argb)
+                                },
+                            )
+                        }
+                    }
+
+                    SettingsSubPage.CREATE_BACKUP -> {
+                        GamepadDeck(
+                            breadcrumbs =
+                                listOf(
+                                    stringResource(R.string.settings_section_config),
+                                    stringResource(R.string.settings_config_export),
+                                ),
+                            accentColor = effectiveAccent,
+                        ) {
+                            CreateBackupSubPage(
+                                onExport = { metadata, includeBackgrounds ->
+                                    ConfigManager.requestExport(
+                                        metadata = metadata,
+                                        filename = buildExportFilename(metadata),
+                                        includeBackgrounds = includeBackgrounds,
+                                    )
+                                },
+                            )
+                        }
+                    }
+
+                    SettingsSubPage.SHARE_PROFILE -> {
+                        GamepadDeck(
+                            breadcrumbs =
+                                listOf(
+                                    stringResource(R.string.settings_section_config),
+                                    stringResource(R.string.settings_config_export_profile),
+                                ),
+                            accentColor = effectiveAccent,
+                        ) {
+                            ShareProfileSubPage(
+                                onExportProfile = { metadata, profile, includeBackgrounds ->
+                                    ConfigManager.requestProfileExport(
+                                        metadata = metadata,
+                                        profile = profile,
+                                        filename = buildProfileExportFilename(metadata, profile.name),
+                                        includeBackgrounds = includeBackgrounds,
+                                    )
+                                },
+                            )
+                        }
+                    }
+
+                    SettingsSubPage.RESTORE_BACKUP -> {
+                        GamepadDeck(
+                            breadcrumbs =
+                                listOf(
+                                    stringResource(R.string.settings_section_config),
+                                    stringResource(R.string.config_restore_dialog_title),
+                                ),
+                            accentColor = effectiveAccent,
+                        ) {
+                            RestoreBackupSubPage(
+                                internalBackups = internalBackups,
+                                effectiveAccent = effectiveAccent,
+                                onPickExternalFile = {
+                                    ConfigManager.requestImport(ConfigManager.ImportMode.BACKUP_RESTORE)
+                                },
+                                onSelectInternalBackup = { backup ->
+                                    showImportPreviewDialog = backup.export
+                                    subPageStack = subPageStack + SettingsSubPage.RESTORE_REVIEW
+                                },
+                            )
+                        }
+                    }
+
+                    SettingsSubPage.RESTORE_REVIEW -> {
+                        val reviewExport = activeImportPreview ?: lastReviewExport
+                        if (reviewExport != null) {
+                            GamepadDeck(
+                                breadcrumbs =
+                                    listOf(
+                                        stringResource(R.string.settings_section_config),
+                                        stringResource(R.string.config_restore_dialog_title),
+                                        stringResource(R.string.config_import_review_title),
+                                    ),
+                                accentColor = effectiveAccent,
+                            ) {
+                                RestoreReviewSubPage(
+                                    export = reviewExport,
+                                    pendingInAppImportMode = pendingInAppImportMode,
+                                    onConfirmImport = { exp, mode ->
+                                        val pendingImages = ConfigManager.getPendingInAppImages()
+                                        showImportPreviewDialog = null
+                                        subPageStack = emptyList()
+                                        coroutineScope.launch {
+                                            runCatching {
+                                                when (mode) {
+                                                    ConfigManager.ImportMode.BACKUP_RESTORE -> {
+                                                        ConfigManager.applyImport(
+                                                            context,
+                                                            exp,
+                                                            pendingImages,
+                                                        )
+                                                    }
+
+                                                    ConfigManager.ImportMode.PROFILE_SHARE -> {
+                                                        ConfigManager.applyProfileImport(
+                                                            context,
+                                                            exp,
+                                                            pendingImages,
+                                                        )
+                                                    }
                                                 }
-                                            val options = ActivityOptions.makeBasic()
-                                            options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-                                            context.startActivity(intent, options.toBundle())
-                                            AppLog.d(TAG, "Launched Ko-fi link: $url")
-                                        } catch (e: Exception) {
-                                            AppLog.e(TAG, "Failed to open Ko-fi link: ${e.message}")
+                                            }.onSuccess {
+                                                val msgRes =
+                                                    if (mode == ConfigManager.ImportMode.BACKUP_RESTORE) {
+                                                        R.string.config_import_success
+                                                    } else {
+                                                        R.string.config_profile_import_success
+                                                    }
+                                                DialogToastManager.show(context.getString(msgRes))
+                                            }.onFailure { e ->
+                                                importError =
+                                                    e.message?.takeIf { it.isNotBlank() }
+                                                        ?: context.getString(R.string.config_error_unknown)
+                                            }
                                         }
                                     },
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        HelpIconButton(onClick = { showSettingsHelp = true })
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.surface),
-                )
-            },
-        ) { paddingValues ->
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                        .verticalScroll(rememberScrollState()),
-            ) {
-                if (updateAvailable && latestReleaseInfo != null) {
-                    UpdateAvailableBanner(
-                        tagName = latestReleaseInfo!!.tagName,
-                        accentColor = effectiveAccent,
-                        colors = colors,
-                        onUpdateClick = { showUpdatePromptDialog = true },
-                    )
-                }
-
-                SectionJumpRow(
-                    colors = colors,
-                    selectedSectionFilter = selectedSectionFilter,
-                    onSelectAll = { selectedSectionFilter = null },
-                    onSelectGeneral = { selectedSectionFilter = SettingsSectionFilter.GENERAL },
-                    onSelectInput = { selectedSectionFilter = SettingsSectionFilter.INPUT },
-                    onSelectAppearance = { selectedSectionFilter = SettingsSectionFilter.APPEARANCE },
-                    onSelectData = { selectedSectionFilter = SettingsSectionFilter.DATA },
-                    onSelectConfig = { selectedSectionFilter = SettingsSectionFilter.CONFIGURATION },
-                    onSelectUpdates = { selectedSectionFilter = SettingsSectionFilter.UPDATES },
-                    onSelectDiagnostics = { selectedSectionFilter = SettingsSectionFilter.DIAGNOSTICS },
-                )
-                if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.GENERAL) {
-                    SettingsSection(
-                        title = stringResource(R.string.settings_section_general),
-                        colors = colors,
-                    ) {
-                        ConfigActionRow(
-                            label = stringResource(R.string.settings_start_welcome_tour),
-                            description = stringResource(R.string.settings_start_welcome_tour_desc),
-                            buttonText = stringResource(R.string.settings_start_welcome_tour_btn),
-                            accentColor = effectiveAccent,
-                            onClick = {
-                                AppStateManager.closeActiveModal()
-                                OnboardingWizardManager.startWizard(force = true)
-                                onBack()
-                            },
-                        )
-                        AppDivider()
-                        PrivdSettingsCard(
-                            viewModel = viewModel,
-                            onShowWizard = { showPrivdWizard = true },
-                        )
-                        AppDivider()
-                        LanguagePickerRow(
-                            language = appLanguage,
-                            accentColor = effectiveAccent,
-                            onChanged = { viewModel.setAppLanguage(it) },
-                        )
-                        AppDivider()
-                        RememberSettingRow(
-                            label = stringResource(R.string.settings_exclude_from_recents),
-                            description = stringResource(R.string.settings_exclude_from_recents_desc),
-                            checked = excludeFromRecents,
-                            onCheckedChange = { viewModel.setExcludeFromRecents(it) },
-                        )
-                        AppDivider()
-                        SteamGridDbTokenRow(
-                            token = steamGridDbApiToken,
-                            onTokenChanged = { viewModel.setSteamGridDbApiToken(it) },
-                            accentColor = effectiveAccent,
-                        )
+                                )
+                            }
+                        }
                     }
-                }
 
-                if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.INPUT) {
-                    SettingsSection(
-                        title = stringResource(R.string.settings_section_input),
-                        colors = colors,
-                    ) {
-                        RememberSettingRow(
-                            label = stringResource(R.string.settings_gamepad_swap_face_buttons),
-                            description = stringResource(R.string.settings_gamepad_swap_face_buttons_desc),
-                            checked = gamepadSwapFaceButtons,
-                            onCheckedChange = { viewModel.setGamepadSwapFaceButtons(it) },
-                        )
-                        AppDivider()
-                        PrivdDeadzoneSettingsRow(
-                            deadzoneLeft = deadzoneLeft,
-                            deadzoneRight = deadzoneRight,
-                            onClick = { showDeadzoneDialog = true },
-                        )
-                    }
-                }
-
-                if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.APPEARANCE) {
-                    SettingsSection(
-                        title = stringResource(R.string.settings_section_appearance),
-                        colors = colors,
-                    ) {
-                        ThemePickerRow(
-                            themeMode = themeMode,
+                    SettingsSubPage.UPDATE_AVAILABLE -> {
+                        val releaseUrl =
+                            latestReleaseInfo?.htmlUrl?.ifBlank { "https://github.com/stormpanda/megingiard/releases" }
+                                ?: "https://github.com/stormpanda/megingiard/releases"
+                        val tagName = latestReleaseInfo?.tagName ?: ""
+                        GamepadDeck(
+                            breadcrumbs =
+                                listOf(
+                                    stringResource(R.string.settings_jump_updates),
+                                    stringResource(R.string.update_dialog_title, tagName),
+                                ),
                             accentColor = effectiveAccent,
-                            onChanged = { viewModel.setThemeMode(it) },
-                        )
-                        if (themeMode.supportsCustomAccent) {
-                            AppDivider()
-                            AccentColorRow(
-                                accentColor = accentColor,
-                                onClick = { showColorPicker = true },
-                                onPaletteClick = { showPresetPaletteDialog = true },
+                        ) {
+                            UpdateAvailableSubPage(
+                                tagName = tagName,
+                                effectiveAccent = effectiveAccent,
+                                onBackupAndOpen = {
+                                    pendingUpdateReleaseUrl = releaseUrl
+                                    selectedCategory = SettingsCategory.CONFIGURATION
+                                    subPageStack = listOf(SettingsSubPage.CREATE_BACKUP)
+                                },
+                                onOpenDirectly = {
+                                    launchUrlOnPrimaryDisplay(context, releaseUrl)
+                                    AppStateManager.closeActiveModal()
+                                    onBack()
+                                },
                             )
                         }
-                        AppDivider()
-                        OverlayPositionRow(
-                            overlayAtBottom = overlayAtBottom,
-                            onChanged = { viewModel.setOverlayAtBottom(it) },
-                        )
-                        AppDivider()
-                        OverlayFadeOutRow(
-                            fadeEnabled = overlayFadeOut,
-                            onChanged = { viewModel.setOverlayFadeOut(it) },
-                        )
-                    }
-                }
-
-                if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.DATA) {
-                    SettingsSection(
-                        title = stringResource(R.string.settings_section_data),
-                        colors = colors,
-                    ) {
-                        ConfigActionRow(
-                            label = stringResource(R.string.settings_restore_defaults),
-                            description = stringResource(R.string.settings_restore_defaults_desc),
-                            accentColor = effectiveAccent,
-                            onClick = { showRestoreDefaultsConfirm = true },
-                        )
-                        AppDivider()
-                        ConfigActionRow(
-                            label = stringResource(R.string.settings_reset_tutorials),
-                            description = stringResource(R.string.settings_reset_tutorials_desc),
-                            accentColor = effectiveAccent,
-                            onClick = {
-                                viewModel.resetAllTutorials()
-                                Toast
-                                    .makeText(
-                                        context,
-                                        context.getString(R.string.settings_reset_tutorials_toast),
-                                        Toast.LENGTH_SHORT,
-                                    ).show()
-                            },
-                        )
-                    }
-                }
-
-                if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.CONFIGURATION) {
-                    SettingsSection(
-                        title = stringResource(R.string.settings_section_config),
-                        colors = colors,
-                    ) {
-                        ConfigSection(
-                            onShowExportDialog = { showExportMetadataDialog = true },
-                            onShowRestoreBackupDialog = { showRestoreBackupDialog = true },
-                            onShowProfileExportDialog = { showProfileExportDialog = true },
-                            onImportPreviewReady = { showImportPreviewDialog = it },
-                            onAddToObtainium = {
-                                val deepLink = "obtainium://add/${GS_OBTAINIUM_REPO_URL}"
-                                try {
-                                    val intent =
-                                        Intent(Intent.ACTION_VIEW, Uri.parse(deepLink)).apply {
-                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                        }
-                                    val options = ActivityOptions.makeBasic()
-                                    options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-                                    context.startActivity(intent, options.toBundle())
-                                    AppLog.d(TAG, "Launched Obtainium deep link: $deepLink")
-                                } catch (e: Exception) {
-                                    AppLog.w(TAG, "Obtainium deep link failed: ${e.message}, falling back to browser")
-                                    try {
-                                        val browserIntent =
-                                            Intent(Intent.ACTION_VIEW, Uri.parse(GS_OBTAINIUM_FALLBACK_URL)).apply {
-                                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                            }
-                                        val options = ActivityOptions.makeBasic()
-                                        options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-                                        context.startActivity(browserIntent, options.toBundle())
-                                    } catch (ex: Exception) {
-                                        AppLog.e(TAG, "Failed to open browser fallback: ${ex.message}")
-                                    }
-                                }
-                            },
-                        )
-                    }
-                }
-
-                if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.UPDATES) {
-                    SettingsSection(
-                        title = stringResource(R.string.settings_section_updates),
-                        colors = colors,
-                    ) {
-                        UpdateCheckSection(
-                            autoUpdateCheckEnabled = autoUpdateCheckEnabled,
-                            isChecking = isCheckingUpdates,
-                            latestTag = latestReleaseInfo?.tagName ?: "",
-                            updateAvailable = updateAvailable,
-                            accentColor = effectiveAccent,
-                            onAutoUpdateCheckChanged = { viewModel.setAutoUpdateCheckEnabled(it) },
-                            onCheckForUpdates = { viewModel.checkForUpdatesManually() },
-                        )
-                    }
-                }
-
-                if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.DIAGNOSTICS) {
-                    SettingsSection(
-                        title = stringResource(R.string.settings_section_diagnostics),
-                        colors = colors,
-                    ) {
-                        LogLevelPickerRow(
-                            logLevel = logLevel,
-                            accentColor = effectiveAccent,
-                            onChanged = { viewModel.setLogLevel(it) },
-                        )
-                        AppDivider()
-                        SaveLogReportRow(
-                            accentColor = effectiveAccent,
-                            onClick = { viewModel.requestSaveLogReport() },
-                        )
                     }
                 }
             }
-        }
-
-        if (showPrivdWizard) {
-            PrivdSetupWizardDialog(
-                viewModel = viewModel,
-                onDismiss = { showPrivdWizard = false },
+        },
+    )
+    LaunchedEffect(importError, configImportError) {
+        val error = importError ?: configImportError
+        if (error != null) {
+            DialogToastManager.show(
+                message = error,
+                icon = Icons.Rounded.ErrorOutline,
+                isError = true,
             )
+            importError = null
+            ConfigManager.setInAppImportError(null)
         }
-        if (showDeadzoneDialog) {
-            val deadzoneLeft by viewModel.privdDeadzoneLeft.collectAsState()
-            val deadzoneRight by viewModel.privdDeadzoneRight.collectAsState()
-            DeadzoneDialog(
-                initialDeadzoneLeft = deadzoneLeft,
-                initialDeadzoneRight = deadzoneRight,
-                onConfirm = { left, right ->
-                    viewModel.setPrivdDeadzoneLeft(left)
-                    viewModel.setPrivdDeadzoneRight(right)
-                    showDeadzoneDialog = false
-                },
-                onDismiss = { showDeadzoneDialog = false },
-            )
-        }
-        if (showColorPicker) {
-            ColorWheelPicker(
-                initialColor = accentColor,
-                onColorSelected = { color ->
-                    viewModel.setAccentColor(color.toArgb())
-                    showColorPicker = false
-                },
-                onDismiss = { showColorPicker = false },
-            )
-        }
-        if (showPresetPaletteDialog) {
-            PresetAccentPaletteDialog(
-                currentAccent = accentColor,
-                colors = colors,
-                onColorSelected = { color ->
-                    viewModel.setAccentColor(color.toArgb())
-                    showPresetPaletteDialog = false
-                },
-                onDismiss = { showPresetPaletteDialog = false },
-            )
-        }
-        if (showRestoreBackupDialog) {
-            RestoreBackupSelectionDialog(
-                internalBackups = internalBackups,
-                colors = colors,
-                accentColor = effectiveAccent,
-                onConfirm = { backup ->
-                    showRestoreBackupDialog = false
-                    if (backup == null) {
-                        ConfigManager.requestImport(ConfigManager.ImportMode.BACKUP_RESTORE)
-                    } else {
-                        showImportPreviewDialog = backup.export
-                    }
-                },
-                onDismiss = { showRestoreBackupDialog = false },
-            )
-        }
-        if (showRestoreDefaultsConfirm) {
-            InTreeConfirmDialog(
-                title = stringResource(R.string.settings_restore_defaults),
-                text = stringResource(R.string.settings_restore_defaults_confirm),
-                confirmText =
-                    if (restoreCountdown > 0) {
-                        stringResource(R.string.settings_restore_defaults_confirm_countdown, restoreCountdown)
-                    } else {
-                        stringResource(R.string.settings_restore_defaults_confirm_button)
-                    },
-                confirmEnabled = restoreCountdown == 0,
-                dismissText = stringResource(R.string.settings_cancel),
-                colors = colors,
-                accentColor = effectiveAccent,
-                onConfirm = {
-                    showRestoreDefaultsConfirm = false
-                    MacroPadState.restoreDefaults()
-                },
-                onDismiss = { showRestoreDefaultsConfirm = false },
-            )
-        }
-        if (showExportMetadataDialog) {
-            ExportMetadataDialog(
-                defaultMetadata = ConfigManager.defaultMetadata(context),
-                colors = colors,
-                accentColor = effectiveAccent,
-                onConfirm = { metadata, includeBackgrounds ->
-                    showExportMetadataDialog = false
-                    ConfigManager.requestExport(
-                        metadata = metadata,
-                        filename = buildExportFilename(metadata),
-                        includeBackgrounds = includeBackgrounds,
-                    )
-                },
-                onDismiss = { showExportMetadataDialog = false },
-            )
-        }
-        if (showUpdatePromptDialog) {
-            UpdatePromptDialog(
-                tagName = latestReleaseInfo?.tagName ?: "",
-                colors = colors,
-                accentColor = effectiveAccent,
-                onBackupAndOpen = {
-                    showUpdatePromptDialog = false
-                    showExportMetadataDialog = true
-                    val url =
-                        latestReleaseInfo?.htmlUrl?.ifBlank { "https://github.com/stormpanda/megingiard/releases" }
-                            ?: "https://github.com/stormpanda/megingiard/releases"
-                    try {
-                        val intent =
-                            Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            }
-                        val options = ActivityOptions.makeBasic()
-                        options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-                        context.startActivity(intent, options.toBundle())
-                        AppLog.d(TAG, "Launched release URL on top display: $url")
-                    } catch (e: Exception) {
-                        AppLog.e(TAG, "Failed to launch release URL: ${e.message}")
-                    }
-                },
-                onOpenDirectly = {
-                    showUpdatePromptDialog = false
-                    val url =
-                        latestReleaseInfo?.htmlUrl?.ifBlank { "https://github.com/stormpanda/megingiard/releases" }
-                            ?: "https://github.com/stormpanda/megingiard/releases"
-                    try {
-                        val intent =
-                            Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            }
-                        val options = ActivityOptions.makeBasic()
-                        options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-                        context.startActivity(intent, options.toBundle())
-                        AppLog.d(TAG, "Launched release URL on top display: $url")
-                    } catch (e: Exception) {
-                        AppLog.e(TAG, "Failed to launch release URL: ${e.message}")
-                    }
-                },
-                onDismiss = { showUpdatePromptDialog = false },
-            )
-        }
-        if (showProfileExportDialog) {
-            ProfileExportDialog(
-                colors = colors,
-                accentColor = effectiveAccent,
-                onConfirm = { metadata, profile, includeBackgrounds ->
-                    showProfileExportDialog = false
-                    ConfigManager.requestProfileExport(
-                        metadata = metadata,
-                        profile = profile,
-                        filename = buildProfileExportFilename(metadata, profile.name),
-                        includeBackgrounds = includeBackgrounds,
-                    )
-                },
-                onDismiss = { showProfileExportDialog = false },
-            )
-        }
-        showImportPreviewDialog?.let { export ->
-            ImportPreviewDialog(
-                export = export,
-                importMode = pendingInAppImportMode,
-                colors = colors,
-                accentColor = effectiveAccent,
-                onConfirm = {
-                    showImportPreviewDialog = null
-                    val mode = pendingInAppImportMode
-                    coroutineScope.launch {
-                        runCatching {
-                            when (mode) {
-                                ConfigManager.ImportMode.BACKUP_RESTORE -> ConfigManager.applyImport(context, export)
-                                ConfigManager.ImportMode.PROFILE_SHARE -> ConfigManager.applyProfileImport(context, export)
-                            }
-                        }.onSuccess {
-                            when (mode) {
-                                ConfigManager.ImportMode.BACKUP_RESTORE -> importSuccess = true
-                                ConfigManager.ImportMode.PROFILE_SHARE -> profileImportSuccess = true
-                            }
-                        }.onFailure { e ->
-                            importError =
-                                e.message?.takeIf { it.isNotBlank() } ?: context.getString(R.string.config_error_unknown)
-                        }
-                        ConfigManager.clearInAppPendingImport()
-                    }
-                },
-                onDismiss = {
-                    showImportPreviewDialog = null
-                    ConfigManager.clearInAppPendingImport()
-                },
-            )
-        }
-        importError?.let { error ->
-            InTreeMessageDialog(
-                title = stringResource(R.string.config_error_title),
-                text = error,
-                buttonText = stringResource(R.string.config_ok),
-                colors = colors,
-                accentColor = effectiveAccent,
-                onDismiss = { importError = null },
-            )
-        }
-        if (importSuccess) {
-            InTreeMessageDialog(
-                title = stringResource(R.string.config_success_title),
-                text = stringResource(R.string.config_import_success),
-                buttonText = stringResource(R.string.config_ok),
-                colors = colors,
-                accentColor = effectiveAccent,
-                onDismiss = { importSuccess = false },
-            )
-        }
-        if (profileImportSuccess) {
-            InTreeMessageDialog(
-                title = stringResource(R.string.config_success_title),
-                text = stringResource(R.string.config_profile_import_success),
-                buttonText = stringResource(R.string.config_ok),
-                colors = colors,
-                accentColor = effectiveAccent,
-                onDismiss = { profileImportSuccess = false },
-            )
-        }
+    }
+    LaunchedEffect(exportResult) {
         when (val result = exportResult) {
             is ConfigManager.ExportResult.Success -> {
-                InTreeMessageDialog(
-                    title = stringResource(R.string.config_success_title),
-                    text = stringResource(R.string.config_export_success),
-                    buttonText = stringResource(R.string.config_ok),
-                    colors = colors,
-                    accentColor = effectiveAccent,
-                    onDismiss = { ConfigManager.clearExportResult() },
-                )
+                val urlToLaunch = pendingUpdateReleaseUrl
+                pendingUpdateReleaseUrl = null
+                val toastMsg =
+                    if (result.kind is ConfigManager.ExportKind.ProfileShare) {
+                        context.getString(R.string.config_profile_export_success)
+                    } else {
+                        context.getString(R.string.config_export_success)
+                    }
+                DialogToastManager.show(toastMsg)
+                ConfigManager.clearExportResult()
+                if (urlToLaunch != null) {
+                    launchUrlOnPrimaryDisplay(context, urlToLaunch)
+                    AppStateManager.closeActiveModal()
+                    onBack()
+                } else if (subPageStack.isNotEmpty()) {
+                    subPageStack = emptyList()
+                }
             }
 
             is ConfigManager.ExportResult.Failure -> {
-                InTreeMessageDialog(
-                    title = stringResource(R.string.config_error_title),
-                    text = result.message?.takeIf { it.isNotBlank() } ?: stringResource(R.string.config_error_unknown),
-                    buttonText = stringResource(R.string.config_ok),
-                    colors = colors,
-                    accentColor = effectiveAccent,
-                    onDismiss = { ConfigManager.clearExportResult() },
+                val errorMsg =
+                    result.message?.takeIf { it.isNotBlank() }
+                        ?: context.getString(R.string.config_error_unknown)
+                DialogToastManager.show(
+                    message = errorMsg,
+                    icon = Icons.Rounded.ErrorOutline,
+                    isError = true,
                 )
+                ConfigManager.clearExportResult()
             }
 
             null -> {}
         }
+    }
+    LaunchedEffect(logReportSaveResult) {
         when (val logResult = logReportSaveResult) {
             is LogReportManager.SaveResult.Success -> {
-                InTreeMessageDialog(
-                    title = stringResource(R.string.config_success_title),
-                    text = stringResource(R.string.log_report_save_success),
-                    buttonText = stringResource(R.string.config_ok),
-                    colors = colors,
-                    accentColor = effectiveAccent,
-                    onDismiss = { LogReportManager.clearSaveResult() },
-                )
+                DialogToastManager.show(context.getString(R.string.log_report_save_success))
+                LogReportManager.clearSaveResult()
             }
 
             is LogReportManager.SaveResult.Failure -> {
-                InTreeMessageDialog(
-                    title = stringResource(R.string.config_error_title),
-                    text = logResult.message?.takeIf { it.isNotBlank() } ?: stringResource(R.string.log_report_save_error),
-                    buttonText = stringResource(R.string.config_ok),
-                    colors = colors,
-                    accentColor = effectiveAccent,
-                    onDismiss = { LogReportManager.clearSaveResult() },
+                val errorMsg =
+                    logResult.message?.takeIf { it.isNotBlank() }
+                        ?: context.getString(R.string.log_report_save_error)
+                DialogToastManager.show(
+                    message = errorMsg,
+                    icon = Icons.Rounded.ErrorOutline,
+                    isError = true,
                 )
+                LogReportManager.clearSaveResult()
             }
 
             null -> {}
         }
-    }
-
-    GlobalSettingsHelpModal(
-        visible = showSettingsHelp,
-        onDismiss = { showSettingsHelp = false },
-    )
-}
-
-@Composable
-private fun GlobalSettingsHelpModal(
-    visible: Boolean,
-    onDismiss: () -> Unit,
-) {
-    HelpModal(
-        visible = visible,
-        title = stringResource(R.string.help_settings_title),
-        onDismiss = onDismiss,
-    ) {
-        HelpIntro(stringResource(R.string.help_settings_intro))
-
-        HelpSection(stringResource(R.string.settings_section_general))
-        HelpEntry(
-            label = stringResource(R.string.settings_start_welcome_tour),
-            description = stringResource(R.string.settings_start_welcome_tour_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.privd_title),
-            description = stringResource(R.string.help_settings_privd_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_language),
-            description = stringResource(R.string.help_settings_language_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_exclude_from_recents),
-            description = stringResource(R.string.help_settings_recents_desc),
-        )
-
-        HelpSection(stringResource(R.string.settings_section_input))
-        HelpEntry(
-            label = stringResource(R.string.settings_gamepad_swap_face_buttons),
-            description = stringResource(R.string.help_settings_gamepad_swap_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.privd_deadzone_title),
-            description = stringResource(R.string.help_settings_deadzone_desc),
-        )
-
-        HelpSection(stringResource(R.string.settings_section_appearance))
-        HelpEntry(
-            label = stringResource(R.string.settings_theme),
-            description = stringResource(R.string.help_settings_theme_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_accent_color),
-            description = stringResource(R.string.help_settings_accent_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_overlay_position),
-            description = stringResource(R.string.help_settings_overlay_position_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_overlay_fade_out),
-            description = stringResource(R.string.help_settings_overlay_fade_out_desc),
-        )
-
-        HelpSection(stringResource(R.string.settings_section_data))
-        HelpEntry(
-            label = stringResource(R.string.settings_restore_defaults),
-            description = stringResource(R.string.help_settings_restore_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_reset_tutorials),
-            description = stringResource(R.string.help_settings_reset_tutorials_desc),
-        )
-
-        HelpSection(stringResource(R.string.settings_section_config))
-        HelpEntry(
-            label = stringResource(R.string.settings_config_export),
-            description = stringResource(R.string.help_settings_export_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_config_import),
-            description = stringResource(R.string.help_settings_import_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_config_export_profile),
-            description = stringResource(R.string.help_settings_export_profile_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_config_import_profile),
-            description = stringResource(R.string.help_settings_import_profile_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_add_to_obtainium),
-            description = stringResource(R.string.help_settings_add_to_obtainium_desc),
-        )
-
-        HelpSection(stringResource(R.string.settings_section_updates))
-        HelpEntry(
-            label = stringResource(R.string.settings_auto_update_check),
-            description = stringResource(R.string.help_settings_auto_update_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_check_for_updates),
-            description = stringResource(R.string.help_settings_check_updates_desc),
-        )
-
-        HelpSection(stringResource(R.string.settings_section_diagnostics))
-        HelpEntry(
-            label = stringResource(R.string.settings_log_level),
-            description = stringResource(R.string.help_settings_log_level_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_save_log_report),
-            description = stringResource(R.string.help_settings_save_log_desc),
-        )
-    }
-}
-
-@Composable
-private fun SteamGridDbTokenRow(
-    token: String,
-    onTokenChanged: (String) -> Unit,
-    accentColor: Color,
-) {
-    val colors = LocalAppColors.current
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-    ) {
-        Text(
-            text = stringResource(R.string.settings_steamgriddb_token),
-            color = colors.onSurface,
-            style = MaterialTheme.typography.titleMedium,
-        )
-        Text(
-            text = stringResource(R.string.settings_steamgriddb_token_desc),
-            color = colors.onSurfaceSecondary,
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.padding(bottom = 8.dp),
-        )
-        AppTextField(
-            value = token,
-            onValueChange = onTokenChanged,
-            modifier = Modifier.fillMaxWidth(),
-            placeholder = {
-                Text(
-                    text = stringResource(R.string.settings_steamgriddb_token_placeholder),
-                    color = colors.onSurfaceSecondary,
-                )
-            },
-            singleLine = true,
-        )
     }
 }

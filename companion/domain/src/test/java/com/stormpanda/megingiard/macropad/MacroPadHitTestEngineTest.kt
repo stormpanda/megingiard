@@ -3,46 +3,35 @@ package com.stormpanda.megingiard.macropad
 import com.stormpanda.megingiard.input.ShellInputInjector
 import com.stormpanda.megingiard.input.TouchAction
 import com.stormpanda.megingiard.input.TouchCommand
+import com.stormpanda.megingiard.privd.PrivdClient
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.util.concurrent.LinkedBlockingQueue
 
 class MacroPadHitTestEngineTest {
-    private val dummyDpToPx: (Float) -> Float = { it }
+    private val engine = MacroPadHitTestEngine(buttonUnitDpToPx = { it })
     private val canvasW = 1000f
     private val canvasH = 1000f
 
     private lateinit var queue: LinkedBlockingQueue<TouchCommand>
     private var originalRunning: Boolean = false
 
-    @Before
-    fun setUp() {
-        // Use reflection to enable queueing in ShellInputInjector during tests
-        val superclass = ShellInputInjector::class.java.superclass
-        val runningField = superclass.getDeclaredField("running")
-        runningField.isAccessible = true
-        originalRunning = runningField.get(ShellInputInjector) as Boolean
-        runningField.set(ShellInputInjector, true)
-
-        val queueField = superclass.getDeclaredField("queue")
-        queueField.isAccessible = true
-        @Suppress("UNCHECKED_CAST")
-        queue = queueField.get(ShellInputInjector) as LinkedBlockingQueue<TouchCommand>
-        queue.clear()
-    }
-
-    @After
-    fun tearDown() {
-        val superclass = ShellInputInjector::class.java.superclass
-        val runningField = superclass.getDeclaredField("running")
-        runningField.isAccessible = true
-        runningField.set(ShellInputInjector, originalRunning)
-        queue.clear()
-    }
+    private val enabledProfile =
+        PadProfile(
+            id = "p",
+            name = "Test Profile",
+            enableKeyboard = true,
+            enableGamepad = true,
+            enableMouse = true,
+            enableTouch = true,
+        )
+    private val disabledTouchProfile = enabledProfile.copy(enableTouch = false)
 
     private fun centeredButton(action: PadAction) =
         PadButton(
@@ -56,176 +45,120 @@ class MacroPadHitTestEngineTest {
             hapticCustomAmplitude = 0,
         )
 
-    private val enabledProfile =
-        PadProfile(
-            id = "p",
-            name = "Test Profile",
-            enableKeyboard = true,
-            enableGamepad = true,
-            enableMouse = true,
-            enableTouch = true,
-        )
+    private val trackpointButton = centeredButton(PadAction.TrackpointMove(TrackpointSize.MEDIUM, TrackpointMode.VIRTUAL_TOUCH))
+    private val mouseButton = centeredButton(PadAction.TrackpointMove(TrackpointSize.MEDIUM, TrackpointMode.PHYSICAL_MOUSE))
 
-    private val disabledTouchProfile = enabledProfile.copy(enableTouch = false)
+    private fun assertTouch(
+        action: TouchAction,
+        x: Int,
+        y: Int,
+    ) {
+        val cmd = queue.poll()
+        assertNotNull(cmd)
+        assertEquals(action, cmd!!.action)
+        assertEquals(x, cmd.x)
+        assertEquals(y, cmd.y)
+    }
+
+    @Before
+    fun setUp() {
+        val superclass = ShellInputInjector::class.java.superclass
+        val runningField = superclass.getDeclaredField("running").apply { isAccessible = true }
+        originalRunning = runningField.get(ShellInputInjector) as Boolean
+        runningField.set(ShellInputInjector, true)
+
+        val queueField = superclass.getDeclaredField("queue").apply { isAccessible = true }
+        @Suppress("UNCHECKED_CAST")
+        queue = queueField.get(ShellInputInjector) as LinkedBlockingQueue<TouchCommand>
+        queue.clear()
+    }
+
+    @After
+    fun tearDown() {
+        val superclass = ShellInputInjector::class.java.superclass
+        superclass.getDeclaredField("running").apply {
+            isAccessible = true
+            set(ShellInputInjector, originalRunning)
+        }
+        queue.clear()
+        PrivdClient.isConnectedForTest = null
+    }
 
     @Test
     fun `virtual touch trackpoint injects DOWN event at center initially`() {
-        val engine = MacroPadHitTestEngine(dummyDpToPx)
-        val button = centeredButton(PadAction.TrackpointMove(TrackpointSize.MEDIUM, TrackpointMode.VIRTUAL_TOUCH))
-
-        val blocked = engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(button), enabledProfile, false)
+        val blocked = engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton), enabledProfile, false)
         assertNull(blocked)
-
         assertEquals(1, queue.size)
-        val cmd = queue.poll()
-        assertNotNull(cmd)
-        assertEquals(TouchAction.DOWN, cmd!!.action)
-        // Center of screen (0.5, 0.5)
-        // px = (1 - 0.5) * 1080 = 540
-        // py = 0.5 * 1920 = 960
-        assertEquals(540, cmd.x)
-        assertEquals(960, cmd.y)
+        assertTouch(TouchAction.DOWN, 540, 960)
     }
 
     @Test
     fun `virtual touch trackpoint accumulates moves and coerces bounds`() {
-        val engine = MacroPadHitTestEngine(dummyDpToPx)
-        val button = centeredButton(PadAction.TrackpointMove(TrackpointSize.MEDIUM, TrackpointMode.VIRTUAL_TOUCH))
-
-        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(button), enabledProfile, false)
+        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton), enabledProfile, false)
         queue.clear()
 
-        // Move 1: deltaX = 50f, deltaY = -20f
-        // dxNormalized = (50 * 3) / 1920 = 150 / 1920 = 0.078125
-        // dyNormalized = (-20 * 3) / 1080 = -60 / 1080 = -0.05555556
-        // cursorX = 0.5 + 0.078125 = 0.578125
-        // cursorY = 0.5 - 0.05555556 = 0.44444444
-        // px = (1 - 0.44444444) * 1080 = 600
-        // py = 0.578125 * 1920 = 1110
-        engine.onMove(0L, 550f, 480f, 50f, -20f, listOf(button), enabledProfile)
+        engine.onMove(0L, 550f, 480f, 50f, -20f, listOf(trackpointButton), enabledProfile)
         assertEquals(1, queue.size)
-        val cmd1 = queue.poll()
-        assertNotNull(cmd1)
-        assertEquals(TouchAction.MOVE, cmd1!!.action)
-        assertEquals(600, cmd1.x)
-        assertEquals(1110, cmd1.y)
+        assertTouch(TouchAction.MOVE, 600, 1110)
 
-        // Move 2: Drag way off screen to test unclamped coordinate tracking
-        // deltaX = 1000f, deltaY = 1000f -> unclamped accumulates to (2.140625, 3.222222)
-        // Clamped to (1.5, 1.5) -> px = (1 - 1.5) * 1080 = -540, py = 1.5 * 1920 = 2880
-        engine.onMove(0L, 1550f, 1480f, 1000f, 1000f, listOf(button), enabledProfile)
+        engine.onMove(0L, 1550f, 1480f, 1000f, 1000f, listOf(trackpointButton), enabledProfile)
         assertEquals(1, queue.size)
-        val cmd2 = queue.poll()
-        assertNotNull(cmd2)
-        assertEquals(TouchAction.MOVE, cmd2!!.action)
-        assertEquals(-540, cmd2.x)
-        assertEquals(2880, cmd2.y)
+        assertTouch(TouchAction.MOVE, -540, 2880)
 
-        // Move 3: Drag in opposite direction to test direction change snap
-        // deltaX = -50f, deltaY = -50f -> Direction changes!
-        // dxNormalized = (-50 * 3) / 1920 = -0.078125
-        // dyNormalized = (-50 * 3) / 1080 = -0.13888889
-        // unclampedCursorX snaps to virtualCursorX (1.0f) -> unclampedCursorX = 1.0f - 0.078125 = 0.921875
-        // unclampedCursorY snaps to virtualCursorY (1.0f) -> unclampedCursorY = 1.0f - 0.13888889 = 0.8611111
-        // px = (1 - 0.8611111) * 1080 = 150
-        // py = 0.921875 * 1920 = 1770
-        engine.onMove(0L, 1500f, 1430f, -50f, -50f, listOf(button), enabledProfile)
+        engine.onMove(0L, 1500f, 1430f, -50f, -50f, listOf(trackpointButton), enabledProfile)
         assertEquals(1, queue.size)
-        val cmd3 = queue.poll()
-        assertNotNull(cmd3)
-        assertEquals(TouchAction.MOVE, cmd3!!.action)
-        assertEquals(150, cmd3.x)
-        assertEquals(1770, cmd3.y)
+        assertTouch(TouchAction.MOVE, 150, 1770)
     }
 
     @Test
     fun `virtual touch trackpoint release injects UP event at last position`() {
-        val engine = MacroPadHitTestEngine(dummyDpToPx)
-        val button = centeredButton(PadAction.TrackpointMove(TrackpointSize.MEDIUM, TrackpointMode.VIRTUAL_TOUCH))
-
-        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(button), enabledProfile, false)
-        engine.onMove(0L, 550f, 480f, 50f, -20f, listOf(button), enabledProfile)
+        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton), enabledProfile, false)
+        engine.onMove(0L, 550f, 480f, 50f, -20f, listOf(trackpointButton), enabledProfile)
         queue.clear()
 
-        engine.onRelease(0L, listOf(button), enabledProfile)
+        engine.onRelease(0L, listOf(trackpointButton), enabledProfile)
         assertEquals(1, queue.size)
-        val cmd = queue.poll()
-        assertNotNull(cmd)
-        assertEquals(TouchAction.UP, cmd!!.action)
-        assertEquals(600, cmd.x)
-        assertEquals(1110, cmd.y)
+        assertTouch(TouchAction.UP, 600, 1110)
     }
 
     @Test
     fun `virtual touch trackpoint keeps internally tracked position clamped on release`() {
-        val engine = MacroPadHitTestEngine(dummyDpToPx)
-        val button = centeredButton(PadAction.TrackpointMove(TrackpointSize.MEDIUM, TrackpointMode.VIRTUAL_TOUCH))
-
-        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(button), enabledProfile, false)
+        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton), enabledProfile, false)
         queue.clear()
 
-        // Move way off screen: unclampedCursor should accumulate to (2.0625, 3.277778)
-        // Clamps injected touch to (1.5, 1.5) i.e. (-540, 2880)
-        engine.onMove(0L, 1500f, 1500f, 1000f, 1000f, listOf(button), enabledProfile)
-        val cmdMove = queue.poll()!!
-        assertEquals(TouchAction.MOVE, cmdMove.action)
-        assertEquals(-540, cmdMove.x)
-        assertEquals(2880, cmdMove.y)
+        engine.onMove(0L, 1500f, 1500f, 1000f, 1000f, listOf(trackpointButton), enabledProfile)
+        assertTouch(TouchAction.MOVE, -540, 2880)
 
-        // Release: should inject UP at clamped (1.5, 1.5) i.e. (-540, 2880)
-        engine.onRelease(0L, listOf(button), enabledProfile)
-        val cmdRelease = queue.poll()!!
-        assertEquals(TouchAction.UP, cmdRelease.action)
-        assertEquals(-540, cmdRelease.x)
-        assertEquals(2880, cmdRelease.y)
+        engine.onRelease(0L, listOf(trackpointButton), enabledProfile)
+        assertTouch(TouchAction.UP, -540, 2880)
 
-        // Start a new swipe: should DOWN at clamped (1.0f, 1.0f) i.e. (0, 1920)
-        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(button), enabledProfile, false)
-        val cmdPress = queue.poll()!!
-        assertEquals(TouchAction.DOWN, cmdPress.action)
-        assertEquals(0, cmdPress.x)
-        assertEquals(1920, cmdPress.y)
+        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton), enabledProfile, false)
+        assertTouch(TouchAction.DOWN, 0, 1920)
     }
 
     @Test
     fun `virtual touch trackpoint remembers position across swipes`() {
-        val engine = MacroPadHitTestEngine(dummyDpToPx)
-        val button = centeredButton(PadAction.TrackpointMove(TrackpointSize.MEDIUM, TrackpointMode.VIRTUAL_TOUCH))
-
-        // First swipe
-        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(button), enabledProfile, false)
-        engine.onMove(0L, 550f, 480f, 50f, -20f, listOf(button), enabledProfile)
-        engine.onRelease(0L, listOf(button), enabledProfile)
+        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton), enabledProfile, false)
+        engine.onMove(0L, 550f, 480f, 50f, -20f, listOf(trackpointButton), enabledProfile)
+        engine.onRelease(0L, listOf(trackpointButton), enabledProfile)
         queue.clear()
 
-        // Second swipe starts: should DOWN at (0.578125, 0.44444444) -> (600, 1110)
-        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(button), enabledProfile, false)
+        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton), enabledProfile, false)
         assertEquals(1, queue.size)
-        val cmd = queue.poll()
-        assertNotNull(cmd)
-        assertEquals(TouchAction.DOWN, cmd!!.action)
-        assertEquals(600, cmd.x)
-        assertEquals(1110, cmd.y)
+        assertTouch(TouchAction.DOWN, 600, 1110)
     }
 
     @Test
     fun `physical mouse trackpoint does not inject touch events`() {
-        val engine = MacroPadHitTestEngine(dummyDpToPx)
-        val button = centeredButton(PadAction.TrackpointMove(TrackpointSize.MEDIUM, TrackpointMode.PHYSICAL_MOUSE))
-
-        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(button), enabledProfile, false)
-        engine.onMove(0L, 550f, 480f, 50f, -20f, listOf(button), enabledProfile)
-        engine.onRelease(0L, listOf(button), enabledProfile)
-
+        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(mouseButton), enabledProfile, false)
+        engine.onMove(0L, 550f, 480f, 50f, -20f, listOf(mouseButton), enabledProfile)
+        engine.onRelease(0L, listOf(mouseButton), enabledProfile)
         assertEquals(0, queue.size)
     }
 
     @Test
     fun `disabled touch profile blocks virtual touch trackpoint`() {
-        val engine = MacroPadHitTestEngine(dummyDpToPx)
-        val button = centeredButton(PadAction.TrackpointMove(TrackpointSize.MEDIUM, TrackpointMode.VIRTUAL_TOUCH))
-
-        val blocked = engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(button), disabledTouchProfile, false)
+        val blocked = engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton), disabledTouchProfile, false)
         assertNotNull(blocked)
         assertEquals("btn-test", blocked?.id)
         assertEquals(0, queue.size)
@@ -233,51 +166,100 @@ class MacroPadHitTestEngineTest {
 
     @Test
     fun `releaseAll with active virtual touch trackpoint injects UP event`() {
-        val engine = MacroPadHitTestEngine(dummyDpToPx)
-        val button = centeredButton(PadAction.TrackpointMove(TrackpointSize.MEDIUM, TrackpointMode.VIRTUAL_TOUCH))
-
-        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(button), enabledProfile, false)
-        engine.onMove(0L, 550f, 480f, 50f, -20f, listOf(button), enabledProfile)
+        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton), enabledProfile, false)
+        engine.onMove(0L, 550f, 480f, 50f, -20f, listOf(trackpointButton), enabledProfile)
         queue.clear()
 
-        engine.releaseAll(listOf(button))
+        engine.releaseAll(listOf(trackpointButton))
         assertEquals(1, queue.size)
-        val cmd = queue.poll()
-        assertNotNull(cmd)
-        assertEquals(TouchAction.UP, cmd!!.action)
-        assertEquals(600, cmd.x)
-        assertEquals(1110, cmd.y)
+        assertTouch(TouchAction.UP, 600, 1110)
     }
 
     @Test
     fun `hitTest returns correct value when coordinates fall inside and outside button bounds`() {
-        val engine = MacroPadHitTestEngine(dummyDpToPx)
-        // centered button uses size (cols=1, rows=1) which resolves to size 60px x 60px because of dummyDpToPx returning value directly.
-        // posX = 0.5f -> 500px, posY = 0.5f -> 500px.
-        // Bounds should be [470, 530] for both X and Y.
         val button = centeredButton(PadAction.KeyboardKey(keycode = 1, label = "Test"))
-
-        // Inside
-        org.junit.Assert.assertTrue(engine.hitTest(500f, 500f, canvasW, canvasH, listOf(button), false))
-        org.junit.Assert.assertTrue(engine.hitTest(480f, 520f, canvasW, canvasH, listOf(button), false))
-
-        // Outside
-        org.junit.Assert.assertFalse(engine.hitTest(400f, 500f, canvasW, canvasH, listOf(button), false))
-        org.junit.Assert.assertFalse(engine.hitTest(500f, 540f, canvasW, canvasH, listOf(button), false))
+        assertTrue(engine.hitTest(500f, 500f, canvasW, canvasH, listOf(button), false))
+        assertTrue(engine.hitTest(480f, 520f, canvasW, canvasH, listOf(button), false))
+        assertFalse(engine.hitTest(400f, 500f, canvasW, canvasH, listOf(button), false))
+        assertFalse(engine.hitTest(500f, 540f, canvasW, canvasH, listOf(button), false))
     }
 
     @Test
     fun `isPointerTracked returns true when pointer is tracked and false otherwise`() {
-        val engine = MacroPadHitTestEngine(dummyDpToPx)
         val button = centeredButton(PadAction.KeyboardKey(keycode = 1, label = "Test"))
         val pointerId = 42L
 
-        org.junit.Assert.assertFalse(engine.isPointerTracked(pointerId))
-
+        assertFalse(engine.isPointerTracked(pointerId))
         engine.onPress(pointerId, 500f, 500f, canvasW, canvasH, listOf(button), enabledProfile, false)
-        org.junit.Assert.assertTrue(engine.isPointerTracked(pointerId))
-
+        assertTrue(engine.isPointerTracked(pointerId))
         engine.onRelease(pointerId, listOf(button), enabledProfile)
-        org.junit.Assert.assertFalse(engine.isPointerTracked(pointerId))
+        assertFalse(engine.isPointerTracked(pointerId))
+    }
+
+    @Test
+    fun `macro button is disabled when Privileged Mode is disconnected`() {
+        val macroAction = PadAction.Macro("macro-1")
+
+        PrivdClient.isConnectedForTest = false
+        assertTrue(MacroPadHitTestEngine.isDeviceDisabled(macroAction, enabledProfile))
+        assertEquals(DisabledReason.MACRO_PRIVD, MacroPadHitTestEngine.deviceDisabledReason(macroAction, enabledProfile))
+
+        PrivdClient.isConnectedForTest = true
+        assertFalse(MacroPadHitTestEngine.isDeviceDisabled(macroAction, enabledProfile))
+        assertNull(MacroPadHitTestEngine.deviceDisabledReason(macroAction, enabledProfile))
+    }
+
+    @Test
+    fun `deviceDisabledReason returns correct reason for each disabled device type`() {
+        val kbAction = PadAction.KeyboardKey(keycode = 1, label = "K")
+        val gpAction = PadAction.GamepadButton(btnCode = 304, label = "A")
+        val mouseAction = PadAction.MouseButton(button = MouseButton.LEFT)
+
+        val disabledKbProfile = enabledProfile.copy(enableKeyboard = false)
+        val disabledGpProfile = enabledProfile.copy(enableGamepad = false)
+        val disabledMouseProfile = enabledProfile.copy(enableMouse = false)
+
+        assertEquals(DisabledReason.KEYBOARD, MacroPadHitTestEngine.deviceDisabledReason(kbAction, disabledKbProfile))
+        assertEquals(DisabledReason.GAMEPAD, MacroPadHitTestEngine.deviceDisabledReason(gpAction, disabledGpProfile))
+        assertEquals(DisabledReason.MOUSE, MacroPadHitTestEngine.deviceDisabledReason(mouseAction, disabledMouseProfile))
+    }
+
+    @Test
+    fun `scroll wheel button handles press, drag, and release`() {
+        val scrollBtn = centeredButton(PadAction.ScrollWheel)
+        engine.onPress(10L, 500f, 500f, canvasW, canvasH, listOf(scrollBtn), enabledProfile, false)
+        assertTrue(engine.isPointerTracked(10L))
+
+        engine.onMove(10L, 500f, 450f, 0f, -50f, listOf(scrollBtn), enabledProfile)
+        engine.onMove(10L, 500f, 550f, 0f, 100f, listOf(scrollBtn), enabledProfile)
+
+        engine.onRelease(10L, listOf(scrollBtn), enabledProfile)
+        assertFalse(engine.isPointerTracked(10L))
+    }
+
+    @Test
+    fun `haptic callback is invoked on button press with non-off strength`() {
+        var hapticTriggered = false
+        val engineWithHaptic =
+            MacroPadHitTestEngine(
+                buttonUnitDpToPx = { it },
+                onHapticFeedback = { id, strength, duration, amplitude, magnitude ->
+                    hapticTriggered = true
+                    assertEquals("btn-haptic", id)
+                    assertEquals(HapticStrength.MEDIUM, strength)
+                },
+            )
+        val hapticBtn =
+            PadButton(
+                id = "btn-haptic",
+                label = "H",
+                posX = 0.5f,
+                posY = 0.5f,
+                action = PadAction.KeyboardKey(keycode = 30, label = "H"),
+                hapticStrength = HapticStrength.MEDIUM,
+            )
+
+        engineWithHaptic.onPress(5L, 500f, 500f, canvasW, canvasH, listOf(hapticBtn), enabledProfile, false)
+        assertTrue(hapticTriggered)
     }
 }

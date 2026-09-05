@@ -60,3 +60,25 @@ fun Int.floorMod(other: Int): Int {
     val r = this % other
     return if ((r xor other) < 0 && r != 0) r + other else r
 }
+
+/**
+ * Returns the previous element in this list cycling to the last element when at the start,
+ * or [current] if the list is empty.
+ */
+fun <T> List<T>.prevItem(current: T): T {
+    if (isEmpty()) return current
+    val idx = indexOf(current)
+    if (idx < 0) return first()
+    return this[(idx - 1 + size) % size]
+}
+
+/**
+ * Returns the next element in this list cycling to the first element when at the end,
+ * or [current] if the list is empty.
+ */
+fun <T> List<T>.nextItem(current: T): T {
+    if (isEmpty()) return current
+    val idx = indexOf(current)
+    if (idx < 0) return first()
+    return this[(idx + 1) % size]
+}

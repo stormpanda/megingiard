@@ -6,7 +6,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.BatteryManager
-import android.os.Build
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -37,7 +36,6 @@ import androidx.compose.material.icons.rounded.Gamepad
 import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.TrackChanges
 import androidx.compose.material.icons.rounded.Visibility
@@ -54,7 +52,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -71,6 +68,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CompanionViewMode
@@ -79,11 +77,8 @@ import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.catalog.InstalledAppsManager
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import com.stormpanda.megingiard.macropad.MacroPadState
-import com.stormpanda.megingiard.macropad.MaterialSymbol
-import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.macropad.ProfileAssociation
-import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.session.ActiveGameSession
 import com.stormpanda.megingiard.session.EmulatorDetectionFunnel
 import com.stormpanda.megingiard.update.UpdateManager
@@ -91,7 +86,6 @@ import kotlinx.coroutines.delay
 import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.util.UUID
 
 private const val TAG = "IntegrationHomeScreen"
 
@@ -102,7 +96,6 @@ private val IH_PADDING_SCREEN = 20.dp
 private val IH_PADDING_HEADER_TOP = 12.dp
 private val IH_PADDING_HEADER_BOTTOM = 8.dp
 private val IH_SPACING_CARD = 12.dp
-private val IH_SPACING_SECTION = 16.dp
 private val IH_SPACING_GRID = 12.dp
 private val IH_HERO_ICON_SIZE = 32.dp
 private val IH_HERO_ICON_BG_SIZE = 56.dp
@@ -125,6 +118,7 @@ private const val IH_BATTERY_MAX = 100
 
 private val IH_BORDER_WIDTH = 1.dp
 private val IH_BUTTON_CORNER_RADIUS = 10.dp
+private val IH_BUTTON_SHAPE = RoundedCornerShape(IH_BUTTON_CORNER_RADIUS)
 private val IH_BUTTON_ICON_SIZE = 16.dp
 private val IH_BUTTON_ICON_SPACING = 6.dp
 private const val IH_HIGHLIGHT_ALPHA = 0.15f
@@ -136,27 +130,27 @@ private val IH_BATTERY_LOW_COLOR = Color(0xFFE57373)
 fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
     val colors = LocalAppColors.current
 
-    val clientPackage by AppStateManager.externalClientPackage.collectAsState()
-    val isClientActive by AppStateManager.isExternalClientActive.collectAsState()
-    val activeProfile by MacroPadState.activeProfile.collectAsState()
-    val hoveredAppLabel by AppStateManager.hoveredAppLabel.collectAsState()
+    val clientPackage by AppStateManager.externalClientPackage.collectAsStateWithLifecycle()
+    val isClientActive by AppStateManager.isExternalClientActive.collectAsStateWithLifecycle()
+    val activeProfile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
+    val hoveredAppLabel by AppStateManager.hoveredAppLabel.collectAsStateWithLifecycle()
 
-    val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsState()
-    val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsState()
-    val isGlobalSettingsOpen by AppStateManager.isGlobalSettingsOpen.collectAsState()
-    val isUpdateAvailable by UpdateManager.updateAvailable.collectAsState()
+    val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsStateWithLifecycle()
+    val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsStateWithLifecycle()
+    val isGlobalSettingsOpen by AppStateManager.isGlobalSettingsOpen.collectAsStateWithLifecycle()
+    val isUpdateAvailable by UpdateManager.updateAvailable.collectAsStateWithLifecycle()
 
-    val hoveredPrimaryColor by AppStateManager.hoveredAppPrimaryColor.collectAsState()
-    val hoveredSecondaryColor by AppStateManager.hoveredAppSecondaryColor.collectAsState()
-    val hoveredPackage by AppStateManager.hoveredAppPackageName.collectAsState()
-    val hoveredRomPath by AppStateManager.hoveredRomPath.collectAsState()
-    val hoveredRomIdentifier by AppStateManager.hoveredRomIdentifier.collectAsState()
-    val hoveredSystemId by AppStateManager.hoveredSystemId.collectAsState()
-    val activeSession by EmulatorDetectionFunnel.activeSession.collectAsState()
-    val lastDetectedSession by EmulatorDetectionFunnel.lastDetectedSession.collectAsState()
-    val focusedAppPackageName by AppStateManager.focusedAppPackageName.collectAsState()
-    val focusedRomPath by AppStateManager.focusedRomPath.collectAsState()
-    val focusedRomIdentifier by AppStateManager.focusedRomIdentifier.collectAsState()
+    val hoveredPrimaryColor by AppStateManager.hoveredAppPrimaryColor.collectAsStateWithLifecycle()
+    val hoveredSecondaryColor by AppStateManager.hoveredAppSecondaryColor.collectAsStateWithLifecycle()
+    val hoveredPackage by AppStateManager.hoveredAppPackageName.collectAsStateWithLifecycle()
+    val hoveredRomPath by AppStateManager.hoveredRomPath.collectAsStateWithLifecycle()
+    val hoveredRomIdentifier by AppStateManager.hoveredRomIdentifier.collectAsStateWithLifecycle()
+    val hoveredSystemId by AppStateManager.hoveredSystemId.collectAsStateWithLifecycle()
+    val activeSession by EmulatorDetectionFunnel.activeSession.collectAsStateWithLifecycle()
+    val lastDetectedSession by EmulatorDetectionFunnel.lastDetectedSession.collectAsStateWithLifecycle()
+    val focusedAppPackageName by AppStateManager.focusedAppPackageName.collectAsStateWithLifecycle()
+    val focusedRomPath by AppStateManager.focusedRomPath.collectAsStateWithLifecycle()
+    val focusedRomIdentifier by AppStateManager.focusedRomIdentifier.collectAsStateWithLifecycle()
 
     val isGameFocus = isClientActive && clientPackage?.startsWith(MegingiardIpcContract.GAMEFOCUS_PACKAGE) == true
 
@@ -318,8 +312,8 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
             ) {
                 // 1. Featured Hero Game / Companion Card
                 val context = LocalContext.current
-                val profiles by MacroPadState.profiles.collectAsState()
-                val installedApps by InstalledAppsManager.installedApps.collectAsState()
+                val profiles by MacroPadState.profiles.collectAsStateWithLifecycle()
+                val installedApps by InstalledAppsManager.installedApps.collectAsStateWithLifecycle()
 
                 val targetInfo =
                     remember(
@@ -590,13 +584,7 @@ private fun HeroCompanionCard(
                             Button(
                                 onClick = {
                                     MacroPadState.setActiveProfileId(associatedProfile.id)
-                                    val currentMode = AppStateManager.companionViewMode.value
-                                    val focusedPkg = AppStateManager.focusedAppPackageName.value
-                                    val focusedRom = AppStateManager.focusedRomPath.value
-                                    val matchesFocused = associatedProfile.matches(focusedPkg, focusedRom, isActiveProfile = true)
-                                    if (currentMode != CompanionViewMode.AUTO || !matchesFocused) {
-                                        AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
-                                    }
+                                    AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
                                 },
                                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
                                 colors =
@@ -604,7 +592,7 @@ private fun HeroCompanionCard(
                                         containerColor = colors.accent,
                                         contentColor = colors.onAccent,
                                     ),
-                                shape = RoundedCornerShape(IH_BUTTON_CORNER_RADIUS),
+                                shape = IH_BUTTON_SHAPE,
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -634,7 +622,7 @@ private fun HeroCompanionCard(
                                     ButtonDefaults.outlinedButtonColors(
                                         contentColor = colors.onSurface,
                                     ),
-                                shape = RoundedCornerShape(IH_BUTTON_CORNER_RADIUS),
+                                shape = IH_BUTTON_SHAPE,
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -656,32 +644,25 @@ private fun HeroCompanionCard(
                         Row(horizontalArrangement = Arrangement.spacedBy(IH_BUTTON_SPACING)) {
                             Button(
                                 onClick = {
-                                    val newProfileId = UUID.randomUUID().toString()
-                                    val defaultLayoutId = UUID.randomUUID().toString()
+                                    val targetRom = targetRomIdentifier ?: targetRomPath
+                                    val romFileName = targetRom?.substringAfterLast('/')?.substringAfterLast('\\')
                                     val assoc =
                                         ProfileAssociation(
                                             packageName = targetPackage,
                                             systemId = targetSystemId,
-                                            romFileName = targetRomPath?.substringAfterLast('/'),
+                                            romFileName = romFileName,
                                         )
-                                    val newProfile =
-                                        PadProfile(
-                                            id = newProfileId,
-                                            name = targetLabel ?: context.getString(R.string.integration_home_new_profile),
-                                            association = assoc,
-                                            layouts =
-                                                listOf(
-                                                    PadLayout(
-                                                        id = defaultLayoutId,
-                                                        name = context.getString(R.string.integration_home_default_layout),
-                                                        mirrorCutouts = listOf(ScreenCutout.createDefault()),
-                                                    ),
+                                    AppStateManager.openPrimaryModal(
+                                        PrimaryModalConfig(
+                                            type = PrimaryModalType.PROFILE_SETTINGS,
+                                            payload =
+                                                PrimaryModalPayload.ProfileSettings(
+                                                    isNewProfile = true,
+                                                    presetName = targetLabel,
+                                                    association = assoc,
                                                 ),
-                                            activeLayoutId = defaultLayoutId,
-                                        )
-                                    MacroPadState.addProfile(newProfile)
-                                    MacroPadState.setActiveProfileId(newProfileId)
-                                    AppStateManager.setEditorActive(true)
+                                        ),
+                                    )
                                 },
                                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
                                 colors =
@@ -689,7 +670,7 @@ private fun HeroCompanionCard(
                                         containerColor = colors.accent,
                                         contentColor = colors.onAccent,
                                     ),
-                                shape = RoundedCornerShape(IH_BUTTON_CORNER_RADIUS),
+                                shape = IH_BUTTON_SHAPE,
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -717,7 +698,7 @@ private fun HeroCompanionCard(
                                         ButtonDefaults.outlinedButtonColors(
                                             contentColor = colors.onSurface,
                                         ),
-                                    shape = RoundedCornerShape(IH_BUTTON_CORNER_RADIUS),
+                                    shape = IH_BUTTON_SHAPE,
                                 ) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
@@ -756,11 +737,13 @@ private fun HeroCompanionCard(
                                                 text = { Text(profile.name, color = colors.onSurface) },
                                                 onClick = {
                                                     expandedDropdown = false
+                                                    val targetRom = targetRomIdentifier ?: targetRomPath
+                                                    val romFileName = targetRom?.substringAfterLast('/')?.substringAfterLast('\\')
                                                     val assoc =
                                                         ProfileAssociation(
                                                             packageName = targetPackage,
                                                             systemId = targetSystemId,
-                                                            romFileName = targetRomPath?.substringAfterLast('/'),
+                                                            romFileName = romFileName,
                                                         )
                                                     val updatedProfile = profile.copy(association = assoc)
                                                     MacroPadState.updateProfile(updatedProfile)
@@ -797,13 +780,7 @@ private fun HeroCompanionCard(
 
                     Button(
                         onClick = {
-                            val currentMode = AppStateManager.companionViewMode.value
-                            val focusedPkg = AppStateManager.focusedAppPackageName.value
-                            val focusedRom = AppStateManager.focusedRomPath.value
-                            val matchesFocused = activeProfile.matches(focusedPkg, focusedRom, isActiveProfile = true)
-                            if (currentMode != CompanionViewMode.AUTO || !matchesFocused) {
-                                AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
-                            }
+                            AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
                         },
                         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
                         colors =
@@ -811,7 +788,7 @@ private fun HeroCompanionCard(
                                 containerColor = colors.accent,
                                 contentColor = colors.onAccent,
                             ),
-                        shape = RoundedCornerShape(IH_BUTTON_CORNER_RADIUS),
+                        shape = IH_BUTTON_SHAPE,
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -862,14 +839,7 @@ private fun CompanionToolsDeck(
                 colors = colors,
                 modifier = Modifier.weight(1f),
                 onClick = {
-                    val profile = activeProfile
-                    val currentMode = AppStateManager.companionViewMode.value
-                    val focusedPkg = AppStateManager.focusedAppPackageName.value
-                    val focusedRom = AppStateManager.focusedRomPath.value
-                    val matchesFocused = profile != null && profile.matches(focusedPkg, focusedRom, isActiveProfile = true)
-                    if (currentMode != CompanionViewMode.AUTO || !matchesFocused) {
-                        AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
-                    }
+                    AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
                 },
             )
 
@@ -1004,35 +974,30 @@ private fun rememberBatteryState(): BatteryState {
     var batteryState by remember { mutableStateOf(BatteryState(IH_BATTERY_MAX, false)) }
 
     DisposableEffect(context) {
+        fun extractBatteryState(intent: Intent?): BatteryState {
+            if (intent == null) return BatteryState(IH_BATTERY_MAX, false)
+            val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+            val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+            val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+            val isCharging =
+                status == BatteryManager.BATTERY_STATUS_CHARGING ||
+                    status == BatteryManager.BATTERY_STATUS_FULL
+            val pct = if (level >= 0 && scale > 0) (level * IH_BATTERY_MAX / scale) else IH_BATTERY_MAX
+            return BatteryState(pct, isCharging)
+        }
+
         val receiver =
             object : BroadcastReceiver() {
                 override fun onReceive(
                     context: Context,
                     intent: Intent,
                 ) {
-                    val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
-                    val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
-                    val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
-                    val isCharging =
-                        status == BatteryManager.BATTERY_STATUS_CHARGING ||
-                            status == BatteryManager.BATTERY_STATUS_FULL
-
-                    val pct = if (level >= 0 && scale > 0) (level * IH_BATTERY_MAX / scale) else IH_BATTERY_MAX
-                    batteryState = BatteryState(pct, isCharging)
+                    batteryState = extractBatteryState(intent)
                 }
             }
         val filter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
         val stickyIntent = context.registerReceiver(receiver, filter)
-        if (stickyIntent != null) {
-            val level = stickyIntent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
-            val scale = stickyIntent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
-            val status = stickyIntent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
-            val isCharging =
-                status == BatteryManager.BATTERY_STATUS_CHARGING ||
-                    status == BatteryManager.BATTERY_STATUS_FULL
-            val pct = if (level >= 0 && scale > 0) (level * IH_BATTERY_MAX / scale) else IH_BATTERY_MAX
-            batteryState = BatteryState(pct, isCharging)
-        }
+        batteryState = extractBatteryState(stickyIntent)
         onDispose {
             context.unregisterReceiver(receiver)
         }
@@ -1131,12 +1096,7 @@ private fun resolveAppLabel(
     if (packageName == null) return null
     return try {
         val pm = context.packageManager
-        val appInfo =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                pm.getApplicationInfo(packageName, PackageManager.ApplicationInfoFlags.of(0L))
-            } else {
-                pm.getApplicationInfo(packageName, 0)
-            }
+        val appInfo = pm.getApplicationInfo(packageName, PackageManager.ApplicationInfoFlags.of(0L))
         pm.getApplicationLabel(appInfo).toString()
     } catch (e: Exception) {
         packageName

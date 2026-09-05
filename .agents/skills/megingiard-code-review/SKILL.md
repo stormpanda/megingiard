@@ -18,9 +18,9 @@ You are a Lead Android Architect and Senior Kotlin Engineer on the **Megingiard*
 | -------------- | ------------------------------------------------------------------------------------------------------------ |
 | Package        | `com.stormpanda.megingiard`                                                                                  |
 | Language       | Kotlin 2.0+ (no Java files except `:mirrorserver`), Jetpack Compose Material 3                               |
-| Modules        | `:app` (UI layer) · `:domain` (business logic, singletons) · `:core` (pure data/schemas) · `:mirrorserver` |
+| Modules        | `:companion:ui` (UI) · `:companion:domain` (domain logic) · `:shared:*` · `:mirrorserver`                   |
 | Coding rules   | **`AGENTS.md`** at workspace root — treat every rule as mandatory                                            |
-| Permitted tests| `./gradlew :core:test :domain:test :app:testDebugUnitTest :gamefocus:testDebugUnitTest` (Must be run with sandbox bypass enabled, i.e., `BypassSandbox: true` / unsandboxed) |
+| Permitted tests| `./gradlew :shared:core:test :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:ui:testDebugUnitTest` (Must be run with sandbox bypass enabled, i.e., `BypassSandbox: true` / unsandboxed) |
 | Deployment     | **STRICTLY PROHIBITED** from running deployment/install commands or deleting app data without explicit permission |
 | Log tag prefix | All app logs are tagged `Mgnrd.*` using `AppLog` with file-scoped `private const val TAG`                    |
 | Target Device  | AYN Thor dual-screen handheld (Display 0 = top screen, Display 4 = bottom screen)                           |
@@ -58,6 +58,7 @@ To avoid "lost in the middle" attention leaks and ensure a 100% comprehensive ch
    - Search for `.*` in imports to catch star imports.
    - Search for `MutableStateFlow` to ensure no public flow exposures.
    - Search for `.values()` to enforce `enum.entries`.
+   - Search for unauthorized heuristic patterns (e.g. `.contains("launcher")`, `.contains("home")`, `.contains("game")`, synthetic fallback generation, loose guessing) to strictly enforce §7.5 Zero-Heuristics Policy.
 2. **Exhaustive File Checklist**: Systematically open and review **every single modified file** in the change set. Verify that:
    - No magic numbers or hardcoded dimensions are present (all extracted to private file-scope constants).
    - If a file defines a `private const val TAG = "..."`, that tag is actively used in `AppLog` logs (or add logs if missing).
@@ -69,10 +70,12 @@ To avoid "lost in the middle" attention leaks and ensure a 100% comprehensive ch
 
 Verify strict adherence to module dependencies (§6 of `AGENTS.md`):
 
-- **`:core`**: Must contain pure Kotlin/JVM data models, schemas, and math helpers. **Zero Android or Compose dependencies**.
-- **`:domain`**: Must contain business logic, singleton state holders, input strategy routers, and IPC wrappers. **Must never import Android UI or Composable packages**.
-- **`:app`**: Contains UI screens, viewmodels, Composables, Services, and presentation modes.
+- **`:core` / `:shared:core`**: Must contain pure Kotlin/JVM data models, schemas, and math helpers. **Zero Android or Compose dependencies**.
+- **`:domain` / `:companion:domain`**: Must contain business logic, singleton state holders, input strategy routers, and IPC wrappers. **Must never import Android UI or Composable packages**.
+- **`:app` / `:companion:ui`**: Contains UI screens, viewmodels, Composables, Services, and presentation modes.
+- **Companion Autonomy & Zero Game Focus Dependency (§6.1)**: Verify that any changes, fixes, or logic in Megingiard Companion (`:companion:*`) have ZERO dependencies on Game Focus (`:gamefocus:*`). Companion bugs must NEVER be fixed, partially fixed, or mitigated by modifying Game Focus.
 - **State Singletons (§7.1)**: Ensure state singletons (`AppStateManager`, `ScreenCaptureManager`, etc.) expose only **read-only `StateFlow`** (`val bar: StateFlow<T> = _bar.asStateFlow()`) and keep `MutableStateFlow` private.
+- **Zero-Heuristics & Strict Determinism (§7.5)**: Verify that ZERO heuristics, loose substring deductions, synthetic fallbacks, or probabilistic guessing algorithms exist in the change set without explicit user authorization. All state transitions, role classifications, and data paths must be 100% deterministic.
 
 ---
 
@@ -97,12 +100,13 @@ Audit every line of code against §8 of `AGENTS.md`:
 - **Constants (§8.3)**: Extract all magic numbers to named constants (`private const val`). File-scoped UI colors must use feature-prefixed `SCREAMING_SNAKE_CASE` (e.g., `GS_BG`, `SW_GAP`).
 - **Logging (§8.4)**: Zero calls to `android.util.Log`. All logging routed through `AppLog` with a file-scoped `private const val TAG`. Mandatory logging at lifecycle milestones, error branches, and state mutations. No continuous per-frame event logging. **If an unused `TAG` constant is found in a file, logging MUST be added using `AppLog` (do NOT remove `TAG`) to fulfill logging coverage requirements.**
 - **Kotlin Features (§8.1)**: Use `enum.entries` (never `enum.values()`). Use `kotlin.math.min`/`max`. Avoid anonymous destructuring of `Triple` in lambdas.
+- **Zero-Heuristics (§7.5)**: Ensure no heuristic approximations, loose substring deductions, or synthetic fallback data were added anywhere in the modified files without explicit human approval.
 
 ---
 
 ### 6. ✅ Unit Test & Documentation Sync Audit
 
-- **Test Suite Execution (§3)**: Run `./gradlew :core:test :domain:test :app:testDebugUnitTest :gamefocus:testDebugUnitTest` to verify test suite health (MUST always be run with the sandbox bypass enabled, i.e., `BypassSandbox: true` / unsandboxed).
+- **Test Suite Execution (§3)**: Run `./gradlew :shared:core:test :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:ui:testDebugUnitTest` to verify test suite health (MUST always be run with the sandbox bypass enabled, i.e., `BypassSandbox: true` / unsandboxed).
 - **Test Set Placement**: Ensure pure JVM tests are placed in `:shared/core/src/test/` or `:companion/domain/src/test/`. If a unit test has no Android SDK dependencies, prefer fast pure JUnit over Robolectric.
 - **Documentation Sync (§2 & §5)**: Identify which `docs/features/<feature>/FEATURE.md` owns the modified code. Ensure Functional Requirements and Technical Implementation details accurately reflect all behavioral changes.
   - *Requirements Discrepancy:* If the codebase diverges from requirements, evaluate whether the implementation is correct and the *documentation* should be updated, rather than assuming code is wrong.
@@ -132,3 +136,4 @@ Present the code review using clear, structured GitHub Markdown:
 - **Never modify code silently** during a code review pass — present findings to the user first unless explicitly asked to auto-fix.
 - **Never skip unit test execution** — execute permitted unit test commands to verify test suite status.
 - **Never propose code fixes that break existing animations, layout math, or visual styling**.
+- **Never accept or propose Game Focus modifications as a fix or workaround for Megingiard Companion bugs**. Megingiard Companion is a standalone app and must be 100% self-contained.

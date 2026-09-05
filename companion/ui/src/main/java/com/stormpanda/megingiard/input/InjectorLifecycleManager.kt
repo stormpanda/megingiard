@@ -3,7 +3,7 @@ package com.stormpanda.megingiard.input
 import android.content.Context
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
-import com.stormpanda.megingiard.UiMode
+import com.stormpanda.megingiard.CompanionSurfaceMode
 import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.macropad.GamepadInjector
 import com.stormpanda.megingiard.macropad.MacroPadState
@@ -35,8 +35,8 @@ internal data class InjectorStates(
  * Centralized single source of truth for input injector lifecycles across the application.
  *
  * Implements the 2-sentence rule for input injectors:
- * - ON: When the relevant control UI is active (e.g. [UiMode.FULLSCREEN_KEYBOARD] for Keyboard,
- *   [UiMode.FULLSCREEN_MOUSE] for Mouse), OR when an active MacroPad layout contains buttons for that
+ * - ON: When the relevant control UI is active (e.g. [CompanionSurfaceMode.KEYBOARD] for Keyboard,
+ *   [CompanionSurfaceMode.TOUCHPAD] for Mouse), OR when an active MacroPad layout contains buttons for that
  *   injector type and no blocking modal/editor is active.
  * - OFF: When no controls are needed, OR when any editor screen, settings modal, quick menu,
  *   or prompt is active (preventing hardware device conflicts with Android's software IME).
@@ -53,11 +53,19 @@ object InjectorLifecycleManager {
         watcherJob =
             scope.launch {
                 combine(
-                    AppStateManager.uiMode,
+                    AppStateManager.companionSurfaceMode,
+                    AppStateManager.activePrimaryModal,
+                    AppStateManager.isQuickMenuOpen,
                     AppStateManager.promptInFlight,
                     MacroPadState.activeLayout,
-                ) { uiMode, promptInFlight, activeLayout ->
-                    calculateInjectorStates(uiMode, promptInFlight, activeLayout)
+                ) { surfaceMode, activePrimaryModal, isQuickMenuOpen, promptInFlight, activeLayout ->
+                    calculateInjectorStates(
+                        surfaceMode = surfaceMode,
+                        isModalOpen = activePrimaryModal != null,
+                        isQuickMenuOpen = isQuickMenuOpen,
+                        promptInFlight = promptInFlight,
+                        activeLayout = activeLayout,
+                    )
                 }.distinctUntilChanged()
                     .collectLatest { states ->
                         if (!states.startKeyboard) {
@@ -96,48 +104,40 @@ object InjectorLifecycleManager {
     }
 
     internal fun calculateInjectorStates(
-        uiMode: UiMode,
+        surfaceMode: CompanionSurfaceMode,
+        isModalOpen: Boolean,
+        isQuickMenuOpen: Boolean,
         promptInFlight: Boolean,
         activeLayout: PadLayout?,
     ): InjectorStates {
-        val isEditorModalOrMenu =
-            uiMode == UiMode.LAYOUT_EDITOR ||
-                uiMode == UiMode.BACKGROUND_SETTINGS ||
-                uiMode == UiMode.KEYBOARD_SETTINGS ||
-                uiMode == UiMode.TOUCHPAD_SETTINGS ||
-                uiMode == UiMode.GLOBAL_SETTINGS ||
-                uiMode == UiMode.VIEWPORT_EDIT ||
-                uiMode == UiMode.QUICK_MENU ||
-                promptInFlight
+        val isFullscreenKb = surfaceMode == CompanionSurfaceMode.KEYBOARD
+        val isFullscreenMouse = surfaceMode == CompanionSurfaceMode.TOUCHPAD
 
-        val isFullscreenKb = uiMode == UiMode.FULLSCREEN_KEYBOARD
-        val isFullscreenMouse = uiMode == UiMode.FULLSCREEN_MOUSE
+        val isBlockingMacroUse =
+            isModalOpen ||
+                isQuickMenuOpen ||
+                promptInFlight ||
+                surfaceMode == CompanionSurfaceMode.VIEWPORT_EDIT
 
-        val hasKeyboardMacros =
-            activeLayout?.buttons?.any { it.action is PadAction.KeyboardKey } == true
-        val hasGamepadMacros =
-            activeLayout?.buttons?.any { it.action is PadAction.GamepadButton || it.action is PadAction.Macro } == true
+        val actions = activeLayout?.buttons?.map { it.action }.orEmpty()
+        val hasKeyboardMacros = actions.any { it is PadAction.KeyboardKey }
+        val hasGamepadMacros = actions.any { it is PadAction.GamepadButton || it is PadAction.Macro }
         val hasMouseMacros =
-            activeLayout?.buttons?.any {
-                it.action is PadAction.MouseButton ||
-                    it.action is PadAction.ScrollWheel ||
-                    (
-                        it.action is PadAction.TrackpointMove &&
-                            (it.action as PadAction.TrackpointMove).mode == TrackpointMode.PHYSICAL_MOUSE
-                    )
-            } == true || activeLayout?.backgroundTouchpad?.enabled == true
+            actions.any {
+                it is PadAction.MouseButton ||
+                    it is PadAction.ScrollWheel ||
+                    (it is PadAction.TrackpointMove && it.mode == TrackpointMode.PHYSICAL_MOUSE)
+            } || activeLayout?.backgroundTouchpad?.enabled == true
         val hasTouchMacros =
-            activeLayout?.buttons?.any {
-                (
-                    it.action is PadAction.TrackpointMove &&
-                        (it.action as PadAction.TrackpointMove).mode == TrackpointMode.VIRTUAL_TOUCH
-                ) || it.action is PadAction.Macro
-            } == true
+            actions.any {
+                (it is PadAction.TrackpointMove && it.mode == TrackpointMode.VIRTUAL_TOUCH) ||
+                    it is PadAction.Macro
+            }
 
-        val startKeyboard = isFullscreenKb || (hasKeyboardMacros && !isEditorModalOrMenu)
-        val startMouse = isFullscreenMouse || (hasMouseMacros && !isEditorModalOrMenu && !isFullscreenKb)
-        val startGamepad = hasGamepadMacros && !isEditorModalOrMenu && !isFullscreenKb && !isFullscreenMouse
-        val startTouch = hasTouchMacros && !isEditorModalOrMenu
+        val startKeyboard = isFullscreenKb || (hasKeyboardMacros && !isBlockingMacroUse)
+        val startMouse = isFullscreenMouse || (hasMouseMacros && !isBlockingMacroUse && !isFullscreenKb)
+        val startGamepad = hasGamepadMacros && !isBlockingMacroUse && !isFullscreenKb && !isFullscreenMouse
+        val startTouch = hasTouchMacros && !isBlockingMacroUse
 
         return InjectorStates(
             startKeyboard = startKeyboard,

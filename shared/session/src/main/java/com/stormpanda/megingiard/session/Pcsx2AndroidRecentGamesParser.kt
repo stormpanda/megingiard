@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.session
 
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.catalog.SafPathResolver
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File

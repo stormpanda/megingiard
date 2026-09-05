@@ -3,11 +3,6 @@ package com.stormpanda.megingiard.input
 import android.content.Context
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.privd.PrivdClient
-import com.stormpanda.megingiard.privd.PrivdConnectionState
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 
 private const val TAG = "TouchInjector"
 private const val TOUCH_SLOT_MIN = 0
@@ -39,34 +34,26 @@ object TouchInjector {
 
     @Volatile private var lastContext: Context? = null
 
-    @Volatile private var usePrivd: Boolean = false
-
-    init {
-        CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
-            PrivdClient.state.collect { state ->
+    private val router =
+        InjectorBackendRouter(
+            tag = TAG,
+            onPrivdConnected = {
                 synchronized(TouchInjector) {
-                    if (activeClients.isNotEmpty()) {
-                        val isConnected = (state == PrivdConnectionState.CONNECTED)
-                        if (isConnected && !usePrivd) {
-                            AppLog.i(TAG, "Privd connected while TouchInjector active -> switching to PRIVD backend")
-                            usePrivd = true
-                            if (ShellInputInjector.isRunning) {
-                                ShellInputInjector.stop()
-                            }
-                        } else if (!isConnected && usePrivd) {
-                            AppLog.i(TAG, "Privd disconnected while TouchInjector active -> switching to fallback")
-                            usePrivd = false
-                            lastContext?.let { ctx ->
-                                if (!ShellInputInjector.isRunning) {
-                                    ShellInputInjector.start(ctx)
-                                }
-                            }
+                    if (ShellInputInjector.isRunning) {
+                        ShellInputInjector.stop()
+                    }
+                }
+            },
+            onPrivdDisconnected = {
+                synchronized(TouchInjector) {
+                    lastContext?.let { ctx ->
+                        if (!ShellInputInjector.isRunning) {
+                            ShellInputInjector.start(ctx)
                         }
                     }
                 }
-            }
-        }
-    }
+            },
+        )
 
     /**
      * Starts the native touch injector for a specific client [token].
@@ -82,15 +69,11 @@ object TouchInjector {
         activeClients.add(token)
         AppLog.i(TAG, "start() client='$token' activeClients=$activeClients")
         if (wasEmpty) {
-            usePrivd = PrivdClient.isConnected
-            AppLog.i(TAG, "start() — backend=${if (usePrivd) "PRIVD" else "VIRTUAL_UINPUT"}")
-        }
-        if (!usePrivd) {
-            if (wasEmpty || !ShellInputInjector.isRunning) {
-                if (!ShellInputInjector.isRunning) {
-                    ShellInputInjector.start(context)
-                }
+            if (!router.resolveBackend()) {
+                ShellInputInjector.start(context)
             }
+        } else if (!router.isPrivd && !ShellInputInjector.isRunning) {
+            ShellInputInjector.start(context)
         }
     }
 
@@ -108,7 +91,8 @@ object TouchInjector {
         AppLog.i(TAG, "stop() client='$token' activeClients=$activeClients")
         if (activeClients.isEmpty()) {
             lastContext = null
-            if (usePrivd) {
+            router.markStopped()
+            if (router.isPrivd) {
                 releaseAllSlots()
                 return
             }
@@ -135,7 +119,7 @@ object TouchInjector {
     }
 
     val isRunning: Boolean
-        get() = if (usePrivd) PrivdClient.isConnected else ShellInputInjector.isRunning
+        get() = router.isRunning { ShellInputInjector.isRunning }
 
     /**
      * Injects a touch event using normalised coordinates.
@@ -177,25 +161,27 @@ object TouchInjector {
         val px = ((1f - cy) * THOR_SENSOR_W).toInt()
         val py = (cx * THOR_SENSOR_H).toInt()
 
-        if (usePrivd) {
-            if (action == TouchAction.UP) {
-                PrivdClient.send("U $slot\n")
-            } else {
-                val char = if (action == TouchAction.DOWN) "D" else "M"
-                PrivdClient.send("$char $slot $px $py\n")
-            }
-        } else {
-            ShellInputInjector.injectTouch(slot, action, px, py)
-        }
+        router.dispatch(
+            privdAction = {
+                if (action == TouchAction.UP) {
+                    PrivdClient.send("U $slot\n")
+                } else {
+                    val char = if (action == TouchAction.DOWN) "D" else "M"
+                    PrivdClient.send("$char $slot $px $py\n")
+                }
+            },
+            shellAction = {
+                ShellInputInjector.injectTouch(slot, action, px, py)
+            },
+        )
     }
 
     fun releaseAllSlots() {
         for (slot in TOUCH_SLOT_MIN..TOUCH_SLOT_MAX) {
-            if (usePrivd) {
-                PrivdClient.send("U $slot\n")
-            } else {
-                ShellInputInjector.injectTouch(slot, TouchAction.UP, 0, 0)
-            }
+            router.dispatch(
+                privdAction = { PrivdClient.send("U $slot\n") },
+                shellAction = { ShellInputInjector.injectTouch(slot, TouchAction.UP, 0, 0) },
+            )
         }
     }
 }

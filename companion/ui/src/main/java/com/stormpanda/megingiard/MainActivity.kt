@@ -6,14 +6,20 @@ import android.app.LocaleManager
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
 import android.media.MediaScannerConnection
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.os.Handler
 import android.os.LocaleList
+import android.os.Looper
 import android.os.Process
 import android.view.Display
+import android.view.PixelCopy
+import android.view.Window
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -21,12 +27,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -35,12 +38,10 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,25 +59,27 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.stormpanda.megingiard.catalog.DisplayDetector
+import com.stormpanda.megingiard.catalog.SystemRoleClassifier
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.MGRD_MIME_TYPE
 import com.stormpanda.megingiard.log.LogReportManager
 import com.stormpanda.megingiard.macropad.AppLauncherManager
-import com.stormpanda.megingiard.macropad.MacroExecutor
+import com.stormpanda.megingiard.macropad.BackgroundPickerManager
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.mirror.ACTION_START_PRIVD
 import com.stormpanda.megingiard.mirror.ACTION_STOP
-import com.stormpanda.megingiard.mirror.CropSelectorActivity
 import com.stormpanda.megingiard.mirror.MirrorRuntimeAction
 import com.stormpanda.megingiard.mirror.MirrorRuntimePolicyState
 import com.stormpanda.megingiard.mirror.MirrorStrategy
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCaptureService
+import com.stormpanda.megingiard.mirror.ScreenshotTarget
 import com.stormpanda.megingiard.mirror.decideMirrorRuntimeAction
 import com.stormpanda.megingiard.mirror.isPrivdMirrorConnecting
 import com.stormpanda.megingiard.mirror.selectMirrorStrategy
@@ -93,6 +96,7 @@ import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.AppDimens
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.LocalAppDimens
+import com.stormpanda.megingiard.ui.PrimaryOverlayManager
 import com.stormpanda.megingiard.ui.ScreenshotPreviewOverlay
 import com.stormpanda.megingiard.ui.colorSchemeFor
 import com.stormpanda.megingiard.ui.megingiardTypography
@@ -105,19 +109,22 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.coroutines.resume
 
 private const val TAG = "MainActivity"
+private const val SCREENSHOT_EXIT_DELAY_MS = 200L
+private const val SCREENSHOT_COMPRESS_QUALITY = 100
 
 class MainActivity : ComponentActivity() {
     // ── File picker launchers ─────────────────────────────────────────────────
     // Registered here because ActivityResultLaunchers require an Activity context.
-    // GlobalSettingsScreen (which may be inside MirrorPresentation) posts requests
-    // to ConfigManager and these launchers pick them up.
+    // Settings screens post requests to ConfigManager and these launchers pick them up.
 
     private var pendingExportKind: ConfigManager.ExportKind? = null
     private var pendingInAppImportMode = ConfigManager.ImportMode.BACKUP_RESTORE
@@ -126,7 +133,6 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(
             ActivityResultContracts.CreateDocument(MGRD_MIME_TYPE),
         ) { uri ->
-            AppStateManager.setFilePickerOpen(false)
             val kind = pendingExportKind ?: return@registerForActivityResult
             pendingExportKind = null
             if (uri == null) return@registerForActivityResult
@@ -154,7 +160,7 @@ class MainActivity : ComponentActivity() {
                     ConfigManager.writeToUri(this@MainActivity, uri, export, kind.includeBackgrounds)
                 }.onSuccess {
                     AppLog.i(TAG, "Export written to $uri")
-                    ConfigManager.setExportResult(ConfigManager.ExportResult.Success)
+                    ConfigManager.setExportResult(ConfigManager.ExportResult.Success(kind))
                 }.onFailure { e ->
                     AppLog.e(TAG, "Export failed", e)
                     ConfigManager.setExportResult(ConfigManager.ExportResult.Failure(e.message))
@@ -164,9 +170,8 @@ class MainActivity : ComponentActivity() {
 
     private val openDocumentLauncher =
         registerForActivityResult(
-            ActivityResultContracts.OpenDocument(),
+            ActivityResultContracts.GetContent(),
         ) { uri ->
-            AppStateManager.setFilePickerOpen(false)
             if (uri == null) {
                 return@registerForActivityResult
             }
@@ -177,7 +182,6 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(
             ActivityResultContracts.CreateDocument("text/plain"),
         ) { uri ->
-            AppStateManager.setFilePickerOpen(false)
             if (uri == null) return@registerForActivityResult
             lifecycleScope.launch {
                 LogReportManager.writeReportToUri(
@@ -191,24 +195,55 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+    private val pickImageLauncher =
+        registerForActivityResult(
+            ActivityResultContracts.GetContent(),
+        ) { uri ->
+            BackgroundPickerManager.setPickedUri(uri)
+        }
+
     // The manifest declares configChanges that prevent activity recreation when the app
     // is moved between displays. Without this override, Compose never recomposes and
     // context.display retains the old display ID — the wrong-screen overlay would stay
     // visible even after moving to the correct display.
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        display?.displayId?.let { displayId ->
-        }
+        AppLog.i(TAG, "onConfigurationChanged")
+        val currentDisplayId = display?.displayId ?: Display.DEFAULT_DISPLAY
+        val isValid = DisplayDetector.isValidScreen(currentDisplayId)
+        AppStateManager.setOnValidScreen(isValid)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        AppLog.i(TAG, "onResume")
+        val currentDisplayId = display?.displayId ?: Display.DEFAULT_DISPLAY
+        val isValid = DisplayDetector.isValidScreen(currentDisplayId)
+        AppStateManager.setOnValidScreen(isValid)
+        AppStateManager.setActivityResumed(true)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        AppLog.i(TAG, "onStop")
+        AppStateManager.setActivityResumed(false)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
         super.onCreate(savedInstanceState)
 
+        if (savedInstanceState == null && display?.displayId != Display.DEFAULT_DISPLAY) {
+            PrimaryFocusAnchorActivity.anchorPrimaryFocus(this)
+        }
+
         // Init settings first so the persisted log level is active before anything
         // else runs (including SignatureGuard below). SettingsManager.init() reads
         // just the log level synchronously from DataStore then continues async.
         SettingsManager.init(this)
+
+        // Initialize canonical home launcher and system role classifier
+        SystemRoleClassifier.init(this)
 
         // Trigger session background update check on app launch
         UpdateManager.checkForUpdates(
@@ -263,12 +298,12 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        // Provide a stable applicationContext to MacroExecutor so that TouchTap macro
-        // steps can start TouchInjector without needing the caller to supply a Context.
-        MacroExecutor.init(this)
+        PrimaryOverlayManager.init(application)
 
         SettingsManager.onThemeChangedListener = {
             MegingiardSettingsProvider.notifyThemeChanged(this)
+        }
+        SettingsManager.onSettingsChangedListener = {
             MegingiardSettingsProvider.notifySettingsChanged(this)
         }
 
@@ -290,13 +325,11 @@ class MainActivity : ComponentActivity() {
         // Handle .mgrd config files opened from a file manager or share sheet.
         handleIncomingIntent(intent)
 
-        // Collect export/import requests posted by GlobalSettingsScreen (which may be
-        // inside MirrorPresentation and thus cannot hold ActivityResultLaunchers itself).
+        // Collect export/import requests posted by settings / macro screens.
         lifecycleScope.launch {
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 ConfigManager.exportRequest.collect { kind ->
                     pendingExportKind = kind
-                    AppStateManager.setFilePickerOpen(true)
                     createDocumentLauncher.launch(ConfigManager.exportFilename.value)
                 }
             }
@@ -305,12 +338,7 @@ class MainActivity : ComponentActivity() {
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 ConfigManager.importRequest.collect { mode ->
                     pendingInAppImportMode = mode
-                    AppStateManager.setFilePickerOpen(true)
-                    // Use "*/*" instead of the custom MGRD MIME type: the Android file
-                    // picker (DocumentsUI) does not know the custom MIME type and would
-                    // show an empty list. With "*/*" all files are visible and the user
-                    // can navigate to their .mgrd file.
-                    openDocumentLauncher.launch(arrayOf("*/*"))
+                    openDocumentLauncher.launch("*/*")
                 }
             }
         }
@@ -322,70 +350,16 @@ class MainActivity : ComponentActivity() {
                             .now()
                             .format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"))
                     val filename = LogReportManager.buildReportFilename(timestamp)
-                    AppStateManager.setFilePickerOpen(true)
                     createLogDocumentLauncher.launch(filename)
                 }
             }
         }
         lifecycleScope.launch {
-            var lastLaunchedId: String? = null
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                AppStateManager.activeCropCutoutId.collect { id ->
-                    if (id != null && id != lastLaunchedId) {
-                        lastLaunchedId = id
-                        AppLog.i(TAG, "activeCropCutoutId=$id -> launching CropSelectorActivity on primary display")
-                        val options = ActivityOptions.makeBasic()
-                        options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-                        val intent =
-                            Intent(this@MainActivity, CropSelectorActivity::class.java).apply {
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
-                            }
-                        startActivity(intent, options.toBundle())
-                    } else if (id == null) {
-                        lastLaunchedId = null
-                    }
+                BackgroundPickerManager.pickRequest.collect {
+                    pickImageLauncher.launch("image/*")
                 }
             }
-        }
-        // Keep the normal MacroPad use surface non-focusable on the secondary display so
-        // touch input does not steal focus from a primary-display game that owns pointer
-        // capture. Focus is restored for app overlays that need text/input focus.
-        lifecycleScope.launch {
-            combine(
-                AppStateManager.isFullscreenKeyboardActive,
-                AppStateManager.isOnValidScreen,
-                AppStateManager.isQuickMenuOpen,
-                AppStateManager.isFilePickerOpen,
-                AppStateManager.isEditorActive,
-                AppStateManager.isBackgroundSettingsActive,
-                AppStateManager.isGlobalSettingsOpen,
-                AppStateManager.isKeyboardSettingsOpen,
-                AppStateManager.isTouchpadSettingsOpen,
-            ) { values ->
-                val fullscreenKeyboard = values[0] as Boolean
-                val onValidScreen = values[1] as Boolean
-                val quickMenuOpen = values[2] as Boolean
-                val filePickerOpen = values[3] as Boolean
-                val editorActive = values[4] as Boolean
-                val ambientSettingsActive = values[5] as Boolean
-                val globalSettingsOpen = values[6] as Boolean
-                val keyboardSettingsOpen = values[7] as Boolean
-                val touchpadSettingsOpen = values[8] as Boolean
-                shouldKeepPrimaryGameFocus(
-                    MacroPadFocusPolicyState(
-                        isMacroPadSurfaceActive = onValidScreen,
-                        isFullscreenKeyboardActive = fullscreenKeyboard,
-                        isQuickMenuOpen = quickMenuOpen,
-                        isFilePickerOpen = filePickerOpen,
-                        isEditorActive = editorActive,
-                        isBackgroundSettingsActive = ambientSettingsActive,
-                        isGlobalSettingsOpen = globalSettingsOpen,
-                        isKeyboardSettingsOpen = keyboardSettingsOpen,
-                        isTouchpadSettingsOpen = touchpadSettingsOpen,
-                    ),
-                )
-            }.distinctUntilChanged()
-                .collect { keepPrimaryFocus -> setActivityFocusMode(keepPrimaryFocus) }
         }
         // Auto-connect Privileged Mode if the user previously bootstrapped the daemon.
         // The daemon survives app restarts (it's a separate shell-UID process); we just
@@ -432,42 +406,21 @@ class MainActivity : ComponentActivity() {
         }
         enableEdgeToEdge()
         setContent {
-            val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
-
-            val lifecycleOwner = LocalLifecycleOwner.current
-            LaunchedEffect(lifecycleOwner) {
-                val observer =
-                    LifecycleEventObserver { _, event ->
-                        when (event) {
-                            Lifecycle.Event.ON_RESUME -> {
-                                AppLog.i(TAG, "ON_RESUME isValid=${AppStateManager.isOnValidScreen.value}")
-                                AppStateManager.setActivityResumed(true)
-                            }
-
-                            Lifecycle.Event.ON_STOP -> {
-                                AppLog.i(TAG, "ON_STOP")
-                                AppStateManager.setActivityResumed(false)
-                            }
-
-                            else -> {}
-                        }
-                    }
-                lifecycleOwner.lifecycle.addObserver(observer)
-            }
+            val isCapturing by ScreenCaptureManager.isCapturing.collectAsStateWithLifecycle()
 
             // Synchronous display evaluation gets correct value on frame 0
             val context = LocalContext.current
             val currentDisplayId = context.display?.displayId ?: Display.DEFAULT_DISPLAY
-            val isOnValidScreenLocal = currentDisplayId != Display.DEFAULT_DISPLAY
+            val isOnValidScreenLocal = DisplayDetector.isValidScreen(currentDisplayId)
 
             // Update global state for other components
             LaunchedEffect(isOnValidScreenLocal) {
                 AppStateManager.setOnValidScreen(isOnValidScreenLocal)
             }
 
-            val isOnValidScreen by AppStateManager.isOnValidScreen.collectAsState()
+            val isOnValidScreen by AppStateManager.isOnValidScreen.collectAsStateWithLifecycle()
 
-            val activeLayout by MacroPadState.activeLayout.collectAsState()
+            val activeLayout by MacroPadState.activeLayout.collectAsStateWithLifecycle()
 
             // Reconcile the running mirror session with the active layout's persisted
             // desired state. PadLayout.mirrorAutoStart is the single source of truth:
@@ -499,8 +452,6 @@ class MainActivity : ComponentActivity() {
                     MacroPadState.activeLayout,
                     AppStateManager.isOnValidScreen,
                     OnboardingWizardManager.isWizardActive,
-                    AppStateManager.showIntegrationHome,
-                    AppStateManager.isFloatingBubbleActive,
                     AppStateManager.isFullscreenMouseActive,
                     AppStateManager.isFullscreenKeyboardActive,
                     AppStateManager.wasMirroringStartedByTouchpad,
@@ -510,11 +461,9 @@ class MainActivity : ComponentActivity() {
                     val currentLayout = values[2] as? PadLayout
                     val onValidScreen = values[3] as Boolean
                     val wizardActive = values[4] as Boolean
-                    val showIntegrationHome = values[5] as Boolean
-                    val isFloatingBubbleActive = values[6] as Boolean
-                    val isFullscreenMouseActive = values[7] as Boolean
-                    val isFullscreenKeyboardActive = values[8] as Boolean
-                    val wasMirroringStartedByTouchpad = values[9] as Boolean
+                    val isFullscreenMouseActive = values[5] as Boolean
+                    val isFullscreenKeyboardActive = values[6] as Boolean
+                    val wasMirroringStartedByTouchpad = values[7] as Boolean
 
                     MirrorRuntimePolicyState(
                         promptInFlight = promptInFlight,
@@ -523,8 +472,6 @@ class MainActivity : ComponentActivity() {
                         layoutId = currentLayout?.id,
                         layoutWantsMirror = currentLayout?.mirrorAutoStart == true,
                         tutorialsActive = wizardActive,
-                        showIntegrationHome = showIntegrationHome,
-                        isFloatingBubbleActive = isFloatingBubbleActive,
                         isFullscreenMouseActive = isFullscreenMouseActive,
                         isFullscreenKeyboardActive = isFullscreenKeyboardActive,
                         wasMirroringStartedByTouchpad = wasMirroringStartedByTouchpad,
@@ -649,58 +596,93 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(Unit) {
                 ScreenCaptureManager.screenshotRequested.collect { requested ->
                     if (!requested) return@collect
-                    if (!ScreenCaptureManager.isCapturing.value) {
-                        if (PrivdClient.isConnected) {
-                            AppLog.i(TAG, "screenshotRequested → handling via privileged mode (mirroring not running)")
-                            launch(Dispatchers.IO) {
-                                try {
-                                    val filename = "Megingiard_Screenshot_${System.currentTimeMillis()}.png"
-                                    val picturesDir =
-                                        File(Environment.getExternalStorageDirectory(), ScreenCaptureManager.SCREENSHOT_SUBDIR)
-                                    if (!picturesDir.exists()) {
-                                        picturesDir.mkdirs()
-                                    }
-                                    val filepath = File(picturesDir, filename).absolutePath
-                                    val ok = PrivdClient.takeScreenshot(filepath)
-                                    if (ok) {
-                                        MediaScannerConnection.scanFile(this@MainActivity, arrayOf(filepath), null, null)
-                                        val bitmap = BitmapFactory.decodeFile(filepath)
-                                        if (bitmap != null) {
-                                            ScreenCaptureManager.showScreenshotPreview(bitmap)
-                                            withContext(Dispatchers.Main) {
-                                                Toast.makeText(this@MainActivity, R.string.screenshot_saved, Toast.LENGTH_SHORT).show()
-                                            }
+                    val target = ScreenCaptureManager.pendingScreenshotTarget.value ?: ScreenshotTarget.TOP
+                    AppLog.i(TAG, "screenshotRequested received for target: $target")
+
+                    launch(Dispatchers.IO) {
+                        try {
+                            when (target) {
+                                ScreenshotTarget.TOP -> {
+                                    if (PrivdClient.isConnected) {
+                                        val timestamp = System.currentTimeMillis()
+                                        val filepath = File(getScreenshotsDir(), "Megingiard_Screenshot_Top_$timestamp.png").absolutePath
+                                        val ok = PrivdClient.takeScreenshot(filepath)
+                                        if (ok) {
+                                            MediaScannerConnection.scanFile(this@MainActivity, arrayOf(filepath), null, null)
+                                            val bitmap = BitmapFactory.decodeFile(filepath)
+                                            if (bitmap == null) AppLog.e(TAG, "Failed to decode top screenshot file $filepath")
+                                            notifyScreenshotResult(bitmap != null, bitmap)
                                         } else {
-                                            AppLog.e(TAG, "Failed to decode screenshot file $filepath")
-                                            withContext(Dispatchers.Main) {
-                                                Toast.makeText(this@MainActivity, R.string.screenshot_failed, Toast.LENGTH_SHORT).show()
-                                            }
+                                            AppLog.e(TAG, "Privileged screenshot failed via privd client")
+                                            notifyScreenshotResult(false)
                                         }
-                                    } else {
-                                        AppLog.e(TAG, "Privileged screenshot failed via privd client")
-                                        withContext(Dispatchers.Main) {
-                                            Toast.makeText(this@MainActivity, R.string.screenshot_failed, Toast.LENGTH_SHORT).show()
-                                        }
+                                    } else if (!ScreenCaptureManager.isCapturing.value) {
+                                        AppLog.w(TAG, "Top screenshot requested but mirroring is not active and privd is not connected.")
+                                        notifyScreenshotResult(false)
                                     }
-                                } catch (t: Throwable) {
-                                    AppLog.e(TAG, "Exception during privileged screenshot", t)
+                                }
+
+                                ScreenshotTarget.BOTTOM -> {
                                     withContext(Dispatchers.Main) {
-                                        Toast.makeText(this@MainActivity, R.string.screenshot_failed, Toast.LENGTH_SHORT).show()
+                                        if (AppStateManager.isQuickMenuOpen.value) {
+                                            AppStateManager.closeQuickMenu()
+                                        }
                                     }
-                                } finally {
-                                    ScreenCaptureManager.consumeScreenshotRequest()
+                                    delay(SCREENSHOT_EXIT_DELAY_MS)
+                                    val bottomBitmap = withContext(Dispatchers.Main) { captureWindowBitmap(window) }
+                                    val saved = bottomBitmap?.let { saveBitmapToPictures(it, "Bottom") != null } ?: false
+                                    notifyScreenshotResult(saved, bottomBitmap)
+                                }
+
+                                ScreenshotTarget.BOTH -> {
+                                    withContext(Dispatchers.Main) {
+                                        if (AppStateManager.isQuickMenuOpen.value) {
+                                            AppStateManager.closeQuickMenu()
+                                        }
+                                    }
+                                    delay(SCREENSHOT_EXIT_DELAY_MS)
+                                    var topBitmap: Bitmap? = null
+                                    if (PrivdClient.isConnected) {
+                                        val tempFile = File(getScreenshotsDir(), ".temp_top_${System.currentTimeMillis()}.png")
+                                        if (PrivdClient.takeScreenshot(tempFile.absolutePath) && tempFile.exists()) {
+                                            topBitmap = BitmapFactory.decodeFile(tempFile.absolutePath)
+                                            tempFile.delete()
+                                        }
+                                    }
+                                    if (topBitmap == null && ScreenCaptureManager.isFrozen.value) {
+                                        topBitmap =
+                                            ScreenCaptureManager.frozenBitmap.value?.let {
+                                                it.copy(Bitmap.Config.ARGB_8888, false)
+                                            }
+                                    }
+                                    val bottomBitmap = withContext(Dispatchers.Main) { captureWindowBitmap(window) }
+                                    if (topBitmap != null && bottomBitmap != null) {
+                                        val stitched = stitchVertical(topBitmap, bottomBitmap)
+                                        topBitmap.recycle()
+                                        bottomBitmap.recycle()
+                                        val saved = saveBitmapToPictures(stitched, "Both") != null
+                                        if (!saved) stitched.recycle()
+                                        notifyScreenshotResult(saved, if (saved) stitched else null)
+                                    } else {
+                                        topBitmap?.recycle()
+                                        bottomBitmap?.recycle()
+                                        AppLog.w(TAG, "ScreenshotTarget.BOTH failed: topBitmap=$topBitmap, bottomBitmap=$bottomBitmap")
+                                        notifyScreenshotResult(false)
+                                    }
                                 }
                             }
-                        } else {
-                            AppLog.w(TAG, "Screenshot requested but mirroring is not active and privd is not connected. Consuming request.")
+                        } catch (t: Throwable) {
+                            AppLog.e(TAG, "Exception during screenshot capture", t)
+                            notifyScreenshotResult(false)
+                        } finally {
                             ScreenCaptureManager.consumeScreenshotRequest()
                         }
                     }
                 }
             }
 
-            val themeMode by SettingsManager.themeMode.collectAsState()
-            val userAccentArgb by SettingsManager.accentColor.collectAsState()
+            val themeMode by SettingsManager.themeMode.collectAsStateWithLifecycle()
+            val userAccentArgb by SettingsManager.accentColor.collectAsStateWithLifecycle()
             val appColors = paletteFor(themeMode, Color(userAccentArgb))
 
             MaterialTheme(
@@ -717,22 +699,10 @@ class MainActivity : ComponentActivity() {
                     ) {
                         Box(modifier = Modifier.fillMaxSize()) {
                             MainAppScreen()
-
-                            ScreenshotPreviewOverlay(modifier = Modifier.align(Alignment.Center))
                         }
                     }
                 }
             }
-        }
-    }
-
-    private fun setActivityFocusMode(keepPrimaryFocus: Boolean) {
-        if (keepPrimaryFocus) {
-            AppLog.d(TAG, "FLAG_NOT_FOCUSABLE added (macropad use surface)")
-            window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
-        } else {
-            AppLog.d(TAG, "FLAG_NOT_FOCUSABLE cleared (interactive app overlay)")
-            window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
         }
     }
 
@@ -788,10 +758,14 @@ class MainActivity : ComponentActivity() {
         startService(stopIntent)
     }
 
-    /** Called when the app is already running and receives a new ACTION_VIEW intent. */
+    /** Called when the app is already running and receives a new ACTION_VIEW or launch intent. */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        AppLog.i(TAG, "onNewIntent")
+        setIntent(intent)
+        val currentDisplayId = display?.displayId ?: Display.DEFAULT_DISPLAY
+        val isValid = DisplayDetector.isValidScreen(currentDisplayId)
+        AppLog.i(TAG, "onNewIntent: displayId=$currentDisplayId isValid=$isValid action=${intent.action}")
+        AppStateManager.setOnValidScreen(isValid)
         handleIncomingIntent(intent)
     }
 
@@ -807,5 +781,88 @@ class MainActivity : ComponentActivity() {
                 ConfigManager.setPendingUri(uri)
             }
         }
+    }
+
+    private suspend fun captureWindowBitmap(targetWindow: Window): Bitmap? =
+        suspendCancellableCoroutine { cont ->
+            val view = targetWindow.decorView
+            if (view.width <= 0 || view.height <= 0) {
+                cont.resume(null)
+                return@suspendCancellableCoroutine
+            }
+            val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+            try {
+                PixelCopy.request(
+                    targetWindow,
+                    bitmap,
+                    { result ->
+                        if (result == PixelCopy.SUCCESS) {
+                            cont.resume(bitmap)
+                        } else {
+                            bitmap.recycle()
+                            cont.resume(null)
+                        }
+                    },
+                    Handler(Looper.getMainLooper()),
+                )
+            } catch (e: Exception) {
+                AppLog.e(TAG, "PixelCopy error", e)
+                bitmap.recycle()
+                cont.resume(null)
+            }
+        }
+
+    private fun getScreenshotsDir(): File =
+        File(Environment.getExternalStorageDirectory(), ScreenCaptureManager.SCREENSHOT_SUBDIR).apply {
+            if (!exists()) mkdirs()
+        }
+
+    private suspend fun notifyScreenshotResult(
+        saved: Boolean,
+        bitmap: Bitmap? = null,
+    ) {
+        if (saved && bitmap != null) {
+            ScreenCaptureManager.showScreenshotPreview(bitmap)
+        }
+        withContext(Dispatchers.Main) {
+            Toast
+                .makeText(
+                    this@MainActivity,
+                    if (saved) R.string.screenshot_saved else R.string.screenshot_failed,
+                    Toast.LENGTH_SHORT,
+                ).show()
+        }
+    }
+
+    private fun saveBitmapToPictures(
+        bitmap: Bitmap,
+        targetName: String,
+    ): File? =
+        try {
+            val timestamp = System.currentTimeMillis()
+            val filename = "Megingiard_Screenshot_${targetName}_$timestamp.png"
+            val file = File(getScreenshotsDir(), filename)
+            file.outputStream().use { out ->
+                bitmap.compress(Bitmap.CompressFormat.PNG, SCREENSHOT_COMPRESS_QUALITY, out)
+            }
+            MediaScannerConnection.scanFile(this, arrayOf(file.absolutePath), null, null)
+            file
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Failed to save bitmap to pictures", e)
+            null
+        }
+
+    private fun stitchVertical(
+        top: Bitmap,
+        bottom: Bitmap,
+    ): Bitmap {
+        val width = maxOf(top.width, bottom.width)
+        val height = top.height + bottom.height
+        val combined = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(combined)
+        canvas.drawARGB(255, 0, 0, 0)
+        canvas.drawBitmap(top, (width - top.width) / 2f, 0f, null)
+        canvas.drawBitmap(bottom, (width - bottom.width) / 2f, top.height.toFloat(), null)
+        return combined
     }
 }

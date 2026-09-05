@@ -1,12 +1,10 @@
 package com.stormpanda.megingiard.macropad
 
 import android.content.Context
-import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
-
-private const val TAG = "HapticFeedback"
+import com.stormpanda.megingiard.R
 
 // ─── Vibration parameters ────────────────────────────────────────────────────
 // Duration / amplitude pairs tuned to feel like a very brief, subtle "tick".
@@ -29,6 +27,14 @@ internal const val HF_PRESET_DURATION_MS = 15 // same for all strength presets
 internal const val HF_LIGHT_AMPLITUDE_USER = 25 // user scale 5–100
 internal const val HF_MEDIUM_AMPLITUDE_USER = 50
 internal const val HF_STRONG_AMPLITUDE_USER = 100
+
+internal fun HapticStrength.defaultCustomAmplitude(): Int =
+    when (this) {
+        HapticStrength.LIGHT -> HF_LIGHT_AMPLITUDE_USER
+        HapticStrength.MEDIUM -> HF_MEDIUM_AMPLITUDE_USER
+        HapticStrength.STRONG -> HF_STRONG_AMPLITUDE_USER
+        else -> HF_LIGHT_AMPLITUDE_USER
+    }
 
 /** Minimum custom amplitude clamped at call-site to prevent silent zero. */
 private const val HF_CUSTOM_AMPLITUDE_MIN = 5
@@ -93,20 +99,29 @@ fun triggerHaptic(
 }
 
 /**
- * Context-aware haptic trigger helper that automatically manages VibratorManager (API 31+)
- * vs Vibrator (legacy) and handles system service resolution internally.
+ * Context-aware haptic trigger helper that manages VibratorManager
+ * and handles system service resolution internally.
  */
 fun triggerHapticFeedback(
     context: Context,
     strength: HapticStrength = HapticStrength.LIGHT,
 ) {
-    val vibrator =
-        if (Build.VERSION.SDK_INT >= 31) {
-            val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
-            vibratorManager?.defaultVibrator
-        } else {
-            @Suppress("DEPRECATION")
-            context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-        }
+    val vibrator = context.getSystemService(VibratorManager::class.java)?.defaultVibrator
     vibrator?.let { triggerHaptic(it, strength) }
 }
+
+fun HapticStrength.labelResId(): Int =
+    when (this) {
+        HapticStrength.OFF -> R.string.macropad_haptic_off
+        HapticStrength.LIGHT -> R.string.macropad_haptic_light
+        HapticStrength.MEDIUM -> R.string.macropad_haptic_medium
+        HapticStrength.STRONG -> R.string.macropad_haptic_strong
+        HapticStrength.CUSTOM -> R.string.macropad_haptic_custom
+    }
+
+fun TrackpointSize.labelResId(): Int =
+    when (this) {
+        TrackpointSize.SMALL -> R.string.macropad_trackpoint_size_small
+        TrackpointSize.MEDIUM -> R.string.macropad_trackpoint_size_medium
+        TrackpointSize.LARGE -> R.string.macropad_trackpoint_size_large
+    }

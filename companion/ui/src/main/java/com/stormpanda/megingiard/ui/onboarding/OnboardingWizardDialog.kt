@@ -3,7 +3,6 @@ package com.stormpanda.megingiard.ui.onboarding
 import android.app.ActivityOptions
 import android.app.LocaleManager
 import android.content.Intent
-import android.os.Build
 import android.provider.Settings
 import android.view.Display
 import androidx.activity.compose.BackHandler
@@ -45,10 +44,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.AutoFixHigh
-import androidx.compose.material.icons.rounded.Cancel
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -61,7 +58,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -85,17 +81,23 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.math.nextItem
+import com.stormpanda.megingiard.math.prevItem
 import com.stormpanda.megingiard.onboarding.OnboardingStepId
 import com.stormpanda.megingiard.onboarding.OnboardingStepState
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.AutoSetupLanguageConfig
+import com.stormpanda.megingiard.privd.ChecklistStatus
 import com.stormpanda.megingiard.privd.PrivdBootstrapper
+import com.stormpanda.megingiard.privd.PrivdChecklistRow
 import com.stormpanda.megingiard.privd.PrivdError
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
+import com.stormpanda.megingiard.privd.descriptionResId
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.settings.ThemeMode
@@ -114,6 +116,7 @@ private const val TAG = "OnboardingWizardDialog"
 
 private val OW_DIALOG_MAX_WIDTH = 480.dp
 private val OW_DIALOG_CORNER_RADIUS = 16.dp
+private val OW_DIALOG_SHAPE = RoundedCornerShape(OW_DIALOG_CORNER_RADIUS)
 private val OW_DIALOG_BORDER_WIDTH = 2.dp
 private val OW_DIALOG_SHADOW_ELEVATION = 12.dp
 private val OW_DIALOG_PADDING_HORIZONTAL = 20.dp
@@ -122,9 +125,9 @@ private val OW_DIALOG_PADDING_BOTTOM = 16.dp
 
 private val OW_STEPPER_DOT_SIZE = 24.dp
 
-private const val OW_SCRIM_ALPHA = 0.55f
-
 private val OW_WARNING_CORNER_RADIUS = 12.dp
+private val OW_CARD_SHAPE_12 = RoundedCornerShape(OW_WARNING_CORNER_RADIUS)
+private val OW_PROGRESS_TRACK_SHAPE = RoundedCornerShape(1.dp)
 private val OW_WARNING_BORDER_WIDTH = 1.dp
 private val OW_WARNING_PADDING = 12.dp
 private val OW_WARNING_SPACED_BY_SMALL = 8.dp
@@ -146,8 +149,8 @@ fun OnboardingWizardDialog(
 ) {
     val context = LocalContext.current
     val colors = LocalAppColors.current
-    val steps by OnboardingWizardManager.steps.collectAsState()
-    val activeStepIndex by OnboardingWizardManager.activeStepIndex.collectAsState()
+    val steps by OnboardingWizardManager.steps.collectAsStateWithLifecycle()
+    val activeStepIndex by OnboardingWizardManager.activeStepIndex.collectAsStateWithLifecycle()
 
     val currentStepState = steps.getOrNull(activeStepIndex) ?: return
     val totalSteps = steps.size
@@ -162,7 +165,7 @@ fun OnboardingWizardDialog(
     val isAccessibilityStep = currentStepState.id == OnboardingStepId.ACCESSIBILITY
 
     val isPrivilegedStep = currentStepState.id == OnboardingStepId.PRIVILEGED
-    val privdState by PrivdManager.state.collectAsState()
+    val privdState by PrivdManager.state.collectAsStateWithLifecycle()
     var isWifiActive by remember { mutableStateOf(MegingiardAccessibilityService.isWifiActive(context)) }
     var isDevModeActive by remember { mutableStateOf(MegingiardAccessibilityService.isDevModeActive(context)) }
     var isUsbActive by remember { mutableStateOf(MegingiardAccessibilityService.isUsbDebuggingActive(context)) }
@@ -258,13 +261,13 @@ fun OnboardingWizardDialog(
                     .animateContentSize(
                         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
                         alignment = Alignment.Center,
-                    ).shadow(OW_DIALOG_SHADOW_ELEVATION, RoundedCornerShape(OW_DIALOG_CORNER_RADIUS))
-                    .clip(RoundedCornerShape(OW_DIALOG_CORNER_RADIUS))
+                    ).shadow(OW_DIALOG_SHADOW_ELEVATION, OW_DIALOG_SHAPE)
+                    .clip(OW_DIALOG_SHAPE)
                     .background(colors.surface)
                     .border(
                         OW_DIALOG_BORDER_WIDTH,
                         brush = rememberBezelBrush(),
-                        shape = RoundedCornerShape(OW_DIALOG_CORNER_RADIUS),
+                        shape = OW_DIALOG_SHAPE,
                     ).padding(
                         start = OW_DIALOG_PADDING_HORIZONTAL,
                         end = OW_DIALOG_PADDING_HORIZONTAL,
@@ -430,14 +433,9 @@ fun OnboardingWizardDialog(
 @Composable
 fun ThemeStepContent() {
     val colors = LocalAppColors.current
-    val currentThemeMode by SettingsManager.themeMode.collectAsState()
+    val currentThemeMode by SettingsManager.themeMode.collectAsStateWithLifecycle()
     val themes = remember { ThemeMode.entries }
-    val currentIndex = themes.indexOf(currentThemeMode).coerceAtLeast(0)
-
     var isNextAnimation by remember { mutableStateOf(true) }
-
-    val prevIndex = if (currentIndex > 0) currentIndex - 1 else themes.size - 1
-    val nextIndex = if (currentIndex < themes.size - 1) currentIndex + 1 else 0
 
     val edgeFadeMask =
         remember {
@@ -473,8 +471,8 @@ fun ThemeStepContent() {
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .background(colors.surfaceVariant, RoundedCornerShape(12.dp))
-                    .border(1.dp, colors.controlOverlayBorder, RoundedCornerShape(12.dp))
+                    .background(colors.surfaceVariant, OW_CARD_SHAPE_12)
+                    .border(1.dp, colors.controlOverlayBorder, OW_CARD_SHAPE_12)
                     .padding(horizontal = 4.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -482,7 +480,7 @@ fun ThemeStepContent() {
             IconButton(
                 onClick = {
                     isNextAnimation = false
-                    SettingsManager.setThemeMode(themes[prevIndex])
+                    SettingsManager.setThemeMode(themes.prevItem(currentThemeMode))
                 },
             ) {
                 Icon(
@@ -506,20 +504,12 @@ fun ThemeStepContent() {
                 AnimatedContent(
                     targetState = currentThemeMode,
                     transitionSpec = {
-                        if (isNextAnimation) {
-                            (slideInHorizontally { it } + fadeIn()) togetherWith
-                                (slideOutHorizontally { -it } + fadeOut())
-                        } else {
-                            (slideInHorizontally { -it } + fadeIn()) togetherWith
-                                (slideOutHorizontally { it } + fadeOut())
-                        }
+                        val direction = if (isNextAnimation) 1 else -1
+                        (slideInHorizontally { it * direction } + fadeIn()) togetherWith
+                            (slideOutHorizontally { -it * direction } + fadeOut())
                     },
                     label = "theme-carousel-animation",
                 ) { targetTheme ->
-                    val targetIdx = themes.indexOf(targetTheme).coerceAtLeast(0)
-                    val pIdx = if (targetIdx > 0) targetIdx - 1 else themes.size - 1
-                    val nIdx = if (targetIdx < themes.size - 1) targetIdx + 1 else 0
-
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -527,7 +517,7 @@ fun ThemeStepContent() {
                     ) {
                         // Previous Theme (subdued, left aligned)
                         Text(
-                            text = stringResource(themes[pIdx].displayNameResId()),
+                            text = stringResource(themes.prevItem(targetTheme).displayNameResId()),
                             color = colors.onSurfaceSecondary.copy(alpha = 0.5f),
                             style = MaterialTheme.typography.bodySmall,
                             maxLines = 1,
@@ -549,7 +539,7 @@ fun ThemeStepContent() {
 
                         // Next Theme (subdued, right aligned)
                         Text(
-                            text = stringResource(themes[nIdx].displayNameResId()),
+                            text = stringResource(themes.nextItem(targetTheme).displayNameResId()),
                             color = colors.onSurfaceSecondary.copy(alpha = 0.5f),
                             style = MaterialTheme.typography.bodySmall,
                             maxLines = 1,
@@ -564,7 +554,7 @@ fun ThemeStepContent() {
             IconButton(
                 onClick = {
                     isNextAnimation = true
-                    SettingsManager.setThemeMode(themes[nextIndex])
+                    SettingsManager.setThemeMode(themes.nextItem(currentThemeMode))
                 },
             ) {
                 Icon(
@@ -635,25 +625,15 @@ fun PrivilegedStepContent(
 ) {
     val context = LocalContext.current
     val colors = LocalAppColors.current
-    val lastError by PrivdManager.lastError.collectAsState()
+    val lastError by PrivdManager.lastError.collectAsStateWithLifecycle()
     val systemLocale =
         remember {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                val lm = context.getSystemService(LocaleManager::class.java)
-                val locales = lm?.systemLocales
-                if (locales != null && !locales.isEmpty) {
-                    locales.get(0)
-                } else {
-                    Locale.getDefault()
-                }
+            val lm = context.getSystemService(LocaleManager::class.java)
+            val locales = lm?.systemLocales
+            if (locales != null && !locales.isEmpty) {
+                locales.get(0)
             } else {
-                val systemLocalesSetting = Settings.System.getString(context.contentResolver, "system_locales")
-                if (!systemLocalesSetting.isNullOrBlank()) {
-                    val firstTag = systemLocalesSetting.split(",").firstOrNull()
-                    if (!firstTag.isNullOrBlank()) Locale.forLanguageTag(firstTag) else Locale.getDefault()
-                } else {
-                    Locale.getDefault()
-                }
+                Locale.getDefault()
             }
         }
 
@@ -709,8 +689,8 @@ fun PrivilegedStepContent(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .background(colors.surfaceVariant, RoundedCornerShape(12.dp))
-                        .border(1.dp, colors.controlOverlayBorder, RoundedCornerShape(12.dp))
+                        .background(colors.surfaceVariant, OW_CARD_SHAPE_12)
+                        .border(1.dp, colors.controlOverlayBorder, OW_CARD_SHAPE_12)
                         .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
@@ -738,86 +718,62 @@ fun PrivilegedStepContent(
             }
         } else {
             // Sequential status checklist calculation
-            val devStatus: ChecklistStatus
-            val wirelessStatus: ChecklistStatus
-            val pairingStatus: ChecklistStatus
-            val daemonStatus: ChecklistStatus
+            val isPendingAll = !isAllSet && (!isWifiActive || !hasAutoSetupBeenStarted)
 
-            if (isAllSet) {
-                devStatus = ChecklistStatus.DONE
-                wirelessStatus = ChecklistStatus.DONE
-                pairingStatus = ChecklistStatus.DONE
-                daemonStatus = ChecklistStatus.DONE
-            } else if (!isWifiActive || !hasAutoSetupBeenStarted) {
-                devStatus = ChecklistStatus.PENDING
-                wirelessStatus = ChecklistStatus.PENDING
-                pairingStatus = ChecklistStatus.PENDING
-                daemonStatus = ChecklistStatus.PENDING
-            } else {
-                devStatus = if (isDevModeActive) ChecklistStatus.DONE else ChecklistStatus.ACTIVE
+            val devStatus =
+                when {
+                    isAllSet -> ChecklistStatus.DONE
+                    isPendingAll -> ChecklistStatus.PENDING
+                    isDevModeActive -> ChecklistStatus.DONE
+                    else -> ChecklistStatus.ACTIVE
+                }
 
-                wirelessStatus =
-                    if (devStatus == ChecklistStatus.DONE) {
-                        if (isWirelessActive && isUsbActive) ChecklistStatus.DONE else ChecklistStatus.ACTIVE
-                    } else {
-                        ChecklistStatus.PENDING
-                    }
+            val wirelessStatus =
+                when {
+                    isAllSet -> ChecklistStatus.DONE
+                    isPendingAll || devStatus != ChecklistStatus.DONE -> ChecklistStatus.PENDING
+                    isWirelessActive && isUsbActive -> ChecklistStatus.DONE
+                    else -> ChecklistStatus.ACTIVE
+                }
 
-                pairingStatus =
-                    if (devStatus == ChecklistStatus.DONE && wirelessStatus == ChecklistStatus.DONE) {
-                        if (isDevicePaired) ChecklistStatus.DONE else ChecklistStatus.ACTIVE
-                    } else {
-                        ChecklistStatus.PENDING
-                    }
+            val pairingStatus =
+                when {
+                    isAllSet -> ChecklistStatus.DONE
+                    isPendingAll || wirelessStatus != ChecklistStatus.DONE -> ChecklistStatus.PENDING
+                    isDevicePaired -> ChecklistStatus.DONE
+                    else -> ChecklistStatus.ACTIVE
+                }
 
-                daemonStatus =
-                    if (devStatus == ChecklistStatus.DONE && wirelessStatus == ChecklistStatus.DONE &&
-                        pairingStatus == ChecklistStatus.DONE
-                    ) {
-                        when (privdState) {
-                            PrivdState.RUNNING -> {
-                                ChecklistStatus.DONE
-                            }
-
-                            PrivdState.FAILED -> {
-                                if (isAutoSetupActive) ChecklistStatus.ACTIVE else ChecklistStatus.FAILED
-                            }
-
-                            else -> {
-                                ChecklistStatus.ACTIVE
-                            }
-                        }
-                    } else {
-                        ChecklistStatus.PENDING
-                    }
-            }
+            val daemonStatus =
+                when {
+                    isAllSet -> ChecklistStatus.DONE
+                    isPendingAll || pairingStatus != ChecklistStatus.DONE -> ChecklistStatus.PENDING
+                    privdState == PrivdState.RUNNING -> ChecklistStatus.DONE
+                    privdState == PrivdState.FAILED -> if (isAutoSetupActive) ChecklistStatus.ACTIVE else ChecklistStatus.FAILED
+                    else -> ChecklistStatus.ACTIVE
+                }
 
             // Multi-stage status checklist
             Column(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .background(colors.surfaceVariant, RoundedCornerShape(12.dp))
-                        .border(1.dp, colors.controlOverlayBorder, RoundedCornerShape(12.dp))
+                        .background(colors.surfaceVariant, OW_CARD_SHAPE_12)
+                        .border(1.dp, colors.controlOverlayBorder, OW_CARD_SHAPE_12)
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                PrivdChecklistRow(
-                    label = stringResource(R.string.onboarding_privd_stage_dev),
-                    status = devStatus,
-                )
-                PrivdChecklistRow(
-                    label = stringResource(R.string.onboarding_privd_stage_wireless),
-                    status = wirelessStatus,
-                )
-                PrivdChecklistRow(
-                    label = stringResource(R.string.onboarding_privd_stage_pairing),
-                    status = pairingStatus,
-                )
-                PrivdChecklistRow(
-                    label = stringResource(R.string.onboarding_privd_stage_daemon),
-                    status = daemonStatus,
-                )
+                listOf(
+                    R.string.onboarding_privd_stage_dev to devStatus,
+                    R.string.onboarding_privd_stage_wireless to wirelessStatus,
+                    R.string.onboarding_privd_stage_pairing to pairingStatus,
+                    R.string.onboarding_privd_stage_daemon to daemonStatus,
+                ).forEach { (resId, status) ->
+                    PrivdChecklistRow(
+                        label = stringResource(resId),
+                        status = status,
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -843,67 +799,17 @@ fun PrivilegedStepContent(
                     )
                 }
             } else if (!isWifiActive) {
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .background(colors.error.copy(alpha = OW_WARNING_ALPHA_BG), RoundedCornerShape(OW_WARNING_CORNER_RADIUS))
-                            .border(
-                                OW_WARNING_BORDER_WIDTH,
-                                colors.error.copy(alpha = OW_WARNING_ALPHA_BORDER),
-                                RoundedCornerShape(OW_WARNING_CORNER_RADIUS),
-                            ).padding(OW_WARNING_PADDING),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(OW_WARNING_SPACED_BY_SMALL),
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Warning,
-                        contentDescription = null,
-                        tint = colors.error,
-                        modifier = Modifier.size(OW_WARNING_ICON_SIZE),
-                    )
-                    Text(
-                        text = stringResource(R.string.onboarding_privd_wifi_warning),
-                        color = colors.error,
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
+                OnboardingWarningBanner(text = stringResource(R.string.onboarding_privd_wifi_warning))
             } else if (privdState == PrivdState.FAILED && !isAutoSetupActive && hasAutoSetupBeenStarted) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(OW_WARNING_SPACED_BY_MEDIUM),
                 ) {
-                    val errorRes = errorStringResource(lastError)
-                    Row(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .background(colors.error.copy(alpha = OW_WARNING_ALPHA_BG), RoundedCornerShape(OW_WARNING_CORNER_RADIUS))
-                                .border(
-                                    OW_WARNING_BORDER_WIDTH,
-                                    colors.error.copy(alpha = OW_WARNING_ALPHA_BORDER),
-                                    RoundedCornerShape(OW_WARNING_CORNER_RADIUS),
-                                ).padding(OW_WARNING_PADDING),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(OW_WARNING_SPACED_BY_SMALL),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Warning,
-                            contentDescription = null,
-                            tint = colors.error,
-                            modifier = Modifier.size(OW_WARNING_ICON_SIZE),
-                        )
-                        Text(
-                            text = if (errorRes != null) stringResource(errorRes) else "Daemon connection failed.",
-                            color = colors.error,
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
+                    val errorRes = lastError.descriptionResId()
+                    OnboardingWarningBanner(
+                        text = if (errorRes != null) stringResource(errorRes) else "Daemon connection failed.",
+                    )
                     AppMagicalButton(
                         onClick = {
                             hasAutoSetupBeenStarted = true
@@ -951,64 +857,37 @@ fun PrivilegedStepContent(
     }
 }
 
-private enum class ChecklistStatus { PENDING, ACTIVE, DONE, FAILED }
-
 @Composable
-private fun PrivdChecklistRow(
-    label: String,
-    status: ChecklistStatus,
+private fun OnboardingWarningBanner(
+    text: String,
+    modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
     Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .background(colors.error.copy(alpha = OW_WARNING_ALPHA_BG), OW_CARD_SHAPE_12)
+                .border(
+                    OW_WARNING_BORDER_WIDTH,
+                    colors.error.copy(alpha = OW_WARNING_ALPHA_BORDER),
+                    OW_CARD_SHAPE_12,
+                ).padding(OW_WARNING_PADDING),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(OW_WARNING_SPACED_BY_SMALL),
     ) {
-        when (status) {
-            ChecklistStatus.PENDING -> {
-                Icon(
-                    imageVector = Icons.Rounded.RadioButtonUnchecked,
-                    contentDescription = null,
-                    tint = colors.onSurfaceSecondary.copy(alpha = 0.6f),
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-
-            ChecklistStatus.ACTIVE -> {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(20.dp),
-                    strokeWidth = 2.dp,
-                    color = colors.accent,
-                )
-            }
-
-            ChecklistStatus.DONE -> {
-                Icon(
-                    imageVector = Icons.Rounded.CheckCircle,
-                    contentDescription = null,
-                    tint = colors.accent,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-
-            ChecklistStatus.FAILED -> {
-                Icon(
-                    imageVector = Icons.Rounded.Cancel,
-                    contentDescription = null,
-                    tint = colors.error,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-        }
+        Icon(
+            imageVector = Icons.Rounded.Warning,
+            contentDescription = null,
+            tint = colors.error,
+            modifier = Modifier.size(OW_WARNING_ICON_SIZE),
+        )
         Text(
-            text = label,
-            color =
-                when (status) {
-                    ChecklistStatus.DONE -> colors.onSurface
-                    ChecklistStatus.ACTIVE -> colors.onSurface
-                    ChecklistStatus.PENDING -> colors.onSurfaceSecondary
-                    ChecklistStatus.FAILED -> colors.error
-                },
-            style = MaterialTheme.typography.bodyMedium,
+            text = text,
+            color = colors.error,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.weight(1f),
         )
     }
 }
@@ -1103,7 +982,7 @@ fun OnboardingStepper(
                             .weight(1f)
                             .height(2.dp)
                             .padding(horizontal = 4.dp)
-                            .clip(RoundedCornerShape(1.dp))
+                            .clip(OW_PROGRESS_TRACK_SHAPE)
                             .background(color = colors.onSurfaceSecondary.copy(alpha = 0.25f)),
                 ) {
                     if (lineProgress > 0f) {
@@ -1153,7 +1032,7 @@ fun AccessibilityStepContent(
 
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
+            shape = OW_CARD_SHAPE_12,
             color = colors.surfaceVariant,
         ) {
             Row(
@@ -1212,17 +1091,3 @@ fun AccessibilityStepContent(
         }
     }
 }
-
-private fun errorStringResource(error: PrivdError?): Int? =
-    when (error) {
-        PrivdError.DAEMON_UNREACHABLE -> R.string.privd_error_daemon_unreachable
-        PrivdError.PAIRING_FAILED -> R.string.privd_error_pairing_failed
-        PrivdError.ADB_DISCOVERY_FAILED -> R.string.privd_error_adb_discovery_failed
-        PrivdError.ADB_CONNECT_FAILED -> R.string.privd_error_adb_connect_failed
-        PrivdError.BOOTSTRAP_PUSH_FAILED -> R.string.privd_error_bootstrap_push_failed
-        PrivdError.BOOTSTRAP_SPAWN_FAILED -> R.string.privd_error_bootstrap_spawn_failed
-        PrivdError.BOOTSTRAP_PROVISION_FAILED -> R.string.privd_error_bootstrap_provision_failed
-        PrivdError.ADB_PAIRING_REQUIRED -> R.string.privd_error_adb_pairing_required
-        PrivdError.VERSION_MISMATCH -> R.string.privd_error_version_mismatch
-        null -> null
-    }

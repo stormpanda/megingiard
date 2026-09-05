@@ -45,7 +45,7 @@ The Virtual Touchpad is instantiated via the **Fullscreen Mouse Overlay** (`Full
   - **16:9 Aspect Ratio:** The touch surface is constrained to a `16:9` aspect ratio aligned to the bottom part of the screen, matching the primary screen dimensions to prevent mapping scaling distortion.
   - **Touchpad Screen Mirroring:** Can display a real-time mirror of the full top screen inside the touch area. A play button in the bottom toolbar toggles mirroring.
   - **Restore State:** Closing the touchpad (or turning off touchpad mirroring) stops the screen capture if it was initiated by the touchpad, restoring the macro pad's mirror capture to its exact prior state.
-- **Touchpad Settings:** A settings overlay is available via the settings cog button in the bottom toolbar. It groups options into two concurrent sections: **Relative Mouse Mode** (including toggles for tap-to-click, two-finger tap, three-finger tap, tap-and-drag, two-finger scroll with optional natural scrolling direction and a scroll speed sensitivity slider, Mouse 4/5 buttons, a Pointer Speed sensitivity slider, and a Haptic Feedback toggle) and **Absolute Touch Mode** (including a toggle for touchpad mirroring and a mirror dim level slider). The active input mode is persistent in the background but not exposed as a settings preference option. These settings are persisted across app sessions and full backups.
+- **Touchpad Settings:** A settings overlay is available via the settings cog button in the bottom toolbar, displayed on the primary (top) display while the virtual touchpad remains active, visible, and fully interactive on the secondary (bottom) display without closing or tearing down input injection. It groups options into two concurrent sections: **Relative Mouse Mode** (including toggles for tap-to-click, two-finger tap, three-finger tap, tap-and-drag, two-finger scroll with optional natural scrolling direction and a scroll speed sensitivity stepper with ±0.1x increments, Mouse 4/5 buttons, a Pointer Speed sensitivity stepper with ±0.1x increments, and a Haptic Feedback toggle) and **Absolute Touch Mode** (including a toggle for touchpad mirroring and a mirror dim level stepper). The active input mode is persistent in the background but not exposed as a settings preference option. These settings are persisted across app sessions and full backups.
 - When the Quick Menu is visible, all pointer changes are consumed to ensure touches do not bleed through.
 
 ---
@@ -154,16 +154,15 @@ In **Touch Mode** (shared absolute coordinate injection, e.g. for Mirror Touch P
 
 ### Secondary Display Rendering & Touchpad Mirroring
 
-When screen mirroring is active (`ScreenCaptureManager.isCapturing == true`), `FullscreenMouseOverlay` is composed inside `MirrorPresentation` as **Layer 4** — above `BackgroundMacroPadOverlay` — so it appears on the secondary display.
+`FullscreenMouseOverlay` is composed directly inside `MainAppScreen` on the secondary display as an animated overlay layer above `MacroPadScreen`.
 
-`MainAppScreen` suppresses the `FullscreenMouseOverlay` instance on the primary display whenever screen mirroring is active, ensuring only one instance of `MouseInjector` runs at a time.
+`MainAppScreen` ensures only one instance of `MouseInjector` runs at a time.
 
-Dismissal on the secondary display reuses the existing swipe-to-close path in `BackgroundMacroPadOverlay`: `SwipeGestureProcessor` → `AppStateManager.handleEdgeSwipe()` → `AppStateManager.closeActiveModal()` → `_isFullscreenMouseActive.value = false`.
+Dismissal on the secondary display reuses the edge-swipe gesture path: `SwipeGestureProcessor` → `AppStateManager.handleEdgeSwipe()` → `AppStateManager.closeActiveModal()` → `_isFullscreenMouseActive.value = false`.
 
 **Touchpad Mirroring Integration:**
 
-- When absolute touchpad mirroring is active, the touchpad Composable (`FullscreenMouseOverlay`) dynamically acquires the master `TextureView` instance from the `MirrorPresentation` via `LocalMirrorPresentation.current` and renders it directly inside the Compose layout using an `AndroidView`.
-- Upon disposal or mirroring deactivation, the master `TextureView` is safely detached and returned back to the background `MultiCutoutContainer` (`mcc`) for standard MacroPad cutout rendering.
+- When absolute touchpad mirroring is active (`isMirroringActive == true`), `FullscreenMouseOverlay` renders `EmbeddedMirrorView` with owner `MasterSurfaceRegistry.OWNER_TOUCHPAD` (`priority = 20`) and `ScreenCutout.FULLSCREEN` directly inside its 16:9 touch pad area. `MasterSurfaceRegistry` routes the video capture stream to the Touchpad and automatically restores MacroPad's surface when the Touchpad closes or mirroring is paused.
 - A semi-transparent black overlay dims the mirrored stream based on the user-configured `touchpadMirrorDim` level.
 - The lifecycle of the capture service is managed: if the capture service was started _by_ the touchpad, it is stopped immediately when the touchpad is closed or mode is toggled, restoring the previous active/inactive screen capture state of the MacroPad.
 

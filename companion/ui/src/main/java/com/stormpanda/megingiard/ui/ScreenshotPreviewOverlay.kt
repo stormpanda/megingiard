@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,6 +30,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import kotlinx.coroutines.delay
@@ -38,10 +38,13 @@ import kotlinx.coroutines.launch
 
 private const val TAG = "ScreenshotPreviewOverlay"
 
-// Layout dimensions & ratios
+// Layout dimensions & margins
 private const val SS_PREVIEW_WIDTH_FRACTION = 0.85f
+private val SS_MIN_EDGE_MARGIN_V = 24.dp
+private val SS_MIN_EDGE_MARGIN_H = 32.dp
 private val SS_SHADOW_ELEVATION = 12.dp
 private val SS_CORNER_RADIUS = 4.dp
+private val SS_SHAPE = RoundedCornerShape(SS_CORNER_RADIUS)
 private val SS_BORDER_WIDTH = 1.dp
 private val SS_IMAGE_BORDER_WIDTH = 1.dp
 private val SS_FRAME_PADDING = 12.dp
@@ -65,7 +68,7 @@ private const val SS_FADE_OUT_DURATION_MS = 400
 
 @Composable
 fun ScreenshotPreviewOverlay(modifier: Modifier = Modifier) {
-    val previewBitmap by ScreenCaptureManager.screenshotPreview.collectAsState()
+    val previewBitmap by ScreenCaptureManager.screenshotPreview.collectAsStateWithLifecycle()
     var isPreviewVisible by remember { mutableStateOf(false) }
     val sweepOffset = remember { Animatable(SS_GLARE_START_OFFSET) }
 
@@ -111,13 +114,14 @@ fun ScreenshotPreviewOverlay(modifier: Modifier = Modifier) {
                 remember(currentBitmap) {
                     currentBitmap.width.toFloat() / currentBitmap.height.toFloat()
                 }
+
             Box(
                 modifier =
                     Modifier
-                        .fillMaxWidth(SS_PREVIEW_WIDTH_FRACTION)
-                        .shadow(elevation = SS_SHADOW_ELEVATION, shape = RoundedCornerShape(SS_CORNER_RADIUS))
+                        .padding(horizontal = SS_MIN_EDGE_MARGIN_H, vertical = SS_MIN_EDGE_MARGIN_V)
+                        .shadow(elevation = SS_SHADOW_ELEVATION, shape = SS_SHAPE)
                         .background(SS_BG_COLOR)
-                        .border(width = SS_BORDER_WIDTH, color = SS_BORDER_COLOR, shape = RoundedCornerShape(SS_CORNER_RADIUS))
+                        .border(width = SS_BORDER_WIDTH, color = SS_BORDER_COLOR, shape = SS_SHAPE)
                         .padding(SS_FRAME_PADDING)
                         .drawWithContent {
                             drawContent()
@@ -150,10 +154,16 @@ fun ScreenshotPreviewOverlay(modifier: Modifier = Modifier) {
                     bitmap = currentBitmap.asImageBitmap(),
                     contentDescription = null,
                     modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(aspectRatio)
-                            .border(width = SS_IMAGE_BORDER_WIDTH, color = SS_IMAGE_BORDER_COLOR),
+                        if (aspectRatio >= 1.0f) {
+                            Modifier
+                                .fillMaxWidth(SS_PREVIEW_WIDTH_FRACTION)
+                                .aspectRatio(aspectRatio)
+                                .border(width = SS_IMAGE_BORDER_WIDTH, color = SS_IMAGE_BORDER_COLOR)
+                        } else {
+                            Modifier
+                                .aspectRatio(aspectRatio, matchHeightConstraintsFirst = true)
+                                .border(width = SS_IMAGE_BORDER_WIDTH, color = SS_IMAGE_BORDER_COLOR)
+                        },
                 )
             }
         }

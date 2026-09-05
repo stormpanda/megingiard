@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.mirror
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.emptyPreferences
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
@@ -25,6 +26,48 @@ import org.junit.Test
 class MirrorCutoutDomainTest {
     private val testDispatcher = UnconfinedTestDispatcher()
 
+    private fun loadLayout(
+        id: String = "test-layout",
+        name: String = "Test Layout",
+        mirrorCutouts: List<ScreenCutout> = emptyList(),
+        mirrorMultiMode: Boolean = false,
+        mirrorSavedScale: Float = 1f,
+        mirrorSavedOffsetX: Float = 0f,
+        mirrorSavedOffsetY: Float = 0f,
+    ): PadLayout {
+        val layout =
+            PadLayout(
+                id = id,
+                name = name,
+                mirrorCutouts = mirrorCutouts,
+                mirrorMultiMode = mirrorMultiMode,
+                mirrorSavedScale = mirrorSavedScale,
+                mirrorSavedOffsetX = mirrorSavedOffsetX,
+                mirrorSavedOffsetY = mirrorSavedOffsetY,
+            )
+        val profile = PadProfile(id = "profile-$id", name = "Profile", layouts = listOf(layout), activeLayoutId = id)
+        MacroPadState.loadFrom(listOf(profile), profile.id)
+        return layout
+    }
+
+    private fun sampleCutout(
+        id: String = "cutout-1",
+        touchProjectionEnabled: Boolean = true,
+    ) = ScreenCutout(
+        id = id,
+        name = "Part 1",
+        srcX = 0.1f,
+        srcY = 0.2f,
+        srcWidth = 0.4f,
+        srcHeight = 0.4f,
+        destX = 0.2f,
+        destY = 0.2f,
+        destWidth = 0.5f,
+        destHeight = 0.5f,
+        opacity = 1f,
+        touchProjectionEnabled = touchProjectionEnabled,
+    )
+
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
@@ -32,9 +75,7 @@ class MirrorCutoutDomainTest {
             object : DataStore<Preferences> {
                 override val data: Flow<Preferences> = emptyFlow()
 
-                override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences =
-                    androidx.datastore.preferences.core
-                        .emptyPreferences()
+                override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences = emptyPreferences()
             }
         MirrorSettings.init(dummyDataStore, CoroutineScope(testDispatcher))
         ScreenCaptureManager.scope = CoroutineScope(testDispatcher)
@@ -49,21 +90,7 @@ class MirrorCutoutDomainTest {
 
     @Test
     fun `loadFrom does not populate cutouts list and preserves unconfigured empty cutouts`() {
-        val layoutWithoutCutouts =
-            PadLayout(
-                id = "test-layout-1",
-                name = "Test Layout 1",
-                mirrorCutouts = emptyList(),
-            )
-        val profile =
-            PadProfile(
-                id = "test-profile-1",
-                name = "Test Profile 1",
-                layouts = listOf(layoutWithoutCutouts),
-                activeLayoutId = "test-layout-1",
-            )
-
-        MacroPadState.loadFrom(listOf(profile), "test-profile-1")
+        loadLayout("test-layout-1")
 
         val activeLayout = MacroPadState.activeLayout.value
         assertNotNull(activeLayout)
@@ -73,33 +100,18 @@ class MirrorCutoutDomainTest {
 
     @Test
     fun `setSurfaceSize does not migrate legacy viewport settings to cutouts list`() {
-        val layoutWithLegacy =
-            PadLayout(
-                id = "test-layout-legacy",
-                name = "Test Layout Legacy",
-                mirrorSavedScale = 5f,
-                mirrorSavedOffsetX = 960f,
-                mirrorSavedOffsetY = 540f,
-                mirrorCutouts = emptyList(),
-            )
-        val profile =
-            PadProfile(
-                id = "test-profile-legacy",
-                name = "Test Profile Legacy",
-                layouts = listOf(layoutWithLegacy),
-                activeLayoutId = "test-layout-legacy",
-            )
+        loadLayout(
+            id = "test-layout-legacy",
+            mirrorSavedScale = 5f,
+            mirrorSavedOffsetX = 960f,
+            mirrorSavedOffsetY = 540f,
+        )
 
-        MacroPadState.loadFrom(listOf(profile), "test-profile-legacy")
-
-        // Call setSurfaceSize
         ScreenCaptureManager.setSurfaceSize(1920f, 1080f)
 
         val activeLayout = MacroPadState.activeLayout.value
         assertNotNull(activeLayout)
         assertEquals(0, activeLayout!!.mirrorCutouts.size)
-
-        // Assert legacy fields are preserved
         assertEquals(5f, activeLayout.mirrorSavedScale, 0.001f)
         assertEquals(960f, activeLayout.mirrorSavedOffsetX, 0.001f)
         assertEquals(540f, activeLayout.mirrorSavedOffsetY, 0.001f)
@@ -107,43 +119,11 @@ class MirrorCutoutDomainTest {
 
     @Test
     fun `TouchProjectionController onPress handles coordinates mapping correctly`() {
-        val cutout =
-            ScreenCutout(
-                id = "cutout-1",
-                name = "Part 1",
-                srcX = 0.1f,
-                srcY = 0.2f,
-                srcWidth = 0.4f,
-                srcHeight = 0.4f,
-                destX = 0.2f,
-                destY = 0.2f,
-                destWidth = 0.5f,
-                destHeight = 0.5f,
-                opacity = 1f,
-                touchProjectionEnabled = true,
-            )
-        val layout =
-            PadLayout(
-                id = "test-layout-proj",
-                name = "Test Layout Proj",
-                mirrorCutouts = listOf(cutout),
-            )
-        val profile =
-            PadProfile(
-                id = "test-profile-proj",
-                name = "Test Profile Proj",
-                layouts = listOf(layout),
-                activeLayoutId = "test-layout-proj",
-            )
-        MacroPadState.loadFrom(listOf(profile), "test-profile-proj")
-
-        // Sync ScreenCaptureManager cutouts
-        ScreenCaptureManager.setSurfaceSize(1000f, 1000f) // trigger flow update
+        loadLayout("test-layout-proj", mirrorCutouts = listOf(sampleCutout()))
+        ScreenCaptureManager.setSurfaceSize(1000f, 1000f)
 
         val controller = TouchProjectionController(edgeZonePx = 20f, overlayAtBottom = false)
 
-        // dest boundaries: destLeft = 200, destTop = 200, destWidth = 500, destHeight = 500
-        // Touch in the center of the destination area: x = 200 + 250 = 450, y = 200 + 250 = 450
         val handled =
             controller.onPress(
                 pointerId = 1L,
@@ -155,132 +135,49 @@ class MirrorCutoutDomainTest {
                 pointerCount = 1,
             )
         assertTrue(handled)
-        // The mapped touch should be in the center of the source area:
-        // srcX + srcWidth / 2 = 0.1 + 0.2 = 0.3
-        // srcY + srcHeight / 2 = 0.2 + 0.2 = 0.4
-        // Wait, let's verify if indicator position was set
         assertEquals(Pair(450f, 450f), controller.indicatorPos.value)
     }
 
     @Test
     fun `toggling multi-mode and saving viewport does not override other mode configs`() {
-        val layout =
-            PadLayout(
-                id = "test-layout-toggle",
-                name = "Toggle Layout",
-                mirrorMultiMode = false,
-                mirrorSavedScale = 2f,
-                mirrorCutouts =
-                    listOf(
-                        ScreenCutout(
-                            id = "c1",
-                            name = "Cutout 1",
-                            srcX = 0f,
-                            srcY = 0f,
-                            srcWidth = 1f,
-                            srcHeight = 1f,
-                            destX = 0f,
-                            destY = 0f,
-                            destWidth = 1f,
-                            destHeight = 1f,
-                        ),
-                    ),
-            )
-        val profile =
-            PadProfile(
-                id = "test-profile-toggle",
-                name = "Toggle Profile",
-                layouts = listOf(layout),
-                activeLayoutId = "test-layout-toggle",
-            )
+        loadLayout(
+            id = "test-layout-toggle",
+            mirrorMultiMode = false,
+            mirrorSavedScale = 2f,
+            mirrorCutouts = listOf(sampleCutout("c1")),
+        )
 
-        MacroPadState.loadFrom(listOf(profile), "test-profile-toggle")
-
-        // Save viewport while in single-mode
         MacroPadState.saveMirrorViewport("test-layout-toggle", scale = 3f, offsetX = 10f, offsetY = 10f)
 
         val activeLayout = MacroPadState.activeLayout.value
         assertNotNull(activeLayout)
         assertEquals(3f, activeLayout!!.mirrorSavedScale, 0.001f)
-        // Multi-mode cutouts list must NOT be overwritten or modified
         assertEquals(1, activeLayout.mirrorCutouts.size)
         assertEquals("c1", activeLayout.mirrorCutouts.first().id)
     }
 
     @Test
-    fun `restoreFromLayout on layout with empty cutouts automatically populates it with default cutout`() {
-        val layoutWithEmptyCutouts =
-            PadLayout(
-                id = "test-layout-empty-cutouts",
-                name = "Test Layout Empty Cutouts",
-                mirrorCutouts = emptyList(),
-            )
-        val profile =
-            PadProfile(
-                id = "test-profile-empty",
-                name = "Test Profile Empty",
-                layouts = listOf(layoutWithEmptyCutouts),
-                activeLayoutId = "test-layout-empty-cutouts",
-            )
+    fun `restoreFromLayout on layout with empty cutouts preserves empty cutouts`() {
+        loadLayout("test-layout-empty-cutouts")
 
-        MacroPadState.loadFrom(listOf(profile), "test-profile-empty")
-
-        // Set up capture source size and surface size in ScreenCaptureManager
         ScreenCaptureManager.setCaptureSourceSize(1920, 1080)
         ScreenCaptureManager.setSurfaceSize(1000f, 1000f)
 
-        // Restore viewport / check layout - this should trigger the creation of a default cutout
         MirrorViewportController.restoreFromLayout()
 
         val activeLayout = MacroPadState.activeLayout.value
         assertNotNull(activeLayout)
-        assertEquals(1, activeLayout!!.mirrorCutouts.size)
-        val defaultCutout = activeLayout.mirrorCutouts.first()
-        assertEquals(1f, defaultCutout.srcWidth, 0.001f)
-        assertEquals(1f, defaultCutout.srcHeight, 0.001f)
-        assertEquals(1f, defaultCutout.destWidth, 0.001f)
-        // Dest height = (1000 * 1080) / (1000 * 1920) = 1080 / 1920 = 0.5625f
-        assertEquals(0.5625f, defaultCutout.destHeight, 0.001f)
+        assertEquals(0, activeLayout!!.mirrorCutouts.size)
+        assertTrue(activeLayout.mirrorCutouts.isEmpty())
     }
 
     @Test
     fun `TouchProjectionController multi touch allocates distinct slots`() {
-        val cutout =
-            ScreenCutout(
-                id = "cutout-1",
-                name = "Part 1",
-                srcX = 0.1f,
-                srcY = 0.2f,
-                srcWidth = 0.4f,
-                srcHeight = 0.4f,
-                destX = 0.2f,
-                destY = 0.2f,
-                destWidth = 0.5f,
-                destHeight = 0.5f,
-                opacity = 1f,
-                touchProjectionEnabled = true,
-            )
-        val layout =
-            PadLayout(
-                id = "test-layout-proj",
-                name = "Test Layout Proj",
-                mirrorCutouts = listOf(cutout),
-            )
-        val profile =
-            PadProfile(
-                id = "test-profile-proj",
-                name = "Test Profile Proj",
-                layouts = listOf(layout),
-                activeLayoutId = "test-layout-proj",
-            )
-        MacroPadState.loadFrom(listOf(profile), "test-profile-proj")
-
-        // Sync ScreenCaptureManager cutouts
+        loadLayout("test-layout-proj", mirrorCutouts = listOf(sampleCutout()))
         ScreenCaptureManager.setSurfaceSize(1000f, 1000f)
 
         val controller = TouchProjectionController(edgeZonePx = 20f, overlayAtBottom = false)
 
-        // Press first pointer in cutout-1
         val handled1 =
             controller.onPress(
                 pointerId = 1L,
@@ -294,7 +191,6 @@ class MirrorCutoutDomainTest {
         assertTrue(handled1)
         assertEquals(Pair(450f, 450f), controller.indicatorPos.value)
 
-        // Press second pointer in cutout-1
         val handled2 =
             controller.onPress(
                 pointerId = 2L,
@@ -308,9 +204,7 @@ class MirrorCutoutDomainTest {
         assertTrue(handled2)
         assertEquals(Pair(450f, 450f), controller.indicatorPos.value)
 
-        // Release first pointer
         controller.onRelease(1L, 450f, 450f, 1000f, 1000f)
-        // Release second pointer
         controller.onRelease(2L, 500f, 500f, 1000f, 1000f)
     }
 }

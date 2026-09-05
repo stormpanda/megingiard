@@ -5,6 +5,7 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.input.TouchAction
 import com.stormpanda.megingiard.input.TouchInjector
+import com.stormpanda.megingiard.macropad.MouseButton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -93,6 +94,23 @@ class TouchpadGestureProcessor(
     private var isDragging = false
     private var pendingClickJob: Job? = null
 
+    private fun resetMousePointers() {
+        releasedAsTap.clear()
+        pressTimes.clear()
+        downPositions.clear()
+        movedTooFar.clear()
+        primaryPointer = null
+    }
+
+    private fun clickButton(button: MouseButton) {
+        onHapticFeedback()
+        scope.launch {
+            MouseInjector.buttonDown(button)
+            delay(TP_CLICK_DURATION_MS)
+            MouseInjector.buttonUp(button)
+        }
+    }
+
     /**
      * Handle a Press event.
      *
@@ -137,20 +155,12 @@ class TouchpadGestureProcessor(
                         job.cancel()
                         pendingClickJob = null
                     } else {
-                        scope.launch {
-                            MouseInjector.leftDown()
-                        }
+                        MouseInjector.leftDown()
                     }
                 }
             }
         } else {
-            var slot = -1
-            for (i in 0 until MAX_TOUCH_SLOTS) {
-                if (!activeSlots[i]) {
-                    slot = i
-                    break
-                }
-            }
+            val slot = activeSlots.indexOfFirst { !it }
             if (slot != -1) {
                 activeSlots[slot] = true
                 pointerToSlotMap[pointerId] = slot
@@ -258,27 +268,16 @@ class TouchpadGestureProcessor(
 
             if (isDragging) {
                 isDragging = false
-                releasedAsTap.clear()
-                pressTimes.clear()
-                downPositions.clear()
-                movedTooFar.clear()
-                primaryPointer = null
+                resetMousePointers()
                 AppLog.d(TAG, "onRelease: ending drag lock")
-                scope.launch {
-                    MouseInjector.leftUp()
-                }
+                MouseInjector.leftUp()
                 return
             }
 
             // When all fingers are up, evaluate taps
-            val allPointersUp = downPositions.isEmpty()
-            if (allPointersUp) {
+            if (downPositions.isEmpty()) {
                 val tapCount = releasedAsTap.size
-                releasedAsTap.clear()
-                pressTimes.clear()
-                downPositions.clear()
-                movedTooFar.clear()
-                primaryPointer = null
+                resetMousePointers()
                 when {
                     tapCount == 1 && tapToClick() -> {
                         lastTapReleaseTime = System.currentTimeMillis()
@@ -296,21 +295,11 @@ class TouchpadGestureProcessor(
                     }
 
                     tapCount == 2 && twoFingerTap() -> {
-                        onHapticFeedback()
-                        scope.launch {
-                            MouseInjector.rightDown()
-                            delay(TP_CLICK_DURATION_MS)
-                            MouseInjector.rightUp()
-                        }
+                        clickButton(MouseButton.RIGHT)
                     }
 
                     tapCount >= 3 && threeFingerTap() -> {
-                        onHapticFeedback()
-                        scope.launch {
-                            MouseInjector.middleDown()
-                            delay(TP_CLICK_DURATION_MS)
-                            MouseInjector.middleUp()
-                        }
+                        clickButton(MouseButton.MIDDLE)
                     }
                 }
             }
@@ -333,11 +322,7 @@ class TouchpadGestureProcessor(
         // Unconditionally clean up Mouse mode state synchronously
         val wasDragging = isDragging
         isDragging = false
-        releasedAsTap.clear()
-        pressTimes.clear()
-        downPositions.clear()
-        movedTooFar.clear()
-        primaryPointer = null
+        resetMousePointers()
         scrollAccumY = 0f
         pendingClickJob?.cancel()
         pendingClickJob = null
@@ -353,13 +338,5 @@ class TouchpadGestureProcessor(
         for ((_, slot) in slotsToRelease) {
             TouchInjector.injectTouch(slot, TouchAction.UP, 0f, 0f)
         }
-    }
-
-    /**
-     * Designate a pointer as the new primary (for cursor movement in mouse mode).
-     * Call when the previous primary pointer lifts and others are still held.
-     */
-    fun setPrimaryPointer(pointerId: Long) {
-        primaryPointer = pointerId
     }
 }

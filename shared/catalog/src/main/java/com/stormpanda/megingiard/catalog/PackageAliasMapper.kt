@@ -27,12 +27,5 @@ object PackageAliasMapper {
     fun getTitleForPackage(
         packageName: String,
         fallbackTitle: String,
-    ): String {
-        val overrideTitle = aliasMap[packageName]
-        return if (!overrideTitle.isNullOrBlank()) {
-            overrideTitle
-        } else {
-            fallbackTitle
-        }
-    }
+    ): String = aliasMap[packageName]?.takeIf { it.isNotBlank() } ?: fallbackTitle
 }

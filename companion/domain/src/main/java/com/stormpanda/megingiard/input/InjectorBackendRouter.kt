@@ -3,6 +3,7 @@ package com.stormpanda.megingiard.input
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdConnectionState
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -18,10 +19,11 @@ import kotlinx.coroutines.launch
  */
 class InjectorBackendRouter(
     private val tag: String,
+    dispatcher: CoroutineDispatcher = Dispatchers.Default,
     private val onPrivdConnected: (() -> Unit)? = null,
     private val onPrivdDisconnected: (() -> Unit)? = null,
 ) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val scope = CoroutineScope(SupervisorJob() + dispatcher)
 
     @Volatile
     private var usePrivd: Boolean = false
@@ -69,12 +71,19 @@ class InjectorBackendRouter(
     /**
      * Returns whether the privileged backend is currently selected.
      */
-    val isPrivd: Boolean get() = usePrivd
+    val isPrivd: Boolean get() = usePrivd || PrivdClient.isConnected
 
     /**
      * Queries whether the underlying backend injector is active.
      */
-    fun isRunning(isFallbackRunning: () -> Boolean): Boolean = if (usePrivd) PrivdClient.isConnected else isFallbackRunning()
+    fun isRunning(isFallbackRunning: () -> Boolean): Boolean =
+        if (!active) {
+            false
+        } else if (usePrivd) {
+            PrivdClient.isConnected
+        } else {
+            isFallbackRunning()
+        }
 
     /**
      * Executes [privdAction] if the privileged backend is active, otherwise [shellAction].

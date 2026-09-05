@@ -11,7 +11,7 @@ import androidx.compose.ui.unit.dp
  *
  * Consolidating these parameters in a single location guarantees that the visual tab
  * alignments in [QuickMenuBar][com.stormpanda.megingiard.ui.QuickMenuBar] and the edge-swipe gesture zones in the host screens
- * ([MainAppScreen][com.stormpanda.megingiard.MainAppScreen], [BackgroundMacroPadOverlay][com.stormpanda.megingiard.macropad.BackgroundMacroPadOverlay], [MirrorPresentation][com.stormpanda.megingiard.mirror.MirrorPresentation])
+ * ([MainAppScreen][com.stormpanda.megingiard.MainAppScreen], [MacroPadScreen][com.stormpanda.megingiard.macropad.MacroPadScreen])
  * always remain perfectly in sync.
  */
 object QuickMenuBarLayout {
@@ -58,30 +58,26 @@ data class QuickMenuGestureMetrics(
 fun rememberQuickMenuGestureMetrics(): QuickMenuGestureMetrics {
     val density = LocalDensity.current
     return remember(density) {
-        val edgeZonePx = with(density) { QuickMenuBarLayout.SWIPE_EDGE_ZONE.toPx() }
-        val swipeThresholdPx = with(density) { QuickMenuBarLayout.SWIPE_THRESHOLD.toPx() }
-        val quickMenuBarZoneWidthPx = with(density) { QuickMenuBarLayout.SWIPE_QM_BAR_ZONE_WIDTH.toPx() }
+        with(density) {
+            val edgeZonePx = QuickMenuBarLayout.SWIPE_EDGE_ZONE.toPx()
+            val swipeThresholdPx = QuickMenuBarLayout.SWIPE_THRESHOLD.toPx()
+            val quickMenuBarZoneWidthPx = QuickMenuBarLayout.SWIPE_QM_BAR_ZONE_WIDTH.toPx()
 
-        val kbBarWidthPx = with(density) { QuickMenuBarLayout.TAB_WIDTH.toPx() }
-        val kbBarStartPaddingPx = with(density) { QuickMenuBarLayout.TAB_PADDING.toPx() }
-        val kbBarZoneWidthPx = with(density) { QuickMenuBarLayout.TAB_ZONE_WIDTH.toPx() }
-        val kbBarCenterPx = kbBarStartPaddingPx + (kbBarWidthPx / 2f)
-        val kbBarMinX = kbBarCenterPx - (kbBarZoneWidthPx / 2f)
-        val kbBarMaxX = kbBarCenterPx + (kbBarZoneWidthPx / 2f)
+            val kbBarWidthPx = QuickMenuBarLayout.TAB_WIDTH.toPx()
+            val kbBarStartPaddingPx = QuickMenuBarLayout.TAB_PADDING.toPx()
+            val kbBarZoneWidthPx = QuickMenuBarLayout.TAB_ZONE_WIDTH.toPx()
+            val kbBarCenterPx = kbBarStartPaddingPx + (kbBarWidthPx / 2f)
 
-        val tpBarWidthPx = with(density) { QuickMenuBarLayout.TAB_WIDTH.toPx() }
-        val tpBarEndPaddingPx = with(density) { QuickMenuBarLayout.TAB_PADDING.toPx() }
-        val tpBarZoneWidthPx = with(density) { QuickMenuBarLayout.TAB_ZONE_WIDTH.toPx() }
-
-        QuickMenuGestureMetrics(
-            edgeZonePx = edgeZonePx,
-            swipeThresholdPx = swipeThresholdPx,
-            quickMenuBarZoneWidthPx = quickMenuBarZoneWidthPx,
-            kbBarMinX = kbBarMinX,
-            kbBarMaxX = kbBarMaxX,
-            tpBarWidthPx = tpBarWidthPx,
-            tpBarEndPaddingPx = tpBarEndPaddingPx,
-            tpBarZoneWidthPx = tpBarZoneWidthPx,
-        )
+            QuickMenuGestureMetrics(
+                edgeZonePx = edgeZonePx,
+                swipeThresholdPx = swipeThresholdPx,
+                quickMenuBarZoneWidthPx = quickMenuBarZoneWidthPx,
+                kbBarMinX = kbBarCenterPx - (kbBarZoneWidthPx / 2f),
+                kbBarMaxX = kbBarCenterPx + (kbBarZoneWidthPx / 2f),
+                tpBarWidthPx = QuickMenuBarLayout.TAB_WIDTH.toPx(),
+                tpBarEndPaddingPx = QuickMenuBarLayout.TAB_PADDING.toPx(),
+                tpBarZoneWidthPx = QuickMenuBarLayout.TAB_ZONE_WIDTH.toPx(),
+            )
+        }
     }
 }

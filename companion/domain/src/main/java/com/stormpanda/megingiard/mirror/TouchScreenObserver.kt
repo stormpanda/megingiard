@@ -1,115 +1,255 @@
 package com.stormpanda.megingiard.mirror
 
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.input.TouchAction
 import com.stormpanda.megingiard.input.TouchInjector
+import com.stormpanda.megingiard.privd.EvdevEvent
+import com.stormpanda.megingiard.privd.PrivdClient
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExecutorCoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import java.io.File
-import java.io.FileInputStream
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
-import java.util.concurrent.Executors
+import java.util.Collections
 
 private const val TAG = "TouchScreenObserver"
-private const val EVENT_NODE = "/dev/input/event6"
-private const val INPUT_EVENT_SIZE = 24
+private const val MAX_TOUCH_SLOTS = 10
 
-object TouchScreenObserver {
-    private var job: Job? = null
+// Linux evdev protocol constants
+private const val EV_SYN = 0
+private const val EV_KEY = 1
+private const val EV_ABS = 3
 
-    // Created per start(), closed per stop() so the backing thread does not outlive the session.
-    private var dispatcher: ExecutorCoroutineDispatcher? = null
+private const val SYN_REPORT = 0
+private const val BTN_TOUCH = 0x14a
 
-    // Retained so stop() can close the stream and unblock the in-progress blocking read() immediately.
-    @Volatile private var activeStream: FileInputStream? = null
+private const val ABS_MT_SLOT = 0x2f
+private const val ABS_MT_POSITION_X = 0x35
+private const val ABS_MT_POSITION_Y = 0x36
+private const val ABS_MT_TRACKING_ID = 0x39
 
-    // Callback invoked when a touch coordinate is received.
-    // Coordinates are normalized landscape [0, 1].
-    @Volatile var onTouchNormalized: ((Float, Float) -> Unit)? = null
+private class SlotTracker(
+    val slotId: Int,
+) {
+    var trackingId: Int = -1
+    var rawX: Int? = null
+    var rawY: Int? = null
+    var isActive: Boolean = false
+    var isNewDown: Boolean = false
+    var isPendingUp: Boolean = false
+    var hasMovedInPacket: Boolean = false
 
-    fun start() {
-        if (job != null) return
-        AppLog.i(TAG, "start()")
-        val exec = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
-        dispatcher = exec
-        job =
-            CoroutineScope(exec).launch {
-                val file = File(EVENT_NODE)
-                if (!file.exists()) {
-                    AppLog.e(TAG, "Touch event node $EVENT_NODE does not exist")
-                    return@launch
-                }
-                try {
-                    val fis = FileInputStream(file)
-                    activeStream = fis
-                    fis.use {
-                        val buffer = ByteArray(INPUT_EVENT_SIZE)
-                        val byteBuffer = ByteBuffer.wrap(buffer).order(ByteOrder.nativeOrder())
+    fun reset() {
+        trackingId = -1
+        rawX = null
+        rawY = null
+        isActive = false
+        isNewDown = false
+        isPendingUp = false
+        hasMovedInPacket = false
+    }
+}
 
-                        var currentX: Int? = null
-                        var currentY: Int? = null
+/**
+ * Protocol parser for Linux Multi-Touch Protocol Type B evdev streams.
+ */
+internal class TouchEventParser(
+    private val onDown: (slot: Int, normX: Float, normY: Float) -> Unit,
+    private val onMove: (slot: Int, normX: Float, normY: Float) -> Unit,
+    private val onUp: (slot: Int, normX: Float, normY: Float) -> Unit,
+) {
+    private val slots = Array(MAX_TOUCH_SLOTS) { SlotTracker(it) }
+    private var currentSlot = 0
 
-                        while (coroutineContext[Job]?.isActive == true) {
-                            var bytesRead = 0
-                            while (bytesRead < INPUT_EVENT_SIZE) {
-                                val r = fis.read(buffer, bytesRead, INPUT_EVENT_SIZE - bytesRead)
-                                if (r < 0) break
-                                bytesRead += r
+    fun processEvent(
+        type: Int,
+        code: Int,
+        value: Int,
+    ) {
+        when (type) {
+            EV_ABS -> {
+                when (code) {
+                    ABS_MT_SLOT -> {
+                        currentSlot = value.coerceIn(0, MAX_TOUCH_SLOTS - 1)
+                    }
+
+                    ABS_MT_TRACKING_ID -> {
+                        val slot = slots[currentSlot]
+                        if (value == -1) {
+                            if (slot.isActive) {
+                                slot.isActive = false
+                                slot.isPendingUp = true
+                                slot.trackingId = -1
                             }
-                            if (bytesRead < INPUT_EVENT_SIZE) {
-                                AppLog.w(TAG, "Read fewer bytes than expected input event size, stopping")
-                                break
-                            }
-
-                            byteBuffer.rewind()
-                            // Skip timeval (16 bytes on 64-bit systems)
-                            byteBuffer.position(16)
-                            val type = byteBuffer.short.toInt() and 0xFFFF
-                            val code = byteBuffer.short.toInt() and 0xFFFF
-                            val value = byteBuffer.int
-
-                            // EV_ABS = 3
-                            if (type == 3) {
-                                if (code == 53) { // ABS_MT_POSITION_X
-                                    currentX = value
-                                } else if (code == 54) { // ABS_MT_POSITION_Y
-                                    currentY = value
-                                }
-                            } else if (type == 0 && code == 0) { // EV_SYN / SYN_REPORT
-                                val x = currentX
-                                val y = currentY
-                                if (x != null && y != null) {
-                                    // Map to normalized landscape coordinates:
-                                    // normalizedX = sensor_y / THOR_SENSOR_H
-                                    // normalizedY = 1.0f - (sensor_x / THOR_SENSOR_W)
-                                    val nx = y.toFloat() / TouchInjector.THOR_SENSOR_H
-                                    val ny = 1.0f - (x.toFloat() / TouchInjector.THOR_SENSOR_W)
-                                    // Coerce to [0, 1]
-                                    val coercedNx = nx.coerceIn(0f, 1f)
-                                    val coercedNy = ny.coerceIn(0f, 1f)
-                                    onTouchNormalized?.invoke(coercedNx, coercedNy)
-                                }
+                        } else {
+                            if (!slot.isActive) {
+                                slot.isActive = true
+                                slot.isNewDown = true
+                                slot.trackingId = value
                             }
                         }
                     }
-                } catch (e: Exception) {
-                    AppLog.w(TAG, "Exception in touch screen reading loop: $e")
-                } finally {
-                    activeStream = null
+
+                    ABS_MT_POSITION_X -> {
+                        val slot = slots[currentSlot]
+                        slot.rawX = value
+                        slot.hasMovedInPacket = true
+                    }
+
+                    ABS_MT_POSITION_Y -> {
+                        val slot = slots[currentSlot]
+                        slot.rawY = value
+                        slot.hasMovedInPacket = true
+                    }
                 }
             }
+
+            EV_SYN -> {
+                if (code == SYN_REPORT) {
+                    for (slot in slots) {
+                        val rx = slot.rawX
+                        val ry = slot.rawY
+                        if (rx != null && ry != null) {
+                            val nx = (ry.toFloat() / TouchInjector.THOR_SENSOR_H).coerceIn(0f, 1f)
+                            val ny = (1.0f - (rx.toFloat() / TouchInjector.THOR_SENSOR_W)).coerceIn(0f, 1f)
+
+                            if (slot.isNewDown) {
+                                slot.isNewDown = false
+                                slot.hasMovedInPacket = false
+                                onDown(slot.slotId, nx, ny)
+                            } else if (slot.isActive && slot.hasMovedInPacket) {
+                                slot.hasMovedInPacket = false
+                                onMove(slot.slotId, nx, ny)
+                            }
+
+                            if (slot.isPendingUp) {
+                                slot.isPendingUp = false
+                                slot.hasMovedInPacket = false
+                                onUp(slot.slotId, nx, ny)
+                                slot.reset()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Passive evdev reader for the primary touchscreen device node (`/dev/input/event6`).
+ *
+ * Monitors physical touches on Display 0 in real time without grabbing the device (`EVIOCGRAB`),
+ * allowing the foreground game or emulator to receive all native touches unimpeded with zero latency.
+ *
+ * Uses token-based client reference counting so multiple consumers (e.g. Follow Mode, Touch Macro Recording)
+ * can safely request touch observation without prematurely closing active sessions.
+ *
+ * Automatically routes through [PrivdClient.touchEvdevEvents] (`SUB TOUCH`) when Privileged Mode is active.
+ */
+object TouchScreenObserver {
+    private val activeClients = Collections.synchronizedSet(mutableSetOf<String>())
+    private var job: Job? = null
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    /**
+     * Legacy single-point callback for normalized landscape coordinates `[0, 1]`.
+     */
+    @Volatile var onTouchNormalized: ((Float, Float) -> Unit)? = null
+
+    /**
+     * Full multi-touch stream callback delivering slot index, action, and normalized landscape coordinates `[0, 1]`.
+     */
+    @Volatile var onTouchEvent: ((slot: Int, action: TouchAction, normX: Float, normY: Float) -> Unit)? = null
+
+    val isRunning: Boolean
+        get() = job?.isActive == true
+
+    /**
+     * Starts the passive touch screen reader for a specific client [clientToken].
+     * Coordinates lifecycle across multiple concurrent active clients.
+     */
+    @Synchronized
+    fun start(clientToken: String) {
+        val wasEmpty = activeClients.isEmpty()
+        activeClients.add(clientToken)
+        AppLog.i(TAG, "start() client='$clientToken' activeClients=$activeClients")
+        if (wasEmpty) {
+            startInternal()
+        }
     }
 
-    fun stop() {
-        AppLog.i(TAG, "stop()")
-        activeStream?.close() // unblocks the blocking read() immediately
-        activeStream = null
+    /**
+     * Stops the passive touch screen reader for a specific client [clientToken].
+     * Only terminates the underlying reader thread when all registered clients have released it.
+     */
+    @Synchronized
+    fun stop(clientToken: String) {
+        if (!activeClients.contains(clientToken)) {
+            AppLog.d(TAG, "stop() called for non-active client '$clientToken'. Ignoring.")
+            return
+        }
+        activeClients.remove(clientToken)
+        AppLog.i(TAG, "stop() client='$clientToken' activeClients=$activeClients")
+        if (activeClients.isEmpty()) {
+            onTouchNormalized = null
+            onTouchEvent = null
+            stopInternal()
+        }
+    }
+
+    /**
+     * Force-stops all clients and tears down the reader thread. For testing / cleanup only.
+     */
+    @Synchronized
+    fun stopAll() {
+        AppLog.i(TAG, "stopAll() activeClients=$activeClients")
+        activeClients.clear()
+        onTouchNormalized = null
+        onTouchEvent = null
+        stopInternal()
+    }
+
+    private fun startInternal() {
+        if (job != null) return
+        AppLog.i(TAG, "startInternal() isPrivdConnected=${PrivdClient.isConnected}")
+
+        val parser =
+            TouchEventParser(
+                onDown = { slot, nx, ny ->
+                    onTouchEvent?.invoke(slot, TouchAction.DOWN, nx, ny)
+                    onTouchNormalized?.invoke(nx, ny)
+                },
+                onMove = { slot, nx, ny ->
+                    onTouchEvent?.invoke(slot, TouchAction.MOVE, nx, ny)
+                    onTouchNormalized?.invoke(nx, ny)
+                },
+                onUp = { slot, nx, ny ->
+                    onTouchEvent?.invoke(slot, TouchAction.UP, nx, ny)
+                },
+            )
+
+        if (PrivdClient.isConnected) {
+            AppLog.i(TAG, "Starting touch observation via PrivdClient SUB TOUCH")
+            PrivdClient.subscribeTouch()
+            job =
+                scope.launch {
+                    PrivdClient.touchEvdevEvents.collect { ev ->
+                        parser.processEvent(ev.type, ev.code, ev.value)
+                    }
+                }
+            return
+        }
+
+        AppLog.w(TAG, "Cannot start touch observation: Privileged Mode is not connected")
+    }
+
+    private fun stopInternal() {
+        AppLog.i(TAG, "stopInternal()")
+        if (PrivdClient.isConnected) {
+            PrivdClient.unsubscribeTouch()
+        }
         job?.cancel()
         job = null
-        dispatcher?.close() // shuts down the backing executor thread
-        dispatcher = null
     }
 }

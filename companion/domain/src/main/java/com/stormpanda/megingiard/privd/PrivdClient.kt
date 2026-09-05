@@ -66,12 +66,19 @@ private const val HMAC_HEX_LEN = 64 // SHA-256 digest → 64 hex chars
  */
 object PrivdClient {
     init {
-        ProcessCmdlineProvider.runningProcessesProvider = { getRunningProcesses() }
-        ProcessCmdlineProvider.textFileReader = { path -> readTextFile(path) }
+        ProcessCmdlineProvider.runningProcessesProvider = ::getRunningProcesses
+        ProcessCmdlineProvider.textFileReader = ::readTextFile
     }
 
     private val _state = MutableStateFlow(PrivdConnectionState.DISCONNECTED)
     val state: StateFlow<PrivdConnectionState> = _state.asStateFlow()
+
+    internal fun setStateForTesting(newState: PrivdConnectionState?) {
+        isConnectedForTest = if (newState == null) null else (newState == PrivdConnectionState.CONNECTED)
+        if (newState != null) {
+            _state.value = newState
+        }
+    }
 
     private val commandMutex = Mutex()
 
@@ -88,6 +95,19 @@ object PrivdClient {
             onBufferOverflow = BufferOverflow.DROP_OLDEST,
         )
     val evdevEvents: SharedFlow<EvdevEvent> = _evdevEvents.asSharedFlow()
+
+    /**
+     * Raw touchscreen evdev events streamed from the daemon while a `SUB TOUCH` subscription is active.
+     * Consumed by [com.stormpanda.megingiard.mirror.TouchScreenObserver].
+     *
+     * Buffer: 128 events (DROP_OLDEST on overflow).
+     */
+    private val _touchEvdevEvents =
+        MutableSharedFlow<EvdevEvent>(
+            extraBufferCapacity = 128,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
+    val touchEvdevEvents: SharedFlow<EvdevEvent> = _touchEvdevEvents.asSharedFlow()
 
     // Per-install HMAC key loaded from Android Keystore-encrypted storage at startup.
     // Null means the Privileged Mode setup wizard has not been run yet (or the app was
@@ -107,10 +127,18 @@ object PrivdClient {
      * The decryption involves a short (~10 ms) hardware-backed Keystore operation.
      */
     fun setPackageName(name: String) {
-        val isDebug = name.endsWith(".debug") || name.contains(".debug")
+        val isDebug = name.contains(".debug")
         portStart = if (isDebug) PORT_DEBUG_START else PORT_RELEASE_START
         portEnd = portStart + 4
         AppLog.d(TAG, "setPackageName: $name -> port range $portStart..$portEnd")
+    }
+
+    internal fun setPortRangeForTesting(
+        start: Int,
+        end: Int = start,
+    ) {
+        portStart = start
+        portEnd = end
     }
 
     fun loadKey(context: Context) {
@@ -170,8 +198,10 @@ object PrivdClient {
 
     private val dumpLock = Any()
 
+    @Volatile internal var isConnectedForTest: Boolean? = null
+
     val isConnected: Boolean
-        get() = running && (socket?.isConnected == true) && (socket?.isClosed == false)
+        get() = isConnectedForTest ?: (running && (socket?.isConnected == true) && (socket?.isClosed == false))
 
     /**
      * Attempts to connect to the local TCP port range.
@@ -179,6 +209,7 @@ object PrivdClient {
      */
     @Synchronized
     fun connect(): Boolean {
+        isConnectedForTest = null
         if (isConnected) return true
         cleanupLocked()
         _state.value = PrivdConnectionState.CONNECTING
@@ -306,15 +337,19 @@ object PrivdClient {
             return ok
         }
 
-    suspend fun takeScreenshot(path: String): Boolean =
+    suspend fun takeScreenshot(
+        path: String,
+        displayId: Int? = null,
+    ): Boolean =
         commandMutex.withLock {
             if (!isConnected) return false
             val deferred = CompletableDeferred<Boolean>()
             screenshotDeferred = deferred
-            send("SCREENSHOT $path\n")
+            val cmd = if (displayId != null) "SCREENSHOT $displayId $path\n" else "SCREENSHOT $path\n"
+            send(cmd)
             val ok = withTimeoutOrNull(SCREENSHOT_TIMEOUT_MS) { deferred.await() } ?: false
             screenshotDeferred = null
-            AppLog.i(TAG, "takeScreenshot($path) -> $ok")
+            AppLog.i(TAG, "takeScreenshot($path, displayId=$displayId) -> $ok")
             return ok
         }
 
@@ -343,6 +378,16 @@ object PrivdClient {
             AppLog.i(TAG, "getRunningProcesses() fetched ${result?.length ?: 0} bytes")
             return result
         }
+
+    fun subscribeTouch() {
+        AppLog.d(TAG, "subscribeTouch() -> sending 'SUB TOUCH\\n'")
+        send("SUB TOUCH\n")
+    }
+
+    fun unsubscribeTouch() {
+        AppLog.d(TAG, "unsubscribeTouch() -> sending 'UNSUB TOUCH\\n'")
+        send("UNSUB TOUCH\n")
+    }
 
     // -------------------------------------------------------------------------
     // Internal
@@ -427,9 +472,47 @@ object PrivdClient {
                     AppLog.w(TAG, "readerLoop failed: $e")
                     break
                 }
-            if (line == "PONG") {
-                pingDeferred?.complete(true)
-                continue
+            when (line) {
+                "PONG" -> {
+                    pingDeferred?.complete(true)
+                    continue
+                }
+
+                "MIRROR_STOPPED" -> {
+                    mirrorStopDeferred?.complete(true)
+                    continue
+                }
+
+                "SCREENSHOT_OK" -> {
+                    screenshotDeferred?.complete(true)
+                    continue
+                }
+
+                "READ_BEGIN" -> {
+                    isCapturingReadFile = true
+                    synchronized(dumpLock) { readFileDumpBuilder.clear() }
+                    continue
+                }
+
+                "READ_END" -> {
+                    isCapturingReadFile = false
+                    val content = synchronized(dumpLock) { readFileDumpBuilder.toString().also { readFileDumpBuilder.clear() } }
+                    readFileDeferred?.complete(content)
+                    continue
+                }
+
+                "PROC_BEGIN" -> {
+                    isCapturingProcesses = true
+                    synchronized(dumpLock) { processesDumpBuilder.clear() }
+                    continue
+                }
+
+                "PROC_END" -> {
+                    isCapturingProcesses = false
+                    val content = synchronized(dumpLock) { processesDumpBuilder.toString().also { processesDumpBuilder.clear() } }
+                    listProcessesDeferred?.complete(content)
+                    continue
+                }
             }
             if (line.startsWith("MIRROR_DIRECT_READY")) {
                 mirrorDirectStartDeferred?.complete(true)
@@ -439,23 +522,8 @@ object PrivdClient {
                 mirrorDirectStartDeferred?.complete(false)
                 continue
             }
-            if (line == "MIRROR_STOPPED") {
-                mirrorStopDeferred?.complete(true)
-                continue
-            }
-            if (line == "SCREENSHOT_OK") {
-                screenshotDeferred?.complete(true)
-                continue
-            }
             if (line.startsWith("SCREENSHOT_ERR")) {
                 screenshotDeferred?.complete(false)
-                continue
-            }
-            if (line == "READ_BEGIN") {
-                isCapturingReadFile = true
-                synchronized(dumpLock) {
-                    readFileDumpBuilder.clear()
-                }
                 continue
             }
             if (line.startsWith("READ_ERR")) {
@@ -463,50 +531,17 @@ object PrivdClient {
                 readFileDeferred?.complete(null)
                 continue
             }
-            if (line == "READ_END") {
-                isCapturingReadFile = false
-                val content =
-                    synchronized(dumpLock) {
-                        val res = readFileDumpBuilder.toString()
-                        readFileDumpBuilder.clear()
-                        res
-                    }
-                readFileDeferred?.complete(content)
-                continue
-            }
-            if (isCapturingReadFile) {
-                synchronized(dumpLock) {
-                    readFileDumpBuilder.append(line).append('\n')
-                }
-                continue
-            }
-            if (line == "PROC_BEGIN") {
-                isCapturingProcesses = true
-                synchronized(dumpLock) {
-                    processesDumpBuilder.clear()
-                }
-                continue
-            }
             if (line.startsWith("PROC_ERR")) {
                 isCapturingProcesses = false
                 listProcessesDeferred?.complete(null)
                 continue
             }
-            if (line == "PROC_END") {
-                isCapturingProcesses = false
-                val content =
-                    synchronized(dumpLock) {
-                        val res = processesDumpBuilder.toString()
-                        processesDumpBuilder.clear()
-                        res
-                    }
-                listProcessesDeferred?.complete(content)
+            if (isCapturingReadFile) {
+                synchronized(dumpLock) { readFileDumpBuilder.append(line).append('\n') }
                 continue
             }
             if (isCapturingProcesses) {
-                synchronized(dumpLock) {
-                    processesDumpBuilder.append(line).append('\n')
-                }
+                synchronized(dumpLock) { processesDumpBuilder.append(line).append('\n') }
                 continue
             }
             if (line.startsWith("EVT ")) {
@@ -519,6 +554,19 @@ object PrivdClient {
                         _evdevEvents.tryEmit(EvdevEvent(type, code, value))
                     }
                 }
+                continue
+            }
+            if (line.startsWith("EVT_TOUCH ")) {
+                val parts = line.split(' ')
+                if (parts.size == 4) {
+                    val type = parts[1].toIntOrNull()
+                    val code = parts[2].toIntOrNull()
+                    val value = parts[3].toIntOrNull()
+                    if (type != null && code != null && value != null) {
+                        _touchEvdevEvents.tryEmit(EvdevEvent(type, code, value))
+                    }
+                }
+                continue
             }
         }
         markBroken()
@@ -538,6 +586,7 @@ object PrivdClient {
 
     /** Must be invoked from a synchronized block. */
     private fun cleanupLocked() {
+        isConnectedForTest = null
         running = false
         queue.clear()
         pingDeferred?.complete(false)

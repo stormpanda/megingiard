@@ -32,10 +32,10 @@ every device since Android 11 (API 30).
 
 ### FR-PV2: Status Visibility
 
-- The Settings card MUST show one of five states: `OFF`, `BOOTSTRAPPING`,
-  `CONNECTING`, `RUNNING`, `FAILED`.
-- A `Test connection` button MUST round-trip a `PING` to the daemon and
-  display the result, so the user can verify the link is alive.
+- The Global Settings Privileged Mode action card MUST display a trailing status badge:
+  - `"ON (V<N>)"` (e.g., `ON (V7)`) with illuminated accent badge styling when Privileged Mode is in the `RUNNING` state.
+  - `"OFF"` with standard muted surface badge styling when Privileged Mode is offline or disconnected.
+- The Reconnection Prompt and Onboarding step MUST show detailed status guidance and actionable controls when bootstrapping or connecting.
 
 ### FR-PV3: Automatic Feature Promotion
 
@@ -66,7 +66,7 @@ every device since Android 11 (API 30).
 
 ### FR-PV8: 4-Step Manual Setup Wizard & Connect Port Entry
 
-- The manual setup wizard (`PrivdSetupWizardDialog`) renders a 4-step modal dialog using the Welcome Tour styling (`OnboardingStepper`, `FinishedStepContent`, dark backdrop scrim, bezel card container, and smooth horizontal step transitions):
+- The manual setup wizard (`PrivdSetupWizardDialog`) renders a 4-step modal dialog on the secondary display (bottom screen) using the Welcome Tour styling (`OnboardingStepper`, `FinishedStepContent`, dark backdrop scrim, bezel card container, and smooth horizontal step transitions). When triggered from Global Settings, the primary display (top screen) settings modal is automatically closed so that Android Developer Options and Wireless Debugging on Display 0 remain visible and unobstructed:
   - **Step 1 (Menu Description)**: Displays instructions for navigating to Developer Options -> Wireless Debugging with an "Open system settings" button.
   - **Step 2 (Connect Port)**: Provides an input field for the Wireless Debugging **Connect Port** (5 digits).
   - **Step 3 (Pairing Code & Pairing Port)**: Provides input fields for **WiFi pairing code** (6 digits) and **Pairing port** (5 digits), triggering pairing and bootstrapping with live stage progress checklist.
@@ -102,7 +102,7 @@ every device since Android 11 (API 30).
 | Feature                                      | What it gains                                                                                 | Without Privileged Mode                                                                                                                                        |
 | -------------------------------------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Gamepad merge** (MacroPad → physical pad)  | Single-controller emulation: games see only one controller.                                   | Falls back to a virtual uinput gamepad. Most games still recognise both, but a few (e.g. some Steam Big Picture flows) only accept the first-connected device. |
-| **Gamepad recording** (physical pad → macro) | Macro recording from the real controller while the target game still receives the same input. | Falls back to the on-screen virtual controller recording overlay.                                                                                              |
+| **Macro subsystem** (execution, recording, editing) | Low-latency physical controller & touch capture directly over running games; hardware evdev input injection. | Blocked with proactive UI feedback: use-mode buttons show disabled styling with floating warning banners; editor decks display warning banners and prevent recording / execution. |
 | **Privileged mirror** (FR-M9)                | No MediaProjection consent dialog when direct SurfaceControl output starts successfully.      | Falls back to `MediaProjection` + `VirtualDisplay` with the system consent dialog. DRM content keeps working.                                                  |
 | **Relative mouse** (Touchpad / Keyboard)     | Low-latency, scheduler-boosted mouse events. Shell UID execution prevents cursor lag under CPU contention. | Falls back to spawning a local virtual mouse binary (`mouseinjector_arm64`) as an app subprocess. |
 | **Virtual keyboard** (Keyboard)             | Low-latency, scheduler-boosted keystrokes. Shell UID execution prevents typing lag under CPU contention.   | Falls back to spawning a local virtual keyboard binary (`keyinjector_arm64`) as an app subprocess. |
@@ -355,6 +355,9 @@ the existing protocol.
 | App → D   | `SUB GAMEPAD\n`                | Start streaming physical gamepad evdev events to the app |
 | App → D   | `UNSUB GAMEPAD\n`              | Stop streaming physical gamepad evdev events             |
 | D → App   | `EVT <type> <code> <value>\n`  | Physical evdev event while subscribed                    |
+| App → D   | `SUB TOUCH\n`                  | Start streaming physical touchscreen evdev events to app |
+| App → D   | `UNSUB TOUCH\n`                | Stop streaming physical touchscreen evdev events        |
+| D → App   | `EVT_TOUCH <type> <code> <val>`| Physical touchscreen evdev event while subscribed        |
 | App → D   | `MIRROR START_DIRECT w h\n`    | Spawn direct-Surface `app_process` mirror child (FR-M9/FR-M11) |
 | D → App   | `MIRROR_DIRECT_READY\n`        | Direct mirror child bound its readiness socket           |
 | D → App   | `MIRROR_DIRECT_ERR <reason>\n` | Direct mirror child failed to start                      |
@@ -370,7 +373,7 @@ the existing protocol.
 
 For the privileged mirror (`MIRROR START_DIRECT`), the `app_process` child registers the Binder service `megingiard.direct.surface` to receive multiple target `Surface` instances and their physical dimensions. This allows the direct mirror server to set up and capture multiple concurrent virtual displays mapping to different cutout regions without process restarts.
 
-`SUB GAMEPAD` opens the physical evdev node read-only and starts a reader thread that forwards filtered `EVT` lines to the app. The fd is **not** grabbed via `EVIOCGRAB` — evdev is multicast, so Android's EventHub continues to dispatch the same events to the foreground game in parallel. Recording is therefore purely passive observation; nothing is intercepted or replayed.
+`SUB GAMEPAD` and `SUB TOUCH` open the physical evdev nodes (`/dev/input/event*` for gamepad, `/dev/input/event6` for touchscreen) read-only/read-write and start dedicated reader threads that forward filtered `EVT` and `EVT_TOUCH` lines to the app. The fds are **not** grabbed via `EVIOCGRAB` — evdev is multicast, so Android's EventHub continues to dispatch the same events to the foreground game in parallel. Recording is therefore purely passive observation; nothing is intercepted or replayed.
 
 On startup the daemon prints exactly one line on **stdout** so the
 spawn command can detect success:
@@ -472,7 +475,7 @@ mid-game requires a leave-and-re-enter of the MacroPad mode.
 | `domain/.../privd/PrivdAdbConnectionManager.kt`          | `AbsAdbConnectionManager` subclass: persistent RSA key + X.509 cert in `filesDir`, `pair`/`connect`                                        |
 | `domain/.../privd/PrivdBootstrapper.kt`                  | `BootstrapStage` state flow + pair / push (`sync:` + byte-size verification) / spawn (detached) / verify orchestration                     |
 | `app/.../privd/PrivdSettingsCard.kt`                     | Compose card: status badge, connect/test buttons, wizard trigger, auto-connect Switch                                                     |
-| `app/.../privd/PrivdSetupWizard.kt`                      | `PrivdSetupWizardDialog` — in-tree modal dialog (scrim + centered card) hosting the 4-step wizard; state hoisted to `GlobalSettingsScreen` |
+| `companion/ui/src/main/java/com/stormpanda/megingiard/privd/PrivdSetupWizard.kt`                      | `PrivdSetupWizardDialog` — in-tree modal dialog (scrim + centered card) hosting the 4-step wizard; hosted on the secondary display (bottom screen) via `MainAppScreen` / `AppStateManager` |
 | `app/.../MainActivity.kt`                                | Auto-connect hook (`combine(privdAutoConnect, state)` one-shot)                                                                            |
 | `domain/.../macropad/GamepadInjector.kt`                 | Strategy router between virtual uinput and Privd merge backends                                                                            |
 | `domain/.../macropad/PhysicalGamepadRecordingManager.kt` | Converts physical evdev events into macro steps while recording (`GamepadButtonTap`, `DPadTap`, `JoystickPath`)                            |

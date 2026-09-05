@@ -8,11 +8,6 @@ import org.junit.Test
 
 /**
  * Round-trip serialization tests for [Macro] and the [MacroStep] sealed hierarchy.
- *
- * Exported macropad data is persisted as JSON via kotlinx.serialization. The
- * `@SerialName` discriminators on each [MacroStep] subtype are part of the
- * on-disk schema — these tests guard against accidental renames that would
- * silently invalidate user data.
  */
 class MacroDataSerializationTest {
     private val json =
@@ -21,84 +16,45 @@ class MacroDataSerializationTest {
             encodeDefaults = true
         }
 
+    private inline fun <reified T> assertRoundTrip(value: T) {
+        val encoded = json.encodeToString(value)
+        val decoded = json.decodeFromString<T>(encoded)
+        assertEquals(value, decoded)
+    }
+
     @Test
     fun `gamepad button tap survives JSON round-trip`() {
-        val step: MacroStep =
-            MacroStep.GamepadButtonTap(
-                startTimeMs = 100L,
-                durationMs = 250L,
-                btnCode = 0x130,
-                label = "A",
-            )
-        val encoded = json.encodeToString(step)
-        val decoded = json.decodeFromString<MacroStep>(encoded)
-        assertEquals(step, decoded)
+        assertRoundTrip<MacroStep>(MacroStep.GamepadButtonTap(100L, 250L, 0x130, "A"))
     }
 
     @Test
     fun `joystick move survives JSON round-trip`() {
-        val step: MacroStep =
-            MacroStep.JoystickMove(
-                startTimeMs = 0L,
-                durationMs = 500L,
-                stick = JoystickStick.RIGHT,
-                x = 0.75f,
-                y = -0.25f,
-            )
-        val decoded = json.decodeFromString<MacroStep>(json.encodeToString(step))
-        assertEquals(step, decoded)
+        assertRoundTrip<MacroStep>(MacroStep.JoystickMove(0L, 500L, JoystickStick.RIGHT, 0.75f, -0.25f))
     }
 
     @Test
     fun `dpad tap survives JSON round-trip`() {
-        val step: MacroStep =
-            MacroStep.DPadTap(
-                startTimeMs = 50L,
-                durationMs = 100L,
-                dirX = -1,
-                dirY = 1,
-            )
-        val decoded = json.decodeFromString<MacroStep>(json.encodeToString(step))
-        assertEquals(step, decoded)
+        assertRoundTrip<MacroStep>(MacroStep.DPadTap(50L, 100L, -1, 1))
     }
 
     @Test
     fun `touch tap survives JSON round-trip`() {
-        val step: MacroStep =
-            MacroStep.TouchTap(
-                startTimeMs = 0L,
-                durationMs = 33L,
-                normX = 0.5f,
-                normY = 0.5f,
-            )
-        val decoded = json.decodeFromString<MacroStep>(json.encodeToString(step))
-        assertEquals(step, decoded)
+        assertRoundTrip<MacroStep>(MacroStep.TouchTap(0L, 33L, 0.5f, 0.5f))
     }
 
     @Test
     fun `serial name discriminators are stable`() {
-        // These string literals are part of the on-disk format. If any of them
-        // change, existing user data becomes unreadable.
-        val gamepad =
-            json.encodeToString<MacroStep>(
-                MacroStep.GamepadButtonTap(0L, 100L, 0x130, "A"),
+        val discriminators =
+            mapOf(
+                MacroStep.GamepadButtonTap(0L, 100L, 0x130, "A") to "gamepad_button_tap",
+                MacroStep.JoystickMove(0L, 100L, JoystickStick.LEFT, 0f, 0f) to "joystick_move",
+                MacroStep.DPadTap(0L, 100L, 0, 0) to "dpad_tap",
+                MacroStep.TouchTap(0L, 100L, 0f, 0f) to "touch_tap",
+                MacroStep.JoystickPath(0L, 100L, JoystickStick.RIGHT, listOf(PathSample(0L, 0.5f, 0.5f))) to "joystick_path",
             )
-        val joystick =
-            json.encodeToString<MacroStep>(
-                MacroStep.JoystickMove(0L, 100L, JoystickStick.LEFT, 0f, 0f),
-            )
-        val dpad =
-            json.encodeToString<MacroStep>(
-                MacroStep.DPadTap(0L, 100L, 0, 0),
-            )
-        val touch =
-            json.encodeToString<MacroStep>(
-                MacroStep.TouchTap(0L, 100L, 0f, 0f),
-            )
-        assertTrue("gamepad_button_tap discriminator", gamepad.contains("\"gamepad_button_tap\""))
-        assertTrue("joystick_move discriminator", joystick.contains("\"joystick_move\""))
-        assertTrue("dpad_tap discriminator", dpad.contains("\"dpad_tap\""))
-        assertTrue("touch_tap discriminator", touch.contains("\"touch_tap\""))
+        for ((step, disc) in discriminators) {
+            assertTrue("$disc discriminator", json.encodeToString<MacroStep>(step).contains("\"$disc\""))
+        }
     }
 
     @Test
@@ -117,8 +73,7 @@ class MacroDataSerializationTest {
                 loopEnabled = true,
                 loopPauseMs = 250,
             )
-        val decoded = json.decodeFromString<Macro>(json.encodeToString(macro))
-        assertEquals(macro, decoded)
+        assertRoundTrip(macro)
     }
 
     @Test
@@ -129,8 +84,8 @@ class MacroDataSerializationTest {
         val steps =
             listOf(
                 MacroStep.GamepadButtonTap(0L, 80L, 0x130, "A"),
-                MacroStep.JoystickMove(50L, 200L, JoystickStick.LEFT, 0f, 0f), // ends 250
-                MacroStep.DPadTap(100L, 100L, 0, 1), // ends 200
+                MacroStep.JoystickMove(50L, 200L, JoystickStick.LEFT, 0f, 0f),
+                MacroStep.DPadTap(100L, 100L, 0, 1),
             )
         assertEquals(250L, steps.totalDurationMs())
     }
@@ -149,22 +104,7 @@ class MacroDataSerializationTest {
                         PathSample(offsetMs = 200L, x = 1.0f, y = -0.5f),
                     ),
             )
-        val decoded = json.decodeFromString<MacroStep>(json.encodeToString(step))
-        assertEquals(step, decoded)
-    }
-
-    @Test
-    fun `joystick path serial name discriminator is stable`() {
-        val json2 = json
-        val step: MacroStep =
-            MacroStep.JoystickPath(
-                startTimeMs = 0L,
-                durationMs = 100L,
-                stick = JoystickStick.RIGHT,
-                samples = listOf(PathSample(0L, 0.5f, 0.5f)),
-            )
-        val encoded = json2.encodeToString(step)
-        assertTrue("joystick_path discriminator", encoded.contains("\"joystick_path\""))
+        assertRoundTrip(step)
     }
 
     @Test
@@ -174,19 +114,7 @@ class MacroDataSerializationTest {
 
     @Test
     fun `unknown keys are ignored on decode`() {
-        // Ensures forward compatibility: data written by a future version with
-        // additional fields can still be read by the current version.
-        val withExtra =
-            """
-            {
-                "id": "abc",
-                "name": "X",
-                "steps": [],
-                "loopEnabled": false,
-                "loopPauseMs": 0,
-                "futureField": "ignore-me"
-            }
-            """.trimIndent()
+        val withExtra = """{"id": "abc", "name": "X", "steps": [], "loopEnabled": false, "loopPauseMs": 0, "futureField": "ignore-me"}"""
         val decoded = json.decodeFromString<Macro>(withExtra)
         assertEquals("abc", decoded.id)
         assertEquals("X", decoded.name)
@@ -203,7 +131,7 @@ class MacroDataSerializationTest {
                         MacroStep.GamepadButtonTap(0L, 50L, 0x130, "A"),
                         MacroStep.JoystickPath(
                             startTimeMs = 60L,
-                            durationMs = 201L, // > max sample offset (200)
+                            durationMs = 201L,
                             stick = JoystickStick.LEFT,
                             samples =
                                 listOf(
@@ -215,11 +143,7 @@ class MacroDataSerializationTest {
                         MacroStep.DPadTap(300L, 100L, 1, 0),
                     ),
             )
-        val decoded = json.decodeFromString<Macro>(json.encodeToString(macro))
-        assertEquals(macro, decoded)
-        val path = decoded.steps[1] as MacroStep.JoystickPath
-        assertEquals(3, path.samples.size)
-        assertEquals(100L, path.samples[1].offsetMs)
+        assertRoundTrip(macro)
     }
 
     @Test

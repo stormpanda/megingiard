@@ -1,8 +1,5 @@
 package com.stormpanda.megingiard.macropad
 
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.drawable.Drawable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -33,7 +30,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,12 +38,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
@@ -58,7 +52,9 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.ui.MaterialSymbol
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
@@ -71,29 +67,29 @@ private const val TAG = "MacroPadButton"
 
 internal val MP_BUTTON_UNIT_DP = 60.dp // 1×1 = this size on-screen; matches editor
 
-private const val MP_BTN_PRESSED_ALPHA = 0.80f
-private const val MP_BTN_NORMAL_ALPHA = 0.25f
+internal const val MP_BTN_PRESSED_ALPHA = 0.80f
+internal const val MP_BTN_NORMAL_ALPHA = 0.25f
 
 // Pulsing animation for running macros: alpha cycles between low and high.
 private const val MP_BTN_RUNNING_PULSE_LOW = 0.30f
 private const val MP_BTN_RUNNING_PULSE_HIGH = 0.80f
 private const val MP_PULSE_HALF_PERIOD_MS = 600
 
-private val MP_BTN_SQUARE_RADIUS = 4.dp
-private val MP_BTN_ICON_UNIT = 44.dp // icon size per grid unit (≈ 73 % of MP_BUTTON_UNIT_DP)
+internal val MP_BTN_SQUARE_RADIUS = 4.dp
+internal val MP_BTN_SQUARE_SHAPE = RoundedCornerShape(MP_BTN_SQUARE_RADIUS)
+internal val MP_PILL_SHAPE = RoundedCornerShape(percent = 50)
+internal val MP_BTN_ICON_UNIT = 44.dp // icon size per grid unit (≈ 73 % of MP_BUTTON_UNIT_DP)
 
 private const val MP_PRESS_ANIM_MS = 80
 private const val MP_RELEASE_ANIM_MS = 160
 
 // Outer gradient edge alpha at resting state; intermediate stops follow r² quadratic curve.
-// Scale factor maps animated alpha (resting = MP_BTN_NORMAL_ALPHA) → MP_BTN_GRADIENT_OUTER.
-private const val MP_BTN_GRADIENT_OUTER = 0.7f
-private const val MP_BTN_GRADIENT_SCALE = MP_BTN_GRADIENT_OUTER / MP_BTN_NORMAL_ALPHA
+internal const val MP_BTN_GRADIENT_OUTER = 0.7f
 
 // Neutral (theme-independent) ambient button style — intentionally NOT derived from AppColors;
 // these are muted, always-dim values designed to look unobtrusive on any background color and
 // are identical across all palettes (Dark / Dark OLED).
-internal val MP_AMBIENT_NEUTRAL_BG = Color.White
+internal val MP_AMBIENT_NEUTRAL_BG = Color(0xB3FFFFFF) // 70% white (matching previous default resting level)
 internal val MP_AMBIENT_NEUTRAL_BORDER = Color(0x99AAAAAA)
 internal val MP_AMBIENT_NEUTRAL_TEXT = Color(0xFFDDDDDD).copy(alpha = 0.9f)
 
@@ -121,7 +117,7 @@ internal fun PadButton(
     val resolvedBorderColorOption = btn.buttonBorderColor ?: layout.buttonBorderColor
     val resolvedTextColorOption = btn.buttonTextColor ?: layout.buttonTextColor
 
-    val effectiveBg = resolveColorOption(resolvedBgColorOption, accentColor, MP_AMBIENT_NEUTRAL_BG)
+    val effectiveBg = resolveBgColorOption(resolvedBgColorOption, accentColor)
     val effectiveBorder = resolveColorOption(resolvedBorderColorOption, accentColor, MP_AMBIENT_NEUTRAL_BORDER)
     val effectiveTextTint = resolveColorOption(resolvedTextColorOption, accentColor, MP_AMBIENT_NEUTRAL_TEXT)
     val effectiveContentAccent = effectiveTextTint
@@ -195,14 +191,13 @@ internal fun PadButton(
         } else {
             when (btn.buttonShape) {
                 ButtonShape.SQUARE, ButtonShape.ICON_ONLY -> {
-                    RoundedCornerShape(MP_BTN_SQUARE_RADIUS)
+                    MP_BTN_SQUARE_SHAPE
                 }
 
                 ButtonShape.CIRCLE -> {
                     when (btn.buttonSize) {
-                        ButtonSize.SIZE_2X2 -> CircleShape
-                        ButtonSize.SIZE_2X1, ButtonSize.SIZE_1X2 -> RoundedCornerShape(percent = 50)
-                        ButtonSize.SIZE_1X1 -> CircleShape
+                        ButtonSize.SIZE_2X2, ButtonSize.SIZE_1X1 -> CircleShape
+                        ButtonSize.SIZE_2X1, ButtonSize.SIZE_1X2 -> MP_PILL_SHAPE
                     }
                 }
             }
@@ -268,8 +263,6 @@ internal fun PadButton(
             isDeviceDisabled = isDeviceDisabled,
             borderColor = effectiveBorder,
             bgColor = effectiveBg,
-            bgAlpha = alpha,
-            gradientScale = MP_BTN_GRADIENT_SCALE,
             modifier = Modifier.fillMaxSize(),
         ) {
             Box(
@@ -301,7 +294,11 @@ internal fun PadButtonContent(
     effectiveContentAccent: Color = effectiveTextTint,
 ) {
     if (isTrackpoint) {
-        Text("●", color = effectiveContentAccent.copy(alpha = 0.7f), style = MaterialTheme.typography.titleLarge)
+        Text(
+            "●",
+            color = effectiveContentAccent.copy(alpha = 0.7f * effectiveContentAccent.alpha),
+            style = MaterialTheme.typography.titleLarge,
+        )
     } else if (btn.action is PadAction.ScrollWheel) {
         ScrollWheelFace(accentColor = effectiveContentAccent)
     } else if (btn.action is PadAction.BackgroundPeek) {
@@ -392,6 +389,7 @@ private fun tintedGrayscaleFilter(tint: Color): ColorFilter {
     val r = tint.red
     val g = tint.green
     val b = tint.blue
+    val a = tint.alpha
     val matrix =
         ColorMatrix(
             floatArrayOf(
@@ -413,7 +411,7 @@ private fun tintedGrayscaleFilter(tint: Color): ColorFilter {
                 0f,
                 0f,
                 0f,
-                1f,
+                a,
                 0f,
             ),
         )
@@ -436,7 +434,7 @@ internal fun ScrollWheelFace(accentColor: Color) {
         Icon(
             Icons.Rounded.KeyboardArrowUp,
             contentDescription = null,
-            tint = accentColor.copy(alpha = 0.5f),
+            tint = accentColor.copy(alpha = 0.5f * accentColor.alpha),
             modifier = Modifier.size(18.dp),
         )
         Spacer(Modifier.height(4.dp))
@@ -444,7 +442,7 @@ internal fun ScrollWheelFace(accentColor: Color) {
         Icon(
             Icons.Rounded.KeyboardArrowDown,
             contentDescription = null,
-            tint = accentColor.copy(alpha = 0.5f),
+            tint = accentColor.copy(alpha = 0.5f * accentColor.alpha),
             modifier = Modifier.size(18.dp),
         )
         Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = accentColor, modifier = Modifier.size(18.dp))
@@ -457,7 +455,7 @@ internal fun ScrollWheelFace(accentColor: Color) {
 
 @Composable
 internal fun BackgroundPeekFace(accentColor: Color) {
-    val isPeekActive by MacroPadState.isPeekActive.collectAsState()
+    val isPeekActive by MacroPadState.isPeekActive.collectAsStateWithLifecycle()
     Icon(
         imageVector = if (isPeekActive) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
         contentDescription = null,
@@ -480,3 +478,13 @@ internal fun resolveColorOption(
     val clampedAlpha = resolved.alpha.coerceIn(0.1f, 1f)
     return resolved.copy(alpha = clampedAlpha)
 }
+
+internal fun resolveBgColorOption(
+    option: ColorOption,
+    accentColor: Color,
+): Color =
+    resolveColorOption(
+        option = option,
+        accentColor = accentColor.copy(alpha = 0.7f),
+        defaultNeutral = MP_AMBIENT_NEUTRAL_BG,
+    )

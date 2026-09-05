@@ -99,8 +99,9 @@ class LogReportManagerTest {
         val failure = LogReportManager.SaveResult.Failure("oops")
         assertEquals("oops", failure.message)
         // Verify they are different types at compile time via exhaustive when
+        val res: LogReportManager.SaveResult = success
         val successLabel =
-            when (success) {
+            when (res) {
                 is LogReportManager.SaveResult.Success -> "success"
                 is LogReportManager.SaveResult.Failure -> "failure"
             }
@@ -111,5 +112,21 @@ class LogReportManagerTest {
     fun `SaveResult Failure with null message`() {
         val failure = LogReportManager.SaveResult.Failure(null)
         assertNull(failure.message)
+    }
+
+    @Test
+    fun `setSaveResult and clearSaveResult update stateFlow`() {
+        assertNull(LogReportManager.saveResult.value)
+
+        LogReportManager.setSaveResult(LogReportManager.SaveResult.Success)
+        assertEquals(LogReportManager.SaveResult.Success, LogReportManager.saveResult.value)
+
+        LogReportManager.clearSaveResult()
+        assertNull(LogReportManager.saveResult.value)
+    }
+
+    @Test
+    fun `requestSaveReport emits unit`() {
+        LogReportManager.requestSaveReport()
     }
 }

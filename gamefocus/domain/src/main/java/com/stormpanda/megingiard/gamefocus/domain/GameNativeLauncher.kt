@@ -6,8 +6,6 @@ import android.content.Context
 import android.content.Intent
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.RomLauncher
-import com.stormpanda.megingiard.catalog.RomSystemDef
-import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
 import com.stormpanda.megingiard.session.GameNativeDetector
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

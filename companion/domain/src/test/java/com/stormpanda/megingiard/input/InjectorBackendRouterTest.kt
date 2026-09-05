@@ -35,14 +35,31 @@ class InjectorBackendRouterTest {
         router.resolveBackend()
         router.markStopped()
 
-        // When stopped, fallback check should still work without error
+        // When stopped, isRunning returns false immediately without checking fallback
         var fallbackChecked = false
         val isRunning =
             router.isRunning {
                 fallbackChecked = true
-                false
+                true
             }
-        assertTrue(fallbackChecked)
+        assertFalse(fallbackChecked)
         assertFalse(isRunning)
+    }
+
+    @Test
+    fun testDispatchExecutesCorrectBranch() {
+        val router = InjectorBackendRouter("TestTag")
+        router.resolveBackend()
+
+        var privdRan = false
+        var shellRan = false
+
+        router.dispatch(
+            privdAction = { privdRan = true },
+            shellAction = { shellRan = true },
+        )
+
+        assertFalse(privdRan)
+        assertTrue(shellRan)
     }
 }

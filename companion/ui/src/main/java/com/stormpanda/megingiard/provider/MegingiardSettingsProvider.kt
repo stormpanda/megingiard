@@ -214,6 +214,8 @@ class MegingiardSettingsProvider : ContentProvider() {
 
                 if (focusedPackage != null) {
                     AutoSwitchCoordinator.onPackageChanged(focusedPackage)
+                } else if (!isActive) {
+                    AutoSwitchCoordinator.reevaluateAutoState()
                 }
 
                 // Notify observers

@@ -1,21 +1,20 @@
 package com.stormpanda.megingiard.viewmodel
 
-import android.content.ComponentName
 import android.content.Context
-import android.provider.Settings
-import android.text.TextUtils
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.BuildConfig
+import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.config.InternalBackup
 import com.stormpanda.megingiard.log.LogReportManager
+import com.stormpanda.megingiard.media.SteamGridDbClient
+import com.stormpanda.megingiard.media.SteamGridDbException
 import com.stormpanda.megingiard.privd.BootstrapStage
 import com.stormpanda.megingiard.privd.PrivdBootstrapper
 import com.stormpanda.megingiard.privd.PrivdError
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
-import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.settings.SettingsManager
@@ -31,6 +30,28 @@ import kotlinx.coroutines.withContext
 
 private const val TAG = "GlobalSettingsVM"
 
+enum class SteamGridDbTestStatus(
+    val labelResId: Int,
+) {
+    IDLE(R.string.settings_steamgriddb_test_btn),
+    TESTING(R.string.settings_steamgriddb_status_testing),
+    CONNECTED(R.string.settings_steamgriddb_status_connected),
+    INVALID_TOKEN(R.string.settings_steamgriddb_status_invalid),
+    OFFLINE(R.string.settings_steamgriddb_status_offline),
+    RATE_LIMITED(R.string.settings_steamgriddb_status_rate_limited),
+    UNREACHABLE(R.string.settings_steamgriddb_status_unreachable),
+    ERROR(R.string.settings_steamgriddb_status_error),
+}
+
+private fun Throwable.toSteamGridDbTestStatus(): SteamGridDbTestStatus =
+    when (this) {
+        is SteamGridDbException.Offline -> SteamGridDbTestStatus.OFFLINE
+        is SteamGridDbException.RateLimited -> SteamGridDbTestStatus.RATE_LIMITED
+        is SteamGridDbException.ServiceUnavailable -> SteamGridDbTestStatus.UNREACHABLE
+        is SteamGridDbException.Unauthorized -> SteamGridDbTestStatus.INVALID_TOKEN
+        else -> SteamGridDbTestStatus.ERROR
+    }
+
 /**
  * ViewModel for [GlobalSettingsScreen] — exposes the app-global settings state
  * and routes mutations through named functions instead of letting Composables
@@ -45,6 +66,7 @@ class GlobalSettingsViewModel : ViewModel() {
     val internalBackups: StateFlow<List<InternalBackup>> = SettingsManager.internalBackups
 
     val accentColor: StateFlow<Int> = SettingsManager.accentColor
+    val customAccentColor: StateFlow<Int> = SettingsManager.customAccentColor
     val themeMode: StateFlow<ThemeMode> = SettingsManager.themeMode
     val overlayAtBottom: StateFlow<Boolean> = SettingsManager.overlayAtBottom
     val overlayFadeOut: StateFlow<Boolean> = SettingsManager.overlayFadeOut
@@ -82,6 +104,8 @@ class GlobalSettingsViewModel : ViewModel() {
 
     fun setAccentColor(argb: Int) = SettingsManager.setAccentColor(argb)
 
+    fun setCustomAccentColor(argb: Int) = SettingsManager.setCustomAccentColor(argb)
+
     fun setThemeMode(mode: ThemeMode) = SettingsManager.setThemeMode(mode)
 
     fun setOverlayAtBottom(value: Boolean) = SettingsManager.setOverlayAtBottom(value)
@@ -90,9 +114,30 @@ class GlobalSettingsViewModel : ViewModel() {
 
     fun setAppLanguage(value: AppLanguage) = SettingsManager.setAppLanguage(value)
 
+    private val _steamGridDbTestStatus = MutableStateFlow(SteamGridDbTestStatus.IDLE)
+    val steamGridDbTestStatus: StateFlow<SteamGridDbTestStatus> = _steamGridDbTestStatus.asStateFlow()
+
     fun setLogLevel(value: AppLog.Level) = SettingsManager.setLogLevel(value)
 
-    fun setSteamGridDbApiToken(value: String) = SettingsManager.setSteamGridDbApiToken(value)
+    fun setSteamGridDbApiToken(value: String) {
+        SettingsManager.setSteamGridDbApiToken(value)
+        _steamGridDbTestStatus.value = SteamGridDbTestStatus.IDLE
+    }
+
+    fun testSteamGridDbConnection(token: String) {
+        if (token.isBlank()) {
+            _steamGridDbTestStatus.value = SteamGridDbTestStatus.INVALID_TOKEN
+            return
+        }
+        viewModelScope.launch {
+            _steamGridDbTestStatus.value = SteamGridDbTestStatus.TESTING
+            _steamGridDbTestStatus.value =
+                SteamGridDbClient.validateToken(token.trim()).fold(
+                    onSuccess = { SteamGridDbTestStatus.CONNECTED },
+                    onFailure = { it.toSteamGridDbTestStatus() },
+                )
+        }
+    }
 
     fun requestSaveLogReport() = LogReportManager.requestSaveReport()
 
@@ -125,11 +170,6 @@ class GlobalSettingsViewModel : ViewModel() {
             PrivdManager.connect(appContext)
         }
     }
-
-    /**
-     * Disconnects from the daemon socket. The daemon binary stays on the device.
-     */
-    fun privdDisconnect() = PrivdManager.disconnect()
 
     fun setPrivdDeadzoneLeft(value: Float) = MacroPadSettings.setDeadzoneLeft(value)
 
@@ -180,11 +220,6 @@ class GlobalSettingsViewModel : ViewModel() {
             onResult(ok)
         }
     }
-
-    /**
-     * Checks if the Megingiard Accessibility Service is currently enabled in Android system settings.
-     */
-    fun checkAccessibilityActive(context: Context): Boolean = MegingiardAccessibilityService.isEnabled(context)
 
     fun checkPrivilegedModeStatus(context: Context) {
         val appContext = context.applicationContext

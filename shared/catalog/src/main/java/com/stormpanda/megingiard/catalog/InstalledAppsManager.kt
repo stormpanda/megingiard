@@ -8,16 +8,14 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.net.Uri
-import android.os.Build
 import android.provider.Settings
 import android.view.Display
+import androidx.core.util.AtomicFile
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.ipc.IpcSettingsParser
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import com.stormpanda.megingiard.ipc.observeContentProvider
 import com.stormpanda.megingiard.media.SteamGridDbClient
-import com.stormpanda.megingiard.media.SteamGridDbGame
-import com.stormpanda.megingiard.media.SteamGridDbImage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -29,6 +27,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.File
+import java.io.FileOutputStream
 
 private const val TAG = "InstalledAppsManager"
 private const val FILE_FAVORITES = "gamefocus_favorites.txt"
@@ -44,10 +43,10 @@ private const val THOR_SECONDARY_DISPLAY_FALLBACK_ID = 4
 object InstalledAppsManager {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    private val _installedAndroidApps = MutableStateFlow<List<InstalledAppInfo>>(emptyList())
+    private val installedAndroidAppsFlow = MutableStateFlow<List<InstalledAppInfo>>(emptyList())
     val installedApps: StateFlow<List<InstalledAppInfo>> =
         combine(
-            _installedAndroidApps,
+            installedAndroidAppsFlow,
             RomManager.romApps,
         ) { androidApps, romApps ->
             (androidApps + romApps).sortedBy { it.label.lowercase() }
@@ -67,104 +66,112 @@ object InstalledAppsManager {
     private val _lastUsed = MutableStateFlow<List<String>>(emptyList())
     val lastUsed: StateFlow<List<String>> = _lastUsed.asStateFlow()
 
-    private fun loadFavorites(context: Context) {
-        val file = File(context.filesDir, FILE_FAVORITES)
-        if (file.exists()) {
+    internal fun resetForTesting() {
+        installedAndroidAppsFlow.value = emptyList()
+        _favorites.value = emptySet()
+        _hiddenApps.value = emptySet()
+        _lastUsed.value = emptyList()
+        synchronized(scrapedPackages) { scrapedPackages.clear() }
+        isScrapedPackagesLoaded = false
+        isSettingsObserverRegistered = false
+    }
+
+    private fun loadStringList(
+        context: Context,
+        filename: String,
+        limit: Int = Int.MAX_VALUE,
+    ): List<String> {
+        val file = File(context.filesDir, filename)
+        if (!file.exists()) return emptyList()
+        val atomicFile = AtomicFile(file)
+        return try {
+            val text = atomicFile.readFully().toString(Charsets.UTF_8)
+            text
+                .lineSequence()
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+                .take(limit)
+                .toList()
+        } catch (e: Exception) {
+            AppLog.w(TAG, "Failed to load $filename: ${e.message}")
+            emptyList()
+        }
+    }
+
+    private fun loadStringSet(
+        context: Context,
+        filename: String,
+    ): Set<String> = loadStringList(context, filename).toSet()
+
+    private fun persistLines(
+        context: Context,
+        filename: String,
+        lines: Iterable<String>,
+    ) {
+        scope.launch {
+            val file = File(context.filesDir, filename)
+            val atomicFile = AtomicFile(file)
+            var fos: FileOutputStream? = null
             try {
-                val set =
-                    file
-                        .readLines()
-                        .map { it.trim() }
-                        .filter { it.isNotEmpty() }
-                        .toSet()
-                _favorites.value = set
-                AppLog.d(TAG, "Loaded ${set.size} favorite apps from disk")
+                fos = atomicFile.startWrite()
+                fos.bufferedWriter(Charsets.UTF_8).use { writer ->
+                    for (line in lines) {
+                        writer.write(line)
+                        writer.newLine()
+                    }
+                }
+                atomicFile.finishWrite(fos)
             } catch (e: Exception) {
-                AppLog.w(TAG, "Failed to load favorites file: ${e.message}")
+                if (fos != null) {
+                    atomicFile.failWrite(fos)
+                }
+                AppLog.e(TAG, "Failed to persist $filename: ${e.message}", e)
             }
         }
+    }
+
+    private fun toggleInSet(
+        context: Context,
+        filename: String,
+        stateFlow: MutableStateFlow<Set<String>>,
+        item: String,
+        label: String,
+    ) {
+        val current = stateFlow.value.toMutableSet()
+        val added = !current.remove(item)
+        if (added) current.add(item)
+        AppLog.i(TAG, "${if (added) "Added" else "Removed"} $item ${if (added) "to" else "from"} $label")
+        stateFlow.value = current
+        persistLines(context, filename, current)
+    }
+
+    private fun loadFavorites(context: Context) {
+        _favorites.value = loadStringSet(context, FILE_FAVORITES)
+        AppLog.d(TAG, "Loaded ${_favorites.value.size} favorite apps from disk")
     }
 
     fun toggleFavorite(
         context: Context,
         packageName: String,
     ) {
-        val current = _favorites.value.toMutableSet()
-        if (current.contains(packageName)) {
-            current.remove(packageName)
-            AppLog.i(TAG, "Removed $packageName from favorites")
-        } else {
-            current.add(packageName)
-            AppLog.i(TAG, "Added $packageName to favorites")
-        }
-        _favorites.value = current
-        scope.launch {
-            try {
-                val file = File(context.filesDir, FILE_FAVORITES)
-                file.writeText(current.joinToString("\n"))
-            } catch (e: Exception) {
-                AppLog.e(TAG, "Failed to persist favorites: ${e.message}", e)
-            }
-        }
+        toggleInSet(context, FILE_FAVORITES, _favorites, packageName, "favorites")
     }
 
     private fun loadHidden(context: Context) {
-        val file = File(context.filesDir, FILE_HIDDEN)
-        if (file.exists()) {
-            try {
-                val set =
-                    file
-                        .readLines()
-                        .map { it.trim() }
-                        .filter { it.isNotEmpty() }
-                        .toSet()
-                _hiddenApps.value = set
-                AppLog.d(TAG, "Loaded ${set.size} hidden apps from disk")
-            } catch (e: Exception) {
-                AppLog.w(TAG, "Failed to load hidden apps file: ${e.message}")
-            }
-        }
+        _hiddenApps.value = loadStringSet(context, FILE_HIDDEN)
+        AppLog.d(TAG, "Loaded ${_hiddenApps.value.size} hidden apps from disk")
     }
 
     fun toggleHidden(
         context: Context,
         packageName: String,
     ) {
-        val current = _hiddenApps.value.toMutableSet()
-        if (current.contains(packageName)) {
-            current.remove(packageName)
-            AppLog.i(TAG, "Removed $packageName from hidden apps")
-        } else {
-            current.add(packageName)
-            AppLog.i(TAG, "Added $packageName to hidden apps")
-        }
-        _hiddenApps.value = current
-        scope.launch {
-            try {
-                val file = File(context.filesDir, FILE_HIDDEN)
-                file.writeText(current.joinToString("\n"))
-            } catch (e: Exception) {
-                AppLog.e(TAG, "Failed to persist hidden apps: ${e.message}", e)
-            }
-        }
+        toggleInSet(context, FILE_HIDDEN, _hiddenApps, packageName, "hidden apps")
     }
 
     private fun loadLastUsed(context: Context) {
-        val file = File(context.filesDir, FILE_LAST_USED)
-        if (file.exists()) {
-            try {
-                val list =
-                    file
-                        .readLines()
-                        .map { it.trim() }
-                        .filter { it.isNotEmpty() }
-                        .take(MAX_RECENT_APPS)
-                _lastUsed.value = list
-                AppLog.d(TAG, "Loaded ${list.size} last used apps from disk")
-            } catch (e: Exception) {
-                AppLog.w(TAG, "Failed to load last used file: ${e.message}")
-            }
-        }
+        _lastUsed.value = loadStringList(context, FILE_LAST_USED, MAX_RECENT_APPS)
+        AppLog.d(TAG, "Loaded ${_lastUsed.value.size} last used apps from disk")
     }
 
     fun recordAppLaunch(
@@ -176,31 +183,15 @@ object InstalledAppsManager {
         list.add(0, packageName)
         val trimmed = list.take(MAX_RECENT_APPS)
         _lastUsed.value = trimmed
-        scope.launch {
-            try {
-                val file = File(context.filesDir, FILE_LAST_USED)
-                file.writeText(trimmed.joinToString("\n"))
-                AppLog.i(TAG, "Recorded launch for $packageName (recent count=${trimmed.size})")
-            } catch (e: Exception) {
-                AppLog.e(TAG, "Failed to persist last used apps: ${e.message}", e)
-            }
-        }
+        persistLines(context, FILE_LAST_USED, trimmed)
+        AppLog.i(TAG, "Recorded launch for $packageName (recent count=${trimmed.size})")
     }
 
     private fun loadScrapedPackages(context: Context): Set<String> =
         synchronized(scrapedPackages) {
             if (!isScrapedPackagesLoaded) {
-                val file = File(context.filesDir, FILE_SCRAPED_APPS)
-                if (file.exists()) {
-                    try {
-                        file.readLines().map { it.trim() }.filter { it.isNotEmpty() }.forEach {
-                            scrapedPackages.add(it)
-                        }
-                        AppLog.d(TAG, "Loaded ${scrapedPackages.size} scraped package records from disk")
-                    } catch (e: Exception) {
-                        AppLog.w(TAG, "Failed to read scraped packages file: ${e.message}")
-                    }
-                }
+                scrapedPackages.addAll(loadStringSet(context, FILE_SCRAPED_APPS))
+                AppLog.d(TAG, "Loaded ${scrapedPackages.size} scraped package records from disk")
                 isScrapedPackagesLoaded = true
             }
             scrapedPackages
@@ -216,17 +207,8 @@ object InstalledAppsManager {
                 scrapedPackages.add(packageName)
             }
         if (needsWrite) {
-            scope.launch {
-                synchronized(scrapedPackages) {
-                    try {
-                        val file = File(context.filesDir, FILE_SCRAPED_APPS)
-                        file.writeText(scrapedPackages.joinToString("\n"))
-                        AppLog.i(TAG, "Persisted $packageName to scraped packages registry")
-                    } catch (e: Exception) {
-                        AppLog.e(TAG, "Failed to persist scraped packages file: ${e.message}", e)
-                    }
-                }
-            }
+            persistLines(context, FILE_SCRAPED_APPS, synchronized(scrapedPackages) { scrapedPackages.toList() })
+            AppLog.i(TAG, "Persisted $packageName to scraped packages registry")
         }
     }
 
@@ -234,23 +216,18 @@ object InstalledAppsManager {
     fun isPackageAGame(
         appInfo: ApplicationInfo,
         gamePackagesFromIntent: Set<String> = emptySet(),
-    ): Boolean {
-        if (gamePackagesFromIntent.contains(appInfo.packageName)) {
-            return true
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            if (appInfo.category == ApplicationInfo.CATEGORY_GAME) {
-                return true
-            }
-        }
-        return (appInfo.flags and ApplicationInfo.FLAG_IS_GAME) != 0
-    }
+    ): Boolean =
+        gamePackagesFromIntent.contains(appInfo.packageName) ||
+            appInfo.category == ApplicationInfo.CATEGORY_GAME ||
+            (appInfo.flags and ApplicationInfo.FLAG_IS_GAME) != 0
 
     @Suppress("DEPRECATION")
     fun loadInstalledApps(context: Context) {
         scope.launch {
             RomManager.loadRomFolders(context)
             RomManager.reloadRomApps(context)
+
+            SystemRoleClassifier.refreshLaunchers(context)
 
             loadFavorites(context)
             loadHidden(context)
@@ -272,28 +249,20 @@ object InstalledAppsManager {
                 }
 
             val resolveInfoList: List<ResolveInfo> =
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    packageManager.queryIntentActivities(
-                        mainIntent,
-                        PackageManager.ResolveInfoFlags.of(0L),
-                    )
-                } else {
-                    packageManager.queryIntentActivities(mainIntent, 0)
-                }
+                packageManager.queryIntentActivities(
+                    mainIntent,
+                    PackageManager.ResolveInfoFlags.of(0L),
+                )
 
             val gameResolveList: List<ResolveInfo> =
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                packageManager.queryIntentActivities(
+                    gameIntent,
+                    PackageManager.ResolveInfoFlags.of(0L),
+                ) +
                     packageManager.queryIntentActivities(
-                        gameIntent,
+                        appGamesIntent,
                         PackageManager.ResolveInfoFlags.of(0L),
-                    ) +
-                        packageManager.queryIntentActivities(
-                            appGamesIntent,
-                            PackageManager.ResolveInfoFlags.of(0L),
-                        )
-                } else {
-                    packageManager.queryIntentActivities(gameIntent, 0) + packageManager.queryIntentActivities(appGamesIntent, 0)
-                }
+                    )
             val gamePackagesFromIntent = gameResolveList.map { it.activityInfo.packageName }.toSet()
 
             val coversDir = File(context.cacheDir, DIR_COVERS).apply { mkdirs() }
@@ -328,7 +297,7 @@ object InstalledAppsManager {
                         )
                     }.sortedBy { it.label.lowercase() }
 
-            _installedAndroidApps.value = apps
+            installedAndroidAppsFlow.value = apps
             val gameCount = apps.count { it.isGame }
             AppLog.d(TAG, "Loaded ${apps.size} installed apps ($gameCount games, ${apps.size - gameCount} apps) for launcher browser")
 
@@ -345,17 +314,7 @@ object InstalledAppsManager {
             RomManager.updateRomCover(packageName, coverPath)
             return
         }
-        _installedAndroidApps.value =
-            _installedAndroidApps.value.map { item ->
-                if (item.packageName == packageName) {
-                    item.copy(
-                        coverPath = coverPath,
-                        coverLastModified = System.currentTimeMillis(),
-                    )
-                } else {
-                    item
-                }
-            }
+        installedAndroidAppsFlow.value = installedAndroidAppsFlow.value.withUpdatedCover(packageName, coverPath)
         AppLog.i(TAG, "Updated in-memory cover path for $packageName to $coverPath")
     }
 
@@ -372,9 +331,8 @@ object InstalledAppsManager {
             observeContentProvider(
                 context,
                 MegingiardIpcContract.SETTINGS_URI,
-            ) { resolver, uri ->
-                IpcSettingsParser.parse(resolver, uri)
-            }.collect { config ->
+                IpcSettingsParser::parse,
+            ).collect { config ->
                 if (config.steamGridDbApiToken.isNotBlank()) {
                     AppLog.i(TAG, "SteamGridDB API key updated via IPC ContentObserver -> triggering cover scraping")
                     triggerSteamGridDbScraping(context, coversDir)
@@ -447,11 +405,9 @@ object InstalledAppsManager {
                         val images = imagesResult.getOrNull()
                         val imageUrl = images?.firstOrNull()?.url
                         if (imageUrl != null) {
-                            val tempResult = SteamGridDbClient.downloadImageToTempFile(imageUrl, context.cacheDir)
-                            val tempFile = tempResult.getOrNull()
-                            if (tempFile != null) {
-                                tempFile.copyTo(coverFile, overwrite = true)
-                                tempFile.delete()
+                            val bytes = SteamGridDbClient.downloadImageBytes(imageUrl).getOrNull()
+                            if (bytes != null) {
+                                coverFile.writeBytes(bytes)
                                 updateAppCover(app.packageName, coverFile.absolutePath)
                                 AppLog.i(TAG, "Successfully scraped SteamGridDB cover for ${app.label}")
                             }
@@ -469,11 +425,9 @@ object InstalledAppsManager {
                                 val logos = logosResult.getOrNull()
                                 val logoUrl = logos?.firstOrNull()?.url
                                 if (logoUrl != null) {
-                                    val tempLogoRes = SteamGridDbClient.downloadImageToTempFile(logoUrl, context.cacheDir)
-                                    val tempLogoFile = tempLogoRes.getOrNull()
-                                    if (tempLogoFile != null) {
-                                        tempLogoFile.copyTo(logoFile, overwrite = true)
-                                        tempLogoFile.delete()
+                                    val logoBytes = SteamGridDbClient.downloadImageBytes(logoUrl).getOrNull()
+                                    if (logoBytes != null) {
+                                        logoFile.writeBytes(logoBytes)
                                         AppLog.i(TAG, "Successfully scraped SteamGridDB logo for ROM: ${app.label}")
                                     }
                                 }

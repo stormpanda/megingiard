@@ -41,4 +41,22 @@ class ViewportMathTest {
         assertEquals(2, 2.floorMod(3))
         assertEquals(0, 3.floorMod(3))
     }
+
+    @Test
+    fun `prevItem and nextItem cycle correctly through lists`() {
+        val list = listOf("A", "B", "C")
+        assertEquals("C", list.prevItem("A"))
+        assertEquals("A", list.prevItem("B"))
+        assertEquals("B", list.prevItem("C"))
+        assertEquals("A", list.prevItem("UNKNOWN"))
+
+        assertEquals("B", list.nextItem("A"))
+        assertEquals("C", list.nextItem("B"))
+        assertEquals("A", list.nextItem("C"))
+        assertEquals("A", list.nextItem("UNKNOWN"))
+
+        val emptyList = emptyList<String>()
+        assertEquals("X", emptyList.prevItem("X"))
+        assertEquals("X", emptyList.nextItem("X"))
+    }
 }

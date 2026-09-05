@@ -35,4 +35,10 @@ class MouseInjectorTest {
         MouseInjector.scrollWheel(1)
         MouseInjector.scrollWheel(-1)
     }
+
+    @Test
+    fun testStopWhenNotStarted() {
+        MouseInjector.stop()
+        assertFalse(MouseInjector.isRunning)
+    }
 }

@@ -20,6 +20,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import kotlin.math.cos
+import kotlin.math.sin
 
 private val MAGICAL_BORDER_STROKE_WIDTH = 1.5.dp
 private const val MAGICAL_FEATHER_GLOW_ALPHA = 0.08f
@@ -41,13 +43,13 @@ fun rememberMagicalBezelBrush(accentColor: Color = LocalAppColors.current.action
 
     return remember(angle, accentColor) {
         val rad = Math.toRadians(angle.toDouble())
-        val cos = kotlin.math.cos(rad).toFloat()
-        val sin = kotlin.math.sin(rad).toFloat()
+        val cosVal = cos(rad).toFloat()
+        val sinVal = sin(rad).toFloat()
 
-        val startX = 500f * (1f - cos)
-        val startY = 500f * (1f - sin)
-        val endX = 500f * (1f + cos)
-        val endY = 500f * (1f + sin)
+        val startX = 500f * (1f - cosVal)
+        val startY = 500f * (1f - sinVal)
+        val endX = 500f * (1f + cosVal)
+        val endY = 500f * (1f + sinVal)
 
         Brush.linearGradient(
             colorStops =

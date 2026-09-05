@@ -36,10 +36,38 @@ class IntegrationHomeScreenTargetInfoTest {
             systemId = "snes",
         )
 
+    private fun resolve(
+        hoveredPackage: String? = null,
+        hoveredAppLabel: String? = null,
+        hoveredRomPath: String? = null,
+        hoveredRomIdentifier: String? = null,
+        hoveredSystemId: String? = null,
+        activeSession: ActiveGameSession? = null,
+        lastDetectedSession: ActiveGameSession? = null,
+        focusedAppPackageName: String? = null,
+        focusedRomPath: String? = null,
+        focusedRomIdentifier: String? = null,
+        installedApps: List<InstalledAppInfo> = listOf(testApp),
+        resolveAppLabel: (String) -> String? = { null },
+    ) = resolveTargetAppInfo(
+        hoveredPackage = hoveredPackage,
+        hoveredAppLabel = hoveredAppLabel,
+        hoveredRomPath = hoveredRomPath,
+        hoveredRomIdentifier = hoveredRomIdentifier,
+        hoveredSystemId = hoveredSystemId,
+        activeSession = activeSession,
+        lastDetectedSession = lastDetectedSession,
+        focusedAppPackageName = focusedAppPackageName,
+        focusedRomPath = focusedRomPath,
+        focusedRomIdentifier = focusedRomIdentifier,
+        installedApps = installedApps,
+        resolveAppLabel = resolveAppLabel,
+    )
+
     @Test
     fun resolveTargetAppInfo_hoveredPackagePriority() {
         val target =
-            resolveTargetAppInfo(
+            resolve(
                 hoveredPackage = "com.example.game",
                 hoveredAppLabel = "Hovered Title",
                 hoveredRomPath = "/roms/hovered.sfc",
@@ -48,8 +76,6 @@ class IntegrationHomeScreenTargetInfoTest {
                 activeSession = activeGameSession,
                 lastDetectedSession = lastGameSession,
                 focusedAppPackageName = "com.other.app",
-                focusedRomPath = null,
-                installedApps = listOf(testApp),
             )
 
         assertEquals("com.example.game", target.pkg)
@@ -62,16 +88,8 @@ class IntegrationHomeScreenTargetInfoTest {
     @Test
     fun resolveTargetAppInfo_hoveredPackageFallbackToInstalledAppsLabel() {
         val target =
-            resolveTargetAppInfo(
+            resolve(
                 hoveredPackage = "com.example.game",
-                hoveredAppLabel = null,
-                hoveredRomPath = null,
-                hoveredSystemId = null,
-                activeSession = null,
-                lastDetectedSession = null,
-                focusedAppPackageName = null,
-                focusedRomPath = null,
-                installedApps = listOf(testApp),
                 resolveAppLabel = { "Fallback Label" },
             )
 
@@ -82,15 +100,8 @@ class IntegrationHomeScreenTargetInfoTest {
     @Test
     fun resolveTargetAppInfo_hoveredPackageFallbackToResolverLambda() {
         val target =
-            resolveTargetAppInfo(
+            resolve(
                 hoveredPackage = "com.unknown.package",
-                hoveredAppLabel = null,
-                hoveredRomPath = null,
-                hoveredSystemId = null,
-                activeSession = null,
-                lastDetectedSession = null,
-                focusedAppPackageName = null,
-                focusedRomPath = null,
                 installedApps = emptyList(),
                 resolveAppLabel = { pkg -> "Resolved ($pkg)" },
             )
@@ -102,16 +113,10 @@ class IntegrationHomeScreenTargetInfoTest {
     @Test
     fun resolveTargetAppInfo_activeSessionPriorityWhenNotHovering() {
         val target =
-            resolveTargetAppInfo(
-                hoveredPackage = null,
-                hoveredAppLabel = null,
-                hoveredRomPath = null,
-                hoveredSystemId = null,
+            resolve(
                 activeSession = activeGameSession,
                 lastDetectedSession = lastGameSession,
                 focusedAppPackageName = "com.example.game",
-                focusedRomPath = null,
-                installedApps = listOf(testApp),
             )
 
         assertEquals("com.retroarch.game", target.pkg)
@@ -123,16 +128,10 @@ class IntegrationHomeScreenTargetInfoTest {
     @Test
     fun resolveTargetAppInfo_focusedAppMatchingLastDetectedSession() {
         val target =
-            resolveTargetAppInfo(
-                hoveredPackage = null,
-                hoveredAppLabel = null,
-                hoveredRomPath = null,
-                hoveredSystemId = null,
-                activeSession = null,
+            resolve(
                 lastDetectedSession = lastGameSession,
                 focusedAppPackageName = "com.retroarch.lastgame",
                 focusedRomPath = "/override/path.sfc",
-                installedApps = listOf(testApp),
             )
 
         assertEquals("com.retroarch.lastgame", target.pkg)
@@ -144,16 +143,9 @@ class IntegrationHomeScreenTargetInfoTest {
     @Test
     fun resolveTargetAppInfo_focusedAppDifferentFromLastDetectedSession() {
         val target =
-            resolveTargetAppInfo(
-                hoveredPackage = null,
-                hoveredAppLabel = null,
-                hoveredRomPath = null,
-                hoveredSystemId = null,
-                activeSession = null,
+            resolve(
                 lastDetectedSession = lastGameSession,
                 focusedAppPackageName = "com.example.game",
-                focusedRomPath = null,
-                installedApps = listOf(testApp),
             )
 
         assertEquals("com.example.game", target.pkg)
@@ -165,15 +157,8 @@ class IntegrationHomeScreenTargetInfoTest {
     @Test
     fun resolveTargetAppInfo_lastDetectedSessionFallbackWhenNothingActive() {
         val target =
-            resolveTargetAppInfo(
-                hoveredPackage = null,
-                hoveredAppLabel = null,
-                hoveredRomPath = null,
-                hoveredSystemId = null,
-                activeSession = null,
+            resolve(
                 lastDetectedSession = lastGameSession,
-                focusedAppPackageName = null,
-                focusedRomPath = null,
                 installedApps = emptyList(),
             )
 
@@ -185,22 +170,30 @@ class IntegrationHomeScreenTargetInfoTest {
 
     @Test
     fun resolveTargetAppInfo_allNullReturnsEmptyTargetInfo() {
-        val target =
-            resolveTargetAppInfo(
-                hoveredPackage = null,
-                hoveredAppLabel = null,
-                hoveredRomPath = null,
-                hoveredSystemId = null,
-                activeSession = null,
-                lastDetectedSession = null,
-                focusedAppPackageName = null,
-                focusedRomPath = null,
-                installedApps = emptyList(),
-            )
+        val target = resolve(installedApps = emptyList())
 
         assertNull(target.pkg)
         assertNull(target.label)
         assertNull(target.romPath)
         assertNull(target.systemId)
+    }
+
+    @Test
+    fun resolveTargetAppInfo_gameNativeSessionWithRomIdentifier() {
+        val session =
+            ActiveGameSession(
+                packageName = "app.gamenative",
+                gameTitle = "Boltgun",
+                romPath = null,
+                romIdentifier = "Boltgun.steam",
+                systemId = "pc",
+            )
+        val target = resolve(activeSession = session)
+
+        assertEquals("app.gamenative", target.pkg)
+        assertEquals("Boltgun", target.label)
+        assertNull(target.romPath)
+        assertEquals("Boltgun.steam", target.romIdentifier)
+        assertEquals("pc", target.systemId)
     }
 }

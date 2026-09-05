@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.mirror
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.emptyPreferences
 import com.stormpanda.megingiard.macropad.MacroExecutor
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.settings.MirrorSettings
@@ -29,6 +30,8 @@ class ScreenCaptureFollowTest {
     private val testDispatcher = UnconfinedTestDispatcher()
     private val cutoutId = "test-cutout-id"
 
+    private fun getCutout(id: String = cutoutId) = ScreenCaptureManager.cutouts.value.find { it.id == id }!!
+
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
@@ -38,13 +41,10 @@ class ScreenCaptureFollowTest {
             object : DataStore<Preferences> {
                 override val data: Flow<Preferences> = emptyFlow()
 
-                override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences =
-                    androidx.datastore.preferences.core
-                        .emptyPreferences()
+                override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences = emptyPreferences()
             }
         MirrorSettings.init(dummyDataStore, CoroutineScope(testDispatcher))
 
-        // Setup default layout with one follow-touch enabled cutout
         val layout = MacroPadState.activeLayout.value!!
         val testCutout =
             ScreenCutout(
@@ -94,27 +94,18 @@ class ScreenCaptureFollowTest {
         ScreenCaptureManager.setCapturing(true)
         ScreenCaptureManager.setFollowActive(true)
 
-        // Center touch (0.5, 0.5)
-        // targetSrcX = 0.5 - 0.5/2 = 0.25f
-        // targetSrcY = 0.5 - 0.5/2 = 0.25f
         ScreenCaptureManager.onTouchReceived(0.5f, 0.5f)
-        val cutout1 = ScreenCaptureManager.cutouts.value.find { it.id == cutoutId }!!
+        val cutout1 = getCutout()
         assertEquals(0.25f, cutout1.srcX, 0.001f)
         assertEquals(0.25f, cutout1.srcY, 0.001f)
 
-        // Touch at (0.2f, 0.2f)
-        // targetSrcX = 0.2 - 0.25 = -0.05 -> coerced to 0f
-        // targetSrcY = 0.2 - 0.25 = -0.05 -> coerced to 0f
         ScreenCaptureManager.onTouchReceived(0.2f, 0.2f)
-        val cutout2 = ScreenCaptureManager.cutouts.value.find { it.id == cutoutId }!!
+        val cutout2 = getCutout()
         assertEquals(0f, cutout2.srcX, 0.001f)
         assertEquals(0f, cutout2.srcY, 0.001f)
 
-        // Touch at (0.9f, 0.9f)
-        // targetSrcX = 0.9 - 0.25 = 0.65 -> coerced to 0.5f (since 1.0 - srcWidth = 0.5)
-        // targetSrcY = 0.9 - 0.25 = 0.65 -> coerced to 0.5f
         ScreenCaptureManager.onTouchReceived(0.9f, 0.9f)
-        val cutout3 = ScreenCaptureManager.cutouts.value.find { it.id == cutoutId }!!
+        val cutout3 = getCutout()
         assertEquals(0.5f, cutout3.srcX, 0.001f)
         assertEquals(0.5f, cutout3.srcY, 0.001f)
     }
@@ -125,56 +116,41 @@ class ScreenCaptureFollowTest {
             ScreenCaptureManager.setCapturing(true)
             ScreenCaptureManager.setFollowActive(true)
 
-            // Enable motion smoothing on the cutout
             val layout = MacroPadState.activeLayout.value!!
             val testCutout = layout.mirrorCutouts.find { it.id == cutoutId }!!.copy(motionSmoothing = true)
             MacroPadState.updateLayout(layout.copy(mirrorCutouts = listOf(testCutout)))
-
-            // Trigger capture manager collection updates
             ScreenCaptureManager.setFollowActive(true)
 
-            // Initial position is at (0.25, 0.25)
-            var cutout = ScreenCaptureManager.cutouts.value.find { it.id == cutoutId }!!
-            assertEquals(0.25f, cutout.srcX, 0.001f)
+            assertEquals(0.25f, getCutout().srcX, 0.001f)
 
-            // Touch at (0.9f, 0.9f) -> targetSrcX = 0.5f
             ScreenCaptureManager.onTouchReceived(0.9f, 0.9f)
-
-            // Wait 100ms
             delay(100)
-            cutout = ScreenCaptureManager.cutouts.value.find { it.id == cutoutId }!!
-            assertTrue("cutout.srcX (${cutout.srcX}) should have moved from 0.25", cutout.srcX > 0.25f)
-            assertTrue("cutout.srcX (${cutout.srcX}) should be less than target 0.5", cutout.srcX < 0.5f)
+            val moving = getCutout()
+            assertTrue(moving.srcX > 0.25f)
+            assertTrue(moving.srcX < 0.5f)
 
-            // Wait another 500ms to allow Lerp to snap
             delay(500)
-            cutout = ScreenCaptureManager.cutouts.value.find { it.id == cutoutId }!!
-            assertEquals(0.5f, cutout.srcX, 0.001f)
+            assertEquals(0.5f, getCutout().srcX, 0.001f)
         }
 
     @Test
     fun `toggleFollow persists follow state to active layout`() {
-        // Initially, follow mode should be false in the layout
         val layout = MacroPadState.activeLayout.value!!
         assertFalse(layout.mirrorFollowActive)
 
-        // Toggling follow on should persist true to the layout
         ScreenCaptureManager.toggleFollow()
         assertTrue(MacroPadState.activeLayout.value!!.mirrorFollowActive)
 
-        // Toggling follow off should persist false to the layout
         ScreenCaptureManager.toggleFollow()
         assertFalse(MacroPadState.activeLayout.value!!.mirrorFollowActive)
     }
 
     @Test
     fun `restoreFromLayout restores follow active state`() {
-        // Setup layout with follow mode active
         val layout = MacroPadState.activeLayout.value!!
         MacroPadState.setLayoutMirrorFollowActive(layout.id, true)
         assertTrue(MacroPadState.activeLayout.value!!.mirrorFollowActive)
 
-        // restoreFromLayout should activate follow in ScreenCaptureManager
         assertFalse(ScreenCaptureManager.isFollowActive.value)
         MirrorViewportController.restoreFromLayout()
         assertTrue(ScreenCaptureManager.isFollowActive.value)
@@ -185,29 +161,15 @@ class ScreenCaptureFollowTest {
         ScreenCaptureManager.setCapturing(true)
         ScreenCaptureManager.setFollowActive(true)
 
-        // Initial offsets should be 0.25f
-        var cutout = ScreenCaptureManager.cutouts.value.find { it.id == cutoutId }!!
-        assertEquals(0.25f, cutout.srcX, 0.001f)
+        assertEquals(0.25f, getCutout().srcX, 0.001f)
 
-        // Mock running macro
         MacroExecutor.setRunningMacroIdsForTest(setOf("test-macro-id"))
-
-        // Send touch event (0.9f, 0.9f)
         ScreenCaptureManager.onTouchReceived(0.9f, 0.9f)
+        assertEquals(0.25f, getCutout().srcX, 0.001f)
 
-        // Offsets should remain 0.25f (ignored)
-        cutout = ScreenCaptureManager.cutouts.value.find { it.id == cutoutId }!!
-        assertEquals(0.25f, cutout.srcX, 0.001f)
-
-        // Clear running macros
         MacroExecutor.setRunningMacroIdsForTest(emptySet())
-
-        // Send touch event again
         ScreenCaptureManager.onTouchReceived(0.9f, 0.9f)
-
-        // Now it should center: targetSrcX = 0.5f
-        cutout = ScreenCaptureManager.cutouts.value.find { it.id == cutoutId }!!
-        assertEquals(0.5f, cutout.srcX, 0.001f)
+        assertEquals(0.5f, getCutout().srcX, 0.001f)
     }
 
     @Test
@@ -225,28 +187,22 @@ class ScreenCaptureFollowTest {
             ScreenCaptureManager.onTouchReceived(0.9f, 0.9f)
 
             delay(50)
-            val list1 = ScreenCaptureManager.cutouts.value
-            val c1 = list1.find { it.id == "cutout-1" }!!
-            assertTrue("cutout-1 should have started animating", c1.srcX > 0.25f)
+            assertTrue(getCutout("cutout-1").srcX > 0.25f)
 
             val updatedLayout = MacroPadState.activeLayout.value!!
-            val updatedCutout1 = testCutout1.copy(followTouch = false)
-            val updatedCutout2 = testCutout2.copy(followTouch = true)
-            MacroPadState.updateLayout(updatedLayout.copy(mirrorCutouts = listOf(updatedCutout1, updatedCutout2)))
+            MacroPadState.updateLayout(
+                updatedLayout.copy(
+                    mirrorCutouts = listOf(testCutout1.copy(followTouch = false), testCutout2.copy(followTouch = true)),
+                ),
+            )
 
             ScreenCaptureManager.onTouchReceived(0.1f, 0.1f)
-
             delay(50)
-            val list2 = ScreenCaptureManager.cutouts.value
-            val c1Final = list2.find { it.id == "cutout-1" }!!
-            val c2Final = list2.find { it.id == "cutout-2" }!!
+            assertTrue(getCutout("cutout-2").srcX < 0.25f)
 
-            assertTrue("cutout-2 should have animated from 0.25f", c2Final.srcX < 0.25f)
-
-            val c1XBefore = c1Final.srcX
+            val c1XBefore = getCutout("cutout-1").srcX
             delay(100)
-            val list3 = ScreenCaptureManager.cutouts.value
-            val c1XAfter = list3.find { it.id == "cutout-1" }!!.srcX
-            assertEquals("cutout-1 animation should have stopped", c1XBefore, c1XAfter, 0.001f)
+            val c1XAfter = getCutout("cutout-1").srcX
+            assertEquals(c1XBefore, c1XAfter, 0.001f)
         }
 }

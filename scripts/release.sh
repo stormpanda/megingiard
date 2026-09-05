@@ -65,10 +65,10 @@ build_release_apk() {
     version_line=$(grep -E 'versionName[[:space:]]*=' "$GRADLE_FILE")
     release_version=$(echo "$version_line" | sed -E 's/.*versionName[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/')
 
-    log_info "Building release APKs for version $release_version..."
-    ./gradlew :companion:ui:assembleRelease :gamefocus:ui:assembleRelease
+    log_info "Building release APK for version $release_version..."
+    ./gradlew :companion:ui:assembleRelease
 
-    # Ensure output dir exists, clean old artifacts, and copy the APKs
+    # Ensure output dir exists, clean old artifacts, and copy the APK
     rm -f app/release/*.apk(N) app/release/*-checksum-*.txt(N)
     mkdir -p app/release
     generated_apk="companion/ui/build/outputs/apk/release/Megingiard-v${release_version}.apk"
@@ -82,18 +82,11 @@ build_release_apk() {
     cp "$generated_apk" "$copied_apk"
     log_info "Copied APK to $copied_apk"
 
-    gf_generated_apk="gamefocus/ui/build/outputs/apk/release/Megingiard-GameFocus-v${release_version}.apk"
-    if [[ -f "$gf_generated_apk" ]]; then
-        gf_copied_apk="app/release/Megingiard-GameFocus-v${release_version}.apk"
-        cp "$gf_generated_apk" "$gf_copied_apk"
-        log_info "Copied Game Focus APK to $gf_copied_apk"
-    fi
-
     # Run checksum script
     log_info "Generating SHA-256 checksum..."
     scripts/generate_checksum.sh
 
-    log_success "Release Build $release_version APKs successfully created and signed."
+    log_success "Release Build $release_version APK successfully created and signed."
 }
 
 # Helper function to install built release APK on connected Thor/Android device
@@ -257,8 +250,6 @@ case "$1" in
 
         apk_path="app/release/Megingiard-v${release_version}.apk"
         checksum_path="app/release/Megingiard-v${release_version}-checksum-sha256.txt"
-        gf_apk_path="app/release/Megingiard-GameFocus-v${release_version}.apk"
-        gf_checksum_path="app/release/Megingiard-GameFocus-v${release_version}-checksum-sha256.txt"
 
         if [[ ! -f "$apk_path" || ! -f "$checksum_path" ]]; then
             log_error "Release artifacts not found. Please run 'scripts/release.sh build' first."
@@ -274,9 +265,6 @@ case "$1" in
         fi
 
         artifacts=("$apk_path" "$checksum_path")
-        if [[ -f "$gf_apk_path" && -f "$gf_checksum_path" ]]; then
-            artifacts+=("$gf_apk_path" "$gf_checksum_path")
-        fi
 
         gh release create "$release_version" \
             --draft \
@@ -284,7 +272,7 @@ case "$1" in
             --notes-file "$changelog_file" \
             "${artifacts[@]}"
 
-        log_success "Release draft Megingiard-v$release_version successfully uploaded with APKs and checksums."
+        log_success "Release draft Megingiard-v$release_version successfully uploaded with APK and checksum."
         ;;
 
     finish)

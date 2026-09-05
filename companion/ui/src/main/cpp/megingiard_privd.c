@@ -65,7 +65,7 @@
 #include <dirent.h>
 #include "cmd_parsers.h"
 
-#define PRIVD_VERSION 5
+#define PRIVD_VERSION 7
 
 static int g_port_start = 51234;
 #define SCAN_MAX 32
@@ -106,6 +106,11 @@ static pthread_t g_reader_thread;
 static volatile int g_client_fd_for_reader = -1;
 static pthread_mutex_t g_send_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+/* Touch evdev-streaming state (SUB TOUCH / UNSUB TOUCH). */
+static volatile int g_touch_reader_active = 0;
+static pthread_t g_touch_reader_thread;
+static volatile int g_client_fd_for_touch_reader = -1;
+
 /* Direct mirror server child (MIRROR START_DIRECT/STOP). */
 static volatile pid_t g_mirror_pid = -1;
 static char g_mirror_socket[64] = {0};
@@ -128,6 +133,34 @@ static int should_emit_evdev(__u16 type, __u16 code) {
             case ABS_RZ:     /* 5  — right stick Y */
             case ABS_HAT0X:  /* 16 — D-Pad X */
             case ABS_HAT0Y:  /* 17 — D-Pad Y */
+                return 1;
+            default:
+                return 0;
+        }
+    }
+    return 0;
+}
+
+/*
+ * Returns 1 if the touch evdev event should be streamed to the client.
+ * We forward:
+ *   EV_SYN  SYN_REPORT
+ *   EV_KEY  BTN_TOUCH
+ *   EV_ABS  Linux Multi-Touch Type B axes (ABS_MT_*) and fallback single-touch axes (ABS_X/Y)
+ */
+static int should_emit_touch_evdev(__u16 type, __u16 code) {
+    if (type == EV_SYN) return code == SYN_REPORT;
+    if (type == EV_KEY) return code == BTN_TOUCH;
+    if (type == EV_ABS) {
+        switch (code) {
+            case ABS_X:
+            case ABS_Y:
+            case ABS_MT_SLOT:
+            case ABS_MT_TOUCH_MAJOR:
+            case ABS_MT_WIDTH_MAJOR:
+            case ABS_MT_POSITION_X:
+            case ABS_MT_POSITION_Y:
+            case ABS_MT_TRACKING_ID:
                 return 1;
             default:
                 return 0;
@@ -186,7 +219,7 @@ static void *evdev_reader_thread(void *arg) {
 }
 
 /*
- * Signals the reader thread to stop and blocks until it has exited.
+ * Signals the gamepad reader thread to stop and blocks until it has exited.
  * Safe to call even if no thread is running (g_reader_active == 0).
  */
 static void stop_reader_thread(void) {
@@ -194,6 +227,58 @@ static void stop_reader_thread(void) {
     g_reader_active = 0;
     pthread_join(g_reader_thread, NULL);
     g_client_fd_for_reader = -1;
+}
+
+/*
+ * Background thread: polls g_touch_fd for physical touchscreen events and
+ * forwards filtered events to the connected client as:
+ *   EVT_TOUCH <type> <code> <value>\n
+ *
+ * Read-only observation without EVIOCGRAB.
+ */
+static void *touch_evdev_reader_thread(void *arg) {
+    (void)arg;
+    struct pollfd pfd;
+    pfd.fd = g_touch_fd;
+    pfd.events = POLLIN;
+
+    while (g_touch_reader_active) {
+        int ret = poll(&pfd, 1, 10); /* 10 ms timeout so exit flag is checked */
+        if (ret <= 0) continue;
+        if (!(pfd.revents & POLLIN)) continue;
+
+        struct input_event ev;
+        ssize_t r = read(g_touch_fd, &ev, sizeof(ev));
+        if (r != (ssize_t)sizeof(ev)) break;
+
+        if (!should_emit_touch_evdev(ev.type, ev.code)) continue;
+
+        int cfd = g_client_fd_for_touch_reader;
+        if (cfd < 0) continue;
+
+        char buf[64];
+        int len = snprintf(buf, sizeof(buf), "EVT_TOUCH %d %d %d\n",
+                           (int)ev.type, (int)ev.code, (int)ev.value);
+        if (len <= 0 || len >= (int)sizeof(buf)) continue;
+
+        pthread_mutex_lock(&g_send_mutex);
+        if (g_touch_reader_active) {
+            (void)write(cfd, buf, (size_t)len);
+        }
+        pthread_mutex_unlock(&g_send_mutex);
+    }
+    return NULL;
+}
+
+/*
+ * Signals the touch reader thread to stop and blocks until it has exited.
+ * Safe to call even if no thread is running (g_touch_reader_active == 0).
+ */
+static void stop_touch_reader_thread(void) {
+    if (!g_touch_reader_active) return;
+    g_touch_reader_active = 0;
+    pthread_join(g_touch_reader_thread, NULL);
+    g_client_fd_for_touch_reader = -1;
 }
 
 static void signal_handler(int sig) {
@@ -1070,6 +1155,25 @@ static int serve_client(int client_fd) {
             continue;
         }
 
+        if (strcmp(line, "SUB TOUCH") == 0) {
+            if (g_touch_fd >= 0 && !g_touch_reader_active) {
+                int fl = fcntl(g_touch_fd, F_GETFL);
+                fcntl(g_touch_fd, F_SETFL, fl | O_NONBLOCK);
+                struct input_event drain_ev;
+                while (read(g_touch_fd, &drain_ev, sizeof(drain_ev)) > 0) {}
+                fcntl(g_touch_fd, F_SETFL, fl);
+
+                g_client_fd_for_touch_reader = client_fd;
+                g_touch_reader_active = 1;
+                pthread_create(&g_touch_reader_thread, NULL, touch_evdev_reader_thread, NULL);
+            }
+            continue;
+        }
+        if (strcmp(line, "UNSUB TOUCH") == 0) {
+            stop_touch_reader_thread();
+            continue;
+        }
+
         if (strncmp(line, "MIRROR START_DIRECT", 19) == 0) {
             int w, h;
             char resp[96];
@@ -1110,13 +1214,28 @@ static int serve_client(int client_fd) {
                 p[len - 1] = '\0';
                 len--;
             }
+            while (*p == ' ') p++;
             if (len > 0 && len < sizeof(path)) {
-                strncpy(path, p, sizeof(path));
+                char *display_id_str = NULL;
+                char *target_path = p;
+                char *space = strchr(p, ' ');
+                if (space != NULL) {
+                    *space = '\0';
+                    display_id_str = p;
+                    target_path = space + 1;
+                    while (*target_path == ' ') target_path++;
+                }
+                strncpy(path, target_path, sizeof(path));
                 path[sizeof(path) - 1] = '\0';
                 pid_t pid = fork();
                 if (pid == 0) {
-                    char *args[] = {"/system/bin/screencap", "-p", path, NULL};
-                    execv(args[0], args);
+                    if (display_id_str != NULL && strlen(display_id_str) > 0) {
+                        char *args[] = {"/system/bin/screencap", "-d", display_id_str, "-p", path, NULL};
+                        execv(args[0], args);
+                    } else {
+                        char *args[] = {"/system/bin/screencap", "-p", path, NULL};
+                        execv(args[0], args);
+                    }
                     _exit(127);
                 } else if (pid > 0) {
                     int status;
@@ -1175,6 +1294,7 @@ static int serve_client(int client_fd) {
         fprintf(stderr, "privd: virtual keyboard de-registered (cleanup)\n");
     }
     stop_reader_thread();
+    stop_touch_reader_thread();
     stop_mirror_child();
     return 0;
 }
@@ -1259,9 +1379,9 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    g_touch_fd = open("/dev/input/event6", O_WRONLY);
+    g_touch_fd = open("/dev/input/event6", O_RDWR);
     if (g_touch_fd < 0) {
-        fprintf(stderr, "privd: warning: failed to open touchscreen node event6 (touch injection disabled) errno=%d\n", errno);
+        fprintf(stderr, "privd: warning: failed to open touchscreen node event6 (touch injection/observation disabled) errno=%d\n", errno);
     }
 
     int bound_port = 0;

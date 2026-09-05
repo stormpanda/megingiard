@@ -42,6 +42,7 @@ import com.stormpanda.megingiard.math.floorMod
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
+import kotlin.math.sign
 import android.graphics.Paint as NativePaint
 
 private val HPC_DEFAULT_POSTER_WIDTH = 175.dp
@@ -80,6 +81,11 @@ fun HorizontalPosterCarousel(
     val appColors = LocalAppColors.current
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
+    val extraPushPx =
+        remember(density) {
+            with(density) { HPC_EXTRA_PUSH_DP.toPx() }
+        }
+    val posterShape = remember(posterCornerRadius) { RoundedCornerShape(posterCornerRadius) }
 
     BoxWithConstraints(
         modifier =
@@ -118,11 +124,6 @@ fun HorizontalPosterCarousel(
                 cardBackgroundColor?.invoke(actualIndex, isSelected)
                     ?: if (isSelected) appColors.surfaceVariant else appColors.surface
 
-            val extraPushPx =
-                remember(density) {
-                    with(density) { HPC_EXTRA_PUSH_DP.toPx() }
-                }
-
             Box(
                 modifier =
                     Modifier
@@ -142,7 +143,7 @@ fun HorizontalPosterCarousel(
                             val pageOffset = rawOffset.absoluteValue
                             val s = (1.18f - (pageOffset * 0.33f)).coerceIn(0.85f, 1.18f)
                             val a = (1.0f - (pageOffset * 0.45f)).coerceIn(0.55f, 1.0f)
-                            val sign = kotlin.math.sign(rawOffset)
+                            val sign = sign(rawOffset)
                             val neighborFactor = (1.0f - (rawOffset.absoluteValue - 1.0f).absoluteValue).coerceIn(0.0f, 1.0f)
 
                             scaleX = s
@@ -181,15 +182,12 @@ fun HorizontalPosterCarousel(
                                 color = resolvedCardBg.copy(alpha = cardHiddenAlpha),
                                 cornerRadius = CornerRadius(cornerRadiusPx, cornerRadiusPx),
                             )
-                        }.clip(RoundedCornerShape(posterCornerRadius))
+                        }.clip(posterShape)
                         .border(
                             width = if (isSelected) 3.dp else 1.dp,
                             color = if (isSelected) appColors.accent else appColors.divider,
-                            shape = RoundedCornerShape(posterCornerRadius),
-                        ).clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                        ) {
+                            shape = posterShape,
+                        ).noFocusClickable {
                             if (isSelected) {
                                 onItemClick(actualIndex)
                             } else {

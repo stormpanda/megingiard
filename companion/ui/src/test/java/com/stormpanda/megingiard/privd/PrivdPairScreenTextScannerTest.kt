@@ -12,159 +12,72 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
 class PrivdPairScreenTextScannerTest {
+    private fun assertPairing(
+        text: String,
+        code: String?,
+        port: String?,
+        isComplete: Boolean,
+        connectPort: Int = 0,
+        langConfig: AutoSetupLanguageConfig = AutoSetupLanguageConfig.ENGLISH,
+    ) {
+        val result = PrivdPairScreenTextScanner.parsePairingInfoFromText(text, langConfig)
+        assertEquals(code, result.code)
+        assertEquals(port, result.port)
+        assertEquals(isComplete, result.isComplete)
+        if (connectPort != 0) assertEquals(connectPort, result.connectPort)
+    }
+
     @Test
     fun parsePairingInfoFromText_extractsCodeAndPortFromSampleScreenshotText() {
-        val sampleText =
-            """
-            10:07 PM
-            Wireless debugging
-            Pair with device
-            Wi-Fi pairing code
-            722106
-            IP address & Port
-            192.168.178.35:35283
-            CANCEL
-            """.trimIndent()
-
-        val result = PrivdPairScreenTextScanner.parsePairingInfoFromText(sampleText)
-
-        assertEquals("722106", result.code)
-        assertEquals("35283", result.port)
-        assertTrue(result.isComplete)
+        val sample = "10:07 PM\nWireless debugging\nPair with device\nWi-Fi pairing code\n722106\nIP address & Port\n192.168.178.35:35283\nCANCEL"
+        assertPairing(sample, "722106", "35283", true)
     }
 
     @Test
     fun parsePairingInfoFromText_handlesPartialOrBlankText() {
-        val blankResult = PrivdPairScreenTextScanner.parsePairingInfoFromText("")
-        assertNull(blankResult.code)
-        assertNull(blankResult.port)
-        assertFalse(blankResult.isComplete)
-
-        val codeOnlyText = "Wi-Fi pairing code: 123456"
-        val codeOnlyResult = PrivdPairScreenTextScanner.parsePairingInfoFromText(codeOnlyText)
-        assertEquals("123456", codeOnlyResult.code)
-        assertNull(codeOnlyResult.port)
-        assertFalse(codeOnlyResult.isComplete)
+        assertPairing("", null, null, false)
+        assertPairing("Wi-Fi pairing code: 123456", "123456", null, false)
     }
 
     @Test
     fun parsePairingInfoFromText_handlesExplicitPortLabel() {
-        val text = "Pairing Code: 654321 Port: 42135"
-        val result = PrivdPairScreenTextScanner.parsePairingInfoFromText(text)
-        assertEquals("654321", result.code)
-        assertEquals("42135", result.port)
-        assertTrue(result.isComplete)
+        assertPairing("Pairing Code: 654321 Port: 42135", "654321", "42135", true)
     }
 
     @Test
     fun parsePairingInfoFromText_extractsCodeAndPortFromGermanSampleText() {
-        val sampleGermanText =
-            """
-            22:15
-            Debugging über WLAN
-            Gerät über einen Kopplungscode koppeln
-            WLAN-Kopplungscode
-            849201
-            IP-Adresse & Port
-            192.168.178.50:41209
-            ABBRECHEN
-            """.trimIndent()
-
-        val result =
-            PrivdPairScreenTextScanner.parsePairingInfoFromText(
-                sampleGermanText,
-                AutoSetupLanguageConfig.GERMAN,
-            )
-
-        assertEquals("849201", result.code)
-        assertEquals("41209", result.port)
-        assertTrue(result.isComplete)
+        val sample = "22:15\nDebugging über WLAN\nGerät über einen Kopplungscode koppeln\nWLAN-Kopplungscode\n849201\nIP-Adresse & Port\n192.168.178.50:41209\nABBRECHEN"
+        assertPairing(sample, "849201", "41209", true, langConfig = AutoSetupLanguageConfig.GERMAN)
     }
 
     @Test
-    fun parseConnectPortFromText_extractsConnectPortCorrectober() {
-        val sampleText =
-            """
-            Wireless debugging
-            IP address & Port
-            192.168.178.35:41235
-            """.trimIndent()
-
-        val port = PrivdPairScreenTextScanner.parseConnectPortFromText(sampleText)
-        assertEquals(41235, port)
-    }
-
-    @Test
-    fun parseConnectPortFromText_ignoresTextWithPairingKeywords() {
-        val sampleText =
-            """
-            Wi-Fi pairing code
-            722106
-            IP address & Port
-            192.168.178.35:35283
-            """.trimIndent()
-
-        val port = PrivdPairScreenTextScanner.parseConnectPortFromText(sampleText)
-        assertEquals(0, port)
-    }
-
-    @Test
-    fun parseConnectPortFromText_parsesSettingsScreenDespitePairingRowText() {
-        val sampleText =
-            """
-            Wireless debugging
-            Use wireless debugging
-            IP address & Port
-            192.168.178.35:41235
-            Pair device with pairing code
-            Gerät über einen Kopplungscode koppeln
-            """.trimIndent()
-
-        val port = PrivdPairScreenTextScanner.parseConnectPortFromText(sampleText)
-        assertEquals(41235, port)
+    fun parseConnectPortFromText_extractsConnectPort() {
+        assertEquals(
+            41235,
+            PrivdPairScreenTextScanner.parseConnectPortFromText("Wireless debugging\nIP address & Port\n192.168.178.35:41235"),
+        )
+        assertEquals(
+            0,
+            PrivdPairScreenTextScanner.parseConnectPortFromText("Wi-Fi pairing code\n722106\nIP address & Port\n192.168.178.35:35283"),
+        )
+        assertEquals(
+            41235,
+            PrivdPairScreenTextScanner.parseConnectPortFromText(
+                "Wireless debugging\nUse wireless debugging\nIP address & Port\n192.168.178.35:41235\nPair device with pairing code\nGerät über einen Kopplungscode koppeln",
+            ),
+        )
     }
 
     @Test
     fun hasPairingCode_detectsPresenceOfPairingCode() {
-        val sampleTextWithCode =
-            """
-            Wi-Fi pairing code
-            722106
-            IP address & Port
-            192.168.178.35:35283
-            """.trimIndent()
-        val sampleTextWithoutCode =
-            """
-            Wireless debugging
-            IP address & Port
-            192.168.178.35:41235
-            """.trimIndent()
-
-        assertTrue(PrivdPairScreenTextScanner.hasPairingCode(sampleTextWithCode))
-        assertFalse(PrivdPairScreenTextScanner.hasPairingCode(sampleTextWithoutCode))
+        assertTrue(PrivdPairScreenTextScanner.hasPairingCode("Wi-Fi pairing code\n722106\nIP address & Port\n192.168.178.35:35283"))
+        assertFalse(PrivdPairScreenTextScanner.hasPairingCode("Wireless debugging\nIP address & Port\n192.168.178.35:41235"))
         assertFalse(PrivdPairScreenTextScanner.hasPairingCode(""))
     }
 
     @Test
     fun parsePairingInfoFromText_extractsBothConnectAndPairingPortsWhenCombined() {
-        val combinedWindowText =
-            """
-            Wireless debugging
-            IP address & Port
-            192.168.1.50:42231
-            Pair device with pairing code
-            Wi-Fi pairing code
-            869932
-            IP address & Port
-            192.168.1.50:37241
-            CANCEL
-            """.trimIndent()
-
-        val result = PrivdPairScreenTextScanner.parsePairingInfoFromText(combinedWindowText)
-
-        assertEquals("869932", result.code)
-        assertEquals("37241", result.port)
-        assertEquals(42231, result.connectPort)
-        assertTrue(result.isComplete)
+        val sample = "Wireless debugging\nIP address & Port\n192.168.1.50:42231\nPair device with pairing code\nWi-Fi pairing code\n869932\nIP address & Port\n192.168.1.50:37241\nCANCEL"
+        assertPairing(sample, "869932", "37241", true, connectPort = 42231)
     }
 }

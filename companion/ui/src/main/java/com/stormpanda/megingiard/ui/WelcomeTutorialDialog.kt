@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 
 private const val TAG = "WelcomeTutorialDialog"
+private val WT_TITLE_SPACING = 12.dp
 private val WT_CONTENT_SPACING = 16.dp
 private val WT_INTRO_SPACING = 6.dp
 
@@ -26,7 +27,7 @@ fun WelcomeStepContent() {
             color = colors.onSurface,
             style = MaterialTheme.typography.titleLarge,
         )
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(WT_TITLE_SPACING))
         Text(
             text = stringResource(R.string.welcome_desc),
             color = colors.onSurfaceSecondary,

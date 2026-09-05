@@ -17,6 +17,7 @@ import com.stormpanda.megingiard.macropad.ProfileAssociation
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -43,19 +44,22 @@ class MegingiardSettingsProviderTest {
         contentResolver = RuntimeEnvironment.getApplication().contentResolver
     }
 
+    private fun testIntegrationProfile(
+        profileId: String = UUID.randomUUID().toString(),
+        layoutId: String = UUID.randomUUID().toString(),
+        packageName: String = "com.test.targetapp",
+    ) = PadProfile(
+        id = profileId,
+        name = "Test Integration Profile",
+        layouts = listOf(PadLayout(id = layoutId, name = "Layout 1")),
+        activeLayoutId = layoutId,
+        association = ProfileAssociation(packageName = packageName),
+    )
+
     @Test
     fun `query profiles returns configured profiles cursor`() {
-        val profileId = UUID.randomUUID().toString()
-        val layoutId = UUID.randomUUID().toString()
-        val testProfile =
-            PadProfile(
-                id = profileId,
-                name = "Test Integration Profile",
-                layouts = listOf(PadLayout(id = layoutId, name = "Layout 1")),
-                activeLayoutId = layoutId,
-                association = ProfileAssociation(packageName = "com.test.targetapp"),
-            )
-        MacroPadState.loadFrom(listOf(testProfile), profileId)
+        val testProfile = testIntegrationProfile()
+        MacroPadState.loadFrom(listOf(testProfile), testProfile.id)
 
         val uri = Uri.parse("content://${MegingiardIpcContract.AUTHORITY}/profiles")
         val cursor: Cursor? = contentResolver.query(uri, null, null, null, null)
@@ -167,5 +171,37 @@ class MegingiardSettingsProviderTest {
         } finally {
             contentResolver.unregisterContentObserver(observer)
         }
+    }
+
+    @Test
+    fun `query theme and settings return valid cursors`() {
+        val themeUri = Uri.parse("content://${MegingiardIpcContract.AUTHORITY}/theme")
+        val themeCursor = contentResolver.query(themeUri, null, null, null, null)
+        assertNotNull(themeCursor)
+        themeCursor!!.use {
+            assertTrue(it.moveToFirst())
+            assertNotNull(it.getString(it.getColumnIndexOrThrow(MegingiardIpcContract.COLUMN_THEME_MODE)))
+        }
+
+        val settingsUri = Uri.parse("content://${MegingiardIpcContract.AUTHORITY}/settings")
+        val settingsCursor = contentResolver.query(settingsUri, null, null, null, null)
+        assertNotNull(settingsCursor)
+        settingsCursor!!.use {
+            assertTrue(it.moveToFirst())
+            assertNotNull(it.getString(it.getColumnIndexOrThrow(MegingiardIpcContract.COLUMN_STEAMGRIDDB_TOKEN)))
+        }
+
+        MegingiardSettingsProvider.notifyThemeChanged(RuntimeEnvironment.getApplication())
+        MegingiardSettingsProvider.notifySettingsChanged(RuntimeEnvironment.getApplication())
+    }
+
+    @Test
+    fun `provider getType and mutations return defaults`() {
+        val uri = Uri.parse("content://${MegingiardIpcContract.AUTHORITY}/theme")
+        val provider = MegingiardSettingsProvider()
+        assertEquals("vnd.android.cursor.item/vnd.com.stormpanda.megingiard.theme", provider.getType(uri))
+        assertNull(provider.insert(uri, null))
+        assertEquals(0, provider.update(uri, null, null, null))
+        assertEquals(0, provider.delete(uri, null, null))
     }
 }

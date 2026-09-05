@@ -58,4 +58,42 @@ class AppAlertDialogTest {
         composeTestRule.onNodeWithText("Confirm").performClick()
         assertTrue("Confirm click handler must be triggered", confirmed)
     }
+
+    @Test
+    fun appAlertDialog_rendersTitleTextAndButtons() {
+        val testColors = paletteFor(ThemeMode.DARK)
+        var confirmed = false
+        var dismissed = false
+
+        composeTestRule.setContent {
+            CompositionLocalProvider(LocalAppColors provides testColors) {
+                AppAlertDialog(
+                    onDismissRequest = { dismissed = true },
+                    title = { Text("Alert Title") },
+                    text = { Text("Alert Body Message") },
+                    confirmButton = {
+                        TextButton(onClick = { confirmed = true }) {
+                            Text("Confirm Button")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { dismissed = true }) {
+                            Text("Cancel Button")
+                        }
+                    },
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("Alert Title").assertExists()
+        composeTestRule.onNodeWithText("Alert Body Message").assertExists()
+        composeTestRule.onNodeWithText("Confirm Button").assertExists()
+        composeTestRule.onNodeWithText("Cancel Button").assertExists()
+
+        composeTestRule.onNodeWithText("Confirm Button").performClick()
+        assertTrue("Confirm handler must be triggered", confirmed)
+
+        composeTestRule.onNodeWithText("Cancel Button").performClick()
+        assertTrue("Dismiss handler must be triggered", dismissed)
+    }
 }

@@ -14,6 +14,7 @@ dependencies {
     compileOnly("com.android.tools.build:gradle:8.13.2")
     compileOnly("org.jetbrains.kotlin:kotlin-gradle-plugin:2.0.21")
     compileOnly("org.jetbrains.kotlin:compose-compiler-gradle-plugin:2.0.21")
+    compileOnly("org.jetbrains.kotlinx.kover:org.jetbrains.kotlinx.kover.gradle.plugin:0.9.1")
 }
 
 gradlePlugin {

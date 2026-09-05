@@ -14,6 +14,10 @@ Detailed functional requirements (including acceptance criteria and edge cases) 
 
 ## Non-Functional Requirements
 
+### Hardware Environment & Multi-Display Architecture
+
+Megingiard is strictly designed for **dual-screen Android gaming handhelds** (specifically the AYN Thor). Single-screen hardware (phones, tablets, and single-screen emulators) is **permanently unsupported**. The system requires concurrent physical multi-display topology where the companion UI runs exclusively on the secondary display and configuration overlays project to the primary display. Single-screen fallbacks are intentionally excluded from the architecture.
+
 ### Battery Efficiency
 
 The continuous loop required by the `MediaProjection` API must be implemented in a CPU-friendly manner. When leaving the mirror view, the `VirtualDisplay` must be stopped or hidden to conserve computing power and battery life. The native touch injector process must be terminated when leaving Touchpad mode.
@@ -35,3 +39,7 @@ Pure SHA-256 and HMAC-SHA256 logic MUST remain covered by local JVM tests in `:d
 ### Code Quality
 
 State management must be centrally orchestrated via asynchronous Kotlin flows (`MutableStateFlow`) to maintain a strict separation of concerns between the UI and the Background Service. All conventions are specified in [AGENTS.md](../AGENTS.md).
+
+### Standalone Companion Autonomy (Zero Game Focus Dependency)
+
+Megingiard Companion is a completely standalone application with zero dependencies on Game Focus. Game Focus is an optional top-screen launcher currently not released to the public. Users are not required to use Game Focus and may use stock or third-party launchers. Any bugs affecting Megingiard Companion must be addressed strictly within Megingiard Companion and shared modules, never via Game Focus.

@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.session
 
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.catalog.SafPathResolver
 
 private const val TAG = "Pcsx2AndroidDetector"
 

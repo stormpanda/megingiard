@@ -1,0 +1,113 @@
+package com.stormpanda.megingiard.macropad
+
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
+import androidx.compose.material.icons.automirrored.rounded.ViewQuilt
+import androidx.compose.material.icons.rounded.Crop
+import androidx.compose.material.icons.rounded.Folder
+import androidx.compose.material.icons.rounded.OpenWith
+import androidx.compose.material.icons.rounded.SmartButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.privd.PrivdManager
+import com.stormpanda.megingiard.privd.PrivdState
+import com.stormpanda.megingiard.ui.GamepadActionCard
+import com.stormpanda.megingiard.ui.GamepadTwoColumnGrid
+
+private const val TAG = "QuickActionsDeck"
+
+private data class QuickActionItem(
+    val titleRes: Int,
+    val descRes: Int,
+    val icon: ImageVector,
+    val onClick: () -> Unit,
+)
+
+@Composable
+internal fun QuickActionsDeckContent(
+    onNewButton: () -> Unit,
+    onNewMacro: () -> Unit,
+    onNewLayout: () -> Unit,
+    onNewProfile: () -> Unit,
+    onArrangeButtons: () -> Unit,
+    onEditMirrorLayout: () -> Unit,
+) {
+    AppLog.d(TAG, "Rendering QuickActionsDeckContent")
+
+    val privdState by PrivdManager.state.collectAsStateWithLifecycle()
+    val isPrivdRunning = privdState == PrivdState.RUNNING
+    val items =
+        remember(onNewButton, onNewMacro, onNewLayout, onNewProfile, onArrangeButtons, onEditMirrorLayout, isPrivdRunning) {
+            buildList {
+                add(
+                    QuickActionItem(
+                        titleRes = R.string.macropad_editor_add_button,
+                        descRes = R.string.macropad_editor_create_button_desc,
+                        icon = Icons.Rounded.SmartButton,
+                        onClick = onNewButton,
+                    ),
+                )
+                if (isPrivdRunning) {
+                    add(
+                        QuickActionItem(
+                            titleRes = R.string.macropad_editor_open_timeline_title,
+                            descRes = R.string.macropad_editor_open_timeline_desc,
+                            icon = Icons.AutoMirrored.Rounded.PlaylistPlay,
+                            onClick = onNewMacro,
+                        ),
+                    )
+                }
+                add(
+                    QuickActionItem(
+                        titleRes = R.string.settings_macropad_new_layout,
+                        descRes = R.string.macropad_editor_new_layout_desc,
+                        icon = Icons.AutoMirrored.Rounded.ViewQuilt,
+                        onClick = onNewLayout,
+                    ),
+                )
+                add(
+                    QuickActionItem(
+                        titleRes = R.string.settings_macropad_new_profile,
+                        descRes = R.string.macropad_editor_new_profile_desc,
+                        icon = Icons.Rounded.Folder,
+                        onClick = onNewProfile,
+                    ),
+                )
+                add(
+                    QuickActionItem(
+                        titleRes = R.string.quick_action_edit_buttons,
+                        descRes = R.string.quick_action_edit_buttons_desc,
+                        icon = Icons.Rounded.OpenWith,
+                        onClick = onArrangeButtons,
+                    ),
+                )
+                add(
+                    QuickActionItem(
+                        titleRes = R.string.mirror_editor_arrange_cutouts_title,
+                        descRes = R.string.mirror_editor_arrange_cutouts_desc,
+                        icon = Icons.Rounded.Crop,
+                        onClick = onEditMirrorLayout,
+                    ),
+                )
+            }
+        }
+
+    GamepadTwoColumnGrid(
+        items = items,
+    ) { item, _, cardModifier ->
+        GamepadActionCard(
+            title = stringResource(item.titleRes),
+            description = stringResource(item.descRes),
+            icon = item.icon,
+            alwaysShowFullDescription = true,
+            onClick = item.onClick,
+            modifier = cardModifier,
+        )
+    }
+}

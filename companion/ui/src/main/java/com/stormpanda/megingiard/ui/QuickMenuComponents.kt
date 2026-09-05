@@ -1,9 +1,7 @@
 package com.stormpanda.megingiard.ui
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -24,11 +22,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AutoFixHigh
 import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -46,7 +42,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -66,6 +61,9 @@ private const val TAG = "QuickMenuComponents"
 internal val PM_CHIP_LABEL_GAP = 6.dp
 internal val PM_AUTO_SWITCH_GAP = 8.dp
 
+private val PM_ACTION_BUTTON_SHAPE = RoundedCornerShape(PM_ACTION_BUTTON_CORNER)
+private val PM_TOGGLE_CONTAINER_SHAPE = RoundedCornerShape(8.dp)
+
 @Composable
 internal fun SectionLabel(
     text: String,
@@ -81,19 +79,22 @@ internal fun SectionLabel(
 }
 
 @Composable
-internal fun ProfileRow(
-    profiles: List<PadProfile>,
-    activeProfile: PadProfile?,
+private fun <T> ScrollableSelectionRow(
+    items: List<T>,
+    selectedId: String?,
+    itemId: (T) -> String,
+    itemName: (T) -> String,
     colors: AppColors,
-    onProfileSelected: (PadProfile) -> Unit,
+    onItemSelected: (T) -> Unit,
 ) {
     val listState = rememberLazyListState()
 
-    LaunchedEffect(activeProfile?.id, profiles) {
-        val activeId = activeProfile?.id ?: return@LaunchedEffect
-        val index = profiles.indexOfFirst { it.id == activeId }
-        if (index >= 0) {
-            listState.animateScrollToItem(index)
+    LaunchedEffect(selectedId, items) {
+        if (selectedId != null) {
+            val index = items.indexOfFirst { itemId(it) == selectedId }
+            if (index >= 0) {
+                listState.animateScrollToItem(index)
+            }
         }
     }
 
@@ -102,16 +103,34 @@ internal fun ProfileRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(PM_CHIP_SPACING),
     ) {
-        items(profiles, key = { it.id }) { profile ->
-            val isActive = profile.id == activeProfile?.id
-            SelectableChip(
-                text = profile.name,
-                isSelected = isActive,
-                contentDescription = profile.name,
-                onClick = { onProfileSelected(profile) },
+        items(items, key = { itemId(it) }) { item ->
+            val name = itemName(item)
+            AppSelectableChip(
+                text = name,
+                selected = itemId(item) == selectedId,
+                onClick = { onItemSelected(item) },
+                contentDescription = name,
+                unselectedContentColor = colors.accent,
             )
         }
     }
+}
+
+@Composable
+internal fun ProfileRow(
+    profiles: List<PadProfile>,
+    activeProfile: PadProfile?,
+    colors: AppColors,
+    onProfileSelected: (PadProfile) -> Unit,
+) {
+    ScrollableSelectionRow(
+        items = profiles,
+        selectedId = activeProfile?.id,
+        itemId = { it.id },
+        itemName = { it.name },
+        colors = colors,
+        onItemSelected = onProfileSelected,
+    )
 }
 
 @Composable
@@ -121,31 +140,14 @@ internal fun LayoutRow(
     colors: AppColors,
     onLayoutSelected: (String) -> Unit,
 ) {
-    val layouts = activeProfile?.layouts ?: emptyList()
-    val listState = rememberLazyListState()
-
-    LaunchedEffect(activeLayout?.id, layouts) {
-        val activeId = activeLayout?.id ?: return@LaunchedEffect
-        val index = layouts.indexOfFirst { it.id == activeId }
-        if (index >= 0) {
-            listState.animateScrollToItem(index)
-        }
-    }
-
-    LazyRow(
-        state = listState,
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(PM_CHIP_SPACING),
-    ) {
-        items(layouts, key = { it.id }) { layout ->
-            SelectableChip(
-                text = layout.name,
-                isSelected = layout.id == activeLayout?.id,
-                contentDescription = layout.name,
-                onClick = { onLayoutSelected(layout.id) },
-            )
-        }
-    }
+    ScrollableSelectionRow(
+        items = activeProfile?.layouts ?: emptyList(),
+        selectedId = activeLayout?.id,
+        itemId = { it.id },
+        itemName = { it.name },
+        colors = colors,
+        onItemSelected = { onLayoutSelected(it.id) },
+    )
 }
 
 @Composable
@@ -164,8 +166,8 @@ internal fun QuickMenuActionChip(
     Row(
         modifier =
             modifier
-                .clip(RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
-                .border(PM_BORDER_WIDTH, borderColor, RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
+                .clip(PM_ACTION_BUTTON_SHAPE)
+                .border(PM_BORDER_WIDTH, borderColor, PM_ACTION_BUTTON_SHAPE)
                 .clickable(onClick = {
                     AppLog.d(TAG, "QuickMenuActionChip clicked: $label")
                     onClick()
@@ -232,7 +234,7 @@ internal fun MagicalAutoToggleChip(
     Row(
         modifier =
             modifier
-                .clip(RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
+                .clip(PM_ACTION_BUTTON_SHAPE)
                 .then(
                     if (active) {
                         Modifier
@@ -304,9 +306,9 @@ internal fun MagicalAutoToggleChip(
                                         style = Stroke(width = strokeWidth),
                                     )
                                 }
-                            }.background(accentColor.copy(alpha = 0.10f), RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
+                            }.background(accentColor.copy(alpha = 0.10f), PM_ACTION_BUTTON_SHAPE)
                     } else {
-                        Modifier.border(PM_BORDER_WIDTH, colors.controlOverlayBorder, RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
+                        Modifier.border(PM_BORDER_WIDTH, colors.controlOverlayBorder, PM_ACTION_BUTTON_SHAPE)
                     },
                 ).clickable(onClick = {
                     AppLog.d(TAG, "MagicalAutoToggleChip clicked: active=$active")
@@ -337,9 +339,9 @@ internal fun MagicalAutoToggleChip(
                 Modifier
                     .width(28.dp)
                     .height(16.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(PM_TOGGLE_CONTAINER_SHAPE)
                     .background(if (active) accentColor.copy(alpha = 0.35f) else colors.surfaceVariant)
-                    .border(1.dp, if (active) accentColor.copy(alpha = 0.7f) else colors.controlOverlayBorder, RoundedCornerShape(8.dp))
+                    .border(1.dp, if (active) accentColor.copy(alpha = 0.7f) else colors.controlOverlayBorder, PM_TOGGLE_CONTAINER_SHAPE)
                     .padding(2.dp),
             contentAlignment = if (active) Alignment.CenterEnd else Alignment.CenterStart,
         ) {
@@ -368,8 +370,8 @@ internal fun QuickMenuIconButton(
     Box(
         modifier =
             modifier
-                .clip(RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
-                .border(PM_BORDER_WIDTH, accent.copy(alpha = 0.5f), RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
+                .clip(PM_ACTION_BUTTON_SHAPE)
+                .border(PM_BORDER_WIDTH, accent.copy(alpha = 0.5f), PM_ACTION_BUTTON_SHAPE)
                 .clickable(onClick = {
                     AppLog.d(TAG, "QuickMenuIconButton clicked: $contentDescription")
                     onClick()
@@ -399,20 +401,5 @@ internal fun ShutOffIconButton(
         onClick = onClick,
         modifier = modifier,
         tint = colors.accent,
-    )
-}
-
-@Composable
-private fun SelectableChip(
-    text: String,
-    isSelected: Boolean,
-    contentDescription: String? = null,
-    onClick: () -> Unit,
-) {
-    AppSelectableChip(
-        text = text,
-        selected = isSelected,
-        onClick = onClick,
-        contentDescription = contentDescription,
     )
 }

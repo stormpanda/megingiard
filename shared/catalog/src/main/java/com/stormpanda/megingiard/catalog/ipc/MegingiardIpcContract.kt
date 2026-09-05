@@ -46,19 +46,23 @@ object MegingiardIpcContract {
         if (isInitialized) return
 
         val pm = context.packageManager
-        val isDebug = context.packageName.endsWith(".debug") || context.packageName.contains(".debug")
+        val isDebug = context.packageName.contains(".debug")
+
+        val isHostCompanionApp =
+            context.packageName == "com.stormpanda.megingiard" || context.packageName == "com.stormpanda.megingiard.debug"
 
         AUTHORITY =
-            if (context.packageName.startsWith("com.stormpanda.megingiard")) {
+            if (isHostCompanionApp) {
                 if (isDebug) "com.stormpanda.megingiard.debug.provider" else "com.stormpanda.megingiard.provider"
             } else {
                 val releaseInstalled = isPackageInstalled(pm, "com.stormpanda.megingiard")
                 val debugInstalled = isPackageInstalled(pm, "com.stormpanda.megingiard.debug")
                 when {
                     isDebug && debugInstalled -> "com.stormpanda.megingiard.debug.provider"
+                    !isDebug && releaseInstalled -> "com.stormpanda.megingiard.provider"
                     releaseInstalled -> "com.stormpanda.megingiard.provider"
                     debugInstalled -> "com.stormpanda.megingiard.debug.provider"
-                    else -> "com.stormpanda.megingiard.provider"
+                    else -> if (isDebug) "com.stormpanda.megingiard.debug.provider" else "com.stormpanda.megingiard.provider"
                 }
             }
 

@@ -39,8 +39,8 @@ android {
         applicationId = "com.stormpanda.megingiard"
         minSdk = 33
         targetSdk = 35
-        versionCode = 9
-        versionName = "0.9.0-SNAPSHOT"
+        versionCode = 10
+        versionName = "0.10.0-SNAPSHOT"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -174,6 +174,7 @@ afterEvaluate {
 
 dependencies {
     implementation(project(":companion:domain"))
+    implementation(project(":shared:ui"))
     implementation(project(":shared:catalog"))
     implementation(project(":shared:media"))
     implementation(project(":shared:session"))
@@ -197,6 +198,7 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
+    testImplementation(libs.turbine)
     testImplementation(platform(libs.androidx.compose.bom))
     testImplementation(libs.androidx.ui.test.junit4)
     androidTestImplementation(libs.androidx.junit)

@@ -1,45 +1,23 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Megingiard</string>
-    <string name="focus_launcher_title">Game Focus Launcher</string>
-    <string name="focus_launcher_refresh">Aktualisieren</string>
-    <string name="focus_launcher_search_hint">Apps &amp; Spiele suchen…</string>
     <string name="focus_launcher_no_apps">Keine Apps gefunden</string>
-    <string name="mirror_waiting_permission">Warte auf Bildschirmberechtigung\u2026</string>
     <string name="wrong_screen_message">Megingiard muss auf dem unteren Bildschirm laufen.\nBitte verschiebe die App, um fortzufahren.</string>
     <string name="cd_wrong_screen_arrow">Pfeil zeigt zum unteren Bildschirm</string>
-    <string name="mirror_start_button">Spiegelung starten</string>
-    <string name="cd_previous_tool">Vorheriges Werkzeug</string>
-    <string name="cd_next_tool">Nächstes Werkzeug</string>
     <string name="cd_stop_mirroring">Spiegelung stoppen</string>
     <string name="cd_start_mirroring">Spiegelung starten</string>
     <string name="cd_freeze">Einfrieren</string>
     <string name="cd_unfreeze">Einfrieren aufheben</string>
     <string name="cd_screenshot">Screenshot</string>
-    <string name="cd_lock_view">Ansicht sperren</string>
-    <string name="cd_unlock_view">Ansicht entsperren</string>
-    <string name="cd_touch_projection_on">Touch-Projektion aktiv</string>
-    <string name="cd_touch_projection_off">Touch-Projektion inaktiv</string>
-    <string name="cd_frozen_image">Eingefrorenes Standbild</string>
     <string name="notification_mirroring_active">Spiegelung aktiv</string>
-    <string name="touchpad_hint">Hier tippen, um den oberen Bildschirm zu steuern</string>
-    <string name="touchpad_hint_mouse">Ziehen zum Bewegen · Tippen zum Klicken</string>
-
-    <string name="cd_keyboard_trackpoint">Trackpoint</string>
 
     <!-- Settings screen -->
     <string name="settings_close">Schließen</string>
     <string name="settings_support_app">App unterstützen</string>
-    <string name="cd_open_settings">Einstellungen öffnen</string>
-    <string name="cd_open_global_settings">Globale Einstellungen öffnen</string>
     <string name="cd_drag_reorder">Zum Sortieren ziehen</string>
-    <string name="settings_section_tools">Werkzeuge</string>
-    <string name="settings_section_general">Allgemein</string>
-    <string name="settings_section_automation">Profile &amp; Automation</string>
     <string name="settings_section_appearance">Erscheinungsbild</string>
     <string name="settings_global_title">Einstellungen</string>
-    <string name="settings_back">Zurück</string>
     <string name="settings_accent_color">Akzentfarbe</string>
+    <string name="settings_accent_color_desc">Wähle aus vordefinierten Themen-Akzentfarben</string>
     <string name="settings_theme">Design</string>
     <string name="theme_dark">Dunkel</string>
     <string name="theme_dark_oled">Dunkel OLED</string>
@@ -53,92 +31,46 @@
     <string name="settings_overlay_fade_out">Steuerleiste ausblenden</string>
     <string name="settings_overlay_fade_out_desc">Die Schnellmenüleiste nach einigen Sekunden Inaktivität ausblenden</string>
     <string name="mirror_edge_blend_label">Kantenübergänge</string>
-    <string name="mirror_edge_blend_label_value">%1$d</string>
     <string name="mirror_edge_blend_strength_off">Aus</string>
-    <string name="mirror_edge_blend_strength_light">Leicht</string>
-    <string name="mirror_edge_blend_strength_medium">Mittel</string>
-    <string name="mirror_edge_blend_strength_strong">Stark</string>
-    <string name="mirror_edge_blend_strength_max">Max</string>
-    <string name="mirror_fps_label">FPS-Limit</string>
-    <string name="mirror_fps_value">%1$d FPS</string>
 
-    <string name="settings_auto_switch_profiles">Profile autom. wechseln</string>
-    <string name="settings_auto_switch_profiles_desc">Automatisches Wechseln des MacroPad-Profils, wenn eine verknüpfte App auf dem Hauptbildschirm gestartet wird</string>
     <string name="settings_exclude_from_recents">Aus \"Letzte Apps\" ausschließen</string>
     <string name="settings_exclude_from_recents_desc">Die App aus der Liste der kürzlich geöffneten Apps ausblenden, wenn Sie zu einer anderen App wechseln</string>
     <string name="settings_accessibility_status">Bedienungshilfen-Dienst</string>
-    <string name="settings_accessibility_status_active">Aktiv</string>
-    <string name="settings_accessibility_status_inactive">Inaktiv (Tippen zum Aktivieren)</string>
-    <string name="settings_accessibility_status_desc">Ermöglicht es Megingiard beispielsweise zu erkennen, welche App gerade läuft, um das Profil automatisch zu wechseln.</string>
     <string name="settings_accessibility_setup">Einrichten</string>
-    <string name="settings_accent_color_picker_title">Akzentfarbe wählen</string>
-    <string name="settings_accent_color_custom">Benutzerdefiniert</string>
-    <string name="settings_accent_suggestions_title">Akzentfarben-Vorschläge</string>
-    <string name="settings_accent_palette_suggestions">Vordefinierte Akzentfarben</string>
-    <string name="settings_accent_suggestions_close">Schließen</string>
     <string name="settings_color_brightness">Helligkeit</string>
     <string name="settings_color_cancel">Abbrechen</string>
-    <string name="settings_color_apply">Anwenden</string>
 
     <!-- Keyboard settings -->
     <string name="settings_keyboard_title">Tastatur-Einstellungen</string>
+    <string name="cd_keyboard_trackpoint">Trackpoint</string>
     <string name="cd_kb_select_all">Alles auswählen</string>
     <string name="cd_kb_cut">Ausschneiden</string>
     <string name="cd_kb_copy">Kopieren</string>
     <string name="cd_kb_paste">Einfügen</string>
-    <string name="cd_kb_shift">Umschalt</string>
     <string name="cd_kb_backspace">Rücktaste</string>
     <string name="cd_kb_enter">Eingabe</string>
     <string name="cd_kb_layout">Tastaturlayout</string>
     <string name="cd_kb_collapse">Tastatur einklappen</string>
     <string name="cd_kb_settings">Tastatur-Einstellungen</string>
     <string name="settings_kb_layout">Tastaturlayout</string>
-    <string name="settings_kb_layout_desc">Buchstabenanordnung</string>
-    <string name="settings_kb_layout_qwertz">QWERTZ</string>
-    <string name="settings_kb_layout_qwerty">QWERTY</string>
-    <string name="settings_kb_layout_azerty">AZERTY</string>
-    <string name="settings_kb_trackpoint">Trackpoint</string>
-    <string name="settings_kb_trackpoint_desc">Trackpoint-Punkt in der Grundreihe anzeigen</string>
-    <string name="settings_kb_repeat">Tastenwiederholung</string>
-    <string name="settings_kb_repeat_desc">Taste gedrückt halten für Wiederholung</string>
-    <string name="settings_kb_fullscreen">Vollbild-Tastatur</string>
-    <string name="settings_kb_fullscreen_desc">Kein Abstand unten — Tastatur füllt den gesamten Bildschirm</string>
     <string name="settings_kb_touchpad">Tastatur-Touchpad</string>
     <string name="settings_kb_touchpad_desc">Touchpad über der Tastatur anzeigen</string>
 
-
     <!-- Input method (touchpad + keyboard trackpoint) -->
-    <string name="settings_input_method">Mausmodus</string>
-    <string name="settings_input_method_desc">Mausbewegungen statt Touch-Steuerung</string>
-    <string name="settings_tap_to_click">Tippen zum Klicken</string>
-    <string name="settings_tap_to_click_desc">Einfaches Tippen = Linksklick</string>
-    <string name="settings_two_finger_tap">Zwei-Finger-Tippen</string>
-    <string name="settings_two_finger_tap_desc">Zwei-Finger-Tippen = Rechtsklick</string>
-
 
     <!-- Mirror session state persistence -->
-    <string name="settings_remember_viewport">Ansichtsausschnitt merken</string>
-    <string name="settings_remember_viewport_desc">Zoom und Position beim Neustart der Spiegelung wiederherstellen</string>
-    <string name="settings_remember_lock">Sperre merken</string>
-    <string name="settings_remember_lock_desc">Gesperrten Zustand beim Neustart der Spiegelung wiederherstellen</string>
-    <string name="settings_remember_projection">Touch-Projektion merken</string>
-
     <!-- MacroPad tool -->
-    <string name="macropad_no_profile">Kein Profil konfiguriert.
-Einstellungen öffnen, um ein Layout zu erstellen.</string>
-    <string name="macropad_open_settings">Einstellungen öffnen</string>
-    <string name="cd_macropad_button">MacroPad-Taste: %s</string>
-    <string name="cd_macropad_trackpoint">Trackpoint</string>
+    <string name="macropad_no_profile">No profile configured.
+Open Settings to create a layout.</string>
+    <string name="macropad_empty_layout_pill_title">Tippen, um Layout anzupassen</string>
+    <string name="macropad_empty_layout_pill_hint">Am Rand wischen für Schnellmenü</string>
 
     <!-- MacroPad editor -->
     <string name="macropad_editor_title">Layout bearbeiten</string>
-    <string name="macropad_editor_title_edit_profile">Profil bearbeiten</string>
-    <string name="macropad_editor_done">Speichern</string>
     <string name="macropad_editor_add_button">Taste hinzufügen</string>
     <string name="macropad_editor_add">Hinzufügen</string>
     <string name="macropad_editor_delete_button">Löschen</string>
     <string name="macropad_editor_button_label">Beschriftung</string>
-    <string name="macropad_editor_action">Aktion</string>
     <string name="macropad_editor_button_shape">Tastenform</string>
     <string name="macropad_editor_shape_circle">Kreis</string>
     <string name="macropad_editor_shape_square">Quadrat</string>
@@ -156,15 +88,9 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_button_size_2x1">2×1</string>
     <string name="macropad_button_size_1x2">1×2</string>
     <string name="macropad_button_size_2x2">2×2</string>
-    <string name="macropad_editor_trackpoint_size">Trackpoint-Größe</string>
     <string name="macropad_trackpoint_size_small">Klein</string>
     <string name="macropad_trackpoint_size_medium">Mittel</string>
     <string name="macropad_trackpoint_size_large">Groß</string>
-    <string name="macropad_editor_trackpoint_mode">Tracking-Modus</string>
-    <string name="macropad_trackpoint_mode_physical">Virtuelle physische Maus</string>
-    <string name="macropad_trackpoint_mode_touch">Virtueller Touch (WIP)</string>
-    <string name="macropad_trackpoint_mode_physical_desc">Simuliert eine Standardmaus. Ziehen bewegt den Systemcursor relativ von seiner aktuellen Position.</string>
-    <string name="macropad_trackpoint_mode_touch_desc">Simuliert absolute Toucheingaben auf dem Hauptbildschirm. Die Cursorposition wird gespeichert, sodass Sie mehrere Wischbewegungen an derselben Stelle fortsetzen können. (WIP)</string>
     <string name="macropad_editor_section_haptic">Haptisches Feedback</string>
     <string name="macropad_haptic_off">Aus</string>
     <string name="macropad_haptic_light">Leicht</string>
@@ -173,11 +99,6 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_haptic_custom">Eigene</string>
     <string name="macropad_haptic_custom_duration">Dauer</string>
     <string name="macropad_haptic_custom_amplitude">Stärke</string>
-    <string name="macropad_haptic_custom_test">Vibration testen</string>
-    <string name="macropad_editor_devices">Simulierte Geräte</string>
-    <string name="macropad_editor_device_keyboard">Tastatur</string>
-    <string name="macropad_editor_device_gamepad">Gamepad</string>
-    <string name="macropad_editor_device_mouse">Maus</string>
     <string name="macropad_device_disabled_keyboard">Tastatur ist für dieses Layout deaktiviert</string>
     <string name="macropad_device_disabled_gamepad">Gamepad ist für dieses Layout deaktiviert</string>
 
@@ -188,53 +109,76 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="kb_mouse_btn_4">M4</string>
     <string name="kb_mouse_btn_5">M5</string>
     <!-- Keyboard trackpoint mouse button position setting -->
-    <string name="settings_kb_mouse_btn_pos">Tastenposition</string>
-    <string name="settings_kb_mouse_btn_pos_desc">Wo die LMT/RMT-Tasten erscheinen</string>
-    <string name="kb_mouse_btn_pos_left">Links</string>
-    <string name="kb_mouse_btn_pos_right">Rechts</string>
-    <string name="kb_mouse_btn_pos_both">Links &amp; Rechts</string>
     <string name="macropad_device_disabled_mouse">Maus ist für dieses Layout deaktiviert</string>
     <string name="macropad_device_disabled_touch">Touch-Eingabe ist für dieses Layout deaktiviert</string>
-    <string name="macropad_editor_new_profile_name">Neues Profil</string>
-    <string name="macropad_editor_rename">Umbenennen</string>
+    <string name="macropad_device_disabled_macro_privd">Makros erfordern den Privilegierten Modus. Bitte aktiviere den Privilegierten Modus in den Einstellungen.</string>
+    <string name="macropad_macro_privd_required_banner">Der Privilegierte Modus ist erforderlich, um Makros zu erstellen, zu bearbeiten, zu testen und auszuführen. Bitte aktiviere ihn in den Einstellungen.</string>
     <string name="macropad_editor_delete_profile">Profil löschen</string>
-    <string name="macropad_editor_confirm_delete">Dieses Profil löschen?</string>
     <string name="macropad_editor_delete_layout">Layout löschen</string>
-    <string name="cd_layout_enable_toggle">Layout aktivieren/deaktivieren</string>
     <string name="macropad_editor_cancel">Abbrechen</string>
-    <string name="macropad_editor_confirm">Löschen</string>
- 
+
     <!-- Profile settings -->
-    <string name="profile_settings_title">Profil-Einstellungen</string>
     <string name="profile_settings_name">Profilname</string>
-    <string name="profile_settings_app_mapping">App zuweisen</string>
-    <string name="profile_settings_select_app">App wählen…</string>
-    <string name="profile_settings_clear_app">Verknüpfung aufheben</string>
-    <string name="profile_settings_search_apps">Apps suchen…</string>
+    <string name="profile_settings_search_apps">Apps suchen</string>
     <string name="profile_settings_no_apps">Keine Apps gefunden</string>
     <string name="profile_settings_app_assigned">(zugewiesen)</string>
-    <string name="profile_settings_loading_apps">Lade Apps…</string>
-    <string name="profile_settings_accessibility_required">Der Bedienungshilfen-Dienst muss in den globalen Einstellungen aktiviert werden</string>
 
     <!-- MacroPad icon picker -->
     <string name="macropad_icon_picker_title">Icon auswählen</string>
-    <string name="macropad_icon_picker_search">Icons suchen\u2026</string>
+    <string name="macropad_icon_picker_search">Icons suchen</string>
     <string name="macropad_icon_picker_no_results">Keine Icons gefunden</string>
     <string name="macropad_icon_picker_filled">Ausgefüllt</string>
-    <string name="macropad_icon_picker_currently_selected">Aktuell gewählt</string>
-    <string name="cd_icon_picker_button">Icon für Button auswählen</string>
-    <string name="cd_icon_picker_confirm">Icon-Auswahl übernehmen</string>
-    <string name="cd_icon_picker_delete">Icon entfernen</string>
+    <string name="macropad_icon_clear_confirm_title">Ausgewähltes Symbol entfernen?</string>
 
-    <!-- MacroPad editor grid -->
-    <string name="macropad_editor_grid_off">Raster aus</string>
-    <string name="macropad_editor_grid_rectangular">Rechteckiges Raster</string>
-    <string name="macropad_editor_grid_radial">Radiales Raster</string>
-    <string name="macropad_editor_grid_toggle">Raster ändern</string>
-    <string name="macropad_editor_toolbar_button">Taste hinzufügen</string>
-    <string name="macropad_editor_unlock">Tasten entsperren</string>
-    <string name="macropad_editor_lock">Tasten sperren</string>
-    <string name="macropad_editor_change_background">Hintergrund ändern</string>
+    <!-- Configuration export/import -->
+    <string name="settings_section_config">Teilen &amp; Backup</string>
+    <string name="settings_section_scraping">Scraping</string>
+    <string name="settings_restore_defaults">Alle benutzerdefinierten Profile löschen</string>
+    <string name="settings_restore_defaults_desc">Löscht alle Profile und erstellt ein leeres Standardprofil</string>
+    <string name="settings_restore_defaults_toast">Alle benutzerdefinierten Profile gelöscht</string>
+    <string name="settings_restore_defaults_countdown">%1$ds</string>
+    <string name="settings_cancel">Abbrechen</string>
+    <string name="settings_config_export">Backup erstellen</string>
+    <string name="settings_config_import">Backup wiederherstellen</string>
+    <string name="settings_config_export_profile">Profil teilen</string>
+    <string name="settings_config_import_profile">Geteiltes Profil importieren</string>
+    <string name="settings_add_to_obtainium">Zu Obtainium hinzufügen</string>
+
+    <!-- Export metadata configuration -->
+    <string name="config_export_author">Autor</string>
+    <string name="config_export_author_desc">Ersteller- oder Autorenname in den Metadaten</string>
+    <string name="config_export_description">Beschreibung</string>
+    <string name="config_export_description_desc">Zusammenfassung oder Notizen zu diesem Export</string>
+    <string name="config_export_include_backgrounds_desc">Benutzerdefinierte Hintergrundbilder in der .mgrd-Datei bündeln</string>
+
+    <!-- Import preview dialog -->
+    <string name="config_import_title">Konfiguration importieren</string>
+    <string name="config_import_tags_label">Tags</string>
+    <string name="config_import_sections_label">Enthält</string>
+    <string name="config_import_section_global">Globale Einstellungen</string>
+    <string name="config_import_section_mirror">Spiegel-Einstellungen</string>
+    <string name="config_import_section_touchpad">Touchpad-Einstellungen</string>
+    <string name="config_import_section_keyboard">Tastatur-Einstellungen</string>
+    <string name="config_import_section_macropad">MacroPad (%1$d Profile, %2$d Makros)</string>
+    <string name="config_import_section_macropad_settings">MacroPad-Einstellungen</string>
+    <string name="config_import_section_settings">Einstellungen (global / werkzeugspezifisch)</string>
+    <string name="config_import_meta_author">Autor: %1$s</string>
+    <string name="config_import_warning">Neue Profile und Makros werden zu den vorhandenen hinzugefügt.</string>
+    <string name="config_import_warning_backup">Neue Profile werden neben den bestehenden hinzugefügt. App-Einstellungen werden überschrieben.</string>
+    <string name="config_import_warning_profile">Profile werden neben den bestehenden hinzugefügt. App-Einstellungen in dieser Datei werden ignoriert.</string>
+    <string name="config_profile_export_select">Zu teilendes Profil</string>
+    <string name="config_profile_export_select_desc">Wähle das Profil aus, das du teilen möchtest</string>
+    <string name="config_profile_import_success">Profil erfolgreich importiert.</string>
+    <string name="config_import_confirm">Importieren</string>
+    <string name="config_import_cancel">Abbrechen</string>
+
+    <!-- Export/import results -->
+    <string name="config_export_success">Konfiguration erfolgreich exportiert.</string>
+    <string name="config_profile_export_success">Profil erfolgreich exportiert.</string>
+    <string name="config_import_success">Konfiguration erfolgreich importiert.</string>
+    <string name="config_error_title">Fehler</string>
+    <string name="config_error_unknown">Ein unerwarteter Fehler ist aufgetreten.</string>
+    <string name="config_ok">OK</string>
 
     <!-- MacroPad action picker labels -->
     <string name="macropad_action_keyboard_key">Tastaturtaste</string>
@@ -252,52 +196,28 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_action_mirror_touch_projection">Touch-Projektion</string>
     <string name="macropad_action_fullscreen_mouse">Vollbild-Maus</string>
     <string name="macropad_action_fullscreen_keyboard">Vollbild-Tastatur</string>
-    <string name="macropad_action_app_launcher">App-Launcher</string>
-    <string name="macropad_display_app_launcher">App: %s</string>
+    <string name="macropad_action_app_launcher">App Quick-Switch</string>
     <string name="app_launcher_picker_title">Anwendung auswählen</string>
-    <string name="app_launcher_picker_search">Anwendungen suchen…</string>
-    <string name="app_launcher_picker_no_apps">Keine Anwendungen gefunden</string>
-    <string name="app_launcher_picker_select_app">App wählen…</string>
+    <string name="app_launcher_picker_select_app">App wählen</string>
     <string name="app_launcher_button_label_format">Öffnen %1$s</string>
     <string name="floating_bubble_cd">Megingiard Schwebendes Bubble-Overlay</string>
-    <string name="floating_bubble_tap_hint">Tippen, um Megingiard wiederherzustellen</string>
 
-    <!-- MacroPad settings (ToolSettingsPanel) -->
-    <string name="settings_macropad_profile">Aktives Profil</string>
-    <string name="settings_macropad_new_profile">Neues Profil\u2026</string>
-    <string name="settings_macropad_pad_shape">Pad-Form</string>
-    <string name="settings_macropad_shape_square">Quadrat</string>
-    <string name="settings_macropad_shape_circle">Kreis</string>
-    <string name="settings_macropad_pad_size">Pad-Größe: %d%%</string>
-    <string name="settings_macropad_edit_layout">Layout bearbeiten\u2026</string>
+    <!-- MacroPad profile / layout strings -->
+    <string name="settings_macropad_new_profile">Neues Profil</string>
     <string name="settings_macropad_new_layout">Neues Layout</string>
-    <string name="settings_macropad_edit">Bearbeiten</string>
     <string name="settings_macropad_new">Neu</string>
-    <string name="macropad_layout_template_title">Kopieren von…</string>
-    <string name="macropad_layout_template_blank">Leer</string>
     <string name="macropad_reorder_profiles">Profile sortieren</string>
     <string name="macropad_reorder_layouts">Layouts sortieren</string>
 
-    <!-- MacroPad-Ambient-Display-Einstellungen -->
-    <string name="settings_section_background_following">Hintergrund-Verfolgung</string>
+    <!-- MacroPad ambient display settings -->
     <string name="settings_mirror_follow_touch">Hintergrund-Spiegelung folgt Berührung</string>
     <string name="settings_mirror_follow_touch_desc">Zentriert den gespiegelten Bildausschnitt auf der zuletzt berührten Stelle des Hauptbildschirms.</string>
     <string name="settings_mirror_follow_smoothing">Glättung</string>
     <string name="settings_mirror_follow_smoothing_desc">Sanftes Verschieben des Ausschnitts mit exponentieller Glättung</string>
     <string name="settings_mirror_follow_touch_off">Aus</string>
-    <string name="settings_section_cutouts">Ausschnitte</string>
     <string name="settings_mirror_no_cutouts">Keine Ausschnitte definiert. Füge Ausschnitte im Viewport-Editor hinzu.</string>
 
-
-    <string name="settings_macropad_ambient">Spiegelung im Hintergrund</string>
-    <string name="settings_macropad_ambient_hint">Startet Bildschirmspiegelung automatisch (einmalige Berechtigung erforderlich)</string>
-    <string name="settings_macropad_ambient_preview">Vorschau für Darstellung</string>
-    <string name="settings_macropad_ambient_preview_hint">Transparentes Fenster während Darstellung angepasst wird</string>
-    <string name="settings_macropad_ambient_apply_theme">Theme auch bei Spiegelung im Hintergrund anwenden</string>
-    <string name="settings_macropad_ambient_apply_theme_hint">Wenn deaktiviert, erscheinen alle Buttons im neutralen Grau-Stil</string>
     <string name="settings_macropad_dim">Abdunkelung</string>
-
-    <string name="ambient_preview">Vorschau</string>
 
     <!-- MacroPad button action display labels (shown in editor button list) -->
     <string name="macropad_display_keyboard_key">Taste: %s</string>
@@ -316,63 +236,36 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_gamepad_swap_face_buttons">Face-Button-Beschriftung tauschen (A/B und X/Y)</string>
     <string name="settings_gamepad_swap_face_buttons_desc">Zeigt Nintendo-Layout-Beschriftungen im Gamepad-Picker (A↔B und X↔Y). Die gesendeten Keycodes bleiben unverändert.</string>
 
-    <!-- Privilegierter Modus -->
+    <!-- Privileged Mode -->
     <string name="privd_title">Privilegierter Modus</string>
-    <string name="privd_description">Verbessert die Kompatibilität und erweitert bestimmte Funktionen. Siehe Hilfe für weitere Informationen.</string>
     <string name="privd_status_off">Aus</string>
-    <string name="privd_status_connecting">Verbinde…</string>
-    <string name="privd_status_bootstrapping">Einrichten…</string>
-    <string name="privd_status_running">Aktiv (v%1$d)</string>
+    <string name="privd_status_running_version">AN (V%1$d)</string>
     <string name="accessibility_status_active">Aktiv</string>
-    <string name="privd_status_failed">Fehlgeschlagen</string>
-    <string name="privd_action_connect">Verbinden</string>
-    <string name="privd_action_disconnect">Trennen</string>
-    <string name="privd_action_test">Verbindung testen</string>
-    <string name="privd_action_show_wizard">Einrichten</string>
-    <string name="privd_action_test_autotoggle">Auto-Toggle testen</string>
-    <string name="privd_action_auto_setup">Auto-Einrichtung</string>
     <string name="privd_action_retry">Auto-Einrichtung wiederholen</string>
     <string name="privd_toast_accessibility_required">Eingabehilfe-Dienst wird für den automatischen Toggle benötigt. Bitte in den Einstellungen aktivieren.</string>
     <string name="privd_toast_all_set">Alles bereit! Privilegiierter Modus ist einsatzbereit.</string>
-    <string name="privd_ping_ok">Daemon antwortet — Verbindung ist intakt.</string>
-    <string name="privd_ping_fail">Keine Antwort vom Daemon. Die Verbindung ist möglicherweise abgebrochen.</string>
-
-    <string name="privd_show_reconnect_prompt">Wiederverbindungshinweis anzeigen</string>
-    <string name="privd_show_reconnect_prompt_desc">Zeigt beim App-Start einen Dialog an, wenn die Verbindung zum privilegierten Helfer-Daemon fehlschlägt.</string>
-    <string name="privd_reconnect_prompt_title">Privilegierten Modus reaktivieren</string>
-    <string name="privd_reconnect_prompt_skip">Überspringen</string>
-    <string name="privd_reconnect_prompt_done">Fertig</string>
-    <string name="privd_reconnect_prompt_settings">Entwicklereinstellungen</string>
-
-
-
 
     <string name="privd_deadzone_title">Deadzones einstellen</string>
-    <string name="privd_deadzone_desc">Um eine perfekt übereinstimmende Wiedergabe analoger Eingaben in Makros zu gewährleisten, passe die Totzonen an die Einstellungen des Thor an.</string>
-    <string name="privd_deadzone_values">Linker Stick: %1$d%%  ·  Rechter Stick: %2$d%%</string>
-    <string name="privd_deadzone_dialog_title">Gamepad-Deadzones</string>
-    <string name="privd_deadzone_dialog_hint">Öffne Einstellungen → Thor Settings → Joystick calibration &amp; Gamepad test → Joystick deadzone radius, um die Werte für jeden Stick nachzuschlagen, und trage sie unten ein.</string>
     <string name="privd_deadzone_left">Linker Stick</string>
     <string name="privd_deadzone_right">Rechter Stick</string>
-    <string name="privd_deadzone_ok">OK</string>
-    <string name="privd_deadzone_cancel">Abbrechen</string>
 
-    <string name="privd_recording_physical_title">Physischen Controller aufzeichnen…</string>
-    <string name="privd_recording_physical_hint">Drücke Tasten und bewege die Sticks am physischen Gamepad. Tippe auf Stop, wenn du fertig bist.</string>
-    <string name="privd_recording_physical_pressed">Gedrückt: %1$s</string>
-    <string name="privd_recording_physical_stick_left">Linker Stick: %1$s, %2$s</string>
-    <string name="privd_recording_physical_stick_right">Rechter Stick: %1$s, %2$s</string>
+    <string name="privd_recording_physical_title">Controller-Eingabe aufzeichnen</string>
+    <string name="privd_recording_physical_hint">Drücke Tasten und bewege Sticks am Controller. Leerlaufpausen werden automatisch gekürzt.</string>
+    <string name="privd_recording_physical_stick_neutral">Neutral</string>
+    <string name="privd_recording_physical_actions_count" formatted="false">%1$d Aktionen</string>
+    <string name="privd_recording_physical_no_buttons">Warte auf Controller-Eingaben</string>
+    <string name="privd_recording_physical_dpad_title">Steuerkreuz: %1$s</string>
+    <string name="privd_recording_physical_stick_l_label">L-Stick</string>
+    <string name="privd_recording_physical_stick_r_label">R-Stick</string>
     <string name="privd_recording_physical_stop">Stopp &amp; Speichern</string>
     <string name="privd_recording_physical_cancel">Abbrechen</string>
 
-    <!-- Privilegierter Modus — Einrichtungs-Assistent -->
-    <string name="privd_wizard_title">Privilegierten Modus einrichten</string>
+    <!-- Privileged Mode — setup wizard -->
     <string name="privd_wizard_next">Weiter</string>
     <string name="privd_wizard_back">Zurück</string>
     <string name="privd_wizard_close">Fertig</string>
-    <string name="privd_wizard_close_dialog">Assistent schließen</string>
-    <string name="privd_wizard_pairing">Koppeln…</string>
-    <string name="privd_wizard_bootstrapping">Einrichten…</string>
+    <string name="privd_wizard_pairing">Koppeln</string>
+    <string name="privd_wizard_bootstrapping">Einrichten</string>
 
     <string name="privd_wizard_step1_intro">Folge diesen Schritten, um Drahtloses Debugging zu aktivieren:</string>
     <string name="privd_wizard_step1_variant_dev_disabled_title">Falls Entwickleroptionen NOCH NICHT aktiv sind:</string>
@@ -388,7 +281,6 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_wizard_step1_open">Systemeinstellungen öffnen</string>
     <string name="privd_wizard_step1_error_missing_toggles">Bitte aktiviere sowohl USB-Debugging als auch Drahtloses Debugging in den Entwickleroptionen, um fortzufahren.</string>
 
-    <string name="privd_wizard_step2_intro">Gib den Connect-Port aus dem Menü \"WLAN-Debugging\" sowie den Kopplungscode und Kopplungs-Port aus dem Dialog \"Gerät über Kopplungscode koppeln\" ein.</string>
     <string name="privd_wizard_step2_connect_intro">Gib den 5-stelligen Connect-Port ein, der unter \"IP-Adresse &amp; Port\" im WLAN-Debugging-Hauptmenü angezeigt wird.</string>
     <string name="privd_wizard_step2_connect_example">Beispiel IP-Adresse &amp; Port: 192.168.1.42:</string>
     <string name="privd_wizard_step3_pair_intro">Tippe auf \"Gerät über Kopplungscode koppeln\" in den WLAN-Debugging-Einstellungen und gib den 6-stelligen Kopplungscode sowie den 5-stelligen Kopplungs-Port ein.</string>
@@ -400,25 +292,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_wizard_field_code">WLAN-Kopplungscode (6 Ziffern)</string>
     <string name="privd_wizard_field_pair_port">Kopplungs-Port (5 Ziffern unter \"Gerät koppeln\")</string>
     <string name="privd_wizard_step2_pair">Koppeln</string>
-    <string name="privd_wizard_step2_error">Kopplung fehlgeschlagen. Prüfe Ports und Code und versuche es erneut.</string>
-    <string name="privd_wizard_autofill_read_screen">Automatisch ausfüllen (Bildschirm lesen)</string>
-    <string name="privd_wizard_autofill_scanning">Bildschirm wird gescanned…</string>
-    <string name="privd_wizard_autofill_success">Kopplungsdaten automatisch eingetragen!</string>
-    <string name="privd_wizard_autofill_not_found">Konnte nicht alle Kopplungsdaten auf dem Bildschirm erkennen. Stelle sicher, dass entweder das WLAN-Debugging Menü oder der \"Gerät koppeln\"-Dialog auf dem oberen Bildschirm geöffnet ist.</string>
-    <string name="privd_wizard_autofill_accessibility_disabled">Aktiviere den Barrierefreiheitsdienst in den Einstellungen für automatisches Ausfüllen durch Bildschirmlesen.</string>
-
-    <string name="privd_wizard_step3_intro">Megingiard kopiert jetzt die Helfer-Daemon-Binary nach /data/local/tmp und startet sie. Der Daemon läuft als ADB-Shell-Benutzer und bleibt bis zum Neustart aktiv.</string>
-    <string name="privd_wizard_step3_start">Daemon übertragen und starten</string>
 
     <string name="privd_wizard_step4_done">Privilegierter Modus ist eingerichtet. Künftige App-Starts verbinden automatisch.</string>
-
-    <string name="privd_wizard_stage_idle">Bereit</string>
-    <string name="privd_wizard_stage_pairing">ADB-Kopplung läuft…</string>
-    <string name="privd_wizard_stage_connecting">ADB-Verbindung wird aufgebaut…</string>
-    <string name="privd_wizard_stage_pushing">Daemon-Binary wird übertragen…</string>
-    <string name="privd_wizard_stage_spawning">Daemon wird gestartet…</string>
-    <string name="privd_wizard_stage_verifying">Verbindung wird geprüft…</string>
-    <string name="privd_wizard_stage_done">Fertig</string>
 
     <string name="privd_wizard_checklist_adb">ADB-Verbindung</string>
     <string name="privd_wizard_checklist_push">Daemon-Binary übertragen</string>
@@ -434,207 +309,14 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_error_bootstrap_spawn_failed">Daemon-Prozess konnte nicht gestartet werden.</string>
     <string name="privd_error_bootstrap_provision_failed">Authentifizierungsschlüssel konnte nicht übertragen werden. Führe den Einrichtungsassistenten erneut aus.</string>
     <string name="privd_error_version_mismatch">Daemon-Version stimmt nicht überein. Tippe auf Auto-Setup oder Verbinden, um den Daemon zu aktualisieren.</string>
-    <string name="privd_info_running">Privilegiert-Modus ist aktiv und läuft.</string>
-    <string name="privd_info_no_credentials">Keine Kopplungs-Anmeldedaten gefunden. Bitte führe den Einrichtungsassistenten aus.</string>
-    <string name="privd_info_wireless_disabled">Drahtloses Debugging ist inaktiv. Bitte aktiviere es in den Entwicklereinstellungen und versuche es erneut.</string>
-    <string name="privd_info_wireless_active_disconnected">Drahtloses Debugging ist aktiv. Tippe auf Verbinden, um den Privilegiert-Modus zu starten.</string>
-    <string name="privd_info_connecting">Verbindung zum Daemon wird hergestellt…</string>
-
-    <!-- Exit confirmation dialog -->
-    <string name="exit_dialog_title">Megingiard beenden</string>
-    <string name="exit_dialog_message">Möchtest du die App schließen?</string>
-    <string name="exit_dialog_confirm">Schließen</string>
-    <string name="exit_dialog_cancel">Abbrechen</string>
-
-    <!-- MacroPad-Aktionstyp und Anzeigetext -->
-    <string name="macropad_action_macro">Makro</string>
-    <string name="macropad_display_macro">Makro: %s</string>
-
-    <!-- MacroPad-Picker -->
-    <string name="macropad_macro_picker_no_macros">Keine Makros verfügbar</string>
-    <string name="macropad_macro_picker_unknown">Unbekanntes Makro</string>
-
-    <!-- MacroPad-Editor-Toolbar -->
-    <string name="macropad_editor_manage_macros">Makros…</string>
-    <string name="macropad_editor_add_macro_button">Makro-Taste hinzufügen</string>
-
-    <!-- MacroPad editor section headers -->
-    <string name="macropad_editor_section_layout">Layout</string>
-    <string name="macropad_editor_section_buttons">Tasten</string>
-    <string name="macropad_editor_section_button_settings">Tasteneinstellungen</string>
-    <string name="macropad_editor_section_layout_settings">Layout-Einstellungen</string>
-    <string name="macropad_macro_section_list">Liste</string>
-    <string name="macropad_macro_section_steps">Makro-Schritte</string>
-    <string name="macropad_macro_section_settings">Makro-Einstellungen</string>
-
-    <!-- MacroPad-Editor Layout-Einstellungen — Tastenfarbe -->
-    <string name="macropad_editor_button_color_no_mirror">Tastenfarbe (ohne Spiegelung)</string>
-    <string name="macropad_editor_button_color_mirror">Tastenfarbe (mit Spiegelung)</string>
-    <string name="macropad_editor_button_color_accented">Akzentfarbe</string>
-    <string name="macropad_editor_button_color_neutral">Neutral</string>
-
-    <!-- Layout background image settings -->
-    <string name="layout_settings_bg_image_title">Hintergrundbild</string>
-    <string name="layout_settings_bg_image_desc">Ein benutzerdefiniertes Bild hinter den MacroPad-Tasten anzeigen</string>
-    <string name="layout_settings_bg_image_none">Keines ausgewählt</string>
-    <string name="layout_settings_bg_image_active">Benutzerdefinierter Hintergrund aktiv</string>
-    <string name="layout_settings_bg_image_pending">Neues Bild ausgewählt (ungesichert)</string>
-    <string name="layout_settings_bg_image_choose">Bild wählen</string>
-    <string name="layout_settings_bg_image_change">Bild ändern</string>
-    <string name="layout_settings_bg_image_remove">Hintergrundbild entfernen</string>
-    <string name="layout_settings_bg_image_use_as_mask">Als Maske verwenden</string>
-    <string name="layout_settings_bg_image_use_as_mask_desc">Hintergrundbild über den gespiegelten Bildausschnitten anzeigen. Nützlich für PNGs mit Transparenz.</string>
-    <string name="layout_settings_bg_image_preview_desc">Hintergrundbild-Vorschau</string>
-    <string name="layout_settings_bg_image_preview_dialog_title">Hintergrundbild-Vorschau</string>
-    <string name="layout_settings_bg_image_crop">Zuschneiden</string>
-    <string name="layout_settings_crop_image_title">Hintergrundbild zuschneiden</string>
-    <string name="layout_settings_crop_image_instructions">Ziehen zum Verschieben • Zoomen durch Auf-/Zuziehen</string>
-    <!-- Custom Layout Settings Buttons Colors -->
-    <string name="layout_settings_bg_section_title">Hintergrund</string>
-    <string name="layout_settings_bg_image_dimming_title">Dimmung</string>
-    <string name="layout_settings_colors_section_title">Tastenfarben-Standardwerte</string>
-    <string name="button_settings_colors_section_title">Tastenfarben</string>
-    <string name="layout_settings_color_text">Text- &amp; Symbolfarbe</string>
-    <string name="layout_settings_color_border">Rahmenfarbe</string>
-    <string name="layout_settings_color_bg">Verlaufsfarbe</string>
-    <string name="layout_settings_select_text_color">Text- &amp; Symbolfarbe wählen</string>
-    <string name="layout_settings_select_border_color">Rahmenfarbe wählen</string>
-    <string name="layout_settings_select_bg_color">Verlaufsfarbe wählen</string>
-    <string name="layout_settings_color_neutral">Neutraler Stil</string>
-    <string name="layout_settings_color_accent">Akzentfarbe</string>
-    <string name="layout_settings_recent_colors">Kürzlich verwendete Farben</string>
-    <string name="layout_settings_no_recent_colors">Noch keine kürzlich verwendeten Farben</string>
-    <string name="layout_settings_color_layout_default">Layout-Standardwert</string>
-    <string name="layout_settings_color_opacity">Deckkraft</string>
-    <string name="layout_settings_invisible_buttons">Unsichtbare Tasten</string>
-    <string name="layout_settings_invisible_buttons_desc">Macht die Tasten unsichtbar, während das Layout verwendet wird. Im Editor bleiben sie sichtbar.</string>
- 
- 
-    <!-- Help menu strings for Layout settings -->
-    <string name="help_layout_settings_title">Layout-Einstellungen Hilfe</string>
-    <string name="help_layout_settings_intro">Konfiguriere das Aussehen, das Hintergrundbild und die Standard-Tastenfarben dieses Layouts.</string>
-    <string name="help_layout_settings_intro_no_bg">Konfiguriere das Aussehen, den Namen und die Standard-Tastenfarben dieses Layouts.</string>
-    <string name="help_layout_settings_sec_properties">Eigenschaften</string>
-    <string name="help_layout_settings_name_title">Layoutname</string>
-    <string name="help_layout_settings_name_desc">Weise diesem Layout einen eindeutigen Namen zu, um es im Editor und im Schnellmenü zu identifizieren.</string>
-    <string name="help_layout_settings_bg_title">Hintergrundbild</string>
-    <string name="help_layout_settings_bg_desc">Zeige optional ein benutzerdefiniertes Bild hinter den Tasten an. Unterstützte Formate sind JPG, PNG und WebP.</string>
-    <string name="help_layout_settings_mask_title">Als Maske verwenden</string>
-    <string name="help_layout_settings_mask_desc">Lege das Hintergrundbild über die gespiegelten Bildausschnitte. Ideal für eigene Konsolengehäuse oder transparente Rahmen.</string>
-    <string name="help_layout_settings_sec_colors">Tastenfarben</string>
-    <string name="help_layout_settings_colors_title">Standardfarben</string>
-    <string name="help_layout_settings_colors_desc">Setze Standardfarben für alle Tasten in diesem Layout (Text/Symbol, Rahmen und Verlaufsfarbe). Tasten können diese Werte einzeln überschreiben.</string>
-    <string name="help_layout_settings_palette_title">Schnellpalette</string>
-    <string name="help_layout_settings_palette_desc">Tippe auf das Palette-Symbol neben einer Farbe, um standardmäßige neutrale/Akzent-Stile oder kürzlich genutzte Farben auszuwählen.</string>
-
-    <!-- Help menu strings for Background settings -->
-    <string name="help_bg_settings_intro">Konfiguriere das Hintergrundbild, die Dimmung, das Scrapen und die Masken-Überlagerung des Layouts.</string>
-    <string name="help_bg_settings_dimming_title">Dimmung</string>
-    <string name="help_bg_settings_dimming_desc">Dimme das Hintergrundbild mit dem Schieberegler. Der Bereich reicht von 0% (keine Dimmung) bis 90% (maximale Dimmung), damit Tasten gut lesbar bleiben.</string>
-    <string name="help_bg_settings_crop_title">Zuschneiden &amp; Verschieben</string>
-    <string name="help_bg_settings_crop_desc">Schneide und skaliere das Bild per Zieh- und Zoomgesten zu, um es an das Dual-Screen-Seitenverhältnis anzupassen.</string>
-
-    <!-- Makro-Listenverwaltung -->
-    <string name="macropad_macro_list_title">Makros</string>
-    <string name="macropad_macro_list_new">Neues Makro</string>
-    <string name="macropad_macro_list_empty">Noch keine Makros. Tippe auf +, um eines zu erstellen.</string>
-    <!-- %1$d = Anzahl Schritte, %2$s = Gesamtdauer-Text -->
-    <string name="macropad_macro_list_steps">%1$d Schritte • %2$s</string>
-    <string name="macropad_macro_duration">%1$d ms</string>
-    <string name="macropad_macro_duration_randomized">%1$d ms (randomisiert %2$d ms)</string>
-    <string name="macropad_macro_default_name">Neues Makro</string>
-    <string name="macropad_macro_delete_title">Makro löschen</string>
-    <string name="macropad_macro_delete_confirm">Dieses Makro löschen? Pad-Tasten, die es verwenden, funktionieren danach nicht mehr.</string>
-    <!-- %d = Anzahl referenzierender Tasten -->
-    <string name="macropad_macro_delete_confirm_referenced">Dieses Makro wird von %d Taste(n) verwendet. Trotzdem löschen?</string>
-    <string name="macropad_macro_duplicate">Makro duplizieren</string>
-    <string name="macropad_macro_editor_save">Speichern</string>
-    <string name="macropad_macro_editor_cancel">Abbrechen</string>
-
-    <!-- Touch-Aufzeichnung -->
-    <string name="macropad_macro_record_touch_dialog_title">Touch aufzeichnen</string>
-    <string name="macropad_macro_record_touch_dialog_message">Der Bildschirmspiegel wird gestartet. Wähle aus, ob du ein einzelnes Tippen (Tap) oder eine kontinuierliche Geste (inklusive Multi-Touch) aufzeichnen möchtest.</string>
-    <string name="macropad_macro_record_touch_option_tap">Tippen</string>
-    <string name="macropad_macro_record_touch_option_gesture">Geste</string>
-    <string name="macropad_macro_test_run">Testlauf</string>
-    <string name="cd_test_macro">Makro testen</string>
-    <string name="cd_edit_macro">Makro bearbeiten</string>
-    <string name="macropad_macro_loop_toggle">Makro wiederholen</string>
-    <string name="macropad_macro_loop_pause_label">Pause zwischen Wiederholungen</string>
-    <string name="macropad_macro_randomize_toggle">Timing randomisieren</string>
-    <string name="macropad_macro_randomize_range_label">Maximaler Zeitversatz</string>
-    <string name="macropad_macro_randomize_desc">Fügt der konfigurierten Startzeit und Dauer jedes Schritts bei jeder Ausführung einen zufälligen Millisekunden-Wert (bis zum Maximum) hinzu.</string>
-    <string name="cd_record_touch">Touch-Schritt aufzeichnen</string>
-
-    <!-- Makro-Schritte -->
-    <string name="macropad_macro_add_step">Schritt</string>
-    <string name="macropad_macro_record_touch">Aufzeichnen</string>
-    <string name="macropad_macro_no_steps">Noch keine Schritte. Tippe auf +, um einen hinzuzufügen.</string>
-    <string name="macropad_macro_step_delete_title">Schritt löschen</string>
-    <string name="macropad_macro_step_delete_confirm">Diesen Schritt aus dem Makro entfernen?</string>
-    <string name="macropad_macro_step_new">Schritt hinzufügen</string>
-    <string name="macropad_macro_step_edit">Schritt bearbeiten</string>
-    <string name="macropad_macro_step_type_gamepad">Gamepad-Taste</string>
-    <string name="macropad_macro_step_type_joystick">Joystick</string>
-    <string name="macropad_macro_step_type_joystick_path">Joystick-Pfad</string>
-    <string name="macropad_macro_step_type_dpad">D-Pad</string>
-    <string name="macropad_macro_step_type_touch">Touch-Tippen</string>
-    <string name="macropad_macro_step_type_touch_path">Touch-Geste</string>
-    <string name="macropad_macro_step_label_short_tap">Tippen</string>
-    <string name="macropad_macro_step_label_short_gesture">Geste</string>
-    <string name="macropad_macro_step_short_samples_count">(%1$d Pkt.)</string>
-    <string name="macropad_macro_step_joystick_path_short">%1$s (%2$d Pkt.)</string>
-    <string name="macropad_macro_step_touch_path_details">Gestenpfad: %1$d Punkte aufgezeichnet.</string>
-    <string name="macropad_macro_step_touch_position">Aufgezeichnete Position (schreibgeschützt)</string>
-    <string name="macropad_macro_step_touch_path_readonly">Aufgezeichnete Touch-Geste (schreibgeschützt). Nur das Timing kann bearbeitet werden.</string>
-    <string name="macropad_macro_step_path_readonly">Aufgezeichneter analoger Stick-Pfad (schreibgeschützt). Nur das Timing kann bearbeitet werden.</string>
-    <string name="macropad_macro_step_path_summary_stick">Stick: %1$s</string>
-    <string name="macropad_macro_step_path_summary_samples">Samples: %1$d</string>
-    <string name="macropad_macro_step_start_ms">Startzeit (ms)</string>
-    <string name="macropad_macro_step_duration_ms">Dauer (ms)</string>
-    <string name="macropad_macro_step_timing_delta">%+d</string>
-    <string name="macropad_macro_step_stick_left">Linker Stick</string>
-    <string name="macropad_macro_step_stick_right">Rechter Stick</string>
-    <!-- %.1f = Stärke des Joystick-Ausschlags -->
-    <string name="macropad_macro_step_magnitude">Stärke: %.1f</string>
-    <string name="macropad_macro_step_direction">Richtung</string>
-    <string name="macropad_gamepad_face_label_template">%1$s / %2$s / %3$s</string>
-    <string name="macropad_gamepad_symbol_cross">Kreuz</string>
-    <string name="macropad_gamepad_symbol_circle">Kreis</string>
-    <string name="macropad_gamepad_symbol_triangle">Dreieck</string>
-    <string name="macropad_gamepad_symbol_square">Quadrat</string>
-    <string name="macropad_gamepad_position_south">Unten</string>
-    <string name="macropad_gamepad_position_east">Rechts</string>
-    <string name="macropad_gamepad_position_north">Oben</string>
-    <string name="macropad_gamepad_position_west">Links</string>
-
-    <!-- Makro-Duplikat-Name: %1$s = originaler Makro-Name -->
-    <string name="macropad_macro_copy_name">%1$s Kopie</string>
-    <!-- Zeitachsen-Tick-Label: %1$d = Zeit in ms -->
-    <string name="macropad_macro_timeline_tick">%1$d ms</string>
-    <!-- Schritt-Timing: %1$d = Startzeit ms, %2$d = Dauer ms -->
-    <string name="macropad_macro_step_timing">@%1$d ms  ⟶  %2$d ms</string>
-
-    <string name="macropad_picker_folder_empty">Keine Makros verfügbar</string>
-    <string name="cd_more_options">Weitere Optionen</string>
-
-    <!-- Data / restore -->
-    <string name="settings_section_data">Daten</string>
-    <string name="settings_section_updates">Updates</string>
-    <string name="settings_jump_all">Alle</string>
-    <string name="settings_filter_label">Filter</string>
     <string name="settings_jump_general">Allgemein</string>
-    <string name="settings_jump_automation">Automation</string>
     <string name="settings_jump_appearance">Darstellung</string>
-    <string name="settings_jump_data">Daten</string>
-    <string name="settings_jump_config">Konfiguration</string>
+    <string name="settings_jump_config">Teilen &amp; Backup</string>
+    <string name="settings_jump_scraping">Scraping</string>
     <string name="settings_jump_updates">Updates</string>
     <string name="settings_jump_input">Eingabe</string>
     <string name="settings_jump_diagnostics">Diagnose</string>
     <string name="settings_section_input">Eingabe</string>
-    <string name="settings_section_diagnostics">Diagnose</string>
-    <string name="settings_section_expand">Abschnitt aufklappen</string>
-    <string name="settings_section_collapse">Abschnitt zuklappen</string>
     <string name="settings_name_error_empty">Name darf nicht leer sein.</string>
     <string name="settings_name_error_duplicate">Dieser Name existiert bereits.</string>
 
@@ -647,149 +329,243 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="mirror_control_label_stop">Stop</string>
     <string name="mirror_control_label_freeze">Einfrieren</string>
     <string name="mirror_control_label_unfreeze">Auftauen</string>
-    <string name="mirror_control_label_viewport">Viewport</string>
-    <string name="mirror_control_label_projection">Projektion</string>
-    <string name="mirror_control_label_screenshot">Screenshot</string>
+    <string name="quick_menu_take_screenshot">Screenshot aufnehmen</string>
+    <string name="quick_menu_screenshot_top">Oben</string>
+    <string name="quick_menu_screenshot_bottom">Unten</string>
+    <string name="quick_menu_screenshot_both">Beide</string>
+    <string name="cd_screenshot_top">Screenshot vom oberen Bildschirm aufnehmen</string>
+    <string name="cd_screenshot_bottom">Screenshot vom unteren Bildschirm aufnehmen</string>
+    <string name="cd_screenshot_both">Screenshot von beiden Bildschirmen aufnehmen</string>
     <string name="screenshot_saved">Screenshot unter Pictures/Megingiard gespeichert</string>
     <string name="screenshot_failed">Screenshot konnte nicht gespeichert werden</string>
-    <string name="settings_restore_defaults">Standardprofile wiederherstellen</string>
-    <string name="settings_restore_defaults_desc">Löscht alle Profile und erstellt ein leeres Standardprofil</string>
-    <string name="settings_restore_defaults_confirm">Alle vorhandenen Profile und Makros werden gelöscht und ein einzelnes leeres Profil erstellt. Diese Aktion kann nicht rückgängig gemacht werden.</string>
-    <string name="settings_restore_defaults_confirm_button">Wiederherstellen</string>
-    <string name="settings_restore_defaults_confirm_countdown">Wiederherstellen (%1$d)</string>
-    <string name="settings_cancel">Abbrechen</string>
 
-    <!-- Configuration export/import -->
-    <string name="settings_section_config">Konfiguration</string>
-    <string name="settings_config_export">Backup erstellen</string>
-    <string name="settings_config_export_desc">Alle Einstellungen und MacroPad-Profile als .mgrd-Sicherungsdatei speichern</string>
-    <string name="settings_config_import">Backup wiederherstellen</string>
-    <string name="settings_config_import_desc">Einstellungen anwenden und Profile aus einem internen täglichen Backup oder einer externen .mgrd-Datei wiederherstellen</string>
-    <string name="settings_config_export_profile">Profil teilen</string>
-    <string name="settings_config_export_profile_desc">Ein MacroPad-Profil als .mgrd-Datei zum Teilen exportieren</string>
-    <string name="settings_config_import_profile">Geteiltes Profil importieren</string>
-    <string name="settings_config_import_profile_desc">Ein MacroPad-Profil aus einer .mgrd-Datei hinzufügen</string>
-    <string name="settings_add_to_obtainium">Zu Obtainium hinzufügen</string>
-    <string name="settings_add_to_obtainium_desc">Hinterlege den Repository-Link direkt in Obtainium für automatische Updates</string>
-    <string name="config_export_default_filename">megingiard_%s.mgrd</string>
+    <!-- Exit confirmation dialog -->
+    <string name="exit_dialog_title">Megingiard beenden</string>
+    <string name="exit_dialog_message">Möchtest du die App schließen?</string>
+    <string name="exit_dialog_confirm">Schließen</string>
+    <string name="exit_dialog_cancel">Abbrechen</string>
 
-    <!-- Export metadata dialog -->
-    <string name="config_export_dialog_title">Export-Info (optional)</string>
-    <string name="config_export_author">Autor</string>
-    <string name="config_export_description">Beschreibung</string>
-    <string name="config_export_tags">Tags (kommagetrennt)</string>
-    <string name="config_export_confirm">Exportieren</string>
-    <string name="config_export_cancel">Abbrechen</string>
+    <!-- MacroPad macro action -->
+    <string name="macropad_action_macro">Makro</string>
+    <string name="macropad_display_macro">Makro: %s</string>
 
-    <!-- Import preview dialog -->
-    <string name="config_import_title">Konfiguration importieren</string>
-    <string name="config_import_author_label">Autor</string>
-    <string name="config_import_description_label">Beschreibung</string>
-    <string name="config_import_tags_label">Tags</string>
-    <string name="config_import_sections_label">Enthält</string>
-    <string name="config_import_section_global">Globale Einstellungen</string>
-    <string name="config_import_section_mirror">Spiegel-Einstellungen</string>
-    <string name="config_import_section_touchpad">Touchpad-Einstellungen</string>
-    <string name="config_import_section_keyboard">Tastatur-Einstellungen</string>
-    <string name="config_import_section_macropad">MacroPad (%1$d Profile, %2$d Makros)</string>
-    <string name="config_import_section_macropad_settings">MacroPad-Einstellungen</string>
-    <string name="config_import_section_settings">Einstellungen (global / werkzeugspezifisch)</string>
-    <string name="config_import_meta_author">Autor: %1$s</string>
-    <string name="config_import_warning">Neue Profile und Makros werden zu den vorhandenen hinzugefügt.</string>
-    <string name="config_import_warning_backup">Neue Profile werden neben den bestehenden hinzugefügt. App-Einstellungen werden überschrieben.</string>
-    <string name="config_import_warning_profile">Profile werden neben den bestehenden hinzugefügt. App-Einstellungen in dieser Datei werden ignoriert.</string>
-    <string name="config_profile_export_dialog_title">Profil teilen</string>
-    <string name="config_profile_export_select">Zu teilendes Profil</string>
-    <string name="config_profile_import_success">Profil erfolgreich importiert.</string>
-    <string name="config_import_confirm">Importieren</string>
-    <string name="config_import_cancel">Abbrechen</string>
+    <!-- MacroPad macro picker (PadActionPicker) -->
+    <string name="macropad_picker_folder_empty">Keine Makros verfügbar</string>
 
-    <!-- Export/import results -->
-    <string name="config_export_success">Konfiguration erfolgreich exportiert.</string>
-    <string name="config_import_success">Konfiguration erfolgreich importiert.</string>
-    <string name="config_error_title">Fehler</string>
-    <string name="config_success_title">Fertig</string>
-    <string name="config_error_unknown">Ein unerwarteter Fehler ist aufgetreten.</string>
-    <string name="config_ok">OK</string>
+    <!-- MacroPad editor toolbar -->
+    <string name="macropad_editor_manage_macros">Makros</string>
 
-    <!-- Macro timeline editor -->
+    <!-- MacroPad editor grid -->
+
+    <!-- MacroPad editor section headers -->
+    <string name="macropad_editor_section_layout">Layout</string>
+    <string name="macropad_editor_section_buttons">Tasten</string>
+    <string name="macropad_editor_section_button_settings">Tasteneinstellungen</string>
+    <string name="macropad_editor_section_button_colors">Tastenfarben</string>
+    <string name="macropad_editor_section_shape_size">Form &amp; Größe</string>
+    <string name="macropad_macro_section_steps">Makro-Schritte</string>
+    <string name="macropad_macro_section_action_details">Aktionsdetails</string>
+    <string name="macropad_macro_section_timing">Timing</string>
+    <string name="macropad_editor_section_save">Speichern</string>
+    <string name="macropad_editor_section_save_and_delete">Speichern &amp; Löschen</string>
+    <string name="settings_section_scrolling">Scrollen</string>
+
+    <!-- MacroPad editor layout settings — button color style -->
+
+    <!-- Layout background image settings -->
+    <string name="layout_settings_bg_image_none">Keines ausgewählt</string>
+    <string name="layout_settings_bg_image_use_as_mask">Als Maske verwenden</string>
+    <string name="layout_settings_bg_image_use_as_mask_desc">Hintergrundbild über den gespiegelten Bildausschnitten anzeigen. Nützlich für PNGs mit Transparenz.</string>
+    <string name="layout_settings_bg_image_crop">Zuschneiden</string>
+    <string name="layout_settings_bg_image_crop_desc">Auf dem unteren Bildschirm mit zwei Fingern zoomen und durch Ziehen verschieben.</string>
+    <string name="layout_settings_bg_image_crop_disabled_stretch">Zuschneiden und Positionieren sind deaktiviert, wenn Strecken aktiv ist.</string>
+    <string name="layout_settings_bg_scale_mode">Skalierung</string>
+    <string name="layout_settings_bg_scale_mode_desc">Wähle, wie das Hintergrundbild an das Seitenverhältnis des Bildschirms angepasst wird.</string>
+    <string name="bg_scale_mode_fill">Ausfüllen</string>
+    <string name="bg_scale_mode_fit">Einpassen</string>
+    <string name="bg_scale_mode_stretch">Strecken</string>
+    <string name="layout_settings_bg_image_adjustments">Bildanpassungen &amp; Maskierung</string>
+    <string name="layout_settings_bg_section_title">Hintergrund</string>
+    <string name="layout_settings_bg_image_dimming_title">Dimmung</string>
+    <string name="layout_settings_colors_section_title">Tastenfarben-Standardwerte</string>
+    <string name="layout_settings_color_text">Text- &amp; Symbolfarbe</string>
+    <string name="layout_settings_color_border">Rahmenfarbe</string>
+    <string name="layout_settings_color_bg">Verlaufsfarbe</string>
+    <string name="layout_settings_select_text_color">Text- &amp; Symbolfarbe wählen</string>
+    <string name="layout_settings_select_border_color">Rahmenfarbe wählen</string>
+    <string name="layout_settings_select_bg_color">Verlaufsfarbe wählen</string>
+    <string name="layout_settings_color_neutral">Neutraler Stil</string>
+    <string name="layout_settings_color_accent">Akzentfarbe</string>
+    <string name="layout_settings_color_layout_default">Layout-Standardwert</string>
+    <string name="layout_settings_color_opacity">Deckkraft</string>
+    <string name="layout_settings_invisible_buttons">Unsichtbare Tasten</string>
+    <string name="layout_settings_invisible_buttons_desc">Macht die Tasten unsichtbar, während das Layout verwendet wird. Im Editor bleiben sie sichtbar.</string>
+
+    <!-- Help menu strings for Layout settings -->
+
+    <!-- Help menu strings for Background settings -->
+    <string name="help_bg_settings_dimming_desc">Dimme das Hintergrundbild mit dem Schieberegler. Der Bereich reicht von 0% (keine Dimmung) bis 90% (maximale Dimmung), damit Tasten gut lesbar bleiben.</string>
+
+    <!-- MacroListEditor -->
+    <!-- %1$d = step count, %2$s = total duration text -->
+    <string name="macropad_macro_default_name">Neues Makro</string>
+    <string name="macropad_macro_delete_title">Makro löschen</string>
+    <string name="macropad_macro_delete_confirm">Dieses Makro löschen? Pad-Tasten, die es verwenden, funktionieren danach nicht mehr.</string>
+    <string name="macropad_macro_create_title">Makro erstellen</string>
+    <string name="macropad_macro_create_record_gamepad_title">Controller-Eingabe aufnehmen</string>
+    <string name="macropad_macro_create_record_gamepad_desc">Nimm Live-Combos, Tastendrücke und Analogstick-Bewegungen direkt über den Controller auf.</string>
+    <string name="macropad_macro_create_record_touch_tap_title">Einzelne Berührung aufnehmen</string>
+    <string name="macropad_macro_create_record_touch_tap_desc">Nimm eine einzelne Zielberührung direkt auf dem Hauptbildschirm auf.</string>
+    <string name="macropad_macro_create_record_touch_gesture_title">Touch-Geste aufnehmen</string>
+    <string name="macropad_macro_create_record_touch_gesture_desc">Nimm Multi-Touch-Wisch- und Ziehgesten direkt auf dem Hauptbildschirm auf.</string>
+    <string name="macropad_macro_create_manual_title">Schritt für Schritt erstellen</string>
+    <string name="macropad_macro_create_manual_desc">Erstelle zeitgesteuerte Eingabeschritte manuell von Grund auf mit millimetergenauer Millisekunden-Kontrolle.</string>
+    <string name="macropad_macro_manual_steps_title">Schritte manuell bearbeiten</string>
+    <string name="macropad_macro_manual_steps_desc">Einzelne getimte Schritte hinzufügen, bearbeiten, sortieren oder löschen (%1$d Schritte konfiguriert).</string>
+    <string name="macropad_macro_manual_steps_action">Bearbeiten</string>
+
+    <!-- MacroTimelineEditor -->
+    <string name="macropad_macro_editor_save">Speichern</string>
+    <string name="macropad_macro_record_gamepad">Aufzeichnen</string>
+    <string name="macropad_macro_record_touch">Aufzeichnen</string>
+    <string name="macropad_macro_step_delete_confirm">Diesen Schritt aus dem Makro entfernen?</string>
+    <string name="macropad_macro_recorded_steps_toast_single">1 Schritt aufgezeichnet</string>
+    <string name="macropad_macro_recorded_steps_toast_multiple">%1$d Schritte aufgezeichnet</string>
+
+    <!-- Touch recording flow -->
+    <string name="touch_recording_title">Touch-Eingabe aufzeichnen</string>
+    <string name="touch_recording_mode_tap">Einzeltippen</string>
+    <string name="touch_recording_mode_gesture">Touch-Geste</string>
+    <string name="touch_recording_hint_tap">Tippe auf die gewünschte Stelle auf dem Hauptbildschirm. Die Position wird automatisch erfasst.</string>
+    <string name="touch_recording_hint_gesture">Führe Touch-Gesten auf dem Hauptbildschirm aus. Tippe auf ‚Stopp &amp; Speichern‘, wenn du fertig bist.</string>
+    <string name="touch_recording_radar_waiting">Warte auf Touch-Eingabe auf dem Hauptbildschirm</string>
+    <string name="touch_recording_radar_coords">X: %1$.1f%%  Y: %2$.1f%%</string>
+    <string name="touch_recording_actions_tap" formatted="false">%1$d Tippen</string>
+    <string name="touch_recording_actions_gestures" formatted="false">%1$d Gesten (%2$d Pkt.)</string>
+    <string name="macropad_macro_test_run">Testlauf</string>
+    <string name="macropad_macro_loop_toggle">Makro wiederholen</string>
+    <string name="macropad_macro_loop_desc">Makro kontinuierlich in Schleife wiederholen</string>
+    <string name="macropad_macro_loop_pause_label">Pause zwischen Wiederholungen</string>
+    <string name="macropad_macro_loop_pause_desc">Wartezeit zwischen aufeinanderfolgenden Wiederholungen</string>
+    <string name="macropad_macro_randomize_toggle">Timing randomisieren</string>
+    <string name="macropad_macro_randomize_range_label">Maximaler Zeitversatz</string>
+    <string name="macropad_macro_randomize_desc">Fügt der konfigurierten Startzeit und Dauer jedes Schritts bei jeder Ausführung einen zufälligen Millisekunden-Wert (bis zum Maximum) hinzu.</string>
     <string name="macropad_macro_editor_undo">Rückgängig</string>
-    <string name="macropad_macro_editor_redo">Wiederherstellen</string>
-    <string name="macropad_macro_editor_view_label">Ansicht</string>
-    <string name="macropad_macro_editor_view_list">Liste/Bearbeiten</string>
-    <string name="macropad_macro_editor_view_timeline">Zeitleiste</string>
     <string name="macropad_macro_editor_shift_subsequent">Nachfolgende Schritte verschieben</string>
     <string name="macropad_macro_editor_shift_none">Aus</string>
     <string name="macropad_macro_editor_shift_start_delta">Start &#916;</string>
     <string name="macropad_macro_editor_shift_end_delta">Ende &#916;</string>
-    <string name="macropad_macro_record_gamepad">Aufzeichnen</string>
-    <string name="macropad_macro_record_gamepad_title">Gamepad-Eingabe aufnehmen</string>
-    <string name="macropad_macro_record_gamepad_hint">Berühre den eingeblendeten Controller. Eingaben werden aufgenommen und live an den oberen Bildschirm weitergegeben.</string>
-    <string name="macropad_macro_record_gamepad_stop">Fertig</string>
-    <string name="macropad_macro_record_gamepad_cancel">Abbrechen</string>
-    <string name="macropad_macro_record_gamepad_left_stick">Linker Stick</string>
-    <string name="macropad_macro_record_gamepad_right_stick">Rechter Stick</string>
-    <string name="macropad_macro_record_gamepad_l3">L3</string>
-    <string name="macropad_macro_record_gamepad_r3">R3</string>
-    <string name="macropad_macro_record_gamepad_select">SE</string>
-    <string name="macropad_macro_record_gamepad_home">HM</string>
-    <string name="macropad_macro_record_gamepad_start">ST</string>
-    <string name="macropad_macro_record_gamepad_dialog_confirm">Start</string>
-    <string name="macropad_macro_record_gamepad_dialog_title">Gamepad-Aufnahme starten</string>
-    <string name="macropad_macro_record_gamepad_dialog_message">Ein Touch-Gamepad wird auf diesem Bildschirm geöffnet. Deine Berührungen werden als Makro-Schritte aufgenommen und live über das virtuelle Gamepad an den oberen Bildschirm weitergegeben.</string>
-    <string name="macropad_macro_record_gamepad_dialog_dont_show_again">Nicht mehr anzeigen</string>
-    <string name="macropad_macro_record_gamepad_error_title">Gamepad-Aufnahme nicht verfügbar</string>
-    <string name="macropad_macro_record_gamepad_error_start">Das virtuelle Gamepad konnte nicht gestartet werden. Die Aufnahme wurde nicht begonnen.</string>
-    <string name="cd_record_gamepad">Gamepad-Eingabe aufnehmen</string>
+    <!-- MacroStepEditDialog -->
+    <string name="macropad_macro_step_new">Schritt hinzufügen</string>
+    <string name="macropad_macro_step_edit">Schritt bearbeiten</string>
+    <string name="macropad_macro_step_type_gamepad">Gamepad-Taste</string>
+    <string name="macropad_macro_step_type_joystick">Joystick</string>
+    <string name="macropad_macro_step_type_joystick_path">Joystick-Pfad</string>
+    <string name="macropad_macro_step_type_dpad">D-Pad</string>
+    <string name="macropad_macro_step_type_touch">Touch-Tippen</string>
+    <string name="macropad_macro_step_type_touch_path">Touch-Geste</string>
+    <string name="macropad_macro_step_short_samples_count">(%1$d Pkt.)</string>
+    <string name="macropad_macro_step_joystick_path_short">%1$s (%2$d Pkt.)</string>
+    <string name="macropad_macro_step_touch_path_details">Gestenpfad: %1$d Punkte aufgezeichnet.</string>
+    <string name="macropad_macro_step_path_summary_stick">Stick: %1$s</string>
+    <string name="macropad_macro_step_path_summary_samples">Samples: %1$d</string>
+    <string name="macropad_macro_step_start_ms">Startzeit (ms)</string>
+    <string name="macropad_macro_step_duration_ms">Dauer (ms)</string>
+    <string name="macropad_macro_step_stick_left">Linker Stick</string>
+    <string name="macropad_macro_step_stick_right">Rechter Stick</string>
+    <string name="macropad_macro_step_magnitude">Stärke: %.1f</string>
+    <string name="macropad_macro_step_direction">Richtung</string>
+    <string name="macropad_gamepad_face_label_template">%1$s / %2$s / %3$s</string>
+    <string name="macropad_gamepad_symbol_cross">Kreuz</string>
+    <string name="macropad_gamepad_symbol_circle">Kreis</string>
+    <string name="macropad_gamepad_symbol_triangle">Dreieck</string>
+    <string name="macropad_gamepad_symbol_square">Quadrat</string>
+    <string name="macropad_gamepad_position_south">Unten</string>
+    <string name="macropad_gamepad_position_east">Rechts</string>
+    <string name="macropad_gamepad_position_north">Oben</string>
+    <string name="macropad_gamepad_position_west">Links</string>
+    <!-- %1$s = original macro name; result: "Name Copy", "Name Copy (2)", etc. -->
+    <!-- %1$d = time in ms (tick label on the timeline) -->
+    <!-- %1$d = start time ms, %2$d = duration ms -->
+    <string name="macropad_macro_step_timing">@%1$d ms  ⟶  %2$d ms</string>
+    <string name="macropad_macro_reorder_steps_title">Schritte sortieren</string>
+    <string name="macropad_macro_reorder_steps_desc">Reihenfolge der Makroschritte anpassen</string>
+    <string name="macropad_macro_reorder_steps_empty">Keine Schritte zum Sortieren vorhanden.</string>
+    <string name="macropad_macro_step_duplicate">Schritt duplizieren</string>
+    <string name="macropad_macro_step_duplicate_desc">Erstellt eine Kopie dieses Schritts am Ende der Zeitachse</string>
+    <string name="macropad_macro_step_delete">Schritt löschen</string>
+    <string name="macropad_macro_step_delete_desc">Diesen Schritt aus dem Makro entfernen</string>
+    <string name="macropad_macro_step_delete_confirm_title">Schritt #%1$d löschen?</string>
+    <string name="macropad_macro_dir_up">Oben (↑)</string>
+    <string name="macropad_macro_dir_down">Unten (↓)</string>
+    <string name="macropad_macro_dir_left">Links (←)</string>
+    <string name="macropad_macro_dir_right">Rechts (→)</string>
+    <string name="macropad_macro_dir_up_left">Oben-Links (↖)</string>
+    <string name="macropad_macro_dir_up_right">Oben-Rechts (↗)</string>
+    <string name="macropad_macro_dir_down_left">Unten-Links (↙)</string>
+    <string name="macropad_macro_dir_down_right">Unten-Rechts (↘)</string>
+    <string name="macropad_macro_section_playback">Wiedergabe &amp; Schleife</string>
+    <string name="macropad_macro_section_actions">Schritt-Aktionen</string>
+    <string name="macropad_macro_section_recording">Aufnahme &amp; Schnellaktionen</string>
+    <string name="macropad_macro_step_start_desc">Zeitpunkt auf der Zeitachse, an dem diese Aktion auslöst</string>
+    <string name="macropad_macro_step_duration_desc">Dauer, wie lange diese Aktion aktiv bleibt</string>
+    <string name="macropad_macro_step_shift_desc">Nachfolgende Schritte automatisch verschieben</string>
+    <string name="macropad_macro_step_pos_x">Touch X-Position</string>
+    <string name="macropad_macro_step_pos_y">Touch Y-Position</string>
+    <string name="macropad_macro_step_pos_desc" formatted="false">Normalisierte Bildschirm-Koordinaten (0% bis 100%)</string>
+    <string name="macropad_macro_test_run_success">Makro \"%1$s\" ausgeführt</string>
 
-    <!-- Schnellmenüleiste -->
-
+    <!-- Quick Menu Bar -->
 
     <!-- Quick Menu -->
     <string name="quick_menu_profile_label">Profil</string>
     <string name="quick_menu_layout_label">Layout</string>
-    <string name="quick_menu_new_profile">Neues Profil</string>
-    <string name="quick_menu_new_layout">Neues Layout</string>
     <string name="quick_menu_edit_layout">Profil/Layout bearbeiten</string>
-    <string name="quick_menu_ambient_settings">Bildschirmspiegelungs-Einstellungen</string>
-    <string name="quick_menu_screen_mirroring">Bildschirmspiegelung</string>
+    <string name="quick_menu_screen_mirroring">Spiegelung</string>
     <string name="quick_menu_global_settings">Globale Einstellungen</string>
     <string name="quick_menu_shut_off_cd">Megingiard beenden</string>
     <string name="shut_off_dialog_title">Megingiard beenden</string>
     <string name="shut_off_dialog_body">Möchtest du Megingiard wirklich beenden?</string>
     <string name="shut_off_dialog_confirm">Beenden</string>
-    <string name="quick_menu_dismiss_dialog">Dialog schließen</string>
-    <string name="quick_menu_profile_name_hint">Profilname</string>
     <string name="quick_menu_layout_name_hint">Layoutname</string>
-    <string name="cd_layout_prev">Vorheriges Layout</string>
-    <string name="cd_layout_next">Nächstes Layout</string>
-    <string name="cd_viewport_edit">Viewport bearbeiten</string>
-    <string name="macropad_action_group_keyboard">Tastatur</string>
-    <string name="macropad_action_group_gamepad">Gamepad</string>
-    <string name="macropad_action_group_mouse">Maus</string>
-    <string name="macropad_action_group_macro">Makro</string>
-    <string name="macropad_action_group_layout">Profil/Layout</string>
-    <string name="macropad_action_group_mirror">Mirror-Menü</string>
-    <string name="macropad_action_group_profile">Profil</string>
-    <string name="macropad_action_group_other">Overlays</string>
-    <string name="macropad_picker_label_group">Gruppe</string>
 
-    <!-- Log-Bericht exportieren -->
+    <string name="macropad_action_group_keyboard">Tastatur</string>
+    <string name="macropad_action_group_keyboard_desc">Einzelne Tastaturanschläge oder Tastenkombinationen senden</string>
+    <string name="macropad_action_group_gamepad">Gamepad</string>
+    <string name="macropad_action_group_gamepad_desc">Standard-Gamepad-Tasten und Trigger simulieren</string>
+    <string name="macropad_action_group_mouse">Maus</string>
+    <string name="macropad_action_group_mouse_desc">Mausklicks, Scrollräder oder Trackpoint-Eingaben simulieren</string>
+    <string name="macropad_action_group_macro">Makro</string>
+    <string name="macropad_action_group_macro_desc">Aufgezeichnete Sequenz zeitgesteuerter Eingaben ausführen</string>
+    <string name="macropad_action_group_layout">Profil/Layout</string>
+    <string name="macropad_action_group_layout_desc">Layouts wechseln oder den Profilwechsler öffnen</string>
+    <string name="macropad_action_group_mirror">Mirror-Menü</string>
+    <string name="macropad_action_group_mirror_desc">Bildschirmübertragung, Einfrieren oder Touch-Projektion steuern</string>
+    <string name="macropad_action_group_app_launcher">App Quick-Switch</string>
+    <string name="macropad_action_group_app_launcher_desc">Schnell zwischen Megingiard und einer anderen App wechseln</string>
+    <string name="macropad_action_group_other">Overlays</string>
+    <string name="macropad_action_group_other_desc">Vollbild-Maus- und Tastatur-Overlays öffnen</string>
+    <string name="macropad_editor_button_type">Tastentyp</string>
+
+    <!-- Log report export -->
     <string name="settings_save_log_report">Log-Bericht speichern</string>
-    <string name="settings_save_log_report_desc">Aktuelle Logcat-Ausgabe als .txt-Datei für Fehlerberichte speichern</string>
     <string name="log_report_save_success">Log-Bericht gespeichert.</string>
     <string name="log_report_save_error">Log-Bericht konnte nicht gespeichert werden.</string>
 
     <!-- Restore backup selection dialog -->
     <string name="config_restore_dialog_title">Backup wiederherstellen</string>
-    <string name="config_restore_option_external">Externe Datei…</string>
+    <string name="config_restore_option_external">Externe Datei</string>
     <string name="config_restore_option_external_sub">Wählen Sie eine .mgrd-Sicherungsdatei aus</string>
     <string name="config_restore_option_internal_sub">%1$d Profile • %2$d Layouts • %3$d Makros</string>
+    <string name="config_restore_automatic_backups">Automatische Sicherungen</string>
+    <string name="config_import_review_title">Überprüfen &amp; Anwenden</string>
+    <string name="config_import_archive_title">Megingiard Backup-Archiv</string>
+    <string name="config_import_show_details">Details anzeigen</string>
+    <string name="config_import_hide_details">Details ausblenden</string>
 
     <!-- Copy macros/buttons/layouts to other profiles/layouts -->
-    <string name="macropad_editor_copy_to_profile">In Profil kopieren…</string>
-    <string name="macropad_editor_copy_to_layout">In Layout kopieren…</string>
-    <string name="macropad_editor_copy_profile_select">Zielprofil auswählen</string>
+    <string name="macropad_editor_copy_to_layout">In Layout kopieren</string>
+    <string name="macropad_editor_copy_profile_select">Layout in Profil kopieren</string>
     <string name="macropad_editor_copy_layout_select">Ziellayout auswählen</string>
     <string name="macropad_editor_copy_button_duplicate">Taste duplizieren</string>
     <string name="macropad_duplicate_profile">Profil duplizieren</string>
@@ -797,47 +573,34 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_copy_no_profiles_available">Keine anderen Profile verfügbar.</string>
     <string name="macropad_copy_no_layouts_available">Keine anderen Layouts verfügbar.</string>
 
-    <!-- Crop editor -->
-    <string name="mirror_crop_editor_title">Ausschnitt festlegen</string>
-    <string name="mirror_crop_editor_subtitle">Ausschnitt: %1$s</string>
-    <string name="mirror_crop_editor_done">Fertig</string>
-    <string name="mirror_crop_editor_cancel">Abbrechen</string>
-    <string name="cd_drag_toolbar">Ziehen, um die Symbolleiste zu verschieben</string>
-
     <!-- Cutout Layout Editor -->
     <string name="mirror_editor_add_cutout">Ausschnitt hinzufügen</string>
-    <string name="mirror_editor_delete_cutout">Auswahl löschen</string>
-    <string name="mirror_editor_delete_cutout_label">Ausschnitt löschen</string>
-    <string name="mirror_editor_edit_crop">Ausschnitt wählen</string>
-    <string name="mirror_editor_single_mode">Einzelner Viewport</string>
-    <string name="mirror_editor_multi_mode">Mehrere Ausschnitte</string>
     <string name="mirror_editor_done">Fertig</string>
-    <string name="mirror_editor_multi_cutout_privileged_only">Mehrere Ausschnitte erfordern den Privilegierten Modus</string>
-    <string name="mirror_editor_aspect_ratio_mode">Seitenverhältnis-Modus</string>
-    <string name="mirror_editor_aspect_ratio_locked">Seitenverhältnis: Gesperrt</string>
+    <string name="mirror_editor_aspect_ratio_mode">Festes Seitenverhältnis</string>
     <string name="mirror_editor_aspect_ratio_free">Frei</string>
     <string name="mirror_editor_aspect_ratio_top">Oben</string>
     <string name="mirror_editor_aspect_ratio_bottom">Unten</string>
-    <string name="mirror_editor_motion_smoothing">Glätten</string>
-    <string name="cd_motion_smoothing">Bewegungsglättung für den ausgewählten Ausschnitt umschalten</string>
-    <string name="mirror_smoothing_strength_label">Glättung</string>
-    <string name="mirror_smoothing_strength_value">%1$d%%</string>
     <string name="mirror_smoothing_strength_light">Leicht</string>
     <string name="mirror_smoothing_strength_medium">Mittel</string>
     <string name="mirror_smoothing_strength_strong">Stark</string>
     <string name="mirror_smoothing_strength_off">Aus</string>
-    <string name="mirror_editor_shape_circle">Form: Kreis</string>
-    <string name="mirror_editor_shape_rectangle">Form: Rechteck</string>
-    <string name="mirror_editor_no_space">Kein Platz für einen weiteren Ausschnitt</string>
-    <string name="mirror_editor_max_cutouts">Maximale Anzahl von 10 Ausschnitten erreicht</string>
-    <string name="mirror_editor_rename_cutout">Ausschnitt umbenennen</string>
+    <string name="mirror_editor_no_space">Bitte schaffe zuerst Platz auf dem Bildschirm für einen weiteren Ausschnitt</string>
     <string name="mirror_editor_cutout_name_hint">Ausschnitt-Name</string>
+    <string name="mirror_editor_adjust_top_cutout">Oberen Ausschnitt anpassen</string>
+    <string name="mirror_editor_adjust_bottom_cutout">Unteren Ausschnitt anpassen</string>
+    <string name="mirror_editor_saved_badge">GESPEICHERT</string>
+    <string name="mirror_editor_adjust_toast">Steuerkreuz zum Verschieben. R2 gedrückt halten zum Ändern der Größe. L2 gedrückt halten für Präzision.</string>
+    <string name="mirror_editor_no_cutouts">Keine Ausschnitte</string>
+    <string name="mirror_editor_save_changes">Speichern</string>
+    <string name="mirror_editor_saved_toast">Layout-Änderungen gespeichert</string>
+    <string name="mirror_editor_minimize">Minimieren</string>
+    <string name="mirror_editor_expand">Erweitern</string>
+    <string name="mirror_editor_hide_background">Hintergrund</string>
+    <string name="mirror_editor_bg_hidden">Ausgeblendet</string>
+    <string name="mirror_editor_bg_visible">Sichtbar</string>
+    <string name="mirror_editor_bg_none">Keiner</string>
 
     <!-- Cutout Layout Editor Toolbar Short Labels -->
-    <string name="mirror_editor_toolbar_add">Hinzufügen</string>
-    <string name="mirror_editor_toolbar_settings">Optionen</string>
-    <string name="mirror_editor_toolbar_delete">Löschen</string>
-    <string name="mirror_editor_toolbar_crop">Zuschneiden</string>
     <string name="mirror_editor_toolbar_done">Fertig</string>
     <string name="mirror_editor_toolbar_cancel">Abbrechen</string>
     <string name="mirror_editor_toolbar_shape_circle">Kreis</string>
@@ -846,6 +609,20 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_mirror_touch_projection_desc">Berührungen innerhalb dieses Ausschnitts an den Hauptbildschirm weiterleiten</string>
     <string name="settings_mirror_cutout_default">Ausschnitt</string>
     <string name="settings_mirror_cutout_default_name_fmt">Ausschnitt %1$d</string>
+    <string name="mirror_editor_arrange_cutouts_title">Bildschirmspiegelungs-Layout bearbeiten</string>
+    <string name="mirror_editor_arrange_cutouts_desc">Spiegelungsbereiche auf dem Bildschirm anordnen und zuschneiden</string>
+    <string name="settings_mirror_advanced_title">Erweiterte Einstellungen</string>
+    <string name="settings_mirror_advanced_desc">Umgebungs-Abdunklung, Kantenüberblendung und Touch-Verfolgung konfigurieren</string>
+    <string name="settings_mirror_cutouts_header">Ausschnitte</string>
+    <string name="macropad_cutout_deleted_toast">Ausschnitt \"%1$s\" gelöscht</string>
+    <string name="macropad_delete_cutout_title">Ausschnitt löschen</string>
+    <string name="macropad_delete_cutout_desc">Diesen Ausschnitt dauerhaft aus dem Layout entfernen</string>
+    <string name="mirror_editor_shape_mode">Ausschnittform</string>
+    <string name="mirror_editor_shape_desc">Zwischen rechteckiger und kreisförmiger Darstellung wechseln</string>
+    <string name="settings_mirror_cutout_summary_fmt">Glättung: %1$s • Projektion: %2$s</string>
+    <string name="settings_mirror_projection_on">Ein</string>
+    <string name="settings_mirror_projection_off">Aus</string>
+    <string name="macropad_editor_section_actions">Aktionen</string>
 
     <!-- ── Help tutorial system ──────────────────────────────────────────── -->
     <!-- Shared -->
@@ -853,159 +630,45 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_close_cd">Hilfe schließen</string>
 
     <!-- MacroPad Editor help -->
-    <string name="help_editor_title">Profil/Layout bearbeiten — Hilfe</string>
-    <string name="help_editor_intro">In diesem Bereich erstellst und organisierst du alle Schaltflächen auf deinem Makro-Pad. Änderungen werden sofort gespeichert — es gibt keinen separaten Speicherschritt.</string>
-    <string name="help_editor_section_profiles">Profile</string>
-    <string name="help_editor_profiles_label">Profil-Chips</string>
-    <string name="help_editor_profiles_desc">Tippe auf einen Chip, um das aktive Profil zu wechseln. Das aktive Profil ist hervorgehoben. Jedes Profil enthält eigene Layouts und Makros — ideal für verschiedene Spiele.</string>
-    <string name="help_editor_add_profile_label">Profil hinzufügen</string>
-    <string name="help_editor_add_profile_desc">Tippe auf das Plus-Symbol (+) neben der Profil-Überschrift, um ein neues Profil zu erstellen.</string>
-    <string name="help_editor_profile_options_label">Profil-Optionen</string>
-    <string name="help_editor_profile_options_desc">Tippe auf das Optionen-Symbol (drei Punkte), um Profile umzubenennen, zu duplizieren, zu sortieren oder zu löschen.</string>
-    <string name="help_editor_section_layouts">Layouts</string>
-    <string name="help_editor_layouts_label">Layout-Chips</string>
-    <string name="help_editor_layouts_desc">Ein Profil kann mehrere Layouts haben. Nur aktivierte Layouts erscheinen im Schnellmenü zum schnellen Wechseln. Halte einen Layout-Chip gedrückt und ziehe ihn, um die Reihenfolge zu ändern.</string>
-    <string name="help_editor_add_layout_label">Layout hinzufügen</string>
-    <string name="help_editor_add_layout_desc">Tippe auf das Plus-Symbol (+) neben der Layout-Überschrift, um ein neues Layout im aktuellen Profil zu erstellen.</string>
-    <string name="help_editor_layout_options_label">Layout-Optionen</string>
-    <string name="help_editor_layout_options_desc">Tippe auf das Optionen-Symbol (drei Punkte), um Layouts umzubenennen, zu duplizieren, in ein anderes Profil zu kopieren oder zu löschen.</string>
-    <string name="help_editor_section_toolbar">Toolbar</string>
-    <string name="help_editor_toolbar_button_label">Taste</string>
-    <string name="help_editor_toolbar_button_desc">Platziert eine neue Makro-Schaltfläche auf der Arbeitsfläche. Danach kannst du sie bei entsperrter Fläche beliebig verschieben.</string>
-    <string name="help_editor_toolbar_background_label">Hintergrund</string>
-    <string name="help_editor_toolbar_background_desc">Öffnet die Hintergrundbildeinstellungen, um ein Hintergrundbild auszuwählen oder zu entfernen, Cover von SteamGridDB zu laden, das Bild zuzuschneiden/skalieren oder den Maskenmodus zu aktivieren.</string>
-    <string name="help_editor_profile_macros_label">Makros…</string>
-    <string name="help_editor_profile_macros_desc">Öffnet die Makroliste für dieses Profil, um wiederverwendbare Makros zu erstellen, zu bearbeiten und zu verwalten.</string>
-    <string name="help_editor_toolbar_grid_label">Raster</string>
-    <string name="help_editor_toolbar_grid_desc">Wechselt zwischen Raster-Modi: Aus → Rechteckig → Radial. Bei aktivem Raster rasten Schaltflächen beim Verschieben an Rasterpositionen ein.</string>
-    <string name="help_editor_toolbar_lock_label">Sperren / Entsperren</string>
-    <string name="help_editor_toolbar_lock_desc">Das Sperren verhindert versehentliches Verschieben. Tippe erneut auf das Schloss-Symbol, um das Verschieben wieder zu erlauben.</string>
-    <string name="help_editor_section_canvas">Arbeitsfläche</string>
-    <string name="help_editor_canvas_drag_label">Schaltfläche ziehen</string>
-    <string name="help_editor_canvas_drag_desc">Bei entsperrter Fläche: halten und ziehen, um eine Schaltfläche neu zu positionieren. Loslassen zum Ablegen.</string>
-    <string name="help_editor_section_buttons">Tasten</string>
-    <string name="help_editor_button_edit_label">Taste bearbeiten</string>
-    <string name="help_editor_button_edit_desc">Tippe auf eine beliebige Taste in der Liste unter der Arbeitsfläche, um den Bearbeitungsdialog zu öffnen. Hier kannst du Beschriftung, Symbol, Größe, Form, Farbe, Haptik und die zugewiesene Makro-Aktion ändern.</string>
-    <string name="help_editor_button_reorder_label">Tasten sortieren</string>
-    <string name="help_editor_button_reorder_desc">Ziehe den Anfasser auf der rechten Seite eines Listeneintrags, um die Tasten in der Liste neu zu sortieren.</string>
 
     <!-- Macro List help -->
-    <string name="help_macrolist_title">Makros — Hilfe</string>
-    <string name="help_macrolist_intro">Die Makro-Liste zeigt alle wiederverwendbaren Makros des aktuellen Profils. Makros sind eigenständige Eingabe-Sequenzen, die einer oder mehreren Pad-Schaltflächen zugewiesen werden können.</string>
-    <string name="help_macrolist_section_actions">Aktionen</string>
-    <string name="help_macrolist_add_label">Makro hinzufügen</string>
-    <string name="help_macrolist_add_desc">Erstellt ein neues leeres Makro und öffnet sofort den Timeline-Editor, damit du Schritte hinzufügen kannst. Gib dem Makro oben im Editor einen aussagekräftigen Namen.</string>
-    <string name="help_macrolist_section_list">Makro-Einträge</string>
-    <string name="help_macrolist_tap_label">Makro-Zeile antippen</string>
-    <string name="help_macrolist_tap_desc">Öffnet den Makro-Timeline-Editor für dieses Makro, um Schritte anzuzeigen oder zu bearbeiten.</string>
-    <string name="help_macrolist_menu_label">Optionsmenü</string>
-    <string name="help_macrolist_menu_desc">Jede Makro-Zeile hat ein Optionen-Menü (drei Punkte) zum Umbenennen, Duplizieren, In Profil kopieren oder Löschen des Makros. Das Löschen ist dauerhaft.</string>
-    <string name="help_macrolist_drag_label">Zieh-Griff</string>
-    <string name="help_macrolist_drag_desc">Den Zieh-Griff rechts in der Makro-Zeile gedrückt halten und bewegen, um Makros in der Liste neu anzuordnen. Die Reihenfolge ist rein kosmetisch.</string>
 
     <!-- Macro Timeline Editor help -->
-    <string name="help_timeline_title">Makro-Editor — Hilfe</string>
-    <string name="help_timeline_intro">Im Timeline-Editor baust du die genaue Abfolge von Eingaben, die ein Makro ausführt. Schritte werden von oben nach unten ausgeführt. Zeiten können aufgezeichnet oder manuell eingegeben werden.</string>
-    <string name="help_timeline_section_topbar">Steuerleiste oben</string>
     <string name="help_timeline_name_label">Makro-Namensfeld</string>
     <string name="help_timeline_name_desc">Tippe in das Textfeld, um das Makro umzubenennen. Der Name wird beim Antippen von „Speichern“ gespeichert.</string>
-    <string name="help_timeline_cancel_label">Abbrechen</string>
-    <string name="help_timeline_cancel_desc">Verwirft alle nicht gespeicherten Änderungen und kehrt zur Makro-Liste zurück. In dieser Sitzung hinzugefügte Schritte gehen verloren.</string>
-    <string name="help_timeline_save_label">Speichern</string>
-    <string name="help_timeline_save_desc">Speichert den aktuellen Namen und alle Schritte im Profil. Die Schaltfläche ist ausgegraut, wenn das Namensfeld leer ist.</string>
-    <string name="help_timeline_section_secondary">Sekundäre Leiste</string>
-    <string name="help_timeline_undo_label">Rückgängig</string>
-    <string name="help_timeline_undo_desc">Macht die letzte Änderung an der Schritt-Liste rückgängig. Bis zu 50 Rückgängig-Schritte werden pro Sitzung gespeichert.</string>
-    <string name="help_timeline_redo_label">Wiederholen</string>
-    <string name="help_timeline_redo_desc">Stellt eine rückgängig gemachte Änderung wieder her. Der Verlauf wird bei jeder neuen Bearbeitung gelöscht.</string>
-    <string name="help_timeline_view_list_label">Liste/Bearbeiten</string>
-    <string name="help_timeline_view_list_desc">Zeigt alle Schritte als vertikale scrollbare Liste — die übersichtlichste Ansicht zum Prüfen und Bearbeiten einzelner Schritt-Zeiten.</string>
-    <string name="help_timeline_view_timeline_label">Zeitleiste</string>
-    <string name="help_timeline_view_timeline_desc">Stellt Schritte horizontal auf einer Zeitachse dar. Hilfreich, um Lücken, Überlappungen und die Gesamtstruktur des Makro-Timings zu erkennen.</string>
-    <string name="help_timeline_shift_label">Nachfolgende Schritte verschieben</string>
-    <string name="help_timeline_shift_desc">Legt fest, wie zeitliche Änderungen eines Schritts nachfolgende Schritte verschieben: Nein (keine Verschiebung), Um Start-Verzögerung (Verschiebung um Startzeit-Änderungen) oder Um Gesamtdauer (Verschiebung um Startzeit- oder Dauer-Änderungen).</string>
-    <string name="help_timeline_section_steps">Schritte hinzufügen &amp; testen</string>
-    <string name="help_timeline_add_step_label">Schritt hinzufügen</string>
-    <string name="help_timeline_add_step_desc">Öffnet eine Auswahl mit Eingabe-Typen: Tastendruck, Gamepad-Taste, Mausklick, Scrollen, Verzögerung und mehr.</string>
-    <string name="help_timeline_record_touch_label">Touch aufzeichnen</string>
-    <string name="help_timeline_record_touch_desc">Zeichnet einen Tipp-Vorgang oder eine Geste auf dem Primärbildschirm auf und wandelt ihn in Touch-Schritte um. Die Spiegelung wird bei Bedarf automatisch gestartet.</string>
-    <string name="help_timeline_record_gamepad_label">Gamepad aufzeichnen</string>
-    <string name="help_timeline_record_gamepad_desc">Erfasst live Tastendruck des physischen Controllers und wandelt sie in Gamepad-Schritte um. Im Privileged Mode wird der physische Gamepad-Rekorder für höhere Genauigkeit verwendet.</string>
-    <string name="help_timeline_test_run_label">Testlauf</string>
-    <string name="help_timeline_test_run_desc">Führt die aktuellen Makroschritte sofort auf dem Gerät aus, damit du die Sequenz überprüfen kannst. Die Schleifenwiedergabe ist bei Testläufen deaktiviert.</string>
-    <string name="help_timeline_section_step_items">Schritt-Optionen</string>
-    <string name="help_timeline_step_edit_label">Schritt bearbeiten</string>
-    <string name="help_timeline_step_edit_desc">Tippe auf das Bearbeiten-Symbol (Stift) oder die Schritt-Zeile selbst, um den Konfigurationsdialog für diesen Schritt zu öffnen.</string>
-    <string name="help_timeline_step_delete_label">Schritt löschen</string>
-    <string name="help_timeline_step_delete_desc">Tippe auf das Löschen-Symbol (Mülleimer), um den Schritt aus der Makro-Timeline zu entfernen.</string>
-    <string name="help_timeline_section_loop">Schleife &amp; Timing</string>
-    <string name="help_timeline_loop_label">Schleifen-Umschalter</string>
-    <string name="help_timeline_loop_desc">Wenn aktiviert, wird das Makro dauerhaft wiederholt bis es gestoppt wird. Eine Pause zwischen Wiederholungen kann mit dem dann erscheinenden Regler eingestellt werden.</string>
-    <string name="help_timeline_randomise_label">Timing randomisieren</string>
-    <string name="help_timeline_randomise_desc">Fügt bei jeder Ausführung einen kleinen zufälligen Versatz (±Bereich) zu den Schritt-Zeiten hinzu. Das macht das Makro weniger mechanisch und kann Bot-Erkennung in manchen Apps erschweren.</string>
 
     <!-- Ambient / Background Settings help -->
-    <string name="help_ambient_title">Bildschirmspiegelungs-Einstellungen — Hilfe</string>
-    <string name="help_ambient_intro">Diese Einstellungen steuern, wie das gespiegelte Bild im Ambient-Modus aussieht — wenn Megingiard im Hintergrund hinter deinen Schaltflächen läuft. Alle Änderungen gelten nur für das aktuell aktive Layout.</string>
-    <string name="help_ambient_dim_label">Abdunkeln</string>
-    <string name="help_ambient_dim_desc" formatted="false">Reduziert die Helligkeit des gespiegelten Bildes durch einen schwarzen Schleier. 0 % bedeutet kein Abdunkeln; 90 % ist nahezu schwarz. Das Auge-Symbol ermöglicht eine Live-Vorschau auf dem Sekundärbildschirm.</string>
-    <string name="help_ambient_blend_label">Randüberblendung</string>
+    <string name="help_ambient_dim_desc" formatted="false">Reduziert die Helligkeit des gespiegelten Bildes durch einen schwarzen Schleier. 0 % bedeutet kein Abdunkeln; 90 % ist nahezu schwarz.</string>
     <string name="help_ambient_blend_desc">Blendet die Ränder des Spiegelbildes nach innen aus, sodass der Inhalt fließend in den Hintergrund übergeht statt abrupt abzubrechen. Höhere Werte erzeugen einen stärkeren Vignetten-Effekt.</string>
-    <string name="help_ambient_follow_touch_desc">Zentriert den gespiegelten Bildausschnitt auf der zuletzt berührten Stelle des Hauptbildschirms. Wähle einen Ausschnitt aus dem Dropdown, um es zu aktivieren, oder Aus, um es zu deaktivieren.</string>
-    <string name="help_ambient_cutouts_label">Ausschnitt-Liste</string>
-    <string name="help_ambient_cutouts_desc">Listet alle für dieses Layout definierten Spiegelungs-Ausschnitte auf. Du kannst jeden Ausschnitt über das Stift-Symbol umbenennen oder seine Bewegungsglättung und Touch-Projektion anpassen.</string>
-    <string name="help_ambient_smoothing_label">Glättung</string>
-    <string name="help_ambient_smoothing_desc">Wendet eine Bewegungsglättung auf das Verschieben des Ausschnitts an (Aus, Leicht, Mittel oder Stark). Höhere Werte machen die Bewegung sanfter, können aber eine minimale Verzögerung hinzufügen.</string>
-    <string name="help_ambient_touch_projection_desc">Leitet Berührungen innerhalb dieses Ausschnitts an den Hauptbildschirm weiter. Wenn aktiv, lösen Berührungen auf dem gespiegelten Bereich entsprechende Aktionen auf dem Hauptbildschirm aus.</string>
-    <string name="help_ambient_preview_label">Vorschau</string>
-    <string name="help_ambient_preview_desc">Aktiviert eine Live-Vorschau des Reglerwerts auf dem Sekundärbildschirm. Interagiere dort mit den Steuerelementen, um den Wert zu bestätigen oder abzubrechen.</string>
 
     <!-- Mirror editor (Cutout Layout Editor) help -->
     <string name="help_mirror_editor_title">Spiegel-Editor — Hilfe</string>
     <string name="help_mirror_editor_intro">Der Spiegel-Editor ermöglicht es, die Viewport-Ausschnitte hinzuzufügen, zu verschieben, in der Größe zu ändern und zu konfigurieren, die während der Spiegelung auf dem Sekundärbildschirm erscheinen. Tippe auf einen Ausschnitt, um ihn auszuwählen, und nutze dann die Toolbar-Schaltflächen, um darauf zu reagieren.</string>
-    <string name="help_mirror_editor_section_global">Globale Aktionen</string>
-    <string name="help_mirror_editor_add_desc">Erstellt einen neuen Viewport-Ausschnitt an einer freien Position auf dem Sekundärbildschirm. Pro Layout sind bis zu 10 Ausschnitte erlaubt. Der neue Ausschnitt wird automatisch ausgewählt.</string>
-    <string name="help_mirror_editor_settings_desc">Öffnet die layoutspezifischen Ambient-Anzeigeeinstellungen (Abdunkelung, Randüberblendung, Weichzeichnung). Änderungen gelten nur für das aktuell aktive Layout.</string>
     <string name="help_mirror_editor_section_selected">Ausgewählter Ausschnitt</string>
     <string name="help_mirror_editor_aspect_desc">Wechselt zwischen drei Seitenverhältnis-Modi für den ausgewählten Ausschnitt. Frei — keine Einschränkung, unabhängige Größenänderung. Oben — fixiert das Seitenverhältnis passend zum Crop-Bereich auf dem oberen Bildschirm. Unten — fixiert das Seitenverhältnis passend zum Ausschnitt auf dem unteren Bildschirm.</string>
     <string name="help_mirror_editor_shape_label">Form</string>
     <string name="help_mirror_editor_shape_desc">Wechselt die Form des ausgewählten Ausschnitts zwischen Rechteck und Kreis. Nützlich für Spielminiaturkarten oder runde Anzeigen, die im Kreis besser aussehen.</string>
-    <string name="help_mirror_editor_crop_desc">Öffnet die Crop-Auswahl für den gewählten Ausschnitt und ermöglicht es, einen Rahmen über den oberen Bildschirm zu ziehen, um den gespiegelten Bereich festzulegen.</string>
-    <string name="help_mirror_editor_delete_desc">Entfernt den ausgewählten Ausschnitt dauerhaft aus dem Layout. Wenn der gelöschte Ausschnitt Touch-Follow aktiv hatte, wird dieser Modus ebenfalls deaktiviert.</string>
+    <string name="help_mirror_editor_adjust_label">Koordinaten anpassen</string>
+    <string name="help_mirror_editor_adjust_desc">Aktiviert den Feinjustierungsmodus. Verwende das Steuerkreuz zum pixelweisen Verschieben. Halte R2 gedrückt, während du das Steuerkreuz drückst, um die Größe symmetrisch zum Mittelpunkt zu ändern.</string>
+    <string name="help_mirror_editor_hide_bg_desc">Blendet das Layout-Hintergrundbild auf dem sekundären Bildschirm während der Bearbeitung vorübergehend aus, um das Anpassen der Ausschnittgrenzen zu erleichtern. Ändert nicht Ihre gespeicherten Layouteinstellungen.</string>
     <string name="help_mirror_editor_section_finish">Abschließen</string>
     <string name="help_mirror_editor_done_desc">Speichert alle in dieser Sitzung vorgenommenen Änderungen und schließt den Editor. Das aktualisierte Ausschnitt-Layout wird sofort aktiv.</string>
     <string name="help_mirror_editor_cancel_desc">Verwirft alle seit dem Öffnen des Editors vorgenommenen Änderungen und stellt das Layout in den vorherigen Zustand zurück. Es werden keine Änderungen gespeichert.</string>
 
-    <!-- Global Settings help -->
-    <string name="help_settings_title">Einstellungen — Hilfe</string>
-    <string name="help_settings_intro">Die globalen Einstellungen gelten für die gesamte App und bleiben zwischen Sitzungen erhalten. Nutze die Abschnitts-Sprungleiste oben, um schnell zu einer bestimmten Gruppe zu scrollen.</string>
+    <!-- Global Settings card descriptions -->
     <string name="help_settings_overlay_position_desc">Empfohlen, wenn deine Hände das Gerät so halten, dass deine Daumen natürlich in der Nähe der Unterkante ruhen. Das Schnellmenü lässt sich so leichter wischen.</string>
-    <string name="help_settings_overlay_fade_out_desc">Blendet die seitliche Schnellmenüleiste nach einigen Sekunden visuell aus. Die Wischgesten funktionieren weiterhin normal, selbst wenn die Leiste vollständig unsichtbar ist, sodass du das Schnellmenü jederzeit öffnen kannst.</string>
-
-    <string name="help_settings_auto_profile_desc">Sorgt für nahtloses Gaming. Verknüpft Makroprofile mit Apps, sodass deine Tasten beim Starten eines Spiels automatisch wechseln.</string>
-    <string name="help_settings_recents_desc">Hält deine Übersicht der zuletzt geöffneten Apps aufgeräumt. Empfohlen, wenn du Megingiard komplett über die Schnellmenü-Steuerung steuerst.</string>
-    <string name="help_settings_accessibility_desc">Erforderlich für automatische Profilwechsel, damit Megingiard das aktive Spiel im Vordergrund erkennen darf. Tippe zum Konfigurieren.</string>
     <string name="help_settings_language_desc">Ändert die Sprache aller App-Menüs, Overlays und Hilfeseiten. Derzeit stehen Englisch, Deutsch und Trad. Chinesisch zur Auswahl.</string>
-    <string name="help_settings_gamepad_swap_desc">Aktiviere dies, wenn du das Nintendo-Layout (A rechts, B unten) dem standardmäßigen Xbox-Layout für Gamepad-Makros vorziehst.</string>
-    <string name="help_settings_accent_desc">Passt die Farbe aktiver Tasten und Tabs an. Eigene Akzentfarben gelten für die Designs Dunkel und Dunkel OLED; tippe auf die Farbvorschau für das Farbrad oder auf das Paletten-Symbol für vordefinierte Akzentfarben aus den Themen-Designs.</string>
     <string name="help_settings_theme_desc">Wähle aus 8 verschiedenen Designs darunter Dunkel, Dunkel OLED, Megingiard, Mjölnir-Stahl, Valhalla-Sonnenuntergang, Nordlicht Aurora, Retro-Phosphor und Königliches Asgard.</string>
-    <string name="help_settings_restore_desc">Setzt alle Einstellungen auf Werkseinstellungen zurück, falls etwas falsch konfiguriert ist. Dies löscht alle deine benutzerdefinierten Profile, Layouts und Makros.</string>
     <string name="help_settings_export_desc">Erstellt ein vollständiges Backup deiner Profile und Einstellungen. Empfohlen vor App-Updates oder dem Zurücksetzen von Einstellungen.</string>
-    <string name="help_settings_import_desc">Stellt Profile und Einstellungen aus einer .mgrd-Datei oder einem automatischen täglichen Backup wieder her. Überschreibt aktuelle Profile.</string>
     <string name="help_settings_export_profile_desc">Speichert ein einzelnes Profil in eine Datei, um Tasten-Layout und Makros mit anderen Spielern zu teilen, ohne deine gesamte Konfiguration freizugeben.</string>
-    <string name="help_settings_import_profile_desc">Fügt ein geteiltes Profil eines anderen Spielers deiner Sammlung hinzu. Vorhandene eigene Profile werden dabei nicht verändert oder überschrieben.</string>
+    <string name="help_settings_import_profile_desc">Importiert ein von einem anderen Benutzer geteiltes Profil aus einer .mgrd-Datei und fügt es zu deinen Profilen hinzu, ohne deine globalen Einstellungen zu überschreiben.</string>
     <string name="help_settings_add_to_obtainium_desc">Öffnet Obtainium (falls installiert) mit dem vorausgefüllten Megingiard-Repository-Link. Falls Obtainium nicht installiert ist, wird die GitHub-Seite von Obtainium im Browser geöffnet.</string>
     <string name="help_settings_privd_desc">Richtet eine Hintergrundverbindung per Wireless Debugging ein, um auf System-Eingabegeräte zuzugreifen, die für normale Apps gesperrt sind. Dies ermöglicht:\n\n• Gamepad-Zusammenführung: Kombiniert virtuelle und physische Controller, sodass Spiele nur einen Controller sehen (erhöht die Kompatibilität).\n• Physische Gamepad-Aufnahme: Nimmt Makros direkt von deinem physischen Controller auf.\n• Privilegiertes Screen Mirroring: Startet die Bildschirmübertragung ohne die ständige Android-Sicherheitsabfrage.\n• Screenshots: Erstellt Screenshots des Hauptbildschirms direkt aus dem Schnellmenü-Overlay, ohne dass die Bildschirmübertragung aktiv sein muss.</string>
     <string name="help_settings_deadzone_desc">Verhindert, dass Rauschen oder Drift der Analogsticks aufgenommen werden. Gleiche diese Werte für beste Genauigkeit mit den Totzonen-Einstellungen deines Thor ab.</string>
-    <string name="help_settings_reconnect_prompt_desc">Wenn aktiv, wird beim App-Start ein Dialog angezeigt, falls die Verbindung zum privilegierten Daemon fehlschlägt, damit Sie sie direkt wiederherstellen können.</string>
     <string name="help_settings_log_level_desc">Im Normalbetrieb auf Warn oder Info belassen. Nur bei der Fehlersuche auf Debug oder Verbose stellen, um detaillierte Logs aufzuzeichnen.</string>
     <string name="help_settings_save_log_desc">Exportiert das aktuelle System-Log. Generiere dieses direkt nach einem Fehler oder Absturz, um es an einen Entwicklerbericht anzuhängen.</string>
     <!-- Keyboard settings help -->
-    <string name="help_keyboard_settings_title">Tastatur-Einstellungen — Hilfe</string>
-    <string name="help_keyboard_settings_intro">Konfigurieren Sie Layouts und Tasten für die virtuelle Tastatur.</string>
     <string name="help_keyboard_settings_layout_desc">Wählen Sie Ihre bevorzugte Buchstabenanordnung (QWERTY, QWERTZ oder AZERTY). Beachten Sie, dass diese Einstellung nur das Buchstaben-Layout (ABC-Modus) beeinflusst. Die Layout-Ebenen für Zahlen und Symbole sind bei allen regionalen Formaten identisch.</string>
-    <string name="help_keyboard_settings_touchpad_desc">Zeigt ein kleines relatives Touchpad im Bereich über dem Tastaturlayout an, wenn die Tastatur geöffnet ist. Gesten wie Tippen zum Klicken, Zwei-Finger-Tippen (Rechtsklick) und Zwei-Finger-Scrollen werden unterstützt. Zeigergeschwindigkeit und Bildlaufgeschwindigkeit werden aus den Touchpad-Einstellungen übernommen.</string>
-
 
     <!-- Quick Menu help -->
     <string name="help_quickmenu_title">Schnellmenü — Hilfe</string>
@@ -1016,8 +679,12 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_quickmenu_freeze_label">Einfrieren / Auftauen</string>
     <string name="help_quickmenu_freeze_desc">Friert das gespiegelte Bild ein, sodass ein Standbild statt des Live-Feeds angezeigt wird. Nützlich, um eine Spielszene zum genauen Lesen anzuhalten.</string>
     <string name="help_quickmenu_viewport_desc">Öffnet den Ausschnitt-Layout-Editor auf dem Sekundärbildschirm, um transparente Ausschnittfenster im Spiegel-Overlay zu verschieben, zu skalieren oder hinzuzufügen.</string>
-    <string name="help_quickmenu_screenshot_label">Screenshot aufnehmen</string>
-    <string name="help_quickmenu_screenshot_desc">Nimmt einen Screenshot des Hauptbildschirms auf. Wenn die Spiegelung nicht aktiv ist, erfordert dies eine Verbindung zum Privilegierten Modus.</string>
+    <string name="help_quickmenu_screenshot_top_label">Screenshot oberer Bildschirm</string>
+    <string name="help_quickmenu_screenshot_top_desc">Nimmt einen Screenshot des oberen Bildschirms auf. Wenn kein Mirroring aktiv ist, muss der Privileged Mode verbunden sein.</string>
+    <string name="help_quickmenu_screenshot_bottom_label">Screenshot unterer Bildschirm</string>
+    <string name="help_quickmenu_screenshot_bottom_desc">Nimmt einen sauberen Screenshot des unteren Bildschirmlayouts auf.</string>
+    <string name="help_quickmenu_screenshot_both_label">Dual-Screen-Screenshot</string>
+    <string name="help_quickmenu_screenshot_both_desc">Nimmt gleichzeitig einen Screenshot beider Bildschirme auf und fügt sie vertikal zu einem Dual-Screen-Bild zusammen.</string>
     <string name="help_quickmenu_section_macropad">MacroPad-Steuerung (untere Karte)</string>
     <string name="help_quickmenu_profiles_desc">Tippe auf einen Chip, um sofort zu einem anderen Spielprofil zu wechseln (deaktiviert den Auto-Wechsel). Das aktive Profil ist hervorgehoben. Profile werden im Bereich „Profil/Layout bearbeiten“ verwaltet.</string>
     <string name="help_quickmenu_layouts_desc">Tippe auf einen Chip, um zu einem anderen Layout im aktuellen Profil zu wechseln (deaktiviert den Auto-Wechsel). Nur als aktiviert markierte Layouts erscheinen hier.</string>
@@ -1051,41 +718,21 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="welcome_help_title">So erhältst du Hilfe</string>
     <string name="welcome_help_intro">Achte auf das Hilfe-Symbol (?) in der oberen rechten Ecke jedes Bildschirms, um detaillierte Anleitungen und Best Practices für diese Funktion anzuzeigen.</string>
     <string name="welcome_btn_got_it">Verstanden</string>
-    <string name="welcome_btn_dont_show">Nicht mehr anzeigen</string>
     <string name="settings_reset_tutorials">Tutorials zurücksetzen</string>
     <string name="settings_reset_tutorials_desc">Setzt alle Tutorial-Popups zurück, um sie beim nächsten Zugriff erneut anzuzeigen</string>
     <string name="settings_reset_tutorials_toast">Tutorials werden nun wieder angezeigt</string>
-    <string name="help_settings_reset_tutorials_desc">Erzwingt, dass alle Tutorial-Bildschirme und Willkommens-Popups beim nächsten Zugriff wieder angezeigt werden, selbst wenn sie zuvor ausgeblendet wurden.</string>
 
     <!-- Macro Editor Tutorial -->
-    <string name="macro_tutorial_title">Makros erstellen</string>
-    <string name="macro_tutorial_intro">Makros ermöglichen es dir, Sequenzen von Controller-Tasten oder Bildschirmberührungen zu automatisieren.</string>
-    <string name="macro_tutorial_privileged_title">Aufnahme mit physischen Tasten</string>
-    <string name="macro_tutorial_privileged_body">Für das beste Spielerlebnis aktiviere den Privilegierten Modus in den globalen Einstellungen. Dadurch kannst du Makros direkt durch Drücken der physischen Tasten deines Thor-Geräts aufzeichnen.</string>
-    <string name="macro_tutorial_virtual_title">Virtuelles Gamepad</string>
-    <string name="macro_tutorial_virtual_body">Ist der Privilegierte Modus nicht aktiv, wird stattdessen ein virtuelles Touch-Gamepad auf dem Bildschirm angezeigt, mit dem du Controller-Eingaben aufzeichnen kannst.</string>
-    <string name="macro_tutorial_manual_title">Manuelle Bearbeitung &amp; Timings</string>
-    <string name="macro_tutorial_manual_body">Du kannst Schritte manuell über die Leiste unten hinzufügen. Versuche dabei, an das Timing zu denken, das du selbst beim Eingeben der Befehle im Spiel verwendest: Ahme diese physischen Timings und Eingaben zuerst exakt nach und optimiere sie erst danach (z. B. für eine schnellere Ausführung). Obwohl Standard-Verzögerungen automatisch hinzugefügt werden, um eine logische Abfolge zu erstellen, müssen diese fast immer an die spezifischen Anforderungen des Spiels angepasst werden.</string>
-    <string name="macro_tutorial_randomize_title">Timing-Randomisierung</string>
-    <string name="macro_tutorial_randomize_body">Unter dem Bereich Einstellungen unten in der Liste kannst du die Timing-Randomisierung aktivieren. Dies fügt bei jeder Wiedergabe eine minimale, zufällige Verzögerung hinzu, um menschliche Abweichungen zu simulieren. Dies wird für Online-Spiele dringend empfohlen, um Anti-Cheat-Erkennungen vorzubeugen. Bitte denke daran, dass Makros dein Leben erleichtern, aber das Leben anderer Spieler nicht schwerer machen sollen; die App und dieses Feature sind nicht zum Online-Cheaten gedacht.</string>
-    <string name="macro_tutorial_btn_got_it">Verstanden</string>
-    <string name="macro_tutorial_btn_dont_show">Nicht mehr anzeigen</string>
 
     <!-- Onboarding Wizard -->
     <string name="settings_start_welcome_tour">Willkommenstour / Schnell-Einrichtung starten</string>
     <string name="settings_start_welcome_tour_desc">Führe die Schritt-für-Schritt-Einführung und Randgesten-Tour erneut aus</string>
-    <string name="settings_start_welcome_tour_btn">Starten</string>
-    <string name="onboarding_step_welcome">Willkommen</string>
-    <string name="onboarding_step_quick_menu">Rand-Gesten</string>
-    <string name="onboarding_step_theme">Design</string>
     <string name="onboarding_theme_title">Wähle deinen Stil</string>
     <string name="onboarding_theme_desc">Wähle ein visuelles Thema für Megingiard. Du kannst dies jederzeit in den globalen Einstellungen ändern.</string>
     <string name="onboarding_theme_prev">Vorheriges Thema</string>
     <string name="onboarding_theme_next">Nächstes Thema</string>
-    <string name="onboarding_step_accessibility">Barrierefreiheit</string>
     <string name="onboarding_accessibility_title">Barrierefreiheitsdienst</string>
     <string name="onboarding_accessibility_desc">Der Barrierefreiheitsdienst ist für Megingiard erforderlich. Er wird für Kernfunktionen wie den automatischen Makro-Profilwechsel beim Starten von Spielen, die Einrichtung des Privilegierten Modus sowie kommende Funktionen benötigt.</string>
-    <string name="onboarding_step_privileged">Privilegierter Modus</string>
     <string name="onboarding_privd_title">Privilegierter Modus (empfohlen!)</string>
     <string name="onboarding_privd_desc">Ermöglicht direkte Eingabe-Injektion ohne Latenz, Trackpoint-Präzision und physikalische Gamepad-Aufzeichnung ohne Root oder PC-Verbindung. Nutze die Auto-Einrichtung für eine 1-Tap-Konfiguration.</string>
     <string name="onboarding_privd_auto_setup">Auto-Einrichtung starten</string>
@@ -1104,10 +751,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="onboarding_privd_manual_step_1">1. Überspringe diesen Schritt vorerst, indem du zum nächsten Schritt weitergehst.</string>
     <string name="onboarding_privd_manual_step_2">2. Öffne Globale Einstellungen → Privilegierter Modus.</string>
     <string name="onboarding_privd_manual_step_3">3. Folge dort den manuellen Kopplungsanweisungen, um den Privilegierten Modus zu aktivieren.</string>
-    <string name="onboarding_step_finished">Fertig</string>
     <string name="onboarding_finished_title">Alles erledigt! Bereit zum Basteln?</string>
     <string name="onboarding_finished_desc">Du hast die Willkommenstour abgeschlossen. Du kannst diese Tour jederzeit unter Globale Einstellungen → Allgemein erneut starten.</string>
-    <string name="onboarding_step_counter">Schritt %1$d von %2$d</string>
     <string name="onboarding_btn_next">Weiter</string>
     <string name="onboarding_btn_back">Zurück</string>
     <string name="onboarding_btn_skip">Überspringen</string>
@@ -1123,32 +768,48 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_steamgriddb_token">SteamGridDB API-Token</string>
     <string name="settings_steamgriddb_token_desc">Erforderlich, um Hintergrundbilder von steamgriddb.com zu laden (Scrapen). Erstelle ein API-Token in deinen Profileinstellungen auf deren Website.</string>
     <string name="settings_steamgriddb_token_placeholder">Gib deinen API-Schlüssel hier ein</string>
+    <string name="settings_steamgriddb_test_title">Verbindung testen</string>
+    <string name="settings_steamgriddb_test_desc">Überprüft, ob dein API-Token eine Verbindung zu SteamGridDB herstellen kann.</string>
+    <string name="settings_steamgriddb_test_btn">Testen</string>
+    <string name="settings_steamgriddb_status_testing">Wird getestet</string>
+    <string name="settings_steamgriddb_status_connected">Verbunden</string>
+    <string name="settings_steamgriddb_status_invalid">Ungültiges Token (401)</string>
+    <string name="settings_steamgriddb_status_offline">Offline</string>
+    <string name="settings_steamgriddb_status_rate_limited">Ratenlimit erreicht (429)</string>
+    <string name="settings_steamgriddb_status_unreachable">Nicht erreichbar</string>
+    <string name="settings_steamgriddb_status_error">Verbindung fehlgeschlagen</string>
     <string name="layout_settings_bg_image_scrape">Von SteamGridDB abrufen</string>
     <string name="layout_settings_bg_image_browse_local">Lokale Bilder durchsuchen</string>
     <string name="steamgriddb_token_missing_title">API-Token erforderlich</string>
     <string name="steamgriddb_token_missing_message">Das Laden von SteamGridDB erfordert ein API-Token. Bitte erstelle einen API-Schlüssel in deinen SteamGridDB-Kontoeinstellungen und füge ihn in den globalen Einstellungen von Megingiard hinzu.</string>
-    <string name="steamgriddb_token_missing_go_settings">Einstellungen öffnen</string>
-    <string name="steamgriddb_scrape_search_label">Spiel suchen</string>
+    <string name="steamgriddb_scrape_search_title">Spiel suchen</string>
+    <string name="steamgriddb_scrape_search_desc">SteamGridDB nach Postern, Bannern und Logos durchsuchen</string>
+    <string name="steamgriddb_scrape_type_title">Grafik-Kategorie</string>
+    <string name="steamgriddb_scrape_type_desc">Zwischen Postern, Hero-Bannern, Logos oder Icons wechseln</string>
+    <string name="steamgriddb_scrape_game_title">Gefundenes Spiel</string>
+    <string name="steamgriddb_scrape_game_desc">Durch gefundene Spieletitel blättern</string>
+    <string name="steamgriddb_scrape_apply_title">Artwork anwenden</string>
+    <string name="steamgriddb_scrape_apply_desc">Herunterladen und als Layout-Hintergrund festlegen</string>
+    <string name="steamgriddb_scrape_images_section">Verfügbares Artwork</string>
     <string name="steamgriddb_scrape_search_placeholder">z.B. Half-Life 2</string>
     <string name="steamgriddb_scrape_type_grid">Grid</string>
     <string name="steamgriddb_scrape_type_hero">Hero</string>
     <string name="steamgriddb_scrape_type_logo">Logo</string>
     <string name="steamgriddb_scrape_type_icon">Icon</string>
-    <string name="steamgriddb_scrape_search_btn">Suchen</string>
-    <string name="steamgriddb_scrape_searching_games">Spiele werden gesucht...</string>
-    <string name="steamgriddb_scrape_loading_images">Bilder werden geladen...</string>
+    <string name="steamgriddb_scrape_searching_games">Spiele werden gesucht</string>
+    <string name="steamgriddb_scrape_loading_images">Bilder werden geladen</string>
     <string name="steamgriddb_scrape_no_games_found">Keine Spiele gefunden.</string>
     <string name="steamgriddb_scrape_no_images_found">Keine Bilder für diesen Typ gefunden.</string>
-    <string name="steamgriddb_scrape_select_game">Spiel auswählen:</string>
-    <string name="steamgriddb_scrape_error">Fehler: %1$s</string>
-    <string name="steamgriddb_scrape_dialog_title">SteamGridDB Scraper</string>
-    <string name="steamgriddb_scrape_downloading">Bild wird heruntergeladen...</string>
+    <string name="steamgriddb_scrape_downloading">Bild wird heruntergeladen</string>
     <string name="steamgriddb_error_offline_title">Verbindung offline</string>
     <string name="steamgriddb_error_offline_message">Du bist offline. Bitte überprüfe deine Internetverbindung und versuche es erneut.</string>
     <string name="steamgriddb_error_rate_limited_title">Anfragen begrenzt</string>
     <string name="steamgriddb_error_rate_limited_message">Anfragenlimit überschritten. Bitte versuche es später noch einmal.</string>
     <string name="steamgriddb_error_unreachable_title">SteamGridDB nicht erreichbar</string>
     <string name="steamgriddb_error_unreachable_message">SteamGridDB ist derzeit nicht erreichbar oder offline. Bitte versuche es später noch einmal.</string>
+    <string name="steamgriddb_error_invalid_token_title">Ungültiger API-Schlüssel</string>
+    <string name="steamgriddb_error_invalid_token_message">Dein SteamGridDB-API-Schlüssel ist ungültig, fehlt oder ist nicht autorisiert. Bitte überprüfe deinen Schlüssel in den Einstellungen.</string>
+    <string name="steamgriddb_error_api_title">SteamGridDB API-Fehler</string>
     <string name="steamgriddb_error_generic_title">Fehler</string>
     <string name="steamgriddb_error_generic_message">Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es noch einmal.</string>
     <string name="steamgriddb_error_dismiss">OK</string>
@@ -1166,8 +827,6 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_section_absolute_touch">Absolut-Touch-Modus</string>
     <string name="cd_touchpad_collapse">Touchpad einklappen</string>
     <string name="cd_touchpad_settings">Touchpad-Einstellungen</string>
-    <string name="settings_touchpad_use_mouse">Eingabemodus</string>
-    <string name="settings_touchpad_use_mouse_desc">Wechseln zwischen relativem Mausmodus und absolutem Touchscreen-Modus</string>
     <string name="settings_touchpad_tap_to_click">Tippen zum Klicken</string>
     <string name="settings_touchpad_tap_to_click_desc">Einfaches Tippen als Linksklick ausführen</string>
     <string name="settings_touchpad_two_finger_tap">Zwei-Finger-Tippen</string>
@@ -1188,10 +847,6 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_touchpad_sensitivity_desc">Multiplikator für Cursor-Empfindlichkeit anpassen</string>
     <string name="settings_touchpad_haptics">Haptisches Feedback</string>
     <string name="settings_touchpad_haptics_desc">Leicht vibrieren bei Klicks und Gesten</string>
-    <string name="help_touchpad_settings_title">Touchpad-Hilfe</string>
-    <string name="help_touchpad_settings_intro">Optionen für das virtuelle Vollbild-Touchpad konfigurieren.</string>
-    <string name="help_touchpad_settings_mode_desc">Der relative Mausmodus bewegt den Cursor basierend auf Finger-Deltas, während der absolute Modus Touch-Koordinaten direkt projiziert.</string>
-    <string name="help_touchpad_settings_click_desc">Links-, Rechts- und Mittelklicks können durch kurzes Tippen mit einem, zwei oder drei Fingern simuliert werden.</string>
     <string name="settings_touchpad_mirroring">Touchpad-Spiegelung</string>
     <string name="settings_touchpad_mirroring_desc">Den oberen Bildschirm im Touchpad-Bereich spiegeln</string>
     <string name="settings_touchpad_mirror_dim">Spiegelung-Dimmstufe</string>
@@ -1201,99 +856,55 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="cd_touchpad_relative_mouse_mode">Relativer Mausmodus</string>
     <string name="cd_touchpad_absolute_touch_mode">Absoluter Touchmodus</string>
     <string name="cd_touchpad_toggle_mirroring">Touchpad-Spiegelung umschalten</string>
-    <string name="help_touchpad_settings_scroll_desc">Ziehe mit zwei Fingern vertikal, um Scrollrad-Ereignisse zu senden.</string>
-    <string name="help_touchpad_settings_tap_to_click_desc">Ein kurzes Tippen mit einem Finger führt einen Linksklick aus.</string>
-    <string name="help_touchpad_settings_two_finger_tap_desc">Ein kurzes Tippen mit zwei Fingern führt einen Rechtsklick aus.</string>
-    <string name="help_touchpad_settings_three_finger_tap_desc">Ein kurzes Tippen mit drei Fingern führt einen Mittelklick aus.</string>
-    <string name="help_touchpad_settings_tap_drag_desc">Doppeltippen und Halten, um Elemente zu ziehen.</string>
-    <string name="help_touchpad_settings_mouse_4_5_desc">Zeigt M4 (Zurück) und M5 (Vorwärts) Knöpfe in den Ecken des relativen Mausbereichs.</string>
-    <string name="help_touchpad_settings_mirroring_desc">Aktiviert die absolute Touch-Projektion mit einer Echtzeit-Spiegelung des primären Bildschirms.</string>
     <string name="help_touchpad_settings_mirror_dim_desc">Passt die Helligkeit des gespiegelten Bildschirms im Touchpad an.</string>
     <string name="help_touchpad_settings_sensitivity_desc">Passt den Cursor-Bewegungs-Multiplikator im relativen Mausmodus an.</string>
-    <string name="help_touchpad_settings_natural_scroll_desc">Aktiviert die natürliche Scrollrichtung: Das Ziehen von Fingern nach unten zieht den Bildschirminhalt nach unten.</string>
     <string name="help_touchpad_settings_scroll_speed_desc">Passt die Empfindlichkeit/Geschwindigkeit des Zwei-Finger-Scrollens an.</string>
-    <string name="help_touchpad_settings_haptics_desc">Aktiviert subtile physische Klick-Vibrationen beim Drücken von Knöpfen oder Ausführen von Klick-Gesten.</string>
 
-    <string name="macropad_editor_touchpad_settings">Touchpad-Optionen</string>
-    <string name="layout_settings_touchpad_title">Hintergrund-Touchpad</string>
     <string name="layout_settings_touchpad_enable">Hintergrund-Touchpad aktivieren</string>
     <string name="layout_settings_touchpad_enable_desc">Freie Fläche als relatives Maus-Touchpad nutzen</string>
-    <string name="help_editor_toolbar_touchpad_label">Touchpad-Einstellungen</string>
-    <string name="help_editor_toolbar_touchpad_desc">Verhalten des relativen Maus-Touchpads für freie Layout-Flächen anpassen.</string>
-    <string name="macropad_touchpad_conflict_projection_title">Touch-Projektion deaktivieren?</string>
     <string name="macropad_touchpad_conflict_projection_body">Das Aktivieren des Hintergrund-Touchpads deaktiviert die Touch-Projektion für alle Ausschnitte dieses Layouts.</string>
-    <string name="macropad_touchpad_conflict_projection_confirm">Touch-Projektion deaktivieren &amp; Touchpad aktivieren</string>
     <string name="macropad_projection_conflict_touchpad_title">Hintergrund-Touchpad deaktivieren?</string>
     <string name="macropad_projection_conflict_touchpad_body">Das Aktivieren der Touch-Projektion deaktiviert das Hintergrund-Touchpad für dieses Layout.</string>
-    <string name="macropad_projection_conflict_touchpad_confirm">Touchpad deaktivieren &amp; Projektion aktivieren</string>
     <string name="layout_settings_touchpad_incompatible_warning">Nicht kompatibel mit aktiver Touch-Projektion</string>
-    <string name="layout_settings_projection_incompatible_warning">Nicht kompatibel mit aktivem Hintergrund-Touchpad</string>
-    <string name="settings_section_master_touchpad">Hintergrund-Touchpad</string>
     <string name="settings_section_pointer_speed">Zeigergeschwindigkeit</string>
     <string name="settings_section_gestures">Gesten &amp; Aktionen</string>
-    <string name="settings_section_scrolling">Scrollen</string>
     <string name="settings_section_feedback">Haptik</string>
     <string name="config_export_include_backgrounds">Hintergrundbilder einschließen</string>
-    <string name="config_import_section_background_images">Hintergrundbilder (%1$d)</string>
 
     <!-- Megingiard Integration API / Home Screen -->
-    <string name="integration_home_title">Megingiard Begleiter</string>
-    <string name="integration_home_connected_client">Verbundener Client</string>
     <string name="integration_home_active_profile">Aktives Profil</string>
     <string name="integration_home_hovered_game">Fokussiertes Spiel/App</string>
-    <string name="integration_home_no_game_hovered">Keines</string>
     <string name="integration_home_no_profile_active">Kein Profil aktiv</string>
-    <string name="integration_home_profile_config_title">Profil-Konfiguration</string>
     <string name="integration_home_linked_profile">Verknüpftes Profil</string>
     <string name="integration_home_edit_layout">Bearbeiten</string>
-    <string name="integration_home_no_profile_assigned">Noch kein Profil für diese App konfiguriert.</string>
     <string name="integration_home_create_profile">Erstellen</string>
     <string name="integration_home_link_existing">Verknüpfen</string>
     <string name="integration_home_no_unassigned_profiles">Keine unzugewiesenen Profile</string>
-    <string name="integration_home_status_title">Begleiter-Status</string>
-    <string name="integration_home_status_privd">Privilegierter Daemon</string>
-    <string name="integration_home_status_mirror">Bildschirm-Spiegelung</string>
-    <string name="integration_home_status_accessibility">Barrierefreiheitsdienst</string>
-    <string name="integration_home_status_active">AKTIV</string>
-    <string name="integration_home_status_inactive">INAKTIV</string>
-    <string name="integration_home_status_running">LÄUFT</string>
-    <string name="integration_home_status_stopped">GESTOPPT</string>
-    <string name="integration_home_unknown">Unbekannt</string>
-    <string name="integration_home_none">Keine</string>
-    <string name="integration_home_detected_rom">Zuletzt erkanntes ROM</string>
-    <string name="integration_home_no_rom_detected">Keins erkannt</string>
     <string name="integration_home_new_profile">Neues Profil</string>
     <string name="integration_home_default_layout">Standard</string>
     <string name="integration_home_show_macropad">Anzeigen</string>
     <string name="integration_home_hero_idle_title">Megingiard Begleiter-Hub</string>
     <string name="integration_home_hero_idle_subtitle">Wähle ein Spiel auf dem oberen Bildschirm oder öffne unten ein Werkzeug.</string>
     <string name="integration_home_launch_controls">Anzeigen</string>
-    <string name="integration_home_deck_title">Begleiter-Werkzeuge</string>
     <string name="integration_home_macropad_desc">Gamepad &amp; Makros</string>
     <string name="integration_home_touchpad_desc">Maus / Touch-Projektion</string>
     <string name="integration_home_keyboard_desc">Virtuelle Tastatur</string>
-    <string name="integration_home_mirror_desc">Oberer Bildschirm-Spiegel</string>
-    <string name="integration_home_settings">Globale Einstellungen</string>
-    <string name="integration_home_help">Hilfe &amp; Tutorials</string>
     <string name="integration_home_tool_macropad">Aktives Profil</string>
     <string name="integration_home_tool_touchpad">Touchpad</string>
     <string name="integration_home_tool_keyboard">Tastatur</string>
     <string name="integration_home_tool_settings">Globale Einstellungen</string>
     <string name="integration_home_settings_desc">App-Einstellungen</string>
-    <string name="integration_home_tool_mirror">Bildschirmspiegel</string>
     <string name="quick_menu_show_dashboard">Zum Hub wechseln</string>
+    <string name="quick_menu_show_macropad">Zu Spiel-Profil wechseln</string>
     <string name="quick_menu_auto_mode">Auto-Wechsel</string>
     <string name="toast_auto_switch_off">Auto-Wechsel: Aus</string>
-    <string name="quick_menu_show_macropad">Zu Spiel-Profil wechseln</string>
 
     <!-- Update Check Strings -->
     <string name="settings_update_available_short">Update verfügbar</string>
+    <string name="settings_up_to_date">Du bist auf dem neuesten Stand!</string>
+    <string name="settings_check_failed">Prüfung fehlgeschlagen</string>
     <string name="settings_auto_update_check">Automatische Update-Prüfung</string>
-    <string name="settings_auto_update_check_desc">Regelmäßig im Hintergrund auf GitHub Releases nach App-Updates suchen</string>
     <string name="settings_check_for_updates">Nach Updates suchen</string>
-    <string name="settings_check_for_updates_desc">Manuell prüfen, ob eine neuere Version verfügbar ist</string>
-    <string name="settings_update_checking">Suche nach Updates…</string>
-    <string name="settings_update_up_to_date">App ist auf dem neuesten Stand (%1$s)</string>
     <string name="settings_update_available_banner">Update verfügbar: %1$s</string>
     <string name="settings_update_available_banner_desc">Eine neue Version ist auf GitHub Releases verfügbar</string>
     <string name="settings_update_now_btn">Aktualisieren</string>
@@ -1302,11 +913,265 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="update_dialog_title">Update verfügbar (%1$s)</string>
     <string name="update_dialog_message">Version %1$s ist auf GitHub Releases verfügbar.\n\nMöchtest du deine Konfiguration sichern, bevor die Download-Seite geöffnet wird?</string>
     <string name="update_dialog_btn_backup_and_open">Sichern &amp; Link öffnen</string>
+    <string name="update_dialog_backup_and_open_desc">Einstellungen in Backup-Datei exportieren und GitHub Releases im Browser öffnen</string>
     <string name="update_dialog_btn_open_directly">Link direkt öffnen</string>
-    <string name="update_dialog_btn_cancel">Abbrechen</string>
+    <string name="update_dialog_open_directly_desc">GitHub Releases-Downloadseite im Browser ohne Backup öffnen</string>
 
-    <!-- Settings Help Modal Entry -->
+    <!-- Settings card description -->
     <string name="help_settings_auto_update_desc">Wenn aktiviert, prüft Megingiard alle 24 Stunden lautlos im Hintergrund auf neue Releases. Wenn ein Update gefunden wird, kannst du deine Einstellungen sichern und die Release-Seite im Standardbrowser auf dem oberen Bildschirm öffnen.</string>
-    <string name="help_settings_check_updates_desc">Führt sofort eine manuelle Suche nach neuen Releases auf GitHub durch.</string>
-</resources>
 
+    <!-- Gamepad Action Buttons -->
+    <string name="gamepad_action_save">Speichern</string>
+    <string name="gamepad_action_check">Prüfen</string>
+    <string name="gamepad_action_checking">Prüfen</string>
+    <string name="gamepad_action_move">Verschieben</string>
+    <string name="gamepad_action_moving">Verschieben</string>
+    <string name="gamepad_action_delete">Löschen</string>
+    <string name="macropad_reorder_empty">Keine Einträge zum Neuanordnen</string>
+    <string name="gamepad_action_copy">Kopieren</string>
+    <string name="gamepad_action_clear">Entfernen</string>
+    <string name="gamepad_action_unlink">Trennen</string>
+    <string name="gamepad_action_enable">Aktivieren</string>
+    <string name="gamepad_action_custom_color">Eigene Farbe</string>
+    <string name="gamepad_action_select">Auswählen</string>
+    <string name="gamepad_slider_fine_adjustment_toast">L2 gedrückt halten für präzise Anpassungen</string>
+    <string name="macropad_picker_visual_keyboard_title">Tastaturtaste auswählen</string>
+    <string name="macropad_picker_keyboard_nav_title">Navigation &amp; Erweitert</string>
+    <string name="macropad_picker_visual_gamepad_title">Gamepad-Taste auswählen</string>
+    <string name="macropad_picker_visual_mouse_title">Mausaktion auswählen</string>
+    <string name="macropad_picker_mirror_title">Mirror-Aktion auswählen</string>
+    <string name="macropad_picker_overlay_title">Overlay-Aktion auswählen</string>
+    <string name="macropad_picker_layout_title">Layout-Aktion auswählen</string>
+    <string name="macropad_mouse_btn_left">Linksklick</string>
+    <string name="macropad_mouse_btn_left_desc">Primäre Maustaste</string>
+    <string name="macropad_mouse_btn_right">Rechtsklick</string>
+    <string name="macropad_mouse_btn_right_desc">Sekundäre Kontext-Taste</string>
+    <string name="macropad_mouse_btn_middle">Mittelklick</string>
+    <string name="macropad_mouse_btn_middle_desc">Mausrad-Taste</string>
+    <string name="macropad_mouse_btn_back">Zurück (Maus 4)</string>
+    <string name="macropad_mouse_btn_back_desc">Rückwärts navigieren</string>
+    <string name="macropad_mouse_btn_forward">Vorwärts (Maus 5)</string>
+    <string name="macropad_mouse_btn_forward_desc">Vorwärts navigieren</string>
+    <string name="macropad_mouse_btn_scroll_desc">Vertikaler Scrollrad-Streifen</string>
+    <string name="macropad_mouse_btn_trackpoint_desc">Analoger Mauszeiger-Knopf</string>
+    <string name="macropad_action_mirror_play_stop_desc">Zweitbildschirm-Stream starten oder stoppen</string>
+    <string name="macropad_action_mirror_freeze_desc">Mirror-Bild einfrieren oder fortsetzen</string>
+    <string name="macropad_action_mirror_viewport_edit_desc">Zoom, Pan und Zuschnitt des Mirrors anpassen</string>
+    <string name="macropad_action_mirror_touch_projection_desc">Berührungen direkt auf das gespiegelte Display projizieren</string>
+    <string name="macropad_action_ambient_peek_desc">Gedrückt halten oder tippen, um den Bildschirm darunter zu zeigen</string>
+    <string name="macropad_action_fullscreen_mouse_desc">Vollbild-Touchpad-Overlay öffnen</string>
+    <string name="macropad_action_fullscreen_keyboard_desc">Vollbild-Tastatur-Overlay öffnen</string>
+    <string name="macropad_action_layout_next_desc">Zum nächsten Layout im Profil wechseln</string>
+    <string name="macropad_action_layout_previous_desc">Zum vorherigen Layout im Profil wechseln</string>
+    <string name="macropad_action_profile_switcher_desc">Profil-Auswahlmenü öffnen</string>
+    <string name="macropad_gamepad_btn_dpad_up">Steuerkreuz Oben</string>
+    <string name="macropad_gamepad_btn_dpad_down">Steuerkreuz Unten</string>
+    <string name="macropad_gamepad_btn_dpad_left">Steuerkreuz Links</string>
+    <string name="macropad_gamepad_btn_dpad_right">Steuerkreuz Rechts</string>
+    <string name="macropad_gamepad_btn_dpad_up_left">Steuerkreuz Oben-Links</string>
+    <string name="macropad_gamepad_btn_dpad_up_right">Steuerkreuz Oben-Rechts</string>
+    <string name="macropad_gamepad_btn_dpad_down_left">Steuerkreuz Unten-Links</string>
+    <string name="macropad_gamepad_btn_dpad_down_right">Steuerkreuz Unten-Rechts</string>
+    <string name="macropad_gamepad_btn_ls_up">Linker Stick Oben</string>
+    <string name="macropad_gamepad_btn_ls_down">Linker Stick Unten</string>
+    <string name="macropad_gamepad_btn_ls_left">Linker Stick Links</string>
+    <string name="macropad_gamepad_btn_ls_right">Linker Stick Rechts</string>
+    <string name="macropad_gamepad_btn_ls_up_left">Linker Stick Oben-Links</string>
+    <string name="macropad_gamepad_btn_ls_up_right">Linker Stick Oben-Rechts</string>
+    <string name="macropad_gamepad_btn_ls_down_left">Linker Stick Unten-Links</string>
+    <string name="macropad_gamepad_btn_ls_down_right">Linker Stick Unten-Rechts</string>
+    <string name="macropad_gamepad_btn_rs_up">Rechter Stick Oben</string>
+    <string name="macropad_gamepad_btn_rs_down">Rechter Stick Unten</string>
+    <string name="macropad_gamepad_btn_rs_left">Rechter Stick Links</string>
+    <string name="macropad_gamepad_btn_rs_right">Rechter Stick Rechts</string>
+    <string name="macropad_gamepad_btn_rs_up_left">Rechter Stick Oben-Links</string>
+    <string name="macropad_gamepad_btn_rs_up_right">Rechter Stick Oben-Rechts</string>
+    <string name="macropad_gamepad_btn_rs_down_left">Rechter Stick Unten-Links</string>
+    <string name="macropad_gamepad_btn_rs_down_right">Rechter Stick Unten-Rechts</string>
+
+    <!-- Gamepad Settings Screen -->
+    <string name="privd_deadzone_summary">Links: %1$d%% • Rechts: %2$d%%</string>
+    <string name="settings_steamgriddb_token_configured">API-Token konfiguriert (%1$s…)</string>
+    <string name="settings_accent_custom_title">Eigene Akzentfarbe</string>
+    <string name="settings_accent_custom_desc">Eigenen Farbton, Sättigung und Helligkeit anpassen</string>
+    <string name="settings_color_hue">Farbton</string>
+    <string name="settings_color_hue_desc">Farbtonwinkel anpassen</string>
+    <string name="settings_color_saturation">Sättigung</string>
+    <string name="settings_color_saturation_desc">Farbintensität anpassen</string>
+    <string name="settings_color_brightness_desc">Helligkeit der Farbe anpassen</string>
+    <string name="settings_color_opacity_desc">Deckkraft der Farbe anpassen</string>
+    <string name="settings_color_save_title">Akzentfarbe speichern</string>
+    <string name="settings_color_save_desc">Diese eigene Akzentfarbe anwenden und speichern</string>
+    <string name="settings_config_import_card_desc">Konfiguration aus einer bestehenden .mgrd-Sicherungsdatei wiederherstellen</string>
+    <string name="settings_update_available_tag">Update verfügbar: %1$s</string>
+    <string name="settings_app_version">Version %1$s</string>
+
+    <!-- MacroPad Editor Screen -->
+    <string name="macropad_editor_active_profile_desc">Aktuell aktives Profil</string>
+    <string name="macropad_editor_edit_profile_title">Profil bearbeiten</string>
+    <string name="macropad_editor_edit_profile_desc">Name, Verknüpfung und Löschung verwalten</string>
+    <string name="macropad_editor_new_profile_desc">Neues Profil mit eigenen Layouts und Makros erstellen</string>
+    <string name="macropad_editor_duplicate_profile_desc">Erstelle eine vollständige Kopie von \'%1$s\' mit allen Layouts und Assets</string>
+    <string name="macropad_editor_reorder_profiles_desc">Reihenfolge der Profile im Auswahldialog ändern</string>
+    <string name="macropad_editor_delete_profile_desc">Löscht \'%1$s\' und alle zugehörigen Layouts dauerhaft</string>
+    <string name="macropad_editor_active_layout_desc">Aktives Layout in \'%1$s\'</string>
+    <string name="macropad_editor_none">Keines</string>
+    <string name="macropad_editor_edit_layout_title">Layout bearbeiten</string>
+    <string name="macropad_editor_edit_layout_desc">Name, Farben, Touchpad und Löschung verwalten</string>
+    <string name="macropad_editor_new_layout_desc">Ein neues Tastenlayout zu diesem Profil hinzufügen</string>
+    <string name="macropad_editor_appearance_title">Layout-Darstellung &amp; Farben</string>
+    <string name="macropad_editor_touchpad_desc">Hintergrund-Touchpad und Touch-Projektionsbereiche konfigurieren</string>
+    <string name="macropad_editor_duplicate_layout_desc">Aktives Layout innerhalb dieses Profils duplizieren</string>
+    <string name="macropad_editor_duplicate_button_desc">Diese Taste im aktiven Layout duplizieren</string>
+    <string name="macropad_editor_copy_layout_desc">Dieses Layout in ein anderes Profil kopieren</string>
+    <string name="macropad_editor_copy_button_to_layout_desc">Diese Taste in ein anderes Layout kopieren</string>
+    <string name="macropad_editor_reorder_layouts_desc">Reihenfolge der Layouts in diesem Profil ändern</string>
+    <string name="macropad_editor_delete_layout_desc">Löscht \'%1$s\' aus diesem Profil</string>
+    <string name="macropad_editor_delete_button_desc">Löscht \'%1$s\' aus diesem Layout</string>
+    <string name="macropad_editor_edit_button_positions">Tastenpositionen bearbeiten</string>
+    <string name="macropad_editor_edit_button_positions_card_desc">Tasten per Touch oder D-Pad präzise bewegen</string>
+    <string name="macropad_editor_move_buttons_info">Bewege Tasten direkt durch Ziehen auf dem unteren Bildschirm oder wähle unten eine Taste, um sie mit dem Steuerkreuz oder linken Stick pixelgenau zu verschieben.</string>
+    <string name="macropad_editor_manage_buttons">Tasten verwalten</string>
+    <string name="macropad_editor_reorder_buttons">Tasten neu anordnen</string>
+    <string name="macropad_editor_reorder_buttons_enabled_desc">Tastenreihenfolge anpassen</string>
+    <string name="macropad_editor_reorder_buttons_disabled_desc">Taste auswählen, um Einstellungen zu bearbeiten</string>
+    <string name="macropad_editor_snap_grid">Raster-Modus</string>
+    <string name="macropad_editor_snap_grid_desc">Ausrichtungsraster auf der Arbeitsfläche anzeigen</string>
+    <string name="macropad_editor_grid_off_label">Aus</string>
+    <string name="macropad_editor_grid_rectangular_label">Rechteckig</string>
+    <string name="macropad_editor_grid_radial_label">Radial</string>
+    <string name="macropad_editor_create_button_desc">Neue interaktive Taste erstellen und konfigurieren</string>
+    <string name="macropad_editor_no_buttons_in_layout">Noch keine Tasten in diesem Layout vorhanden.</string>
+    <string name="macropad_editor_open_timeline_title">Neues Makro erstellen</string>
+    <string name="macropad_editor_open_timeline_desc">Zeitgesteuerte Eingabemakro-Sequenzen erstellen, aufnehmen und bearbeiten</string>
+    <string name="macropad_editor_no_macros_desc">Eingabemakro-Sequenzen erstellen und bearbeiten</string>
+    <string name="macropad_macro_step_count_single">1 Schritt</string>
+    <string name="macropad_macro_step_count_multiple">%1$d Schritte</string>
+
+    <!-- Layout Settings Editor -->
+    <string name="macropad_editor_color_palette_desc">Standard-, Akzent- oder eigene Farbpalette wählen</string>
+    <string name="macropad_editor_color_wheel_desc">Farbrad oder zuletzt verwendete Farbpalette öffnen</string>
+    <string name="macropad_editor_section_visibility_behavior">Sichtbarkeit &amp; Verhalten</string>
+
+    <!-- Background Settings Editor -->
+    <string name="macropad_editor_section_artwork_source">Bildquelle</string>
+    <string name="macropad_editor_bg_steamgriddb_desc">Spielbanner und Poster auf SteamGridDB suchen</string>
+    <string name="macropad_editor_bg_storage_desc">Bild aus dem Gerätespeicher wählen</string>
+    <string name="macropad_editor_remove_bg_image">Hintergrundbild entfernen</string>
+    <string name="macropad_editor_remove_bg_image_desc">Entfernt das Hintergrundbild aus diesem Layout</string>
+
+    <!-- Pad Button Edit Dialog -->
+    <string name="macropad_btn_shape_desc">Geometrie der interaktiven Tastenkappe</string>
+    <string name="macropad_btn_size_desc">Breite und Höhe im Raster</string>
+    <string name="macropad_btn_haptic_desc">Vibrationsfeedback beim Antippen</string>
+    <string name="macropad_btn_haptic_duration_desc">Dauer in Millisekunden</string>
+    <string name="macropad_btn_haptic_amplitude_desc">Stärke des Vibrationsmotors in Prozent</string>
+    <string name="macropad_picker_label_key_desc">Zu sendende Tastaturtaste</string>
+    <string name="macropad_picker_label_mod_desc">Optionaler Zusatztasten-Modifikator</string>
+    <string name="macropad_picker_label_button_desc">Gamepad-Taste zum Drücken</string>
+    <string name="macropad_picker_label_extra_desc">Optionale Combo-Taste</string>
+    <string name="macropad_picker_mouse_button_desc">Zu simulierender Mausklick</string>
+    <string name="macropad_picker_macro_desc">Gespeicherte Makro-Sequenz ausführen</string>
+    <string name="macropad_picker_macro_create_info_title">Makros erstellen</string>
+    <string name="macropad_picker_macro_create_info_desc">Um ein neues Makro zu erstellen, erstelle oder nimm es zuerst im Makro-Menü oder über die Schnellaktionen auf.</string>
+    <string name="macropad_picker_macro_empty_title">Keine Makros verfügbar</string>
+    <string name="macropad_btn_color_layout_default_desc">Standardfarbe des Layouts übernehmen</string>
+
+    <!-- Macro Step Edit Dialog -->
+    <string name="macro_step_action_type_title">Aktionstyp des Schritts</string>
+    <string name="macro_step_action_type_desc">Eingabesignal während der Makroausführung</string>
+    <string name="macro_step_gamepad_button_title">Gamepad-Taste</string>
+    <string name="macro_step_gamepad_button_desc">Ziel-Tastencode oder Trigger des Controllers</string>
+    <string name="macro_step_target_stick_title">Ziel-Stick</string>
+    <string name="macro_step_target_stick_desc">Zwischen linkem und rechtem Analogstick wählen</string>
+    <string name="macro_step_stick_deflection_desc">Neigungswinkel des Sticks in Prozent</string>
+
+    <!-- Dialogs & Overlays -->
+    <string name="macropad_cutout_rename_title">Ausschnitt umbenennen</string>
+    <string name="macropad_cutout_rename_desc">Anzeigenamen dieses Spiegelungsbereichs ändern</string>
+    <string name="macropad_icon_picker_empty_desc">Versuche es mit einem anderen Suchbegriff</string>
+    <string name="steamgriddb_empty_games_desc">Versuche nach einem anderen Spieletitel zu suchen</string>
+    <string name="steamgriddb_empty_images_desc">Keine Bilder für diese Kategorie gefunden</string>
+    <string name="steamgriddb_cd_error_thumbnail">Fehler beim Laden des Vorschaubilds</string>
+    <string name="macro_timeline_list_empty_desc">Schritt hinzufügen oder Eingabesequenzen aufnehmen</string>
+
+    <!-- Gamepad Core Components -->
+    <string name="gamepad_previous">Vorheriges</string>
+    <string name="gamepad_next">Nächstes</string>
+    <string name="gamepad_toggle_on">AN</string>
+    <string name="gamepad_toggle_off">AUS</string>
+    <string name="gamepad_color_option">Farboption %1$d</string>
+    <string name="gamepad_color_selected">Ausgewählt</string>
+    <string name="gamepad_search_placeholder">Suchen</string>
+    <string name="gamepad_search_clear">Suche löschen</string>
+    <string name="gamepad_category_all">Alle</string>
+    <string name="gamepad_prompt_select">Auswählen</string>
+    <string name="quick_menu_layouts_count">%1$d Layouts</string>
+    <string name="quick_menu_buttons_count">%1$d Buttons</string>
+
+    <string name="macropad_editor_create_profile_title">Profil erstellen</string>
+    <string name="macropad_editor_create_profile_desc">Dieses neue MacroPad-Profil speichern und aktivieren</string>
+    <string name="macropad_editor_create_layout_title">Layout erstellen</string>
+    <string name="macropad_editor_create_layout_desc">Dieses neue Tastenlayout zum aktiven Profil hinzufügen</string>
+    <string name="macropad_editor_save_layout_title">Layout speichern</string>
+    <string name="macropad_editor_profile_name_desc">Name dieses Profils in der Auswahlliste</string>
+    <string name="macropad_editor_edit_profile_name_desc">Dieses Profil umbenennen</string>
+    <string name="macropad_editor_layout_name_desc">Name dieses Tastenlayouts</string>
+    <string name="macropad_editor_button_label_desc">Auf der Taste angezeigter Text</string>
+    <string name="macropad_editor_button_label_placeholder">z.B. A, Speichern, Turbo</string>
+    <string name="profile_settings_name_placeholder">z. B. Name des Spiels / der App</string>
+    <string name="quick_menu_layout_name_placeholder">z.B. Standard, Kampf, Menü</string>
+    <string name="profile_settings_search_apps_desc">Installierte Apps nach Name oder Paket filtern</string>
+    <string name="profile_settings_search_apps_placeholder">Apps suchen</string>
+    <string name="macropad_icon_picker_search_placeholder">Symbole suchen</string>
+    <string name="macropad_icon_picker_filled_desc">Zwischen ausgefüllten und Umriss-Symbolen umschalten</string>
+    <string name="gamepad_action_create">Erstellen</string>
+    <string name="gamepad_action_confirm">Bestätigen</string>
+    <string name="macropad_profile_delete_confirm_title">\"%1$s\" wirklich löschen?</string>
+    <string name="macropad_layout_delete_confirm_title">\"%1$s\" wirklich löschen?</string>
+    <string name="macropad_button_delete_confirm_title">Diesen Button wirklich löschen?</string>
+    <string name="macropad_macro_delete_confirm_title">\"%1$s\" wirklich löschen?</string>
+    <string name="macropad_editor_bg_delete_confirm_title">Hintergrundbild entfernen?</string>
+    <string name="macropad_profile_unlink_app">App/Spiel-Verknüpfung aufheben</string>
+    <string name="macropad_profile_unlink_app_confirm_title">Verknüpfung von \"%1$s\" wirklich aufheben?</string>
+    <string name="macropad_profile_unlink_app_desc">Verknüpfung mit %1$s aufheben</string>
+    <string name="macropad_profile_no_app_linked">Keine App oder Spiel mit diesem Profil verknüpft</string>
+    <string name="macropad_profile_unlinked_toast">App-Verknüpfung von \"%1$s\" aufgehoben</string>
+    <string name="macropad_profile_deleted_toast">Profil \"%1$s\" gelöscht</string>
+    <string name="macropad_profile_duplicated_toast">Profil \"%1$s\" dupliziert und ausgewählt</string>
+    <string name="macropad_layout_deleted_toast">Layout \"%1$s\" gelöscht</string>
+    <string name="macropad_layout_cannot_delete_last_toast">Das letzte Layout kann nicht gelöscht werden</string>
+    <string name="macropad_layout_duplicated_toast">Layout \"%1$s\" dupliziert und ausgewählt</string>
+    <string name="macropad_layout_copied_toast">Layout erfolgreich kopiert!</string>
+    <string name="macropad_button_deleted_toast">Button gelöscht</string>
+    <string name="macropad_macro_deleted_toast">Makro \"%1$s\" gelöscht</string>
+    <string name="macropad_editor_save_button_colors_title">Tastenfarben-Standardwerte speichern</string>
+    <string name="macropad_editor_save_button_colors_desc">Aktualisierte Tastenfarben-Standardwerte übernehmen und speichern</string>
+    <string name="macropad_editor_create_button_title">Button erstellen</string>
+    <string name="macropad_editor_save_button_title">Button speichern</string>
+    <string name="macropad_editor_save_button_desc">Änderungen an diesem Button anwenden und speichern</string>
+    <string name="macropad_editor_save_macro_title">Makro speichern</string>
+    <string name="macropad_editor_save_macro_desc">Änderungen und Makrosequenz speichern</string>
+    <string name="macropad_editor_save_step_title">Schritt speichern</string>
+    <string name="macropad_editor_save_step_desc">Änderungen an diesem Makroschritt speichern</string>
+    <string name="macropad_editor_create_step_title">Schritt hinzufügen</string>
+    <string name="macropad_editor_create_step_desc">Neuen Schritt zur Makrosequenz hinzufügen</string>
+    <string name="macropad_editor_save_layout_desc">Layout-Erscheinungsbild speichern</string>
+    <string name="macropad_editor_new_layout_default_name">Neues Layout</string>
+    <string name="macropad_editor_new_button_default_label">Neuer Button</string>
+    <string name="macropad_editor_button_preview_text">Text</string>
+    <string name="gamepad_action_save_and_exit">Speichern &amp; Beenden</string>
+    <string name="gamepad_action_save_and_exit_desc">Änderungen anwenden und speichern</string>
+    <string name="gamepad_action_discard_and_exit">Verwerfen &amp; Beenden</string>
+    <string name="gamepad_action_discard_and_exit_desc">Änderungen verwerfen und beenden</string>
+    <string name="gamepad_action_discard">Verwerfen</string>
+    <string name="macropad_editor_color_preview_title">Stilvorschau</string>
+    <string name="macropad_editor_color_preview_desc">Gespeichertes Aussehen im Vergleich zu den aktuellen Änderungen</string>
+    <string name="macropad_editor_color_wheel_undo_title">Farbänderungen rückgängig machen</string>
+    <string name="macropad_editor_color_wheel_undo_desc">Auf die ursprüngliche Farbe zurücksetzen (%1$s)</string>
+    <string name="macropad_editor_color_wheel_undo_desc_no_changes">Farbe wurde nicht verändert</string>
+    <!-- Quick Actions -->
+    <string name="quick_actions_title">Schnellaktionen</string>
+    <string name="quick_action_edit_buttons">Tastenpositionen anordnen</string>
+    <string name="quick_action_edit_buttons_desc">MacroPad-Tasten visuell verschieben und anpassen</string>
+</resources>

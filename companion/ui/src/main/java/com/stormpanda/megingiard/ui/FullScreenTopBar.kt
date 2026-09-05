@@ -8,12 +8,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.R
 
 private val FS_TOP_BAR_HEIGHT = 56.dp
@@ -22,7 +24,7 @@ private val FS_TOP_BAR_H_PADDING = 8.dp
 /**
  * Standard top bar for full-screen overlay dialogs (ButtonEdit, StepEdit, IconPicker, …).
  *
- * Layout: [Cancel] — [title (centered, weight=1)] — [trailingContent]
+ * Layout: [Cancel] — [title (centered, weight=1)] — [toast] — [trailingContent]
  *
  * The bar is always [FS_TOP_BAR_HEIGHT] tall with a [LocalAppColors.current.surface] background.
  * Callers provide the [title] string (pre-computed) and a [trailingContent] slot for
@@ -33,9 +35,11 @@ internal fun FullScreenTopBar(
     title: String,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
-    trailingContent: @Composable () -> Unit,
+    trailingContent: @Composable () -> Unit = {},
 ) {
     val colors = LocalAppColors.current
+    val activeToast by DialogToastManager.currentToast.collectAsStateWithLifecycle()
+
     Row(
         modifier =
             modifier
@@ -57,6 +61,10 @@ internal fun FullScreenTopBar(
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.weight(1f),
             textAlign = TextAlign.Center,
+        )
+        DialogToastPill(
+            toast = activeToast,
+            modifier = Modifier.padding(horizontal = FS_TOP_BAR_H_PADDING),
         )
         trailingContent()
     }

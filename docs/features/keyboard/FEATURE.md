@@ -1,9 +1,9 @@
 # Feature: Virtual Keyboard
 
 > **Related source:**
-> - `:app` module: `companion/ui/src/main/java/com/stormpanda/megingiard/keyboard/` (UI Composables), `companion/ui/src/main/java/com/stormpanda/megingiard/viewmodel/KeyboardViewModel.kt` (ViewModel)
-> - `:domain` module: `companion/domain/src/main/java/com/stormpanda/megingiard/keyboard/` (Key repeat + state logic + facades), `companion/domain/src/main/java/com/stormpanda/megingiard/settings/KeyboardSettings.kt` (Settings facade), `companion/domain/src/main/java/com/stormpanda/megingiard/input/` (Shared mouse injection infrastructure)
-> - `:core` module: `shared/core/src/main/kotlin/com/stormpanda/megingiard/keyboard/` (Layout structures + keycode constants)
+> - `:companion:ui` module: `companion/ui/src/main/java/com/stormpanda/megingiard/keyboard/` (UI Composables), `companion/ui/src/main/java/com/stormpanda/megingiard/viewmodel/KeyboardViewModel.kt` (ViewModel)
+> - `:companion:domain` module: `companion/domain/src/main/java/com/stormpanda/megingiard/keyboard/` (Key repeat + state logic + facades), `companion/domain/src/main/java/com/stormpanda/megingiard/settings/KeyboardSettings.kt` (Settings facade), `companion/domain/src/main/java/com/stormpanda/megingiard/input/` (Shared mouse injection infrastructure)
+> - `:shared:core` module: `shared/core/src/main/kotlin/com/stormpanda/megingiard/keyboard/` (Layout structures + keycode constants)
 > **Native source:** `companion/ui/src/main/cpp/keyinjector.c` (Virtual keyboard), `companion/ui/src/main/cpp/mouseinjector.c` (Virtual mouse/trackpoint)
 > **Binary assets:** `companion/ui/src/main/assets/keyinjector_arm64`, `companion/ui/src/main/assets/mouseinjector_arm64`
 > **Build instructions:** [BUILD_NATIVE.md](../../BUILD_NATIVE.md)
@@ -88,8 +88,7 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
 
 ### FR-K9: Keyboard Settings Toolbar Button & Screen
 
-- The bottom toolbar MUST render a Settings Cog button on the right-hand side.
-- Tapping this button MUST open a fullscreen Keyboard Settings screen overlay.
+- Tapping this button MUST open a Keyboard Settings screen overlay on the primary (top) display while the virtual keyboard remains active, visible, and fully interactive on the secondary (bottom) display without closing or tearing down input injection.
 - The settings screen MUST include a dropdown to select between **QWERTZ**, **QWERTY**, and **AZERTY** regional layouts.
 - Switching layout via this dropdown MUST only impact the alphabetic (`LETTERS` / ABC) keyboard layout, leaving symbol and numeric layouts unaffected.
 
@@ -150,9 +149,9 @@ The pre-built `keyinjector_arm64` binary is bundled in `companion/ui/src/main/as
 
 The binary signals readiness by writing `"R\n"` to stdout. `start()` blocks waiting for this signal with a 5-second timeout; startup fails if the signal does not arrive or the process exits prematurely.
 
-The binary opens `/dev/uinput` using the standard `uinput` protocol (register a virtual keyboard device, then inject `EV_KEY` events). Injector start and stop lifecycle is centrally managed by `InjectorLifecycleManager`, which evaluates app UI state (`AppStateManager.uiMode`), active MacroPad layout keyboard controls, and blocking modals to determine when `KeyInjector` should be active:
+The binary opens `/dev/uinput` using the standard `uinput` protocol (register a virtual keyboard device, then inject `EV_KEY` events). Injector start and stop lifecycle is centrally managed by `InjectorLifecycleManager`, which evaluates app UI state (`AppStateManager.companionSurfaceMode`), active MacroPad layout keyboard controls, and blocking modals to determine when `KeyInjector` should be active:
 
-* **ON**: When `UiMode.FULLSCREEN_KEYBOARD` is active, or when an active MacroPad layout has keyboard buttons and no blocking editor/modal is open.
+* **ON**: When `CompanionSurfaceMode.KEYBOARD` is active, or when an active MacroPad layout has keyboard buttons and no blocking editor/modal is open.
 * **OFF**: When no keyboard controls are needed, or when any editor modal, settings screen, quick menu, or prompt is active (ensuring Android's standard soft IME operates without hardware keyboard conflicts).
 
 ```kotlin
@@ -267,31 +266,31 @@ When a full-screen UI overlay is visible:
 
 | Module / Path | File | Responsibility |
 | --- | --- | --- |
-| **`:app`** | [KeyboardScreen.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/keyboard/KeyboardScreen.kt) | Compose UI: layout rendering, gesture handling, and trackpoint overlay integration |
-| **`:app`** | [KeyboardSettingsOverlay.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/keyboard/KeyboardSettingsOverlay.kt) | Fullscreen Settings Composable: dropdown select for regional keyboard layouts |
-| **`:app`** | [KeyboardKeyCap.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/keyboard/KeyboardKeyCap.kt) | KeyCap Composable: rendering, highlighting, and bounds reporting |
-| **`:app`** | [KeyboardMouseOverlay.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/keyboard/KeyboardMouseOverlay.kt) | Mouse Overlay: renders columns for mouse buttons (LMB/MMB/RMB/M4/M5) and scroll wheel |
-| **`:app`** | [KeyboardViewModel.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/viewmodel/KeyboardViewModel.kt) | VM coordinating keyboard state, repeat controller scope, and injector startup/shutdown |
-| **`:domain`** | [KeyboardState.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/keyboard/KeyboardState.kt) | Modifier key state machine (INACTIVE / STICKY / HELD) per modifier key |
-| **`:domain`** | [KeyRepeatController.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/keyboard/KeyRepeatController.kt) | Coordinated timing: repeat triggers, modifier holds, pointer maps, and trackpoint relative movement |
-| **`:domain`** | [KeyInjector.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/keyboard/KeyInjector.kt) | Public business logic facade for keyboard event injection |
-| **`:domain`** | [ShellKeyInjector.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/keyboard/ShellKeyInjector.kt) | Native binary deployment and `LinkedBlockingQueue` writer thread sending `KD/KU` to stdin |
-| **`:domain`** | [KeyboardSettings.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/settings/KeyboardSettings.kt) | Persistence bridge: synchronizes key, trackpoint, repeat, and overlay position defaults to/from DataStore |
-| **`:domain`** | [MouseInjector.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/input/MouseInjector.kt) | Public business logic facade for mouse clicks and relative pointer movements |
-| **`:domain`** | [ShellMouseInjector.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/input/ShellMouseInjector.kt) | Native relative mouse binary deployment, move coalescing, and writer thread sending `MB/MM/MW` |
-| **`:core`** | [KeyboardLayout.kt](../../../shared/core/src/main/kotlin/com/stormpanda/megingiard/keyboard/KeyboardLayout.kt) | `KeyDef` data class, layouts configurations (QWERTZ/QWERTY/AZERTY), and layout lookup utility |
-| **`:core`** | [KeyAction.kt](../../../shared/core/src/main/kotlin/com/stormpanda/megingiard/keyboard/KeyAction.kt) | Shared keyboard action `DOWN / UP` enum |
-| **`:core`** | [LinuxKeycodes.kt](../../../shared/core/src/main/kotlin/com/stormpanda/megingiard/keyboard/LinuxKeycodes.kt) | Linux `input-event-codes.h` KEY_* code maps (all keys used are <= 125) |
+| **`:companion:ui`** | [KeyboardScreen.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/keyboard/KeyboardScreen.kt) | Compose UI: layout rendering, gesture handling, and trackpoint overlay integration |
+| **`:companion:ui`** | [KeyboardSettingsOverlay.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/keyboard/KeyboardSettingsOverlay.kt) | Fullscreen Settings Composable: dropdown select for regional keyboard layouts |
+| **`:companion:ui`** | [KeyboardKeyCap.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/keyboard/KeyboardKeyCap.kt) | KeyCap Composable: rendering, highlighting, and bounds reporting |
+| **`:companion:ui`** | [KeyboardMouseOverlay.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/keyboard/KeyboardMouseOverlay.kt) | Mouse Overlay: renders columns for mouse buttons (LMB/MMB/RMB/M4/M5) and scroll wheel |
+| **`:companion:ui`** | [KeyboardViewModel.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/viewmodel/KeyboardViewModel.kt) | VM coordinating keyboard state, repeat controller scope, and injector startup/shutdown |
+| **`:companion:domain`** | [KeyboardState.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/keyboard/KeyboardState.kt) | Modifier key state machine (INACTIVE / STICKY / HELD) per modifier key |
+| **`:companion:domain`** | [KeyRepeatController.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/keyboard/KeyRepeatController.kt) | Coordinated timing: repeat triggers, modifier holds, pointer maps, and trackpoint relative movement |
+| **`:companion:domain`** | [KeyInjector.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/keyboard/KeyInjector.kt) | Public business logic facade for keyboard event injection |
+| **`:companion:domain`** | [ShellKeyInjector.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/keyboard/ShellKeyInjector.kt) | Native binary deployment and `LinkedBlockingQueue` writer thread sending `KD/KU` to stdin |
+| **`:companion:domain`** | [KeyboardSettings.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/settings/KeyboardSettings.kt) | Persistence bridge: synchronizes key, trackpoint, repeat, and overlay position defaults to/from DataStore |
+| **`:companion:domain`** | [MouseInjector.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/input/MouseInjector.kt) | Public business logic facade for mouse clicks and relative pointer movements |
+| **`:companion:domain`** | [ShellMouseInjector.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/input/ShellMouseInjector.kt) | Native relative mouse binary deployment, move coalescing, and writer thread sending `MB/MM/MW` |
+| **`:shared:core`** | [KeyboardLayout.kt](../../../shared/core/src/main/kotlin/com/stormpanda/megingiard/keyboard/KeyboardLayout.kt) | `KeyDef` data class, layouts configurations (QWERTZ/QWERTY/AZERTY), and layout lookup utility |
+| **`:shared:core`** | [KeyAction.kt](../../../shared/core/src/main/kotlin/com/stormpanda/megingiard/keyboard/KeyAction.kt) | Shared keyboard action `DOWN / UP` enum |
+| **`:shared:core`** | [LinuxKeycodes.kt](../../../shared/core/src/main/kotlin/com/stormpanda/megingiard/keyboard/LinuxKeycodes.kt) | Linux `input-event-codes.h` KEY_* code maps (all keys used are <= 125) |
 | Native Source | `companion/ui/src/main/cpp/keyinjector.c` | C source for native keyboard input emulator device setup |
 | Native Source | `companion/ui/src/main/cpp/mouseinjector.c` | C source for native relative mouse emulator device setup |
 | Binary Asset | `companion/ui/src/main/assets/keyinjector_arm64` | Pre-built virtual keyboard injection executable |
 | Binary Asset | `companion/ui/src/main/assets/mouseinjector_arm64` | Pre-built virtual relative-mouse injection executable |
 
-### Secondary Display Rendering (Background Display Mode)
+### Secondary Display Rendering
 
-When screen mirroring is active (`ScreenCaptureManager.isCapturing == true`), `KeyboardScreen` is composed inside `MirrorPresentation` as **Layer 5** — above `BackgroundMacroPadOverlay` — so it appears on the secondary display.
+`KeyboardScreen` is composed directly inside `MainAppScreen` on the secondary display as an animated overlay layer above `MacroPadScreen`.
 
-`MainAppScreen` suppresses the `KeyboardScreen` instance on the primary display whenever screen mirroring is active, ensuring only one instance of `KeyInjector` runs at a time.
+`MainAppScreen` ensures only one instance of `KeyInjector` runs at a time.
 
 Both screens feature a left-aligned visual `QuickKeyboardBarTab` and use a dedicated `SwipeGestureProcessor` covering the left-most 120 dp edge zone (representing the `QuickKeyboardBar`) to swipe and toggle the virtual keyboard overlay. 
 

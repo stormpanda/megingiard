@@ -8,6 +8,7 @@ import com.stormpanda.megingiard.settings.KEY_AUTO_UPDATE_CHECK_ENABLED
 import com.stormpanda.megingiard.settings.KEY_LATEST_RELEASE_NOTES
 import com.stormpanda.megingiard.settings.KEY_LATEST_RELEASE_TAG
 import com.stormpanda.megingiard.settings.KEY_LATEST_RELEASE_URL
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -177,6 +178,9 @@ object UpdateManager {
                     prefs[KEY_LATEST_RELEASE_URL] = releaseInfo.htmlUrl
                     prefs[KEY_LATEST_RELEASE_NOTES] = releaseInfo.releaseNotes
                 }
+            } catch (e: CancellationException) {
+                _isChecking.value = false
+                throw e
             } catch (e: Exception) {
                 AppLog.w(TAG, "Update check failed: ${e.javaClass.simpleName} - ${e.message}")
                 _checkError.value = e.message ?: "Failed to check for updates"

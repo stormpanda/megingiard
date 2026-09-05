@@ -187,14 +187,6 @@ object PrivdManager {
     }
 
     /**
-     * Convenience: are we ready to dispatch events for [feature]?
-     * Caller is responsible for combining this with the per-feature flag
-     * stored in user settings.
-     */
-    @Suppress("UNUSED_PARAMETER")
-    fun isAvailable(feature: PrivdFeature): Boolean = _state.value == PrivdState.RUNNING && PrivdClient.isConnected
-
-    /**
      * Used during the VERIFYING phase of bootstrap. Attempts a raw socket
      * connect without publishing CONNECTING/FAILED state transitions, to avoid
      * UI flicker on each retry. On success, transitions state to RUNNING and

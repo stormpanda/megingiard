@@ -1,10 +1,12 @@
 package com.stormpanda.megingiard
 
+import android.app.Activity
+import android.app.ActivityOptions
 import android.content.Context
+import android.content.Intent
 import android.database.ContentObserver
 import android.os.Handler
 import android.os.Looper
-import android.os.Vibrator
 import android.provider.Settings
 import android.view.Display
 import android.view.accessibility.AccessibilityManager
@@ -38,8 +40,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -47,10 +47,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -61,7 +58,6 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
@@ -69,27 +65,32 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.SwipeGestureProcessor
 import com.stormpanda.megingiard.catalog.DisplayDetector
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.keyboard.KeyboardScreen
-import com.stormpanda.megingiard.keyboard.KeyboardSettingsOverlay
-import com.stormpanda.megingiard.macropad.BackgroundSettingsOverlay
+import com.stormpanda.megingiard.macropad.GamepadRecordingState
 import com.stormpanda.megingiard.macropad.HapticStrength
-import com.stormpanda.megingiard.macropad.MacroPadEditor
 import com.stormpanda.megingiard.macropad.MacroPadScreen
 import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.macropad.PhysicalGamepadRecordingManager
+import com.stormpanda.megingiard.macropad.PhysicalGamepadRecordingSheet
+import com.stormpanda.megingiard.macropad.TouchRecordingManager
+import com.stormpanda.megingiard.macropad.TouchRecordingSheet
+import com.stormpanda.megingiard.macropad.TouchRecordingState
 import com.stormpanda.megingiard.macropad.triggerHapticFeedback
+import com.stormpanda.megingiard.mirror.CutoutLayoutEditor
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.PrivdManager
+import com.stormpanda.megingiard.privd.PrivdSetupWizardDialog
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
-import com.stormpanda.megingiard.settings.GlobalSettingsScreen
+import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
-import com.stormpanda.megingiard.touchpad.TouchpadSettingsOverlay
 import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.IntegrationHomeScreen
@@ -98,6 +99,7 @@ import com.stormpanda.megingiard.ui.PrivdReconnectPromptDialog
 import com.stormpanda.megingiard.ui.QuickMenuBar
 import com.stormpanda.megingiard.ui.QuickMenuBarLayout
 import com.stormpanda.megingiard.ui.QuickMenuTutorialDialog
+import com.stormpanda.megingiard.ui.ScreenshotPreviewOverlay
 import com.stormpanda.megingiard.ui.WelcomeTutorialDialog
 import com.stormpanda.megingiard.ui.onboarding.OnboardingWizardDialog
 import com.stormpanda.megingiard.ui.rememberBezelBrush
@@ -107,45 +109,34 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 private const val TAG = "MainAppScreen"
+private const val MAS_SWIPE_ALPHA = 0.5f
 private val MAS_ARROW_SIZE = 56.dp
 private const val MAS_ARROW_BOUNCE_PX = 24f
 private const val MAS_ARROW_BOUNCE_MS = 800
 private const val MAS_KB_SLIDE_ANIM_DURATION_MS = 300
+private val MAS_HELP_CONTAINER_SHAPE = RoundedCornerShape(12.dp)
+private val MAS_RETRY_BTN_SHAPE = RoundedCornerShape(8.dp)
 
 @Composable
 fun MainAppScreen() {
-    val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
-    val isValidScreen by AppStateManager.isOnValidScreen.collectAsState()
+    val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsStateWithLifecycle()
+    val isValidScreen by AppStateManager.isOnValidScreen.collectAsStateWithLifecycle()
     val colors = LocalAppColors.current
 
-    val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsState()
-    val isExternalClientActive by AppStateManager.isExternalClientActive.collectAsState()
-    val activeProfile by MacroPadState.activeProfile.collectAsState()
-    val companionViewMode by AppStateManager.companionViewMode.collectAsState()
-    val focusedAppPackageName by AppStateManager.focusedAppPackageName.collectAsState()
-    val focusedRomPath by AppStateManager.focusedRomPath.collectAsState()
-    val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsState()
+    val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsStateWithLifecycle()
+    val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsStateWithLifecycle()
+    val fullscreenKeyboardLayout by AppStateManager.fullscreenKeyboardLayout.collectAsStateWithLifecycle()
+    val isEditorActive by AppStateManager.isEditorActive.collectAsStateWithLifecycle()
+    val isBackgroundSettingsActive by AppStateManager.isBackgroundSettingsActive.collectAsStateWithLifecycle()
 
-    val fullscreenKeyboardLayout by AppStateManager.fullscreenKeyboardLayout.collectAsState()
-    val isEditorActive by AppStateManager.isEditorActive.collectAsState()
-    val isBackgroundSettingsActive by AppStateManager.isBackgroundSettingsActive.collectAsState()
-    val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
-    val welcomeTourCompletedVersion by SettingsManager.welcomeTourCompletedVersion.collectAsState()
-    val isGlobalSettingsOpen by AppStateManager.isGlobalSettingsOpen.collectAsState()
-    val isKeyboardSettingsOpen by AppStateManager.isKeyboardSettingsOpen.collectAsState()
-    val isTouchpadSettingsOpen by AppStateManager.isTouchpadSettingsOpen.collectAsState()
-    val isQuickMenuOpen by AppStateManager.isQuickMenuOpen.collectAsState()
-    val isAnyMenuOpen by AppStateManager.isAnyMenuOpen.collectAsState()
-    val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
+    val isAnyMenuOpen by AppStateManager.isAnyMenuOpen.collectAsStateWithLifecycle()
+    val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsStateWithLifecycle()
     val isGesturesEnabled = !isAnyMenuOpen && !isFullscreenKeyboardActive && !isFullscreenMouseActive && !isViewportEditActive
 
-    val showPromptDialog by AppStateManager.isPrivdPromptActive.collectAsState()
-
-    LaunchedEffect(isBackgroundSettingsActive) {
-        if (isBackgroundSettingsActive) {
-            AppStateManager.setPrivdPromptDismissed(true)
-        }
-    }
+    val showPromptDialog by AppStateManager.isPrivdPromptActive.collectAsStateWithLifecycle()
+    val physicalRecordingState by PhysicalGamepadRecordingManager.state.collectAsStateWithLifecycle()
+    val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsStateWithLifecycle()
+    val welcomeTourCompletedVersion by SettingsManager.welcomeTourCompletedVersion.collectAsStateWithLifecycle()
 
     val (
         edgeZonePx,
@@ -161,9 +152,9 @@ fun MainAppScreen() {
     val context = LocalContext.current
     var showExitDialog by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
-    val pendingImportUri by ConfigManager.pendingUri.collectAsState()
-    val pendingImport by ConfigManager.pendingParsedImport.collectAsState()
-    val pendingInAppUri by ConfigManager.pendingInAppUri.collectAsState()
+    val pendingImportUri by ConfigManager.pendingUri.collectAsStateWithLifecycle()
+    val pendingImport by ConfigManager.pendingParsedImport.collectAsStateWithLifecycle()
+    val pendingInAppUri by ConfigManager.pendingInAppUri.collectAsStateWithLifecycle()
     var importError by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(pendingImportUri) {
@@ -191,8 +182,10 @@ fun MainAppScreen() {
                 ConfigManager.setInAppParsedImport(export)
             }.onFailure { err ->
                 AppLog.e(TAG, "In-app import parse failed: ${err.message}")
+                val errorMsg = err.message ?: context.getString(R.string.config_error_unknown)
                 ConfigManager.clearInAppPendingImport()
-                importError = err.message ?: context.getString(R.string.config_error_unknown)
+                ConfigManager.setInAppImportError(errorMsg)
+                importError = errorMsg
             }
     }
 
@@ -201,13 +194,35 @@ fun MainAppScreen() {
             colors = colors,
             onRetry = {
                 val displayId = context.display?.displayId ?: Display.DEFAULT_DISPLAY
-                AppLog.i(TAG, "wrong-screen retry tapped: displayId=$displayId")
+                val secondaryDisplay = DisplayDetector.findSecondaryDisplay(context)
+                AppLog.i(
+                    TAG,
+                    "wrong-screen retry tapped: displayId=$displayId secondaryDisplay=${secondaryDisplay?.displayId}",
+                )
+                if (secondaryDisplay != null && displayId == Display.DEFAULT_DISPLAY) {
+                    val options =
+                        ActivityOptions.makeBasic().apply {
+                            setLaunchDisplayId(secondaryDisplay.displayId)
+                        }
+                    val retryIntent =
+                        Intent(context, MainActivity::class.java).apply {
+                            addFlags(
+                                Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP,
+                            )
+                        }
+                    context.startActivity(retryIntent, options.toBundle())
+                    (context as? Activity)?.finishAndRemoveTask()
+                } else {
+                    val isValid = DisplayDetector.isValidScreen(displayId)
+                    AppStateManager.setOnValidScreen(isValid)
+                }
             },
         )
     } else {
         BackHandler { showExitDialog = true }
 
-        val isWizardActive by OnboardingWizardManager.isWizardActive.collectAsState()
+        val isWizardActive by OnboardingWizardManager.isWizardActive.collectAsStateWithLifecycle()
+        val isPrivdSetupWizardActive by AppStateManager.isPrivdSetupWizardActive.collectAsStateWithLifecycle()
 
         Box(
             modifier =
@@ -220,25 +235,37 @@ fun MainAppScreen() {
                         kbBarMaxX,
                         isGesturesEnabled,
                         isWizardActive,
+                        isPrivdSetupWizardActive,
                     ) {
-                        if (!isGesturesEnabled || isWizardActive) return@pointerInput
+                        if (!isGesturesEnabled || isWizardActive || isPrivdSetupWizardActive) return@pointerInput
+
+                        fun makeProgressHandler(type: SwipeGestureType) =
+                            { delta: Float, isPast: Boolean ->
+                                AppStateManager.updateActiveSwipe(
+                                    SwipeGestureProgress(type, delta, swipeThresholdPx, isPast),
+                                )
+                            }
+
+                        fun handleModalOrActivate(action: () -> Unit) {
+                            AppStateManager.updateActiveSwipe(null)
+                            if (AppStateManager.isAnyModalActive.value) {
+                                AppStateManager.closeActiveModal()
+                            } else if (AppStateManager.isQuickMenuOpen.value) {
+                                AppStateManager.closeQuickMenu()
+                            } else {
+                                action()
+                            }
+                        }
+
                         val qmSwipe =
                             SwipeGestureProcessor(
                                 edgeZonePx = edgeZonePx,
                                 swipeThresholdPx = swipeThresholdPx,
                                 overlayAtBottom = overlayAtBottom,
                                 quickMenuBarZoneWidthPx = quickMenuBarZoneWidthPx,
-                                onSwipeProgress = { delta, isPast ->
-                                    AppStateManager.updateActiveSwipe(
-                                        SwipeGestureProgress(SwipeGestureType.MENU, delta, swipeThresholdPx, isPast),
-                                    )
-                                },
-                                onSwipeCancel = {
-                                    AppStateManager.updateActiveSwipe(null)
-                                },
-                                onHapticTick = {
-                                    triggerHapticFeedback(context, HapticStrength.LIGHT)
-                                },
+                                onSwipeProgress = makeProgressHandler(SwipeGestureType.MENU),
+                                onSwipeCancel = { AppStateManager.updateActiveSwipe(null) },
+                                onHapticTick = { triggerHapticFeedback(context, HapticStrength.LIGHT) },
                                 onEdgeSwipe = {
                                     AppStateManager.updateActiveSwipe(null)
                                     AppStateManager.handleEdgeSwipe()
@@ -250,27 +277,10 @@ fun MainAppScreen() {
                                 swipeThresholdPx = swipeThresholdPx,
                                 overlayAtBottom = overlayAtBottom,
                                 customZoneCheck = { x, _ -> x >= kbBarMinX && x <= kbBarMaxX },
-                                onSwipeProgress = { delta, isPast ->
-                                    AppStateManager.updateActiveSwipe(
-                                        SwipeGestureProgress(SwipeGestureType.KEYBOARD, delta, swipeThresholdPx, isPast),
-                                    )
-                                },
-                                onSwipeCancel = {
-                                    AppStateManager.updateActiveSwipe(null)
-                                },
-                                onHapticTick = {
-                                    triggerHapticFeedback(context, HapticStrength.LIGHT)
-                                },
-                                onEdgeSwipe = {
-                                    AppStateManager.updateActiveSwipe(null)
-                                    if (AppStateManager.isAnyModalActive.value) {
-                                        AppStateManager.closeActiveModal()
-                                    } else if (AppStateManager.isQuickMenuOpen.value) {
-                                        AppStateManager.closeQuickMenu()
-                                    } else {
-                                        AppStateManager.setFullscreenKeyboardActive(true)
-                                    }
-                                },
+                                onSwipeProgress = makeProgressHandler(SwipeGestureType.KEYBOARD),
+                                onSwipeCancel = { AppStateManager.updateActiveSwipe(null) },
+                                onHapticTick = { triggerHapticFeedback(context, HapticStrength.LIGHT) },
+                                onEdgeSwipe = { handleModalOrActivate { AppStateManager.setFullscreenKeyboardActive(true) } },
                             )
                         val tpSwipe =
                             SwipeGestureProcessor(
@@ -278,35 +288,15 @@ fun MainAppScreen() {
                                 swipeThresholdPx = swipeThresholdPx,
                                 overlayAtBottom = overlayAtBottom,
                                 customZoneCheck = { x, width ->
-                                    val tpBarWidth = tpBarWidthPx
-                                    val tpBarEndPadding = tpBarEndPaddingPx
-                                    val tpBarZoneWidth = tpBarZoneWidthPx
-                                    val tpBarCenter = width - tpBarEndPadding - (tpBarWidth / 2f)
-                                    val tpBarMinX = tpBarCenter - (tpBarZoneWidth / 2f)
-                                    val tpBarMaxX = tpBarCenter + (tpBarZoneWidth / 2f)
+                                    val tpBarCenter = width - tpBarEndPaddingPx - (tpBarWidthPx / 2f)
+                                    val tpBarMinX = tpBarCenter - (tpBarZoneWidthPx / 2f)
+                                    val tpBarMaxX = tpBarCenter + (tpBarZoneWidthPx / 2f)
                                     x >= tpBarMinX && x <= tpBarMaxX
                                 },
-                                onSwipeProgress = { delta, isPast ->
-                                    AppStateManager.updateActiveSwipe(
-                                        SwipeGestureProgress(SwipeGestureType.TOUCHPAD, delta, swipeThresholdPx, isPast),
-                                    )
-                                },
-                                onSwipeCancel = {
-                                    AppStateManager.updateActiveSwipe(null)
-                                },
-                                onHapticTick = {
-                                    triggerHapticFeedback(context, HapticStrength.LIGHT)
-                                },
-                                onEdgeSwipe = {
-                                    AppStateManager.updateActiveSwipe(null)
-                                    if (AppStateManager.isAnyModalActive.value) {
-                                        AppStateManager.closeActiveModal()
-                                    } else if (AppStateManager.isQuickMenuOpen.value) {
-                                        AppStateManager.closeQuickMenu()
-                                    } else {
-                                        AppStateManager.setFullscreenMouseActive(true)
-                                    }
-                                },
+                                onSwipeProgress = makeProgressHandler(SwipeGestureType.TOUCHPAD),
+                                onSwipeCancel = { AppStateManager.updateActiveSwipe(null) },
+                                onHapticTick = { triggerHapticFeedback(context, HapticStrength.LIGHT) },
+                                onEdgeSwipe = { handleModalOrActivate { AppStateManager.setFullscreenMouseActive(true) } },
                             )
                         awaitPointerEventScope {
                             while (true) {
@@ -367,45 +357,51 @@ fun MainAppScreen() {
                         }
                     },
         ) {
-            val showIntegrationHome by AppStateManager.showIntegrationHome.collectAsState()
+            val showIntegrationHome by AppStateManager.showIntegrationHome.collectAsStateWithLifecycle()
 
-            if (showIntegrationHome) {
+            if (shouldShowCompanionHub(
+                    showIntegrationHome = showIntegrationHome,
+                    isEditorActive = isEditorActive,
+                    isViewportEditActive = isViewportEditActive,
+                    isBackgroundSettingsActive = isBackgroundSettingsActive,
+                )
+            ) {
                 IntegrationHomeScreen()
             } else {
                 MacroPadScreen()
             }
 
-            // Fullscreen modal overlays — rendered above MacroPad but below QuickMenuBar.
-            // Suppressed when ambient mode is active: the overlays are rendered on the
-            // secondary display inside MirrorPresentation instead.
-            AnimatedVisibility(
-                visible = isFullscreenMouseActive && !isCapturing,
-                enter =
+            val recordingRequested by TouchRecordingManager.recordingRequested.collectAsStateWithLifecycle()
+            val touchRecordingState by TouchRecordingManager.state.collectAsStateWithLifecycle()
+
+            val modalEnter =
+                remember(overlayAtBottom) {
                     slideInVertically(
                         animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS),
                         initialOffsetY = { if (overlayAtBottom) it else -it },
-                    ) + fadeIn(animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS)),
-                exit =
+                    ) + fadeIn(animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS))
+                }
+            val modalExit =
+                remember {
                     slideOutVertically(
                         animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS),
                         targetOffsetY = { it },
-                    ) + fadeOut(animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS)),
+                    ) + fadeOut(animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS))
+                }
+
+            // Fullscreen modal overlays — rendered above MacroPad but below QuickMenuBar.
+            AnimatedVisibility(
+                visible = isFullscreenMouseActive,
+                enter = modalEnter,
+                exit = modalExit,
                 modifier = Modifier.fillMaxSize(),
             ) {
                 FullscreenMouseOverlay()
             }
             AnimatedVisibility(
-                visible = isFullscreenKeyboardActive && !isCapturing,
-                enter =
-                    slideInVertically(
-                        animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS),
-                        initialOffsetY = { if (overlayAtBottom) it else -it },
-                    ) + fadeIn(animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS)),
-                exit =
-                    slideOutVertically(
-                        animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS),
-                        targetOffsetY = { it },
-                    ) + fadeOut(animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS)),
+                visible = isFullscreenKeyboardActive,
+                enter = modalEnter,
+                exit = modalExit,
                 modifier = Modifier.fillMaxSize(),
             ) {
                 KeyboardScreen(
@@ -413,74 +409,56 @@ fun MainAppScreen() {
                     forcedLayout = fullscreenKeyboardLayout,
                 )
             }
-            AnimatedVisibility(
-                visible = isEditorActive,
-                enter = slideInVertically { it } + fadeIn(),
-                exit = slideOutVertically { it } + fadeOut(),
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                MacroPadEditor(
-                    onDone = { AppStateManager.setEditorActive(false) },
-                )
+
+            if (isViewportEditActive) {
+                CutoutLayoutEditor()
             }
-            AnimatedVisibility(
-                visible = isBackgroundSettingsActive,
-                enter = slideInVertically { it } + fadeIn(),
-                exit = slideOutVertically { it } + fadeOut(),
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                BackgroundSettingsOverlay(
-                    onDone = { AppStateManager.setBackgroundSettingsActive(false) },
+
+            if (recordingRequested && touchRecordingState is TouchRecordingState.Recording) {
+                TouchRecordingSheet(
+                    state = touchRecordingState,
+                    onStop = {
+                        TouchRecordingManager.finishRecording()
+                        AppStateManager.resumeSuspended()
+                    },
+                    onCancel = {
+                        TouchRecordingManager.cancelRecording()
+                        AppStateManager.resumeSuspended()
+                    },
                 )
             }
 
-            // Quick Menu Bar + Quick Menu overlay — hidden while editor or ambient settings
-            // are open because those modals render their own full-screen chrome.
-            // Also hidden when fullscreen keyboard is active.
-            if (!isEditorActive && !isBackgroundSettingsActive && !isFullscreenKeyboardActive && !isFullscreenMouseActive) {
+            if (physicalRecordingState is GamepadRecordingState.Recording) {
+                PhysicalGamepadRecordingSheet(
+                    state = physicalRecordingState,
+                    swapFaceButtons = swapFaceButtons,
+                    onStop = {
+                        PhysicalGamepadRecordingManager.finishRecording()
+                        AppStateManager.resumeSuspended()
+                    },
+                    onCancel = {
+                        PhysicalGamepadRecordingManager.cancelRecording()
+                        AppStateManager.resumeSuspended()
+                    },
+                )
+            }
+
+            // Quick Menu Bar + Quick Menu overlay — rendered on secondary display,
+            // suppressed only when fullscreen keyboard/mouse is active.
+            if (!isFullscreenKeyboardActive && !isFullscreenMouseActive) {
                 QuickMenuBar()
             }
 
-            AnimatedVisibility(
-                visible = isGlobalSettingsOpen,
-                enter = slideInVertically { it } + fadeIn(),
-                exit = slideOutVertically { it } + fadeOut(),
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                GlobalSettingsScreen(
-                    onBack = { AppStateManager.setGlobalSettingsOpen(false) },
-                )
-            }
-
-            AnimatedVisibility(
-                visible = isKeyboardSettingsOpen,
-                enter = slideInVertically { it } + fadeIn(),
-                exit = slideOutVertically { it } + fadeOut(),
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                KeyboardSettingsOverlay(
-                    onBack = { AppStateManager.setKeyboardSettingsOpen(false) },
-                )
-            }
-            AnimatedVisibility(
-                visible = isTouchpadSettingsOpen,
-                enter = slideInVertically { it } + fadeIn(),
-                exit = slideOutVertically { it } + fadeOut(),
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                TouchpadSettingsOverlay(
-                    onBack = { AppStateManager.setTouchpadSettingsOpen(false) },
-                )
-            }
+            ScreenshotPreviewOverlay(modifier = Modifier.align(Alignment.Center))
         }
 
         pendingImport?.let { export ->
             IncomingImportDialog(
                 export = export,
                 onConfirm = {
+                    val pendingImages = ConfigManager.getPendingImages()
                     coroutineScope.launch {
-                        ConfigManager.applyImport(context, export)
-                        ConfigManager.clearPendingImport()
+                        ConfigManager.applyImport(context, export, pendingImages)
                     }
                 },
                 onDismiss = { ConfigManager.clearPendingImport() },
@@ -498,9 +476,8 @@ fun MainAppScreen() {
             val contentObserver =
                 object : ContentObserver(Handler(Looper.getMainLooper())) {
                     override fun onChange(selfChange: Boolean) {
-                        val active = MegingiardAccessibilityService.isEnabled(context)
-                        AppLog.d(TAG, "ContentObserver: ENABLED_ACCESSIBILITY_SERVICES changed, active=$active")
-                        AppStateManager.setAccessibilityActive(active)
+                        AppLog.d(TAG, "ContentObserver: ENABLED_ACCESSIBILITY_SERVICES changed")
+                        syncAccessibilityState(context)
                     }
                 }
 
@@ -508,18 +485,13 @@ fun MainAppScreen() {
             context.contentResolver.registerContentObserver(uri, false, contentObserver)
 
             val am = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
-            val listener =
-                AccessibilityManager.AccessibilityStateChangeListener { _ ->
-                    val active = MegingiardAccessibilityService.isEnabled(context)
-                    AppStateManager.setAccessibilityActive(active)
-                }
+            val listener = AccessibilityManager.AccessibilityStateChangeListener { syncAccessibilityState(context) }
             am?.addAccessibilityStateChangeListener(listener)
 
             val observer =
                 LifecycleEventObserver { _, event ->
                     if (event == Lifecycle.Event.ON_RESUME) {
-                        val active = MegingiardAccessibilityService.isEnabled(context)
-                        AppStateManager.setAccessibilityActive(active)
+                        syncAccessibilityState(context)
                     }
                 }
             lifecycleOwner.lifecycle.addObserver(observer)
@@ -536,8 +508,7 @@ fun MainAppScreen() {
                 overlayAtBottom = overlayAtBottom,
                 onDismiss = {
                     OnboardingWizardManager.finishWizard()
-                    val active = MegingiardAccessibilityService.isEnabled(context)
-                    AppStateManager.setAccessibilityActive(active)
+                    syncAccessibilityState(context)
                     AppStateManager.resetPrivdPromptState()
                 },
             )
@@ -546,14 +517,20 @@ fun MainAppScreen() {
         if (showPromptDialog && !isWizardActive) {
             PrivdReconnectPromptDialog(
                 onSkip = {
-                    val active = MegingiardAccessibilityService.isEnabled(context)
-                    AppStateManager.setAccessibilityActive(active)
+                    syncAccessibilityState(context)
                     AppStateManager.setPrivdPromptDismissed(true)
                 },
                 onDone = {
-                    val active = MegingiardAccessibilityService.isEnabled(context)
-                    AppStateManager.setAccessibilityActive(active)
+                    syncAccessibilityState(context)
                     AppStateManager.setPrivdPromptDismissed(true)
+                },
+            )
+        }
+
+        if (isPrivdSetupWizardActive && !isWizardActive) {
+            PrivdSetupWizardDialog(
+                onDismiss = {
+                    AppStateManager.setPrivdSetupWizardOpen(false)
                 },
             )
         }
@@ -661,7 +638,7 @@ private fun WrongScreenOverlay(
             Column(
                 modifier =
                     Modifier
-                        .background(colors.surface, shape = RoundedCornerShape(12.dp))
+                        .background(colors.surface, shape = MAS_HELP_CONTAINER_SHAPE)
                         .padding(20.dp)
                         .fillMaxWidth(0.9f),
             ) {
@@ -694,7 +671,7 @@ private fun WrongScreenOverlay(
 
             TextButton(
                 onClick = onRetry,
-                modifier = Modifier.background(colors.accent.copy(alpha = 0.1f), shape = RoundedCornerShape(8.dp)),
+                modifier = Modifier.background(colors.accent.copy(alpha = 0.1f), shape = MAS_RETRY_BTN_SHAPE),
             ) {
                 Text(
                     text = stringResource(R.string.wrong_screen_retry),
@@ -783,4 +760,20 @@ private fun IncomingImportDialog(
             }
         },
     )
+}
+
+/**
+ * Evaluates whether the Companion Home Hub (`IntegrationHomeScreen`) should be displayed
+ * as the base screen layer, or whether `MacroPadScreen` should take precedence (such as when
+ * an editor, screen mirror cutout arrangement, or background editor is active).
+ */
+internal fun shouldShowCompanionHub(
+    showIntegrationHome: Boolean,
+    isEditorActive: Boolean,
+    isViewportEditActive: Boolean,
+    isBackgroundSettingsActive: Boolean,
+): Boolean = showIntegrationHome && !isEditorActive && !isViewportEditActive && !isBackgroundSettingsActive
+
+private fun syncAccessibilityState(context: Context) {
+    AppStateManager.setAccessibilityActive(MegingiardAccessibilityService.isEnabled(context))
 }

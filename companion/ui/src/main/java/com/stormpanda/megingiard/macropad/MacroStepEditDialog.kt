@@ -1,129 +1,105 @@
 package com.stormpanda.megingiard.macropad
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material.icons.Icons
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.NearMe
+import androidx.compose.material.icons.rounded.OpenWith
+import androidx.compose.material.icons.rounded.Save
+import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material.icons.rounded.SportsEsports
+import androidx.compose.material.icons.rounded.TouchApp
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.MacroPadSettings
-import com.stormpanda.megingiard.ui.AppDropdown
-import com.stormpanda.megingiard.ui.AppSelectableChip
-import com.stormpanda.megingiard.ui.FullScreenTopBar
+import com.stormpanda.megingiard.ui.BumperDirection
+import com.stormpanda.megingiard.ui.GamepadActionCard
+import com.stormpanda.megingiard.ui.GamepadCardRow
+import com.stormpanda.megingiard.ui.GamepadChoiceCard
+import com.stormpanda.megingiard.ui.GamepadFocusCard
+import com.stormpanda.megingiard.ui.GamepadSaveExitActionRow
+import com.stormpanda.megingiard.ui.GamepadSectionHeader
+import com.stormpanda.megingiard.ui.GamepadSliderCard
+import com.stormpanda.megingiard.ui.GamepadTwoStepConfirmCard
 import com.stormpanda.megingiard.ui.LocalAppColors
-import com.stormpanda.megingiard.ui.blockPointerEvents
+import com.stormpanda.megingiard.ui.cycle
+import com.stormpanda.megingiard.ui.firstDeckItem
+import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 private const val TAG = "MacroStepEditDialog"
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Constants
-// ─────────────────────────────────────────────────────────────────────────────
-
-private const val MSD_GRID_CELL_SIZE = 44
-private const val MSD_GRID_SPACING = 4
 private const val MSD_DEFAULT_DURATION_MS = 100L
-private const val MSD_TIMING_BASE_START_MAX_MS = 10_000
-private const val MSD_TIMING_BASE_DURATION_MAX_MS = 1_000
-private const val MSD_TIMING_SCALE_STEP_MS = 1_000
-private const val MSD_TIMING_SLIDER_INCREMENT_MS = 100
-private const val MSD_TIMING_DELTA_MINUS_HUNDRED_MS = -100
-private const val MSD_TIMING_DELTA_MINUS_TEN_MS = -10
-private const val MSD_TIMING_DELTA_MINUS_ONE_MS = -1
-private const val MSD_TIMING_DELTA_PLUS_ONE_MS = 1
-private const val MSD_TIMING_DELTA_PLUS_TEN_MS = 10
-private const val MSD_TIMING_DELTA_PLUS_HUNDRED_MS = 100
-private const val MSD_TIMING_DELTA_PLUS_THOUSAND_MS = 1_000
-private const val MSD_TIMING_DELTA_BUTTON_MIN_WIDTH = 30
-private const val MSD_TIMING_DELTA_BUTTON_MIN_HEIGHT = 28
-private const val MSD_TIMING_DELTA_BUTTON_H_PADDING = 4
-private const val MSD_TIMING_DELTA_BUTTON_V_PADDING = 2
-// ─────────────────────────────────────────────────────────────────────────────
-// Step type (editor-internal)
-// ─────────────────────────────────────────────────────────────────────────────
+private const val MSD_MAX_START_TIME_BUFFER_MS = 5000L
+private const val MSD_MAX_DURATION_MS = 5000L
+private const val MSD_TIME_SLIDER_STEP = 25f
+private const val MSD_PERCENT_SLIDER_STEP = 5f
 
-private enum class StepType { GAMEPAD, JOYSTICK, JOYSTICK_PATH, DPAD, TOUCH, TOUCH_PATH }
+private enum class StepType(
+    val labelResId: Int,
+) {
+    GAMEPAD(R.string.macropad_macro_step_type_gamepad),
+    JOYSTICK(R.string.macropad_macro_step_type_joystick),
+    JOYSTICK_PATH(R.string.macropad_macro_step_type_joystick_path),
+    DPAD(R.string.macropad_macro_step_type_dpad),
+    TOUCH(R.string.macropad_macro_step_type_touch),
+    TOUCH_PATH(R.string.macropad_macro_step_type_touch_path),
+}
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Direction arrow labels keyed by (col, row) in the 3×3 grid.
-// col ∈ {−1, 0, +1} maps to dirX; row ∈ {−1, 0, +1} maps to dirY.
-// Center (0, 0) is intentionally absent — that cell is rendered invisible.
-// ─────────────────────────────────────────────────────────────────────────────
+private data class DirectionOption(
+    val dirX: Int,
+    val dirY: Int,
+    val labelRes: Int,
+)
 
-private val MSD_DIR_LABELS: Map<Pair<Int, Int>, String> =
-    mapOf(
-        Pair(-1, -1) to "↖",
-        Pair(0, -1) to "↑",
-        Pair(1, -1) to "↗",
-        Pair(-1, 0) to "←",
-        Pair(1, 0) to "→",
-        Pair(-1, 1) to "↙",
-        Pair(0, 1) to "↓",
-        Pair(1, 1) to "↘",
+private val MSD_DIRECTIONS =
+    listOf(
+        DirectionOption(0, -1, R.string.macropad_macro_dir_up),
+        DirectionOption(1, -1, R.string.macropad_macro_dir_up_right),
+        DirectionOption(1, 0, R.string.macropad_macro_dir_right),
+        DirectionOption(1, 1, R.string.macropad_macro_dir_down_right),
+        DirectionOption(0, 1, R.string.macropad_macro_dir_down),
+        DirectionOption(-1, 1, R.string.macropad_macro_dir_down_left),
+        DirectionOption(-1, 0, R.string.macropad_macro_dir_left),
+        DirectionOption(-1, -1, R.string.macropad_macro_dir_up_left),
     )
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Dialog
-// ─────────────────────────────────────────────────────────────────────────────
+private fun findDirectionIndex(
+    x: Int,
+    y: Int,
+): Int = MSD_DIRECTIONS.indexOfFirst { it.dirX == x && it.dirY == y }.coerceAtLeast(0)
 
-/**
- * Full-screen editor for creating or editing a single [MacroStep].
- *
- * @param step        Existing step to edit, or `null` to create a new one.
- * @param accentColor Accent color from the calling screen.
- * @param onConfirm   Called with the completed [MacroStep] when the user confirms.
- * @param onDismiss   Called when the user cancels or otherwise requests dismissal
- *                    from this screen's UI.
- */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-internal fun MacroStepEditDialog(
+internal fun MacroStepEditSubPageContent(
+    macroName: String,
     step: MacroStep?,
+    stepIndex: Int?,
     accentColor: Color,
     suggestedStartTimeMs: Long,
     initialShiftMode: ShiftMode,
     onConfirm: (MacroStep, ShiftMode) -> Unit,
-    onDismiss: () -> Unit,
+    onDiscard: () -> Unit,
+    onDuplicate: ((MacroStep) -> Unit)? = null,
+    onDelete: (() -> Unit)? = null,
 ) {
     val colors = LocalAppColors.current
-    val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsState()
+    val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsStateWithLifecycle()
 
-    // ── Derive initial state from the existing step ───────────────────────────
     val initialType =
         when (step) {
             is MacroStep.GamepadButtonTap -> StepType.GAMEPAD
@@ -137,20 +113,15 @@ internal fun MacroStepEditDialog(
 
     val initialStartMs =
         when {
-            step != null -> clampLongToNonNegativeInt(step.startTimeMs)
-            else -> clampLongToNonNegativeInt(suggestedStartTimeMs)
+            step != null -> step.startTimeMs.coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
+            else -> suggestedStartTimeMs.coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
         }
-    val initialDurationMs = clampLongToNonNegativeInt(step?.durationMs ?: MSD_DEFAULT_DURATION_MS)
+    val initialDurationMs = (step?.durationMs ?: MSD_DEFAULT_DURATION_MS).coerceIn(10L, MSD_MAX_DURATION_MS).toInt()
 
     var stepType by remember { mutableStateOf(initialType) }
     var startMs by remember { mutableIntStateOf(initialStartMs) }
     var durMs by remember { mutableIntStateOf(initialDurationMs) }
-    var startMaxMs by remember {
-        mutableIntStateOf(expandScaleToFit(MSD_TIMING_BASE_START_MAX_MS, initialStartMs))
-    }
-    var durationMaxMs by remember {
-        mutableIntStateOf(expandScaleToFit(MSD_TIMING_BASE_DURATION_MAX_MS, initialDurationMs))
-    }
+    var shiftMode by remember { mutableStateOf(initialShiftMode) }
 
     // GamepadButtonTap state
     val initPreset =
@@ -168,27 +139,27 @@ internal fun MacroStepEditDialog(
     val initJoyDir =
         if (step is MacroStep.JoystickMove && (step.x != 0f || step.y != 0f)) {
             val mag = sqrt(step.x * step.x + step.y * step.y)
-            Pair(
+            val dx =
                 when {
-                    step.x / mag > 0.5f -> 1
-                    step.x / mag < -0.5f -> -1
+                    step.x / mag > 0.35f -> 1
+                    step.x / mag < -0.35f -> -1
                     else -> 0
-                },
+                }
+            val dy =
                 when {
-                    step.y / mag > 0.5f -> 1
-                    step.y / mag < -0.5f -> -1
+                    step.y / mag > 0.35f -> 1
+                    step.y / mag < -0.35f -> -1
                     else -> 0
-                },
-            )
+                }
+            findDirectionIndex(dx, dy)
         } else {
-            Pair(1, 0) // default: right
+            0
         }
-    var joyDirX by remember { mutableIntStateOf(initJoyDir.first) }
-    var joyDirY by remember { mutableIntStateOf(initJoyDir.second) }
+    var selectedJoyDirIdx by remember { mutableIntStateOf(initJoyDir) }
     var joyMagnitude by remember {
         mutableFloatStateOf(
             if (step is MacroStep.JoystickMove) {
-                sqrt(step.x * step.x + step.y * step.y).coerceIn(0f, 1f)
+                sqrt(step.x * step.x + step.y * step.y).coerceIn(0.1f, 1f)
             } else {
                 1f
             },
@@ -196,551 +167,385 @@ internal fun MacroStepEditDialog(
     }
 
     // DPadTap state
-    var dpadDirX by remember { mutableIntStateOf(if (step is MacroStep.DPadTap) step.dirX else 0) }
-    var dpadDirY by remember { mutableIntStateOf(if (step is MacroStep.DPadTap) step.dirY else -1) }
-    var shiftMode by remember { mutableStateOf(initialShiftMode) }
-
-    // ── Confirm guard ─────────────────────────────────────────────────────────
-    val isConfirmEnabled =
-        durMs > 0 &&
-            when (stepType) {
-                StepType.GAMEPAD -> true
-                StepType.JOYSTICK -> !(joyDirX == 0 && joyDirY == 0)
-                StepType.JOYSTICK_PATH -> step is MacroStep.JoystickPath
-                StepType.DPAD -> !(dpadDirX == 0 && dpadDirY == 0)
-                StepType.TOUCH -> true
-                StepType.TOUCH_PATH -> step is MacroStep.TouchPath
-            }
-
-    // ── Full-screen layout ────────────────────────────────────────────────────────────────
-    Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(colors.appBackground)
-                .blockPointerEvents(),
-    ) {
-        val topBarTitle =
-            stringResource(
-                if (step == null) {
-                    R.string.macropad_macro_step_new
-                } else {
-                    R.string.macropad_macro_step_edit
-                },
-            )
-        FullScreenTopBar(title = topBarTitle, onDismiss = onDismiss) {
-            TextButton(
-                onClick = {
-                    val builtStep =
-                        when (stepType) {
-                            StepType.GAMEPAD -> {
-                                MacroStep.GamepadButtonTap(
-                                    startTimeMs = startMs.toLong(),
-                                    durationMs = durMs.toLong().coerceAtLeast(1L),
-                                    btnCode = selectedPreset.code,
-                                    label = selectedPreset.displayShortLabel(swapFaceButtons),
-                                )
-                            }
-
-                            StepType.JOYSTICK -> {
-                                val norm = sqrt((joyDirX * joyDirX + joyDirY * joyDirY).toFloat())
-                                MacroStep.JoystickMove(
-                                    startTimeMs = startMs.toLong(),
-                                    durationMs = durMs.toLong().coerceAtLeast(1L),
-                                    stick = joyStick,
-                                    x = if (norm > 0f) joyDirX / norm * joyMagnitude else 0f,
-                                    y = if (norm > 0f) joyDirY / norm * joyMagnitude else 0f,
-                                )
-                            }
-
-                            StepType.DPAD -> {
-                                MacroStep.DPadTap(
-                                    startTimeMs = startMs.toLong(),
-                                    durationMs = durMs.toLong().coerceAtLeast(1L),
-                                    dirX = dpadDirX,
-                                    dirY = dpadDirY,
-                                )
-                            }
-
-                            StepType.TOUCH -> {
-                                (step as MacroStep.TouchTap).copy(
-                                    startTimeMs = startMs.toLong(),
-                                    durationMs = durMs.toLong().coerceAtLeast(1L),
-                                )
-                            }
-
-                            StepType.JOYSTICK_PATH -> {
-                                (step as MacroStep.JoystickPath).copy(
-                                    startTimeMs = startMs.toLong(),
-                                    durationMs = durMs.toLong().coerceAtLeast(1L),
-                                )
-                            }
-
-                            StepType.TOUCH_PATH -> {
-                                (step as MacroStep.TouchPath).let { tp ->
-                                    tp.copy(
-                                        startTimeMs = startMs.toLong(),
-                                        durationMs =
-                                            durMs.toLong().coerceAtLeast(
-                                                tp.samples.maxOfOrNull { it.offsetMs }?.coerceAtLeast(1L) ?: 1L,
-                                            ),
-                                    )
-                                }
-                            }
-                        }
-                    onConfirm(builtStep, shiftMode)
-                },
-                enabled = isConfirmEnabled,
-            ) {
-                Text(
-                    stringResource(R.string.macropad_editor_done),
-                    color = if (isConfirmEnabled) accentColor else colors.onSurfaceSecondary,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
+    val initDpadDir =
+        if (step is MacroStep.DPadTap) {
+            findDirectionIndex(step.dirX, step.dirY)
+        } else {
+            0
         }
+    var selectedDpadDirIdx by remember { mutableIntStateOf(initDpadDir) }
 
-        // ── Scrollable form body ──────────────────────────────────────────────────────────
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StepType.entries.forEach { type ->
-                    /* TOUCH, TOUCH_PATH and JOYSTICK_PATH are recorded — only show their chip when editing
-                       a step of that type, and hide them when editing any other step. */
-                    val initialIsRecorded =
-                        initialType == StepType.TOUCH || initialType == StepType.TOUCH_PATH || initialType == StepType.JOYSTICK_PATH
-                    val typeIsRecorded = type == StepType.TOUCH || type == StepType.TOUCH_PATH || type == StepType.JOYSTICK_PATH
-                    if (initialIsRecorded && type != initialType) return@forEach
-                    if (!initialIsRecorded && typeIsRecorded) return@forEach
-                    val selected = type == stepType
-                    val labelRes =
-                        when (type) {
-                            StepType.GAMEPAD -> R.string.macropad_macro_step_type_gamepad
-                            StepType.JOYSTICK -> R.string.macropad_macro_step_type_joystick
-                            StepType.JOYSTICK_PATH -> R.string.macropad_macro_step_type_joystick_path
-                            StepType.DPAD -> R.string.macropad_macro_step_type_dpad
-                            StepType.TOUCH -> R.string.macropad_macro_step_type_touch
-                            StepType.TOUCH_PATH -> R.string.macropad_macro_step_type_touch_path
-                        }
-                    val symbolName =
-                        when (type) {
-                            StepType.GAMEPAD -> "sports_esports"
-                            StepType.JOYSTICK -> "joystick"
-                            StepType.JOYSTICK_PATH -> "joystick"
-                            StepType.DPAD -> "gamepad"
-                            StepType.TOUCH -> "touch_app"
-                            StepType.TOUCH_PATH -> "touch_app"
-                        }
-                    StepTypeChip(
-                        text = stringResource(labelRes),
-                        symbolName = symbolName,
-                        selected = selected,
-                        enabled = !typeIsRecorded,
-                        onClick = { stepType = type },
-                    )
-                }
-            }
-
-            // Type-specific content
-            when (stepType) {
-                StepType.GAMEPAD -> {
-                    AppDropdown(
-                        selected = selectedPreset,
-                        options = GamepadKeycodes.PRESETS,
-                        optionText = { preset -> preset.localizedDisplayLabel(swapFaceButtons) },
-                        onSelected = { preset -> selectedPreset = preset },
-                        modifier = Modifier.fillMaxWidth(),
-                        fillMaxWidth = true,
-                    )
-                }
-
-                StepType.JOYSTICK -> {
-                    // Stick selector chips
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(
-                            JoystickStick.LEFT to stringResource(R.string.macropad_macro_step_stick_left),
-                            JoystickStick.RIGHT to stringResource(R.string.macropad_macro_step_stick_right),
-                        ).forEach { (stick, stickLabel) ->
-                            val sel = joyStick == stick
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .background(
-                                            if (sel) accentColor.copy(alpha = 0.2f) else Color.Transparent,
-                                        ).border(
-                                            1.dp,
-                                            if (sel) accentColor else accentColor.copy(alpha = 0.4f),
-                                            RoundedCornerShape(6.dp),
-                                        ).clickable { joyStick = stick }
-                                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                            ) {
-                                Text(
-                                    stickLabel,
-                                    color = if (sel) accentColor else colors.onSurfaceSecondary,
-                                    style = MaterialTheme.typography.labelMedium,
-                                )
-                            }
-                        }
-                    }
-
-                    Text(
-                        stringResource(R.string.macropad_macro_step_direction),
-                        color = colors.onSurfaceSecondary,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    DirectionGrid(
-                        selectedX = joyDirX,
-                        selectedY = joyDirY,
-                        accentColor = accentColor,
-                        onSelect = { x, y ->
-                            joyDirX = x
-                            joyDirY = y
-                        },
-                    )
-
-                    Text(
-                        stringResource(R.string.macropad_macro_step_magnitude, joyMagnitude),
-                        color = colors.onSurfaceSecondary,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    Slider(
-                        value = joyMagnitude,
-                        onValueChange = { joyMagnitude = it },
-                        valueRange = 0f..1f,
-                        colors =
-                            SliderDefaults.colors(
-                                thumbColor = accentColor,
-                                activeTrackColor = accentColor,
-                            ),
-                    )
-                }
-
-                StepType.DPAD -> {
-                    Text(
-                        stringResource(R.string.macropad_macro_step_direction),
-                        color = colors.onSurfaceSecondary,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    DirectionGrid(
-                        selectedX = dpadDirX,
-                        selectedY = dpadDirY,
-                        accentColor = accentColor,
-                        onSelect = { x, y ->
-                            dpadDirX = x
-                            dpadDirY = y
-                        },
-                    )
-                }
-
-                StepType.TOUCH -> {
-                    val touchStep = step as? MacroStep.TouchTap
-                    Text(
-                        stringResource(R.string.macropad_macro_step_touch_position),
-                        color = colors.onSurfaceSecondary,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    ) {
-                        Text(
-                            "X: ${"%.3f".format(touchStep?.normX ?: 0f)}",
-                            color = colors.onSurface,
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        Text(
-                            "Y: ${"%.3f".format(touchStep?.normY ?: 0f)}",
-                            color = colors.onSurface,
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                    }
-                }
-
-                StepType.JOYSTICK_PATH -> {
-                    val pathStep = step as? MacroStep.JoystickPath
-                    Text(
-                        stringResource(R.string.macropad_macro_step_path_readonly),
-                        color = colors.onSurfaceSecondary,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    val stickLabel =
-                        stringResource(
-                            if (pathStep?.stick == JoystickStick.RIGHT) {
-                                R.string.macropad_macro_step_stick_right
-                            } else {
-                                R.string.macropad_macro_step_stick_left
-                            },
-                        )
-                    Text(
-                        stringResource(R.string.macropad_macro_step_path_summary_stick, stickLabel),
-                        color = colors.onSurface,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Text(
-                        stringResource(
-                            R.string.macropad_macro_step_path_summary_samples,
-                            pathStep?.samples?.size ?: 0,
-                        ),
-                        color = colors.onSurface,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-
-                StepType.TOUCH_PATH -> {
-                    val touchPathStep = step as? MacroStep.TouchPath
-                    Text(
-                        stringResource(R.string.macropad_macro_step_touch_path_readonly),
-                        color = colors.onSurfaceSecondary,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    if (touchPathStep != null) {
-                        Text(
-                            stringResource(R.string.macropad_macro_step_touch_path_details, touchPathStep.samples.size),
-                            color = colors.onSurface,
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                    }
-                }
-            }
-
-            // Timing
-            MsdTimingRow(
-                label = stringResource(R.string.macropad_macro_step_start_ms),
-                valueMs = startMs,
-                sliderMaxMs = startMaxMs,
-                accentColor = accentColor,
-                onSliderMaxChange = { startMaxMs = it },
-                onChange = { startMs = it },
-            )
-            MsdTimingRow(
-                label = stringResource(R.string.macropad_macro_step_duration_ms),
-                valueMs = durMs,
-                sliderMaxMs = durationMaxMs,
-                accentColor = accentColor,
-                onSliderMaxChange = { durationMaxMs = it },
-                onChange = { durMs = it },
-            )
-
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    text = stringResource(R.string.macropad_macro_editor_shift_subsequent),
-                    color = colors.onSurfaceSecondary,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf(
-                        ShiftMode.NONE to stringResource(R.string.macropad_macro_editor_shift_none),
-                        ShiftMode.START_DELTA to stringResource(R.string.macropad_macro_editor_shift_start_delta),
-                        ShiftMode.END_DELTA to stringResource(R.string.macropad_macro_editor_shift_end_delta),
-                    ).forEach { (mode, label) ->
-                        AppSelectableChip(
-                            text = label,
-                            selected = shiftMode == mode,
-                            onClick = { shiftMode = mode },
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun StepTypeChip(
-    text: String,
-    symbolName: String,
-    selected: Boolean,
-    enabled: Boolean,
-    onClick: () -> Unit,
-) {
-    AppSelectableChip(
-        text = text,
-        selected = selected,
-        enabled = enabled,
-        onClick = onClick,
-        leadingIcon = { color ->
-            MaterialSymbol(
-                name = symbolName,
-                size = 18.dp,
-                tint = color,
-                modifier = Modifier.size(18.dp),
-            )
-        },
-    )
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Timing row — label + current value + slider + delta buttons
-// ─────────────────────────────────────────────────────────────────────────────
-
-@Composable
-private fun MsdTimingRow(
-    label: String,
-    valueMs: Int,
-    sliderMaxMs: Int,
-    accentColor: Color,
-    onSliderMaxChange: (Int) -> Unit,
-    onChange: (Int) -> Unit,
-) {
-    val colors = LocalAppColors.current
-
-    fun applyDelta(deltaMs: Int) {
-        val nextValue = (valueMs + deltaMs).coerceAtLeast(0)
-        val nextMax = expandScaleToFit(sliderMaxMs, nextValue)
-        if (nextMax != sliderMaxMs) onSliderMaxChange(nextMax)
-        onChange(nextValue)
-    }
-
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(label, color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
-            Text("$valueMs ms", color = colors.onSurface, style = MaterialTheme.typography.labelMedium)
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            MsdTimingDeltaButton(accentColor = accentColor, deltaMs = MSD_TIMING_DELTA_MINUS_HUNDRED_MS) {
-                applyDelta(MSD_TIMING_DELTA_MINUS_HUNDRED_MS)
-            }
-            MsdTimingDeltaButton(accentColor = accentColor, deltaMs = MSD_TIMING_DELTA_MINUS_TEN_MS) {
-                applyDelta(MSD_TIMING_DELTA_MINUS_TEN_MS)
-            }
-            MsdTimingDeltaButton(accentColor = accentColor, deltaMs = MSD_TIMING_DELTA_MINUS_ONE_MS) {
-                applyDelta(MSD_TIMING_DELTA_MINUS_ONE_MS)
-            }
-            Slider(
-                value = valueMs.toFloat(),
-                onValueChange = { onChange(it.roundToInt().coerceIn(0, sliderMaxMs)) },
-                valueRange = 0f..sliderMaxMs.toFloat(),
-                steps = ((sliderMaxMs / MSD_TIMING_SLIDER_INCREMENT_MS) - 1).coerceAtLeast(0),
-                colors =
-                    SliderDefaults.colors(
-                        thumbColor = accentColor,
-                        activeTrackColor = accentColor,
-                    ),
-                modifier = Modifier.weight(1f),
-            )
-            MsdTimingDeltaButton(accentColor = accentColor, deltaMs = MSD_TIMING_DELTA_PLUS_ONE_MS) {
-                applyDelta(MSD_TIMING_DELTA_PLUS_ONE_MS)
-            }
-            MsdTimingDeltaButton(accentColor = accentColor, deltaMs = MSD_TIMING_DELTA_PLUS_TEN_MS) {
-                applyDelta(MSD_TIMING_DELTA_PLUS_TEN_MS)
-            }
-            MsdTimingDeltaButton(accentColor = accentColor, deltaMs = MSD_TIMING_DELTA_PLUS_HUNDRED_MS) {
-                applyDelta(MSD_TIMING_DELTA_PLUS_HUNDRED_MS)
-            }
-            MsdTimingDeltaButton(accentColor = accentColor, deltaMs = MSD_TIMING_DELTA_PLUS_THOUSAND_MS) {
-                applyDelta(MSD_TIMING_DELTA_PLUS_THOUSAND_MS)
-            }
-        }
-    }
-}
-
-@Composable
-private fun MsdTimingDeltaButton(
-    accentColor: Color,
-    deltaMs: Int,
-    onClick: () -> Unit,
-) {
-    TextButton(
-        onClick = onClick,
-        contentPadding =
-            PaddingValues(
-                horizontal = MSD_TIMING_DELTA_BUTTON_H_PADDING.dp,
-                vertical = MSD_TIMING_DELTA_BUTTON_V_PADDING.dp,
-            ),
-        modifier =
-            Modifier.defaultMinSize(
-                minWidth = MSD_TIMING_DELTA_BUTTON_MIN_WIDTH.dp,
-                minHeight = MSD_TIMING_DELTA_BUTTON_MIN_HEIGHT.dp,
-            ),
-    ) {
-        Text(
-            text = stringResource(R.string.macropad_macro_step_timing_delta, deltaMs),
-            color = accentColor,
-            style = MaterialTheme.typography.labelSmall,
+    // TouchTap state
+    var touchXPercent by remember {
+        mutableIntStateOf(
+            if (step is MacroStep.TouchTap) {
+                (step.normX * 100).roundToInt().coerceIn(0, 100)
+            } else {
+                50
+            },
         )
     }
-}
-
-private fun expandScaleToFit(
-    currentMaxMs: Int,
-    requiredValueMs: Int,
-): Int {
-    var maxMs = currentMaxMs.coerceAtLeast(MSD_TIMING_SCALE_STEP_MS)
-    while (requiredValueMs > maxMs) {
-        maxMs += MSD_TIMING_SCALE_STEP_MS
+    var touchYPercent by remember {
+        mutableIntStateOf(
+            if (step is MacroStep.TouchTap) {
+                (step.normY * 100).roundToInt().coerceIn(0, 100)
+            } else {
+                50
+            },
+        )
     }
-    return maxMs
-}
 
-private fun clampLongToNonNegativeInt(value: Long): Int = value.coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
+    // Construct the active MacroStep
+    val constructedStep: MacroStep =
+        when (stepType) {
+            StepType.GAMEPAD -> {
+                MacroStep.GamepadButtonTap(
+                    startTimeMs = startMs.toLong(),
+                    durationMs = durMs.toLong(),
+                    btnCode = selectedPreset.code,
+                    label = selectedPreset.label,
+                )
+            }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Direction grid — 3×3 clickable cells; center cell is invisible placeholder
-// ─────────────────────────────────────────────────────────────────────────────
+            StepType.JOYSTICK -> {
+                val dir = MSD_DIRECTIONS[selectedJoyDirIdx]
+                val unitX = dir.dirX.toFloat()
+                val unitY = dir.dirY.toFloat()
+                val len = sqrt(unitX * unitX + unitY * unitY).coerceAtLeast(0.001f)
+                val normX = (unitX / len) * joyMagnitude
+                val normY = (unitY / len) * joyMagnitude
+                MacroStep.JoystickMove(
+                    startTimeMs = startMs.toLong(),
+                    durationMs = durMs.toLong(),
+                    stick = joyStick,
+                    x = normX,
+                    y = normY,
+                )
+            }
 
-@Composable
-private fun DirectionGrid(
-    selectedX: Int,
-    selectedY: Int,
-    accentColor: Color,
-    onSelect: (Int, Int) -> Unit,
-) {
-    val colors = LocalAppColors.current
-    Column(verticalArrangement = Arrangement.spacedBy(MSD_GRID_SPACING.dp)) {
-        listOf(-1, 0, 1).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(MSD_GRID_SPACING.dp)) {
-                listOf(-1, 0, 1).forEach { col ->
-                    val isCenter = col == 0 && row == 0
-                    val isSelected = !isCenter && col == selectedX && row == selectedY
-                    Box(
-                        modifier =
-                            Modifier
-                                .size(MSD_GRID_CELL_SIZE.dp)
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(
-                                    when {
-                                        isCenter -> Color.Transparent
-                                        isSelected -> accentColor.copy(alpha = 0.3f)
-                                        else -> colors.appBackground
-                                    },
-                                ).border(
-                                    1.dp,
-                                    when {
-                                        isCenter -> Color.Transparent
-                                        isSelected -> accentColor
-                                        else -> accentColor.copy(alpha = 0.3f)
-                                    },
-                                    RoundedCornerShape(6.dp),
-                                ).then(
-                                    if (isCenter) {
-                                        Modifier
-                                    } else {
-                                        Modifier.clickable { onSelect(col, row) }
-                                    },
-                                ),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        if (!isCenter) {
-                            Text(
-                                text = MSD_DIR_LABELS[Pair(col, row)] ?: "",
-                                color = if (isSelected) accentColor else colors.onSurface,
-                                style = MaterialTheme.typography.titleLarge,
-                            )
-                        }
-                    }
-                }
+            StepType.DPAD -> {
+                val dir = MSD_DIRECTIONS[selectedDpadDirIdx]
+                MacroStep.DPadTap(
+                    startTimeMs = startMs.toLong(),
+                    durationMs = durMs.toLong(),
+                    dirX = dir.dirX,
+                    dirY = dir.dirY,
+                )
+            }
+
+            StepType.TOUCH -> {
+                MacroStep.TouchTap(
+                    startTimeMs = startMs.toLong(),
+                    durationMs = durMs.toLong(),
+                    normX = touchXPercent / 100f,
+                    normY = touchYPercent / 100f,
+                )
+            }
+
+            StepType.JOYSTICK_PATH -> {
+                (step as? MacroStep.JoystickPath)?.withTiming(startMs.toLong(), durMs.toLong())
+                    ?: (step as? MacroStep.JoystickPath)
+                    ?: MacroStep.GamepadButtonTap(startMs.toLong(), durMs.toLong(), 0, "")
+            }
+
+            StepType.TOUCH_PATH -> {
+                (step as? MacroStep.TouchPath)?.withTiming(startMs.toLong(), durMs.toLong())
+                    ?: (step as? MacroStep.TouchPath)
+                    ?: MacroStep.TouchTap(startMs.toLong(), durMs.toLong(), 0.5f, 0.5f)
             }
         }
+
+    val hasChanges = step == null || constructedStep != step || shiftMode != initialShiftMode
+    val isConfirmEnabled = durMs > 0
+
+    val promptState =
+        rememberSaveExitPromptState(
+            hasChanges = hasChanges,
+            onSave = {
+                if (isConfirmEnabled) {
+                    AppLog.d(TAG, "Saving macro step: $constructedStep, shiftMode: $shiftMode")
+                    onConfirm(constructedStep, shiftMode)
+                }
+            },
+            onDiscard = {
+                AppLog.d(TAG, "Discarding macro step edits")
+                onDiscard()
+            },
+        )
+
+    val availableTypes =
+        StepType.entries.filter { type ->
+            val initialIsRecorded =
+                initialType == StepType.TOUCH_PATH || initialType == StepType.JOYSTICK_PATH
+            if (initialIsRecorded) type == initialType else type != StepType.TOUCH_PATH && type != StepType.JOYSTICK_PATH
+        }
+
+    GamepadChoiceCard(
+        title = stringResource(R.string.macro_step_action_type_title),
+        description = stringResource(R.string.macro_step_action_type_desc),
+        selectedText = stringResource(stepType.labelResId),
+        icon = stepIcon(constructedStep),
+        enabled = availableTypes.size > 1,
+        onPrevious = { stepType = availableTypes.cycle(stepType, BumperDirection.PREV) },
+        onNext = { stepType = availableTypes.cycle(stepType, BumperDirection.NEXT) },
+        modifier = Modifier.firstDeckItem(),
+    )
+
+    // ── Action Details Section ───────────────────────────────────────────────
+    GamepadSectionHeader(
+        text = stringResource(R.string.macropad_macro_section_action_details),
+        color = accentColor,
+    )
+
+    when (stepType) {
+        StepType.GAMEPAD -> {
+            val presets = GamepadKeycodes.PRESETS
+            GamepadChoiceCard(
+                title = stringResource(R.string.macro_step_gamepad_button_title),
+                description = stringResource(R.string.macro_step_gamepad_button_desc),
+                selectedText = selectedPreset.localizedDisplayLabel(swapFaceButtons),
+                icon = Icons.Rounded.SportsEsports,
+                onPrevious = { selectedPreset = presets.cycle(selectedPreset, BumperDirection.PREV) },
+                onNext = { selectedPreset = presets.cycle(selectedPreset, BumperDirection.NEXT) },
+            )
+        }
+
+        StepType.JOYSTICK -> {
+            val sticks = listOf(JoystickStick.LEFT, JoystickStick.RIGHT)
+            val stickLabels =
+                listOf(
+                    stringResource(R.string.macropad_macro_step_stick_left),
+                    stringResource(R.string.macropad_macro_step_stick_right),
+                )
+            val stickIdx = sticks.indexOf(joyStick).coerceAtLeast(0)
+            GamepadChoiceCard(
+                title = stringResource(R.string.macro_step_target_stick_title),
+                description = stringResource(R.string.macro_step_target_stick_desc),
+                selectedText = stickLabels[stickIdx],
+                icon = Icons.Rounded.NearMe,
+                onPrevious = { joyStick = sticks.cycle(joyStick, BumperDirection.PREV) },
+                onNext = { joyStick = sticks.cycle(joyStick, BumperDirection.NEXT) },
+            )
+
+            GamepadChoiceCard(
+                title = stringResource(R.string.macropad_macro_step_direction),
+                description = stringResource(R.string.macro_step_stick_deflection_desc),
+                selectedText = stringResource(MSD_DIRECTIONS[selectedJoyDirIdx].labelRes),
+                icon = Icons.Rounded.NearMe,
+                onPrevious = {
+                    selectedJoyDirIdx = (selectedJoyDirIdx - 1 + MSD_DIRECTIONS.size) % MSD_DIRECTIONS.size
+                },
+                onNext = {
+                    selectedJoyDirIdx = (selectedJoyDirIdx + 1) % MSD_DIRECTIONS.size
+                },
+            )
+
+            GamepadSliderCard(
+                title = stringResource(R.string.macropad_macro_step_magnitude, joyMagnitude),
+                description = stringResource(R.string.macro_step_stick_deflection_desc),
+                value = joyMagnitude * 100f,
+                valueRange = 10f..100f,
+                step = MSD_PERCENT_SLIDER_STEP,
+                fineStep = 1f,
+                valueLabel = "${(joyMagnitude * 100).roundToInt()}%",
+                icon = Icons.Rounded.Tune,
+                onValueChange = { joyMagnitude = (it / 100f).coerceIn(0.1f, 1f) },
+            )
+        }
+
+        StepType.DPAD -> {
+            GamepadChoiceCard(
+                title = stringResource(R.string.macropad_macro_step_direction),
+                description = stringResource(R.string.macro_step_action_type_desc),
+                selectedText = stringResource(MSD_DIRECTIONS[selectedDpadDirIdx].labelRes),
+                icon = Icons.Rounded.OpenWith,
+                onPrevious = {
+                    selectedDpadDirIdx = (selectedDpadDirIdx - 1 + MSD_DIRECTIONS.size) % MSD_DIRECTIONS.size
+                },
+                onNext = {
+                    selectedDpadDirIdx = (selectedDpadDirIdx + 1) % MSD_DIRECTIONS.size
+                },
+            )
+        }
+
+        StepType.TOUCH -> {
+            GamepadSliderCard(
+                title = stringResource(R.string.macropad_macro_step_pos_x),
+                description = stringResource(R.string.macropad_macro_step_pos_desc),
+                value = touchXPercent.toFloat(),
+                valueRange = 0f..100f,
+                step = 1f,
+                valueLabel = "$touchXPercent%",
+                icon = Icons.Rounded.TouchApp,
+                onValueChange = { touchXPercent = it.roundToInt().coerceIn(0, 100) },
+            )
+
+            GamepadSliderCard(
+                title = stringResource(R.string.macropad_macro_step_pos_y),
+                description = stringResource(R.string.macropad_macro_step_pos_desc),
+                value = touchYPercent.toFloat(),
+                valueRange = 0f..100f,
+                step = 1f,
+                valueLabel = "$touchYPercent%",
+                icon = Icons.Rounded.TouchApp,
+                onValueChange = { touchYPercent = it.roundToInt().coerceIn(0, 100) },
+            )
+        }
+
+        StepType.JOYSTICK_PATH -> {
+            val pathStep = step as? MacroStep.JoystickPath
+            val stickLabel =
+                stringResource(
+                    if (pathStep?.stick == JoystickStick.RIGHT) {
+                        R.string.macropad_macro_step_stick_right
+                    } else {
+                        R.string.macropad_macro_step_stick_left
+                    },
+                )
+            GamepadFocusCard(onClick = {}) {
+                GamepadCardRow(
+                    title = stringResource(R.string.macropad_macro_step_path_summary_stick, stickLabel),
+                    description = stringResource(R.string.macropad_macro_step_path_summary_samples, pathStep?.samples?.size ?: 0),
+                    icon = Icons.Rounded.NearMe,
+                )
+            }
+        }
+
+        StepType.TOUCH_PATH -> {
+            val touchPathStep = step as? MacroStep.TouchPath
+            GamepadFocusCard(onClick = {}) {
+                GamepadCardRow(
+                    title = stringResource(R.string.macropad_macro_step_type_touch_path),
+                    description = stringResource(R.string.macropad_macro_step_touch_path_details, touchPathStep?.samples?.size ?: 0),
+                    icon = Icons.Rounded.TouchApp,
+                )
+            }
+        }
+    }
+
+    // ── Timing & Sequence Section ────────────────────────────────────────────
+    GamepadSectionHeader(
+        text = stringResource(R.string.macropad_macro_section_timing),
+        color = accentColor,
+    )
+
+    val maxStartMs = (suggestedStartTimeMs + MSD_MAX_START_TIME_BUFFER_MS).coerceAtLeast(1000L).toFloat()
+    GamepadSliderCard(
+        title = stringResource(R.string.macropad_macro_step_start_ms),
+        description = stringResource(R.string.macropad_macro_step_start_desc),
+        value = startMs.toFloat(),
+        valueRange = 0f..maxStartMs,
+        step = MSD_TIME_SLIDER_STEP,
+        fineStep = 1f,
+        valueLabel = "$startMs ms",
+        icon = Icons.Rounded.Schedule,
+        onValueChange = { startMs = it.roundToInt().coerceAtLeast(0) },
+    )
+
+    GamepadSliderCard(
+        title = stringResource(R.string.macropad_macro_step_duration_ms),
+        description = stringResource(R.string.macropad_macro_step_duration_desc),
+        value = durMs.toFloat(),
+        valueRange = 10f..MSD_MAX_DURATION_MS.toFloat(),
+        step = MSD_TIME_SLIDER_STEP,
+        fineStep = 1f,
+        valueLabel = "$durMs ms",
+        icon = Icons.Rounded.Schedule,
+        onValueChange = { durMs = it.roundToInt().coerceIn(10, MSD_MAX_DURATION_MS.toInt()) },
+    )
+
+    if (step != null) {
+        val shiftModes = ShiftMode.entries
+        val shiftModeLabels =
+            listOf(
+                stringResource(R.string.macropad_macro_editor_shift_none),
+                stringResource(R.string.macropad_macro_editor_shift_start_delta),
+                stringResource(R.string.macropad_macro_editor_shift_end_delta),
+            )
+        val shiftIdx = shiftModes.indexOf(shiftMode).coerceAtLeast(0)
+        GamepadChoiceCard(
+            title = stringResource(R.string.macropad_macro_editor_shift_subsequent),
+            description = stringResource(R.string.macropad_macro_step_shift_desc),
+            selectedText = shiftModeLabels[shiftIdx],
+            icon = Icons.Rounded.Schedule,
+            onPrevious = { shiftMode = shiftModes.cycle(shiftMode, BumperDirection.PREV) },
+            onNext = { shiftMode = shiftModes.cycle(shiftMode, BumperDirection.NEXT) },
+        )
+    }
+
+    // ── Step Management Actions (Duplicate / Delete) ─────────────────────────
+    if (step != null) {
+        GamepadSectionHeader(
+            text = stringResource(R.string.macropad_macro_section_actions),
+            color = accentColor,
+        )
+
+        if (onDuplicate != null) {
+            GamepadActionCard(
+                title = stringResource(R.string.macropad_macro_step_duplicate),
+                description = stringResource(R.string.macropad_macro_step_duplicate_desc),
+                icon = Icons.Rounded.ContentCopy,
+                onClick = { onDuplicate(constructedStep) },
+            )
+        }
+    }
+
+    // ── Save / Save & Delete Section ─────────────────────────────────────────
+    val hasDelete = step != null && onDelete != null
+    GamepadSectionHeader(
+        text =
+            stringResource(
+                if (hasDelete) {
+                    R.string.macropad_editor_section_save_and_delete
+                } else {
+                    R.string.macropad_editor_section_save
+                },
+            ),
+        color = accentColor,
+    )
+
+    // ── Save & Exit Action Row ───────────────────────────────────────────────
+    GamepadSaveExitActionRow(
+        title =
+            if (step == null) {
+                stringResource(R.string.macropad_editor_create_step_title)
+            } else {
+                stringResource(R.string.macropad_editor_save_step_title)
+            },
+        description =
+            if (step == null) {
+                stringResource(R.string.macropad_editor_create_step_desc)
+            } else {
+                stringResource(R.string.macropad_editor_save_step_desc)
+            },
+        pulseOnChanges = hasChanges,
+        saveActionText =
+            if (step == null) {
+                stringResource(R.string.gamepad_action_create)
+            } else {
+                stringResource(R.string.gamepad_action_save)
+            },
+        saveIcon = Icons.Rounded.Save,
+        showExitPrompt = promptState.showExitPrompt,
+        onDismissPrompt = promptState.dismissPrompt,
+        saveFocusRequester = promptState.focusRequester,
+        bringIntoViewRequester = promptState.bringIntoViewRequester,
+        onSave = promptState.onSave,
+        onDiscard = promptState.onDiscard,
+    )
+
+    // ── Step Deletion (Last Item) ────────────────────────────────────────────
+    if (step != null && onDelete != null) {
+        val stepNumber = (stepIndex ?: 0) + 1
+        GamepadTwoStepConfirmCard(
+            title = stringResource(R.string.macropad_macro_step_delete),
+            confirmTitle = stringResource(R.string.macropad_macro_step_delete_confirm_title, stepNumber),
+            description = stringResource(R.string.macropad_macro_step_delete_desc),
+            actionText = stringResource(R.string.gamepad_action_delete),
+            confirmActionText = stringResource(R.string.gamepad_action_confirm),
+            icon = Icons.Rounded.Delete,
+            isDestructive = true,
+            onConfirm = onDelete,
+        )
     }
 }

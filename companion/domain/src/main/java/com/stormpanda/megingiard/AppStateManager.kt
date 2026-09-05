@@ -1,16 +1,23 @@
 package com.stormpanda.megingiard
 
+import com.stormpanda.megingiard.catalog.SystemRoleClassifier
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.macropad.AutoSwitchCoordinator
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.navigation.NavDestination
+import com.stormpanda.megingiard.navigation.toPrimaryModalConfig
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
+import com.stormpanda.megingiard.session.EmulatorDetectionFunnel
 import com.stormpanda.megingiard.settings.KeyboardSettings
 import com.stormpanda.megingiard.settings.MacroPadSettings
+import com.stormpanda.megingiard.ui.PrimaryModalConfig
+import com.stormpanda.megingiard.ui.PrimaryModalPayload
+import com.stormpanda.megingiard.ui.PrimaryModalType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -39,6 +46,7 @@ fun CompanionViewMode.shouldShowIntegrationHome(
     focusedAppPackageName: String?,
     focusedRomPath: String?,
     activeProfile: PadProfile?,
+    foregroundApp: String? = AutoSwitchCoordinator.foregroundApp.value,
 ): Boolean =
     when (this) {
         CompanionViewMode.MACROPAD -> {
@@ -50,15 +58,7 @@ fun CompanionViewMode.shouldShowIntegrationHome(
         }
 
         CompanionViewMode.AUTO -> {
-            val foreground = AutoSwitchCoordinator.foregroundApp.value
-            val isForegroundLauncher =
-                foreground != null &&
-                    (
-                        foreground.startsWith(MegingiardIpcContract.GAMEFOCUS_PACKAGE) ||
-                            foreground.contains("launcher") ||
-                            foreground.contains("home") ||
-                            foreground == "com.android.systemui"
-                    )
+            val isForegroundLauncher = SystemRoleClassifier.isLauncherOrSystemUi(foregroundApp)
 
             if (focusedAppPackageName == null || isForegroundLauncher) {
                 true
@@ -83,9 +83,6 @@ object AppStateManager {
 
     private val _promptInFlight = MutableStateFlow(false)
     val promptInFlight: StateFlow<Boolean> = _promptInFlight.asStateFlow()
-
-    private val _mirrorAutoStartSuppressedLayoutId = MutableStateFlow<String?>(null)
-    val mirrorAutoStartSuppressedLayoutId: StateFlow<String?> = _mirrorAutoStartSuppressedLayoutId.asStateFlow()
 
     // ── Mirror control signals ────────────────────────────────────────────────
     // One-shot fire-and-forget flags: MainActivity resets them after handling.
@@ -113,9 +110,6 @@ object AppStateManager {
     private val _pendingAppLaunchRequest = MutableStateFlow<AppLaunchRequest?>(null)
     val pendingAppLaunchRequest: StateFlow<AppLaunchRequest?> = _pendingAppLaunchRequest.asStateFlow()
 
-    private val _isFloatingBubbleActive = MutableStateFlow(false)
-    val isFloatingBubbleActive: StateFlow<Boolean> = _isFloatingBubbleActive.asStateFlow()
-
     fun requestAppLaunch(
         packageName: String,
         touchX: Float = -1f,
@@ -128,11 +122,6 @@ object AppStateManager {
     fun consumeAppLaunchRequest() {
         AppLog.d(TAG, "consumeAppLaunchRequest")
         _pendingAppLaunchRequest.value = null
-    }
-
-    fun setFloatingBubbleActive(active: Boolean) {
-        AppLog.d(TAG, "setFloatingBubbleActive: $active")
-        _isFloatingBubbleActive.value = active
     }
 
     fun requestMirrorStart() {
@@ -233,17 +222,47 @@ object AppStateManager {
             )
         }
         _isExternalClientActive.value = isActive
-        _externalClientPackage.value = packageName
-        _focusedAppPackageName.value = focusedApp
-        _focusedRomPath.value = focusedRomPath
-        _focusedRomIdentifier.value = focusedRomIdentifier
-        _hoveredAppPackageName.value = hoveredPackage
-        _hoveredAppLabel.value = hoveredLabel
-        _hoveredRomPath.value = hoveredRomPath
-        _hoveredRomIdentifier.value = hoveredRomIdentifier
-        _hoveredSystemId.value = hoveredSystemId
-        _hoveredAppPrimaryColor.value = hoveredPrimaryColor
-        _hoveredAppSecondaryColor.value = hoveredSecondaryColor
+        _externalClientPackage.value = if (isActive) packageName else null
+
+        if (isActive || focusedApp != null) {
+            _focusedAppPackageName.value = focusedApp
+            _focusedRomPath.value = focusedRomPath
+            _focusedRomIdentifier.value = focusedRomIdentifier
+        } else {
+            val foreground = AutoSwitchCoordinator.foregroundApp.value
+            val session = EmulatorDetectionFunnel.activeSession.value ?: EmulatorDetectionFunnel.lastDetectedSession.value
+            if (session != null && session.packageName == foreground) {
+                _focusedAppPackageName.value = session.packageName
+                _focusedRomPath.value = session.romPath ?: session.romIdentifier
+                _focusedRomIdentifier.value = session.romIdentifier ?: session.romPath
+            } else if (foreground != null && !SystemRoleClassifier.isLauncherOrSystemUi(foreground)) {
+                _focusedAppPackageName.value = foreground
+                _focusedRomPath.value = null
+                _focusedRomIdentifier.value = null
+            } else {
+                _focusedAppPackageName.value = null
+                _focusedRomPath.value = null
+                _focusedRomIdentifier.value = null
+            }
+        }
+
+        if (isActive) {
+            _hoveredAppPackageName.value = hoveredPackage
+            _hoveredAppLabel.value = hoveredLabel
+            _hoveredRomPath.value = hoveredRomPath
+            _hoveredRomIdentifier.value = hoveredRomIdentifier
+            _hoveredSystemId.value = hoveredSystemId
+            _hoveredAppPrimaryColor.value = hoveredPrimaryColor
+            _hoveredAppSecondaryColor.value = hoveredSecondaryColor
+        } else {
+            _hoveredAppPackageName.value = null
+            _hoveredAppLabel.value = null
+            _hoveredRomPath.value = null
+            _hoveredRomIdentifier.value = null
+            _hoveredSystemId.value = null
+            _hoveredAppPrimaryColor.value = null
+            _hoveredAppSecondaryColor.value = null
+        }
     }
 
     fun setStandaloneForegroundState(
@@ -278,90 +297,67 @@ object AppStateManager {
         _promptInFlight.value = inFlight
     }
 
-    fun suppressMirrorAutoStart(layoutId: String) {
-        AppLog.d(TAG, "suppressMirrorAutoStart($layoutId)")
-        _mirrorAutoStartSuppressedLayoutId.value = layoutId
-    }
+    // ── Single Source of Truth for Companion Surface & Primary Modals ────────
 
-    fun clearMirrorAutoStartSuppression(layoutId: String) {
-        if (_mirrorAutoStartSuppressedLayoutId.value == layoutId) {
-            AppLog.d(TAG, "clearMirrorAutoStartSuppression($layoutId)")
-            _mirrorAutoStartSuppressedLayoutId.value = null
-        }
-    }
+    private val _companionSurfaceMode = MutableStateFlow(CompanionSurfaceMode.MACROPAD)
+    val companionSurfaceMode: StateFlow<CompanionSurfaceMode> = _companionSurfaceMode.asStateFlow()
 
-    // ── Touch / gesture state ─────────────────────────────────────────────────
+    private val _activePrimaryModal = MutableStateFlow<PrimaryModalConfig?>(null)
+    val activePrimaryModal: StateFlow<PrimaryModalConfig?> = _activePrimaryModal.asStateFlow()
 
-    /** True while any finger is pressing the screen. Used by SwipeGestureProcessor. */
-    private val _isTouching = MutableStateFlow(false)
-    val isTouching: StateFlow<Boolean> = _isTouching.asStateFlow()
+    private val _currentNavDestination = MutableStateFlow<NavDestination?>(null)
+    val currentNavDestination: StateFlow<NavDestination?> = _currentNavDestination.asStateFlow()
 
-    fun setTouching(touching: Boolean) {
-        _isTouching.value = touching
-    }
+    private val _suspendedPrimaryModal = MutableStateFlow<PrimaryModalConfig?>(null)
+    val suspendedPrimaryModal: StateFlow<PrimaryModalConfig?> = _suspendedPrimaryModal.asStateFlow()
 
-    // ── SAF file picker ───────────────────────────────────────────────────────
+    val hasSuspendedPrimaryModal: StateFlow<Boolean> =
+        _suspendedPrimaryModal.map { it != null }.stateIn(scope, SharingStarted.Eagerly, false)
 
-    // Whether the system file picker (SAF) is currently open. While true,
-    // MirrorPresentation hides itself so DocumentsUI is visible to the user on the
-    // secondary display. Without this, the Presentation (TYPE_PRIVATE_PRESENTATION)
-    // sits above the file-picker Activity and the user cannot see or interact with it.
-    private val _isFilePickerOpen = MutableStateFlow(false)
-    val isFilePickerOpen: StateFlow<Boolean> = _isFilePickerOpen.asStateFlow()
+    private val _isQuickMenuOpen = MutableStateFlow(false)
+    val isQuickMenuOpen: StateFlow<Boolean> = _isQuickMenuOpen.asStateFlow()
 
-    fun setFilePickerOpen(open: Boolean) {
-        AppLog.d(TAG, "setFilePickerOpen($open)")
-        _isFilePickerOpen.value = open
-    }
+    private fun isPrimaryModalActive(type: PrimaryModalType): StateFlow<Boolean> =
+        _activePrimaryModal
+            .map { it?.type == type }
+            .stateIn(scope, SharingStarted.Eagerly, false)
 
-    // ── Quick Menu ────────────────────────────────────────────────────────────
+    private fun isCompanionSurfaceActive(mode: CompanionSurfaceMode): StateFlow<Boolean> =
+        _companionSurfaceMode
+            .map { it == mode }
+            .stateIn(scope, SharingStarted.Eagerly, false)
 
-    // ── Single Source of Truth for Active UI Overlay / Screen Mode ────────────
-
-    private val _uiMode = MutableStateFlow(UiMode.MACROPAD_USE)
-    val uiMode: StateFlow<UiMode> = _uiMode.asStateFlow()
-
-    val isGlobalSettingsOpen: StateFlow<Boolean> =
-        _uiMode.map { it == UiMode.GLOBAL_SETTINGS }.stateIn(scope, SharingStarted.Eagerly, false)
-
-    val isKeyboardSettingsOpen: StateFlow<Boolean> =
-        _uiMode.map { it == UiMode.KEYBOARD_SETTINGS }.stateIn(scope, SharingStarted.Eagerly, false)
-
-    val isTouchpadSettingsOpen: StateFlow<Boolean> =
-        _uiMode.map { it == UiMode.TOUCHPAD_SETTINGS }.stateIn(scope, SharingStarted.Eagerly, false)
-
-    val isBackgroundSettingsActive: StateFlow<Boolean> =
-        _uiMode.map { it == UiMode.BACKGROUND_SETTINGS }.stateIn(scope, SharingStarted.Eagerly, false)
+    val isGlobalSettingsOpen: StateFlow<Boolean> = isPrimaryModalActive(PrimaryModalType.GLOBAL_SETTINGS)
+    val isKeyboardSettingsOpen: StateFlow<Boolean> = isPrimaryModalActive(PrimaryModalType.KEYBOARD_SETTINGS)
+    val isTouchpadSettingsOpen: StateFlow<Boolean> = isPrimaryModalActive(PrimaryModalType.TOUCHPAD_SETTINGS)
+    val isBackgroundSettingsActive: StateFlow<Boolean> = isPrimaryModalActive(PrimaryModalType.BACKGROUND_SETTINGS)
 
     val isEditorActive: StateFlow<Boolean> =
-        _uiMode.map { it == UiMode.LAYOUT_EDITOR }.stateIn(scope, SharingStarted.Eagerly, false)
+        _activePrimaryModal
+            .map {
+                it?.type == PrimaryModalType.MACROPAD_EDITOR ||
+                    it?.type == PrimaryModalType.MACROPAD_INSPECTOR ||
+                    it?.type == PrimaryModalType.LAYOUT_SETTINGS ||
+                    it?.type == PrimaryModalType.PROFILE_SETTINGS ||
+                    it?.type == PrimaryModalType.MACRO_TIMELINE_EDITOR
+            }.stateIn(scope, SharingStarted.Eagerly, false)
 
-    val isQuickMenuOpen: StateFlow<Boolean> =
-        _uiMode.map { it == UiMode.QUICK_MENU }.stateIn(scope, SharingStarted.Eagerly, false)
-
-    val isViewportEditActive: StateFlow<Boolean> =
-        _uiMode.map { it == UiMode.VIEWPORT_EDIT }.stateIn(scope, SharingStarted.Eagerly, false)
-
-    val isFullscreenKeyboardActive: StateFlow<Boolean> =
-        _uiMode.map { it == UiMode.FULLSCREEN_KEYBOARD }.stateIn(scope, SharingStarted.Eagerly, false)
-
-    val isFullscreenMouseActive: StateFlow<Boolean> =
-        _uiMode.map { it == UiMode.FULLSCREEN_MOUSE }.stateIn(scope, SharingStarted.Eagerly, false)
+    val isViewportEditActive: StateFlow<Boolean> = isCompanionSurfaceActive(CompanionSurfaceMode.VIEWPORT_EDIT)
+    val isFullscreenKeyboardActive: StateFlow<Boolean> = isCompanionSurfaceActive(CompanionSurfaceMode.KEYBOARD)
+    val isFullscreenMouseActive: StateFlow<Boolean> = isCompanionSurfaceActive(CompanionSurfaceMode.TOUCHPAD)
 
     fun openQuickMenu() {
-        if (OnboardingWizardManager.isWizardActive.value) {
-            AppLog.w(TAG, "openQuickMenu suppressed while onboarding wizard is active")
+        if (OnboardingWizardManager.isWizardActive.value || _isPrivdSetupWizardActive.value) {
+            AppLog.w(TAG, "openQuickMenu suppressed while wizard is active")
             return
         }
         AppLog.i(TAG, "openQuickMenu")
-        _uiMode.value = UiMode.QUICK_MENU
+        _isQuickMenuOpen.value = true
     }
 
     fun closeQuickMenu() {
         AppLog.i(TAG, "closeQuickMenu")
-        if (_uiMode.value == UiMode.QUICK_MENU) {
-            _uiMode.value = UiMode.MACROPAD_USE
-        }
+        _isQuickMenuOpen.value = false
     }
 
     private val _activeSwipe = MutableStateFlow<SwipeGestureProgress?>(null)
@@ -409,8 +405,9 @@ object AppStateManager {
             _focusedRomPath,
             MacroPadState.activeProfile,
             _companionViewMode,
-        ) { focusedPackage, focusedRom, profile, viewMode ->
-            viewMode.shouldShowIntegrationHome(focusedPackage, focusedRom, profile)
+            AutoSwitchCoordinator.foregroundApp,
+        ) { focusedPackage, focusedRom, profile, viewMode, foreground ->
+            viewMode.shouldShowIntegrationHome(focusedPackage, focusedRom, profile, foreground)
         }.stateIn(scope, SharingStarted.Eagerly, false)
 
     fun setCompanionViewMode(
@@ -446,17 +443,115 @@ object AppStateManager {
 
     fun resetPrivdPromptState() {
         AppLog.d(TAG, "resetPrivdPromptState")
-        _isPrivdPromptShowing.value = false
+        _isPrivdPromptActive.value = false
     }
 
-    private val _isPrivdPromptShowing = MutableStateFlow(false)
-    val isPrivdPromptActive: StateFlow<Boolean> = _isPrivdPromptShowing.asStateFlow()
+    private val _isPrivdPromptActive = MutableStateFlow(false)
+    val isPrivdPromptActive: StateFlow<Boolean> = _isPrivdPromptActive.asStateFlow()
+
+    private val _isPrivdSetupWizardActive = MutableStateFlow(false)
+    val isPrivdSetupWizardActive: StateFlow<Boolean> = _isPrivdSetupWizardActive.asStateFlow()
+
+    fun setPrivdSetupWizardOpen(open: Boolean) {
+        AppLog.d(TAG, "setPrivdSetupWizardOpen($open)")
+        _isPrivdSetupWizardActive.value = open
+    }
 
     private val _activeCropCutoutId = MutableStateFlow<String?>(null)
     val activeCropCutoutId: StateFlow<String?> = _activeCropCutoutId.asStateFlow()
 
     private val _selectedCutoutId = MutableStateFlow<String?>(null)
     val selectedCutoutId: StateFlow<String?> = _selectedCutoutId.asStateFlow()
+
+    private val _isMirrorEditorBackgroundHidden = MutableStateFlow(false)
+    val isMirrorEditorBackgroundHidden: StateFlow<Boolean> = _isMirrorEditorBackgroundHidden.asStateFlow()
+
+    fun setMirrorEditorBackgroundHidden(hidden: Boolean) {
+        AppLog.d(TAG, "setMirrorEditorBackgroundHidden($hidden)")
+        _isMirrorEditorBackgroundHidden.value = hidden
+    }
+
+    fun toggleMirrorEditorBackgroundHidden() {
+        setMirrorEditorBackgroundHidden(!_isMirrorEditorBackgroundHidden.value)
+    }
+
+    fun openPrimaryModal(config: PrimaryModalConfig) {
+        AppLog.i(TAG, "openPrimaryModal: type=${config.type} payload=${config.payload}")
+        _activePrimaryModal.value = config
+        when (val payload = config.payload) {
+            is PrimaryModalPayload.CropSelector -> {
+                _activeCropCutoutId.value = payload.cutoutId
+            }
+
+            is PrimaryModalPayload.CutoutInspector -> {
+                _selectedCutoutId.value = payload.cutoutId
+            }
+
+            else -> {}
+        }
+    }
+
+    fun openPrimaryModal(type: PrimaryModalType) {
+        openPrimaryModal(PrimaryModalConfig(type))
+    }
+
+    /**
+     * Deep-links directly to any destination across the app.
+     */
+    fun navigateTo(destination: NavDestination) {
+        AppLog.i(TAG, "navigateTo: $destination")
+        _currentNavDestination.value = destination
+        when (destination) {
+            is NavDestination.CutoutLayoutEditor -> {
+                _selectedCutoutId.value = destination.cutoutId
+                setViewportEditActive(true)
+            }
+
+            else -> {
+                openPrimaryModal(destination.toPrimaryModalConfig())
+            }
+        }
+    }
+
+    /**
+     * Temporarily suspends current navigation/modal state (e.g. before recording touch gestures)
+     * and dismisses open modal overlays so the user can interact with the screen.
+     */
+    fun suspendCurrentAndDismiss(overrideConfig: PrimaryModalConfig? = null) {
+        val configToSuspend = overrideConfig ?: _activePrimaryModal.value
+        AppLog.i(TAG, "suspendCurrentAndDismiss: saving config=$configToSuspend")
+        _suspendedPrimaryModal.value = configToSuspend
+        closePrimaryModal()
+    }
+
+    /**
+     * Resumes the suspended modal destination (if any) back to the exact sub-menu / stack.
+     */
+    fun resumeSuspended() {
+        val suspended = _suspendedPrimaryModal.value
+        AppLog.i(TAG, "resumeSuspended: resuming config=$suspended")
+        _suspendedPrimaryModal.value = null
+        if (suspended != null) {
+            openPrimaryModal(suspended)
+        }
+    }
+
+    /**
+     * Clears any currently suspended modal state without reopening.
+     */
+    fun clearSuspended() {
+        AppLog.d(TAG, "clearSuspended")
+        _suspendedPrimaryModal.value = null
+    }
+
+    fun closePrimaryModal() {
+        AppLog.i(TAG, "closePrimaryModal: currentModal=${_activePrimaryModal.value?.type}")
+        _activePrimaryModal.value = null
+        _activeCropCutoutId.value = null
+        _selectedCutoutId.value = null
+        _isMirrorEditorBackgroundHidden.value = false
+        _currentNavDestination.value = null
+    }
 
     fun setActiveCropCutoutId(id: String?) {
         AppLog.d(TAG, "setActiveCropCutoutId($id)")
@@ -466,124 +561,150 @@ object AppStateManager {
     fun setSelectedCutoutId(id: String?) {
         AppLog.d(TAG, "setSelectedCutoutId($id)")
         _selectedCutoutId.value = id
+        if (_companionSurfaceMode.value == CompanionSurfaceMode.VIEWPORT_EDIT) {
+            _activeCropCutoutId.value = id
+        }
+    }
+
+    private fun setPrimaryModalActive(
+        type: PrimaryModalType,
+        active: Boolean,
+    ) {
+        if (active) {
+            openPrimaryModal(PrimaryModalConfig(type))
+        } else if (_activePrimaryModal.value?.type == type) {
+            closePrimaryModal()
+        }
     }
 
     fun setGlobalSettingsOpen(open: Boolean) {
         AppLog.d(TAG, "setGlobalSettingsOpen($open)")
-        _uiMode.value = if (open) UiMode.GLOBAL_SETTINGS else UiMode.MACROPAD_USE
+        setPrimaryModalActive(PrimaryModalType.GLOBAL_SETTINGS, open)
     }
 
     fun setKeyboardSettingsOpen(open: Boolean) {
         AppLog.d(TAG, "setKeyboardSettingsOpen($open)")
-        _uiMode.value = if (open) UiMode.KEYBOARD_SETTINGS else UiMode.MACROPAD_USE
+        setPrimaryModalActive(PrimaryModalType.KEYBOARD_SETTINGS, open)
     }
 
     fun setTouchpadSettingsOpen(open: Boolean) {
         AppLog.d(TAG, "setTouchpadSettingsOpen($open)")
-        _uiMode.value = if (open) UiMode.TOUCHPAD_SETTINGS else UiMode.MACROPAD_USE
+        setPrimaryModalActive(PrimaryModalType.TOUCHPAD_SETTINGS, open)
     }
-
-    private var wasViewportEditActiveBeforeSettings = false
 
     private val _fullscreenMouseSensitivity = MutableStateFlow(1.0f)
     val fullscreenMouseSensitivity: StateFlow<Float> = _fullscreenMouseSensitivity.asStateFlow()
 
-    private val _forcedKeyboardLayout = MutableStateFlow<KbLayout?>(null)
+    private val forcedKeyboardLayout = MutableStateFlow<KbLayout?>(null)
     val fullscreenKeyboardLayout: StateFlow<KbLayout> =
-        combine(_forcedKeyboardLayout, KeyboardSettings.kbLayout) { forced, settings ->
+        combine(forcedKeyboardLayout, KeyboardSettings.kbLayout) { forced, settings ->
             forced ?: settings
         }.stateIn(scope, SharingStarted.Eagerly, KeyboardSettings.kbLayout.value)
 
     /**
-     * True whenever any fullscreen modal overlay is showing.
-     * Used by [handleEdgeSwipe] to determine if an edge swipe should close the active modal.
+     * True whenever any modal dialog, peek overlay, or non-macropad fullscreen surface is showing.
+     * Used by [handleEdgeSwipe] to determine if an edge swipe should close an active modal or overlay.
      */
     val isAnyModalActive: StateFlow<Boolean> =
-        combine(uiMode, MacroPadState.isPeekActive) { mode, peek ->
-            peek || mode == UiMode.GLOBAL_SETTINGS || mode == UiMode.KEYBOARD_SETTINGS ||
-                mode == UiMode.TOUCHPAD_SETTINGS || mode == UiMode.BACKGROUND_SETTINGS ||
-                mode == UiMode.FULLSCREEN_KEYBOARD || mode == UiMode.FULLSCREEN_MOUSE ||
-                mode == UiMode.VIEWPORT_EDIT
+        combine(activePrimaryModal, MacroPadState.isPeekActive, _companionSurfaceMode) { modal, peek, surface ->
+            modal != null || peek || surface != CompanionSurfaceMode.MACROPAD
         }.stateIn(scope, SharingStarted.Eagerly, false)
 
     /**
-     * True whenever any settings menu, Quick Menu, or editor modal is active/open.
+     * True whenever any modal dialog or Quick Menu is open.
      * Used by swipe gesture processors to disable edge gesture handling when menus are open.
      */
     val isAnyMenuOpen: StateFlow<Boolean> =
-        uiMode
-            .map { mode ->
-                mode == UiMode.GLOBAL_SETTINGS || mode == UiMode.KEYBOARD_SETTINGS ||
-                    mode == UiMode.TOUCHPAD_SETTINGS || mode == UiMode.BACKGROUND_SETTINGS ||
-                    mode == UiMode.LAYOUT_EDITOR || mode == UiMode.QUICK_MENU
-            }.stateIn(scope, SharingStarted.Eagerly, false)
+        combine(activePrimaryModal, _isQuickMenuOpen) { modal, quickMenuOpen ->
+            modal != null || quickMenuOpen
+        }.stateIn(scope, SharingStarted.Eagerly, false)
 
     fun setFullscreenKeyboardActive(
         active: Boolean,
         layout: KbLayout? = null,
     ) {
-        if (active && OnboardingWizardManager.isWizardActive.value) {
-            AppLog.w(TAG, "setFullscreenKeyboardActive suppressed while onboarding wizard is active")
+        if (active && (OnboardingWizardManager.isWizardActive.value || _isPrivdSetupWizardActive.value)) {
+            AppLog.w(TAG, "setFullscreenKeyboardActive suppressed while wizard is active")
             return
         }
         AppLog.i(TAG, "setFullscreenKeyboardActive($active, layout=$layout)")
         if (active) {
-            _forcedKeyboardLayout.value = layout
+            forcedKeyboardLayout.value = layout
+            _companionSurfaceMode.value = CompanionSurfaceMode.KEYBOARD
         } else {
-            _forcedKeyboardLayout.value = null
+            forcedKeyboardLayout.value = null
+            if (_companionSurfaceMode.value == CompanionSurfaceMode.KEYBOARD) {
+                _companionSurfaceMode.value = CompanionSurfaceMode.MACROPAD
+            }
         }
-        _uiMode.value = if (active) UiMode.FULLSCREEN_KEYBOARD else UiMode.MACROPAD_USE
     }
 
     fun setFullscreenMouseActive(
         active: Boolean,
         sensitivity: Float = 1.0f,
     ) {
-        if (active && OnboardingWizardManager.isWizardActive.value) {
-            AppLog.w(TAG, "setFullscreenMouseActive suppressed while onboarding wizard is active")
+        if (active && (OnboardingWizardManager.isWizardActive.value || _isPrivdSetupWizardActive.value)) {
+            AppLog.w(TAG, "setFullscreenMouseActive suppressed while wizard is active")
             return
         }
         AppLog.i(TAG, "setFullscreenMouseActive($active, sensitivity=$sensitivity)")
         if (active) {
             _fullscreenMouseSensitivity.value = sensitivity
+            _companionSurfaceMode.value = CompanionSurfaceMode.TOUCHPAD
+        } else {
+            if (_companionSurfaceMode.value == CompanionSurfaceMode.TOUCHPAD) {
+                _companionSurfaceMode.value = CompanionSurfaceMode.MACROPAD
+            }
         }
-        _uiMode.value = if (active) UiMode.FULLSCREEN_MOUSE else UiMode.MACROPAD_USE
     }
 
     fun setViewportEditActive(active: Boolean) {
         AppLog.i(TAG, "setViewportEditActive($active)")
         if (active) {
             ScreenCaptureManager.setFollowActive(false, persist = true)
+            _activeCropCutoutId.value = _selectedCutoutId.value
+            _isMirrorEditorBackgroundHidden.value = false
+            _companionSurfaceMode.value = CompanionSurfaceMode.VIEWPORT_EDIT
+        } else {
+            _selectedCutoutId.value = null
+            _activeCropCutoutId.value = null
+            _isMirrorEditorBackgroundHidden.value = false
+            if (_companionSurfaceMode.value == CompanionSurfaceMode.VIEWPORT_EDIT) {
+                _companionSurfaceMode.value = CompanionSurfaceMode.MACROPAD
+            }
         }
-        _uiMode.value = if (active) UiMode.VIEWPORT_EDIT else UiMode.MACROPAD_USE
     }
 
     fun setBackgroundSettingsActive(active: Boolean) {
         AppLog.i(TAG, "setBackgroundSettingsActive($active)")
         if (active) {
-            wasViewportEditActiveBeforeSettings = (_uiMode.value == UiMode.VIEWPORT_EDIT)
             setPrivdPromptDismissed(true)
-            _uiMode.value = UiMode.BACKGROUND_SETTINGS
-        } else {
-            _uiMode.value = if (wasViewportEditActiveBeforeSettings) UiMode.VIEWPORT_EDIT else UiMode.MACROPAD_USE
+            openPrimaryModal(PrimaryModalConfig(PrimaryModalType.BACKGROUND_SETTINGS))
+        } else if (_activePrimaryModal.value?.type == PrimaryModalType.BACKGROUND_SETTINGS) {
+            closePrimaryModal()
         }
     }
 
     fun setEditorActive(active: Boolean) {
         AppLog.i(TAG, "setEditorActive($active)")
-        _uiMode.value = if (active) UiMode.LAYOUT_EDITOR else UiMode.MACROPAD_USE
+        if (active) {
+            openPrimaryModal(PrimaryModalConfig(PrimaryModalType.MACROPAD_EDITOR))
+        } else if (isEditorActive.value) {
+            closePrimaryModal()
+        }
     }
 
-    /** Closes whichever fullscreen modal overlay is currently active. */
+    /** Closes whichever modal dialog or non-macropad fullscreen surface is currently active. */
     fun closeActiveModal() {
         AppLog.i(
             TAG,
-            "closeActiveModal: mode=${_uiMode.value} peek=${MacroPadState.isPeekActive.value}",
+            "closeActiveModal: surface=${_companionSurfaceMode.value} peek=${MacroPadState.isPeekActive.value} primaryModal=${_activePrimaryModal.value?.type}",
         )
-        _uiMode.value = UiMode.MACROPAD_USE
+        _activePrimaryModal.value = null
+        _companionSurfaceMode.value = CompanionSurfaceMode.MACROPAD
         _activeCropCutoutId.value = null
         _selectedCutoutId.value = null
-        wasViewportEditActiveBeforeSettings = false
+        _currentNavDestination.value = null
         MacroPadState.resetPeek()
     }
 
@@ -592,8 +713,8 @@ object AppStateManager {
      * Dispatches to the correct action based on current navigation state.
      */
     fun handleEdgeSwipe() {
-        if (OnboardingWizardManager.isWizardActive.value) {
-            AppLog.w(TAG, "handleEdgeSwipe suppressed while onboarding wizard is active")
+        if (OnboardingWizardManager.isWizardActive.value || _isPrivdSetupWizardActive.value) {
+            AppLog.w(TAG, "handleEdgeSwipe suppressed while wizard is active")
             return
         }
         AppLog.d(TAG, "handleEdgeSwipe: modal=${isAnyModalActive.value} quickMenu=${isQuickMenuOpen.value}")
@@ -610,11 +731,8 @@ object AppStateManager {
             MacroPadState.activeLayout.collect { layout ->
                 val newId = layout?.id
                 if (lastActiveLayoutId != null && newId != lastActiveLayoutId) {
-                    AppLog.d(TAG, "activeLayout changed from $lastActiveLayoutId to $newId; closing active modals")
-                    if (_uiMode.value != UiMode.QUICK_MENU &&
-                        _uiMode.value != UiMode.LAYOUT_EDITOR &&
-                        _uiMode.value != UiMode.BACKGROUND_SETTINGS
-                    ) {
+                    AppLog.d(TAG, "activeLayout changed from $lastActiveLayoutId to $newId; checking modal dismissal")
+                    if (_activePrimaryModal.value == null && !_isQuickMenuOpen.value) {
                         closeActiveModal()
                     }
                 }
@@ -640,11 +758,11 @@ object AppStateManager {
                 }
                 if (!accessibilityActive) {
                     MacroPadSettings.setPrivdPromptDismissed(false)
-                    _isPrivdPromptShowing.value = true
+                    _isPrivdPromptActive.value = true
                 } else if (dismissed || bgSettingsActive) {
-                    _isPrivdPromptShowing.value = false
+                    _isPrivdPromptActive.value = false
                 } else if (state == PrivdState.FAILED && hasCreds) {
-                    _isPrivdPromptShowing.value = true
+                    _isPrivdPromptActive.value = true
                 }
             }.collect {}
         }

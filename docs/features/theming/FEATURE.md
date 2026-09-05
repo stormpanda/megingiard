@@ -27,8 +27,8 @@ Megingiard supports user-selectable colour themes. The app provides three themes
 
 - All screen and component colours MUST be expressed through the 35 semantic tokens defined in `AppColors`.
 - Screens MUST NOT use hardcoded `Color.Black`, `Color.White`, or other literal `Color` values for surface, background, or text colours. Exceptions are permitted for:
-  - HSV colour-wheel rendering math in `ColorWheelPicker.kt` (saturation gradient, brightness overlay, selector dot ring).
-  - Text / icon content placed on `accentColor` container surfaces — the `onAccent` token defines theming-appropriate contrast colour.
+  - HSV color-wheel and slider rendering math in `MacroPadSubPages.kt` and `GlobalSettingsScreen.kt` (hue, saturation, brightness, and opacity gradients, selector thumb color).
+  - Text / icon content placed on `accentColor` container surfaces — the `onAccent` token defines theming-appropriate contrast colour (dynamically calculated based on relative luminance when custom accent colors are applied).
   - Standard dialog scrim overlays (`Color.Black.copy(alpha = 0.5f)` behind modal panels).
   - Material 3 component internal styling (`SwitchDefaults.colors`, `CheckboxDefaults.colors`) where tokens do not apply.
   - Explicit slider track colours (`Color.LightGray` / `Color.DarkGray` in `MediaScreen`).
@@ -36,7 +36,7 @@ Megingiard supports user-selectable colour themes. The app provides three themes
 ### FR-TH3: Real-Time Application
 
 - The theme MUST apply immediately when the user changes the theme selection — no restart required.
-- All screens visible on both the primary display (via `MainActivity`) and the secondary display (via `MirrorPresentation`) MUST respect the active theme.
+- All screens visible on both the primary display (via `PrimaryOverlayActivity`) and the secondary display (via `MainActivity`) MUST respect the active theme.
 
 ### FR-TH4: Centralized Modal Container & Bezel Light Refraction Border
 
@@ -71,15 +71,15 @@ Thirty-five semantic `AppColors` tokens cover all theming needs:
 | `pickerBackground`       | Color-picker dialog background                                                                                                     |
 | `accentBorder`           | Accent-colour swatch border                                                                                                        |
 | `accent`                 | Primary interactive accent colour (user-overridable or fixed per theme)                                                            |
-| `onAccent`               | Text / icons on accent / highlighted button backgrounds (theme-defined)                                                            |
+| `onAccent`               | Text / icons on accent / highlighted button backgrounds (theme-defined; dynamically resolved via relative luminance for custom accents) |
 | `quickMenuBarIdleColor`  | Always-visible pull-tab quick menu bar colour                                                                                      |
-| `controlIndicatorActive` | Active mode indicator dot in the navigation bar                                                                                   |
+| `controlIndicatorActive` | Active mode indicator dot in the navigation bar (tracks `onAccent` in custom-accent themes)                                        |
 | `navQuickMenuBody`       | Navigation bar background (tracks accent in custom-accent themes)                                                                 |
 | `buttonBody`             | Mirror control button background (tracks accent in custom-accent themes)                                                          |
 | `controlOverlayBorder`   | Border/outline of the carousel control overlay container                                                                           |
 | `navQuickMenuBorder`     | Border/outline of the navigation bar                                                                                               |
 | `mirrorQuickMenuBorder`  | Border/outline of the mirror control bar                                                                                           |
-| `buttonIconTint`         | Icon tint on mirror control buttons                                                                                                |
+| `buttonIconTint`         | Icon tint on mirror control buttons (tracks `onAccent` in custom-accent themes)                                                    |
 | `error`                  | Destructive/error action color                                                                                                     |
 | `onError`                | Text/icons on error-colored surfaces                                                                                               |
 | `actionColorGamepad`     | Badge tint for gamepad/joystick macro step chips                                                                                   |
@@ -88,6 +88,7 @@ Thirty-five semantic `AppColors` tokens cover all theming needs:
 | `macroPadAccentBorder`   | MacroPad placement border/outline tint                                                                                             |
 | `sectionHeaderColor`     | Uppercase section-header label tint                                                                                                |
 | `settingsSeparator`      | Thin divider between transparent settings rows (distinct from `divider`); tuned per theme to the settings screen/dialog background |
+| `subduedBorder`          | Subtle, non-accented border (`onSurface.copy(alpha = 0.15f)`) used for unfocused cards, pills, text fields, and chips              |
 
 ### Palettes
 
@@ -161,34 +162,19 @@ For external applications (such as the standalone Megingiard Game Focus launcher
 - **Provider Host (`MegingiardSettingsProvider.kt` in `:app`):** Exposes `/theme` and `/settings` endpoints. Listens to `SettingsManager.onThemeChangedListener` and invokes `contentResolver.notifyChange()` whenever the user changes the theme mode or custom accent color.
 - **Observer Client (`MegingiardThemeClient.kt` in `:gamefocus`):** Consumes `observeContentProvider()` to query initial state synchronously on launch and reactively update `LocalAppColors` whenever theme change notifications arrive.
 
-### Secondary Display — `MirrorPresentation.kt`
+### Secondary Display — `MainActivity.kt`
 
-`MirrorPresentation` independently collects `SettingsManager.themeMode` and `SettingsManager.accentColor` and wraps its own Compose tree with the same provider, ensuring the Mirror screen also responds to theme changes and uses the same effective accent.
+`MainActivity` wraps its Compose tree with `ProvideAppColors` derived from `SettingsManager.themeMode` and `SettingsManager.accentColor`, ensuring all screens, overlays, and embedded cutouts respond to theme changes and use the effective accent.
 
 ### Settings UI — `GlobalSettingsScreen.kt`
 
 - Theme selection uses a picker/dropdown row, not a binary switch.
-- The Accent Color row is only shown when `themeMode.supportsCustomAccent` is `true`.
-- To the right of the accent color chooser row, a palette icon button (`Icons.Rounded.Palette`) opens a color suggestions dialog (`PresetAccentPaletteDialog`).
-- `PresetAccentPaletteDialog` lists all fixed accent colors from thematic styles (`!supportsCustomAccent`) as swatches labeled with their theme names.
+- The Accent Color section is only shown when `themeMode.supportsCustomAccent` is `true`.
+- Accent color selection provides an inline palette card (`GamepadColorPaletteCard`) containing preset swatches (`ACCENT_PALETTE_PRESETS`) and an action card opening a dedicated custom accent sub-page (`CustomAccentSubPage`) with Hue, Saturation, and Brightness (HSV) sliders and a Save action card.
+- The custom accent color is persisted independently (`KEY_CUSTOM_ACCENT_COLOR` / `customAccentColor`), retaining the user's custom HSV values and preview swatch even when an `ACCENT_PALETTE_PRESETS` preset is actively selected.
 - The accent swatch still shows the stored user accent even when the currently active theme may ignore it.
 
-### Shared Dropdowns — `ui/AppDropdown.kt`
-
-- Selection dropdowns use the shared `AppDropdown` composable, styled after the Ambient Settings vignette-shape picker: a compact rounded trigger with subtle surface tint, trailing drop-down icon, themed surface menu, and accent-coloured selected item.
-- `AppDropdown` supports compact trailing controls, full-width form fields, disabled empty states, and optional footer actions for selectors such as the MacroPad profile picker.
-- Context/action menus that are not value selectors may continue to use Material `DropdownMenu` directly.
-
-### Settings Rows — `ui/AppSettingsRow.kt`
-
-All settings rows across the app (Global Settings, Keyboard/Touchpad tool settings, MacroPad editor layout settings) use the shared container composables `AppSettingsRow` and `AppDivider`.
-
-**`AppSettingsRow`** is a transparent container:
-
-- Applies consistent `16.dp` horizontal and `12.dp` vertical padding by default (both overridable).
-- Enforces a `48.dp` minimum touch-target height.
-- Adds `Modifier.clickable` only when `onClick` is non-null (rows without an action are not clickable).
-- Has **no background** — the parent section/dialog/screen owns the background.
+### Separators — `AppDivider`
 
 **`AppDivider`** renders a thin `HorizontalDivider` using `AppColors.settingsSeparator` as its default colour.
 
@@ -198,8 +184,6 @@ All settings rows across the app (Global Settings, Keyboard/Touchpad tool settin
 - The `divider` token is reserved for non-row guide lines drawn directly on a Canvas (e.g. `MacroVerticalTimeline`).
 
 **`quickMenuBarIdleColor` — per-palette constants:** Each palette defines its own named constant (`DARK_QM_BAR_IDLE`, `LIGHT_QM_BAR_IDLE`, `CP_QM_BAR_IDLE`), all set to `Color.White.copy(alpha = 0.4f)`. This ensures consistent pull-tab visibility across Dark, Light, and Cyberpunk themes while keeping theme-specific constants for future divergence.
-
-**Background ownership rule:** Settings rows are transparent. The parent `Column` that groups a set of settings rows is responsible for setting `Modifier.background(colors.surface)`. This is why `GlobalSettingsScreen.SettingsSection` and `BackgroundSettingsOverlay` wrap their row groups in `Column(modifier = Modifier.fillMaxWidth().background(colors.surface))` rather than per-row backgrounds.
 
 ### Persistence — `SettingsManager.kt`
 
@@ -347,3 +331,39 @@ Modifier.padding(dimens.paddingLarge)
 | `sectionHeaderColor`   | `accent`      | `accent`      | `CP_SECTION_HEADER` | Section-header labels and pull-tab tint |
 
 Use these tokens instead of hardcoding `Color(0xFFCF6679)` / `Color(0xFFFF9800)` / `Color(0xFF2196F3)` in screen code.
+
+---
+
+## Gamepad Design System Components (`ui/GamepadComponents.kt`)
+
+Megingiard provides a centralized, reusable suite of handheld gamepad-first composables for primary screen menus and dialogs:
+
+| Component | Description | Primary Usage |
+| --------- | ----------- | ------------- |
+| `GamepadTwoPaneScaffold` | Split-screen scaffold with fixed `210.dp` category sidebar, scrollable content deck, sticky sidebar footer, and bottom prompt bar. | `GlobalSettingsScreen`, `MacroPadEditor` |
+| `GamepadSectionHeader` | Uppercase section header with tracked letter-spacing, localized text, and themed accent/section coloring. | `GlobalSettingsScreen`, `MacroPadEditor`, `MacroTimelineEditor` |
+| `GamepadCategoryTile` | Focusable navigation tile for sidebar category rails with subtle background highlight and icon/label layout. | `GamepadTwoPaneScaffold` sidebars |
+| `GamepadFocusCard` | Standard focusable card container with animated scaling, draw-phase glowing accent border on focus, and click handling. | Base for all gamepad cards |
+| `GamepadAdjustableCard` | Shared two-tier focusable adjustable card container managing Tier-1/Tier-2 focus and value adjustment state machine. | Base for `GamepadStepperCard`, `GamepadChoiceCard` |
+| `GamepadToggleCard` | Focusable toggle card with switch control, title, description, and icon. Pressing `[A]` directly toggles the setting; `[Left]` moves back to sidebar rail. | Settings switches, lock toggles |
+| `GamepadStepperCard` | Two-tier focusable numeric stepper card. Pressing `[A]` enters Tier 2 value adjustment (`[Left/Right]` decrements/increments, `[B]` exits). | Numeric settings, step intervals |
+| `GamepadChoiceCard` | Two-tier focusable value carousel card. Tier 1: `[Up/Down]` row traversal, `[Left]` back to sidebar. Pressing `[A]` enters Tier 2 value adjustment (capsule glows, `[Left/Right]` changes value, `[B]` exits without closing dialog). | Enums, presets, log levels |
+| `GamepadActionCard` | Focusable actionable item card with action pill, optional leading widget slot (`actionLeadingContent`), and icon. Pressing `[A]` executes action; `[Left]` returns to sidebar rail. | Buttons, macros, edit actions, custom wheel card |
+| `GamepadTextFieldCard` | Collapsible two-tier focusable text input card. Tier 1: `[Up/Down]` row traversal (56 dp minimum height with quoted value headline and `[ Edit ]` CTA pill), `[Left]` back to sidebar. Pressing `[A]` enters Tier 2 text editing (smoothly expands card, requests text field focus, and opens keyboard; `[B]`, `[Enter]`, or tapping `[ Save ]` exits, commits value, and collapses). | API tokens, names, labels |
+| `GamepadSliderCard` | Two-tier focusable slider card. Tier 1: `[Up/Down]` row traversal, `[Left]` back to sidebar. Pressing `[A]` enters Tier 2 value adjustment (`[Left/Right]` adjusts value, `[B]` exits). | Deadzone, opacity, volume sliders |
+| `GamepadColorPaletteCard` | Two-tier focusable color palette card. Tier 1: `[Up/Down]` row traversal, `[Left]` back to sidebar. Pressing `[A]` enters Tier 2 color selection (`[Left/Right]` cycles preset colors, `[B]` exits). | Accent color preset picker |
+| `GamepadColorPaletteGrid` | Color swatch grid with checkmark selection indicators and touch click support. | Color picker options |
+| `GamepadColorSwatch` | Standalone circular color swatch with checkmark icon and 3 dp focus outline. | Preset palette, action card swatch badge |
+| `GamepadSearchBar` | Focusable search field with clear (`X`) button and optional horizontal filter chips. | `IconPickerDialog`, `SteamGridDbScrapeDialog` |
+| `GamepadTwoStepConfirmCard` | Destructive action card requiring two-step confirmation (`[ Delete ]` -> `[ Confirm ]`) with in-deck B-button cancellation. | Profiles, layouts, buttons, macros, conflict resolution |
+| `GamepadInfoBox` | Themed info banner / notice box with vector icon, surface background, subtle border, and optional title/description layout. | Sub-menu instructions, empty search/list notices |
+
+### Two-Tier Handheld Focus & Navigation Model
+
+All two-pane primary screen overlays adhere to a strict two-tier gamepad focus architecture:
+1. **Left Category Rail:** Navigating `[D-Pad Up / Down]` automatically selects and switches categories on focus (`onFocusChanged`). Pressing `[D-Pad Right]` transitions focus into the right content deck.
+2. **Tier 1 — Row Selection Mode:** The entire card is outlined with an accent border. `[D-Pad Up / Down]` navigates strictly to the adjacent card above or below without diagonal jumping. Pressing `[D-Pad Left]` navigates back to the left category sidebar.
+3. **Tier 2 — Value Adjustment Mode (Choice / Stepper / Slider / Color Palette):** Pressing `[Button A]` activates in-place value adjustment (the value capsule or active element illuminates). `[D-Pad Left / Right]` modifies the value or selects adjacent colors. Pressing `[Button B]` cancels/exits value adjustment without closing the overlay dialog. Pressing `[D-Pad Up / Down]` commits the value, exits adjustment mode, and navigates to the adjacent row.
+4. **Drill-Down Sub-Page Navigation Deck:** In-tree configuration sub-pages (e.g. `DeadzonesSubPage`) slide into the right content deck with smooth bidirectional horizontal transitions (`AnimatedContent`). Forward navigation slides category cards out left and sub-pages in from the right with dynamic breadcrumb headers (`<CATEGORY>  ›  <SUB-PAGE>`), while pressing `[Button B]` or triggering back handlers slides in reverse and restores category deck focus.
+
+

@@ -53,9 +53,10 @@ To maintain codebase health and high execution performance, please adhere to the
 
 ### 1. Architectural Integrity
 Megingiard is split into modular layers:
-* **`:app` (Android UI Layer):** Jetpack Compose, ViewModels, Activities, and foreground services. Place shared Composable components in `ui/`.
-* **`:domain` (Business Logic & State Management):** Pure business logic, hardware interaction, and state flows. **Must not import Android UI or View elements.**
-* **`:core` (Data Structures & Constants):** Pure Kotlin models, serializable schemas, and common constants. **Must have no Android framework dependencies.**
+* **`:companion:ui` / `:gamefocus:ui` (Android UI Layer):** Jetpack Compose, ViewModels, Activities, and foreground services.
+* **`:companion:domain` / `:gamefocus:domain` (Feature Domain Logic):** Feature business logic, input injection facades, and state management. **Must not import Android UI or Compose elements.**
+* **`:shared:catalog` / `:shared:media` / `:shared:session` (Shared Domain Libraries):** App/ROM indexing, artwork scrapers, and active emulator session tracking.
+* **`:shared:core` (Data Structures & Constants):** Pure Kotlin models, serializable schemas, logging facade (`AppLog`), and common constants. **Must have no Android framework dependencies.**
 
 ### 2. Kotlin & Compose Conventions
 * **Kotlin 2.0+:** Write modern Kotlin. Use `enum.entries` (never `enum.values()`). Use `kotlin.math.min`/`max` (never `java.lang.Math.*`).
@@ -78,7 +79,7 @@ We welcome translation contributions to make Megingiard accessible to more users
 
 ### 2. Mandatory Privileged Auto Setup Support
 * **Strict Requirement:** Any language offered as an app translation **must** also support **Privileged Auto Setup**. (Auto Setup is permitted and welcomed to support *more* system languages than Megingiard offers UI translations for, but any language with UI translations must support Auto Setup).
-* **Configuration:** You must update [`AutoSetupLanguageConfig.kt`](shared/core/src/main/kotlin/com/stormpanda/megingiard/privd/AutoSetupLanguageConfig.kt) in the `:core` module by adding a new language configuration containing:
+* **Configuration:** You must update [`AutoSetupLanguageConfig.kt`](shared/core/src/main/kotlin/com/stormpanda/megingiard/privd/AutoSetupLanguageConfig.kt) in the `:shared:core` module by adding a new language configuration containing:
   - BCP 47 locale tag and 2-letter ISO language code.
   - System settings search query strings for **Build Number**, **Wireless Debugging**, and **USB Debugging**.
   - Localized keyword lists for identifying the **"Pair device with pairing code"** row and dialog **"Allow" / "OK"** confirmation buttons.
@@ -118,9 +119,15 @@ Before submitting a translation Pull Request, you **must** manually verify that 
    git merge upstream/main
    ```
 2. **Implement:** Write your code following the guidelines in [AGENTS.md](AGENTS.md).
-3. **Mandatory Testing:** Run the unit tests locally before submitting any contribution to ensure there are no regressions:
+3. **Mandatory Testing & Coverage:** Run the unit tests and coverage report locally before submitting any contribution to ensure there are no regressions:
    ```bash
-   ./gradlew test
+   # Run all unit tests
+   ./gradlew :shared:core:test :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:ui:testDebugUnitTest
+
+   # Generate consolidated test coverage report
+   ./gradlew koverHtmlReport
+   # View console coverage summary
+   ./gradlew koverLog
    ```
 4. **Mandatory Documentation Sync:**
    - If your changes affect a feature's behavior or settings, you **must** update the corresponding `docs/features/<feature>/FEATURE.md` documentation.

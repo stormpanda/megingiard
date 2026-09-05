@@ -1,0 +1,230 @@
+package com.stormpanda.megingiard.macropad
+
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.rounded.Cast
+import androidx.compose.material.icons.rounded.CropFree
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Keyboard
+import androidx.compose.material.icons.rounded.Mouse
+import androidx.compose.material.icons.rounded.PauseCircle
+import androidx.compose.material.icons.rounded.SmartButton
+import androidx.compose.material.icons.rounded.SwapHoriz
+import androidx.compose.material.icons.rounded.TouchApp
+import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.ui.GamepadActionCard
+import com.stormpanda.megingiard.ui.GamepadInfoBox
+import com.stormpanda.megingiard.ui.GamepadTwoColumnGrid
+
+private const val TAG = "ActionGridSubPages"
+
+internal data class ActionGridItem(
+    val action: PadAction,
+    val titleRes: Int,
+    val descRes: Int,
+    val icon: ImageVector,
+)
+
+private val MIRROR_ACTION_ITEMS =
+    listOf(
+        ActionGridItem(
+            PadAction.MirrorPlayStop,
+            R.string.macropad_action_mirror_play_stop,
+            R.string.macropad_action_mirror_play_stop_desc,
+            Icons.Rounded.Cast,
+        ),
+        ActionGridItem(
+            PadAction.MirrorFreeze,
+            R.string.macropad_action_mirror_freeze,
+            R.string.macropad_action_mirror_freeze_desc,
+            Icons.Rounded.PauseCircle,
+        ),
+        ActionGridItem(
+            PadAction.MirrorViewportEdit,
+            R.string.macropad_action_mirror_viewport_edit,
+            R.string.macropad_action_mirror_viewport_edit_desc,
+            Icons.Rounded.CropFree,
+        ),
+        ActionGridItem(
+            PadAction.MirrorTouchProjection,
+            R.string.macropad_action_mirror_touch_projection,
+            R.string.macropad_action_mirror_touch_projection_desc,
+            Icons.Rounded.TouchApp,
+        ),
+        ActionGridItem(
+            PadAction.BackgroundPeek,
+            R.string.macropad_action_ambient_peek,
+            R.string.macropad_action_ambient_peek_desc,
+            Icons.Rounded.Visibility,
+        ),
+    )
+
+private val OVERLAY_ACTION_ITEMS =
+    listOf(
+        ActionGridItem(
+            PadAction.FullScreenMouse(),
+            R.string.macropad_action_fullscreen_mouse,
+            R.string.macropad_action_fullscreen_mouse_desc,
+            Icons.Rounded.Mouse,
+        ),
+        ActionGridItem(
+            PadAction.FullScreenKeyboard(),
+            R.string.macropad_action_fullscreen_keyboard,
+            R.string.macropad_action_fullscreen_keyboard_desc,
+            Icons.Rounded.Keyboard,
+        ),
+    )
+
+private val LAYOUT_ACTION_ITEMS =
+    listOf(
+        ActionGridItem(
+            PadAction.LayoutNext,
+            R.string.macropad_action_layout_next,
+            R.string.macropad_action_layout_next_desc,
+            Icons.AutoMirrored.Rounded.ArrowForward,
+        ),
+        ActionGridItem(
+            PadAction.LayoutPrevious,
+            R.string.macropad_action_layout_previous,
+            R.string.macropad_action_layout_previous_desc,
+            Icons.AutoMirrored.Rounded.ArrowBack,
+        ),
+        ActionGridItem(
+            PadAction.ProfileSwitcher,
+            R.string.macropad_action_profile_switcher,
+            R.string.macropad_action_profile_switcher_desc,
+            Icons.Rounded.SwapHoriz,
+        ),
+    )
+
+@Composable
+private fun GenericActionGridPickerSubPageContent(
+    tag: String,
+    items: List<ActionGridItem>,
+    currentAction: PadAction,
+    onSelectAction: (action: PadAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    AppLog.d(TAG, "$tag: currentAction=$currentAction")
+
+    GamepadTwoColumnGrid(
+        items = items,
+        modifier = modifier,
+    ) { item, _, cardModifier ->
+        val isSelected = currentAction::class == item.action::class
+
+        GamepadActionCard(
+            title = stringResource(item.titleRes),
+            description = stringResource(item.descRes),
+            icon = item.icon,
+            actionText = if (isSelected) stringResource(R.string.gamepad_color_selected) else null,
+            alwaysShowFullDescription = true,
+            onClick = { onSelectAction(item.action) },
+            modifier = cardModifier,
+        )
+    }
+}
+
+@Composable
+internal fun MirrorActionPickerSubPageContent(
+    currentAction: PadAction,
+    accentColor: Color,
+    onSelectAction: (action: PadAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    GenericActionGridPickerSubPageContent(
+        tag = "MirrorActionPickerSubPageContent",
+        items = MIRROR_ACTION_ITEMS,
+        currentAction = currentAction,
+        onSelectAction = onSelectAction,
+        modifier = modifier,
+    )
+}
+
+@Composable
+internal fun OverlayActionPickerSubPageContent(
+    currentAction: PadAction,
+    accentColor: Color,
+    onSelectAction: (action: PadAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    GenericActionGridPickerSubPageContent(
+        tag = "OverlayActionPickerSubPageContent",
+        items = OVERLAY_ACTION_ITEMS,
+        currentAction = currentAction,
+        onSelectAction = onSelectAction,
+        modifier = modifier,
+    )
+}
+
+@Composable
+internal fun LayoutActionPickerSubPageContent(
+    currentAction: PadAction,
+    accentColor: Color,
+    onSelectAction: (action: PadAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    GenericActionGridPickerSubPageContent(
+        tag = "LayoutActionPickerSubPageContent",
+        items = LAYOUT_ACTION_ITEMS,
+        currentAction = currentAction,
+        onSelectAction = onSelectAction,
+        modifier = modifier,
+    )
+}
+
+@Composable
+internal fun MacroActionPickerSubPageContent(
+    currentAction: PadAction,
+    accentColor: Color,
+    onSelectAction: (action: PadAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    AppLog.d(TAG, "MacroActionPickerSubPageContent: currentAction=$currentAction")
+    val profile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
+    val macros = profile?.macros ?: emptyList()
+
+    if (macros.isEmpty()) {
+        GamepadInfoBox(
+            text = stringResource(R.string.macropad_picker_macro_empty_title),
+            description = stringResource(R.string.macropad_picker_macro_create_info_desc),
+            icon = Icons.Rounded.Info,
+            modifier = modifier.fillMaxWidth(),
+        )
+    } else {
+        val currentMacroId = (currentAction as? PadAction.Macro)?.macroId
+        GamepadTwoColumnGrid(
+            items = macros,
+            modifier = modifier,
+        ) { macro, _, cardModifier ->
+            val isSelected = macro.id == currentMacroId
+            val stepCountDesc =
+                if (macro.steps.size == 1) {
+                    stringResource(R.string.macropad_macro_step_count_single)
+                } else {
+                    stringResource(R.string.macropad_macro_step_count_multiple, macro.steps.size)
+                }
+
+            GamepadActionCard(
+                title = macro.name,
+                description = stepCountDesc,
+                icon = Icons.Rounded.SmartButton,
+                actionText = if (isSelected) stringResource(R.string.gamepad_color_selected) else null,
+                alwaysShowFullDescription = true,
+                onClick = { onSelectAction(PadAction.Macro(macro.id)) },
+                modifier = cardModifier,
+            )
+        }
+    }
+}

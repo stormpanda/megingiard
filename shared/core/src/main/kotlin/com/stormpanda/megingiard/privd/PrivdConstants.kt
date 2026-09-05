@@ -9,5 +9,5 @@ object PrivdConstants {
      * Incrementing this value triggers automatic binary re-push and reconnection
      * dialogs across app upgrades and downgrades.
      */
-    const val PRIVD_VERSION = 5
+    const val PRIVD_VERSION = 7
 }

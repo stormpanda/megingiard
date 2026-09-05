@@ -28,7 +28,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes.KEY_ESC
@@ -56,6 +56,8 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.viewmodel.KeyboardViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+private val KTT_BUTTON_SHAPE = RoundedCornerShape(4.dp)
 
 @Composable
 internal fun KeyboardTopToolbar(
@@ -141,7 +143,7 @@ private fun ModifierButton(
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
-    val state by KeyboardState.stateFor(id).collectAsState()
+    val state by KeyboardState.stateFor(id).collectAsStateWithLifecycle()
     val isActive = state != ModifierState.INACTIVE
 
     val bg = if (isActive) accentColor.copy(alpha = 0.7f) else Color.Transparent
@@ -258,8 +260,8 @@ private fun BaseToolbarButton(
                 .border(
                     width = 1.dp,
                     color = borderColor,
-                    shape = RoundedCornerShape(4.dp),
-                ).clip(RoundedCornerShape(4.dp))
+                    shape = KTT_BUTTON_SHAPE,
+                ).clip(KTT_BUTTON_SHAPE)
                 .background(bg)
                 .pointerInput(onPress) {
                     detectTapGestures(onPress = onPress)
