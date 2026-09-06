@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import java.util.Locale
 import java.util.UUID
 
 private const val TAG = "MacroPadState"
@@ -22,6 +23,27 @@ private const val MP_DEFAULT_LAYOUT_NAME = "Layout"
 private const val DEFAULT_PROFILE_NAME = "Default"
 private const val DUPLICATE_BUTTON_OFFSET = 0.05f
 private const val MP_LEGACY_BG_ALPHA_MIGRATION = 0xB3 // 70% opacity in hex (matching previous default resting level)
+
+private fun defaultInitialName(): String =
+    when (Locale.getDefault().language.lowercase()) {
+        "zh" -> "預設"
+        "de" -> "Standard"
+        else -> "Default"
+    }
+
+private fun List<String>.nextUniqueName(
+    baseName: String,
+    fallback: String,
+): String {
+    val normalizedBase = baseName.trim().ifBlank { fallback }
+    if (none { it.equals(normalizedBase, ignoreCase = true) }) return normalizedBase
+    var index = 2
+    while (true) {
+        val candidate = "$normalizedBase ($index)"
+        if (none { it.equals(candidate, ignoreCase = true) }) return candidate
+        index += 1
+    }
+}
 
 private fun migrateButtonBgColorOption(option: ColorOption?): ColorOption? {
     if (option is ColorOption.Custom) {
@@ -272,13 +294,14 @@ object MacroPadState {
                 needsSave = true
                 val defaultId = UUID.randomUUID().toString()
                 val defaultLayoutId = UUID.randomUUID().toString()
+                val initialName = defaultInitialName()
                 listOf(
                     PadProfile(
                         id = defaultId,
-                        name = DEFAULT_PROFILE_NAME,
+                        name = initialName,
                         layouts =
                             listOf(
-                                PadLayout(id = defaultLayoutId, name = DEFAULT_PROFILE_NAME),
+                                PadLayout(id = defaultLayoutId, name = initialName),
                             ),
                         activeLayoutId = defaultLayoutId,
                     ),
@@ -468,11 +491,12 @@ object MacroPadState {
     fun restoreDefaults() {
         val defaultId = UUID.randomUUID().toString()
         val defaultLayoutId = UUID.randomUUID().toString()
+        val initialName = defaultInitialName()
         val defaultProfile =
             PadProfile(
                 id = defaultId,
-                name = "Default",
-                layouts = listOf(PadLayout(id = defaultLayoutId, name = "Default")),
+                name = initialName,
+                layouts = listOf(PadLayout(id = defaultLayoutId, name = initialName)),
                 activeLayoutId = defaultLayoutId,
             )
         _profiles.value = listOf(defaultProfile)

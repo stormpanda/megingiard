@@ -15,6 +15,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.util.Locale
 import java.util.UUID
 
 /**
@@ -24,14 +25,18 @@ import java.util.UUID
 @OptIn(ExperimentalCoroutinesApi::class)
 class MacroPadStateTest {
     private val testDispatcher = UnconfinedTestDispatcher()
+    private lateinit var originalLocale: Locale
 
     @Before
     fun setUp() {
+        originalLocale = Locale.getDefault()
+        Locale.setDefault(Locale.US)
         Dispatchers.setMain(testDispatcher)
     }
 
     @After
     fun tearDown() {
+        Locale.setDefault(originalLocale)
         Dispatchers.resetMain()
     }
 
@@ -146,6 +151,26 @@ class MacroPadStateTest {
         assertEquals(defaultProfile.id, MacroPadState.activeProfileId.value)
         assertEquals(defaultProfile, MacroPadState.activeProfile.value)
         assertEquals(defaultLayout, MacroPadState.activeLayout.value)
+    }
+
+    @Test
+    fun `loadFrom with empty list in Traditional Chinese locale generates localized default name`() {
+        Locale.setDefault(Locale.TRADITIONAL_CHINESE)
+        MacroPadState.loadFrom(emptyList(), null)
+
+        val defaultProfile = MacroPadState.profiles.value.first()
+        assertEquals("預設", defaultProfile.name)
+        assertEquals("預設", defaultProfile.layouts.first().name)
+    }
+
+    @Test
+    fun `loadFrom with empty list in German locale generates localized default name`() {
+        Locale.setDefault(Locale.GERMANY)
+        MacroPadState.loadFrom(emptyList(), null)
+
+        val defaultProfile = MacroPadState.profiles.value.first()
+        assertEquals("Standard", defaultProfile.name)
+        assertEquals("Standard", defaultProfile.layouts.first().name)
     }
 
     @Test

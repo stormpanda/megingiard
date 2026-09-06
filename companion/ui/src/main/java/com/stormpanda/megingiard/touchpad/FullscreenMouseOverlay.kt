@@ -668,7 +668,7 @@ private fun ModeToggleButton(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             ModeSegment(
-                text = "Mouse",
+                text = stringResource(R.string.touchpad_mode_mouse),
                 icon = Icons.Rounded.Mouse,
                 contentDescription = stringResource(R.string.cd_touchpad_relative_mouse_mode),
                 color = mouseColor,
@@ -676,7 +676,7 @@ private fun ModeToggleButton(
                 modifier = Modifier.weight(1f),
             )
             ModeSegment(
-                text = "Touch",
+                text = stringResource(R.string.touchpad_mode_touch),
                 icon = Icons.Rounded.TouchApp,
                 contentDescription = stringResource(R.string.cd_touchpad_absolute_touch_mode),
                 color = touchColor,
