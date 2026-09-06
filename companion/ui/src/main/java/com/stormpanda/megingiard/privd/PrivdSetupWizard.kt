@@ -1,10 +1,14 @@
 package com.stormpanda.megingiard.privd
 
+import android.app.Activity
 import android.app.ActivityOptions
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import android.view.Display
+import android.view.WindowManager
+import android.view.inputmethod.InputMethodManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateContentSize
@@ -49,6 +53,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldColors
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -74,6 +79,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.PrimaryFocusAnchorActivity
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.onboarding.OnboardingStepId
 import com.stormpanda.megingiard.onboarding.OnboardingStepState
@@ -166,6 +172,31 @@ internal fun PrivdSetupWizardDialog(
     LaunchedEffect(Unit) {
         AppLog.d(TAG, "PrivdSetupWizardDialog: wizard opened")
         viewModel.privdResetBootstrapStage()
+    }
+
+    DisposableEffect(Unit) {
+        val activity = context as? Activity
+        val window = activity?.window
+        AppLog.d(TAG, "PrivdSetupWizardDialog: clearing FLAG_NOT_FOCUSABLE for IME")
+        window?.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
+
+        onDispose {
+            AppLog.d(TAG, "PrivdSetupWizardDialog: restoring FLAG_NOT_FOCUSABLE and anchoring primary focus")
+            window?.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
+            val imm = activity?.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+            window?.decorView?.windowToken?.let { token ->
+                imm?.hideSoftInputFromWindow(token, 0)
+            }
+            val currentDisplayId =
+                try {
+                    activity?.display?.displayId
+                } catch (_: Exception) {
+                    null
+                } ?: Display.DEFAULT_DISPLAY
+            if (activity != null && currentDisplayId != Display.DEFAULT_DISPLAY) {
+                PrimaryFocusAnchorActivity.anchorPrimaryFocus(activity)
+            }
+        }
     }
 
     LaunchedEffect(step) {

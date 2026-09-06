@@ -72,6 +72,7 @@ every device since Android 11 (API 30).
   - **Step 3 (Pairing Code & Pairing Port)**: Provides input fields for **WiFi pairing code** (6 digits) and **Pairing port** (5 digits), triggering pairing and bootstrapping with live stage progress checklist.
   - **Step 4 (You're All Set)**: Reuses `FinishedStepContent` to display completion confirmation ("You're all set! Privileged Mode is ready.").
 - Step 2 and Step 3 provide **Back** buttons to navigate to preceding steps, and the **Pair** button on Step 3 triggers `PrivdBootstrapper` pairing (`127.0.0.1:<PairPort>`) and bootstrap.
+- **IME Focus Lifecycle & Macro Silencing**: Because `MainActivity` maintains `FLAG_NOT_FOCUSABLE`, `PrivdSetupWizardDialog` temporarily clears this flag via a `DisposableEffect` while mounted so the Android software keyboard (IME) can appear for typing ports and pairing codes. Upon unmounting (dismissal, cancel, completion, or teardown), `FLAG_NOT_FOCUSABLE` is restored, the IME is dismissed, and `PrimaryFocusAnchorActivity.anchorPrimaryFocus(activity)` is invoked to cleanly return focus to Display 0. Simultaneously, `InjectorLifecycleManager` observes `AppStateManager.isPrivdSetupWizardActive` and stops all virtual macro key/mouse injectors while the wizard is active.
 
 ### FR-PV9: Multi-Stage Privileged Mode Auto-Setup & Onboarding Tour Integration
 

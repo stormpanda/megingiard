@@ -30,12 +30,14 @@ class InjectorLifecycleManagerTest {
         isModalOpen: Boolean = false,
         isQuickMenuOpen: Boolean = false,
         promptInFlight: Boolean = false,
+        isPrivdSetupWizardActive: Boolean = false,
         activeLayout: PadLayout? = null,
     ) = InjectorLifecycleManager.calculateInjectorStates(
         surfaceMode = surfaceMode,
         isModalOpen = isModalOpen,
         isQuickMenuOpen = isQuickMenuOpen,
         promptInFlight = promptInFlight,
+        isPrivdSetupWizardActive = isPrivdSetupWizardActive,
         activeLayout = activeLayout,
     )
 
@@ -116,6 +118,16 @@ class InjectorLifecycleManagerTest {
     fun testViewportEditActive_stopsAllMacroInjectors() {
         val states =
             calcStates(surfaceMode = CompanionSurfaceMode.VIEWPORT_EDIT, activeLayout = createLayout(hasKeyboard = true, hasMouse = true))
+        assertFalse(states.startKeyboard)
+        assertFalse(states.startMouse)
+        assertFalse(states.startGamepad)
+        assertFalse(states.startTouch)
+    }
+
+    @Test
+    fun testPrivdSetupWizardActive_stopsAllMacroInjectors() {
+        val states =
+            calcStates(isPrivdSetupWizardActive = true, activeLayout = createLayout(hasKeyboard = true, hasMouse = true))
         assertFalse(states.startKeyboard)
         assertFalse(states.startMouse)
         assertFalse(states.startGamepad)
