@@ -181,8 +181,9 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
     val hasCutouts = cutouts.isNotEmpty()
     val showEmbeddedMirror = isCapturing && hasCutouts
 
+    // Plain canvas background of MacroPad is strictly theme-invariant and always pitch black (Color.Black).
     Box(
-        modifier = modifier.fillMaxSize().background(colors.appBackground).padding(MP_SCREEN_PADDING),
+        modifier = modifier.fillMaxSize().background(Color.Black).padding(MP_SCREEN_PADDING),
         contentAlignment = Alignment.Center,
     ) {
         if (showEmbeddedMirror) {

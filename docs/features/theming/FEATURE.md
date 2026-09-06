@@ -90,6 +90,10 @@ Thirty-five semantic `AppColors` tokens cover all theming needs:
 | `settingsSeparator`      | Thin divider between transparent settings rows (distinct from `divider`); tuned per theme to the settings screen/dialog background |
 | `subduedBorder`          | Subtle, non-accented border (`onSurface.copy(alpha = 0.15f)`) used for unfocused cards, pills, text fields, and chips              |
 
+> [!NOTE]
+> **Theme-Invariant Plain MacroPad Background:**
+> Unlike `keyboardBackground` and `touchpadBackground` which inherit the theme's `appBackground`, the plain canvas background of a MacroPad (when no custom background image is configured) is strictly theme-invariant and always pitch black (`Color.Black`). This guarantees maximum contrast for buttons, icons, and cutouts regardless of which theme palette is active.
+
 ### Palettes
 
 Eight palettes are defined:

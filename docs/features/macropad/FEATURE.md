@@ -189,6 +189,7 @@ Each button supports one of the following actions:
 
 ### FR-P9: Background Display
 
+- **Theme-Invariant Pitch Black Plain Background:** The plain canvas background of a MacroPad (when no custom background image is configured) MUST always be pitch black (`Color.Black`), completely invariant to the active theme palette. Regardless of whether Dark, Dark OLED, Norse (`megingiard`), Mjolnir, Valkyrie, Bifrost, Yggdrasil, or Odin Mono is active, the MacroPad canvas base background does not adopt theme background colors (`appBackground`) and remains solid pitch black across Use Mode (`PadSurface`), Editor Mode (`PadCanvas`), and behind embedded mirror cutouts (`EmbeddedMirrorView`).
 - An optional **Background Display** mode renders the Screen Mirror output behind the MacroPad buttons on the secondary display via `EmbeddedMirrorView`.
 - Enabled via a **toggle** in MacroPad tool settings (default: off).
 - When Background Display is enabled and the user enters MacroPad mode, `ScreenCaptureService` is **automatically started** (identical to how Mirror mode auto-starts when that setting is active). The user is prompted for MediaProjection consent if not already capturing. Declining within a session is respected until the next mode entry.
@@ -746,9 +747,10 @@ In use mode, all button hit testing (including `TrackpointMove` buttons) uses an
 
 AABB hit detection is conservative for circular buttons (slightly over-accepts at corners) but this is acceptable for a game-pad-style UI.
 
-### Pad Canvas Sizing
+### Pad Canvas Sizing & Plain Background
 
-The pad surface occupies the full screen with **no padding** (`MP_SCREEN_PADDING = 0.dp` in `MacroPadScreen.kt`) — the pad extends to all four screen edges with no corner radius. No aspect-ratio constraint is applied; the pad grows or shrinks with the available display area.
+The pad surface occupies the full screen with **no padding** (`MP_SCREEN_PADDING = 0.dp` in `MacroPadScreen.kt`) — the pad extends to all four screen edges with no corner radius.
+The plain canvas background (when no custom background image is configured) is strictly theme-invariant and always pitch black (`Color.Black`), ensuring that MacroPad buttons and layout previews rest on pure black regardless of which global theme (`appBackground`) is active. No aspect-ratio constraint is applied; the pad grows or shrinks with the available display area.
 
 The layout editor's `PadCanvas` reads the screen dimensions from `LocalConfiguration.current` and sets an explicit `width`/`height` of `screenWidth × screenHeight` — **pixel-identical** to the use-mode pad. Because button positions are stored as normalised coordinates [0.0, 1.0], any button placed in the editor maps to the exact same physical pixel in use mode, enabling true 1:1 WYSIWYG layout design.
 
