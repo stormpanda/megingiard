@@ -201,7 +201,10 @@ re-pairing, the device name is generated with a random 4-character suffix (e.g.
 as the CN in the self-signed X.509 certificate (SHA512withRSA, ~30-year validity).
 On credential regeneration or deletion, the `libadb-android` library's static
 `SslUtils.sslContext` cache is cleared via reflection to ensure the new certificate
-and private key are loaded successfully by subsequent TLS connections.
+and private key are loaded successfully by subsequent TLS connections. Both `io.github.muntashirakon.**`
+and `android.sun.security.**` are preserved in ProGuard / R8 rules (`consumer-rules.pro` and `proguard-rules.pro`)
+so that reflection-based cache flushing, native Spake2 JNI methods, and dynamic X.509 OID class resolution
+function correctly in minified release builds.
 
 Key pair generation uses `SecureRandom()` (not a named algorithm) for the
 RSA key-pair initializer, and `SecureRandom().nextInt() and Int.MAX_VALUE`

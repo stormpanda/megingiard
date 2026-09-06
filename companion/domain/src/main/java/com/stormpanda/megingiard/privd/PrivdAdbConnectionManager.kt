@@ -20,6 +20,7 @@ import android.sun.security.x509.X509CertInfo
 import com.stormpanda.megingiard.AppLog
 import io.github.muntashirakon.adb.AbsAdbConnectionManager
 import java.io.File
+import java.lang.reflect.Modifier
 import java.security.KeyFactory
 import java.security.KeyPairGenerator
 import java.security.PrivateKey
@@ -29,6 +30,7 @@ import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
 import java.security.spec.PKCS8EncodedKeySpec
 import java.util.Date
+import javax.net.ssl.SSLContext
 
 private const val TAG = "PrivdAdbCM"
 private const val KEY_FILE = "privd_adb_key.bin"
@@ -84,13 +86,20 @@ internal class PrivdAdbConnectionManager private constructor(
             runCatching { instance?.disconnect() }
             instance = null
             flushLibaDBCache()
-            AppLog.i("PrivdAdbConnMgr", "clearCredentials: ADB key, cert & name credentials deleted")
+            AppLog.i(TAG, "clearCredentials: ADB key, cert & name credentials deleted")
         }
 
         fun flushLibaDBCache() {
             runCatching {
                 val clazz = Class.forName("io.github.muntashirakon.adb.SslUtils")
-                val field = clazz.getDeclaredField("sslContext")
+                val field =
+                    runCatching {
+                        clazz.getDeclaredField("sslContext")
+                    }.getOrElse {
+                        clazz.declaredFields.firstOrNull { f ->
+                            Modifier.isStatic(f.modifiers) && SSLContext::class.java.isAssignableFrom(f.type)
+                        } ?: throw it
+                    }
                 field.isAccessible = true
                 field.set(null, null)
                 AppLog.i(TAG, "flushLibaDBCache: Successfully cleared libadb SslUtils sslContext cache")
