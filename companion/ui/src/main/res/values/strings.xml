@@ -818,6 +818,10 @@ Open Settings to create a layout.</string>
     <string name="focus_change_artwork_title">Change Artwork</string>
 
     <!-- Touchpad settings -->
+    <string name="keyboard_mode_ergo">Ergo</string>
+    <string name="keyboard_mode_full">Full</string>
+    <string name="touchpad_mode_mouse">Mouse</string>
+    <string name="touchpad_mode_touch">Touch</string>
     <string name="settings_touchpad_title">Touchpad Settings</string>
     <string name="settings_section_relative_mouse">Relative Mouse Mode</string>
     <string name="settings_section_absolute_touch">Absolute Touch Mode</string>
