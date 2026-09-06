@@ -39,7 +39,7 @@ internal data class InjectorStates(
  *   [CompanionSurfaceMode.TOUCHPAD] for Mouse), OR when an active MacroPad layout contains buttons for that
  *   injector type and no blocking modal/editor is active.
  * - OFF: When no controls are needed, OR when any editor screen, settings modal, quick menu,
- *   or prompt is active (preventing hardware device conflicts with Android's software IME).
+ *   privileged setup wizard, or prompt is active (preventing hardware device conflicts with Android's software IME).
  */
 object InjectorLifecycleManager {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -57,13 +57,22 @@ object InjectorLifecycleManager {
                     AppStateManager.activePrimaryModal,
                     AppStateManager.isQuickMenuOpen,
                     AppStateManager.promptInFlight,
+                    AppStateManager.isPrivdSetupWizardActive,
                     MacroPadState.activeLayout,
-                ) { surfaceMode, activePrimaryModal, isQuickMenuOpen, promptInFlight, activeLayout ->
+                ) { flows ->
+                    @Suppress("UNCHECKED_CAST")
+                    val surfaceMode = flows[0] as CompanionSurfaceMode
+                    val activePrimaryModal = flows[1]
+                    val isQuickMenuOpen = flows[2] as Boolean
+                    val promptInFlight = flows[3] as Boolean
+                    val isPrivdSetupWizardActive = flows[4] as Boolean
+                    val activeLayout = flows[5] as? PadLayout
                     calculateInjectorStates(
                         surfaceMode = surfaceMode,
                         isModalOpen = activePrimaryModal != null,
                         isQuickMenuOpen = isQuickMenuOpen,
                         promptInFlight = promptInFlight,
+                        isPrivdSetupWizardActive = isPrivdSetupWizardActive,
                         activeLayout = activeLayout,
                     )
                 }.distinctUntilChanged()
@@ -108,6 +117,7 @@ object InjectorLifecycleManager {
         isModalOpen: Boolean,
         isQuickMenuOpen: Boolean,
         promptInFlight: Boolean,
+        isPrivdSetupWizardActive: Boolean = false,
         activeLayout: PadLayout?,
     ): InjectorStates {
         val isFullscreenKb = surfaceMode == CompanionSurfaceMode.KEYBOARD
@@ -117,6 +127,7 @@ object InjectorLifecycleManager {
             isModalOpen ||
                 isQuickMenuOpen ||
                 promptInFlight ||
+                isPrivdSetupWizardActive ||
                 surfaceMode == CompanionSurfaceMode.VIEWPORT_EDIT
 
         val actions = activeLayout?.buttons?.map { it.action }.orEmpty()
