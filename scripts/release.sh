@@ -167,7 +167,7 @@ case "$1" in
         elif [[ "$start_branch" =~ ^release/ ]]; then
             # Check if current branch name matches current_version (resuming/re-pushing release)
             branch_version="${start_branch#release/}"
-            if [[ "$current_version" == "$branch_version" ]]; then
+            if [[ "$current_version" == "$branch_version" ]] && ! git rev-parse "$current_version" >/dev/null 2>&1; then
                 release_version="$current_version"
                 log_info "Resuming release preparation on '$start_branch': target version $release_version"
             elif [[ "$current_version" =~ "-SNAPSHOT$" ]]; then
@@ -296,6 +296,11 @@ case "$1" in
                 log_info "Resolving companion/ui/build.gradle.kts conflict by favoring main's version configuration..."
                 git checkout --ours companion/ui/build.gradle.kts
                 git add companion/ui/build.gradle.kts
+                if git status --porcelain | grep -q "gamefocus/ui/build.gradle.kts"; then
+                    log_info "Resolving gamefocus/ui/build.gradle.kts conflict by favoring main's version configuration..."
+                    git checkout --ours gamefocus/ui/build.gradle.kts
+                    git add gamefocus/ui/build.gradle.kts
+                fi
                 git commit -m "chore(release): merge $release_branch into main (resolved build.gradle.kts)"
             else
                 log_error "Merge conflict could not be automatically resolved. Please resolve conflicts manually."
