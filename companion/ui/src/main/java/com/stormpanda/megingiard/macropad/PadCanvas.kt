@@ -157,7 +157,6 @@ internal fun PadCanvas(
     val isMirrorEditorBackgroundHidden by AppStateManager.isMirrorEditorBackgroundHidden.collectAsStateWithLifecycle()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsStateWithLifecycle()
     val shouldHideBackground = isViewportEditActive && isMirrorEditorBackgroundHidden
-    val colors = LocalAppColors.current
     val density = LocalDensity.current
     val context = LocalContext.current
     val gridStepPx = with(density) { PC_GRID_STEP_DP.toPx() }

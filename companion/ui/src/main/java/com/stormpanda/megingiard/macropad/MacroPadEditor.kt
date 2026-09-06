@@ -1712,6 +1712,7 @@ fun MacroPadEditor(
                                                 accentColor = colors.accent,
                                                 onSelectAction = { act ->
                                                     val updatedDraft = applyActionToDraftButton(effectiveButton, act)
+                                                    buttonDraft = updatedDraft
                                                     MacroPadNavState.setStack(
                                                         subPageStack.dropLast(1).map { subPage ->
                                                             if (subPage is MacroPadSubPage.EditButton) {
