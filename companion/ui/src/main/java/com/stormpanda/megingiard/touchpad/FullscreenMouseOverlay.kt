@@ -728,7 +728,6 @@ private fun ModeSegment(
                 iconWidget()
                 Spacer(modifier = Modifier.width(6.dp))
                 label()
->>>>>>> origin/main
             }
         }
     }
