@@ -467,7 +467,15 @@ object InstalledAppsManager {
             val romPath = appInfo.romPath ?: return false
             val systemDef = SUPPORTED_SYSTEMS.find { it.id == systemId } ?: return false
             val launcher = RomLauncherRegistry.getLauncher(systemDef.emulatorId) ?: return false
-            val success = launcher.launchGame(context, romPath, systemId, displayId, appInfo.retroArchCore)
+            val success =
+                launcher.launchGame(
+                    context = context,
+                    romPath = romPath,
+                    systemId = systemId,
+                    displayId = displayId,
+                    retroArchCore = appInfo.retroArchCore,
+                    romUri = appInfo.romUri,
+                )
             if (success) {
                 recordAppLaunch(context, appInfo.packageName)
             }

@@ -19,5 +19,6 @@ interface RomLauncher {
         systemId: String,
         displayId: Int,
         retroArchCore: String? = null,
+        romUri: String? = null,
     ): Boolean
 }

@@ -1,6 +1,8 @@
 package com.stormpanda.megingiard.gamefocus
 
 import android.content.Context
+import com.stormpanda.megingiard.catalog.InstalledAppInfo
+import com.stormpanda.megingiard.catalog.RomManager
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertNotNull
@@ -47,21 +49,41 @@ class MegingiardSettingsClientTest {
     fun testUpdateClientState_withRomPackage() {
         val context: Context = RuntimeEnvironment.getApplication()
         val romApp =
-            com.stormpanda.megingiard.catalog.InstalledAppInfo(
+            InstalledAppInfo(
                 packageName = "rom.snes.smw",
                 activityName = "",
                 label = "Super Mario World",
                 systemId = "snes",
                 romPath = "/storage/roms/snes/smw.smc",
             )
-        com.stormpanda.megingiard.catalog.RomManager
-            .setRomAppsForTesting(listOf(romApp))
+        RomManager.setRomAppsForTesting(listOf(romApp))
 
         MegingiardSettingsClient.updateClientState(
             context = context,
             isActive = true,
             focusedPackage = "rom.snes.smw",
             hoveredPackage = "rom.snes.smw",
+        )
+    }
+
+    @Test
+    fun testUpdateClientState_withSwitchRomPackage() {
+        val context: Context = RuntimeEnvironment.getApplication()
+        val switchRomApp =
+            InstalledAppInfo(
+                packageName = "rom.switch.botw",
+                activityName = "",
+                label = "The Legend of Zelda: Breath of the Wild",
+                systemId = "switch",
+                romPath = "/storage/roms/switch/botw.nsp",
+            )
+        RomManager.setRomAppsForTesting(listOf(switchRomApp))
+
+        MegingiardSettingsClient.updateClientState(
+            context = context,
+            isActive = true,
+            focusedPackage = "rom.switch.botw",
+            hoveredPackage = "rom.switch.botw",
         )
     }
 }

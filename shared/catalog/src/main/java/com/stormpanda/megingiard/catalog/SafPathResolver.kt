@@ -1,11 +1,16 @@
 package com.stormpanda.megingiard.catalog
 
+import android.net.Uri
+import android.provider.DocumentsContract
 import com.stormpanda.megingiard.AppLog
 import java.io.File
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 
 private const val TAG = "SafPathResolver"
+private const val PRIMARY_STORAGE_PREFIX = "/storage/emulated/0/"
+private const val STORAGE_PREFIX = "/storage/"
+private const val PRIMARY_DOC_PREFIX = "primary:"
 
 /**
  * Shared utility for resolving Android Storage Access Framework (SAF) content URIs
@@ -54,6 +59,55 @@ object SafPathResolver {
             AppLog.w(TAG, "resolveFilePath: failed to decode URI '$uriStr' - $e")
             uriStr
         }
+    }
+
+    /**
+     * Resolves an absolute file path (e.g. `/storage/XXXX-XXXX/...` or `/storage/emulated/0/...`)
+     * to a SAF content URI using the provided list of registered SAF tree URIs.
+     * If the path is already a content URI, returns it directly as a parsed [Uri].
+     */
+    fun resolveContentUri(
+        filePath: String?,
+        treeUris: List<String>,
+    ): Uri? {
+        if (filePath.isNullOrBlank()) return null
+        if (filePath.startsWith("content://")) return Uri.parse(filePath)
+
+        for (treeUriStr in treeUris) {
+            val treePath = resolveFilePath(treeUriStr) ?: continue
+            if (filePath == treePath || filePath.startsWith("$treePath/")) {
+                val docId =
+                    when {
+                        filePath.startsWith(PRIMARY_STORAGE_PREFIX) -> {
+                            "$PRIMARY_DOC_PREFIX${filePath.removePrefix(PRIMARY_STORAGE_PREFIX)}"
+                        }
+
+                        filePath.startsWith(STORAGE_PREFIX) -> {
+                            val withoutStorage = filePath.removePrefix(STORAGE_PREFIX)
+                            val volumeId = withoutStorage.substringBefore('/')
+                            val relativePath = withoutStorage.substringAfter('/')
+                            "$volumeId:$relativePath"
+                        }
+
+                        else -> {
+                            null
+                        }
+                    }
+                if (docId != null) {
+                    return try {
+                        val treeUri = Uri.parse(treeUriStr)
+                        DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
+                    } catch (e: Exception) {
+                        AppLog.w(
+                            TAG,
+                            "resolveContentUri: failed to build document URI from tree '$treeUriStr' for docId '$docId' - $e",
+                        )
+                        null
+                    }
+                }
+            }
+        }
+        return null
     }
 
     /**

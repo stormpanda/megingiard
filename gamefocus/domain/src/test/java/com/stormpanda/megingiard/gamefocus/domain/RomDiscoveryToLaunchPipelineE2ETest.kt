@@ -145,4 +145,75 @@ class RomDiscoveryToLaunchPipelineE2ETest {
             RomManager.reloadRomAppsSuspend(context)
             assertTrue("Expected RomManager.romApps to be empty after removing folder", RomManager.romApps.value.isEmpty())
         }
+
+    @Test
+    fun testSwitchRomDiscoveryToYuzuLaunchPipelineE2E() =
+        runTest {
+            // Register YuzuLauncher
+            val yuzuLauncher = YuzuLauncher()
+            RomLauncherRegistry.register(yuzuLauncher)
+
+            // Install Yuzu mock package
+            val pkg = "org.yuzu.yuzu_emu"
+            val packageInfo = PackageInfo().apply { packageName = pkg }
+            shadowOf(context.packageManager).installPackage(packageInfo)
+
+            // 1. Create Switch ROM file
+            val switchRomFile =
+                File(romsDir, "The Legend of Zelda - Echoes of Wisdom (World).nsp").apply {
+                    writeBytes(byteArrayOf(0x50, 0x4B))
+                }
+            val docFile = DocumentFile.fromFile(romsDir)
+            val uri = docFile.uri
+
+            // 2. Register CustomRomFolder for Switch
+            val switchFolder =
+                CustomRomFolder(
+                    uriString = uri.toString(),
+                    folderPath = romsDir.absolutePath,
+                    systemId = "switch",
+                    systemName = "Nintendo Switch",
+                )
+
+            val romFoldersJsonFile = File(context.filesDir, "gamefocus_rom_folders.json")
+            romFoldersJsonFile.writeText(
+                """
+                [
+                    {
+                        "uriString": "$uri",
+                        "folderPath": "${romsDir.absolutePath}",
+                        "systemId": "switch",
+                        "systemName": "Nintendo Switch"
+                    }
+                ]
+                """.trimIndent(),
+            )
+
+            RomManager.loadRomFolders(context)
+            RomManager.reloadRomAppsSuspend(context)
+
+            // 3. Verify Switch ROM is indexed
+            val romApps = RomManager.romApps.value
+            val switchApp = romApps.firstOrNull { it.systemId == "switch" }
+            assertNotNull("Expected Switch ROM indexed in RomManager", switchApp)
+            assertEquals("The Legend of Zelda - Echoes of Wisdom", switchApp?.label)
+            assertEquals("switch", switchApp?.systemId)
+            assertTrue("Expected isRom = true", switchApp?.isRom == true)
+
+            // 4. Launch ROM on primary display
+            val launchSuccess = InstalledAppsManager.launchAppOnDisplay(context, switchApp!!, displayId = 0)
+            assertTrue("Expected launchGame for Switch to succeed", launchSuccess)
+
+            // 5. Verify launched intent
+            val startedIntent = shadowOf(RuntimeEnvironment.getApplication()).nextStartedActivity
+            assertNotNull("Expected intent dispatched to system", startedIntent)
+            assertEquals(Intent.ACTION_VIEW, startedIntent.action)
+            assertEquals(pkg, startedIntent.`package`)
+            assertEquals(Uri.fromFile(File(switchApp.romPath!!)), startedIntent.data)
+            assertEquals("application/octet-stream", startedIntent.type)
+
+            // 6. Verify recent launch history recorded
+            val lastUsed = InstalledAppsManager.lastUsed.value
+            assertTrue("Expected launched app package recorded in recent apps", lastUsed.contains(switchApp.packageName))
+        }
 }

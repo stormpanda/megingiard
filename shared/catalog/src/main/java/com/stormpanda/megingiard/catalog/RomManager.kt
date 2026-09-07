@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.catalog
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.annotation.VisibleForTesting
 import androidx.core.util.AtomicFile
 import androidx.documentfile.provider.DocumentFile
 import com.stormpanda.megingiard.AppLog
@@ -55,9 +56,14 @@ object RomManager {
     private val _romApps = MutableStateFlow<List<InstalledAppInfo>>(emptyList())
     val romApps: StateFlow<List<InstalledAppInfo>> = _romApps.asStateFlow()
 
-    @androidx.annotation.VisibleForTesting
+    @VisibleForTesting
     fun setRomAppsForTesting(apps: List<InstalledAppInfo>) {
         _romApps.value = apps
+    }
+
+    @VisibleForTesting
+    fun setRomFoldersForTesting(folders: List<CustomRomFolder>) {
+        _romFolders.value = folders
     }
 
     private val romCleanedNames = mutableMapOf<String, String>()
@@ -308,6 +314,7 @@ object RomManager {
                                         isGame = true,
                                         isRom = true,
                                         romPath = romPath,
+                                        romUri = romUriStr,
                                         systemId = folder.systemId,
                                         retroArchCore = folder.retroArchCore,
                                         coverLastModified = coverLastModified,

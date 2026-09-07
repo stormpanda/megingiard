@@ -4,10 +4,13 @@ import android.content.Context
 import android.net.Uri
 import android.os.Bundle
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.catalog.EMULATOR_ID_GAMENATIVE
 import com.stormpanda.megingiard.catalog.EMULATOR_ID_RETROARCH
+import com.stormpanda.megingiard.catalog.EMULATOR_ID_YUZU
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.catalog.RomManager
 import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
+import com.stormpanda.megingiard.gamefocus.domain.YuzuLauncher
 import com.stormpanda.megingiard.ipc.IpcSettingsParser
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import com.stormpanda.megingiard.ipc.observeContentProvider
@@ -108,10 +111,11 @@ object MegingiardSettingsClient {
         if (systemId == null) return "com.retroarch.aarch64"
         val systemDef = SUPPORTED_SYSTEMS.find { it.id == systemId }
         val candidates =
-            if (systemDef?.emulatorId == EMULATOR_ID_RETROARCH || systemDef?.emulatorId == null) {
-                listOf("com.retroarch.aarch64", "com.retroarch")
-            } else {
-                GameNativeDetector.supportedPackages
+            when (systemDef?.emulatorId) {
+                EMULATOR_ID_RETROARCH, null -> listOf("com.retroarch.aarch64", "com.retroarch")
+                EMULATOR_ID_YUZU -> YuzuLauncher.supportedPackages
+                EMULATOR_ID_GAMENATIVE -> GameNativeDetector.supportedPackages.toList()
+                else -> listOf("com.retroarch.aarch64", "com.retroarch")
             }
         val pm = context.packageManager
         return candidates.firstOrNull { pkg ->
