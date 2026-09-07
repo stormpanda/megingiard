@@ -100,7 +100,6 @@ Open Settings to create a layout.</string>
     <string name="macropad_haptic_custom_duration">持續時間</string>
     <string name="macropad_haptic_custom_amplitude">振幅</string>
     <string name="macropad_device_disabled_keyboard">此配置已停用鍵盤</string>
-    <string name="macropad_device_disabled_gamepad">此配置已停用手把</string>
 
     <!-- Keyboard trackpoint virtual mouse buttons -->
     <string name="kb_mouse_btn_left">左鍵</string>

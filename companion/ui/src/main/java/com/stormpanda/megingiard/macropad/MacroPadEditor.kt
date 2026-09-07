@@ -1096,7 +1096,7 @@ fun MacroPadEditor(
                                                     }
                                                     val hasMacros = profile.macros.isNotEmpty()
                                                     val defaultCategory =
-                                                        group.actions().firstOrNull { it.isEnabled(true, true, true, hasMacros) }
+                                                        group.actions().firstOrNull { it.isAvailable(hasMacros) }
                                                             ?: group.actions().first()
                                                     val defaultAction = defaultCategory.defaultAction()
                                                     val newDraft =

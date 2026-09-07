@@ -24,7 +24,7 @@ private const val LOGICAL_SCREEN_HEIGHT = 1080f
  * so the `:domain` module never references Android resources directly.
  * The UI layer maps this to a localised string.
  */
-enum class DisabledReason { KEYBOARD, GAMEPAD, MOUSE, TOUCH, MACRO_PRIVD, GAMEPAD_PRIVD }
+enum class DisabledReason { KEYBOARD, MOUSE, TOUCH, MACRO_PRIVD, GAMEPAD_PRIVD }
 
 /**
  * Hit-test engine and multi-touch dispatch for MacroPad use-mode.

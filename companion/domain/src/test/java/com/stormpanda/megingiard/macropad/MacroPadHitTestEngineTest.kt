@@ -229,7 +229,6 @@ class MacroPadHitTestEngineTest {
         val mouseAction = PadAction.MouseButton(button = MouseButton.LEFT)
 
         val disabledKbProfile = enabledProfile.copy(enableKeyboard = false)
-        val disabledGpProfile = enabledProfile.copy(enableGamepad = false)
         val disabledMouseProfile = enabledProfile.copy(enableMouse = false)
 
         PrivdClient.isConnectedForTest = false

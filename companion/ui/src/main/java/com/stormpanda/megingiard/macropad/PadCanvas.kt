@@ -323,10 +323,6 @@ internal fun PadCanvas(
                 layout = layout!!,
                 canvasSize = canvasSize,
                 accentColor = accentColor,
-                enableKeyboard = profile.enableKeyboard,
-                enableGamepad = profile.enableGamepad,
-                enableMouse = profile.enableMouse,
-                enableTouch = profile.enableTouch,
                 gridMode = gridMode,
                 gridStepPx = gridStepPx,
                 isLocked = isLocked || isCropping,
@@ -466,10 +462,6 @@ private fun DraggableButton(
     layout: PadLayout,
     canvasSize: IntSize,
     accentColor: Color,
-    enableKeyboard: Boolean,
-    enableGamepad: Boolean,
-    enableMouse: Boolean,
-    enableTouch: Boolean,
     gridMode: GridMode,
     gridStepPx: Float,
     isLocked: Boolean,
@@ -507,13 +499,7 @@ private fun DraggableButton(
     val density = LocalDensity.current
     val isTrackpoint = btn.action is PadAction.TrackpointMove
     val isDeviceDisabled =
-        when (val act = btn.action) {
-            is PadAction.KeyboardKey -> !enableKeyboard
-            is PadAction.GamepadButton, is PadAction.Macro -> !isPrivdRunning
-            is PadAction.MouseButton, is PadAction.ScrollWheel -> !enableMouse
-            is PadAction.TrackpointMove -> if (act.mode == TrackpointMode.VIRTUAL_TOUCH) !enableTouch else !enableMouse
-            else -> false
-        }
+        (btn.action is PadAction.GamepadButton || btn.action is PadAction.Macro) && !isPrivdRunning
 
     val tpMultiplier = if (isTrackpoint) (btn.action as PadAction.TrackpointMove).size.multiplier else 1f
     val btnWidthDp = ED_BUTTON_UNIT_DP * (if (isTrackpoint) tpMultiplier else btn.buttonSize.cols.toFloat())

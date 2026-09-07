@@ -100,7 +100,6 @@ Open Settings to create a layout.</string>
     <string name="macropad_haptic_custom_duration">Duration</string>
     <string name="macropad_haptic_custom_amplitude">Amplitude</string>
     <string name="macropad_device_disabled_keyboard">Keyboard has been disabled for this layout</string>
-    <string name="macropad_device_disabled_gamepad">Gamepad has been disabled for this layout</string>
 
     <!-- Keyboard trackpoint virtual mouse buttons -->
     <string name="kb_mouse_btn_left">LMB</string>

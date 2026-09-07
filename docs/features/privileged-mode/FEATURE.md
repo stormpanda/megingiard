@@ -321,7 +321,7 @@ The daemon compares the app's `AUTH` proof with a constant-time XOR accumulator.
 
 Upon daemon replacement and reconnection, active subsystems automatically recover:
 - **Screen Mirroring (`ScreenCaptureService`):** Observes `PrivdClient.state` and automatically starts a new `DirectPrivdMirrorSession` on the new daemon, restoring mirror output without user intervention.
-- **Input Injectors (`KeyInjector`, `TouchInjector`, `MouseInjector`, `GamepadInjector`):** `InjectorBackendRouter` automatically re-synchronizes backend routing and re-sends initialization commands (`KB_START` for keyboard) to establish input nodes on the new daemon.
+- **Input Injectors (`KeyInjector`, `TouchInjector`, `MouseInjector`):** `InjectorBackendRouter` automatically re-synchronizes backend routing and re-sends initialization commands (`KB_START` for keyboard) to establish input nodes on the new daemon. Gamepad injection automatically routes directly to `PrivdGamepadInjector` for hardware evdev merge when Privd is connected.
 
 Detailed native rebuild and generated hash behavior are documented in [BUILD_NATIVE.md](../../BUILD_NATIVE.md#native-asset-integrity).
 
@@ -463,14 +463,14 @@ but before spawning the daemon) — no separate `PROVISIONING` stage is needed.
 | `domain/.../privd/PrivdPairKey.kt`                       | Per-install Keystore-encrypted HMAC key: `generateAndStore()`, `load()`, `delete()`                                                        |
 | `domain/.../privd/PrivdClient.kt`                        | TCP Socket transport singleton (writer + reader threads, ping support, physical evdev event stream)                                        |
 | `domain/.../privd/PrivdConnectionState.kt`               | Connection-state enum (DISCONNECTED / CONNECTING / CONNECTED)                                                                              |
-| `domain/.../privd/PrivdGamepadInjector.kt`               | Same surface as `ShellGamepadInjector`, sends via `PrivdClient`                                                                            |
+| `domain/.../privd/PrivdGamepadInjector.kt`               | Sends GD/GU/HD/JS gamepad commands via `PrivdClient` for physical evdev merge                              |
 | `domain/.../privd/PrivdManager.kt`                       | Top-level state machine, `PrivdState` (incl. `BOOTSTRAPPING`), `PrivdError` (6 codes), `PrivdFeature` enum                                 |
 | `domain/.../privd/PrivdAdbConnectionManager.kt`          | `AbsAdbConnectionManager` subclass: persistent RSA key + X.509 cert in `filesDir`, `pair`/`connect`                                        |
 | `domain/.../privd/PrivdBootstrapper.kt`                  | `BootstrapStage` state flow + pair / push (`sync:` + byte-size verification) / spawn (detached) / verify orchestration                     |
 | `app/.../privd/PrivdSettingsCard.kt`                     | Compose card: status badge, connect/test buttons, wizard trigger, auto-connect Switch                                                     |
 | `companion/ui/src/main/java/com/stormpanda/megingiard/privd/PrivdSetupWizard.kt`                      | `PrivdSetupWizardDialog` — in-tree modal dialog (scrim + centered card) hosting the 4-step wizard; hosted on the secondary display (bottom screen) via `MainAppScreen` / `AppStateManager` |
 | `app/.../MainActivity.kt`                                | Auto-connect hook (`combine(privdAutoConnect, state)` one-shot)                                                                            |
-| `domain/.../macropad/GamepadInjector.kt`                 | Strategy router between virtual uinput and Privd merge backends                                                                            |
+| `domain/.../macropad/GamepadInjector.kt`                 | Public facade delegating directly to `PrivdGamepadInjector` physical merge                                                                 |
 | `domain/.../macropad/PhysicalGamepadRecordingManager.kt` | Converts physical evdev events into macro steps while recording (`GamepadButtonTap`, `DPadTap`, `JoystickPath`)                            |
 | `domain/.../settings/MacroPadSettings.kt`                | `privdAutoConnect` flag                                                                                                                   |
 | `domain/.../settings/SettingsKeys.kt`                    | `KEY_PRIVD_AUTO_CONNECT` DataStore key                                                                                                     |

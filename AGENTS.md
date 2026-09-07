@@ -103,7 +103,6 @@
 > | `companion/ui/src/main/cpp/touchinjector.c`    | `./scripts/build_touchinjector.sh`                                      |
 > | `companion/ui/src/main/cpp/keyinjector.c`      | `./scripts/build_keyinjector.sh`                                        |
 > | `companion/ui/src/main/cpp/mouseinjector.c`    | `./scripts/build_mouseinjector.sh`                                      |
-> | `companion/ui/src/main/cpp/gamepadinjector.c`  | `./scripts/build_gamepadinjector.sh`                                    |
 >
 > Run the script **before** proposing the commit message. If the build fails, fix the
 > source error before proceeding. The scripts must be run from the workspace root.
