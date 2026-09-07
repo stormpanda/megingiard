@@ -627,6 +627,9 @@ object AppStateManager {
             if (_companionSurfaceMode.value == CompanionSurfaceMode.KEYBOARD) {
                 _companionSurfaceMode.value = CompanionSurfaceMode.MACROPAD
             }
+            if (isKeyboardSettingsOpen.value) {
+                setKeyboardSettingsOpen(false)
+            }
         }
     }
 
@@ -645,6 +648,9 @@ object AppStateManager {
         } else {
             if (_companionSurfaceMode.value == CompanionSurfaceMode.TOUCHPAD) {
                 _companionSurfaceMode.value = CompanionSurfaceMode.MACROPAD
+            }
+            if (isTouchpadSettingsOpen.value) {
+                setTouchpadSettingsOpen(false)
             }
         }
     }
@@ -717,6 +723,16 @@ object AppStateManager {
     }
 
     init {
+        scope.launch {
+            _companionSurfaceMode.collect { mode ->
+                if (mode != CompanionSurfaceMode.KEYBOARD && isKeyboardSettingsOpen.value) {
+                    setKeyboardSettingsOpen(false)
+                }
+                if (mode != CompanionSurfaceMode.TOUCHPAD && isTouchpadSettingsOpen.value) {
+                    setTouchpadSettingsOpen(false)
+                }
+            }
+        }
         scope.launch {
             var lastActiveLayoutId: String? = null
             MacroPadState.activeLayout.collect { layout ->

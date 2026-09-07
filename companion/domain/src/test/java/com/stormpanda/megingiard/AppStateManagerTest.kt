@@ -34,6 +34,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -216,6 +217,50 @@ class AppStateManagerTest {
             // Clean up
             AppStateManager.setFullscreenKeyboardActive(false)
             KeyboardSettings.setKbLayout(KbLayout.QWERTZ)
+        }
+
+    @Test
+    fun `closing keyboard closes keyboard settings if open`() =
+        runTest {
+            AppStateManager.setFullscreenKeyboardActive(true)
+            AppStateManager.setKeyboardSettingsOpen(true)
+            assertTrue(AppStateManager.isKeyboardSettingsOpen.value)
+
+            AppStateManager.setFullscreenKeyboardActive(false)
+            assertFalse(AppStateManager.isKeyboardSettingsOpen.value)
+            assertNull(AppStateManager.activePrimaryModal.value)
+        }
+
+    @Test
+    fun `closing touchpad closes touchpad settings if open`() =
+        runTest {
+            AppStateManager.setFullscreenMouseActive(true)
+            AppStateManager.setTouchpadSettingsOpen(true)
+            assertTrue(AppStateManager.isTouchpadSettingsOpen.value)
+
+            AppStateManager.setFullscreenMouseActive(false)
+            assertFalse(AppStateManager.isTouchpadSettingsOpen.value)
+            assertNull(AppStateManager.activePrimaryModal.value)
+        }
+
+    @Test
+    fun `transitioning companionSurfaceMode away from KEYBOARD or TOUCHPAD closes settings`() =
+        runTest {
+            AppStateManager.setFullscreenKeyboardActive(true)
+            AppStateManager.setKeyboardSettingsOpen(true)
+            assertTrue(AppStateManager.isKeyboardSettingsOpen.value)
+
+            // Transition surface mode directly to TOUCHPAD
+            AppStateManager.setFullscreenMouseActive(true)
+            assertFalse(AppStateManager.isKeyboardSettingsOpen.value)
+
+            // Open touchpad settings while in TOUCHPAD mode
+            AppStateManager.setTouchpadSettingsOpen(true)
+            assertTrue(AppStateManager.isTouchpadSettingsOpen.value)
+
+            // Reset back to MACROPAD
+            AppStateManager.setFullscreenMouseActive(false)
+            assertFalse(AppStateManager.isTouchpadSettingsOpen.value)
         }
 
     @Test

@@ -212,6 +212,9 @@ fun FullscreenMouseOverlay() {
                 AppStateManager.requestMirrorStop()
                 AppStateManager.setWasMirroringStartedByTouchpad(false)
             }
+            if (AppStateManager.isTouchpadSettingsOpen.value) {
+                AppStateManager.setTouchpadSettingsOpen(false)
+            }
         }
     }
 
