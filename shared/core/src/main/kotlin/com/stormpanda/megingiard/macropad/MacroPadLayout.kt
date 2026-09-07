@@ -270,10 +270,11 @@ sealed class PadAction {
         val sensitivity: Float = 1.0f,
     ) : PadAction()
 
-    /** Opens the fullscreen keyboard overlay with the specified layout (or user preference if null). */
+    /** Opens the fullscreen keyboard overlay using the global keyboard settings layout. */
     @Serializable
     @SerialName("full_screen_keyboard")
     data class FullScreenKeyboard(
+        @Deprecated("Keyboard layout is managed globally via KeyboardSettings; per-button overrides are not supported.")
         val layout: KbLayout? = null,
     ) : PadAction()
 

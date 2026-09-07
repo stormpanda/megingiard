@@ -187,52 +187,30 @@ class AppStateManagerTest {
         }
 
     @Test
-    fun `setFullscreenKeyboardActive falls back to KeyboardSettings layout when null`() =
+    fun `setFullscreenKeyboardActive activates keyboard mode and uses KeyboardSettings layout`() =
         runTest {
             // Assert initial state
             AppStateManager.setFullscreenKeyboardActive(false)
+            assertEquals(CompanionSurfaceMode.MACROPAD, AppStateManager.companionSurfaceMode.value)
 
-            // Set layout explicitly
-            AppStateManager.setFullscreenKeyboardActive(true, KbLayout.AZERTY)
-            assertEquals(KbLayout.AZERTY, AppStateManager.fullscreenKeyboardLayout.value)
+            // Activate keyboard
+            AppStateManager.setFullscreenKeyboardActive(true)
+            assertEquals(CompanionSurfaceMode.KEYBOARD, AppStateManager.companionSurfaceMode.value)
+            assertEquals(KeyboardSettings.kbLayout.value, AppStateManager.fullscreenKeyboardLayout.value)
 
             // Reset
             AppStateManager.setFullscreenKeyboardActive(false)
-
-            // Activate with null/default layout, it should fall back to KeyboardSettings (default QWERTZ)
-            AppStateManager.setFullscreenKeyboardActive(true)
-            assertEquals(KbLayout.QWERTZ, AppStateManager.fullscreenKeyboardLayout.value)
+            assertEquals(CompanionSurfaceMode.MACROPAD, AppStateManager.companionSurfaceMode.value)
         }
 
     @Test
-    fun `fullscreenKeyboardLayout updates dynamically when KeyboardSettings layout changes`() =
+    fun `fullscreenKeyboardLayout mirrors KeyboardSettings layout dynamically`() =
         runTest {
-            // Activate keyboard with no layout override (null)
             AppStateManager.setFullscreenKeyboardActive(true)
             assertEquals(KbLayout.QWERTZ, AppStateManager.fullscreenKeyboardLayout.value)
 
             // Change persistent setting layout
             KeyboardSettings.setKbLayout(KbLayout.AZERTY)
-
-            // Verify fullscreenKeyboardLayout changes immediately
-            assertEquals(KbLayout.AZERTY, AppStateManager.fullscreenKeyboardLayout.value)
-
-            // Clean up
-            AppStateManager.setFullscreenKeyboardActive(false)
-            KeyboardSettings.setKbLayout(KbLayout.QWERTZ)
-        }
-
-    @Test
-    fun `KeyboardSettings change clears prior forced layout override`() =
-        runTest {
-            // Activate with explicit override
-            AppStateManager.setFullscreenKeyboardActive(true, KbLayout.QWERTY)
-            assertEquals(KbLayout.QWERTY, AppStateManager.fullscreenKeyboardLayout.value)
-
-            // User changes setting in carousel or settings
-            KeyboardSettings.setKbLayout(KbLayout.AZERTY)
-
-            // Verify forced layout is cleared and user setting takes effect
             assertEquals(KbLayout.AZERTY, AppStateManager.fullscreenKeyboardLayout.value)
 
             // Clean up

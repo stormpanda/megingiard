@@ -89,8 +89,9 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
 ### FR-K9: Keyboard Settings Toolbar Button & Screen
 
 - Tapping this button MUST open a Keyboard Settings screen overlay on the primary (top) display while the virtual keyboard remains active, visible, and fully interactive on the secondary (bottom) display without closing or tearing down input injection.
-- The settings screen MUST include a dropdown to select between **QWERTZ**, **QWERTY**, and **AZERTY** regional layouts.
-- Switching layout via this dropdown MUST only impact the alphabetic (`LETTERS` / ABC) keyboard layout, leaving symbol and numeric layouts unaffected.
+- The settings screen MUST include a choice card to select between **QWERTZ**, **QWERTY**, and **AZERTY** regional layouts and a toggle for the Keyboard Touchpad, matching 100% parity with the identical options available in Global Settings (under the Input category).
+- Switching layout via this card MUST only impact the alphabetic (`LETTERS` / ABC) keyboard layout, leaving symbol and numeric layouts unaffected.
+- The overlay button (`PadAction.FullScreenKeyboard`) always activates the keyboard with whatever regional layout is configured globally in `KeyboardSettings` with zero per-button or per-layout overrides.
 
 ### FR-K10: Keyboard-Top Touchpad
 

@@ -1,7 +1,6 @@
 package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.AppStateManager
-import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -66,7 +65,7 @@ class MacroPadActionDispatchTest {
         injectActionDown(mouseAction)
         assertTrue(AppStateManager.isFullscreenMouseActive.value)
 
-        val kbAction = PadAction.FullScreenKeyboard(layout = KbLayout.QWERTY)
+        val kbAction = PadAction.FullScreenKeyboard()
         injectActionDown(kbAction)
         assertTrue(AppStateManager.isFullscreenKeyboardActive.value)
 

@@ -1,7 +1,9 @@
 package com.stormpanda.megingiard.viewmodel
 
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.settings.AppLanguage
+import com.stormpanda.megingiard.settings.KeyboardSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.settings.ThemeMode
 import kotlinx.coroutines.Dispatchers
@@ -120,5 +122,21 @@ class GlobalSettingsViewModelTest {
         vm.resetAllTutorials()
         vm.privdResetBootstrapStage()
         vm.requestSaveLogReport()
+    }
+
+    @Test
+    fun testKeyboardSettingsDelegation() {
+        val vm = GlobalSettingsViewModel()
+        vm.setKbLayout(KbLayout.AZERTY)
+        assertEquals(KbLayout.AZERTY, vm.kbLayout.value)
+        assertEquals(KbLayout.AZERTY, KeyboardSettings.kbLayout.value)
+
+        vm.setKbTouchpadEnabled(false)
+        assertFalse(vm.kbTouchpadEnabled.value)
+        assertFalse(KeyboardSettings.kbTouchpadEnabled.value)
+
+        // Reset
+        vm.setKbLayout(KbLayout.QWERTZ)
+        vm.setKbTouchpadEnabled(true)
     }
 }

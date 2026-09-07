@@ -8,9 +8,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.keyboard.KbLayout
+import com.stormpanda.megingiard.keyboard.KeyboardSettingsCards
 import com.stormpanda.megingiard.ui.GamepadActionCard
+import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadSliderCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
+import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.firstDeckItem
 import kotlin.math.roundToInt
 
@@ -19,9 +23,20 @@ fun InputSettingsTab(
     gamepadSwapFaceButtons: Boolean,
     deadzoneLeft: Float,
     deadzoneRight: Float,
+    kbLayout: KbLayout,
+    kbTouchpadEnabled: Boolean,
     onGamepadSwapFaceButtonsChange: (Boolean) -> Unit,
     onOpenDeadzones: () -> Unit,
+    onKbLayoutChange: (KbLayout) -> Unit,
+    onKbTouchpadEnabledChange: (Boolean) -> Unit,
 ) {
+    val colors = LocalAppColors.current
+
+    GamepadSectionHeader(
+        text = stringResource(R.string.macropad_action_group_gamepad),
+        color = colors.accent,
+    )
+
     GamepadToggleCard(
         title = stringResource(R.string.settings_gamepad_swap_face_buttons),
         description = stringResource(R.string.settings_gamepad_swap_face_buttons_desc),
@@ -42,6 +57,18 @@ fun InputSettingsTab(
             ),
         icon = Icons.Rounded.Games,
         onClick = onOpenDeadzones,
+    )
+
+    GamepadSectionHeader(
+        text = stringResource(R.string.settings_keyboard_title),
+        color = colors.accent,
+    )
+
+    KeyboardSettingsCards(
+        kbLayout = kbLayout,
+        kbTouchpadEnabled = kbTouchpadEnabled,
+        onKbLayoutChange = onKbLayoutChange,
+        onKbTouchpadEnabledChange = onKbTouchpadEnabledChange,
     )
 }
 

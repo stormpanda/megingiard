@@ -39,22 +39,40 @@ fun KeyboardSettingsOverlay(viewModel: KeyboardViewModel = viewModel()) {
         title = "",
         modifier = Modifier.fillMaxSize(),
     ) {
-        GamepadChoiceCard(
-            title = stringResource(R.string.settings_kb_layout),
-            description = stringResource(R.string.help_keyboard_settings_layout_desc),
-            selectedText = currentLayout.name,
-            icon = Icons.Rounded.Keyboard,
-            onPrevious = { viewModel.setKbLayout(KbLayout.entries.cycle(currentLayout, BumperDirection.PREV)) },
-            onNext = { viewModel.setKbLayout(KbLayout.entries.cycle(currentLayout, BumperDirection.NEXT)) },
-            modifier = Modifier.firstDeckItem(),
-        )
-
-        GamepadToggleCard(
-            title = stringResource(R.string.settings_kb_touchpad),
-            description = stringResource(R.string.settings_kb_touchpad_desc),
-            checked = kbTouchpadEnabled,
-            icon = Icons.Rounded.Mouse,
-            onCheckedChange = viewModel::setKbTouchpadEnabled,
+        KeyboardSettingsCards(
+            kbLayout = currentLayout,
+            kbTouchpadEnabled = kbTouchpadEnabled,
+            onKbLayoutChange = viewModel::setKbLayout,
+            onKbTouchpadEnabledChange = viewModel::setKbTouchpadEnabled,
+            isFirstItem = true,
         )
     }
+}
+
+@Composable
+fun KeyboardSettingsCards(
+    kbLayout: KbLayout,
+    kbTouchpadEnabled: Boolean,
+    onKbLayoutChange: (KbLayout) -> Unit,
+    onKbTouchpadEnabledChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    isFirstItem: Boolean = false,
+) {
+    GamepadChoiceCard(
+        title = stringResource(R.string.settings_kb_layout),
+        description = stringResource(R.string.help_keyboard_settings_layout_desc),
+        selectedText = kbLayout.name,
+        icon = Icons.Rounded.Keyboard,
+        onPrevious = { onKbLayoutChange(KbLayout.entries.cycle(kbLayout, BumperDirection.PREV)) },
+        onNext = { onKbLayoutChange(KbLayout.entries.cycle(kbLayout, BumperDirection.NEXT)) },
+        modifier = modifier.firstDeckItem(isFirstItem),
+    )
+
+    GamepadToggleCard(
+        title = stringResource(R.string.settings_kb_touchpad),
+        description = stringResource(R.string.settings_kb_touchpad_desc),
+        checked = kbTouchpadEnabled,
+        icon = Icons.Rounded.Mouse,
+        onCheckedChange = onKbTouchpadEnabledChange,
+    )
 }
