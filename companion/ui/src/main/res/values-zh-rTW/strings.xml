@@ -112,6 +112,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_device_disabled_mouse">此配置已停用滑鼠</string>
     <string name="macropad_device_disabled_touch">此配置已停用觸控</string>
     <string name="macropad_device_disabled_macro_privd">巨集需要特權模式。請在設定中啟用特權模式。</string>
+    <string name="macropad_device_disabled_gamepad_privd">手把按鍵需要特權模式。請在設定中啟用特權模式。</string>
     <string name="macropad_macro_privd_required_banner">建立、編輯、測試及執行巨集需要特權模式。請在設定中啟用特權模式。</string>
     <string name="macropad_editor_delete_profile">刪除設定檔</string>
     <string name="macropad_editor_delete_layout">刪除配置</string>

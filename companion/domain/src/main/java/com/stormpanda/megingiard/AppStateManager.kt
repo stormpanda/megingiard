@@ -727,6 +727,11 @@ object AppStateManager {
 
     init {
         scope.launch {
+            KeyboardSettings.kbLayout.collect {
+                forcedKeyboardLayout.value = null
+            }
+        }
+        scope.launch {
             var lastActiveLayoutId: String? = null
             MacroPadState.activeLayout.collect { layout ->
                 val newId = layout?.id

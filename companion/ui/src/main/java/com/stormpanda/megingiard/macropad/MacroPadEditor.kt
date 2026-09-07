@@ -1088,7 +1088,9 @@ fun MacroPadEditor(
                                         ) {
                                             ChooseButtonTypeSubPageContent(
                                                 onSelectType = { group ->
-                                                    if (group == ActionGroup.MACRO && PrivdManager.state.value != PrivdState.RUNNING) {
+                                                    if ((group == ActionGroup.MACRO || group == ActionGroup.GAMEPAD) &&
+                                                        PrivdManager.state.value != PrivdState.RUNNING
+                                                    ) {
                                                         DialogToastManager.show(context.getString(R.string.privd_error_daemon_unreachable))
                                                         return@ChooseButtonTypeSubPageContent
                                                     }

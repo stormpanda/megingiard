@@ -80,7 +80,7 @@ Each button supports one of the following actions:
     - `enableGamepad = true` if any button has a `GamepadButton` action.
     - `enableMouse = true` if any button has a `MouseButton`, `ScrollWheel`, or `TrackpointMove` (with `PHYSICAL_MOUSE` tracking mode) action. (Note: `MirrorTouchProjection` is explicitly excluded from this derivation because the screen mirror presentation manages its own touch injector lifecycle).
     - `enableTouch = true` if any button has a `TrackpointMove` (with `VIRTUAL_TOUCH` tracking mode) action.
-- Injector start and stop lifecycle is centrally managed by `InjectorLifecycleManager`, which evaluates `AppStateManager.uiMode`, `MacroPadState.activeLayout`, and `AppStateManager.promptInFlight`. When editor screens or settings popups are open, all injectors are stopped; when returned to MacroPad use mode, only enabled injectors for the active layout are started.
+- Injector start and stop lifecycle is centrally managed by `InjectorLifecycleManager`, which maintains active `KeyInjector`, `MouseInjector`, and `TouchInjector` instances whenever Megingiard is in the foreground (`AppStateManager.isActivityResumed`), stopping them when backgrounded (`onStop`) or during active software keyboard input in the Privileged Mode setup wizard. Gamepad buttons and macros route strictly via Privileged Mode merge into the physical controller.
 
 ### FR-P5: Trackpoint Button
 

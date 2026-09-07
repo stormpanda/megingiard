@@ -270,11 +270,11 @@ sealed class PadAction {
         val sensitivity: Float = 1.0f,
     ) : PadAction()
 
-    /** Opens the fullscreen keyboard overlay with the specified layout. */
+    /** Opens the fullscreen keyboard overlay with the specified layout (or user preference if null). */
     @Serializable
     @SerialName("full_screen_keyboard")
     data class FullScreenKeyboard(
-        val layout: KbLayout = KbLayout.QWERTZ,
+        val layout: KbLayout? = null,
     ) : PadAction()
 
     /** Opens an installed Android app on the target screen and minimizes Megingiard into a floating bubble overlay. */

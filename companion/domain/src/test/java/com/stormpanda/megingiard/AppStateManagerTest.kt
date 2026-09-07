@@ -223,6 +223,24 @@ class AppStateManagerTest {
         }
 
     @Test
+    fun `KeyboardSettings change clears prior forced layout override`() =
+        runTest {
+            // Activate with explicit override
+            AppStateManager.setFullscreenKeyboardActive(true, KbLayout.QWERTY)
+            assertEquals(KbLayout.QWERTY, AppStateManager.fullscreenKeyboardLayout.value)
+
+            // User changes setting in carousel or settings
+            KeyboardSettings.setKbLayout(KbLayout.AZERTY)
+
+            // Verify forced layout is cleared and user setting takes effect
+            assertEquals(KbLayout.AZERTY, AppStateManager.fullscreenKeyboardLayout.value)
+
+            // Clean up
+            AppStateManager.setFullscreenKeyboardActive(false)
+            KeyboardSettings.setKbLayout(KbLayout.QWERTZ)
+        }
+
+    @Test
     fun `request flags set and consume resets`() =
         runTest {
             fun assertRequestConsume(

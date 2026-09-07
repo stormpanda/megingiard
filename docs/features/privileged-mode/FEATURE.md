@@ -102,7 +102,7 @@ every device since Android 11 (API 30).
 
 | Feature                                      | What it gains                                                                                 | Without Privileged Mode                                                                                                                                        |
 | -------------------------------------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Gamepad merge** (MacroPad → physical pad)  | Single-controller emulation: games see only one controller.                                   | Falls back to a virtual uinput gamepad. Most games still recognise both, but a few (e.g. some Steam Big Picture flows) only accept the first-connected device. |
+| **Gamepad buttons & merge** (MacroPad → physical pad) | Single-controller emulation: games see only one controller via physical evdev merge. | Blocked with proactive UI feedback: Gamepad buttons render disabled styling on the canvas; tapping them triggers a toast prompting the user to activate Privileged Mode. Standalone uinput virtual gamepad fallback is retired to prevent dual-controller conflicts on the AYN Thor. |
 | **Macro subsystem** (execution, recording, editing) | Low-latency physical controller & touch capture directly over running games; hardware evdev input injection. | Blocked with proactive UI feedback: use-mode buttons show disabled styling with floating warning banners; editor decks display warning banners and prevent recording / execution. |
 | **Privileged mirror** (FR-M9)                | No MediaProjection consent dialog when direct SurfaceControl output starts successfully.      | Falls back to `MediaProjection` + `VirtualDisplay` with the system consent dialog. DRM content keeps working.                                                  |
 | **Relative mouse** (Touchpad / Keyboard)     | Low-latency, scheduler-boosted mouse events. Shell UID execution prevents cursor lag under CPU contention. | Falls back to spawning a local virtual mouse binary (`mouseinjector_arm64`) as an app subprocess. |
@@ -450,20 +450,9 @@ VERIFYING / DONE) is exposed by `PrivdBootstrapper.stage` for the wizard UI.
 Key provisioning happens during the `PUSHING_BINARY` stage (after a successful binary push
 but before spawning the daemon) — no separate `PROVISIONING` stage is needed.
 
-### Strategy Routing in GamepadInjector
+### Privileged Mode Requirement in GamepadInjector
 
-`GamepadInjector` is a strategy router. At `start()` time it decides:
-
-```
-if (PrivdClient.isConnected) {
-    backend = PrivdGamepadInjector  // physical-pad merge
-} else {
-    backend = ShellGamepadInjector  // standard virtual uinput
-}
-```
-
-The chosen backend is locked in for the session — toggling the setting
-mid-game requires a leave-and-re-enter of the MacroPad mode.
+`GamepadInjector` routes directly to `PrivdGamepadInjector` for kernel evdev merge into the physical controller (`g_gamepad_fd`) when `PrivdClient.isConnected`. When Privileged Mode is offline, gamepad injection is suppressed and buttons render with disabled styling, avoiding dual-controller conflicts from `/dev/uinput` virtual devices on the AYN Thor. Standalone uinput virtual gamepad fallback is retired.
 
 ### Source Files
 

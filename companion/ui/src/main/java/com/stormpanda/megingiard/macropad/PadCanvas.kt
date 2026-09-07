@@ -63,6 +63,8 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.BitmapUtils
 import com.stormpanda.megingiard.math.ViewportMath
+import com.stormpanda.megingiard.privd.PrivdManager
+import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.MaterialSymbol
 import com.stormpanda.megingiard.ui.dimColorFilter
@@ -499,13 +501,16 @@ private fun DraggableButton(
     var dragOffsetX by remember(btn.id) { mutableFloatStateOf(0f) }
     var dragOffsetY by remember(btn.id) { mutableFloatStateOf(0f) }
 
+    val privdState by PrivdManager.state.collectAsStateWithLifecycle()
+    val isPrivdRunning = privdState == PrivdState.RUNNING
+
     val density = LocalDensity.current
     val isTrackpoint = btn.action is PadAction.TrackpointMove
     val isDeviceDisabled =
         when (val act = btn.action) {
-            is PadAction.KeyboardKey, is PadAction.FullScreenKeyboard -> !enableKeyboard
-            is PadAction.GamepadButton, is PadAction.Macro -> !enableGamepad
-            is PadAction.MouseButton, is PadAction.ScrollWheel, is PadAction.FullScreenMouse -> !enableMouse
+            is PadAction.KeyboardKey -> !enableKeyboard
+            is PadAction.GamepadButton, is PadAction.Macro -> !isPrivdRunning
+            is PadAction.MouseButton, is PadAction.ScrollWheel -> !enableMouse
             is PadAction.TrackpointMove -> if (act.mode == TrackpointMode.VIRTUAL_TOUCH) !enableTouch else !enableMouse
             else -> false
         }

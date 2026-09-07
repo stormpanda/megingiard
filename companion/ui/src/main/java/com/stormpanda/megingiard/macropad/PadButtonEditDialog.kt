@@ -106,7 +106,7 @@ internal fun ChooseButtonTypeSubPageContent(
     val availableGroups =
         remember(hasMacros, enableKeyboard, enableGamepad, enableMouse, isPrivdRunning) {
             ActionGroup.entries.filter { group ->
-                if (group == ActionGroup.MACRO && !isPrivdRunning) return@filter false
+                if ((group == ActionGroup.MACRO || group == ActionGroup.GAMEPAD) && !isPrivdRunning) return@filter false
                 group.actions().any { category ->
                     category.isEnabled(enableKeyboard, enableGamepad, enableMouse, hasMacros)
                 }

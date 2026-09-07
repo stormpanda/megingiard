@@ -149,10 +149,7 @@ The pre-built `keyinjector_arm64` binary is bundled in `companion/ui/src/main/as
 
 The binary signals readiness by writing `"R\n"` to stdout. `start()` blocks waiting for this signal with a 5-second timeout; startup fails if the signal does not arrive or the process exits prematurely.
 
-The binary opens `/dev/uinput` using the standard `uinput` protocol (register a virtual keyboard device, then inject `EV_KEY` events). Injector start and stop lifecycle is centrally managed by `InjectorLifecycleManager`, which evaluates app UI state (`AppStateManager.companionSurfaceMode`), active MacroPad layout keyboard controls, and blocking modals to determine when `KeyInjector` should be active:
-
-* **ON**: When `CompanionSurfaceMode.KEYBOARD` is active, or when an active MacroPad layout has keyboard buttons and no blocking editor/modal is open.
-* **OFF**: When no keyboard controls are needed, or when any editor modal, settings screen, quick menu, or prompt is active (ensuring Android's standard soft IME operates without hardware keyboard conflicts).
+The binary opens `/dev/uinput` using the standard `uinput` protocol (register a virtual keyboard device, then inject `EV_KEY` events). Injector start and stop lifecycle is centrally managed by `InjectorLifecycleManager`, which maintains active `KeyInjector`, `MouseInjector`, and `TouchInjector` instances whenever Megingiard is in the foreground (`AppStateManager.isActivityResumed`), stopping them when backgrounded (`onStop`) or during active software keyboard input in the Privileged Mode setup wizard (`AppStateManager.isPrivdSetupWizardActive`) so that Android's software IME can operate without hardware keyboard conflicts.
 
 ```kotlin
 InjectorLifecycleManager.watch(context)

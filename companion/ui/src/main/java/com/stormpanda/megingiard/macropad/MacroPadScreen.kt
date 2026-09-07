@@ -131,7 +131,7 @@ private const val TAG = "MacroPadScreen"
 private fun DisabledReason.feedbackTextResId(): Int =
     when (this) {
         DisabledReason.KEYBOARD -> R.string.macropad_device_disabled_keyboard
-        DisabledReason.GAMEPAD -> R.string.macropad_device_disabled_gamepad
+        DisabledReason.GAMEPAD, DisabledReason.GAMEPAD_PRIVD -> R.string.macropad_device_disabled_gamepad_privd
         DisabledReason.MOUSE -> R.string.macropad_device_disabled_mouse
         DisabledReason.TOUCH -> R.string.macropad_device_disabled_touch
         DisabledReason.MACRO_PRIVD -> R.string.macropad_device_disabled_macro_privd
@@ -140,7 +140,7 @@ private fun DisabledReason.feedbackTextResId(): Int =
 private fun DisabledReason.feedbackIcon(): ImageVector =
     when (this) {
         DisabledReason.KEYBOARD -> Icons.Rounded.Keyboard
-        DisabledReason.GAMEPAD -> Icons.Rounded.SportsEsports
+        DisabledReason.GAMEPAD, DisabledReason.GAMEPAD_PRIVD -> Icons.Rounded.SportsEsports
         DisabledReason.MOUSE -> Icons.Rounded.Mouse
         DisabledReason.TOUCH -> Icons.Rounded.TouchApp
         DisabledReason.MACRO_PRIVD -> Icons.Rounded.Warning
