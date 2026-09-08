@@ -184,8 +184,8 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
   - **Re-Calibrate Smart Cutout:** An action card allowing the user to re-sample screen frames to refresh the mask, anchors, and freeze frame.
   - **Remove Smart Cutout:** A two-step destructive confirmation card that deletes calibration files from disk and reverts the cutout back to a standard live rectangular/circular mirror cutout (`hasTransparencyMask = false`, `freezeOnHudLoss = false`).
 - **Presence Detection & Absence Freezing (`HudPresenceManager`, `HudPresenceEvaluator`):**
-  - When mirroring is active and a Smart Cutout is calibrated, `HudPresenceManager` samples frames at native source resolution (1080p) at 10 Hz (100 ms interval) via zero-allocation reusable frame buffers (`TextureView.getBitmap(reusableBitmap)`).
-  - When the anchor match drops below 45% (`MATCH_THRESHOLD_LOST`), it transitions to `LOST` immediately on the first check (0–100 ms), completely eliminating video leakage during cutscenes, menus, or dialogues.
+  - When mirroring is active and a Smart Cutout is calibrated, `HudPresenceManager` samples frames using a lightweight hardware-scaled probe bitmap ($480 \times 270$) at ~30 Hz (33 ms interval) during active gameplay via zero-allocation reusable probe buffers (`TextureView.getBitmap(reusableProbeBitmap)`). When all cutouts are in the `LOST` state (cutscene/menu active), the loop adaptively backs off to 5 Hz (200 ms) for maximal battery conservation.
+  - When the anchor match drops below 55% (`MATCH_THRESHOLD_LOST`), it transitions to `LOST` immediately on the first check (0–33 ms), completely eliminating video leakage and flickery cutscene flashes during cutscenes, menus, or dialogues.
   - `MultiCutoutContainer` renders the native-resolution pristine reference frame (`mask_<cutoutId>_freeze.png`) with bilinear filtering (`isFilterBitmap = true`) and the transparency mask stencil applied on top. When the UI returns, a 2-check hysteresis (200 ms) restores live 60 FPS mirroring smoothly.
 - Mask state is persisted per-cutout in `ScreenCutout` (`hasTransparencyMask: Boolean`, `maskFeathering: Int = 0`, `maskTranslucency: Int = 0`, `freezeOnHudLoss: Boolean = false`).
 
@@ -215,11 +215,11 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
   - `HudAutoTuner.analyze` extracts stationary anchor pixels and persists `HudAnchorSignature` (`mask_<cutoutId>_anchor.json`).
   - The cutout is saved with `freezeOnHudLoss = true` and `hasTransparencyMask = false` so that the dynamic mirror stream remains solid and unmasked.
 - **Dynamic Live Frame Buffering & Animated Blur Freezing (`HudPresenceManager`, `MultiCutoutContainer`):**
-  - For cutouts with custom reference anchors, `HudPresenceManager` continuously buffers the live cutout crop at native 1080p source resolution at ~5 Hz (200 ms interval) while the anchor is detected as present ($\ge 65\%$, matching `HudPresenceEvaluator.MATCH_THRESHOLD_PRESENT`).
+  - For cutouts with custom reference anchors, full 1080p frame buffer capture is decoupled from the 30 Hz probe loop and throttled to ~2 Hz (500 ms interval), running only while the anchor is detected as confidently present ($\ge 65\%$, matching `HudPresenceEvaluator.MATCH_THRESHOLD_PRESENT`).
   - Crop boundaries are computed with subpixel rounding (`roundToInt()`, `cRight - cX`, `cBottom - cY`), and `MultiCutoutContainer` applies bilinear filtering (`Paint.isFilterBitmap = true`), ensuring 1:1 pixel alignment without position shifts or upscaling blur.
   - An initial native frame is captured immediately upon detection, and fallback freeze frames are persisted to disk under `mask_<cutoutId>_freeze.png`.
-  - When the anchor element disappears (match ratio $< 45\%$) or manual freeze is engaged, the cutout smoothly animates a frosted-glass blur in ($0\text{px} \to 16\text{px}$ over 250 ms) displaying this latest valid live frame.
-  - When the anchor returns or manual freeze is released, the cutout smoothly animates the blur out ($16\text{px} \to 0\text{px}$ over 200 ms) back to live video.
+  - When the anchor element disappears (match ratio $< 55\%$) or manual freeze is engaged, the cutout immediately engages a frosted-glass blur-in animation ($0\text{px} \to 16\text{px}$ over 250 ms) using `DecelerateInterpolator()` for immediate first-frame softening that completely masks transition seams, displaying the latest valid live frame.
+  - When the anchor returns or manual freeze is released, the cutout smoothly animates the blur out ($16\text{px} \to 0\text{px}$ over 200 ms) via `AccelerateDecelerateInterpolator()` back to crisp live video.
   - **Hardware Layer Isolation:** Blur is strictly isolated using dedicated hardware `RenderNode` instances and `RenderEffect.createBlurEffect` bounded to each cutout's dimensions. The background wallpaper and gothic mask overlay frame are completely outside the `RenderNode` and remain 100% crisp. During live gameplay ($blur = 0\text{px}$), `RenderNode` recording is completely bypassed with zero GPU layer overhead.
 
 ---

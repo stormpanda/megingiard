@@ -85,6 +85,22 @@ class HudPresenceEvaluatorTest {
     }
 
     @Test
+    fun `transitionState respects MATCH_THRESHOLD_LOST of 0_55f`() {
+        var state = HudPresenceState.PRESENT
+        var count = 0
+
+        // Ratio just above 0.55 (0.56) remains PRESENT
+        val (state1, count1) = HudPresenceEvaluator.transitionState(state, count, 0.56f, "test")
+        assertEquals(HudPresenceState.PRESENT, state1)
+        assertEquals(0, count1)
+
+        // Ratio below 0.55 (0.54) transitions immediately to LOST
+        val (state2, count2) = HudPresenceEvaluator.transitionState(state1, count1, 0.54f, "test")
+        assertEquals(HudPresenceState.LOST, state2)
+        assertEquals(0, count2)
+    }
+
+    @Test
     fun `evaluateMatchRatio evaluates signature sampled from custom anchor crop`() {
         // Anchor point at center of anchor box (u=0.5, v=0.5)
         val signature = HudAnchorSignature("minimap", listOf(AnchorPoint(0.5f, 0.5f, 200, 200, 200)))

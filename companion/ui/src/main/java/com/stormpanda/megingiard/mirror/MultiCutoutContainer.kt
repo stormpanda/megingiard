@@ -22,6 +22,7 @@ import android.graphics.RenderEffect
 import android.graphics.RenderNode
 import android.graphics.Shader
 import android.view.animation.AccelerateDecelerateInterpolator
+import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.macropad.BackgroundScaleMode
@@ -266,7 +267,12 @@ internal class MultiCutoutContainer(
                     val animator =
                         ValueAnimator.ofFloat(currentBlur, targetBlur).apply {
                             this.duration = duration
-                            interpolator = AccelerateDecelerateInterpolator()
+                            interpolator =
+                                if (targetBlur > currentBlur) {
+                                    DecelerateInterpolator()
+                                } else {
+                                    AccelerateDecelerateInterpolator()
+                                }
                             addUpdateListener { anim ->
                                 cutoutBlurRadii[cutout.id] = anim.animatedValue as Float
                                 invalidate()

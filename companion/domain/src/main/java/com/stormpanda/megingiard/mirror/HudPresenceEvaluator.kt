@@ -26,8 +26,8 @@ object HudPresenceEvaluator {
     /** Minimum fraction of matching anchors required to confirm HUD is present (65%). */
     const val MATCH_THRESHOLD_PRESENT = 0.65f
 
-    /** Fraction of matching anchors below which HUD is considered absent (45%). */
-    const val MATCH_THRESHOLD_LOST = 0.45f
+    /** Fraction of matching anchors below which HUD is considered absent (55%). */
+    const val MATCH_THRESHOLD_LOST = 0.55f
 
     /** Number of consecutive checks required to confirm HUD absence (1 check = immediate freeze, preventing cutscene leak). */
     const val HYSTERESIS_CONSECUTIVE_LOST = 1
