@@ -197,6 +197,27 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - The dimming opacity MUST be adjustable via a slider ("Primary HUD Dimming Opacity", `0%` to `100%`, default `60%`, stored in `MacroPadLayout.topScreenHudDimOpacity`).
 - When mirroring is stopped or paused, the scrim automatically hides.
 
+### FR-M19: Custom Reference Anchors for Presence Freezing
+
+- The user MUST be able to define a **Custom Reference Anchor** for any mirror cutout via **Advanced Cutout Settings** (`CutoutAdvancedSettingsSubPageContent`).
+- **Dynamic Cutout Problem & Solution:**
+  - Cutouts mirroring dynamic UI elements (such as minimaps with rotating player markers and scrolling terrain, gauges, or scrolling radars) contain constantly moving pixels and cannot act as their own presence anchor.
+  - Custom Reference Anchors allow the user to link the cutout's presence detection and frame freezing capability to a separate stationary UI element on Display 0 (such as a character portrait, menu icon, or quest badge) that is always visible whenever the dynamic element is shown, and disappears during cutscenes or menus.
+- **Anchor Sources (`ScreenCutout`):**
+  - **Cutout Area (Default):** Monitors the cutout's own crop coordinates (`customAnchorEnabled = false`).
+  - **Custom Screen Area:** Monitors an independent bounding box on Display 0 (`anchorSrcX`, `anchorSrcY`, `anchorSrcWidth`, `anchorSrcHeight`).
+  - **Link to Another Cutout:** Inherits presence state from another cutout in the active layout (`anchorCutoutId`).
+- **Top-Screen Anchor Positioning (`AnchorSelectorOverlay`):**
+  - Tapping **[ Position Anchor on Screen ]** launches `AnchorSelectorOverlay` on Display 0 via `PrimaryModalType.ANCHOR_SELECTOR` and `PrimaryModalPayload.AnchorSelector(cutoutId)`.
+  - Features semi-transparent scrims, an accent-colored bounding box with a clean interior (no badges or obstructions inside the crop area), center 2D touch drag, 4 directional edge handles (top, bottom, left, right), and a reusable vertical controller toolbox (`ToolboxContainer`, `AdjustCoordinatesCard`, `ToolboxActionCard`) for 2D gamepad navigation and confirmation.
+- **Calibration (`HudAutoTuneCoordinator`):**
+  - When calibrating a cutout with a custom reference anchor, video frames are sampled from the **anchor area** rather than the cutout's crop.
+  - `HudAutoTuner.analyze` extracts stationary anchor pixels and persists `HudAnchorSignature` (`mask_<cutoutId>_anchor.json`).
+  - The cutout is saved with `freezeOnHudLoss = true` and `hasTransparencyMask = false` so that the dynamic mirror stream remains solid and unmasked.
+- **Dynamic Live Frame Buffering (`HudPresenceManager`):**
+  - For cutouts with custom reference anchors, `HudPresenceManager` continuously buffers the live cutout crop at ~5 Hz (200 ms interval) while the anchor is detected as present ($\ge 65\%$, matching `HudPresenceEvaluator.MATCH_THRESHOLD_PRESENT`). An initial frame is captured immediately upon detection, and fallback freeze frames are persisted to disk under `mask_<cutoutId>_freeze.png`.
+  - When the anchor element disappears (match ratio $< 45\%$), the cutout immediately freezes displaying this latest valid live frame (rather than a static calibration snapshot). When the anchor returns, live mirroring resumes smoothly.
+
 ---
 
 ## Technical Implementation

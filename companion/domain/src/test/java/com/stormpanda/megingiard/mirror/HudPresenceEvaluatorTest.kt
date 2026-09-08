@@ -83,4 +83,54 @@ class HudPresenceEvaluatorTest {
         assertEquals(HudPresenceState.LOST, state2)
         assertEquals(0, count2)
     }
+
+    @Test
+    fun `evaluateMatchRatio evaluates signature sampled from custom anchor crop`() {
+        // Anchor point at center of anchor box (u=0.5, v=0.5)
+        val signature = HudAnchorSignature("minimap", listOf(AnchorPoint(0.5f, 0.5f, 200, 200, 200)))
+        val anchorCrop = AnchorCrop(x = 0.02f, y = 0.02f, width = 0.10f, height = 0.10f)
+
+        // Pixel provider maps anchor crop coordinates
+        val sampledCoordinates = mutableListOf<Pair<Float, Float>>()
+        val ratio =
+            HudPresenceEvaluator.evaluateMatchRatio(signature) { u, v ->
+                val globalU = anchorCrop.x + u * anchorCrop.width
+                val globalV = anchorCrop.y + v * anchorCrop.height
+                sampledCoordinates.add(globalU to globalV)
+                colorArgb(200, 200, 200)
+            }
+
+        assertEquals(1.0f, ratio, 0.001f)
+        assertEquals(1, sampledCoordinates.size)
+        // 0.02 + 0.5 * 0.10 = 0.07
+        assertEquals(0.07f, sampledCoordinates[0].first, 0.001f)
+        assertEquals(0.07f, sampledCoordinates[0].second, 0.001f)
+    }
+
+    @Test
+    fun `transitionState handles real-world gameplay match ratio recovery and cutscene loss`() {
+        var state = HudPresenceState.PRESENT
+        var count = 0
+
+        // In gameplay with real-world rendering variances (e.g. 68% match ratio), state remains PRESENT
+        val (state1, count1) = HudPresenceEvaluator.transitionState(state, count, 0.68f, "minimap")
+        assertEquals(HudPresenceState.PRESENT, state1)
+        assertEquals(0, count1)
+
+        // Cutscene begins: anchor disappears, match ratio drops to 17% -> transitions immediately to LOST
+        val (state2, count2) = HudPresenceEvaluator.transitionState(state1, count1, 0.17f, "minimap")
+        assertEquals(HudPresenceState.LOST, state2)
+        assertEquals(0, count2)
+
+        // Cutscene ends: anchor returns at 67% (>= MATCH_THRESHOLD_PRESENT 0.65)
+        // 1st recovery frame -> count = 1, state still LOST
+        val (state3, count3) = HudPresenceEvaluator.transitionState(state2, count2, 0.67f, "minimap")
+        assertEquals(HudPresenceState.LOST, state3)
+        assertEquals(1, count3)
+
+        // 2nd recovery frame at 68% -> recovers to PRESENT
+        val (state4, count4) = HudPresenceEvaluator.transitionState(state3, count3, 0.68f, "minimap")
+        assertEquals(HudPresenceState.PRESENT, state4)
+        assertEquals(0, count4)
+    }
 }

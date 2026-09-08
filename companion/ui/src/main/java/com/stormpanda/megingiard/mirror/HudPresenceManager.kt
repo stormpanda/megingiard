@@ -2,7 +2,9 @@ package com.stormpanda.megingiard.mirror
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.os.SystemClock
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.macropad.MacroPadState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -18,14 +20,14 @@ import java.util.concurrent.ConcurrentHashMap
 private const val TAG = "HudPresenceManager"
 
 private const val PRESENCE_CHECK_INTERVAL_MS = 100L // 10 Hz (prompt detection on cutscene start)
+private const val LIVE_FRAME_BUFFER_INTERVAL_MS = 200L // 5 Hz live frame updates for dynamic cutouts
 private const val CHECK_FRAME_WIDTH = 960
 private const val CHECK_FRAME_HEIGHT = 540
-private const val HIGH_CONFIDENCE_MATCH_THRESHOLD = 0.85f
 
 /**
  * Singleton manager coordinating real-time HUD presence detection and freeze-frame caching.
  *
- * Periodically samples top-screen video frames at 4 Hz, evaluates anchor signatures of active
+ * Periodically samples top-screen video frames at 10 Hz, evaluates anchor signatures of active
  * cutouts, and smoothly manages the transition to frozen frames during cutscenes or in-game menus.
  */
 object HudPresenceManager {
@@ -36,6 +38,7 @@ object HudPresenceManager {
     private val cutoutStates = ConcurrentHashMap<String, HudPresenceState>()
     private val cutoutConsecutiveCounts = ConcurrentHashMap<String, Int>()
     private val lastValidFrameBitmaps = ConcurrentHashMap<String, Bitmap>()
+    private val lastLiveFrameCaptureTimes = ConcurrentHashMap<String, Long>()
 
     private val _presenceRevision = MutableStateFlow(0)
     val presenceRevision: StateFlow<Int> = _presenceRevision.asStateFlow()
@@ -71,7 +74,7 @@ object HudPresenceManager {
         val shouldMonitor = isCapturing && cutouts.any { it.freezeOnHudLoss }
         if (shouldMonitor) {
             if (monitorJob?.isActive != true) {
-                AppLog.i(TAG, "Starting HUD presence monitoring loop (4 Hz)")
+                AppLog.i(TAG, "Starting HUD presence monitoring loop (10 Hz)")
                 monitorJob = scope.launch { runMonitoringLoop() }
             }
         } else {
@@ -83,6 +86,7 @@ object HudPresenceManager {
                     if (!bmp.isRecycled) bmp.recycle()
                 }
                 lastValidFrameBitmaps.clear()
+                lastLiveFrameCaptureTimes.clear()
                 cutoutStates.clear()
                 cutoutConsecutiveCounts.clear()
             }
@@ -106,13 +110,16 @@ object HudPresenceManager {
                 var anyStateChanged = false
 
                 for (cutout in currentCutouts) {
-                    val signature = CutoutMaskManager.getAnchorSignature(context, cutout.id) ?: continue
+                    val targetCutoutId = (if (cutout.customAnchorEnabled) cutout.anchorCutoutId else null) ?: cutout.id
+                    val signature = CutoutMaskManager.getAnchorSignature(context, targetCutoutId) ?: continue
                     if (signature.points.isEmpty()) continue
 
+                    val allCutouts = ScreenCaptureManager.cutouts.value
+                    val anchorCrop = cutout.getEffectiveAnchorCrop(allCutouts)
                     val matchRatio =
                         HudPresenceEvaluator.evaluateMatchRatio(signature) { u, v ->
-                            val globalU = cutout.srcX + u * cutout.srcWidth
-                            val globalV = cutout.srcY + v * cutout.srcHeight
+                            val globalU = anchorCrop.x + u * anchorCrop.width
+                            val globalV = anchorCrop.y + v * anchorCrop.height
                             val px = (globalU * frameW).toInt().coerceIn(0, frameW - 1)
                             val py = (globalV * frameH).toInt().coerceIn(0, frameH - 1)
                             frame.getPixel(px, py)
@@ -129,23 +136,50 @@ object HudPresenceManager {
                     cutoutStates[cutout.id] = newState
                     cutoutConsecutiveCounts[cutout.id] = newCount
 
-                    // Only capture live frame if we do not already have a pristine calibrated freeze frame on disk,
-                    // and only when confidence is very high (>= 85%) so we never capture an empty or fading cutscene frame.
-                    if (newState == HudPresenceState.PRESENT && matchRatio >= HIGH_CONFIDENCE_MATCH_THRESHOLD) {
-                        if (CutoutMaskManager.getFreezeFrame(context, cutout.id) == null) {
-                            val cX = (cutout.srcX * frameW).toInt().coerceIn(0, frameW - 1)
-                            val cY = (cutout.srcY * frameH).toInt().coerceIn(0, frameH - 1)
-                            val cW = (cutout.srcWidth * frameW).toInt().coerceIn(1, frameW - cX)
-                            val cH = (cutout.srcHeight * frameH).toInt().coerceIn(1, frameH - cY)
-                            try {
-                                val crop = Bitmap.createBitmap(frame, cX, cY, cW, cH)
-                                CutoutMaskManager.saveFreezeFrame(context, cutout.id, crop)
-                                val oldCrop = lastValidFrameBitmaps.put(cutout.id, crop)
-                                if (oldCrop != null && !oldCrop.isRecycled) {
-                                    oldCrop.recycle()
+                    // Frame capture for freeze:
+                    val hasCachedFrame = lastValidFrameBitmaps.containsKey(cutout.id)
+                    val isConfidentPresent = matchRatio >= HudPresenceEvaluator.MATCH_THRESHOLD_PRESENT
+                    if (newState == HudPresenceState.PRESENT && (!hasCachedFrame || isConfidentPresent)) {
+                        if (cutout.customAnchorEnabled) {
+                            // Dynamic cutout: buffer live frames continuously at ~5 Hz
+                            val now = SystemClock.elapsedRealtime()
+                            val lastCapture = lastLiveFrameCaptureTimes[cutout.id] ?: 0L
+                            if (!hasCachedFrame || now - lastCapture >= LIVE_FRAME_BUFFER_INTERVAL_MS) {
+                                lastLiveFrameCaptureTimes[cutout.id] = now
+                                val cX = (cutout.srcX * frameW).toInt().coerceIn(0, frameW - 1)
+                                val cY = (cutout.srcY * frameH).toInt().coerceIn(0, frameH - 1)
+                                val cW = (cutout.srcWidth * frameW).toInt().coerceIn(1, frameW - cX)
+                                val cH = (cutout.srcHeight * frameH).toInt().coerceIn(1, frameH - cY)
+                                try {
+                                    val crop = Bitmap.createBitmap(frame, cX, cY, cW, cH)
+                                    val oldCrop = lastValidFrameBitmaps.put(cutout.id, crop)
+                                    if (oldCrop != null && !oldCrop.isRecycled) {
+                                        oldCrop.recycle()
+                                    }
+                                    if (CutoutMaskManager.getFreezeFrame(context, cutout.id) == null) {
+                                        CutoutMaskManager.saveFreezeFrame(context, cutout.id, crop)
+                                    }
+                                } catch (e: Exception) {
+                                    AppLog.e(TAG, "Failed to capture live crop for dynamic cutout ${cutout.id}", e)
                                 }
-                            } catch (e: Exception) {
-                                AppLog.e(TAG, "Failed to capture live valid crop for cutout ${cutout.id}", e)
+                            }
+                        } else {
+                            // Static HUD: capture once if no calibrated frame on disk
+                            if (CutoutMaskManager.getFreezeFrame(context, cutout.id) == null) {
+                                val cX = (cutout.srcX * frameW).toInt().coerceIn(0, frameW - 1)
+                                val cY = (cutout.srcY * frameH).toInt().coerceIn(0, frameH - 1)
+                                val cW = (cutout.srcWidth * frameW).toInt().coerceIn(1, frameW - cX)
+                                val cH = (cutout.srcHeight * frameH).toInt().coerceIn(1, frameH - cY)
+                                try {
+                                    val crop = Bitmap.createBitmap(frame, cX, cY, cW, cH)
+                                    CutoutMaskManager.saveFreezeFrame(context, cutout.id, crop)
+                                    val oldCrop = lastValidFrameBitmaps.put(cutout.id, crop)
+                                    if (oldCrop != null && !oldCrop.isRecycled) {
+                                        oldCrop.recycle()
+                                    }
+                                } catch (e: Exception) {
+                                    AppLog.e(TAG, "Failed to capture live valid crop for cutout ${cutout.id}", e)
+                                }
                             }
                         }
                     }
@@ -170,19 +204,35 @@ object HudPresenceManager {
     fun isCutoutHudLost(cutoutId: String): Boolean = cutoutStates[cutoutId] == HudPresenceState.LOST
 
     /**
-     * Retrieves the most recent valid HUD frame bitmap for [cutoutId], prioritizing the high-resolution
-     * calibrated reference frame saved during Auto-Tune.
+     * Retrieves the most recent valid HUD frame bitmap for [cutoutId].
+     * For dynamic cutouts with custom anchors, prioritizes the live buffered frame.
+     * For static HUD cutouts, prioritizes the high-resolution calibrated reference frame.
      */
     fun getFrozenFrame(
         context: Context,
         cutoutId: String,
     ): Bitmap? {
-        CutoutMaskManager.getFreezeFrame(context, cutoutId)?.let { refFrame ->
-            if (!refFrame.isRecycled) return refFrame
-        }
-        lastValidFrameBitmaps[cutoutId]?.let { cached ->
-            if (!cached.isRecycled) return cached
-            lastValidFrameBitmaps.remove(cutoutId)
+        val cutout =
+            ScreenCaptureManager.cutouts.value.find { it.id == cutoutId }
+                ?: MacroPadState.activeLayout.value
+                    ?.mirrorCutouts
+                    ?.find { it.id == cutoutId }
+        if (cutout?.customAnchorEnabled == true) {
+            lastValidFrameBitmaps[cutoutId]?.let { cached ->
+                if (!cached.isRecycled) return cached
+                lastValidFrameBitmaps.remove(cutoutId)
+            }
+            CutoutMaskManager.getFreezeFrame(context, cutoutId)?.let { refFrame ->
+                if (!refFrame.isRecycled) return refFrame
+            }
+        } else {
+            CutoutMaskManager.getFreezeFrame(context, cutoutId)?.let { refFrame ->
+                if (!refFrame.isRecycled) return refFrame
+            }
+            lastValidFrameBitmaps[cutoutId]?.let { cached ->
+                if (!cached.isRecycled) return cached
+                lastValidFrameBitmaps.remove(cutoutId)
+            }
         }
         return null
     }
@@ -193,6 +243,7 @@ object HudPresenceManager {
     fun clearCutout(cutoutId: String) {
         cutoutStates.remove(cutoutId)
         cutoutConsecutiveCounts.remove(cutoutId)
+        lastLiveFrameCaptureTimes.remove(cutoutId)
         lastValidFrameBitmaps.remove(cutoutId)?.let {
             if (!it.isRecycled) it.recycle()
         }

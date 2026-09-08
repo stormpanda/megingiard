@@ -21,6 +21,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.KeyboardSettingsOverlay
 import com.stormpanda.megingiard.macropad.MacroPadEditor
+import com.stormpanda.megingiard.mirror.AnchorSelectorOverlay
 import com.stormpanda.megingiard.mirror.CropSelectorOverlay
 import com.stormpanda.megingiard.settings.GlobalSettingsScreen
 import com.stormpanda.megingiard.touchpad.TouchpadSettingsOverlay
@@ -117,6 +118,17 @@ fun PrimaryModalHost(
             val cutoutId = payload?.cutoutId
             if (cutoutId != null) {
                 CropSelectorOverlay(
+                    cutoutId = cutoutId,
+                    onDismiss = onDismiss,
+                )
+            }
+        }
+
+        PrimaryModalType.ANCHOR_SELECTOR -> {
+            val payload = config.payload as? PrimaryModalPayload.AnchorSelector
+            val cutoutId = payload?.cutoutId
+            if (cutoutId != null) {
+                AnchorSelectorOverlay(
                     cutoutId = cutoutId,
                     onDismiss = onDismiss,
                 )

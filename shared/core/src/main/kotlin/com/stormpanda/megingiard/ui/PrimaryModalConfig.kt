@@ -19,6 +19,7 @@ enum class PrimaryModalType {
     PROFILE_SETTINGS,
     MACRO_TIMELINE_EDITOR,
     CROP_SELECTOR,
+    ANCHOR_SELECTOR,
 }
 
 /**
@@ -39,6 +40,10 @@ sealed interface PrimaryModalPayload {
     ) : PrimaryModalPayload
 
     data class CropSelector(
+        val cutoutId: String,
+    ) : PrimaryModalPayload
+
+    data class AnchorSelector(
         val cutoutId: String,
     ) : PrimaryModalPayload
 

@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.macropad
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Anchor
 import androidx.compose.material.icons.rounded.Crop
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
@@ -8,6 +9,7 @@ import androidx.compose.material.icons.rounded.FilterCenterFocus
 import androidx.compose.material.icons.rounded.Grain
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Layers
+import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Opacity
 import androidx.compose.material.icons.rounded.PauseCircle
 import androidx.compose.material.icons.rounded.TouchApp
@@ -27,6 +29,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.math.nextItem
 import com.stormpanda.megingiard.mirror.CutoutMaskManager
@@ -46,6 +49,9 @@ import com.stormpanda.megingiard.ui.GamepadTextFieldCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.GamepadTwoStepConfirmCard
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.PrimaryModalConfig
+import com.stormpanda.megingiard.ui.PrimaryModalPayload
+import com.stormpanda.megingiard.ui.PrimaryModalType
 import com.stormpanda.megingiard.ui.firstDeckItem
 import kotlin.math.roundToInt
 
@@ -349,6 +355,12 @@ internal fun CutoutAdvancedSettingsSubPageContent(
     val lastTunedPercent by HudAutoTuneCoordinator.lastTunedPercent.collectAsStateWithLifecycle()
     var calibrationRevision by remember { mutableIntStateOf(0) }
 
+    val activeLayout by MacroPadState.activeLayout.collectAsStateWithLifecycle()
+    val otherCutouts =
+        remember(activeLayout, cutout.id) {
+            activeLayout?.mirrorCutouts?.filter { it.id != cutout.id } ?: emptyList()
+        }
+
     if (isCalibrating) {
         val pct = (calibrateProgress * MSE_PERCENT_DIVISOR).roundToInt()
         GamepadActionCard(
@@ -360,31 +372,171 @@ internal fun CutoutAdvancedSettingsSubPageContent(
             onClick = { HudAutoTuneCoordinator.cancelCalibration() },
         )
     } else {
-        val isCalibrated =
-            remember(cutout.id, cutout.hasTransparencyMask, cutout.freezeOnHudLoss, calibrationRevision) {
-                CutoutMaskManager.isCalibrated(context, cutout.id)
+        val anchorModes =
+            mutableListOf(
+                stringResource(R.string.settings_cutout_anchor_source_cutout),
+                stringResource(R.string.settings_cutout_anchor_source_custom),
+            )
+        if (otherCutouts.isNotEmpty()) {
+            anchorModes.add(stringResource(R.string.settings_cutout_anchor_source_linked))
+        }
+
+        val currentAnchorModeIdx =
+            when {
+                !cutout.customAnchorEnabled -> 0
+                cutout.anchorCutoutId != null && otherCutouts.isNotEmpty() -> 2
+                else -> 1
+            }.coerceIn(0, anchorModes.size - 1)
+
+        GamepadChoiceCard(
+            modifier = Modifier.firstDeckItem(),
+            title = stringResource(R.string.settings_cutout_anchor_source_title),
+            description = stringResource(R.string.settings_cutout_anchor_source_desc),
+            selectedText = anchorModes[currentAnchorModeIdx],
+            icon = Icons.Rounded.Anchor,
+            itemKey = "cutout_${cutout.id}_anchor_source",
+            onPrevious = {
+                val nextIdx = (currentAnchorModeIdx - 1 + anchorModes.size) % anchorModes.size
+                applyAnchorMode(nextIdx, cutout, otherCutouts, onUpdateCutout)
+            },
+            onNext = {
+                val nextIdx = (currentAnchorModeIdx + 1) % anchorModes.size
+                applyAnchorMode(nextIdx, cutout, otherCutouts, onUpdateCutout)
+            },
+        )
+
+        when (currentAnchorModeIdx) {
+            1 -> {
+                // Custom Screen Area
+                GamepadActionCard(
+                    title = stringResource(R.string.settings_cutout_anchor_position_title),
+                    description = stringResource(R.string.settings_cutout_anchor_position_desc),
+                    icon = Icons.Rounded.FilterCenterFocus,
+                    itemKey = "cutout_${cutout.id}_position_anchor",
+                    onClick = {
+                        AppStateManager.openPrimaryModal(
+                            PrimaryModalConfig(
+                                type = PrimaryModalType.ANCHOR_SELECTOR,
+                                payload = PrimaryModalPayload.AnchorSelector(cutout.id),
+                            ),
+                        )
+                    },
+                )
+
+                val signature =
+                    remember(cutout.id, calibrationRevision) {
+                        CutoutMaskManager.getAnchorSignature(context, cutout.id)
+                    }
+                val hasSignature = signature != null && signature.points.isNotEmpty()
+                val calibTitle =
+                    if (hasSignature) {
+                        stringResource(R.string.settings_cutout_anchor_recalibrate_title)
+                    } else {
+                        stringResource(R.string.settings_cutout_anchor_calibrate_title)
+                    }
+
+                GamepadActionCard(
+                    title = calibTitle,
+                    description = stringResource(R.string.settings_cutout_anchor_calibrate_desc),
+                    icon = Icons.Rounded.Tune,
+                    itemKey = "cutout_${cutout.id}_calibrate_anchor",
+                    onClick = {
+                        HudAutoTuneCoordinator.startCalibration(context, cutout) { updatedCutout, _ ->
+                            calibrationRevision++
+                            onUpdateCutout(updatedCutout)
+                        }
+                    },
+                )
+
+                if (signature != null && signature.points.isNotEmpty()) {
+                    GamepadInfoBox(
+                        text = stringResource(R.string.settings_cutout_anchor_status_calibrated, signature.points.size),
+                        icon = Icons.Rounded.Anchor,
+                        iconTint = accentColor,
+                    )
+                }
             }
 
-        if (isCalibrated) {
-            val autoTuneDesc =
-                lastTunedPercent?.let {
-                    stringResource(R.string.settings_mirror_hud_auto_tune_success, "$it%")
-                } ?: stringResource(R.string.settings_cutout_recalibrate_smart_desc)
+            2 -> {
+                // Link to Another Cutout
+                val linkedCutout = otherCutouts.find { it.id == cutout.anchorCutoutId } ?: otherCutouts.firstOrNull()
+                val linkedName =
+                    linkedCutout?.let {
+                        if (it.name.isNotBlank()) {
+                            it.name
+                        } else {
+                            "${stringResource(
+                                R.string.settings_mirror_cutout_default,
+                            )} (${it.id.take(4)})"
+                        }
+                    } ?: "—"
+                val currentLinkedIdx = otherCutouts.indexOfFirst { it.id == cutout.anchorCutoutId }.coerceAtLeast(0)
 
-            GamepadActionCard(
-                modifier = Modifier.firstDeckItem(),
-                title = stringResource(R.string.settings_cutout_recalibrate_smart_title),
-                description = autoTuneDesc,
-                icon = Icons.Rounded.Tune,
-                itemKey = "cutout_${cutout.id}_recalibrate_smart",
-                onClick = {
-                    HudAutoTuneCoordinator.startCalibration(context, cutout) { updatedCutout, _ ->
-                        calibrationRevision++
-                        onUpdateCutout(updatedCutout)
+                GamepadChoiceCard(
+                    title = stringResource(R.string.settings_cutout_anchor_linked_title),
+                    description = stringResource(R.string.settings_cutout_anchor_linked_desc),
+                    selectedText = linkedName,
+                    icon = Icons.Rounded.Link,
+                    itemKey = "cutout_${cutout.id}_linked_anchor",
+                    onPrevious = {
+                        val nextIdx = (currentLinkedIdx - 1 + otherCutouts.size) % otherCutouts.size
+                        onUpdateCutout(
+                            cutout.copy(customAnchorEnabled = true, anchorCutoutId = otherCutouts[nextIdx].id, freezeOnHudLoss = true),
+                        )
+                    },
+                    onNext = {
+                        val nextIdx = (currentLinkedIdx + 1) % otherCutouts.size
+                        onUpdateCutout(
+                            cutout.copy(customAnchorEnabled = true, anchorCutoutId = otherCutouts[nextIdx].id, freezeOnHudLoss = true),
+                        )
+                    },
+                )
+            }
+
+            else -> {
+                // Cutout Area (Default)
+                val isCalibrated =
+                    remember(cutout.id, cutout.hasTransparencyMask, cutout.freezeOnHudLoss, calibrationRevision) {
+                        CutoutMaskManager.isCalibrated(context, cutout.id)
                     }
-                },
-            )
 
+                if (isCalibrated) {
+                    val autoTuneDesc =
+                        lastTunedPercent?.let {
+                            stringResource(R.string.settings_mirror_hud_auto_tune_success, "$it%")
+                        } ?: stringResource(R.string.settings_cutout_recalibrate_smart_desc)
+
+                    GamepadActionCard(
+                        title = stringResource(R.string.settings_cutout_recalibrate_smart_title),
+                        description = autoTuneDesc,
+                        icon = Icons.Rounded.Tune,
+                        itemKey = "cutout_${cutout.id}_recalibrate_smart",
+                        onClick = {
+                            HudAutoTuneCoordinator.startCalibration(context, cutout) { updatedCutout, _ ->
+                                calibrationRevision++
+                                onUpdateCutout(updatedCutout)
+                            }
+                        },
+                    )
+                } else {
+                    GamepadActionCard(
+                        title = stringResource(R.string.settings_cutout_convert_smart_title),
+                        description = stringResource(R.string.settings_cutout_convert_smart_desc),
+                        icon = Icons.Rounded.FilterCenterFocus,
+                        itemKey = "cutout_${cutout.id}_convert_smart",
+                        onClick = {
+                            HudAutoTuneCoordinator.startCalibration(context, cutout) { updatedCutout, _ ->
+                                calibrationRevision++
+                                onUpdateCutout(updatedCutout)
+                            }
+                        },
+                    )
+                }
+            }
+        }
+
+        // ── 2. Mask Translucency & Feathering Sliders (if hasTransparencyMask) ──
+        if (cutout.hasTransparencyMask) {
             val translucencyLabel =
                 if (cutout.maskTranslucency > 0) {
                     "${cutout.maskTranslucency}%"
@@ -428,7 +580,13 @@ internal fun CutoutAdvancedSettingsSubPageContent(
                     onUpdateCutout(cutout.copy(maskFeathering = newFeathering))
                 },
             )
+        }
 
+        // ── 3. Actions Section ──────────────────────────────────────────────
+        val isSmartOrAnchored =
+            cutout.hasTransparencyMask || cutout.freezeOnHudLoss || cutout.customAnchorEnabled ||
+                CutoutMaskManager.isCalibrated(context, cutout.id)
+        if (isSmartOrAnchored) {
             GamepadSectionHeader(
                 text = stringResource(R.string.macropad_editor_section_actions),
                 color = accentColor,
@@ -453,24 +611,34 @@ internal fun CutoutAdvancedSettingsSubPageContent(
                             maskFeathering = 0,
                             maskTranslucency = 0,
                             freezeOnHudLoss = false,
+                            customAnchorEnabled = false,
+                            anchorCutoutId = null,
                         ),
                     )
                 },
             )
-        } else {
-            GamepadActionCard(
-                modifier = Modifier.firstDeckItem(),
-                title = stringResource(R.string.settings_cutout_convert_smart_title),
-                description = stringResource(R.string.settings_cutout_convert_smart_desc),
-                icon = Icons.Rounded.FilterCenterFocus,
-                itemKey = "cutout_${cutout.id}_convert_smart",
-                onClick = {
-                    HudAutoTuneCoordinator.startCalibration(context, cutout) { updatedCutout, _ ->
-                        calibrationRevision++
-                        onUpdateCutout(updatedCutout)
-                    }
-                },
-            )
+        }
+    }
+}
+
+private fun applyAnchorMode(
+    modeIdx: Int,
+    cutout: ScreenCutout,
+    otherCutouts: List<ScreenCutout>,
+    onUpdateCutout: (ScreenCutout) -> Unit,
+) {
+    when (modeIdx) {
+        0 -> {
+            onUpdateCutout(cutout.copy(customAnchorEnabled = false, anchorCutoutId = null))
+        }
+
+        1 -> {
+            onUpdateCutout(cutout.copy(customAnchorEnabled = true, anchorCutoutId = null, freezeOnHudLoss = true))
+        }
+
+        2 -> {
+            val targetId = cutout.anchorCutoutId ?: otherCutouts.firstOrNull()?.id
+            onUpdateCutout(cutout.copy(customAnchorEnabled = true, anchorCutoutId = targetId, freezeOnHudLoss = true))
         }
     }
 }

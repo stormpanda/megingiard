@@ -81,6 +81,7 @@ internal object HudAutoTuneCoordinator {
                 val sampledFrames = ArrayList<IntArray>()
                 var cropW = 0
                 var cropH = 0
+                var cutoutFreezeBitmap: Bitmap? = null
                 val startTime = SystemClock.elapsedRealtime()
 
                 try {
@@ -95,10 +96,24 @@ internal object HudAutoTuneCoordinator {
                         val frameBitmap = MirrorFrameSampler.captureFrame(SAMPLE_WIDTH, SAMPLE_HEIGHT)
                         if (frameBitmap != null) {
                             try {
-                                val cX = (cutout.srcX * frameBitmap.width).toInt().coerceIn(0, frameBitmap.width - 1)
-                                val cY = (cutout.srcY * frameBitmap.height).toInt().coerceIn(0, frameBitmap.height - 1)
-                                cropW = (cutout.srcWidth * frameBitmap.width).toInt().coerceIn(1, frameBitmap.width - cX)
-                                cropH = (cutout.srcHeight * frameBitmap.height).toInt().coerceIn(1, frameBitmap.height - cY)
+                                if (cutout.customAnchorEnabled && cutoutFreezeBitmap == null) {
+                                    val cX = (cutout.srcX * frameBitmap.width).toInt().coerceIn(0, frameBitmap.width - 1)
+                                    val cY = (cutout.srcY * frameBitmap.height).toInt().coerceIn(0, frameBitmap.height - 1)
+                                    val cW = (cutout.srcWidth * frameBitmap.width).toInt().coerceIn(1, frameBitmap.width - cX)
+                                    val cH = (cutout.srcHeight * frameBitmap.height).toInt().coerceIn(1, frameBitmap.height - cY)
+                                    try {
+                                        cutoutFreezeBitmap = Bitmap.createBitmap(frameBitmap, cX, cY, cW, cH)
+                                    } catch (e: Exception) {
+                                        AppLog.e(TAG, "Failed to capture initial cutout freeze frame", e)
+                                    }
+                                }
+
+                                val allCutouts = MacroPadState.activeLayout.value?.mirrorCutouts ?: emptyList()
+                                val targetCrop = cutout.getEffectiveAnchorCrop(allCutouts)
+                                val cX = (targetCrop.x * frameBitmap.width).toInt().coerceIn(0, frameBitmap.width - 1)
+                                val cY = (targetCrop.y * frameBitmap.height).toInt().coerceIn(0, frameBitmap.height - 1)
+                                cropW = (targetCrop.width * frameBitmap.width).toInt().coerceIn(1, frameBitmap.width - cX)
+                                cropH = (targetCrop.height * frameBitmap.height).toInt().coerceIn(1, frameBitmap.height - cY)
 
                                 val pixels = IntArray(cropW * cropH)
                                 frameBitmap.getPixels(pixels, 0, cropW, cX, cY, cropW, cropH)
@@ -123,46 +138,81 @@ internal object HudAutoTuneCoordinator {
                                 HudAutoTuner.analyze(sampledFrames, cropW, cropH, cutoutId = cutout.id)
                             }
 
-                        val mask = result.maskPixels
-                        if (mask != null && result.maskWidth > 0 && result.maskHeight > 0 && !result.isStaticScene) {
-                            val maskBitmap =
-                                Bitmap.createBitmap(
-                                    mask,
-                                    result.maskWidth,
-                                    result.maskHeight,
-                                    Bitmap.Config.ARGB_8888,
+                        if (cutout.customAnchorEnabled) {
+                            // Dynamic cutout with custom reference anchor: only extract anchor signature
+                            val signature = result.anchorSignature
+                            val hasValidSignature = signature != null && signature.points.isNotEmpty()
+                            if (signature != null && signature.points.isNotEmpty()) {
+                                CutoutMaskManager.saveAnchorSignature(
+                                    context = context.applicationContext,
+                                    cutoutId = cutout.id,
+                                    signature = signature,
                                 )
-                            val freezeBitmap =
-                                if (sampledFrames.isNotEmpty()) {
-                                    Bitmap.createBitmap(sampledFrames.first(), cropW, cropH, Bitmap.Config.ARGB_8888)
-                                } else {
-                                    null
-                                }
-                            CutoutMaskManager.saveMask(
-                                context = context.applicationContext,
-                                cutoutId = cutout.id,
-                                bitmap = maskBitmap,
-                                varianceMap = result.varianceMap,
-                                anchorSignature = result.anchorSignature,
-                                freezeFrame = freezeBitmap,
+                            }
+                            if (cutoutFreezeBitmap != null) {
+                                CutoutMaskManager.saveFreezeFrame(
+                                    context = context.applicationContext,
+                                    cutoutId = cutout.id,
+                                    bitmap = cutoutFreezeBitmap,
+                                )
+                            }
+                            val updatedCutout =
+                                cutout.copy(
+                                    hasTransparencyMask = false,
+                                    maskFeathering = 0,
+                                    maskTranslucency = 0,
+                                    freezeOnHudLoss = hasValidSignature,
+                                )
+                            MacroPadState.updateCutout(updatedCutout)
+                            _lastTunedPercent.value = null
+                            AppLog.i(
+                                TAG,
+                                "Custom anchor calibration complete: points=${signature?.points?.size ?: 0}, freezeOnHudLoss=$hasValidSignature",
                             )
-                        }
+                            onComplete?.invoke(updatedCutout, result)
+                        } else {
+                            // Standard Smart Cutout: full transparency mask + anchor signature
+                            val mask = result.maskPixels
+                            if (mask != null && result.maskWidth > 0 && result.maskHeight > 0 && !result.isStaticScene) {
+                                val maskBitmap =
+                                    Bitmap.createBitmap(
+                                        mask,
+                                        result.maskWidth,
+                                        result.maskHeight,
+                                        Bitmap.Config.ARGB_8888,
+                                    )
+                                val freezeBitmap =
+                                    if (sampledFrames.isNotEmpty()) {
+                                        Bitmap.createBitmap(sampledFrames.first(), cropW, cropH, Bitmap.Config.ARGB_8888)
+                                    } else {
+                                        null
+                                    }
+                                CutoutMaskManager.saveMask(
+                                    context = context.applicationContext,
+                                    cutoutId = cutout.id,
+                                    bitmap = maskBitmap,
+                                    varianceMap = result.varianceMap,
+                                    anchorSignature = result.anchorSignature,
+                                    freezeFrame = freezeBitmap,
+                                )
+                            }
 
-                        val hasMask = mask != null && !result.isStaticScene
-                        val updatedCutout =
-                            cutout.copy(
-                                hasTransparencyMask = hasMask,
-                                maskFeathering = 0,
-                                maskTranslucency = 0,
-                                freezeOnHudLoss = hasMask,
+                            val hasMask = mask != null && !result.isStaticScene
+                            val updatedCutout =
+                                cutout.copy(
+                                    hasTransparencyMask = hasMask,
+                                    maskFeathering = 0,
+                                    maskTranslucency = 0,
+                                    freezeOnHudLoss = hasMask,
+                                )
+                            MacroPadState.updateCutout(updatedCutout)
+                            _lastTunedPercent.value = if (hasMask) result.transparentPercent else null
+                            AppLog.i(
+                                TAG,
+                                "Auto-Tune completed successfully: hasMask=$hasMask, transparentPct=${result.transparentPercent}%, summary=${result.summary}",
                             )
-                        MacroPadState.updateCutout(updatedCutout)
-                        _lastTunedPercent.value = if (hasMask) result.transparentPercent else null
-                        AppLog.i(
-                            TAG,
-                            "Auto-Tune completed successfully: hasMask=$hasMask, transparentPct=${result.transparentPercent}%, summary=${result.summary}",
-                        )
-                        onComplete?.invoke(updatedCutout, result)
+                            onComplete?.invoke(updatedCutout, result)
+                        }
                     } else {
                         AppLog.w(TAG, "No video frames could be sampled during calibration")
                         _lastTunedPercent.value = null
@@ -175,6 +225,13 @@ internal object HudAutoTuneCoordinator {
                     }
                     _lastTunedPercent.value = null
                 } finally {
+                    if (cutoutFreezeBitmap != null &&
+                        CutoutMaskManager.getFreezeFrame(context.applicationContext, cutout.id) != cutoutFreezeBitmap
+                    ) {
+                        if (!cutoutFreezeBitmap.isRecycled) {
+                            cutoutFreezeBitmap.recycle()
+                        }
+                    }
                     _isCalibrating.value = false
                     _progress.value = 0f
                     _remainingSeconds.value = 0
