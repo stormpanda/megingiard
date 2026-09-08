@@ -114,6 +114,16 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
 - Holding a character key in Compact Full Keyboard Mode MUST NOT trigger any secondary options popup; only its standard character preview popup is displayed.
 - Moving the finger while holding down a character key in Compact Full Keyboard Mode MUST perform slide-to-correct: it dynamically updates the hovered key and its corresponding preview popup. The final character is injected upon finger release.
 
+### FR-K12: Auto-Open on Top-Screen Text Focus (Accessibility-Driven)
+
+- The virtual keyboard MUST support an optional **Auto-Open on Text Focus** mode, configurable via Settings (`KeyboardSettings.kbAutoOpenOnFocus`, enabled by default).
+- When enabled, `MegingiardAccessibilityService` monitors `AccessibilityEvent.TYPE_VIEW_FOCUSED` and `TYPE_VIEW_CLICKED` on the primary display (`Display.DEFAULT_DISPLAY`).
+- Focusing or tapping any editable text input field (`AccessibilityNodeInfo.isEditable == true`) on the primary display MUST automatically open Megingiard's virtual keyboard on the secondary display via `AppStateManager.setFullscreenKeyboardActive(true)`.
+- The mechanism MUST function system-wide across all Android applications without requiring Megingiard to be registered or configured as a system Input Method Editor (IME).
+- Focusing a non-editable element or changing the active window on the primary display MUST automatically dismiss the virtual keyboard.
+- If the user manually collapses or dismisses the virtual keyboard while an editable field remains focused, the system MUST record hysteresis (`userDismissedFieldId`) to avoid aggressively re-opening the keyboard until focus changes to another field or the user explicitly taps the field again.
+- Megingiard relies on Android's native hardware keyboard detection (`show_ime_with_hard_keyboard = 0`) to keep the top-screen soft keyboard (Gboard) hidden without tearing down or finishing the application's active `InputConnection`. Forced suppression via `SHOW_MODE_HIDDEN` MUST NOT be used, as it causes Chromium and other input-connection engines to suspend text rendering until the IME session is restored.
+
 ---
 
 ## Technical Implementation
@@ -260,6 +270,7 @@ When a full-screen UI overlay is visible:
 | Fullscreen Mode    | `kb_fullscreen`         | `false`  | Expand keyboard to use full screen area                   |
 | Button Position    | `kb_mouse_btn_pos`      | `LEFT`   | Mouse button overlay placement (`LEFT`, `RIGHT`, or `BOTH`) |
 | Keyboard Touchpad  | `kb_touchpad_enabled`   | `true`   | Show touchpad on top of the keyboard layout              |
+| Auto-Open on Focus | `kb_auto_open_on_focus` | `true`   | Auto-open bottom keyboard when top text field is focused  |
 
 ### Source Files
 
@@ -270,6 +281,7 @@ When a full-screen UI overlay is visible:
 | **`:companion:ui`** | [KeyboardKeyCap.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/keyboard/KeyboardKeyCap.kt) | KeyCap Composable: rendering, highlighting, and bounds reporting |
 | **`:companion:ui`** | [KeyboardMouseOverlay.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/keyboard/KeyboardMouseOverlay.kt) | Mouse Overlay: renders columns for mouse buttons (LMB/MMB/RMB/M4/M5) and scroll wheel |
 | **`:companion:ui`** | [KeyboardViewModel.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/viewmodel/KeyboardViewModel.kt) | VM coordinating keyboard state, repeat controller scope, and injector startup/shutdown |
+| **`:companion:domain`** | [AutoKeyboardFocusCoordinator.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/keyboard/AutoKeyboardFocusCoordinator.kt) | Coordinates auto-open/close on text focus and manual dismiss hysteresis |
 | **`:companion:domain`** | [KeyboardState.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/keyboard/KeyboardState.kt) | Modifier key state machine (INACTIVE / STICKY / HELD) per modifier key |
 | **`:companion:domain`** | [KeyRepeatController.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/keyboard/KeyRepeatController.kt) | Coordinated timing: repeat triggers, modifier holds, pointer maps, and trackpoint relative movement |
 | **`:companion:domain`** | [KeyInjector.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/keyboard/KeyInjector.kt) | Public business logic facade for keyboard event injection |

@@ -128,15 +128,24 @@ class GlobalSettingsViewModelTest {
     fun testKeyboardSettingsDelegation() {
         val vm = GlobalSettingsViewModel()
         vm.setKbLayout(KbLayout.AZERTY)
+        testDispatcher.scheduler.advanceUntilIdle()
         assertEquals(KbLayout.AZERTY, vm.kbLayout.value)
         assertEquals(KbLayout.AZERTY, KeyboardSettings.kbLayout.value)
 
         vm.setKbTouchpadEnabled(false)
+        testDispatcher.scheduler.advanceUntilIdle()
         assertFalse(vm.kbTouchpadEnabled.value)
         assertFalse(KeyboardSettings.kbTouchpadEnabled.value)
+
+        vm.setKbAutoOpenOnFocus(false)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertFalse(vm.kbAutoOpenOnFocus.value)
+        assertFalse(KeyboardSettings.kbAutoOpenOnFocus.value)
 
         // Reset
         vm.setKbLayout(KbLayout.QWERTZ)
         vm.setKbTouchpadEnabled(true)
+        vm.setKbAutoOpenOnFocus(true)
+        testDispatcher.scheduler.advanceUntilIdle()
     }
 }

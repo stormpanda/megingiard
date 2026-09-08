@@ -55,6 +55,8 @@
     <string name="settings_kb_layout">Tastaturlayout</string>
     <string name="settings_kb_touchpad">Tastatur-Touchpad</string>
     <string name="settings_kb_touchpad_desc">Touchpad über der Tastatur anzeigen</string>
+    <string name="settings_kb_auto_open_on_focus">Automatisch öffnen bei Textfokus</string>
+    <string name="settings_kb_auto_open_on_focus_desc">Öffnet Megingiards Tastatur automatisch auf dem unteren Bildschirm, wenn ein Textfeld auf dem oberen Bildschirm fokussiert wird</string>
 
     <!-- Input method (touchpad + keyboard trackpoint) -->
 

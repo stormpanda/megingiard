@@ -41,6 +41,7 @@ class KeyboardViewModel(
     val kbFullscreen: StateFlow<Boolean> = KeyboardSettings.kbFullscreen
     val kbMouseBtnPos: StateFlow<KbMouseBtnPos> = KeyboardSettings.kbMouseBtnPos
     val kbTouchpadEnabled: StateFlow<Boolean> = KeyboardSettings.kbTouchpadEnabled
+    val kbAutoOpenOnFocus: StateFlow<Boolean> = KeyboardSettings.kbAutoOpenOnFocus
     val overlayAtBottom: StateFlow<Boolean> = SettingsManager.overlayAtBottom
     val isQuickMenuOpen: StateFlow<Boolean> = AppStateManager.isQuickMenuOpen
 
@@ -52,6 +53,8 @@ class KeyboardViewModel(
     }
 
     fun setKbTouchpadEnabled(value: Boolean) = KeyboardSettings.setKbTouchpadEnabled(value)
+
+    fun setKbAutoOpenOnFocus(value: Boolean) = KeyboardSettings.setKbAutoOpenOnFocus(value)
 
     private fun sendCtrlCombo(keyCode: Int) {
         viewModelScope.launch(Dispatchers.IO) {

@@ -49,6 +49,9 @@ object KeyboardSettings {
     private val _kbTouchpadEnabled = MutableStateFlow(true)
     val kbTouchpadEnabled: StateFlow<Boolean> = _kbTouchpadEnabled.asStateFlow()
 
+    private val _kbAutoOpenOnFocus = MutableStateFlow(true)
+    val kbAutoOpenOnFocus: StateFlow<Boolean> = _kbAutoOpenOnFocus.asStateFlow()
+
     internal fun init(
         dataStore: DataStore<Preferences>,
         scope: CoroutineScope,
@@ -64,6 +67,7 @@ object KeyboardSettings {
         _kbFullscreen.value = prefs[KEY_KB_FULLSCREEN] ?: false
         _kbMouseBtnPos.value = KbMouseBtnPos.entries.firstOrNull { it.name == prefs[KEY_KB_MOUSE_BTN_POS] } ?: KbMouseBtnPos.LEFT
         _kbTouchpadEnabled.value = prefs[KEY_KB_TOUCHPAD_ENABLED] ?: true
+        _kbAutoOpenOnFocus.value = prefs[KEY_KB_AUTO_OPEN_ON_FOCUS] ?: true
     }
 
     private val optionalDataStore: DataStore<Preferences>?
@@ -102,5 +106,17 @@ object KeyboardSettings {
 
     fun setKbTouchpadEnabled(value: Boolean) {
         updateSettingPref(KEY_KB_TOUCHPAD_ENABLED, value, _kbTouchpadEnabled, optionalScope, optionalDataStore, TAG, "setKbTouchpadEnabled")
+    }
+
+    fun setKbAutoOpenOnFocus(value: Boolean) {
+        updateSettingPref(
+            KEY_KB_AUTO_OPEN_ON_FOCUS,
+            value,
+            _kbAutoOpenOnFocus,
+            optionalScope,
+            optionalDataStore,
+            TAG,
+            "setKbAutoOpenOnFocus",
+        )
     }
 }
