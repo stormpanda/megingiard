@@ -8,6 +8,7 @@ import androidx.compose.material.icons.rounded.Grain
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.Opacity
+import androidx.compose.material.icons.rounded.PauseCircle
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Warning
@@ -348,6 +349,18 @@ internal fun CutoutSettingsSubPageContent(
                 },
             )
 
+            GamepadToggleCard(
+                title = stringResource(R.string.settings_mirror_hud_freeze_on_loss_title),
+                description = stringResource(R.string.settings_mirror_hud_freeze_on_loss_desc),
+                checked = cutout.freezeOnHudLoss,
+                icon = Icons.Rounded.PauseCircle,
+                itemKey = "cutout_${cutout.id}_freeze_on_loss",
+                onCheckedChange = { isChecked ->
+                    AppLog.d(TAG, "Updating cutout ${cutout.id} freezeOnHudLoss: $isChecked")
+                    onUpdateCutout(cutout.copy(freezeOnHudLoss = isChecked), false)
+                },
+            )
+
             GamepadActionCard(
                 title = stringResource(R.string.settings_mirror_hud_clear_mask_title),
                 description = stringResource(R.string.settings_mirror_hud_clear_mask_desc),
@@ -360,6 +373,7 @@ internal fun CutoutSettingsSubPageContent(
                             hasTransparencyMask = false,
                             maskFeathering = 0,
                             maskTranslucency = 0,
+                            freezeOnHudLoss = false,
                         ),
                         false,
                     )

@@ -632,6 +632,8 @@ Open Settings to create a layout.</string>
     <string name="settings_mirror_hud_feathering_title">HUD Edge Feathering</string>
     <string name="settings_mirror_hud_feathering_desc">Restores cut pixels along HUD borders with decreasing opacity falloff</string>
     <string name="settings_mirror_hud_feathering_off">Off</string>
+    <string name="settings_mirror_hud_freeze_on_loss_title">Freeze during Cutscenes</string>
+    <string name="settings_mirror_hud_freeze_on_loss_desc">Freezes the last valid HUD frame during cutscenes or menus instead of showing background video</string>
     <string name="settings_mirror_hud_auto_tuning_prompt">Calibrating HUD... Move your camera or character in-game! (%ds left)</string>
     <string name="settings_mirror_hud_auto_tune_success">Auto-Tuned: %s</string>
     <string name="mirror_hud_calibration_title">HUD Auto-Tuning</string>

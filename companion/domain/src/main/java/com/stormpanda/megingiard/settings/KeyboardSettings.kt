@@ -57,13 +57,26 @@ object KeyboardSettings {
         this.scope = scope
     }
 
+    fun resetForTesting() {
+        _kbLayout.value = KbLayout.QWERTZ
+        _kbTrackpointEnabled.value = true
+        _kbRepeatEnabled.value = true
+        _kbFullscreen.value = false
+        _kbMouseBtnPos.value = KbMouseBtnPos.LEFT
+        _kbTouchpadEnabled.value = true
+    }
+
     internal fun loadFrom(prefs: Preferences) {
-        _kbLayout.value = KbLayout.entries.firstOrNull { it.name == prefs[KEY_KB_LAYOUT] } ?: KbLayout.QWERTZ
-        _kbTrackpointEnabled.value = prefs[KEY_KB_TRACKPOINT_ENABLED] ?: true
-        _kbRepeatEnabled.value = prefs[KEY_KB_REPEAT_ENABLED] ?: true
-        _kbFullscreen.value = prefs[KEY_KB_FULLSCREEN] ?: false
-        _kbMouseBtnPos.value = KbMouseBtnPos.entries.firstOrNull { it.name == prefs[KEY_KB_MOUSE_BTN_POS] } ?: KbMouseBtnPos.LEFT
-        _kbTouchpadEnabled.value = prefs[KEY_KB_TOUCHPAD_ENABLED] ?: true
+        prefs[KEY_KB_LAYOUT]?.let { name ->
+            KbLayout.entries.firstOrNull { it.name == name }?.let { _kbLayout.value = it }
+        }
+        prefs[KEY_KB_TRACKPOINT_ENABLED]?.let { _kbTrackpointEnabled.value = it }
+        prefs[KEY_KB_REPEAT_ENABLED]?.let { _kbRepeatEnabled.value = it }
+        prefs[KEY_KB_FULLSCREEN]?.let { _kbFullscreen.value = it }
+        prefs[KEY_KB_MOUSE_BTN_POS]?.let { name ->
+            KbMouseBtnPos.entries.firstOrNull { it.name == name }?.let { _kbMouseBtnPos.value = it }
+        }
+        prefs[KEY_KB_TOUCHPAD_ENABLED]?.let { _kbTouchpadEnabled.value = it }
     }
 
     private val optionalDataStore: DataStore<Preferences>?

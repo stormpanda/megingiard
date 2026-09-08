@@ -359,4 +359,51 @@ class HudAutoTunerTest {
         // Distant pixel at (2, 2) is outside halo and remains transparent
         assertEquals("Distant pixel outside halo must remain transparent", MASK_PIXEL_TRANSPARENT, maskTuned[2 * testW + 2])
     }
+
+    @Test
+    fun `extractAnchorSignature extracts stationary pixels with accurate reference colors and normalized coordinates`() {
+        val testW = 16
+        val testH = 16
+        val testCount = testW * testH
+        val varianceMap = ByteArray(testCount) { 100.toByte() }
+
+        // Place stationary anchors in top-left (0,0) with variance 0 and color #FFFFFF
+        varianceMap[0] = 0.toByte()
+        // Place stationary anchor in bottom-right (15,15) with variance 2 and color #FF8000
+        varianceMap[15 * testW + 15] = 2.toByte()
+
+        val frames =
+            listOf(
+                IntArray(testCount) { idx ->
+                    when (idx) {
+                        0 -> colorArgb(255, 255, 255)
+                        15 * testW + 15 -> colorArgb(255, 128, 0)
+                        else -> colorArgb(50, 50, 50)
+                    }
+                },
+                IntArray(testCount) { idx ->
+                    when (idx) {
+                        0 -> colorArgb(255, 255, 255)
+                        15 * testW + 15 -> colorArgb(255, 128, 0)
+                        else -> colorArgb(80, 80, 80)
+                    }
+                },
+            )
+
+        val signature = HudAutoTuner.extractAnchorSignature(varianceMap, frames, testW, testH, "cutout_123")
+        assertEquals("cutout_123", signature.cutoutId)
+        assertTrue("Signature should extract at least 2 points", signature.points.size >= 2)
+
+        val topLeftPoint = signature.points.firstOrNull { it.u < 0.2f && it.v < 0.2f }
+        assertTrue("Should extract top-left anchor", topLeftPoint != null)
+        assertEquals(255, topLeftPoint!!.r)
+        assertEquals(255, topLeftPoint.g)
+        assertEquals(255, topLeftPoint.b)
+
+        val bottomRightPoint = signature.points.firstOrNull { it.u > 0.8f && it.v > 0.8f }
+        assertTrue("Should extract bottom-right anchor", bottomRightPoint != null)
+        assertEquals(255, bottomRightPoint!!.r)
+        assertEquals(128, bottomRightPoint.g)
+        assertEquals(0, bottomRightPoint.b)
+    }
 }

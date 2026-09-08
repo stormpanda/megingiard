@@ -36,6 +36,11 @@ private const val ENCLOSED_MAX_VARIANCE_BOOST = 120
 private const val ENCLOSED_MAX_BARRIER_BOOST = 55
 private const val MIN_PARTIAL_ALPHA = 40
 
+private const val SIGNATURE_GRID_COLS = 8
+private const val SIGNATURE_GRID_ROWS = 8
+private const val MAX_ANCHOR_VARIANCE = 10
+private const val HALF_PIXEL_OFFSET = 0.5f
+
 /**
  * Result returned by [HudAutoTuner.analyze].
  *
@@ -46,6 +51,7 @@ private const val MIN_PARTIAL_ALPHA = 40
  * @param isStaticScene True if no motion was observed during calibration.
  * @param summary Human-readable summary of the detection result for UI toasts and status.
  * @param varianceMap Raw per-pixel maximum color variation byte map used for dynamic translucency tuning.
+ * @param anchorSignature Spatially distributed anchor sample points used for real-time presence detection.
  */
 data class AutoTuneResult(
     val maskPixels: IntArray? = null,
@@ -55,6 +61,7 @@ data class AutoTuneResult(
     val isStaticScene: Boolean = false,
     val summary: String = "",
     val varianceMap: ByteArray? = null,
+    val anchorSignature: HudAnchorSignature? = null,
 )
 
 /**
@@ -76,6 +83,7 @@ object HudAutoTuner {
         width: Int,
         height: Int,
         colorChangeThreshold: Int = COLOR_CHANGE_THRESHOLD,
+        cutoutId: String = "",
     ): AutoTuneResult {
         if (frames.size < MIN_FRAMES_REQUIRED || width <= 0 || height <= 0) {
             AppLog.w(TAG, "Insufficient frames (${frames.size}) or invalid dimensions (${width}x$height)")
@@ -172,9 +180,17 @@ object HudAutoTuner {
         }
 
         val finalTransparentPct = (transparentCount * PERCENT_MULTIPLIER) / pixelCount
+        val signature =
+            extractAnchorSignature(
+                varianceMap = varianceMap,
+                frames = frames,
+                width = width,
+                height = height,
+                cutoutId = cutoutId,
+            )
         AppLog.i(
             TAG,
-            "Auto-Tune completed: $finalTransparentPct% background transparent (${width}x$height, $changedCount moving px)",
+            "Auto-Tune completed: $finalTransparentPct% background transparent (${width}x$height, ${signature.points.size} anchors)",
         )
 
         return AutoTuneResult(
@@ -185,7 +201,78 @@ object HudAutoTuner {
             isStaticScene = false,
             summary = "Tuned: $finalTransparentPct% background made transparent.",
             varianceMap = varianceMap,
+            anchorSignature = signature,
         )
+    }
+
+    /**
+     * Extracts a compact, spatially stratified [HudAnchorSignature] from stationary pixels
+     * across an 8x8 grid over the cutout.
+     */
+    fun extractAnchorSignature(
+        varianceMap: ByteArray,
+        frames: List<IntArray>,
+        width: Int,
+        height: Int,
+        cutoutId: String = "",
+    ): HudAnchorSignature {
+        if (varianceMap.isEmpty() || frames.isEmpty() || width <= 0 || height <= 0) {
+            return HudAnchorSignature(cutoutId, emptyList())
+        }
+
+        val points = ArrayList<AnchorPoint>()
+        val cellW = width.toFloat() / SIGNATURE_GRID_COLS.toFloat()
+        val cellH = height.toFloat() / SIGNATURE_GRID_ROWS.toFloat()
+
+        for (gy in 0 until SIGNATURE_GRID_ROWS) {
+            val yStart = (gy * cellH).toInt().coerceIn(0, height - 1)
+            val yEnd = ((gy + 1) * cellH).toInt().coerceIn(yStart + 1, height)
+
+            for (gx in 0 until SIGNATURE_GRID_COLS) {
+                val xStart = (gx * cellW).toInt().coerceIn(0, width - 1)
+                val xEnd = ((gx + 1) * cellW).toInt().coerceIn(xStart + 1, width)
+
+                var bestX = -1
+                var bestY = -1
+                var minVar = Int.MAX_VALUE
+
+                for (y in yStart until yEnd) {
+                    val rowOffset = y * width
+                    for (x in xStart until xEnd) {
+                        val v = varianceMap[rowOffset + x].toInt() and COLOR_BYTE_MASK
+                        if (v <= MAX_ANCHOR_VARIANCE && v < minVar) {
+                            minVar = v
+                            bestX = x
+                            bestY = y
+                        }
+                    }
+                }
+
+                if (bestX >= 0 && bestY >= 0) {
+                    val bestIdx = bestY * width + bestX
+                    var sumR = 0
+                    var sumG = 0
+                    var sumB = 0
+                    for (frame in frames) {
+                        val rgb = frame[bestIdx]
+                        sumR += (rgb shr SHIFT_RED) and COLOR_BYTE_MASK
+                        sumG += (rgb shr SHIFT_GREEN) and COLOR_BYTE_MASK
+                        sumB += rgb and COLOR_BYTE_MASK
+                    }
+                    val frameCount = frames.size
+                    val avgR = sumR / frameCount
+                    val avgG = sumG / frameCount
+                    val avgB = sumB / frameCount
+
+                    val u = (bestX + HALF_PIXEL_OFFSET) / width.toFloat()
+                    val v = (bestY + HALF_PIXEL_OFFSET) / height.toFloat()
+                    points.add(AnchorPoint(u = u, v = v, r = avgR, g = avgG, b = avgB))
+                }
+            }
+        }
+
+        AppLog.d(TAG, "Extracted ${points.size} anchor signature points for cutout '$cutoutId' (${width}x$height)")
+        return HudAnchorSignature(cutoutId, points)
     }
 
     /**

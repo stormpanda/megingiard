@@ -632,6 +632,8 @@ Open Settings to create a layout.</string>
     <string name="settings_mirror_hud_feathering_title">HUD 邊緣羽化</string>
     <string name="settings_mirror_hud_feathering_desc">以遞減的不透明度恢復 HUD 邊緣被剪除的像素</string>
     <string name="settings_mirror_hud_feathering_off">關閉</string>
+    <string name="settings_mirror_hud_freeze_on_loss_title">過場動畫時凍結</string>
+    <string name="settings_mirror_hud_freeze_on_loss_desc">在過場動畫或選單中凍結最後的有效 HUD 畫面，而不是顯示背景視訊</string>
     <string name="settings_mirror_hud_auto_tuning_prompt">正在校準 HUD... 請在遊戲中移動視角或角色！（剩餘 %d 秒）</string>
     <string name="settings_mirror_hud_auto_tune_success">已自動微調：%s</string>
     <string name="mirror_hud_calibration_title">HUD 自動校準</string>

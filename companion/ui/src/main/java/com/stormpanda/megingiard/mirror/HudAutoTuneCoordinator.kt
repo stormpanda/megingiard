@@ -120,7 +120,7 @@ internal object HudAutoTuneCoordinator {
                         )
                         val result =
                             withContext(Dispatchers.Default) {
-                                HudAutoTuner.analyze(sampledFrames, cropW, cropH)
+                                HudAutoTuner.analyze(sampledFrames, cropW, cropH, cutoutId = cutout.id)
                             }
 
                         val mask = result.maskPixels
@@ -132,11 +132,19 @@ internal object HudAutoTuneCoordinator {
                                     result.maskHeight,
                                     Bitmap.Config.ARGB_8888,
                                 )
+                            val freezeBitmap =
+                                if (sampledFrames.isNotEmpty()) {
+                                    Bitmap.createBitmap(sampledFrames.first(), cropW, cropH, Bitmap.Config.ARGB_8888)
+                                } else {
+                                    null
+                                }
                             CutoutMaskManager.saveMask(
                                 context = context.applicationContext,
                                 cutoutId = cutout.id,
                                 bitmap = maskBitmap,
                                 varianceMap = result.varianceMap,
+                                anchorSignature = result.anchorSignature,
+                                freezeFrame = freezeBitmap,
                             )
                         }
 
@@ -146,6 +154,7 @@ internal object HudAutoTuneCoordinator {
                                 hasTransparencyMask = hasMask,
                                 maskFeathering = 0,
                                 maskTranslucency = 0,
+                                freezeOnHudLoss = hasMask,
                             )
                         MacroPadState.updateCutout(updatedCutout)
                         _lastTunedPercent.value = if (hasMask) result.transparentPercent else null

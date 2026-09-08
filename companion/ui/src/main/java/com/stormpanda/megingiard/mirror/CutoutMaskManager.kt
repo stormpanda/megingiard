@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import com.stormpanda.megingiard.AppLog
+import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.ConcurrentHashMap
@@ -13,19 +14,27 @@ private const val MASKS_DIR = "cutout_masks"
 private const val MASK_FILE_PREFIX = "mask_"
 private const val PNG_EXTENSION = ".png"
 private const val VARIANCE_EXTENSION = "_var.bin"
+private const val ANCHOR_EXTENSION = "_anchor.json"
+private const val FREEZE_EXTENSION = "_freeze.png"
 private const val PNG_QUALITY = 100
 
 /**
- * Manages in-memory caching and filesystem persistence for auto-tuned cutout transparency masks
- * and raw variance maps for dynamic translucency and edge feathering tuning.
+ * Manages in-memory caching and filesystem persistence for auto-tuned cutout transparency masks,
+ * raw variance maps for dynamic translucency/feathering, anchor signatures for presence detection,
+ * and high-resolution freeze frames for cutscene preservation.
  *
  * Base masks are stored as lossless PNG files under `context.filesDir/cutout_masks/mask_<cutoutId>.png`.
  * Variance maps are stored as binary byte arrays under `context.filesDir/cutout_masks/mask_<cutoutId>_var.bin`.
+ * Anchor signatures are stored as JSON under `context.filesDir/cutout_masks/mask_<cutoutId>_anchor.json`.
+ * Freeze frames are stored as PNG under `context.filesDir/cutout_masks/mask_<cutoutId>_freeze.png`.
  */
 object CutoutMaskManager {
+    private val json = Json { ignoreUnknownKeys = true }
     private val baseMaskCache = ConcurrentHashMap<String, Bitmap>()
     private val tunedMaskCache = ConcurrentHashMap<String, Bitmap>()
     private val varianceCache = ConcurrentHashMap<String, ByteArray>()
+    private val anchorSignatureCache = ConcurrentHashMap<String, HudAnchorSignature>()
+    private val freezeFrameCache = ConcurrentHashMap<String, Bitmap>()
 
     /**
      * Retrieves the transparency mask bitmap for [cutoutId] with optional [translucency] (0..10)
@@ -146,13 +155,15 @@ object CutoutMaskManager {
 
     /**
      * Persists [bitmap] to disk as the base mask and updates the in-memory cache for [cutoutId].
-     * Optionally persists the raw [varianceMap] alongside the mask.
+     * Optionally persists the raw [varianceMap], [anchorSignature], and [freezeFrame] alongside the mask.
      */
     fun saveMask(
         context: Context,
         cutoutId: String,
         bitmap: Bitmap,
         varianceMap: ByteArray? = null,
+        anchorSignature: HudAnchorSignature? = null,
+        freezeFrame: Bitmap? = null,
     ) {
         clearTunedCacheFor(cutoutId)
         baseMaskCache[cutoutId] = bitmap
@@ -180,8 +191,112 @@ object CutoutMaskManager {
             } else if (varFile.exists()) {
                 varFile.delete()
             }
+
+            if (anchorSignature != null) {
+                saveAnchorSignature(context, cutoutId, anchorSignature)
+            }
+
+            if (freezeFrame != null) {
+                saveFreezeFrame(context, cutoutId, freezeFrame)
+            }
         } catch (e: Exception) {
             AppLog.e(TAG, "Failed to persist mask/variance for cutout $cutoutId", e)
+        }
+    }
+
+    /**
+     * Retrieves the reference anchor signature for [cutoutId] if available.
+     */
+    fun getAnchorSignature(
+        context: Context,
+        cutoutId: String,
+    ): HudAnchorSignature? {
+        anchorSignatureCache[cutoutId]?.let { return it }
+
+        val dir = File(context.filesDir, MASKS_DIR)
+        val file = File(dir, "$MASK_FILE_PREFIX$cutoutId$ANCHOR_EXTENSION")
+        if (!file.exists()) return null
+
+        return try {
+            val text = file.readText()
+            val signature = json.decodeFromString(HudAnchorSignature.serializer(), text)
+            anchorSignatureCache[cutoutId] = signature
+            AppLog.d(TAG, "Loaded anchor signature for cutout $cutoutId (${signature.points.size} points) from disk")
+            signature
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Failed to read anchor signature for cutout $cutoutId", e)
+            null
+        }
+    }
+
+    /**
+     * Persists [signature] as the reference anchor signature for [cutoutId].
+     */
+    fun saveAnchorSignature(
+        context: Context,
+        cutoutId: String,
+        signature: HudAnchorSignature,
+    ) {
+        anchorSignatureCache[cutoutId] = signature
+        try {
+            val dir = File(context.filesDir, MASKS_DIR)
+            if (!dir.exists()) dir.mkdirs()
+            val file = File(dir, "$MASK_FILE_PREFIX$cutoutId$ANCHOR_EXTENSION")
+            file.writeText(json.encodeToString(HudAnchorSignature.serializer(), signature))
+            AppLog.i(TAG, "Saved anchor signature for cutout $cutoutId (${signature.points.size} points)")
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Failed to persist anchor signature for cutout $cutoutId", e)
+        }
+    }
+
+    /**
+     * Retrieves the reference freeze frame bitmap for [cutoutId] if available.
+     */
+    fun getFreezeFrame(
+        context: Context,
+        cutoutId: String,
+    ): Bitmap? {
+        freezeFrameCache[cutoutId]?.let { cached ->
+            if (!cached.isRecycled) return cached
+            freezeFrameCache.remove(cutoutId)
+        }
+
+        val dir = File(context.filesDir, MASKS_DIR)
+        val file = File(dir, "$MASK_FILE_PREFIX$cutoutId$FREEZE_EXTENSION")
+        if (!file.exists()) return null
+
+        return try {
+            val bitmap = BitmapFactory.decodeFile(file.absolutePath)
+            if (bitmap != null) {
+                freezeFrameCache[cutoutId] = bitmap
+                AppLog.d(TAG, "Loaded freeze frame for cutout $cutoutId (${bitmap.width}x${bitmap.height}) from disk")
+            }
+            bitmap
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Failed to decode freeze frame for cutout $cutoutId", e)
+            null
+        }
+    }
+
+    /**
+     * Persists [bitmap] as the reference freeze frame for [cutoutId].
+     */
+    fun saveFreezeFrame(
+        context: Context,
+        cutoutId: String,
+        bitmap: Bitmap,
+    ) {
+        freezeFrameCache[cutoutId] = bitmap
+        try {
+            val dir = File(context.filesDir, MASKS_DIR)
+            if (!dir.exists()) dir.mkdirs()
+            val file = File(dir, "$MASK_FILE_PREFIX$cutoutId$FREEZE_EXTENSION")
+            FileOutputStream(file).use { out ->
+                bitmap.compress(Bitmap.CompressFormat.PNG, PNG_QUALITY, out)
+            }
+            AppLog.i(TAG, "Saved freeze frame for cutout $cutoutId (${bitmap.width}x${bitmap.height}) to ${file.absolutePath}")
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Failed to persist freeze frame for cutout $cutoutId", e)
         }
     }
 
@@ -194,6 +309,12 @@ object CutoutMaskManager {
     ) {
         clearTunedCacheFor(cutoutId)
         varianceCache.remove(cutoutId)
+        anchorSignatureCache.remove(cutoutId)
+        freezeFrameCache.remove(cutoutId)?.let { cached ->
+            if (!cached.isRecycled) {
+                cached.recycle()
+            }
+        }
         baseMaskCache.remove(cutoutId)?.let { cached ->
             if (!cached.isRecycled) {
                 cached.recycle()
@@ -210,6 +331,16 @@ object CutoutMaskManager {
             if (varFile.exists()) {
                 varFile.delete()
                 AppLog.i(TAG, "Deleted variance file for cutout $cutoutId")
+            }
+            val anchorFile = File(dir, "$MASK_FILE_PREFIX$cutoutId$ANCHOR_EXTENSION")
+            if (anchorFile.exists()) {
+                anchorFile.delete()
+                AppLog.i(TAG, "Deleted anchor file for cutout $cutoutId")
+            }
+            val freezeFile = File(dir, "$MASK_FILE_PREFIX$cutoutId$FREEZE_EXTENSION")
+            if (freezeFile.exists()) {
+                freezeFile.delete()
+                AppLog.i(TAG, "Deleted freeze file for cutout $cutoutId")
             }
         } catch (e: Exception) {
             AppLog.e(TAG, "Failed to delete mask files for cutout $cutoutId", e)

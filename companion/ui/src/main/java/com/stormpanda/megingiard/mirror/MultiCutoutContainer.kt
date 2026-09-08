@@ -211,8 +211,10 @@ internal class MultiCutoutContainer(
             xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
         }
     private val maskDestRect = RectF()
+    private val cutoutDestRect = RectF()
 
     init {
+        HudPresenceManager.initialize(context)
         clipChildren = true
         setWillNotDraw(false)
     }
@@ -344,42 +346,50 @@ internal class MultiCutoutContainer(
                     }
                     val innerSaveCount = canvas.save()
 
-                    val isFollowActive = ScreenCaptureManager.isFollowActive.value
-                    val isUncropped = cutout.srcWidth >= MCC_UNCROPPED_THRESHOLD && cutout.srcHeight >= MCC_UNCROPPED_THRESHOLD
-                    if (cutouts.size == 1 && isFollowActive && isUncropped) {
-                        canvas.translate(viewportOffsetX, viewportOffsetY)
-                        canvas.scale(viewportScale, viewportScale, dw / 2f, dh / 2f)
+                    val isCutoutHudLost = cutout.freezeOnHudLoss && HudPresenceManager.isCutoutHudLost(cutout.id)
+                    val frozenFrame = if (isCutoutHudLost) HudPresenceManager.getFrozenFrame(context, cutout.id) else null
 
-                        val srcRatio = srcWidth.toFloat() / srcHeight.toFloat()
-                        val destRatio = dw / dh
+                    if (frozenFrame != null && !frozenFrame.isRecycled) {
+                        cutoutDestRect.set(0f, 0f, dw, dh)
+                        canvas.drawBitmap(frozenFrame, null, cutoutDestRect, null)
+                    } else {
+                        val isFollowActive = ScreenCaptureManager.isFollowActive.value
+                        val isUncropped = cutout.srcWidth >= MCC_UNCROPPED_THRESHOLD && cutout.srcHeight >= MCC_UNCROPPED_THRESHOLD
+                        if (cutouts.size == 1 && isFollowActive && isUncropped) {
+                            canvas.translate(viewportOffsetX, viewportOffsetY)
+                            canvas.scale(viewportScale, viewportScale, dw / 2f, dh / 2f)
 
-                        var fitW = dw
-                        var fitH = dh
-                        if (srcRatio > destRatio) {
-                            fitH = dw / srcRatio
+                            val srcRatio = srcWidth.toFloat() / srcHeight.toFloat()
+                            val destRatio = dw / dh
+
+                            var fitW = dw
+                            var fitH = dh
+                            if (srcRatio > destRatio) {
+                                fitH = dw / srcRatio
+                            } else {
+                                fitW = dh * srcRatio
+                            }
+
+                            val fitX = (dw - fitW) / 2f
+                            val fitY = (dh - fitH) / 2f
+                            canvas.translate(fitX, fitY)
+
+                            val scaleX = fitW / srcWidth
+                            val scaleY = fitH / srcHeight
+                            canvas.scale(scaleX, scaleY)
                         } else {
-                            fitW = dh * srcRatio
+                            val scaleX = dw / sw
+                            val scaleY = dh / sh
+                            canvas.translate(-sx * scaleX, -sy * scaleY)
+                            canvas.scale(scaleX, scaleY)
                         }
 
-                        val fitX = (dw - fitW) / 2f
-                        val fitY = (dh - fitH) / 2f
-                        canvas.translate(fitX, fitY)
-
-                        val scaleX = fitW / srcWidth
-                        val scaleY = fitH / srcHeight
-                        canvas.scale(scaleX, scaleY)
-                    } else {
-                        val scaleX = dw / sw
-                        val scaleY = dh / sh
-                        canvas.translate(-sx * scaleX, -sy * scaleY)
-                        canvas.scale(scaleX, scaleY)
-                    }
-
-                    if (isFrozen && frozenBitmap != null) {
-                        canvas.drawBitmap(frozenBitmap!!, 0f, 0f, null)
-                    } else if (masterView != null) {
-                        drawChild(canvas, masterView, drawTime)
-                        masterViewDrawn = true
+                        if (isFrozen && frozenBitmap != null) {
+                            canvas.drawBitmap(frozenBitmap!!, 0f, 0f, null)
+                        } else if (masterView != null) {
+                            drawChild(canvas, masterView, drawTime)
+                            masterViewDrawn = true
+                        }
                     }
 
                     canvas.restoreToCount(innerSaveCount)

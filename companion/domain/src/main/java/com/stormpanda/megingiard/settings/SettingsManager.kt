@@ -144,6 +144,7 @@ object SettingsManager {
         _showMacroEditorTutorial.value = true
         _internalBackups.value = emptyList()
         MacroPadSettings.resetForTesting()
+        KeyboardSettings.resetForTesting()
         UpdateManager.resetForTesting()
         if (::dataStore.isInitialized) {
             runBlocking {
