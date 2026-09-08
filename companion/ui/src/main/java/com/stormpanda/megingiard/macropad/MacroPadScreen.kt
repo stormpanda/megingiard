@@ -72,7 +72,6 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.BitmapUtils
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.math.ViewportMath
 import com.stormpanda.megingiard.mirror.EmbeddedMirrorView
 import com.stormpanda.megingiard.mirror.MasterSurfaceRegistry
@@ -342,14 +341,6 @@ internal fun PadSurface(
             TouchProjectionController(edgeZonePx, overlayAtBottom)
         }
 
-    LaunchedEffect(isTouchProjectionActive) {
-        if (isTouchProjectionActive) {
-            TouchInjector.start(context, "TouchProjection")
-        } else {
-            TouchInjector.stop("TouchProjection")
-        }
-    }
-
     LaunchedEffect(isFollowActive, isCapturing) {
         if (isFollowActive && isCapturing) {
             TouchScreenObserver.onTouchNormalized = { nx, ny ->
@@ -364,7 +355,6 @@ internal fun PadSurface(
 
     DisposableEffect(Unit) {
         onDispose {
-            TouchInjector.stop("TouchProjection")
             TouchScreenObserver.stop("MacroPadScreen_FollowMode")
         }
     }

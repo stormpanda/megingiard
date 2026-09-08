@@ -65,23 +65,12 @@ On the AYN Thor, these nodes are accessible to the app/shell UID — root is not
 
 ### Native Binary: Deployment & Lifecycle
 
-The pre-built binaries are bundled in the app's `assets/`. When a relative touchpad session starts in `FullscreenMouseOverlay`:
+The pre-built binaries are bundled in the app's `assets/`. Injector lifecycles are managed globally by `InjectorLifecycleManager`, which maintains active `MouseInjector`, `TouchInjector`, and `KeyInjector` processes continuously whenever Megingiard is in the foreground (`AppStateManager.isActivityResumed`), stopping them when backgrounded (`onStop`) or during the Privileged Mode setup wizard IME:
 
-1. `MouseInjector.start(context)` is called on composition within `LaunchedEffect(Unit)`.
-2. The `NativeBinaryInjector` helper copies `mouseinjector_arm64` from `assets/` to `context.filesDir` (app-private directory), calls `setExecutable(true)`, and launches it via `ProcessBuilder`.
+1. `InjectorLifecycleManager.watch(context)` is initiated centrally in `MainActivity.onCreate()`.
+2. The `NativeBinaryInjector` helper copies `mouseinjector_arm64` and `touchinjector_arm64` from `assets/` to `context.filesDir` (app-private directory), calls `setExecutable(true)`, and launches them via `ProcessBuilder`.
 3. The binary signals readiness by writing `"R\n"` to stdout (checked with a 500 ms timeout).
-4. The relative touchpad session directly pipes commands to the stdin of the running `mouseinjector_arm64` process.
-
-The process remains alive for the entire Touchpad session and is terminated on disposal via:
-
-```kotlin
-DisposableEffect(Unit) {
-    onDispose {
-        AppLog.i(TAG, "dispose: stopping MouseInjector")
-        MouseInjector.stop()
-    }
-}
-```
+4. Individual screens (`FullscreenMouseOverlay`, `MacroPadScreen`) route events directly to `MouseInjector` or `TouchInjector` without starting or stopping background processes on local composition/disposal.
 
 ### Stdin Protocol (Mouse Mode)
 

@@ -69,7 +69,6 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
-import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.macropad.HapticStrength
 import com.stormpanda.megingiard.macropad.triggerHaptic
 import com.stormpanda.megingiard.mirror.EmbeddedMirrorView
@@ -81,8 +80,6 @@ import com.stormpanda.megingiard.settings.TouchpadSettings
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.detectHoldPointerEvents
 import com.stormpanda.megingiard.ui.rememberBezelBrush
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 private const val TAG = "FullscreenMouseOverlay"
 
@@ -170,20 +167,10 @@ fun FullscreenMouseOverlay() {
     val pointersInsideTouchpad = remember { HashSet<Long>() }
     var hasActivePointers by remember { mutableStateOf(false) }
 
-    // Injector Lifecycle
     LaunchedEffect(touchpadUseMouse) {
         processor.onCancel()
         pointersInsideTouchpad.clear()
         hasActivePointers = false
-        if (touchpadUseMouse) {
-            AppLog.i(TAG, "switching to mouse mode: starting MouseInjector, stopping TouchInjector")
-            TouchInjector.stop("FullscreenTouchpad")
-            withContext(Dispatchers.IO) { MouseInjector.start(context) }
-        } else {
-            AppLog.i(TAG, "switching to touch mode: starting TouchInjector, stopping MouseInjector")
-            MouseInjector.stop()
-            withContext(Dispatchers.IO) { TouchInjector.start(context, "FullscreenTouchpad") }
-        }
     }
 
     LaunchedEffect(isFullscreenMouseActive, touchpadUseMouse, touchpadMirroringEnabled) {
@@ -202,12 +189,10 @@ fun FullscreenMouseOverlay() {
 
     DisposableEffect(Unit) {
         onDispose {
-            AppLog.i(TAG, "dispose: stopping both injectors")
+            AppLog.i(TAG, "dispose: resetting gesture processor state")
             processor.onCancel()
             pointersInsideTouchpad.clear()
             hasActivePointers = false
-            MouseInjector.stop()
-            TouchInjector.stop("FullscreenTouchpad")
             if (AppStateManager.wasMirroringStartedByTouchpad.value && !isFullscreenMouseActive) {
                 AppStateManager.requestMirrorStop()
                 AppStateManager.setWasMirroringStartedByTouchpad(false)

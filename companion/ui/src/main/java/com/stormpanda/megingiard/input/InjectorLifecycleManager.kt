@@ -20,7 +20,6 @@ private const val TAG = "InjectorLifecycleManager"
 internal data class InjectorStates(
     val startKeyboard: Boolean,
     val startMouse: Boolean,
-    val startGamepad: Boolean = false,
     val startTouch: Boolean,
 )
 
@@ -91,7 +90,6 @@ object InjectorLifecycleManager {
         return InjectorStates(
             startKeyboard = startKeyboard,
             startMouse = startMouse,
-            startGamepad = false,
             startTouch = startTouch,
         )
     }

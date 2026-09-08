@@ -15,7 +15,6 @@ class InjectorLifecycleManagerTest {
         assertTrue(states.startKeyboard)
         assertTrue(states.startMouse)
         assertTrue(states.startTouch)
-        assertFalse(states.startGamepad)
     }
 
     @Test
@@ -28,7 +27,6 @@ class InjectorLifecycleManagerTest {
         assertFalse(states.startKeyboard)
         assertTrue(states.startMouse)
         assertTrue(states.startTouch)
-        assertFalse(states.startGamepad)
     }
 
     @Test
@@ -41,6 +39,5 @@ class InjectorLifecycleManagerTest {
         assertFalse(states.startKeyboard)
         assertFalse(states.startMouse)
         assertFalse(states.startTouch)
-        assertFalse(states.startGamepad)
     }
 }

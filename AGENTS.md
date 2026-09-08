@@ -149,8 +149,7 @@ Before marking a task as done, verify:
 - [ ] New `Activity` launches on correct display via `ActivityOptions.setLaunchDisplayId()`
 - [ ] WindowOverlayLifecycleOwner.destroy() called when overlay view is removed
 - [ ] Service `onStartCommand` returns `START_NOT_STICKY`
-- [ ] Touch injector process stopped in `DisposableEffect` when leaving `TOUCHPAD` mode
-- [ ] Key injector process stopped in `DisposableEffect` when leaving `KEYBOARD` mode
+- [ ] Input injector lifecycles managed centrally via `InjectorLifecycleManager` (active while foregrounded, stopped on backgrounding or Privd setup wizard IME) — no local injector stop/start in screen Composable Disposables
 - [ ] No suspected compile errors (verified via static analysis or build compiles)
 - [ ] All modal dialogs and non-fullscreen popups use the centralized AppModalDialog / AppAlertDialog container or rememberBezelBrush() border
 - [ ] New or changed pure logic is covered by unit tests in `:core` or `:domain`
