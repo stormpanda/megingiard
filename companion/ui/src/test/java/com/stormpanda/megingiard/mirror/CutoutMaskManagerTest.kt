@@ -160,4 +160,18 @@ class CutoutMaskManagerTest {
         assertNull(CutoutMaskManager.getAnchorSignature(context, cutoutId))
         assertNull(CutoutMaskManager.getFreezeFrame(context, cutoutId))
     }
+
+    @Test
+    fun `isCalibrated returns true when mask or anchor signature exists and false after deletion`() {
+        val context = RuntimeEnvironment.getApplication()
+        val cutoutId = "test_calibrated_cutout"
+        assertFalse(CutoutMaskManager.isCalibrated(context, cutoutId))
+
+        val bitmap = Bitmap.createBitmap(10, 10, Bitmap.Config.ARGB_8888)
+        CutoutMaskManager.saveMask(context, cutoutId, bitmap)
+        assertTrue(CutoutMaskManager.isCalibrated(context, cutoutId))
+
+        CutoutMaskManager.deleteMask(context, cutoutId)
+        assertFalse(CutoutMaskManager.isCalibrated(context, cutoutId))
+    }
 }

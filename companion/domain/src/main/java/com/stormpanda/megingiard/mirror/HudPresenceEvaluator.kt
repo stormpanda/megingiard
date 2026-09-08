@@ -29,8 +29,11 @@ object HudPresenceEvaluator {
     /** Fraction of matching anchors below which HUD is considered absent (45%). */
     const val MATCH_THRESHOLD_LOST = 0.45f
 
-    /** Number of consecutive checks required to confirm a state transition (prevents single-frame glitches). */
-    const val HYSTERESIS_CONSECUTIVE_CHECKS = 2
+    /** Number of consecutive checks required to confirm HUD absence (1 check = immediate freeze, preventing cutscene leak). */
+    const val HYSTERESIS_CONSECUTIVE_LOST = 1
+
+    /** Number of consecutive checks required to confirm recovery back to PRESENT (prevents flickering). */
+    const val HYSTERESIS_CONSECUTIVE_RECOVER = 2
 
     private const val COLOR_BYTE_MASK = 0xFF
     private const val SHIFT_RED = 16
@@ -77,7 +80,7 @@ object HudPresenceEvaluator {
             HudPresenceState.PRESENT -> {
                 if (matchRatio < MATCH_THRESHOLD_LOST) {
                     val nextCount = consecutiveCount + 1
-                    if (nextCount >= HYSTERESIS_CONSECUTIVE_CHECKS) {
+                    if (nextCount >= HYSTERESIS_CONSECUTIVE_LOST) {
                         AppLog.i(TAG, "Cutout $cutoutId HUD lost (matchRatio=${(matchRatio * 100).toInt()}%) -> State: LOST")
                         HudPresenceState.LOST to 0
                     } else {
@@ -91,7 +94,7 @@ object HudPresenceEvaluator {
             HudPresenceState.LOST -> {
                 if (matchRatio >= MATCH_THRESHOLD_PRESENT) {
                     val nextCount = consecutiveCount + 1
-                    if (nextCount >= HYSTERESIS_CONSECUTIVE_CHECKS) {
+                    if (nextCount >= HYSTERESIS_CONSECUTIVE_RECOVER) {
                         AppLog.i(TAG, "Cutout $cutoutId HUD recovered (matchRatio=${(matchRatio * 100).toInt()}%) -> State: PRESENT")
                         HudPresenceState.PRESENT to 0
                     } else {

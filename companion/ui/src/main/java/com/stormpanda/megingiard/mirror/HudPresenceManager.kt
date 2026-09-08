@@ -17,9 +17,10 @@ import java.util.concurrent.ConcurrentHashMap
 
 private const val TAG = "HudPresenceManager"
 
-private const val PRESENCE_CHECK_INTERVAL_MS = 250L // 4 Hz
+private const val PRESENCE_CHECK_INTERVAL_MS = 100L // 10 Hz (prompt detection on cutscene start)
 private const val CHECK_FRAME_WIDTH = 960
 private const val CHECK_FRAME_HEIGHT = 540
+private const val HIGH_CONFIDENCE_MATCH_THRESHOLD = 0.85f
 
 /**
  * Singleton manager coordinating real-time HUD presence detection and freeze-frame caching.
@@ -128,19 +129,24 @@ object HudPresenceManager {
                     cutoutStates[cutout.id] = newState
                     cutoutConsecutiveCounts[cutout.id] = newCount
 
-                    if (newState == HudPresenceState.PRESENT) {
-                        val cX = (cutout.srcX * frameW).toInt().coerceIn(0, frameW - 1)
-                        val cY = (cutout.srcY * frameH).toInt().coerceIn(0, frameH - 1)
-                        val cW = (cutout.srcWidth * frameW).toInt().coerceIn(1, frameW - cX)
-                        val cH = (cutout.srcHeight * frameH).toInt().coerceIn(1, frameH - cY)
-                        try {
-                            val crop = Bitmap.createBitmap(frame, cX, cY, cW, cH)
-                            val oldCrop = lastValidFrameBitmaps.put(cutout.id, crop)
-                            if (oldCrop != null && !oldCrop.isRecycled) {
-                                oldCrop.recycle()
+                    // Only capture live frame if we do not already have a pristine calibrated freeze frame on disk,
+                    // and only when confidence is very high (>= 85%) so we never capture an empty or fading cutscene frame.
+                    if (newState == HudPresenceState.PRESENT && matchRatio >= HIGH_CONFIDENCE_MATCH_THRESHOLD) {
+                        if (CutoutMaskManager.getFreezeFrame(context, cutout.id) == null) {
+                            val cX = (cutout.srcX * frameW).toInt().coerceIn(0, frameW - 1)
+                            val cY = (cutout.srcY * frameH).toInt().coerceIn(0, frameH - 1)
+                            val cW = (cutout.srcWidth * frameW).toInt().coerceIn(1, frameW - cX)
+                            val cH = (cutout.srcHeight * frameH).toInt().coerceIn(1, frameH - cY)
+                            try {
+                                val crop = Bitmap.createBitmap(frame, cX, cY, cW, cH)
+                                CutoutMaskManager.saveFreezeFrame(context, cutout.id, crop)
+                                val oldCrop = lastValidFrameBitmaps.put(cutout.id, crop)
+                                if (oldCrop != null && !oldCrop.isRecycled) {
+                                    oldCrop.recycle()
+                                }
+                            } catch (e: Exception) {
+                                AppLog.e(TAG, "Failed to capture live valid crop for cutout ${cutout.id}", e)
                             }
-                        } catch (e: Exception) {
-                            AppLog.e(TAG, "Failed to capture live valid crop for cutout ${cutout.id}", e)
                         }
                     }
                 }
@@ -164,17 +170,21 @@ object HudPresenceManager {
     fun isCutoutHudLost(cutoutId: String): Boolean = cutoutStates[cutoutId] == HudPresenceState.LOST
 
     /**
-     * Retrieves the most recent valid HUD frame bitmap for [cutoutId], falling back to the calibrated disk frame.
+     * Retrieves the most recent valid HUD frame bitmap for [cutoutId], prioritizing the high-resolution
+     * calibrated reference frame saved during Auto-Tune.
      */
     fun getFrozenFrame(
         context: Context,
         cutoutId: String,
     ): Bitmap? {
+        CutoutMaskManager.getFreezeFrame(context, cutoutId)?.let { refFrame ->
+            if (!refFrame.isRecycled) return refFrame
+        }
         lastValidFrameBitmaps[cutoutId]?.let { cached ->
             if (!cached.isRecycled) return cached
             lastValidFrameBitmaps.remove(cutoutId)
         }
-        return CutoutMaskManager.getFreezeFrame(context, cutoutId)
+        return null
     }
 
     /**

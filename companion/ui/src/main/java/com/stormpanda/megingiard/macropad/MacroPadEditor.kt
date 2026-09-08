@@ -966,6 +966,46 @@ fun MacroPadEditor(
                                                         )
                                                         MacroPadNavState.pop()
                                                     },
+                                                    onOpenAdvancedCutoutSettings = {
+                                                        MacroPadNavState.push(MacroPadSubPage.CutoutAdvancedSettings(cutout.id))
+                                                    },
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    is MacroPadSubPage.CutoutAdvancedSettings -> {
+                                        val layout = activeLayout
+                                        val cutout =
+                                            layout?.mirrorCutouts?.firstOrNull { it.id == currentSubPage.cutoutId }
+                                        if (cutout != null) {
+                                            val cutoutTitle =
+                                                cutout.name.ifBlank {
+                                                    val index = layout.mirrorCutouts.indexOfFirst { it.id == cutout.id }
+                                                    stringResource(
+                                                        R.string.settings_mirror_cutout_default_name_fmt,
+                                                        if (index >= 0) index + 1 else 1,
+                                                    )
+                                                }
+                                            GamepadDeck(
+                                                breadcrumbs =
+                                                    listOf(
+                                                        stringResource(R.string.quick_menu_screen_mirroring),
+                                                        cutoutTitle,
+                                                        stringResource(R.string.settings_cutout_advanced_title),
+                                                    ),
+                                            ) {
+                                                CutoutAdvancedSettingsSubPageContent(
+                                                    cutout = cutout,
+                                                    accentColor = colors.accent,
+                                                    onUpdateCutout = { updatedCutout ->
+                                                        val updatedList =
+                                                            layout.mirrorCutouts.map {
+                                                                if (it.id == updatedCutout.id) updatedCutout else it
+                                                            }
+                                                        val updatedLayout = layout.copy(mirrorCutouts = updatedList)
+                                                        MacroPadState.updateLayout(updatedLayout)
+                                                    },
                                                 )
                                             }
                                         }

@@ -4,6 +4,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Crop
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.FilterCenterFocus
 import androidx.compose.material.icons.rounded.Grain
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Layers
@@ -183,6 +184,7 @@ internal fun CutoutSettingsSubPageContent(
     accentColor: Color,
     onUpdateCutout: (ScreenCutout, disableTouchpad: Boolean) -> Unit,
     onDeleteCutout: (String) -> Unit,
+    onOpenAdvancedCutoutSettings: () -> Unit,
 ) {
     AppLog.d(TAG, "CutoutSettingsSubPageContent: cutout=${cutout.id}")
     val colors = LocalAppColors.current
@@ -266,123 +268,7 @@ internal fun CutoutSettingsSubPageContent(
         onNext = { applySmoothIdx((currentSmoothIdx + 1) % smoothingModes.size) },
     )
 
-    // 3. HUD Isolation Filter
-    val context = LocalContext.current
-    val isCalibrating by HudAutoTuneCoordinator.isCalibrating.collectAsStateWithLifecycle()
-    val calibrateProgress by HudAutoTuneCoordinator.progress.collectAsStateWithLifecycle()
-    val remainingSeconds by HudAutoTuneCoordinator.remainingSeconds.collectAsStateWithLifecycle()
-    val lastTunedPercent by HudAutoTuneCoordinator.lastTunedPercent.collectAsStateWithLifecycle()
-
-    // 3a. Auto-Tune HUD Action Card
-    if (isCalibrating) {
-        val pct = (calibrateProgress * MSE_PERCENT_DIVISOR).roundToInt()
-        GamepadActionCard(
-            title = stringResource(R.string.settings_mirror_hud_auto_tuning_prompt, remainingSeconds),
-            description = stringResource(R.string.settings_mirror_hud_auto_tune_success, "$pct%"),
-            icon = Icons.Rounded.Tune,
-            itemKey = "cutout_${cutout.id}_auto_tune_active",
-            onClick = { HudAutoTuneCoordinator.cancelCalibration() },
-        )
-    } else {
-        val autoTuneDesc =
-            if (cutout.hasTransparencyMask) {
-                val statusStr = lastTunedPercent?.let { "$it%" } ?: stringResource(R.string.settings_mirror_projection_on)
-                stringResource(R.string.settings_mirror_hud_auto_tune_success, statusStr)
-            } else {
-                stringResource(R.string.settings_mirror_hud_auto_tune_desc)
-            }
-
-        GamepadActionCard(
-            title = stringResource(R.string.settings_mirror_hud_auto_tune_title),
-            description = autoTuneDesc,
-            icon = Icons.Rounded.Tune,
-            itemKey = "cutout_${cutout.id}_auto_tune",
-            onClick = {
-                HudAutoTuneCoordinator.startCalibration(context, cutout) { updatedCutout, _ ->
-                    onUpdateCutout(updatedCutout, false)
-                }
-            },
-        )
-
-        if (cutout.hasTransparencyMask) {
-            val translucencyLabel =
-                if (cutout.maskTranslucency > 0) {
-                    "${cutout.maskTranslucency}%"
-                } else {
-                    stringResource(R.string.settings_mirror_hud_translucency_off)
-                }
-            GamepadSliderCard(
-                title = stringResource(R.string.settings_mirror_hud_translucency_title),
-                description = stringResource(R.string.settings_mirror_hud_translucency_desc),
-                value = cutout.maskTranslucency.toFloat(),
-                valueRange = MSE_TRANSLUCENCY_MIN..MSE_TRANSLUCENCY_MAX,
-                step = MSE_TRANSLUCENCY_STEP,
-                fineStep = MSE_TRANSLUCENCY_STEP,
-                icon = Icons.Rounded.Layers,
-                valueLabel = translucencyLabel,
-                onValueChange = { newVal ->
-                    val newTranslucency = newVal.roundToInt().coerceIn(MIN_TRANSLUCENCY, MAX_TRANSLUCENCY)
-                    AppLog.d(TAG, "Updating cutout ${cutout.id} maskTranslucency: $newTranslucency%")
-                    onUpdateCutout(cutout.copy(maskTranslucency = newTranslucency), false)
-                },
-            )
-
-            val featheringLabel =
-                if (cutout.maskFeathering > 0) {
-                    "${cutout.maskFeathering} px"
-                } else {
-                    stringResource(R.string.settings_mirror_hud_feathering_off)
-                }
-            GamepadSliderCard(
-                title = stringResource(R.string.settings_mirror_hud_feathering_title),
-                description = stringResource(R.string.settings_mirror_hud_feathering_desc),
-                value = cutout.maskFeathering.toFloat(),
-                valueRange = MSE_FEATHERING_MIN..MSE_FEATHERING_MAX,
-                step = MSE_FEATHERING_STEP,
-                fineStep = MSE_FEATHERING_STEP,
-                icon = Icons.Rounded.Grain,
-                valueLabel = featheringLabel,
-                onValueChange = { newVal ->
-                    val newFeathering = newVal.roundToInt().coerceIn(MIN_FEATHERING_PX, MAX_FEATHERING_PX)
-                    AppLog.d(TAG, "Updating cutout ${cutout.id} maskFeathering: $newFeathering")
-                    onUpdateCutout(cutout.copy(maskFeathering = newFeathering), false)
-                },
-            )
-
-            GamepadToggleCard(
-                title = stringResource(R.string.settings_mirror_hud_freeze_on_loss_title),
-                description = stringResource(R.string.settings_mirror_hud_freeze_on_loss_desc),
-                checked = cutout.freezeOnHudLoss,
-                icon = Icons.Rounded.PauseCircle,
-                itemKey = "cutout_${cutout.id}_freeze_on_loss",
-                onCheckedChange = { isChecked ->
-                    AppLog.d(TAG, "Updating cutout ${cutout.id} freezeOnHudLoss: $isChecked")
-                    onUpdateCutout(cutout.copy(freezeOnHudLoss = isChecked), false)
-                },
-            )
-
-            GamepadActionCard(
-                title = stringResource(R.string.settings_mirror_hud_clear_mask_title),
-                description = stringResource(R.string.settings_mirror_hud_clear_mask_desc),
-                icon = Icons.Rounded.Delete,
-                itemKey = "cutout_${cutout.id}_clear_mask",
-                onClick = {
-                    CutoutMaskManager.deleteMask(context, cutout.id)
-                    onUpdateCutout(
-                        cutout.copy(
-                            hasTransparencyMask = false,
-                            maskFeathering = 0,
-                            maskTranslucency = 0,
-                            freezeOnHudLoss = false,
-                        ),
-                        false,
-                    )
-                },
-            )
-        }
-    }
-
-    // 4. Touch Projection
+    // 3. Touch Projection
     if (!cutout.touchProjectionEnabled && layout.backgroundTouchpad.enabled) {
         GamepadTwoStepConfirmCard(
             title = stringResource(R.string.settings_mirror_touch_projection),
@@ -418,7 +304,16 @@ internal fun CutoutSettingsSubPageContent(
         )
     }
 
-    // 4. Delete Cutout Action
+    // 4. Advanced Cutout Settings (Smart Cutout)
+    GamepadActionCard(
+        title = stringResource(R.string.settings_cutout_advanced_title),
+        description = stringResource(R.string.settings_cutout_advanced_desc),
+        icon = Icons.Rounded.Tune,
+        itemKey = "cutout_${cutout.id}_advanced_settings",
+        onClick = onOpenAdvancedCutoutSettings,
+    )
+
+    // 5. Delete Cutout Action
     GamepadSectionHeader(
         text = stringResource(R.string.macropad_editor_section_actions),
         color = accentColor,
@@ -438,6 +333,146 @@ internal fun CutoutSettingsSubPageContent(
             onDeleteCutout(cutout.id)
         },
     )
+}
+
+@Composable
+internal fun CutoutAdvancedSettingsSubPageContent(
+    cutout: ScreenCutout,
+    accentColor: Color,
+    onUpdateCutout: (ScreenCutout) -> Unit,
+) {
+    AppLog.d(TAG, "CutoutAdvancedSettingsSubPageContent: cutout=${cutout.id}")
+    val context = LocalContext.current
+    val isCalibrating by HudAutoTuneCoordinator.isCalibrating.collectAsStateWithLifecycle()
+    val calibrateProgress by HudAutoTuneCoordinator.progress.collectAsStateWithLifecycle()
+    val remainingSeconds by HudAutoTuneCoordinator.remainingSeconds.collectAsStateWithLifecycle()
+    val lastTunedPercent by HudAutoTuneCoordinator.lastTunedPercent.collectAsStateWithLifecycle()
+    var calibrationRevision by remember { mutableIntStateOf(0) }
+
+    if (isCalibrating) {
+        val pct = (calibrateProgress * MSE_PERCENT_DIVISOR).roundToInt()
+        GamepadActionCard(
+            modifier = Modifier.firstDeckItem(),
+            title = stringResource(R.string.settings_mirror_hud_auto_tuning_prompt, remainingSeconds),
+            description = stringResource(R.string.settings_mirror_hud_auto_tune_success, "$pct%"),
+            icon = Icons.Rounded.Tune,
+            itemKey = "cutout_${cutout.id}_auto_tune_active",
+            onClick = { HudAutoTuneCoordinator.cancelCalibration() },
+        )
+    } else {
+        val isCalibrated =
+            remember(cutout.id, cutout.hasTransparencyMask, cutout.freezeOnHudLoss, calibrationRevision) {
+                CutoutMaskManager.isCalibrated(context, cutout.id)
+            }
+
+        if (isCalibrated) {
+            val autoTuneDesc =
+                lastTunedPercent?.let {
+                    stringResource(R.string.settings_mirror_hud_auto_tune_success, "$it%")
+                } ?: stringResource(R.string.settings_cutout_recalibrate_smart_desc)
+
+            GamepadActionCard(
+                modifier = Modifier.firstDeckItem(),
+                title = stringResource(R.string.settings_cutout_recalibrate_smart_title),
+                description = autoTuneDesc,
+                icon = Icons.Rounded.Tune,
+                itemKey = "cutout_${cutout.id}_recalibrate_smart",
+                onClick = {
+                    HudAutoTuneCoordinator.startCalibration(context, cutout) { updatedCutout, _ ->
+                        calibrationRevision++
+                        onUpdateCutout(updatedCutout)
+                    }
+                },
+            )
+
+            val translucencyLabel =
+                if (cutout.maskTranslucency > 0) {
+                    "${cutout.maskTranslucency}%"
+                } else {
+                    stringResource(R.string.settings_mirror_hud_translucency_off)
+                }
+            GamepadSliderCard(
+                title = stringResource(R.string.settings_cutout_translucency_title),
+                description = stringResource(R.string.settings_cutout_translucency_desc),
+                value = cutout.maskTranslucency.toFloat(),
+                valueRange = MSE_TRANSLUCENCY_MIN..MSE_TRANSLUCENCY_MAX,
+                step = MSE_TRANSLUCENCY_STEP,
+                fineStep = MSE_TRANSLUCENCY_STEP,
+                icon = Icons.Rounded.Layers,
+                valueLabel = translucencyLabel,
+                onValueChange = { newVal ->
+                    val newTranslucency = newVal.roundToInt().coerceIn(MIN_TRANSLUCENCY, MAX_TRANSLUCENCY)
+                    AppLog.d(TAG, "Updating cutout ${cutout.id} maskTranslucency: $newTranslucency%")
+                    onUpdateCutout(cutout.copy(maskTranslucency = newTranslucency))
+                },
+            )
+
+            val featheringLabel =
+                if (cutout.maskFeathering > 0) {
+                    "${cutout.maskFeathering} px"
+                } else {
+                    stringResource(R.string.settings_mirror_hud_feathering_off)
+                }
+            GamepadSliderCard(
+                title = stringResource(R.string.settings_cutout_feathering_title),
+                description = stringResource(R.string.settings_cutout_feathering_desc),
+                value = cutout.maskFeathering.toFloat(),
+                valueRange = MSE_FEATHERING_MIN..MSE_FEATHERING_MAX,
+                step = MSE_FEATHERING_STEP,
+                fineStep = MSE_FEATHERING_STEP,
+                icon = Icons.Rounded.Grain,
+                valueLabel = featheringLabel,
+                onValueChange = { newVal ->
+                    val newFeathering = newVal.roundToInt().coerceIn(MIN_FEATHERING_PX, MAX_FEATHERING_PX)
+                    AppLog.d(TAG, "Updating cutout ${cutout.id} maskFeathering: $newFeathering")
+                    onUpdateCutout(cutout.copy(maskFeathering = newFeathering))
+                },
+            )
+
+            GamepadSectionHeader(
+                text = stringResource(R.string.macropad_editor_section_actions),
+                color = accentColor,
+            )
+
+            GamepadTwoStepConfirmCard(
+                title = stringResource(R.string.settings_cutout_remove_smart_title),
+                confirmTitle = stringResource(R.string.settings_cutout_remove_smart_title),
+                description = stringResource(R.string.settings_cutout_remove_smart_desc),
+                confirmDescription = stringResource(R.string.settings_cutout_remove_smart_desc),
+                actionText = stringResource(R.string.gamepad_action_delete),
+                confirmActionText = stringResource(R.string.gamepad_action_confirm),
+                icon = Icons.Rounded.Delete,
+                isDestructive = true,
+                itemKey = "cutout_${cutout.id}_remove_smart",
+                onConfirm = {
+                    CutoutMaskManager.deleteMask(context, cutout.id)
+                    calibrationRevision++
+                    onUpdateCutout(
+                        cutout.copy(
+                            hasTransparencyMask = false,
+                            maskFeathering = 0,
+                            maskTranslucency = 0,
+                            freezeOnHudLoss = false,
+                        ),
+                    )
+                },
+            )
+        } else {
+            GamepadActionCard(
+                modifier = Modifier.firstDeckItem(),
+                title = stringResource(R.string.settings_cutout_convert_smart_title),
+                description = stringResource(R.string.settings_cutout_convert_smart_desc),
+                icon = Icons.Rounded.FilterCenterFocus,
+                itemKey = "cutout_${cutout.id}_convert_smart",
+                onClick = {
+                    HudAutoTuneCoordinator.startCalibration(context, cutout) { updatedCutout, _ ->
+                        calibrationRevision++
+                        onUpdateCutout(updatedCutout)
+                    }
+                },
+            )
+        }
+    }
 }
 
 @Composable

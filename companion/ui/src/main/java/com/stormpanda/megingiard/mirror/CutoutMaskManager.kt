@@ -369,4 +369,18 @@ object CutoutMaskManager {
         val file = File(dir, "$MASK_FILE_PREFIX$cutoutId$PNG_EXTENSION")
         return file.exists()
     }
+
+    /**
+     * Checks if calibration assets (transparency mask or anchor signature) exist for [cutoutId].
+     */
+    fun isCalibrated(
+        context: Context,
+        cutoutId: String,
+    ): Boolean {
+        if (hasMask(context, cutoutId)) return true
+        if (anchorSignatureCache.containsKey(cutoutId)) return true
+        val dir = File(context.filesDir, MASKS_DIR)
+        val file = File(dir, "$MASK_FILE_PREFIX$cutoutId$ANCHOR_EXTENSION")
+        return file.exists()
+    }
 }
