@@ -1,8 +1,8 @@
 # Feature: MacroPad
 
 > **Related source:** `companion/ui/src/main/java/com/stormpanda/megingiard/macropad/`
-> **Native source:** `companion/ui/src/main/cpp/gamepadinjector.c`, `companion/ui/src/main/cpp/mouseinjector.c`
-> **Binary assets:** `companion/ui/src/main/assets/gamepadinjector_arm64`, `companion/ui/src/main/assets/mouseinjector_arm64`
+> **Native source:** `companion/ui/src/main/cpp/mouseinjector.c`
+> **Binary assets:** `companion/ui/src/main/assets/mouseinjector_arm64`
 > **Build instructions:** [BUILD_NATIVE.md](../../BUILD_NATIVE.md)
 
 ---
@@ -11,7 +11,7 @@
 
 ### Overview
 
-The MacroPad feature turns the secondary display into a fully configurable button pad. The user can create named profiles, freely place buttons on a canvas, and assign each button one of several action types: keyboard keystroke, gamepad button, mouse button, scroll wheel, or trackpoint (relative mouse movement). Each profile independently controls which virtual input devices (keyboard, gamepad, mouse) are active. Multiple profiles can be created and switched without leaving the use-mode screen. All configuration persists across sessions.
+The MacroPad feature turns the secondary display into a fully configurable button pad. The user can create named profiles, freely place buttons on a canvas, and assign each button one of several action types: keyboard keystroke, gamepad button, mouse button, scroll wheel, or trackpoint (relative mouse movement). Multiple profiles can be created and switched without leaving the use-mode screen. All configuration persists across sessions. Standard input injectors (Keyboard, Mouse, Touch) run continuously whenever Megingiard is in the foreground. Gamepad actions and macros require Privileged Mode for seamless kernel evdev merge into the physical controller.
 
 ### FR-P1: Configurable Layout Profiles
 
@@ -43,17 +43,17 @@ The MacroPad feature turns the secondary display into a fully configurable butto
 
 Each button supports one of the following actions:
 
-| Action type      | Injection target          | Native binary           |
-| ---------------- | ------------------------- | ----------------------- |
-| `KeyboardKey`    | Linux keycode via uinput  | `keyinjector_arm64`     |
-| `GamepadButton`  | Linux BTN\_\* via uinput  | `gamepadinjector_arm64` |
-| `MouseButton`    | BTN_LEFT/RIGHT/MIDDLE/4/5 | `mouseinjector_arm64`   |
-| `ScrollWheel`    | REL_WHEEL via uinput      | `mouseinjector_arm64`   |
-| `TrackpointMove` | REL_X / REL_Y via uinput  | `mouseinjector_arm64`   |
-| `BackgroundPeek` | App-level peek toggle     | _(none)_                |
+| Action type      | Injection target          | Native binary / Service       |
+| ---------------- | ------------------------- | ----------------------------- |
+| `KeyboardKey`    | Linux keycode via uinput  | `keyinjector_arm64`           |
+| `GamepadButton`  | Linux BTN\_\* via evdev   | `megingiard_privd` (Privd)    |
+| `MouseButton`    | BTN_LEFT/RIGHT/MIDDLE/4/5 | `mouseinjector_arm64`         |
+| `ScrollWheel`    | REL_WHEEL via uinput      | `mouseinjector_arm64`         |
+| `TrackpointMove` | REL_X / REL_Y via uinput  | `mouseinjector_arm64`         |
+| `BackgroundPeek` | App-level peek toggle     | _(none)_                      |
 
 - `KeyboardKey` actions use `KeyInjector` / `ShellKeyInjector` from the keyboard package. Each `KeyboardKey` action MAY carry up to **2 optional modifier keycodes** (`modifiers: List<Int>`, default empty). On button-down, modifiers are pressed in order before the base key; on button-up, the base key is released first, then modifiers in reverse order. Available modifiers: Ctrl L/R, Shift L/R, Alt, AltGr, Meta/Win, Fn (Linux keycode 464). The `keyinjector_arm64` binary accepts keycodes in the range **1–464** (extended from the original 1–254 to include Fn).
-- `GamepadButton` actions use `GamepadInjector` / `ShellGamepadInjector`. Each `GamepadButton` action MAY carry up to **3 optional extra button codes** (`extraBtnCodes: List<Int>`, default empty). On button-down, the primary button is pressed first, then extras in order; on button-up, extras are released in reverse order, then the primary button.
+- `GamepadButton` actions use `GamepadInjector`, which delegates directly to `PrivdGamepadInjector` to merge events into the connected physical controller's evdev node (`g_gamepad_fd`) via `megingiard_privd`. Gamepad buttons require Privileged Mode. Each `GamepadButton` action MAY carry up to **3 optional extra button codes** (`extraBtnCodes: List<Int>`, default empty). On button-down, the primary button is pressed first, then extras in order; on button-up, extras are released in reverse order, then the primary button.
 - **Visual Action Pickers (`VisualKeyboardPicker`, `VisualGamepadPicker`, `VisualMousePicker`, `ActionGridSubPages`)**:
   - In the button editor, selecting the primary action card opens a dedicated visual sub-page picker:
     - **Visual Keyboard Picker**: Displays a full, interactive virtual keyboard layout (F-keys, number row, QWERTY rows, bottom control row, navigation cluster) with 2D D-pad spatial navigation and (A) key selection.
@@ -64,11 +64,9 @@ Each button supports one of the following actions:
     - **Layout Action Picker**: Displays all 3 layout actions (Next Layout, Previous Layout, Profile Switcher) in a 2-column card grid.
     - **App Quick-Switch**: Extracted into a dedicated top-level `ActionGroup.APP_LAUNCHER` button type. In the button editor, the app selection card (`AppLauncherPicker`) is displayed directly without redundant action sub-menu selectors to quickly switch between Megingiard and another app.
   - Modifiers (Mod 1, Mod 2 for keyboard), combo buttons (Extra 1, Extra 2, Extra 3 for gamepad), and specific app target (for App Quick-Switch) remain configurable on the `EditButton` page below the primary action card. For `GamepadButton`, selecting any extra input card (Extra 1, Extra 2, Extra 3) opens the same `VisualGamepadPicker` sub-page as the primary button action, enabling visual selection, automatic deduplication, toggle-to-deselect, and an in-deck Clear action.
-- `GamepadButton` and all mouse actions use dedicated injectors (`GamepadInjector`, `MouseInjector`) backed by their own native binary processes.
+- Standard input injectors (`KeyInjector`, `MouseInjector`, `TouchInjector`) run continuously whenever Megingiard is in the foreground (`isActivityResumed && !isPrivdSetupWizardActive`), avoiding per-layout startup delays and false-positive disabled states. Gamepad buttons and macros require Privileged Mode; if Privileged Mode is offline, they render with hatched disabled styling in the canvas and editor.
 
-> **Optional: physical-pad merge** — When [Privileged Mode](../privileged-mode/FEATURE.md) is RUNNING and its `Gamepad merge` per-feature flag is enabled, `GamepadInjector` routes all gamepad events to `PrivdGamepadInjector` instead of the virtual uinput path. The privileged daemon writes them into the connected physical controller's evdev node, so games see only one device. Falls back transparently to the virtual gamepad when Privileged Mode is OFF.
-
-- Only the injectors for devices **enabled in the active profile** (see FR-P4) are started; the others stay stopped. The action picker in the editor always shows all action type categories regardless of which devices are currently enabled — the flags are derived from the buttons, not the other way around.
+- The action picker in the editor always shows all action type categories regardless of which devices are currently enabled — the flags are derived from the buttons, not the other way around.
 
 ### FR-P4: Per-Profile Device Flags
 
@@ -80,7 +78,7 @@ Each button supports one of the following actions:
     - `enableGamepad = true` if any button has a `GamepadButton` action.
     - `enableMouse = true` if any button has a `MouseButton`, `ScrollWheel`, or `TrackpointMove` (with `PHYSICAL_MOUSE` tracking mode) action. (Note: `MirrorTouchProjection` is explicitly excluded from this derivation because the screen mirror presentation manages its own touch injector lifecycle).
     - `enableTouch = true` if any button has a `TrackpointMove` (with `VIRTUAL_TOUCH` tracking mode) action.
-- Injector start and stop lifecycle is centrally managed by `InjectorLifecycleManager`, which evaluates `AppStateManager.uiMode`, `MacroPadState.activeLayout`, and `AppStateManager.promptInFlight`. When editor screens or settings popups are open, all injectors are stopped; when returned to MacroPad use mode, only enabled injectors for the active layout are started.
+- Injector start and stop lifecycle is centrally managed by `InjectorLifecycleManager`, which maintains active `KeyInjector`, `MouseInjector`, and `TouchInjector` instances whenever Megingiard is in the foreground (`AppStateManager.isActivityResumed`), stopping them when backgrounded (`onStop`) or during active software keyboard input in the Privileged Mode setup wizard. Gamepad buttons and macros route strictly via Privileged Mode merge into the physical controller.
 
 ### FR-P5: Trackpoint Button
 
@@ -455,7 +453,7 @@ Each button supports one of the following actions:
 Compose UI (MacroPadScreen)
       │  DOWN / UP touch events per button id
       ├──── PadAction.KeyboardKey   → KeyInjector (keyinjector_arm64)
-      ├──── PadAction.GamepadButton → GamepadInjector (gamepadinjector_arm64)
+      ├──── PadAction.GamepadButton → GamepadInjector (Privd physical evdev merge)
       ├──── PadAction.MouseButton  → MouseInjector (mouseinjector_arm64)
       └──── PadAction.TrackpointMove → MouseInjector.moveMouse()
 
@@ -480,7 +478,7 @@ MacroTimelineEditor (Gamepad-first in-deck sub-page, opened from Macros Deck)
   ├── Delete Macro Section: Two-step confirmation card
   ├── Record Touch → TouchRecordingManager → PrimaryTouchRecordingOverlay (Display 0) / TouchRecordingSheet (Display 4)
   └── Record Gamepad → GamepadRecordingOverlay / PhysicalGamepadRecordingSheet
-     ├── live passthrough via GamepadInjector (gamepadinjector_arm64) or /dev/input physical passthrough
+     ├── live passthrough via GamepadInjector (Privd physical evdev merge)
      └── timed step compilation via GamepadRecordingManager / PhysicalGamepadRecordingManager
 ```
 
@@ -663,18 +661,6 @@ the font file is updated.
 
 ### Native Binaries
 
-Two new native binaries are introduced:
-
-**`gamepadinjector_arm64`** — Creates a `BUS_VIRTUAL` uinput gamepad device and accepts commands on stdin:
-
-- `GD <btnCode>\n` — button down
-- `GU <btnCode>\n` — button up
-- `HD <axis> <value>\n` — D-Pad hat event (axis 0 = X, 1 = Y; value −1/0/+1)
-- `JS <axisCode> <value>\n` — analog joystick axis (axisCode: 0=ABS_X, 1=ABS_Y, 2=ABS_Z, 5=ABS_RZ; value −32768…32767)
-- `R\n` on stdout when ready
-
-Supported button codes: `BTN_SOUTH (304)`, `BTN_EAST (305)`, `BTN_NORTH (308)`, `BTN_WEST (307)`, `BTN_TL (310)`, `BTN_TR (311)`, `BTN_TL2 (312)`, `BTN_TR2 (313)`, `BTN_THUMBL (317)`, `BTN_THUMBR (318)`, `BTN_START (315)`, `BTN_SELECT (314)`, `BTN_MODE (316)`.
-
 **`mouseinjector_arm64`** — Creates a `BUS_VIRTUAL` uinput mouse device and accepts commands on stdin:
 
 - `MB L|R|M D|U\n` — mouse button down/up
@@ -684,56 +670,32 @@ Supported button codes: `BTN_SOUTH (304)`, `BTN_EAST (305)`, `BTN_NORTH (308)`, 
 
 MOVE events (`MM`) are coalesced in the writer thread (keep-latest) to avoid latency backlog during trackpoint drag.
 
+Gamepad injection is handled without a standalone virtual uinput binary: events are sent over `PrivdClient` to `megingiard_privd`, which merges them into the physical controller's kernel evdev node (`g_gamepad_fd`).
+
 ### State Management
 
 `MacroPadState` is an `object` singleton following the project-wide pattern:
 
-```kotlin
-object MacroPadState {
-    private val _profiles = MutableStateFlow<List<PadProfile>>(emptyList())
-    val profiles: StateFlow<List<PadProfile>> = _profiles.asStateFlow()
+- Private `MutableStateFlow` backing fields: `_profiles`, `_activeProfileId`, `_activeLayoutId`
+- Public read-only `StateFlow`: `profiles`, `activeProfile`, `activeLayout`
+- Mutation methods (`addProfile`, `updateProfile`, `deleteProfile`, `setActiveProfile`, `setActiveLayout`, etc.) re-emit state and schedule an asynchronous save to `SettingsManager`
+- `withSyncedDeviceFlags()` auto-derives `enable*` flags from buttons across all enabled layouts
 
-    private val _activeProfileId = MutableStateFlow<String?>(null)
-    val activeProfileId: StateFlow<String?> = _activeProfileId.asStateFlow()
+### Injector Lifecycle
 
-    val activeProfile: StateFlow<PadProfile?> = combine(_profiles, _activeProfileId) { … }
-        .stateIn(scope, SharingStarted.Eagerly, null)
-
-    val activeLayout: StateFlow<PadLayout?> = combine(activeProfile, _activeLayoutId) { … }
-        .stateIn(scope, SharingStarted.Eagerly, null)
-
-    // Profile CRUD: addProfile, updateProfile, deleteProfile, renameProfile, setActiveProfileId
-    // Layout CRUD: addLayout, updateLayout, deleteLayout, reorderLayouts, setEnabled, previous/nextLayout, setActiveLayoutId
-    // Macro CRUD:  addMacro, updateMacro, deleteMacro, renameMacro, reorderMacros
-    // All mutations call MacroPadSettings.saveMacroPadData()
-    // withSyncedDeviceFlags() auto-derives enable* flags from buttons across all enabled layouts
-}
-```
-
-`SettingsManager` loads profiles on `init` via `MacroPadState.loadFrom()` and exposes `saveMacroPadData()` for any mutation. The `loadFrom()` method performs two-step migration: (1) legacy `hasTrackpoint` → `TrackpointMove` button, (2) legacy flat `buttons` list → single `PadLayout`.
-
-### Injector Lifecycle in MacroPadScreen
-
-Only the injectors for **enabled devices** in the active profile are started when entering MacroPad mode:
+Input injectors (`KeyInjector`, `MouseInjector`, `TouchInjector`) are managed globally via `InjectorLifecycleManager`. They start whenever Megingiard is in the foreground (`isActivityResumed && !isPrivdSetupWizardActive`) and stop during backgrounding or setup wizard IME text entry:
 
 ```kotlin
-LaunchedEffect(Unit) {
-    AppStateManager.overlayVisible.first { !it }
-    withContext(Dispatchers.IO) {
-        val ap = MacroPadState.activeProfile.value
-        if (ap?.enableKeyboard != false) KeyInjector.start(context)
-        if (ap?.enableGamepad != false) GamepadInjector.start(context)
-        if (ap?.enableMouse != false) MouseInjector.start(context)
-    }
-}
-
-DisposableEffect(Unit) {
-    onDispose {
-        KeyInjector.stop()
-        GamepadInjector.stop()
-        MouseInjector.stop()
-    }
-}
+scope.launch {
+    combine(
+        AppStateManager.isActivityResumed,
+        AppStateManager.isPrivdSetupWizardActive,
+    ) { isResumed, isWizardActive ->
+        isResumed && !isWizardActive
+    }.distinctUntilChanged()
+        .collect { shouldRun ->
+            if (shouldRun) startInjectors() else stopInjectors()
+        }
 ```
 
 The same conditional logic applies in `MacroPadEditor`'s `DisposableEffect`, which restarts only enabled injectors when the editor is dismissed. The same stop/restart pattern is also used by `QuickMenu` and `BackgroundSettingsOverlay` — injectors are stopped while these modals are open so the Android soft IME can appear for text input fields. `BackgroundMacroPadOverlay` additionally observes `isQuickMenuOpen` and stops/restarts injectors when the QuickMenu opens from inside the Presentation window.
@@ -821,8 +783,7 @@ The editor canvas supports an optional snap grid rendered behind the draggable b
 | `BackgroundTouchpadSettingsEditor.kt` | In-deck sub-page (`LayoutTouchpadSubPageContent`) for configuring per-layout relative mouse touchpad settings.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | `LayoutSettingsEditor.kt`        | In-deck sub-pages (`EditLayoutSubPageContent`, `NewLayoutSubPageContent`) for layout appearance colors, names, and invisible button defaults (in layout editing).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | `CopyDialogs.kt`                 | In-deck sub-pages (`CopyLayoutSubPageContent`, `CopyButtonSubPageContent`) for copying layouts and buttons across profiles/layouts.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| `GamepadInjector.kt`             | Public facade over `ShellGamepadInjector` (incl. `joystick()` for ABS axes)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `ShellGamepadInjector.kt`        | Native binary lifecycle + writer thread; handles GD/GU/HD/JS commands                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `GamepadInjector.kt`             | Public facade delegating directly to `PrivdGamepadInjector` for hardware evdev merge                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | `GamepadKeycodes.kt`             | Linux BTN\_\* + ABS\_\* constants + preset list                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `MouseInjector.kt`               | Public facade over `ShellMouseInjector`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | `ShellMouseInjector.kt`          | Native binary lifecycle + MOVE-coalescing writer thread for mouse injection                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |

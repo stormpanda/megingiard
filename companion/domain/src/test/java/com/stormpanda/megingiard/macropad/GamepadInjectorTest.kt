@@ -77,7 +77,6 @@ class GamepadInjectorTest {
     fun joystickAndHatMethods() {
         GamepadInjector.joystick(GamepadKeycodes.ABS_X, 1000)
         GamepadInjector.hat(0, 1)
-        GamepadInjector.stop()
         assertFalse(GamepadInjector.isRunning)
     }
 }

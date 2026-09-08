@@ -63,6 +63,8 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.BitmapUtils
 import com.stormpanda.megingiard.math.ViewportMath
+import com.stormpanda.megingiard.privd.PrivdManager
+import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.MaterialSymbol
 import com.stormpanda.megingiard.ui.dimColorFilter
@@ -157,6 +159,8 @@ internal fun PadCanvas(
     val isMirrorEditorBackgroundHidden by AppStateManager.isMirrorEditorBackgroundHidden.collectAsStateWithLifecycle()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsStateWithLifecycle()
     val shouldHideBackground = isViewportEditActive && isMirrorEditorBackgroundHidden
+    val privdState by PrivdManager.state.collectAsStateWithLifecycle()
+    val isPrivdRunning = privdState == PrivdState.RUNNING
     val density = LocalDensity.current
     val context = LocalContext.current
     val gridStepPx = with(density) { PC_GRID_STEP_DP.toPx() }
@@ -321,13 +325,10 @@ internal fun PadCanvas(
                 layout = layout!!,
                 canvasSize = canvasSize,
                 accentColor = accentColor,
-                enableKeyboard = profile.enableKeyboard,
-                enableGamepad = profile.enableGamepad,
-                enableMouse = profile.enableMouse,
-                enableTouch = profile.enableTouch,
                 gridMode = gridMode,
                 gridStepPx = gridStepPx,
                 isLocked = isLocked || isCropping,
+                isPrivdRunning = isPrivdRunning,
                 onTouch = {
                     MacroPadState.setSelectedButtonId(btn.id)
                 },
@@ -464,13 +465,10 @@ private fun DraggableButton(
     layout: PadLayout,
     canvasSize: IntSize,
     accentColor: Color,
-    enableKeyboard: Boolean,
-    enableGamepad: Boolean,
-    enableMouse: Boolean,
-    enableTouch: Boolean,
     gridMode: GridMode,
     gridStepPx: Float,
     isLocked: Boolean,
+    isPrivdRunning: Boolean,
     onTouch: () -> Unit,
     onPositionChanged: (Float, Float) -> Unit,
 ) {
@@ -502,13 +500,7 @@ private fun DraggableButton(
     val density = LocalDensity.current
     val isTrackpoint = btn.action is PadAction.TrackpointMove
     val isDeviceDisabled =
-        when (val act = btn.action) {
-            is PadAction.KeyboardKey, is PadAction.FullScreenKeyboard -> !enableKeyboard
-            is PadAction.GamepadButton, is PadAction.Macro -> !enableGamepad
-            is PadAction.MouseButton, is PadAction.ScrollWheel, is PadAction.FullScreenMouse -> !enableMouse
-            is PadAction.TrackpointMove -> if (act.mode == TrackpointMode.VIRTUAL_TOUCH) !enableTouch else !enableMouse
-            else -> false
-        }
+        (btn.action is PadAction.GamepadButton || btn.action is PadAction.Macro) && !isPrivdRunning
 
     val tpMultiplier = if (isTrackpoint) (btn.action as PadAction.TrackpointMove).size.multiplier else 1f
     val btnWidthDp = ED_BUTTON_UNIT_DP * (if (isTrackpoint) tpMultiplier else btn.buttonSize.cols.toFloat())

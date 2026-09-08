@@ -1,8 +1,6 @@
 package com.stormpanda.megingiard.macropad
 
-import android.content.Context
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.input.InjectorBackendRouter
 import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdGamepadInjector
 
@@ -18,121 +16,67 @@ private const val HAT_DIR_NEG = -1
 private const val HAT_DIR_CENTER = 0
 
 /**
- * Public facade for gamepad button injection — strategy router.
+ * Public facade for gamepad button injection via Privileged Mode merge.
+ *
+ * Direct physical gamepad merge requires [PrivdClient.isConnected]. Standalone virtual
+ * uinput fallback is retired to prevent dual-controller conflicts on the AYN Thor.
  */
 object GamepadInjector {
-    private val router =
-        InjectorBackendRouter(
-            tag = TAG,
-            onPrivdConnected = {
-                if (ShellGamepadInjector.isRunning) {
-                    ShellGamepadInjector.stop()
-                }
-            },
-        )
-
-    fun start(context: Context) {
-        val useMerge = router.resolveBackend()
-        if (useMerge) {
-            if (!PrivdClient.isConnected) {
-                AppLog.w(TAG, "Merge enabled but PrivdClient is not connected — dispatch will no-op")
-            }
-        } else {
-            ShellGamepadInjector.start(context)
-        }
-    }
-
-    fun stop() {
-        AppLog.i(TAG, "stop() — backend=${if (router.isPrivd) "PRIVD_MERGE" else "VIRTUAL_UINPUT"}")
-        router.markStopped()
-        if (!router.isPrivd) {
-            ShellGamepadInjector.stop()
-        }
-    }
-
     val isRunning: Boolean
-        get() = router.isRunning { ShellGamepadInjector.isRunning }
+        get() = PrivdClient.isConnected
 
     fun buttonDown(btnCode: Int) {
+        if (!PrivdClient.isConnected) {
+            AppLog.w(TAG, "buttonDown($btnCode) dropped: Privd not connected")
+            return
+        }
         when (btnCode) {
             GamepadKeycodes.BTN_DPAD_UP -> {
                 hat(HAT_AXIS_Y, HAT_DIR_NEG)
-                router.dispatch({ PrivdGamepadInjector.buttonDown(btnCode) }, { ShellGamepadInjector.buttonDown(btnCode) })
+                PrivdGamepadInjector.buttonDown(btnCode)
             }
 
             GamepadKeycodes.BTN_DPAD_DOWN -> {
                 hat(HAT_AXIS_Y, HAT_DIR_POS)
-                router.dispatch({ PrivdGamepadInjector.buttonDown(btnCode) }, { ShellGamepadInjector.buttonDown(btnCode) })
+                PrivdGamepadInjector.buttonDown(btnCode)
             }
 
             GamepadKeycodes.BTN_DPAD_LEFT -> {
                 hat(HAT_AXIS_X, HAT_DIR_NEG)
-                router.dispatch({ PrivdGamepadInjector.buttonDown(btnCode) }, { ShellGamepadInjector.buttonDown(btnCode) })
+                PrivdGamepadInjector.buttonDown(btnCode)
             }
 
             GamepadKeycodes.BTN_DPAD_RIGHT -> {
                 hat(HAT_AXIS_X, HAT_DIR_POS)
-                router.dispatch({ PrivdGamepadInjector.buttonDown(btnCode) }, { ShellGamepadInjector.buttonDown(btnCode) })
+                PrivdGamepadInjector.buttonDown(btnCode)
             }
 
             GamepadKeycodes.CODE_DPAD_UP_LEFT -> {
                 hat(HAT_AXIS_X, HAT_DIR_NEG)
                 hat(HAT_AXIS_Y, HAT_DIR_NEG)
-                router.dispatch(
-                    {
-                        PrivdGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_UP)
-                        PrivdGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_LEFT)
-                    },
-                    {
-                        ShellGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_UP)
-                        ShellGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_LEFT)
-                    },
-                )
+                PrivdGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_UP)
+                PrivdGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_LEFT)
             }
 
             GamepadKeycodes.CODE_DPAD_UP_RIGHT -> {
                 hat(HAT_AXIS_X, HAT_DIR_POS)
                 hat(HAT_AXIS_Y, HAT_DIR_NEG)
-                router.dispatch(
-                    {
-                        PrivdGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_UP)
-                        PrivdGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_RIGHT)
-                    },
-                    {
-                        ShellGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_UP)
-                        ShellGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_RIGHT)
-                    },
-                )
+                PrivdGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_UP)
+                PrivdGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_RIGHT)
             }
 
             GamepadKeycodes.CODE_DPAD_DOWN_LEFT -> {
                 hat(HAT_AXIS_X, HAT_DIR_NEG)
                 hat(HAT_AXIS_Y, HAT_DIR_POS)
-                router.dispatch(
-                    {
-                        PrivdGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_DOWN)
-                        PrivdGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_LEFT)
-                    },
-                    {
-                        ShellGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_DOWN)
-                        ShellGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_LEFT)
-                    },
-                )
+                PrivdGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_DOWN)
+                PrivdGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_LEFT)
             }
 
             GamepadKeycodes.CODE_DPAD_DOWN_RIGHT -> {
                 hat(HAT_AXIS_X, HAT_DIR_POS)
                 hat(HAT_AXIS_Y, HAT_DIR_POS)
-                router.dispatch(
-                    {
-                        PrivdGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_DOWN)
-                        PrivdGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_RIGHT)
-                    },
-                    {
-                        ShellGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_DOWN)
-                        ShellGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_RIGHT)
-                    },
-                )
+                PrivdGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_DOWN)
+                PrivdGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_RIGHT)
             }
 
             GamepadKeycodes.CODE_LS_UP -> {
@@ -208,21 +152,22 @@ object GamepadInjector {
             }
 
             else -> {
-                router.dispatch({ PrivdGamepadInjector.buttonDown(btnCode) }, { ShellGamepadInjector.buttonDown(btnCode) })
+                PrivdGamepadInjector.buttonDown(btnCode)
             }
         }
     }
 
     fun buttonUp(btnCode: Int) {
+        if (!PrivdClient.isConnected) return
         when (btnCode) {
             GamepadKeycodes.BTN_DPAD_UP, GamepadKeycodes.BTN_DPAD_DOWN -> {
                 hat(HAT_AXIS_Y, HAT_DIR_CENTER)
-                router.dispatch({ PrivdGamepadInjector.buttonUp(btnCode) }, { ShellGamepadInjector.buttonUp(btnCode) })
+                PrivdGamepadInjector.buttonUp(btnCode)
             }
 
             GamepadKeycodes.BTN_DPAD_LEFT, GamepadKeycodes.BTN_DPAD_RIGHT -> {
                 hat(HAT_AXIS_X, HAT_DIR_CENTER)
-                router.dispatch({ PrivdGamepadInjector.buttonUp(btnCode) }, { ShellGamepadInjector.buttonUp(btnCode) })
+                PrivdGamepadInjector.buttonUp(btnCode)
             }
 
             GamepadKeycodes.CODE_DPAD_UP_LEFT,
@@ -232,20 +177,10 @@ object GamepadInjector {
             -> {
                 hat(HAT_AXIS_X, HAT_DIR_CENTER)
                 hat(HAT_AXIS_Y, HAT_DIR_CENTER)
-                router.dispatch(
-                    {
-                        PrivdGamepadInjector.buttonUp(GamepadKeycodes.BTN_DPAD_UP)
-                        PrivdGamepadInjector.buttonUp(GamepadKeycodes.BTN_DPAD_DOWN)
-                        PrivdGamepadInjector.buttonUp(GamepadKeycodes.BTN_DPAD_LEFT)
-                        PrivdGamepadInjector.buttonUp(GamepadKeycodes.BTN_DPAD_RIGHT)
-                    },
-                    {
-                        ShellGamepadInjector.buttonUp(GamepadKeycodes.BTN_DPAD_UP)
-                        ShellGamepadInjector.buttonUp(GamepadKeycodes.BTN_DPAD_DOWN)
-                        ShellGamepadInjector.buttonUp(GamepadKeycodes.BTN_DPAD_LEFT)
-                        ShellGamepadInjector.buttonUp(GamepadKeycodes.BTN_DPAD_RIGHT)
-                    },
-                )
+                PrivdGamepadInjector.buttonUp(GamepadKeycodes.BTN_DPAD_UP)
+                PrivdGamepadInjector.buttonUp(GamepadKeycodes.BTN_DPAD_DOWN)
+                PrivdGamepadInjector.buttonUp(GamepadKeycodes.BTN_DPAD_LEFT)
+                PrivdGamepadInjector.buttonUp(GamepadKeycodes.BTN_DPAD_RIGHT)
             }
 
             GamepadKeycodes.CODE_LS_UP,
@@ -291,7 +226,7 @@ object GamepadInjector {
             }
 
             else -> {
-                router.dispatch({ PrivdGamepadInjector.buttonUp(btnCode) }, { ShellGamepadInjector.buttonUp(btnCode) })
+                PrivdGamepadInjector.buttonUp(btnCode)
             }
         }
     }
@@ -301,7 +236,8 @@ object GamepadInjector {
         axis: Int,
         value: Int,
     ) {
-        router.dispatch({ PrivdGamepadInjector.hat(axis, value) }, { ShellGamepadInjector.hat(axis, value) })
+        if (!PrivdClient.isConnected) return
+        PrivdGamepadInjector.hat(axis, value)
     }
 
     /**
@@ -314,6 +250,7 @@ object GamepadInjector {
         axisCode: Int,
         value: Int,
     ) {
-        router.dispatch({ PrivdGamepadInjector.joystick(axisCode, value) }, { ShellGamepadInjector.joystick(axisCode, value) })
+        if (!PrivdClient.isConnected) return
+        PrivdGamepadInjector.joystick(axisCode, value)
     }
 }

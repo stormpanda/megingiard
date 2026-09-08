@@ -210,18 +210,37 @@ class MacroPadHitTestEngineTest {
     }
 
     @Test
+    fun `gamepad button is disabled when Privileged Mode is disconnected`() {
+        val gpAction = PadAction.GamepadButton(btnCode = 304, label = "A")
+
+        PrivdClient.isConnectedForTest = false
+        assertTrue(MacroPadHitTestEngine.isDeviceDisabled(gpAction, enabledProfile))
+        assertEquals(DisabledReason.GAMEPAD_PRIVD, MacroPadHitTestEngine.deviceDisabledReason(gpAction, enabledProfile))
+
+        PrivdClient.isConnectedForTest = true
+        assertFalse(MacroPadHitTestEngine.isDeviceDisabled(gpAction, enabledProfile))
+        assertNull(MacroPadHitTestEngine.deviceDisabledReason(gpAction, enabledProfile))
+    }
+
+    @Test
     fun `deviceDisabledReason returns correct reason for each disabled device type`() {
         val kbAction = PadAction.KeyboardKey(keycode = 1, label = "K")
         val gpAction = PadAction.GamepadButton(btnCode = 304, label = "A")
         val mouseAction = PadAction.MouseButton(button = MouseButton.LEFT)
 
         val disabledKbProfile = enabledProfile.copy(enableKeyboard = false)
-        val disabledGpProfile = enabledProfile.copy(enableGamepad = false)
         val disabledMouseProfile = enabledProfile.copy(enableMouse = false)
 
+        PrivdClient.isConnectedForTest = false
         assertEquals(DisabledReason.KEYBOARD, MacroPadHitTestEngine.deviceDisabledReason(kbAction, disabledKbProfile))
-        assertEquals(DisabledReason.GAMEPAD, MacroPadHitTestEngine.deviceDisabledReason(gpAction, disabledGpProfile))
+        assertEquals(DisabledReason.GAMEPAD_PRIVD, MacroPadHitTestEngine.deviceDisabledReason(gpAction, enabledProfile))
         assertEquals(DisabledReason.MOUSE, MacroPadHitTestEngine.deviceDisabledReason(mouseAction, disabledMouseProfile))
+
+        // FullScreenKeyboard and FullScreenMouse are overlays and must never be blocked by missing key flags
+        val fsKbAction = PadAction.FullScreenKeyboard()
+        val fsMouseAction = PadAction.FullScreenMouse()
+        assertNull(MacroPadHitTestEngine.deviceDisabledReason(fsKbAction, disabledKbProfile))
+        assertNull(MacroPadHitTestEngine.deviceDisabledReason(fsMouseAction, disabledMouseProfile))
     }
 
     @Test

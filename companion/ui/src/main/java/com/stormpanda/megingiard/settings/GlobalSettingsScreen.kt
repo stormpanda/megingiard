@@ -81,6 +81,8 @@ fun GlobalSettingsScreen(
     val logLevel by viewModel.logLevel.collectAsStateWithLifecycle()
     val excludeFromRecents by viewModel.excludeFromRecents.collectAsStateWithLifecycle()
     val gamepadSwapFaceButtons by viewModel.gamepadSwapFaceButtons.collectAsStateWithLifecycle()
+    val kbLayout by viewModel.kbLayout.collectAsStateWithLifecycle()
+    val kbTouchpadEnabled by viewModel.kbTouchpadEnabled.collectAsStateWithLifecycle()
     val privdState by viewModel.privdState.collectAsStateWithLifecycle()
     val deadzoneLeft by viewModel.privdDeadzoneLeft.collectAsStateWithLifecycle()
     val deadzoneRight by viewModel.privdDeadzoneRight.collectAsStateWithLifecycle()
@@ -250,8 +252,12 @@ fun GlobalSettingsScreen(
                                         gamepadSwapFaceButtons = gamepadSwapFaceButtons,
                                         deadzoneLeft = deadzoneLeft,
                                         deadzoneRight = deadzoneRight,
+                                        kbLayout = kbLayout,
+                                        kbTouchpadEnabled = kbTouchpadEnabled,
                                         onGamepadSwapFaceButtonsChange = { viewModel.setGamepadSwapFaceButtons(it) },
                                         onOpenDeadzones = { subPageStack = listOf(SettingsSubPage.DEADZONES) },
+                                        onKbLayoutChange = { viewModel.setKbLayout(it) },
+                                        onKbTouchpadEnabledChange = { viewModel.setKbTouchpadEnabled(it) },
                                     )
                                 }
 

@@ -102,7 +102,7 @@ every device since Android 11 (API 30).
 
 | Feature                                      | What it gains                                                                                 | Without Privileged Mode                                                                                                                                        |
 | -------------------------------------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Gamepad merge** (MacroPad → physical pad)  | Single-controller emulation: games see only one controller.                                   | Falls back to a virtual uinput gamepad. Most games still recognise both, but a few (e.g. some Steam Big Picture flows) only accept the first-connected device. |
+| **Gamepad buttons & merge** (MacroPad → physical pad) | Single-controller emulation: games see only one controller via physical evdev merge. | Blocked with proactive UI feedback: Gamepad buttons render disabled styling on the canvas; tapping them triggers a toast prompting the user to activate Privileged Mode. Standalone uinput virtual gamepad fallback is retired to prevent dual-controller conflicts on the AYN Thor. |
 | **Macro subsystem** (execution, recording, editing) | Low-latency physical controller & touch capture directly over running games; hardware evdev input injection. | Blocked with proactive UI feedback: use-mode buttons show disabled styling with floating warning banners; editor decks display warning banners and prevent recording / execution. |
 | **Privileged mirror** (FR-M9)                | No MediaProjection consent dialog when direct SurfaceControl output starts successfully.      | Falls back to `MediaProjection` + `VirtualDisplay` with the system consent dialog. DRM content keeps working.                                                  |
 | **Relative mouse** (Touchpad / Keyboard)     | Low-latency, scheduler-boosted mouse events. Shell UID execution prevents cursor lag under CPU contention. | Falls back to spawning a local virtual mouse binary (`mouseinjector_arm64`) as an app subprocess. |
@@ -321,7 +321,7 @@ The daemon compares the app's `AUTH` proof with a constant-time XOR accumulator.
 
 Upon daemon replacement and reconnection, active subsystems automatically recover:
 - **Screen Mirroring (`ScreenCaptureService`):** Observes `PrivdClient.state` and automatically starts a new `DirectPrivdMirrorSession` on the new daemon, restoring mirror output without user intervention.
-- **Input Injectors (`KeyInjector`, `TouchInjector`, `MouseInjector`, `GamepadInjector`):** `InjectorBackendRouter` automatically re-synchronizes backend routing and re-sends initialization commands (`KB_START` for keyboard) to establish input nodes on the new daemon.
+- **Input Injectors (`KeyInjector`, `TouchInjector`, `MouseInjector`):** `InjectorBackendRouter` automatically re-synchronizes backend routing and re-sends initialization commands (`KB_START` for keyboard) to establish input nodes on the new daemon. Gamepad injection automatically routes directly to `PrivdGamepadInjector` for hardware evdev merge when Privd is connected.
 
 Detailed native rebuild and generated hash behavior are documented in [BUILD_NATIVE.md](../../BUILD_NATIVE.md#native-asset-integrity).
 
@@ -450,20 +450,9 @@ VERIFYING / DONE) is exposed by `PrivdBootstrapper.stage` for the wizard UI.
 Key provisioning happens during the `PUSHING_BINARY` stage (after a successful binary push
 but before spawning the daemon) — no separate `PROVISIONING` stage is needed.
 
-### Strategy Routing in GamepadInjector
+### Privileged Mode Requirement in GamepadInjector
 
-`GamepadInjector` is a strategy router. At `start()` time it decides:
-
-```
-if (PrivdClient.isConnected) {
-    backend = PrivdGamepadInjector  // physical-pad merge
-} else {
-    backend = ShellGamepadInjector  // standard virtual uinput
-}
-```
-
-The chosen backend is locked in for the session — toggling the setting
-mid-game requires a leave-and-re-enter of the MacroPad mode.
+`GamepadInjector` routes directly to `PrivdGamepadInjector` for kernel evdev merge into the physical controller (`g_gamepad_fd`) when `PrivdClient.isConnected`. When Privileged Mode is offline, gamepad injection is suppressed and buttons render with disabled styling, avoiding dual-controller conflicts from `/dev/uinput` virtual devices on the AYN Thor. Standalone uinput virtual gamepad fallback is retired.
 
 ### Source Files
 
@@ -474,14 +463,14 @@ mid-game requires a leave-and-re-enter of the MacroPad mode.
 | `domain/.../privd/PrivdPairKey.kt`                       | Per-install Keystore-encrypted HMAC key: `generateAndStore()`, `load()`, `delete()`                                                        |
 | `domain/.../privd/PrivdClient.kt`                        | TCP Socket transport singleton (writer + reader threads, ping support, physical evdev event stream)                                        |
 | `domain/.../privd/PrivdConnectionState.kt`               | Connection-state enum (DISCONNECTED / CONNECTING / CONNECTED)                                                                              |
-| `domain/.../privd/PrivdGamepadInjector.kt`               | Same surface as `ShellGamepadInjector`, sends via `PrivdClient`                                                                            |
+| `domain/.../privd/PrivdGamepadInjector.kt`               | Sends GD/GU/HD/JS gamepad commands via `PrivdClient` for physical evdev merge                              |
 | `domain/.../privd/PrivdManager.kt`                       | Top-level state machine, `PrivdState` (incl. `BOOTSTRAPPING`), `PrivdError` (6 codes), `PrivdFeature` enum                                 |
 | `domain/.../privd/PrivdAdbConnectionManager.kt`          | `AbsAdbConnectionManager` subclass: persistent RSA key + X.509 cert in `filesDir`, `pair`/`connect`                                        |
 | `domain/.../privd/PrivdBootstrapper.kt`                  | `BootstrapStage` state flow + pair / push (`sync:` + byte-size verification) / spawn (detached) / verify orchestration                     |
 | `app/.../privd/PrivdSettingsCard.kt`                     | Compose card: status badge, connect/test buttons, wizard trigger, auto-connect Switch                                                     |
 | `companion/ui/src/main/java/com/stormpanda/megingiard/privd/PrivdSetupWizard.kt`                      | `PrivdSetupWizardDialog` — in-tree modal dialog (scrim + centered card) hosting the 4-step wizard; hosted on the secondary display (bottom screen) via `MainAppScreen` / `AppStateManager` |
 | `app/.../MainActivity.kt`                                | Auto-connect hook (`combine(privdAutoConnect, state)` one-shot)                                                                            |
-| `domain/.../macropad/GamepadInjector.kt`                 | Strategy router between virtual uinput and Privd merge backends                                                                            |
+| `domain/.../macropad/GamepadInjector.kt`                 | Public facade delegating directly to `PrivdGamepadInjector` physical merge                                                                 |
 | `domain/.../macropad/PhysicalGamepadRecordingManager.kt` | Converts physical evdev events into macro steps while recording (`GamepadButtonTap`, `DPadTap`, `JoystickPath`)                            |
 | `domain/.../settings/MacroPadSettings.kt`                | `privdAutoConnect` flag                                                                                                                   |
 | `domain/.../settings/SettingsKeys.kt`                    | `KEY_PRIVD_AUTO_CONNECT` DataStore key                                                                                                     |

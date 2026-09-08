@@ -595,11 +595,7 @@ object AppStateManager {
     private val _fullscreenMouseSensitivity = MutableStateFlow(1.0f)
     val fullscreenMouseSensitivity: StateFlow<Float> = _fullscreenMouseSensitivity.asStateFlow()
 
-    private val forcedKeyboardLayout = MutableStateFlow<KbLayout?>(null)
-    val fullscreenKeyboardLayout: StateFlow<KbLayout> =
-        combine(forcedKeyboardLayout, KeyboardSettings.kbLayout) { forced, settings ->
-            forced ?: settings
-        }.stateIn(scope, SharingStarted.Eagerly, KeyboardSettings.kbLayout.value)
+    val fullscreenKeyboardLayout: StateFlow<KbLayout> = KeyboardSettings.kbLayout
 
     /**
      * True whenever any modal dialog, peek overlay, or non-macropad fullscreen surface is showing.
@@ -619,22 +615,20 @@ object AppStateManager {
             modal != null || quickMenuOpen
         }.stateIn(scope, SharingStarted.Eagerly, false)
 
-    fun setFullscreenKeyboardActive(
-        active: Boolean,
-        layout: KbLayout? = null,
-    ) {
+    fun setFullscreenKeyboardActive(active: Boolean) {
         if (active && (OnboardingWizardManager.isWizardActive.value || _isPrivdSetupWizardActive.value)) {
             AppLog.w(TAG, "setFullscreenKeyboardActive suppressed while wizard is active")
             return
         }
-        AppLog.i(TAG, "setFullscreenKeyboardActive($active, layout=$layout)")
+        AppLog.i(TAG, "setFullscreenKeyboardActive($active)")
         if (active) {
-            forcedKeyboardLayout.value = layout
             _companionSurfaceMode.value = CompanionSurfaceMode.KEYBOARD
         } else {
-            forcedKeyboardLayout.value = null
             if (_companionSurfaceMode.value == CompanionSurfaceMode.KEYBOARD) {
                 _companionSurfaceMode.value = CompanionSurfaceMode.MACROPAD
+            }
+            if (isKeyboardSettingsOpen.value) {
+                setKeyboardSettingsOpen(false)
             }
         }
     }
@@ -654,6 +648,9 @@ object AppStateManager {
         } else {
             if (_companionSurfaceMode.value == CompanionSurfaceMode.TOUCHPAD) {
                 _companionSurfaceMode.value = CompanionSurfaceMode.MACROPAD
+            }
+            if (isTouchpadSettingsOpen.value) {
+                setTouchpadSettingsOpen(false)
             }
         }
     }
@@ -726,6 +723,16 @@ object AppStateManager {
     }
 
     init {
+        scope.launch {
+            _companionSurfaceMode.collect { mode ->
+                if (mode != CompanionSurfaceMode.KEYBOARD && isKeyboardSettingsOpen.value) {
+                    setKeyboardSettingsOpen(false)
+                }
+                if (mode != CompanionSurfaceMode.TOUCHPAD && isTouchpadSettingsOpen.value) {
+                    setTouchpadSettingsOpen(false)
+                }
+            }
+        }
         scope.launch {
             var lastActiveLayoutId: String? = null
             MacroPadState.activeLayout.collect { layout ->

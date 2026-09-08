@@ -15,9 +15,7 @@ private val VALID_JOYSTICK_AXES =
 /**
  * Routes gamepad events to the privileged daemon's physical-evdev path.
  *
- * Mirrors the public surface of `ShellGamepadInjector`, but instead of
- * spawning a process and creating a virtual uinput device, every command is
- * forwarded over [PrivdClient] to the running `megingiard_privd` daemon
+ * Every command is forwarded over [PrivdClient] to the running `megingiard_privd` daemon
  * (UID 2000, group `input`). The daemon writes the events directly into the
  * already-open `/dev/input/event*` node of the physical gamepad — so games
  * see only one controller, with the MacroPad inputs and the physical inputs
@@ -27,7 +25,7 @@ private val VALID_JOYSTICK_AXES =
  * [PrivdClient] / `PrivdManager`. Callers should consult
  * [PrivdClient.isConnected] before relying on event delivery.
  *
- * Wire protocol (identical to the on-device `gamepadinjector` binary):
+ * Wire protocol:
  *   - `GD <code>\n` button DOWN, `GU <code>\n` button UP
  *   - `HD <axis> <value>\n` D-Pad hat
  *   - `JS <axisCode> <value>\n` analog joystick

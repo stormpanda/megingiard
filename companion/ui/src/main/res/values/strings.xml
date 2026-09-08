@@ -100,7 +100,6 @@ Open Settings to create a layout.</string>
     <string name="macropad_haptic_custom_duration">Duration</string>
     <string name="macropad_haptic_custom_amplitude">Amplitude</string>
     <string name="macropad_device_disabled_keyboard">Keyboard has been disabled for this layout</string>
-    <string name="macropad_device_disabled_gamepad">Gamepad has been disabled for this layout</string>
 
     <!-- Keyboard trackpoint virtual mouse buttons -->
     <string name="kb_mouse_btn_left">LMB</string>
@@ -112,6 +111,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_device_disabled_mouse">Mouse has been disabled for this layout</string>
     <string name="macropad_device_disabled_touch">Touch has been disabled for this layout</string>
     <string name="macropad_device_disabled_macro_privd">Macros require Privileged Mode. Please activate Privileged Mode in Settings.</string>
+    <string name="macropad_device_disabled_gamepad_privd">Gamepad buttons require Privileged Mode. Please activate Privileged Mode in Settings.</string>
     <string name="macropad_macro_privd_required_banner">Privileged Mode is required to create, edit, test, and execute macros. Please activate Privileged Mode in Settings.</string>
     <string name="macropad_editor_delete_profile">Delete Profile</string>
     <string name="macropad_editor_delete_layout">Delete Layout</string>

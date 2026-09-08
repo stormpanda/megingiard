@@ -66,6 +66,7 @@ import com.stormpanda.megingiard.catalog.DisplayDetector
 import com.stormpanda.megingiard.catalog.SystemRoleClassifier
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.MGRD_MIME_TYPE
+import com.stormpanda.megingiard.input.InjectorLifecycleManager
 import com.stormpanda.megingiard.log.LogReportManager
 import com.stormpanda.megingiard.macropad.AppLauncherManager
 import com.stormpanda.megingiard.macropad.BackgroundPickerManager
@@ -229,6 +230,12 @@ class MainActivity : ComponentActivity() {
         AppStateManager.setActivityResumed(false)
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        AppLog.i(TAG, "onDestroy")
+        InjectorLifecycleManager.stopAll()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
         super.onCreate(savedInstanceState)
@@ -241,6 +248,9 @@ class MainActivity : ComponentActivity() {
         // else runs (including SignatureGuard below). SettingsManager.init() reads
         // just the log level synchronously from DataStore then continues async.
         SettingsManager.init(this)
+
+        // Centralized input injector lifecycle watching (keeps Key, Mouse, Touch active while foregrounded)
+        InjectorLifecycleManager.watch(this)
 
         // Initialize canonical home launcher and system role classifier
         SystemRoleClassifier.init(this)

@@ -57,15 +57,11 @@ import com.stormpanda.megingiard.viewmodel.KeyboardViewModel
 private const val TAG = "KeyboardScreen"
 
 @Composable
-fun KeyboardScreen(
-    modifier: Modifier = Modifier,
-    forcedLayout: KbLayout? = null,
-) {
+fun KeyboardScreen(modifier: Modifier = Modifier) {
     val viewModel: KeyboardViewModel = viewModel()
     val context = LocalContext.current
     val density = LocalDensity.current
-    val kbLayoutSetting by viewModel.kbLayout.collectAsStateWithLifecycle()
-    val kbLayout = forcedLayout ?: kbLayoutSetting
+    val kbLayout by viewModel.kbLayout.collectAsStateWithLifecycle()
     val kbRepeatEnabled by viewModel.kbRepeatEnabled.collectAsStateWithLifecycle()
     val kbTrackpointEnabled by viewModel.kbTrackpointEnabled.collectAsStateWithLifecycle()
     val kbFullscreen by viewModel.kbFullscreen.collectAsStateWithLifecycle()
@@ -119,8 +115,11 @@ fun KeyboardScreen(
 
     DisposableEffect(Unit) {
         onDispose {
-            AppLog.d(TAG, "KeyboardScreen disposed: stopping and resetting injectors")
+            AppLog.d(TAG, "KeyboardScreen disposed: resetting controller and state")
             viewModel.stopAndReset()
+            if (AppStateManager.isKeyboardSettingsOpen.value) {
+                AppStateManager.setKeyboardSettingsOpen(false)
+            }
         }
     }
 

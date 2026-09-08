@@ -61,7 +61,6 @@ val nativeBinaries = listOf(
     "touchinjector_arm64",
     "mouseinjector_arm64",
     "keyinjector_arm64",
-    "gamepadinjector_arm64",
     "megingiard_privd_arm64",
     "megingiard_mirror.dex",
 )

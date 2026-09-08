@@ -45,7 +45,7 @@ The Virtual Touchpad is instantiated via the **Fullscreen Mouse Overlay** (`Full
   - **16:9 Aspect Ratio:** The touch surface is constrained to a `16:9` aspect ratio aligned to the bottom part of the screen, matching the primary screen dimensions to prevent mapping scaling distortion.
   - **Touchpad Screen Mirroring:** Can display a real-time mirror of the full top screen inside the touch area. A play button in the bottom toolbar toggles mirroring.
   - **Restore State:** Closing the touchpad (or turning off touchpad mirroring) stops the screen capture if it was initiated by the touchpad, restoring the macro pad's mirror capture to its exact prior state.
-- **Touchpad Settings:** A settings overlay is available via the settings cog button in the bottom toolbar, displayed on the primary (top) display while the virtual touchpad remains active, visible, and fully interactive on the secondary (bottom) display without closing or tearing down input injection. It groups options into two concurrent sections: **Relative Mouse Mode** (including toggles for tap-to-click, two-finger tap, three-finger tap, tap-and-drag, two-finger scroll with optional natural scrolling direction and a scroll speed sensitivity stepper with ±0.1x increments, Mouse 4/5 buttons, a Pointer Speed sensitivity stepper with ±0.1x increments, and a Haptic Feedback toggle) and **Absolute Touch Mode** (including a toggle for touchpad mirroring and a mirror dim level stepper). The active input mode is persistent in the background but not exposed as a settings preference option. These settings are persisted across app sessions and full backups.
+- **Touchpad Settings:** A settings overlay is available via the settings cog button in the bottom toolbar, displayed on the primary (top) display while the virtual touchpad remains active, visible, and fully interactive on the secondary (bottom) display without closing or tearing down input injection. Closing or collapsing the virtual touchpad overlay while the Touchpad Settings overlay is open MUST automatically close the Touchpad Settings overlay. It groups options into two concurrent sections: **Relative Mouse Mode** (including toggles for tap-to-click, two-finger tap, three-finger tap, tap-and-drag, two-finger scroll with optional natural scrolling direction and a scroll speed sensitivity stepper with ±0.1x increments, Mouse 4/5 buttons, a Pointer Speed sensitivity stepper with ±0.1x increments, and a Haptic Feedback toggle) and **Absolute Touch Mode** (including a toggle for touchpad mirroring and a mirror dim level stepper). The active input mode is persistent in the background but not exposed as a settings preference option. These settings are persisted across app sessions and full backups.
 - When the Quick Menu is visible, all pointer changes are consumed to ensure touches do not bleed through.
 
 ---
@@ -65,23 +65,12 @@ On the AYN Thor, these nodes are accessible to the app/shell UID — root is not
 
 ### Native Binary: Deployment & Lifecycle
 
-The pre-built binaries are bundled in the app's `assets/`. When a relative touchpad session starts in `FullscreenMouseOverlay`:
+The pre-built binaries are bundled in the app's `assets/`. Injector lifecycles are managed globally by `InjectorLifecycleManager`, which maintains active `MouseInjector`, `TouchInjector`, and `KeyInjector` processes continuously whenever Megingiard is in the foreground (`AppStateManager.isActivityResumed`), stopping them when backgrounded (`onStop`) or during the Privileged Mode setup wizard IME:
 
-1. `MouseInjector.start(context)` is called on composition within `LaunchedEffect(Unit)`.
-2. The `NativeBinaryInjector` helper copies `mouseinjector_arm64` from `assets/` to `context.filesDir` (app-private directory), calls `setExecutable(true)`, and launches it via `ProcessBuilder`.
+1. `InjectorLifecycleManager.watch(context)` is initiated centrally in `MainActivity.onCreate()`.
+2. The `NativeBinaryInjector` helper copies `mouseinjector_arm64` and `touchinjector_arm64` from `assets/` to `context.filesDir` (app-private directory), calls `setExecutable(true)`, and launches them via `ProcessBuilder`.
 3. The binary signals readiness by writing `"R\n"` to stdout (checked with a 500 ms timeout).
-4. The relative touchpad session directly pipes commands to the stdin of the running `mouseinjector_arm64` process.
-
-The process remains alive for the entire Touchpad session and is terminated on disposal via:
-
-```kotlin
-DisposableEffect(Unit) {
-    onDispose {
-        AppLog.i(TAG, "dispose: stopping MouseInjector")
-        MouseInjector.stop()
-    }
-}
-```
+4. Individual screens (`FullscreenMouseOverlay`, `MacroPadScreen`) route events directly to `MouseInjector` or `TouchInjector` without starting or stopping background processes on local composition/disposal.
 
 ### Stdin Protocol (Mouse Mode)
 

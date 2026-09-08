@@ -158,7 +158,7 @@ sealed class PadAction {
         val modifiers: List<Int> = emptyList(),
     ) : PadAction()
 
-    /** Injects a Linux gamepad button event via gamepadinjector_arm64. */
+    /** Injects a Linux gamepad button event via Privileged Mode evdev merge. */
     @Serializable
     @SerialName("gamepad_button")
     data class GamepadButton(
@@ -270,11 +270,12 @@ sealed class PadAction {
         val sensitivity: Float = 1.0f,
     ) : PadAction()
 
-    /** Opens the fullscreen keyboard overlay with the specified layout. */
+    /** Opens the fullscreen keyboard overlay using the global keyboard settings layout. */
     @Serializable
     @SerialName("full_screen_keyboard")
     data class FullScreenKeyboard(
-        val layout: KbLayout = KbLayout.QWERTZ,
+        @Deprecated("Keyboard layout is managed globally via KeyboardSettings; per-button overrides are not supported.")
+        val layout: KbLayout? = null,
     ) : PadAction()
 
     /** Opens an installed Android app on the target screen and minimizes Megingiard into a floating bubble overlay. */

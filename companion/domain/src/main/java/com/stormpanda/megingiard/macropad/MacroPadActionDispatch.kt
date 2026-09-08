@@ -82,8 +82,8 @@ fun injectActionDown(action: PadAction) {
         }
 
         is PadAction.FullScreenKeyboard -> {
-            AppLog.d(TAG, "actionDown: FullScreenKeyboard layout=${action.layout}")
-            AppStateManager.setFullscreenKeyboardActive(true, action.layout)
+            AppLog.d(TAG, "actionDown: FullScreenKeyboard")
+            AppStateManager.setFullscreenKeyboardActive(true)
         }
 
         is PadAction.MirrorPlayStop -> {

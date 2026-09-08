@@ -18,7 +18,7 @@ private const val NBI_FLUSH_POLL_INTERVAL_MS = 1L
  * Base class for shell-process-backed native injectors.
  *
  * Encapsulates the full lifecycle shared by [ShellInputInjector], [ShellMouseInjector],
- * [ShellKeyInjector], and [ShellGamepadInjector]:
+ * and [ShellKeyInjector]:
  *
  * 1. Binary deployment from `assets/` to `filesDir`.
  * 2. Process start and readiness handshake (`R\n` on stdout).

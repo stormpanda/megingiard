@@ -231,16 +231,8 @@ internal fun PadAction.toCategory(): ActionCategory =
         is PadAction.AppLauncher -> ActionCategory.APP_LAUNCHER
     }
 
-internal fun ActionCategory.isEnabled(
-    enableKeyboard: Boolean,
-    enableGamepad: Boolean,
-    enableMouse: Boolean,
-    hasMacros: Boolean,
-): Boolean =
+internal fun ActionCategory.isAvailable(hasMacros: Boolean): Boolean =
     when (this) {
-        ActionCategory.KEYBOARD_KEY -> enableKeyboard
-        ActionCategory.GAMEPAD_BUTTON -> enableGamepad
-        ActionCategory.MOUSE_BUTTON, ActionCategory.SCROLL_WHEEL, ActionCategory.TRACKPOINT -> enableMouse
         ActionCategory.MACRO -> hasMacros
         else -> true
     }

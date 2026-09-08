@@ -93,22 +93,17 @@ internal fun describeButtonColorOption(
  * Deck sub-page allowing the user to select the Button Type (ActionGroup) before editing button details.
  */
 @Composable
-internal fun ChooseButtonTypeSubPageContent(
-    enableKeyboard: Boolean = true,
-    enableGamepad: Boolean = true,
-    enableMouse: Boolean = true,
-    onSelectType: (ActionGroup) -> Unit,
-) {
+internal fun ChooseButtonTypeSubPageContent(onSelectType: (ActionGroup) -> Unit) {
     val privdState by PrivdManager.state.collectAsStateWithLifecycle()
     val isPrivdRunning = privdState == PrivdState.RUNNING
     val profile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
     val hasMacros = isPrivdRunning && (profile?.macros?.isNotEmpty() == true)
     val availableGroups =
-        remember(hasMacros, enableKeyboard, enableGamepad, enableMouse, isPrivdRunning) {
+        remember(hasMacros, isPrivdRunning) {
             ActionGroup.entries.filter { group ->
-                if (group == ActionGroup.MACRO && !isPrivdRunning) return@filter false
+                if ((group == ActionGroup.MACRO || group == ActionGroup.GAMEPAD) && !isPrivdRunning) return@filter false
                 group.actions().any { category ->
-                    category.isEnabled(enableKeyboard, enableGamepad, enableMouse, hasMacros)
+                    category.isAvailable(hasMacros)
                 }
             }
         }
