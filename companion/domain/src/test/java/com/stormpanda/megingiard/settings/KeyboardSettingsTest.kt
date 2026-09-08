@@ -82,20 +82,20 @@ class KeyboardSettingsTest {
 
             KeyboardSettings.init(testDataStore, testScope)
 
-            // 1. Verify default value: auto-open is false
-            assertFalse(KeyboardSettings.kbAutoOpenOnFocus.value)
-
-            // 2. Enable auto-open and verify persistence
-            KeyboardSettings.setKbAutoOpenOnFocus(true)
-            testScheduler.advanceUntilIdle()
+            // 1. Verify default value: auto-open is true by default
             assertTrue(KeyboardSettings.kbAutoOpenOnFocus.value)
 
-            val prefs = testDataStore.data.first()
-            assertTrue(prefs[KEY_KB_AUTO_OPEN_ON_FOCUS] == true)
-
-            // 3. Reset
+            // 2. Disable auto-open and verify persistence
             KeyboardSettings.setKbAutoOpenOnFocus(false)
             testScheduler.advanceUntilIdle()
             assertFalse(KeyboardSettings.kbAutoOpenOnFocus.value)
+
+            val prefs = testDataStore.data.first()
+            assertTrue(prefs[KEY_KB_AUTO_OPEN_ON_FOCUS] == false)
+
+            // 3. Reset
+            KeyboardSettings.setKbAutoOpenOnFocus(true)
+            testScheduler.advanceUntilIdle()
+            assertTrue(KeyboardSettings.kbAutoOpenOnFocus.value)
         }
 }

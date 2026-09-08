@@ -116,7 +116,7 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
 
 ### FR-K12: Auto-Open on Top-Screen Text Focus (Accessibility-Driven)
 
-- The virtual keyboard MUST support an optional **Auto-Open on Text Focus** mode, configurable via Settings (`KeyboardSettings.kbAutoOpenOnFocus`, disabled by default).
+- The virtual keyboard MUST support an optional **Auto-Open on Text Focus** mode, configurable via Settings (`KeyboardSettings.kbAutoOpenOnFocus`, enabled by default).
 - When enabled, `MegingiardAccessibilityService` monitors `AccessibilityEvent.TYPE_VIEW_FOCUSED` and `TYPE_VIEW_CLICKED` on the primary display (`Display.DEFAULT_DISPLAY`).
 - Focusing or tapping any editable text input field (`AccessibilityNodeInfo.isEditable == true`) on the primary display MUST automatically open Megingiard's virtual keyboard on the secondary display via `AppStateManager.setFullscreenKeyboardActive(true)`.
 - The mechanism MUST function system-wide across all Android applications without requiring Megingiard to be registered or configured as a system Input Method Editor (IME).
@@ -270,7 +270,7 @@ When a full-screen UI overlay is visible:
 | Fullscreen Mode    | `kb_fullscreen`         | `false`  | Expand keyboard to use full screen area                   |
 | Button Position    | `kb_mouse_btn_pos`      | `LEFT`   | Mouse button overlay placement (`LEFT`, `RIGHT`, or `BOTH`) |
 | Keyboard Touchpad  | `kb_touchpad_enabled`   | `true`   | Show touchpad on top of the keyboard layout              |
-| Auto-Open on Focus | `kb_auto_open_on_focus` | `false`  | Auto-open bottom keyboard when top text field is focused  |
+| Auto-Open on Focus | `kb_auto_open_on_focus` | `true`   | Auto-open bottom keyboard when top text field is focused  |
 
 ### Source Files
 

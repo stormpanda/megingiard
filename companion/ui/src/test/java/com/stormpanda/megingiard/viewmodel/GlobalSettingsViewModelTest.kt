@@ -137,15 +137,15 @@ class GlobalSettingsViewModelTest {
         assertFalse(vm.kbTouchpadEnabled.value)
         assertFalse(KeyboardSettings.kbTouchpadEnabled.value)
 
-        vm.setKbAutoOpenOnFocus(true)
+        vm.setKbAutoOpenOnFocus(false)
         testDispatcher.scheduler.advanceUntilIdle()
-        assertTrue(vm.kbAutoOpenOnFocus.value)
-        assertTrue(KeyboardSettings.kbAutoOpenOnFocus.value)
+        assertFalse(vm.kbAutoOpenOnFocus.value)
+        assertFalse(KeyboardSettings.kbAutoOpenOnFocus.value)
 
         // Reset
         vm.setKbLayout(KbLayout.QWERTZ)
         vm.setKbTouchpadEnabled(true)
-        vm.setKbAutoOpenOnFocus(false)
+        vm.setKbAutoOpenOnFocus(true)
         testDispatcher.scheduler.advanceUntilIdle()
     }
 }
