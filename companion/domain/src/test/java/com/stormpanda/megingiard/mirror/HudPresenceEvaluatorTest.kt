@@ -85,17 +85,17 @@ class HudPresenceEvaluatorTest {
     }
 
     @Test
-    fun `transitionState respects MATCH_THRESHOLD_LOST of 0_55f`() {
+    fun `transitionState respects MATCH_THRESHOLD_LOST of 0_45f`() {
         var state = HudPresenceState.PRESENT
         var count = 0
 
-        // Ratio just above 0.55 (0.56) remains PRESENT
-        val (state1, count1) = HudPresenceEvaluator.transitionState(state, count, 0.56f, "test")
+        // Ratio just above 0.45 (0.46) remains PRESENT
+        val (state1, count1) = HudPresenceEvaluator.transitionState(state, count, 0.46f, "test")
         assertEquals(HudPresenceState.PRESENT, state1)
         assertEquals(0, count1)
 
-        // Ratio below 0.55 (0.54) transitions immediately to LOST
-        val (state2, count2) = HudPresenceEvaluator.transitionState(state1, count1, 0.54f, "test")
+        // Ratio below 0.45 (0.44) transitions immediately to LOST
+        val (state2, count2) = HudPresenceEvaluator.transitionState(state1, count1, 0.44f, "test")
         assertEquals(HudPresenceState.LOST, state2)
         assertEquals(0, count2)
     }
