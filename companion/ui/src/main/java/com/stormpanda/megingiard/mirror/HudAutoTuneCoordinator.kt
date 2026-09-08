@@ -19,6 +19,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.ceil
 import kotlin.math.max
+import kotlin.math.roundToInt
 
 private const val TAG = "HudAutoTuneCoordinator"
 
@@ -96,11 +97,21 @@ internal object HudAutoTuneCoordinator {
                         val frameBitmap = MirrorFrameSampler.captureFrame(SAMPLE_WIDTH, SAMPLE_HEIGHT)
                         if (frameBitmap != null) {
                             try {
-                                if (cutout.customAnchorEnabled && cutoutFreezeBitmap == null) {
-                                    val cX = (cutout.srcX * frameBitmap.width).toInt().coerceIn(0, frameBitmap.width - 1)
-                                    val cY = (cutout.srcY * frameBitmap.height).toInt().coerceIn(0, frameBitmap.height - 1)
-                                    val cW = (cutout.srcWidth * frameBitmap.width).toInt().coerceIn(1, frameBitmap.width - cX)
-                                    val cH = (cutout.srcHeight * frameBitmap.height).toInt().coerceIn(1, frameBitmap.height - cY)
+                                if (cutoutFreezeBitmap == null) {
+                                    val cX = (cutout.srcX * frameBitmap.width).roundToInt().coerceIn(0, frameBitmap.width - 1)
+                                    val cY = (cutout.srcY * frameBitmap.height).roundToInt().coerceIn(0, frameBitmap.height - 1)
+                                    val cRight =
+                                        ((cutout.srcX + cutout.srcWidth) * frameBitmap.width).roundToInt().coerceIn(
+                                            cX + 1,
+                                            frameBitmap.width,
+                                        )
+                                    val cBottom =
+                                        ((cutout.srcY + cutout.srcHeight) * frameBitmap.height).roundToInt().coerceIn(
+                                            cY + 1,
+                                            frameBitmap.height,
+                                        )
+                                    val cW = cRight - cX
+                                    val cH = cBottom - cY
                                     try {
                                         cutoutFreezeBitmap = Bitmap.createBitmap(frameBitmap, cX, cY, cW, cH)
                                     } catch (e: Exception) {
@@ -110,13 +121,20 @@ internal object HudAutoTuneCoordinator {
 
                                 val allCutouts = MacroPadState.activeLayout.value?.mirrorCutouts ?: emptyList()
                                 val targetCrop = cutout.getEffectiveAnchorCrop(allCutouts)
-                                val cX = (targetCrop.x * frameBitmap.width).toInt().coerceIn(0, frameBitmap.width - 1)
-                                val cY = (targetCrop.y * frameBitmap.height).toInt().coerceIn(0, frameBitmap.height - 1)
-                                cropW = (targetCrop.width * frameBitmap.width).toInt().coerceIn(1, frameBitmap.width - cX)
-                                cropH = (targetCrop.height * frameBitmap.height).toInt().coerceIn(1, frameBitmap.height - cY)
+                                val aX = (targetCrop.x * frameBitmap.width).roundToInt().coerceIn(0, frameBitmap.width - 1)
+                                val aY = (targetCrop.y * frameBitmap.height).roundToInt().coerceIn(0, frameBitmap.height - 1)
+                                val aRight =
+                                    ((targetCrop.x + targetCrop.width) * frameBitmap.width).roundToInt().coerceIn(aX + 1, frameBitmap.width)
+                                val aBottom =
+                                    ((targetCrop.y + targetCrop.height) * frameBitmap.height).roundToInt().coerceIn(
+                                        aY + 1,
+                                        frameBitmap.height,
+                                    )
+                                cropW = aRight - aX
+                                cropH = aBottom - aY
 
                                 val pixels = IntArray(cropW * cropH)
-                                frameBitmap.getPixels(pixels, 0, cropW, cX, cY, cropW, cropH)
+                                frameBitmap.getPixels(pixels, 0, cropW, aX, aY, cropW, cropH)
                                 sampledFrames.add(pixels)
                             } finally {
                                 if (frameBitmap != ScreenCaptureManager.frozenBitmap.value) {
@@ -182,11 +200,12 @@ internal object HudAutoTuneCoordinator {
                                         Bitmap.Config.ARGB_8888,
                                     )
                                 val freezeBitmap =
-                                    if (sampledFrames.isNotEmpty()) {
-                                        Bitmap.createBitmap(sampledFrames.first(), cropW, cropH, Bitmap.Config.ARGB_8888)
-                                    } else {
-                                        null
-                                    }
+                                    cutoutFreezeBitmap
+                                        ?: if (sampledFrames.isNotEmpty()) {
+                                            Bitmap.createBitmap(sampledFrames.first(), cropW, cropH, Bitmap.Config.ARGB_8888)
+                                        } else {
+                                            null
+                                        }
                                 CutoutMaskManager.saveMask(
                                     context = context.applicationContext,
                                     cutoutId = cutout.id,

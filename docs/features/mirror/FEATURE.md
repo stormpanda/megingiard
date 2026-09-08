@@ -184,9 +184,9 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
   - **Re-Calibrate Smart Cutout:** An action card allowing the user to re-sample screen frames to refresh the mask, anchors, and freeze frame.
   - **Remove Smart Cutout:** A two-step destructive confirmation card that deletes calibration files from disk and reverts the cutout back to a standard live rectangular/circular mirror cutout (`hasTransparencyMask = false`, `freezeOnHudLoss = false`).
 - **Presence Detection & Absence Freezing (`HudPresenceManager`, `HudPresenceEvaluator`):**
-  - When mirroring is active and a Smart Cutout is calibrated, `HudPresenceManager` samples downscaled frames at 10 Hz (100 ms interval).
+  - When mirroring is active and a Smart Cutout is calibrated, `HudPresenceManager` samples frames at native source resolution (1080p) at 10 Hz (100 ms interval) via zero-allocation reusable frame buffers (`TextureView.getBitmap(reusableBitmap)`).
   - When the anchor match drops below 45% (`MATCH_THRESHOLD_LOST`), it transitions to `LOST` immediately on the first check (0–100 ms), completely eliminating video leakage during cutscenes, menus, or dialogues.
-  - `MultiCutoutContainer` renders the full-resolution pristine reference frame (`mask_<cutoutId>_freeze.png`) with the transparency mask stencil applied on top. When the UI returns, a 2-check hysteresis (200 ms) restores live 60 FPS mirroring smoothly.
+  - `MultiCutoutContainer` renders the native-resolution pristine reference frame (`mask_<cutoutId>_freeze.png`) with bilinear filtering (`isFilterBitmap = true`) and the transparency mask stencil applied on top. When the UI returns, a 2-check hysteresis (200 ms) restores live 60 FPS mirroring smoothly.
 - Mask state is persisted per-cutout in `ScreenCutout` (`hasTransparencyMask: Boolean`, `maskFeathering: Int = 0`, `maskTranslucency: Int = 0`, `freezeOnHudLoss: Boolean = false`).
 
 ### FR-M18: Display 0 HUD Dimming Scrim (Veil)
@@ -215,7 +215,9 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
   - `HudAutoTuner.analyze` extracts stationary anchor pixels and persists `HudAnchorSignature` (`mask_<cutoutId>_anchor.json`).
   - The cutout is saved with `freezeOnHudLoss = true` and `hasTransparencyMask = false` so that the dynamic mirror stream remains solid and unmasked.
 - **Dynamic Live Frame Buffering (`HudPresenceManager`):**
-  - For cutouts with custom reference anchors, `HudPresenceManager` continuously buffers the live cutout crop at ~5 Hz (200 ms interval) while the anchor is detected as present ($\ge 65\%$, matching `HudPresenceEvaluator.MATCH_THRESHOLD_PRESENT`). An initial frame is captured immediately upon detection, and fallback freeze frames are persisted to disk under `mask_<cutoutId>_freeze.png`.
+  - For cutouts with custom reference anchors, `HudPresenceManager` continuously buffers the live cutout crop at native 1080p source resolution at ~5 Hz (200 ms interval) while the anchor is detected as present ($\ge 65\%$, matching `HudPresenceEvaluator.MATCH_THRESHOLD_PRESENT`).
+  - Crop boundaries are computed with subpixel rounding (`roundToInt()`, `cRight - cX`, `cBottom - cY`), and `MultiCutoutContainer` applies bilinear filtering (`Paint.isFilterBitmap = true`), ensuring 1:1 pixel alignment without position shifts or upscaling blur.
+  - An initial native frame is captured immediately upon detection, and fallback freeze frames are persisted to disk under `mask_<cutoutId>_freeze.png`.
   - When the anchor element disappears (match ratio $< 45\%$), the cutout immediately freezes displaying this latest valid live frame (rather than a static calibration snapshot). When the anchor returns, live mirroring resumes smoothly.
 
 ---

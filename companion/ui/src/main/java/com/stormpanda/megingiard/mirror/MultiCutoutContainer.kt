@@ -212,6 +212,11 @@ internal class MultiCutoutContainer(
         }
     private val maskDestRect = RectF()
     private val cutoutDestRect = RectF()
+    private val frozenFramePaint =
+        Paint().apply {
+            isAntiAlias = true
+            isFilterBitmap = true
+        }
 
     init {
         HudPresenceManager.initialize(context)
@@ -351,7 +356,7 @@ internal class MultiCutoutContainer(
 
                     if (frozenFrame != null && !frozenFrame.isRecycled) {
                         cutoutDestRect.set(0f, 0f, dw, dh)
-                        canvas.drawBitmap(frozenFrame, null, cutoutDestRect, null)
+                        canvas.drawBitmap(frozenFrame, null, cutoutDestRect, frozenFramePaint)
                     } else {
                         val isFollowActive = ScreenCaptureManager.isFollowActive.value
                         val isUncropped = cutout.srcWidth >= MCC_UNCROPPED_THRESHOLD && cutout.srcHeight >= MCC_UNCROPPED_THRESHOLD
@@ -385,7 +390,7 @@ internal class MultiCutoutContainer(
                         }
 
                         if (isFrozen && frozenBitmap != null) {
-                            canvas.drawBitmap(frozenBitmap!!, 0f, 0f, null)
+                            canvas.drawBitmap(frozenBitmap!!, 0f, 0f, frozenFramePaint)
                         } else if (masterView != null) {
                             drawChild(canvas, masterView, drawTime)
                             masterViewDrawn = true

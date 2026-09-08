@@ -174,4 +174,29 @@ class CutoutMaskManagerTest {
         CutoutMaskManager.deleteMask(context, cutoutId)
         assertFalse(CutoutMaskManager.isCalibrated(context, cutoutId))
     }
+
+    @Test
+    fun `saveFreezeFrame persists native resolution frame and updates existing disk frame`() {
+        val context = RuntimeEnvironment.getApplication()
+        val cutoutId = "test_native_freeze_cutout"
+
+        val lowRes = Bitmap.createBitmap(480, 270, Bitmap.Config.ARGB_8888)
+        CutoutMaskManager.saveFreezeFrame(context, cutoutId, lowRes)
+
+        val retrievedLowRes = CutoutMaskManager.getFreezeFrame(context, cutoutId)
+        assertNotNull(retrievedLowRes)
+        assertEquals(480, retrievedLowRes!!.width)
+        assertEquals(270, retrievedLowRes.height)
+
+        val highRes = Bitmap.createBitmap(1920, 1080, Bitmap.Config.ARGB_8888)
+        CutoutMaskManager.saveFreezeFrame(context, cutoutId, highRes)
+
+        val retrievedHighRes = CutoutMaskManager.getFreezeFrame(context, cutoutId)
+        assertNotNull(retrievedHighRes)
+        assertEquals(1920, retrievedHighRes!!.width)
+        assertEquals(1080, retrievedHighRes.height)
+
+        CutoutMaskManager.deleteMask(context, cutoutId)
+        assertNull(CutoutMaskManager.getFreezeFrame(context, cutoutId))
+    }
 }
