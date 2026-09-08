@@ -8,6 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.serialization.json.JsonPrimitive
 import org.junit.After
@@ -101,4 +102,19 @@ class SettingsManagerTest {
         assertEquals(AppLog.Level.DEBUG, SettingsManager.logLevel.value)
         assertEquals(AppLog.Level.DEBUG, AppLog.level)
     }
+
+    @Test
+    fun testImportKeyboardAutoOpenOnFocus() =
+        runTest(testDispatcher) {
+            val payload =
+                mapOf(
+                    "keyboard" to
+                        mapOf(
+                            "kb_auto_open_on_focus" to JsonPrimitive(true),
+                        ),
+                )
+            SettingsManager.importGroupedSettingsAwait(payload)
+            testDispatcher.scheduler.advanceUntilIdle()
+            assertTrue(KeyboardSettings.kbAutoOpenOnFocus.value)
+        }
 }

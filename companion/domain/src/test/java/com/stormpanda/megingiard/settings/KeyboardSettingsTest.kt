@@ -71,7 +71,7 @@ class KeyboardSettingsTest {
         }
 
     @Test
-    fun testKeyboardAutoOpenAndSuppressImeSettings() =
+    fun testKeyboardAutoOpenOnFocusSetting() =
         runTest(testDispatcher) {
             val testScope = CoroutineScope(SupervisorJob() + testDispatcher)
             val testDataStore =

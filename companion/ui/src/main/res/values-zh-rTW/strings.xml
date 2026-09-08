@@ -55,6 +55,8 @@
     <string name="settings_kb_layout">鍵盤配置</string>
     <string name="settings_kb_touchpad">鍵盤觸控板</string>
     <string name="settings_kb_touchpad_desc">在鍵盤上方顯示觸控板</string>
+    <string name="settings_kb_auto_open_on_focus">文字焦點時自動開啟</string>
+    <string name="settings_kb_auto_open_on_focus_desc">當頂部螢幕聚焦文字輸入框時，自動於底部螢幕展開 Megingiard 虛擬鍵盤</string>
 
     <!-- Input method (touchpad + keyboard trackpoint) -->
 

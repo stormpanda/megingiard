@@ -810,6 +810,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
 
     override fun onUnbind(intent: Intent?): Boolean {
         AppLog.w(TAG, "onUnbind: Megingiard Accessibility Service disabled")
+        AutoKeyboardFocusCoordinator.reset()
         if (instance == this) instance = null
         AppStateManager.setAccessibilityActive(false)
         return super.onUnbind(intent)
