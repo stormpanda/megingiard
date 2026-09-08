@@ -25,10 +25,12 @@ fun InputSettingsTab(
     deadzoneRight: Float,
     kbLayout: KbLayout,
     kbTouchpadEnabled: Boolean,
+    kbAutoOpenOnFocus: Boolean,
     onGamepadSwapFaceButtonsChange: (Boolean) -> Unit,
     onOpenDeadzones: () -> Unit,
     onKbLayoutChange: (KbLayout) -> Unit,
     onKbTouchpadEnabledChange: (Boolean) -> Unit,
+    onKbAutoOpenOnFocusChange: (Boolean) -> Unit,
 ) {
     val colors = LocalAppColors.current
 
@@ -67,8 +69,10 @@ fun InputSettingsTab(
     KeyboardSettingsCards(
         kbLayout = kbLayout,
         kbTouchpadEnabled = kbTouchpadEnabled,
+        kbAutoOpenOnFocus = kbAutoOpenOnFocus,
         onKbLayoutChange = onKbLayoutChange,
         onKbTouchpadEnabledChange = onKbTouchpadEnabledChange,
+        onKbAutoOpenOnFocusChange = onKbAutoOpenOnFocusChange,
     )
 }
 

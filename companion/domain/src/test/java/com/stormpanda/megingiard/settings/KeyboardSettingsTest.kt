@@ -69,4 +69,33 @@ class KeyboardSettingsTest {
             val updatedPrefs = testDataStore.data.first()
             assertTrue(updatedPrefs[KEY_KB_TOUCHPAD_ENABLED] == true)
         }
+
+    @Test
+    fun testKeyboardAutoOpenAndSuppressImeSettings() =
+        runTest(testDispatcher) {
+            val testScope = CoroutineScope(SupervisorJob() + testDispatcher)
+            val testDataStore =
+                PreferenceDataStoreFactory.create(
+                    produceFile = { tempFile },
+                    scope = testScope,
+                )
+
+            KeyboardSettings.init(testDataStore, testScope)
+
+            // 1. Verify default value: auto-open is false
+            assertFalse(KeyboardSettings.kbAutoOpenOnFocus.value)
+
+            // 2. Enable auto-open and verify persistence
+            KeyboardSettings.setKbAutoOpenOnFocus(true)
+            testScheduler.advanceUntilIdle()
+            assertTrue(KeyboardSettings.kbAutoOpenOnFocus.value)
+
+            val prefs = testDataStore.data.first()
+            assertTrue(prefs[KEY_KB_AUTO_OPEN_ON_FOCUS] == true)
+
+            // 3. Reset
+            KeyboardSettings.setKbAutoOpenOnFocus(false)
+            testScheduler.advanceUntilIdle()
+            assertFalse(KeyboardSettings.kbAutoOpenOnFocus.value)
+        }
 }

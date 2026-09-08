@@ -47,6 +47,7 @@ internal val KEY_KB_REPEAT_ENABLED = booleanPreferencesKey("kb_repeat_enabled")
 internal val KEY_KB_FULLSCREEN = booleanPreferencesKey("kb_fullscreen")
 internal val KEY_KB_MOUSE_BTN_POS = stringPreferencesKey("kb_mouse_btn_pos")
 internal val KEY_KB_TOUCHPAD_ENABLED = booleanPreferencesKey("kb_touchpad_enabled")
+internal val KEY_KB_AUTO_OPEN_ON_FOCUS = booleanPreferencesKey("kb_auto_open_on_focus")
 
 // Language
 internal val KEY_APP_LANGUAGE = stringPreferencesKey("app_language")
@@ -150,6 +151,7 @@ private val KEYBOARD_KEYS: Set<Preferences.Key<*>> =
         KEY_KB_REPEAT_ENABLED,
         KEY_KB_FULLSCREEN,
         KEY_KB_MOUSE_BTN_POS,
+        KEY_KB_AUTO_OPEN_ON_FOCUS,
     )
 private val MACROPAD_SETTINGS_KEYS: Set<Preferences.Key<*>> =
     setOf(
