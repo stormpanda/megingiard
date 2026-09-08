@@ -125,7 +125,7 @@ Megingiard uses layered local hardening rather than a single trust check. The co
 
 ### Native Asset Integrity
 
-The app ships native helpers (`touchinjector_arm64`, `keyinjector_arm64`, `mouseinjector_arm64`, `gamepadinjector_arm64`, `megingiard_privd_arm64`) and `megingiard_mirror.dex` as APK assets. The `:domain:generateNativeBinaryHashes` task hashes the bytes that will ship and generates `NativeBinaryHashes.EXPECTED`. Runtime code calls `BinaryIntegrity.verify()` before any asset is executed, pushed to `/data/local/tmp`, or used by Privileged Mode.
+The app ships native helpers (`touchinjector_arm64`, `keyinjector_arm64`, `mouseinjector_arm64`, `megingiard_privd_arm64`) and `megingiard_mirror.dex` as APK assets. The `:domain:generateNativeBinaryHashes` task hashes the bytes that will ship and generates `NativeBinaryHashes.EXPECTED`. Runtime code calls `BinaryIntegrity.verify()` before any asset is executed, pushed to `/data/local/tmp`, or used by Privileged Mode.
 
 `NativeBinaryInjector` performs a second check after writing a helper to app-private storage: it re-reads the on-disk file, verifies SHA-256 again, then sets the executable bit and marks the file non-writable. This narrows the time-of-check/time-of-use window between verified asset bytes and executed filesystem bytes.
 

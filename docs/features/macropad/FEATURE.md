@@ -66,7 +66,7 @@ Each button supports one of the following actions:
   - Modifiers (Mod 1, Mod 2 for keyboard), combo buttons (Extra 1, Extra 2, Extra 3 for gamepad), and specific app target (for App Quick-Switch) remain configurable on the `EditButton` page below the primary action card. For `GamepadButton`, selecting any extra input card (Extra 1, Extra 2, Extra 3) opens the same `VisualGamepadPicker` sub-page as the primary button action, enabling visual selection, automatic deduplication, toggle-to-deselect, and an in-deck Clear action.
 - Standard input injectors (`KeyInjector`, `MouseInjector`, `TouchInjector`) run continuously whenever Megingiard is in the foreground (`isActivityResumed && !isPrivdSetupWizardActive`), avoiding per-layout startup delays and false-positive disabled states. Gamepad buttons and macros require Privileged Mode; if Privileged Mode is offline, they render with hatched disabled styling in the canvas and editor.
 
-- Only the injectors for devices **enabled in the active profile** (see FR-P4) are started; the others stay stopped. The action picker in the editor always shows all action type categories regardless of which devices are currently enabled — the flags are derived from the buttons, not the other way around.
+- The action picker in the editor always shows all action type categories regardless of which devices are currently enabled — the flags are derived from the buttons, not the other way around.
 
 ### FR-P4: Per-Profile Device Flags
 

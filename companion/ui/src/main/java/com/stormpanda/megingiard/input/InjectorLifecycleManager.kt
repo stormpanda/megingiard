@@ -4,7 +4,6 @@ import android.content.Context
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.keyboard.KeyInjector
-import com.stormpanda.megingiard.macropad.GamepadInjector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -101,7 +100,6 @@ object InjectorLifecycleManager {
         watcherJob = null
         KeyInjector.stop()
         MouseInjector.stop()
-        GamepadInjector.stop()
         TouchInjector.stop("InjectorLifecycleManager")
     }
 }

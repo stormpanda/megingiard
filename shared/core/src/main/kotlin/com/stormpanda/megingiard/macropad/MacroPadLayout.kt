@@ -158,7 +158,7 @@ sealed class PadAction {
         val modifiers: List<Int> = emptyList(),
     ) : PadAction()
 
-    /** Injects a Linux gamepad button event via gamepadinjector_arm64. */
+    /** Injects a Linux gamepad button event via Privileged Mode evdev merge. */
     @Serializable
     @SerialName("gamepad_button")
     data class GamepadButton(

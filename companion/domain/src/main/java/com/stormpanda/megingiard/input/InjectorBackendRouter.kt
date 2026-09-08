@@ -14,7 +14,7 @@ import kotlinx.coroutines.launch
  *
  * Manages backend determination ([PrivdClient.isConnected] vs standard virtual uinput binary),
  * lifecycle logging, connection status queries, and automatic backend re-synchronization
- * upon Privd daemon reconnects across [KeyInjector], [MouseInjector], [GamepadInjector],
+ * upon Privd daemon reconnects across [KeyInjector], [MouseInjector],
  * and [TouchInjector].
  */
 class InjectorBackendRouter(

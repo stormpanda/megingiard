@@ -1,7 +1,7 @@
 package com.stormpanda.megingiard.macropad
 
 /**
- * Linux BTN_* constants for gamepad buttons as registered in `gamepadinjector.c`.
+ * Linux BTN_* constants for gamepad buttons merged via Privileged Mode (`megingiard_privd`).
  *
  * Values match `<linux/input-event-codes.h>`.
  */

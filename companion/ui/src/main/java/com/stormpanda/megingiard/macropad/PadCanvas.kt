@@ -159,6 +159,8 @@ internal fun PadCanvas(
     val isMirrorEditorBackgroundHidden by AppStateManager.isMirrorEditorBackgroundHidden.collectAsStateWithLifecycle()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsStateWithLifecycle()
     val shouldHideBackground = isViewportEditActive && isMirrorEditorBackgroundHidden
+    val privdState by PrivdManager.state.collectAsStateWithLifecycle()
+    val isPrivdRunning = privdState == PrivdState.RUNNING
     val density = LocalDensity.current
     val context = LocalContext.current
     val gridStepPx = with(density) { PC_GRID_STEP_DP.toPx() }
@@ -326,6 +328,7 @@ internal fun PadCanvas(
                 gridMode = gridMode,
                 gridStepPx = gridStepPx,
                 isLocked = isLocked || isCropping,
+                isPrivdRunning = isPrivdRunning,
                 onTouch = {
                     MacroPadState.setSelectedButtonId(btn.id)
                 },
@@ -465,6 +468,7 @@ private fun DraggableButton(
     gridMode: GridMode,
     gridStepPx: Float,
     isLocked: Boolean,
+    isPrivdRunning: Boolean,
     onTouch: () -> Unit,
     onPositionChanged: (Float, Float) -> Unit,
 ) {
@@ -492,9 +496,6 @@ private fun DraggableButton(
     var startPosY by remember(btn.id) { mutableFloatStateOf(btn.posY) }
     var dragOffsetX by remember(btn.id) { mutableFloatStateOf(0f) }
     var dragOffsetY by remember(btn.id) { mutableFloatStateOf(0f) }
-
-    val privdState by PrivdManager.state.collectAsStateWithLifecycle()
-    val isPrivdRunning = privdState == PrivdState.RUNNING
 
     val density = LocalDensity.current
     val isTrackpoint = btn.action is PadAction.TrackpointMove

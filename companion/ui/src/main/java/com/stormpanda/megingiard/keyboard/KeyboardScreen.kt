@@ -115,7 +115,7 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
 
     DisposableEffect(Unit) {
         onDispose {
-            AppLog.d(TAG, "KeyboardScreen disposed: stopping and resetting injectors")
+            AppLog.d(TAG, "KeyboardScreen disposed: resetting controller and state")
             viewModel.stopAndReset()
             if (AppStateManager.isKeyboardSettingsOpen.value) {
                 AppStateManager.setKeyboardSettingsOpen(false)

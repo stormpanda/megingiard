@@ -1,6 +1,5 @@
 package com.stormpanda.megingiard.macropad
 
-import android.content.Context
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdGamepadInjector
@@ -23,19 +22,14 @@ private const val HAT_DIR_CENTER = 0
  * uinput fallback is retired to prevent dual-controller conflicts on the AYN Thor.
  */
 object GamepadInjector {
-    fun start(context: Context) {
-        AppLog.i(TAG, "start() — Privd merge backend (connected=${PrivdClient.isConnected})")
-    }
-
-    fun stop() {
-        AppLog.i(TAG, "stop()")
-    }
-
     val isRunning: Boolean
         get() = PrivdClient.isConnected
 
     fun buttonDown(btnCode: Int) {
-        if (!PrivdClient.isConnected) return
+        if (!PrivdClient.isConnected) {
+            AppLog.w(TAG, "buttonDown($btnCode) dropped: Privd not connected")
+            return
+        }
         when (btnCode) {
             GamepadKeycodes.BTN_DPAD_UP -> {
                 hat(HAT_AXIS_Y, HAT_DIR_NEG)
