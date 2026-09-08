@@ -214,11 +214,13 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
   - When calibrating a cutout with a custom reference anchor, video frames are sampled from the **anchor area** rather than the cutout's crop.
   - `HudAutoTuner.analyze` extracts stationary anchor pixels and persists `HudAnchorSignature` (`mask_<cutoutId>_anchor.json`).
   - The cutout is saved with `freezeOnHudLoss = true` and `hasTransparencyMask = false` so that the dynamic mirror stream remains solid and unmasked.
-- **Dynamic Live Frame Buffering (`HudPresenceManager`):**
+- **Dynamic Live Frame Buffering & Animated Blur Freezing (`HudPresenceManager`, `MultiCutoutContainer`):**
   - For cutouts with custom reference anchors, `HudPresenceManager` continuously buffers the live cutout crop at native 1080p source resolution at ~5 Hz (200 ms interval) while the anchor is detected as present ($\ge 65\%$, matching `HudPresenceEvaluator.MATCH_THRESHOLD_PRESENT`).
   - Crop boundaries are computed with subpixel rounding (`roundToInt()`, `cRight - cX`, `cBottom - cY`), and `MultiCutoutContainer` applies bilinear filtering (`Paint.isFilterBitmap = true`), ensuring 1:1 pixel alignment without position shifts or upscaling blur.
   - An initial native frame is captured immediately upon detection, and fallback freeze frames are persisted to disk under `mask_<cutoutId>_freeze.png`.
-  - When the anchor element disappears (match ratio $< 45\%$), the cutout immediately freezes displaying this latest valid live frame (rather than a static calibration snapshot). When the anchor returns, live mirroring resumes smoothly.
+  - When the anchor element disappears (match ratio $< 45\%$) or manual freeze is engaged, the cutout smoothly animates a frosted-glass blur in ($0\text{px} \to 16\text{px}$ over 250 ms) displaying this latest valid live frame.
+  - When the anchor returns or manual freeze is released, the cutout smoothly animates the blur out ($16\text{px} \to 0\text{px}$ over 200 ms) back to live video.
+  - **Hardware Layer Isolation:** Blur is strictly isolated using dedicated hardware `RenderNode` instances and `RenderEffect.createBlurEffect` bounded to each cutout's dimensions. The background wallpaper and gothic mask overlay frame are completely outside the `RenderNode` and remain 100% crisp. During live gameplay ($blur = 0\text{px}$), `RenderNode` recording is completely bypassed with zero GPU layer overhead.
 
 ---
 

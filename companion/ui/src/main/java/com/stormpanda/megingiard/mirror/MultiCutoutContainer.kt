@@ -1,5 +1,8 @@
 package com.stormpanda.megingiard.mirror
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -15,18 +18,30 @@ import android.graphics.PorterDuffXfermode
 import android.graphics.RadialGradient
 import android.graphics.Rect
 import android.graphics.RectF
+import android.graphics.RenderEffect
+import android.graphics.RenderNode
 import android.graphics.Shader
+import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.FrameLayout
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.macropad.BackgroundScaleMode
 import com.stormpanda.megingiard.math.ViewportMath
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
+
+private const val TAG = "MultiCutoutContainer"
 
 private const val MCC_TOUCH_TOLERANCE = 0.005f
 private const val MCC_UNCROPPED_THRESHOLD = 0.999f
 private const val MCC_MAX_ALPHA_FLOAT = 255f
 private const val MCC_MAX_ALPHA_INT = 255
+private const val TARGET_BLUR_RADIUS = 16f
+private const val BLUR_IN_DURATION_MS = 250L
+private const val BLUR_OUT_DURATION_MS = 200L
+private const val MIN_RENDER_EFFECT_RADIUS = 0.5f
+private const val MIN_ANIMATION_DIFF = 0.1f
 
 internal class MultiCutoutContainer(
     context: Context,
@@ -217,6 +232,76 @@ internal class MultiCutoutContainer(
             isAntiAlias = true
             isFilterBitmap = true
         }
+    private val cutoutBlurRadii = mutableMapOf<String, Float>()
+    private val cutoutBlurTargets = mutableMapOf<String, Float>()
+    private val cutoutBlurAnimators = mutableMapOf<String, ValueAnimator>()
+    private val cutoutRenderNodes = mutableMapOf<String, RenderNode>()
+
+    private fun updateCutoutBlurAnimations() {
+        val activeCutoutIds = cutouts.map { it.id }.toSet()
+
+        val removedIds = cutoutBlurAnimators.keys.filter { it !in activeCutoutIds }
+        for (id in removedIds) {
+            cutoutBlurAnimators[id]?.cancel()
+            cutoutBlurAnimators.remove(id)
+            cutoutBlurTargets.remove(id)
+            cutoutBlurRadii.remove(id)
+            cutoutRenderNodes.remove(id)
+        }
+
+        for (cutout in cutouts) {
+            val isCutoutHudLost = cutout.freezeOnHudLoss && HudPresenceManager.isCutoutHudLost(cutout.id)
+            val isTargetFrozen = isFrozen || isCutoutHudLost
+            val targetBlur = if (isTargetFrozen) TARGET_BLUR_RADIUS else 0f
+            val currentTarget = cutoutBlurTargets[cutout.id]
+
+            if (currentTarget != targetBlur) {
+                cutoutBlurTargets[cutout.id] = targetBlur
+                val currentBlur = cutoutBlurRadii[cutout.id] ?: 0f
+
+                cutoutBlurAnimators[cutout.id]?.cancel()
+
+                if (abs(currentBlur - targetBlur) > MIN_ANIMATION_DIFF) {
+                    val duration = if (targetBlur > currentBlur) BLUR_IN_DURATION_MS else BLUR_OUT_DURATION_MS
+                    val animator =
+                        ValueAnimator.ofFloat(currentBlur, targetBlur).apply {
+                            this.duration = duration
+                            interpolator = AccelerateDecelerateInterpolator()
+                            addUpdateListener { anim ->
+                                cutoutBlurRadii[cutout.id] = anim.animatedValue as Float
+                                invalidate()
+                            }
+                            addListener(
+                                object : AnimatorListenerAdapter() {
+                                    override fun onAnimationEnd(animation: Animator) {
+                                        cutoutBlurAnimators.remove(cutout.id)
+                                        cutoutBlurRadii[cutout.id] = targetBlur
+                                        invalidate()
+                                    }
+
+                                    override fun onAnimationCancel(animation: Animator) {
+                                        cutoutBlurAnimators.remove(cutout.id)
+                                    }
+                                },
+                            )
+                        }
+                    cutoutBlurAnimators[cutout.id] = animator
+                    animator.start()
+                } else {
+                    cutoutBlurRadii[cutout.id] = targetBlur
+                }
+            }
+        }
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        cutoutBlurAnimators.values.forEach { it.cancel() }
+        cutoutBlurAnimators.clear()
+        cutoutBlurTargets.clear()
+        cutoutBlurRadii.clear()
+        cutoutRenderNodes.clear()
+    }
 
     init {
         HudPresenceManager.initialize(context)
@@ -261,6 +346,8 @@ internal class MultiCutoutContainer(
         val parentW = width.toFloat()
         val parentH = height.toFloat()
         if (parentW <= 0f || parentH <= 0f) return
+
+        updateCutoutBlurAnimations()
 
         val drawTime = this.drawingTime
         val blendWidthDp = ScreenCaptureManager.edgeBlendWidthDp.value
@@ -349,55 +436,84 @@ internal class MultiCutoutContainer(
                         circlePath.addCircle(dw / 2f, dh / 2f, r, Path.Direction.CW)
                         canvas.clipPath(circlePath)
                     }
-                    val innerSaveCount = canvas.save()
 
-                    val isCutoutHudLost = cutout.freezeOnHudLoss && HudPresenceManager.isCutoutHudLost(cutout.id)
-                    val frozenFrame = if (isCutoutHudLost) HudPresenceManager.getFrozenFrame(context, cutout.id) else null
+                    val currentBlur = cutoutBlurRadii[cutout.id] ?: 0f
+                    val isBlurActive = currentBlur > MIN_RENDER_EFFECT_RADIUS
+                    val renderNode =
+                        if (isBlurActive) {
+                            try {
+                                val node = cutoutRenderNodes.getOrPut(cutout.id) { RenderNode("CutoutBlur_${cutout.id}") }
+                                val intDw = dw.roundToInt().coerceAtLeast(1)
+                                val intDh = dh.roundToInt().coerceAtLeast(1)
+                                node.setPosition(0, 0, intDw, intDh)
+                                val safeRadius = currentBlur.coerceAtLeast(MIN_RENDER_EFFECT_RADIUS)
+                                node.setRenderEffect(RenderEffect.createBlurEffect(safeRadius, safeRadius, Shader.TileMode.CLAMP))
+                                node
+                            } catch (e: Throwable) {
+                                AppLog.w(TAG, "RenderNode blur setup failed: ${e.message}")
+                                null
+                            }
+                        } else {
+                            null
+                        }
 
-                    if (frozenFrame != null && !frozenFrame.isRecycled) {
-                        cutoutDestRect.set(0f, 0f, dw, dh)
-                        canvas.drawBitmap(frozenFrame, null, cutoutDestRect, frozenFramePaint)
-                    } else {
-                        val isFollowActive = ScreenCaptureManager.isFollowActive.value
-                        val isUncropped = cutout.srcWidth >= MCC_UNCROPPED_THRESHOLD && cutout.srcHeight >= MCC_UNCROPPED_THRESHOLD
-                        if (cutouts.size == 1 && isFollowActive && isUncropped) {
-                            canvas.translate(viewportOffsetX, viewportOffsetY)
-                            canvas.scale(viewportScale, viewportScale, dw / 2f, dh / 2f)
+                    val drawCanvas = renderNode?.beginRecording() ?: canvas
+                    val innerSaveCount = if (drawCanvas == canvas) canvas.save() else 0
 
-                            val srcRatio = srcWidth.toFloat() / srcHeight.toFloat()
-                            val destRatio = dw / dh
+                    try {
+                        val isCutoutHudLost = cutout.freezeOnHudLoss && HudPresenceManager.isCutoutHudLost(cutout.id)
+                        val frozenFrame = if (isCutoutHudLost) HudPresenceManager.getFrozenFrame(context, cutout.id) else null
 
-                            var fitW = dw
-                            var fitH = dh
-                            if (srcRatio > destRatio) {
-                                fitH = dw / srcRatio
+                        if (frozenFrame != null && !frozenFrame.isRecycled) {
+                            cutoutDestRect.set(0f, 0f, dw, dh)
+                            drawCanvas.drawBitmap(frozenFrame, null, cutoutDestRect, frozenFramePaint)
+                        } else {
+                            val isFollowActive = ScreenCaptureManager.isFollowActive.value
+                            val isUncropped = cutout.srcWidth >= MCC_UNCROPPED_THRESHOLD && cutout.srcHeight >= MCC_UNCROPPED_THRESHOLD
+                            if (cutouts.size == 1 && isFollowActive && isUncropped) {
+                                drawCanvas.translate(viewportOffsetX, viewportOffsetY)
+                                drawCanvas.scale(viewportScale, viewportScale, dw / 2f, dh / 2f)
+
+                                val srcRatio = srcWidth.toFloat() / srcHeight.toFloat()
+                                val destRatio = dw / dh
+
+                                var fitW = dw
+                                var fitH = dh
+                                if (srcRatio > destRatio) {
+                                    fitH = dw / srcRatio
+                                } else {
+                                    fitW = dh * srcRatio
+                                }
+
+                                val fitX = (dw - fitW) / 2f
+                                val fitY = (dh - fitH) / 2f
+                                drawCanvas.translate(fitX, fitY)
+
+                                val scaleX = fitW / srcWidth
+                                val scaleY = fitH / srcHeight
+                                drawCanvas.scale(scaleX, scaleY)
                             } else {
-                                fitW = dh * srcRatio
+                                val scaleX = dw / sw
+                                val scaleY = dh / sh
+                                drawCanvas.translate(-sx * scaleX, -sy * scaleY)
+                                drawCanvas.scale(scaleX, scaleY)
                             }
 
-                            val fitX = (dw - fitW) / 2f
-                            val fitY = (dh - fitH) / 2f
-                            canvas.translate(fitX, fitY)
-
-                            val scaleX = fitW / srcWidth
-                            val scaleY = fitH / srcHeight
-                            canvas.scale(scaleX, scaleY)
-                        } else {
-                            val scaleX = dw / sw
-                            val scaleY = dh / sh
-                            canvas.translate(-sx * scaleX, -sy * scaleY)
-                            canvas.scale(scaleX, scaleY)
+                            if (isFrozen && frozenBitmap != null) {
+                                drawCanvas.drawBitmap(frozenBitmap!!, 0f, 0f, frozenFramePaint)
+                            } else if (masterView != null) {
+                                drawChild(drawCanvas, masterView, drawTime)
+                                masterViewDrawn = true
+                            }
                         }
-
-                        if (isFrozen && frozenBitmap != null) {
-                            canvas.drawBitmap(frozenBitmap!!, 0f, 0f, frozenFramePaint)
-                        } else if (masterView != null) {
-                            drawChild(canvas, masterView, drawTime)
-                            masterViewDrawn = true
+                    } finally {
+                        if (renderNode != null) {
+                            renderNode.endRecording()
+                            canvas.drawRenderNode(renderNode)
+                        } else {
+                            canvas.restoreToCount(innerSaveCount)
                         }
                     }
-
-                    canvas.restoreToCount(innerSaveCount)
 
                     if (ambientDim > 0f) {
                         canvas.drawRect(0f, 0f, dw, dh, ambientDimPaint)
