@@ -41,6 +41,8 @@ private const val TARGET_BLUR_RADIUS = 8f
 private const val BLUR_TRANSITION_DURATION_MS = 300L
 private const val MIN_ALPHA_THRESHOLD = 0.005f
 private const val FULL_ALPHA_FLOAT = 1.0f
+private const val FROZEN_INACTIVE_SATURATION = 0.6f
+private const val FROZEN_INACTIVE_BRIGHTNESS = 0.85f
 
 internal class MultiCutoutContainer(
     context: Context,
@@ -230,6 +232,16 @@ internal class MultiCutoutContainer(
         Paint().apply {
             isAntiAlias = true
             isFilterBitmap = true
+        }
+    private val frozenInactiveColorFilter =
+        run {
+            val satMatrix = ColorMatrix().apply { setSaturation(FROZEN_INACTIVE_SATURATION) }
+            val scaleMatrix =
+                ColorMatrix().apply {
+                    setScale(FROZEN_INACTIVE_BRIGHTNESS, FROZEN_INACTIVE_BRIGHTNESS, FROZEN_INACTIVE_BRIGHTNESS, 1f)
+                }
+            val combined = ColorMatrix(satMatrix).apply { postConcat(scaleMatrix) }
+            ColorMatrixColorFilter(combined)
         }
     private val delayedFramePaint =
         Paint().apply {
@@ -580,6 +592,7 @@ internal class MultiCutoutContainer(
                                     val recCanvas = node.beginRecording()
                                     try {
                                         frozenFramePaint.alpha = MCC_MAX_ALPHA_INT
+                                        frozenFramePaint.colorFilter = frozenInactiveColorFilter
                                         drawFrozenBitmapToCanvas(
                                             recCanvas,
                                             frozenBitmapToDraw,
@@ -593,6 +606,7 @@ internal class MultiCutoutContainer(
                                             frozenFramePaint,
                                         )
                                     } finally {
+                                        frozenFramePaint.colorFilter = null
                                         node.endRecording()
                                     }
                                     cutoutRenderNodeBitmaps[cutout.id] = frozenBitmapToDraw
@@ -610,7 +624,9 @@ internal class MultiCutoutContainer(
                             canvas.drawRenderNode(renderNode)
                         } else {
                             frozenFramePaint.alpha = (blurAlpha * MCC_MAX_ALPHA_FLOAT).roundToInt().coerceIn(0, MCC_MAX_ALPHA_INT)
+                            frozenFramePaint.colorFilter = frozenInactiveColorFilter
                             drawFrozenBitmapToCanvas(canvas, frozenBitmapToDraw, isCropped, dw, dh, sw, sh, sx, sy, frozenFramePaint)
+                            frozenFramePaint.colorFilter = null
                             frozenFramePaint.alpha = MCC_MAX_ALPHA_INT
                         }
                     }
