@@ -196,7 +196,7 @@ object HudPresenceManager {
                     cutoutStates[cutout.id] = newState
                     cutoutConsecutiveCounts[cutout.id] = newCount
 
-                    // When transitioning PRESENT -> LOST, save the delayed pristine frame before cutscene appeared
+                    // When transitioning PRESENT -> LOST, save the pristine frame before cutscene appeared
                     if (curState == HudPresenceState.PRESENT && newState == HudPresenceState.LOST) {
                         if (delayFrames > 0) {
                             val delayedBmp = cutoutRingBuffers[cutout.id]?.getDelayedFrame(delayFrames)
@@ -212,6 +212,24 @@ object HudPresenceManager {
                                     AppLog.e(TAG, "Failed to copy delayed frame for freeze on cutout ${cutout.id}", e)
                                 }
                             }
+                        } else if (cW > 0 && cH > 0) {
+                            // Preserve the last valid frame captured while PRESENT.
+                            // Only capture current frame as a fallback if no valid frame was ever cached.
+                            val hasValidFrame =
+                                lastValidFrameBitmaps[cutout.id]?.isRecycled == false ||
+                                    CutoutMaskManager.getFreezeFrame(context, cutout.id)?.isRecycled == false
+                            if (!hasValidFrame) {
+                                try {
+                                    val crop = Bitmap.createBitmap(frame, cX, cY, cW, cH)
+                                    val oldCrop = lastValidFrameBitmaps.put(cutout.id, crop)
+                                    if (oldCrop != null && !oldCrop.isRecycled) {
+                                        oldCrop.recycle()
+                                    }
+                                    CutoutMaskManager.saveFreezeFrame(context, cutout.id, crop)
+                                } catch (e: Exception) {
+                                    AppLog.e(TAG, "Failed to capture freeze frame fallback for cutout ${cutout.id}", e)
+                                }
+                            }
                         }
                     }
 
@@ -220,40 +238,24 @@ object HudPresenceManager {
                         val hasCachedFrame = lastValidFrameBitmaps.containsKey(cutout.id)
                         val isConfidentPresent = matchRatio >= HudPresenceEvaluator.MATCH_THRESHOLD_PRESENT
                         if (newState == HudPresenceState.PRESENT && (!hasCachedFrame || isConfidentPresent)) {
-                            if (cutout.customAnchorEnabled) {
-                                // Dynamic cutout: buffer live frames decoupled at 2 Hz
-                                val now = SystemClock.elapsedRealtime()
-                                val lastCapture = lastLiveFrameCaptureTimes[cutout.id] ?: 0L
-                                if (!hasCachedFrame || now - lastCapture >= LIVE_FRAME_BUFFER_INTERVAL_MS) {
-                                    lastLiveFrameCaptureTimes[cutout.id] = now
-                                    try {
-                                        val crop = Bitmap.createBitmap(frame, cX, cY, cW, cH)
-                                        val oldCrop = lastValidFrameBitmaps.put(cutout.id, crop)
-                                        if (oldCrop != null && !oldCrop.isRecycled) {
-                                            oldCrop.recycle()
-                                        }
+                            val now = SystemClock.elapsedRealtime()
+                            val lastCapture = lastLiveFrameCaptureTimes[cutout.id] ?: 0L
+                            if (!hasCachedFrame || now - lastCapture >= LIVE_FRAME_BUFFER_INTERVAL_MS) {
+                                lastLiveFrameCaptureTimes[cutout.id] = now
+                                try {
+                                    val crop = Bitmap.createBitmap(frame, cX, cY, cW, cH)
+                                    val oldCrop = lastValidFrameBitmaps.put(cutout.id, crop)
+                                    if (oldCrop != null && !oldCrop.isRecycled) {
+                                        oldCrop.recycle()
+                                    }
+                                    if (cutout.customAnchorEnabled) {
                                         val existingFreeze = CutoutMaskManager.getFreezeFrame(context, cutout.id)
                                         if (existingFreeze == null || existingFreeze.width != cW || existingFreeze.height != cH) {
                                             CutoutMaskManager.saveFreezeFrame(context, cutout.id, crop)
                                         }
-                                    } catch (e: Exception) {
-                                        AppLog.e(TAG, "Failed to capture live crop for dynamic cutout ${cutout.id}", e)
                                     }
-                                }
-                            } else {
-                                // Static HUD: capture once if no calibrated frame on disk
-                                val existingFreeze = CutoutMaskManager.getFreezeFrame(context, cutout.id)
-                                if (existingFreeze == null || existingFreeze.width != cW || existingFreeze.height != cH) {
-                                    try {
-                                        val crop = Bitmap.createBitmap(frame, cX, cY, cW, cH)
-                                        CutoutMaskManager.saveFreezeFrame(context, cutout.id, crop)
-                                        val oldCrop = lastValidFrameBitmaps.put(cutout.id, crop)
-                                        if (oldCrop != null && !oldCrop.isRecycled) {
-                                            oldCrop.recycle()
-                                        }
-                                    } catch (e: Exception) {
-                                        AppLog.e(TAG, "Failed to capture live valid crop for cutout ${cutout.id}", e)
-                                    }
+                                } catch (e: Exception) {
+                                    AppLog.e(TAG, "Failed to capture live valid crop for cutout ${cutout.id}", e)
                                 }
                             }
                         }
@@ -299,27 +301,12 @@ object HudPresenceManager {
         context: Context,
         cutoutId: String,
     ): Bitmap? {
-        val cutout =
-            ScreenCaptureManager.cutouts.value.find { it.id == cutoutId }
-                ?: MacroPadState.activeLayout.value
-                    ?.mirrorCutouts
-                    ?.find { it.id == cutoutId }
-        if (cutout?.customAnchorEnabled == true) {
-            lastValidFrameBitmaps[cutoutId]?.let { cached ->
-                if (!cached.isRecycled) return cached
-                lastValidFrameBitmaps.remove(cutoutId)
-            }
-            CutoutMaskManager.getFreezeFrame(context, cutoutId)?.let { refFrame ->
-                if (!refFrame.isRecycled) return refFrame
-            }
-        } else {
-            CutoutMaskManager.getFreezeFrame(context, cutoutId)?.let { refFrame ->
-                if (!refFrame.isRecycled) return refFrame
-            }
-            lastValidFrameBitmaps[cutoutId]?.let { cached ->
-                if (!cached.isRecycled) return cached
-                lastValidFrameBitmaps.remove(cutoutId)
-            }
+        lastValidFrameBitmaps[cutoutId]?.let { cached ->
+            if (!cached.isRecycled) return cached
+            lastValidFrameBitmaps.remove(cutoutId)
+        }
+        CutoutMaskManager.getFreezeFrame(context, cutoutId)?.let { refFrame ->
+            if (!refFrame.isRecycled) return refFrame
         }
         return null
     }
