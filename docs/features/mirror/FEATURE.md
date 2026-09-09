@@ -219,8 +219,15 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
   - Crop boundaries are computed with subpixel rounding (`roundToInt()`, `cRight - cX`, `cBottom - cY`), and `MultiCutoutContainer` applies bilinear filtering (`Paint.isFilterBitmap = true`), ensuring 1:1 pixel alignment without position shifts or upscaling blur.
   - An initial native frame is captured immediately upon detection, and fallback freeze frames are persisted to disk under `mask_<cutoutId>_freeze.png`.
   - When the anchor element disappears (match ratio $< 45\%$) or manual freeze is engaged, the cutout immediately engages a frosted-glass blur-in animation ($0\text{px} \to 8\text{px}$ over 250 ms) using `DecelerateInterpolator()` for immediate first-frame softening that completely masks transition seams, displaying the latest valid live frame.
-  - When the anchor returns or manual freeze is released, the cutout smoothly animates the blur out ($8\text{px} \to 0\text{px}$ over 200 ms) via `AccelerateDecelerateInterpolator()` back to crisp live video.
+  - When the anchor returns or manual freeze is released, the cutout executes an optical dissolve cross-fade ($1.0 \to 0.0$ opacity over 300 ms via `AccelerateDecelerateInterpolator()`) where the frozen frame remains blurred at $8\text{px}$ while fading out directly over the sharp live/delayed video stream beneath it. Live gameplay is never subjected to a blur-out artifact, and upon completion of the dissolve, the freeze overlay and `RenderNode` recording are completely bypassed with zero GPU layer overhead.
   - **Hardware Layer Isolation:** Blur is strictly isolated using dedicated hardware `RenderNode` instances and `RenderEffect.createBlurEffect` bounded to each cutout's dimensions. The background wallpaper and gothic mask overlay frame are completely outside the `RenderNode` and remain 100% crisp. During live gameplay ($blur = 0\text{px}$), `RenderNode` recording is completely bypassed with zero GPU layer overhead.
+- **Configurable Cutout Stream Delay (`ScreenCutout.streamDelayFrames`, `CutoutFrameRingBuffer`):**
+  - The user can configure a stream delay (`0` to `10` frames, ~0 to ~160 ms) via **Advanced Cutout Settings** ("Stream Delay" slider, stored in `ScreenCutout.streamDelayFrames`).
+  - When `streamDelayFrames > 0`, `HudPresenceManager` maintains a dedicated `CutoutFrameRingBuffer` containing pre-allocated slot bitmaps and canvases, blitting the cropped region at 60 Hz with zero runtime heap allocations.
+  - While the cutout view renders the delayed frame ($N - D$), presence detection inspects the live real-time frame ($N$).
+  - When entering a cutscene, HUD absence is detected at frame $N$ and the blur animation begins *before* the cutscene frame reaches the cutout display.
+  - On the transition from `PRESENT` to `LOST`, the delayed frame from $D$ frames in the past is captured into `lastValidFrameBitmaps`, guaranteeing that the frozen frame is a pristine HUD image without any cutscene visual leakage.
+  - When `streamDelayFrames == 0` (default), direct hardware rendering via `drawChild(masterView)` is retained with zero overhead.
 
 ---
 

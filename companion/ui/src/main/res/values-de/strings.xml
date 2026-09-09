@@ -636,6 +636,10 @@ Open Settings to create a layout.</string>
     <string name="settings_cutout_feathering_title">Kantenabrundung</string>
     <string name="settings_cutout_feathering_desc">Glättet und verfeinert äußere Konturen durch Kanten-Aufweitung</string>
     <string name="settings_mirror_hud_feathering_off">Aus</string>
+    <string name="settings_cutout_stream_delay_title">Bildverzögerung</string>
+    <string name="settings_cutout_stream_delay_desc">Verzögert das Cutout-Video um N Frames, damit die HUD-Erkennung und Unschärfe greifen, bevor Zwischensequenzen sichtbar werden</string>
+    <string name="settings_cutout_stream_delay_off">0 Frames (Echtzeit)</string>
+    <string name="settings_cutout_stream_delay_frames">%1$d Frames (~%2$d ms)</string>
     <string name="settings_mirror_hud_auto_tuning_prompt">Smart Cutout wird kalibriert... Bitte Kamera oder Figur im Spiel bewegen! (%ds verbleibend)</string>
     <string name="settings_mirror_hud_auto_tune_success">Smart Cutout kalibriert: %s</string>
     <string name="mirror_hud_calibration_title">Smart-Cutout-Kalibrierung</string>

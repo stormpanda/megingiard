@@ -42,6 +42,7 @@ object HudPresenceManager {
     private val cutoutConsecutiveCounts = ConcurrentHashMap<String, Int>()
     private val lastValidFrameBitmaps = ConcurrentHashMap<String, Bitmap>()
     private val lastLiveFrameCaptureTimes = ConcurrentHashMap<String, Long>()
+    private val cutoutRingBuffers = ConcurrentHashMap<String, CutoutFrameRingBuffer>()
 
     @Volatile
     private var reusableFrameBitmap: Bitmap? = null
@@ -77,7 +78,7 @@ object HudPresenceManager {
         isCapturing: Boolean,
         cutouts: List<ScreenCutout>,
     ) {
-        val shouldMonitor = isCapturing && cutouts.any { it.freezeOnHudLoss }
+        val shouldMonitor = isCapturing && cutouts.any { it.freezeOnHudLoss || it.streamDelayFrames > 0 }
         if (shouldMonitor) {
             if (monitorJob?.isActive != true) {
                 AppLog.i(TAG, "Starting HUD presence monitoring loop (active 60 Hz / recover 30 Hz)")
@@ -99,6 +100,8 @@ object HudPresenceManager {
                 lastLiveFrameCaptureTimes.clear()
                 cutoutStates.clear()
                 cutoutConsecutiveCounts.clear()
+                cutoutRingBuffers.values.forEach { it.recycle() }
+                cutoutRingBuffers.clear()
             }
         }
     }
@@ -106,7 +109,7 @@ object HudPresenceManager {
     private suspend fun runMonitoringLoop() {
         while (scope.isActive) {
             val context = appContext ?: continue
-            val currentCutouts = ScreenCaptureManager.cutouts.value.filter { it.freezeOnHudLoss }
+            val currentCutouts = ScreenCaptureManager.cutouts.value.filter { it.freezeOnHudLoss || it.streamDelayFrames > 0 }
             if (currentCutouts.isEmpty()) {
                 delay(PRESENCE_CHECK_INTERVAL_LOST_MS)
                 continue
@@ -144,6 +147,29 @@ object HudPresenceManager {
                 var anyStateChanged = false
 
                 for (cutout in currentCutouts) {
+                    val cX = (cutout.srcX * frameW).roundToInt().coerceIn(0, frameW - 1)
+                    val cY = (cutout.srcY * frameH).roundToInt().coerceIn(0, frameH - 1)
+                    val cRight = ((cutout.srcX + cutout.srcWidth) * frameW).roundToInt().coerceIn(cX + 1, frameW)
+                    val cBottom = ((cutout.srcY + cutout.srcHeight) * frameH).roundToInt().coerceIn(cY + 1, frameH)
+                    val cW = cRight - cX
+                    val cH = cBottom - cY
+
+                    // Feed ring buffer if stream delay is configured
+                    val delayFrames = cutout.streamDelayFrames.coerceIn(0, MAX_STREAM_DELAY_FRAMES)
+                    if (delayFrames > 0 && cW > 0 && cH > 0) {
+                        var ring = cutoutRingBuffers[cutout.id]
+                        if (ring == null || ring.width != cW || ring.height != cH) {
+                            ring?.recycle()
+                            ring = CutoutFrameRingBuffer(cW, cH, MAX_STREAM_DELAY_FRAMES + 2)
+                            cutoutRingBuffers[cutout.id] = ring
+                        }
+                        ring.pushFrame(frame, cX, cY)
+                    } else if (delayFrames == 0) {
+                        cutoutRingBuffers.remove(cutout.id)?.recycle()
+                    }
+
+                    if (!cutout.freezeOnHudLoss) continue
+
                     val targetCutoutId = (if (cutout.customAnchorEnabled) cutout.anchorCutoutId else null) ?: cutout.id
                     val signature = CutoutMaskManager.getAnchorSignature(context, targetCutoutId) ?: continue
                     if (signature.points.isEmpty()) continue
@@ -170,18 +196,30 @@ object HudPresenceManager {
                     cutoutStates[cutout.id] = newState
                     cutoutConsecutiveCounts[cutout.id] = newCount
 
-                    // Frame capture for freeze:
-                    val hasCachedFrame = lastValidFrameBitmaps.containsKey(cutout.id)
-                    val isConfidentPresent = matchRatio >= HudPresenceEvaluator.MATCH_THRESHOLD_PRESENT
-                    if (newState == HudPresenceState.PRESENT && (!hasCachedFrame || isConfidentPresent)) {
-                        val cX = (cutout.srcX * frameW).roundToInt().coerceIn(0, frameW - 1)
-                        val cY = (cutout.srcY * frameH).roundToInt().coerceIn(0, frameH - 1)
-                        val cRight = ((cutout.srcX + cutout.srcWidth) * frameW).roundToInt().coerceIn(cX + 1, frameW)
-                        val cBottom = ((cutout.srcY + cutout.srcHeight) * frameH).roundToInt().coerceIn(cY + 1, frameH)
-                        val cW = cRight - cX
-                        val cH = cBottom - cY
+                    // When transitioning PRESENT -> LOST, save the delayed pristine frame before cutscene appeared
+                    if (curState == HudPresenceState.PRESENT && newState == HudPresenceState.LOST) {
+                        if (delayFrames > 0) {
+                            val delayedBmp = cutoutRingBuffers[cutout.id]?.getDelayedFrame(delayFrames)
+                            if (delayedBmp != null && !delayedBmp.isRecycled) {
+                                try {
+                                    val freezeCopy = delayedBmp.copy(Bitmap.Config.ARGB_8888, false)
+                                    val oldCrop = lastValidFrameBitmaps.put(cutout.id, freezeCopy)
+                                    if (oldCrop != null && !oldCrop.isRecycled) {
+                                        oldCrop.recycle()
+                                    }
+                                    CutoutMaskManager.saveFreezeFrame(context, cutout.id, freezeCopy)
+                                } catch (e: Exception) {
+                                    AppLog.e(TAG, "Failed to copy delayed frame for freeze on cutout ${cutout.id}", e)
+                                }
+                            }
+                        }
+                    }
 
-                        if (cW > 0 && cH > 0) {
+                    // Live frame buffering while confident PRESENT (if streamDelayFrames == 0)
+                    if (delayFrames == 0 && cW > 0 && cH > 0) {
+                        val hasCachedFrame = lastValidFrameBitmaps.containsKey(cutout.id)
+                        val isConfidentPresent = matchRatio >= HudPresenceEvaluator.MATCH_THRESHOLD_PRESENT
+                        if (newState == HudPresenceState.PRESENT && (!hasCachedFrame || isConfidentPresent)) {
                             if (cutout.customAnchorEnabled) {
                                 // Dynamic cutout: buffer live frames decoupled at 2 Hz
                                 val now = SystemClock.elapsedRealtime()
@@ -241,6 +279,18 @@ object HudPresenceManager {
     fun isCutoutHudLost(cutoutId: String): Boolean = cutoutStates[cutoutId] == HudPresenceState.LOST
 
     /**
+     * Retrieves the delayed live frame bitmap for [cutoutId] if stream delay is configured.
+     * Returns null if delay is 0 or no buffered frames are available.
+     */
+    fun getDelayedFrame(
+        cutoutId: String,
+        delayFrames: Int,
+    ): Bitmap? {
+        if (delayFrames <= 0) return null
+        return cutoutRingBuffers[cutoutId]?.getDelayedFrame(delayFrames)
+    }
+
+    /**
      * Retrieves the most recent valid HUD frame bitmap for [cutoutId].
      * For dynamic cutouts with custom anchors, prioritizes the live buffered frame.
      * For static HUD cutouts, prioritizes the high-resolution calibrated reference frame.
@@ -281,6 +331,7 @@ object HudPresenceManager {
         cutoutStates.remove(cutoutId)
         cutoutConsecutiveCounts.remove(cutoutId)
         lastLiveFrameCaptureTimes.remove(cutoutId)
+        cutoutRingBuffers.remove(cutoutId)?.recycle()
         lastValidFrameBitmaps.remove(cutoutId)?.let {
             if (!it.isRecycled) it.recycle()
         }

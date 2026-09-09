@@ -636,6 +636,10 @@ Open Settings to create a layout.</string>
     <string name="settings_cutout_feathering_title">Edge Feathering</string>
     <string name="settings_cutout_feathering_desc">Restores cut pixels along element borders with decreasing opacity falloff</string>
     <string name="settings_mirror_hud_feathering_off">Off</string>
+    <string name="settings_cutout_stream_delay_title">Stream Delay</string>
+    <string name="settings_cutout_stream_delay_desc">Delays cutout video by N frames so HUD absence and blur are applied before cutscenes appear</string>
+    <string name="settings_cutout_stream_delay_off">0 frames (Real-time)</string>
+    <string name="settings_cutout_stream_delay_frames">%1$d frames (~%2$d ms)</string>
     <string name="settings_mirror_hud_auto_tuning_prompt">Calibrating Smart Cutout... Move your camera or character in-game! (%ds left)</string>
     <string name="settings_mirror_hud_auto_tune_success">Smart Cutout Calibrated: %s</string>
     <string name="mirror_hud_calibration_title">Smart Cutout Calibration</string>

@@ -45,6 +45,7 @@ enum class AspectRatioMode {
  * @param anchorSrcWidth Normalized width of custom reference anchor on primary screen.
  * @param anchorSrcHeight Normalized height of custom reference anchor on primary screen.
  * @param anchorCutoutId Optional ID of another cutout whose presence state or crop is borrowed as reference anchor.
+ * @param streamDelayFrames Number of frames (0..10) to delay the live stream by to eliminate cutscene flicker.
  */
 @Serializable
 data class AnchorCrop(
@@ -55,6 +56,7 @@ data class AnchorCrop(
 )
 
 const val DEFAULT_ANCHOR_SIZE = 0.15f
+const val MAX_STREAM_DELAY_FRAMES = 10
 
 @Serializable
 data class ScreenCutout(
@@ -86,6 +88,7 @@ data class ScreenCutout(
     val anchorSrcWidth: Float = DEFAULT_ANCHOR_SIZE,
     val anchorSrcHeight: Float = DEFAULT_ANCHOR_SIZE,
     val anchorCutoutId: String? = null,
+    val streamDelayFrames: Int = 0,
 ) {
     /**
      * Resolves the effective normalized screen crop rectangle used for presence anchor sampling.

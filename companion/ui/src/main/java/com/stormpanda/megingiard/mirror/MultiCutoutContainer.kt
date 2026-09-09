@@ -40,9 +40,11 @@ private const val MCC_MAX_ALPHA_FLOAT = 255f
 private const val MCC_MAX_ALPHA_INT = 255
 private const val TARGET_BLUR_RADIUS = 8f
 private const val BLUR_IN_DURATION_MS = 250L
-private const val BLUR_OUT_DURATION_MS = 200L
+private const val CROSSFADE_OUT_DURATION_MS = 300L
 private const val MIN_RENDER_EFFECT_RADIUS = 0.5f
 private const val MIN_ANIMATION_DIFF = 0.1f
+private const val MIN_ALPHA_THRESHOLD = 0.005f
+private const val FULL_ALPHA_FLOAT = 1.0f
 
 internal class MultiCutoutContainer(
     context: Context,
@@ -233,68 +235,113 @@ internal class MultiCutoutContainer(
             isAntiAlias = true
             isFilterBitmap = true
         }
+    private val delayedFramePaint =
+        Paint().apply {
+            isAntiAlias = true
+            isFilterBitmap = true
+        }
     private val cutoutBlurRadii = mutableMapOf<String, Float>()
-    private val cutoutBlurTargets = mutableMapOf<String, Float>()
+    private val cutoutFadeAlphas = mutableMapOf<String, Float>()
     private val cutoutBlurAnimators = mutableMapOf<String, ValueAnimator>()
+    private val cutoutFadeAnimators = mutableMapOf<String, ValueAnimator>()
+    private val cutoutWasFrozen = mutableMapOf<String, Boolean>()
     private val cutoutRenderNodes = mutableMapOf<String, RenderNode>()
 
-    private fun updateCutoutBlurAnimations() {
+    private fun updateCutoutTransitions() {
         val activeCutoutIds = cutouts.map { it.id }.toSet()
 
-        val removedIds = cutoutBlurAnimators.keys.filter { it !in activeCutoutIds }
-        for (id in removedIds) {
-            cutoutBlurAnimators[id]?.cancel()
-            cutoutBlurAnimators.remove(id)
-            cutoutBlurTargets.remove(id)
-            cutoutBlurRadii.remove(id)
-            cutoutRenderNodes.remove(id)
+        val trackedIds = cutoutBlurAnimators.keys + cutoutFadeAnimators.keys + cutoutWasFrozen.keys
+        for (id in trackedIds.toSet()) {
+            if (id !in activeCutoutIds) {
+                cutoutBlurAnimators.remove(id)?.cancel()
+                cutoutFadeAnimators.remove(id)?.cancel()
+                cutoutBlurRadii.remove(id)
+                cutoutFadeAlphas.remove(id)
+                cutoutWasFrozen.remove(id)
+                cutoutRenderNodes.remove(id)
+            }
         }
 
         for (cutout in cutouts) {
             val isCutoutHudLost = cutout.freezeOnHudLoss && HudPresenceManager.isCutoutHudLost(cutout.id)
             val isTargetFrozen = isFrozen || isCutoutHudLost
-            val targetBlur = if (isTargetFrozen) TARGET_BLUR_RADIUS else 0f
-            val currentTarget = cutoutBlurTargets[cutout.id]
+            val wasTargetFrozen = cutoutWasFrozen[cutout.id] ?: false
 
-            if (currentTarget != targetBlur) {
-                cutoutBlurTargets[cutout.id] = targetBlur
-                val currentBlur = cutoutBlurRadii[cutout.id] ?: 0f
+            if (isTargetFrozen != wasTargetFrozen) {
+                cutoutWasFrozen[cutout.id] = isTargetFrozen
 
-                cutoutBlurAnimators[cutout.id]?.cancel()
+                if (isTargetFrozen) {
+                    cutoutFadeAnimators.remove(cutout.id)?.cancel()
+                    cutoutFadeAlphas[cutout.id] = FULL_ALPHA_FLOAT
 
-                if (abs(currentBlur - targetBlur) > MIN_ANIMATION_DIFF) {
-                    val duration = if (targetBlur > currentBlur) BLUR_IN_DURATION_MS else BLUR_OUT_DURATION_MS
-                    val animator =
-                        ValueAnimator.ofFloat(currentBlur, targetBlur).apply {
-                            this.duration = duration
-                            interpolator =
-                                if (targetBlur > currentBlur) {
-                                    DecelerateInterpolator()
-                                } else {
-                                    AccelerateDecelerateInterpolator()
+                    val currentBlur = cutoutBlurRadii[cutout.id] ?: 0f
+                    cutoutBlurAnimators[cutout.id]?.cancel()
+
+                    if (TARGET_BLUR_RADIUS - currentBlur > MIN_ANIMATION_DIFF) {
+                        val animator =
+                            ValueAnimator.ofFloat(currentBlur, TARGET_BLUR_RADIUS).apply {
+                                duration = BLUR_IN_DURATION_MS
+                                interpolator = DecelerateInterpolator()
+                                addUpdateListener { anim ->
+                                    cutoutBlurRadii[cutout.id] = anim.animatedValue as Float
+                                    invalidate()
                                 }
-                            addUpdateListener { anim ->
-                                cutoutBlurRadii[cutout.id] = anim.animatedValue as Float
-                                invalidate()
-                            }
-                            addListener(
-                                object : AnimatorListenerAdapter() {
-                                    override fun onAnimationEnd(animation: Animator) {
-                                        cutoutBlurAnimators.remove(cutout.id)
-                                        cutoutBlurRadii[cutout.id] = targetBlur
-                                        invalidate()
-                                    }
+                                addListener(
+                                    object : AnimatorListenerAdapter() {
+                                        override fun onAnimationEnd(animation: Animator) {
+                                            cutoutBlurAnimators.remove(cutout.id)
+                                            cutoutBlurRadii[cutout.id] = TARGET_BLUR_RADIUS
+                                            invalidate()
+                                        }
 
-                                    override fun onAnimationCancel(animation: Animator) {
-                                        cutoutBlurAnimators.remove(cutout.id)
-                                    }
-                                },
-                            )
-                        }
-                    cutoutBlurAnimators[cutout.id] = animator
-                    animator.start()
+                                        override fun onAnimationCancel(animation: Animator) {
+                                            cutoutBlurAnimators.remove(cutout.id)
+                                        }
+                                    },
+                                )
+                            }
+                        cutoutBlurAnimators[cutout.id] = animator
+                        animator.start()
+                    } else {
+                        cutoutBlurRadii[cutout.id] = TARGET_BLUR_RADIUS
+                    }
                 } else {
-                    cutoutBlurRadii[cutout.id] = targetBlur
+                    cutoutBlurAnimators.remove(cutout.id)?.cancel()
+                    cutoutBlurRadii[cutout.id] = TARGET_BLUR_RADIUS
+
+                    val currentAlpha = cutoutFadeAlphas[cutout.id] ?: FULL_ALPHA_FLOAT
+                    cutoutFadeAnimators[cutout.id]?.cancel()
+
+                    if (currentAlpha > MIN_ALPHA_THRESHOLD) {
+                        val animator =
+                            ValueAnimator.ofFloat(currentAlpha, 0f).apply {
+                                duration = CROSSFADE_OUT_DURATION_MS
+                                interpolator = AccelerateDecelerateInterpolator()
+                                addUpdateListener { anim ->
+                                    cutoutFadeAlphas[cutout.id] = anim.animatedValue as Float
+                                    invalidate()
+                                }
+                                addListener(
+                                    object : AnimatorListenerAdapter() {
+                                        override fun onAnimationEnd(animation: Animator) {
+                                            cutoutFadeAnimators.remove(cutout.id)
+                                            cutoutFadeAlphas[cutout.id] = 0f
+                                            cutoutBlurRadii[cutout.id] = 0f
+                                            invalidate()
+                                        }
+
+                                        override fun onAnimationCancel(animation: Animator) {
+                                            cutoutFadeAnimators.remove(cutout.id)
+                                        }
+                                    },
+                                )
+                            }
+                        cutoutFadeAnimators[cutout.id] = animator
+                        animator.start()
+                    } else {
+                        cutoutFadeAlphas[cutout.id] = 0f
+                        cutoutBlurRadii[cutout.id] = 0f
+                    }
                 }
             }
         }
@@ -304,9 +351,41 @@ internal class MultiCutoutContainer(
         super.onDetachedFromWindow()
         cutoutBlurAnimators.values.forEach { it.cancel() }
         cutoutBlurAnimators.clear()
-        cutoutBlurTargets.clear()
+        cutoutFadeAnimators.values.forEach { it.cancel() }
+        cutoutFadeAnimators.clear()
         cutoutBlurRadii.clear()
+        cutoutFadeAlphas.clear()
+        cutoutWasFrozen.clear()
         cutoutRenderNodes.clear()
+    }
+
+    private fun drawFrozenBitmapToCanvas(
+        targetCanvas: Canvas,
+        frozenBitmapToDraw: Bitmap,
+        isCroppedCutoutBitmap: Boolean,
+        dw: Float,
+        dh: Float,
+        sw: Float,
+        sh: Float,
+        sx: Float,
+        sy: Float,
+        paint: Paint,
+    ) {
+        if (isCroppedCutoutBitmap) {
+            cutoutDestRect.set(0f, 0f, dw, dh)
+            targetCanvas.drawBitmap(frozenBitmapToDraw, null, cutoutDestRect, paint)
+        } else {
+            val save = targetCanvas.save()
+            try {
+                val scaleX = dw / sw
+                val scaleY = dh / sh
+                targetCanvas.translate(-sx * scaleX, -sy * scaleY)
+                targetCanvas.scale(scaleX, scaleY)
+                targetCanvas.drawBitmap(frozenBitmapToDraw, 0f, 0f, paint)
+            } finally {
+                targetCanvas.restoreToCount(save)
+            }
+        }
     }
 
     init {
@@ -353,7 +432,7 @@ internal class MultiCutoutContainer(
         val parentH = height.toFloat()
         if (parentW <= 0f || parentH <= 0f) return
 
-        updateCutoutBlurAnimations()
+        updateCutoutTransitions()
 
         val drawTime = this.drawingTime
         val blendWidthDp = ScreenCaptureManager.edgeBlendWidthDp.value
@@ -443,81 +522,111 @@ internal class MultiCutoutContainer(
                         canvas.clipPath(circlePath)
                     }
 
-                    val currentBlur = cutoutBlurRadii[cutout.id] ?: 0f
-                    val isBlurActive = currentBlur > MIN_RENDER_EFFECT_RADIUS
-                    val renderNode =
-                        if (isBlurActive) {
-                            try {
-                                val node = cutoutRenderNodes.getOrPut(cutout.id) { RenderNode("CutoutBlur_${cutout.id}") }
-                                val intDw = dw.roundToInt().coerceAtLeast(1)
-                                val intDh = dh.roundToInt().coerceAtLeast(1)
-                                node.setPosition(0, 0, intDw, intDh)
-                                val safeRadius = currentBlur.coerceAtLeast(MIN_RENDER_EFFECT_RADIUS)
-                                node.setRenderEffect(RenderEffect.createBlurEffect(safeRadius, safeRadius, Shader.TileMode.CLAMP))
-                                node
-                            } catch (e: Throwable) {
-                                AppLog.w(TAG, "RenderNode blur setup failed: ${e.message}")
+                    val isCutoutHudLost = cutout.freezeOnHudLoss && HudPresenceManager.isCutoutHudLost(cutout.id)
+                    val isTargetFrozen = isFrozen || isCutoutHudLost
+                    val fadeAlpha = cutoutFadeAlphas[cutout.id] ?: (if (isTargetFrozen) FULL_ALPHA_FLOAT else 0f)
+                    val isFrozenOverlayActive = fadeAlpha > MIN_ALPHA_THRESHOLD
+
+                    val cachedFrozenFrame = if (isFrozenOverlayActive) HudPresenceManager.getFrozenFrame(context, cutout.id) else null
+                    val fullFrozenBitmap = if (isFrozenOverlayActive && cachedFrozenFrame == null && isFrozen) frozenBitmap else null
+                    val hasFrozenBitmap =
+                        (cachedFrozenFrame != null && !cachedFrozenFrame.isRecycled) ||
+                            (fullFrozenBitmap != null && !fullFrozenBitmap.isRecycled)
+                    val showFrozenOverlay = isFrozenOverlayActive && hasFrozenBitmap
+
+                    if (fadeAlpha < FULL_ALPHA_FLOAT || !showFrozenOverlay) {
+                        val delayedFrame =
+                            if (cutout.streamDelayFrames > 0) {
+                                HudPresenceManager.getDelayedFrame(cutout.id, cutout.streamDelayFrames)
+                            } else {
                                 null
                             }
-                        } else {
-                            null
-                        }
 
-                    val drawCanvas = renderNode?.beginRecording() ?: canvas
-                    val innerSaveCount = if (drawCanvas == canvas) canvas.save() else 0
-
-                    try {
-                        val isCutoutHudLost = cutout.freezeOnHudLoss && HudPresenceManager.isCutoutHudLost(cutout.id)
-                        val frozenFrame = if (isCutoutHudLost) HudPresenceManager.getFrozenFrame(context, cutout.id) else null
-
-                        if (frozenFrame != null && !frozenFrame.isRecycled) {
+                        if (delayedFrame != null && !delayedFrame.isRecycled) {
                             cutoutDestRect.set(0f, 0f, dw, dh)
-                            drawCanvas.drawBitmap(frozenFrame, null, cutoutDestRect, frozenFramePaint)
+                            canvas.drawBitmap(delayedFrame, null, cutoutDestRect, delayedFramePaint)
                         } else {
                             val isFollowActive = ScreenCaptureManager.isFollowActive.value
                             val isUncropped = cutout.srcWidth >= MCC_UNCROPPED_THRESHOLD && cutout.srcHeight >= MCC_UNCROPPED_THRESHOLD
-                            if (cutouts.size == 1 && isFollowActive && isUncropped) {
-                                drawCanvas.translate(viewportOffsetX, viewportOffsetY)
-                                drawCanvas.scale(viewportScale, viewportScale, dw / 2f, dh / 2f)
+                            val liveSaveCount = canvas.save()
+                            try {
+                                if (cutouts.size == 1 && isFollowActive && isUncropped) {
+                                    canvas.translate(viewportOffsetX, viewportOffsetY)
+                                    canvas.scale(viewportScale, viewportScale, dw / 2f, dh / 2f)
 
-                                val srcRatio = srcWidth.toFloat() / srcHeight.toFloat()
-                                val destRatio = dw / dh
+                                    val srcRatio = srcWidth.toFloat() / srcHeight.toFloat()
+                                    val destRatio = dw / dh
 
-                                var fitW = dw
-                                var fitH = dh
-                                if (srcRatio > destRatio) {
-                                    fitH = dw / srcRatio
+                                    var fitW = dw
+                                    var fitH = dh
+                                    if (srcRatio > destRatio) {
+                                        fitH = dw / srcRatio
+                                    } else {
+                                        fitW = dh * srcRatio
+                                    }
+
+                                    val fitX = (dw - fitW) / 2f
+                                    val fitY = (dh - fitH) / 2f
+                                    canvas.translate(fitX, fitY)
+
+                                    val scaleX = fitW / srcWidth
+                                    val scaleY = fitH / srcHeight
+                                    canvas.scale(scaleX, scaleY)
                                 } else {
-                                    fitW = dh * srcRatio
+                                    val scaleX = dw / sw
+                                    val scaleY = dh / sh
+                                    canvas.translate(-sx * scaleX, -sy * scaleY)
+                                    canvas.scale(scaleX, scaleY)
                                 }
 
-                                val fitX = (dw - fitW) / 2f
-                                val fitY = (dh - fitH) / 2f
-                                drawCanvas.translate(fitX, fitY)
-
-                                val scaleX = fitW / srcWidth
-                                val scaleY = fitH / srcHeight
-                                drawCanvas.scale(scaleX, scaleY)
-                            } else {
-                                val scaleX = dw / sw
-                                val scaleY = dh / sh
-                                drawCanvas.translate(-sx * scaleX, -sy * scaleY)
-                                drawCanvas.scale(scaleX, scaleY)
-                            }
-
-                            if (isFrozen && frozenBitmap != null) {
-                                drawCanvas.drawBitmap(frozenBitmap!!, 0f, 0f, frozenFramePaint)
-                            } else if (masterView != null) {
-                                drawChild(drawCanvas, masterView, drawTime)
-                                masterViewDrawn = true
+                                if (masterView != null) {
+                                    drawChild(canvas, masterView, drawTime)
+                                    masterViewDrawn = true
+                                }
+                            } finally {
+                                canvas.restoreToCount(liveSaveCount)
                             }
                         }
-                    } finally {
+                    }
+
+                    if (showFrozenOverlay) {
+                        val currentBlur = cutoutBlurRadii[cutout.id] ?: TARGET_BLUR_RADIUS
+                        val isBlurActive = currentBlur > MIN_RENDER_EFFECT_RADIUS
+                        val renderNode =
+                            if (isBlurActive) {
+                                try {
+                                    val node = cutoutRenderNodes.getOrPut(cutout.id) { RenderNode("CutoutBlur_${cutout.id}") }
+                                    val intDw = dw.roundToInt().coerceAtLeast(1)
+                                    val intDh = dh.roundToInt().coerceAtLeast(1)
+                                    node.setPosition(0, 0, intDw, intDh)
+                                    val safeRadius = currentBlur.coerceAtLeast(MIN_RENDER_EFFECT_RADIUS)
+                                    node.setRenderEffect(RenderEffect.createBlurEffect(safeRadius, safeRadius, Shader.TileMode.CLAMP))
+                                    node.setAlpha(fadeAlpha.coerceIn(0f, FULL_ALPHA_FLOAT))
+                                    node
+                                } catch (e: Throwable) {
+                                    AppLog.w(TAG, "RenderNode blur setup failed: ${e.message}")
+                                    null
+                                }
+                            } else {
+                                null
+                            }
+
+                        val bitmapToDraw = cachedFrozenFrame ?: fullFrozenBitmap!!
+                        val isCropped = cachedFrozenFrame != null
+
                         if (renderNode != null) {
-                            renderNode.endRecording()
+                            val recCanvas = renderNode.beginRecording()
+                            try {
+                                frozenFramePaint.alpha = MCC_MAX_ALPHA_INT
+                                drawFrozenBitmapToCanvas(recCanvas, bitmapToDraw, isCropped, dw, dh, sw, sh, sx, sy, frozenFramePaint)
+                            } finally {
+                                renderNode.endRecording()
+                            }
                             canvas.drawRenderNode(renderNode)
                         } else {
-                            canvas.restoreToCount(innerSaveCount)
+                            frozenFramePaint.alpha = (fadeAlpha * MCC_MAX_ALPHA_FLOAT).roundToInt().coerceIn(0, MCC_MAX_ALPHA_INT)
+                            drawFrozenBitmapToCanvas(canvas, bitmapToDraw, isCropped, dw, dh, sw, sh, sx, sy, frozenFramePaint)
+                            frozenFramePaint.alpha = MCC_MAX_ALPHA_INT
                         }
                     }
 

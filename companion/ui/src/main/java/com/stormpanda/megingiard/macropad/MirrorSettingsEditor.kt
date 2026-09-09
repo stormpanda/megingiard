@@ -12,6 +12,7 @@ import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Opacity
 import androidx.compose.material.icons.rounded.PauseCircle
+import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Warning
@@ -35,6 +36,7 @@ import com.stormpanda.megingiard.math.nextItem
 import com.stormpanda.megingiard.mirror.CutoutMaskManager
 import com.stormpanda.megingiard.mirror.HudAutoTuneCoordinator
 import com.stormpanda.megingiard.mirror.MAX_FEATHERING_PX
+import com.stormpanda.megingiard.mirror.MAX_STREAM_DELAY_FRAMES
 import com.stormpanda.megingiard.mirror.MAX_TRANSLUCENCY
 import com.stormpanda.megingiard.mirror.MIN_FEATHERING_PX
 import com.stormpanda.megingiard.mirror.MIN_TRANSLUCENCY
@@ -81,6 +83,11 @@ private const val MSE_FEATHERING_STEP = 1f
 private const val MSE_TRANSLUCENCY_MIN = 0f
 private const val MSE_TRANSLUCENCY_MAX = 100f
 private const val MSE_TRANSLUCENCY_STEP = 5f
+
+private const val MSE_STREAM_DELAY_MIN = 0f
+private const val MSE_STREAM_DELAY_MAX = 10f
+private const val MSE_STREAM_DELAY_STEP = 1f
+private const val MSE_MS_PER_FRAME = 16
 
 @Composable
 internal fun MirrorDeck(
@@ -582,7 +589,36 @@ internal fun CutoutAdvancedSettingsSubPageContent(
             )
         }
 
-        // ── 3. Actions Section ──────────────────────────────────────────────
+        // ── 3. Stream Delay Slider (Smart Cutout / Absence Freeze) ─────────
+        if (cutout.freezeOnHudLoss || cutout.customAnchorEnabled || CutoutMaskManager.isCalibrated(context, cutout.id)) {
+            val delayLabel =
+                if (cutout.streamDelayFrames > 0) {
+                    stringResource(
+                        R.string.settings_cutout_stream_delay_frames,
+                        cutout.streamDelayFrames,
+                        cutout.streamDelayFrames * MSE_MS_PER_FRAME,
+                    )
+                } else {
+                    stringResource(R.string.settings_cutout_stream_delay_off)
+                }
+            GamepadSliderCard(
+                title = stringResource(R.string.settings_cutout_stream_delay_title),
+                description = stringResource(R.string.settings_cutout_stream_delay_desc),
+                value = cutout.streamDelayFrames.toFloat(),
+                valueRange = MSE_STREAM_DELAY_MIN..MSE_STREAM_DELAY_MAX,
+                step = MSE_STREAM_DELAY_STEP,
+                fineStep = MSE_STREAM_DELAY_STEP,
+                icon = Icons.Rounded.Schedule,
+                valueLabel = delayLabel,
+                onValueChange = { newVal ->
+                    val newDelay = newVal.roundToInt().coerceIn(0, MAX_STREAM_DELAY_FRAMES)
+                    AppLog.d(TAG, "Updating cutout ${cutout.id} streamDelayFrames: $newDelay")
+                    onUpdateCutout(cutout.copy(streamDelayFrames = newDelay))
+                },
+            )
+        }
+
+        // ── 4. Actions Section ──────────────────────────────────────────────
         val isSmartOrAnchored =
             cutout.hasTransparencyMask || cutout.freezeOnHudLoss || cutout.customAnchorEnabled ||
                 CutoutMaskManager.isCalibrated(context, cutout.id)

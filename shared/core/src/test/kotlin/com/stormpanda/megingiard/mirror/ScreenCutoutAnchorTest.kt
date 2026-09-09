@@ -212,5 +212,30 @@ class ScreenCutoutAnchorTest {
         assertEquals(DEFAULT_ANCHOR_SIZE, parsed.anchorSrcWidth, 0.001f)
         assertEquals(DEFAULT_ANCHOR_SIZE, parsed.anchorSrcHeight, 0.001f)
         assertNull(parsed.anchorCutoutId)
+        assertEquals(0, parsed.streamDelayFrames)
+    }
+
+    @Test
+    fun `verify serialization round-trip with streamDelayFrames`() {
+        val cutout =
+            ScreenCutout(
+                id = "delayed_cutout",
+                srcX = 0.1f,
+                srcY = 0.2f,
+                srcWidth = 0.3f,
+                srcHeight = 0.4f,
+                destX = 0f,
+                destY = 0f,
+                destWidth = 1f,
+                destHeight = 1f,
+                streamDelayFrames = 3,
+            )
+
+        val serialized = json.encodeToString(ScreenCutout.serializer(), cutout)
+        assertTrue(serialized.contains("streamDelayFrames"))
+
+        val deserialized = json.decodeFromString(ScreenCutout.serializer(), serialized)
+        assertEquals(3, deserialized.streamDelayFrames)
+        assertEquals(cutout, deserialized)
     }
 }

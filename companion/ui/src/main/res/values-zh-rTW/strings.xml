@@ -636,6 +636,10 @@ Open Settings to create a layout.</string>
     <string name="settings_cutout_feathering_title">邊緣羽化</string>
     <string name="settings_cutout_feathering_desc">透過向外邊緣擴展柔化並平滑外部輪廓</string>
     <string name="settings_mirror_hud_feathering_off">關閉</string>
+    <string name="settings_cutout_stream_delay_title">畫面延遲</string>
+    <string name="settings_cutout_stream_delay_desc">將即時畫面延遲 N 幀，以便在過場動畫出現前預先完成凍結與模糊</string>
+    <string name="settings_cutout_stream_delay_off">0 幀 (即時)</string>
+    <string name="settings_cutout_stream_delay_frames">%1$d 幀 (~%2$d 毫秒)</string>
     <string name="settings_mirror_hud_auto_tuning_prompt">正在校準智慧切角... 請在遊戲中移動視角或角色！（剩餘 %d 秒）</string>
     <string name="settings_mirror_hud_auto_tune_success">已校準智慧切角：%s</string>
     <string name="mirror_hud_calibration_title">智慧切角校準</string>
