@@ -3,11 +3,17 @@ package com.stormpanda.megingiard.mirror
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Rect
+import android.os.Handler
+import android.os.HandlerThread
+import android.view.PixelCopy
+import android.view.Surface
 import android.view.TextureView
 import com.stormpanda.megingiard.AppLog
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.lang.ref.WeakReference
+import kotlin.coroutines.resume
 
 private const val TAG = "MirrorFrameSampler"
 
@@ -16,22 +22,114 @@ private const val TAG = "MirrorFrameSampler"
  * screen mirror surface for real-time analysis (e.g. HUD auto-tuning calibration) and
  * freeze-frame capture.
  *
- * Capturing frames via [TextureView.getBitmap] requires execution on the main UI thread to prevent
- * native HWUI race conditions and segmentation faults in RenderThread's [DeferredLayerUpdater].
+ * Bounding-box crops are extracted via hardware-accelerated [PixelCopy.request] directly from the
+ * active [Surface] on a dedicated background [HandlerThread], eliminating main-thread stalls and
+ * multi-megabyte frame readbacks.
  */
 internal object MirrorFrameSampler {
     @Volatile
     private var activeTextureView: WeakReference<TextureView>? = null
 
-    fun registerTextureView(tv: TextureView) {
-        AppLog.d(TAG, "Registering active TextureView for frame sampling")
+    @Volatile
+    private var activeSurface: WeakReference<Surface>? = null
+
+    private val pixelCopyThread = HandlerThread("MirrorPixelCopy").apply { start() }
+    private val pixelCopyHandler = Handler(pixelCopyThread.looper)
+
+    fun registerTextureView(
+        tv: TextureView,
+        surface: Surface? = null,
+    ) {
+        AppLog.d(TAG, "Registering active TextureView and Surface for frame sampling")
         activeTextureView = WeakReference(tv)
+        activeSurface = surface?.let { WeakReference(it) }
     }
 
     fun unregisterTextureView(tv: TextureView) {
         if (activeTextureView?.get() == tv) {
-            AppLog.d(TAG, "Unregistering active TextureView")
+            AppLog.d(TAG, "Unregistering active TextureView and Surface")
             activeTextureView = null
+            activeSurface = null
+        }
+    }
+
+    /**
+     * Captures a 1:1 hardware crop [cropRect] directly from the active mirror surface via [PixelCopy].
+     * Renders into [reusableBitmap] if provided and dimensions match, avoiding heap allocations.
+     * Returns null if no active surface or frozen frame is available, or if PixelCopy fails.
+     */
+    suspend fun captureCrop(
+        cropRect: Rect,
+        reusableBitmap: Bitmap? = null,
+    ): Bitmap? {
+        val cropW = cropRect.width()
+        val cropH = cropRect.height()
+        if (cropW <= 0 || cropH <= 0) return null
+
+        val frozen = ScreenCaptureManager.frozenBitmap.value
+        if (frozen != null && !frozen.isRecycled) {
+            val target =
+                if (reusableBitmap != null &&
+                    reusableBitmap.width == cropW &&
+                    reusableBitmap.height == cropH &&
+                    !reusableBitmap.isRecycled
+                ) {
+                    reusableBitmap
+                } else {
+                    Bitmap.createBitmap(cropW, cropH, Bitmap.Config.ARGB_8888)
+                }
+            val canvas = Canvas(target)
+            val src = Rect(cropRect)
+            val dst = Rect(0, 0, cropW, cropH)
+            canvas.drawBitmap(frozen, src, dst, null)
+            return target
+        }
+
+        val surface = activeSurface?.get() ?: return null
+        if (!surface.isValid) return null
+
+        val targetBitmap =
+            if (reusableBitmap != null &&
+                reusableBitmap.width == cropW &&
+                reusableBitmap.height == cropH &&
+                !reusableBitmap.isRecycled
+            ) {
+                reusableBitmap
+            } else {
+                try {
+                    Bitmap.createBitmap(cropW, cropH, Bitmap.Config.ARGB_8888)
+                } catch (e: OutOfMemoryError) {
+                    AppLog.e(TAG, "OOM allocating crop bitmap (${cropW}x$cropH)", e)
+                    return null
+                }
+            }
+
+        return suspendCancellableCoroutine { cont ->
+            try {
+                PixelCopy.request(
+                    surface,
+                    cropRect,
+                    targetBitmap,
+                    { result ->
+                        if (result == PixelCopy.SUCCESS) {
+                            if (cont.isActive) cont.resume(targetBitmap)
+                        } else {
+                            AppLog.w(TAG, "PixelCopy.request failed with result code $result")
+                            if (targetBitmap !== reusableBitmap && !targetBitmap.isRecycled) {
+                                targetBitmap.recycle()
+                            }
+                            if (cont.isActive) cont.resume(null)
+                        }
+                    },
+                    pixelCopyHandler,
+                )
+            } catch (e: Exception) {
+                AppLog.e(TAG, "Exception requesting PixelCopy crop", e)
+                if (targetBitmap !== reusableBitmap && !targetBitmap.isRecycled) {
+                    targetBitmap.recycle()
+                }
+                if (cont.isActive) cont.resume(null)
+            }
         }
     }
 

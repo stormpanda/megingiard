@@ -229,7 +229,6 @@ fun EmbeddedMirrorView(
                         width: Int,
                         height: Int,
                     ) {
-                        MirrorFrameSampler.registerTextureView(tv)
                         val currentSrcW =
                             if (ScreenCaptureManager.captureSourceWidth.value >
                                 0
@@ -249,6 +248,7 @@ fun EmbeddedMirrorView(
                         st.setDefaultBufferSize(currentSrcW, currentSrcH)
                         val surface = Surface(st)
                         containerHolder.masterSurface = surface
+                        MirrorFrameSampler.registerTextureView(tv, surface)
                         try {
                             val fps = ScreenCaptureManager.maxFps.value
                             AppLog.i(TAG, "Setting initial surface frame rate to $fps FPS")

@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.mirror
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Rect
 import android.os.SystemClock
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.macropad.MacroPadState
@@ -29,9 +30,9 @@ private const val DEFAULT_SOURCE_HEIGHT = 1080
 /**
  * Singleton manager coordinating real-time HUD presence detection and freeze-frame caching.
  *
- * Samples top-screen video frames at native resolution using zero-allocation reusable bitmaps
- * at ~60 Hz, evaluates anchor signatures with exact 1:1 pixel calibration alignment, and manages
- * freeze-frame capture decoupled at a lower cadence.
+ * Samples targeted bounding-box crops of active anchors at native resolution using zero-allocation
+ * reusable bitmaps via PixelCopy, evaluates anchor signatures with exact 1:1 pixel calibration alignment,
+ * and manages freeze-frame capture decoupled at a lower cadence.
  */
 object HudPresenceManager {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -45,7 +46,7 @@ object HudPresenceManager {
     private val cutoutRingBuffers = ConcurrentHashMap<String, CutoutFrameRingBuffer>()
 
     @Volatile
-    private var reusableFrameBitmap: Bitmap? = null
+    private var reusableCropBitmap: Bitmap? = null
 
     private val _presenceRevision = MutableStateFlow(0)
     val presenceRevision: StateFlow<Int> = _presenceRevision.asStateFlow()
@@ -89,10 +90,10 @@ object HudPresenceManager {
                 AppLog.i(TAG, "Stopping HUD presence monitoring loop")
                 monitorJob?.cancel()
                 monitorJob = null
-                reusableFrameBitmap?.let { bmp ->
+                reusableCropBitmap?.let { bmp ->
                     if (!bmp.isRecycled) bmp.recycle()
                 }
-                reusableFrameBitmap = null
+                reusableCropBitmap = null
                 lastValidFrameBitmaps.values.forEach { bmp ->
                     if (!bmp.isRecycled) bmp.recycle()
                 }
@@ -109,7 +110,8 @@ object HudPresenceManager {
     private suspend fun runMonitoringLoop() {
         while (scope.isActive) {
             val context = appContext ?: continue
-            val currentCutouts = ScreenCaptureManager.cutouts.value.filter { it.freezeOnHudLoss || it.streamDelayFrames > 0 }
+            val allCutouts = ScreenCaptureManager.cutouts.value
+            val currentCutouts = allCutouts.filter { it.freezeOnHudLoss || it.streamDelayFrames > 0 }
             if (currentCutouts.isEmpty()) {
                 delay(PRESENCE_CHECK_INTERVAL_LOST_MS)
                 continue
@@ -123,22 +125,52 @@ object HudPresenceManager {
             val srcW = ScreenCaptureManager.captureSourceWidth.value.let { if (it > 0) it else DEFAULT_SOURCE_WIDTH }
             val srcH = ScreenCaptureManager.captureSourceHeight.value.let { if (it > 0) it else DEFAULT_SOURCE_HEIGHT }
 
-            var reusable = reusableFrameBitmap
-            if (reusable == null || reusable.width != srcW || reusable.height != srcH || reusable.isRecycled) {
+            // Compute composite bounding box encompassing all active anchors and required crops
+            var minNormX = 1f
+            var minNormY = 1f
+            var maxNormX = 0f
+            var maxNormY = 0f
+
+            for (cutout in currentCutouts) {
+                val anchorCrop = cutout.getEffectiveAnchorCrop(allCutouts)
+                minNormX = minOf(minNormX, anchorCrop.x)
+                minNormY = minOf(minNormY, anchorCrop.y)
+                maxNormX = maxOf(maxNormX, anchorCrop.x + anchorCrop.width)
+                maxNormY = maxOf(maxNormY, anchorCrop.y + anchorCrop.height)
+
+                val delayFrames = cutout.streamDelayFrames.coerceIn(0, MAX_STREAM_DELAY_FRAMES)
+                if (delayFrames > 0 || cutout.customAnchorEnabled) {
+                    minNormX = minOf(minNormX, cutout.srcX)
+                    minNormY = minOf(minNormY, cutout.srcY)
+                    maxNormX = maxOf(maxNormX, cutout.srcX + cutout.srcWidth)
+                    maxNormY = maxOf(maxNormY, cutout.srcY + cutout.srcHeight)
+                }
+            }
+
+            val cropLeft = (minNormX * srcW).roundToInt().coerceIn(0, srcW - 1)
+            val cropTop = (minNormY * srcH).roundToInt().coerceIn(0, srcH - 1)
+            val cropRight = (maxNormX * srcW).roundToInt().coerceIn(cropLeft + 1, srcW)
+            val cropBottom = (maxNormY * srcH).roundToInt().coerceIn(cropTop + 1, srcH)
+            val cropW = cropRight - cropLeft
+            val cropH = cropBottom - cropTop
+            val cropRect = Rect(cropLeft, cropTop, cropRight, cropBottom)
+
+            var reusable = reusableCropBitmap
+            if (reusable == null || reusable.width != cropW || reusable.height != cropH || reusable.isRecycled) {
                 if (reusable != null && !reusable.isRecycled) {
                     reusable.recycle()
                 }
                 reusable =
                     try {
-                        Bitmap.createBitmap(srcW, srcH, Bitmap.Config.ARGB_8888)
+                        Bitmap.createBitmap(cropW, cropH, Bitmap.Config.ARGB_8888)
                     } catch (e: OutOfMemoryError) {
-                        AppLog.e(TAG, "OOM allocating reusable frame bitmap (${srcW}x$srcH)", e)
+                        AppLog.e(TAG, "OOM allocating reusable crop bitmap (${cropW}x$cropH)", e)
                         null
                     }
-                reusableFrameBitmap = reusable
+                reusableCropBitmap = reusable
             }
 
-            val frame = MirrorFrameSampler.captureFrame(srcW, srcH, reusableBitmap = reusable) ?: continue
+            val frame = MirrorFrameSampler.captureCrop(cropRect, reusableBitmap = reusable) ?: continue
             try {
                 val frameW = frame.width
                 val frameH = frame.height
@@ -147,23 +179,28 @@ object HudPresenceManager {
                 var anyStateChanged = false
 
                 for (cutout in currentCutouts) {
-                    val cX = (cutout.srcX * frameW).roundToInt().coerceIn(0, frameW - 1)
-                    val cY = (cutout.srcY * frameH).roundToInt().coerceIn(0, frameH - 1)
-                    val cRight = ((cutout.srcX + cutout.srcWidth) * frameW).roundToInt().coerceIn(cX + 1, frameW)
-                    val cBottom = ((cutout.srcY + cutout.srcHeight) * frameH).roundToInt().coerceIn(cY + 1, frameH)
+                    val cX = (cutout.srcX * srcW).roundToInt().coerceIn(0, srcW - 1)
+                    val cY = (cutout.srcY * srcH).roundToInt().coerceIn(0, srcH - 1)
+                    val cRight = ((cutout.srcX + cutout.srcWidth) * srcW).roundToInt().coerceIn(cX + 1, srcW)
+                    val cBottom = ((cutout.srcY + cutout.srcHeight) * srcH).roundToInt().coerceIn(cY + 1, srcH)
                     val cW = cRight - cX
                     val cH = cBottom - cY
 
+                    val localCropX = (cX - cropLeft).coerceIn(0, frameW - 1)
+                    val localCropY = (cY - cropTop).coerceIn(0, frameH - 1)
+                    val safeCropW = minOf(cW, frameW - localCropX)
+                    val safeCropH = minOf(cH, frameH - localCropY)
+
                     // Feed ring buffer if stream delay is configured
                     val delayFrames = cutout.streamDelayFrames.coerceIn(0, MAX_STREAM_DELAY_FRAMES)
-                    if (delayFrames > 0 && cW > 0 && cH > 0) {
+                    if (delayFrames > 0 && safeCropW > 0 && safeCropH > 0) {
                         var ring = cutoutRingBuffers[cutout.id]
                         if (ring == null || ring.width != cW || ring.height != cH) {
                             ring?.recycle()
                             ring = CutoutFrameRingBuffer(cW, cH, MAX_STREAM_DELAY_FRAMES + 2)
                             cutoutRingBuffers[cutout.id] = ring
                         }
-                        ring.pushFrame(frame, cX, cY)
+                        ring.pushFrame(frame, localCropX, localCropY)
                     } else if (delayFrames == 0) {
                         cutoutRingBuffers.remove(cutout.id)?.recycle()
                     }
@@ -174,15 +211,16 @@ object HudPresenceManager {
                     val signature = CutoutMaskManager.getAnchorSignature(context, targetCutoutId) ?: continue
                     if (signature.points.isEmpty()) continue
 
-                    val allCutouts = ScreenCaptureManager.cutouts.value
                     val anchorCrop = cutout.getEffectiveAnchorCrop(allCutouts)
                     val matchRatio =
                         HudPresenceEvaluator.evaluateMatchRatio(signature) { u, v ->
                             val globalU = anchorCrop.x + u * anchorCrop.width
                             val globalV = anchorCrop.y + v * anchorCrop.height
-                            val px = (globalU * frameW).roundToInt().coerceIn(0, frameW - 1)
-                            val py = (globalV * frameH).roundToInt().coerceIn(0, frameH - 1)
-                            frame.getPixel(px, py)
+                            val px = (globalU * srcW).roundToInt().coerceIn(0, srcW - 1)
+                            val py = (globalV * srcH).roundToInt().coerceIn(0, srcH - 1)
+                            val localX = (px - cropLeft).coerceIn(0, frameW - 1)
+                            val localY = (py - cropTop).coerceIn(0, frameH - 1)
+                            frame.getPixel(localX, localY)
                         }
 
                     val curState = cutoutStates[cutout.id] ?: HudPresenceState.PRESENT
@@ -212,7 +250,7 @@ object HudPresenceManager {
                                     AppLog.e(TAG, "Failed to copy delayed frame for freeze on cutout ${cutout.id}", e)
                                 }
                             }
-                        } else if (cW > 0 && cH > 0) {
+                        } else if (safeCropW > 0 && safeCropH > 0) {
                             // Preserve the last valid frame captured while PRESENT.
                             // Only capture current frame as a fallback if no valid frame was ever cached.
                             val hasValidFrame =
@@ -220,7 +258,7 @@ object HudPresenceManager {
                                     CutoutMaskManager.getFreezeFrame(context, cutout.id)?.isRecycled == false
                             if (!hasValidFrame) {
                                 try {
-                                    val crop = Bitmap.createBitmap(frame, cX, cY, cW, cH)
+                                    val crop = Bitmap.createBitmap(frame, localCropX, localCropY, safeCropW, safeCropH)
                                     val oldCrop = lastValidFrameBitmaps.put(cutout.id, crop)
                                     if (oldCrop != null && !oldCrop.isRecycled) {
                                         oldCrop.recycle()
@@ -234,7 +272,7 @@ object HudPresenceManager {
                     }
 
                     // Live frame buffering while confident PRESENT (if streamDelayFrames == 0)
-                    if (delayFrames == 0 && cW > 0 && cH > 0) {
+                    if (delayFrames == 0 && safeCropW > 0 && safeCropH > 0) {
                         val hasCachedFrame = lastValidFrameBitmaps.containsKey(cutout.id)
                         val isConfidentPresent = matchRatio >= HudPresenceEvaluator.MATCH_THRESHOLD_PRESENT
                         if (newState == HudPresenceState.PRESENT && (!hasCachedFrame || isConfidentPresent)) {
@@ -243,7 +281,7 @@ object HudPresenceManager {
                             if (!hasCachedFrame || now - lastCapture >= LIVE_FRAME_BUFFER_INTERVAL_MS) {
                                 lastLiveFrameCaptureTimes[cutout.id] = now
                                 try {
-                                    val crop = Bitmap.createBitmap(frame, cX, cY, cW, cH)
+                                    val crop = Bitmap.createBitmap(frame, localCropX, localCropY, safeCropW, safeCropH)
                                     val oldCrop = lastValidFrameBitmaps.put(cutout.id, crop)
                                     if (oldCrop != null && !oldCrop.isRecycled) {
                                         oldCrop.recycle()
@@ -268,7 +306,7 @@ object HudPresenceManager {
             } catch (e: Exception) {
                 AppLog.e(TAG, "Error in HUD presence evaluation loop", e)
             } finally {
-                if (frame != reusableFrameBitmap && frame != ScreenCaptureManager.frozenBitmap.value) {
+                if (frame != reusableCropBitmap && frame != ScreenCaptureManager.frozenBitmap.value) {
                     frame.recycle()
                 }
             }
