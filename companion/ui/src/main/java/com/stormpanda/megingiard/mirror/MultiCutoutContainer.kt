@@ -265,7 +265,7 @@ internal class MultiCutoutContainer(
                 cutoutTransitionAnimators.remove(id)?.cancel()
                 cutoutBlurAlphas.remove(id)
                 cutoutWasFrozen.remove(id)
-                cutoutRenderNodes.remove(id)
+                cutoutRenderNodes.remove(id)?.discardDisplayList()
                 cutoutRenderNodeBitmaps.remove(id)
                 cutoutRenderNodeWidths.remove(id)
                 cutoutRenderNodeHeights.remove(id)
@@ -323,6 +323,7 @@ internal class MultiCutoutContainer(
         cutoutTransitionAnimators.clear()
         cutoutBlurAlphas.clear()
         cutoutWasFrozen.clear()
+        cutoutRenderNodes.values.forEach { it.discardDisplayList() }
         cutoutRenderNodes.clear()
         cutoutRenderNodeBitmaps.clear()
         cutoutRenderNodeWidths.clear()
