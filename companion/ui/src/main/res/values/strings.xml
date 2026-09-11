@@ -387,6 +387,27 @@ Open Settings to create a layout.</string>
     <string name="layout_settings_bg_image_adjustments">Image Adjustments &amp; Masking</string>
     <string name="layout_settings_bg_section_title">Background</string>
     <string name="layout_settings_bg_image_dimming_title">Dimming</string>
+    <!-- Automatic Layout Switching & Visual Anchor -->
+    <string name="layout_settings_auto_switch_section_title">Automatic Layout Switching</string>
+    <string name="layout_settings_auto_switch_title">Automatic Layout Switching</string>
+    <string name="layout_settings_auto_switch_enabled_desc">Visual anchor active • Synchronized freeze enabled</string>
+    <string name="layout_settings_auto_switch_disabled_desc">Not configured</string>
+    <string name="layout_settings_visual_anchor_title">Visual Reference Anchor</string>
+    <string name="layout_settings_visual_anchor_desc">Monitors a reference region on the top screen to synchronize cutout states across this layout.</string>
+    <string name="layout_settings_visual_anchor_position_title">Position Reference Anchor</string>
+    <string name="layout_settings_visual_anchor_position_desc">Adjust the reference bounding box on the primary display</string>
+    <string name="layout_settings_visual_anchor_calibrate_title">Calibrate Reference Anchor</string>
+    <string name="layout_settings_visual_anchor_calibrate_desc">Sample reference area to detect stable anchor points</string>
+    <string name="layout_settings_visual_anchor_recalibrate_title">Recalibrate Reference Anchor</string>
+    <string name="layout_settings_visual_anchor_recalibrate_desc">Update anchor points from live game screen</string>
+    <string name="layout_settings_visual_anchor_status_calibrated">Calibrated (%1$d reference points)</string>
+    <string name="layout_settings_visual_anchor_stream_delay_desc">Buffer frames to eliminate visual tearing when UI disappears</string>
+    <string name="layout_settings_visual_anchor_freeze_title">Freeze Cutouts on Loss</string>
+    <string name="layout_settings_visual_anchor_freeze_desc">Freeze all cutouts and apply subtle blur when HUD reference disappears</string>
+    <string name="layout_settings_visual_anchor_remove_title">Delete Anchor Calibration</string>
+    <string name="layout_settings_visual_anchor_remove_desc">Remove calibrated reference signature and disable visual anchor</string>
+    <string name="help_layout_settings_auto_switch_desc">Configure automatic layout switching and visual anchoring for this layout. Monitors a primary display reference region and synchronizes cutout freeze states when the HUD disappears.</string>
+
     <string name="layout_settings_colors_section_title">Button Color Defaults</string>
     <string name="layout_settings_color_text">Text &amp; Icon Color</string>
     <string name="layout_settings_color_border">Border Color</string>

@@ -126,13 +126,11 @@ fun PrimaryModalHost(
 
         PrimaryModalType.ANCHOR_SELECTOR -> {
             val payload = config.payload as? PrimaryModalPayload.AnchorSelector
-            val cutoutId = payload?.cutoutId
-            if (cutoutId != null) {
-                AnchorSelectorOverlay(
-                    cutoutId = cutoutId,
-                    onDismiss = onDismiss,
-                )
-            }
+            AnchorSelectorOverlay(
+                layoutId = payload?.layoutId,
+                cutoutId = payload?.cutoutId,
+                onDismiss = onDismiss,
+            )
         }
     }
 }

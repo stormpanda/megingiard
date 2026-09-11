@@ -177,6 +177,12 @@ internal sealed interface MacroPadSubPage {
         override val parentSection = EditorSection.LAYOUTS
     }
 
+    data class AutomaticLayoutSwitching(
+        val layoutId: String,
+    ) : MacroPadSubPage {
+        override val parentSection = EditorSection.LAYOUTS
+    }
+
     data class CopyLayout(
         val layoutId: String,
     ) : MacroPadSubPage {

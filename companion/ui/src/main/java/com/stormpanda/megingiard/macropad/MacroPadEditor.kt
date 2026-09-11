@@ -229,6 +229,7 @@ fun MacroPadEditor(
         val hasAppearanceSubPages =
             subPageStack.any {
                 it is MacroPadSubPage.EditLayout || it is MacroPadSubPage.LayoutColor ||
+                    it is MacroPadSubPage.AutomaticLayoutSwitching ||
                     (it is MacroPadSubPage.ColorWheel && it.section == EditorSection.LAYOUTS)
             }
         val hasButtonSubPages =
@@ -811,6 +812,9 @@ fun MacroPadEditor(
                                                             appearanceDraft = appearanceDraft?.copy(invisibleButtons = newInvisible)
                                                         }
                                                     },
+                                                    onOpenAutomaticLayoutSwitching = {
+                                                        MacroPadNavState.push(MacroPadSubPage.AutomaticLayoutSwitching(lay.id))
+                                                    },
                                                     onOpenColorSubMenu = { target ->
                                                         MacroPadNavState.push(MacroPadSubPage.LayoutColor(lay.id, target))
                                                     },
@@ -1063,6 +1067,28 @@ fun MacroPadEditor(
                                                                 mirrorCutouts = newCutouts,
                                                             ),
                                                         )
+                                                    },
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    is MacroPadSubPage.AutomaticLayoutSwitching -> {
+                                        val lay = profile.layouts.firstOrNull { it.id == currentSubPage.layoutId } ?: activeLayout
+                                        if (lay != null) {
+                                            GamepadDeck(
+                                                breadcrumbs =
+                                                    listOf(
+                                                        stringResource(R.string.macropad_editor_section_layout),
+                                                        stringResource(R.string.macropad_editor_edit_layout_title),
+                                                        stringResource(R.string.layout_settings_auto_switch_title),
+                                                    ),
+                                            ) {
+                                                AutomaticLayoutSwitchingSubPageContent(
+                                                    layout = lay,
+                                                    accentColor = colors.accent,
+                                                    onUpdateLayout = { updatedLayout ->
+                                                        MacroPadState.updateLayout(updatedLayout)
                                                     },
                                                 )
                                             }

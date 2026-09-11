@@ -81,13 +81,21 @@ data class ScreenCutout(
     val hasTransparencyMask: Boolean = false,
     val maskFeathering: Int = 0,
     val maskTranslucency: Int = 0,
+    @Deprecated("Use PadLayout.visualAnchor instead")
     val freezeOnHudLoss: Boolean = false,
+    @Deprecated("Use PadLayout.visualAnchor instead")
     val customAnchorEnabled: Boolean = false,
+    @Deprecated("Use PadLayout.visualAnchor instead")
     val anchorSrcX: Float = 0f,
+    @Deprecated("Use PadLayout.visualAnchor instead")
     val anchorSrcY: Float = 0f,
+    @Deprecated("Use PadLayout.visualAnchor instead")
     val anchorSrcWidth: Float = DEFAULT_ANCHOR_SIZE,
+    @Deprecated("Use PadLayout.visualAnchor instead")
     val anchorSrcHeight: Float = DEFAULT_ANCHOR_SIZE,
+    @Deprecated("Use PadLayout.visualAnchor instead")
     val anchorCutoutId: String? = null,
+    @Deprecated("Use PadLayout.visualAnchor instead")
     val streamDelayFrames: Int = 0,
 ) {
     /**

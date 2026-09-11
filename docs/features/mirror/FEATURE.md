@@ -197,37 +197,32 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - The dimming opacity MUST be adjustable via a slider ("Primary HUD Dimming Opacity", `0%` to `100%`, default `60%`, stored in `MacroPadLayout.topScreenHudDimOpacity`).
 - When mirroring is stopped or paused, the scrim automatically hides.
 
-### FR-M19: Custom Reference Anchors for Presence Freezing
+### FR-M19: Automatic Layout Switching & Layout-Level Visual Reference Anchors
 
-- The user MUST be able to define a **Custom Reference Anchor** for any mirror cutout via **Advanced Cutout Settings** (`CutoutAdvancedSettingsSubPageContent`).
-- **Dynamic Cutout Problem & Solution:**
-  - Cutouts mirroring dynamic UI elements (such as minimaps with rotating player markers and scrolling terrain, gauges, or scrolling radars) contain constantly moving pixels and cannot act as their own presence anchor.
-  - Custom Reference Anchors allow the user to link the cutout's presence detection and frame freezing capability to a separate stationary UI element on Display 0 (such as a character portrait, menu icon, or quest badge) that is always visible whenever the dynamic element is shown, and disappears during cutscenes or menus.
-- **Anchor Sources (`ScreenCutout`):**
-  - **Cutout Area (Default):** Monitors the cutout's own crop coordinates (`customAnchorEnabled = false`).
-  - **Custom Screen Area:** Monitors an independent bounding box on Display 0 (`anchorSrcX`, `anchorSrcY`, `anchorSrcWidth`, `anchorSrcHeight`).
-  - **Link to Another Cutout:** Inherits presence state from another cutout in the active layout (`anchorCutoutId`).
+- The user MUST be able to define a **Layout-Level Visual Reference Anchor** for any MacroPad layout via **Edit Layout → Automatic Layout Switching** (`AutomaticLayoutSwitchingSubPageContent`), placed directly before Button Color Defaults.
+- **Unified Presence Architecture & Elimination of Per-Cutout Anchor Duplication:**
+  - Cutouts mirroring game HUD elements (e.g. minimaps, quest widgets, meters) frequently disappear together during in-game cutscenes, full-screen menus, dialogue trees, or loading screens.
+  - Instead of configuring redundant anchors per cutout, visual anchoring is configured once per layout in `PadLayout.visualAnchor` (`LayoutVisualAnchor`).
+  - When the layout's visual reference anchor is evaluated by `HudPresenceManager`, the resulting presence state (`PRESENT` vs. `LOST`) is applied across all cutouts belonging to the active layout simultaneously.
+  - Advanced Cutout Settings (`CutoutAdvancedSettingsSubPageContent`) is streamlined to focus strictly on **Foreground UI / Background Separation** (Smart Cutout background mask calibration, translucency slider, feathering slider, and mask removal).
 - **Top-Screen Anchor Positioning (`AnchorSelectorOverlay`):**
-  - Tapping **[ Position Anchor on Screen ]** launches `AnchorSelectorOverlay` on Display 0 via `PrimaryModalType.ANCHOR_SELECTOR` and `PrimaryModalPayload.AnchorSelector(cutoutId)`.
-  - Features semi-transparent scrims, an accent-colored bounding box with a clean interior (no badges or obstructions inside the crop area), center 2D touch drag, 4 directional edge handles (top, bottom, left, right), and a reusable vertical controller toolbox (`ToolboxContainer`, `AdjustCoordinatesCard`, `ToolboxActionCard`) for 2D gamepad navigation and confirmation.
-- **Calibration (`HudAutoTuneCoordinator`):**
-  - When calibrating a cutout with a custom reference anchor, video frames are sampled from the **anchor area** rather than the cutout's crop.
-  - `HudAutoTuner.analyze` extracts stationary anchor pixels and persists `HudAnchorSignature` (`mask_<cutoutId>_anchor.json`).
-  - The cutout is saved with `freezeOnHudLoss = true` and `hasTransparencyMask = false` so that the dynamic mirror stream remains solid and unmasked.
-- **Dynamic Live Frame Buffering & Animated Blur Freezing (`HudPresenceManager`, `MultiCutoutContainer`):**
-  - For cutouts with custom reference anchors, full 1080p frame buffer capture is decoupled from the 60 Hz presence evaluation loop and throttled to ~2 Hz (500 ms interval), running only while the anchor is detected as confidently present ($\ge 65\%$, matching `HudPresenceEvaluator.MATCH_THRESHOLD_PRESENT`).
-  - Crop boundaries are computed with subpixel rounding (`roundToInt()`, `cRight - cX`, `cBottom - cY`), and `MultiCutoutContainer` applies bilinear filtering (`Paint.isFilterBitmap = true`), ensuring 1:1 pixel alignment without position shifts or upscaling blur.
-  - An initial native frame is captured immediately upon detection, and fallback freeze frames are persisted to disk under `mask_<cutoutId>_freeze.png`.
-  - When the anchor element disappears (match ratio $< 45\%$) or manual freeze is engaged, the cutout immediately stops the live video stream and freezes the sharp last valid frame on the base layer (zero cutscene leak). A static 8px blurred, subtly desaturated (60% saturation), and gently dimmed (85% brightness) inactive version of that exact same frame is recorded into a hardware `RenderNode` and cached. The cutout executes a smooth crossfade ($0.0 \to 1.0$ opacity over 300 ms via `AccelerateDecelerateInterpolator()`) from the sharp frame to the frosted inactive overlay, creating an elegant visual perception of inactivity while eliminating hard cuts, dynamic GPU shader recompilations, and blur flashes.
-  - When the anchor returns or manual freeze is released, the base layer immediately resumes the live/delayed video stream, while the static inactive overlay executes an optical dissolve crossfade away ($1.0 \to 0.0$ opacity over 300 ms via `AccelerateDecelerateInterpolator()`), smoothly revealing the vibrant, sharp live stream underneath. Live gameplay is never subjected to a blur-out artifact, and upon completion of the dissolve, the freeze overlay and `RenderNode` drawing are completely bypassed with zero GPU layer overhead.
-  - **Hardware Layer Isolation & Caching:** Blur and color matrix adjustments are strictly isolated using dedicated hardware `RenderNode` instances and `RenderEffect.createBlurEffect(8f, 8f, ...)` bounded to each cutout's dimensions. The blurred and stylized display list is recorded once upon freezing and cached; during the 300 ms crossfade animation, only `RenderNode.setAlpha()` is updated on the GPU without re-recording or re-allocating shaders. The background wallpaper and gothic mask overlay frame remain completely outside the `RenderNode` and 100% crisp. During live gameplay, `RenderNode` drawing is completely bypassed with zero GPU overhead.
-- **Configurable Cutout Stream Delay (`ScreenCutout.streamDelayFrames`, `CutoutFrameRingBuffer`):**
-  - The user can configure a stream delay (`0` to `10` frames, ~0 to ~160 ms) via **Advanced Cutout Settings** ("Stream Delay" slider, stored in `ScreenCutout.streamDelayFrames`).
-  - When `streamDelayFrames > 0`, `HudPresenceManager` maintains a dedicated `CutoutFrameRingBuffer` containing pre-allocated slot bitmaps and canvases, blitting the cropped region at 60 Hz with zero runtime heap allocations.
-  - While the cutout view renders the delayed frame ($N - D$), presence detection inspects the live real-time frame ($N$).
-  - When entering a cutscene, HUD absence is detected at frame $N$ and the blur animation begins *before* the cutscene frame reaches the cutout display.
-  - On the transition from `PRESENT` to `LOST`, the delayed frame from $D$ frames in the past is captured into `lastValidFrameBitmaps`, guaranteeing that the frozen frame is a pristine HUD image without any cutscene visual leakage.
-  - When `streamDelayFrames == 0` (default), direct hardware rendering via `drawChild(masterView)` is retained with zero overhead.
+  - Tapping **[ Position Reference Anchor ]** launches `AnchorSelectorOverlay` on Display 0 via `PrimaryModalType.ANCHOR_SELECTOR` with `PrimaryModalPayload.AnchorSelector(layoutId = layout.id)`.
+  - Features semi-transparent scrims, an accent-colored bounding box with a clean interior, center 2D touch drag, 4 directional edge handles (top, bottom, left, right), and a reusable vertical controller toolbox (`ToolboxContainer`, `AdjustCoordinatesCard`, `ToolboxActionCard`) for 2D gamepad navigation and confirmation.
+  - Positioning directly updates `layout.visualAnchor` (`srcX`, `srcY`, `srcWidth`, `srcHeight`).
+- **Layout Anchor Calibration (`HudAutoTuneCoordinator`):**
+  - Tapping **[ Calibrate Reference Anchor ]** samples strictly the layout's visual anchor bounding box on Display 0 at native resolution (1920x1080) over 6 seconds while leaving the primary screen completely unobstructed and playable at 120Hz.
+  - `HudAutoTuner.analyze` extracts stable, stationary anchor pixels and persists `HudAnchorSignature` to disk under `context.filesDir/cutout_masks/layout_anchor_<layoutId>_anchor.json`.
+  - The layout is saved with `layout.visualAnchor.enabled = true`.
+- **Synchronized Absence Freezing & Animated Blur Transition (`HudPresenceManager`, `MultiCutoutContainer`):**
+  - When visual anchoring is enabled and mirroring is active, `HudPresenceManager` evaluates the layout's anchor signature at ~60 Hz.
+  - When the reference element disappears (match ratio $< 45\%$, matching `HudPresenceEvaluator.MATCH_THRESHOLD_LOST`), HUD loss is signaled layout-wide (`isLayoutHudLost(layoutId)`).
+  - When loss occurs, all cutouts in the layout freeze simultaneously on their sharp last valid delayed frames from the ring buffer (zero cutscene leak).
+  - Each cutout renders an 8px frosted, desaturated (60% saturation), gently dimmed (85% brightness) inactive overlay via a hardware `RenderNode` and executes a smooth crossfade ($0.0 \to 1.0$ opacity over 300 ms via `AccelerateDecelerateInterpolator()`).
+  - When the anchor returns, the live/delayed video streams resume immediately and the frosted overlay dissolves smoothly ($1.0 \to 0.0$ opacity over 300 ms).
+- **Configurable Layout Stream Delay & 2 Hz Cache Elimination (`LayoutVisualAnchor.streamDelayFrames`, `CutoutFrameRingBuffer`):**
+  - The user can configure stream delay (1 to 10 frames, ~16 to ~166 ms, default 2 frames) via **Automatic Layout Switching** ("Stream Delay" slider, stored in `LayoutVisualAnchor.streamDelayFrames`).
+  - When visual anchoring is enabled, `streamDelayFrames` is strictly enforced to $\ge 1$, ensuring that `CutoutFrameRingBuffer` instances for all cutouts are always continuously populated during active gameplay.
+  - Because pristine pre-transition frames are always guaranteed in the ring buffer, the legacy 2 Hz full-screen background live-frame capture is completely eliminated, avoiding periodic bitmap allocations and GPU readbacks during gameplay.
 
 ---
 

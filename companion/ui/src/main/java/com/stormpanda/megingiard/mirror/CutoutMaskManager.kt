@@ -12,6 +12,7 @@ import java.util.concurrent.ConcurrentHashMap
 private const val TAG = "CutoutMaskManager"
 private const val MASKS_DIR = "cutout_masks"
 private const val MASK_FILE_PREFIX = "mask_"
+private const val LAYOUT_ANCHOR_FILE_PREFIX = "layout_anchor_"
 private const val PNG_EXTENSION = ".png"
 private const val VARIANCE_EXTENSION = "_var.bin"
 private const val ANCHOR_EXTENSION = "_anchor.json"
@@ -34,6 +35,7 @@ object CutoutMaskManager {
     private val tunedMaskCache = ConcurrentHashMap<String, Bitmap>()
     private val varianceCache = ConcurrentHashMap<String, ByteArray>()
     private val anchorSignatureCache = ConcurrentHashMap<String, HudAnchorSignature>()
+    private val layoutAnchorCache = ConcurrentHashMap<String, HudAnchorSignature>()
     private val freezeFrameCache = ConcurrentHashMap<String, Bitmap>()
 
     /**
@@ -381,6 +383,84 @@ object CutoutMaskManager {
         if (anchorSignatureCache.containsKey(cutoutId)) return true
         val dir = File(context.filesDir, MASKS_DIR)
         val file = File(dir, "$MASK_FILE_PREFIX$cutoutId$ANCHOR_EXTENSION")
+        return file.exists()
+    }
+
+    /**
+     * Retrieves the reference anchor signature for [layoutId] if available.
+     */
+    fun getLayoutAnchorSignature(
+        context: Context,
+        layoutId: String,
+    ): HudAnchorSignature? {
+        layoutAnchorCache[layoutId]?.let { return it }
+
+        val dir = File(context.filesDir, MASKS_DIR)
+        val file = File(dir, "$LAYOUT_ANCHOR_FILE_PREFIX$layoutId$ANCHOR_EXTENSION")
+        if (!file.exists()) return null
+
+        return try {
+            val text = file.readText()
+            val signature = json.decodeFromString(HudAnchorSignature.serializer(), text)
+            layoutAnchorCache[layoutId] = signature
+            AppLog.d(TAG, "Loaded anchor signature for layout $layoutId (${signature.points.size} points) from disk")
+            signature
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Failed to read anchor signature for layout $layoutId", e)
+            null
+        }
+    }
+
+    /**
+     * Persists [signature] as the reference anchor signature for [layoutId].
+     */
+    fun saveLayoutAnchorSignature(
+        context: Context,
+        layoutId: String,
+        signature: HudAnchorSignature,
+    ) {
+        layoutAnchorCache[layoutId] = signature
+        try {
+            val dir = File(context.filesDir, MASKS_DIR)
+            if (!dir.exists()) dir.mkdirs()
+            val file = File(dir, "$LAYOUT_ANCHOR_FILE_PREFIX$layoutId$ANCHOR_EXTENSION")
+            file.writeText(json.encodeToString(HudAnchorSignature.serializer(), signature))
+            AppLog.i(TAG, "Saved anchor signature for layout $layoutId (${signature.points.size} points)")
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Failed to persist anchor signature for layout $layoutId", e)
+        }
+    }
+
+    /**
+     * Deletes the anchor signature for [layoutId] from memory and disk.
+     */
+    fun deleteLayoutAnchorSignature(
+        context: Context,
+        layoutId: String,
+    ) {
+        layoutAnchorCache.remove(layoutId)
+        try {
+            val dir = File(context.filesDir, MASKS_DIR)
+            val file = File(dir, "$LAYOUT_ANCHOR_FILE_PREFIX$layoutId$ANCHOR_EXTENSION")
+            if (file.exists()) {
+                file.delete()
+                AppLog.i(TAG, "Deleted anchor signature for layout $layoutId")
+            }
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Failed to delete anchor signature for layout $layoutId", e)
+        }
+    }
+
+    /**
+     * Checks if a reference anchor signature is calibrated for [layoutId].
+     */
+    fun isLayoutAnchorCalibrated(
+        context: Context,
+        layoutId: String,
+    ): Boolean {
+        if (layoutAnchorCache.containsKey(layoutId)) return true
+        val dir = File(context.filesDir, MASKS_DIR)
+        val file = File(dir, "$LAYOUT_ANCHOR_FILE_PREFIX$layoutId$ANCHOR_EXTENSION")
         return file.exists()
     }
 }

@@ -44,7 +44,8 @@ sealed interface PrimaryModalPayload {
     ) : PrimaryModalPayload
 
     data class AnchorSelector(
-        val cutoutId: String,
+        val layoutId: String? = null,
+        val cutoutId: String? = null,
     ) : PrimaryModalPayload
 
     data class GlobalSettings(

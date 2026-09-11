@@ -387,6 +387,27 @@ Open Settings to create a layout.</string>
     <string name="layout_settings_bg_image_adjustments">Bildanpassungen &amp; Maskierung</string>
     <string name="layout_settings_bg_section_title">Hintergrund</string>
     <string name="layout_settings_bg_image_dimming_title">Dimmung</string>
+    <!-- Automatic Layout Switching & Visual Anchor -->
+    <string name="layout_settings_auto_switch_section_title">Automatischer Layout-Wechsel</string>
+    <string name="layout_settings_auto_switch_title">Automatischer Layout-Wechsel</string>
+    <string name="layout_settings_auto_switch_enabled_desc">Visueller Anker aktiv • Synchronisiertes Einfrieren aktiviert</string>
+    <string name="layout_settings_auto_switch_disabled_desc">Nicht konfiguriert</string>
+    <string name="layout_settings_visual_anchor_title">Visueller Referenz-Anker</string>
+    <string name="layout_settings_visual_anchor_desc">Überwacht einen Referenzbereich auf dem oberen Bildschirm, um Cutout-Zustände in diesem Layout zu synchronisieren.</string>
+    <string name="layout_settings_visual_anchor_position_title">Referenz-Anker positionieren</string>
+    <string name="layout_settings_visual_anchor_position_desc">Rahmen auf dem oberen Bildschirm anpassen</string>
+    <string name="layout_settings_visual_anchor_calibrate_title">Referenz-Anker kalibrieren</string>
+    <string name="layout_settings_visual_anchor_calibrate_desc">Referenzbereich abtasten, um stabile Ankerpunkte zu erkennen</string>
+    <string name="layout_settings_visual_anchor_recalibrate_title">Referenz-Anker neu kalibrieren</string>
+    <string name="layout_settings_visual_anchor_recalibrate_desc">Ankerpunkte vom laufenden Spiel aktualisieren</string>
+    <string name="layout_settings_visual_anchor_status_calibrated">Kalibriert (%1$d Referenzpunkte)</string>
+    <string name="layout_settings_visual_anchor_stream_delay_desc">Bilder zwischenspeichern, um Übergänge bei verschwindendem HUD zu glätten</string>
+    <string name="layout_settings_visual_anchor_freeze_title">Cutouts bei Verlust einfrieren</string>
+    <string name="layout_settings_visual_anchor_freeze_desc">Alle Cutouts einfrieren und leicht weichzeichnen, wenn die HUD-Referenz verschwindet</string>
+    <string name="layout_settings_visual_anchor_remove_title">Anker-Kalibrierung löschen</string>
+    <string name="layout_settings_visual_anchor_remove_desc">Gespeicherte Referenz-Signatur entfernen und visuellen Anker deaktivieren</string>
+    <string name="help_layout_settings_auto_switch_desc">Konfiguriere automatischen Layout-Wechsel und visuelle Verankerung für dieses Layout. Überwacht einen Referenzbereich auf dem Hauptbildschirm und synchronisiert das Einfrieren aller Cutouts, wenn das HUD verschwindet.</string>
+
     <string name="layout_settings_colors_section_title">Tastenfarben-Standardwerte</string>
     <string name="layout_settings_color_text">Text- &amp; Symbolfarbe</string>
     <string name="layout_settings_color_border">Rahmenfarbe</string>

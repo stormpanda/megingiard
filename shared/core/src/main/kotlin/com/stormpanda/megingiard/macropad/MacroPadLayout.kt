@@ -399,6 +399,32 @@ data class BackgroundTouchpadConfig(
  * @param backgroundTouchpad          Per-layout background touchpad settings for relative mouse.
  */
 const val DEFAULT_HUD_DIM_OPACITY = 0.60f
+const val DEFAULT_LAYOUT_STREAM_DELAY_FRAMES = 2
+const val MIN_LAYOUT_STREAM_DELAY_FRAMES = 1
+const val MAX_LAYOUT_STREAM_DELAY_FRAMES = 10
+const val DEFAULT_LAYOUT_ANCHOR_SIZE = 0.15f
+
+/**
+ * Visual reference anchor configuration for a [PadLayout].
+ *
+ * When [enabled], samples the primary display at [srcX], [srcY], [srcWidth], [srcHeight]
+ * to evaluate the presence of the layout's HUD reference.
+ * If the reference signature is lost (e.g. cutscene, inventory menu), all cutouts in the
+ * layout freeze simultaneously, retaining their pristine delayed frames from the ring buffer.
+ *
+ * [streamDelayFrames] enforces a minimum of 1 frame (1..10) to guarantee ring buffer availability
+ * and eliminate the need for periodic background frame sampling.
+ */
+@Serializable
+data class LayoutVisualAnchor(
+    val enabled: Boolean = false,
+    val srcX: Float = 0f,
+    val srcY: Float = 0f,
+    val srcWidth: Float = DEFAULT_LAYOUT_ANCHOR_SIZE,
+    val srcHeight: Float = DEFAULT_LAYOUT_ANCHOR_SIZE,
+    val streamDelayFrames: Int = DEFAULT_LAYOUT_STREAM_DELAY_FRAMES,
+    val freezeCutoutsOnLoss: Boolean = true,
+)
 
 @Serializable
 data class PadLayout(
@@ -438,6 +464,7 @@ data class PadLayout(
     val backgroundTouchpad: BackgroundTouchpadConfig = BackgroundTouchpadConfig(),
     val dimTopScreenHud: Boolean = false,
     val topScreenHudDimOpacity: Float = DEFAULT_HUD_DIM_OPACITY,
+    val visualAnchor: LayoutVisualAnchor = LayoutVisualAnchor(),
 )
 
 /**

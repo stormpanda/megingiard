@@ -25,6 +25,7 @@ import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.FrameLayout
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.macropad.BackgroundScaleMode
+import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.math.ViewportMath
 import kotlin.math.abs
 import kotlin.math.max
@@ -272,8 +273,20 @@ internal class MultiCutoutContainer(
             }
         }
 
+        val activeLayout = MacroPadState.activeLayout.value
+        val isLayoutAnchorActive = activeLayout?.visualAnchor?.enabled == true
+        val isLayoutHudLost =
+            activeLayout != null && isLayoutAnchorActive && activeLayout.visualAnchor.freezeCutoutsOnLoss &&
+                HudPresenceManager.isLayoutHudLost(activeLayout.id)
+
         for (cutout in cutouts) {
-            val isCutoutHudLost = cutout.freezeOnHudLoss && HudPresenceManager.isCutoutHudLost(cutout.id)
+            val isCutoutHudLost =
+                if (isLayoutAnchorActive) {
+                    isLayoutHudLost
+                } else {
+                    @Suppress("DEPRECATION")
+                    cutout.freezeOnHudLoss && HudPresenceManager.isCutoutHudLost(cutout.id)
+                }
             val isTargetFrozen = isFrozen || isCutoutHudLost
             val wasTargetFrozen = cutoutWasFrozen[cutout.id] ?: false
 
@@ -440,6 +453,12 @@ internal class MultiCutoutContainer(
                     canvas.save()
                 }
 
+            val activeLayout = MacroPadState.activeLayout.value
+            val isLayoutAnchorActive = activeLayout?.visualAnchor?.enabled == true
+            val isLayoutHudLost =
+                activeLayout != null && isLayoutAnchorActive && activeLayout.visualAnchor.freezeCutoutsOnLoss &&
+                    HudPresenceManager.isLayoutHudLost(activeLayout.id)
+
             for (cutout in cutouts) {
                 val dw = (cutout.destWidth * parentW).roundToInt().toFloat()
                 val dh = (cutout.destHeight * parentH).roundToInt().toFloat()
@@ -493,7 +512,13 @@ internal class MultiCutoutContainer(
                         canvas.clipPath(circlePath)
                     }
 
-                    val isCutoutHudLost = cutout.freezeOnHudLoss && HudPresenceManager.isCutoutHudLost(cutout.id)
+                    val isCutoutHudLost =
+                        if (isLayoutAnchorActive) {
+                            isLayoutHudLost
+                        } else {
+                            @Suppress("DEPRECATION")
+                            cutout.freezeOnHudLoss && HudPresenceManager.isCutoutHudLost(cutout.id)
+                        }
                     val isTargetFrozen = isFrozen || isCutoutHudLost
                     val blurAlpha = cutoutBlurAlphas[cutout.id] ?: (if (isTargetFrozen) FULL_ALPHA_FLOAT else 0f)
 
@@ -515,9 +540,16 @@ internal class MultiCutoutContainer(
                         }
                     } else {
                         // Live / Unfreezing: render live/delayed video stream base layer
+                        val effectiveDelay =
+                            if (activeLayout != null && isLayoutAnchorActive) {
+                                activeLayout.visualAnchor.streamDelayFrames
+                            } else {
+                                @Suppress("DEPRECATION")
+                                cutout.streamDelayFrames
+                            }
                         val delayedFrame =
-                            if (cutout.streamDelayFrames > 0) {
-                                HudPresenceManager.getDelayedFrame(cutout.id, cutout.streamDelayFrames)
+                            if (effectiveDelay > 0) {
+                                HudPresenceManager.getDelayedFrame(cutout.id, effectiveDelay)
                             } else {
                                 null
                             }
