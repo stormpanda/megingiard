@@ -176,7 +176,6 @@ internal object HudAutoTuneCoordinator {
                                 cutoutId = cutout.id,
                                 bitmap = maskBitmap,
                                 varianceMap = result.varianceMap,
-                                anchorSignature = null,
                                 freezeFrame = freezeBitmap,
                             )
                         }

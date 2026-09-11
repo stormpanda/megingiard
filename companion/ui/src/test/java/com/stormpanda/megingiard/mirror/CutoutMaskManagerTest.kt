@@ -124,32 +124,19 @@ class CutoutMaskManagerTest {
     }
 
     @Test
-    fun `saveMask with anchorSignature and freezeFrame persists both and deleteMask removes them`() {
+    fun `saveMask with freezeFrame persists both and deleteMask removes them`() {
         val context = RuntimeEnvironment.getApplication()
-        val cutoutId = "test_signature_freeze_cutout"
+        val cutoutId = "test_freeze_cutout"
         val maskBitmap = Bitmap.createBitmap(15, 15, Bitmap.Config.ARGB_8888)
         val freezeBitmap = Bitmap.createBitmap(15, 15, Bitmap.Config.ARGB_8888)
         freezeBitmap.setPixel(5, 5, 0xFF00FF00.toInt())
-
-        val signature =
-            HudAnchorSignature(
-                cutoutId = cutoutId,
-                points = listOf(AnchorPoint(0.5f, 0.5f, 0, 255, 0)),
-            )
 
         CutoutMaskManager.saveMask(
             context = context,
             cutoutId = cutoutId,
             bitmap = maskBitmap,
-            anchorSignature = signature,
             freezeFrame = freezeBitmap,
         )
-
-        val retrievedSig = CutoutMaskManager.getAnchorSignature(context, cutoutId)
-        assertNotNull(retrievedSig)
-        assertEquals(cutoutId, retrievedSig!!.cutoutId)
-        assertEquals(1, retrievedSig.points.size)
-        assertEquals(255, retrievedSig.points[0].g)
 
         val retrievedFreeze = CutoutMaskManager.getFreezeFrame(context, cutoutId)
         assertNotNull(retrievedFreeze)
@@ -157,12 +144,11 @@ class CutoutMaskManagerTest {
 
         // Cleanup
         CutoutMaskManager.deleteMask(context, cutoutId)
-        assertNull(CutoutMaskManager.getAnchorSignature(context, cutoutId))
         assertNull(CutoutMaskManager.getFreezeFrame(context, cutoutId))
     }
 
     @Test
-    fun `isCalibrated returns true when mask or anchor signature exists and false after deletion`() {
+    fun `isCalibrated returns true when mask exists and false after deletion`() {
         val context = RuntimeEnvironment.getApplication()
         val cutoutId = "test_calibrated_cutout"
         assertFalse(CutoutMaskManager.isCalibrated(context, cutoutId))

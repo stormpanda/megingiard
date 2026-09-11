@@ -15,11 +15,10 @@ class ScreenCutoutHudFilterTest {
         assertFalse(cutout.hasTransparencyMask)
         assertEquals(0, cutout.maskFeathering)
         assertEquals(0, cutout.maskTranslucency)
-        assertFalse(cutout.freezeOnHudLoss)
     }
 
     @Test
-    fun `verify serialization roundtrip with hasTransparencyMask and freezeOnHudLoss`() {
+    fun `verify serialization roundtrip with hasTransparencyMask`() {
         val original =
             ScreenCutout(
                 id = "hud_minimap",
@@ -35,21 +34,18 @@ class ScreenCutoutHudFilterTest {
                 hasTransparencyMask = true,
                 maskFeathering = 4,
                 maskTranslucency = 65,
-                freezeOnHudLoss = true,
             )
 
         val serialized = json.encodeToString(ScreenCutout.serializer(), original)
         assertTrue(serialized.contains("hasTransparencyMask"))
         assertTrue(serialized.contains("maskFeathering"))
         assertTrue(serialized.contains("maskTranslucency"))
-        assertTrue(serialized.contains("freezeOnHudLoss"))
 
         val deserialized = json.decodeFromString(ScreenCutout.serializer(), serialized)
         assertEquals(original, deserialized)
         assertTrue(deserialized.hasTransparencyMask)
         assertEquals(4, deserialized.maskFeathering)
         assertEquals(65, deserialized.maskTranslucency)
-        assertTrue(deserialized.freezeOnHudLoss)
     }
 
     @Test
@@ -109,7 +105,6 @@ class ScreenCutoutHudFilterTest {
         val parsed = json.decodeFromString(ScreenCutout.serializer(), legacyWithOldFields)
         assertEquals("cutout_with_old_hud", parsed.id)
         assertTrue(parsed.hasTransparencyMask)
-        assertFalse(parsed.freezeOnHudLoss)
     }
 
     @Test

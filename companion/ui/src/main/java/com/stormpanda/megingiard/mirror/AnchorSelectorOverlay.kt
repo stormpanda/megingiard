@@ -73,17 +73,14 @@ private val ASO_EDGE_HANDLE_SHAPE = RoundedCornerShape(ASO_EDGE_HANDLE_CORNER)
  */
 @Composable
 fun AnchorSelectorOverlay(
-    cutoutId: String? = null,
-    layoutId: String? = null,
+    layoutId: String,
     onDismiss: () -> Unit = {},
 ) {
-    AppLog.d(TAG, "AnchorSelectorOverlay composed for layoutId=$layoutId cutoutId=$cutoutId")
+    AppLog.d(TAG, "AnchorSelectorOverlay composed for layoutId=$layoutId")
     val colors = LocalAppColors.current
     val activeLayout by MacroPadState.activeLayout.collectAsStateWithLifecycle()
     val activeProfile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
-    val layout = (if (layoutId != null) activeProfile?.layouts?.find { it.id == layoutId } else null) ?: activeLayout ?: return
-    val cutout = if (cutoutId != null) layout.mirrorCutouts.find { it.id == cutoutId } else null
-    val currentCutoutState = rememberUpdatedState(cutout)
+    val layout = activeProfile?.layouts?.find { it.id == layoutId } ?: activeLayout ?: return
     val currentLayoutState = rememberUpdatedState(layout)
     val density = LocalDensity.current
 
@@ -137,16 +134,10 @@ fun AnchorSelectorOverlay(
         val screenH = constraints.maxHeight.toFloat()
         if (screenW <= 0f || screenH <= 0f) return@BoxWithConstraints
 
-        val isLayoutMode = layoutId != null || cutout == null
-
-        fun getCurrentCrop(): AnchorCrop =
-            if (isLayoutMode) {
-                val a = currentLayoutState.value.visualAnchor
-                AnchorCrop(a.srcX, a.srcY, a.srcWidth, a.srcHeight)
-            } else {
-                currentCutoutState.value?.getEffectiveAnchorCrop(currentLayoutState.value.mirrorCutouts)
-                    ?: AnchorCrop(0f, 0f, MIN_ANCHOR_SIZE, MIN_ANCHOR_SIZE)
-            }
+        fun getCurrentCrop(): AnchorCrop {
+            val a = currentLayoutState.value.visualAnchor
+            return AnchorCrop(a.srcX, a.srcY, a.srcWidth, a.srcHeight)
+        }
 
         val effectiveCrop = getCurrentCrop()
         val anchorLeft = effectiveCrop.x * screenW
@@ -165,31 +156,16 @@ fun AnchorSelectorOverlay(
             val clampedX = newX.coerceIn(0f, 1f - clampedW)
             val clampedY = newY.coerceIn(0f, 1f - clampedH)
 
-            if (isLayoutMode) {
-                val curLayout = currentLayoutState.value
-                val updatedAnchor =
-                    curLayout.visualAnchor.copy(
-                        enabled = true,
-                        srcX = clampedX,
-                        srcY = clampedY,
-                        srcWidth = clampedW,
-                        srcHeight = clampedH,
-                    )
-                MacroPadState.updateLayout(curLayout.copy(visualAnchor = updatedAnchor))
-            } else {
-                val curCutout = currentCutoutState.value ?: return
-                val updatedCutout =
-                    curCutout.copy(
-                        customAnchorEnabled = true,
-                        anchorCutoutId = null,
-                        anchorSrcX = clampedX,
-                        anchorSrcY = clampedY,
-                        anchorSrcWidth = clampedW,
-                        anchorSrcHeight = clampedH,
-                        freezeOnHudLoss = true,
-                    )
-                MacroPadState.updateCutout(updatedCutout)
-            }
+            val curLayout = currentLayoutState.value
+            val updatedAnchor =
+                curLayout.visualAnchor.copy(
+                    enabled = true,
+                    srcX = clampedX,
+                    srcY = clampedY,
+                    srcWidth = clampedW,
+                    srcHeight = clampedH,
+                )
+            MacroPadState.updateLayout(curLayout.copy(visualAnchor = updatedAnchor))
         }
 
         // 1. Semi-transparent scrim rects surrounding the anchor region
@@ -243,7 +219,7 @@ fun AnchorSelectorOverlay(
                         width = with(density) { anchorW.toDp() },
                         height = with(density) { anchorH.toDp() },
                     ).border(ASO_BORDER_WIDTH, colors.accent)
-                    .pointerInput(cutoutId, layoutId) {
+                    .pointerInput(layoutId) {
                         var boxDragStartX = 0f
                         var boxDragStartY = 0f
                         var boxDragStartW = 0f
@@ -273,10 +249,10 @@ fun AnchorSelectorOverlay(
         )
 
         // 3. Horizontal and Vertical Edge Resize Handles (Touch)
-        var dragStartX by remember(cutoutId, layoutId) { mutableFloatStateOf(0f) }
-        var dragStartY by remember(cutoutId, layoutId) { mutableFloatStateOf(0f) }
-        var dragStartW by remember(cutoutId, layoutId) { mutableFloatStateOf(0f) }
-        var dragStartH by remember(cutoutId, layoutId) { mutableFloatStateOf(0f) }
+        var dragStartX by remember(layoutId) { mutableFloatStateOf(0f) }
+        var dragStartY by remember(layoutId) { mutableFloatStateOf(0f) }
+        var dragStartW by remember(layoutId) { mutableFloatStateOf(0f) }
+        var dragStartH by remember(layoutId) { mutableFloatStateOf(0f) }
 
         fun captureDragStart() {
             val crop = getCurrentCrop()
@@ -388,7 +364,7 @@ fun AnchorSelectorOverlay(
                     val newH = (cur.height + dy.toFloat() / screenH).coerceIn(MIN_ANCHOR_SIZE, 1f - cur.y)
                     updateAnchorCrop(cur.x, cur.y, newW, newH)
                 },
-                resetKey = cutout?.id ?: layout.id,
+                resetKey = layout.id,
                 cardFocusRequester = firstItemFocusRequester,
                 modifier =
                     Modifier

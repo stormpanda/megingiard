@@ -280,14 +280,7 @@ internal class MultiCutoutContainer(
                 HudPresenceManager.isLayoutHudLost(activeLayout.id)
 
         for (cutout in cutouts) {
-            val isCutoutHudLost =
-                if (isLayoutAnchorActive) {
-                    isLayoutHudLost
-                } else {
-                    @Suppress("DEPRECATION")
-                    cutout.freezeOnHudLoss && HudPresenceManager.isCutoutHudLost(cutout.id)
-                }
-            val isTargetFrozen = isFrozen || isCutoutHudLost
+            val isTargetFrozen = isFrozen || isLayoutHudLost
             val wasTargetFrozen = cutoutWasFrozen[cutout.id] ?: false
 
             if (isTargetFrozen != wasTargetFrozen) {
@@ -512,14 +505,7 @@ internal class MultiCutoutContainer(
                         canvas.clipPath(circlePath)
                     }
 
-                    val isCutoutHudLost =
-                        if (isLayoutAnchorActive) {
-                            isLayoutHudLost
-                        } else {
-                            @Suppress("DEPRECATION")
-                            cutout.freezeOnHudLoss && HudPresenceManager.isCutoutHudLost(cutout.id)
-                        }
-                    val isTargetFrozen = isFrozen || isCutoutHudLost
+                    val isTargetFrozen = isFrozen || isLayoutHudLost
                     val blurAlpha = cutoutBlurAlphas[cutout.id] ?: (if (isTargetFrozen) FULL_ALPHA_FLOAT else 0f)
 
                     val cachedFrozenFrame = HudPresenceManager.getFrozenFrame(context, cutout.id)
@@ -544,8 +530,7 @@ internal class MultiCutoutContainer(
                             if (activeLayout != null && isLayoutAnchorActive) {
                                 activeLayout.visualAnchor.streamDelayFrames
                             } else {
-                                @Suppress("DEPRECATION")
-                                cutout.streamDelayFrames
+                                0
                             }
                         val delayedFrame =
                             if (effectiveDelay > 0) {

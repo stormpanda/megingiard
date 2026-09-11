@@ -163,12 +163,12 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - The toggle button MUST look like the other buttons, switch between a rectangle and circle icon, and use the same active accent color in both states.
 - The Aspect Ratio lock button MUST also be updated to use the active accent color in both states.
 
-### FR-M17: Smart Cutouts (Automated UI Isolation, Translucency Recovery & Absence Freeze-Frame)
+### FR-M17: Smart Cutouts (Automated UI Isolation & Translucency Recovery)
 
 - The user MUST be able to configure advanced cutout features on a per-cutout level in the **Advanced Cutout Settings** sub-page (`CutoutAdvancedSettingsSubPageContent`), accessed via an action card placed directly below Touch Projection in `CutoutSettingsSubPageContent`.
 - **Smart Cutout Concept:**
-  - A Smart Cutout isolates on-screen UI elements (minimaps, touch controls, meters, dials, widgets) from moving 3D background scenery, composites them with clean transparency over the companion display, and automatically freezes the frame when elements disappear during in-game menus, dialogue trees, cutscenes, or transitions.
-  - Converting a cutout to a Smart Cutout automatically enables **Transparent Background** (`hasTransparencyMask = true`) and **Freeze on Absence** (`freezeOnHudLoss = true`) as core default behaviors.
+  - A Smart Cutout isolates on-screen UI elements (minimaps, touch controls, meters, dials, widgets) from moving 3D background scenery and composites them with clean transparency over the companion display.
+  - Converting a cutout to a Smart Cutout automatically enables **Transparent Background** (`hasTransparencyMask = true`) as core default behavior.
 - **Conversion & Calibration (`HudAutoTuneCoordinator`, `HudAutoTuner`, `CutoutMaskManager`)**:
   - Uncalibrated cutouts display a prominent **[ Convert to Smart Cutout ]** action card (`settings_cutout_convert_smart_title`) explaining its capabilities.
   - Tapping this card begins a 6-second calibration sampling cycle at native top-screen resolution (1920x1080).
@@ -176,18 +176,14 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
   - **Secondary Companion Display HUD (`HudAutoTuneCalibrationSheet`):** While Display 0 is unobstructed, Display 4 renders a non-blocking companion HUD sheet over the live video stream featuring a pulsing accent dot, live countdown timer ("%ds left"), progress bar (0% to 100%), actionable guidance prompt ("The top screen is unobstructed. Move your character or rotate the camera in-game now so the algorithm can isolate static UI elements from the moving background"), and an Outlined Cancel button.
   - **Pixel-Level Color Change Tracking & High-Definition Sampling:** For every pixel in the cutout crop, the engine tracks channel min/max ($R, G, B$) across time. Moving 3D scenery is identified and marked transparent; stationary UI graphics remain opaque.
   - **Morphological Despeckling & Gaussian Anti-Aliasing:** Isolated noise specks are eliminated via morphological opening, followed by a 2-pass separable Gaussian blur (`[1, 2, 1] / 4`) producing smooth, anti-aliased edges with zero color fringing.
-  - **Anchor Signature Extraction & Pristine Reference Frame:** Samples up to 48 stratified anchor points across an $8 \times 8$ grid (`HudAnchorSignature`) and saves the full-res reference frame (`mask_<cutoutId>_freeze.png`).
-  - **Automated Commit & Mask Persistence:** The generated mask bitmap, variance map, anchor signature, and freeze frame are saved to disk under `context.filesDir/cutout_masks/`. The cutout is saved with `hasTransparencyMask = true`, `freezeOnHudLoss = true`, `maskFeathering = 0`, and `maskTranslucency = 0`.
+  - **Pristine Reference Frame:** Saves the full-res reference frame (`mask_<cutoutId>_freeze.png`) for high-fidelity rendering.
+  - **Automated Commit & Mask Persistence:** The generated mask bitmap, variance map, and freeze frame are saved to disk under `context.filesDir/cutout_masks/`. The cutout is saved with `hasTransparencyMask = true`, `maskFeathering = 0`, and `maskTranslucency = 0`.
 - **Advanced Cutout Controls (Calibrated State):**
   - **Cutout Translucency Slider:** A dedicated slider (`0%` / Off to `100%`, step `5%`) to recover semi-transparent glass panels, buttons, and dials over changing scenery using 2D cavity flood-fill and halo proximity relaxation.
   - **Edge Feathering Slider:** A dedicated slider (`0` to `10 px`, default `0 px` / Off) applying outward Euclidean edge dilation with distance-based linear opacity falloff to restore clipped anti-aliased borders and glows.
-  - **Re-Calibrate Smart Cutout:** An action card allowing the user to re-sample screen frames to refresh the mask, anchors, and freeze frame.
-  - **Remove Smart Cutout:** A two-step destructive confirmation card that deletes calibration files from disk and reverts the cutout back to a standard live rectangular/circular mirror cutout (`hasTransparencyMask = false`, `freezeOnHudLoss = false`).
-- **Presence Detection & Absence Freezing (`HudPresenceManager`, `HudPresenceEvaluator`):**
-  - When mirroring is active and a Smart Cutout is calibrated, `HudPresenceManager` extracts a minimal bounding-box crop covering all active anchor regions via hardware-accelerated `PixelCopy.request` directly from the active `Surface` on a dedicated background thread into a pre-allocated zero-allocation buffer (`reusableCropBitmap`) at ~60 Hz (16 ms interval) during active gameplay. This eliminates 1080p full-frame GPU readbacks (~8.3 MB per frame) and main-thread UI stalls while preserving 100% 1:1 bit-accurate pixel sampling for HUD signature evaluation. When all cutouts are in the `LOST` state (cutscene/menu active), the loop checks at ~30 Hz (33 ms interval) for prompt recovery when the HUD reappears.
-  - When the anchor match drops below 45% (`MATCH_THRESHOLD_LOST`), it transitions to `LOST` immediately on the first check (0–16 ms), completely eliminating video leakage and flickery cutscene flashes during cutscenes, menus, or dialogues.
-  - `MultiCutoutContainer` renders the native-resolution pristine reference frame (`mask_<cutoutId>_freeze.png`) with bilinear filtering (`isFilterBitmap = true`) and the transparency mask stencil applied on top. When the UI returns, a 2-check hysteresis (~66 ms) restores live 60 FPS mirroring smoothly.
-- Mask state is persisted per-cutout in `ScreenCutout` (`hasTransparencyMask: Boolean`, `maskFeathering: Int = 0`, `maskTranslucency: Int = 0`, `freezeOnHudLoss: Boolean = false`).
+  - **Re-Calibrate Smart Cutout:** An action card allowing the user to re-sample screen frames to refresh the mask and freeze frame.
+  - **Remove Smart Cutout:** A two-step destructive confirmation card that deletes calibration files from disk and reverts the cutout back to a standard live rectangular/circular mirror cutout (`hasTransparencyMask = false`).
+- Mask state is persisted per-cutout in `ScreenCutout` (`hasTransparencyMask: Boolean`, `maskFeathering: Int = 0`, `maskTranslucency: Int = 0`).
 
 ### FR-M18: Display 0 HUD Dimming Scrim (Veil)
 

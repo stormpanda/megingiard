@@ -21,12 +21,12 @@ private const val PNG_QUALITY = 100
 
 /**
  * Manages in-memory caching and filesystem persistence for auto-tuned cutout transparency masks,
- * raw variance maps for dynamic translucency/feathering, anchor signatures for presence detection,
+ * raw variance maps for dynamic translucency/feathering, layout anchor signatures for presence detection,
  * and high-resolution freeze frames for cutscene preservation.
  *
  * Base masks are stored as lossless PNG files under `context.filesDir/cutout_masks/mask_<cutoutId>.png`.
  * Variance maps are stored as binary byte arrays under `context.filesDir/cutout_masks/mask_<cutoutId>_var.bin`.
- * Anchor signatures are stored as JSON under `context.filesDir/cutout_masks/mask_<cutoutId>_anchor.json`.
+ * Layout anchor signatures are stored as JSON under `context.filesDir/cutout_masks/layout_anchor_<layoutId>_anchor.json`.
  * Freeze frames are stored as PNG under `context.filesDir/cutout_masks/mask_<cutoutId>_freeze.png`.
  */
 object CutoutMaskManager {
@@ -34,7 +34,6 @@ object CutoutMaskManager {
     private val baseMaskCache = ConcurrentHashMap<String, Bitmap>()
     private val tunedMaskCache = ConcurrentHashMap<String, Bitmap>()
     private val varianceCache = ConcurrentHashMap<String, ByteArray>()
-    private val anchorSignatureCache = ConcurrentHashMap<String, HudAnchorSignature>()
     private val layoutAnchorCache = ConcurrentHashMap<String, HudAnchorSignature>()
     private val freezeFrameCache = ConcurrentHashMap<String, Bitmap>()
 
@@ -164,7 +163,6 @@ object CutoutMaskManager {
         cutoutId: String,
         bitmap: Bitmap,
         varianceMap: ByteArray? = null,
-        anchorSignature: HudAnchorSignature? = null,
         freezeFrame: Bitmap? = null,
     ) {
         clearTunedCacheFor(cutoutId)
@@ -194,60 +192,11 @@ object CutoutMaskManager {
                 varFile.delete()
             }
 
-            if (anchorSignature != null) {
-                saveAnchorSignature(context, cutoutId, anchorSignature)
-            }
-
             if (freezeFrame != null) {
                 saveFreezeFrame(context, cutoutId, freezeFrame)
             }
         } catch (e: Exception) {
             AppLog.e(TAG, "Failed to persist mask/variance for cutout $cutoutId", e)
-        }
-    }
-
-    /**
-     * Retrieves the reference anchor signature for [cutoutId] if available.
-     */
-    fun getAnchorSignature(
-        context: Context,
-        cutoutId: String,
-    ): HudAnchorSignature? {
-        anchorSignatureCache[cutoutId]?.let { return it }
-
-        val dir = File(context.filesDir, MASKS_DIR)
-        val file = File(dir, "$MASK_FILE_PREFIX$cutoutId$ANCHOR_EXTENSION")
-        if (!file.exists()) return null
-
-        return try {
-            val text = file.readText()
-            val signature = json.decodeFromString(HudAnchorSignature.serializer(), text)
-            anchorSignatureCache[cutoutId] = signature
-            AppLog.d(TAG, "Loaded anchor signature for cutout $cutoutId (${signature.points.size} points) from disk")
-            signature
-        } catch (e: Exception) {
-            AppLog.e(TAG, "Failed to read anchor signature for cutout $cutoutId", e)
-            null
-        }
-    }
-
-    /**
-     * Persists [signature] as the reference anchor signature for [cutoutId].
-     */
-    fun saveAnchorSignature(
-        context: Context,
-        cutoutId: String,
-        signature: HudAnchorSignature,
-    ) {
-        anchorSignatureCache[cutoutId] = signature
-        try {
-            val dir = File(context.filesDir, MASKS_DIR)
-            if (!dir.exists()) dir.mkdirs()
-            val file = File(dir, "$MASK_FILE_PREFIX$cutoutId$ANCHOR_EXTENSION")
-            file.writeText(json.encodeToString(HudAnchorSignature.serializer(), signature))
-            AppLog.i(TAG, "Saved anchor signature for cutout $cutoutId (${signature.points.size} points)")
-        } catch (e: Exception) {
-            AppLog.e(TAG, "Failed to persist anchor signature for cutout $cutoutId", e)
         }
     }
 
@@ -311,7 +260,6 @@ object CutoutMaskManager {
     ) {
         clearTunedCacheFor(cutoutId)
         varianceCache.remove(cutoutId)
-        anchorSignatureCache.remove(cutoutId)
         freezeFrameCache.remove(cutoutId)?.let { cached ->
             if (!cached.isRecycled) {
                 cached.recycle()
@@ -333,11 +281,6 @@ object CutoutMaskManager {
             if (varFile.exists()) {
                 varFile.delete()
                 AppLog.i(TAG, "Deleted variance file for cutout $cutoutId")
-            }
-            val anchorFile = File(dir, "$MASK_FILE_PREFIX$cutoutId$ANCHOR_EXTENSION")
-            if (anchorFile.exists()) {
-                anchorFile.delete()
-                AppLog.i(TAG, "Deleted anchor file for cutout $cutoutId")
             }
             val freezeFile = File(dir, "$MASK_FILE_PREFIX$cutoutId$FREEZE_EXTENSION")
             if (freezeFile.exists()) {
@@ -373,18 +316,12 @@ object CutoutMaskManager {
     }
 
     /**
-     * Checks if calibration assets (transparency mask or anchor signature) exist for [cutoutId].
+     * Checks if calibration assets (transparency mask) exist for [cutoutId].
      */
     fun isCalibrated(
         context: Context,
         cutoutId: String,
-    ): Boolean {
-        if (hasMask(context, cutoutId)) return true
-        if (anchorSignatureCache.containsKey(cutoutId)) return true
-        val dir = File(context.filesDir, MASKS_DIR)
-        val file = File(dir, "$MASK_FILE_PREFIX$cutoutId$ANCHOR_EXTENSION")
-        return file.exists()
-    }
+    ): Boolean = hasMask(context, cutoutId)
 
     /**
      * Retrieves the reference anchor signature for [layoutId] if available.

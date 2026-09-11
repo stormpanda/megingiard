@@ -38,26 +38,7 @@ enum class AspectRatioMode {
  * @param hasTransparencyMask Whether an auto-tuned transparency mask bitmap is present for this cutout.
  * @param maskFeathering Outward edge expansion radius in pixels (0..10) with decreasing opacity falloff.
  * @param maskTranslucency Semi-transparent HUD capture sensitivity level (0..100%), preserving dials and glows.
- * @param freezeOnHudLoss Whether to freeze the last valid HUD frame when the HUD element is absent (e.g. cutscene or menu).
- * @param customAnchorEnabled Whether presence detection monitors a separate reference anchor rather than the cutout's own crop.
- * @param anchorSrcX Normalized X position of custom reference anchor on primary screen.
- * @param anchorSrcY Normalized Y position of custom reference anchor on primary screen.
- * @param anchorSrcWidth Normalized width of custom reference anchor on primary screen.
- * @param anchorSrcHeight Normalized height of custom reference anchor on primary screen.
- * @param anchorCutoutId Optional ID of another cutout whose presence state or crop is borrowed as reference anchor.
- * @param streamDelayFrames Number of frames (0..10) to delay the live stream by to eliminate cutscene flicker.
  */
-@Serializable
-data class AnchorCrop(
-    val x: Float,
-    val y: Float,
-    val width: Float,
-    val height: Float,
-)
-
-const val DEFAULT_ANCHOR_SIZE = 0.15f
-const val MAX_STREAM_DELAY_FRAMES = 10
-
 @Serializable
 data class ScreenCutout(
     val id: String,
@@ -81,50 +62,7 @@ data class ScreenCutout(
     val hasTransparencyMask: Boolean = false,
     val maskFeathering: Int = 0,
     val maskTranslucency: Int = 0,
-    @Deprecated("Use PadLayout.visualAnchor instead")
-    val freezeOnHudLoss: Boolean = false,
-    @Deprecated("Use PadLayout.visualAnchor instead")
-    val customAnchorEnabled: Boolean = false,
-    @Deprecated("Use PadLayout.visualAnchor instead")
-    val anchorSrcX: Float = 0f,
-    @Deprecated("Use PadLayout.visualAnchor instead")
-    val anchorSrcY: Float = 0f,
-    @Deprecated("Use PadLayout.visualAnchor instead")
-    val anchorSrcWidth: Float = DEFAULT_ANCHOR_SIZE,
-    @Deprecated("Use PadLayout.visualAnchor instead")
-    val anchorSrcHeight: Float = DEFAULT_ANCHOR_SIZE,
-    @Deprecated("Use PadLayout.visualAnchor instead")
-    val anchorCutoutId: String? = null,
-    @Deprecated("Use PadLayout.visualAnchor instead")
-    val streamDelayFrames: Int = 0,
 ) {
-    /**
-     * Resolves the effective normalized screen crop rectangle used for presence anchor sampling.
-     * If [customAnchorEnabled] is false, returns the cutout's own crop ([srcX], [srcY], [srcWidth], [srcHeight]).
-     * If linked to another cutout via [anchorCutoutId], recursively resolves that cutout's anchor crop (with cycle protection).
-     * Otherwise returns the custom anchor bounds ([anchorSrcX], [anchorSrcY], [anchorSrcWidth], [anchorSrcHeight]).
-     */
-    fun getEffectiveAnchorCrop(allCutouts: List<ScreenCutout> = emptyList()): AnchorCrop {
-        if (!customAnchorEnabled) {
-            return AnchorCrop(srcX, srcY, srcWidth, srcHeight)
-        }
-        if (anchorCutoutId != null) {
-            val visited = mutableSetOf(id)
-            var currentLinkedId: String? = anchorCutoutId
-            while (currentLinkedId != null && currentLinkedId !in visited) {
-                visited.add(currentLinkedId)
-                val target = allCutouts.find { it.id == currentLinkedId } ?: break
-                if (!target.customAnchorEnabled || target.anchorCutoutId == null) {
-                    return target.getEffectiveAnchorCrop(allCutouts)
-                }
-                currentLinkedId = target.anchorCutoutId
-            }
-        }
-        val w = if (anchorSrcWidth > 0f) anchorSrcWidth else DEFAULT_ANCHOR_SIZE
-        val h = if (anchorSrcHeight > 0f) anchorSrcHeight else DEFAULT_ANCHOR_SIZE
-        return AnchorCrop(anchorSrcX, anchorSrcY, w, h)
-    }
-
     companion object {
         val FULLSCREEN =
             ScreenCutout(
