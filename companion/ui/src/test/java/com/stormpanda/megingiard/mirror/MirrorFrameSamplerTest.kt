@@ -143,6 +143,7 @@ class MirrorFrameSamplerTest {
     fun testCaptureCropReturnsCroppedFrozenBitmap() =
         runTest {
             val frozen = Bitmap.createBitmap(200, 200, Bitmap.Config.ARGB_8888)
+            ScreenCaptureManager.setFrozen(true)
             ScreenCaptureManager.setFrozenBitmap(frozen)
 
             val cropRect = Rect(20, 30, 70, 90)
@@ -158,6 +159,7 @@ class MirrorFrameSamplerTest {
     fun testCaptureCropRendersIntoReusableBitmapFromFrozen() =
         runTest {
             val frozen = Bitmap.createBitmap(200, 200, Bitmap.Config.ARGB_8888)
+            ScreenCaptureManager.setFrozen(true)
             ScreenCaptureManager.setFrozenBitmap(frozen)
 
             val cropRect = Rect(10, 10, 60, 70) // width 50, height 60
@@ -168,6 +170,20 @@ class MirrorFrameSamplerTest {
             assertEquals(50, cropped!!.width)
             assertEquals(60, cropped.height)
             reusable.recycle()
+        }
+
+    @Test
+    fun testCaptureCropBypassesFrozenBitmapWhenNotFrozen() =
+        runTest {
+            val frozen = Bitmap.createBitmap(200, 200, Bitmap.Config.ARGB_8888)
+            ScreenCaptureManager.setFrozenBitmap(frozen)
+            ScreenCaptureManager.setFrozen(false)
+
+            val cropRect = Rect(20, 30, 70, 90)
+            val cropped = MirrorFrameSampler.captureCrop(cropRect)
+
+            assertNull(cropped)
+            ScreenCaptureManager.setFrozenBitmap(null)
         }
 
     @Test

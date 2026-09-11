@@ -66,8 +66,9 @@ internal object MirrorFrameSampler {
         val cropH = cropRect.height()
         if (cropW <= 0 || cropH <= 0) return null
 
-        val frozen = ScreenCaptureManager.frozenBitmap.value
-        if (frozen != null && !frozen.isRecycled) {
+        val isFrozen = ScreenCaptureManager.isFrozen.value
+        val frozen = if (isFrozen) ScreenCaptureManager.frozenBitmap.value else null
+        if (frozen != null) {
             val target =
                 if (reusableBitmap != null &&
                     reusableBitmap.width == cropW &&
@@ -81,8 +82,16 @@ internal object MirrorFrameSampler {
             val canvas = Canvas(target)
             val src = Rect(cropRect)
             val dst = Rect(0, 0, cropW, cropH)
-            canvas.drawBitmap(frozen, src, dst, null)
-            return target
+            synchronized(frozen) {
+                if (!frozen.isRecycled) {
+                    canvas.drawBitmap(frozen, src, dst, null)
+                    return target
+                }
+            }
+            if (target !== reusableBitmap && !target.isRecycled) {
+                target.recycle()
+            }
+            return null
         }
 
         val surface = activeSurface?.get() ?: return null

@@ -173,6 +173,7 @@ fun EmbeddedMirrorView(
         } else if (!isFrozen) {
             mcc?.isFrozen = false
             mcc?.frozenBitmap = null
+            ScreenCaptureManager.setFrozenBitmap(null)
         }
     }
 
