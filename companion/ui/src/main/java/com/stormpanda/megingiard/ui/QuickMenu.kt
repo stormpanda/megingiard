@@ -51,6 +51,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.macropad.LayoutTransitionManager
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
@@ -215,7 +216,7 @@ fun QuickMenu(
                     colors = colors,
                     onLayoutSelected = { layoutId ->
                         AppLog.d(TAG, "layout selected: $layoutId")
-                        MacroPadState.setActiveLayoutId(layoutId)
+                        LayoutTransitionManager.switchLayout(layoutId)
                         AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
                     },
                 )

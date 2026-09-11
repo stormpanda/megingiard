@@ -50,6 +50,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onKeyEvent
@@ -231,6 +232,21 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
                     )
                     AppLog.d(TAG, "show disabled action feedback: $reason")
                 },
+            )
+        }
+
+        val transitionSnapshot by LayoutTransitionManager.transitionSnapshot.collectAsStateWithLifecycle()
+        val transitionAlpha by LayoutTransitionManager.transitionAlpha.collectAsStateWithLifecycle()
+        val activeSnapshot = transitionSnapshot
+        if (activeSnapshot != null && !activeSnapshot.isRecycled && transitionAlpha > 0f) {
+            Image(
+                bitmap = activeSnapshot.asImageBitmap(),
+                contentDescription = null,
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .clip(MP_SCREEN_SHAPE)
+                        .graphicsLayer { alpha = transitionAlpha },
             )
         }
 

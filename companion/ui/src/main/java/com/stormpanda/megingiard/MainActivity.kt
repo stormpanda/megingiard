@@ -70,6 +70,7 @@ import com.stormpanda.megingiard.input.InjectorLifecycleManager
 import com.stormpanda.megingiard.log.LogReportManager
 import com.stormpanda.megingiard.macropad.AppLauncherManager
 import com.stormpanda.megingiard.macropad.BackgroundPickerManager
+import com.stormpanda.megingiard.macropad.LayoutTransitionManager
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
@@ -234,12 +235,14 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         AppLog.i(TAG, "onDestroy")
+        LayoutTransitionManager.unregisterWindowProvider()
         InjectorLifecycleManager.stopAll()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
         super.onCreate(savedInstanceState)
+        LayoutTransitionManager.registerWindowProvider { window }
 
         if (savedInstanceState == null && display?.displayId != Display.DEFAULT_DISPLAY) {
             PrimaryFocusAnchorActivity.anchorPrimaryFocus(this)

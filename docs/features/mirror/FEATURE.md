@@ -228,6 +228,13 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
     - A 500 ms cooldown (`AUTO_SWITCH_COOLDOWN_MS`) prevents rapid thrashing between candidate layouts.
     - Once switched, candidate scanning stops completely until the newly active layout's anchor is lost again. If no candidate layout matches, the current layout remains active and frozen.
   - **Quick Menu Interaction & Manual Override:** Selecting a profile or layout manually in the `QuickMenu` automatically disengages autonomous mode (`CompanionViewMode.MACROPAD`) and triggers an informational toast ("Auto Switch turned off"). Tapping the shimmering `AUTO` chip re-engages autonomous mode (`CompanionViewMode.AUTO`).
+- **Hardware-Accelerated Layout Crossfade Transitions (`LayoutTransitionManager`):**
+  - Switching between MacroPad layouts (autonomously via `HudPresenceManager` or in-game via gamepad/swipe shortcuts) executes a smooth 300 ms crossfade transition.
+  - Immediately prior to switching `MacroPadState.activeLayout`, `LayoutTransitionManager` captures a hardware snapshot of the outgoing layout via `PixelCopy`.
+  - The snapshot renders as a non-interactive overlay over `MacroPadScreen` and dissolves from $1.0 \to 0.0$ alpha over 300 ms using `AccelerateDecelerateInterpolator`.
+  - The incoming layout renders underneath and accepts touch inputs immediately on frame 0 with zero latency.
+  - Upon completion or cancellation, snapshot bitmaps are strictly recycled per §7.3 of `AGENTS.md`.
+  - When the Quick Menu is open, snapshot capturing is bypassed to avoid freezing Quick Menu cards into the transition frame.
 
 ---
 

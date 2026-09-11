@@ -7,6 +7,7 @@ import android.os.SystemClock
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CompanionViewMode
+import com.stormpanda.megingiard.macropad.LayoutTransitionManager
 import com.stormpanda.megingiard.macropad.MAX_LAYOUT_STREAM_DELAY_FRAMES
 import com.stormpanda.megingiard.macropad.MIN_LAYOUT_STREAM_DELAY_FRAMES
 import com.stormpanda.megingiard.macropad.MacroPadState
@@ -174,7 +175,7 @@ object HudPresenceManager {
                             layoutStates[candidate.id] = HudPresenceState.PRESENT
                             layoutConsecutiveCounts[candidate.id] = 0
                             candidateScanIndex = 0
-                            MacroPadState.setActiveLayoutId(candidate.id)
+                            LayoutTransitionManager.switchLayout(candidate.id)
                         }
                     }
                 }
@@ -335,7 +336,7 @@ object HudPresenceManager {
                                 layoutStates[candidate.id] = HudPresenceState.PRESENT
                                 layoutConsecutiveCounts[candidate.id] = 0
                                 candidateScanIndex = 0
-                                MacroPadState.setActiveLayoutId(candidate.id)
+                                LayoutTransitionManager.switchLayout(candidate.id)
                             }
                         }
                     }
