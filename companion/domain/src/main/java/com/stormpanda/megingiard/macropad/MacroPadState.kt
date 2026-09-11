@@ -670,6 +670,7 @@ object MacroPadState {
                 mirrorCutouts = copiedCutouts,
                 backgroundImagePath = layout.backgroundImagePath?.let { "backgrounds/bg_$newLayoutId" },
                 backgroundImageVersion = 0,
+                visualAnchor = layout.visualAnchor,
             )
 
         AppLog.d(TAG, "duplicateLayout layoutId=$layoutId newId=${duplicatedLayout.id} name='$uniqueName' in profile=${profile.id}")
@@ -790,9 +791,9 @@ object MacroPadState {
         layout: PadLayout,
         sourceProfileId: String,
         targetProfileId: String,
-    ) {
-        val sourceProfile = _profiles.value.firstOrNull { it.id == sourceProfileId } ?: return
-        val targetProfile = _profiles.value.firstOrNull { it.id == targetProfileId } ?: return
+    ): String? {
+        val sourceProfile = _profiles.value.firstOrNull { it.id == sourceProfileId } ?: return null
+        val targetProfile = _profiles.value.firstOrNull { it.id == targetProfileId } ?: return null
 
         val existingNames = targetProfile.layouts.map { it.name }
         val desiredName = layout.name
@@ -829,17 +830,22 @@ object MacroPadState {
                 cutout.copy(id = UUID.randomUUID().toString())
             }
 
+        val newLayoutId = UUID.randomUUID().toString()
         val copiedLayout =
             layout.copy(
-                id = UUID.randomUUID().toString(),
+                id = newLayoutId,
                 name = uniqueName,
                 buttons = layout.buttons.cloneWithMacroMapping(macroMapping),
                 mirrorCutouts = copiedCutouts,
+                backgroundImagePath = layout.backgroundImagePath?.let { "backgrounds/bg_$newLayoutId" },
+                backgroundImageVersion = 0,
+                visualAnchor = layout.visualAnchor,
             )
 
         AppLog.d(TAG, "copyLayoutToProfile layoutId=${layout.id} name='$uniqueName' to profileId=$targetProfileId")
         updatedTargetProfile = updatedTargetProfile.copy(layouts = updatedTargetProfile.layouts + copiedLayout)
         updateProfile(updatedTargetProfile)
+        return newLayoutId
     }
 
     /** Copy a single button to a layout in any profile, copying its referenced macro if cross-profile. */

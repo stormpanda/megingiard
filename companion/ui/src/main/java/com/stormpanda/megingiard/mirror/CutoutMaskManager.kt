@@ -400,4 +400,18 @@ object CutoutMaskManager {
         val file = File(dir, "$LAYOUT_ANCHOR_FILE_PREFIX$layoutId$ANCHOR_EXTENSION")
         return file.exists()
     }
+
+    /**
+     * Clones the reference anchor signature from [sourceLayoutId] to [targetLayoutId].
+     */
+    fun duplicateLayoutAnchorSignature(
+        context: Context,
+        sourceLayoutId: String,
+        targetLayoutId: String,
+    ) {
+        val signature = getLayoutAnchorSignature(context, sourceLayoutId) ?: return
+        val copiedSignature = signature.copy(cutoutId = targetLayoutId)
+        saveLayoutAnchorSignature(context, targetLayoutId, copiedSignature)
+        AppLog.i(TAG, "Duplicated anchor signature from $sourceLayoutId to $targetLayoutId")
+    }
 }

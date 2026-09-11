@@ -80,6 +80,7 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
+import com.stormpanda.megingiard.mirror.CutoutMaskManager
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.settings.MacroPadSettings
@@ -397,14 +398,21 @@ fun MacroPadEditor(
                                                         for (origLayout in originalLayouts) {
                                                             val originalPath = origLayout.backgroundImagePath
                                                             val newLayoutId = layoutMapping[origLayout.id]
-                                                            if (originalPath != null && newLayoutId != null) {
-                                                                scope.launch {
-                                                                    MacroPadMediaRepository.duplicateBackgroundImage(
-                                                                        context,
-                                                                        origLayout.id,
-                                                                        newLayoutId,
-                                                                    )
+                                                            if (newLayoutId != null) {
+                                                                if (originalPath != null) {
+                                                                    scope.launch {
+                                                                        MacroPadMediaRepository.duplicateBackgroundImage(
+                                                                            context,
+                                                                            origLayout.id,
+                                                                            newLayoutId,
+                                                                        )
+                                                                    }
                                                                 }
+                                                                CutoutMaskManager.duplicateLayoutAnchorSignature(
+                                                                    context,
+                                                                    origLayout.id,
+                                                                    newLayoutId,
+                                                                )
                                                             }
                                                         }
                                                         val duplicatedProfile = MacroPadState.activeProfile.value
@@ -451,6 +459,11 @@ fun MacroPadEditor(
                                                                 )
                                                             }
                                                         }
+                                                        CutoutMaskManager.duplicateLayoutAnchorSignature(
+                                                            context,
+                                                            originalLayout.id,
+                                                            newLayoutId,
+                                                        )
                                                         val duplicatedLayout =
                                                             MacroPadState.activeProfile.value?.layouts?.firstOrNull {
                                                                 it.id ==
@@ -831,6 +844,7 @@ fun MacroPadEditor(
                                                             scope.launch {
                                                                 MacroPadMediaRepository.deleteBackgroundImage(context, lay.id)
                                                             }
+                                                            CutoutMaskManager.deleteLayoutAnchorSignature(context, lay.id)
                                                             appearanceDraft = null
                                                             MacroPadNavState.pop()
                                                             DialogToastManager.show(
@@ -1114,7 +1128,24 @@ fun MacroPadEditor(
                                                     excludeProfileId = profile.id,
                                                     accentColor = colors.accent,
                                                     onSelect = { targetProfileId ->
-                                                        MacroPadState.copyLayoutToProfile(lay, profile.id, targetProfileId)
+                                                        val newLayoutId =
+                                                            MacroPadState.copyLayoutToProfile(lay, profile.id, targetProfileId)
+                                                        if (newLayoutId != null) {
+                                                            if (lay.backgroundImagePath != null) {
+                                                                scope.launch {
+                                                                    MacroPadMediaRepository.duplicateBackgroundImage(
+                                                                        context,
+                                                                        lay.id,
+                                                                        newLayoutId,
+                                                                    )
+                                                                }
+                                                            }
+                                                            CutoutMaskManager.duplicateLayoutAnchorSignature(
+                                                                context,
+                                                                lay.id,
+                                                                newLayoutId,
+                                                            )
+                                                        }
                                                         MacroPadNavState.pop()
                                                         DialogToastManager.show(
                                                             context.getString(R.string.macropad_layout_copied_toast),

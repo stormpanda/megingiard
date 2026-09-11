@@ -18,6 +18,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.KeyboardSettingsOverlay
 import com.stormpanda.megingiard.macropad.MacroPadEditor
@@ -129,7 +130,13 @@ fun PrimaryModalHost(
             if (payload != null) {
                 AnchorSelectorOverlay(
                     layoutId = payload.layoutId,
-                    onDismiss = onDismiss,
+                    onDismiss = {
+                        if (AppStateManager.suspendedPrimaryModal.value != null) {
+                            AppStateManager.resumeSuspended()
+                        } else {
+                            onDismiss()
+                        }
+                    },
                 )
             }
         }

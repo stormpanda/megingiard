@@ -144,6 +144,16 @@ object HudPresenceManager {
     private suspend fun runMonitoringLoop() {
         while (scope.isActive) {
             val context = appContext ?: continue
+
+            // Suspend presence monitoring and layout auto-switching during calibration or while editor/modal is open
+            if (HudAutoTuneCoordinator.isCalibrating.value ||
+                AppStateManager.isEditorActive.value ||
+                AppStateManager.activePrimaryModal.value != null
+            ) {
+                delay(PRESENCE_CHECK_INTERVAL_LOST_MS)
+                continue
+            }
+
             val activeLayout = MacroPadState.activeLayout.value
             val layoutAnchor = activeLayout?.visualAnchor?.takeIf { it.enabled }
             val activeProfile = MacroPadState.activeProfile.value

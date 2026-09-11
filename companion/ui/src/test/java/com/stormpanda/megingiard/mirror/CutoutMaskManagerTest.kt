@@ -232,4 +232,34 @@ class CutoutMaskManagerTest {
         CutoutMaskManager.deleteLayoutAnchorSignature(context, layoutId)
         assertFalse(CutoutMaskManager.isLayoutAnchorCalibrated(context, layoutId))
     }
+
+    @Test
+    fun `duplicateLayoutAnchorSignature clones signature with new layoutId`() {
+        val context = RuntimeEnvironment.getApplication()
+        val sourceId = "source_layout"
+        val targetId = "target_layout"
+
+        val signature =
+            HudAnchorSignature(
+                cutoutId = sourceId,
+                points = listOf(AnchorPoint(0.1f, 0.2f, 11, 22, 33)),
+            )
+
+        CutoutMaskManager.saveLayoutAnchorSignature(context, sourceId, signature)
+        assertTrue(CutoutMaskManager.isLayoutAnchorCalibrated(context, sourceId))
+        assertFalse(CutoutMaskManager.isLayoutAnchorCalibrated(context, targetId))
+
+        CutoutMaskManager.duplicateLayoutAnchorSignature(context, sourceId, targetId)
+        assertTrue(CutoutMaskManager.isLayoutAnchorCalibrated(context, targetId))
+
+        val cloned = CutoutMaskManager.getLayoutAnchorSignature(context, targetId)
+        assertNotNull(cloned)
+        assertEquals(targetId, cloned!!.cutoutId)
+        assertEquals(1, cloned.points.size)
+        assertEquals(11, cloned.points[0].r)
+
+        // Cleanup
+        CutoutMaskManager.deleteLayoutAnchorSignature(context, sourceId)
+        CutoutMaskManager.deleteLayoutAnchorSignature(context, targetId)
+    }
 }

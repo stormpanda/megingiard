@@ -23,7 +23,7 @@ class HudAutoTunerTest {
     }
 
     @Test
-    fun `analyze with static scene returns static flag with tip message`() {
+    fun `analyze with static scene returns static flag with tip message but extracts valid anchorSignature`() {
         // All 10 frames are identical (no player camera movement)
         val frames =
             List(10) {
@@ -31,9 +31,12 @@ class HudAutoTunerTest {
                     colorArgb(i % 255, (i * 2) % 255, (i * 3) % 255)
                 }
             }
-        val result = HudAutoTuner.analyze(frames, width, height)
+        val result = HudAutoTuner.analyze(frames, width, height, cutoutId = "layout_static_test")
         assertTrue(result.isStaticScene)
         assertTrue(result.summary.contains("Static scene detected"))
+        assertTrue(result.anchorSignature != null)
+        assertTrue(result.anchorSignature!!.points.isNotEmpty())
+        assertEquals("layout_static_test", result.anchorSignature!!.cutoutId)
     }
 
     @Test

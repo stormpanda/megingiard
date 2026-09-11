@@ -78,9 +78,12 @@ fun AnchorSelectorOverlay(
 ) {
     AppLog.d(TAG, "AnchorSelectorOverlay composed for layoutId=$layoutId")
     val colors = LocalAppColors.current
-    val activeLayout by MacroPadState.activeLayout.collectAsStateWithLifecycle()
     val activeProfile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
-    val layout = activeProfile?.layouts?.find { it.id == layoutId } ?: activeLayout ?: return
+    val profiles by MacroPadState.profiles.collectAsStateWithLifecycle()
+    val layout =
+        activeProfile?.layouts?.find { it.id == layoutId }
+            ?: profiles.flatMap { it.layouts }.find { it.id == layoutId }
+            ?: return
     val currentLayoutState = rememberUpdatedState(layout)
     val density = LocalDensity.current
 

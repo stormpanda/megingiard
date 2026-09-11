@@ -74,6 +74,7 @@ class MacroPadStateTest {
         buttonBgColor: ColorOption = ColorOption.Neutral,
         mirrorEdgeBlendWidth: Float = 0f,
         mirrorConfigured: Boolean = false,
+        visualAnchor: LayoutVisualAnchor = LayoutVisualAnchor(),
     ) = PadLayout(
         id = id,
         name = name,
@@ -91,6 +92,7 @@ class MacroPadStateTest {
         buttonBgColor = buttonBgColor,
         mirrorEdgeBlendWidth = mirrorEdgeBlendWidth,
         mirrorConfigured = mirrorConfigured,
+        visualAnchor = visualAnchor,
     )
 
     private fun testProfile(
@@ -342,18 +344,28 @@ class MacroPadStateTest {
     fun `copyLayoutToProfile duplicates layout and maps referenced macros when cross-profile`() {
         val m1 = Macro(id = "macro-1", name = "Fire", steps = emptyList())
         val btn = testButton(id = "btn-1", action = PadAction.Macro("macro-1"))
-        val l1 = testLayout(id = "layout-1", name = "Lay1", buttons = listOf(btn))
+        val l1 =
+            testLayout(
+                id = "layout-1",
+                name = "Lay1",
+                buttons = listOf(btn),
+                visualAnchor = LayoutVisualAnchor(enabled = true, srcY = 0.3f),
+            )
         val p1 = testProfile(id = "p1", layouts = listOf(l1), macros = listOf(m1))
         val p2 = testProfile(id = "p2", layouts = listOf(testLayout(id = "layout-2", name = "Lay2")))
         loadProfiles(p1, p2, activeId = "p1")
 
-        MacroPadState.copyLayoutToProfile(l1, "p1", "p2")
+        val newId = MacroPadState.copyLayoutToProfile(l1, "p1", "p2")
+        assertNotNull(newId)
 
         val targetProfile = MacroPadState.profiles.value.first { it.id == "p2" }
         assertEquals(2, targetProfile.layouts.size)
         val copiedLayout = targetProfile.layouts.first { it.id != "layout-2" }
+        assertEquals(newId, copiedLayout.id)
         assertEquals("Lay1", copiedLayout.name)
         assertEquals(1, copiedLayout.buttons.size)
+        assertTrue(copiedLayout.visualAnchor.enabled)
+        assertEquals(0.3f, copiedLayout.visualAnchor.srcY, 0.001f)
 
         assertEquals(1, targetProfile.macros.size)
         val copiedMacro = targetProfile.macros.first()
@@ -431,6 +443,7 @@ class MacroPadStateTest {
                 buttons = listOf(btn),
                 mirrorEdgeBlendWidth = 25f,
                 mirrorCutouts = listOf(cutout),
+                visualAnchor = LayoutVisualAnchor(enabled = true, srcX = 0.2f),
             )
         loadProfiles(testProfile(id = "p1", layouts = listOf(l1), activeLayoutId = "layout-1"))
 
@@ -453,6 +466,8 @@ class MacroPadStateTest {
         assertTrue(dupCutout.touchProjectionEnabled)
         assertTrue(dupCutout.motionSmoothing)
         assertEquals(75, dupCutout.motionSmoothingStrength)
+        assertTrue(duplicated.visualAnchor.enabled)
+        assertEquals(0.2f, duplicated.visualAnchor.srcX, 0.001f)
     }
 
     @Test

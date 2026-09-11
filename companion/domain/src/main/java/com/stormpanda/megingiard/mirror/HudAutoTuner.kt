@@ -148,6 +148,18 @@ object HudAutoTuner {
         val motionPct = (changedCount * PERCENT_MULTIPLIER) / pixelCount
         val isStatic = motionPct < STATIC_SCENE_MIN_MOTION_PCT
 
+        // Always extract stationary anchor signature points regardless of whether motion occurred,
+        // because visual anchors are reference crops of static HUD elements (e.g. icons, menus, portraits)
+        // where 0% motion is optimal rather than a failure.
+        val signature =
+            extractAnchorSignature(
+                varianceMap = varianceMap,
+                frames = frames,
+                width = width,
+                height = height,
+                cutoutId = cutoutId,
+            )
+
         if (isStatic) {
             AppLog.i(TAG, "Static scene detected (motionPct=$motionPct%). All pixels stayed constant.")
             return AutoTuneResult(
@@ -158,6 +170,7 @@ object HudAutoTuner {
                 isStaticScene = true,
                 summary = "Static scene detected: No motion observed. (Tip: Move in-game during tuning).",
                 varianceMap = varianceMap,
+                anchorSignature = signature,
             )
         }
 
@@ -179,15 +192,8 @@ object HudAutoTuner {
             }
         }
 
-        val finalTransparentPct = (transparentCount * PERCENT_MULTIPLIER) / pixelCount
-        val signature =
-            extractAnchorSignature(
-                varianceMap = varianceMap,
-                frames = frames,
-                width = width,
-                height = height,
-                cutoutId = cutoutId,
-            )
+        val rawTransparentPct = (transparentCount * PERCENT_MULTIPLIER) / pixelCount
+        val finalTransparentPct = rawTransparentPct.coerceIn(0, 100)
         AppLog.i(
             TAG,
             "Auto-Tune completed: $finalTransparentPct% background transparent (${width}x$height, ${signature.points.size} anchors)",
