@@ -402,11 +402,15 @@ Open Settings to create a layout.</string>
     <string name="layout_settings_visual_anchor_recalibrate_desc">Ankerpunkte vom laufenden Spiel aktualisieren</string>
     <string name="layout_settings_visual_anchor_status_calibrated">Kalibriert (%1$d Referenzpunkte)</string>
     <string name="layout_settings_visual_anchor_stream_delay_desc">Bilder zwischenspeichern, um Übergänge bei verschwindendem HUD zu glätten</string>
-    <string name="layout_settings_visual_anchor_freeze_title">Cutouts bei Verlust einfrieren</string>
-    <string name="layout_settings_visual_anchor_freeze_desc">Alle Cutouts einfrieren und leicht weichzeichnen, wenn die HUD-Referenz verschwindet</string>
+    <string name="layout_settings_visual_anchor_blur_title">Inaktive Cutouts weichzeichnen</string>
+    <string name="layout_settings_visual_anchor_blur_desc">Milchglas-Weichzeichnung anwenden, wenn der Referenzanker verschwindet. Wenn deaktiviert, bleiben Cutouts scharf eingefroren.</string>
     <string name="layout_settings_visual_anchor_remove_title">Anker-Kalibrierung löschen</string>
     <string name="layout_settings_visual_anchor_remove_desc">Gespeicherte Referenz-Signatur entfernen und visuellen Anker deaktivieren</string>
     <string name="help_layout_settings_auto_switch_desc">Konfiguriere automatischen Layout-Wechsel und visuelle Verankerung für dieses Layout. Überwacht einen Referenzbereich auf dem Hauptbildschirm und synchronisiert das Einfrieren aller Cutouts, wenn das HUD verschwindet.</string>
+
+    <string name="settings_profile_automation_header">Automatisierung</string>
+    <string name="settings_profile_auto_layout_switching_title">Automatischer Layout-Wechsel</string>
+    <string name="settings_profile_auto_layout_switching_desc">Wechselt automatisch zum ersten Layout in diesem Profil, dessen Referenzanker auf dem Bildschirm sichtbar ist</string>
 
     <string name="layout_settings_colors_section_title">Tastenfarben-Standardwerte</string>
     <string name="layout_settings_color_text">Text- &amp; Symbolfarbe</string>
@@ -756,7 +760,7 @@ Open Settings to create a layout.</string>
     <string name="help_quickmenu_profiles_desc">Tippe auf einen Chip, um sofort zu einem anderen Spielprofil zu wechseln (deaktiviert den Auto-Wechsel). Das aktive Profil ist hervorgehoben. Profile werden im Bereich „Profil/Layout bearbeiten“ verwaltet.</string>
     <string name="help_quickmenu_layouts_desc">Tippe auf einen Chip, um zu einem anderen Layout im aktuellen Profil zu wechseln (deaktiviert den Auto-Wechsel). Nur als aktiviert markierte Layouts erscheinen hier.</string>
     <string name="help_quickmenu_auto_switch_label">Auto-Wechsel</string>
-    <string name="help_quickmenu_auto_switch_desc">Schaltet die automatische Profilzuordnung EIN/AUS. Bei EIN wechseln Profile und Companion-Ansichten automatisch basierend auf dem aktiven Spiel oder Emulator. Bei AUS ist der automatische Wechsel pausiert.</string>
+    <string name="help_quickmenu_auto_switch_desc">Schaltet den automatischen Wechsel EIN/AUS. Bei EIN wechseln Profile, Layouts und Ansichten automatisch basierend auf dem aktiven Spiel, Emulator und Bildschirmanckern. Bei AUS ist der automatische Wechsel pausiert.</string>
     <string name="help_quickmenu_view_switch_label">Zum Hub / Spiel-Profil wechseln</string>
     <string name="help_quickmenu_view_switch_desc">Wechselt manuell zwischen dem Companion Hub Dashboard und dem aktiven Spiel-Profil-Layout (deaktiviert den Auto-Wechsel).</string>
     <string name="help_quickmenu_edit_desc">Öffnet den Bereich „Profil/Layout bearbeiten“, in dem du Schaltflächen hinzufügen, verschieben und konfigurieren sowie Profile, Layouts und Makros verwalten kannst.</string>

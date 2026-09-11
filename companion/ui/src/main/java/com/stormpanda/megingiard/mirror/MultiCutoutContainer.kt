@@ -276,8 +276,9 @@ internal class MultiCutoutContainer(
         val activeLayout = MacroPadState.activeLayout.value
         val isLayoutAnchorActive = activeLayout?.visualAnchor?.enabled == true
         val isLayoutHudLost =
-            activeLayout != null && isLayoutAnchorActive && activeLayout.visualAnchor.freezeCutoutsOnLoss &&
+            activeLayout != null && isLayoutAnchorActive &&
                 HudPresenceManager.isLayoutHudLost(activeLayout.id)
+        val shouldBlur = activeLayout?.visualAnchor?.blurCutoutsOnLoss == true
 
         for (cutout in cutouts) {
             val isTargetFrozen = isFrozen || isLayoutHudLost
@@ -286,8 +287,8 @@ internal class MultiCutoutContainer(
             if (isTargetFrozen != wasTargetFrozen) {
                 cutoutWasFrozen[cutout.id] = isTargetFrozen
 
-                val targetAlpha = if (isTargetFrozen) FULL_ALPHA_FLOAT else 0f
-                val currentAlpha = cutoutBlurAlphas[cutout.id] ?: (if (wasTargetFrozen) FULL_ALPHA_FLOAT else 0f)
+                val targetAlpha = if (isTargetFrozen && shouldBlur) FULL_ALPHA_FLOAT else 0f
+                val currentAlpha = cutoutBlurAlphas[cutout.id] ?: (if (wasTargetFrozen && shouldBlur) FULL_ALPHA_FLOAT else 0f)
                 cutoutBlurAlphas[cutout.id] = currentAlpha
                 cutoutTransitionAnimators.remove(cutout.id)?.cancel()
 
@@ -449,8 +450,9 @@ internal class MultiCutoutContainer(
             val activeLayout = MacroPadState.activeLayout.value
             val isLayoutAnchorActive = activeLayout?.visualAnchor?.enabled == true
             val isLayoutHudLost =
-                activeLayout != null && isLayoutAnchorActive && activeLayout.visualAnchor.freezeCutoutsOnLoss &&
+                activeLayout != null && isLayoutAnchorActive &&
                     HudPresenceManager.isLayoutHudLost(activeLayout.id)
+            val shouldBlur = activeLayout?.visualAnchor?.blurCutoutsOnLoss == true
 
             for (cutout in cutouts) {
                 val dw = (cutout.destWidth * parentW).roundToInt().toFloat()
@@ -506,7 +508,7 @@ internal class MultiCutoutContainer(
                     }
 
                     val isTargetFrozen = isFrozen || isLayoutHudLost
-                    val blurAlpha = cutoutBlurAlphas[cutout.id] ?: (if (isTargetFrozen) FULL_ALPHA_FLOAT else 0f)
+                    val blurAlpha = cutoutBlurAlphas[cutout.id] ?: (if (isTargetFrozen && shouldBlur) FULL_ALPHA_FLOAT else 0f)
 
                     val cachedFrozenFrame = HudPresenceManager.getFrozenFrame(context, cutout.id)
                     val fullFrozenBitmap = if (cachedFrozenFrame == null && isFrozen) frozenBitmap else null

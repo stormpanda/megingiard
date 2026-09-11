@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.Anchor
+import androidx.compose.material.icons.rounded.BlurOn
 import androidx.compose.material.icons.rounded.Colorize
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
@@ -15,7 +16,6 @@ import androidx.compose.material.icons.rounded.FormatColorFill
 import androidx.compose.material.icons.rounded.FormatColorText
 import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.Palette
-import androidx.compose.material.icons.rounded.PauseCircle
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Tune
@@ -430,15 +430,15 @@ internal fun AutomaticLayoutSwitchingSubPageContent(
             )
 
             GamepadToggleCard(
-                title = stringResource(R.string.layout_settings_visual_anchor_freeze_title),
-                description = stringResource(R.string.layout_settings_visual_anchor_freeze_desc),
-                checked = layout.visualAnchor.freezeCutoutsOnLoss,
-                icon = Icons.Rounded.PauseCircle,
-                itemKey = "layout_${layout.id}_freeze_on_loss",
+                title = stringResource(R.string.layout_settings_visual_anchor_blur_title),
+                description = stringResource(R.string.layout_settings_visual_anchor_blur_desc),
+                checked = layout.visualAnchor.blurCutoutsOnLoss,
+                icon = Icons.Rounded.BlurOn,
+                itemKey = "layout_${layout.id}_blur_on_loss",
                 onCheckedChange = { isChecked ->
                     onUpdateLayout(
                         layout.copy(
-                            visualAnchor = layout.visualAnchor.copy(freezeCutoutsOnLoss = isChecked),
+                            visualAnchor = layout.visualAnchor.copy(blurCutoutsOnLoss = isChecked),
                         ),
                     )
                 },

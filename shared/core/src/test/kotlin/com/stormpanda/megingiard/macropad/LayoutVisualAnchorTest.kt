@@ -30,7 +30,7 @@ class LayoutVisualAnchorTest {
         assertEquals(DEFAULT_LAYOUT_ANCHOR_SIZE, anchor.srcWidth, EPSILON)
         assertEquals(DEFAULT_LAYOUT_ANCHOR_SIZE, anchor.srcHeight, EPSILON)
         assertEquals(DEFAULT_LAYOUT_STREAM_DELAY_FRAMES, anchor.streamDelayFrames)
-        assertTrue(anchor.freezeCutoutsOnLoss)
+        assertTrue(anchor.blurCutoutsOnLoss)
     }
 
     @Test
@@ -43,13 +43,13 @@ class LayoutVisualAnchorTest {
                 srcWidth = TEST_SRC_WIDTH,
                 srcHeight = TEST_SRC_HEIGHT,
                 streamDelayFrames = TEST_STREAM_DELAY,
-                freezeCutoutsOnLoss = false,
+                blurCutoutsOnLoss = false,
             )
 
         val serialized = json.encodeToString(original)
         assertTrue(serialized.contains("\"enabled\":true"))
         assertTrue(serialized.contains("\"streamDelayFrames\":$TEST_STREAM_DELAY"))
-        assertTrue(serialized.contains("\"freezeCutoutsOnLoss\":false"))
+        assertTrue(serialized.contains("\"blurCutoutsOnLoss\":false"))
 
         val deserialized = json.decodeFromString<LayoutVisualAnchor>(serialized)
         assertEquals(original, deserialized)
@@ -58,7 +58,7 @@ class LayoutVisualAnchorTest {
         assertEquals(TEST_SRC_WIDTH, deserialized.srcWidth, EPSILON)
         assertEquals(TEST_SRC_HEIGHT, deserialized.srcHeight, EPSILON)
         assertEquals(TEST_STREAM_DELAY, deserialized.streamDelayFrames)
-        assertFalse(deserialized.freezeCutoutsOnLoss)
+        assertFalse(deserialized.blurCutoutsOnLoss)
     }
 
     @Test
@@ -75,7 +75,7 @@ class LayoutVisualAnchorTest {
                         srcWidth = TEST_SRC_WIDTH,
                         srcHeight = TEST_SRC_HEIGHT,
                         streamDelayFrames = TEST_STREAM_DELAY,
-                        freezeCutoutsOnLoss = true,
+                        blurCutoutsOnLoss = true,
                     ),
             )
 
@@ -87,7 +87,7 @@ class LayoutVisualAnchorTest {
         assertTrue(deserialized.visualAnchor.enabled)
         assertEquals(TEST_SRC_X, deserialized.visualAnchor.srcX, EPSILON)
         assertEquals(TEST_STREAM_DELAY, deserialized.visualAnchor.streamDelayFrames)
-        assertTrue(deserialized.visualAnchor.freezeCutoutsOnLoss)
+        assertTrue(deserialized.visualAnchor.blurCutoutsOnLoss)
     }
 
     @Test
@@ -110,6 +110,39 @@ class LayoutVisualAnchorTest {
         assertEquals(DEFAULT_LAYOUT_ANCHOR_SIZE, parsed.visualAnchor.srcWidth, EPSILON)
         assertEquals(DEFAULT_LAYOUT_ANCHOR_SIZE, parsed.visualAnchor.srcHeight, EPSILON)
         assertEquals(DEFAULT_LAYOUT_STREAM_DELAY_FRAMES, parsed.visualAnchor.streamDelayFrames)
-        assertTrue(parsed.visualAnchor.freezeCutoutsOnLoss)
+        assertTrue(parsed.visualAnchor.blurCutoutsOnLoss)
+    }
+
+    @Test
+    fun `verify PadProfile serialization round-trip with autoLayoutSwitching`() {
+        val profile =
+            PadProfile(
+                id = "profile_auto_switch",
+                name = "Auto Switch Profile",
+                autoLayoutSwitching = true,
+            )
+
+        val serialized = json.encodeToString(profile)
+        assertTrue(serialized.contains("\"autoLayoutSwitching\":true"))
+
+        val deserialized = json.decodeFromString<PadProfile>(serialized)
+        assertEquals(profile, deserialized)
+        assertTrue(deserialized.autoLayoutSwitching)
+    }
+
+    @Test
+    fun `verify backward compatibility when deserializing legacy PadProfile without autoLayoutSwitching`() {
+        val legacyJson =
+            """
+            {
+                "id": "legacy_prof_1",
+                "name": "Legacy Profile"
+            }
+            """.trimIndent()
+
+        val parsed = json.decodeFromString<PadProfile>(legacyJson)
+        assertEquals("legacy_prof_1", parsed.id)
+        assertEquals("Legacy Profile", parsed.name)
+        assertFalse(parsed.autoLayoutSwitching)
     }
 }

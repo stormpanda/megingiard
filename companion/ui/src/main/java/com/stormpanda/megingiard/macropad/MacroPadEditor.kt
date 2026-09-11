@@ -683,6 +683,9 @@ fun MacroPadEditor(
                                                 onNameChange = { name ->
                                                     MacroPadState.renameProfile(prof.id, name)
                                                 },
+                                                onAutoLayoutSwitchingChange = { enabled ->
+                                                    MacroPadState.updateProfile(prof.copy(autoLayoutSwitching = enabled))
+                                                },
                                                 onUnlinkApp = {
                                                     val unlinked = prof.copy(association = null)
                                                     MacroPadState.updateProfile(unlinked)

@@ -3,11 +3,15 @@ package com.stormpanda.megingiard.mirror
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Rect
+import android.os.SystemClock
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.macropad.MAX_LAYOUT_STREAM_DELAY_FRAMES
 import com.stormpanda.megingiard.macropad.MIN_LAYOUT_STREAM_DELAY_FRAMES
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
+import com.stormpanda.megingiard.macropad.PadProfile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -26,6 +30,7 @@ private const val TAG = "HudPresenceManager"
 
 private const val PRESENCE_CHECK_INTERVAL_ACTIVE_MS = 16L // ~60 Hz (1-frame instant cutscene detection)
 private const val PRESENCE_CHECK_INTERVAL_LOST_MS = 33L // ~30 Hz prompt recovery when HUD returns
+private const val AUTO_SWITCH_COOLDOWN_MS = 500L
 private const val DEFAULT_SOURCE_WIDTH = 1920
 private const val DEFAULT_SOURCE_HEIGHT = 1080
 
@@ -51,8 +56,21 @@ object HudPresenceManager {
     @Volatile
     private var reusableCropBitmap: Bitmap? = null
 
+    @Volatile
+    private var reusableCandidateCropBitmap: Bitmap? = null
+
+    private var candidateScanIndex = 0
+    private var lastAutoSwitchTimeMs = 0L
+
     private val _presenceRevision = MutableStateFlow(0)
     val presenceRevision: StateFlow<Int> = _presenceRevision.asStateFlow()
+
+    private data class CaptureState(
+        val isCapturing: Boolean,
+        val layout: PadLayout?,
+        val profile: PadProfile?,
+        val viewMode: CompanionViewMode,
+    )
 
     /**
      * Initializes the manager with an application context and attaches state flow observers.
@@ -69,11 +87,12 @@ object HudPresenceManager {
             combine(
                 ScreenCaptureManager.isCapturing,
                 MacroPadState.activeLayout,
-                ScreenCaptureManager.cutouts,
-            ) { capturing, layout, cutouts ->
-                Triple(capturing, layout, cutouts)
-            }.collect { (capturing, layout, cutouts) ->
-                updateMonitoringLoop(capturing, layout, cutouts)
+                MacroPadState.activeProfile,
+                AppStateManager.companionViewMode,
+            ) { capturing, layout, profile, viewMode ->
+                CaptureState(capturing, layout, profile, viewMode)
+            }.collect { state ->
+                updateMonitoringLoop(state.isCapturing, state.layout, state.profile, state.viewMode)
             }
         }
     }
@@ -82,10 +101,13 @@ object HudPresenceManager {
     private fun updateMonitoringLoop(
         isCapturing: Boolean,
         layout: PadLayout?,
-        cutouts: List<ScreenCutout>,
+        profile: PadProfile?,
+        viewMode: CompanionViewMode,
     ) {
         val hasLayoutAnchor = layout?.visualAnchor?.enabled == true
-        val shouldMonitor = isCapturing && hasLayoutAnchor
+        val isAutoLayoutSwitching = viewMode == CompanionViewMode.AUTO && profile?.autoLayoutSwitching == true
+        val hasAnyAnchoredLayout = profile?.layouts?.any { it.visualAnchor.enabled } == true
+        val shouldMonitor = isCapturing && (hasLayoutAnchor || (isAutoLayoutSwitching && hasAnyAnchoredLayout))
 
         if (shouldMonitor) {
             if (monitorJob?.isActive != true) {
@@ -101,6 +123,11 @@ object HudPresenceManager {
                     if (!bmp.isRecycled) bmp.recycle()
                 }
                 reusableCropBitmap = null
+                reusableCandidateCropBitmap?.let { bmp ->
+                    if (!bmp.isRecycled) bmp.recycle()
+                }
+                reusableCandidateCropBitmap = null
+                candidateScanIndex = 0
                 lastValidFrameBitmaps.values.forEach { bmp ->
                     if (!bmp.isRecycled) bmp.recycle()
                 }
@@ -118,12 +145,50 @@ object HudPresenceManager {
             val context = appContext ?: continue
             val activeLayout = MacroPadState.activeLayout.value
             val layoutAnchor = activeLayout?.visualAnchor?.takeIf { it.enabled }
+            val activeProfile = MacroPadState.activeProfile.value
+            val viewMode = AppStateManager.companionViewMode.value
+            val isAutoSwitchEligible =
+                viewMode == CompanionViewMode.AUTO &&
+                    activeProfile?.autoLayoutSwitching == true
+
             if (activeLayout == null || layoutAnchor == null) {
+                if (isAutoSwitchEligible) {
+                    val candidates =
+                        activeProfile
+                            ?.layouts
+                            ?.filter { candidate ->
+                                candidate.id != activeLayout?.id &&
+                                    candidate.visualAnchor.enabled &&
+                                    CutoutMaskManager.isLayoutAnchorCalibrated(context, candidate.id)
+                            }.orEmpty()
+                    if (candidates.isNotEmpty()) {
+                        val candidate = candidates[candidateScanIndex % candidates.size]
+                        candidateScanIndex++
+                        val srcW = ScreenCaptureManager.captureSourceWidth.value.let { if (it > 0) it else DEFAULT_SOURCE_WIDTH }
+                        val srcH = ScreenCaptureManager.captureSourceHeight.value.let { if (it > 0) it else DEFAULT_SOURCE_HEIGHT }
+                        val now = SystemClock.uptimeMillis()
+                        val cooldownPassed = (now - lastAutoSwitchTimeMs) >= AUTO_SWITCH_COOLDOWN_MS
+                        if (cooldownPassed && evaluateCandidateLayout(context, candidate, srcW, srcH)) {
+                            AppLog.i(TAG, "Candidate layout '${candidate.name}' (${candidate.id}) matched anchor! Auto-switching layout.")
+                            lastAutoSwitchTimeMs = now
+                            layoutStates[candidate.id] = HudPresenceState.PRESENT
+                            layoutConsecutiveCounts[candidate.id] = 0
+                            candidateScanIndex = 0
+                            MacroPadState.setActiveLayoutId(candidate.id)
+                        }
+                    }
+                }
                 delay(PRESENCE_CHECK_INTERVAL_LOST_MS)
                 continue
             }
 
             val allCutouts = ScreenCaptureManager.cutouts.value
+            val activeCutoutIds = allCutouts.map { it.id }.toSet()
+            val staleCutoutIds = cutoutRingBuffers.keys - activeCutoutIds
+            for (staleId in staleCutoutIds) {
+                cutoutRingBuffers.remove(staleId)?.recycle()
+                lastValidFrameBitmaps.remove(staleId)?.let { if (!it.isRecycled) it.recycle() }
+            }
 
             // 60 Hz during gameplay; 30 Hz when lost
             val isCurrentLost = layoutStates[activeLayout.id] == HudPresenceState.LOST
@@ -245,6 +310,35 @@ object HudPresenceManager {
                             }
                         }
                     }
+
+                    // When LOST, check candidates if profile auto-layout switching is active
+                    if (newState == HudPresenceState.LOST && isAutoSwitchEligible) {
+                        val candidates =
+                            activeProfile
+                                ?.layouts
+                                ?.filter { candidate ->
+                                    candidate.id != activeLayout.id &&
+                                        candidate.visualAnchor.enabled &&
+                                        CutoutMaskManager.isLayoutAnchorCalibrated(context, candidate.id)
+                                }.orEmpty()
+                        if (candidates.isNotEmpty()) {
+                            val candidate = candidates[candidateScanIndex % candidates.size]
+                            candidateScanIndex++
+                            val now = SystemClock.uptimeMillis()
+                            val cooldownPassed = (now - lastAutoSwitchTimeMs) >= AUTO_SWITCH_COOLDOWN_MS
+                            if (cooldownPassed && evaluateCandidateLayout(context, candidate, srcW, srcH)) {
+                                AppLog.i(
+                                    TAG,
+                                    "Candidate layout '${candidate.name}' (${candidate.id}) matched anchor! Auto-switching layout.",
+                                )
+                                lastAutoSwitchTimeMs = now
+                                layoutStates[candidate.id] = HudPresenceState.PRESENT
+                                layoutConsecutiveCounts[candidate.id] = 0
+                                candidateScanIndex = 0
+                                MacroPadState.setActiveLayoutId(candidate.id)
+                            }
+                        }
+                    }
                 }
 
                 if (anyStateChanged) {
@@ -256,6 +350,68 @@ object HudPresenceManager {
                 if (frame != reusableCropBitmap && frame != ScreenCaptureManager.frozenBitmap.value) {
                     frame.recycle()
                 }
+            }
+        }
+    }
+
+    private suspend fun evaluateCandidateLayout(
+        context: Context,
+        candidate: PadLayout,
+        srcW: Int,
+        srcH: Int,
+    ): Boolean {
+        val anchor = candidate.visualAnchor
+        if (!anchor.enabled) return false
+
+        val cropLeft = (anchor.srcX * srcW).roundToInt().coerceIn(0, srcW - 1)
+        val cropTop = (anchor.srcY * srcH).roundToInt().coerceIn(0, srcH - 1)
+        val cropRight = ((anchor.srcX + anchor.srcWidth) * srcW).roundToInt().coerceIn(cropLeft + 1, srcW)
+        val cropBottom = ((anchor.srcY + anchor.srcHeight) * srcH).roundToInt().coerceIn(cropTop + 1, srcH)
+        val cropW = cropRight - cropLeft
+        val cropH = cropBottom - cropTop
+        if (cropW <= 0 || cropH <= 0) return false
+
+        val cropRect = Rect(cropLeft, cropTop, cropRight, cropBottom)
+
+        var reusable = reusableCandidateCropBitmap
+        if (reusable == null || reusable.width != cropW || reusable.height != cropH || reusable.isRecycled) {
+            if (reusable != null && !reusable.isRecycled) {
+                reusable.recycle()
+            }
+            reusable =
+                try {
+                    Bitmap.createBitmap(cropW, cropH, Bitmap.Config.ARGB_8888)
+                } catch (e: OutOfMemoryError) {
+                    AppLog.e(TAG, "OOM allocating candidate crop bitmap (${cropW}x$cropH)", e)
+                    null
+                }
+            reusableCandidateCropBitmap = reusable
+        }
+
+        val frame = MirrorFrameSampler.captureCrop(cropRect, reusableBitmap = reusable) ?: return false
+        try {
+            val frameW = frame.width
+            val frameH = frame.height
+            if (frameW <= 0 || frameH <= 0) return false
+
+            val signature = CutoutMaskManager.getLayoutAnchorSignature(context, candidate.id) ?: return false
+            if (signature.points.isEmpty()) return false
+
+            val matchRatio =
+                HudPresenceEvaluator.evaluateMatchRatio(signature) { u, v ->
+                    val globalU = anchor.srcX + u * anchor.srcWidth
+                    val globalV = anchor.srcY + v * anchor.srcHeight
+                    val px = (globalU * srcW).roundToInt().coerceIn(0, srcW - 1)
+                    val py = (globalV * srcH).roundToInt().coerceIn(0, srcH - 1)
+                    val localX = (px - cropLeft).coerceIn(0, frameW - 1)
+                    val localY = (py - cropTop).coerceIn(0, frameH - 1)
+                    frame.getPixel(localX, localY)
+                }
+
+            return matchRatio >= HudPresenceEvaluator.MATCH_THRESHOLD_PRESENT
+        } finally {
+            if (frame != reusableCandidateCropBitmap && frame != ScreenCaptureManager.frozenBitmap.value) {
+                frame.recycle()
             }
         }
     }

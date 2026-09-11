@@ -401,6 +401,12 @@ Open Settings to create a layout.</string>
     <string name="layout_settings_invisible_buttons">隱形按鈕</string>
     <string name="layout_settings_invisible_buttons_desc">使用配置時讓按鈕隱形，編輯時仍然可見。</string>
 
+    <string name="layout_settings_visual_anchor_blur_title">模糊未啟用的畫面區域</string>
+    <string name="layout_settings_visual_anchor_blur_desc">當參考錨點遺失時套用毛玻璃模糊。若停用，畫面區域將保持清晰定格。</string>
+    <string name="settings_profile_automation_header">自動化</string>
+    <string name="settings_profile_auto_layout_switching_title">自動配置切換</string>
+    <string name="settings_profile_auto_layout_switching_desc">自動切換至此設定檔中第一個參考錨點出現在螢幕上的配置</string>
+
     <!-- Help menu strings for Layout settings -->
 
     <!-- Help menu strings for Background settings -->

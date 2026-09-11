@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.LinkOff
@@ -38,6 +39,7 @@ import com.stormpanda.megingiard.ui.GamepadInfoBox
 import com.stormpanda.megingiard.ui.GamepadSaveExitActionRow
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadTextFieldCard
+import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.GamepadTwoStepConfirmCard
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
@@ -123,6 +125,7 @@ internal fun EditProfileSubPageContent(
     existingNames: List<String>,
     accentColor: Color,
     onNameChange: (String) -> Unit,
+    onAutoLayoutSwitchingChange: (Boolean) -> Unit = {},
     onUnlinkApp: () -> Unit,
     onDeleteProfile: () -> Unit,
 ) {
@@ -152,6 +155,21 @@ internal fun EditProfileSubPageContent(
         icon = Icons.Rounded.Edit,
         isError = hasError,
         modifier = Modifier.firstDeckItem(),
+    )
+
+    // ── Automation Section ────────────────────────────────────────────
+    GamepadSectionHeader(
+        text = stringResource(R.string.settings_profile_automation_header),
+        color = accentColor,
+    )
+
+    GamepadToggleCard(
+        title = stringResource(R.string.settings_profile_auto_layout_switching_title),
+        description = stringResource(R.string.settings_profile_auto_layout_switching_desc),
+        checked = profile.autoLayoutSwitching,
+        icon = Icons.Rounded.AutoAwesome,
+        itemKey = "profile_${profile.id}_auto_layout_switching",
+        onCheckedChange = onAutoLayoutSwitchingChange,
     )
 
     // ── Actions Section ───────────────────────────────────────────────

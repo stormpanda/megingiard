@@ -209,16 +209,25 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
   - Tapping **[ Calibrate Reference Anchor ]** samples strictly the layout's visual anchor bounding box on Display 0 at native resolution (1920x1080) over 6 seconds while leaving the primary screen completely unobstructed and playable at 120Hz.
   - `HudAutoTuner.analyze` extracts stable, stationary anchor pixels and persists `HudAnchorSignature` to disk under `context.filesDir/cutout_masks/layout_anchor_<layoutId>_anchor.json`.
   - The layout is saved with `layout.visualAnchor.enabled = true`.
-- **Synchronized Absence Freezing & Animated Blur Transition (`HudPresenceManager`, `MultiCutoutContainer`):**
+- **Synchronized Absence Freezing & Blur Inactive Cutouts (`HudPresenceManager`, `MultiCutoutContainer`):**
   - When visual anchoring is enabled and mirroring is active, `HudPresenceManager` evaluates the layout's anchor signature at ~60 Hz.
   - When the reference element disappears (match ratio $< 45\%$, matching `HudPresenceEvaluator.MATCH_THRESHOLD_LOST`), HUD loss is signaled layout-wide (`isLayoutHudLost(layoutId)`).
-  - When loss occurs, all cutouts in the layout freeze simultaneously on their sharp last valid delayed frames from the ring buffer (zero cutscene leak).
-  - Each cutout renders an 8px frosted, desaturated (60% saturation), gently dimmed (85% brightness) inactive overlay via a hardware `RenderNode` and executes a smooth crossfade ($0.0 \to 1.0$ opacity over 300 ms via `AccelerateDecelerateInterpolator()`).
+  - When loss occurs, all cutouts in the layout freeze unconditionally on their sharp last valid delayed frames from the ring buffer (zero cutscene leak).
+  - **Blur Inactive Cutouts (`LayoutVisualAnchor.blurCutoutsOnLoss`, default `true`):** Configurable in Layout Settings Editor via **"Blur Inactive Cutouts"** (`layout_settings_visual_anchor_blur_title`). When enabled, each cutout renders an 8px frosted, desaturated (60% saturation), gently dimmed (85% brightness) inactive overlay via a hardware `RenderNode` and executes a smooth crossfade ($0.0 \to 1.0$ opacity over 300 ms via `AccelerateDecelerateInterpolator()`). When disabled, the frosted blur overlay is suppressed (`targetAlpha = 0f`), displaying the frozen base frame crisp and unobstructed.
   - When the anchor returns, the live/delayed video streams resume immediately and the frosted overlay dissolves smoothly ($1.0 \to 0.0$ opacity over 300 ms).
 - **Configurable Layout Stream Delay & 2 Hz Cache Elimination (`LayoutVisualAnchor.streamDelayFrames`, `CutoutFrameRingBuffer`):**
   - The user can configure stream delay (1 to 10 frames, ~16 to ~166 ms, default 2 frames) via **Automatic Layout Switching** ("Stream Delay" slider, stored in `LayoutVisualAnchor.streamDelayFrames`).
   - When visual anchoring is enabled, `streamDelayFrames` is strictly enforced to $\ge 1$, ensuring that `CutoutFrameRingBuffer` instances for all cutouts are always continuously populated during active gameplay.
   - Because pristine pre-transition frames are always guaranteed in the ring buffer, the legacy 2 Hz full-screen background live-frame capture is completely eliminated, avoiding periodic bitmap allocations and GPU readbacks during gameplay.
+- **Profile-Level Automatic Layout Switching (`PadProfile.autoLayoutSwitching`, `HudPresenceManager`):**
+  - Configurable per profile via **Edit Profile → Automation → Automatic Layout Switching** (`settings_profile_auto_layout_switching_title`, stored in `PadProfile.autoLayoutSwitching`, default `false`).
+  - When enabled and autonomous mode is active (`CompanionViewMode.AUTO`), `HudPresenceManager` manages dynamic layout transitions across all calibrated anchored layouts within the active profile:
+    - While the active layout's anchor is `PRESENT`, monitoring runs at ~60 Hz with zero candidate probing overhead.
+    - When the active layout's anchor becomes `LOST` (or if the active layout has no visual anchor configured), `HudPresenceManager` evaluates other calibrated anchored layouts in the active profile in **round-robin order** (in the exact sequence layouts appear in `profile.layouts`) at ~30 Hz.
+    - A single candidate match ($\ge 65\%$ match ratio, matching `HudPresenceEvaluator.MATCH_THRESHOLD_PRESENT`) triggers an immediate layout switch (`MacroPadState.setActiveLayoutId(candidate.id)`).
+    - A 500 ms cooldown (`AUTO_SWITCH_COOLDOWN_MS`) prevents rapid thrashing between candidate layouts.
+    - Once switched, candidate scanning stops completely until the newly active layout's anchor is lost again. If no candidate layout matches, the current layout remains active and frozen.
+  - **Quick Menu Interaction & Manual Override:** Selecting a profile or layout manually in the `QuickMenu` automatically disengages autonomous mode (`CompanionViewMode.MACROPAD`) and triggers an informational toast ("Auto Switch turned off"). Tapping the shimmering `AUTO` chip re-engages autonomous mode (`CompanionViewMode.AUTO`).
 
 ---
 

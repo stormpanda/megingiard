@@ -423,7 +423,7 @@ data class LayoutVisualAnchor(
     val srcWidth: Float = DEFAULT_LAYOUT_ANCHOR_SIZE,
     val srcHeight: Float = DEFAULT_LAYOUT_ANCHOR_SIZE,
     val streamDelayFrames: Int = DEFAULT_LAYOUT_STREAM_DELAY_FRAMES,
-    val freezeCutoutsOnLoss: Boolean = true,
+    val blurCutoutsOnLoss: Boolean = true,
 )
 
 @Serializable
@@ -514,6 +514,7 @@ data class PadProfile(
     val enableTouch: Boolean = false,
     val isDefault: Boolean = false,
     val association: ProfileAssociation? = null,
+    val autoLayoutSwitching: Boolean = false,
 ) {
     fun matches(
         focusedPackage: String?,
@@ -566,6 +567,7 @@ private class PadProfileSurrogate(
     val isDefault: Boolean = false,
     val association: ProfileAssociation? = null,
     val associatedPackage: String? = null,
+    val autoLayoutSwitching: Boolean = false,
 )
 
 object PadProfileSerializer : KSerializer<PadProfile> {
@@ -588,6 +590,7 @@ object PadProfileSerializer : KSerializer<PadProfile> {
                 enableTouch = value.enableTouch,
                 isDefault = value.isDefault,
                 association = value.association,
+                autoLayoutSwitching = value.autoLayoutSwitching,
             )
         encoder.encodeSerializableValue(PadProfileSurrogate.serializer(), surrogate)
     }
@@ -610,6 +613,7 @@ object PadProfileSerializer : KSerializer<PadProfile> {
             enableTouch = surrogate.enableTouch,
             isDefault = surrogate.isDefault,
             association = finalAssoc,
+            autoLayoutSwitching = surrogate.autoLayoutSwitching,
         )
     }
 }

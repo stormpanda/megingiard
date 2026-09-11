@@ -402,11 +402,15 @@ Open Settings to create a layout.</string>
     <string name="layout_settings_visual_anchor_recalibrate_desc">Update anchor points from live game screen</string>
     <string name="layout_settings_visual_anchor_status_calibrated">Calibrated (%1$d reference points)</string>
     <string name="layout_settings_visual_anchor_stream_delay_desc">Buffer frames to eliminate visual tearing when UI disappears</string>
-    <string name="layout_settings_visual_anchor_freeze_title">Freeze Cutouts on Loss</string>
-    <string name="layout_settings_visual_anchor_freeze_desc">Freeze all cutouts and apply subtle blur when HUD reference disappears</string>
+    <string name="layout_settings_visual_anchor_blur_title">Blur Inactive Cutouts</string>
+    <string name="layout_settings_visual_anchor_blur_desc">Apply frosted-glass blur when the reference anchor is lost. If disabled, cutouts remain sharp frozen.</string>
     <string name="layout_settings_visual_anchor_remove_title">Delete Anchor Calibration</string>
     <string name="layout_settings_visual_anchor_remove_desc">Remove calibrated reference signature and disable visual anchor</string>
     <string name="help_layout_settings_auto_switch_desc">Configure automatic layout switching and visual anchoring for this layout. Monitors a primary display reference region and synchronizes cutout freeze states when the HUD disappears.</string>
+
+    <string name="settings_profile_automation_header">Automation</string>
+    <string name="settings_profile_auto_layout_switching_title">Automatic Layout Switching</string>
+    <string name="settings_profile_auto_layout_switching_desc">Automatically switch to the first layout in this profile whose reference anchor is present on screen</string>
 
     <string name="layout_settings_colors_section_title">Button Color Defaults</string>
     <string name="layout_settings_color_text">Text &amp; Icon Color</string>
@@ -756,7 +760,7 @@ Open Settings to create a layout.</string>
     <string name="help_quickmenu_profiles_desc">Tap a chip to instantly switch to a different game profile (deactivates Auto Switch). The currently active profile is highlighted. Profiles and their layouts are created and managed in the Edit Profile/Layout screen.</string>
     <string name="help_quickmenu_layouts_desc">Tap a chip to switch to a different layout within the current profile (deactivates Auto Switch). Only layouts marked as enabled in the editor appear here.</string>
     <string name="help_quickmenu_auto_switch_label">Auto Switch</string>
-    <string name="help_quickmenu_auto_switch_desc">Toggles dynamic profile auto-matching ON/OFF. When ON, profiles and companion views switch automatically based on the active game or emulator. When OFF, profile auto-matching is paused.</string>
+    <string name="help_quickmenu_auto_switch_desc">Toggles dynamic auto-matching ON/OFF. When ON, profiles, layouts, and companion views switch automatically based on the active game, emulator, and on-screen anchors. When OFF, automatic switching is paused.</string>
     <string name="help_quickmenu_view_switch_label">Switch to Hub / Game Profile</string>
     <string name="help_quickmenu_view_switch_desc">Switches manually between the Companion Hub dashboard and the active Game Profile layout (deactivates Auto Switch).</string>
     <string name="help_quickmenu_edit_desc">Opens the Edit Profile/Layout screen where you can add, move, and configure buttons, manage profiles and layouts, and create or edit macros.</string>
