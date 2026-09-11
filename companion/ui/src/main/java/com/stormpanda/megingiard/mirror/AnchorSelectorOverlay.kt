@@ -154,10 +154,10 @@ fun AnchorSelectorOverlay(
             newW: Float,
             newH: Float,
         ) {
-            val clampedW = newW.coerceIn(MIN_ANCHOR_SIZE, 1f - newX)
-            val clampedH = newH.coerceIn(MIN_ANCHOR_SIZE, 1f - newY)
-            val clampedX = newX.coerceIn(0f, 1f - clampedW)
-            val clampedY = newY.coerceIn(0f, 1f - clampedH)
+            val clampedW = newW.coerceIn(MIN_ANCHOR_SIZE, (1f - newX).coerceAtLeast(MIN_ANCHOR_SIZE))
+            val clampedH = newH.coerceIn(MIN_ANCHOR_SIZE, (1f - newY).coerceAtLeast(MIN_ANCHOR_SIZE))
+            val clampedX = newX.coerceIn(0f, (1f - clampedW).coerceAtLeast(0f))
+            val clampedY = newY.coerceIn(0f, (1f - clampedH).coerceAtLeast(0f))
 
             val curLayout = currentLayoutState.value
             val updatedAnchor =
@@ -243,8 +243,8 @@ fun AnchorSelectorOverlay(
                                 change.consume()
                                 accumulatedX += dragAmount.x
                                 accumulatedY += dragAmount.y
-                                val newX = (boxDragStartX + accumulatedX / screenW).coerceIn(0f, 1f - boxDragStartW)
-                                val newY = (boxDragStartY + accumulatedY / screenH).coerceIn(0f, 1f - boxDragStartH)
+                                val newX = (boxDragStartX + accumulatedX / screenW).coerceIn(0f, (1f - boxDragStartW).coerceAtLeast(0f))
+                                val newY = (boxDragStartY + accumulatedY / screenH).coerceIn(0f, (1f - boxDragStartH).coerceAtLeast(0f))
                                 updateAnchorCrop(newX, newY, boxDragStartW, boxDragStartH)
                             },
                         )
@@ -357,14 +357,14 @@ fun AnchorSelectorOverlay(
                 icon = Icons.Rounded.FilterCenterFocus,
                 onMove = { dx, dy ->
                     val cur = getCurrentCrop()
-                    val newX = (cur.x + dx.toFloat() / screenW).coerceIn(0f, 1f - cur.width)
-                    val newY = (cur.y + dy.toFloat() / screenH).coerceIn(0f, 1f - cur.height)
+                    val newX = (cur.x + dx.toFloat() / screenW).coerceIn(0f, (1f - cur.width).coerceAtLeast(0f))
+                    val newY = (cur.y + dy.toFloat() / screenH).coerceIn(0f, (1f - cur.height).coerceAtLeast(0f))
                     updateAnchorCrop(newX, newY, cur.width, cur.height)
                 },
                 onResize = { dx, dy ->
                     val cur = getCurrentCrop()
-                    val newW = (cur.width + dx.toFloat() / screenW).coerceIn(MIN_ANCHOR_SIZE, 1f - cur.x)
-                    val newH = (cur.height + dy.toFloat() / screenH).coerceIn(MIN_ANCHOR_SIZE, 1f - cur.y)
+                    val newW = (cur.width + dx.toFloat() / screenW).coerceIn(MIN_ANCHOR_SIZE, (1f - cur.x).coerceAtLeast(MIN_ANCHOR_SIZE))
+                    val newH = (cur.height + dy.toFloat() / screenH).coerceIn(MIN_ANCHOR_SIZE, (1f - cur.y).coerceAtLeast(MIN_ANCHOR_SIZE))
                     updateAnchorCrop(cur.x, cur.y, newW, newH)
                 },
                 resetKey = layout.id,

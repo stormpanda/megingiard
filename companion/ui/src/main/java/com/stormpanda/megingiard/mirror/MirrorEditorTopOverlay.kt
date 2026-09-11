@@ -294,8 +294,8 @@ fun MirrorEditorTopOverlay(
         val stepX = 1f / srcWidth
         val stepY = 1f / srcHeight
         cur.copy(
-            srcX = (cur.srcX + dx * stepX).coerceIn(0f, 1f - cur.srcWidth),
-            srcY = (cur.srcY + dy * stepY).coerceIn(0f, 1f - cur.srcHeight),
+            srcX = (cur.srcX + dx * stepX).coerceIn(0f, (1f - cur.srcWidth).coerceAtLeast(0f)),
+            srcY = (cur.srcY + dy * stepY).coerceIn(0f, (1f - cur.srcHeight).coerceAtLeast(0f)),
         )
     }
 

@@ -382,6 +382,29 @@ class MirrorCoordinateTransformTest {
     }
 
     @Test
+    fun `clampCutoutDrag handles width or height exceeding 1f without crashing on empty coerce range`() {
+        val allCutouts =
+            listOf(
+                cutout("1", destX = 0f, destY = 0f, destWidth = 1.0000178f, destHeight = 0.5f),
+            )
+        // Must not throw IllegalArgumentException: Cannot coerce value to an empty range
+        val (x, y) = clampCutoutDrag("1", 0f, 0f, 0.1f, 0.2f, 1.0000178f, 0.5f, allCutouts)
+        assertEquals(0f, x, EPS)
+        assertEquals(0.2f, y, EPS)
+    }
+
+    @Test
+    fun `clampCutoutDrag handles full screen cutout without crashing`() {
+        val allCutouts =
+            listOf(
+                cutout("1", destX = 0f, destY = 0f, destWidth = 1f, destHeight = 1f),
+            )
+        val (x, y) = clampCutoutDrag("1", 0f, 0f, 0.1f, 0.2f, 1f, 1f, allCutouts)
+        assertEquals(0f, x, EPS)
+        assertEquals(0f, y, EPS)
+    }
+
+    @Test
     fun `adjustDestSizeToAspectRatio fits destination size correctly`() {
         val (w, h) =
             adjustDestSizeToAspectRatio(
