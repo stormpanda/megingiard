@@ -18,21 +18,27 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlin.math.ceil
-import kotlin.math.max
 import kotlin.math.roundToInt
 
 private const val TAG = "HudAutoTuneCoordinator"
 
-private const val CALIBRATION_DURATION_MS = 6000L
+private const val MAX_CALIBRATION_DURATION_MS = 180_000L
 private const val SAMPLE_INTERVAL_MS = 120L
 private const val SAMPLE_WIDTH = 1920
 private const val SAMPLE_HEIGHT = 1080
-private const val MS_PER_SECOND = 1000.0
 
 /**
- * Coordinates multi-second video frame sampling and HUD auto-tune calibration.
- * Exposes observable StateFlows for UI countdowns and progress bars.
+ * Category of element currently undergoing HUD calibration.
+ */
+enum class CalibrationType {
+    NONE,
+    CUTOUT,
+    LAYOUT_ANCHOR,
+}
+
+/**
+ * Coordinates video frame sampling and HUD auto-tune calibration.
+ * Exposes observable StateFlows for live preview bitmaps, sample frame counts, and completion status.
  *
  * Automatically suspends and dismisses open primary modals on Display 0 via
  * [AppStateManager.suspendCurrentAndDismiss] before starting sampling, allowing unobstructed
@@ -43,6 +49,21 @@ internal object HudAutoTuneCoordinator {
     private val _isCalibrating = MutableStateFlow(false)
     val isCalibrating: StateFlow<Boolean> = _isCalibrating.asStateFlow()
 
+    private val _calibrationType = MutableStateFlow(CalibrationType.NONE)
+    val calibrationType: StateFlow<CalibrationType> = _calibrationType.asStateFlow()
+
+    private val _previewBitmap = MutableStateFlow<Bitmap?>(null)
+    val previewBitmap: StateFlow<Bitmap?> = _previewBitmap.asStateFlow()
+
+    private val _sampleCount = MutableStateFlow(0)
+    val sampleCount: StateFlow<Int> = _sampleCount.asStateFlow()
+
+    private val _canFinish = MutableStateFlow(false)
+    val canFinish: StateFlow<Boolean> = _canFinish.asStateFlow()
+
+    private val _dynamicPercent = MutableStateFlow(0)
+    val dynamicPercent: StateFlow<Int> = _dynamicPercent.asStateFlow()
+
     private val _progress = MutableStateFlow(0f)
     val progress: StateFlow<Float> = _progress.asStateFlow()
 
@@ -52,13 +73,39 @@ internal object HudAutoTuneCoordinator {
     private val _lastTunedPercent = MutableStateFlow<Int?>(null)
     val lastTunedPercent: StateFlow<Int?> = _lastTunedPercent.asStateFlow()
 
+    @Volatile
+    private var isFinishRequested = false
+
     private var calibrationJob: Job? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
+    private fun setPreviewBitmap(bitmap: Bitmap?) {
+        val old = _previewBitmap.value
+        _previewBitmap.value = bitmap
+        if (old != null && old != bitmap) {
+            synchronized(old) {
+                if (!old.isRecycled) {
+                    old.recycle()
+                }
+            }
+        }
+    }
+
     /**
-     * Starts the 6-second auto-tune sampling sequence for [cutout].
+     * Signals the active calibration sampling loop to complete immediately and run analysis.
+     * Only triggers when minimum required frames have been collected.
+     */
+    fun finishCalibration() {
+        if (_isCalibrating.value && _canFinish.value) {
+            AppLog.i(TAG, "finishCalibration requested by user")
+            isFinishRequested = true
+        }
+    }
+
+    /**
+     * Starts the interactive auto-tune sampling sequence for [cutout].
      * Suspends the primary modal overlay on Display 0, unfreezes mirror capture,
-     * and restores the editor upon completion.
+     * streams live transparency previews, and restores the editor upon completion.
      */
     fun startCalibration(
         context: Context,
@@ -72,69 +119,86 @@ internal object HudAutoTuneCoordinator {
             ScreenCaptureManager.setFrozen(false)
         }
 
+        isFinishRequested = false
         calibrationJob =
             scope.launch {
-                AppLog.i(TAG, "Starting HUD Auto-Tune calibration for cutout ${cutout.id} (duration=${CALIBRATION_DURATION_MS}ms)")
+                AppLog.i(TAG, "Starting HUD Auto-Tune calibration for cutout ${cutout.id}")
                 _isCalibrating.value = true
+                _calibrationType.value = CalibrationType.CUTOUT
                 _lastTunedPercent.value = null
                 _progress.value = 0f
-                _remainingSeconds.value = (CALIBRATION_DURATION_MS / MS_PER_SECOND).toInt()
+                _remainingSeconds.value = 0
+                _sampleCount.value = 0
+                _canFinish.value = false
+                _dynamicPercent.value = 0
+                setPreviewBitmap(null)
 
                 val sampledFrames = ArrayList<IntArray>()
                 var cropW = 0
                 var cropH = 0
                 var cutoutFreezeBitmap: Bitmap? = null
+                var tracker: CalibrationPreviewTracker? = null
+                var previewPixels: IntArray? = null
                 val startTime = SystemClock.elapsedRealtime()
 
                 try {
-                    while (isActive) {
-                        val elapsed = SystemClock.elapsedRealtime() - startTime
-                        if (elapsed >= CALIBRATION_DURATION_MS) break
-
-                        val remainingMs = max(0L, CALIBRATION_DURATION_MS - elapsed)
-                        _remainingSeconds.value = ceil(remainingMs / MS_PER_SECOND).toInt()
-                        _progress.value = (elapsed.toFloat() / CALIBRATION_DURATION_MS).coerceIn(0f, 1f)
+                    while (isActive && !isFinishRequested) {
+                        if (SystemClock.elapsedRealtime() - startTime >= MAX_CALIBRATION_DURATION_MS) {
+                            AppLog.i(TAG, "Cutout calibration reached maximum safety duration (${MAX_CALIBRATION_DURATION_MS}ms)")
+                            break
+                        }
 
                         val frameBitmap = MirrorFrameSampler.captureFrame(SAMPLE_WIDTH, SAMPLE_HEIGHT)
                         if (frameBitmap != null) {
                             try {
-                                if (cutoutFreezeBitmap == null) {
-                                    val cX = (cutout.srcX * frameBitmap.width).roundToInt().coerceIn(0, frameBitmap.width - 1)
-                                    val cY = (cutout.srcY * frameBitmap.height).roundToInt().coerceIn(0, frameBitmap.height - 1)
-                                    val cRight =
-                                        ((cutout.srcX + cutout.srcWidth) * frameBitmap.width).roundToInt().coerceIn(
-                                            cX + 1,
-                                            frameBitmap.width,
-                                        )
-                                    val cBottom =
-                                        ((cutout.srcY + cutout.srcHeight) * frameBitmap.height).roundToInt().coerceIn(
-                                            cY + 1,
-                                            frameBitmap.height,
-                                        )
-                                    val cW = cRight - cX
-                                    val cH = cBottom - cY
-                                    try {
-                                        cutoutFreezeBitmap = Bitmap.createBitmap(frameBitmap, cX, cY, cW, cH)
-                                    } catch (e: Exception) {
-                                        AppLog.e(TAG, "Failed to capture initial cutout freeze frame", e)
-                                    }
-                                }
-
-                                val aX = (cutout.srcX * frameBitmap.width).roundToInt().coerceIn(0, frameBitmap.width - 1)
-                                val aY = (cutout.srcY * frameBitmap.height).roundToInt().coerceIn(0, frameBitmap.height - 1)
-                                val aRight =
-                                    ((cutout.srcX + cutout.srcWidth) * frameBitmap.width).roundToInt().coerceIn(aX + 1, frameBitmap.width)
-                                val aBottom =
+                                val cX = (cutout.srcX * frameBitmap.width).roundToInt().coerceIn(0, frameBitmap.width - 1)
+                                val cY = (cutout.srcY * frameBitmap.height).roundToInt().coerceIn(0, frameBitmap.height - 1)
+                                val cRight =
+                                    ((cutout.srcX + cutout.srcWidth) * frameBitmap.width).roundToInt().coerceIn(
+                                        cX + 1,
+                                        frameBitmap.width,
+                                    )
+                                val cBottom =
                                     ((cutout.srcY + cutout.srcHeight) * frameBitmap.height).roundToInt().coerceIn(
-                                        aY + 1,
+                                        cY + 1,
                                         frameBitmap.height,
                                     )
-                                cropW = aRight - aX
-                                cropH = aBottom - aY
+                                cropW = cRight - cX
+                                cropH = cBottom - cY
 
-                                val pixels = IntArray(cropW * cropH)
-                                frameBitmap.getPixels(pixels, 0, cropW, aX, aY, cropW, cropH)
-                                sampledFrames.add(pixels)
+                                if (cropW > 0 && cropH > 0) {
+                                    if (cutoutFreezeBitmap == null) {
+                                        try {
+                                            cutoutFreezeBitmap = Bitmap.createBitmap(frameBitmap, cX, cY, cropW, cropH)
+                                        } catch (e: Exception) {
+                                            AppLog.e(TAG, "Failed to capture initial cutout freeze frame", e)
+                                        }
+                                    }
+
+                                    val pixels = IntArray(cropW * cropH)
+                                    frameBitmap.getPixels(pixels, 0, cropW, cX, cY, cropW, cropH)
+                                    sampledFrames.add(pixels)
+
+                                    if (tracker == null || tracker.width != cropW || tracker.height != cropH) {
+                                        tracker = CalibrationPreviewTracker(cropW, cropH)
+                                        previewPixels = IntArray(cropW * cropH)
+                                    }
+
+                                    previewPixels?.let { outBuf ->
+                                        tracker.ingestFrame(pixels, outBuf)
+                                        try {
+                                            val bmp = Bitmap.createBitmap(outBuf, cropW, cropH, Bitmap.Config.ARGB_8888)
+                                            setPreviewBitmap(bmp)
+                                        } catch (e: Exception) {
+                                            AppLog.e(TAG, "Failed to create preview bitmap", e)
+                                        }
+                                        _sampleCount.value = tracker.frameCount
+                                        _dynamicPercent.value = tracker.transparentPixelPercent
+                                        if (tracker.frameCount >= MIN_CALIBRATION_FRAMES) {
+                                            _canFinish.value = true
+                                        }
+                                    }
+                                }
                             } finally {
                                 if (frameBitmap != ScreenCaptureManager.frozenBitmap.value) {
                                     frameBitmap.recycle()
@@ -213,7 +277,12 @@ internal object HudAutoTuneCoordinator {
                             cutoutFreezeBitmap.recycle()
                         }
                     }
+                    setPreviewBitmap(null)
                     _isCalibrating.value = false
+                    _calibrationType.value = CalibrationType.NONE
+                    _canFinish.value = false
+                    _sampleCount.value = 0
+                    _dynamicPercent.value = 0
                     _progress.value = 0f
                     _remainingSeconds.value = 0
                     AppStateManager.resumeSuspended()
@@ -222,7 +291,7 @@ internal object HudAutoTuneCoordinator {
     }
 
     /**
-     * Starts the 6-second auto-tune sampling sequence for a layout's [LayoutVisualAnchor].
+     * Starts the interactive auto-tune sampling sequence for a layout's [LayoutVisualAnchor].
      * Samples solely the layout visual anchor bounds on the primary display and computes
      * the [HudAnchorSignature].
      */
@@ -238,28 +307,34 @@ internal object HudAutoTuneCoordinator {
             ScreenCaptureManager.setFrozen(false)
         }
 
+        isFinishRequested = false
         calibrationJob =
             scope.launch {
-                AppLog.i(TAG, "Starting layout anchor calibration for layout ${layout.id} (duration=${CALIBRATION_DURATION_MS}ms)")
+                AppLog.i(TAG, "Starting layout anchor calibration for layout ${layout.id}")
                 _isCalibrating.value = true
+                _calibrationType.value = CalibrationType.LAYOUT_ANCHOR
                 _lastTunedPercent.value = null
                 _progress.value = 0f
-                _remainingSeconds.value = (CALIBRATION_DURATION_MS / MS_PER_SECOND).toInt()
+                _remainingSeconds.value = 0
+                _sampleCount.value = 0
+                _canFinish.value = false
+                _dynamicPercent.value = 0
+                setPreviewBitmap(null)
 
                 val sampledFrames = ArrayList<IntArray>()
                 var cropW = 0
                 var cropH = 0
+                var tracker: CalibrationPreviewTracker? = null
+                var previewPixels: IntArray? = null
                 val startTime = SystemClock.elapsedRealtime()
 
                 try {
                     val anchor = layout.visualAnchor
-                    while (isActive) {
-                        val elapsed = SystemClock.elapsedRealtime() - startTime
-                        if (elapsed >= CALIBRATION_DURATION_MS) break
-
-                        val remainingMs = max(0L, CALIBRATION_DURATION_MS - elapsed)
-                        _remainingSeconds.value = ceil(remainingMs / MS_PER_SECOND).toInt()
-                        _progress.value = (elapsed.toFloat() / CALIBRATION_DURATION_MS).coerceIn(0f, 1f)
+                    while (isActive && !isFinishRequested) {
+                        if (SystemClock.elapsedRealtime() - startTime >= MAX_CALIBRATION_DURATION_MS) {
+                            AppLog.i(TAG, "Layout anchor calibration reached maximum safety duration (${MAX_CALIBRATION_DURATION_MS}ms)")
+                            break
+                        }
 
                         val frameBitmap = MirrorFrameSampler.captureFrame(SAMPLE_WIDTH, SAMPLE_HEIGHT)
                         if (frameBitmap != null) {
@@ -276,9 +351,31 @@ internal object HudAutoTuneCoordinator {
                                 cropW = aRight - aX
                                 cropH = aBottom - aY
 
-                                val pixels = IntArray(cropW * cropH)
-                                frameBitmap.getPixels(pixels, 0, cropW, aX, aY, cropW, cropH)
-                                sampledFrames.add(pixels)
+                                if (cropW > 0 && cropH > 0) {
+                                    val pixels = IntArray(cropW * cropH)
+                                    frameBitmap.getPixels(pixels, 0, cropW, aX, aY, cropW, cropH)
+                                    sampledFrames.add(pixels)
+
+                                    if (tracker == null || tracker.width != cropW || tracker.height != cropH) {
+                                        tracker = CalibrationPreviewTracker(cropW, cropH)
+                                        previewPixels = IntArray(cropW * cropH)
+                                    }
+
+                                    previewPixels?.let { outBuf ->
+                                        tracker.ingestFrame(pixels, outBuf)
+                                        try {
+                                            val bmp = Bitmap.createBitmap(outBuf, cropW, cropH, Bitmap.Config.ARGB_8888)
+                                            setPreviewBitmap(bmp)
+                                        } catch (e: Exception) {
+                                            AppLog.e(TAG, "Failed to create preview bitmap", e)
+                                        }
+                                        _sampleCount.value = tracker.frameCount
+                                        _dynamicPercent.value = tracker.transparentPixelPercent
+                                        if (tracker.frameCount >= MIN_CALIBRATION_FRAMES) {
+                                            _canFinish.value = true
+                                        }
+                                    }
+                                }
                             } finally {
                                 if (frameBitmap != ScreenCaptureManager.frozenBitmap.value) {
                                     frameBitmap.recycle()
@@ -330,7 +427,12 @@ internal object HudAutoTuneCoordinator {
                     }
                     _lastTunedPercent.value = null
                 } finally {
+                    setPreviewBitmap(null)
                     _isCalibrating.value = false
+                    _calibrationType.value = CalibrationType.NONE
+                    _canFinish.value = false
+                    _sampleCount.value = 0
+                    _dynamicPercent.value = 0
                     _progress.value = 0f
                     _remainingSeconds.value = 0
                     AppStateManager.resumeSuspended()
@@ -349,7 +451,12 @@ internal object HudAutoTuneCoordinator {
             calibrationJob?.cancel()
         }
         calibrationJob = null
+        setPreviewBitmap(null)
         _isCalibrating.value = false
+        _calibrationType.value = CalibrationType.NONE
+        _canFinish.value = false
+        _sampleCount.value = 0
+        _dynamicPercent.value = 0
         _progress.value = 0f
         _remainingSeconds.value = 0
         if (resumeSuspended && wasActive) {

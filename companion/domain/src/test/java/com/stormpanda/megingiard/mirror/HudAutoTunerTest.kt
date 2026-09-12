@@ -409,4 +409,59 @@ class HudAutoTunerTest {
         assertEquals(128, bottomRightPoint.g)
         assertEquals(0, bottomRightPoint.b)
     }
+
+    @Test
+    fun `CalibrationPreviewTracker frame 1 creates completely opaque base pixels with zero percent transparent`() {
+        val testW = 10
+        val testH = 10
+        val count = testW * testH
+        val tracker = CalibrationPreviewTracker(testW, testH)
+
+        val frame1 = IntArray(count) { idx -> colorArgb(idx * 2, 100, 200) }
+        val outPixels = IntArray(count)
+
+        tracker.ingestFrame(frame1, outPixels)
+
+        assertEquals(1, tracker.frameCount)
+        assertEquals(0, tracker.transparentPixelPercent)
+        for (i in 0 until count) {
+            val expected = (0xFF shl 24) or (frame1[i] and 0x00FFFFFF)
+            assertEquals("Pixel $i must match base frame with full opacity on frame 1", expected, outPixels[i])
+        }
+    }
+
+    @Test
+    fun `CalibrationPreviewTracker subsequent frames turn dynamic pixels transparent and keep stationary pixels opaque`() {
+        val testW = 10
+        val testH = 10
+        val count = testW * testH
+        val tracker = CalibrationPreviewTracker(testW, testH)
+
+        val frame1 =
+            IntArray(count) { idx ->
+                if (idx < 50) colorArgb(0, 0, 255) else colorArgb(50, 50, 50)
+            }
+        val outPixels = IntArray(count)
+
+        tracker.ingestFrame(frame1, outPixels)
+        assertEquals(0, tracker.transparentPixelPercent)
+
+        // Frame 2: Top half (0..49) stays identical blue, bottom half (50..99) shifts to (150, 150, 150)
+        val frame2 =
+            IntArray(count) { idx ->
+                if (idx < 50) colorArgb(0, 0, 255) else colorArgb(150, 150, 150)
+            }
+        tracker.ingestFrame(frame2, outPixels)
+
+        assertEquals(2, tracker.frameCount)
+        assertEquals(50, tracker.transparentPixelPercent)
+
+        for (i in 0 until 50) {
+            val expected = (0xFF shl 24) or (frame1[i] and 0x00FFFFFF)
+            assertEquals("Stationary pixel $i must remain opaque with base color", expected, outPixels[i])
+        }
+        for (i in 50 until count) {
+            assertEquals("Dynamic pixel $i must turn transparent", MASK_PIXEL_TRANSPARENT, outPixels[i])
+        }
+    }
 }

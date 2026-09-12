@@ -484,10 +484,10 @@ MacroTimelineEditor (Gamepad-first in-deck sub-page, opened from Macros Deck)
 
 #### Background Display Rendering Pipeline
 
-When screen mirroring is active (`ScreenCaptureManager.isCapturing == true`) and cutouts are present on the active layout:
+When screen mirroring is active (`ScreenCaptureManager.isCapturing == true`):
 
-1. `MacroPadScreen` detects `isCapturing && cutouts.isNotEmpty()` and embeds `EmbeddedMirrorView` directly beneath `PadSurface`.
-2. Mirrored cutouts are rendered via `MultiCutoutContainer` and `ThrottledTextureView` on the secondary display.
+1. `MacroPadScreen` detects `isCapturing` and embeds `EmbeddedMirrorView` directly beneath `PadSurface`. The mirror capture pipeline remains active regardless of cutout count so layout reference anchor calibration and automatic layout switching can continuously sample frames even on 0-cutout layouts.
+2. When cutouts are present, mirrored cutouts are rendered via `MultiCutoutContainer` and `ThrottledTextureView` on the secondary display. When cutouts are empty, zero cutouts are drawn, keeping the canvas pitch black / displaying layout background artwork.
 3. `PadSurface` renders the MacroPad buttons with `transparentBackground = true`.
 4. When `isPeekActive` is true, only `BackgroundPeek` buttons are rendered (the Press hit-test list is also filtered to `BackgroundPeek` buttons so hidden buttons cannot be triggered).
    - **Peek state reset:** `MacroPadState.resetPeek()` is called in `MacroPadScreen`'s `DisposableEffect.onDispose` (leaving MacroPad mode). This ensures peek state never leaks across mode switches.

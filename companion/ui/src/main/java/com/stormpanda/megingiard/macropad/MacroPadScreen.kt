@@ -177,9 +177,7 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
     }
 
     val isCapturing by ScreenCaptureManager.isCapturing.collectAsStateWithLifecycle()
-    val cutouts by ScreenCaptureManager.cutouts.collectAsStateWithLifecycle()
-    val hasCutouts = cutouts.isNotEmpty()
-    val showEmbeddedMirror = isCapturing && hasCutouts
+    val showEmbeddedMirror = isCapturing
 
     // Plain canvas background of MacroPad is strictly theme-invariant and always pitch black (Color.Black).
     Box(

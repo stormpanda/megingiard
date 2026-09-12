@@ -449,6 +449,9 @@ fun MainAppScreen() {
                     onCancel = {
                         HudAutoTuneCoordinator.cancelCalibration()
                     },
+                    onFinish = {
+                        HudAutoTuneCoordinator.finishCalibration()
+                    },
                 )
             }
 

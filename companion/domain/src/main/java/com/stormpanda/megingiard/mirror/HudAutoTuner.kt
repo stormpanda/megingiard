@@ -21,6 +21,7 @@ private const val RGB_WHITE_MASK = 0x00FFFFFF
 private const val FULL_ALPHA_BYTE = 255
 private const val PERCENT_MULTIPLIER = 100
 
+const val MIN_CALIBRATION_FRAMES = 5
 const val MASK_PIXEL_TRANSPARENT = 0x00000000
 const val MASK_PIXEL_OPAQUE = -1 // 0xFFFFFFFF.toInt()
 const val MIN_FEATHERING_PX = 0
@@ -642,5 +643,82 @@ object HudAutoTuner {
         }
 
         return result
+    }
+}
+
+/**
+ * Stateful engine tracking per-pixel RGB min/max variances across incoming frame crops during calibration.
+ * Produces an incremental ARGB preview image where dynamic pixels turn transparent over time
+ * while stationary HUD pixels remain opaque with their base color.
+ */
+class CalibrationPreviewTracker(
+    val width: Int,
+    val height: Int,
+    val colorChangeThreshold: Int = COLOR_CHANGE_THRESHOLD,
+) {
+    private val pixelCount = width * height
+    private val minR = IntArray(pixelCount) { 255 }
+    private val maxR = IntArray(pixelCount) { 0 }
+    private val minG = IntArray(pixelCount) { 255 }
+    private val maxG = IntArray(pixelCount) { 0 }
+    private val minB = IntArray(pixelCount) { 255 }
+    private val maxB = IntArray(pixelCount) { 0 }
+    private var basePixels: IntArray? = null
+
+    var frameCount: Int = 0
+        private set
+
+    var transparentPixelPercent: Int = 0
+        private set
+
+    /**
+     * Ingests a new frame crop, updates channel variances, and writes the current preview into [outPixels].
+     * Stationary pixels retain the RGB color from the first frame with 100% opacity.
+     * Dynamic pixels whose variance exceeds [colorChangeThreshold] become 100% transparent (`0x00000000`).
+     */
+    fun ingestFrame(
+        framePixels: IntArray,
+        outPixels: IntArray,
+    ) {
+        if (framePixels.size != pixelCount || outPixels.size != pixelCount) return
+        if (basePixels == null) {
+            basePixels = framePixels.clone()
+        }
+        val base = basePixels ?: return
+        frameCount++
+
+        var transparentCount = 0
+        for (i in 0 until pixelCount) {
+            val rgb = framePixels[i]
+            val r = (rgb shr SHIFT_RED) and COLOR_BYTE_MASK
+            val g = (rgb shr SHIFT_GREEN) and COLOR_BYTE_MASK
+            val b = rgb and COLOR_BYTE_MASK
+
+            if (r < minR[i]) minR[i] = r
+            if (r > maxR[i]) maxR[i] = r
+            if (g < minG[i]) minG[i] = g
+            if (g > maxG[i]) maxG[i] = g
+            if (b < minB[i]) minB[i] = b
+            if (b > maxB[i]) maxB[i] = b
+
+            val diffR = maxR[i] - minR[i]
+            val diffG = maxG[i] - minG[i]
+            val diffB = maxB[i] - minB[i]
+            val maxDiff = maxOf(diffR, diffG, diffB)
+            val totalDiff = diffR + diffG + diffB
+            val effectiveDiff =
+                maxOf(
+                    maxDiff,
+                    (totalDiff * COLOR_CHANGE_THRESHOLD + (TOTAL_COLOR_CHANGE_THRESHOLD - 1)) / TOTAL_COLOR_CHANGE_THRESHOLD,
+                )
+
+            if (effectiveDiff > colorChangeThreshold) {
+                outPixels[i] = MASK_PIXEL_TRANSPARENT
+                transparentCount++
+            } else {
+                outPixels[i] = (FULL_ALPHA_BYTE shl ALPHA_SHIFT) or (base[i] and RGB_WHITE_MASK)
+            }
+        }
+        transparentPixelPercent = if (pixelCount > 0) (transparentCount * PERCENT_MULTIPLIER) / pixelCount else 0
     }
 }

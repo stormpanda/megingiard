@@ -714,7 +714,7 @@ internal class MultiCutoutContainer(
                 }
             }
 
-            if (!masterViewDrawn && !isFrozen && masterView != null && cutouts.isNotEmpty()) {
+            if (!masterViewDrawn && !isFrozen && masterView != null) {
                 val saveCount = canvas.save()
                 canvas.clipRect(0f, 0f, 1f, 1f)
                 drawChild(canvas, masterView, drawTime)

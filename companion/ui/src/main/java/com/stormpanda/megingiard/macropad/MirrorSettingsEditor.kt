@@ -343,17 +343,14 @@ internal fun CutoutAdvancedSettingsSubPageContent(
     AppLog.d(TAG, "CutoutAdvancedSettingsSubPageContent: cutout=${cutout.id}")
     val context = LocalContext.current
     val isCalibrating by HudAutoTuneCoordinator.isCalibrating.collectAsStateWithLifecycle()
-    val calibrateProgress by HudAutoTuneCoordinator.progress.collectAsStateWithLifecycle()
-    val remainingSeconds by HudAutoTuneCoordinator.remainingSeconds.collectAsStateWithLifecycle()
     val lastTunedPercent by HudAutoTuneCoordinator.lastTunedPercent.collectAsStateWithLifecycle()
     var calibrationRevision by remember { mutableIntStateOf(0) }
 
     if (isCalibrating) {
-        val pct = (calibrateProgress * MSE_PERCENT_DIVISOR).roundToInt()
         GamepadActionCard(
             modifier = Modifier.firstDeckItem(),
-            title = stringResource(R.string.settings_mirror_hud_auto_tuning_prompt, remainingSeconds),
-            description = stringResource(R.string.settings_mirror_hud_auto_tune_success, "$pct%"),
+            title = stringResource(R.string.settings_mirror_hud_auto_tuning_in_progress),
+            description = stringResource(R.string.settings_mirror_hud_auto_tuning_secondary_prompt),
             icon = Icons.Rounded.Tune,
             itemKey = "cutout_${cutout.id}_auto_tune_active",
             onClick = { HudAutoTuneCoordinator.cancelCalibration() },
