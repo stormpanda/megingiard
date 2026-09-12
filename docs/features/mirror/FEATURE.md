@@ -231,6 +231,14 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
     - A single candidate match ($\ge 65\%$ match ratio, matching `HudPresenceEvaluator.MATCH_THRESHOLD_PRESENT`) triggers an immediate layout switch (`MacroPadState.setActiveLayoutId(candidate.id)`).
     - A 500 ms cooldown (`AUTO_SWITCH_COOLDOWN_MS`) prevents rapid thrashing between candidate layouts.
     - Once switched, candidate scanning stops completely until the newly active layout's anchor is lost again. If no candidate layout matches, the current layout remains active and frozen.
+  - **Hardware-Layer TextureView Sampling (`MirrorFrameSampler`):**
+    - High-frequency presence sampling (~60 Hz for active layout, ~30 Hz for candidate layouts) requires low-latency crop extraction.
+    - Android's native `PixelCopy.request(Surface, ...)` relies on `Surface::getLastQueuedBuffer` in C++ (`libs/gui/Surface.cpp`), which returns `null` for cross-process producer surfaces (such as `masterSurface` fed across Binder by `DirectMirrorServer` / SurfaceFlinger), failing with code 3 (`ERROR_SOURCE_NO_DATA`).
+    - To eliminate sampling stalls, `MirrorFrameSampler.captureCrop` extracts crops directly from the hardware layer `TextureView` on `Dispatchers.Main.immediate` using `tv.getBitmap(reusableFullFrameBitmap)` and draws into the target crop buffer via `Canvas.drawBitmap`. On the AYN Thor's Snapdragon 8 Gen 2, this executes in ~1 ms with zero GC heap allocation. When mirroring is frozen or the view is detached, it falls back to software-cropping `ScreenCaptureManager.frozenBitmap`.
+  - **Thread-Safe Presence Lifecycle & Bitmap Ownership (`HudPresenceManager`):**
+    - Reusable capture buffers (`cropBitmapHolder`, `candidateBitmapHolder`) are strictly scoped inside `runMonitoringLoop()`.
+    - When monitoring stops (e.g. layout/profile switch or mirror stop), `updateMonitoringLoop()` cancels `monitorJob` without asynchronously recycling bitmaps from the caller thread. All reusable bitmaps, ring buffers, and cached freeze-frames are recycled cleanly in the coroutine's `finally` block once execution has completely terminated, preventing native SIGABRT crashes in `libhwui.so` / `HardwareRenderer`.
+    - Access to `lastValidFrameBitmaps` is synchronized to prevent race conditions during UI drawing passes in `MultiCutoutContainer.dispatchDraw`.
   - **Quick Menu Interaction & Manual Override:** Selecting a profile or layout manually in the `QuickMenu` automatically disengages autonomous mode (`CompanionViewMode.MACROPAD`) and triggers an informational toast ("Auto Switch turned off"). Tapping the shimmering `AUTO` chip re-engages autonomous mode (`CompanionViewMode.AUTO`).
 - **Hardware-Accelerated Layout Crossfade Transitions (`LayoutTransitionManager`):**
   - Switching between MacroPad layouts (autonomously via `HudPresenceManager` or in-game via gamepad/swipe shortcuts) executes a smooth 300 ms crossfade transition.
@@ -589,5 +597,7 @@ HUD isolation is implemented via hardware-accelerated transparency mask blending
 | `CropSelectorActivity.kt`             | Translucent Activity hosting CropSelectorOverlay on the primary display                                    |
 | `CutoutLayoutEditor.kt`               | Secondary display cutout placement arrange editor                                                          |
 | `ScreenCutout.kt`                     | Serializable data model representing a crop/placement pair with HUD isolation filter configuration        |
+| `MirrorFrameSampler.kt`               | Low-latency hardware layer TextureView crop extraction for anchor calibration and real-time presence detection |
+| `HudPresenceManager.kt`               | Real-time 60 Hz HUD presence detection, zero-allocation ring buffers, freeze caching, and layout auto-switching |
 | `../input/TouchInjector.kt`           | Shared injection facade (also used by Touchpad)                                                            |
 | `../input/ShellInputInjector.kt`      | Shared native binary lifecycle and command queue                                                           |

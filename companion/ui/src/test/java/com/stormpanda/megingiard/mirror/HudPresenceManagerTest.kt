@@ -1,10 +1,15 @@
 package com.stormpanda.megingiard.mirror
 
 import android.graphics.Bitmap
+import com.stormpanda.megingiard.CompanionViewMode
+import com.stormpanda.megingiard.macropad.LayoutVisualAnchor
+import com.stormpanda.megingiard.macropad.PadLayout
+import com.stormpanda.megingiard.macropad.PadProfile
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -60,5 +65,98 @@ class HudPresenceManagerTest {
 
         CutoutMaskManager.deleteMask(context, cutoutId)
         HudPresenceManager.clearCutout(cutoutId)
+    }
+
+    @Test
+    fun `updateMonitoringLoop starts when capturing with visual anchor and stops cleanly`() {
+        val anchor =
+            LayoutVisualAnchor(
+                enabled = true,
+                srcX = 0.1f,
+                srcY = 0.1f,
+                srcWidth = 0.1f,
+                srcHeight = 0.1f,
+            )
+        val layout =
+            PadLayout(
+                id = "layout_with_anchor",
+                name = "Gameplay",
+                visualAnchor = anchor,
+            )
+        val profile =
+            PadProfile(
+                id = "profile_1",
+                name = "Test Profile",
+                layouts = listOf(layout),
+            )
+
+        HudPresenceManager.updateMonitoringLoop(
+            isCapturing = true,
+            layout = layout,
+            profile = profile,
+            viewMode = CompanionViewMode.MACROPAD,
+        )
+        assertTrue(HudPresenceManager.isMonitoring)
+
+        HudPresenceManager.updateMonitoringLoop(
+            isCapturing = false,
+            layout = layout,
+            profile = profile,
+            viewMode = CompanionViewMode.MACROPAD,
+        )
+        assertFalse(HudPresenceManager.isMonitoring)
+    }
+
+    @Test
+    fun `updateMonitoringLoop stops when active layout has no anchor and auto switch is disabled`() {
+        val anchor =
+            LayoutVisualAnchor(
+                enabled = true,
+                srcX = 0.1f,
+                srcY = 0.1f,
+                srcWidth = 0.1f,
+                srcHeight = 0.1f,
+            )
+        val layoutWithAnchor =
+            PadLayout(
+                id = "layout_with_anchor",
+                name = "Gameplay",
+                visualAnchor = anchor,
+            )
+        val profileWithAnchor =
+            PadProfile(
+                id = "profile_1",
+                name = "Test Profile",
+                layouts = listOf(layoutWithAnchor),
+            )
+        val layoutWithoutAnchor =
+            PadLayout(
+                id = "layout_no_anchor",
+                name = "Map",
+                visualAnchor = LayoutVisualAnchor(enabled = false),
+            )
+        val profileWithoutAnchor =
+            PadProfile(
+                id = "profile_2",
+                name = "Empty Profile",
+                layouts = listOf(layoutWithoutAnchor),
+            )
+
+        HudPresenceManager.updateMonitoringLoop(
+            isCapturing = true,
+            layout = layoutWithAnchor,
+            profile = profileWithAnchor,
+            viewMode = CompanionViewMode.MACROPAD,
+        )
+        assertTrue(HudPresenceManager.isMonitoring)
+
+        // Switch to profile without anchor
+        HudPresenceManager.updateMonitoringLoop(
+            isCapturing = true,
+            layout = layoutWithoutAnchor,
+            profile = profileWithoutAnchor,
+            viewMode = CompanionViewMode.MACROPAD,
+        )
+        assertFalse(HudPresenceManager.isMonitoring)
     }
 }
