@@ -251,20 +251,21 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
 @Composable
 private fun LayoutTransitionSnapshotOverlay() {
     val transitionSnapshot by LayoutTransitionManager.transitionSnapshot.collectAsStateWithLifecycle()
-    val activeSnapshot = transitionSnapshot ?: return
-    if (activeSnapshot.isRecycled) return
-
-    Image(
-        bitmap = activeSnapshot.asImageBitmap(),
-        contentDescription = null,
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .clip(MP_SCREEN_SHAPE)
-                .graphicsLayer {
-                    alpha = LayoutTransitionManager.transitionAlpha.value
-                },
-    )
+    val transitionAlpha by LayoutTransitionManager.transitionAlpha.collectAsStateWithLifecycle()
+    val activeSnapshot = transitionSnapshot
+    if (activeSnapshot != null && !activeSnapshot.isRecycled && transitionAlpha > 0f) {
+        Image(
+            bitmap = activeSnapshot.asImageBitmap(),
+            contentDescription = null,
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .clip(MP_SCREEN_SHAPE)
+                    .graphicsLayer {
+                        alpha = transitionAlpha
+                    },
+        )
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -106,8 +106,9 @@ fun EmbeddedMirrorView(
                     val smoothingCutout = if (!isMouseActive) activeCutouts.firstOrNull { it.motionSmoothing } else null
                     val effectiveStrength = smoothingCutout?.motionSmoothingStrength ?: 0
 
+                    val wantsSmoother = surfaceOwner == MasterSurfaceRegistry.OWNER_MACROPAD
                     var smoother = gpuMotionSmoother
-                    if (smoother == null && width > 0 && height > 0 && effectiveStrength > 0) {
+                    if (smoother == null && width > 0 && height > 0 && wantsSmoother) {
                         AppLog.i(
                             TAG,
                             "[$surfaceOwner] Initializing GpuMotionSmoother unified pipeline for master Surface (strength=$effectiveStrength)",
@@ -115,14 +116,21 @@ fun EmbeddedMirrorView(
                         smoother = GpuMotionSmoother(master, width, height, effectiveStrength)
                         gpuMotionSmoother = smoother
                         val inSurface = smoother.inputSurface
-                        if (inSurface != null) {
+                        if (inSurface != null && inSurface.isValid) {
                             currentRoutedSurface = inSurface
                             MasterSurfaceRegistry.registerMasterSurface(surfaceOwner, inSurface, surfacePriority)
+                        } else {
+                            AppLog.w(
+                                TAG,
+                                "[$surfaceOwner] GpuMotionSmoother failed to initialize; falling back to direct master surface",
+                            )
+                            currentRoutedSurface = master
+                            MasterSurfaceRegistry.registerMasterSurface(surfaceOwner, master, surfacePriority)
                         }
                     } else if (smoother != null) {
                         smoother.updateStrength(effectiveStrength)
                         val inSurface = smoother.inputSurface
-                        if (inSurface != null && currentRoutedSurface != inSurface) {
+                        if (inSurface != null && inSurface.isValid && currentRoutedSurface != inSurface) {
                             currentRoutedSurface = inSurface
                             MasterSurfaceRegistry.registerMasterSurface(surfaceOwner, inSurface, surfacePriority)
                         }

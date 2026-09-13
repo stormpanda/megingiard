@@ -204,7 +204,11 @@ object LayoutTransitionManager {
         val oldBitmap = _transitionSnapshot.value
         _transitionSnapshot.value = null
         if (oldBitmap != null && !oldBitmap.isRecycled) {
-            oldBitmap.recycle()
+            mainHandler.post {
+                if (!oldBitmap.isRecycled) {
+                    oldBitmap.recycle()
+                }
+            }
         }
     }
 }
