@@ -43,7 +43,7 @@ private const val BLUR_TRANSITION_DURATION_MS = 300L
 private const val MIN_ALPHA_THRESHOLD = 0.005f
 private const val FULL_ALPHA_FLOAT = 1.0f
 private const val FROZEN_INACTIVE_SATURATION = 0.6f
-private const val FROZEN_INACTIVE_BRIGHTNESS = 0.85f
+private const val FROZEN_INACTIVE_BRIGHTNESS = 0.65f
 
 internal class MultiCutoutContainer(
     context: Context,
@@ -200,10 +200,14 @@ internal class MultiCutoutContainer(
     private val circleBlendColors = intArrayOf(Color.BLACK, Color.BLACK, Color.TRANSPARENT)
     private val circleBlendStops = floatArrayOf(0f, 0f, 1f)
 
-    private val horizontalGradientShader = LinearGradient(0f, 0f, 1f, 0f, transparentToBlackColors, null, Shader.TileMode.CLAMP)
-    private val horizontalReverseGradientShader = LinearGradient(0f, 0f, 1f, 0f, blackToTransparentColors, null, Shader.TileMode.CLAMP)
-    private val verticalGradientShader = LinearGradient(0f, 0f, 0f, 1f, transparentToBlackColors, null, Shader.TileMode.CLAMP)
-    private val verticalReverseGradientShader = LinearGradient(0f, 0f, 0f, 1f, blackToTransparentColors, null, Shader.TileMode.CLAMP)
+    private val horizontalGradientShader =
+        LinearGradient(0f, 0f, 1f, 0f, transparentToBlackColors, null, Shader.TileMode.CLAMP)
+    private val horizontalReverseGradientShader =
+        LinearGradient(0f, 0f, 1f, 0f, blackToTransparentColors, null, Shader.TileMode.CLAMP)
+    private val verticalGradientShader =
+        LinearGradient(0f, 0f, 0f, 1f, transparentToBlackColors, null, Shader.TileMode.CLAMP)
+    private val verticalReverseGradientShader =
+        LinearGradient(0f, 0f, 0f, 1f, blackToTransparentColors, null, Shader.TileMode.CLAMP)
     private val shaderMatrix = Matrix()
 
     private var cachedCircleRadius = -1f
@@ -299,7 +303,8 @@ internal class MultiCutoutContainer(
                 cutoutWasFrozen[cutout.id] = isTargetFrozen
 
                 val targetAlpha = if (isTargetFrozen && shouldBlur) FULL_ALPHA_FLOAT else 0f
-                val currentAlpha = cutoutBlurAlphas[cutout.id] ?: (if (wasTargetFrozen == true && shouldBlur) FULL_ALPHA_FLOAT else 0f)
+                val currentAlpha =
+                    cutoutBlurAlphas[cutout.id] ?: (if (wasTargetFrozen == true && shouldBlur) FULL_ALPHA_FLOAT else 0f)
                 cutoutBlurAlphas[cutout.id] = currentAlpha
                 cutoutTransitionAnimators.remove(cutout.id)?.cancel()
 
@@ -519,7 +524,8 @@ internal class MultiCutoutContainer(
                     }
 
                     val isTargetFrozen = isFrozen || isLayoutAnchorLost
-                    val blurAlpha = cutoutBlurAlphas[cutout.id] ?: (if (isTargetFrozen && shouldBlur) FULL_ALPHA_FLOAT else 0f)
+                    val blurAlpha =
+                        cutoutBlurAlphas[cutout.id] ?: (if (isTargetFrozen && shouldBlur) FULL_ALPHA_FLOAT else 0f)
 
                     val cachedFrozenFrame = AnchorPresenceManager.getFrozenFrame(context, cutout.id)
                     val fullFrozenBitmap = if (cachedFrozenFrame == null && isFrozen) frozenBitmap else null
@@ -535,7 +541,18 @@ internal class MultiCutoutContainer(
                         // (Live video feed is completely cut off, preventing video flicker/leakage during content transitions)
                         if (blurAlpha < FULL_ALPHA_FLOAT) {
                             frozenFramePaint.alpha = MCC_MAX_ALPHA_INT
-                            drawFrozenBitmapToCanvas(canvas, frozenBitmapToDraw, isCropped, dw, dh, sw, sh, sx, sy, frozenFramePaint)
+                            drawFrozenBitmapToCanvas(
+                                canvas,
+                                frozenBitmapToDraw,
+                                isCropped,
+                                dw,
+                                dh,
+                                sw,
+                                sh,
+                                sx,
+                                sy,
+                                frozenFramePaint,
+                            )
                         }
                     } else {
                         // Live / Unfreezing: render live/delayed video stream base layer
@@ -557,7 +574,8 @@ internal class MultiCutoutContainer(
                             canvas.drawBitmap(delayedFrame, null, cutoutDestRect, delayedFramePaint)
                         } else {
                             val isFollowActive = ScreenCaptureManager.isFollowActive.value
-                            val isUncropped = cutout.srcWidth >= MCC_UNCROPPED_THRESHOLD && cutout.srcHeight >= MCC_UNCROPPED_THRESHOLD
+                            val isUncropped =
+                                cutout.srcWidth >= MCC_UNCROPPED_THRESHOLD && cutout.srcHeight >= MCC_UNCROPPED_THRESHOLD
                             val liveSaveCount = canvas.save()
                             try {
                                 if (cutouts.size == 1 && isFollowActive && isUncropped) {
@@ -605,7 +623,8 @@ internal class MultiCutoutContainer(
                         val intDh = dh.roundToInt().coerceAtLeast(1)
                         val renderNode =
                             try {
-                                val node = cutoutRenderNodes.getOrPut(cutout.id) { RenderNode("CutoutBlur_${cutout.id}") }
+                                val node =
+                                    cutoutRenderNodes.getOrPut(cutout.id) { RenderNode("CutoutBlur_${cutout.id}") }
                                 val needsRecord =
                                     cutoutRenderNodeBitmaps[cutout.id] !== frozenBitmapToDraw ||
                                         cutoutRenderNodeWidths[cutout.id] != intDw ||
@@ -654,9 +673,21 @@ internal class MultiCutoutContainer(
                         if (renderNode != null) {
                             canvas.drawRenderNode(renderNode)
                         } else {
-                            frozenFramePaint.alpha = (blurAlpha * MCC_MAX_ALPHA_FLOAT).roundToInt().coerceIn(0, MCC_MAX_ALPHA_INT)
+                            frozenFramePaint.alpha =
+                                (blurAlpha * MCC_MAX_ALPHA_FLOAT).roundToInt().coerceIn(0, MCC_MAX_ALPHA_INT)
                             frozenFramePaint.colorFilter = frozenInactiveColorFilter
-                            drawFrozenBitmapToCanvas(canvas, frozenBitmapToDraw, isCropped, dw, dh, sw, sh, sx, sy, frozenFramePaint)
+                            drawFrozenBitmapToCanvas(
+                                canvas,
+                                frozenBitmapToDraw,
+                                isCropped,
+                                dw,
+                                dh,
+                                sw,
+                                sh,
+                                sx,
+                                sy,
+                                frozenFramePaint,
+                            )
                             frozenFramePaint.colorFilter = null
                             frozenFramePaint.alpha = MCC_MAX_ALPHA_INT
                         }
@@ -675,7 +706,14 @@ internal class MultiCutoutContainer(
                                 cachedCircleRadius = r
                                 cachedCircleStop = stop
                                 cachedCircleShader =
-                                    RadialGradient(dw / 2f, dh / 2f, r, circleBlendColors, circleBlendStops, Shader.TileMode.CLAMP)
+                                    RadialGradient(
+                                        dw / 2f,
+                                        dh / 2f,
+                                        r,
+                                        circleBlendColors,
+                                        circleBlendStops,
+                                        Shader.TileMode.CLAMP,
+                                    )
                             }
                             blendPaint.shader = cachedCircleShader
                             canvas.drawRect(0f, 0f, dw, dh, blendPaint)
@@ -697,9 +735,25 @@ internal class MultiCutoutContainer(
                             canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
                         }
                         if (touchesLeft) drawEdgeBlend(horizontalGradientShader, 2f * leftExt, 1f, -leftExt, 0f)
-                        if (touchesRight) drawEdgeBlend(horizontalReverseGradientShader, 2f * rightExt, 1f, dw - rightExt, 0f)
+                        if (touchesRight) {
+                            drawEdgeBlend(
+                                horizontalReverseGradientShader,
+                                2f * rightExt,
+                                1f,
+                                dw - rightExt,
+                                0f,
+                            )
+                        }
                         if (touchesTop) drawEdgeBlend(verticalGradientShader, 1f, 2f * topExt, 0f, -topExt)
-                        if (touchesBottom) drawEdgeBlend(verticalReverseGradientShader, 1f, 2f * bottomExt, 0f, dh - bottomExt)
+                        if (touchesBottom) {
+                            drawEdgeBlend(
+                                verticalReverseGradientShader,
+                                1f,
+                                2f * bottomExt,
+                                0f,
+                                dh - bottomExt,
+                            )
+                        }
                         blendPaint.shader = null
                     }
 
