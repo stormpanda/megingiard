@@ -36,6 +36,8 @@ object CutoutMaskManager {
     private val varianceCache = ConcurrentHashMap<String, ByteArray>()
     private val layoutAnchorCache = ConcurrentHashMap<String, HudAnchorSignature>()
     private val freezeFrameCache = ConcurrentHashMap<String, Bitmap>()
+    private val maskExistenceCache = ConcurrentHashMap<String, Boolean>()
+    private val layoutAnchorExistenceCache = ConcurrentHashMap<String, Boolean>()
 
     /**
      * Retrieves the transparency mask bitmap for [cutoutId] with optional [translucency] (0..10)
@@ -167,6 +169,7 @@ object CutoutMaskManager {
     ) {
         clearTunedCacheFor(cutoutId)
         baseMaskCache[cutoutId] = bitmap
+        maskExistenceCache[cutoutId] = true
         if (varianceMap != null) {
             varianceCache[cutoutId] = varianceMap
         } else {
@@ -260,6 +263,7 @@ object CutoutMaskManager {
     ) {
         clearTunedCacheFor(cutoutId)
         varianceCache.remove(cutoutId)
+        maskExistenceCache[cutoutId] = false
         freezeFrameCache.remove(cutoutId)?.let { cached ->
             if (!cached.isRecycled) {
                 cached.recycle()
@@ -310,9 +314,12 @@ object CutoutMaskManager {
         cutoutId: String,
     ): Boolean {
         if (baseMaskCache.containsKey(cutoutId)) return true
+        maskExistenceCache[cutoutId]?.let { return it }
         val dir = File(context.filesDir, MASKS_DIR)
         val file = File(dir, "$MASK_FILE_PREFIX$cutoutId$PNG_EXTENSION")
-        return file.exists()
+        val exists = file.exists()
+        maskExistenceCache[cutoutId] = exists
+        return exists
     }
 
     /**
@@ -357,6 +364,7 @@ object CutoutMaskManager {
         signature: HudAnchorSignature,
     ) {
         layoutAnchorCache[layoutId] = signature
+        layoutAnchorExistenceCache[layoutId] = true
         try {
             val dir = File(context.filesDir, MASKS_DIR)
             if (!dir.exists()) dir.mkdirs()
@@ -376,6 +384,7 @@ object CutoutMaskManager {
         layoutId: String,
     ) {
         layoutAnchorCache.remove(layoutId)
+        layoutAnchorExistenceCache[layoutId] = false
         try {
             val dir = File(context.filesDir, MASKS_DIR)
             val file = File(dir, "$LAYOUT_ANCHOR_FILE_PREFIX$layoutId$ANCHOR_EXTENSION")
@@ -396,9 +405,12 @@ object CutoutMaskManager {
         layoutId: String,
     ): Boolean {
         if (layoutAnchorCache.containsKey(layoutId)) return true
+        layoutAnchorExistenceCache[layoutId]?.let { return it }
         val dir = File(context.filesDir, MASKS_DIR)
         val file = File(dir, "$LAYOUT_ANCHOR_FILE_PREFIX$layoutId$ANCHOR_EXTENSION")
-        return file.exists()
+        val exists = file.exists()
+        layoutAnchorExistenceCache[layoutId] = exists
+        return exists
     }
 
     /**

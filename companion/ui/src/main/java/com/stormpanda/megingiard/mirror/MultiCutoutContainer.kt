@@ -258,18 +258,29 @@ internal class MultiCutoutContainer(
     private val cutoutRenderNodeHeights = mutableMapOf<String, Int>()
 
     private fun updateCutoutTransitions() {
-        val activeCutoutIds = cutouts.map { it.id }.toSet()
+        if (cutoutRenderNodes.isNotEmpty()) {
+            val iterator = cutoutRenderNodes.entries.iterator()
+            while (iterator.hasNext()) {
+                val entry = iterator.next()
+                if (cutouts.none { it.id == entry.key }) {
+                    entry.value.discardDisplayList()
+                    iterator.remove()
+                    cutoutRenderNodeBitmaps.remove(entry.key)
+                    cutoutRenderNodeWidths.remove(entry.key)
+                    cutoutRenderNodeHeights.remove(entry.key)
+                }
+            }
+        }
 
-        val trackedIds = cutoutTransitionAnimators.keys + cutoutWasFrozen.keys
-        for (id in trackedIds.toSet()) {
-            if (id !in activeCutoutIds) {
-                cutoutTransitionAnimators.remove(id)?.cancel()
-                cutoutBlurAlphas.remove(id)
-                cutoutWasFrozen.remove(id)
-                cutoutRenderNodes.remove(id)?.discardDisplayList()
-                cutoutRenderNodeBitmaps.remove(id)
-                cutoutRenderNodeWidths.remove(id)
-                cutoutRenderNodeHeights.remove(id)
+        if (cutoutWasFrozen.isNotEmpty()) {
+            val iterator = cutoutWasFrozen.keys.iterator()
+            while (iterator.hasNext()) {
+                val id = iterator.next()
+                if (cutouts.none { it.id == id }) {
+                    cutoutTransitionAnimators.remove(id)?.cancel()
+                    cutoutBlurAlphas.remove(id)
+                    iterator.remove()
+                }
             }
         }
 
@@ -282,13 +293,13 @@ internal class MultiCutoutContainer(
 
         for (cutout in cutouts) {
             val isTargetFrozen = isFrozen || isLayoutHudLost
-            val wasTargetFrozen = cutoutWasFrozen[cutout.id] ?: false
+            val wasTargetFrozen = cutoutWasFrozen[cutout.id]
 
-            if (isTargetFrozen != wasTargetFrozen) {
+            if (wasTargetFrozen == null || isTargetFrozen != wasTargetFrozen) {
                 cutoutWasFrozen[cutout.id] = isTargetFrozen
 
                 val targetAlpha = if (isTargetFrozen && shouldBlur) FULL_ALPHA_FLOAT else 0f
-                val currentAlpha = cutoutBlurAlphas[cutout.id] ?: (if (wasTargetFrozen && shouldBlur) FULL_ALPHA_FLOAT else 0f)
+                val currentAlpha = cutoutBlurAlphas[cutout.id] ?: (if (wasTargetFrozen == true && shouldBlur) FULL_ALPHA_FLOAT else 0f)
                 cutoutBlurAlphas[cutout.id] = currentAlpha
                 cutoutTransitionAnimators.remove(cutout.id)?.cancel()
 

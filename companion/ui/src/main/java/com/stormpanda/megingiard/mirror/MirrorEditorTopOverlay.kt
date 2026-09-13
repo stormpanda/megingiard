@@ -143,7 +143,11 @@ private val METO_PILL_PADDING_H = 7.dp
 private val METO_PILL_PADDING_V = 2.dp
 
 private const val METO_INITIAL_FOCUS_DELAY_MS = 100L
+private const val METO_EXIT_PROMPT_DISMISS_DELAY_MS = 100L
 private val METO_SCROLL_EXTRA_PADDING = 0.dp
+private val METO_TOAST_TOP_PADDING = 16.dp
+private val METO_CAROUSEL_BUTTON_SIZE = 16.dp
+private val METO_CAROUSEL_ICON_SIZE = 14.dp
 
 private const val METO_FALLBACK_SRC_WIDTH = 1920f
 private const val METO_FALLBACK_SRC_HEIGHT = 1080f
@@ -660,7 +664,7 @@ fun MirrorEditorTopOverlay(
                 modifier =
                     Modifier
                         .align(Alignment.TopCenter)
-                        .padding(top = 16.dp),
+                        .padding(top = METO_TOAST_TOP_PADDING),
             )
         }
     }
@@ -751,7 +755,7 @@ private fun TargetCutoutCarouselCard(
             Box(
                 modifier =
                     Modifier
-                        .size(16.dp)
+                        .size(METO_CAROUSEL_BUTTON_SIZE)
                         .clip(CircleShape)
                         .clickable(enabled = hasCutouts) { selectPrevious() },
                 contentAlignment = Alignment.Center,
@@ -760,7 +764,7 @@ private fun TargetCutoutCarouselCard(
                     imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowLeft,
                     contentDescription = stringResource(R.string.gamepad_previous),
                     tint = arrowTint,
-                    modifier = Modifier.size(14.dp),
+                    modifier = Modifier.size(METO_CAROUSEL_ICON_SIZE),
                 )
             }
 
@@ -776,7 +780,7 @@ private fun TargetCutoutCarouselCard(
             Box(
                 modifier =
                     Modifier
-                        .size(16.dp)
+                        .size(METO_CAROUSEL_BUTTON_SIZE)
                         .clip(CircleShape)
                         .clickable(enabled = hasCutouts) { selectNext() },
                 contentAlignment = Alignment.Center,
@@ -785,7 +789,7 @@ private fun TargetCutoutCarouselCard(
                     imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
                     contentDescription = stringResource(R.string.gamepad_next),
                     tint = arrowTint,
-                    modifier = Modifier.size(14.dp),
+                    modifier = Modifier.size(METO_CAROUSEL_ICON_SIZE),
                 )
             }
         }
@@ -1021,7 +1025,7 @@ private fun ToolboxSaveExitRow(
 
     LaunchedEffect(isRowFocused, showExitPrompt) {
         if (showExitPrompt && !isRowFocused) {
-            delay(100)
+            delay(METO_EXIT_PROMPT_DISMISS_DELAY_MS)
             if (showExitPrompt && !isSaveFocused && !isDiscardFocused) {
                 AppLog.d(TAG, "ToolboxSaveExitRow focus settled outside -> dismissing prompt")
                 onDismissPrompt()

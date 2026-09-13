@@ -235,6 +235,7 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         AppLog.i(TAG, "onDestroy")
+        PrimaryHudDimOverlayManager.destroy()
         LayoutTransitionManager.unregisterWindowProvider()
         InjectorLifecycleManager.stopAll()
     }

@@ -36,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -98,10 +99,7 @@ internal fun HudAutoTuneCalibrationSheet(
     val bezelBrush = rememberBezelBrush()
 
     val calibrationType by HudAutoTuneCoordinator.calibrationType.collectAsStateWithLifecycle()
-    val previewBitmap by HudAutoTuneCoordinator.previewBitmap.collectAsStateWithLifecycle()
-    val sampleCount by HudAutoTuneCoordinator.sampleCount.collectAsStateWithLifecycle()
     val canFinish by HudAutoTuneCoordinator.canFinish.collectAsStateWithLifecycle()
-    val dynamicPercent by HudAutoTuneCoordinator.dynamicPercent.collectAsStateWithLifecycle()
 
     val title =
         when (calibrationType) {
@@ -170,110 +168,11 @@ internal fun HudAutoTuneCalibrationSheet(
                     )
                     Spacer(Modifier.weight(1f))
 
-                    // Status Badge (Sampling... vs X frames)
-                    Box(
-                        modifier =
-                            Modifier
-                                .clip(RoundedCornerShape(PILL_CORNER_RADIUS))
-                                .background(colors.surfaceVariant)
-                                .border(
-                                    width = BORDER_WIDTH,
-                                    color = colors.divider,
-                                    shape = RoundedCornerShape(PILL_CORNER_RADIUS),
-                                ).padding(horizontal = PILL_HORIZONTAL_PADDING, vertical = PILL_VERTICAL_PADDING),
-                    ) {
-                        Text(
-                            text =
-                                if (sampleCount < MIN_CALIBRATION_FRAMES) {
-                                    stringResource(R.string.mirror_hud_calibration_sampling)
-                                } else {
-                                    stringResource(R.string.mirror_hud_calibration_frames_count, sampleCount)
-                                },
-                            color = if (canFinish) colors.accent else colors.onSurfaceSecondary,
-                            style = MaterialTheme.typography.labelMedium,
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
+                    SampleCounterBadge()
                 }
 
                 // ── Live Preview Box with Checkerboard Transparency Background ──
-                val checkerColor1 = colors.surfaceVariant
-                val checkerColor2 = colors.surface
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .height(PREVIEW_HEIGHT)
-                            .clip(RoundedCornerShape(PREVIEW_CORNER_RADIUS))
-                            .border(
-                                width = BORDER_WIDTH,
-                                brush = bezelBrush,
-                                shape = RoundedCornerShape(PREVIEW_CORNER_RADIUS),
-                            ).drawBehind {
-                                val checkPx = CHECKER_SIZE.toPx()
-                                val cols = ceil(size.width / checkPx).toInt()
-                                val rows = ceil(size.height / checkPx).toInt()
-                                for (r in 0 until rows) {
-                                    for (c in 0 until cols) {
-                                        val color = if ((r + c) % 2 == 0) checkerColor1 else checkerColor2
-                                        drawRect(
-                                            color = color,
-                                            topLeft = Offset(c * checkPx, r * checkPx),
-                                            size = Size(checkPx, checkPx),
-                                        )
-                                    }
-                                }
-                            },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    val currentPreview = previewBitmap
-                    if (currentPreview != null) {
-                        Image(
-                            bitmap = currentPreview.asImageBitmap(),
-                            contentDescription = stringResource(R.string.mirror_hud_calibration_preview_desc),
-                            modifier = Modifier.fillMaxSize().padding(SPACING_S),
-                            contentScale = ContentScale.Fit,
-                        )
-
-                        // Dynamic transparency percentage pill
-                        if (canFinish && dynamicPercent > 0) {
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .align(Alignment.BottomEnd)
-                                        .padding(SPACING_S)
-                                        .clip(RoundedCornerShape(PILL_CORNER_RADIUS))
-                                        .background(Color.Black.copy(alpha = BADGE_BG_ALPHA))
-                                        .padding(horizontal = PILL_HORIZONTAL_PADDING, vertical = PILL_VERTICAL_PADDING),
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.mirror_hud_calibration_dynamic_pct, dynamicPercent),
-                                    color = colors.accent,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontFamily = FontFamily.Monospace,
-                                    fontWeight = FontWeight.SemiBold,
-                                )
-                            }
-                        }
-                    } else {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(SPACING_S),
-                        ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(LOADING_INDICATOR_SIZE),
-                                color = colors.accent,
-                                strokeWidth = LOADING_STROKE_WIDTH,
-                            )
-                            Text(
-                                text = stringResource(R.string.mirror_hud_calibration_sampling),
-                                color = colors.onSurfaceSecondary,
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                        }
-                    }
-                }
+                CalibrationPreviewBox(bezelBrush = bezelBrush)
 
                 // ── Instruction Prompt Box ──
                 Row(
@@ -351,6 +250,123 @@ internal fun HudAutoTuneCalibrationSheet(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SampleCounterBadge() {
+    val colors = LocalAppColors.current
+    val sampleCount by HudAutoTuneCoordinator.sampleCount.collectAsStateWithLifecycle()
+    val canFinish by HudAutoTuneCoordinator.canFinish.collectAsStateWithLifecycle()
+
+    Box(
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(PILL_CORNER_RADIUS))
+                .background(colors.surfaceVariant)
+                .border(
+                    width = BORDER_WIDTH,
+                    color = colors.divider,
+                    shape = RoundedCornerShape(PILL_CORNER_RADIUS),
+                ).padding(horizontal = PILL_HORIZONTAL_PADDING, vertical = PILL_VERTICAL_PADDING),
+    ) {
+        Text(
+            text =
+                if (sampleCount < MIN_CALIBRATION_FRAMES) {
+                    stringResource(R.string.mirror_hud_calibration_sampling)
+                } else {
+                    stringResource(R.string.mirror_hud_calibration_frames_count, sampleCount)
+                },
+            color = if (canFinish) colors.accent else colors.onSurfaceSecondary,
+            style = MaterialTheme.typography.labelMedium,
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+@Composable
+private fun CalibrationPreviewBox(bezelBrush: Brush) {
+    val colors = LocalAppColors.current
+    val previewBitmap by HudAutoTuneCoordinator.previewBitmap.collectAsStateWithLifecycle()
+    val canFinish by HudAutoTuneCoordinator.canFinish.collectAsStateWithLifecycle()
+    val dynamicPercent by HudAutoTuneCoordinator.dynamicPercent.collectAsStateWithLifecycle()
+
+    val checkerColor1 = colors.surfaceVariant
+    val checkerColor2 = colors.surface
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(PREVIEW_HEIGHT)
+                .clip(RoundedCornerShape(PREVIEW_CORNER_RADIUS))
+                .border(
+                    width = BORDER_WIDTH,
+                    brush = bezelBrush,
+                    shape = RoundedCornerShape(PREVIEW_CORNER_RADIUS),
+                ).drawBehind {
+                    val checkPx = CHECKER_SIZE.toPx()
+                    val cols = ceil(size.width / checkPx).toInt()
+                    val rows = ceil(size.height / checkPx).toInt()
+                    for (r in 0 until rows) {
+                        for (c in 0 until cols) {
+                            val color = if ((r + c) % 2 == 0) checkerColor1 else checkerColor2
+                            drawRect(
+                                color = color,
+                                topLeft = Offset(c * checkPx, r * checkPx),
+                                size = Size(checkPx, checkPx),
+                            )
+                        }
+                    }
+                },
+        contentAlignment = Alignment.Center,
+    ) {
+        val currentPreview = previewBitmap
+        if (currentPreview != null) {
+            Image(
+                bitmap = currentPreview.asImageBitmap(),
+                contentDescription = stringResource(R.string.mirror_hud_calibration_preview_desc),
+                modifier = Modifier.fillMaxSize().padding(SPACING_S),
+                contentScale = ContentScale.Fit,
+            )
+
+            // Dynamic transparency percentage pill
+            if (canFinish && dynamicPercent > 0) {
+                Box(
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(SPACING_S)
+                            .clip(RoundedCornerShape(PILL_CORNER_RADIUS))
+                            .background(Color.Black.copy(alpha = BADGE_BG_ALPHA))
+                            .padding(horizontal = PILL_HORIZONTAL_PADDING, vertical = PILL_VERTICAL_PADDING),
+                ) {
+                    Text(
+                        text = stringResource(R.string.mirror_hud_calibration_dynamic_pct, dynamicPercent),
+                        color = colors.accent,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            }
+        } else {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(SPACING_S),
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(LOADING_INDICATOR_SIZE),
+                    color = colors.accent,
+                    strokeWidth = LOADING_STROKE_WIDTH,
+                )
+                Text(
+                    text = stringResource(R.string.mirror_hud_calibration_sampling),
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
         }
     }

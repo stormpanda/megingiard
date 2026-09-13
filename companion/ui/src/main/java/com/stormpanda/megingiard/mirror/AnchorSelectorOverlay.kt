@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.mirror
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -26,6 +27,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onKeyEvent
@@ -63,6 +66,7 @@ private val ASO_EDGE_TOUCH_LENGTH = 56.dp
 private val ASO_EDGE_TOUCH_THICKNESS = 36.dp
 private val ASO_EDGE_HANDLE_CORNER = 3.dp
 private val ASO_EDGE_HANDLE_SHAPE = RoundedCornerShape(ASO_EDGE_HANDLE_CORNER)
+private val ASO_TOAST_TOP_PADDING = 16.dp
 
 /**
  * Interactive full-screen overlay rendered on Display 0 for positioning and resizing
@@ -172,46 +176,45 @@ fun AnchorSelectorOverlay(
         }
 
         // 1. Semi-transparent scrim rects surrounding the anchor region
-        // Top scrim
-        Box(
-            modifier =
-                Modifier
-                    .offset { IntOffset(0, 0) }
-                    .size(
-                        width = this@BoxWithConstraints.maxWidth,
-                        height = with(density) { anchorTop.toDp() },
-                    ).background(MaterialTheme.colorScheme.scrim.copy(alpha = ASO_SCRIM_ALPHA)),
-        )
-        // Bottom scrim
-        Box(
-            modifier =
-                Modifier
-                    .offset { IntOffset(0, (anchorTop + anchorH).roundToInt()) }
-                    .size(
-                        width = this@BoxWithConstraints.maxWidth,
-                        height = with(density) { (screenH - (anchorTop + anchorH)).coerceAtLeast(0f).toDp() },
-                    ).background(MaterialTheme.colorScheme.scrim.copy(alpha = ASO_SCRIM_ALPHA)),
-        )
-        // Left scrim
-        Box(
-            modifier =
-                Modifier
-                    .offset { IntOffset(0, anchorTop.roundToInt()) }
-                    .size(
-                        width = with(density) { anchorLeft.toDp() },
-                        height = with(density) { anchorH.toDp() },
-                    ).background(MaterialTheme.colorScheme.scrim.copy(alpha = ASO_SCRIM_ALPHA)),
-        )
-        // Right scrim
-        Box(
-            modifier =
-                Modifier
-                    .offset { IntOffset((anchorLeft + anchorW).roundToInt(), anchorTop.roundToInt()) }
-                    .size(
-                        width = with(density) { (screenW - (anchorLeft + anchorW)).coerceAtLeast(0f).toDp() },
-                        height = with(density) { anchorH.toDp() },
-                    ).background(MaterialTheme.colorScheme.scrim.copy(alpha = ASO_SCRIM_ALPHA)),
-        )
+        val scrimColor = MaterialTheme.colorScheme.scrim.copy(alpha = ASO_SCRIM_ALPHA)
+        Canvas(
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            // Top scrim
+            if (anchorTop > 0f) {
+                drawRect(
+                    color = scrimColor,
+                    topLeft = Offset.Zero,
+                    size = Size(size.width, anchorTop),
+                )
+            }
+            // Bottom scrim
+            val bottomY = anchorTop + anchorH
+            if (bottomY < size.height) {
+                drawRect(
+                    color = scrimColor,
+                    topLeft = Offset(0f, bottomY),
+                    size = Size(size.width, size.height - bottomY),
+                )
+            }
+            // Left scrim
+            if (anchorLeft > 0f) {
+                drawRect(
+                    color = scrimColor,
+                    topLeft = Offset(0f, anchorTop),
+                    size = Size(anchorLeft, anchorH),
+                )
+            }
+            // Right scrim
+            val rightX = anchorLeft + anchorW
+            if (rightX < size.width) {
+                drawRect(
+                    color = scrimColor,
+                    topLeft = Offset(rightX, anchorTop),
+                    size = Size(size.width - rightX, anchorH),
+                )
+            }
+        }
 
         // 2. Anchor Bounding Box
         Box(
@@ -394,7 +397,7 @@ fun AnchorSelectorOverlay(
             modifier =
                 Modifier
                     .align(Alignment.TopCenter)
-                    .padding(top = 16.dp),
+                    .padding(top = ASO_TOAST_TOP_PADDING),
         )
     }
 }
