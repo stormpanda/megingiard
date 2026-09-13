@@ -402,8 +402,26 @@ Open Settings to create a layout.</string>
     <string name="layout_settings_invisible_buttons">隱形按鈕</string>
     <string name="layout_settings_invisible_buttons_desc">使用配置時讓按鈕隱形，編輯時仍然可見。</string>
 
+    <string name="layout_settings_auto_switch_section_title">視覺參考錨點</string>
+    <string name="layout_settings_auto_switch_title">視覺參考錨點</string>
+    <string name="layout_settings_auto_switch_enabled_desc">視覺錨點已啟用 • 當內容未顯示時自動凍結或模糊切角</string>
+    <string name="layout_settings_auto_switch_disabled_desc">當預期內容未在遊戲中顯示時凍結/模糊切角或切換版面</string>
+    <string name="layout_settings_visual_anchor_title">視覺參考錨點</string>
+    <string name="layout_settings_visual_anchor_desc">監控主螢幕上的參考區域，當預期內容未顯示時凍結或模糊此版面的切角。</string>
+    <string name="layout_settings_visual_anchor_position_title">定位參考錨點</string>
+    <string name="layout_settings_visual_anchor_position_desc">在主螢幕上調整參考邊界框</string>
+    <string name="layout_settings_visual_anchor_calibrate_title">校準參考錨點</string>
+    <string name="layout_settings_visual_anchor_calibrate_desc">取樣參考區域以偵測穩定的錨點</string>
+    <string name="layout_settings_visual_anchor_recalibrate_title">重新校準參考錨點</string>
+    <string name="layout_settings_visual_anchor_recalibrate_desc">從即時遊戲畫面更新錨點</string>
+    <string name="layout_settings_visual_anchor_status_calibrated">已校準（%1$d 個參考點）</string>
+    <string name="layout_settings_visual_anchor_stream_delay_desc">緩衝畫面以消除內容消失時的畫面撕裂</string>
     <string name="layout_settings_visual_anchor_blur_title">模糊未啟用的畫面區域</string>
     <string name="layout_settings_visual_anchor_blur_desc">當參考錨點遺失時套用毛玻璃模糊。若停用，畫面區域將保持清晰定格。</string>
+    <string name="layout_settings_visual_anchor_remove_title">刪除錨點校準</string>
+    <string name="layout_settings_visual_anchor_remove_desc">移除已校準的參考簽章並停用視覺錨點</string>
+    <string name="help_layout_settings_auto_switch_desc">為此版面設定視覺錨點與自動切換。監控主螢幕上的參考區域，當此版面的預期內容未顯示時凍結或模糊切角，或切換版面。</string>
+
     <string name="settings_profile_automation_header">自動化</string>
     <string name="settings_profile_auto_layout_switching_title">自動配置切換</string>
     <string name="settings_profile_auto_layout_switching_desc">自動切換至此設定檔中第一個參考錨點出現在螢幕上的配置</string>
@@ -411,7 +429,7 @@ Open Settings to create a layout.</string>
     <string name="automation_no_anchors_warning">此設定檔中沒有任何佈局已校準視覺參考錨點。請在下方設定錨點以啟用自動切換。</string>
     <string name="automation_anchors_status_summary">%1$d / %2$d 個佈局已校準視覺參考錨點。</string>
     <string name="automation_configure_anchors_title">設定佈局錨點</string>
-    <string name="automation_configure_anchors_desc">為所有佈局設定參考錨點與過場凍結</string>
+    <string name="automation_configure_anchors_desc">設定參考錨點，在預期內容未顯示時凍結切角或自動切換版面</string>
     <string name="automation_anchor_present_badge">存在</string>
     <string name="automation_anchor_lost_badge">丟失</string>
     <string name="automation_anchor_active_badge">當前</string>
@@ -655,7 +673,7 @@ Open Settings to create a layout.</string>
     <string name="settings_cutout_feathering_desc">透過向外邊緣擴展柔化並平滑外部輪廓</string>
     <string name="settings_mirror_hud_feathering_off">關閉</string>
     <string name="settings_cutout_stream_delay_title">畫面延遲</string>
-    <string name="settings_cutout_stream_delay_desc">將即時畫面延遲 N 幀，以便在過場動畫出現前預先完成凍結與模糊</string>
+    <string name="settings_cutout_stream_delay_desc">將切角視訊延遲 N 幀，以便在內容變更前乾淨地套用缺少凍結與模糊</string>
     <string name="settings_cutout_stream_delay_off">0 幀 (即時)</string>
     <string name="settings_cutout_stream_delay_frames">%1$d 幀 (~%2$d 毫秒)</string>
     <string name="settings_mirror_hud_auto_tuning_prompt">正在校準智慧切角... 請在遊戲中移動視角或角色！（剩餘 %d 秒）</string>

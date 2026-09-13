@@ -194,9 +194,9 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
     - Direct navigation into per-layout reference anchor configuration (`MacroPadSubPage.AutomaticLayoutSwitching`).
   - **Hub & Spoke Integration with Existing Menus:**
     - **Edit Profile:** Retains the profile-level master toggle and includes a direct action card pointing to the Automation hub ("Configure Layout Anchors →").
-    - **Edit Layout:** Retains the contextual "Automatic Layout Switching" entry card, pointing into `AutomaticLayoutSwitchingSubPageContent` while preserving layout-deck breadcrumbs and back navigation.
+    - **Edit Layout:** Retains the contextual "Visual Reference Anchor" entry card, pointing into `AutomaticLayoutSwitchingSubPageContent` while preserving layout-deck breadcrumbs and back navigation.
 - **Unified Presence Architecture & Elimination of Per-Cutout Anchor Duplication:**
-  - Cutouts mirroring game HUD elements (e.g. minimaps, quest widgets, meters) frequently disappear together during in-game cutscenes, full-screen menus, dialogue trees, or loading screens.
+  - Cutouts mirroring game HUD elements (e.g. minimaps, quest widgets, meters) or specialized views frequently disappear or change whenever the layout's intended content is not being shown on screen.
   - Instead of configuring redundant anchors per cutout, visual anchoring is configured once per layout in `PadLayout.visualAnchor` (`LayoutVisualAnchor`).
   - When the layout's visual reference anchor is evaluated by `HudPresenceManager`, the resulting presence state (`PRESENT` vs. `LOST`) is applied across all cutouts belonging to the active layout simultaneously.
   - Advanced Cutout Settings (`CutoutAdvancedSettingsSubPageContent`) is streamlined to focus strictly on **Foreground UI / Background Separation** (Smart Cutout background mask calibration, translucency slider, feathering slider, and mask removal).
