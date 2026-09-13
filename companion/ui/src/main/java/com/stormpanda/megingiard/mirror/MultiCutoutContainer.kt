@@ -286,13 +286,13 @@ internal class MultiCutoutContainer(
 
         val activeLayout = MacroPadState.activeLayout.value
         val isLayoutAnchorActive = activeLayout?.visualAnchor?.enabled == true
-        val isLayoutHudLost =
+        val isLayoutAnchorLost =
             activeLayout != null && isLayoutAnchorActive &&
-                HudPresenceManager.isLayoutHudLost(activeLayout.id)
+                AnchorPresenceManager.isLayoutAnchorLost(activeLayout.id)
         val shouldBlur = activeLayout?.visualAnchor?.blurCutoutsOnLoss == true
 
         for (cutout in cutouts) {
-            val isTargetFrozen = isFrozen || isLayoutHudLost
+            val isTargetFrozen = isFrozen || isLayoutAnchorLost
             val wasTargetFrozen = cutoutWasFrozen[cutout.id]
 
             if (wasTargetFrozen == null || isTargetFrozen != wasTargetFrozen) {
@@ -378,7 +378,7 @@ internal class MultiCutoutContainer(
     }
 
     init {
-        HudPresenceManager.initialize(context)
+        AnchorPresenceManager.initialize(context)
         clipChildren = true
         setWillNotDraw(false)
     }
@@ -460,9 +460,9 @@ internal class MultiCutoutContainer(
 
             val activeLayout = MacroPadState.activeLayout.value
             val isLayoutAnchorActive = activeLayout?.visualAnchor?.enabled == true
-            val isLayoutHudLost =
+            val isLayoutAnchorLost =
                 activeLayout != null && isLayoutAnchorActive &&
-                    HudPresenceManager.isLayoutHudLost(activeLayout.id)
+                    AnchorPresenceManager.isLayoutAnchorLost(activeLayout.id)
             val shouldBlur = activeLayout?.visualAnchor?.blurCutoutsOnLoss == true
 
             for (cutout in cutouts) {
@@ -518,10 +518,10 @@ internal class MultiCutoutContainer(
                         canvas.clipPath(circlePath)
                     }
 
-                    val isTargetFrozen = isFrozen || isLayoutHudLost
+                    val isTargetFrozen = isFrozen || isLayoutAnchorLost
                     val blurAlpha = cutoutBlurAlphas[cutout.id] ?: (if (isTargetFrozen && shouldBlur) FULL_ALPHA_FLOAT else 0f)
 
-                    val cachedFrozenFrame = HudPresenceManager.getFrozenFrame(context, cutout.id)
+                    val cachedFrozenFrame = AnchorPresenceManager.getFrozenFrame(context, cutout.id)
                     val fullFrozenBitmap = if (cachedFrozenFrame == null && isFrozen) frozenBitmap else null
                     val hasFrozenBitmap =
                         (cachedFrozenFrame != null && !cachedFrozenFrame.isRecycled) ||
@@ -532,7 +532,7 @@ internal class MultiCutoutContainer(
                     // 1. Base Layer
                     if (isTargetFrozen && hasFrozenBitmap && frozenBitmapToDraw != null) {
                         // Freeze active: render sharp frozen frame base layer
-                        // (Live video feed is completely cut off, preventing cutscene flicker/leakage)
+                        // (Live video feed is completely cut off, preventing video flicker/leakage during content transitions)
                         if (blurAlpha < FULL_ALPHA_FLOAT) {
                             frozenFramePaint.alpha = MCC_MAX_ALPHA_INT
                             drawFrozenBitmapToCanvas(canvas, frozenBitmapToDraw, isCropped, dw, dh, sw, sh, sx, sy, frozenFramePaint)
@@ -547,7 +547,7 @@ internal class MultiCutoutContainer(
                             }
                         val delayedFrame =
                             if (effectiveDelay > 0) {
-                                HudPresenceManager.getDelayedFrame(cutout.id, effectiveDelay)
+                                AnchorPresenceManager.getDelayedFrame(cutout.id, effectiveDelay)
                             } else {
                                 null
                             }

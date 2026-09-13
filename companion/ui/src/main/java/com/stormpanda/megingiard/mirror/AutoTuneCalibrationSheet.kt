@@ -54,7 +54,7 @@ import com.stormpanda.megingiard.ui.blockPointerEvents
 import com.stormpanda.megingiard.ui.rememberBezelBrush
 import kotlin.math.ceil
 
-private const val TAG = "HudAutoTuneCalibrationSheet"
+private const val TAG = "AutoTuneCalibrationSheet"
 
 private const val SHEET_MAX_WIDTH_FRACTION = 0.88f
 private val SHEET_CORNER_RADIUS = 16.dp
@@ -82,46 +82,46 @@ private val LOADING_STROKE_WIDTH = 2.dp
 private val LOADING_INDICATOR_SIZE = 18.dp
 
 /**
- * Companion display HUD rendered on Display 4 during active HUD auto-tune calibration.
+ * Companion display overlay rendered on Display 4 during active auto-tune calibration.
  *
  * Appears while the primary modal on Display 0 is suspended, giving the user complete
  * freedom to move and rotate the camera in-game without touch or input interference.
  * Displays a live preview of the reference element over a checkerboard background:
- * moving scenery turns transparent in real time while stationary HUD elements remain opaque.
+ * moving scenery turns transparent in real time while stationary elements remain opaque.
  * Provides user-driven [onFinish] and [onCancel] controls.
  */
 @Composable
-internal fun HudAutoTuneCalibrationSheet(
+internal fun AutoTuneCalibrationSheet(
     onCancel: () -> Unit,
     onFinish: () -> Unit,
 ) {
     val colors = LocalAppColors.current
     val bezelBrush = rememberBezelBrush()
 
-    val calibrationType by HudAutoTuneCoordinator.calibrationType.collectAsStateWithLifecycle()
-    val canFinish by HudAutoTuneCoordinator.canFinish.collectAsStateWithLifecycle()
+    val calibrationType by VisualAutoTuneCoordinator.calibrationType.collectAsStateWithLifecycle()
+    val canFinish by VisualAutoTuneCoordinator.canFinish.collectAsStateWithLifecycle()
 
     val title =
         when (calibrationType) {
             CalibrationType.LAYOUT_ANCHOR -> stringResource(R.string.mirror_anchor_calibration_title)
-            else -> stringResource(R.string.mirror_hud_calibration_title)
+            else -> stringResource(R.string.mirror_calibration_title)
         }
 
     val instruction =
         when (calibrationType) {
             CalibrationType.LAYOUT_ANCHOR -> stringResource(R.string.mirror_anchor_calibration_instruction)
-            else -> stringResource(R.string.mirror_hud_calibration_instruction_preview)
+            else -> stringResource(R.string.mirror_calibration_instruction_preview)
         }
 
     BackHandler {
-        AppLog.i(TAG, "BackHandler triggered during HUD auto-tune calibration")
+        AppLog.i(TAG, "BackHandler triggered during auto-tune calibration")
         onCancel()
     }
 
     DisposableEffect(Unit) {
-        AppLog.i(TAG, "HudAutoTuneCalibrationSheet visible on secondary display")
+        AppLog.i(TAG, "AutoTuneCalibrationSheet visible on secondary display")
         onDispose {
-            AppLog.i(TAG, "HudAutoTuneCalibrationSheet disposed")
+            AppLog.i(TAG, "AutoTuneCalibrationSheet disposed")
         }
     }
 
@@ -218,7 +218,7 @@ internal fun HudAutoTuneCalibrationSheet(
                         )
                         Spacer(Modifier.width(SPACING_S))
                         Text(
-                            text = stringResource(R.string.mirror_hud_calibration_cancel),
+                            text = stringResource(R.string.mirror_calibration_cancel),
                             color = colors.onSurfaceSecondary,
                             style = MaterialTheme.typography.labelLarge,
                         )
@@ -244,7 +244,7 @@ internal fun HudAutoTuneCalibrationSheet(
                         )
                         Spacer(Modifier.width(SPACING_S))
                         Text(
-                            text = stringResource(R.string.mirror_hud_calibration_finish),
+                            text = stringResource(R.string.mirror_calibration_finish),
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold,
                         )
@@ -258,8 +258,8 @@ internal fun HudAutoTuneCalibrationSheet(
 @Composable
 private fun SampleCounterBadge() {
     val colors = LocalAppColors.current
-    val sampleCount by HudAutoTuneCoordinator.sampleCount.collectAsStateWithLifecycle()
-    val canFinish by HudAutoTuneCoordinator.canFinish.collectAsStateWithLifecycle()
+    val sampleCount by VisualAutoTuneCoordinator.sampleCount.collectAsStateWithLifecycle()
+    val canFinish by VisualAutoTuneCoordinator.canFinish.collectAsStateWithLifecycle()
 
     Box(
         modifier =
@@ -275,9 +275,9 @@ private fun SampleCounterBadge() {
         Text(
             text =
                 if (sampleCount < MIN_CALIBRATION_FRAMES) {
-                    stringResource(R.string.mirror_hud_calibration_sampling)
+                    stringResource(R.string.mirror_calibration_sampling)
                 } else {
-                    stringResource(R.string.mirror_hud_calibration_frames_count, sampleCount)
+                    stringResource(R.string.mirror_calibration_frames_count, sampleCount)
                 },
             color = if (canFinish) colors.accent else colors.onSurfaceSecondary,
             style = MaterialTheme.typography.labelMedium,
@@ -290,9 +290,9 @@ private fun SampleCounterBadge() {
 @Composable
 private fun CalibrationPreviewBox(bezelBrush: Brush) {
     val colors = LocalAppColors.current
-    val previewBitmap by HudAutoTuneCoordinator.previewBitmap.collectAsStateWithLifecycle()
-    val canFinish by HudAutoTuneCoordinator.canFinish.collectAsStateWithLifecycle()
-    val dynamicPercent by HudAutoTuneCoordinator.dynamicPercent.collectAsStateWithLifecycle()
+    val previewBitmap by VisualAutoTuneCoordinator.previewBitmap.collectAsStateWithLifecycle()
+    val canFinish by VisualAutoTuneCoordinator.canFinish.collectAsStateWithLifecycle()
+    val dynamicPercent by VisualAutoTuneCoordinator.dynamicPercent.collectAsStateWithLifecycle()
 
     val checkerColor1 = colors.surfaceVariant
     val checkerColor2 = colors.surface
@@ -327,7 +327,7 @@ private fun CalibrationPreviewBox(bezelBrush: Brush) {
         if (currentPreview != null) {
             Image(
                 bitmap = currentPreview.asImageBitmap(),
-                contentDescription = stringResource(R.string.mirror_hud_calibration_preview_desc),
+                contentDescription = stringResource(R.string.mirror_calibration_preview_desc),
                 modifier = Modifier.fillMaxSize().padding(SPACING_S),
                 contentScale = ContentScale.Fit,
             )
@@ -344,7 +344,7 @@ private fun CalibrationPreviewBox(bezelBrush: Brush) {
                             .padding(horizontal = PILL_HORIZONTAL_PADDING, vertical = PILL_VERTICAL_PADDING),
                 ) {
                     Text(
-                        text = stringResource(R.string.mirror_hud_calibration_dynamic_pct, dynamicPercent),
+                        text = stringResource(R.string.mirror_calibration_dynamic_pct, dynamicPercent),
                         color = colors.accent,
                         style = MaterialTheme.typography.labelSmall,
                         fontFamily = FontFamily.Monospace,
@@ -363,7 +363,7 @@ private fun CalibrationPreviewBox(bezelBrush: Brush) {
                     strokeWidth = LOADING_STROKE_WIDTH,
                 )
                 Text(
-                    text = stringResource(R.string.mirror_hud_calibration_sampling),
+                    text = stringResource(R.string.mirror_calibration_sampling),
                     color = colors.onSurfaceSecondary,
                     style = MaterialTheme.typography.bodySmall,
                 )

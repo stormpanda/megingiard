@@ -3,7 +3,7 @@ package com.stormpanda.megingiard.mirror
 import kotlinx.serialization.Serializable
 
 /**
- * Represents a single reference anchor sample point extracted from a stationary HUD element.
+ * Represents a single reference anchor sample point extracted from a stationary reference element.
  *
  * @param u Normalized horizontal position [0.0, 1.0] within the cutout's source crop rectangle.
  * @param v Normalized vertical position [0.0, 1.0] within the cutout's source crop rectangle.
@@ -22,13 +22,13 @@ data class AnchorPoint(
 
 /**
  * Compact reference signature containing spatially distributed anchor sample points
- * used for real-time HUD presence detection (identifying cutscenes, menus, or loading screens).
+ * used for real-time visual anchor presence detection.
  *
- * @param cutoutId Unique identifier of the associated [ScreenCutout].
+ * @param cutoutId Unique identifier of the associated layout or cutout.
  * @param points Stratified sample of anchor points with near-zero calibration variance.
  */
 @Serializable
-data class HudAnchorSignature(
+data class VisualAnchorSignature(
     val cutoutId: String,
     val points: List<AnchorPoint>,
 )

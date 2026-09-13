@@ -30,12 +30,14 @@ class KeyboardViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
+        KeyboardSettings.resetForTesting()
         AppStateManager.closeQuickMenu()
     }
 
     @After
     fun tearDown() {
         AppStateManager.closeQuickMenu()
+        KeyboardSettings.resetForTesting()
         Dispatchers.resetMain()
     }
 

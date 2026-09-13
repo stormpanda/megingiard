@@ -29,13 +29,13 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.math.nextItem
 import com.stormpanda.megingiard.mirror.CutoutMaskManager
-import com.stormpanda.megingiard.mirror.HudAutoTuneCoordinator
 import com.stormpanda.megingiard.mirror.MAX_FEATHERING_PX
 import com.stormpanda.megingiard.mirror.MAX_TRANSLUCENCY
 import com.stormpanda.megingiard.mirror.MIN_FEATHERING_PX
 import com.stormpanda.megingiard.mirror.MIN_TRANSLUCENCY
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCutout
+import com.stormpanda.megingiard.mirror.VisualAutoTuneCoordinator
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
 import com.stormpanda.megingiard.ui.GamepadInfoBox
@@ -138,19 +138,19 @@ internal fun MirrorDeck(
                     stringResource(R.string.settings_mirror_projection_off)
                 }
 
-            val hudFilterText =
+            val filterText =
                 if (cutout.hasTransparencyMask) {
-                    stringResource(R.string.settings_mirror_hud_filter_transparency_mask)
+                    stringResource(R.string.settings_mirror_cutout_filter_transparency_mask)
                 } else {
                     null
                 }
 
             val summaryDesc =
-                if (hudFilterText != null) {
+                if (filterText != null) {
                     stringResource(
-                        R.string.settings_mirror_cutout_summary_with_hud_fmt,
+                        R.string.settings_mirror_cutout_summary_with_filter_fmt,
                         smoothingText,
-                        hudFilterText,
+                        filterText,
                         projectionText,
                     )
                 } else {
@@ -337,18 +337,18 @@ internal fun CutoutAdvancedSettingsSubPageContent(
 ) {
     AppLog.d(TAG, "CutoutAdvancedSettingsSubPageContent: cutout=${cutout.id}")
     val context = LocalContext.current
-    val isCalibrating by HudAutoTuneCoordinator.isCalibrating.collectAsStateWithLifecycle()
-    val lastTunedPercent by HudAutoTuneCoordinator.lastTunedPercent.collectAsStateWithLifecycle()
+    val isCalibrating by VisualAutoTuneCoordinator.isCalibrating.collectAsStateWithLifecycle()
+    val lastTunedPercent by VisualAutoTuneCoordinator.lastTunedPercent.collectAsStateWithLifecycle()
     var calibrationRevision by remember { mutableIntStateOf(0) }
 
     if (isCalibrating) {
         GamepadActionCard(
             modifier = Modifier.firstDeckItem(),
-            title = stringResource(R.string.settings_mirror_hud_auto_tuning_in_progress),
-            description = stringResource(R.string.settings_mirror_hud_auto_tuning_secondary_prompt),
+            title = stringResource(R.string.settings_mirror_auto_tuning_in_progress),
+            description = stringResource(R.string.settings_mirror_auto_tuning_secondary_prompt),
             icon = Icons.Rounded.Tune,
             itemKey = "cutout_${cutout.id}_auto_tune_active",
-            onClick = { HudAutoTuneCoordinator.cancelCalibration() },
+            onClick = { VisualAutoTuneCoordinator.cancelCalibration() },
         )
     } else {
         val isCalibrated =
@@ -359,7 +359,7 @@ internal fun CutoutAdvancedSettingsSubPageContent(
         if (isCalibrated) {
             val autoTuneDesc =
                 lastTunedPercent?.let {
-                    stringResource(R.string.settings_mirror_hud_auto_tune_success, "$it%")
+                    stringResource(R.string.settings_mirror_auto_tune_success, "$it%")
                 } ?: stringResource(R.string.settings_cutout_recalibrate_smart_desc)
 
             GamepadActionCard(
@@ -369,7 +369,7 @@ internal fun CutoutAdvancedSettingsSubPageContent(
                 icon = Icons.Rounded.Tune,
                 itemKey = "cutout_${cutout.id}_recalibrate_smart",
                 onClick = {
-                    HudAutoTuneCoordinator.startCalibration(context, cutout) { updatedCutout, _ ->
+                    VisualAutoTuneCoordinator.startCalibration(context, cutout) { updatedCutout, _ ->
                         calibrationRevision++
                         onUpdateCutout(updatedCutout)
                     }
@@ -383,7 +383,7 @@ internal fun CutoutAdvancedSettingsSubPageContent(
                 icon = Icons.Rounded.FilterCenterFocus,
                 itemKey = "cutout_${cutout.id}_convert_smart",
                 onClick = {
-                    HudAutoTuneCoordinator.startCalibration(context, cutout) { updatedCutout, _ ->
+                    VisualAutoTuneCoordinator.startCalibration(context, cutout) { updatedCutout, _ ->
                         calibrationRevision++
                         onUpdateCutout(updatedCutout)
                     }
@@ -397,7 +397,7 @@ internal fun CutoutAdvancedSettingsSubPageContent(
                 if (cutout.maskTranslucency > 0) {
                     "${cutout.maskTranslucency}%"
                 } else {
-                    stringResource(R.string.settings_mirror_hud_translucency_off)
+                    stringResource(R.string.settings_mirror_cutout_translucency_off)
                 }
             GamepadSliderCard(
                 title = stringResource(R.string.settings_cutout_translucency_title),
@@ -419,7 +419,7 @@ internal fun CutoutAdvancedSettingsSubPageContent(
                 if (cutout.maskFeathering > 0) {
                     "${cutout.maskFeathering} px"
                 } else {
-                    stringResource(R.string.settings_mirror_hud_feathering_off)
+                    stringResource(R.string.settings_mirror_cutout_feathering_off)
                 }
             GamepadSliderCard(
                 title = stringResource(R.string.settings_cutout_feathering_title),

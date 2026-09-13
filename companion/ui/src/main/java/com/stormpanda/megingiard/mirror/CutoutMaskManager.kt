@@ -22,7 +22,7 @@ private const val PNG_QUALITY = 100
 /**
  * Manages in-memory caching and filesystem persistence for auto-tuned cutout transparency masks,
  * raw variance maps for dynamic translucency/feathering, layout anchor signatures for presence detection,
- * and high-resolution freeze frames for cutscene preservation.
+ * and high-resolution freeze frames for freeze frame preservation.
  *
  * Base masks are stored as lossless PNG files under `context.filesDir/cutout_masks/mask_<cutoutId>.png`.
  * Variance maps are stored as binary byte arrays under `context.filesDir/cutout_masks/mask_<cutoutId>_var.bin`.
@@ -34,7 +34,7 @@ object CutoutMaskManager {
     private val baseMaskCache = ConcurrentHashMap<String, Bitmap>()
     private val tunedMaskCache = ConcurrentHashMap<String, Bitmap>()
     private val varianceCache = ConcurrentHashMap<String, ByteArray>()
-    private val layoutAnchorCache = ConcurrentHashMap<String, HudAnchorSignature>()
+    private val layoutAnchorCache = ConcurrentHashMap<String, VisualAnchorSignature>()
     private val freezeFrameCache = ConcurrentHashMap<String, Bitmap>()
     private val maskExistenceCache = ConcurrentHashMap<String, Boolean>()
     private val layoutAnchorExistenceCache = ConcurrentHashMap<String, Boolean>()
@@ -45,7 +45,7 @@ object CutoutMaskManager {
      *
      * If both [translucency] and [featheringPx] are 0, returns the base unfeathered mask.
      * When [translucency] > 0 and a variance map is available, regenerates the mask dynamically
-     * via [HudAutoTuner.buildMask] and caches the resulting bitmap in memory keyed by
+     * via [CutoutAutoTuner.buildMask] and caches the resulting bitmap in memory keyed by
      * `"$cutoutId:$translucency:$featheringPx"`.
      */
     fun getMask(
@@ -75,7 +75,7 @@ object CutoutMaskManager {
             val varMap = getVarianceMap(context, cutoutId)
             val tunedPixels =
                 if (varMap != null && varMap.size == width * height) {
-                    HudAutoTuner.buildMask(
+                    CutoutAutoTuner.buildMask(
                         varianceMap = varMap,
                         width = width,
                         height = height,
@@ -87,7 +87,7 @@ object CutoutMaskManager {
                     val pixels = IntArray(width * height)
                     baseBitmap.getPixels(pixels, 0, width, 0, 0, width, height)
                     if (clampedFeathering > 0) {
-                        HudAutoTuner.applyEdgeFeathering(pixels, width, height, clampedFeathering)
+                        CutoutAutoTuner.applyEdgeFeathering(pixels, width, height, clampedFeathering)
                     } else {
                         pixels
                     }
@@ -336,7 +336,7 @@ object CutoutMaskManager {
     fun getLayoutAnchorSignature(
         context: Context,
         layoutId: String,
-    ): HudAnchorSignature? {
+    ): VisualAnchorSignature? {
         layoutAnchorCache[layoutId]?.let { return it }
 
         val dir = File(context.filesDir, MASKS_DIR)
@@ -345,7 +345,7 @@ object CutoutMaskManager {
 
         return try {
             val text = file.readText()
-            val signature = json.decodeFromString(HudAnchorSignature.serializer(), text)
+            val signature = json.decodeFromString(VisualAnchorSignature.serializer(), text)
             layoutAnchorCache[layoutId] = signature
             AppLog.d(TAG, "Loaded anchor signature for layout $layoutId (${signature.points.size} points) from disk")
             signature
@@ -361,7 +361,7 @@ object CutoutMaskManager {
     fun saveLayoutAnchorSignature(
         context: Context,
         layoutId: String,
-        signature: HudAnchorSignature,
+        signature: VisualAnchorSignature,
     ) {
         layoutAnchorCache[layoutId] = signature
         layoutAnchorExistenceCache[layoutId] = true
@@ -369,7 +369,7 @@ object CutoutMaskManager {
             val dir = File(context.filesDir, MASKS_DIR)
             if (!dir.exists()) dir.mkdirs()
             val file = File(dir, "$LAYOUT_ANCHOR_FILE_PREFIX$layoutId$ANCHOR_EXTENSION")
-            file.writeText(json.encodeToString(HudAnchorSignature.serializer(), signature))
+            file.writeText(json.encodeToString(VisualAnchorSignature.serializer(), signature))
             AppLog.i(TAG, "Saved anchor signature for layout $layoutId (${signature.points.size} points)")
         } catch (e: Exception) {
             AppLog.e(TAG, "Failed to persist anchor signature for layout $layoutId", e)

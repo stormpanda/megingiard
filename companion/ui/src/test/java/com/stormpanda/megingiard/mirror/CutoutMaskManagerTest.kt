@@ -191,7 +191,7 @@ class CutoutMaskManagerTest {
         val context = RuntimeEnvironment.getApplication()
         val layoutId = "test_layout_anchor_persist"
         val signature =
-            HudAnchorSignature(
+            VisualAnchorSignature(
                 cutoutId = layoutId,
                 points =
                     listOf(
@@ -221,7 +221,7 @@ class CutoutMaskManagerTest {
         assertFalse(CutoutMaskManager.isLayoutAnchorCalibrated(context, layoutId))
 
         val signature =
-            HudAnchorSignature(
+            VisualAnchorSignature(
                 cutoutId = layoutId,
                 points = listOf(AnchorPoint(0.1f, 0.1f, 100, 100, 100)),
             )
@@ -240,7 +240,7 @@ class CutoutMaskManagerTest {
         val targetId = "target_layout"
 
         val signature =
-            HudAnchorSignature(
+            VisualAnchorSignature(
                 cutoutId = sourceId,
                 points = listOf(AnchorPoint(0.1f, 0.2f, 11, 22, 33)),
             )

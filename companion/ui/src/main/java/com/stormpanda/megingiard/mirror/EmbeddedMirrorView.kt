@@ -58,7 +58,7 @@ fun EmbeddedMirrorView(
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsStateWithLifecycle()
     val layout by MacroPadState.activeLayout.collectAsStateWithLifecycle()
     val screenshotRequested by ScreenCaptureManager.screenshotRequested.collectAsStateWithLifecycle()
-    val presenceRevision by HudPresenceManager.presenceRevision.collectAsStateWithLifecycle()
+    val presenceRevision by AnchorPresenceManager.presenceRevision.collectAsStateWithLifecycle()
 
     val effectiveCutouts = overrideCutouts ?: cutouts
     val effectiveShowLayoutBackground = showLayoutBackground && !(isViewportEditActive && isMirrorEditorBackgroundHidden)
@@ -185,7 +185,7 @@ fun EmbeddedMirrorView(
         }
     }
 
-    // React to HUD presence state changes (instant freeze / unfreeze transition)
+    // React to visual anchor presence state changes (instant freeze / unfreeze transition)
     LaunchedEffect(presenceRevision) {
         containerHolder.container?.invalidate()
     }

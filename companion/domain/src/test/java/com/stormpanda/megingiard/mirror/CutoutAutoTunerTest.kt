@@ -4,7 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class HudAutoTunerTest {
+class CutoutAutoTunerTest {
     private val width = 20
     private val height = 20
     private val pixelCount = width * height
@@ -18,7 +18,7 @@ class HudAutoTunerTest {
     @Test
     fun `analyze with insufficient frames returns fallback summary`() {
         val frames = listOf(IntArray(pixelCount) { colorArgb(100, 100, 100) })
-        val result = HudAutoTuner.analyze(frames, width, height)
+        val result = CutoutAutoTuner.analyze(frames, width, height)
         assertTrue(result.summary.contains("Insufficient samples"))
     }
 
@@ -31,7 +31,7 @@ class HudAutoTunerTest {
                     colorArgb(i % 255, (i * 2) % 255, (i * 3) % 255)
                 }
             }
-        val result = HudAutoTuner.analyze(frames, width, height, cutoutId = "layout_static_test")
+        val result = CutoutAutoTuner.analyze(frames, width, height, cutoutId = "layout_static_test")
         assertTrue(result.isStaticScene)
         assertTrue(result.summary.contains("Static scene detected"))
         assertTrue(result.anchorSignature != null)
@@ -58,14 +58,14 @@ class HudAutoTunerTest {
                 }
             }
 
-        val result = HudAutoTuner.analyze(frames, width, height)
+        val result = CutoutAutoTuner.analyze(frames, width, height)
         val mask = result.maskPixels
         assertTrue(mask != null)
 
         // Pixels deep inside the health bar (rows 0..2) MUST be fully opaque
         for (i in 0 until 60) {
             assertEquals(
-                "Deep stationary HUD pixel $i should be fully opaque",
+                "Deep stationary pixel $i should be fully opaque",
                 MASK_PIXEL_OPAQUE,
                 mask!![i],
             )
@@ -78,7 +78,7 @@ class HudAutoTunerTest {
         }
 
         // Pixels further down from the boundary (e.g. rows 8 to 19, pixels 160 until 400)
-        // must be 100% transparent because they changed color and are far from the HUD edge
+        // must be 100% transparent because they changed color and are far from the edge
         var transparentFound = false
         for (i in 160 until pixelCount) {
             if (mask!![i] == MASK_PIXEL_TRANSPARENT) {
@@ -94,7 +94,7 @@ class HudAutoTunerTest {
     @Test
     fun `analyze filters out isolated 1-pixel noise in moving background via despeckle`() {
         // 10 frames:
-        // Top 4 rows are stationary HUD
+        // Top 4 rows are stationary
         // Row 10 has a single isolated static pixel (pixel 205) that happened not to change
         // All other pixels in rows 4..19 change color wildly
         val frames =
@@ -112,7 +112,7 @@ class HudAutoTunerTest {
                 }
             }
 
-        val result = HudAutoTuner.analyze(frames, width, height)
+        val result = CutoutAutoTuner.analyze(frames, width, height)
         val mask = result.maskPixels
         assertTrue(mask != null)
 
@@ -129,7 +129,7 @@ class HudAutoTunerTest {
             List(10) { frameIdx ->
                 IntArray(pixelCount) { i ->
                     if (i < 40) {
-                        // Bright white text HUD glyphs
+                        // Bright white text glyphs
                         colorArgb(255, 255, 255)
                     } else {
                         // Moving 3D scenery
@@ -139,7 +139,7 @@ class HudAutoTunerTest {
                 }
             }
 
-        val result = HudAutoTuner.analyze(frames, width, height)
+        val result = CutoutAutoTuner.analyze(frames, width, height)
         val mask = result.maskPixels
         assertTrue(mask != null)
 
@@ -162,15 +162,9 @@ class HudAutoTunerTest {
                     if (i < 80) {
                         when (i % 4) {
                             0 -> colorArgb(220, 50, 50)
-
-                            // Red marker
                             1 -> colorArgb(50, 80, 230)
-
-                            // Blue river
                             2 -> colorArgb(60, 180, 60)
-
-                            // Green forest
-                            else -> colorArgb(180, 180, 180) // Grey road
+                            else -> colorArgb(180, 180, 180)
                         }
                     } else {
                         // Moving background scenery
@@ -180,7 +174,7 @@ class HudAutoTunerTest {
                 }
             }
 
-        val result = HudAutoTuner.analyze(frames, width, height)
+        val result = CutoutAutoTuner.analyze(frames, width, height)
         val mask = result.maskPixels
         assertTrue(mask != null)
 
@@ -198,14 +192,14 @@ class HudAutoTunerTest {
     @Test
     fun `applyEdgeFeathering with 0 px returns original mask unchanged`() {
         val baseMask = IntArray(pixelCount) { if (it < 100) MASK_PIXEL_OPAQUE else MASK_PIXEL_TRANSPARENT }
-        val feathered = HudAutoTuner.applyEdgeFeathering(baseMask, width, height, 0)
+        val feathered = CutoutAutoTuner.applyEdgeFeathering(baseMask, width, height, 0)
         assertEquals(baseMask, feathered)
     }
 
     @Test
     fun `applyEdgeFeathering leaves already visible pixels completely unaffected`() {
         val baseMask = IntArray(pixelCount) { if (it < 100) colorArgb(200, 100, 50) else MASK_PIXEL_TRANSPARENT }
-        val feathered = HudAutoTuner.applyEdgeFeathering(baseMask, width, height, 4)
+        val feathered = CutoutAutoTuner.applyEdgeFeathering(baseMask, width, height, 4)
         for (i in 0 until 100) {
             assertEquals("Already visible pixel $i should not change", baseMask[i], feathered[i])
         }
@@ -218,7 +212,7 @@ class HudAutoTunerTest {
         baseMask[10 * width + 10] = MASK_PIXEL_OPAQUE
 
         val featheringPx = 3
-        val feathered = HudAutoTuner.applyEdgeFeathering(baseMask, width, height, featheringPx)
+        val feathered = CutoutAutoTuner.applyEdgeFeathering(baseMask, width, height, featheringPx)
 
         // Center pixel remains untouched opaque
         assertEquals(MASK_PIXEL_OPAQUE, feathered[10 * width + 10])
@@ -240,19 +234,19 @@ class HudAutoTunerTest {
     }
 
     @Test
-    fun `buildMask with translucency 0 isolates solid HUD and makes moving background transparent`() {
+    fun `buildMask with translucency 0 isolates solid elements and makes moving background transparent`() {
         // 20x20 test image:
-        // Rows 0..4 have variance 5 (solid HUD)
+        // Rows 0..4 have variance 5 (solid element)
         // Rows 5..19 have variance 50 (moving background)
         val varianceMap =
             ByteArray(pixelCount) { i ->
                 if (i < 100) 5.toByte() else 50.toByte()
             }
 
-        val mask = HudAutoTuner.buildMask(varianceMap, width, height, translucency = 0, featheringPx = 0)
+        val mask = CutoutAutoTuner.buildMask(varianceMap, width, height, translucency = 0, featheringPx = 0)
         assertEquals(pixelCount, mask.size)
 
-        // Deep solid HUD pixels (e.g. row 2) must be fully opaque
+        // Deep solid pixels (e.g. row 2) must be fully opaque
         assertEquals(MASK_PIXEL_OPAQUE, mask[2 * width + 10])
 
         // Moving background pixels (e.g. row 10) must be transparent
@@ -262,7 +256,7 @@ class HudAutoTunerTest {
     @Test
     fun `buildMask with translucency greater than 0 recovers enclosed cavity pixels`() {
         // Test with 60x60 image:
-        // Anchor square border at x in 20..35, y in 20..35 with variance 5 (solid HUD)
+        // Anchor square border at x in 20..35, y in 20..35 with variance 5 (solid element)
         // Inside cavity (x in 23..32, y in 23..32) has variance 55 (translucent dial)
         // Outside moving background has variance 180 (moving 3D scenery)
         val testW = 60
@@ -282,11 +276,11 @@ class HudAutoTunerTest {
         }
 
         // With translucency = 0: inner cavity with variance 55 > 14 is transparent
-        val maskBase = HudAutoTuner.buildMask(varianceMap, testW, testH, translucency = 0)
+        val maskBase = CutoutAutoTuner.buildMask(varianceMap, testW, testH, translucency = 0)
         assertEquals(MASK_PIXEL_TRANSPARENT, maskBase[28 * testW + 28])
 
         // With translucency = 50%: inner cavity is enclosed and recovered!
-        val maskTuned = HudAutoTuner.buildMask(varianceMap, testW, testH, translucency = 50)
+        val maskTuned = CutoutAutoTuner.buildMask(varianceMap, testW, testH, translucency = 50)
         val cavityAlpha = (maskTuned[28 * testW + 28] ushr 24) and 0xFF
         assertTrue("At translucency 50%, inner cavity should be recovered", cavityAlpha > 200)
 
@@ -313,13 +307,13 @@ class HudAutoTunerTest {
         }
 
         // At translucency 0: border variance 40 > 14 is transparent, interior variance 70 > 14 is transparent
-        val maskBase = HudAutoTuner.buildMask(varianceMap, testW, testH, translucency = 0)
+        val maskBase = CutoutAutoTuner.buildMask(varianceMap, testW, testH, translucency = 0)
         assertEquals(MASK_PIXEL_TRANSPARENT, maskBase[28 * testW + 28])
 
         // At translucency 80%: barrier threshold is 14 + (80 * 55) / 100 = 58 >= 40.
         // The semi-transparent ring seals the cavity from the exterior background,
         // and interior variance 70 <= 30 + (80 * 120) / 100 = 126 is fully recovered!
-        val maskTuned = HudAutoTuner.buildMask(varianceMap, testW, testH, translucency = 80)
+        val maskTuned = CutoutAutoTuner.buildMask(varianceMap, testW, testH, translucency = 80)
         val cavityAlpha = (maskTuned[28 * testW + 28] ushr 24) and 0xFF
         assertTrue("Enclosed cavity sealed by semi-transparent ring should be recovered", cavityAlpha > 150)
 
@@ -350,12 +344,12 @@ class HudAutoTunerTest {
         }
 
         // At translucency 0: pixel at (25, 28) with variance 40 > 14 is transparent
-        val maskBase = HudAutoTuner.buildMask(varianceMap, testW, testH, translucency = 0)
+        val maskBase = CutoutAutoTuner.buildMask(varianceMap, testW, testH, translucency = 0)
         assertEquals(MASK_PIXEL_TRANSPARENT, maskBase[28 * testW + 25])
         assertEquals(MASK_PIXEL_TRANSPARENT, maskBase[2 * testW + 2])
 
         // At translucency 60%: pixel at (25, 28) is inside halo radius and recovered!
-        val maskTuned = HudAutoTuner.buildMask(varianceMap, testW, testH, translucency = 60)
+        val maskTuned = CutoutAutoTuner.buildMask(varianceMap, testW, testH, translucency = 60)
         val haloAlpha = (maskTuned[28 * testW + 25] ushr 24) and 0xFF
         assertTrue("Halo pixel should have alpha > 0", haloAlpha > 0)
 
@@ -393,7 +387,7 @@ class HudAutoTunerTest {
                 },
             )
 
-        val signature = HudAutoTuner.extractAnchorSignature(varianceMap, frames, testW, testH, "cutout_123")
+        val signature = CutoutAutoTuner.extractAnchorSignature(varianceMap, frames, testW, testH, "cutout_123")
         assertEquals("cutout_123", signature.cutoutId)
         assertTrue("Signature should extract at least 2 points", signature.points.size >= 2)
 

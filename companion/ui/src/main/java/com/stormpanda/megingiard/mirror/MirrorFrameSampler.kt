@@ -14,7 +14,7 @@ private const val TAG = "MirrorFrameSampler"
 
 /**
  * Thread-safe frame sampler that provides downsampled or native video frames from the active
- * screen mirror surface for real-time analysis (e.g. HUD auto-tuning calibration) and
+ * screen mirror surface for real-time analysis (e.g. cutout auto-tuning calibration) and
  * freeze-frame capture.
  *
  * Bounding-box crops are extracted via hardware layer readback directly from the active

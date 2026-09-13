@@ -41,7 +41,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.mirror.CutoutMaskManager
-import com.stormpanda.megingiard.mirror.HudAutoTuneCoordinator
+import com.stormpanda.megingiard.mirror.VisualAutoTuneCoordinator
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadColorSwatch
@@ -303,17 +303,17 @@ internal fun AutomaticLayoutSwitchingSubPageContent(
 ) {
     AppLog.d(TAG, "AutomaticLayoutSwitchingSubPageContent for layout: ${layout.name} (${layout.id})")
     val context = LocalContext.current
-    val isCalibrating by HudAutoTuneCoordinator.isCalibrating.collectAsStateWithLifecycle()
+    val isCalibrating by VisualAutoTuneCoordinator.isCalibrating.collectAsStateWithLifecycle()
     var calibrationRevision by remember { mutableIntStateOf(0) }
 
     if (isCalibrating) {
         GamepadActionCard(
             modifier = Modifier.firstDeckItem(),
-            title = stringResource(R.string.settings_mirror_hud_auto_tuning_in_progress),
-            description = stringResource(R.string.settings_mirror_hud_auto_tuning_secondary_prompt),
+            title = stringResource(R.string.settings_mirror_auto_tuning_in_progress),
+            description = stringResource(R.string.settings_mirror_auto_tuning_secondary_prompt),
             icon = Icons.Rounded.Tune,
             itemKey = "layout_${layout.id}_auto_tune_active",
-            onClick = { HudAutoTuneCoordinator.cancelCalibration() },
+            onClick = { VisualAutoTuneCoordinator.cancelCalibration() },
         )
     } else {
         GamepadToggleCard(
@@ -377,7 +377,7 @@ internal fun AutomaticLayoutSwitchingSubPageContent(
                 icon = Icons.Rounded.Tune,
                 itemKey = "layout_${layout.id}_calibrate_anchor",
                 onClick = {
-                    HudAutoTuneCoordinator.startLayoutAnchorCalibration(context, layout) { updatedLayout, _ ->
+                    VisualAutoTuneCoordinator.startLayoutAnchorCalibration(context, layout) { updatedLayout, _ ->
                         calibrationRevision++
                         onUpdateLayout(updatedLayout)
                     }

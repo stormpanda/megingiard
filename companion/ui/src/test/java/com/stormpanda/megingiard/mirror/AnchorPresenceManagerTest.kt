@@ -18,40 +18,40 @@ import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
-class HudPresenceManagerTest {
+class AnchorPresenceManagerTest {
     @Test
-    fun `isLayoutHudLost returns false for unknown layout`() {
-        assertFalse(HudPresenceManager.isLayoutHudLost("unknown_layout_123"))
+    fun `isLayoutAnchorLost returns false for unknown layout`() {
+        assertFalse(AnchorPresenceManager.isLayoutAnchorLost("unknown_layout_123"))
     }
 
     @Test
     fun `getLayoutPresenceState returns null for unknown layout`() {
-        assertNull(HudPresenceManager.getLayoutPresenceState("unknown_layout_123"))
+        assertNull(AnchorPresenceManager.getLayoutPresenceState("unknown_layout_123"))
     }
 
     @Test
     fun `clearLayout removes presence state`() {
         val layoutId = "test_layout_clear"
-        HudPresenceManager.clearLayout(layoutId)
-        assertFalse(HudPresenceManager.isLayoutHudLost(layoutId))
+        AnchorPresenceManager.clearLayout(layoutId)
+        assertFalse(AnchorPresenceManager.isLayoutAnchorLost(layoutId))
     }
 
     @Test
     fun `getDelayedFrame returns null when delay is zero`() {
-        val frame = HudPresenceManager.getDelayedFrame("cutout_123", delayFrames = 0)
+        val frame = AnchorPresenceManager.getDelayedFrame("cutout_123", delayFrames = 0)
         assertNull(frame)
     }
 
     @Test
     fun `getDelayedFrame returns null when no frames buffered`() {
-        val frame = HudPresenceManager.getDelayedFrame("non_existent_cutout", delayFrames = 2)
+        val frame = AnchorPresenceManager.getDelayedFrame("non_existent_cutout", delayFrames = 2)
         assertNull(frame)
     }
 
     @Test
     fun `getFrozenFrame returns null when neither cache nor disk has frame`() {
         val context = RuntimeEnvironment.getApplication()
-        val frame = HudPresenceManager.getFrozenFrame(context, "cutout_no_frame")
+        val frame = AnchorPresenceManager.getFrozenFrame(context, "cutout_no_frame")
         assertNull(frame)
     }
 
@@ -63,13 +63,13 @@ class HudPresenceManagerTest {
 
         CutoutMaskManager.saveFreezeFrame(context, cutoutId, bitmap)
 
-        val retrieved = HudPresenceManager.getFrozenFrame(context, cutoutId)
+        val retrieved = AnchorPresenceManager.getFrozenFrame(context, cutoutId)
         assertNotNull(retrieved)
         assertEquals(10, retrieved!!.width)
         assertEquals(10, retrieved.height)
 
         CutoutMaskManager.deleteMask(context, cutoutId)
-        HudPresenceManager.clearCutout(cutoutId)
+        AnchorPresenceManager.clearCutout(cutoutId)
     }
 
     @Test
@@ -95,21 +95,21 @@ class HudPresenceManagerTest {
                 layouts = listOf(layout),
             )
 
-        HudPresenceManager.updateMonitoringLoop(
+        AnchorPresenceManager.updateMonitoringLoop(
             isCapturing = true,
             layout = layout,
             profile = profile,
             viewMode = CompanionViewMode.MACROPAD,
         )
-        assertTrue(HudPresenceManager.isMonitoring)
+        assertTrue(AnchorPresenceManager.isMonitoring)
 
-        HudPresenceManager.updateMonitoringLoop(
+        AnchorPresenceManager.updateMonitoringLoop(
             isCapturing = false,
             layout = layout,
             profile = profile,
             viewMode = CompanionViewMode.MACROPAD,
         )
-        assertFalse(HudPresenceManager.isMonitoring)
+        assertFalse(AnchorPresenceManager.isMonitoring)
     }
 
     @Test
@@ -147,21 +147,21 @@ class HudPresenceManagerTest {
                 layouts = listOf(layoutWithoutAnchor),
             )
 
-        HudPresenceManager.updateMonitoringLoop(
+        AnchorPresenceManager.updateMonitoringLoop(
             isCapturing = true,
             layout = layoutWithAnchor,
             profile = profileWithAnchor,
             viewMode = CompanionViewMode.MACROPAD,
         )
-        assertTrue(HudPresenceManager.isMonitoring)
+        assertTrue(AnchorPresenceManager.isMonitoring)
 
         // Switch to profile without anchor
-        HudPresenceManager.updateMonitoringLoop(
+        AnchorPresenceManager.updateMonitoringLoop(
             isCapturing = true,
             layout = layoutWithoutAnchor,
             profile = profileWithoutAnchor,
             viewMode = CompanionViewMode.MACROPAD,
         )
-        assertFalse(HudPresenceManager.isMonitoring)
+        assertFalse(AnchorPresenceManager.isMonitoring)
     }
 }

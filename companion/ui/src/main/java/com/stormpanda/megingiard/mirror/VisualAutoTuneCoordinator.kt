@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
-private const val TAG = "HudAutoTuneCoordinator"
+private const val TAG = "VisualAutoTuneCoordinator"
 
 private const val MAX_CALIBRATION_DURATION_MS = 180_000L
 private const val SAMPLE_INTERVAL_MS = 120L
@@ -28,7 +28,7 @@ private const val SAMPLE_WIDTH = 1920
 private const val SAMPLE_HEIGHT = 1080
 
 /**
- * Category of element currently undergoing HUD calibration.
+ * Category of element currently undergoing visual calibration.
  */
 enum class CalibrationType {
     NONE,
@@ -37,7 +37,7 @@ enum class CalibrationType {
 }
 
 /**
- * Coordinates video frame sampling and HUD auto-tune calibration.
+ * Coordinates video frame sampling and visual auto-tune calibration.
  * Exposes observable StateFlows for live preview bitmaps, sample frame counts, and completion status.
  *
  * Automatically suspends and dismisses open primary modals on Display 0 via
@@ -45,7 +45,7 @@ enum class CalibrationType {
  * in-game player movement, and automatically restores the editor via [AppStateManager.resumeSuspended]
  * upon completion or cancellation.
  */
-internal object HudAutoTuneCoordinator {
+internal object VisualAutoTuneCoordinator {
     private val _isCalibrating = MutableStateFlow(false)
     val isCalibrating: StateFlow<Boolean> = _isCalibrating.asStateFlow()
 
@@ -122,7 +122,7 @@ internal object HudAutoTuneCoordinator {
         isFinishRequested = false
         calibrationJob =
             scope.launch {
-                AppLog.i(TAG, "Starting HUD Auto-Tune calibration for cutout ${cutout.id}")
+                AppLog.i(TAG, "Starting Smart Cutout calibration for cutout ${cutout.id}")
                 _isCalibrating.value = true
                 _calibrationType.value = CalibrationType.CUTOUT
                 _lastTunedPercent.value = null
@@ -136,15 +136,15 @@ internal object HudAutoTuneCoordinator {
                 val sampledFrames = ArrayList<IntArray>()
                 var cropW = 0
                 var cropH = 0
-                var cutoutFreezeBitmap: Bitmap? = null
                 var tracker: CalibrationPreviewTracker? = null
                 var previewPixels: IntArray? = null
+                var cutoutFreezeBitmap: Bitmap? = null
                 val startTime = SystemClock.elapsedRealtime()
 
                 try {
                     while (isActive && !isFinishRequested) {
                         if (SystemClock.elapsedRealtime() - startTime >= MAX_CALIBRATION_DURATION_MS) {
-                            AppLog.i(TAG, "Cutout calibration reached maximum safety duration (${MAX_CALIBRATION_DURATION_MS}ms)")
+                            AppLog.i(TAG, "Calibration reached maximum safety duration (${MAX_CALIBRATION_DURATION_MS}ms)")
                             break
                         }
 
@@ -154,10 +154,7 @@ internal object HudAutoTuneCoordinator {
                                 val cX = (cutout.srcX * frameBitmap.width).roundToInt().coerceIn(0, frameBitmap.width - 1)
                                 val cY = (cutout.srcY * frameBitmap.height).roundToInt().coerceIn(0, frameBitmap.height - 1)
                                 val cRight =
-                                    ((cutout.srcX + cutout.srcWidth) * frameBitmap.width).roundToInt().coerceIn(
-                                        cX + 1,
-                                        frameBitmap.width,
-                                    )
+                                    ((cutout.srcX + cutout.srcWidth) * frameBitmap.width).roundToInt().coerceIn(cX + 1, frameBitmap.width)
                                 val cBottom =
                                     ((cutout.srcY + cutout.srcHeight) * frameBitmap.height).roundToInt().coerceIn(
                                         cY + 1,
@@ -167,17 +164,13 @@ internal object HudAutoTuneCoordinator {
                                 cropH = cBottom - cY
 
                                 if (cropW > 0 && cropH > 0) {
-                                    if (cutoutFreezeBitmap == null) {
-                                        try {
-                                            cutoutFreezeBitmap = Bitmap.createBitmap(frameBitmap, cX, cY, cropW, cropH)
-                                        } catch (e: Exception) {
-                                            AppLog.e(TAG, "Failed to capture initial cutout freeze frame", e)
-                                        }
-                                    }
-
                                     val pixels = IntArray(cropW * cropH)
                                     frameBitmap.getPixels(pixels, 0, cropW, cX, cY, cropW, cropH)
                                     sampledFrames.add(pixels)
+
+                                    if (cutoutFreezeBitmap == null) {
+                                        cutoutFreezeBitmap = Bitmap.createBitmap(pixels, cropW, cropH, Bitmap.Config.ARGB_8888)
+                                    }
 
                                     if (tracker == null || tracker.width != cropW || tracker.height != cropH) {
                                         tracker = CalibrationPreviewTracker(cropW, cropH)
@@ -216,7 +209,7 @@ internal object HudAutoTuneCoordinator {
                         )
                         val result =
                             withContext(Dispatchers.Default) {
-                                HudAutoTuner.analyze(sampledFrames, cropW, cropH, cutoutId = cutout.id)
+                                CutoutAutoTuner.analyze(sampledFrames, cropW, cropH, cutoutId = cutout.id)
                             }
 
                         val mask = result.maskPixels
@@ -293,12 +286,12 @@ internal object HudAutoTuneCoordinator {
     /**
      * Starts the interactive auto-tune sampling sequence for a layout's [LayoutVisualAnchor].
      * Samples solely the layout visual anchor bounds on the primary display and computes
-     * the [HudAnchorSignature].
+     * the [VisualAnchorSignature].
      */
     fun startLayoutAnchorCalibration(
         context: Context,
         layout: PadLayout,
-        onComplete: ((PadLayout, HudAnchorSignature?) -> Unit)? = null,
+        onComplete: ((PadLayout, VisualAnchorSignature?) -> Unit)? = null,
     ) {
         cancelCalibration(resumeSuspended = false)
 
@@ -393,7 +386,7 @@ internal object HudAutoTuneCoordinator {
                         )
                         val result =
                             withContext(Dispatchers.Default) {
-                                HudAutoTuner.analyze(sampledFrames, cropW, cropH, cutoutId = layout.id)
+                                CutoutAutoTuner.analyze(sampledFrames, cropW, cropH, cutoutId = layout.id)
                             }
 
                         val signature = result.anchorSignature
@@ -447,7 +440,7 @@ internal object HudAutoTuneCoordinator {
     fun cancelCalibration(resumeSuspended: Boolean = true) {
         val wasActive = calibrationJob?.isActive == true
         if (wasActive) {
-            AppLog.i(TAG, "Cancelling active HUD calibration (resumeSuspended=$resumeSuspended)")
+            AppLog.i(TAG, "Cancelling active visual calibration (resumeSuspended=$resumeSuspended)")
             calibrationJob?.cancel()
         }
         calibrationJob = null

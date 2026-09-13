@@ -20,9 +20,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.mirror.AnchorPresenceManager
+import com.stormpanda.megingiard.mirror.AnchorPresenceState
 import com.stormpanda.megingiard.mirror.CutoutMaskManager
-import com.stormpanda.megingiard.mirror.HudPresenceManager
-import com.stormpanda.megingiard.mirror.HudPresenceState
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadInfoBox
 import com.stormpanda.megingiard.ui.GamepadPill
@@ -49,7 +49,7 @@ internal fun AutomationDeckContent(
     onToggleAutoSwitch: (Boolean) -> Unit,
 ) {
     val context = LocalContext.current
-    val presenceRevision by HudPresenceManager.presenceRevision.collectAsStateWithLifecycle()
+    val presenceRevision by AnchorPresenceManager.presenceRevision.collectAsStateWithLifecycle()
 
     LaunchedEffect(profile?.id) {
         AppLog.d(TAG, "AutomationDeckContent mounted for profile: ${profile?.name} (${profile?.id})")
@@ -108,7 +108,7 @@ internal fun AutomationDeckContent(
         val isActive = layout.id == activeLayout?.id
         val presenceState =
             remember(layout.id, presenceRevision) {
-                HudPresenceManager.getLayoutPresenceState(layout.id)
+                AnchorPresenceManager.getLayoutPresenceState(layout.id)
             }
 
         val cardDesc =
@@ -139,7 +139,7 @@ internal fun AutomationDeckContent(
                 ) {
                     if (isActive) {
                         if (isCalibrated && layout.visualAnchor.enabled) {
-                            if (presenceState == HudPresenceState.LOST) {
+                            if (presenceState == AnchorPresenceState.LOST) {
                                 GamepadPill(
                                     text = stringResource(R.string.automation_anchor_lost_badge),
                                     isHighlighted = false,

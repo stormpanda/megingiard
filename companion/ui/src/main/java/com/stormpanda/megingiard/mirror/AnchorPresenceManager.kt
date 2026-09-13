@@ -28,29 +28,29 @@ import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.roundToInt
 
-private const val TAG = "HudPresenceManager"
+private const val TAG = "AnchorPresenceManager"
 
-private const val PRESENCE_CHECK_INTERVAL_ACTIVE_MS = 16L // ~60 Hz (1-frame instant cutscene detection)
-private const val PRESENCE_CHECK_INTERVAL_LOST_MS = 33L // ~30 Hz prompt recovery when HUD returns
+private const val PRESENCE_CHECK_INTERVAL_ACTIVE_MS = 16L // ~60 Hz (1-frame instant content absence detection)
+private const val PRESENCE_CHECK_INTERVAL_LOST_MS = 33L // ~30 Hz prompt recovery when anchor returns
 private const val AUTO_SWITCH_COOLDOWN_MS = 500L
 private const val DEFAULT_SOURCE_WIDTH = 1920
 private const val DEFAULT_SOURCE_HEIGHT = 1080
 
 /**
- * Singleton manager coordinating real-time HUD presence detection and freeze-frame caching.
+ * Singleton manager coordinating real-time visual anchor presence detection and freeze-frame caching.
  *
  * Evaluates the active layout's visual reference anchor at 60 Hz to determine presence state.
- * When the anchor signature is lost (e.g. cutscene, inventory menu), all cutouts in the layout
+ * When the anchor signature is lost (e.g. intended content is not on screen), all cutouts in the layout
  * simultaneously freeze on their pristine delayed frames retrieved from zero-allocation ring buffers.
  * Enforcing stream delay >= 1 frame whenever visual anchoring is enabled eliminates the need for
  * periodic background live frame capture.
  */
-object HudPresenceManager {
+object AnchorPresenceManager {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var monitorJob: Job? = null
     private var appContext: Context? = null
 
-    private val layoutStates = ConcurrentHashMap<String, HudPresenceState>()
+    private val layoutStates = ConcurrentHashMap<String, AnchorPresenceState>()
     private val layoutConsecutiveCounts = ConcurrentHashMap<String, Int>()
     private val lastValidFrameBitmaps = ConcurrentHashMap<String, Bitmap>()
     private val cutoutRingBuffers = ConcurrentHashMap<String, CutoutFrameRingBuffer>()
@@ -118,12 +118,12 @@ object HudPresenceManager {
 
         if (shouldMonitor) {
             if (monitorJob?.isActive != true) {
-                AppLog.i(TAG, "Starting HUD presence monitoring loop (active 60 Hz / recover 30 Hz)")
+                AppLog.i(TAG, "Starting visual anchor presence monitoring loop (active 60 Hz / recover 30 Hz)")
                 monitorJob = scope.launch { runMonitoringLoop() }
             }
         } else {
             if (monitorJob?.isActive == true) {
-                AppLog.i(TAG, "Stopping HUD presence monitoring loop")
+                AppLog.i(TAG, "Stopping visual anchor presence monitoring loop")
                 monitorJob?.cancel()
                 monitorJob = null
                 candidateScanIndex = 0
@@ -136,7 +136,7 @@ object HudPresenceManager {
             val context = appContext ?: continue
 
             // Suspend presence monitoring and layout auto-switching during calibration or while editor/modal is open
-            if (HudAutoTuneCoordinator.isCalibrating.value ||
+            if (VisualAutoTuneCoordinator.isCalibrating.value ||
                 AppStateManager.isEditorActive.value ||
                 AppStateManager.activePrimaryModal.value != null
             ) {
@@ -175,7 +175,7 @@ object HudPresenceManager {
                                 "Candidate layout '${candidate.name}' (${candidate.id}) matched anchor! Auto-switching layout.",
                             )
                             lastAutoSwitchTimeMs = now
-                            layoutStates[candidate.id] = HudPresenceState.PRESENT
+                            layoutStates[candidate.id] = AnchorPresenceState.PRESENT
                             layoutConsecutiveCounts[candidate.id] = 0
                             candidateScanIndex = 0
                             LayoutTransitionManager.switchLayout(candidate.id)
@@ -196,8 +196,8 @@ object HudPresenceManager {
                 }
             }
 
-            // 60 Hz during gameplay; 30 Hz when lost
-            val isCurrentLost = layoutStates[activeLayout.id] == HudPresenceState.LOST
+            // 60 Hz during active display; 30 Hz when lost
+            val isCurrentLost = layoutStates[activeLayout.id] == AnchorPresenceState.LOST
             val checkInterval = if (!isCurrentLost) PRESENCE_CHECK_INTERVAL_ACTIVE_MS else PRESENCE_CHECK_INTERVAL_LOST_MS
             delay(checkInterval)
 
@@ -277,7 +277,7 @@ object HudPresenceManager {
                 val signature = CutoutMaskManager.getLayoutAnchorSignature(context, activeLayout.id)
                 if (signature != null && signature.points.isNotEmpty()) {
                     val matchRatio =
-                        HudPresenceEvaluator.evaluateMatchRatio(signature) { u, v ->
+                        AnchorPresenceEvaluator.evaluateMatchRatio(signature) { u, v ->
                             val globalU = layoutAnchor.srcX + u * layoutAnchor.srcWidth
                             val globalV = layoutAnchor.srcY + v * layoutAnchor.srcHeight
                             val px = (globalU * srcW).roundToInt().coerceIn(0, srcW - 1)
@@ -287,10 +287,10 @@ object HudPresenceManager {
                             frame.getPixel(localX, localY)
                         }
 
-                    val curState = layoutStates[activeLayout.id] ?: HudPresenceState.PRESENT
+                    val curState = layoutStates[activeLayout.id] ?: AnchorPresenceState.PRESENT
                     val curCount = layoutConsecutiveCounts[activeLayout.id] ?: 0
                     val (newState, newCount) =
-                        HudPresenceEvaluator.transitionState(curState, curCount, matchRatio, activeLayout.id)
+                        AnchorPresenceEvaluator.transitionState(curState, curCount, matchRatio, activeLayout.id)
 
                     if (newState != curState) {
                         anyStateChanged = true
@@ -299,7 +299,7 @@ object HudPresenceManager {
                     layoutConsecutiveCounts[activeLayout.id] = newCount
 
                     // When transitioning PRESENT -> LOST, save pristine frame for all cutouts from ring buffer
-                    if (curState == HudPresenceState.PRESENT && newState == HudPresenceState.LOST) {
+                    if (curState == AnchorPresenceState.PRESENT && newState == AnchorPresenceState.LOST) {
                         for (cutout in allCutouts) {
                             val delayedBmp = cutoutRingBuffers[cutout.id]?.getDelayedFrame(layoutDelayFrames)
                             if (delayedBmp != null && !delayedBmp.isRecycled) {
@@ -317,7 +317,7 @@ object HudPresenceManager {
                     }
 
                     // Scan candidate layouts while current layout is LOST
-                    if (newState == HudPresenceState.LOST && isAutoSwitchEligible) {
+                    if (newState == AnchorPresenceState.LOST && isAutoSwitchEligible) {
                         val candidates =
                             activeProfile
                                 ?.layouts
@@ -337,7 +337,7 @@ object HudPresenceManager {
                                     "Candidate layout '${candidate.name}' (${candidate.id}) matched anchor! Auto-switching layout.",
                                 )
                                 lastAutoSwitchTimeMs = now
-                                layoutStates[candidate.id] = HudPresenceState.PRESENT
+                                layoutStates[candidate.id] = AnchorPresenceState.PRESENT
                                 layoutConsecutiveCounts[candidate.id] = 0
                                 candidateScanIndex = 0
                                 LayoutTransitionManager.switchLayout(candidate.id)
@@ -350,7 +350,7 @@ object HudPresenceManager {
                     _presenceRevision.value++
                 }
             } catch (e: Exception) {
-                AppLog.e(TAG, "Error in HUD presence evaluation loop", e)
+                AppLog.e(TAG, "Error in visual anchor presence evaluation loop", e)
             } finally {
                 if (frame != reusableCropBitmap && frame != ScreenCaptureManager.frozenBitmap.value) {
                     frame.recycle()
@@ -402,7 +402,7 @@ object HudPresenceManager {
             if (signature.points.isEmpty()) return false
 
             val matchRatio =
-                HudPresenceEvaluator.evaluateMatchRatio(signature) { u, v ->
+                AnchorPresenceEvaluator.evaluateMatchRatio(signature) { u, v ->
                     val globalU = anchor.srcX + u * anchor.srcWidth
                     val globalV = anchor.srcY + v * anchor.srcHeight
                     val px = (globalU * srcW).roundToInt().coerceIn(0, srcW - 1)
@@ -412,7 +412,7 @@ object HudPresenceManager {
                     frame.getPixel(localX, localY)
                 }
 
-            return matchRatio >= HudPresenceEvaluator.MATCH_THRESHOLD_PRESENT
+            return matchRatio >= AnchorPresenceEvaluator.MATCH_THRESHOLD_PRESENT
         } finally {
             if (frame != reusableCandidateCropBitmap && frame != ScreenCaptureManager.frozenBitmap.value) {
                 frame.recycle()
@@ -421,14 +421,14 @@ object HudPresenceManager {
     }
 
     /**
-     * Checks whether the HUD for the layout [layoutId] is currently flagged as lost.
+     * Checks whether the anchor for the layout [layoutId] is currently flagged as lost.
      */
-    fun isLayoutHudLost(layoutId: String): Boolean = layoutStates[layoutId] == HudPresenceState.LOST
+    fun isLayoutAnchorLost(layoutId: String): Boolean = layoutStates[layoutId] == AnchorPresenceState.LOST
 
     /**
      * Retrieves the current presence state for the layout [layoutId], or null if not evaluated.
      */
-    fun getLayoutPresenceState(layoutId: String): HudPresenceState? = layoutStates[layoutId]
+    fun getLayoutPresenceState(layoutId: String): AnchorPresenceState? = layoutStates[layoutId]
 
     /**
      * Retrieves the delayed live frame bitmap for [cutoutId] if stream delay is configured.
@@ -443,7 +443,7 @@ object HudPresenceManager {
     }
 
     /**
-     * Retrieves the most recent valid HUD frame bitmap for [cutoutId].
+     * Retrieves the most recent valid frozen frame bitmap for [cutoutId].
      * Prioritizes the high-resolution frame saved from the ring buffer upon absence.
      */
     fun getFrozenFrame(

@@ -6,7 +6,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class ScreenCutoutHudFilterTest {
+class ScreenCutoutFilterTest {
     private val json = Json { ignoreUnknownKeys = true }
 
     @Test
@@ -21,8 +21,8 @@ class ScreenCutoutHudFilterTest {
     fun `verify serialization roundtrip with hasTransparencyMask`() {
         val original =
             ScreenCutout(
-                id = "hud_minimap",
-                name = "Minimap HUD",
+                id = "cutout_minimap",
+                name = "Minimap Cutout",
                 srcX = 0.02f,
                 srcY = 0.02f,
                 srcWidth = 0.25f,
@@ -78,12 +78,12 @@ class ScreenCutoutHudFilterTest {
     }
 
     @Test
-    fun `verify backwards compatibility when deserializing legacy JSON with old manual HUD fields`() {
+    fun `verify backwards compatibility when deserializing legacy JSON with old manual filter fields`() {
         val legacyWithOldFields =
             """
             {
-                "id": "cutout_with_old_hud",
-                "name": "Old HUD Cutout",
+                "id": "cutout_with_old_fields",
+                "name": "Old Filter Cutout",
                 "srcX": 0.0,
                 "srcY": 0.0,
                 "srcWidth": 1.0,
@@ -103,22 +103,22 @@ class ScreenCutoutHudFilterTest {
             """.trimIndent()
 
         val parsed = json.decodeFromString(ScreenCutout.serializer(), legacyWithOldFields)
-        assertEquals("cutout_with_old_hud", parsed.id)
+        assertEquals("cutout_with_old_fields", parsed.id)
         assertTrue(parsed.hasTransparencyMask)
     }
 
     @Test
-    fun `verify HudAnchorSignature serialization roundtrip`() {
+    fun `verify VisualAnchorSignature serialization roundtrip`() {
         val points =
             listOf(
                 AnchorPoint(u = 0.1f, v = 0.2f, r = 255, g = 255, b = 255),
                 AnchorPoint(u = 0.5f, v = 0.5f, r = 120, g = 100, b = 80),
                 AnchorPoint(u = 0.9f, v = 0.8f, r = 10, g = 20, b = 30),
             )
-        val signature = HudAnchorSignature(cutoutId = "cutout_abc", points = points)
+        val signature = VisualAnchorSignature(cutoutId = "cutout_abc", points = points)
 
-        val serialized = json.encodeToString(HudAnchorSignature.serializer(), signature)
-        val deserialized = json.decodeFromString(HudAnchorSignature.serializer(), serialized)
+        val serialized = json.encodeToString(VisualAnchorSignature.serializer(), signature)
+        val deserialized = json.decodeFromString(VisualAnchorSignature.serializer(), serialized)
 
         assertEquals(signature, deserialized)
         assertEquals("cutout_abc", deserialized.cutoutId)

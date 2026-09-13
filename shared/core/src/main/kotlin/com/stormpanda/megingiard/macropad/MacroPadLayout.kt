@@ -407,8 +407,8 @@ const val DEFAULT_LAYOUT_ANCHOR_SIZE = 0.15f
  * Visual reference anchor configuration for a [PadLayout].
  *
  * When [enabled], samples the primary display at [srcX], [srcY], [srcWidth], [srcHeight]
- * to evaluate the presence of the layout's HUD reference.
- * If the reference signature is lost (e.g. cutscene, inventory menu), all cutouts in the
+ * to evaluate the presence of the layout's visual reference anchor.
+ * If the reference signature is lost (i.e. intended content is not shown on screen), all cutouts in the
  * layout freeze simultaneously, retaining their pristine delayed frames from the ring buffer.
  *
  * [streamDelayFrames] enforces a minimum of 1 frame (1..10) to guarantee ring buffer availability
