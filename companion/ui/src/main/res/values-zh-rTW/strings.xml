@@ -970,6 +970,8 @@ Open Settings to create a layout.</string>
     <string name="quick_menu_show_macropad">切換至遊戲設定檔</string>
     <string name="quick_menu_auto_mode">自動切換</string>
     <string name="toast_auto_switch_off">自動切換: 關閉</string>
+    <string name="toast_anchor_conflict_two">錨點衝突：「%1$s」與「%2$s」同時符合</string>
+    <string name="toast_anchor_conflict_multiple">錨點衝突：%1$s 同時符合</string>
 
     <!-- Update Check Strings -->
     <string name="settings_update_available_short">有可用更新</string>

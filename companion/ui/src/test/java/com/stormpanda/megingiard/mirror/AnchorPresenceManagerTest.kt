@@ -5,6 +5,7 @@ import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.macropad.LayoutVisualAnchor
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -163,5 +164,68 @@ class AnchorPresenceManagerTest {
             viewMode = CompanionViewMode.MACROPAD,
         )
         assertFalse(AnchorPresenceManager.isMonitoring)
+    }
+
+    @Test
+    fun `scanMatchingCandidates returns all matching candidates in profile sequence`() =
+        runTest {
+            val layout1 = PadLayout(id = "layout_inventory", name = "Inventory")
+            val layout2 = PadLayout(id = "layout_map", name = "Map")
+            val layout3 = PadLayout(id = "layout_skills", name = "Skills")
+
+            val candidates = listOf(layout1, layout2, layout3)
+
+            val matched =
+                AnchorPresenceManager.scanMatchingCandidates(candidates) { candidate ->
+                    // Both inventory and map match at the same time
+                    candidate.id == "layout_inventory" || candidate.id == "layout_map"
+                }
+
+            assertEquals(2, matched.size)
+            assertEquals("layout_inventory", matched[0].id)
+            assertEquals("layout_map", matched[1].id)
+            // Prioritizes first match
+            assertEquals("layout_inventory", matched.first().id)
+        }
+
+    @Test
+    fun `scanMatchingCandidates returns empty list when no candidate matches`() =
+        runTest {
+            val layout1 = PadLayout(id = "layout_inventory", name = "Inventory")
+            val candidates = listOf(layout1)
+
+            val matched =
+                AnchorPresenceManager.scanMatchingCandidates(candidates) {
+                    false
+                }
+
+            assertTrue(matched.isEmpty())
+        }
+
+    @Test
+    fun `formatAnchorConflictToast formats two conflicting layouts properly`() {
+        val context = RuntimeEnvironment.getApplication()
+        val message =
+            AnchorPresenceManager.formatAnchorConflictToast(
+                context = context,
+                layoutNames = listOf("Inventory", "Map"),
+            )
+        assertTrue(message.contains("Inventory"))
+        assertTrue(message.contains("Map"))
+        assertTrue(message.contains("both match") || message.contains("stimmen überein") || message.contains("同時符合"))
+    }
+
+    @Test
+    fun `formatAnchorConflictToast formats three or more conflicting layouts properly`() {
+        val context = RuntimeEnvironment.getApplication()
+        val message =
+            AnchorPresenceManager.formatAnchorConflictToast(
+                context = context,
+                layoutNames = listOf("Inventory", "Map", "Skills"),
+            )
+        assertTrue(message.contains("\"Inventory\""))
+        assertTrue(message.contains("\"Map\""))
+        assertTrue(message.contains("\"Skills\""))
+        assertTrue(message.contains("all match") || message.contains("stimmen überein") || message.contains("同時符合"))
     }
 }

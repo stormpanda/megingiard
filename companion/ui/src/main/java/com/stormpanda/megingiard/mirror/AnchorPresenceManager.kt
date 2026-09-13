@@ -5,15 +5,19 @@ import android.graphics.Bitmap
 import android.graphics.Rect
 import android.os.SystemClock
 import androidx.annotation.VisibleForTesting
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Warning
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CompanionViewMode
+import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.LayoutTransitionManager
 import com.stormpanda.megingiard.macropad.MAX_LAYOUT_STREAM_DELAY_FRAMES
 import com.stormpanda.megingiard.macropad.MIN_LAYOUT_STREAM_DELAY_FRAMES
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
+import com.stormpanda.megingiard.ui.DialogToastManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -55,7 +59,6 @@ object AnchorPresenceManager {
     private val lastValidFrameBitmaps = ConcurrentHashMap<String, Bitmap>()
     private val cutoutRingBuffers = ConcurrentHashMap<String, CutoutFrameRingBuffer>()
 
-    private var candidateScanIndex = 0
     private var lastAutoSwitchTimeMs = 0L
 
     private val _presenceRevision = MutableStateFlow(0)
@@ -126,7 +129,6 @@ object AnchorPresenceManager {
                 AppLog.i(TAG, "Stopping visual anchor presence monitoring loop")
                 monitorJob?.cancel()
                 monitorJob = null
-                candidateScanIndex = 0
             }
         }
     }
@@ -152,35 +154,18 @@ object AnchorPresenceManager {
                 viewMode == CompanionViewMode.AUTO &&
                     activeProfile?.autoLayoutSwitching == true
 
+            val srcW = ScreenCaptureManager.captureSourceWidth.value.let { if (it > 0) it else DEFAULT_SOURCE_WIDTH }
+            val srcH = ScreenCaptureManager.captureSourceHeight.value.let { if (it > 0) it else DEFAULT_SOURCE_HEIGHT }
+
             if (activeLayout == null || layoutAnchor == null) {
                 if (isAutoSwitchEligible) {
-                    val candidates =
-                        activeProfile
-                            ?.layouts
-                            ?.filter { candidate ->
-                                candidate.id != activeLayout?.id &&
-                                    candidate.visualAnchor.enabled &&
-                                    CutoutMaskManager.isLayoutAnchorCalibrated(context, candidate.id)
-                            }.orEmpty()
-                    if (candidates.isNotEmpty()) {
-                        val candidate = candidates[candidateScanIndex % candidates.size]
-                        candidateScanIndex++
-                        val srcW = ScreenCaptureManager.captureSourceWidth.value.let { if (it > 0) it else DEFAULT_SOURCE_WIDTH }
-                        val srcH = ScreenCaptureManager.captureSourceHeight.value.let { if (it > 0) it else DEFAULT_SOURCE_HEIGHT }
-                        val now = SystemClock.uptimeMillis()
-                        val cooldownPassed = (now - lastAutoSwitchTimeMs) >= AUTO_SWITCH_COOLDOWN_MS
-                        if (cooldownPassed && evaluateCandidateLayout(context, candidate, srcW, srcH)) {
-                            AppLog.i(
-                                TAG,
-                                "Candidate layout '${candidate.name}' (${candidate.id}) matched anchor! Auto-switching layout.",
-                            )
-                            lastAutoSwitchTimeMs = now
-                            layoutStates[candidate.id] = AnchorPresenceState.PRESENT
-                            layoutConsecutiveCounts[candidate.id] = 0
-                            candidateScanIndex = 0
-                            LayoutTransitionManager.switchLayout(candidate.id)
-                        }
-                    }
+                    processCandidateScan(
+                        context = context,
+                        activeProfile = activeProfile,
+                        excludedLayoutId = activeLayout?.id,
+                        srcW = srcW,
+                        srcH = srcH,
+                    )
                 }
                 delay(PRESENCE_CHECK_INTERVAL_LOST_MS)
                 continue
@@ -200,9 +185,6 @@ object AnchorPresenceManager {
             val isCurrentLost = layoutStates[activeLayout.id] == AnchorPresenceState.LOST
             val checkInterval = if (!isCurrentLost) PRESENCE_CHECK_INTERVAL_ACTIVE_MS else PRESENCE_CHECK_INTERVAL_LOST_MS
             delay(checkInterval)
-
-            val srcW = ScreenCaptureManager.captureSourceWidth.value.let { if (it > 0) it else DEFAULT_SOURCE_WIDTH }
-            val srcH = ScreenCaptureManager.captureSourceHeight.value.let { if (it > 0) it else DEFAULT_SOURCE_HEIGHT }
 
             var minNormX = layoutAnchor.srcX
             var minNormY = layoutAnchor.srcY
@@ -318,31 +300,13 @@ object AnchorPresenceManager {
 
                     // Scan candidate layouts while current layout is LOST
                     if (newState == AnchorPresenceState.LOST && isAutoSwitchEligible) {
-                        val candidates =
-                            activeProfile
-                                ?.layouts
-                                ?.filter { candidate ->
-                                    candidate.id != activeLayout.id &&
-                                        candidate.visualAnchor.enabled &&
-                                        CutoutMaskManager.isLayoutAnchorCalibrated(context, candidate.id)
-                                }.orEmpty()
-                        if (candidates.isNotEmpty()) {
-                            val candidate = candidates[candidateScanIndex % candidates.size]
-                            candidateScanIndex++
-                            val now = SystemClock.uptimeMillis()
-                            val cooldownPassed = (now - lastAutoSwitchTimeMs) >= AUTO_SWITCH_COOLDOWN_MS
-                            if (cooldownPassed && evaluateCandidateLayout(context, candidate, srcW, srcH)) {
-                                AppLog.i(
-                                    TAG,
-                                    "Candidate layout '${candidate.name}' (${candidate.id}) matched anchor! Auto-switching layout.",
-                                )
-                                lastAutoSwitchTimeMs = now
-                                layoutStates[candidate.id] = AnchorPresenceState.PRESENT
-                                layoutConsecutiveCounts[candidate.id] = 0
-                                candidateScanIndex = 0
-                                LayoutTransitionManager.switchLayout(candidate.id)
-                            }
-                        }
+                        processCandidateScan(
+                            context = context,
+                            activeProfile = activeProfile,
+                            excludedLayoutId = activeLayout.id,
+                            srcW = srcW,
+                            srcH = srcH,
+                        )
                     }
                 }
 
@@ -357,6 +321,92 @@ object AnchorPresenceManager {
                 }
             }
         }
+    }
+
+    private suspend fun processCandidateScan(
+        context: Context,
+        activeProfile: PadProfile?,
+        excludedLayoutId: String?,
+        srcW: Int,
+        srcH: Int,
+    ) {
+        val candidates =
+            activeProfile
+                ?.layouts
+                ?.filter { candidate ->
+                    candidate.id != excludedLayoutId &&
+                        candidate.visualAnchor.enabled &&
+                        CutoutMaskManager.isLayoutAnchorCalibrated(context, candidate.id)
+                }.orEmpty()
+        if (candidates.isEmpty()) return
+
+        val now = SystemClock.uptimeMillis()
+        val cooldownPassed = (now - lastAutoSwitchTimeMs) >= AUTO_SWITCH_COOLDOWN_MS
+        if (!cooldownPassed) return
+
+        val matchedCandidates =
+            scanMatchingCandidates(candidates) { candidate ->
+                evaluateCandidateLayout(context, candidate, srcW, srcH)
+            }
+
+        if (matchedCandidates.isNotEmpty()) {
+            val primary = matchedCandidates.first()
+            AppLog.i(
+                TAG,
+                "Candidate layout '${primary.name}' (${primary.id}) matched anchor! Auto-switching layout.",
+            )
+            lastAutoSwitchTimeMs = now
+            layoutStates[primary.id] = AnchorPresenceState.PRESENT
+            layoutConsecutiveCounts[primary.id] = 0
+            LayoutTransitionManager.switchLayout(primary.id)
+
+            if (matchedCandidates.size >= 2) {
+                notifyAnchorConflict(context, matchedCandidates)
+            }
+        }
+    }
+
+    @VisibleForTesting
+    internal suspend fun scanMatchingCandidates(
+        candidates: List<PadLayout>,
+        evaluator: suspend (PadLayout) -> Boolean,
+    ): List<PadLayout> {
+        val matches = mutableListOf<PadLayout>()
+        for (candidate in candidates) {
+            if (evaluator(candidate)) {
+                matches.add(candidate)
+            }
+        }
+        return matches
+    }
+
+    @VisibleForTesting
+    internal fun formatAnchorConflictToast(
+        context: Context,
+        layoutNames: List<String>,
+    ): String =
+        if (layoutNames.size == 2) {
+            context.getString(R.string.toast_anchor_conflict_two, layoutNames[0], layoutNames[1])
+        } else {
+            val joined = layoutNames.joinToString(", ") { "\"$it\"" }
+            context.getString(R.string.toast_anchor_conflict_multiple, joined)
+        }
+
+    private fun notifyAnchorConflict(
+        context: Context,
+        conflictingLayouts: List<PadLayout>,
+    ) {
+        val names =
+            conflictingLayouts.map {
+                it.name.ifBlank { context.getString(R.string.macropad_editor_new_layout_default_name) }
+            }
+        AppLog.w(TAG, "Layout anchor conflict detected between: $names")
+        val message = formatAnchorConflictToast(context, names)
+        DialogToastManager.show(
+            message = message,
+            icon = Icons.Rounded.Warning,
+            isError = true,
+        )
     }
 
     private suspend fun evaluateCandidateLayout(

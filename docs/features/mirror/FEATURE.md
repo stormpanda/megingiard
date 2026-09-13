@@ -227,8 +227,10 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
   - Configurable per profile via **Edit Profile → Automation → Automatic Layout Switching** (`settings_profile_auto_layout_switching_title`, stored in `PadProfile.autoLayoutSwitching`, default `false`).
   - When enabled and autonomous mode is active (`CompanionViewMode.AUTO`), `AnchorPresenceManager` manages dynamic layout transitions across all calibrated anchored layouts within the active profile:
     - While the active layout's anchor is `PRESENT`, monitoring runs at ~60 Hz with zero candidate probing overhead.
-    - When the active layout's anchor becomes `LOST` (or if the active layout has no visual anchor configured), `AnchorPresenceManager` evaluates other calibrated anchored layouts in the active profile in **round-robin order** (in the exact sequence layouts appear in `profile.layouts`) at ~30 Hz.
-    - A single candidate match ($\ge 65\%$ match ratio, matching `AnchorPresenceEvaluator.MATCH_THRESHOLD_PRESENT`) triggers an immediate layout switch (`MacroPadState.setActiveLayoutId(candidate.id)`).
+    - When the active layout's anchor becomes `LOST` (or if the active layout has no visual anchor configured), `AnchorPresenceManager` evaluates all other calibrated anchored layouts in the active profile at ~30 Hz.
+    - Rather than breaking early on the first match, all candidate layouts are evaluated against the current frame to detect non-mutually-exclusive anchors.
+    - **First-Match Prioritization:** The first matching candidate in profile layout order is prioritized and immediately triggers the layout transition (`LayoutTransitionManager.switchLayout(primary.id)`).
+    - **Anchor Conflict Detection & Warning Toast:** If two or more candidate layout anchors match at the same time ($\ge 65\%$ match ratio), a custom error/warning toast pill is displayed via `DialogToastManager` naming the conflicting layouts (e.g. `Anchor conflict: "Inventory" and "Map" both match`) with `Icons.Rounded.Warning`, alerting the user that the anchors overlap.
     - A 500 ms cooldown (`AUTO_SWITCH_COOLDOWN_MS`) prevents rapid thrashing between candidate layouts.
     - Once switched, candidate scanning stops completely until the newly active layout's anchor is lost again. If no candidate layout matches, the current layout remains active and frozen.
   - **Hardware-Layer TextureView Sampling (`MirrorFrameSampler`):**
