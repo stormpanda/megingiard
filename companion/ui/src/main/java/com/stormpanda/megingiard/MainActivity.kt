@@ -79,7 +79,6 @@ import com.stormpanda.megingiard.mirror.ACTION_STOP
 import com.stormpanda.megingiard.mirror.MirrorRuntimeAction
 import com.stormpanda.megingiard.mirror.MirrorRuntimePolicyState
 import com.stormpanda.megingiard.mirror.MirrorStrategy
-import com.stormpanda.megingiard.mirror.PrimaryHudDimOverlayManager
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCaptureService
 import com.stormpanda.megingiard.mirror.ScreenshotTarget
@@ -235,7 +234,6 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         AppLog.i(TAG, "onDestroy")
-        PrimaryHudDimOverlayManager.destroy()
         LayoutTransitionManager.unregisterWindowProvider()
         InjectorLifecycleManager.stopAll()
     }
@@ -314,7 +312,6 @@ class MainActivity : ComponentActivity() {
         }
 
         PrimaryOverlayManager.init(application)
-        PrimaryHudDimOverlayManager.init(application)
 
         SettingsManager.onThemeChangedListener = {
             MegingiardSettingsProvider.notifyThemeChanged(this)

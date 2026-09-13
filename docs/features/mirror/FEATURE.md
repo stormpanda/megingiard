@@ -184,17 +184,17 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
   - **Remove Smart Cutout:** A two-step destructive confirmation card that deletes calibration files from disk and reverts the cutout back to a standard live rectangular/circular mirror cutout (`hasTransparencyMask = false`).
 - Mask state is persisted per-cutout in `ScreenCutout` (`hasTransparencyMask: Boolean`, `maskFeathering: Int = 0`, `maskTranslucency: Int = 0`).
 
-### FR-M18: Display 0 HUD Dimming Scrim (Veil)
+### FR-M18: Automatic Layout Switching & Layout-Level Visual Reference Anchors
 
-- The user MUST be able to enable an ambient dark veil over cutout source crop regions on Display 0 via **Screen Mirroring → Advanced Settings** ("Dim Primary Screen HUD" toggle, stored in `MacroPadLayout.dimTopScreenHud`).
-- When enabled and screen mirroring is actively capturing, a non-interactive, non-focusable overlay window (`PrimaryHudDimOverlayManager`) renders semi-transparent dark feathered rectangles over each active cutout's source crop area on the primary display.
-- The scrim subtly darkens HUD regions on the handheld screen so the user's focus is naturally drawn to the companion display, while ensuring primary gameplay and touch input remain 100% unhindered (`FLAG_NOT_FOCUSABLE or FLAG_NOT_TOUCHABLE or FLAG_LAYOUT_IN_SCREEN or FLAG_LAYOUT_NO_LIMITS`).
-- The dimming opacity MUST be adjustable via a slider ("Primary HUD Dimming Opacity", `0%` to `100%`, default `60%`, stored in `MacroPadLayout.topScreenHudDimOpacity`).
-- When mirroring is stopped or paused, the scrim automatically hides.
-
-### FR-M19: Automatic Layout Switching & Layout-Level Visual Reference Anchors
-
-- The user MUST be able to define a **Layout-Level Visual Reference Anchor** for any MacroPad layout via **Edit Layout → Automatic Layout Switching** (`AutomaticLayoutSwitchingSubPageContent`), placed directly before Button Color Defaults.
+- The user MUST be able to manage automatic layout switching and define a **Layout-Level Visual Reference Anchor** for any MacroPad layout:
+  - **Dedicated Automation Category Deck (`EditorSection.AUTOMATION`):** A dedicated category in the MacroPad Editor sidebar placed between Layouts and Mirror, providing a centralized hub for the active profile:
+    - Master toggle for profile-level automatic layout switching (`PadProfile.autoLayoutSwitching`).
+    - Informational status banner showing how many layouts in the profile have calibrated reference anchors (or a prominent warning if 0 are calibrated).
+    - Layout list showing anchor calibration status, reference point count, and real-time live presence badges for the active layout (`PRESENT` in accent vs. `LOST` in subdued).
+    - Direct navigation into per-layout reference anchor configuration (`MacroPadSubPage.AutomaticLayoutSwitching`).
+  - **Hub & Spoke Integration with Existing Menus:**
+    - **Edit Profile:** Retains the profile-level master toggle and includes a direct action card pointing to the Automation hub ("Configure Layout Anchors →").
+    - **Edit Layout:** Retains the contextual "Automatic Layout Switching" entry card, pointing into `AutomaticLayoutSwitchingSubPageContent` while preserving layout-deck breadcrumbs and back navigation.
 - **Unified Presence Architecture & Elimination of Per-Cutout Anchor Duplication:**
   - Cutouts mirroring game HUD elements (e.g. minimaps, quest widgets, meters) frequently disappear together during in-game cutscenes, full-screen menus, dialogue trees, or loading screens.
   - Instead of configuring redundant anchors per cutout, visual anchoring is configured once per layout in `PadLayout.visualAnchor` (`LayoutVisualAnchor`).
@@ -571,12 +571,6 @@ HUD isolation is implemented via hardware-accelerated transparency mask blending
    - The transparency mask bitmap is composited directly over the rendered cutout using `Paint` with `PorterDuff.Mode.DST_IN` and bilinear filtering (`isFilterBitmap = true`).
    - Dynamic Translucency & Edge Feathering: `CutoutMaskManager.getMask(context, cutout.id, cutout.maskTranslucency, cutout.maskFeathering)` caches tuned mask variants in memory keyed by `"$cutoutId:$translucency:$featheringPx"`. When `cutout.maskTranslucency > 0`, it calls `HudAutoTuner.buildMask()` using the compact variance map (geometric enclosure infill + proximity halo variance relaxation) in ~3-5ms on CPU, giving instant interactive feedback as either slider is dragged.
    - Stationary HUD graphics remain 100% visible and render live at 60/120 FPS with zero copy overhead, while moving background pixels become 100% transparent.
-2. **Primary Display HUD Dim Scrim (`PrimaryHudDimOverlayManager.kt`)**:
-   - Manages a system overlay window on Display 0 via `WindowManager.addView()`.
-   - Uses layout parameters `TYPE_APPLICATION_OVERLAY`, `FLAG_NOT_FOCUSABLE`, `FLAG_NOT_TOUCHABLE`, `FLAG_LAYOUT_IN_SCREEN`, `FLAG_LAYOUT_NO_LIMITS` with format `TRANSLUCENT`.
-   - Observes `ScreenCaptureManager.isCapturing`, `ScreenCaptureManager.dimTopScreenHud`, `ScreenCaptureManager.topScreenHudDimOpacity`, and `ScreenCaptureManager.cutouts`.
-   - Custom `HudDimCanvasView` paints soft, rounded-rect dark veils (`Color.BLACK` with `alpha = topScreenHudDimOpacity`) over the exact source pixel coordinates `(srcX, srcY, srcWidth, srcHeight)` of each active cutout.
-
 ### Source Files
 
 | File                                  | Responsibility                                                                                             |
@@ -589,7 +583,6 @@ HUD isolation is implemented via hardware-accelerated transparency mask blending
 | `HudAutoTuner.kt`                     | Computer vision engine for pixel-level color change detection, despeckling, and Gaussian anti-aliasing      |
 | `HudAutoTuneCoordinator.kt`           | Orchestrates interactive calibration lifecycle, live preview streaming, overlay suspension, and mask/anchor generation |
 | `HudAutoTuneCalibrationSheet.kt`      | Secondary screen interactive calibration HUD with live dynamic transparency preview and user Finish/Cancel actions |
-| `PrimaryHudDimOverlayManager.kt`      | Display 0 non-interactive WindowManager overlay rendering ambient dark veils over HUD source regions       |
 | `ScreenCaptureManager.kt`             | Singleton state: scale, offset, freeze, lock, touch-projection state, frozen bitmap, follow state          |
 | `TouchScreenObserver.kt`              | Listens to raw `/dev/input/event6` touchscreen events in background thread and maps coordinates            |
 | `CropSelectorOverlay.kt`              | Primary display crop selector overlay Composable UI                                                        |

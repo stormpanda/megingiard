@@ -32,6 +32,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
 import androidx.compose.material.icons.automirrored.rounded.ViewQuilt
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Delete
@@ -135,6 +136,7 @@ private fun EditorSection.titleResId(): Int =
         EditorSection.QUICK_ACTIONS -> R.string.quick_actions_title
         EditorSection.PROFILES -> R.string.quick_menu_profile_label
         EditorSection.LAYOUTS -> R.string.macropad_editor_section_layout
+        EditorSection.AUTOMATION -> R.string.macropad_editor_section_automation
         EditorSection.MIRROR -> R.string.quick_menu_screen_mirroring
         EditorSection.BACKGROUND -> R.string.layout_settings_bg_section_title
         EditorSection.BUTTONS -> R.string.macropad_editor_section_buttons
@@ -146,6 +148,7 @@ private fun EditorSection.icon(): ImageVector =
         EditorSection.QUICK_ACTIONS -> Icons.Rounded.Bolt
         EditorSection.PROFILES -> Icons.Rounded.Folder
         EditorSection.LAYOUTS -> Icons.AutoMirrored.Rounded.ViewQuilt
+        EditorSection.AUTOMATION -> Icons.Rounded.AutoAwesome
         EditorSection.MIRROR -> Icons.Rounded.Videocam
         EditorSection.BACKGROUND -> Icons.Rounded.Wallpaper
         EditorSection.BUTTONS -> Icons.Rounded.SmartButton
@@ -482,6 +485,25 @@ fun MacroPadEditor(
                                                 },
                                                 onReorderLayouts = {
                                                     MacroPadNavState.push(MacroPadSubPage.ReorderLayouts)
+                                                },
+                                            )
+                                        }
+
+                                        EditorSection.AUTOMATION -> {
+                                            AutomationDeckContent(
+                                                profile = profile,
+                                                activeLayout = activeLayout,
+                                                accentColor = colors.accent,
+                                                onOpenAnchorSettings = { layoutId ->
+                                                    MacroPadNavState.push(
+                                                        MacroPadSubPage.AutomaticLayoutSwitching(
+                                                            layoutId = layoutId,
+                                                            section = EditorSection.AUTOMATION,
+                                                        ),
+                                                    )
+                                                },
+                                                onToggleAutoSwitch = { enabled ->
+                                                    MacroPadState.updateProfile(profile.copy(autoLayoutSwitching = enabled))
                                                 },
                                             )
                                         }
@@ -829,7 +851,12 @@ fun MacroPadEditor(
                                                         }
                                                     },
                                                     onOpenAutomaticLayoutSwitching = {
-                                                        MacroPadNavState.push(MacroPadSubPage.AutomaticLayoutSwitching(lay.id))
+                                                        MacroPadNavState.push(
+                                                            MacroPadSubPage.AutomaticLayoutSwitching(
+                                                                layoutId = lay.id,
+                                                                section = EditorSection.LAYOUTS,
+                                                            ),
+                                                        )
                                                     },
                                                     onOpenColorSubMenu = { target ->
                                                         MacroPadNavState.push(MacroPadSubPage.LayoutColor(lay.id, target))
@@ -1095,11 +1122,18 @@ fun MacroPadEditor(
                                         if (lay != null) {
                                             GamepadDeck(
                                                 breadcrumbs =
-                                                    listOf(
-                                                        stringResource(R.string.macropad_editor_section_layout),
-                                                        stringResource(R.string.macropad_editor_edit_layout_title),
-                                                        stringResource(R.string.layout_settings_auto_switch_title),
-                                                    ),
+                                                    if (currentSubPage.section == EditorSection.AUTOMATION) {
+                                                        listOf(
+                                                            stringResource(R.string.macropad_editor_section_automation),
+                                                            lay.name,
+                                                        )
+                                                    } else {
+                                                        listOf(
+                                                            stringResource(R.string.macropad_editor_section_layout),
+                                                            stringResource(R.string.macropad_editor_edit_layout_title),
+                                                            stringResource(R.string.layout_settings_auto_switch_title),
+                                                        )
+                                                    },
                                             ) {
                                                 AutomaticLayoutSwitchingSubPageContent(
                                                     layout = lay,

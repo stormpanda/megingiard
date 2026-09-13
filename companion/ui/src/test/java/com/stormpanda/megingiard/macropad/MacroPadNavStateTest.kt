@@ -234,4 +234,20 @@ class MacroPadNavStateTest {
         MacroPadNavState.setStack(emptyList())
         assertNav(EditorSection.PROFILES)
     }
+
+    @Test
+    fun `AutomaticLayoutSwitching defaults to parentSection AUTOMATION but respects section parameter`() {
+        val defaultAutoSwitch = MacroPadSubPage.AutomaticLayoutSwitching(layoutId = "lay-auto-1")
+        assertEquals(EditorSection.AUTOMATION, defaultAutoSwitch.parentSection)
+        assertEquals("lay-auto-1", defaultAutoSwitch.layoutId)
+
+        val layoutsAutoSwitch =
+            MacroPadSubPage.AutomaticLayoutSwitching(layoutId = "lay-auto-2", section = EditorSection.LAYOUTS)
+        assertEquals(EditorSection.LAYOUTS, layoutsAutoSwitch.parentSection)
+        assertEquals("lay-auto-2", layoutsAutoSwitch.layoutId)
+
+        MacroPadNavState.selectSection(EditorSection.AUTOMATION)
+        MacroPadNavState.push(defaultAutoSwitch)
+        assertNav(EditorSection.AUTOMATION, listOf(defaultAutoSwitch))
+    }
 }

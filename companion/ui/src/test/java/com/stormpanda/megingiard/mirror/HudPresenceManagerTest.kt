@@ -25,6 +25,11 @@ class HudPresenceManagerTest {
     }
 
     @Test
+    fun `getLayoutPresenceState returns null for unknown layout`() {
+        assertNull(HudPresenceManager.getLayoutPresenceState("unknown_layout_123"))
+    }
+
+    @Test
     fun `clearLayout removes presence state`() {
         val layoutId = "test_layout_clear"
         HudPresenceManager.clearLayout(layoutId)

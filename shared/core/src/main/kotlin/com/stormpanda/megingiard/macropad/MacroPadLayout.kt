@@ -398,7 +398,6 @@ data class BackgroundTouchpadConfig(
  *                                    (ambient overlay). Defaults to [ButtonColorStyle.NEUTRAL].
  * @param backgroundTouchpad          Per-layout background touchpad settings for relative mouse.
  */
-const val DEFAULT_HUD_DIM_OPACITY = 0.60f
 const val DEFAULT_LAYOUT_STREAM_DELAY_FRAMES = 2
 const val MIN_LAYOUT_STREAM_DELAY_FRAMES = 1
 const val MAX_LAYOUT_STREAM_DELAY_FRAMES = 10
@@ -462,8 +461,6 @@ data class PadLayout(
     val backgroundImageDim: Float = 0f,
     val bgScaleMode: BackgroundScaleMode = BackgroundScaleMode.FILL,
     val backgroundTouchpad: BackgroundTouchpadConfig = BackgroundTouchpadConfig(),
-    val dimTopScreenHud: Boolean = false,
-    val topScreenHudDimOpacity: Float = DEFAULT_HUD_DIM_OPACITY,
     val visualAnchor: LayoutVisualAnchor = LayoutVisualAnchor(),
 )
 

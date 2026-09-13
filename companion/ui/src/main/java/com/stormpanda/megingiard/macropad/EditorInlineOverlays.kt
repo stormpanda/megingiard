@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Anchor
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
@@ -170,6 +171,16 @@ internal fun EditProfileSubPageContent(
         icon = Icons.Rounded.AutoAwesome,
         itemKey = "profile_${profile.id}_auto_layout_switching",
         onCheckedChange = onAutoLayoutSwitchingChange,
+    )
+
+    GamepadActionCard(
+        title = stringResource(R.string.automation_configure_anchors_title),
+        description = stringResource(R.string.automation_configure_anchors_desc),
+        icon = Icons.Rounded.Anchor,
+        itemKey = "profile_${profile.id}_configure_anchors",
+        onClick = {
+            MacroPadNavState.selectSection(EditorSection.AUTOMATION)
+        },
     )
 
     // ── Actions Section ───────────────────────────────────────────────

@@ -426,6 +426,11 @@ object HudPresenceManager {
     fun isLayoutHudLost(layoutId: String): Boolean = layoutStates[layoutId] == HudPresenceState.LOST
 
     /**
+     * Retrieves the current presence state for the layout [layoutId], or null if not evaluated.
+     */
+    fun getLayoutPresenceState(layoutId: String): HudPresenceState? = layoutStates[layoutId]
+
+    /**
      * Retrieves the delayed live frame bitmap for [cutoutId] if stream delay is configured.
      * Returns null if delay is 0 or no buffered frames are available.
      */

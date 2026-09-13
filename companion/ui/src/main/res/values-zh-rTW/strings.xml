@@ -359,6 +359,7 @@ Open Settings to create a layout.</string>
 
     <!-- MacroPad editor section headers -->
     <string name="macropad_editor_section_layout">配置</string>
+    <string name="macropad_editor_section_automation">自動化</string>
     <string name="macropad_editor_section_buttons">按鈕</string>
     <string name="macropad_editor_section_button_settings">按鈕設定</string>
     <string name="macropad_editor_section_button_colors">按鈕顏色</string>
@@ -406,6 +407,17 @@ Open Settings to create a layout.</string>
     <string name="settings_profile_automation_header">自動化</string>
     <string name="settings_profile_auto_layout_switching_title">自動配置切換</string>
     <string name="settings_profile_auto_layout_switching_desc">自動切換至此設定檔中第一個參考錨點出現在螢幕上的配置</string>
+    <string name="automation_layout_anchors_section_title">佈局參考錨點</string>
+    <string name="automation_no_anchors_warning">此設定檔中沒有任何佈局已校準視覺參考錨點。請在下方設定錨點以啟用自動切換。</string>
+    <string name="automation_anchors_status_summary">%1$d / %2$d 個佈局已校準視覺參考錨點。</string>
+    <string name="automation_configure_anchors_title">設定佈局錨點</string>
+    <string name="automation_configure_anchors_desc">為所有佈局設定參考錨點與過場凍結</string>
+    <string name="automation_anchor_present_badge">存在</string>
+    <string name="automation_anchor_lost_badge">丟失</string>
+    <string name="automation_anchor_active_badge">當前</string>
+    <string name="automation_anchor_calibrated_badge">已校準</string>
+    <string name="automation_anchor_configure_badge">設定</string>
+    <string name="automation_anchor_not_configured">未設定視覺錨點</string>
 
     <!-- Help menu strings for Layout settings -->
 
@@ -631,11 +643,11 @@ Open Settings to create a layout.</string>
     <string name="settings_cutout_advanced_title">進階切角設定</string>
     <string name="settings_cutout_advanced_desc">智慧切角校準、邊緣羽化與半透明度還原</string>
     <string name="settings_cutout_convert_smart_title">轉換為智慧切角</string>
-    <string name="settings_cutout_convert_smart_desc">將螢幕 UI 元素與動態 3D 背景分離，並在選單、過場動畫或轉場中元素消失時自動凍結畫面</string>
+    <string name="settings_cutout_convert_smart_desc">使用透明度遮罩將螢幕 UI 元素（小地圖、量表、儀表）與動態 3D 背景分離</string>
     <string name="settings_cutout_recalibrate_smart_title">重新校準智慧切角</string>
-    <string name="settings_cutout_recalibrate_smart_desc">再次擷取螢幕畫面以更新透明遮罩與錨點</string>
+    <string name="settings_cutout_recalibrate_smart_desc">再次擷取螢幕畫面以更新背景透明度遮罩</string>
     <string name="settings_cutout_remove_smart_title">移除智慧切角</string>
-    <string name="settings_cutout_remove_smart_desc">移除背景透明度與畫面凍結，還原為標準即時切角</string>
+    <string name="settings_cutout_remove_smart_desc">移除背景透明度遮罩，還原為標準即時鏡像切角</string>
     <string name="settings_cutout_translucency_title">切角半透明度</string>
     <string name="settings_cutout_translucency_desc">還原半透明 UI 元素、內部儀表與玻璃面板</string>
     <string name="settings_mirror_hud_translucency_off">關閉</string>
@@ -662,14 +674,10 @@ Open Settings to create a layout.</string>
     <string name="mirror_hud_calibration_preview_desc">校準即時預覽</string>
     <string name="mirror_hud_calibration_dynamic_pct">%d%% 動態</string>
     <string name="mirror_hud_calibration_time_remaining">剩餘 %d 秒</string>
-    <string name="settings_mirror_dim_top_screen_hud_title">主螢幕 HUD 變暗</string>
     <string name="settings_cutout_anchor_position_title">在螢幕上定位錨點</string>
     <string name="mirror_anchor_selector_title">顯示錨點</string>
     <string name="mirror_anchor_selector_hint">將方框定位於靜態參考元素（例如頭像或圖示）上方</string>
     <string name="mirror_anchor_selector_done">完成</string>
-    <string name="settings_mirror_dim_top_screen_hud_desc">在主螢幕的 HUD 區域疊加半透明暗色遮罩，引導視線至副螢幕</string>
-    <string name="settings_mirror_dim_top_screen_hud_opacity">主螢幕遮罩暗度</string>
-    <string name="settings_mirror_dim_top_screen_hud_opacity_desc">主螢幕 HUD 區域非互動暗色遮罩的透明度</string>
     <string name="settings_mirror_projection_on">開啟</string>
     <string name="settings_mirror_projection_off">關閉</string>
     <string name="macropad_editor_section_actions">操作</string>

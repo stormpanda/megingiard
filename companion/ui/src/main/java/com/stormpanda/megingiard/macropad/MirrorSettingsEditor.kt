@@ -62,11 +62,6 @@ private const val MSE_SMOOTHING_VAL_LIGHT = 75
 private const val MSE_SMOOTHING_VAL_MEDIUM = 80
 private const val MSE_SMOOTHING_VAL_STRONG = 85
 
-private const val MSE_TOP_DIM_MIN = 0.10f
-private const val MSE_TOP_DIM_MAX = 0.95f
-private const val MSE_TOP_DIM_STEP = 0.05f
-private const val MSE_TOP_DIM_FINE_STEP = 0.01f
-
 private const val MSE_FEATHERING_MIN = 0f
 private const val MSE_FEATHERING_MAX = 10f
 private const val MSE_FEATHERING_STEP = 1f
@@ -567,36 +562,4 @@ internal fun MirrorAdvancedSettingsSubPageContent(
             }
         },
     )
-
-    // 4. Primary Screen HUD Dimming
-    GamepadToggleCard(
-        title = stringResource(R.string.settings_mirror_dim_top_screen_hud_title),
-        description = stringResource(R.string.settings_mirror_dim_top_screen_hud_desc),
-        checked = layout.dimTopScreenHud,
-        icon = Icons.Rounded.Opacity,
-        itemKey = "mirror_dim_top_screen_hud",
-        onCheckedChange = { isChecked ->
-            AppLog.d(TAG, "Toggling dimTopScreenHud: $isChecked")
-            commitLayout { copy(dimTopScreenHud = isChecked) }
-            ScreenCaptureManager.setDimTopScreenHud(isChecked)
-        },
-    )
-
-    if (layout.dimTopScreenHud) {
-        GamepadSliderCard(
-            title = stringResource(R.string.settings_mirror_dim_top_screen_hud_opacity),
-            description = stringResource(R.string.settings_mirror_dim_top_screen_hud_opacity_desc),
-            value = layout.topScreenHudDimOpacity,
-            valueRange = MSE_TOP_DIM_MIN..MSE_TOP_DIM_MAX,
-            step = MSE_TOP_DIM_STEP,
-            fineStep = MSE_TOP_DIM_FINE_STEP,
-            icon = Icons.Rounded.Opacity,
-            valueLabel = "${(layout.topScreenHudDimOpacity * MSE_PERCENT_DIVISOR).roundToInt()}%",
-            onValueChange = { newVal ->
-                AppLog.d(TAG, "Updating topScreenHudDimOpacity: $newVal")
-                commitLayout { copy(topScreenHudDimOpacity = newVal) }
-                ScreenCaptureManager.setTopScreenHudDimOpacity(newVal)
-            },
-        )
-    }
 }

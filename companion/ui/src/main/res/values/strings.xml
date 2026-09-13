@@ -359,6 +359,7 @@ Open Settings to create a layout.</string>
 
     <!-- MacroPad editor section headers -->
     <string name="macropad_editor_section_layout">Layout</string>
+    <string name="macropad_editor_section_automation">Automation</string>
     <string name="macropad_editor_section_buttons">Buttons</string>
     <string name="macropad_editor_section_button_settings">Button Settings</string>
     <string name="macropad_editor_section_button_colors">Button Colors</string>
@@ -411,6 +412,17 @@ Open Settings to create a layout.</string>
     <string name="settings_profile_automation_header">Automation</string>
     <string name="settings_profile_auto_layout_switching_title">Automatic Layout Switching</string>
     <string name="settings_profile_auto_layout_switching_desc">Automatically switch to the first layout in this profile whose reference anchor is present on screen</string>
+    <string name="automation_layout_anchors_section_title">Layout Reference Anchors</string>
+    <string name="automation_no_anchors_warning">No layouts in this profile have a visual reference anchor calibrated. Configure anchors below to enable automatic switching.</string>
+    <string name="automation_anchors_status_summary">%1$d of %2$d layouts have a calibrated visual reference anchor.</string>
+    <string name="automation_configure_anchors_title">Configure Layout Anchors</string>
+    <string name="automation_configure_anchors_desc">Set up reference anchors and cutscene freezing across all layouts</string>
+    <string name="automation_anchor_present_badge">PRESENT</string>
+    <string name="automation_anchor_lost_badge">LOST</string>
+    <string name="automation_anchor_active_badge">Active</string>
+    <string name="automation_anchor_calibrated_badge">Calibrated</string>
+    <string name="automation_anchor_configure_badge">Configure</string>
+    <string name="automation_anchor_not_configured">No visual anchor configured</string>
 
     <string name="layout_settings_colors_section_title">Button Color Defaults</string>
     <string name="layout_settings_color_text">Text &amp; Icon Color</string>
@@ -650,11 +662,11 @@ Open Settings to create a layout.</string>
     <string name="settings_cutout_advanced_title">Advanced Cutout Settings</string>
     <string name="settings_cutout_advanced_desc">Smart Cutout calibration, edge feathering, and translucency adjustments</string>
     <string name="settings_cutout_convert_smart_title">Convert to Smart Cutout</string>
-    <string name="settings_cutout_convert_smart_desc">Isolates on-screen UI elements from moving 3D scenery and automatically freezes the frame when elements disappear during menus, cutscenes, or transitions</string>
+    <string name="settings_cutout_convert_smart_desc">Isolates on-screen UI elements (minimaps, meters, dials) from moving 3D background scenery using transparency masking</string>
     <string name="settings_cutout_recalibrate_smart_title">Re-Calibrate Smart Cutout</string>
-    <string name="settings_cutout_recalibrate_smart_desc">Samples screen frames again to update the transparency mask and presence anchor points</string>
+    <string name="settings_cutout_recalibrate_smart_desc">Samples screen frames again to update the background transparency mask</string>
     <string name="settings_cutout_remove_smart_title">Remove Smart Cutout</string>
-    <string name="settings_cutout_remove_smart_desc">Removes background transparency and cutscene freeze, reverting to a standard live cutout</string>
+    <string name="settings_cutout_remove_smart_desc">Removes background transparency mask, reverting to a standard live mirror cutout</string>
     <string name="settings_cutout_translucency_title">Cutout Translucency</string>
     <string name="settings_cutout_translucency_desc">Recovers semi-transparent UI elements, inner dials, and glass panels</string>
     <string name="settings_mirror_hud_translucency_off">Off</string>
@@ -681,14 +693,10 @@ Open Settings to create a layout.</string>
     <string name="mirror_hud_calibration_preview_desc">Calibration Live Preview</string>
     <string name="mirror_hud_calibration_dynamic_pct">%d%% dynamic</string>
     <string name="mirror_hud_calibration_time_remaining">%ds left</string>
-    <string name="settings_mirror_dim_top_screen_hud_title">Dim Primary Screen HUD</string>
     <string name="settings_cutout_anchor_position_title">Position Anchor on Screen</string>
     <string name="mirror_anchor_selector_title">Presence Anchor</string>
     <string name="mirror_anchor_selector_hint">Position box over a static reference element (e.g. portrait or icon)</string>
     <string name="mirror_anchor_selector_done">Done</string>
-    <string name="settings_mirror_dim_top_screen_hud_desc">Darken cutout regions on Display 0 so focus shifts down to the secondary screen</string>
-    <string name="settings_mirror_dim_top_screen_hud_opacity">Primary HUD Scrim Darkness</string>
-    <string name="settings_mirror_dim_top_screen_hud_opacity_desc">Opacity of the non-interactive dark veil over top screen HUD regions</string>
     <string name="settings_mirror_projection_on">On</string>
     <string name="settings_mirror_projection_off">Off</string>
     <string name="macropad_editor_section_actions">Actions</string>

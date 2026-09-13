@@ -359,6 +359,7 @@ Open Settings to create a layout.</string>
 
     <!-- MacroPad editor section headers -->
     <string name="macropad_editor_section_layout">Layout</string>
+    <string name="macropad_editor_section_automation">Automation</string>
     <string name="macropad_editor_section_buttons">Tasten</string>
     <string name="macropad_editor_section_button_settings">Tasteneinstellungen</string>
     <string name="macropad_editor_section_button_colors">Tastenfarben</string>
@@ -411,6 +412,17 @@ Open Settings to create a layout.</string>
     <string name="settings_profile_automation_header">Automatisierung</string>
     <string name="settings_profile_auto_layout_switching_title">Automatischer Layout-Wechsel</string>
     <string name="settings_profile_auto_layout_switching_desc">Wechselt automatisch zum ersten Layout in diesem Profil, dessen Referenzanker auf dem Bildschirm sichtbar ist</string>
+    <string name="automation_layout_anchors_section_title">Layout-Referenzanker</string>
+    <string name="automation_no_anchors_warning">Keines der Layouts in diesem Profil verfügt über einen kalibrierten Referenzanker. Konfigurieren Sie unten Anker, um das automatische Umschalten zu aktivieren.</string>
+    <string name="automation_anchors_status_summary">%1$d von %2$d Layouts verfügen über einen kalibrierten visuellen Referenzanker.</string>
+    <string name="automation_configure_anchors_title">Layout-Anker konfigurieren</string>
+    <string name="automation_configure_anchors_desc">Referenzanker und Cutscene-Einfrieren für alle Layouts einrichten</string>
+    <string name="automation_anchor_present_badge">AKTIV</string>
+    <string name="automation_anchor_lost_badge">INAKTIV</string>
+    <string name="automation_anchor_active_badge">Aktiv</string>
+    <string name="automation_anchor_calibrated_badge">Kalibriert</string>
+    <string name="automation_anchor_configure_badge">Einrichten</string>
+    <string name="automation_anchor_not_configured">Kein visueller Anker konfiguriert</string>
 
     <string name="layout_settings_colors_section_title">Tastenfarben-Standardwerte</string>
     <string name="layout_settings_color_text">Text- &amp; Symbolfarbe</string>
@@ -650,11 +662,11 @@ Open Settings to create a layout.</string>
     <string name="settings_cutout_advanced_title">Erweiterte Ausschnitt-Einstellungen</string>
     <string name="settings_cutout_advanced_desc">Smart-Cutout-Kalibrierung, Kantenabrundung und Transparenz-Wiederherstellung</string>
     <string name="settings_cutout_convert_smart_title">In Smart Cutout konvertieren</string>
-    <string name="settings_cutout_convert_smart_desc">Isoliert UI-Elemente von bewegter 3D-Szenerie und friert das Bild automatisch ein, wenn Elemente in Menüs, Sequenzen oder Übergängen ausgeblendet werden</string>
+    <string name="settings_cutout_convert_smart_desc">Isoliert UI-Elemente (Minikarten, Leisten, Skalen) von bewegter 3D-Szenerie mittels Transparenzmaske</string>
     <string name="settings_cutout_recalibrate_smart_title">Smart Cutout neu kalibrieren</string>
-    <string name="settings_cutout_recalibrate_smart_desc">Erfasst erneut Bildframes, um Transparenzmaske und Ankerpunkte zu aktualisieren</string>
+    <string name="settings_cutout_recalibrate_smart_desc">Erfasst erneut Bildframes, um die Hintergrund-Transparenzmaske zu aktualisieren</string>
     <string name="settings_cutout_remove_smart_title">Smart Cutout entfernen</string>
-    <string name="settings_cutout_remove_smart_desc">Entfernt Hintergrundtransparenz und Bild-Einfrieren und stellt einen Standard-Ausschnitt wieder her</string>
+    <string name="settings_cutout_remove_smart_desc">Entfernt Hintergrundtransparenz und stellt einen Standard-Live-Spiegelausschnitt wieder her</string>
     <string name="settings_cutout_translucency_title">Ausschnitt-Transparenz</string>
     <string name="settings_cutout_translucency_desc">Stellt halbtransparente UI-Elemente, innere Skalen und Glas-Oberflächen wieder her</string>
     <string name="settings_mirror_hud_translucency_off">Aus</string>
@@ -681,14 +693,10 @@ Open Settings to create a layout.</string>
     <string name="mirror_hud_calibration_preview_desc">Kalibrierungs-Live-Vorschau</string>
     <string name="mirror_hud_calibration_dynamic_pct">%d%% dynamisch</string>
     <string name="mirror_hud_calibration_time_remaining">Noch %ds</string>
-    <string name="settings_mirror_dim_top_screen_hud_title">Hauptbildschirm-HUD abdunkeln</string>
     <string name="settings_cutout_anchor_position_title">Anker auf Bildschirm positionieren</string>
     <string name="mirror_anchor_selector_title">Präsenz-Anker</string>
     <string name="mirror_anchor_selector_hint">Rahmen über einem statischen Referenzelement (z. B. Porträt oder Icon) platzieren</string>
     <string name="mirror_anchor_selector_done">Fertig</string>
-    <string name="settings_mirror_dim_top_screen_hud_desc">Ausschnittsbereiche auf Display 0 abdunkeln, um den Fokus auf den Zweitbildschirm zu lenken</string>
-    <string name="settings_mirror_dim_top_screen_hud_opacity">HUD-Abdunklungsstärke</string>
-    <string name="settings_mirror_dim_top_screen_hud_opacity_desc">Deckkraft des nicht-interaktiven Schleiers über HUD-Bereichen auf dem oberen Bildschirm</string>
     <string name="settings_mirror_projection_on">Ein</string>
     <string name="settings_mirror_projection_off">Aus</string>
     <string name="macropad_editor_section_actions">Aktionen</string>
