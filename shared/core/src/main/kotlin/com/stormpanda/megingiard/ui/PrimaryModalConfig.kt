@@ -20,6 +20,7 @@ enum class PrimaryModalType {
     MACRO_TIMELINE_EDITOR,
     CROP_SELECTOR,
     ANCHOR_SELECTOR,
+    REACTIVATE_AUTO_SWITCH,
 }
 
 /**

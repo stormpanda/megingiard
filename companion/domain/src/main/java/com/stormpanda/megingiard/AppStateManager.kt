@@ -392,6 +392,16 @@ object AppStateManager {
     private val _companionViewMode = MutableStateFlow(CompanionViewMode.AUTO)
     val companionViewMode: StateFlow<CompanionViewMode> = _companionViewMode.asStateFlow()
 
+    private val _wasAutoSwitchDeactivatedInEditor = MutableStateFlow(false)
+    val wasAutoSwitchDeactivatedInEditor: StateFlow<Boolean> = _wasAutoSwitchDeactivatedInEditor.asStateFlow()
+
+    private var wasAutoSwitchActiveWhenEditorOpened = false
+
+    fun resetAutoSwitchDeactivatedInEditor() {
+        AppLog.d(TAG, "resetAutoSwitchDeactivatedInEditor")
+        _wasAutoSwitchDeactivatedInEditor.value = false
+    }
+
     private val _autoSwitchOffToastEvent =
         MutableSharedFlow<Unit>(
             extraBufferCapacity = 1,
@@ -420,6 +430,14 @@ object AppStateManager {
         if (previousMode == CompanionViewMode.AUTO && mode != CompanionViewMode.AUTO && !isAutoSwitchButton) {
             AppLog.i(TAG, "Auto Switch turned off by non-button -> emitting toast signal")
             _autoSwitchOffToastEvent.tryEmit(Unit)
+        }
+        if (isEditorActive.value) {
+            if (mode == CompanionViewMode.AUTO) {
+                wasAutoSwitchActiveWhenEditorOpened = true
+                _wasAutoSwitchDeactivatedInEditor.value = false
+            } else if (wasAutoSwitchActiveWhenEditorOpened) {
+                _wasAutoSwitchDeactivatedInEditor.value = true
+            }
         }
         if (mode == CompanionViewMode.AUTO) {
             AutoSwitchCoordinator.reevaluateAutoState()
@@ -723,6 +741,21 @@ object AppStateManager {
     }
 
     init {
+        scope.launch {
+            var wasActive = false
+            isEditorActive.collect { active ->
+                if (active && !wasActive) {
+                    wasAutoSwitchActiveWhenEditorOpened = (_companionViewMode.value == CompanionViewMode.AUTO)
+                    _wasAutoSwitchDeactivatedInEditor.value = false
+                    AppLog.d(TAG, "isEditorActive=true, wasAutoSwitchActiveWhenEditorOpened=$wasAutoSwitchActiveWhenEditorOpened")
+                } else if (!active && wasActive) {
+                    _wasAutoSwitchDeactivatedInEditor.value = false
+                    wasAutoSwitchActiveWhenEditorOpened = false
+                    AppLog.d(TAG, "isEditorActive=false, reset auto switch editor state")
+                }
+                wasActive = active
+            }
+        }
         scope.launch {
             _companionSurfaceMode.collect { mode ->
                 if (mode != CompanionSurfaceMode.KEYBOARD && isKeyboardSettingsOpen.value) {

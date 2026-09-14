@@ -978,6 +978,14 @@ Open Settings to create a layout.</string>
     <string name="toast_anchor_conflict_two">Anker-Konflikt: \"%1$s\" und \"%2$s\" stimmen überein</string>
     <string name="toast_anchor_conflict_multiple">Anker-Konflikt: %1$s stimmen überein</string>
 
+    <!-- MacroPad Editor Auto Switch Reactivation Modal -->
+    <string name="macropad_reactivate_auto_switch_title">Auto-Wechsel reaktivieren?</string>
+    <string name="macropad_reactivate_auto_switch_message">Der automatische Wechsel wurde im MacroPad-Editor deaktiviert. Möchtest du ihn wieder einschalten?</string>
+    <string name="macropad_reactivate_auto_switch_confirm">Auto-Wechsel reaktivieren</string>
+    <string name="macropad_reactivate_auto_switch_confirm_desc">Automatischen Profil- und Layout-Wechsel wiederherstellen</string>
+    <string name="macropad_reactivate_auto_switch_dismiss">Auto-Wechsel aus lassen</string>
+    <string name="macropad_reactivate_auto_switch_dismiss_desc">Im manuellen Profilmodus bleiben</string>
+
     <!-- Update Check Strings -->
     <string name="settings_update_available_short">Update verfügbar</string>
     <string name="settings_up_to_date">Du bist auf dem neuesten Stand!</string>

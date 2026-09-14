@@ -547,6 +547,64 @@ class AppStateManagerTest {
         }
 
     @Test
+    fun `wasAutoSwitchDeactivatedInEditor lifecycle and mode transitions`() =
+        runTest {
+            AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
+            AppStateManager.closePrimaryModal()
+            testScheduler.advanceUntilIdle()
+
+            assertFalse(AppStateManager.wasAutoSwitchDeactivatedInEditor.value)
+
+            // Open editor while AUTO is active
+            AppStateManager.setEditorActive(true)
+            testScheduler.advanceUntilIdle()
+            assertFalse(AppStateManager.wasAutoSwitchDeactivatedInEditor.value)
+
+            // Deactivate AUTO in editor
+            AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
+            assertTrue(AppStateManager.wasAutoSwitchDeactivatedInEditor.value)
+
+            // Reactivate AUTO in editor
+            AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
+            assertFalse(AppStateManager.wasAutoSwitchDeactivatedInEditor.value)
+
+            // Deactivate again
+            AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
+            assertTrue(AppStateManager.wasAutoSwitchDeactivatedInEditor.value)
+
+            // Reset method clears flag
+            AppStateManager.resetAutoSwitchDeactivatedInEditor()
+            assertFalse(AppStateManager.wasAutoSwitchDeactivatedInEditor.value)
+
+            // Close editor
+            AppStateManager.setEditorActive(false)
+            testScheduler.advanceUntilIdle()
+            assertFalse(AppStateManager.wasAutoSwitchDeactivatedInEditor.value)
+        }
+
+    @Test
+    fun `wasAutoSwitchDeactivatedInEditor remains false if editor opened when AUTO was already off`() =
+        runTest {
+            AppStateManager.closePrimaryModal()
+            AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
+            testScheduler.advanceUntilIdle()
+
+            // Open editor while MACROPAD mode is already active
+            AppStateManager.setEditorActive(true)
+            testScheduler.advanceUntilIdle()
+            assertFalse(AppStateManager.wasAutoSwitchDeactivatedInEditor.value)
+
+            // Select profile/layout in editor (stays MACROPAD)
+            AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
+            assertFalse(AppStateManager.wasAutoSwitchDeactivatedInEditor.value)
+
+            // Close editor
+            AppStateManager.setEditorActive(false)
+            testScheduler.advanceUntilIdle()
+            assertFalse(AppStateManager.wasAutoSwitchDeactivatedInEditor.value)
+        }
+
+    @Test
     fun `shouldShowIntegrationHome returns expected values across view modes`() {
         val associatedProfile =
             testProfile(

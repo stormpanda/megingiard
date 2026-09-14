@@ -978,6 +978,14 @@ Open Settings to create a layout.</string>
     <string name="toast_anchor_conflict_two">Anchor conflict: \"%1$s\" and \"%2$s\" both match</string>
     <string name="toast_anchor_conflict_multiple">Anchor conflict: %1$s all match</string>
 
+    <!-- MacroPad Editor Auto Switch Reactivation Modal -->
+    <string name="macropad_reactivate_auto_switch_title">Reactivate Auto Switch?</string>
+    <string name="macropad_reactivate_auto_switch_message">Auto Switch was turned off while in the MacroPad editor. Would you like to turn it back on?</string>
+    <string name="macropad_reactivate_auto_switch_confirm">Reactivate Auto Switch</string>
+    <string name="macropad_reactivate_auto_switch_confirm_desc">Restore automatic profile and layout switching</string>
+    <string name="macropad_reactivate_auto_switch_dismiss">Keep Auto Switch Off</string>
+    <string name="macropad_reactivate_auto_switch_dismiss_desc">Remain in manual profile mode</string>
+
     <!-- Update Check Strings -->
     <string name="settings_update_available_short">Update available</string>
     <string name="settings_up_to_date">You are up-to-date!</string>

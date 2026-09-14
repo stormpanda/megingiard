@@ -973,6 +973,14 @@ Open Settings to create a layout.</string>
     <string name="toast_anchor_conflict_two">錨點衝突：「%1$s」與「%2$s」同時符合</string>
     <string name="toast_anchor_conflict_multiple">錨點衝突：%1$s 同時符合</string>
 
+    <!-- MacroPad Editor Auto Switch Reactivation Modal -->
+    <string name="macropad_reactivate_auto_switch_title">重新啟用自動切換？</string>
+    <string name="macropad_reactivate_auto_switch_message">自動切換已在 MacroPad 編輯器中停用。您要重新開啟它嗎？</string>
+    <string name="macropad_reactivate_auto_switch_confirm">重新啟用自動切換</string>
+    <string name="macropad_reactivate_auto_switch_confirm_desc">恢復設定檔與版面配置的自動切換</string>
+    <string name="macropad_reactivate_auto_switch_dismiss">保持自動切換關閉</string>
+    <string name="macropad_reactivate_auto_switch_dismiss_desc">維持手動設定檔模式</string>
+
     <!-- Update Check Strings -->
     <string name="settings_update_available_short">有可用更新</string>
     <string name="settings_up_to_date">已是最新版本！</string>

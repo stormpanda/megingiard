@@ -34,6 +34,7 @@ import androidx.compose.material.icons.automirrored.rounded.ViewQuilt
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DragHandle
@@ -181,6 +182,7 @@ internal val MPE_PADDING = 16.dp
 fun MacroPadEditor(
     onDone: () -> Unit,
     showTopBar: Boolean = true,
+    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -257,13 +259,8 @@ fun MacroPadEditor(
         }
     }
 
-    BackHandler(enabled = true) {
-        if (subPageStack.isNotEmpty()) {
-            MacroPadNavState.pop()
-        } else {
-            MacroPadNavState.reset()
-            onDone()
-        }
+    BackHandler(enabled = subPageStack.isNotEmpty()) {
+        MacroPadNavState.pop()
     }
 
     LaunchedEffect(Unit) {
@@ -274,7 +271,7 @@ fun MacroPadEditor(
 
     Column(
         modifier =
-            Modifier
+            modifier
                 .fillMaxSize()
                 .background(colors.appBackground),
     ) {
@@ -695,6 +692,7 @@ fun MacroPadEditor(
                                                         )
                                                     MacroPadState.addProfile(newProf)
                                                     MacroPadState.setActiveProfileId(newId)
+                                                    AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
                                                     MacroPadNavState.selectSection(EditorSection.PROFILES)
                                                     MacroPadNavState.setStack(emptyList())
                                                 },
