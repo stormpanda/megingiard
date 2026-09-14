@@ -514,11 +514,14 @@ The auto-start logic in `MainActivity` derives an "effective auto-start" signal 
 
 `ScreenCaptureService` does not write `mirrorAutoStart`; start and teardown only manage runtime capture resources. The persisted layout state is changed only by the user's start/stop/consent decisions.
 
-**Runtime reconciliation.** `MainActivity` combines the prompt, capture, active-layout, and privd-connection `StateFlow`s into a `MirrorRuntimePolicyState`. The active layout's `mirrorAutoStart` flag is evaluated directly on every emission: if it is `false` while a session is running, `MainActivity` stops only the runtime service and does not mutate any layout's remembered state. If it is `true` while no session is running, `MainActivity` starts the mirror flow.
+**Runtime reconciliation.** `MainActivity` combines the prompt, capture, active-layout, profile, companion-view-mode, and privd-connection `StateFlow`s into a `MirrorRuntimePolicyState`. Individual layout mirror preference is governed by `PadLayout.mirrorAutoStart`, supplemented by input overlays and profile-level autonomous layout switching requirements (`autoSwitchWantsMirror`). When autonomous mode (`CompanionViewMode.AUTO`) and profile-level auto layout switching (`PadProfile.autoLayoutSwitching`) are active and the profile contains at least one layout with an enabled visual anchor, `autoSwitchWantsMirror` remains `true`. This prevents un-anchored or newly created layouts from stopping the capture stream, ensuring `AnchorPresenceManager` continuously evaluates candidate layout anchors.
+
+If neither the active layout, active overlay, nor autonomous layout switching wants capture while a session is running, `MainActivity` stops only the runtime service and does not mutate any layout's remembered state. If capture is wanted while no session is running, `MainActivity` starts the mirror flow.
 
 ```
 isOnValidScreen && !promptInFlight && !isCapturing &&
-  activeLayout.mirrorAutoStart && !privdMirrorConnecting
+  (activeLayout.mirrorAutoStart || autoSwitchWantsMirror || overlayActive) &&
+  !privdMirrorConnecting && !tutorialsActive
 ```
 
 `privdMirrorConnecting` is `true` while privd mirror is enabled and the daemon is in a transient state (`CONNECTING`, `BOOTSTRAPPING`, or `OFF` with auto-connect pending). This prevents the policy from selecting the `MEDIA_PROJECTION` consent path on fresh app launch before the privd auto-connect coroutine has had a chance to establish the connection. Once the daemon settles (`RUNNING` → privd path; `FAILED`/`OFF` → consent fallback), the combine re-emits and the policy re-evaluates with the correct strategy.

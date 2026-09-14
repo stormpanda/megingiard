@@ -30,6 +30,13 @@ data class MirrorRuntimePolicyState(
     val layoutId: String?,
     val layoutWantsMirror: Boolean,
     /**
+     * True when autonomous mode (AUTO) and profile-level auto layout switching are active
+     * and the profile contains at least one layout with an enabled visual anchor.
+     * Keeps screen capture alive so candidate layouts can be evaluated and auto-switched even
+     * when the active layout does not explicitly request mirrorAutoStart or has no visual anchor.
+     */
+    val autoSwitchWantsMirror: Boolean = false,
+    /**
      * True while the privd mirror daemon is in a transient connecting state
      * (CONNECTING, BOOTSTRAPPING, or OFF-but-auto-connect-pending).
      * Blocks policy auto-start until the daemon settles so the correct
@@ -55,9 +62,10 @@ enum class MirrorRuntimeAction {
 /**
  * Reconciles runtime capture state with the active layout's persisted mirror state.
  *
- * `PadLayout.mirrorAutoStart` is the single source of truth: a running capture
- * stops whenever the active layout does not want mirror, and a stopped capture
- * starts only when the active layout wants mirror and global auto-start allows it.
+ * `PadLayout.mirrorAutoStart` is the single source of truth for individual layouts, supplemented
+ * by active input overlays and profile-level autonomous layout switching requirements.
+ * A running capture stops whenever neither the active layout, active overlay, nor autonomous
+ * layout switching wants capture.
  */
 fun decideMirrorRuntimeAction(state: MirrorRuntimePolicyState): MirrorRuntimeAction {
     if (!state.isOnValidScreen || state.layoutId == null) return MirrorRuntimeAction.NONE
@@ -67,10 +75,12 @@ fun decideMirrorRuntimeAction(state: MirrorRuntimePolicyState): MirrorRuntimeAct
             state.isFullscreenKeyboardActive ||
             state.wasMirroringStartedByTouchpad
 
-    return when {
-        state.isCapturing && !state.layoutWantsMirror && !overlayActive -> MirrorRuntimeAction.STOP
+    val captureWanted = state.layoutWantsMirror || state.autoSwitchWantsMirror || overlayActive
 
-        (state.layoutWantsMirror || overlayActive) &&
+    return when {
+        state.isCapturing && !captureWanted -> MirrorRuntimeAction.STOP
+
+        captureWanted &&
             !state.isCapturing &&
             !state.promptInFlight &&
             !state.privdMirrorConnecting &&

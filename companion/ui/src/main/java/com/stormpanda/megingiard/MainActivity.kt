@@ -463,6 +463,8 @@ class MainActivity : ComponentActivity() {
                     AppStateManager.promptInFlight,
                     ScreenCaptureManager.isCapturing,
                     MacroPadState.activeLayout,
+                    MacroPadState.activeProfile,
+                    AppStateManager.companionViewMode,
                     AppStateManager.isOnValidScreen,
                     OnboardingWizardManager.isWizardActive,
                     AppStateManager.isFullscreenMouseActive,
@@ -472,11 +474,19 @@ class MainActivity : ComponentActivity() {
                     val promptInFlight = values[0] as Boolean
                     val capturing = values[1] as Boolean
                     val currentLayout = values[2] as? PadLayout
-                    val onValidScreen = values[3] as Boolean
-                    val wizardActive = values[4] as Boolean
-                    val isFullscreenMouseActive = values[5] as Boolean
-                    val isFullscreenKeyboardActive = values[6] as Boolean
-                    val wasMirroringStartedByTouchpad = values[7] as Boolean
+                    val profile = values[3] as? PadProfile
+                    val viewMode = values[4] as CompanionViewMode
+                    val onValidScreen = values[5] as Boolean
+                    val wizardActive = values[6] as Boolean
+                    val isFullscreenMouseActive = values[7] as Boolean
+                    val isFullscreenKeyboardActive = values[8] as Boolean
+                    val wasMirroringStartedByTouchpad = values[9] as Boolean
+
+                    val isAutoSwitchEligible =
+                        viewMode == CompanionViewMode.AUTO &&
+                            profile?.autoLayoutSwitching == true
+                    val hasAnyAnchoredLayout =
+                        profile?.layouts?.any { it.visualAnchor.enabled } == true
 
                     MirrorRuntimePolicyState(
                         promptInFlight = promptInFlight,
@@ -484,6 +494,7 @@ class MainActivity : ComponentActivity() {
                         isCapturing = capturing,
                         layoutId = currentLayout?.id,
                         layoutWantsMirror = currentLayout?.mirrorAutoStart == true,
+                        autoSwitchWantsMirror = isAutoSwitchEligible && hasAnyAnchoredLayout,
                         tutorialsActive = wizardActive,
                         isFullscreenMouseActive = isFullscreenMouseActive,
                         isFullscreenKeyboardActive = isFullscreenKeyboardActive,
