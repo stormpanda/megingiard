@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -259,6 +260,8 @@ fun AnchorSelectorOverlay(
         var dragStartY by remember(layoutId) { mutableFloatStateOf(0f) }
         var dragStartW by remember(layoutId) { mutableFloatStateOf(0f) }
         var dragStartH by remember(layoutId) { mutableFloatStateOf(0f) }
+        var anchorHToggle by remember(layoutId) { mutableIntStateOf(0) }
+        var anchorVToggle by remember(layoutId) { mutableIntStateOf(0) }
 
         fun captureDragStart() {
             val crop = getCurrentCrop()
@@ -366,9 +369,23 @@ fun AnchorSelectorOverlay(
                 },
                 onResize = { dx, dy ->
                     val cur = getCurrentCrop()
-                    val newW = (cur.width + dx.toFloat() / screenW).coerceIn(MIN_ANCHOR_SIZE, (1f - cur.x).coerceAtLeast(MIN_ANCHOR_SIZE))
-                    val newH = (cur.height + dy.toFloat() / screenH).coerceIn(MIN_ANCHOR_SIZE, (1f - cur.y).coerceAtLeast(MIN_ANCHOR_SIZE))
-                    updateAnchorCrop(cur.x, cur.y, newW, newH)
+                    val resized =
+                        calculateResizedBounds(
+                            normX = cur.x,
+                            normY = cur.y,
+                            normW = cur.width,
+                            normH = cur.height,
+                            screenWidth = screenW,
+                            screenHeight = screenH,
+                            dx = dx,
+                            dy = dy,
+                            hToggle = anchorHToggle,
+                            vToggle = anchorVToggle,
+                            minSizeRatio = MIN_ANCHOR_SIZE,
+                        )
+                    anchorHToggle = resized.hToggle
+                    anchorVToggle = resized.vToggle
+                    updateAnchorCrop(resized.x, resized.y, resized.width, resized.height)
                 },
                 resetKey = layout.id,
                 cardFocusRequester = firstItemFocusRequester,

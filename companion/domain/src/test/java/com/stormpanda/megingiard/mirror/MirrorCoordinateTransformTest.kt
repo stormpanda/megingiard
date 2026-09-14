@@ -1429,4 +1429,45 @@ class MirrorCoordinateTransformTest {
             )
         assertTrue(expanded10Steps.w > singleStep.w)
     }
+
+    @Test
+    fun `calculateResizedBounds supports custom minSizeRatio for visual anchor scaling`() {
+        val screenW = 1000f
+        val screenH = 1000f
+        val minAnchorRatio = 0.04f
+
+        // Starting at exactly minAnchorRatio: 40px out of 1000px
+        val atMin =
+            calculateResizedBounds(
+                normX = 0.500f,
+                normY = 0.500f,
+                normW = 0.040f,
+                normH = 0.040f,
+                screenWidth = screenW,
+                screenHeight = screenH,
+                dx = -10,
+                dy = 10,
+                minSizeRatio = minAnchorRatio,
+            )
+        // Must clamp to 0.040f (40px)
+        assertEquals(0.040f, atMin.width, EPS)
+        assertEquals(0.040f, atMin.height, EPS)
+
+        // D-Pad UP (dy < 0) expands height symmetrically from center
+        val expandedUp =
+            calculateResizedBounds(
+                normX = 0.500f,
+                normY = 0.500f,
+                normW = 0.040f,
+                normH = 0.040f,
+                screenWidth = screenW,
+                screenHeight = screenH,
+                dx = 0,
+                dy = -2,
+                minSizeRatio = minAnchorRatio,
+            )
+        // Expanded by 2px: top border -1px (0.499f), height 0.042f
+        assertEquals(0.499f, expandedUp.y, EPS)
+        assertEquals(0.042f, expandedUp.height, EPS)
+    }
 }
