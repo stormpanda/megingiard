@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.macropad
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -16,6 +17,7 @@ import androidx.compose.material.icons.rounded.FormatColorFill
 import androidx.compose.material.icons.rounded.FormatColorText
 import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Tune
@@ -65,6 +67,29 @@ import kotlin.math.roundToInt
 private const val TAG = "LayoutSettingsEditor"
 private const val MS_PER_FRAME = 16
 private const val PERCENT_DIVISOR = 100f
+
+private data class LostAnchorEffectDescriptor(
+    val effect: CutoutLostAnchorEffect,
+    @StringRes val titleRes: Int,
+    @StringRes val descRes: Int,
+    val icon: ImageVector,
+)
+
+private val LOST_ANCHOR_EFFECT_DESCRIPTORS =
+    listOf(
+        LostAnchorEffectDescriptor(
+            effect = CutoutLostAnchorEffect.FREEZE,
+            titleRes = R.string.layout_settings_visual_anchor_freeze_title,
+            descRes = R.string.layout_settings_visual_anchor_freeze_desc,
+            icon = Icons.Rounded.Pause,
+        ),
+        LostAnchorEffectDescriptor(
+            effect = CutoutLostAnchorEffect.BLUR,
+            titleRes = R.string.layout_settings_visual_anchor_blur_title,
+            descRes = R.string.layout_settings_visual_anchor_blur_desc,
+            icon = Icons.Rounded.BlurOn,
+        ),
+    )
 
 @Composable
 private fun describeColorOption(
@@ -427,20 +452,22 @@ internal fun AutomaticLayoutSwitchingSubPageContent(
                 },
             )
 
-            GamepadToggleCard(
-                title = stringResource(R.string.layout_settings_visual_anchor_blur_title),
-                description = stringResource(R.string.layout_settings_visual_anchor_blur_desc),
-                checked = layout.visualAnchor.blurCutoutsOnLoss,
-                icon = Icons.Rounded.BlurOn,
-                itemKey = "layout_${layout.id}_blur_on_loss",
-                onCheckedChange = { isChecked ->
-                    onUpdateLayout(
-                        layout.copy(
-                            visualAnchor = layout.visualAnchor.copy(blurCutoutsOnLoss = isChecked),
-                        ),
-                    )
-                },
-            )
+            for (descriptor in LOST_ANCHOR_EFFECT_DESCRIPTORS) {
+                GamepadToggleCard(
+                    title = stringResource(descriptor.titleRes),
+                    description = stringResource(descriptor.descRes),
+                    checked = layout.visualAnchor.hasEffect(descriptor.effect),
+                    icon = descriptor.icon,
+                    itemKey = "layout_${layout.id}_${descriptor.effect.name.lowercase()}_on_loss",
+                    onCheckedChange = { isChecked ->
+                        onUpdateLayout(
+                            layout.copy(
+                                visualAnchor = layout.visualAnchor.withEffect(descriptor.effect, isChecked),
+                            ),
+                        )
+                    },
+                )
+            }
 
             if (isCalibrated) {
                 GamepadSectionHeader(

@@ -680,6 +680,10 @@ object AppStateManager {
             _activeCropCutoutId.value = _selectedCutoutId.value
             _isMirrorEditorBackgroundHidden.value = false
             _companionSurfaceMode.value = CompanionSurfaceMode.VIEWPORT_EDIT
+            MacroPadState.activeLayout.value?.id?.let { layoutId ->
+                MacroPadState.setLayoutMirrorAutoStart(layoutId, true)
+            }
+            requestMirrorStart()
         } else {
             _selectedCutoutId.value = null
             _activeCropCutoutId.value = null

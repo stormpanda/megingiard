@@ -403,8 +403,10 @@ Open Settings to create a layout.</string>
     <string name="layout_settings_visual_anchor_recalibrate_desc">Update anchor points from live game screen</string>
     <string name="layout_settings_visual_anchor_status_calibrated">Calibrated (%1$d reference points)</string>
     <string name="layout_settings_visual_anchor_stream_delay_desc">Buffer frames to eliminate visual tearing when UI disappears</string>
+    <string name="layout_settings_visual_anchor_freeze_title">Freeze Inactive Cutouts</string>
+    <string name="layout_settings_visual_anchor_freeze_desc">Hold the last valid frame when the reference anchor is lost. If disabled, cutouts continue live playback.</string>
     <string name="layout_settings_visual_anchor_blur_title">Blur Inactive Cutouts</string>
-    <string name="layout_settings_visual_anchor_blur_desc">Apply frosted-glass blur when the reference anchor is lost. If disabled, cutouts remain sharp frozen.</string>
+    <string name="layout_settings_visual_anchor_blur_desc">Apply frosted-glass blur when the reference anchor is lost.</string>
     <string name="layout_settings_visual_anchor_remove_title">Delete Anchor Calibration</string>
     <string name="layout_settings_visual_anchor_remove_desc">Remove calibrated reference signature and disable visual anchor</string>
     <string name="help_layout_settings_auto_switch_desc">Configure visual anchoring and automatic layout switching for this layout. Monitors a reference region on the primary screen to freeze or blur cutouts or switch layouts whenever this layout\'s intended content is not shown.</string>

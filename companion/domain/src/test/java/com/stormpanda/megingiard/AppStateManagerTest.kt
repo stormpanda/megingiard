@@ -63,6 +63,10 @@ class AppStateManagerTest {
             focusedApp = null,
         )
         AppStateManager.setStandaloneForegroundState(null, null)
+        AppStateManager.consumeMirrorStartRequest()
+        AppStateManager.consumeMirrorStopRequest()
+        AppStateManager.consumeShutOffRequest()
+        AppStateManager.setViewportEditActive(false)
     }
 
     @After
@@ -76,6 +80,10 @@ class AppStateManagerTest {
             focusedApp = null,
         )
         AppStateManager.setStandaloneForegroundState(null, null)
+        AppStateManager.consumeMirrorStartRequest()
+        AppStateManager.consumeMirrorStopRequest()
+        AppStateManager.consumeShutOffRequest()
+        AppStateManager.setViewportEditActive(false)
         Dispatchers.resetMain()
     }
 
@@ -1121,6 +1129,24 @@ class AppStateManagerTest {
             AppStateManager.setViewportEditActive(false)
             assertEquals(null, AppStateManager.selectedCutoutId.value)
             assertEquals(null, AppStateManager.activeCropCutoutId.value)
+        }
+
+    @Test
+    fun `setViewportEditActive requests mirror start and activates layout mirrorAutoStart`() =
+        runTest {
+            AppStateManager.consumeMirrorStartRequest()
+            assertFalse(AppStateManager.mirrorStartRequested.value)
+
+            val layout = PadLayout(id = "layout_mirror_test", name = "Mirror Layout", mirrorAutoStart = false)
+            val profile = PadProfile(id = "profile_mirror_test", name = "Test Profile", layouts = listOf(layout))
+            MacroPadState.loadFrom(listOf(profile), profile.id)
+            assertFalse(MacroPadState.activeLayout.value?.mirrorAutoStart == true)
+
+            AppStateManager.setViewportEditActive(true)
+            assertTrue(AppStateManager.mirrorStartRequested.value)
+            assertTrue(MacroPadState.activeLayout.value?.mirrorAutoStart == true)
+
+            AppStateManager.setViewportEditActive(false)
         }
 
     @Test

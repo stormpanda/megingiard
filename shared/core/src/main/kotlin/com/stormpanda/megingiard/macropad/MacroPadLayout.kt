@@ -422,8 +422,44 @@ data class LayoutVisualAnchor(
     val srcWidth: Float = DEFAULT_LAYOUT_ANCHOR_SIZE,
     val srcHeight: Float = DEFAULT_LAYOUT_ANCHOR_SIZE,
     val streamDelayFrames: Int = DEFAULT_LAYOUT_STREAM_DELAY_FRAMES,
+    val lostAnchorEffects: Set<CutoutLostAnchorEffect> = DEFAULT_LOST_ANCHOR_EFFECTS,
+    @Deprecated("Migrated to lostAnchorEffects")
     val blurCutoutsOnLoss: Boolean = true,
-)
+) {
+    /**
+     * Checks whether the specified [CutoutLostAnchorEffect] is enabled.
+     * Respects legacy [blurCutoutsOnLoss] if [lostAnchorEffects] was not customized.
+     */
+    fun hasEffect(effect: CutoutLostAnchorEffect): Boolean {
+        if (effect == CutoutLostAnchorEffect.BLUR && !blurCutoutsOnLoss && lostAnchorEffects == DEFAULT_LOST_ANCHOR_EFFECTS) {
+            return false
+        }
+        return effect in lostAnchorEffects
+    }
+
+    /**
+     * Returns a copy with the specified [effect] toggled to [enabled].
+     */
+    fun withEffect(
+        effect: CutoutLostAnchorEffect,
+        enabled: Boolean,
+    ): LayoutVisualAnchor {
+        val baseEffects =
+            if (!blurCutoutsOnLoss && lostAnchorEffects == DEFAULT_LOST_ANCHOR_EFFECTS) {
+                setOf(CutoutLostAnchorEffect.FREEZE)
+            } else {
+                lostAnchorEffects
+            }
+        val updated = if (enabled) baseEffects + effect else baseEffects - effect
+        return copy(
+            lostAnchorEffects = updated,
+            blurCutoutsOnLoss = if (effect == CutoutLostAnchorEffect.BLUR) enabled else blurCutoutsOnLoss,
+        )
+    }
+
+    val freezeCutoutsOnLoss: Boolean
+        get() = hasEffect(CutoutLostAnchorEffect.FREEZE)
+}
 
 @Serializable
 data class PadLayout(

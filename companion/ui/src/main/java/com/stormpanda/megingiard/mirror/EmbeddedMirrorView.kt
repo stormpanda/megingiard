@@ -309,6 +309,7 @@ fun EmbeddedMirrorView(
         update = { mcc ->
             mcc.cutouts = effectiveCutouts
             mcc.isFrozen = isFrozen
+            mcc.isViewportEditActive = isViewportEditActive
             mcc.frozenBitmap = frozenBitmap
             mcc.viewportScale = if (overrideCutouts != null) 1f else scale
             mcc.viewportOffsetX = if (overrideCutouts != null) 0f else offsetX

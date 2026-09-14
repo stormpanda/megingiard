@@ -416,8 +416,10 @@ Open Settings to create a layout.</string>
     <string name="layout_settings_visual_anchor_recalibrate_desc">從即時遊戲畫面更新錨點</string>
     <string name="layout_settings_visual_anchor_status_calibrated">已校準（%1$d 個參考點）</string>
     <string name="layout_settings_visual_anchor_stream_delay_desc">緩衝畫面以消除內容消失時的畫面撕裂</string>
+    <string name="layout_settings_visual_anchor_freeze_title">凍結未啟用的畫面區域</string>
+    <string name="layout_settings_visual_anchor_freeze_desc">當參考錨點遺失時保持最後有效影格。若停用，畫面區域將持續即時播放。</string>
     <string name="layout_settings_visual_anchor_blur_title">模糊未啟用的畫面區域</string>
-    <string name="layout_settings_visual_anchor_blur_desc">當參考錨點遺失時套用毛玻璃模糊。若停用，畫面區域將保持清晰定格。</string>
+    <string name="layout_settings_visual_anchor_blur_desc">當參考錨點遺失時套用毛玻璃模糊。</string>
     <string name="layout_settings_visual_anchor_remove_title">刪除錨點校準</string>
     <string name="layout_settings_visual_anchor_remove_desc">移除已校準的參考簽章並停用視覺錨點</string>
     <string name="help_layout_settings_auto_switch_desc">為此版面設定視覺錨點與自動切換。監控主螢幕上的參考區域，當此版面的預期內容未顯示時凍結或模糊切角，或切換版面。</string>

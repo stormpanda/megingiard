@@ -403,8 +403,10 @@ Open Settings to create a layout.</string>
     <string name="layout_settings_visual_anchor_recalibrate_desc">Ankerpunkte vom laufenden Spiel aktualisieren</string>
     <string name="layout_settings_visual_anchor_status_calibrated">Kalibriert (%1$d Referenzpunkte)</string>
     <string name="layout_settings_visual_anchor_stream_delay_desc">Bilder zwischenspeichern, um Übergänge bei fehlendem Inhalt zu glätten</string>
+    <string name="layout_settings_visual_anchor_freeze_title">Inaktive Cutouts einfrieren</string>
+    <string name="layout_settings_visual_anchor_freeze_desc">Hält das letzte gültige Bild an, wenn der Referenzanker verschwindet. Wenn deaktiviert, laufen Cutouts live weiter.</string>
     <string name="layout_settings_visual_anchor_blur_title">Inaktive Cutouts weichzeichnen</string>
-    <string name="layout_settings_visual_anchor_blur_desc">Milchglas-Weichzeichnung anwenden, wenn der Referenzanker verschwindet. Wenn deaktiviert, bleiben Cutouts scharf eingefroren.</string>
+    <string name="layout_settings_visual_anchor_blur_desc">Milchglas-Weichzeichnung anwenden, wenn der Referenzanker verschwindet.</string>
     <string name="layout_settings_visual_anchor_remove_title">Anker-Kalibrierung löschen</string>
     <string name="layout_settings_visual_anchor_remove_desc">Gespeicherte Referenz-Signatur entfernen und visuellen Anker deaktivieren</string>
     <string name="help_layout_settings_auto_switch_desc">Konfiguriere visuelle Verankerung und automatischen Layout-Wechsel für dieses Layout. Überwacht einen Referenzbereich auf dem Hauptbildschirm, um Cutouts einzufrieren oder das Layout zu wechseln, wenn der vorgesehene Inhalt nicht im Spiel angezeigt wird.</string>

@@ -24,7 +24,9 @@ import android.graphics.Shader
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.FrameLayout
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.macropad.BackgroundScaleMode
+import com.stormpanda.megingiard.macropad.CutoutLostAnchorEffect
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.math.ViewportMath
 import kotlin.math.abs
@@ -63,6 +65,11 @@ internal class MultiCutoutContainer(
             invalidate()
         }
     var isFrozen: Boolean = false
+        set(value) {
+            field = value
+            invalidate()
+        }
+    var isViewportEditActive: Boolean = false
         set(value) {
             field = value
             invalidate()
@@ -288,27 +295,40 @@ internal class MultiCutoutContainer(
             }
         }
 
+        val isEditing = isViewportEditActive || AppStateManager.isViewportEditActive.value
+
         val activeLayout = MacroPadState.activeLayout.value
         val isLayoutAnchorActive = activeLayout?.visualAnchor?.enabled == true
         val isLayoutAnchorLost =
-            activeLayout != null && isLayoutAnchorActive &&
+            !isEditing && activeLayout != null && isLayoutAnchorActive &&
                 AnchorPresenceManager.isLayoutAnchorLost(activeLayout.id)
-        val shouldBlur = activeLayout?.visualAnchor?.blurCutoutsOnLoss == true
+
+        val anchorHasFreeze = activeLayout?.visualAnchor?.hasEffect(CutoutLostAnchorEffect.FREEZE) == true
+        val anchorHasBlur = activeLayout?.visualAnchor?.hasEffect(CutoutLostAnchorEffect.BLUR) == true
+
+        val shouldFreeze = isLayoutAnchorLost && anchorHasFreeze
+        val shouldBlur = isLayoutAnchorLost && anchorHasBlur
+
+        val effectiveManualFrozen = !isEditing && isFrozen
+        val isTargetFrozen = effectiveManualFrozen || shouldFreeze
+        val targetAlpha = if (shouldBlur) FULL_ALPHA_FLOAT else 0f
 
         for (cutout in cutouts) {
-            val isTargetFrozen = isFrozen || isLayoutAnchorLost
             val wasTargetFrozen = cutoutWasFrozen[cutout.id]
-
-            if (wasTargetFrozen == null || isTargetFrozen != wasTargetFrozen) {
+            val isFrozenChanged = wasTargetFrozen == null || isTargetFrozen != wasTargetFrozen
+            if (isFrozenChanged) {
                 cutoutWasFrozen[cutout.id] = isTargetFrozen
+            }
 
-                val targetAlpha = if (isTargetFrozen && shouldBlur) FULL_ALPHA_FLOAT else 0f
-                val currentAlpha =
-                    cutoutBlurAlphas[cutout.id] ?: (if (wasTargetFrozen == true && shouldBlur) FULL_ALPHA_FLOAT else 0f)
+            val currentAlpha = cutoutBlurAlphas[cutout.id] ?: 0f
+            val isAlphaChanged = abs(targetAlpha - currentAlpha) > MIN_ALPHA_THRESHOLD
+            val isAnimating = cutoutTransitionAnimators.containsKey(cutout.id)
+
+            if (isFrozenChanged || (isAlphaChanged && !isAnimating)) {
                 cutoutBlurAlphas[cutout.id] = currentAlpha
                 cutoutTransitionAnimators.remove(cutout.id)?.cancel()
 
-                if (abs(targetAlpha - currentAlpha) > MIN_ALPHA_THRESHOLD) {
+                if (isAlphaChanged) {
                     val animator =
                         ValueAnimator.ofFloat(currentAlpha, targetAlpha).apply {
                             duration = BLUR_TRANSITION_DURATION_MS
@@ -463,12 +483,21 @@ internal class MultiCutoutContainer(
                     canvas.save()
                 }
 
+            val isEditing = isViewportEditActive || AppStateManager.isViewportEditActive.value
             val activeLayout = MacroPadState.activeLayout.value
             val isLayoutAnchorActive = activeLayout?.visualAnchor?.enabled == true
             val isLayoutAnchorLost =
-                activeLayout != null && isLayoutAnchorActive &&
+                !isEditing && activeLayout != null && isLayoutAnchorActive &&
                     AnchorPresenceManager.isLayoutAnchorLost(activeLayout.id)
-            val shouldBlur = activeLayout?.visualAnchor?.blurCutoutsOnLoss == true
+
+            val anchorHasFreeze = activeLayout?.visualAnchor?.hasEffect(CutoutLostAnchorEffect.FREEZE) == true
+            val anchorHasBlur = activeLayout?.visualAnchor?.hasEffect(CutoutLostAnchorEffect.BLUR) == true
+
+            val shouldFreeze = isLayoutAnchorLost && anchorHasFreeze
+            val shouldBlur = isLayoutAnchorLost && anchorHasBlur
+
+            val effectiveManualFrozen = !isEditing && isFrozen
+            val isTargetFrozen = effectiveManualFrozen || shouldFreeze
 
             for (cutout in cutouts) {
                 val dw = (cutout.destWidth * parentW).roundToInt().toFloat()
@@ -523,17 +552,29 @@ internal class MultiCutoutContainer(
                         canvas.clipPath(circlePath)
                     }
 
-                    val isTargetFrozen = isFrozen || isLayoutAnchorLost
                     val blurAlpha =
-                        cutoutBlurAlphas[cutout.id] ?: (if (isTargetFrozen && shouldBlur) FULL_ALPHA_FLOAT else 0f)
+                        cutoutBlurAlphas[cutout.id] ?: (if (shouldBlur) FULL_ALPHA_FLOAT else 0f)
 
                     val cachedFrozenFrame = AnchorPresenceManager.getFrozenFrame(context, cutout.id)
-                    val fullFrozenBitmap = if (cachedFrozenFrame == null && isFrozen) frozenBitmap else null
+                    val fullFrozenBitmap = if (cachedFrozenFrame == null && effectiveManualFrozen) frozenBitmap else null
                     val hasFrozenBitmap =
                         (cachedFrozenFrame != null && !cachedFrozenFrame.isRecycled) ||
                             (fullFrozenBitmap != null && !fullFrozenBitmap.isRecycled)
                     val frozenBitmapToDraw = cachedFrozenFrame ?: fullFrozenBitmap
                     val isCropped = cachedFrozenFrame != null
+
+                    val effectiveDelay =
+                        if (activeLayout != null && isLayoutAnchorActive) {
+                            activeLayout.visualAnchor.streamDelayFrames
+                        } else {
+                            0
+                        }
+                    val delayedFrame =
+                        if (effectiveDelay > 0) {
+                            AnchorPresenceManager.getDelayedFrame(cutout.id, effectiveDelay)
+                        } else {
+                            null
+                        }
 
                     // 1. Base Layer
                     if (isTargetFrozen && hasFrozenBitmap && frozenBitmapToDraw != null) {
@@ -556,19 +597,6 @@ internal class MultiCutoutContainer(
                         }
                     } else {
                         // Live / Unfreezing: render live/delayed video stream base layer
-                        val effectiveDelay =
-                            if (activeLayout != null && isLayoutAnchorActive) {
-                                activeLayout.visualAnchor.streamDelayFrames
-                            } else {
-                                0
-                            }
-                        val delayedFrame =
-                            if (effectiveDelay > 0) {
-                                AnchorPresenceManager.getDelayedFrame(cutout.id, effectiveDelay)
-                            } else {
-                                null
-                            }
-
                         if (delayedFrame != null && !delayedFrame.isRecycled) {
                             cutoutDestRect.set(0f, 0f, dw, dh)
                             canvas.drawBitmap(delayedFrame, null, cutoutDestRect, delayedFramePaint)
@@ -618,7 +646,8 @@ internal class MultiCutoutContainer(
                     }
 
                     // 2. Top Frosted Blur Layer (8px blur, opacity = blurAlpha)
-                    if (blurAlpha > MIN_ALPHA_THRESHOLD && hasFrozenBitmap && frozenBitmapToDraw != null) {
+                    val bitmapToBlur = if (isTargetFrozen) frozenBitmapToDraw else (delayedFrame ?: frozenBitmapToDraw)
+                    if (blurAlpha > MIN_ALPHA_THRESHOLD && bitmapToBlur != null && !bitmapToBlur.isRecycled) {
                         val intDw = dw.roundToInt().coerceAtLeast(1)
                         val intDh = dh.roundToInt().coerceAtLeast(1)
                         val renderNode =
@@ -626,7 +655,7 @@ internal class MultiCutoutContainer(
                                 val node =
                                     cutoutRenderNodes.getOrPut(cutout.id) { RenderNode("CutoutBlur_${cutout.id}") }
                                 val needsRecord =
-                                    cutoutRenderNodeBitmaps[cutout.id] !== frozenBitmapToDraw ||
+                                    cutoutRenderNodeBitmaps[cutout.id] !== bitmapToBlur ||
                                         cutoutRenderNodeWidths[cutout.id] != intDw ||
                                         cutoutRenderNodeHeights[cutout.id] != intDh
 
@@ -645,8 +674,8 @@ internal class MultiCutoutContainer(
                                         frozenFramePaint.colorFilter = frozenInactiveColorFilter
                                         drawFrozenBitmapToCanvas(
                                             recCanvas,
-                                            frozenBitmapToDraw,
-                                            isCropped,
+                                            bitmapToBlur,
+                                            bitmapToBlur !== fullFrozenBitmap,
                                             dw,
                                             dh,
                                             sw,
@@ -659,7 +688,7 @@ internal class MultiCutoutContainer(
                                         frozenFramePaint.colorFilter = null
                                         node.endRecording()
                                     }
-                                    cutoutRenderNodeBitmaps[cutout.id] = frozenBitmapToDraw
+                                    cutoutRenderNodeBitmaps[cutout.id] = bitmapToBlur
                                     cutoutRenderNodeWidths[cutout.id] = intDw
                                     cutoutRenderNodeHeights[cutout.id] = intDh
                                 }
@@ -678,8 +707,8 @@ internal class MultiCutoutContainer(
                             frozenFramePaint.colorFilter = frozenInactiveColorFilter
                             drawFrozenBitmapToCanvas(
                                 canvas,
-                                frozenBitmapToDraw,
-                                isCropped,
+                                bitmapToBlur,
+                                bitmapToBlur !== fullFrozenBitmap,
                                 dw,
                                 dh,
                                 sw,

@@ -30,7 +30,35 @@ class LayoutVisualAnchorTest {
         assertEquals(DEFAULT_LAYOUT_ANCHOR_SIZE, anchor.srcWidth, EPSILON)
         assertEquals(DEFAULT_LAYOUT_ANCHOR_SIZE, anchor.srcHeight, EPSILON)
         assertEquals(DEFAULT_LAYOUT_STREAM_DELAY_FRAMES, anchor.streamDelayFrames)
+        assertEquals(DEFAULT_LOST_ANCHOR_EFFECTS, anchor.lostAnchorEffects)
+        assertTrue(anchor.hasEffect(CutoutLostAnchorEffect.FREEZE))
+        assertTrue(anchor.hasEffect(CutoutLostAnchorEffect.BLUR))
+        assertTrue(anchor.freezeCutoutsOnLoss)
         assertTrue(anchor.blurCutoutsOnLoss)
+    }
+
+    @Test
+    fun `verify withEffect and hasEffect helpers`() {
+        val anchor = LayoutVisualAnchor()
+        assertTrue(anchor.hasEffect(CutoutLostAnchorEffect.FREEZE))
+        assertTrue(anchor.hasEffect(CutoutLostAnchorEffect.BLUR))
+
+        val noFreeze = anchor.withEffect(CutoutLostAnchorEffect.FREEZE, false)
+        assertFalse(noFreeze.hasEffect(CutoutLostAnchorEffect.FREEZE))
+        assertTrue(noFreeze.hasEffect(CutoutLostAnchorEffect.BLUR))
+        assertFalse(noFreeze.freezeCutoutsOnLoss)
+        assertTrue(noFreeze.blurCutoutsOnLoss)
+
+        val noEffects = noFreeze.withEffect(CutoutLostAnchorEffect.BLUR, false)
+        assertFalse(noEffects.hasEffect(CutoutLostAnchorEffect.FREEZE))
+        assertFalse(noEffects.hasEffect(CutoutLostAnchorEffect.BLUR))
+        assertEquals(emptySet<CutoutLostAnchorEffect>(), noEffects.lostAnchorEffects)
+        assertFalse(noEffects.freezeCutoutsOnLoss)
+        assertFalse(noEffects.blurCutoutsOnLoss)
+
+        val reAdded = noEffects.withEffect(CutoutLostAnchorEffect.FREEZE, true)
+        assertTrue(reAdded.hasEffect(CutoutLostAnchorEffect.FREEZE))
+        assertFalse(reAdded.hasEffect(CutoutLostAnchorEffect.BLUR))
     }
 
     @Test
@@ -43,13 +71,14 @@ class LayoutVisualAnchorTest {
                 srcWidth = TEST_SRC_WIDTH,
                 srcHeight = TEST_SRC_HEIGHT,
                 streamDelayFrames = TEST_STREAM_DELAY,
+                lostAnchorEffects = setOf(CutoutLostAnchorEffect.FREEZE),
                 blurCutoutsOnLoss = false,
             )
 
         val serialized = json.encodeToString(original)
         assertTrue(serialized.contains("\"enabled\":true"))
         assertTrue(serialized.contains("\"streamDelayFrames\":$TEST_STREAM_DELAY"))
-        assertTrue(serialized.contains("\"blurCutoutsOnLoss\":false"))
+        assertTrue(serialized.contains("\"lostAnchorEffects\":[\"freeze\"]"))
 
         val deserialized = json.decodeFromString<LayoutVisualAnchor>(serialized)
         assertEquals(original, deserialized)
@@ -58,7 +87,29 @@ class LayoutVisualAnchorTest {
         assertEquals(TEST_SRC_WIDTH, deserialized.srcWidth, EPSILON)
         assertEquals(TEST_SRC_HEIGHT, deserialized.srcHeight, EPSILON)
         assertEquals(TEST_STREAM_DELAY, deserialized.streamDelayFrames)
-        assertFalse(deserialized.blurCutoutsOnLoss)
+        assertEquals(setOf(CutoutLostAnchorEffect.FREEZE), deserialized.lostAnchorEffects)
+        assertTrue(deserialized.hasEffect(CutoutLostAnchorEffect.FREEZE))
+        assertFalse(deserialized.hasEffect(CutoutLostAnchorEffect.BLUR))
+    }
+
+    @Test
+    fun `verify backward compatibility when deserializing legacy LayoutVisualAnchor with only blurCutoutsOnLoss`() {
+        val legacyJson =
+            """
+            {
+                "enabled": true,
+                "srcX": 0.1,
+                "srcY": 0.2,
+                "blurCutoutsOnLoss": false
+            }
+            """.trimIndent()
+
+        val parsed = json.decodeFromString<LayoutVisualAnchor>(legacyJson)
+        assertTrue(parsed.enabled)
+        assertFalse(parsed.hasEffect(CutoutLostAnchorEffect.BLUR))
+        assertTrue(parsed.hasEffect(CutoutLostAnchorEffect.FREEZE))
+        assertTrue(parsed.freezeCutoutsOnLoss)
+        assertFalse(parsed.blurCutoutsOnLoss)
     }
 
     @Test
