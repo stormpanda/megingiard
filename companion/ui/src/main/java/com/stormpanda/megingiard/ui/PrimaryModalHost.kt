@@ -105,27 +105,33 @@ fun PrimaryModalHost(
         PrimaryModalType.PROFILE_SETTINGS,
         PrimaryModalType.MACRO_TIMELINE_EDITOR,
         -> {
-            val handleEditorDismiss = {
+            val handleEditorDismissRequest: () -> Boolean = {
                 val shouldPromptReactivate =
                     AppStateManager.wasAutoSwitchDeactivatedInEditor.value &&
                         AppStateManager.companionViewMode.value != CompanionViewMode.AUTO
                 MacroPadNavState.reset()
                 if (shouldPromptReactivate) {
-                    AppLog.i(TAG, "PrimaryModalHost: editor dismissed, prompting auto switch reactivation")
+                    AppLog.i(TAG, "PrimaryModalHost: editor dismissed, immediately opening reactivate modal")
                     AppStateManager.openPrimaryModal(PrimaryModalConfig(PrimaryModalType.REACTIVATE_AUTO_SWITCH))
+                    true
                 } else {
-                    onDismiss()
+                    false
                 }
             }
 
             PrimaryOverlayContainer(
                 title = stringResource(R.string.macropad_editor_title),
                 icon = Icons.Rounded.Widgets,
-                onDismiss = handleEditorDismiss,
+                onDismiss = onDismiss,
+                onDismissRequest = handleEditorDismissRequest,
                 modifier = modifier,
             ) {
                 MacroPadEditor(
-                    onDone = handleEditorDismiss,
+                    onDone = {
+                        if (!handleEditorDismissRequest()) {
+                            onDismiss()
+                        }
+                    },
                     showTopBar = false,
                 )
             }

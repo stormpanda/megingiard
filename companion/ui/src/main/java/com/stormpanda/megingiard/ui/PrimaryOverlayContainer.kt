@@ -71,7 +71,7 @@ private val POC_CARD_CORNER = 16.dp
 private val POC_BOTTOM_CORNER_ZERO = 0.dp
 private val POC_CARD_ELEVATION = 16.dp
 private val POC_BORDER_WIDTH = 1.dp
-private const val POC_SCRIM_ALPHA = 0.2f
+private const val POC_SCRIM_ALPHA = 0.55f
 private const val POC_CARD_SURFACE_ALPHA = 0.96f
 private const val POC_HEADER_BG_ALPHA = 0.8f
 private const val POC_SUBTITLE_DOT_ALPHA = 0.5f
@@ -112,6 +112,7 @@ fun PrimaryOverlayContainer(
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
     categorySubtitle: String? = null,
+    onDismissRequest: (() -> Boolean)? = null,
     onBumperPrev: (() -> Unit)? = null,
     onBumperNext: (() -> Unit)? = null,
     actions: (@Composable RowScope.() -> Unit)? = null,
@@ -135,11 +136,14 @@ fun PrimaryOverlayContainer(
 
     val handleDismiss: () -> Unit = {
         if (isVisible) {
-            AppLog.d(TAG, "PrimaryOverlayContainer: dismissing '$title'")
-            isVisible = false
-            coroutineScope.launch {
-                delay(MODAL_OVERLAY_ANIMATION_DURATION_MS.toLong())
-                onDismiss()
+            val handledImmediately = onDismissRequest?.invoke() ?: false
+            if (!handledImmediately) {
+                AppLog.d(TAG, "PrimaryOverlayContainer: dismissing '$title'")
+                isVisible = false
+                coroutineScope.launch {
+                    delay(MODAL_OVERLAY_ANIMATION_DURATION_MS.toLong())
+                    onDismiss()
+                }
             }
         }
     }
