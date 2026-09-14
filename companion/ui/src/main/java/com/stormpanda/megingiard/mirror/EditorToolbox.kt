@@ -319,6 +319,7 @@ fun ToolboxDragHandle(
                                     keyCode == KeyEvent.KEYCODE_ENTER
                             )
                         ) {
+                            AppLog.d(TAG, "ToolboxDragHandle: toggle minimize via key (wasMinimized=$isMinimized)")
                             onToggleMinimize()
                             true
                         } else {
@@ -327,7 +328,10 @@ fun ToolboxDragHandle(
                     }.clickable(
                         interactionSource = interactionSource,
                         indication = null,
-                        onClick = onToggleMinimize,
+                        onClick = {
+                            AppLog.d(TAG, "ToolboxDragHandle: toggle minimize via click (wasMinimized=$isMinimized)")
+                            onToggleMinimize()
+                        },
                     ),
             contentAlignment = Alignment.Center,
         ) {
@@ -564,7 +568,10 @@ fun ToolboxActionCard(
     onFocusChanged: ((Boolean) -> Unit)? = null,
 ) {
     ToolboxCard(
-        onClick = onClick,
+        onClick = {
+            AppLog.d(TAG, "ToolboxActionCard '$title' clicked")
+            onClick()
+        },
         icon = icon,
         title = title,
         isDestructive = isDestructive,
@@ -683,9 +690,11 @@ fun AdjustCoordinatesCard(
     ToolboxCard(
         onClick = {
             if (isAdjusting) {
+                AppLog.d(TAG, "AdjustCoordinatesCard '$title': exit adjustment mode via click")
                 stopAdjustingImmediate()
                 isAdjusting = false
             } else {
+                AppLog.d(TAG, "AdjustCoordinatesCard '$title': enter adjustment mode")
                 isAdjusting = true
                 isR2Held = false
                 isL2Held = false
@@ -701,6 +710,7 @@ fun AdjustCoordinatesCard(
         cardFocusRequester = cardFocusRequester,
         onFocusChanged = { focused ->
             if (!focused && isAdjusting) {
+                AppLog.d(TAG, "AdjustCoordinatesCard '$title': exit adjustment mode on focus loss")
                 stopAdjustingImmediate()
                 isAdjusting = false
             }
@@ -716,6 +726,7 @@ fun AdjustCoordinatesCard(
                 onStartAdjusting = { keyCode, dirX, dirY -> startAdjusting(keyCode, dirX, dirY) },
                 onStopAdjusting = { keyCode -> stopAdjusting(keyCode) },
                 onDismissAdjustment = {
+                    AppLog.d(TAG, "AdjustCoordinatesCard '$title': exit adjustment mode via dismiss")
                     stopAdjustingImmediate()
                     isAdjusting = false
                 },
