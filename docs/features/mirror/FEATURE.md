@@ -573,14 +573,22 @@ To stabilize mirrored UI elements against fast-moving backgrounds, we support 10
 
 ### Automated HUD / UI Isolation & Hardware Transparency Mask Pipeline
 
-HUD / UI isolation is implemented via hardware-accelerated transparency mask blending:
+HUD / UI isolation is implemented via hardware-accelerated transparency mask blending and optional static asset pre-rendering:
 
 1. **Hardware-Accelerated Mask Blending (`MultiCutoutContainer.kt`, `CutoutMaskManager.kt`)**:
-   - `CutoutMaskManager` loads the cached mask PNG from `context.filesDir/cutout_masks/mask_<cutoutId>.png` and the variance map from `mask_<cutoutId>_var.bin`.
-   - In `MultiCutoutContainer`, when `cutout.hasTransparencyMask` is true, the cutout is drawn into a compositing layer (`canvas.saveLayer(...)`).
+   - `CutoutMaskManager` loads the base mask PNG from `context.filesDir/cutout_masks/mask_<cutoutId>.png`, the raw variance map from `mask_<cutoutId>_var.bin`, and the reference freeze frame from `mask_<cutoutId>_freeze.png`.
+   - In `MultiCutoutContainer`, when `cutout.hasTransparencyMask` is true and static asset mode is disabled, the cutout is drawn into a hardware compositing layer (`canvas.saveLayer(...)`).
    - The transparency mask bitmap is composited directly over the rendered cutout using `Paint` with `PorterDuff.Mode.DST_IN` and bilinear filtering (`isFilterBitmap = true`).
-   - Dynamic Translucency: `CutoutMaskManager.getMask(context, cutout.id, cutout.maskTranslucency)` caches tuned mask variants in memory keyed by `"$cutoutId:$translucency"`. When `cutout.maskTranslucency > 0`, it calls `CutoutAutoTuner.buildMask()` using the compact variance map (geometric enclosure infill + proximity halo variance relaxation) in ~3-5ms on CPU, giving instant interactive feedback as the slider is dragged.
+   - **Dynamic Translucency & Fine-Tuning**: `CutoutMaskManager.getMask(context, cutout.id, cutout.maskTranslucency, cutout.maskSensitivity, cutout.maskCavityHealing)` caches tuned mask variants in memory keyed by `"$cutoutId:$sensitivity:$translucency:$cavityHealing"`. When parameters are customized, `CutoutAutoTuner.buildMask()` generates the tuned mask dynamically from the raw variance map in ~3-5ms on CPU:
+     - **Sensitivity (`maskSensitivity`, 4..40)**: Adjusts the color variance threshold separating stationary foreground from moving background.
+     - **Translucency (`maskTranslucency`, 0..100%)**: Scales allowed variance across the entire crop without distance constraints to recover semi-transparent elements, floating sparkles, glass backplates, and glowing icons.
+     - **Cavity & Gauge Healing (`maskCavityHealing`)**: Applies morphological dilation, exterior boundary flood-fill, and erosion to bridge open brackets and preserve internal animated meters/gauges.
+     - **Sub-Pixel Alpha Matting**: Always-on trimap gradient alpha falloff along core foreground boundaries eliminates anti-aliasing artifacts and jagged edges.
+   - **Render as Static UI Asset (`cutout.renderAsStaticAsset`)**:
+     - Pre-renders a 32-bit ARGB static asset image (`CutoutMaskManager.getStaticAsset`) combining the reference freeze frame's RGB colors with the tuned transparency mask's alpha channel.
+     - Bypasses the live video stream entirely during rendering, displaying a clean, pristine UI asset with zero background motion bleed-through or compression noise.
    - Stationary UI graphics remain 100% visible and render live at 60/120 FPS with zero copy overhead, while moving background pixels become 100% transparent.
+
 ### Source Files
 
 | File                                  | Responsibility                                                                                             |
