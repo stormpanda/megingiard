@@ -122,7 +122,7 @@ internal object VisualAutoTuneCoordinator {
         isFinishRequested = false
         calibrationJob =
             scope.launch {
-                AppLog.i(TAG, "Starting Smart Cutout calibration for cutout ${cutout.id}")
+                AppLog.i(TAG, "Starting HUD/UI isolation calibration for cutout ${cutout.id}")
                 _isCalibrating.value = true
                 _calibrationType.value = CalibrationType.CUTOUT
                 _lastTunedPercent.value = null
@@ -248,7 +248,7 @@ internal object VisualAutoTuneCoordinator {
                         _lastTunedPercent.value = if (hasMask) result.transparentPercent else null
                         AppLog.i(
                             TAG,
-                            "Smart Cutout mask calibration completed: hasMask=$hasMask, transparentPct=${result.transparentPercent}%, summary=${result.summary}",
+                            "HUD/UI isolation mask calibration completed: hasMask=$hasMask, transparentPct=${result.transparentPercent}%, summary=${result.summary}",
                         )
                         onComplete?.invoke(updatedCutout, result)
                     } else {

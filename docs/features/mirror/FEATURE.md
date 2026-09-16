@@ -163,25 +163,25 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - The toggle button MUST look like the other buttons, switch between a rectangle and circle icon, and use the same active accent color in both states.
 - The Aspect Ratio lock button MUST also be updated to use the active accent color in both states.
 
-### FR-M17: Smart Cutouts (Automated UI Isolation & Translucency Recovery)
+### FR-M17: HUD / UI Isolation & Translucency Recovery
 
 - The user MUST be able to configure advanced cutout features on a per-cutout level in the **Advanced Cutout Settings** sub-page (`CutoutAdvancedSettingsSubPageContent`), accessed via an action card placed directly below Touch Projection in `CutoutSettingsSubPageContent`.
-- **Smart Cutout Concept:**
-  - A Smart Cutout isolates on-screen UI elements (minimaps, touch controls, meters, dials, widgets) from moving 3D background scenery and composites them with clean transparency over the companion display.
-  - Converting a cutout to a Smart Cutout automatically enables **Transparent Background** (`hasTransparencyMask = true`) as core default behavior.
+- **HUD / UI Isolation Concept:**
+  - Isolates stationary on-screen UI elements (minimaps, touch controls, meters, dials, widgets) from moving background scenery and composites them with clean transparency over the companion display.
+  - Converting a cutout via **Isolate HUD / UI Elements** automatically enables **Transparent Background** (`hasTransparencyMask = true`) as core default behavior.
 - **Conversion & Calibration (`VisualAutoTuneCoordinator`, `CutoutAutoTuner`, `CutoutMaskManager`)**:
   - Tapping this card begins an interactive calibration sampling cycle at native top-screen resolution (1920x1080).
   - **Dual-Screen Overlay Suspension & Gamepad Freedom:** When calibration begins, `VisualAutoTuneCoordinator` automatically suspends and dismisses the primary modal overlay on Display 0 via `AppStateManager.suspendCurrentAndDismiss()`, unfreezing live mirror capture (`ScreenCaptureManager.setFrozen(false)`) and suppressing any active top-screen modal dim scrim. This leaves the primary screen 100% unobstructed, responsive to gamepad and touch inputs, and running natively at 120Hz so the user can freely move and rotate the camera in-game.
   - **Secondary Companion Display Sheet (`AutoTuneCalibrationSheet`):** While Display 0 is unobstructed, Display 4 renders an interactive companion calibration sheet over the live video stream featuring a pulsing accent dot, live status badge ("Sampling..." or "%d frames"), live dynamic transparency preview over a checkerboard background showing dynamic background pixels turning transparent in real time as the player moves in-game, an actionable guidance prompt, an Outlined **[ Cancel ]** button, and an enabled **[ Finish ]** button allowing the user to judge isolation quality and conclude calibration when satisfied.
-  - **Pixel-Level Color Change Tracking & High-Definition Sampling:** For every pixel in the cutout crop, the engine tracks channel min/max ($R, G, B$) across time via `CalibrationPreviewTracker`. Moving 3D scenery is identified and marked transparent; stationary UI graphics remain opaque.
+  - **Pixel-Level Color Change Tracking & High-Definition Sampling:** For every pixel in the cutout crop, the engine tracks channel min/max ($R, G, B$) across time via `CalibrationPreviewTracker`. Moving scenery is identified and marked transparent; stationary UI graphics remain opaque.
   - **Morphological Despeckling & Gaussian Anti-Aliasing:** Isolated noise specks are eliminated via morphological opening, followed by a 2-pass separable Gaussian blur (`[1, 2, 1] / 4`) producing smooth, anti-aliased edges with zero color fringing.
   - **Pristine Reference Frame:** Saves the full-res reference frame (`mask_<cutoutId>_freeze.png`) for high-fidelity rendering.
   - **Automated Commit & Mask Persistence:** The generated mask bitmap, variance map, and freeze frame are saved to disk under `context.filesDir/cutout_masks/`. The cutout is saved with `hasTransparencyMask = true`, `maskFeathering = 0`, and `maskTranslucency = 0`.
 - **Advanced Cutout Controls (Calibrated State):**
   - **Cutout Translucency Slider:** A dedicated slider (`0%` / Off to `100%`, step `5%`) to recover semi-transparent glass panels, buttons, and dials over changing scenery using 2D cavity flood-fill and halo proximity relaxation.
   - **Edge Feathering Slider:** A dedicated slider (`0` to `10 px`, default `0 px` / Off) applying outward Euclidean edge dilation with distance-based linear opacity falloff to restore clipped anti-aliased borders and glows.
-  - **Re-Calibrate Smart Cutout:** An action card allowing the user to re-sample screen frames to refresh the mask and freeze frame.
-  - **Remove Smart Cutout:** A two-step destructive confirmation card that deletes calibration files from disk and reverts the cutout back to a standard live rectangular/circular mirror cutout (`hasTransparencyMask = false`).
+  - **Re-Calibrate HUD / UI Mask:** An action card allowing the user to re-sample screen frames to refresh the mask and freeze frame.
+  - **Remove HUD / UI Isolation:** A two-step destructive confirmation card that deletes calibration files from disk and reverts the cutout back to a standard live rectangular/circular mirror cutout (`hasTransparencyMask = false`).
 - Mask state is persisted per-cutout in `ScreenCutout` (`hasTransparencyMask: Boolean`, `maskFeathering: Int = 0`, `maskTranslucency: Int = 0`).
 
 ### FR-M18: Automatic Layout Switching & Layout-Level Visual Reference Anchors
@@ -199,7 +199,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
   - Cutouts mirroring top-screen UI elements (e.g. minimaps, quest widgets, sub-screens, dials) frequently disappear or change whenever the layout's intended content is not being shown on screen.
   - Instead of configuring redundant anchors per cutout, visual anchoring is configured once per layout in `PadLayout.visualAnchor` (`LayoutVisualAnchor`).
   - When the layout's visual reference anchor is evaluated by `AnchorPresenceManager`, the resulting presence state (`PRESENT` vs. `LOST`) is applied across all cutouts belonging to the active layout simultaneously.
-  - Advanced Cutout Settings (`CutoutAdvancedSettingsSubPageContent`) is streamlined to focus strictly on **Foreground UI / Background Separation** (Smart Cutout background mask calibration, translucency slider, feathering slider, and mask removal).
+  - Advanced Cutout Settings (`CutoutAdvancedSettingsSubPageContent`) is streamlined to focus strictly on **Foreground UI / Background Separation** (HUD / UI background mask calibration, translucency slider, feathering slider, and mask removal).
 - **Top-Screen Anchor Positioning (`AnchorSelectorOverlay`):**
   - Tapping **[ Position Reference Anchor ]** atomically suspends the current editor modal (`AppStateManager.suspendCurrentAndOpen(...)`) and launches `AnchorSelectorOverlay` on Display 0 via `PrimaryModalType.ANCHOR_SELECTOR` with `PrimaryModalPayload.AnchorSelector(layoutId = layout.id)`. Confirming or dismissing the overlay automatically resumes the suspended modal (`AppStateManager.resumeSuspended()`) back to the exact subpage without intermediate window destruction.
   - Features semi-transparent scrims, an accent-colored bounding box with a clean interior, center 2D touch drag, 4 directional edge handles (top, bottom, left, right), and a reusable vertical controller toolbox (`ToolboxContainer`, `AdjustCoordinatesCard`, `ToolboxActionCard`) for 2D gamepad navigation (utilizing `calculateResizedBounds` for symmetrical alternating-border scaling and matching D-pad vertical scaling: UP to expand, DOWN to shrink) and confirmation.
@@ -207,7 +207,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - **Layout Anchor Calibration (`VisualAutoTuneCoordinator`):**
   - Tapping **[ Calibrate Reference Anchor ]** samples strictly the layout's visual anchor bounding box on Display 0 at native resolution (1920x1080) with live dynamic transparency preview on Display 4 while leaving the primary screen completely unobstructed and playable at 120Hz.
   - Operates on any layout regardless of whether mirroring cutouts have been added: `EmbeddedMirrorView` mounts whenever screen capture is active (`ScreenCaptureManager.isCapturing == true`), maintaining active `MasterSurfaceRegistry` registration and `MirrorFrameSampler` live frame feeding even on 0-cutout layouts.
-  - On Display 4, `AutoTuneCalibrationSheet` renders a live preview of the anchor crop against a transparency checkerboard. Moving 3D scenery turns transparent in real time as the user rotates the camera or moves in-game, while stationary reference graphics remain sharp and opaque.
+  - On Display 4, `AutoTuneCalibrationSheet` renders a live preview of the anchor crop against a transparency checkerboard. Moving scenery turns transparent in real time as the user rotates the camera or moves in-game, while stationary reference graphics remain sharp and opaque.
   - The fixed 6-second timer is removed; the user evaluates isolation quality in the preview and taps **[ Finish ]** (enabled once $\ge 5$ frames are sampled) to commit the calibration, or **[ Cancel ]** to abort.
   - `CutoutAutoTuner.analyze` extracts stable, stationary anchor pixels regardless of background motion (static menus like inventories or character details produce zero-variance stationary reference points), persisting `VisualAnchorSignature` to disk under `context.filesDir/cutout_masks/layout_anchor_<layoutId>_anchor.json`.
   - The layout is saved with `layout.visualAnchor.enabled = true`.
@@ -569,9 +569,9 @@ To stabilize mirrored UI elements against fast-moving backgrounds, we support 10
 3. **Temporal FBO Blending (>0%)**:
    When motion smoothing is active (e.g. 75%, 80%, 85%), `GpuMotionSmoother` blends incoming OES frames with previous frame textures inside GPU VRAM using an OpenGL ES 2.0 ping-pong FBO pipeline before outputting the smoothed result to `masterSurface`.
 
-### Automated Smart Cutout Isolation & Hardware Transparency Mask Pipeline
+### Automated HUD / UI Isolation & Hardware Transparency Mask Pipeline
 
-Smart cutout isolation is implemented via hardware-accelerated transparency mask blending:
+HUD / UI isolation is implemented via hardware-accelerated transparency mask blending:
 
 1. **Hardware-Accelerated Mask Blending (`MultiCutoutContainer.kt`, `CutoutMaskManager.kt`)**:
    - `CutoutMaskManager` loads the cached mask PNG from `context.filesDir/cutout_masks/mask_<cutoutId>.png` and the variance map from `mask_<cutoutId>_var.bin`.

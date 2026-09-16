@@ -298,7 +298,7 @@ internal fun CutoutSettingsSubPageContent(
         )
     }
 
-    // 4. Advanced Cutout Settings (Smart Cutout)
+    // 4. Advanced Cutout Settings (HUD / UI Isolation)
     GamepadActionCard(
         title = stringResource(R.string.settings_cutout_advanced_title),
         description = stringResource(R.string.settings_cutout_advanced_desc),
