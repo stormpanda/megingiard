@@ -88,13 +88,14 @@ private fun <T> ScrollableSelectionRow(
     onItemSelected: (T) -> Unit,
 ) {
     val listState = rememberLazyListState()
+    val selectedIndex =
+        remember(selectedId, items) {
+            if (selectedId != null) items.indexOfFirst { itemId(it) == selectedId } else -1
+        }
 
-    LaunchedEffect(selectedId, items) {
-        if (selectedId != null) {
-            val index = items.indexOfFirst { itemId(it) == selectedId }
-            if (index >= 0 && index != listState.firstVisibleItemIndex) {
-                listState.scrollToItem(index)
-            }
+    LaunchedEffect(selectedIndex) {
+        if (selectedIndex > 0 && selectedIndex != listState.firstVisibleItemIndex) {
+            listState.scrollToItem(selectedIndex)
         }
     }
 

@@ -560,4 +560,62 @@ class CutoutAutoTunerTest {
         val transitionAlpha = (mask[3 * size + 5] ushr 24) and 0xFF
         assertTrue("Transition pixel should have continuous alpha: $transitionAlpha", transitionAlpha in 50..240)
     }
+
+    @Test
+    fun `analyze generates referenceColorFrame with temporal average colors`() {
+        val size = 5
+        val count = size * size
+        val frames =
+            listOf(
+                IntArray(count) { colorArgb(100, 50, 200) },
+                IntArray(count) { colorArgb(120, 70, 220) },
+                IntArray(count) { colorArgb(100, 50, 200) },
+                IntArray(count) { colorArgb(120, 70, 220) },
+            )
+
+        val result = CutoutAutoTuner.analyze(frames, size, size)
+        val refFrame = result.referenceColorFrame
+        assertTrue("referenceColorFrame must not be null", refFrame != null)
+        assertEquals(count, refFrame!!.size)
+
+        // Average of (100, 50, 200) and (120, 70, 220) is (110, 60, 210)
+        val pixel = refFrame[0]
+        val r = (pixel shr 16) and 0xFF
+        val g = (pixel shr 8) and 0xFF
+        val b = pixel and 0xFF
+        val a = (pixel ushr 24) and 0xFF
+
+        assertEquals(255, a)
+        assertEquals(110, r)
+        assertEquals(60, g)
+        assertEquals(210, b)
+    }
+
+    @Test
+    fun `buildStaticAsset combines reference RGB with mask alpha correctly`() {
+        val size = 4
+        val count = size * size
+        val baseRgb = IntArray(count) { colorArgb(255, 215, 0) } // Gold
+        val maskAlpha = IntArray(count)
+
+        // Pixel 0: Full opaque (alpha = 255)
+        maskAlpha[0] = (255 shl 24) or 0xFFFFFF
+        // Pixel 1: Partial alpha (alpha = 150)
+        maskAlpha[1] = (150 shl 24) or 0xFFFFFF
+        // Pixel 2: Transparent (alpha = 0)
+        maskAlpha[2] = 0x00000000
+
+        val staticAsset = CutoutAutoTuner.buildStaticAsset(baseRgb, maskAlpha, size, size)
+        assertEquals(count, staticAsset.size)
+
+        // Pixel 0: Gold with 255 alpha
+        assertEquals((255 shl 24) or (255 shl 16) or (215 shl 8) or 0, staticAsset[0])
+
+        // Pixel 1: Gold with 150 alpha
+        assertEquals((150 shl 24) or (255 shl 16) or (215 shl 8) or 0, staticAsset[1])
+
+        // Pixel 2: Fully transparent
+        assertEquals(MASK_PIXEL_TRANSPARENT, staticAsset[2])
+    }
 }
+

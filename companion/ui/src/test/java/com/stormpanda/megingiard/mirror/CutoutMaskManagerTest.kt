@@ -262,4 +262,66 @@ class CutoutMaskManagerTest {
         CutoutMaskManager.deleteLayoutAnchorSignature(context, sourceId)
         CutoutMaskManager.deleteLayoutAnchorSignature(context, targetId)
     }
+
+    @Test
+    fun `getStaticAsset generates and caches 32-bit ARGB bitmap with freeze frame RGB and tuned mask alpha`() {
+        val context = RuntimeEnvironment.getApplication()
+        val cutoutId = "test_static_asset_cutout"
+        val width = 10
+        val height = 10
+        val count = width * height
+
+        // Freeze frame: Red square (0xFFFF0000)
+        val freezeBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                freezeBitmap.setPixel(x, y, 0xFFFF0000.toInt())
+            }
+        }
+
+        // Base mask: top half opaque white, bottom half transparent
+        val maskBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                if (y < height / 2) {
+                    maskBitmap.setPixel(x, y, 0xFFFFFFFF.toInt())
+                } else {
+                    maskBitmap.setPixel(x, y, 0x00000000)
+                }
+            }
+        }
+
+        // Variance map: top half variance 0 (stays opaque), bottom half variance 100 (becomes transparent at low translucency)
+        val varMap = ByteArray(count) { i -> if (i < count / 2) 0.toByte() else 100.toByte() }
+
+        CutoutMaskManager.saveMask(
+            context = context,
+            cutoutId = cutoutId,
+            bitmap = maskBitmap,
+            varianceMap = varMap,
+            freezeFrame = freezeBitmap,
+        )
+
+        val staticAsset =
+            CutoutMaskManager.getStaticAsset(
+                context = context,
+                cutoutId = cutoutId,
+                translucency = 0,
+                sensitivity = 14,
+            )
+        assertNotNull(staticAsset)
+        assertEquals(width, staticAsset!!.width)
+        assertEquals(height, staticAsset.height)
+
+        // Top pixel (0, 0) should be Red with 255 alpha (0xFFFF0000)
+        assertEquals(0xFFFF0000.toInt(), staticAsset.getPixel(0, 0))
+
+        // Bottom pixel (5, 8) should be fully transparent (0x00000000)
+        assertEquals(0x00000000, staticAsset.getPixel(5, 8))
+
+        // Cleanup
+        CutoutMaskManager.deleteMask(context, cutoutId)
+        assertNull(CutoutMaskManager.getStaticAsset(context, cutoutId))
+    }
 }
+

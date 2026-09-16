@@ -183,9 +183,10 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
   - **Edge Feathering Slider:** A dedicated slider (`0` to `10 px`, default `0 px` / Off) applying outward Euclidean edge dilation with distance-based linear opacity falloff to restore clipped anti-aliased borders and glows.
   - **Cavity & Gauge Healing Toggle:** An optional switch (enabled by default) applying morphological dilation on solid anchors before outer flood-filling, bridging boundary gaps to keep internal minimap radars, health meters, and changing numbers solid.
   - **Sub-Pixel Alpha Matting Toggle:** An optional switch applying 3-zone continuous Trimap alpha matting to smoothly blend font curves without halos.
+  - **Render as Static UI Asset Toggle:** An optional switch allowing the cutout to bypass live video stream rendering and render the clean, pre-rendered 32-bit RGBA static asset directly. This completely eliminates moving background scenery bleed-through and video compression noise behind semi-transparent elements (e.g. sparkles, decorative frames, touch buttons).
   - **Re-Calibrate HUD / UI Mask:** An action card allowing the user to re-sample screen frames to refresh the mask and freeze frame.
   - **Remove HUD / UI Isolation:** A two-step destructive confirmation card that deletes calibration files from disk and reverts the cutout back to a standard live rectangular/circular mirror cutout (`hasTransparencyMask = false`).
-- Mask state is persisted per-cutout in `ScreenCutout` (`hasTransparencyMask: Boolean`, `maskFeathering: Int = 0`, `maskTranslucency: Int = 0`, `maskSensitivity: Int = 14`, `maskCavityHealing: Boolean = true`, `maskAlphaMatting: Boolean = false`).
+- Mask state is persisted per-cutout in `ScreenCutout` (`hasTransparencyMask: Boolean`, `maskFeathering: Int = 0`, `maskTranslucency: Int = 0`, `maskSensitivity: Int = 14`, `maskCavityHealing: Boolean = true`, `maskAlphaMatting: Boolean = false`, `renderAsStaticAsset: Boolean = false`).
 
 ### FR-M18: Automatic Layout Switching & Layout-Level Visual Reference Anchors
 

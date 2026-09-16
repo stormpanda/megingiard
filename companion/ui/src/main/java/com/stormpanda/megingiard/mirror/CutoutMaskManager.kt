@@ -36,6 +36,7 @@ object CutoutMaskManager {
     private val varianceCache = ConcurrentHashMap<String, ByteArray>()
     private val layoutAnchorCache = ConcurrentHashMap<String, VisualAnchorSignature>()
     private val freezeFrameCache = ConcurrentHashMap<String, Bitmap>()
+    private val staticAssetCache = ConcurrentHashMap<String, Bitmap>()
     private val maskExistenceCache = ConcurrentHashMap<String, Boolean>()
     private val layoutAnchorExistenceCache = ConcurrentHashMap<String, Boolean>()
 
@@ -116,6 +117,72 @@ object CutoutMaskManager {
         } catch (e: Exception) {
             AppLog.e(TAG, "Failed to generate tuned mask for cutout $cutoutId", e)
             baseBitmap
+        }
+    }
+
+    /**
+     * Retrieves a pre-rendered 32-bit ARGB static asset bitmap for [cutoutId] combining the reference
+     * freeze frame's RGB colors with the tuned transparency mask's alpha channel.
+     *
+     * Used when [ScreenCutout.renderAsStaticAsset] is enabled to render a completely static HUD element
+     * without live stream background motion bleed-through.
+     */
+    fun getStaticAsset(
+        context: Context,
+        cutoutId: String,
+        translucency: Int = MIN_TRANSLUCENCY,
+        featheringPx: Int = MIN_FEATHERING_PX,
+        sensitivity: Int = DEFAULT_SENSITIVITY,
+        cavityHealing: Boolean = true,
+        alphaMatting: Boolean = false,
+    ): Bitmap? {
+        val clampedTranslucency = translucency.coerceIn(MIN_TRANSLUCENCY, MAX_TRANSLUCENCY)
+        val clampedFeathering = featheringPx.coerceIn(MIN_FEATHERING_PX, MAX_FEATHERING_PX)
+        val clampedSensitivity = sensitivity.coerceIn(MIN_SENSITIVITY, MAX_SENSITIVITY)
+
+        val cacheKey =
+            "$cutoutId:static:$clampedSensitivity:$clampedTranslucency:$clampedFeathering:$cavityHealing:$alphaMatting"
+        staticAssetCache[cacheKey]?.let { cached ->
+            if (!cached.isRecycled) return cached
+            staticAssetCache.remove(cacheKey)
+        }
+
+        val freezeFrame = getFreezeFrame(context, cutoutId) ?: return null
+        val maskBitmap =
+            getMask(
+                context = context,
+                cutoutId = cutoutId,
+                translucency = clampedTranslucency,
+                featheringPx = clampedFeathering,
+                sensitivity = clampedSensitivity,
+                cavityHealing = cavityHealing,
+                alphaMatting = alphaMatting,
+            ) ?: return null
+
+        val width = freezeFrame.width
+        val height = freezeFrame.height
+        if (maskBitmap.width != width || maskBitmap.height != height) {
+            return null
+        }
+
+        return try {
+            val basePixels = IntArray(width * height)
+            freezeFrame.getPixels(basePixels, 0, width, 0, 0, width, height)
+
+            val maskPixels = IntArray(width * height)
+            maskBitmap.getPixels(maskPixels, 0, width, 0, 0, width, height)
+
+            val staticPixels = CutoutAutoTuner.buildStaticAsset(basePixels, maskPixels, width, height)
+            val staticBitmap = Bitmap.createBitmap(staticPixels, width, height, Bitmap.Config.ARGB_8888)
+            staticAssetCache[cacheKey] = staticBitmap
+            AppLog.d(
+                TAG,
+                "Generated tuned static asset (s=$clampedSensitivity, t=$clampedTranslucency, f=$clampedFeathering px) for cutout $cutoutId (${width}x$height)",
+            )
+            staticBitmap
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Failed to generate static asset for cutout $cutoutId", e)
+            null
         }
     }
 
@@ -314,6 +381,12 @@ object CutoutMaskManager {
         val keysToRemove = tunedMaskCache.keys.filter { it.startsWith(prefix) }
         for (key in keysToRemove) {
             tunedMaskCache.remove(key)?.let {
+                if (!it.isRecycled) it.recycle()
+            }
+        }
+        val staticKeysToRemove = staticAssetCache.keys.filter { it.startsWith(prefix) }
+        for (key in staticKeysToRemove) {
+            staticAssetCache.remove(key)?.let {
                 if (!it.isRecycled) it.recycle()
             }
         }

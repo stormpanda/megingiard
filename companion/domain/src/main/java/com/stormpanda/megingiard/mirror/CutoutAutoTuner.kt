@@ -54,6 +54,7 @@ private const val HALF_PIXEL_OFFSET = 0.5f
  * @param summary Human-readable summary of the detection result for UI toasts and status.
  * @param varianceMap Raw per-pixel maximum color variation byte map used for dynamic translucency tuning.
  * @param anchorSignature Spatially distributed anchor sample points used for real-time presence detection.
+ * @param referenceColorFrame Clean temporal average RGB frame calculated across all calibration samples.
  */
 data class AutoTuneResult(
     val maskPixels: IntArray? = null,
@@ -64,6 +65,7 @@ data class AutoTuneResult(
     val summary: String = "",
     val varianceMap: ByteArray? = null,
     val anchorSignature: VisualAnchorSignature? = null,
+    val referenceColorFrame: IntArray? = null,
 )
 
 /**
@@ -96,13 +98,17 @@ object CutoutAutoTuner {
 
         val pixelCount = width * height
 
-        // 1. Track per-pixel channel min and max across all sampled frames
+        // 1. Track per-pixel channel min, max, and sum across all sampled frames
         val minR = IntArray(pixelCount) { 255 }
         val maxR = IntArray(pixelCount) { 0 }
         val minG = IntArray(pixelCount) { 255 }
         val maxG = IntArray(pixelCount) { 0 }
         val minB = IntArray(pixelCount) { 255 }
         val maxB = IntArray(pixelCount) { 0 }
+
+        val sumR = IntArray(pixelCount)
+        val sumG = IntArray(pixelCount)
+        val sumB = IntArray(pixelCount)
 
         for (frame in frames) {
             for (i in 0 until pixelCount) {
@@ -111,6 +117,10 @@ object CutoutAutoTuner {
                 val g = (rgb shr SHIFT_GREEN) and COLOR_BYTE_MASK
                 val b = rgb and COLOR_BYTE_MASK
 
+                sumR[i] += r
+                sumG[i] += g
+                sumB[i] += b
+
                 if (r < minR[i]) minR[i] = r
                 if (r > maxR[i]) maxR[i] = r
                 if (g < minG[i]) minG[i] = g
@@ -118,6 +128,15 @@ object CutoutAutoTuner {
                 if (b < minB[i]) minB[i] = b
                 if (b > maxB[i]) maxB[i] = b
             }
+        }
+
+        val frameCount = frames.size
+        val referenceColorFrame = IntArray(pixelCount)
+        for (i in 0 until pixelCount) {
+            val avgR = (sumR[i] / frameCount).coerceIn(0, 255)
+            val avgG = (sumG[i] / frameCount).coerceIn(0, 255)
+            val avgB = (sumB[i] / frameCount).coerceIn(0, 255)
+            referenceColorFrame[i] = (FULL_ALPHA_BYTE shl ALPHA_SHIFT) or (avgR shl SHIFT_RED) or (avgG shl SHIFT_GREEN) or avgB
         }
 
         // 2. Identify which pixels changed color and capture per-pixel variance map
@@ -173,6 +192,7 @@ object CutoutAutoTuner {
                 summary = "Static scene detected: No motion observed. (Tip: Move in-game during tuning).",
                 varianceMap = varianceMap,
                 anchorSignature = signature,
+                referenceColorFrame = referenceColorFrame,
             )
         }
 
@@ -210,6 +230,7 @@ object CutoutAutoTuner {
             summary = "Tuned: $finalTransparentPct% background made transparent.",
             varianceMap = varianceMap,
             anchorSignature = signature,
+            referenceColorFrame = referenceColorFrame,
         )
     }
 
@@ -281,6 +302,36 @@ object CutoutAutoTuner {
 
         AppLog.d(TAG, "Extracted ${points.size} anchor signature points for cutout '$cutoutId' (${width}x$height)")
         return VisualAnchorSignature(cutoutId, points)
+    }
+
+    /**
+     * Combines an opaque reference RGB frame ([baseRgbFrame]) with a computed transparency mask ([maskAlphaPixels])
+     * of size [width] x [height], producing a 32-bit ARGB pre-rendered static asset image.
+     *
+     * Pixels with alpha == 0 become fully transparent (0x00000000).
+     */
+    fun buildStaticAsset(
+        baseRgbFrame: IntArray,
+        maskAlphaPixels: IntArray,
+        width: Int,
+        height: Int,
+    ): IntArray {
+        val pixelCount = width * height
+        if (baseRgbFrame.size != pixelCount || maskAlphaPixels.size != pixelCount || width <= 0 || height <= 0) {
+            return IntArray(0)
+        }
+
+        val result = IntArray(pixelCount)
+        for (i in 0 until pixelCount) {
+            val alpha = (maskAlphaPixels[i] ushr ALPHA_SHIFT) and COLOR_BYTE_MASK
+            if (alpha == 0) {
+                result[i] = MASK_PIXEL_TRANSPARENT
+            } else {
+                val rgb = baseRgbFrame[i] and RGB_WHITE_MASK
+                result[i] = (alpha shl ALPHA_SHIFT) or rgb
+            }
+        }
+        return result
     }
 
     /**

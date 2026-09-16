@@ -681,6 +681,8 @@ Open Settings to create a layout.</string>
     <string name="settings_cutout_cavity_healing_desc">自動橋接邊界缺口，保持內部動態小地圖、血條與變動數字完整實心。</string>
     <string name="settings_cutout_alpha_matting_title">次像素 Alpha 邊緣融合</string>
     <string name="settings_cutout_alpha_matting_desc">套用連續邊緣遮罩融合，使字體與圖標邊緣平滑無光暈。</string>
+    <string name="settings_cutout_render_static_title">作為靜態 UI 元件渲染</string>
+    <string name="settings_cutout_render_static_desc">將隔離的 UI 顯示為清晰的靜態圖形，徹底消除背景動態穿透與視訊壓縮雜訊。</string>
     <string name="settings_cutout_stream_delay_title">畫面延遲</string>
     <string name="settings_cutout_stream_delay_desc">將切角視訊延遲 N 幀，以便在內容變更前乾淨地套用缺少凍結與模糊</string>
     <string name="settings_cutout_stream_delay_off">0 幀 (即時)</string>

@@ -576,8 +576,27 @@ internal class MultiCutoutContainer(
                             null
                         }
 
+                    val staticAssetBitmap =
+                        if (cutout.renderAsStaticAsset && hasTransparencyMask) {
+                            CutoutMaskManager.getStaticAsset(
+                                context = context,
+                                cutoutId = cutout.id,
+                                translucency = cutout.maskTranslucency,
+                                featheringPx = cutout.maskFeathering,
+                                sensitivity = cutout.maskSensitivity,
+                                cavityHealing = cutout.maskCavityHealing,
+                                alphaMatting = cutout.maskAlphaMatting,
+                            )
+                        } else {
+                            null
+                        }
+                    val isStaticAssetDrawn = staticAssetBitmap != null && !staticAssetBitmap.isRecycled
+
                     // 1. Base Layer
-                    if (isTargetFrozen && hasFrozenBitmap && frozenBitmapToDraw != null) {
+                    if (isStaticAssetDrawn) {
+                        cutoutDestRect.set(0f, 0f, dw, dh)
+                        canvas.drawBitmap(staticAssetBitmap!!, null, cutoutDestRect, frozenFramePaint)
+                    } else if (isTargetFrozen && hasFrozenBitmap && frozenBitmapToDraw != null) {
                         // Freeze active: render sharp frozen frame base layer
                         // (Live video feed is completely cut off, preventing video flicker/leakage during content transitions)
                         if (blurAlpha < FULL_ALPHA_FLOAT) {
@@ -647,7 +666,7 @@ internal class MultiCutoutContainer(
 
                     // 2. Top Frosted Blur Layer (8px blur, opacity = blurAlpha)
                     val bitmapToBlur = if (isTargetFrozen) frozenBitmapToDraw else (delayedFrame ?: frozenBitmapToDraw)
-                    if (blurAlpha > MIN_ALPHA_THRESHOLD && bitmapToBlur != null && !bitmapToBlur.isRecycled) {
+                    if (!isStaticAssetDrawn && blurAlpha > MIN_ALPHA_THRESHOLD && bitmapToBlur != null && !bitmapToBlur.isRecycled) {
                         val intDw = dw.roundToInt().coerceAtLeast(1)
                         val intDh = dh.roundToInt().coerceAtLeast(1)
                         val renderNode =
@@ -786,7 +805,7 @@ internal class MultiCutoutContainer(
                         blendPaint.shader = null
                     }
 
-                    if (hasTransparencyMask) {
+                    if (hasTransparencyMask && !isStaticAssetDrawn) {
                         val maskBitmap =
                             CutoutMaskManager.getMask(
                                 context = context,

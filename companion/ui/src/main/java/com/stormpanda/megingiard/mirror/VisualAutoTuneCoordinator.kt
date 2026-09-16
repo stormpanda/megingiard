@@ -221,9 +221,12 @@ internal object VisualAutoTuneCoordinator {
                                     result.maskHeight,
                                     Bitmap.Config.ARGB_8888,
                                 )
+                            val refColorFrame = result.referenceColorFrame
                             val freezeBitmap =
                                 cutoutFreezeBitmap
-                                    ?: if (sampledFrames.isNotEmpty()) {
+                                    ?: if (refColorFrame != null && refColorFrame.size == cropW * cropH) {
+                                        Bitmap.createBitmap(refColorFrame, cropW, cropH, Bitmap.Config.ARGB_8888)
+                                    } else if (sampledFrames.isNotEmpty()) {
                                         Bitmap.createBitmap(sampledFrames.first(), cropW, cropH, Bitmap.Config.ARGB_8888)
                                     } else {
                                         null
@@ -243,6 +246,7 @@ internal object VisualAutoTuneCoordinator {
                                 hasTransparencyMask = hasMask,
                                 maskFeathering = 0,
                                 maskTranslucency = 0,
+                                renderAsStaticAsset = false,
                             )
                         MacroPadState.updateCutout(updatedCutout)
                         _lastTunedPercent.value = if (hasMask) result.transparentPercent else null

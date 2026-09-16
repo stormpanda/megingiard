@@ -7,6 +7,7 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.FilterCenterFocus
 import androidx.compose.material.icons.rounded.Grain
+import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.Opacity
@@ -489,6 +490,18 @@ internal fun CutoutAdvancedSettingsSubPageContent(
                     onUpdateCutout(cutout.copy(maskAlphaMatting = isChecked))
                 },
             )
+
+            GamepadToggleCard(
+                title = stringResource(R.string.settings_cutout_render_static_title),
+                description = stringResource(R.string.settings_cutout_render_static_desc),
+                icon = Icons.Rounded.Image,
+                checked = cutout.renderAsStaticAsset,
+                itemKey = "cutout_${cutout.id}_render_static",
+                onCheckedChange = { isChecked ->
+                    AppLog.d(TAG, "Updating cutout ${cutout.id} renderAsStaticAsset: $isChecked")
+                    onUpdateCutout(cutout.copy(renderAsStaticAsset = isChecked))
+                },
+            )
         }
 
         // ── 3. Actions Section ──────────────────────────────────────────────
@@ -516,6 +529,7 @@ internal fun CutoutAdvancedSettingsSubPageContent(
                             hasTransparencyMask = false,
                             maskFeathering = 0,
                             maskTranslucency = 0,
+                            renderAsStaticAsset = false,
                         ),
                     )
                 },
