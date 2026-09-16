@@ -80,6 +80,7 @@ class GlobalSettingsViewModel : ViewModel() {
     val gamepadSwapFaceButtons: StateFlow<Boolean> = MacroPadSettings.gamepadSwapFaceButtons
     val kbLayout: StateFlow<KbLayout> = KeyboardSettings.kbLayout
     val kbTouchpadEnabled: StateFlow<Boolean> = KeyboardSettings.kbTouchpadEnabled
+    val kbAutoOpenOnFocus: StateFlow<Boolean> = KeyboardSettings.kbAutoOpenOnFocus
 
     // Update checks
     val autoUpdateCheckEnabled: StateFlow<Boolean> = UpdateManager.autoUpdateCheckEnabled
@@ -154,6 +155,8 @@ class GlobalSettingsViewModel : ViewModel() {
     fun setKbLayout(value: KbLayout) = KeyboardSettings.setKbLayout(value)
 
     fun setKbTouchpadEnabled(value: Boolean) = KeyboardSettings.setKbTouchpadEnabled(value)
+
+    fun setKbAutoOpenOnFocus(value: Boolean) = KeyboardSettings.setKbAutoOpenOnFocus(value)
 
     fun setAutoUpdateCheckEnabled(value: Boolean) = UpdateManager.setAutoUpdateCheckEnabled(value)
 

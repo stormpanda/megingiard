@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.Mouse
+import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -27,6 +28,7 @@ private const val TAG = "KbSettingsOverlay"
 fun KeyboardSettingsOverlay(viewModel: KeyboardViewModel = viewModel()) {
     val currentLayout by viewModel.kbLayout.collectAsStateWithLifecycle()
     val kbTouchpadEnabled by viewModel.kbTouchpadEnabled.collectAsStateWithLifecycle()
+    val kbAutoOpenOnFocus by viewModel.kbAutoOpenOnFocus.collectAsStateWithLifecycle()
 
     DisposableEffect(Unit) {
         AppLog.d(TAG, "KeyboardSettingsOverlay composed")
@@ -42,8 +44,10 @@ fun KeyboardSettingsOverlay(viewModel: KeyboardViewModel = viewModel()) {
         KeyboardSettingsCards(
             kbLayout = currentLayout,
             kbTouchpadEnabled = kbTouchpadEnabled,
+            kbAutoOpenOnFocus = kbAutoOpenOnFocus,
             onKbLayoutChange = viewModel::setKbLayout,
             onKbTouchpadEnabledChange = viewModel::setKbTouchpadEnabled,
+            onKbAutoOpenOnFocusChange = viewModel::setKbAutoOpenOnFocus,
             isFirstItem = true,
         )
     }
@@ -53,8 +57,10 @@ fun KeyboardSettingsOverlay(viewModel: KeyboardViewModel = viewModel()) {
 fun KeyboardSettingsCards(
     kbLayout: KbLayout,
     kbTouchpadEnabled: Boolean,
+    kbAutoOpenOnFocus: Boolean,
     onKbLayoutChange: (KbLayout) -> Unit,
     onKbTouchpadEnabledChange: (Boolean) -> Unit,
+    onKbAutoOpenOnFocusChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     isFirstItem: Boolean = false,
 ) {
@@ -74,5 +80,13 @@ fun KeyboardSettingsCards(
         checked = kbTouchpadEnabled,
         icon = Icons.Rounded.Mouse,
         onCheckedChange = onKbTouchpadEnabledChange,
+    )
+
+    GamepadToggleCard(
+        title = stringResource(R.string.settings_kb_auto_open_on_focus),
+        description = stringResource(R.string.settings_kb_auto_open_on_focus_desc),
+        checked = kbAutoOpenOnFocus,
+        icon = Icons.Rounded.TouchApp,
+        onCheckedChange = onKbAutoOpenOnFocusChange,
     )
 }
