@@ -100,21 +100,26 @@ fun AnchorSelectorOverlay(
     LaunchedEffect(Unit) {
         try {
             firstItemFocusRequester.requestFocus()
+            AppLog.d(TAG, "AnchorSelectorOverlay: initial focus requested")
         } catch (_: IllegalStateException) {
-            delay(ASO_INITIAL_FOCUS_DELAY_MS)
-            try {
-                firstItemFocusRequester.requestFocus()
-            } catch (_: IllegalStateException) {
-                // Focus requester not attached
-            }
+            AppLog.w(TAG, "AnchorSelectorOverlay: firstItemFocusRequester unattached on initial focus attempt")
+        }
+        delay(ASO_INITIAL_FOCUS_DELAY_MS)
+        try {
+            firstItemFocusRequester.requestFocus()
+            AppLog.d(TAG, "AnchorSelectorOverlay: post-settle focus requested")
+        } catch (_: IllegalStateException) {
+            AppLog.w(TAG, "AnchorSelectorOverlay: firstItemFocusRequester unattached after settle delay")
         }
     }
 
     LaunchedEffect(Unit) {
-        PrimaryOverlayInputBridge.focusRecoveryEvents.collect {
+        PrimaryOverlayInputBridge.focusRecoveryEvents.collect { keyCode ->
             try {
                 firstItemFocusRequester.requestFocus()
+                AppLog.d(TAG, "AnchorSelectorOverlay: focus recovered on keyCode=$keyCode")
             } catch (_: IllegalStateException) {
+                AppLog.w(TAG, "AnchorSelectorOverlay: focus requester unattached on focus recovery")
             }
         }
     }

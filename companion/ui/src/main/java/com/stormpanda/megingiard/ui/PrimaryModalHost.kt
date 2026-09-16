@@ -24,10 +24,12 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.KeyboardSettingsOverlay
+import com.stormpanda.megingiard.macropad.EditorSection
 import com.stormpanda.megingiard.macropad.MacroPadEditor
 import com.stormpanda.megingiard.macropad.MacroPadNavState
 import com.stormpanda.megingiard.mirror.AnchorSelectorOverlay
 import com.stormpanda.megingiard.mirror.CropSelectorOverlay
+import com.stormpanda.megingiard.mirror.MirrorEditorTopOverlay
 import com.stormpanda.megingiard.settings.GlobalSettingsScreen
 import com.stormpanda.megingiard.touchpad.TouchpadSettingsOverlay
 
@@ -190,6 +192,22 @@ fun PrimaryModalHost(
                     },
                 )
             }
+        }
+
+        PrimaryModalType.MIRROR_VIEWPORT_EDITOR -> {
+            val closeViewportEdit = {
+                AppStateManager.setViewportEditActive(false)
+                AppStateManager.openPrimaryModal(
+                    PrimaryModalConfig(
+                        type = PrimaryModalType.MACROPAD_EDITOR,
+                        payload = PrimaryModalPayload.MacroPad(section = EditorSection.MIRROR),
+                    ),
+                )
+            }
+            MirrorEditorTopOverlay(
+                onDone = closeViewportEdit,
+                onCancel = closeViewportEdit,
+            )
         }
     }
 }

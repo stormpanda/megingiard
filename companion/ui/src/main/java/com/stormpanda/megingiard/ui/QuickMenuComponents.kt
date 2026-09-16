@@ -92,7 +92,7 @@ private fun <T> ScrollableSelectionRow(
     LaunchedEffect(selectedId, items) {
         if (selectedId != null) {
             val index = items.indexOfFirst { itemId(it) == selectedId }
-            if (index >= 0) {
+            if (index >= 0 && index != listState.firstVisibleItemIndex) {
                 listState.animateScrollToItem(index)
             }
         }

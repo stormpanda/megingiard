@@ -189,9 +189,15 @@ fun MirrorEditorTopOverlay(
 
     val inputModeManager = LocalInputModeManager.current
     val firstItemFocusRequester = remember { FocusRequester() }
+    val addCutoutFocusRequester = remember { FocusRequester() }
     val saveFocusRequester = remember { FocusRequester() }
     val collapseButtonFocusRequester = remember { FocusRequester() }
     val bringIntoViewSpec = rememberGamepadBringIntoViewSpec(extraPadding = METO_SCROLL_EXTRA_PADDING)
+
+    val effectiveFirstItemFocusRequester =
+        remember(cutouts.isEmpty()) {
+            if (cutouts.isNotEmpty()) firstItemFocusRequester else addCutoutFocusRequester
+        }
 
     fun handleBackAction(): Boolean {
         AppLog.d(TAG, "handleBackAction: hasChanges=$hasChanges, showExitPrompt=$showExitPrompt, isMinimized=$isMinimized")
@@ -229,17 +235,19 @@ fun MirrorEditorTopOverlay(
     // Request initial focus and keyboard input mode on presentation
     LaunchedEffect(Unit) {
         inputModeManager.requestInputMode(InputMode.Keyboard)
+        val targetRequester = if (cutouts.isNotEmpty()) firstItemFocusRequester else addCutoutFocusRequester
         try {
-            firstItemFocusRequester.requestFocus()
+            targetRequester.requestFocus()
             AppLog.d(TAG, "MirrorEditorTopOverlay: initial focus requested")
         } catch (_: IllegalStateException) {
-            delay(METO_INITIAL_FOCUS_DELAY_MS)
-            try {
-                firstItemFocusRequester.requestFocus()
-                AppLog.d(TAG, "MirrorEditorTopOverlay: initial focus retry succeeded")
-            } catch (_: IllegalStateException) {
-                AppLog.w(TAG, "MirrorEditorTopOverlay: firstItemFocusRequester unattached on initial focus")
-            }
+            AppLog.w(TAG, "MirrorEditorTopOverlay: targetRequester unattached on initial focus attempt")
+        }
+        delay(METO_INITIAL_FOCUS_DELAY_MS)
+        try {
+            targetRequester.requestFocus()
+            AppLog.d(TAG, "MirrorEditorTopOverlay: post-settle focus requested")
+        } catch (_: IllegalStateException) {
+            AppLog.w(TAG, "MirrorEditorTopOverlay: targetRequester unattached after settle delay")
         }
     }
 
@@ -251,7 +259,8 @@ fun MirrorEditorTopOverlay(
                 if (showExitPrompt) {
                     saveFocusRequester.requestFocus()
                 } else {
-                    firstItemFocusRequester.requestFocus()
+                    val targetRequester = if (cutouts.isNotEmpty()) firstItemFocusRequester else addCutoutFocusRequester
+                    targetRequester.requestFocus()
                 }
                 AppLog.d(TAG, "MirrorEditorTopOverlay: focus recovered on keyCode=$keyCode")
             } catch (_: IllegalStateException) {
@@ -480,7 +489,7 @@ fun MirrorEditorTopOverlay(
 
     CompositionLocalProvider(
         LocalBringIntoViewSpec provides bringIntoViewSpec,
-        LocalFirstContentRequester provides firstItemFocusRequester,
+        LocalFirstContentRequester provides effectiveFirstItemFocusRequester,
     ) {
         Box(
             modifier =
@@ -501,7 +510,7 @@ fun MirrorEditorTopOverlay(
                 isMinimized = isMinimized,
                 onToggleMinimize = { isMinimized = !isMinimized },
                 toggleButtonFocusRequester = collapseButtonFocusRequester,
-                firstItemFocusRequester = firstItemFocusRequester,
+                firstItemFocusRequester = effectiveFirstItemFocusRequester,
             ) {
                 // Item 0: Target Cutout Carousel Selector
                 TargetCutoutCarouselCard(
@@ -584,6 +593,17 @@ fun MirrorEditorTopOverlay(
                 ToolboxActionCard(
                     title = stringResource(R.string.mirror_editor_add_cutout),
                     icon = Icons.Rounded.Add,
+                    cardFocusRequester = addCutoutFocusRequester,
+                    modifier =
+                        if (cutouts.isEmpty()) {
+                            Modifier
+                                .firstDeckItem()
+                                .focusProperties {
+                                    up = collapseButtonFocusRequester
+                                }
+                        } else {
+                            Modifier
+                        },
                     onClick = {
                         val slot = CutoutPlacementHelper.findAvailableSlot(cutouts)
                         if (slot == null) {

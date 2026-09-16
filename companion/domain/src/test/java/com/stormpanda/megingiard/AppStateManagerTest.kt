@@ -1095,6 +1095,67 @@ class AppStateManagerTest {
         }
 
     @Test
+    fun `suspendCurrentAndOpen transitions to new modal atomically without transient null`() =
+        runTest {
+            AppStateManager.closeActiveModal()
+            AppStateManager.clearSuspended()
+
+            val editorConfig = PrimaryModalConfig(type = PrimaryModalType.MACROPAD_EDITOR)
+            AppStateManager.openPrimaryModal(editorConfig)
+            assertEquals(PrimaryModalType.MACROPAD_EDITOR, AppStateManager.activePrimaryModal.value?.type)
+
+            val anchorConfig =
+                PrimaryModalConfig(
+                    type = PrimaryModalType.ANCHOR_SELECTOR,
+                    payload = PrimaryModalPayload.AnchorSelector(layoutId = "layout-1"),
+                )
+
+            AppStateManager.activePrimaryModal.test {
+                assertEquals(PrimaryModalType.MACROPAD_EDITOR, awaitItem()?.type)
+
+                AppStateManager.suspendCurrentAndOpen(anchorConfig)
+
+                val nextItem = awaitItem()
+                assertEquals(PrimaryModalType.ANCHOR_SELECTOR, nextItem?.type)
+                assertTrue(AppStateManager.hasSuspendedPrimaryModal.value)
+                assertEquals(PrimaryModalType.MACROPAD_EDITOR, AppStateManager.suspendedPrimaryModal.value?.type)
+
+                AppStateManager.closeActiveModal()
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `setViewportEditActive sets activePrimaryModal to MIRROR_VIEWPORT_EDITOR and syncs states`() =
+        runTest {
+            AppStateManager.closeActiveModal()
+
+            AppStateManager.setViewportEditActive(true)
+            assertTrue(AppStateManager.isViewportEditActive.value)
+            assertEquals(PrimaryModalType.MIRROR_VIEWPORT_EDITOR, AppStateManager.activePrimaryModal.value?.type)
+            assertEquals(CompanionSurfaceMode.VIEWPORT_EDIT, AppStateManager.companionSurfaceMode.value)
+
+            AppStateManager.setViewportEditActive(false)
+            assertFalse(AppStateManager.isViewportEditActive.value)
+            assertNull(AppStateManager.activePrimaryModal.value)
+            assertEquals(CompanionSurfaceMode.MACROPAD, AppStateManager.companionSurfaceMode.value)
+        }
+
+    @Test
+    fun `closePrimaryModal when MIRROR_VIEWPORT_EDITOR active clears isViewportEditActive`() =
+        runTest {
+            AppStateManager.closeActiveModal()
+
+            AppStateManager.setViewportEditActive(true)
+            assertTrue(AppStateManager.isViewportEditActive.value)
+            assertEquals(PrimaryModalType.MIRROR_VIEWPORT_EDITOR, AppStateManager.activePrimaryModal.value?.type)
+
+            AppStateManager.closePrimaryModal()
+            assertFalse(AppStateManager.isViewportEditActive.value)
+            assertNull(AppStateManager.activePrimaryModal.value)
+        }
+
+    @Test
     fun `setSelectedCutoutId during viewport edit automatically syncs activeCropCutoutId`() =
         runTest {
             AppStateManager.closeActiveModal()

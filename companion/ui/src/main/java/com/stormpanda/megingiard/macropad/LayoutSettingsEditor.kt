@@ -364,8 +364,7 @@ internal fun AutomaticLayoutSwitchingSubPageContent(
                 icon = Icons.Rounded.FilterCenterFocus,
                 itemKey = "layout_${layout.id}_position_anchor",
                 onClick = {
-                    AppStateManager.suspendCurrentAndDismiss()
-                    AppStateManager.openPrimaryModal(
+                    AppStateManager.suspendCurrentAndOpen(
                         PrimaryModalConfig(
                             type = PrimaryModalType.ANCHOR_SELECTOR,
                             payload = PrimaryModalPayload.AnchorSelector(layoutId = layout.id),

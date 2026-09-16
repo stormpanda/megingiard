@@ -369,7 +369,6 @@ fun MacroPadEditor(
                                                     MacroPadNavState.setStack(listOf(MacroPadSubPage.EditButtonPositions))
                                                 },
                                                 onEditMirrorLayout = {
-                                                    onDone()
                                                     AppStateManager.setViewportEditActive(true)
                                                 },
                                             )
@@ -512,7 +511,6 @@ fun MacroPadEditor(
                                                     layout = activeLayout,
                                                     accentColor = colors.accent,
                                                     onArrangeCutouts = {
-                                                        onDone()
                                                         AppStateManager.setViewportEditActive(true)
                                                     },
                                                     onOpenAdvancedSettings = {

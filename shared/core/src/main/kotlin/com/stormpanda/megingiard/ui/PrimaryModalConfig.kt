@@ -20,6 +20,7 @@ enum class PrimaryModalType {
     MACRO_TIMELINE_EDITOR,
     CROP_SELECTOR,
     ANCHOR_SELECTOR,
+    MIRROR_VIEWPORT_EDITOR,
     REACTIVATE_AUTO_SWITCH,
 }
 
@@ -27,6 +28,9 @@ enum class PrimaryModalType {
  * Optional contextual data passed when opening a primary screen modal.
  */
 sealed interface PrimaryModalPayload {
+    data class MirrorViewportEditor(
+        val cutoutId: String? = null,
+    ) : PrimaryModalPayload
     data class ButtonInspector(
         val buttonId: String,
     ) : PrimaryModalPayload

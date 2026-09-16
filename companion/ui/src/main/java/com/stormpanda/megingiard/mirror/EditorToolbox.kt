@@ -10,6 +10,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -210,6 +211,7 @@ fun ToolboxContainer(
                                     Modifier
                                 },
                             ).verticalScroll(rememberScrollState())
+                            .focusGroup()
                             .padding(horizontal = TOOLBOX_INNER_PADDING_H),
                     verticalArrangement = Arrangement.spacedBy(TOOLBOX_ITEM_SPACING),
                 ) {
