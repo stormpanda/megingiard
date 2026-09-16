@@ -487,7 +487,7 @@ class CutoutAutoTunerTest {
 
 
     @Test
-    fun `buildMask with alpha matting computes continuous sub-pixel falloff on transition boundary`() {
+    fun `buildMask always applies alpha matting to compute continuous sub-pixel falloff on transition boundary`() {
         val size = 10
         val count = size * size
         val varMap = ByteArray(count) { 100.toByte() } // default background
@@ -508,7 +508,6 @@ class CutoutAutoTunerTest {
                 width = size,
                 height = size,
                 colorChangeThreshold = 14,
-                alphaMatting = true,
                 cavityHealing = false,
             )
 

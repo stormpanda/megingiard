@@ -19,7 +19,7 @@ import org.robolectric.annotation.Config
  * Robolectric Compose UI test for [ProfileRow] and [LayoutRow] in QuickMenuComponents.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [33])
+@Config(sdk = [33], qualifiers = "w800dp-h600dp")
 class QuickMenuComponentsTest {
     @get:Rule
     val composeTestRule = createComposeRule()

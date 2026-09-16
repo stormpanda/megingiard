@@ -348,7 +348,6 @@ object CutoutAutoTuner {
         translucency: Int = MIN_TRANSLUCENCY,
         colorChangeThreshold: Int = DEFAULT_SENSITIVITY,
         cavityHealing: Boolean = false,
-        alphaMatting: Boolean = false,
     ): IntArray {
         val clampedTranslucency = translucency.coerceIn(MIN_TRANSLUCENCY, MAX_TRANSLUCENCY)
         val effectiveThreshold = colorChangeThreshold.coerceIn(MIN_SENSITIVITY, MAX_SENSITIVITY)
@@ -382,16 +381,14 @@ object CutoutAutoTuner {
             applyCavityHealing(candidateAlpha, width, height)
         }
 
-        // 3. Optional Trimap Sub-Pixel Alpha Matting
-        if (alphaMatting) {
-            applyAlphaMatting(
-                candidateAlpha = candidateAlpha,
-                varianceMap = varianceMap,
-                width = width,
-                height = height,
-                effectiveThreshold = effectiveThreshold,
-            )
-        }
+        // 3. Trimap Sub-Pixel Alpha Matting (Always on)
+        applyAlphaMatting(
+            candidateAlpha = candidateAlpha,
+            varianceMap = varianceMap,
+            width = width,
+            height = height,
+            effectiveThreshold = effectiveThreshold,
+        )
 
         // 4. Morphological Despeckle: Remove single isolated noise pixels
         val despeckled = IntArray(pixelCount)

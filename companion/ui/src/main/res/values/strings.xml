@@ -677,8 +677,6 @@ Open Settings to create a layout.</string>
     <string name="settings_cutout_features_section">Isolation Features</string>
     <string name="settings_cutout_cavity_healing_title">Cavity &amp; Gauge Healing</string>
     <string name="settings_cutout_cavity_healing_desc">Bridges boundary gaps to keep internal minimap radars, health meters, and changing numbers solid.</string>
-    <string name="settings_cutout_alpha_matting_title">Sub-Pixel Alpha Matting</string>
-    <string name="settings_cutout_alpha_matting_desc">Applies continuous edge matting to smoothly blend font curves without halos.</string>
     <string name="settings_cutout_render_static_title">Render as Static UI Asset</string>
     <string name="settings_cutout_render_static_desc">Displays the isolated UI as a clean static graphic, eliminating moving background bleed-through and video compression noise.</string>
     <string name="settings_cutout_stream_delay_title">Stream Delay</string>

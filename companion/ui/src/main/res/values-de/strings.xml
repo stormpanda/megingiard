@@ -677,8 +677,6 @@ Open Settings to create a layout.</string>
     <string name="settings_cutout_features_section">Isolierungs-Funktionen</string>
     <string name="settings_cutout_cavity_healing_title">Hohlraum- &amp; Anzeige-Schutz</string>
     <string name="settings_cutout_cavity_healing_desc">Schließt Lücken in Rahmen, damit interne Minimap-Radare, Anzeigen und wechselnde Zahlen solide bleiben.</string>
-    <string name="settings_cutout_alpha_matting_title">Sub-Pixel-Alpha-Matting</string>
-    <string name="settings_cutout_alpha_matting_desc">Wendet kontinuierliches Kanten-Matting an, um Schriftkurven ohne Farbsäume sauber zu glätten.</string>
     <string name="settings_cutout_render_static_title">Als statisches UI-Element rendern</string>
     <string name="settings_cutout_render_static_desc">Zeigt das freigestellte UI-Element als saubere statische Grafik an und verhindert das Durchscheinen von Hintergrundbewegungen sowie Videokompressionsrauschen.</string>
     <string name="settings_cutout_stream_delay_title">Stream-Verzögerung</string>

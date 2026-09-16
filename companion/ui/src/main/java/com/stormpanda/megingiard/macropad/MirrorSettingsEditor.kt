@@ -452,18 +452,6 @@ internal fun CutoutAdvancedSettingsSubPageContent(
             )
 
             GamepadToggleCard(
-                title = stringResource(R.string.settings_cutout_alpha_matting_title),
-                description = stringResource(R.string.settings_cutout_alpha_matting_desc),
-                icon = Icons.Rounded.Edit,
-                checked = cutout.maskAlphaMatting,
-                itemKey = "cutout_${cutout.id}_alpha_matting",
-                onCheckedChange = { isChecked ->
-                    AppLog.d(TAG, "Updating cutout ${cutout.id} maskAlphaMatting: $isChecked")
-                    onUpdateCutout(cutout.copy(maskAlphaMatting = isChecked))
-                },
-            )
-
-            GamepadToggleCard(
                 title = stringResource(R.string.settings_cutout_render_static_title),
                 description = stringResource(R.string.settings_cutout_render_static_desc),
                 icon = Icons.Rounded.Image,

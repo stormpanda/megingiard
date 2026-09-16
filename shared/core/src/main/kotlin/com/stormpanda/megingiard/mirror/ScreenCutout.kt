@@ -39,7 +39,6 @@ enum class AspectRatioMode {
  * @param maskTranslucency Semi-transparent foreground capture sensitivity level (0..100%), preserving dials and glows.
  * @param maskSensitivity Color variance threshold (4..40, default 14) for background detection.
  * @param maskCavityHealing Whether morphological closing bridges gaps to protect internal animated meters and widgets.
- * @param maskAlphaMatting Whether continuous sub-pixel trimap alpha matting is applied for smooth font curves.
  * @param renderAsStaticAsset Whether this isolated cutout renders as a clean pre-rendered static RGBA asset bypassing live stream.
  */
 @Serializable
@@ -66,7 +65,6 @@ data class ScreenCutout(
     val maskTranslucency: Int = 0,
     val maskSensitivity: Int = 14,
     val maskCavityHealing: Boolean = true,
-    val maskAlphaMatting: Boolean = false,
     val renderAsStaticAsset: Boolean = false,
 ) {
     companion object {

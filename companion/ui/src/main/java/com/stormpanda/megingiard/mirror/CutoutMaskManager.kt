@@ -44,11 +44,11 @@ object CutoutMaskManager {
      * Retrieves the transparency mask bitmap for [cutoutId] with optional [translucency] (0..100)
      * and [sensitivity] (4..40).
      *
-     * If [translucency] is 0, [sensitivity] is default 14, [cavityHealing] is true, and [alphaMatting] is false,
+     * If [translucency] is 0, [sensitivity] is default 14, and [cavityHealing] is true,
      * returns the base unfeathered mask.
      * When parameters are customized and a variance map is available, regenerates the mask dynamically
      * via [CutoutAutoTuner.buildMask] and caches the resulting bitmap in memory keyed by
-     * `"$cutoutId:$sensitivity:$translucency:$cavityHealing:$alphaMatting"`.
+     * `"$cutoutId:$sensitivity:$translucency:$cavityHealing"`.
      */
     fun getMask(
         context: Context,
@@ -56,21 +56,19 @@ object CutoutMaskManager {
         translucency: Int = MIN_TRANSLUCENCY,
         sensitivity: Int = DEFAULT_SENSITIVITY,
         cavityHealing: Boolean = true,
-        alphaMatting: Boolean = false,
     ): Bitmap? {
         val clampedTranslucency = translucency.coerceIn(MIN_TRANSLUCENCY, MAX_TRANSLUCENCY)
         val clampedSensitivity = sensitivity.coerceIn(MIN_SENSITIVITY, MAX_SENSITIVITY)
 
         if (clampedTranslucency == MIN_TRANSLUCENCY &&
             clampedSensitivity == DEFAULT_SENSITIVITY &&
-            cavityHealing &&
-            !alphaMatting
+            cavityHealing
         ) {
             return getBaseMask(context, cutoutId)
         }
 
         val cacheKey =
-            "$cutoutId:$clampedSensitivity:$clampedTranslucency:$cavityHealing:$alphaMatting"
+            "$cutoutId:$clampedSensitivity:$clampedTranslucency:$cavityHealing"
         tunedMaskCache[cacheKey]?.let { cached ->
             if (!cached.isRecycled) return cached
             tunedMaskCache.remove(cacheKey)
@@ -91,7 +89,6 @@ object CutoutMaskManager {
                         translucency = clampedTranslucency,
                         colorChangeThreshold = clampedSensitivity,
                         cavityHealing = cavityHealing,
-                        alphaMatting = alphaMatting,
                     )
                 } else {
                     val pixels = IntArray(width * height)
@@ -103,7 +100,7 @@ object CutoutMaskManager {
             tunedMaskCache[cacheKey] = tunedBitmap
             AppLog.d(
                 TAG,
-                "Generated tuned mask (s=$clampedSensitivity, t=$clampedTranslucency, c=$cavityHealing, a=$alphaMatting) for cutout $cutoutId (${width}x$height)",
+                "Generated tuned mask (s=$clampedSensitivity, t=$clampedTranslucency, c=$cavityHealing) for cutout $cutoutId (${width}x$height)",
             )
             tunedBitmap
         } catch (e: Exception) {
@@ -125,13 +122,12 @@ object CutoutMaskManager {
         translucency: Int = MIN_TRANSLUCENCY,
         sensitivity: Int = DEFAULT_SENSITIVITY,
         cavityHealing: Boolean = true,
-        alphaMatting: Boolean = false,
     ): Bitmap? {
         val clampedTranslucency = translucency.coerceIn(MIN_TRANSLUCENCY, MAX_TRANSLUCENCY)
         val clampedSensitivity = sensitivity.coerceIn(MIN_SENSITIVITY, MAX_SENSITIVITY)
 
         val cacheKey =
-            "$cutoutId:static:$clampedSensitivity:$clampedTranslucency:$cavityHealing:$alphaMatting"
+            "$cutoutId:static:$clampedSensitivity:$clampedTranslucency:$cavityHealing"
         staticAssetCache[cacheKey]?.let { cached ->
             if (!cached.isRecycled) return cached
             staticAssetCache.remove(cacheKey)
@@ -145,7 +141,6 @@ object CutoutMaskManager {
                 translucency = clampedTranslucency,
                 sensitivity = clampedSensitivity,
                 cavityHealing = cavityHealing,
-                alphaMatting = alphaMatting,
             ) ?: return null
 
         val width = freezeFrame.width
