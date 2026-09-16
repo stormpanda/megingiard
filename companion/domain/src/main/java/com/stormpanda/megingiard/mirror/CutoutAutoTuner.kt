@@ -35,13 +35,8 @@ const val DEFAULT_SENSITIVITY = 14
 private const val CLOSING_RADIUS = 3
 private const val TRIMAP_TRANSITION_MAX = 35
 
-private const val MIN_HALO_RADIUS = 4
-private const val MAX_HALO_RADIUS = 48
-private const val MAX_HALO_VARIANCE_BOOST = 165
-private const val ENCLOSED_BASE_THRESHOLD = 30
-private const val ENCLOSED_MAX_VARIANCE_BOOST = 120
-private const val ENCLOSED_MAX_BARRIER_BOOST = 55
-private const val MIN_PARTIAL_ALPHA = 40
+private const val MAX_TRANSLUCENT_VARIANCE = 180
+private const val MIN_TRANSLUCENT_ALPHA = 60
 
 private const val SIGNATURE_GRID_COLS = 8
 private const val SIGNATURE_GRID_ROWS = 8
@@ -292,13 +287,9 @@ object CutoutAutoTuner {
      * Builds a 2D ARGB transparency mask from a raw per-pixel [varianceMap].
      *
      * Stationary foreground pixels (variance <= [colorChangeThreshold]) form solid core anchors.
-     * When [translucency] > 0:
-     * - Geometric Enclosure Infill: Pixels enclosed within outer borders (cannot reach the outer crop
-     *   boundaries without crossing solid core pixels) have their allowed variance relaxed up to
-     *   [ENCLOSED_BASE_THRESHOLD] + [translucency] * [ENCLOSED_MAX_VARIANCE_BOOST] / 100, capturing inner dials/cavities.
-     * - Proximity Halo: Pixels within a spatial radius (4..48 px) of solid core anchors are allowed damped
-     *   variance up to [colorChangeThreshold] + [translucency] * [MAX_HALO_VARIANCE_BOOST] / 100, smoothly recovering
-     *   semi-transparent borders, starburst glows, and translucent glass panels.
+     * When [translucency] > 0, the allowed variance threshold is proportionally scaled up to
+     * [MAX_TRANSLUCENT_VARIANCE] across the entire crop without distance constraints, recovering
+     * standalone semi-transparent elements, floating sparkles, glass backplates, and glowing icons.
      *
      * Morphological despeckling and separable Gaussian anti-aliasing are applied, followed by optional
      * outward edge [featheringPx].
@@ -322,12 +313,22 @@ object CutoutAutoTuner {
         }
 
         val candidateAlpha = IntArray(pixelCount)
+        val maxAllowedVariance =
+            if (clampedTranslucency > 0) {
+                effectiveThreshold + (clampedTranslucency * (MAX_TRANSLUCENT_VARIANCE - effectiveThreshold)) / MAX_TRANSLUCENCY
+            } else {
+                effectiveThreshold
+            }
 
-        // 1. Core stationary anchors
+        // 1. Recover solid and translucent UI foreground based on sensitivity and translucency tolerance
         for (i in 0 until pixelCount) {
             val v = varianceMap[i].toInt() and COLOR_BYTE_MASK
             if (v <= effectiveThreshold) {
                 candidateAlpha[i] = FULL_ALPHA_BYTE
+            } else if (clampedTranslucency > 0 && v <= maxAllowedVariance) {
+                val falloff = 1.0f - (v - effectiveThreshold).toFloat() / (maxAllowedVariance - effectiveThreshold + 1).toFloat()
+                val partialAlpha = (falloff * (FULL_ALPHA_BYTE - MIN_TRANSLUCENT_ALPHA)).toInt() + MIN_TRANSLUCENT_ALPHA
+                candidateAlpha[i] = partialAlpha.coerceIn(0, FULL_ALPHA_BYTE)
             }
         }
 
@@ -347,144 +348,7 @@ object CutoutAutoTuner {
             )
         }
 
-        // 5. Translucency recovery (Enclosure infill & Proximity halo)
-        if (clampedTranslucency > 0) {
-            // A. Geometric Enclosure Infill: Flood fill from borders to identify exterior background.
-            val barrierThreshold =
-                effectiveThreshold + (clampedTranslucency * ENCLOSED_MAX_BARRIER_BOOST) / MAX_TRANSLUCENCY
-            val exterior = BooleanArray(pixelCount)
-            val queue = IntArray(pixelCount)
-            var head = 0
-            var tail = 0
-
-            for (x in 0 until width) {
-                val topIdx = x
-                if ((varianceMap[topIdx].toInt() and COLOR_BYTE_MASK) > barrierThreshold && !exterior[topIdx]) {
-                    exterior[topIdx] = true
-                    queue[tail++] = topIdx
-                }
-                val botIdx = (height - 1) * width + x
-                if ((varianceMap[botIdx].toInt() and COLOR_BYTE_MASK) > barrierThreshold && !exterior[botIdx]) {
-                    exterior[botIdx] = true
-                    queue[tail++] = botIdx
-                }
-            }
-            for (y in 0 until height) {
-                val leftIdx = y * width
-                if ((varianceMap[leftIdx].toInt() and COLOR_BYTE_MASK) > barrierThreshold && !exterior[leftIdx]) {
-                    exterior[leftIdx] = true
-                    queue[tail++] = leftIdx
-                }
-                val rightIdx = y * width + (width - 1)
-                if ((varianceMap[rightIdx].toInt() and COLOR_BYTE_MASK) > barrierThreshold && !exterior[rightIdx]) {
-                    exterior[rightIdx] = true
-                    queue[tail++] = rightIdx
-                }
-            }
-
-            // 4-way flood fill exterior
-            while (head < tail) {
-                val curr = queue[head++]
-                val cx = curr % width
-                val cy = curr / width
-
-                val up = (cy - 1) * width + cx
-                if (cy > 0 && !exterior[up] && (varianceMap[up].toInt() and COLOR_BYTE_MASK) > barrierThreshold) {
-                    exterior[up] = true
-                    queue[tail++] = up
-                }
-                val down = (cy + 1) * width + cx
-                if (cy < height - 1 && !exterior[down] && (varianceMap[down].toInt() and COLOR_BYTE_MASK) > barrierThreshold) {
-                    exterior[down] = true
-                    queue[tail++] = down
-                }
-                val left = cy * width + (cx - 1)
-                if (cx > 0 && !exterior[left] && (varianceMap[left].toInt() and COLOR_BYTE_MASK) > barrierThreshold) {
-                    exterior[left] = true
-                    queue[tail++] = left
-                }
-                val right = cy * width + (cx + 1)
-                if (cx < width - 1 && !exterior[right] && (varianceMap[right].toInt() and COLOR_BYTE_MASK) > barrierThreshold) {
-                    exterior[right] = true
-                    queue[tail++] = right
-                }
-            }
-
-            // Enclosed cavities receive a generous allowed variance boost proportional to translucency slider
-            val enclosedThreshold =
-                ENCLOSED_BASE_THRESHOLD + (clampedTranslucency * ENCLOSED_MAX_VARIANCE_BOOST) / MAX_TRANSLUCENCY
-            for (i in 0 until pixelCount) {
-                if (!exterior[i]) {
-                    val v = varianceMap[i].toInt() and COLOR_BYTE_MASK
-                    if (v <= enclosedThreshold) {
-                        candidateAlpha[i] = FULL_ALPHA_BYTE
-                    }
-                }
-            }
-
-            // B. Proximity Halo: Radial distance transform around solid core pixels
-            val haloRadius = MIN_HALO_RADIUS + (clampedTranslucency * (MAX_HALO_RADIUS - MIN_HALO_RADIUS)) / MAX_TRANSLUCENCY
-            val haloVariance = (clampedTranslucency * MAX_HALO_VARIANCE_BOOST) / MAX_TRANSLUCENCY
-
-            val dist = IntArray(pixelCount) { Int.MAX_VALUE }
-            var distHead = 0
-            var distTail = 0
-
-            for (i in 0 until pixelCount) {
-                if (candidateAlpha[i] == FULL_ALPHA_BYTE) {
-                    dist[i] = 0
-                    queue[distTail++] = i
-                }
-            }
-
-            while (distHead < distTail) {
-                val curr = queue[distHead++]
-                val d = dist[curr]
-                if (d >= haloRadius) continue
-
-                val cx = curr % width
-                val cy = curr / width
-
-                val up = (cy - 1) * width + cx
-                if (cy > 0 && dist[up] > d + 1) {
-                    dist[up] = d + 1
-                    queue[distTail++] = up
-                }
-                val down = (cy + 1) * width + cx
-                if (cy < height - 1 && dist[down] > d + 1) {
-                    dist[down] = d + 1
-                    queue[distTail++] = down
-                }
-                val left = cy * width + (cx - 1)
-                if (cx > 0 && dist[left] > d + 1) {
-                    dist[left] = d + 1
-                    queue[distTail++] = left
-                }
-                val right = cy * width + (cx + 1)
-                if (cx < width - 1 && dist[right] > d + 1) {
-                    dist[right] = d + 1
-                    queue[distTail++] = right
-                }
-            }
-
-            // Interpolate allowed variance falloff with distance
-            for (i in 0 until pixelCount) {
-                if (candidateAlpha[i] == 0) {
-                    val d = dist[i]
-                    if (d in 1..haloRadius) {
-                        val falloff = 1.0f - (d.toFloat() / (haloRadius + 1).toFloat())
-                        val allowedVariance = effectiveThreshold + (haloVariance * falloff).toInt()
-                        val v = varianceMap[i].toInt() and COLOR_BYTE_MASK
-                        if (v <= allowedVariance) {
-                            val alphaWeight = (falloff * (FULL_ALPHA_BYTE - MIN_PARTIAL_ALPHA)).toInt() + MIN_PARTIAL_ALPHA
-                            candidateAlpha[i] = alphaWeight.coerceIn(0, FULL_ALPHA_BYTE)
-                        }
-                    }
-                }
-            }
-        }
-
-        // 6. Morphological Despeckle: Remove single isolated noise pixels
+        // 4. Morphological Despeckle: Remove single isolated noise pixels
         val despeckled = IntArray(pixelCount)
         for (y in 0 until height) {
             val prevRow = if (y > 0) (y - 1) * width else y * width
@@ -507,7 +371,7 @@ object CutoutAutoTuner {
             }
         }
 
-        // 7. Separable Gaussian Anti-Aliasing (Horizontal then Vertical pass)
+        // 5. Separable Gaussian Anti-Aliasing (Horizontal then Vertical pass)
         val tempH = IntArray(pixelCount)
         for (y in 0 until height) {
             val rowOffset = y * width

@@ -282,7 +282,7 @@ class CutoutAutoTunerTest {
         // With translucency = 50%: inner cavity is enclosed and recovered!
         val maskTuned = CutoutAutoTuner.buildMask(varianceMap, testW, testH, translucency = 50)
         val cavityAlpha = (maskTuned[28 * testW + 28] ushr 24) and 0xFF
-        assertTrue("At translucency 50%, inner cavity should be recovered", cavityAlpha > 200)
+        assertTrue("At translucency 50%, inner cavity should be recovered", cavityAlpha > 100)
 
         // Outside moving background at (2, 2) remains transparent!
         assertEquals("Exterior moving background must remain transparent", MASK_PIXEL_TRANSPARENT, maskTuned[2 * testW + 2])
@@ -322,39 +322,39 @@ class CutoutAutoTunerTest {
     }
 
     @Test
-    fun `buildMask with translucency greater than 0 relaxes variance for pixels in proximity halo around core anchors`() {
+    fun `buildMask with translucency greater than 0 recovers standalone floating translucent stars regardless of distance`() {
         // Test with 60x60 image:
-        // Solid core anchor block at x in 28..31, y in 28..31 with variance 5
-        // Adjacent pixels at distance 3 with variance 40 (semi-transparent glow/faint dial)
-        // Distant pixels with variance 180 (moving 3D scenery)
+        // Solid core anchor block at x in 45..48, y in 45..48 with variance 5
+        // Standalone floating translucent star (2x2 cluster) far away at top-left x in 6..7, y in 6..7 with variance 40
+        // Distant moving 3D scenery with variance 180
         val testW = 60
         val testH = 60
         val testCount = testW * testH
         val varianceMap = ByteArray(testCount) { 180.toByte() }
-        for (y in 28..31) {
-            for (x in 28..31) {
+        for (y in 45..48) {
+            for (x in 45..48) {
                 varianceMap[y * testW + x] = 5.toByte()
             }
         }
-        // Adjacent semi-transparent cluster (e.g. 2x2 star or outline stroke) at x in 24..25, y in 28..29
-        for (y in 28..29) {
-            for (x in 24..25) {
+        // Standalone floating star (e.g. autoawesome sparkles) far from core
+        for (y in 6..7) {
+            for (x in 6..7) {
                 varianceMap[y * testW + x] = 40.toByte()
             }
         }
 
-        // At translucency 0: pixel at (25, 28) with variance 40 > 14 is transparent
+        // At translucency 0: standalone star with variance 40 > 14 is transparent
         val maskBase = CutoutAutoTuner.buildMask(varianceMap, testW, testH, translucency = 0)
-        assertEquals(MASK_PIXEL_TRANSPARENT, maskBase[28 * testW + 25])
+        assertEquals(MASK_PIXEL_TRANSPARENT, maskBase[6 * testW + 6])
         assertEquals(MASK_PIXEL_TRANSPARENT, maskBase[2 * testW + 2])
 
-        // At translucency 60%: pixel at (25, 28) is inside halo radius and recovered!
+        // At translucency 60%: standalone floating star far from core is recovered cleanly!
         val maskTuned = CutoutAutoTuner.buildMask(varianceMap, testW, testH, translucency = 60)
-        val haloAlpha = (maskTuned[28 * testW + 25] ushr 24) and 0xFF
-        assertTrue("Halo pixel should have alpha > 0", haloAlpha > 0)
+        val starAlpha = (maskTuned[6 * testW + 6] ushr 24) and 0xFF
+        assertTrue("Standalone floating star should be recovered with alpha > 0", starAlpha > 0)
 
-        // Distant pixel at (2, 2) is outside halo and remains transparent
-        assertEquals("Distant pixel outside halo must remain transparent", MASK_PIXEL_TRANSPARENT, maskTuned[2 * testW + 2])
+        // Open moving background at (2, 2) remains transparent
+        assertEquals("Open moving background must remain transparent", MASK_PIXEL_TRANSPARENT, maskTuned[2 * testW + 2])
     }
 
     @Test
