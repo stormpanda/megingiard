@@ -178,11 +178,14 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
   - **Pristine Reference Frame:** Saves the full-res reference frame (`mask_<cutoutId>_freeze.png`) for high-fidelity rendering.
   - **Automated Commit & Mask Persistence:** The generated mask bitmap, variance map, and freeze frame are saved to disk under `context.filesDir/cutout_masks/`. The cutout is saved with `hasTransparencyMask = true`, `maskFeathering = 0`, and `maskTranslucency = 0`.
 - **Advanced Cutout Controls (Calibrated State):**
+  - **Isolation Sensitivity Slider:** A dedicated slider (`4` to `40`, default `14`, step `1`) allowing real-time adjustment of the background detection threshold without re-sampling. Lower values preserve delicate faint lines; higher values aggressively cut subtle background variations.
   - **Cutout Translucency Slider:** A dedicated slider (`0%` / Off to `100%`, step `5%`) to recover semi-transparent glass panels, buttons, and dials over changing scenery using 2D cavity flood-fill and halo proximity relaxation.
   - **Edge Feathering Slider:** A dedicated slider (`0` to `10 px`, default `0 px` / Off) applying outward Euclidean edge dilation with distance-based linear opacity falloff to restore clipped anti-aliased borders and glows.
+  - **Cavity & Gauge Healing Toggle:** An optional switch (enabled by default) applying morphological dilation on solid anchors before outer flood-filling, bridging boundary gaps to keep internal minimap radars, health meters, and changing numbers solid.
+  - **Sub-Pixel Alpha Matting Toggle:** An optional switch applying 3-zone continuous Trimap alpha matting to smoothly blend font curves without halos.
   - **Re-Calibrate HUD / UI Mask:** An action card allowing the user to re-sample screen frames to refresh the mask and freeze frame.
   - **Remove HUD / UI Isolation:** A two-step destructive confirmation card that deletes calibration files from disk and reverts the cutout back to a standard live rectangular/circular mirror cutout (`hasTransparencyMask = false`).
-- Mask state is persisted per-cutout in `ScreenCutout` (`hasTransparencyMask: Boolean`, `maskFeathering: Int = 0`, `maskTranslucency: Int = 0`).
+- Mask state is persisted per-cutout in `ScreenCutout` (`hasTransparencyMask: Boolean`, `maskFeathering: Int = 0`, `maskTranslucency: Int = 0`, `maskSensitivity: Int = 14`, `maskCavityHealing: Boolean = true`, `maskAlphaMatting: Boolean = false`).
 
 ### FR-M18: Automatic Layout Switching & Layout-Level Visual Reference Anchors
 

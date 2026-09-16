@@ -793,6 +793,9 @@ internal class MultiCutoutContainer(
                                 cutoutId = cutout.id,
                                 translucency = cutout.maskTranslucency,
                                 featheringPx = cutout.maskFeathering,
+                                sensitivity = cutout.maskSensitivity,
+                                cavityHealing = cutout.maskCavityHealing,
+                                alphaMatting = cutout.maskAlphaMatting,
                             )
                         if (maskBitmap != null && !maskBitmap.isRecycled) {
                             maskDestRect.set(0f, 0f, dw, dh)

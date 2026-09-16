@@ -28,6 +28,12 @@ const val MIN_FEATHERING_PX = 0
 const val MAX_FEATHERING_PX = 10
 const val MIN_TRANSLUCENCY = 0
 const val MAX_TRANSLUCENCY = 100
+const val MIN_SENSITIVITY = 4
+const val MAX_SENSITIVITY = 40
+const val DEFAULT_SENSITIVITY = 14
+
+private const val CLOSING_RADIUS = 3
+private const val TRIMAP_TRANSITION_MAX = 35
 
 private const val MIN_HALO_RADIUS = 4
 private const val MAX_HALO_RADIUS = 48
@@ -303,10 +309,13 @@ object CutoutAutoTuner {
         height: Int,
         translucency: Int = MIN_TRANSLUCENCY,
         featheringPx: Int = MIN_FEATHERING_PX,
-        colorChangeThreshold: Int = COLOR_CHANGE_THRESHOLD,
+        colorChangeThreshold: Int = DEFAULT_SENSITIVITY,
+        cavityHealing: Boolean = false,
+        alphaMatting: Boolean = false,
     ): IntArray {
         val clampedTranslucency = translucency.coerceIn(MIN_TRANSLUCENCY, MAX_TRANSLUCENCY)
         val clampedFeathering = featheringPx.coerceIn(MIN_FEATHERING_PX, MAX_FEATHERING_PX)
+        val effectiveThreshold = colorChangeThreshold.coerceIn(MIN_SENSITIVITY, MAX_SENSITIVITY)
         val pixelCount = width * height
         if (width <= 0 || height <= 0 || varianceMap.size != pixelCount) {
             return IntArray(0)
@@ -317,23 +326,37 @@ object CutoutAutoTuner {
         // 1. Core stationary anchors
         for (i in 0 until pixelCount) {
             val v = varianceMap[i].toInt() and COLOR_BYTE_MASK
-            if (v <= colorChangeThreshold) {
+            if (v <= effectiveThreshold) {
                 candidateAlpha[i] = FULL_ALPHA_BYTE
             }
         }
 
-        // 2. Translucency recovery (Enclosure infill & Proximity halo)
+        // 2. Optional Topological Cavity & Gauge Healing
+        if (cavityHealing) {
+            applyCavityHealing(candidateAlpha, width, height)
+        }
+
+        // 3. Optional Trimap Sub-Pixel Alpha Matting
+        if (alphaMatting) {
+            applyAlphaMatting(
+                candidateAlpha = candidateAlpha,
+                varianceMap = varianceMap,
+                width = width,
+                height = height,
+                effectiveThreshold = effectiveThreshold,
+            )
+        }
+
+        // 5. Translucency recovery (Enclosure infill & Proximity halo)
         if (clampedTranslucency > 0) {
             // A. Geometric Enclosure Infill: Flood fill from borders to identify exterior background.
-            // A soft barrier threshold allows semi-transparent outer boundary rings (e.g. dial circles) to seal the interior cavity.
             val barrierThreshold =
-                colorChangeThreshold + (clampedTranslucency * ENCLOSED_MAX_BARRIER_BOOST) / MAX_TRANSLUCENCY
+                effectiveThreshold + (clampedTranslucency * ENCLOSED_MAX_BARRIER_BOOST) / MAX_TRANSLUCENCY
             val exterior = BooleanArray(pixelCount)
             val queue = IntArray(pixelCount)
             var head = 0
             var tail = 0
 
-            // Seed exterior queue from outermost border pixels that are below barrier threshold
             for (x in 0 until width) {
                 val topIdx = x
                 if ((varianceMap[topIdx].toInt() and COLOR_BYTE_MASK) > barrierThreshold && !exterior[topIdx]) {
@@ -400,7 +423,6 @@ object CutoutAutoTuner {
             }
 
             // B. Proximity Halo: Radial distance transform around solid core pixels
-            // Scaled halo radius (4..48 px) and max allowed variance boost based on translucency level
             val haloRadius = MIN_HALO_RADIUS + (clampedTranslucency * (MAX_HALO_RADIUS - MIN_HALO_RADIUS)) / MAX_TRANSLUCENCY
             val haloVariance = (clampedTranslucency * MAX_HALO_VARIANCE_BOOST) / MAX_TRANSLUCENCY
 
@@ -451,7 +473,7 @@ object CutoutAutoTuner {
                     val d = dist[i]
                     if (d in 1..haloRadius) {
                         val falloff = 1.0f - (d.toFloat() / (haloRadius + 1).toFloat())
-                        val allowedVariance = colorChangeThreshold + (haloVariance * falloff).toInt()
+                        val allowedVariance = effectiveThreshold + (haloVariance * falloff).toInt()
                         val v = varianceMap[i].toInt() and COLOR_BYTE_MASK
                         if (v <= allowedVariance) {
                             val alphaWeight = (falloff * (FULL_ALPHA_BYTE - MIN_PARTIAL_ALPHA)).toInt() + MIN_PARTIAL_ALPHA
@@ -462,7 +484,7 @@ object CutoutAutoTuner {
             }
         }
 
-        // 3. Morphological Despeckle: Remove single isolated noise pixels
+        // 6. Morphological Despeckle: Remove single isolated noise pixels
         val despeckled = IntArray(pixelCount)
         for (y in 0 until height) {
             val prevRow = if (y > 0) (y - 1) * width else y * width
@@ -485,7 +507,7 @@ object CutoutAutoTuner {
             }
         }
 
-        // 4. Separable Gaussian Anti-Aliasing (Horizontal then Vertical pass)
+        // 7. Separable Gaussian Anti-Aliasing (Horizontal then Vertical pass)
         val tempH = IntArray(pixelCount)
         for (y in 0 until height) {
             val rowOffset = y * width
@@ -518,11 +540,186 @@ object CutoutAutoTuner {
             }
         }
 
-        // 5. Edge Feathering
+        // 8. Edge Feathering
         return if (clampedFeathering > 0) {
             applyEdgeFeathering(finalMask, width, height, clampedFeathering)
         } else {
             finalMask
+        }
+    }
+
+    private fun applyCavityHealing(
+        candidateAlpha: IntArray,
+        width: Int,
+        height: Int,
+    ) {
+        val pixelCount = width * height
+        val dilatedBarrier = BooleanArray(pixelCount)
+
+        // Dilate solid core anchors by CLOSING_RADIUS to bridge open brackets and gauge gaps
+        for (y in 0 until height) {
+            val rowOffset = y * width
+            for (x in 0 until width) {
+                if (candidateAlpha[rowOffset + x] == FULL_ALPHA_BYTE) {
+                    for (dy in -CLOSING_RADIUS..CLOSING_RADIUS) {
+                        val ny = y + dy
+                        if (ny !in 0 until height) continue
+                        val nRowOffset = ny * width
+                        for (dx in -CLOSING_RADIUS..CLOSING_RADIUS) {
+                            val nx = x + dx
+                            if (nx !in 0 until width) continue
+                            if (dx * dx + dy * dy <= CLOSING_RADIUS * CLOSING_RADIUS) {
+                                dilatedBarrier[nRowOffset + nx] = true
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Flood fill exterior from borders on the dilated barrier map
+        val exterior = BooleanArray(pixelCount)
+        val queue = IntArray(pixelCount)
+        var head = 0
+        var tail = 0
+
+        for (x in 0 until width) {
+            val topIdx = x
+            if (!dilatedBarrier[topIdx] && !exterior[topIdx]) {
+                exterior[topIdx] = true
+                queue[tail++] = topIdx
+            }
+            val botIdx = (height - 1) * width + x
+            if (!dilatedBarrier[botIdx] && !exterior[botIdx]) {
+                exterior[botIdx] = true
+                queue[tail++] = botIdx
+            }
+        }
+        for (y in 0 until height) {
+            val leftIdx = y * width
+            if (!dilatedBarrier[leftIdx] && !exterior[leftIdx]) {
+                exterior[leftIdx] = true
+                queue[tail++] = leftIdx
+            }
+            val rightIdx = y * width + (width - 1)
+            if (!dilatedBarrier[rightIdx] && !exterior[rightIdx]) {
+                exterior[rightIdx] = true
+                queue[tail++] = rightIdx
+            }
+        }
+
+        while (head < tail) {
+            val curr = queue[head++]
+            val cx = curr % width
+            val cy = curr / width
+
+            val up = (cy - 1) * width + cx
+            if (cy > 0 && !exterior[up] && !dilatedBarrier[up]) {
+                exterior[up] = true
+                queue[tail++] = up
+            }
+            val down = (cy + 1) * width + cx
+            if (cy < height - 1 && !exterior[down] && !dilatedBarrier[down]) {
+                exterior[down] = true
+                queue[tail++] = down
+            }
+            val left = cy * width + (cx - 1)
+            if (cx > 0 && !exterior[left] && !dilatedBarrier[left]) {
+                exterior[left] = true
+                queue[tail++] = left
+            }
+            val right = cy * width + (cx + 1)
+            if (cx < width - 1 && !exterior[right] && !dilatedBarrier[right]) {
+                exterior[right] = true
+                queue[tail++] = right
+            }
+        }
+
+        // Erode the enclosed map (!exterior) by CLOSING_RADIUS to recover enclosed cavities
+        // without artificially expanding outer borders or isolated noise specks.
+        val enclosed = BooleanArray(pixelCount) { !exterior[it] }
+        val healedInterior = BooleanArray(pixelCount)
+
+        for (y in 0 until height) {
+            val rowOffset = y * width
+            for (x in 0 until width) {
+                var allContained = true
+                for (dy in -CLOSING_RADIUS..CLOSING_RADIUS) {
+                    val ny = y + dy
+                    if (ny !in 0 until height) {
+                        allContained = false
+                        break
+                    }
+                    val nRowOffset = ny * width
+                    for (dx in -CLOSING_RADIUS..CLOSING_RADIUS) {
+                        val nx = x + dx
+                        if (nx !in 0 until width) {
+                            allContained = false
+                            break
+                        }
+                        if (dx * dx + dy * dy <= CLOSING_RADIUS * CLOSING_RADIUS) {
+                            if (!enclosed[nRowOffset + nx]) {
+                                allContained = false
+                                break
+                            }
+                        }
+                    }
+                    if (!allContained) break
+                }
+                if (allContained) {
+                    healedInterior[rowOffset + x] = true
+                }
+            }
+        }
+
+        // Mark healed interior cavity pixels as solid
+        for (i in 0 until pixelCount) {
+            if (healedInterior[i]) {
+                candidateAlpha[i] = FULL_ALPHA_BYTE
+            }
+        }
+    }
+
+
+
+    private fun applyAlphaMatting(
+        candidateAlpha: IntArray,
+        varianceMap: ByteArray,
+        width: Int,
+        height: Int,
+        effectiveThreshold: Int,
+    ) {
+        val pixelCount = width * height
+        val isAdjacentToCore = BooleanArray(pixelCount)
+
+        for (y in 0 until height) {
+            val rowOffset = y * width
+            for (x in 0 until width) {
+                if (candidateAlpha[rowOffset + x] == FULL_ALPHA_BYTE) {
+                    for (dy in -1..1) {
+                        val ny = y + dy
+                        if (ny !in 0 until height) continue
+                        val nRowOffset = ny * width
+                        for (dx in -1..1) {
+                            val nx = x + dx
+                            if (nx !in 0 until width) continue
+                            isAdjacentToCore[nRowOffset + nx] = true
+                        }
+                    }
+                }
+            }
+        }
+
+        val transitionMax = effectiveThreshold + TRIMAP_TRANSITION_MAX
+        for (i in 0 until pixelCount) {
+            if (candidateAlpha[i] < FULL_ALPHA_BYTE && isAdjacentToCore[i]) {
+                val v = varianceMap[i].toInt() and COLOR_BYTE_MASK
+                if (v in (effectiveThreshold + 1)..transitionMax) {
+                    val falloff = 1.0f - ((v - effectiveThreshold).toFloat() / TRIMAP_TRANSITION_MAX.toFloat())
+                    val calculatedAlpha = (falloff * FULL_ALPHA_BYTE).toInt().coerceIn(0, FULL_ALPHA_BYTE)
+                    candidateAlpha[i] = maxOf(candidateAlpha[i], calculatedAlpha)
+                }
+            }
         }
     }
 

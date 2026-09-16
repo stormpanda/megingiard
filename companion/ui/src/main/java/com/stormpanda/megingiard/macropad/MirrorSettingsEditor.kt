@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.macropad
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Crop
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
@@ -9,6 +10,7 @@ import androidx.compose.material.icons.rounded.Grain
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.Opacity
+import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Warning
@@ -30,8 +32,10 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.math.nextItem
 import com.stormpanda.megingiard.mirror.CutoutMaskManager
 import com.stormpanda.megingiard.mirror.MAX_FEATHERING_PX
+import com.stormpanda.megingiard.mirror.MAX_SENSITIVITY
 import com.stormpanda.megingiard.mirror.MAX_TRANSLUCENCY
 import com.stormpanda.megingiard.mirror.MIN_FEATHERING_PX
+import com.stormpanda.megingiard.mirror.MIN_SENSITIVITY
 import com.stormpanda.megingiard.mirror.MIN_TRANSLUCENCY
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCutout
@@ -69,6 +73,10 @@ private const val MSE_FEATHERING_STEP = 1f
 private const val MSE_TRANSLUCENCY_MIN = 0f
 private const val MSE_TRANSLUCENCY_MAX = 100f
 private const val MSE_TRANSLUCENCY_STEP = 5f
+
+private const val MSE_SENSITIVITY_MIN = 4f
+private const val MSE_SENSITIVITY_MAX = 40f
+private const val MSE_SENSITIVITY_STEP = 1f
 
 @Composable
 internal fun MirrorDeck(
@@ -391,8 +399,24 @@ internal fun CutoutAdvancedSettingsSubPageContent(
             )
         }
 
-        // ── 2. Mask Translucency & Feathering Sliders (if hasTransparencyMask) ──
+        // ── 2. Mask Settings & Fine-Tuning (if hasTransparencyMask) ──
         if (cutout.hasTransparencyMask) {
+            GamepadSliderCard(
+                title = stringResource(R.string.settings_cutout_sensitivity_title),
+                description = stringResource(R.string.settings_cutout_sensitivity_desc),
+                value = cutout.maskSensitivity.toFloat(),
+                valueRange = MSE_SENSITIVITY_MIN..MSE_SENSITIVITY_MAX,
+                step = MSE_SENSITIVITY_STEP,
+                fineStep = MSE_SENSITIVITY_STEP,
+                icon = Icons.Rounded.Tune,
+                valueLabel = "${cutout.maskSensitivity}",
+                onValueChange = { newVal ->
+                    val newSens = newVal.roundToInt().coerceIn(MIN_SENSITIVITY, MAX_SENSITIVITY)
+                    AppLog.d(TAG, "Updating cutout ${cutout.id} maskSensitivity: $newSens")
+                    onUpdateCutout(cutout.copy(maskSensitivity = newSens))
+                },
+            )
+
             val translucencyLabel =
                 if (cutout.maskTranslucency > 0) {
                     "${cutout.maskTranslucency}%"
@@ -434,6 +458,35 @@ internal fun CutoutAdvancedSettingsSubPageContent(
                     val newFeathering = newVal.roundToInt().coerceIn(MIN_FEATHERING_PX, MAX_FEATHERING_PX)
                     AppLog.d(TAG, "Updating cutout ${cutout.id} maskFeathering: $newFeathering")
                     onUpdateCutout(cutout.copy(maskFeathering = newFeathering))
+                },
+            )
+
+            GamepadSectionHeader(
+                text = stringResource(R.string.settings_cutout_features_section),
+                color = accentColor,
+            )
+
+            GamepadToggleCard(
+                title = stringResource(R.string.settings_cutout_cavity_healing_title),
+                description = stringResource(R.string.settings_cutout_cavity_healing_desc),
+                icon = Icons.Rounded.Shield,
+                checked = cutout.maskCavityHealing,
+                itemKey = "cutout_${cutout.id}_cavity_healing",
+                onCheckedChange = { isChecked ->
+                    AppLog.d(TAG, "Updating cutout ${cutout.id} maskCavityHealing: $isChecked")
+                    onUpdateCutout(cutout.copy(maskCavityHealing = isChecked))
+                },
+            )
+
+            GamepadToggleCard(
+                title = stringResource(R.string.settings_cutout_alpha_matting_title),
+                description = stringResource(R.string.settings_cutout_alpha_matting_desc),
+                icon = Icons.Rounded.Edit,
+                checked = cutout.maskAlphaMatting,
+                itemKey = "cutout_${cutout.id}_alpha_matting",
+                onCheckedChange = { isChecked ->
+                    AppLog.d(TAG, "Updating cutout ${cutout.id} maskAlphaMatting: $isChecked")
+                    onUpdateCutout(cutout.copy(maskAlphaMatting = isChecked))
                 },
             )
         }

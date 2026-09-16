@@ -38,6 +38,9 @@ enum class AspectRatioMode {
  * @param hasTransparencyMask Whether an auto-tuned transparency mask bitmap is present for this cutout.
  * @param maskFeathering Outward edge expansion radius in pixels (0..10) with decreasing opacity falloff.
  * @param maskTranslucency Semi-transparent foreground capture sensitivity level (0..100%), preserving dials and glows.
+ * @param maskSensitivity Color variance threshold (4..40, default 14) for background detection.
+ * @param maskCavityHealing Whether morphological closing bridges gaps to protect internal animated meters and widgets.
+ * @param maskAlphaMatting Whether continuous sub-pixel trimap alpha matting is applied for smooth font curves.
  */
 @Serializable
 data class ScreenCutout(
@@ -62,6 +65,9 @@ data class ScreenCutout(
     val hasTransparencyMask: Boolean = false,
     val maskFeathering: Int = 0,
     val maskTranslucency: Int = 0,
+    val maskSensitivity: Int = 14,
+    val maskCavityHealing: Boolean = true,
+    val maskAlphaMatting: Boolean = false,
 ) {
     companion object {
         val FULLSCREEN =

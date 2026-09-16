@@ -53,15 +53,25 @@ object CutoutMaskManager {
         cutoutId: String,
         translucency: Int = MIN_TRANSLUCENCY,
         featheringPx: Int = MIN_FEATHERING_PX,
+        sensitivity: Int = DEFAULT_SENSITIVITY,
+        cavityHealing: Boolean = true,
+        alphaMatting: Boolean = false,
     ): Bitmap? {
         val clampedTranslucency = translucency.coerceIn(MIN_TRANSLUCENCY, MAX_TRANSLUCENCY)
         val clampedFeathering = featheringPx.coerceIn(MIN_FEATHERING_PX, MAX_FEATHERING_PX)
+        val clampedSensitivity = sensitivity.coerceIn(MIN_SENSITIVITY, MAX_SENSITIVITY)
 
-        if (clampedTranslucency == MIN_TRANSLUCENCY && clampedFeathering == MIN_FEATHERING_PX) {
+        if (clampedTranslucency == MIN_TRANSLUCENCY &&
+            clampedFeathering == MIN_FEATHERING_PX &&
+            clampedSensitivity == DEFAULT_SENSITIVITY &&
+            cavityHealing &&
+            !alphaMatting
+        ) {
             return getBaseMask(context, cutoutId)
         }
 
-        val cacheKey = "$cutoutId:$clampedTranslucency:$clampedFeathering"
+        val cacheKey =
+            "$cutoutId:$clampedSensitivity:$clampedTranslucency:$clampedFeathering:$cavityHealing:$alphaMatting"
         tunedMaskCache[cacheKey]?.let { cached ->
             if (!cached.isRecycled) return cached
             tunedMaskCache.remove(cacheKey)
@@ -81,6 +91,9 @@ object CutoutMaskManager {
                         height = height,
                         translucency = clampedTranslucency,
                         featheringPx = clampedFeathering,
+                        colorChangeThreshold = clampedSensitivity,
+                        cavityHealing = cavityHealing,
+                        alphaMatting = alphaMatting,
                     )
                 } else {
                     // Fallback: If no variance map is available (e.g. legacy mask), apply edge feathering to base mask
@@ -97,7 +110,7 @@ object CutoutMaskManager {
             tunedMaskCache[cacheKey] = tunedBitmap
             AppLog.d(
                 TAG,
-                "Generated tuned mask (t=$clampedTranslucency, f=$clampedFeathering px) for cutout $cutoutId (${width}x$height)",
+                "Generated tuned mask (s=$clampedSensitivity, t=$clampedTranslucency, f=$clampedFeathering px, c=$cavityHealing, a=$alphaMatting) for cutout $cutoutId (${width}x$height)",
             )
             tunedBitmap
         } catch (e: Exception) {

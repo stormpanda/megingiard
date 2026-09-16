@@ -458,4 +458,106 @@ class CutoutAutoTunerTest {
             assertEquals("Dynamic pixel $i must turn transparent", MASK_PIXEL_TRANSPARENT, outPixels[i])
         }
     }
+
+    @Test
+    fun `buildMask with sensitivity threshold differentiates subtle and aggressive changes`() {
+        val size = 10
+        val count = size * size
+        val varMap = ByteArray(count) { 20.toByte() } // variance is 20
+
+        // At low sensitivity (threshold = 10), variance 20 > 10 so it's treated as dynamic background
+        val maskLow =
+            CutoutAutoTuner.buildMask(
+                varianceMap = varMap,
+                width = size,
+                height = size,
+                colorChangeThreshold = 10,
+                cavityHealing = false,
+            )
+        assertEquals(MASK_PIXEL_TRANSPARENT, maskLow[size * 5 + 5])
+
+        // At high sensitivity (threshold = 30), variance 20 <= 30 so it's treated as stationary UI
+        val maskHigh =
+            CutoutAutoTuner.buildMask(
+                varianceMap = varMap,
+                width = size,
+                height = size,
+                colorChangeThreshold = 30,
+                cavityHealing = false,
+            )
+        assertEquals(MASK_PIXEL_OPAQUE, maskHigh[size * 5 + 5])
+    }
+
+    @Test
+    fun `buildMask with cavity healing protects internal animated content inside open brackets`() {
+        val size = 20
+        val count = size * size
+        val varMap = ByteArray(count) { 100.toByte() } // Default moving background
+
+        // Create a 14x14 square bracket (boundary rows 3 and 16, boundary cols 3 and 16) with variance = 0 (solid)
+        // Leave a 2-pixel gap in the right border at y=10..11 to simulate an open gauge / bracket
+        for (y in 3..16) {
+            for (x in 3..16) {
+                val isBorder = (y == 3 || y == 16 || x == 3 || (x == 16 && (y < 9 || y > 12)))
+                if (isBorder) {
+                    varMap[y * size + x] = 0.toByte()
+                }
+            }
+        }
+
+        // Without cavity healing: moving content in center (y=10, x=10) leaks out through gap and is transparent
+        val maskNoHealing =
+            CutoutAutoTuner.buildMask(
+                varianceMap = varMap,
+                width = size,
+                height = size,
+                colorChangeThreshold = 14,
+                cavityHealing = false,
+            )
+        assertEquals("Center pixel should be transparent without cavity healing", MASK_PIXEL_TRANSPARENT, maskNoHealing[10 * size + 10])
+
+        // With cavity healing: 2px gap is bridged, interior cavity is healed and center is preserved solid
+        val maskWithHealing =
+            CutoutAutoTuner.buildMask(
+                varianceMap = varMap,
+                width = size,
+                height = size,
+                colorChangeThreshold = 14,
+                cavityHealing = true,
+            )
+        assertEquals("Center pixel inside open bracket must be preserved solid with cavity healing", MASK_PIXEL_OPAQUE, maskWithHealing[10 * size + 10])
+    }
+
+
+
+    @Test
+    fun `buildMask with alpha matting computes continuous sub-pixel falloff on transition boundary`() {
+        val size = 10
+        val count = size * size
+        val varMap = ByteArray(count) { 100.toByte() } // default background
+
+        // Row 0..2: solid core (variance = 0)
+        // Row 3: transition boundary (variance = 25)
+        // Row 4..9: outer background (variance = 100)
+        for (y in 0 until size) {
+            for (x in 0 until size) {
+                if (y < 3) varMap[y * size + x] = 0.toByte()
+                else if (y == 3) varMap[y * size + x] = 25.toByte()
+            }
+        }
+
+        val mask =
+            CutoutAutoTuner.buildMask(
+                varianceMap = varMap,
+                width = size,
+                height = size,
+                colorChangeThreshold = 14,
+                alphaMatting = true,
+                cavityHealing = false,
+            )
+
+        // Transition pixel in row 3 should have continuous partial alpha between 50 and 240
+        val transitionAlpha = (mask[3 * size + 5] ushr 24) and 0xFF
+        assertTrue("Transition pixel should have continuous alpha: $transitionAlpha", transitionAlpha in 50..240)
+    }
 }
