@@ -13,7 +13,6 @@ class ScreenCutoutFilterTest {
     fun `verify default transparency mask on ScreenCutout is false`() {
         val cutout = ScreenCutout.FULLSCREEN
         assertFalse(cutout.hasTransparencyMask)
-        assertEquals(0, cutout.maskFeathering)
         assertEquals(0, cutout.maskTranslucency)
     }
 
@@ -32,19 +31,16 @@ class ScreenCutoutFilterTest {
                 destWidth = 0.4f,
                 destHeight = 0.4f,
                 hasTransparencyMask = true,
-                maskFeathering = 4,
                 maskTranslucency = 65,
             )
 
         val serialized = json.encodeToString(ScreenCutout.serializer(), original)
         assertTrue(serialized.contains("hasTransparencyMask"))
-        assertTrue(serialized.contains("maskFeathering"))
         assertTrue(serialized.contains("maskTranslucency"))
 
         val deserialized = json.decodeFromString(ScreenCutout.serializer(), serialized)
         assertEquals(original, deserialized)
         assertTrue(deserialized.hasTransparencyMask)
-        assertEquals(4, deserialized.maskFeathering)
         assertEquals(65, deserialized.maskTranslucency)
     }
 
@@ -73,7 +69,6 @@ class ScreenCutoutFilterTest {
         val parsed = json.decodeFromString(ScreenCutout.serializer(), legacyJson)
         assertEquals("legacy_cutout", parsed.id)
         assertFalse(parsed.hasTransparencyMask)
-        assertEquals(0, parsed.maskFeathering)
         assertEquals(0, parsed.maskTranslucency)
     }
 

@@ -662,7 +662,7 @@ Open Settings to create a layout.</string>
     <string name="settings_mirror_cutout_summary_with_filter_fmt">Smoothing: %1$s • %2$s • Projection: %3$s</string>
     <string name="settings_mirror_cutout_filter_transparency_mask">HUD / UI Isolation</string>
     <string name="settings_cutout_advanced_title">Advanced Cutout Settings</string>
-    <string name="settings_cutout_advanced_desc">HUD / UI isolation, edge feathering, and translucency adjustments</string>
+    <string name="settings_cutout_advanced_desc">HUD / UI isolation and translucency adjustments</string>
     <string name="settings_cutout_convert_smart_title">Isolate HUD / UI Elements</string>
     <string name="settings_cutout_convert_smart_desc">Isolates stationary HUD and UI elements from moving background scenery using transparency masking</string>
     <string name="settings_cutout_recalibrate_smart_title">Re-Calibrate HUD / UI Mask</string>
@@ -674,9 +674,6 @@ Open Settings to create a layout.</string>
     <string name="settings_cutout_translucency_title">Cutout Translucency</string>
     <string name="settings_cutout_translucency_desc">Recovers semi-transparent elements, inner details, and translucent effects</string>
     <string name="settings_mirror_cutout_translucency_off">Off</string>
-    <string name="settings_cutout_feathering_title">Edge Feathering</string>
-    <string name="settings_cutout_feathering_desc">Restores cut pixels along element borders with decreasing opacity falloff</string>
-    <string name="settings_mirror_cutout_feathering_off">Off</string>
     <string name="settings_cutout_features_section">Isolation Features</string>
     <string name="settings_cutout_cavity_healing_title">Cavity &amp; Gauge Healing</string>
     <string name="settings_cutout_cavity_healing_desc">Bridges boundary gaps to keep internal minimap radars, health meters, and changing numbers solid.</string>

@@ -47,31 +47,6 @@ class CutoutMaskManagerTest {
     }
 
     @Test
-    fun `getMask with feathering returns feathered bitmap`() {
-        val context = RuntimeEnvironment.getApplication()
-        val cutoutId = "test_feather_cutout"
-
-        val bitmap = Bitmap.createBitmap(20, 20, Bitmap.Config.ARGB_8888)
-        bitmap.setPixel(10, 10, 0xFFFFFFFF.toInt())
-
-        CutoutMaskManager.saveMask(context, cutoutId, bitmap)
-
-        val unfeathered = CutoutMaskManager.getMask(context, cutoutId, translucency = 0, featheringPx = 0)
-        assertNotNull(unfeathered)
-        assertEquals(0x00000000, unfeathered!!.getPixel(11, 10))
-
-        val feathered = CutoutMaskManager.getMask(context, cutoutId, translucency = 0, featheringPx = 3)
-        assertNotNull(feathered)
-        assertEquals(0xFFFFFFFF.toInt(), feathered!!.getPixel(10, 10))
-        val neighborAlpha = (feathered.getPixel(11, 10) ushr 24) and 0xFF
-        assertTrue("Feathered neighbor should have opacity > 0", neighborAlpha > 0)
-
-        // Cleanup
-        CutoutMaskManager.deleteMask(context, cutoutId)
-        assertNull(CutoutMaskManager.getMask(context, cutoutId))
-    }
-
-    @Test
     fun `saveMask with varianceMap persists variance and getVarianceMap retrieves it`() {
         val context = RuntimeEnvironment.getApplication()
         val cutoutId = "test_var_cutout"
@@ -109,11 +84,11 @@ class CutoutMaskManagerTest {
         CutoutMaskManager.saveMask(context, cutoutId, bitmap, varianceMap)
 
         // At translucency 0, neighbor (7, 8) with variance 30 is transparent
-        val baseMask = CutoutMaskManager.getMask(context, cutoutId, translucency = 0, featheringPx = 0)
+        val baseMask = CutoutMaskManager.getMask(context, cutoutId, translucency = 0)
         assertNotNull(baseMask)
 
         // At translucency 60%, neighbor (7, 8) within halo is dynamically recovered
-        val tunedMask = CutoutMaskManager.getMask(context, cutoutId, translucency = 60, featheringPx = 0)
+        val tunedMask = CutoutMaskManager.getMask(context, cutoutId, translucency = 60)
         assertNotNull(tunedMask)
         val neighborAlpha = (tunedMask!!.getPixel(7, 8) ushr 24) and 0xFF
         assertTrue("Neighbor within halo should have recovered alpha", neighborAlpha > 0)

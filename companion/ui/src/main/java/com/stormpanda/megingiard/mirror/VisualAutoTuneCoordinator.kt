@@ -244,7 +244,6 @@ internal object VisualAutoTuneCoordinator {
                         val updatedCutout =
                             cutout.copy(
                                 hasTransparencyMask = hasMask,
-                                maskFeathering = 0,
                                 maskTranslucency = 0,
                                 renderAsStaticAsset = false,
                             )

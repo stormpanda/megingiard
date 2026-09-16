@@ -32,10 +32,8 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.math.nextItem
 import com.stormpanda.megingiard.mirror.CutoutMaskManager
-import com.stormpanda.megingiard.mirror.MAX_FEATHERING_PX
 import com.stormpanda.megingiard.mirror.MAX_SENSITIVITY
 import com.stormpanda.megingiard.mirror.MAX_TRANSLUCENCY
-import com.stormpanda.megingiard.mirror.MIN_FEATHERING_PX
 import com.stormpanda.megingiard.mirror.MIN_SENSITIVITY
 import com.stormpanda.megingiard.mirror.MIN_TRANSLUCENCY
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
@@ -66,10 +64,6 @@ private const val MSE_EDGE_BLEND_STEP = 5f
 private const val MSE_SMOOTHING_VAL_LIGHT = 75
 private const val MSE_SMOOTHING_VAL_MEDIUM = 80
 private const val MSE_SMOOTHING_VAL_STRONG = 85
-
-private const val MSE_FEATHERING_MIN = 0f
-private const val MSE_FEATHERING_MAX = 10f
-private const val MSE_FEATHERING_STEP = 1f
 
 private const val MSE_TRANSLUCENCY_MIN = 0f
 private const val MSE_TRANSLUCENCY_MAX = 100f
@@ -440,28 +434,6 @@ internal fun CutoutAdvancedSettingsSubPageContent(
                 },
             )
 
-            val featheringLabel =
-                if (cutout.maskFeathering > 0) {
-                    "${cutout.maskFeathering} px"
-                } else {
-                    stringResource(R.string.settings_mirror_cutout_feathering_off)
-                }
-            GamepadSliderCard(
-                title = stringResource(R.string.settings_cutout_feathering_title),
-                description = stringResource(R.string.settings_cutout_feathering_desc),
-                value = cutout.maskFeathering.toFloat(),
-                valueRange = MSE_FEATHERING_MIN..MSE_FEATHERING_MAX,
-                step = MSE_FEATHERING_STEP,
-                fineStep = MSE_FEATHERING_STEP,
-                icon = Icons.Rounded.Grain,
-                valueLabel = featheringLabel,
-                onValueChange = { newVal ->
-                    val newFeathering = newVal.roundToInt().coerceIn(MIN_FEATHERING_PX, MAX_FEATHERING_PX)
-                    AppLog.d(TAG, "Updating cutout ${cutout.id} maskFeathering: $newFeathering")
-                    onUpdateCutout(cutout.copy(maskFeathering = newFeathering))
-                },
-            )
-
             GamepadSectionHeader(
                 text = stringResource(R.string.settings_cutout_features_section),
                 color = accentColor,
@@ -527,7 +499,6 @@ internal fun CutoutAdvancedSettingsSubPageContent(
                     onUpdateCutout(
                         cutout.copy(
                             hasTransparencyMask = false,
-                            maskFeathering = 0,
                             maskTranslucency = 0,
                             renderAsStaticAsset = false,
                         ),

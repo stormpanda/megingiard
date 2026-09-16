@@ -661,7 +661,7 @@ Open Settings to create a layout.</string>
     <string name="settings_mirror_cutout_summary_with_filter_fmt">平滑化：%1$s • %2$s • 投影：%3$s</string>
     <string name="settings_mirror_cutout_filter_transparency_mask">HUD / UI 隔離</string>
     <string name="settings_cutout_advanced_title">進階切角設定</string>
-    <string name="settings_cutout_advanced_desc">HUD / UI 隔離校準、邊緣羽化與半透明度還原</string>
+    <string name="settings_cutout_advanced_desc">HUD / UI 隔離校準與半透明度還原</string>
     <string name="settings_cutout_convert_smart_title">隔離 HUD / UI 元素</string>
     <string name="settings_cutout_convert_smart_desc">使用透明度遮罩將靜態 HUD 與 UI 前景元素與動態背景分離</string>
     <string name="settings_cutout_recalibrate_smart_title">重新校準 HUD / UI 遮罩</string>
@@ -673,9 +673,6 @@ Open Settings to create a layout.</string>
     <string name="settings_cutout_translucency_title">切角半透明度</string>
     <string name="settings_cutout_translucency_desc">還原半透明元素、內部細節與透明效果</string>
     <string name="settings_mirror_cutout_translucency_off">關閉</string>
-    <string name="settings_cutout_feathering_title">邊緣羽化</string>
-    <string name="settings_cutout_feathering_desc">透過向外邊緣擴展柔化並平滑外部輪廓</string>
-    <string name="settings_mirror_cutout_feathering_off">關閉</string>
     <string name="settings_cutout_features_section">隔離進階功能</string>
     <string name="settings_cutout_cavity_healing_title">內部區域與量表保護</string>
     <string name="settings_cutout_cavity_healing_desc">自動橋接邊界缺口，保持內部動態小地圖、血條與變動數字完整實心。</string>

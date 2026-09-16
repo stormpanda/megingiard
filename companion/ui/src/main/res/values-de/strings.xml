@@ -662,7 +662,7 @@ Open Settings to create a layout.</string>
     <string name="settings_mirror_cutout_summary_with_filter_fmt">Glättung: %1$s • %2$s • Projektion: %3$s</string>
     <string name="settings_mirror_cutout_filter_transparency_mask">HUD / UI-Isolierung</string>
     <string name="settings_cutout_advanced_title">Erweiterte Ausschnitt-Einstellungen</string>
-    <string name="settings_cutout_advanced_desc">HUD / UI-Isolierung, Kantenabrundung und Transparenz-Wiederherstellung</string>
+    <string name="settings_cutout_advanced_desc">HUD / UI-Isolierung und Transparenz-Wiederherstellung</string>
     <string name="settings_cutout_convert_smart_title">HUD / UI-Elemente isolieren</string>
     <string name="settings_cutout_convert_smart_desc">Isoliert stationäre HUD- und UI-Elemente von bewegter Szenerie mittels Transparenzmaske</string>
     <string name="settings_cutout_recalibrate_smart_title">HUD / UI-Maske neu kalibrieren</string>
@@ -674,9 +674,6 @@ Open Settings to create a layout.</string>
     <string name="settings_cutout_translucency_title">Ausschnitt-Transparenz</string>
     <string name="settings_cutout_translucency_desc">Stellt halbtransparente Elemente, innere Details und durchscheinende Effekte wieder her</string>
     <string name="settings_mirror_cutout_translucency_off">Aus</string>
-    <string name="settings_cutout_feathering_title">Kantenabrundung</string>
-    <string name="settings_cutout_feathering_desc">Glättet und verfeinert äußere Konturen durch Kanten-Aufweitung</string>
-    <string name="settings_mirror_cutout_feathering_off">Aus</string>
     <string name="settings_cutout_features_section">Isolierungs-Funktionen</string>
     <string name="settings_cutout_cavity_healing_title">Hohlraum- &amp; Anzeige-Schutz</string>
     <string name="settings_cutout_cavity_healing_desc">Schließt Lücken in Rahmen, damit interne Minimap-Radare, Anzeigen und wechselnde Zahlen solide bleiben.</string>

@@ -21,7 +21,7 @@ private const val PNG_QUALITY = 100
 
 /**
  * Manages in-memory caching and filesystem persistence for auto-tuned cutout transparency masks,
- * raw variance maps for dynamic translucency/feathering, layout anchor signatures for presence detection,
+ * raw variance maps for dynamic translucency, layout anchor signatures for presence detection,
  * and high-resolution freeze frames for freeze frame preservation.
  *
  * Base masks are stored as lossless PNG files under `context.filesDir/cutout_masks/mask_<cutoutId>.png`.
@@ -41,29 +41,27 @@ object CutoutMaskManager {
     private val layoutAnchorExistenceCache = ConcurrentHashMap<String, Boolean>()
 
     /**
-     * Retrieves the transparency mask bitmap for [cutoutId] with optional [translucency] (0..10)
-     * and edge [featheringPx] (0..10).
+     * Retrieves the transparency mask bitmap for [cutoutId] with optional [translucency] (0..100)
+     * and [sensitivity] (4..40).
      *
-     * If both [translucency] and [featheringPx] are 0, returns the base unfeathered mask.
-     * When [translucency] > 0 and a variance map is available, regenerates the mask dynamically
+     * If [translucency] is 0, [sensitivity] is default 14, [cavityHealing] is true, and [alphaMatting] is false,
+     * returns the base unfeathered mask.
+     * When parameters are customized and a variance map is available, regenerates the mask dynamically
      * via [CutoutAutoTuner.buildMask] and caches the resulting bitmap in memory keyed by
-     * `"$cutoutId:$translucency:$featheringPx"`.
+     * `"$cutoutId:$sensitivity:$translucency:$cavityHealing:$alphaMatting"`.
      */
     fun getMask(
         context: Context,
         cutoutId: String,
         translucency: Int = MIN_TRANSLUCENCY,
-        featheringPx: Int = MIN_FEATHERING_PX,
         sensitivity: Int = DEFAULT_SENSITIVITY,
         cavityHealing: Boolean = true,
         alphaMatting: Boolean = false,
     ): Bitmap? {
         val clampedTranslucency = translucency.coerceIn(MIN_TRANSLUCENCY, MAX_TRANSLUCENCY)
-        val clampedFeathering = featheringPx.coerceIn(MIN_FEATHERING_PX, MAX_FEATHERING_PX)
         val clampedSensitivity = sensitivity.coerceIn(MIN_SENSITIVITY, MAX_SENSITIVITY)
 
         if (clampedTranslucency == MIN_TRANSLUCENCY &&
-            clampedFeathering == MIN_FEATHERING_PX &&
             clampedSensitivity == DEFAULT_SENSITIVITY &&
             cavityHealing &&
             !alphaMatting
@@ -72,7 +70,7 @@ object CutoutMaskManager {
         }
 
         val cacheKey =
-            "$cutoutId:$clampedSensitivity:$clampedTranslucency:$clampedFeathering:$cavityHealing:$alphaMatting"
+            "$cutoutId:$clampedSensitivity:$clampedTranslucency:$cavityHealing:$alphaMatting"
         tunedMaskCache[cacheKey]?.let { cached ->
             if (!cached.isRecycled) return cached
             tunedMaskCache.remove(cacheKey)
@@ -91,27 +89,21 @@ object CutoutMaskManager {
                         width = width,
                         height = height,
                         translucency = clampedTranslucency,
-                        featheringPx = clampedFeathering,
                         colorChangeThreshold = clampedSensitivity,
                         cavityHealing = cavityHealing,
                         alphaMatting = alphaMatting,
                     )
                 } else {
-                    // Fallback: If no variance map is available (e.g. legacy mask), apply edge feathering to base mask
                     val pixels = IntArray(width * height)
                     baseBitmap.getPixels(pixels, 0, width, 0, 0, width, height)
-                    if (clampedFeathering > 0) {
-                        CutoutAutoTuner.applyEdgeFeathering(pixels, width, height, clampedFeathering)
-                    } else {
-                        pixels
-                    }
+                    pixels
                 }
 
             val tunedBitmap = Bitmap.createBitmap(tunedPixels, width, height, Bitmap.Config.ARGB_8888)
             tunedMaskCache[cacheKey] = tunedBitmap
             AppLog.d(
                 TAG,
-                "Generated tuned mask (s=$clampedSensitivity, t=$clampedTranslucency, f=$clampedFeathering px, c=$cavityHealing, a=$alphaMatting) for cutout $cutoutId (${width}x$height)",
+                "Generated tuned mask (s=$clampedSensitivity, t=$clampedTranslucency, c=$cavityHealing, a=$alphaMatting) for cutout $cutoutId (${width}x$height)",
             )
             tunedBitmap
         } catch (e: Exception) {
@@ -131,17 +123,15 @@ object CutoutMaskManager {
         context: Context,
         cutoutId: String,
         translucency: Int = MIN_TRANSLUCENCY,
-        featheringPx: Int = MIN_FEATHERING_PX,
         sensitivity: Int = DEFAULT_SENSITIVITY,
         cavityHealing: Boolean = true,
         alphaMatting: Boolean = false,
     ): Bitmap? {
         val clampedTranslucency = translucency.coerceIn(MIN_TRANSLUCENCY, MAX_TRANSLUCENCY)
-        val clampedFeathering = featheringPx.coerceIn(MIN_FEATHERING_PX, MAX_FEATHERING_PX)
         val clampedSensitivity = sensitivity.coerceIn(MIN_SENSITIVITY, MAX_SENSITIVITY)
 
         val cacheKey =
-            "$cutoutId:static:$clampedSensitivity:$clampedTranslucency:$clampedFeathering:$cavityHealing:$alphaMatting"
+            "$cutoutId:static:$clampedSensitivity:$clampedTranslucency:$cavityHealing:$alphaMatting"
         staticAssetCache[cacheKey]?.let { cached ->
             if (!cached.isRecycled) return cached
             staticAssetCache.remove(cacheKey)
@@ -153,7 +143,6 @@ object CutoutMaskManager {
                 context = context,
                 cutoutId = cutoutId,
                 translucency = clampedTranslucency,
-                featheringPx = clampedFeathering,
                 sensitivity = clampedSensitivity,
                 cavityHealing = cavityHealing,
                 alphaMatting = alphaMatting,
@@ -177,7 +166,7 @@ object CutoutMaskManager {
             staticAssetCache[cacheKey] = staticBitmap
             AppLog.d(
                 TAG,
-                "Generated tuned static asset (s=$clampedSensitivity, t=$clampedTranslucency, f=$clampedFeathering px) for cutout $cutoutId (${width}x$height)",
+                "Generated tuned static asset (s=$clampedSensitivity, t=$clampedTranslucency) for cutout $cutoutId (${width}x$height)",
             )
             staticBitmap
         } catch (e: Exception) {
