@@ -301,7 +301,19 @@ internal fun CutoutSettingsSubPageContent(
         )
     }
 
-    // 4. Advanced Cutout Settings (HUD / UI Isolation)
+    // 4. Render Above Mask
+    GamepadToggleCard(
+        title = stringResource(R.string.settings_cutout_render_above_mask_title),
+        description = stringResource(R.string.settings_cutout_render_above_mask_desc),
+        checked = cutout.renderAboveMask,
+        icon = Icons.Rounded.Layers,
+        itemKey = "cutout_${cutout.id}_render_above_mask",
+        onCheckedChange = { isChecked ->
+            onUpdateCutout(cutout.copy(renderAboveMask = isChecked), false)
+        },
+    )
+
+    // 5. Advanced Cutout Settings (HUD / UI Isolation)
     GamepadActionCard(
         title = stringResource(R.string.settings_cutout_advanced_title),
         description = stringResource(R.string.settings_cutout_advanced_desc),
@@ -310,7 +322,7 @@ internal fun CutoutSettingsSubPageContent(
         onClick = onOpenAdvancedCutoutSettings,
     )
 
-    // 5. Delete Cutout Action
+    // 6. Delete Cutout Action
     GamepadSectionHeader(
         text = stringResource(R.string.macropad_editor_section_actions),
         color = accentColor,

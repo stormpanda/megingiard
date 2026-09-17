@@ -665,6 +665,8 @@ Open Settings to create a layout.</string>
     <string name="settings_mirror_cutout_summary_fmt">Smoothing: %1$s • Projection: %2$s</string>
     <string name="settings_mirror_cutout_summary_with_filter_fmt">Smoothing: %1$s • %2$s • Projection: %3$s</string>
     <string name="settings_mirror_cutout_filter_transparency_mask">HUD / UI Isolation</string>
+    <string name="settings_cutout_render_above_mask_title">Render Above Background Mask</string>
+    <string name="settings_cutout_render_above_mask_desc">Renders this cutout above layout background masks while remaining below MacroPad buttons</string>
     <string name="settings_cutout_advanced_title">Advanced Cutout Settings</string>
     <string name="settings_cutout_advanced_desc">HUD / UI isolation and translucency adjustments</string>
     <string name="settings_cutout_convert_smart_title">Isolate HUD / UI Elements</string>

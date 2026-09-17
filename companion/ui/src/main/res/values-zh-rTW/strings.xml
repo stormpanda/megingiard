@@ -664,6 +664,8 @@ Open Settings to create a layout.</string>
     <string name="settings_mirror_cutout_summary_fmt">平滑化: %1$s • 投影: %2$s</string>
     <string name="settings_mirror_cutout_summary_with_filter_fmt">平滑化：%1$s • %2$s • 投影：%3$s</string>
     <string name="settings_mirror_cutout_filter_transparency_mask">HUD / UI 隔離</string>
+    <string name="settings_cutout_render_above_mask_title">在背景遮罩上方渲染</string>
+    <string name="settings_cutout_render_above_mask_desc">將此裁切區域渲染在佈局背景遮罩之上，同時保持在 MacroPad 按鈕之下</string>
     <string name="settings_cutout_advanced_title">進階切角設定</string>
     <string name="settings_cutout_advanced_desc">HUD / UI 隔離校準與半透明度還原</string>
     <string name="settings_cutout_convert_smart_title">隔離 HUD / UI 元素</string>

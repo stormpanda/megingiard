@@ -185,7 +185,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
   - **Render as Static UI Asset Toggle:** An optional switch allowing the cutout to bypass live video stream rendering and render the clean, pre-rendered 32-bit RGBA static asset directly. This completely eliminates moving background scenery bleed-through and video compression noise behind semi-transparent elements (e.g. sparkles, decorative frames, touch buttons).
   - **Re-Calibrate HUD / UI Mask:** An action card allowing the user to re-sample screen frames to refresh the mask and freeze frame.
   - **Remove HUD / UI Isolation:** A two-step destructive confirmation card that deletes calibration files from disk and reverts the cutout back to a standard live rectangular/circular mirror cutout (`hasTransparencyMask = false`).
-- Mask state is persisted per-cutout in `ScreenCutout` (`hasTransparencyMask: Boolean`, `maskTranslucency: Int = 0`, `maskSensitivity: Int = 14`, `maskCavityHealing: Boolean = true`, `renderAsStaticAsset: Boolean = false`).
+- Mask state and layering are persisted per-cutout in `ScreenCutout` (`hasTransparencyMask: Boolean`, `maskTranslucency: Int = 0`, `maskSensitivity: Int = 14`, `maskCavityHealing: Boolean = true`, `renderAsStaticAsset: Boolean = false`, `renderAboveMask: Boolean = false`).
 
 ### FR-M18: Automatic Layout Switching & Layout-Level Visual Reference Anchors
 
@@ -351,7 +351,7 @@ The master texture surface buffer allocation matches the source resolution. The 
 - `EmbeddedMirrorView` collects updates from `MacroPadState.activeLayout` to dynamically react to layout changes.
 - When a layout custom background image is selected, it is decoded asynchronously (`Dispatchers.IO`) as a `Bitmap`.
 - **Background Mode (`useBackgroundImageAsMask = false`)**: The bitmap is applied behind the cutouts. Mirrored cutouts are drawn on top. If no background image is set (or it is removed), the background falls back to the app theme background.
-- **Mask Mode (`useBackgroundImageAsMask = true`)**: The bitmap is passed directly to `MultiCutoutContainer`. Inside `MultiCutoutContainer.dispatchDraw`, cutouts are rendered in a two-pass architecture: live/frozen stream cutouts are drawn first underneath the background mask overlay, the background mask bitmap is rendered on top, and any static UI cutouts (`renderAsStaticAsset = true` with a valid transparency mask) are drawn above the background mask overlay, while remaining underneath Compose MacroPad buttons. This allows live video streams to shine through transparent mask cutouts while keeping static HUD elements and buttons legible in the foreground.
+- **Mask Mode (`useBackgroundImageAsMask = true`)**: The bitmap is passed directly to `MultiCutoutContainer`. Inside `MultiCutoutContainer.dispatchDraw`, cutouts are rendered in a two-pass architecture: cutouts with `renderAboveMask = false` (the default) are drawn first underneath the background mask overlay, the background mask bitmap is rendered on top, and cutouts with `renderAboveMask = true` are drawn above the background mask overlay, while remaining underneath Compose MacroPad buttons. This allows live video streams to shine through transparent mask cutouts while keeping foreground HUD elements, gauges, and buttons legible on top of the mask.
 
 ### Ambient Dimming Support
 

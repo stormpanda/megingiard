@@ -17,6 +17,37 @@ class ScreenCutoutFilterTest {
     }
 
     @Test
+    fun `verify default renderAboveMask on ScreenCutout is false`() {
+        val cutout = ScreenCutout.FULLSCREEN
+        assertFalse(cutout.renderAboveMask)
+    }
+
+    @Test
+    fun `verify serialization roundtrip with renderAboveMask`() {
+        val original =
+            ScreenCutout(
+                id = "cutout_above_mask",
+                name = "Above Mask Cutout",
+                srcX = 0.0f,
+                srcY = 0.0f,
+                srcWidth = 0.5f,
+                srcHeight = 0.5f,
+                destX = 0.0f,
+                destY = 0.0f,
+                destWidth = 0.5f,
+                destHeight = 0.5f,
+                renderAboveMask = true,
+            )
+
+        val serialized = json.encodeToString(ScreenCutout.serializer(), original)
+        assertTrue(serialized.contains("renderAboveMask"))
+
+        val deserialized = json.decodeFromString(ScreenCutout.serializer(), serialized)
+        assertEquals(original, deserialized)
+        assertTrue(deserialized.renderAboveMask)
+    }
+
+    @Test
     fun `verify serialization roundtrip with hasTransparencyMask`() {
         val original =
             ScreenCutout(
@@ -70,6 +101,7 @@ class ScreenCutoutFilterTest {
         assertEquals("legacy_cutout", parsed.id)
         assertFalse(parsed.hasTransparencyMask)
         assertEquals(0, parsed.maskTranslucency)
+        assertFalse(parsed.renderAboveMask)
     }
 
     @Test
@@ -100,6 +132,7 @@ class ScreenCutoutFilterTest {
         val parsed = json.decodeFromString(ScreenCutout.serializer(), legacyWithOldFields)
         assertEquals("cutout_with_old_fields", parsed.id)
         assertTrue(parsed.hasTransparencyMask)
+        assertFalse(parsed.renderAboveMask)
     }
 
     @Test

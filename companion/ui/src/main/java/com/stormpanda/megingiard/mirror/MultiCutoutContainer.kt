@@ -440,20 +440,6 @@ internal class MultiCutoutContainer(
         }
     }
 
-    private fun isCutoutStaticAsset(cutout: ScreenCutout): Boolean {
-        val hasTransparencyMask = cutout.hasTransparencyMask && CutoutMaskManager.hasMask(context, cutout.id)
-        if (!cutout.renderAsStaticAsset || !hasTransparencyMask) return false
-        val staticAssetBitmap =
-            CutoutMaskManager.getStaticAsset(
-                context = context,
-                cutoutId = cutout.id,
-                translucency = cutout.maskTranslucency,
-                sensitivity = cutout.maskSensitivity,
-                cavityHealing = cutout.maskCavityHealing,
-            )
-        return staticAssetBitmap != null && !staticAssetBitmap.isRecycled
-    }
-
     private fun drawSingleCutout(
         canvas: Canvas,
         cutout: ScreenCutout,
@@ -823,7 +809,7 @@ internal class MultiCutoutContainer(
                 drawBackgroundBitmap(canvas, bg, parentW, parentH)
             }
 
-            val (staticCutouts, streamCutouts) = cutouts.partition { isCutoutStaticAsset(it) }
+            val (aboveMaskCutouts, belowMaskCutouts) = cutouts.partition { it.renderAboveMask }
 
             val isEditing = isViewportEditActive || AppStateManager.isViewportEditActive.value
             val activeLayout = MacroPadState.activeLayout.value
@@ -841,29 +827,29 @@ internal class MultiCutoutContainer(
             val effectiveManualFrozen = !isEditing && isFrozen
             val isTargetFrozen = effectiveManualFrozen || shouldFreeze
 
-            // Pass 1: Stream / live / frozen video cutouts (rendered below background mask)
-            var hasAnyStreamTouchingEdge = false
-            if (edgeBlending && streamCutouts.size > 1) {
-                for (i in streamCutouts.indices) {
-                    val c = streamCutouts[i]
+            // Pass 1: Cutouts rendered below background mask
+            var hasAnyBelowTouchingEdge = false
+            if (edgeBlending && belowMaskCutouts.size > 1) {
+                for (i in belowMaskCutouts.indices) {
+                    val c = belowMaskCutouts[i]
                     if (c.destX > tolerance || c.destX + c.destWidth < 1.0f - tolerance ||
                         c.destY > tolerance || c.destY + c.destHeight < 1.0f - tolerance
                     ) {
-                        hasAnyStreamTouchingEdge = true
+                        hasAnyBelowTouchingEdge = true
                         break
                     }
                 }
             }
 
-            val streamLayerSaveCount =
-                if (hasAnyStreamTouchingEdge) {
+            val belowLayerSaveCount =
+                if (hasAnyBelowTouchingEdge) {
                     canvas.saveLayer(0f, 0f, parentW, parentH, null)
                 } else {
                     canvas.save()
                 }
 
             try {
-                for (cutout in streamCutouts) {
+                for (cutout in belowMaskCutouts) {
                     val drew =
                         drawSingleCutout(
                             canvas = canvas,
@@ -885,69 +871,73 @@ internal class MultiCutoutContainer(
                         masterViewDrawn = true
                     }
                 }
-
-                if (!masterViewDrawn && !isFrozen && masterView != null) {
-                    val saveCount = canvas.save()
-                    canvas.clipRect(0f, 0f, 1f, 1f)
-                    drawChild(canvas, masterView, drawTime)
-                    canvas.drawRect(0f, 0f, 1f, 1f, maskPaint)
-                    canvas.restoreToCount(saveCount)
-                    masterViewDrawn = true
-                }
             } finally {
-                canvas.restoreToCount(streamLayerSaveCount)
+                canvas.restoreToCount(belowLayerSaveCount)
             }
 
-            // Background mask pass: if useAsMask is enabled, draw background mask above stream cutouts
+            // Background mask pass: if useAsMask is enabled, draw background mask above Pass 1 cutouts
             val mask = bgBitmap
             if (useAsMask && mask != null) {
                 drawBackgroundBitmap(canvas, mask, parentW, parentH)
             }
 
-            // Pass 2: Static asset UI cutouts (rendered above background mask, below Compose MacroPad buttons)
-            if (staticCutouts.isNotEmpty()) {
-                var hasAnyStaticTouchingEdge = false
-                if (edgeBlending && staticCutouts.size > 1) {
-                    for (i in staticCutouts.indices) {
-                        val c = staticCutouts[i]
+            // Pass 2: Cutouts rendered above background mask (below Compose MacroPad buttons)
+            if (aboveMaskCutouts.isNotEmpty()) {
+                var hasAnyAboveTouchingEdge = false
+                if (edgeBlending && aboveMaskCutouts.size > 1) {
+                    for (i in aboveMaskCutouts.indices) {
+                        val c = aboveMaskCutouts[i]
                         if (c.destX > tolerance || c.destX + c.destWidth < 1.0f - tolerance ||
                             c.destY > tolerance || c.destY + c.destHeight < 1.0f - tolerance
                         ) {
-                            hasAnyStaticTouchingEdge = true
+                            hasAnyAboveTouchingEdge = true
                             break
                         }
                     }
                 }
 
-                val staticLayerSaveCount =
-                    if (hasAnyStaticTouchingEdge) {
+                val aboveLayerSaveCount =
+                    if (hasAnyAboveTouchingEdge) {
                         canvas.saveLayer(0f, 0f, parentW, parentH, null)
                     } else {
                         canvas.save()
                     }
 
                 try {
-                    for (cutout in staticCutouts) {
-                        drawSingleCutout(
-                            canvas = canvas,
-                            cutout = cutout,
-                            parentW = parentW,
-                            parentH = parentH,
-                            edgeBlending = edgeBlending,
-                            tolerance = tolerance,
-                            blendW = blendW,
-                            isTargetFrozen = isTargetFrozen,
-                            effectiveManualFrozen = effectiveManualFrozen,
-                            shouldBlur = shouldBlur,
-                            activeLayout = activeLayout,
-                            isLayoutAnchorActive = isLayoutAnchorActive,
-                            drawTime = drawTime,
-                            masterView = masterView,
-                        )
+                    for (cutout in aboveMaskCutouts) {
+                        val drew =
+                            drawSingleCutout(
+                                canvas = canvas,
+                                cutout = cutout,
+                                parentW = parentW,
+                                parentH = parentH,
+                                edgeBlending = edgeBlending,
+                                tolerance = tolerance,
+                                blendW = blendW,
+                                isTargetFrozen = isTargetFrozen,
+                                effectiveManualFrozen = effectiveManualFrozen,
+                                shouldBlur = shouldBlur,
+                                activeLayout = activeLayout,
+                                isLayoutAnchorActive = isLayoutAnchorActive,
+                                drawTime = drawTime,
+                                masterView = masterView,
+                            )
+                        if (drew) {
+                            masterViewDrawn = true
+                        }
                     }
                 } finally {
-                    canvas.restoreToCount(staticLayerSaveCount)
+                    canvas.restoreToCount(aboveLayerSaveCount)
                 }
+            }
+
+            if (!masterViewDrawn && !isFrozen && masterView != null) {
+                val saveCount = canvas.save()
+                canvas.clipRect(0f, 0f, 1f, 1f)
+                drawChild(canvas, masterView, drawTime)
+                canvas.drawRect(0f, 0f, 1f, 1f, maskPaint)
+                canvas.restoreToCount(saveCount)
+                masterViewDrawn = true
             }
         } finally {
             canvas.restoreToCount(overallSaveCount)

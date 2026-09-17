@@ -40,6 +40,7 @@ enum class AspectRatioMode {
  * @param maskSensitivity Color variance threshold (0..255, default 14) for background detection.
  * @param maskCavityHealing Whether morphological closing bridges gaps to protect internal animated meters and widgets.
  * @param renderAsStaticAsset Whether this isolated cutout renders as a clean pre-rendered static RGBA asset bypassing live stream.
+ * @param renderAboveMask Whether this cutout is composited above layout background masks while remaining below MacroPad buttons.
  */
 @Serializable
 data class ScreenCutout(
@@ -66,6 +67,7 @@ data class ScreenCutout(
     val maskSensitivity: Int = 14,
     val maskCavityHealing: Boolean = true,
     val renderAsStaticAsset: Boolean = false,
+    val renderAboveMask: Boolean = false,
 ) {
     companion object {
         val FULLSCREEN =
