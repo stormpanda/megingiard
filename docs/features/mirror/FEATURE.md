@@ -351,7 +351,7 @@ The master texture surface buffer allocation matches the source resolution. The 
 - `EmbeddedMirrorView` collects updates from `MacroPadState.activeLayout` to dynamically react to layout changes.
 - When a layout custom background image is selected, it is decoded asynchronously (`Dispatchers.IO`) as a `Bitmap`.
 - **Background Mode (`useBackgroundImageAsMask = false`)**: The bitmap is applied behind the cutouts. Mirrored cutouts are drawn on top. If no background image is set (or it is removed), the background falls back to the app theme background.
-- **Mask Mode (`useBackgroundImageAsMask = true`)**: The bitmap is passed directly to `MultiCutoutContainer`. Inside `MultiCutoutContainer.dispatchDraw`, the bitmap is drawn *on top* of the rendered mirrored cutouts, serving as an overlay mask. This allows the mirrored screen viewports to show through any transparent regions in the background image.
+- **Mask Mode (`useBackgroundImageAsMask = true`)**: The bitmap is passed directly to `MultiCutoutContainer`. Inside `MultiCutoutContainer.dispatchDraw`, cutouts are rendered in a two-pass architecture: live/frozen stream cutouts are drawn first underneath the background mask overlay, the background mask bitmap is rendered on top, and any static UI cutouts (`renderAsStaticAsset = true` with a valid transparency mask) are drawn above the background mask overlay, while remaining underneath Compose MacroPad buttons. This allows live video streams to shine through transparent mask cutouts while keeping static HUD elements and buttons legible in the foreground.
 
 ### Ambient Dimming Support
 
