@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.mirror
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,6 +15,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AspectRatio
+import androidx.compose.material.icons.rounded.CenterFocusStrong
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Crop
@@ -30,7 +32,10 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -43,11 +48,16 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.math.ALIGNMENT_VISUAL_TOLERANCE_PX
+import com.stormpanda.megingiard.math.calculateCutoutAlignmentSnap
+import com.stormpanda.megingiard.math.findAlignedCutoutCenterGuides
+import com.stormpanda.megingiard.settings.MirrorSettings
 import com.stormpanda.megingiard.ui.HelpEntry
 import com.stormpanda.megingiard.ui.HelpIntro
 import com.stormpanda.megingiard.ui.HelpModal
 import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
+import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.roundToInt
 
@@ -76,6 +86,15 @@ private const val CLE_UNSELECTED_BG_ALPHA = 0.05f
 private const val CLE_UNSELECTED_BORDER_ALPHA = 0.15f
 private const val CLE_SELECTED_BORDER_ALPHA = 0.75f
 
+private const val CLE_ALIGNMENT_GUIDE_LINE_ALPHA = 0.85f
+private const val CLE_ALIGNMENT_GUIDE_RING_ALPHA = 0.35f
+private val CLE_ALIGNMENT_GUIDE_STROKE_WIDTH = 1.5.dp
+private const val CLE_ALIGNMENT_GUIDE_DASH_ON = 8f
+private const val CLE_ALIGNMENT_GUIDE_DASH_OFF = 6f
+private val CLE_ALIGNMENT_DOT_RADIUS = 3.5.dp
+private val CLE_ALIGNMENT_DOT_RING_RADIUS = 6.5.dp
+private val CLE_ALIGNMENT_DOT_RING_STROKE = 1.5.dp
+
 @Composable
 fun CutoutLayoutEditor() {
     val colors = LocalAppColors.current
@@ -83,6 +102,7 @@ fun CutoutLayoutEditor() {
     val layout = activeLayout ?: return
 
     val selectedCutoutId by AppStateManager.selectedCutoutId.collectAsStateWithLifecycle()
+    val cutoutAlignmentSnapping by MirrorSettings.cutoutAlignmentSnapping.collectAsStateWithLifecycle()
     val density = LocalDensity.current
     val surfaceWidth by ScreenCaptureManager.surfaceWidth.collectAsStateWithLifecycle()
     val surfaceHeight by ScreenCaptureManager.surfaceHeight.collectAsStateWithLifecycle()
@@ -159,13 +179,26 @@ fun CutoutLayoutEditor() {
                                         val targetX = dragStartX + accumulatedX / screenW
                                         val targetY = dragStartY + accumulatedY / screenH
 
+                                        val snapResult =
+                                            calculateCutoutAlignmentSnap(
+                                                rawDestX = targetX,
+                                                rawDestY = targetY,
+                                                destWidth = curCutout.destWidth,
+                                                destHeight = curCutout.destHeight,
+                                                movingCutoutId = curCutout.id,
+                                                otherCutouts = curLayout.mirrorCutouts,
+                                                canvasW = screenW,
+                                                canvasH = screenH,
+                                                alignmentSnappingEnabled = cutoutAlignmentSnapping,
+                                            )
+
                                         val (clampedX, clampedY) =
                                             clampCutoutDrag(
                                                 cutoutId = curCutout.id,
                                                 originalX = curCutout.destX,
                                                 originalY = curCutout.destY,
-                                                targetX = targetX,
-                                                targetY = targetY,
+                                                targetX = snapResult.snappedNormX,
+                                                targetY = snapResult.snappedNormY,
                                                 width = curCutout.destWidth,
                                                 height = curCutout.destHeight,
                                                 allCutouts = curLayout.mirrorCutouts,
@@ -543,6 +576,31 @@ fun CutoutLayoutEditor() {
                     }
                 }
             }
+
+            // Discover active alignment guides
+            val (alignedXs, alignedYs) =
+                remember(selectedCutoutId, layout.mirrorCutouts, screenW, screenH) {
+                    if (selectedCutoutId != null && screenW > 0f && screenH > 0f) {
+                        findAlignedCutoutCenterGuides(
+                            activeCutoutId = selectedCutoutId,
+                            cutouts = layout.mirrorCutouts,
+                            canvasW = screenW,
+                            canvasH = screenH,
+                        )
+                    } else {
+                        emptyList<Float>() to emptyList<Float>()
+                    }
+                }
+
+            // PowerPoint-style Smart Alignment Guides overlay
+            if (alignedXs.isNotEmpty() || alignedYs.isNotEmpty()) {
+                CutoutAlignmentGuidesOverlay(
+                    alignedXs = alignedXs,
+                    alignedYs = alignedYs,
+                    cutouts = layout.mirrorCutouts,
+                    accentColor = colors.accent,
+                )
+            }
         }
     }
 }
@@ -586,6 +644,11 @@ internal fun CutoutLayoutEditorHelpModal(
             icon = Icons.Rounded.CropSquare,
             label = stringResource(R.string.help_mirror_editor_shape_label),
             description = stringResource(R.string.help_mirror_editor_shape_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.CenterFocusStrong,
+            label = stringResource(R.string.mirror_editor_snap_alignment),
+            description = stringResource(R.string.mirror_editor_snap_alignment_desc),
         )
         HelpEntry(
             icon = Icons.Rounded.Crop,
@@ -698,4 +761,75 @@ internal fun adjustSourceCropToAspectRatio(
         srcWidth = newW,
         srcHeight = newH,
     )
+}
+
+@Composable
+private fun CutoutAlignmentGuidesOverlay(
+    alignedXs: List<Float>,
+    alignedYs: List<Float>,
+    cutouts: List<ScreenCutout>,
+    accentColor: Color,
+) {
+    val density = LocalDensity.current
+    val strokeWidthPx = with(density) { CLE_ALIGNMENT_GUIDE_STROKE_WIDTH.toPx() }
+    val dotRadiusPx = with(density) { CLE_ALIGNMENT_DOT_RADIUS.toPx() }
+    val ringRadiusPx = with(density) { CLE_ALIGNMENT_DOT_RING_RADIUS.toPx() }
+    val ringStrokePx = with(density) { CLE_ALIGNMENT_DOT_RING_STROKE.toPx() }
+    val dashEffect =
+        remember {
+            PathEffect.dashPathEffect(floatArrayOf(CLE_ALIGNMENT_GUIDE_DASH_ON, CLE_ALIGNMENT_GUIDE_DASH_OFF), 0f)
+        }
+    val guideColor = accentColor.copy(alpha = CLE_ALIGNMENT_GUIDE_LINE_ALPHA)
+    val ringColor = accentColor.copy(alpha = CLE_ALIGNMENT_GUIDE_RING_ALPHA)
+
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val w = size.width
+        val h = size.height
+
+        // Draw vertical alignment guide lines
+        alignedXs.forEach { normCenterX ->
+            val xPx = normCenterX * w
+            drawLine(
+                color = guideColor,
+                start = Offset(xPx, 0f),
+                end = Offset(xPx, h),
+                strokeWidth = strokeWidthPx,
+                pathEffect = dashEffect,
+            )
+        }
+
+        // Draw horizontal alignment guide lines
+        alignedYs.forEach { normCenterY ->
+            val yPx = normCenterY * h
+            drawLine(
+                color = guideColor,
+                start = Offset(0f, yPx),
+                end = Offset(w, yPx),
+                strokeWidth = strokeWidthPx,
+                pathEffect = dashEffect,
+            )
+        }
+
+        // Draw indicator dots/rings at matching cutout centers
+        cutouts.forEach { cutout ->
+            val centerX = cutout.destX + cutout.destWidth / 2f
+            val centerY = cutout.destY + cutout.destHeight / 2f
+            val matchesX = alignedXs.any { abs(centerX - it) * w <= ALIGNMENT_VISUAL_TOLERANCE_PX }
+            val matchesY = alignedYs.any { abs(centerY - it) * h <= ALIGNMENT_VISUAL_TOLERANCE_PX }
+            if (matchesX || matchesY) {
+                val center = Offset(centerX * w, centerY * h)
+                drawCircle(
+                    color = ringColor,
+                    radius = ringRadiusPx,
+                    center = center,
+                    style = Stroke(ringStrokePx),
+                )
+                drawCircle(
+                    color = guideColor,
+                    radius = dotRadiusPx,
+                    center = center,
+                )
+            }
+        }
+    }
 }

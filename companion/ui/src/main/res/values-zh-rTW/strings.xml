@@ -643,6 +643,8 @@ Open Settings to create a layout.</string>
     <!-- Cutout Layout Editor Toolbar Short Labels -->
     <string name="mirror_editor_toolbar_done">完成</string>
     <string name="mirror_editor_toolbar_cancel">取消</string>
+    <string name="mirror_editor_snap_alignment">對齊吸附</string>
+    <string name="mirror_editor_snap_alignment_desc">將區塊中心點磁吸對齊至其他區塊</string>
     <string name="mirror_editor_toolbar_shape_circle">圓形</string>
     <string name="mirror_editor_toolbar_shape_rect">矩形</string>
     <string name="settings_mirror_touch_projection">觸控投影</string>

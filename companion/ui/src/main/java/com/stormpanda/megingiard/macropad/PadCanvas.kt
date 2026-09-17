@@ -63,7 +63,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.BitmapUtils
+import com.stormpanda.megingiard.math.BUTTON_ALIGNMENT_VISUAL_TOLERANCE_PX
 import com.stormpanda.megingiard.math.ViewportMath
+import com.stormpanda.megingiard.math.calculateButtonAlignmentSnap
+import com.stormpanda.megingiard.math.findAlignedCenterGuides
+import com.stormpanda.megingiard.math.radialPointCount
+import com.stormpanda.megingiard.math.snapPosition
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.settings.MacroPadSettings

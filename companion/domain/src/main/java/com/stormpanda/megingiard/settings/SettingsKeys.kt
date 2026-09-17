@@ -31,6 +31,7 @@ internal val KEY_STEAMGRIDDB_API_TOKEN = stringPreferencesKey("steamgriddb_api_t
 internal val KEY_REMEMBER_VIEWPORT = booleanPreferencesKey("mirror_remember_viewport")
 internal val KEY_REMEMBER_LOCK = booleanPreferencesKey("mirror_remember_lock")
 internal val KEY_REMEMBER_PROJECTION = booleanPreferencesKey("mirror_remember_projection")
+internal val KEY_MIRROR_SNAP_ALIGNMENT = booleanPreferencesKey("mirror_snap_alignment")
 // Mirror session state persistence — saved values (viewport moved to PadLayout.mirrorSaved*)
 
 // Appearance
@@ -130,6 +131,7 @@ private val MIRROR_KEYS: Set<Preferences.Key<*>> =
         KEY_REMEMBER_VIEWPORT,
         KEY_REMEMBER_LOCK,
         KEY_REMEMBER_PROJECTION,
+        KEY_MIRROR_SNAP_ALIGNMENT,
     )
 private val TOUCHPAD_KEYS: Set<Preferences.Key<*>> =
     setOf(
@@ -209,6 +211,7 @@ internal val BOOLEAN_KEYS: Set<Preferences.Key<*>> =
         KEY_REMEMBER_VIEWPORT,
         KEY_REMEMBER_LOCK,
         KEY_REMEMBER_PROJECTION,
+        KEY_MIRROR_SNAP_ALIGNMENT,
         KEY_KB_TRACKPOINT_ENABLED,
         KEY_KB_REPEAT_ENABLED,
         KEY_KB_FULLSCREEN,

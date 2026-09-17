@@ -135,6 +135,11 @@ class FeatureSettingsTest {
         MirrorSettings.setRememberProjection(true)
         assertTrue(MirrorSettings.rememberProjection.value)
 
+        MirrorSettings.setCutoutAlignmentSnapping(false)
+        assertFalse(MirrorSettings.cutoutAlignmentSnapping.value)
+        MirrorSettings.setCutoutAlignmentSnapping(true)
+        assertTrue(MirrorSettings.cutoutAlignmentSnapping.value)
+
         MirrorSettings.saveMirrorSessionState()
     }
 

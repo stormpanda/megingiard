@@ -644,6 +644,8 @@ Open Settings to create a layout.</string>
     <!-- Cutout Layout Editor Toolbar Short Labels -->
     <string name="mirror_editor_toolbar_done">Fertig</string>
     <string name="mirror_editor_toolbar_cancel">Abbrechen</string>
+    <string name="mirror_editor_snap_alignment">An Ausrichtung einrasten</string>
+    <string name="mirror_editor_snap_alignment_desc">Zentren von Ausschnitten magnetisch an anderen Ausschnitten ausrichten</string>
     <string name="mirror_editor_toolbar_shape_circle">Kreis</string>
     <string name="mirror_editor_toolbar_shape_rect">Rechteck</string>
     <string name="settings_mirror_touch_projection">Touch-Projektion</string>
