@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -109,6 +110,9 @@ val TOOLBOX_CARD_SHAPE = RoundedCornerShape(TOOLBOX_CARD_CORNER)
 val TOOLBOX_CARD_MIN_HEIGHT = 38.dp
 val TOOLBOX_CARD_PADDING_H = 8.dp
 val TOOLBOX_CARD_PADDING_V = 5.dp
+
+const val TOOLBOX_MAX_VISIBLE_ITEMS = 6.5f
+val TOOLBOX_MAX_CONTENT_HEIGHT = (TOOLBOX_CARD_MIN_HEIGHT * TOOLBOX_MAX_VISIBLE_ITEMS) + (TOOLBOX_ITEM_SPACING * 6f)
 
 val TOOLBOX_ICON_BOX_SIZE = 26.dp
 val TOOLBOX_ICON_SIZE = 16.dp
@@ -208,7 +212,7 @@ fun ToolboxContainer(
                                 if (isMinimized) {
                                     Modifier.height(TOOLBOX_CARD_MIN_HEIGHT)
                                 } else {
-                                    Modifier
+                                    Modifier.heightIn(max = TOOLBOX_MAX_CONTENT_HEIGHT)
                                 },
                             ).verticalScroll(rememberScrollState())
                             .focusGroup()
