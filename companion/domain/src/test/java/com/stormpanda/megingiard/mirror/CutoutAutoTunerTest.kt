@@ -249,7 +249,7 @@ class CutoutAutoTunerTest {
         val testW = 60
         val testH = 60
         val testCount = testW * testH
-        val varianceMap = ByteArray(testCount) { 180.toByte() }
+        val varianceMap = ByteArray(testCount) { 240.toByte() }
 
         for (y in 20..35) {
             for (x in 20..35) {
@@ -266,9 +266,9 @@ class CutoutAutoTunerTest {
         val maskBase = CutoutAutoTuner.buildMask(varianceMap, testW, testH, translucency = 0)
         assertEquals(MASK_PIXEL_TRANSPARENT, maskBase[28 * testW + 28])
 
-        // At translucency 80%: barrier threshold is 14 + (80 * 55) / 100 = 58 >= 40.
-        // The semi-transparent ring seals the cavity from the exterior background,
-        // and interior variance 70 <= 30 + (80 * 120) / 100 = 126 is fully recovered!
+        // At translucency 80%: barrier threshold is 14 + (80 * 241) / 100 = 206 >= 40 and >= 70.
+        // The semi-transparent ring seals the cavity from the exterior background (variance 240 > 206),
+        // and interior variance 70 <= 206 is fully recovered!
         val maskTuned = CutoutAutoTuner.buildMask(varianceMap, testW, testH, translucency = 80)
         val cavityAlpha = (maskTuned[28 * testW + 28] ushr 24) and 0xFF
         assertTrue("Enclosed cavity sealed by semi-transparent ring should be recovered", cavityAlpha > 150)
@@ -481,10 +481,16 @@ class CutoutAutoTunerTest {
                 colorChangeThreshold = 14,
                 cavityHealing = true,
             )
-        assertEquals("Center pixel inside open bracket must be preserved solid with cavity healing", MASK_PIXEL_OPAQUE, maskWithHealing[10 * size + 10])
+        assertEquals(
+            "Center pixel inside open bracket must be preserved solid with cavity healing",
+            MASK_PIXEL_OPAQUE,
+            maskWithHealing[
+                10 *
+                    size +
+                    10,
+            ],
+        )
     }
-
-
 
     @Test
     fun `buildMask always applies alpha matting to compute continuous sub-pixel falloff on transition boundary`() {
@@ -497,8 +503,11 @@ class CutoutAutoTunerTest {
         // Row 4..9: outer background (variance = 100)
         for (y in 0 until size) {
             for (x in 0 until size) {
-                if (y < 3) varMap[y * size + x] = 0.toByte()
-                else if (y == 3) varMap[y * size + x] = 25.toByte()
+                if (y < 3) {
+                    varMap[y * size + x] = 0.toByte()
+                } else if (y == 3) {
+                    varMap[y * size + x] = 25.toByte()
+                }
             }
         }
 
@@ -572,5 +581,81 @@ class CutoutAutoTunerTest {
         // Pixel 2: Fully transparent
         assertEquals(MASK_PIXEL_TRANSPARENT, staticAsset[2])
     }
-}
 
+    @Test
+    fun `buildMask with sensitivity 0 keeps only zero variance pixels opaque`() {
+        val testW = 10
+        val testH = 10
+        val testCount = testW * testH
+        val varianceMap = ByteArray(testCount) { 50.toByte() }
+
+        // Place a 3x3 block of 0-variance pixels at (3..5, 3..5)
+        for (y in 3..5) {
+            for (x in 3..5) {
+                varianceMap[y * testW + x] = 0.toByte()
+            }
+        }
+        // Pixel at (8, 4) has variance 1 (exceeds sensitivity 0 and is away from core)
+        varianceMap[4 * testW + 8] = 1.toByte()
+
+        val mask = CutoutAutoTuner.buildMask(varianceMap, testW, testH, translucency = 0, colorChangeThreshold = 0)
+        // Center of 3x3 0-variance block is opaque
+        assertEquals(MASK_PIXEL_OPAQUE, mask[4 * testW + 4])
+        // Non-adjacent pixel with variance 1 > 0 is transparent at sensitivity 0
+        assertEquals(MASK_PIXEL_TRANSPARENT, mask[4 * testW + 8])
+        // Background with variance 50 > 0 is transparent
+        assertEquals(MASK_PIXEL_TRANSPARENT, mask[0])
+    }
+
+    @Test
+    fun `buildMask with sensitivity 255 marks all pixels opaque regardless of variance`() {
+        val testW = 10
+        val testH = 10
+        val testCount = testW * testH
+        // Every pixel has maximum variance 255
+        val varianceMap = ByteArray(testCount) { 255.toByte() }
+
+        val mask = CutoutAutoTuner.buildMask(varianceMap, testW, testH, translucency = 0, colorChangeThreshold = 255)
+        for (i in 0 until testCount) {
+            assertEquals("Pixel $i must be opaque at sensitivity 255", MASK_PIXEL_OPAQUE, mask[i])
+        }
+    }
+
+    @Test
+    fun `buildMask coerces out-of-bounds sensitivity to MIN_SENSITIVITY and MAX_SENSITIVITY`() {
+        val testW = 4
+        val testH = 4
+        val testCount = testW * testH
+        val varianceMap = ByteArray(testCount) { 100.toByte() }
+
+        val maskUnderflow = CutoutAutoTuner.buildMask(varianceMap, testW, testH, colorChangeThreshold = -50)
+        assertEquals(testCount, maskUnderflow.size)
+
+        val maskOverflow = CutoutAutoTuner.buildMask(varianceMap, testW, testH, colorChangeThreshold = 500)
+        assertEquals(testCount, maskOverflow.size)
+        // At clamped 255, variance 100 <= 255, all pixels opaque
+        for (i in 0 until testCount) {
+            assertEquals(MASK_PIXEL_OPAQUE, maskOverflow[i])
+        }
+    }
+
+    @Test
+    fun `buildMask with 100 percent translucency scales variance tolerance to 255`() {
+        val testW = 10
+        val testH = 10
+        val testCount = testW * testH
+        val varianceMap = ByteArray(testCount) { 200.toByte() }
+
+        // Core anchor at (0,0)
+        varianceMap[0] = 5.toByte()
+
+        // At translucency 0, variance 200 > 14 is transparent
+        val maskBase = CutoutAutoTuner.buildMask(varianceMap, testW, testH, translucency = 0, colorChangeThreshold = 14)
+        assertEquals(MASK_PIXEL_TRANSPARENT, maskBase[5 * testW + 5])
+
+        // At translucency 100%, maxAllowedVariance reaches 255 >= 200
+        val maskFull = CutoutAutoTuner.buildMask(varianceMap, testW, testH, translucency = 100, colorChangeThreshold = 14)
+        val centerAlpha = (maskFull[5 * testW + 5] ushr 24) and 0xFF
+        assertTrue("At translucency 100%, variance 200 is within 255 ceiling", centerAlpha > 0)
+    }
+}

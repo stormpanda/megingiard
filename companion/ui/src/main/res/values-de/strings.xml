@@ -673,6 +673,7 @@ Open Settings to create a layout.</string>
     <string name="settings_cutout_remove_smart_desc">Entfernt Hintergrundtransparenz und stellt einen Standard-Live-Spiegelausschnitt wieder her</string>
     <string name="settings_cutout_sensitivity_title">Isolierungs-Empfindlichkeit</string>
     <string name="settings_cutout_sensitivity_desc">Steuert den Schwellenwert der Hintergrundentfernung. Höhere Werte entfernen mehr Hintergrund; niedrigere Werte erhalten feine Linien.</string>
+    <string name="settings_cutout_sensitivity_value_fmt">%1$d%% (%2$d)</string>
     <string name="settings_cutout_translucency_title">Ausschnitt-Transparenz</string>
     <string name="settings_cutout_translucency_desc">Stellt halbtransparente Elemente, innere Details und durchscheinende Effekte wieder her</string>
     <string name="settings_mirror_cutout_translucency_off">Aus</string>

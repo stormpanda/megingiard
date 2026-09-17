@@ -26,14 +26,14 @@ const val MASK_PIXEL_TRANSPARENT = 0x00000000
 const val MASK_PIXEL_OPAQUE = -1 // 0xFFFFFFFF.toInt()
 const val MIN_TRANSLUCENCY = 0
 const val MAX_TRANSLUCENCY = 100
-const val MIN_SENSITIVITY = 4
-const val MAX_SENSITIVITY = 40
+const val MIN_SENSITIVITY = 0
+const val MAX_SENSITIVITY = 255
 const val DEFAULT_SENSITIVITY = 14
 
 private const val CLOSING_RADIUS = 3
 private const val TRIMAP_TRANSITION_MAX = 35
 
-private const val MAX_TRANSLUCENT_VARIANCE = 180
+private const val MAX_TRANSLUCENT_VARIANCE = 255
 private const val MIN_TRANSLUCENT_ALPHA = 60
 
 private const val SIGNATURE_GRID_COLS = 8
@@ -580,8 +580,6 @@ object CutoutAutoTuner {
             }
         }
     }
-
-
 
     private fun applyAlphaMatting(
         candidateAlpha: IntArray,

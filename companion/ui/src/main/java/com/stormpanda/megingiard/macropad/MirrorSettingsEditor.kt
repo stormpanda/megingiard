@@ -67,10 +67,10 @@ private const val MSE_SMOOTHING_VAL_STRONG = 85
 
 private const val MSE_TRANSLUCENCY_MIN = 0f
 private const val MSE_TRANSLUCENCY_MAX = 100f
-private const val MSE_TRANSLUCENCY_STEP = 5f
+private const val MSE_TRANSLUCENCY_STEP = 1f
 
-private const val MSE_SENSITIVITY_MIN = 4f
-private const val MSE_SENSITIVITY_MAX = 40f
+private const val MSE_SENSITIVITY_MIN = 0f
+private const val MSE_SENSITIVITY_MAX = 255f
 private const val MSE_SENSITIVITY_STEP = 1f
 
 @Composable
@@ -396,6 +396,18 @@ internal fun CutoutAdvancedSettingsSubPageContent(
 
         // ── 2. Mask Settings & Fine-Tuning (if hasTransparencyMask) ──
         if (cutout.hasTransparencyMask) {
+            val sensitivityPct =
+                if (MSE_SENSITIVITY_MAX > 0f) {
+                    (cutout.maskSensitivity * MSE_PERCENT_DIVISOR / MSE_SENSITIVITY_MAX).roundToInt()
+                } else {
+                    0
+                }
+            val sensitivityLabel =
+                stringResource(
+                    R.string.settings_cutout_sensitivity_value_fmt,
+                    sensitivityPct,
+                    cutout.maskSensitivity,
+                )
             GamepadSliderCard(
                 title = stringResource(R.string.settings_cutout_sensitivity_title),
                 description = stringResource(R.string.settings_cutout_sensitivity_desc),
@@ -404,7 +416,7 @@ internal fun CutoutAdvancedSettingsSubPageContent(
                 step = MSE_SENSITIVITY_STEP,
                 fineStep = MSE_SENSITIVITY_STEP,
                 icon = Icons.Rounded.Tune,
-                valueLabel = "${cutout.maskSensitivity}",
+                valueLabel = sensitivityLabel,
                 onValueChange = { newVal ->
                     val newSens = newVal.roundToInt().coerceIn(MIN_SENSITIVITY, MAX_SENSITIVITY)
                     AppLog.d(TAG, "Updating cutout ${cutout.id} maskSensitivity: $newSens")

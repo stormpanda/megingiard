@@ -673,6 +673,7 @@ Open Settings to create a layout.</string>
     <string name="settings_cutout_remove_smart_desc">Removes background transparency mask, reverting to a standard live mirror cutout</string>
     <string name="settings_cutout_sensitivity_title">Isolation Sensitivity</string>
     <string name="settings_cutout_sensitivity_desc">Controls background removal threshold. Higher values remove more background; lower values preserve fine lines.</string>
+    <string name="settings_cutout_sensitivity_value_fmt">%1$d%% (%2$d)</string>
     <string name="settings_cutout_translucency_title">Cutout Translucency</string>
     <string name="settings_cutout_translucency_desc">Recovers semi-transparent elements, inner details, and translucent effects</string>
     <string name="settings_mirror_cutout_translucency_off">Off</string>

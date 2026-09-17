@@ -37,7 +37,7 @@ enum class AspectRatioMode {
  * @param aspectRatioMode The mode specifying how aspect ratio is locked between top crop and bottom bounds.
  * @param hasTransparencyMask Whether an auto-tuned transparency mask bitmap is present for this cutout.
  * @param maskTranslucency Semi-transparent foreground capture sensitivity level (0..100%), preserving dials and glows.
- * @param maskSensitivity Color variance threshold (4..40, default 14) for background detection.
+ * @param maskSensitivity Color variance threshold (0..255, default 14) for background detection.
  * @param maskCavityHealing Whether morphological closing bridges gaps to protect internal animated meters and widgets.
  * @param renderAsStaticAsset Whether this isolated cutout renders as a clean pre-rendered static RGBA asset bypassing live stream.
  */

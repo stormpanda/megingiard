@@ -42,7 +42,7 @@ object CutoutMaskManager {
 
     /**
      * Retrieves the transparency mask bitmap for [cutoutId] with optional [translucency] (0..100)
-     * and [sensitivity] (4..40).
+     * and [sensitivity] (0..255).
      *
      * If [translucency] is 0, [sensitivity] is default 14, and [cavityHealing] is true,
      * returns the base unfeathered mask.
