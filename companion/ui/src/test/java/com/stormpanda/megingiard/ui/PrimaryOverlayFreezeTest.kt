@@ -2,11 +2,6 @@ package com.stormpanda.megingiard.ui
 
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -16,18 +11,15 @@ import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowLooper
 
 private const val TAG = "PrimaryOverlayFreezeTest"
 
-@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
 class PrimaryOverlayFreezeTest {
-    private val testDispatcher = StandardTestDispatcher()
-
     @Before
     fun setUp() {
-        Dispatchers.setMain(testDispatcher)
         ScreenCaptureManager.setCapturing(false)
         ScreenCaptureManager.setFrozen(false)
         AppStateManager.closePrimaryModal()
@@ -42,14 +34,14 @@ class PrimaryOverlayFreezeTest {
         AppStateManager.closePrimaryModal()
         AppStateManager.setViewportEditActive(false)
         AppStateManager.setActiveCropCutoutId(null)
-        Dispatchers.resetMain()
+        ShadowLooper.idleMainLooper()
     }
 
     @Test
     fun testPrimaryOverlayActivity_freezesAndResumesCapture() {
         ScreenCaptureManager.setCapturing(true)
         ScreenCaptureManager.setFrozen(false)
-        AppStateManager.openPrimaryModal(PrimaryModalConfig(PrimaryModalType.GLOBAL_SETTINGS))
+        AppStateManager.openPrimaryModal(PrimaryModalConfig(PrimaryModalType.KEYBOARD_SETTINGS))
 
         val controller = Robolectric.buildActivity(PrimaryOverlayActivity::class.java).setup()
         assertTrue("Mirror capture should freeze when primary overlay activity opens", ScreenCaptureManager.isFrozen.value)
@@ -63,7 +55,7 @@ class PrimaryOverlayFreezeTest {
     fun testPrimaryOverlayActivity_preservesInitialManualFreeze() {
         ScreenCaptureManager.setCapturing(true)
         ScreenCaptureManager.setFrozen(true)
-        AppStateManager.openPrimaryModal(PrimaryModalConfig(PrimaryModalType.GLOBAL_SETTINGS))
+        AppStateManager.openPrimaryModal(PrimaryModalConfig(PrimaryModalType.KEYBOARD_SETTINGS))
 
         val controller = Robolectric.buildActivity(PrimaryOverlayActivity::class.java).setup()
         assertTrue("Mirror capture should remain frozen", ScreenCaptureManager.isFrozen.value)
@@ -80,7 +72,7 @@ class PrimaryOverlayFreezeTest {
     fun testPrimaryOverlayActivity_whenNotCapturing_doesNotFreeze() {
         ScreenCaptureManager.setCapturing(false)
         ScreenCaptureManager.setFrozen(false)
-        AppStateManager.openPrimaryModal(PrimaryModalConfig(PrimaryModalType.GLOBAL_SETTINGS))
+        AppStateManager.openPrimaryModal(PrimaryModalConfig(PrimaryModalType.KEYBOARD_SETTINGS))
 
         val controller = Robolectric.buildActivity(PrimaryOverlayActivity::class.java).setup()
         assertFalse("Mirror capture should not be marked frozen when capture is not active", ScreenCaptureManager.isFrozen.value)

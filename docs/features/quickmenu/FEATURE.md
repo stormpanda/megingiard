@@ -51,16 +51,8 @@ the universal "go back" mechanism throughout the app.
 ### FR-PM3: Profile & Layout Selection (Bottom Card)
 
 - The bottom card is always shown when the Quick Menu is open.
-- **Profile section:** A horizontally scrollable row of chips, one per profile. Tapping a chip
-  immediately activates that profile. The Quick Menu remains open so the user can make further adjustments.
-  The row automatically scrolls the active profile chip into view (`listState.animateScrollToItem()`) whenever
-  a profile is auto-switched to or selected, ensuring the active pill is immediately visible even with many profiles.
-  Unselected profile chips render text tinted with the primary accent color (`colors.accent`).
-- **Layout section:** A horizontally scrollable row of chips, one per **enabled** layout in the
-  active profile. Disabled layouts are hidden from this list. Tapping a chip immediately activates
-  that layout. The Quick Menu remains open so the user can make further adjustments. The row also automatically
-  scrolls the active layout chip into view whenever the active layout changes.
-  Unselected layout chips render text tinted with the primary accent color (`colors.accent`).
+- **Profile section:** A horizontally scrollable row of chips, one per profile (`ScrollableSelectionRow` backed by `Row` with `Modifier.horizontalScroll`). Tapping a chip immediately activates that profile. The Quick Menu remains open so the user can make further adjustments. Unselected profile chips render text tinted with the primary accent color (`colors.accent`).
+- **Layout section:** A horizontally scrollable row of chips, one per **enabled** layout in the active profile. Disabled layouts are hidden from this list. Tapping a chip immediately activates that layout. The Quick Menu remains open so the user can make further adjustments. Unselected layout chips render text tinted with the primary accent color (`colors.accent`).
 - New profiles and layouts MUST be created inside the `MacroPadEditor` (using the "+ Add" separator actions), not in the Quick Menu.
 
 ### FR-PM4: Action Buttons (Bottom Card)
