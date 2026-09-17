@@ -5,15 +5,10 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.settings.SettingsManager
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.advanceTimeBy
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -26,6 +21,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowLooper
+import java.util.concurrent.TimeUnit
 
 /**
  * End-to-End integration test suite verifying gamepad-first 2D navigation,
@@ -40,11 +37,8 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
 class GamepadNavigationFocusIsolationE2ETest {
-    private val testDispatcher = StandardTestDispatcher()
-
     @Before
     fun setUp() {
-        Dispatchers.setMain(testDispatcher)
         SettingsManager.init(RuntimeEnvironment.getApplication())
         PrimaryOverlayInputBridge.resetJoystickState()
         AppStateManager.closePrimaryModal()
@@ -56,7 +50,6 @@ class GamepadNavigationFocusIsolationE2ETest {
         PrimaryOverlayInputBridge.resetJoystickState()
         AppStateManager.closePrimaryModal()
         AppStateManager.clearSuspended()
-        Dispatchers.resetMain()
     }
 
     private fun createJoystickMotionEvent(
@@ -112,7 +105,7 @@ class GamepadNavigationFocusIsolationE2ETest {
 
     @Test
     fun testGamepadMotionTranslationAndAcceleratingRepeatE2E() =
-        runTest(testDispatcher) {
+        runTest {
             val keyEvents = mutableListOf<Pair<Int, Int>>()
 
             // 1. Deflect stick Down (axisY = 0.9f)
@@ -126,7 +119,7 @@ class GamepadNavigationFocusIsolationE2ETest {
             assertEquals(KeyEvent.ACTION_DOWN to KeyEvent.KEYCODE_DPAD_DOWN, keyEvents[0])
 
             // 2. Advance time past initial repeat delay (250ms) -> repeat should fire
-            advanceTimeBy(300)
+            ShadowLooper.idleMainLooper(300, TimeUnit.MILLISECONDS)
             assertTrue("Expected repeat events to accumulate during hold", keyEvents.size >= 2)
             assertTrue(keyEvents.all { it.second == KeyEvent.KEYCODE_DPAD_DOWN })
 
@@ -140,13 +133,13 @@ class GamepadNavigationFocusIsolationE2ETest {
 
             // 4. Advance time further -> no more repeat events should fire after release
             val countAtRelease = keyEvents.size
-            advanceTimeBy(500)
+            ShadowLooper.idleMainLooper(500, TimeUnit.MILLISECONDS)
             assertEquals("No events should be emitted after neutral release", countAtRelease, keyEvents.size)
         }
 
     @Test
     fun testBumperNavigationCycleAndFocusRecoveryE2E() =
-        runTest(testDispatcher) {
+        runTest {
             val categories = listOf("QUICK_ACTIONS", "PROFILES", "LAYOUTS", "BUTTONS", "MACROS")
             var currentCategory = "QUICK_ACTIONS"
 

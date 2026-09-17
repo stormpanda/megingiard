@@ -219,8 +219,15 @@ class GpuMotionSmoother(
 
             val surfaceAttribs = intArrayOf(EGL14.EGL_NONE)
             eglSurface = EGL14.eglCreateWindowSurface(eglDisplay, config, outputSurface, surfaceAttribs, 0)
+            if (eglSurface == EGL14.EGL_NO_SURFACE) {
+                val error = EGL14.eglGetError()
+                throw RuntimeException("eglCreateWindowSurface failed with error $error")
+            }
 
-            EGL14.eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext)
+            if (!EGL14.eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext)) {
+                val error = EGL14.eglGetError()
+                throw RuntimeException("eglMakeCurrent failed with error $error")
+            }
 
             setupShaders()
             setupTexturesAndFbos()

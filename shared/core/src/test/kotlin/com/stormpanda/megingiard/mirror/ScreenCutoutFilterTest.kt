@@ -1,0 +1,123 @@
+package com.stormpanda.megingiard.mirror
+
+import kotlinx.serialization.json.Json
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class ScreenCutoutFilterTest {
+    private val json = Json { ignoreUnknownKeys = true }
+
+    @Test
+    fun `verify default transparency mask on ScreenCutout is false`() {
+        val cutout = ScreenCutout.FULLSCREEN
+        assertFalse(cutout.hasTransparencyMask)
+        assertEquals(0, cutout.maskTranslucency)
+    }
+
+    @Test
+    fun `verify serialization roundtrip with hasTransparencyMask`() {
+        val original =
+            ScreenCutout(
+                id = "cutout_minimap",
+                name = "Minimap Cutout",
+                srcX = 0.02f,
+                srcY = 0.02f,
+                srcWidth = 0.25f,
+                srcHeight = 0.25f,
+                destX = 0.1f,
+                destY = 0.1f,
+                destWidth = 0.4f,
+                destHeight = 0.4f,
+                hasTransparencyMask = true,
+                maskTranslucency = 65,
+            )
+
+        val serialized = json.encodeToString(ScreenCutout.serializer(), original)
+        assertTrue(serialized.contains("hasTransparencyMask"))
+        assertTrue(serialized.contains("maskTranslucency"))
+
+        val deserialized = json.decodeFromString(ScreenCutout.serializer(), serialized)
+        assertEquals(original, deserialized)
+        assertTrue(deserialized.hasTransparencyMask)
+        assertEquals(65, deserialized.maskTranslucency)
+    }
+
+    @Test
+    fun `verify backwards compatibility when deserializing legacy JSON without hasTransparencyMask`() {
+        val legacyJson =
+            """
+            {
+                "id": "legacy_cutout",
+                "name": "Old Cutout",
+                "srcX": 0.0,
+                "srcY": 0.0,
+                "srcWidth": 1.0,
+                "srcHeight": 1.0,
+                "destX": 0.0,
+                "destY": 0.0,
+                "destWidth": 1.0,
+                "destHeight": 1.0,
+                "opacity": 1.0,
+                "keepAspectRatio": false,
+                "motionSmoothing": false,
+                "shape": "RECTANGLE"
+            }
+            """.trimIndent()
+
+        val parsed = json.decodeFromString(ScreenCutout.serializer(), legacyJson)
+        assertEquals("legacy_cutout", parsed.id)
+        assertFalse(parsed.hasTransparencyMask)
+        assertEquals(0, parsed.maskTranslucency)
+    }
+
+    @Test
+    fun `verify backwards compatibility when deserializing legacy JSON with old manual filter fields`() {
+        val legacyWithOldFields =
+            """
+            {
+                "id": "cutout_with_old_fields",
+                "name": "Old Filter Cutout",
+                "srcX": 0.0,
+                "srcY": 0.0,
+                "srcWidth": 1.0,
+                "srcHeight": 1.0,
+                "destX": 0.0,
+                "destY": 0.0,
+                "destWidth": 1.0,
+                "destHeight": 1.0,
+                "hudFilterMode": "LUMA_KEY",
+                "lumaThreshold": 0.35,
+                "chromaKeyColorHex": "#00FF00",
+                "chromaTolerance": 0.2,
+                "temporalSensitivity": 3.0,
+                "edgeSmoothness": 0.05,
+                "hasTransparencyMask": true
+            }
+            """.trimIndent()
+
+        val parsed = json.decodeFromString(ScreenCutout.serializer(), legacyWithOldFields)
+        assertEquals("cutout_with_old_fields", parsed.id)
+        assertTrue(parsed.hasTransparencyMask)
+    }
+
+    @Test
+    fun `verify VisualAnchorSignature serialization roundtrip`() {
+        val points =
+            listOf(
+                AnchorPoint(u = 0.1f, v = 0.2f, r = 255, g = 255, b = 255),
+                AnchorPoint(u = 0.5f, v = 0.5f, r = 120, g = 100, b = 80),
+                AnchorPoint(u = 0.9f, v = 0.8f, r = 10, g = 20, b = 30),
+            )
+        val signature = VisualAnchorSignature(cutoutId = "cutout_abc", points = points)
+
+        val serialized = json.encodeToString(VisualAnchorSignature.serializer(), signature)
+        val deserialized = json.decodeFromString(VisualAnchorSignature.serializer(), serialized)
+
+        assertEquals(signature, deserialized)
+        assertEquals("cutout_abc", deserialized.cutoutId)
+        assertEquals(3, deserialized.points.size)
+        assertEquals(255, deserialized.points[0].r)
+    }
+}

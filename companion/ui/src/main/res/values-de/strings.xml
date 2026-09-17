@@ -361,6 +361,7 @@ Open Settings to create a layout.</string>
 
     <!-- MacroPad editor section headers -->
     <string name="macropad_editor_section_layout">Layout</string>
+    <string name="macropad_editor_section_automation">Automation</string>
     <string name="macropad_editor_section_buttons">Tasten</string>
     <string name="macropad_editor_section_button_settings">Tasteneinstellungen</string>
     <string name="macropad_editor_section_button_colors">Tastenfarben</string>
@@ -389,6 +390,44 @@ Open Settings to create a layout.</string>
     <string name="layout_settings_bg_image_adjustments">Bildanpassungen &amp; Maskierung</string>
     <string name="layout_settings_bg_section_title">Hintergrund</string>
     <string name="layout_settings_bg_image_dimming_title">Dimmung</string>
+    <!-- Automatic Layout Switching & Visual Anchor -->
+    <string name="layout_settings_auto_switch_section_title">Visueller Referenzanker</string>
+    <string name="layout_settings_auto_switch_title">Visueller Referenzanker</string>
+    <string name="layout_settings_auto_switch_enabled_desc">Visueller Anker aktiv • Friert Cutouts ein oder weichzeichnet sie, wenn Inhalt fehlt</string>
+    <string name="layout_settings_auto_switch_disabled_desc">Cutouts einfrieren/weichzeichnen oder Layout wechseln, wenn vorgesehener Inhalt nicht im Spiel angezeigt wird</string>
+    <string name="layout_settings_visual_anchor_title">Visueller Referenzanker</string>
+    <string name="layout_settings_visual_anchor_desc">Überwacht einen Referenzbereich auf dem Hauptbildschirm, um Cutouts einzufrieren oder weichzuzeichnen, wenn der vorgesehene Inhalt nicht angezeigt wird.</string>
+    <string name="layout_settings_visual_anchor_position_title">Referenzanker positionieren</string>
+    <string name="layout_settings_visual_anchor_position_desc">Rahmen auf dem oberen Bildschirm anpassen</string>
+    <string name="layout_settings_visual_anchor_calibrate_title">Referenzanker kalibrieren</string>
+    <string name="layout_settings_visual_anchor_calibrate_desc">Referenzbereich abtasten, um stabile Ankerpunkte zu erkennen</string>
+    <string name="layout_settings_visual_anchor_recalibrate_title">Referenzanker neu kalibrieren</string>
+    <string name="layout_settings_visual_anchor_recalibrate_desc">Ankerpunkte vom laufenden Spiel aktualisieren</string>
+    <string name="layout_settings_visual_anchor_status_calibrated">Kalibriert (%1$d Referenzpunkte)</string>
+    <string name="layout_settings_visual_anchor_stream_delay_desc">Bilder zwischenspeichern, um Übergänge bei fehlendem Inhalt zu glätten</string>
+    <string name="layout_settings_visual_anchor_freeze_title">Inaktive Cutouts einfrieren</string>
+    <string name="layout_settings_visual_anchor_freeze_desc">Hält das letzte gültige Bild an, wenn der Referenzanker verschwindet. Wenn deaktiviert, laufen Cutouts live weiter.</string>
+    <string name="layout_settings_visual_anchor_blur_title">Inaktive Cutouts weichzeichnen</string>
+    <string name="layout_settings_visual_anchor_blur_desc">Milchglas-Weichzeichnung anwenden, wenn der Referenzanker verschwindet.</string>
+    <string name="layout_settings_visual_anchor_remove_title">Anker-Kalibrierung löschen</string>
+    <string name="layout_settings_visual_anchor_remove_desc">Gespeicherte Referenz-Signatur entfernen und visuellen Anker deaktivieren</string>
+    <string name="help_layout_settings_auto_switch_desc">Konfiguriere visuelle Verankerung und automatischen Layout-Wechsel für dieses Layout. Überwacht einen Referenzbereich auf dem Hauptbildschirm, um Cutouts einzufrieren oder das Layout zu wechseln, wenn der vorgesehene Inhalt nicht im Spiel angezeigt wird.</string>
+
+    <string name="settings_profile_automation_header">Automatisierung</string>
+    <string name="settings_profile_auto_layout_switching_title">Automatischer Layout-Wechsel</string>
+    <string name="settings_profile_auto_layout_switching_desc">Wechselt automatisch zum ersten Layout in diesem Profil, dessen Referenzanker auf dem Bildschirm sichtbar ist</string>
+    <string name="automation_layout_anchors_section_title">Layout-Referenzanker</string>
+    <string name="automation_no_anchors_warning">Keines der Layouts in diesem Profil verfügt über einen kalibrierten Referenzanker. Konfigurieren Sie unten Anker, um das automatische Umschalten zu aktivieren.</string>
+    <string name="automation_anchors_status_summary">%1$d von %2$d Layouts verfügen über einen kalibrierten visuellen Referenzanker.</string>
+    <string name="automation_configure_anchors_title">Layout-Anker konfigurieren</string>
+    <string name="automation_configure_anchors_desc">Referenzanker einrichten, um Cutouts einzufrieren oder Layouts zu wechseln, wenn der vorgesehene Inhalt nicht angezeigt wird</string>
+    <string name="automation_anchor_present_badge">AKTIV</string>
+    <string name="automation_anchor_lost_badge">INAKTIV</string>
+    <string name="automation_anchor_active_badge">Aktiv</string>
+    <string name="automation_anchor_calibrated_badge">Kalibriert</string>
+    <string name="automation_anchor_configure_badge">Einrichten</string>
+    <string name="automation_anchor_not_configured">Kein visueller Anker konfiguriert</string>
+
     <string name="layout_settings_colors_section_title">Tastenfarben-Standardwerte</string>
     <string name="layout_settings_color_text">Text- &amp; Symbolfarbe</string>
     <string name="layout_settings_color_border">Rahmenfarbe</string>
@@ -622,6 +661,51 @@ Open Settings to create a layout.</string>
     <string name="mirror_editor_shape_mode">Ausschnittform</string>
     <string name="mirror_editor_shape_desc">Zwischen rechteckiger und kreisförmiger Darstellung wechseln</string>
     <string name="settings_mirror_cutout_summary_fmt">Glättung: %1$s • Projektion: %2$s</string>
+    <string name="settings_mirror_cutout_summary_with_filter_fmt">Glättung: %1$s • %2$s • Projektion: %3$s</string>
+    <string name="settings_mirror_cutout_filter_transparency_mask">HUD / UI-Isolierung</string>
+    <string name="settings_cutout_advanced_title">Erweiterte Ausschnitt-Einstellungen</string>
+    <string name="settings_cutout_advanced_desc">HUD / UI-Isolierung und Transparenz-Wiederherstellung</string>
+    <string name="settings_cutout_convert_smart_title">HUD / UI-Elemente isolieren</string>
+    <string name="settings_cutout_convert_smart_desc">Isoliert stationäre HUD- und UI-Elemente von bewegter Szenerie mittels Transparenzmaske</string>
+    <string name="settings_cutout_recalibrate_smart_title">HUD / UI-Maske neu kalibrieren</string>
+    <string name="settings_cutout_recalibrate_smart_desc">Erfasst erneut Bildframes, um die Hintergrund-Transparenzmaske zu aktualisieren</string>
+    <string name="settings_cutout_remove_smart_title">HUD / UI-Isolierung entfernen</string>
+    <string name="settings_cutout_remove_smart_desc">Entfernt Hintergrundtransparenz und stellt einen Standard-Live-Spiegelausschnitt wieder her</string>
+    <string name="settings_cutout_sensitivity_title">Isolierungs-Empfindlichkeit</string>
+    <string name="settings_cutout_sensitivity_desc">Steuert den Schwellenwert der Hintergrundentfernung. Höhere Werte entfernen mehr Hintergrund; niedrigere Werte erhalten feine Linien.</string>
+    <string name="settings_cutout_sensitivity_value_fmt">%1$d%% (%2$d)</string>
+    <string name="settings_cutout_translucency_title">Ausschnitt-Transparenz</string>
+    <string name="settings_cutout_translucency_desc">Stellt halbtransparente Elemente, innere Details und durchscheinende Effekte wieder her</string>
+    <string name="settings_mirror_cutout_translucency_off">Aus</string>
+    <string name="settings_cutout_features_section">Isolierungs-Funktionen</string>
+    <string name="settings_cutout_cavity_healing_title">Hohlraum- &amp; Anzeige-Schutz</string>
+    <string name="settings_cutout_cavity_healing_desc">Schließt Lücken in Rahmen, damit interne Minimap-Radare, Anzeigen und wechselnde Zahlen solide bleiben.</string>
+    <string name="settings_cutout_render_static_title">Als statisches UI-Element rendern</string>
+    <string name="settings_cutout_render_static_desc">Zeigt das freigestellte UI-Element als saubere statische Grafik an und verhindert das Durchscheinen von Hintergrundbewegungen sowie Videokompressionsrauschen.</string>
+    <string name="settings_cutout_stream_delay_title">Stream-Verzögerung</string>
+    <string name="settings_cutout_stream_delay_desc">Verzögert das Cutout-Video um N Frames, damit das Einfrieren und Weichzeichnen sauber angewendet wird, bevor sich der Inhalt ändert</string>
+    <string name="settings_cutout_stream_delay_off">0 Frames (Echtzeit)</string>
+    <string name="settings_cutout_stream_delay_frames">%1$d Frames (~%2$d ms)</string>
+    <string name="settings_mirror_auto_tuning_prompt">HUD / UI-Elemente werden isoliert... Bitte Kamera oder Figur im Spiel bewegen! (%ds verbleibend)</string>
+    <string name="settings_mirror_auto_tuning_in_progress">Kalibrierung läuft</string>
+    <string name="settings_mirror_auto_tuning_secondary_prompt">Frames werden erfasst... Auf dem zweiten Bildschirm fertigstellen oder abbrechen.</string>
+    <string name="settings_mirror_auto_tune_success">HUD / UI isoliert: %s</string>
+    <string name="mirror_calibration_title">HUD / UI-Kalibrierung</string>
+    <string name="mirror_anchor_calibration_title">Referenzanker-Kalibrierung</string>
+    <string name="mirror_calibration_instruction">Der obere Bildschirm ist jetzt frei. Bewege deinen Charakter oder drehe die Kamera im Spiel, damit der Algorithmus HUD- und UI-Elemente vom bewegten Hintergrund trennen kann.</string>
+    <string name="mirror_anchor_calibration_instruction">Der obere Bildschirm ist jetzt frei. Bewege deinen Charakter oder drehe die Kamera im Spiel. Dynamische Hintergründe werden in der Vorschau transparent. Tippe auf Fertigstellen, sobald nur noch stationäre Referenzelemente sichtbar sind.</string>
+    <string name="mirror_calibration_instruction_preview">Der obere Bildschirm ist jetzt frei. Bewege deinen Charakter oder drehe die Kamera im Spiel. Dynamische Hintergründe werden in der Vorschau transparent. Tippe auf Fertigstellen, sobald dein vorgesehener Inhalt isoliert ist.</string>
+    <string name="mirror_calibration_cancel">Abbrechen</string>
+    <string name="mirror_calibration_finish">Fertigstellen</string>
+    <string name="mirror_calibration_sampling">Abtastung...</string>
+    <string name="mirror_calibration_frames_count">%d Frames</string>
+    <string name="mirror_calibration_preview_desc">Kalibrierungs-Live-Vorschau</string>
+    <string name="mirror_calibration_dynamic_pct">%d%% dynamisch</string>
+    <string name="mirror_calibration_time_remaining">Noch %ds</string>
+    <string name="settings_cutout_anchor_position_title">Anker auf Bildschirm positionieren</string>
+    <string name="mirror_anchor_selector_title">Visueller Anker</string>
+    <string name="mirror_anchor_selector_hint">Rahmen über einem statischen Referenzelement (z. B. Porträt oder Icon) platzieren</string>
+    <string name="mirror_anchor_selector_done">Fertig</string>
     <string name="settings_mirror_projection_on">Ein</string>
     <string name="settings_mirror_projection_off">Aus</string>
     <string name="macropad_editor_section_actions">Aktionen</string>
@@ -691,7 +775,7 @@ Open Settings to create a layout.</string>
     <string name="help_quickmenu_profiles_desc">Tippe auf einen Chip, um sofort zu einem anderen Spielprofil zu wechseln (deaktiviert den Auto-Wechsel). Das aktive Profil ist hervorgehoben. Profile werden im Bereich „Profil/Layout bearbeiten“ verwaltet.</string>
     <string name="help_quickmenu_layouts_desc">Tippe auf einen Chip, um zu einem anderen Layout im aktuellen Profil zu wechseln (deaktiviert den Auto-Wechsel). Nur als aktiviert markierte Layouts erscheinen hier.</string>
     <string name="help_quickmenu_auto_switch_label">Auto-Wechsel</string>
-    <string name="help_quickmenu_auto_switch_desc">Schaltet die automatische Profilzuordnung EIN/AUS. Bei EIN wechseln Profile und Companion-Ansichten automatisch basierend auf dem aktiven Spiel oder Emulator. Bei AUS ist der automatische Wechsel pausiert.</string>
+    <string name="help_quickmenu_auto_switch_desc">Schaltet den automatischen Wechsel EIN/AUS. Bei EIN wechseln Profile, Layouts und Ansichten automatisch basierend auf dem aktiven Spiel, Emulator und Bildschirmanckern. Bei AUS ist der automatische Wechsel pausiert.</string>
     <string name="help_quickmenu_view_switch_label">Zum Hub / Spiel-Profil wechseln</string>
     <string name="help_quickmenu_view_switch_desc">Wechselt manuell zwischen dem Companion Hub Dashboard und dem aktiven Spiel-Profil-Layout (deaktiviert den Auto-Wechsel).</string>
     <string name="help_quickmenu_edit_desc">Öffnet den Bereich „Profil/Layout bearbeiten“, in dem du Schaltflächen hinzufügen, verschieben und konfigurieren sowie Profile, Layouts und Makros verwalten kannst.</string>
@@ -900,6 +984,16 @@ Open Settings to create a layout.</string>
     <string name="quick_menu_show_macropad">Zu Spiel-Profil wechseln</string>
     <string name="quick_menu_auto_mode">Auto-Wechsel</string>
     <string name="toast_auto_switch_off">Auto-Wechsel: Aus</string>
+    <string name="toast_anchor_conflict_two">Anker-Konflikt: \"%1$s\" und \"%2$s\" stimmen überein</string>
+    <string name="toast_anchor_conflict_multiple">Anker-Konflikt: %1$s stimmen überein</string>
+
+    <!-- MacroPad Editor Auto Switch Reactivation Modal -->
+    <string name="macropad_reactivate_auto_switch_title">Auto-Wechsel reaktivieren?</string>
+    <string name="macropad_reactivate_auto_switch_message">Der automatische Wechsel wurde im MacroPad-Editor deaktiviert. Möchtest du ihn wieder einschalten?</string>
+    <string name="macropad_reactivate_auto_switch_confirm">Auto-Wechsel reaktivieren</string>
+    <string name="macropad_reactivate_auto_switch_confirm_desc">Automatischen Profil- und Layout-Wechsel wiederherstellen</string>
+    <string name="macropad_reactivate_auto_switch_dismiss">Auto-Wechsel aus lassen</string>
+    <string name="macropad_reactivate_auto_switch_dismiss_desc">Im manuellen Profilmodus bleiben</string>
 
     <!-- Update Check Strings -->
     <string name="settings_update_available_short">Update verfügbar</string>

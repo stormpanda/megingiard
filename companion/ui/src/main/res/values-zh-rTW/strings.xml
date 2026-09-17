@@ -361,6 +361,7 @@ Open Settings to create a layout.</string>
 
     <!-- MacroPad editor section headers -->
     <string name="macropad_editor_section_layout">配置</string>
+    <string name="macropad_editor_section_automation">自動化</string>
     <string name="macropad_editor_section_buttons">按鈕</string>
     <string name="macropad_editor_section_button_settings">按鈕設定</string>
     <string name="macropad_editor_section_button_colors">按鈕顏色</string>
@@ -402,6 +403,43 @@ Open Settings to create a layout.</string>
     <string name="layout_settings_color_opacity">不透明度</string>
     <string name="layout_settings_invisible_buttons">隱形按鈕</string>
     <string name="layout_settings_invisible_buttons_desc">使用配置時讓按鈕隱形，編輯時仍然可見。</string>
+
+    <string name="layout_settings_auto_switch_section_title">視覺參考錨點</string>
+    <string name="layout_settings_auto_switch_title">視覺參考錨點</string>
+    <string name="layout_settings_auto_switch_enabled_desc">視覺錨點已啟用 • 當內容未顯示時自動凍結或模糊切角</string>
+    <string name="layout_settings_auto_switch_disabled_desc">當預期內容未在遊戲中顯示時凍結/模糊切角或切換版面</string>
+    <string name="layout_settings_visual_anchor_title">視覺參考錨點</string>
+    <string name="layout_settings_visual_anchor_desc">監控主螢幕上的參考區域，當預期內容未顯示時凍結或模糊此版面的切角。</string>
+    <string name="layout_settings_visual_anchor_position_title">定位參考錨點</string>
+    <string name="layout_settings_visual_anchor_position_desc">在主螢幕上調整參考邊界框</string>
+    <string name="layout_settings_visual_anchor_calibrate_title">校準參考錨點</string>
+    <string name="layout_settings_visual_anchor_calibrate_desc">取樣參考區域以偵測穩定的錨點</string>
+    <string name="layout_settings_visual_anchor_recalibrate_title">重新校準參考錨點</string>
+    <string name="layout_settings_visual_anchor_recalibrate_desc">從即時遊戲畫面更新錨點</string>
+    <string name="layout_settings_visual_anchor_status_calibrated">已校準（%1$d 個參考點）</string>
+    <string name="layout_settings_visual_anchor_stream_delay_desc">緩衝畫面以消除內容消失時的畫面撕裂</string>
+    <string name="layout_settings_visual_anchor_freeze_title">凍結未啟用的畫面區域</string>
+    <string name="layout_settings_visual_anchor_freeze_desc">當參考錨點遺失時保持最後有效影格。若停用，畫面區域將持續即時播放。</string>
+    <string name="layout_settings_visual_anchor_blur_title">模糊未啟用的畫面區域</string>
+    <string name="layout_settings_visual_anchor_blur_desc">當參考錨點遺失時套用毛玻璃模糊。</string>
+    <string name="layout_settings_visual_anchor_remove_title">刪除錨點校準</string>
+    <string name="layout_settings_visual_anchor_remove_desc">移除已校準的參考簽章並停用視覺錨點</string>
+    <string name="help_layout_settings_auto_switch_desc">為此版面設定視覺錨點與自動切換。監控主螢幕上的參考區域，當此版面的預期內容未顯示時凍結或模糊切角，或切換版面。</string>
+
+    <string name="settings_profile_automation_header">自動化</string>
+    <string name="settings_profile_auto_layout_switching_title">自動配置切換</string>
+    <string name="settings_profile_auto_layout_switching_desc">自動切換至此設定檔中第一個參考錨點出現在螢幕上的配置</string>
+    <string name="automation_layout_anchors_section_title">佈局參考錨點</string>
+    <string name="automation_no_anchors_warning">此設定檔中沒有任何佈局已校準視覺參考錨點。請在下方設定錨點以啟用自動切換。</string>
+    <string name="automation_anchors_status_summary">%1$d / %2$d 個佈局已校準視覺參考錨點。</string>
+    <string name="automation_configure_anchors_title">設定佈局錨點</string>
+    <string name="automation_configure_anchors_desc">設定參考錨點，在預期內容未顯示時凍結切角或自動切換版面</string>
+    <string name="automation_anchor_present_badge">存在</string>
+    <string name="automation_anchor_lost_badge">丟失</string>
+    <string name="automation_anchor_active_badge">當前</string>
+    <string name="automation_anchor_calibrated_badge">已校準</string>
+    <string name="automation_anchor_configure_badge">設定</string>
+    <string name="automation_anchor_not_configured">未設定視覺錨點</string>
 
     <!-- Help menu strings for Layout settings -->
 
@@ -622,6 +660,50 @@ Open Settings to create a layout.</string>
     <string name="mirror_editor_shape_mode">區塊形狀</string>
     <string name="mirror_editor_shape_desc">在矩形與圓形視窗算圖之間切換</string>
     <string name="settings_mirror_cutout_summary_fmt">平滑化: %1$s • 投影: %2$s</string>
+    <string name="settings_mirror_cutout_summary_with_filter_fmt">平滑化：%1$s • %2$s • 投影：%3$s</string>
+    <string name="settings_mirror_cutout_filter_transparency_mask">HUD / UI 隔離</string>
+    <string name="settings_cutout_advanced_title">進階切角設定</string>
+    <string name="settings_cutout_advanced_desc">HUD / UI 隔離校準與半透明度還原</string>
+    <string name="settings_cutout_convert_smart_title">隔離 HUD / UI 元素</string>
+    <string name="settings_cutout_convert_smart_desc">使用透明度遮罩將靜態 HUD 與 UI 前景元素與動態背景分離</string>
+    <string name="settings_cutout_recalibrate_smart_title">重新校準 HUD / UI 遮罩</string>
+    <string name="settings_cutout_recalibrate_smart_desc">再次擷取螢幕畫面以更新背景透明度遮罩</string>
+    <string name="settings_cutout_remove_smart_title">移除 HUD / UI 隔離</string>
+    <string name="settings_cutout_remove_smart_desc">移除背景透明度遮罩，還原為標準即時鏡像切角</string>
+    <string name="settings_cutout_sensitivity_title">隔離靈敏度</string>
+    <string name="settings_cutout_sensitivity_desc">控制背景去除閾值。較高的數值會去除更多背景；較低的數值可保留精細線條。</string>
+    <string name="settings_cutout_translucency_title">切角半透明度</string>
+    <string name="settings_cutout_translucency_desc">還原半透明元素、內部細節與透明效果</string>
+    <string name="settings_mirror_cutout_translucency_off">關閉</string>
+    <string name="settings_cutout_features_section">隔離進階功能</string>
+    <string name="settings_cutout_cavity_healing_title">內部區域與量表保護</string>
+    <string name="settings_cutout_cavity_healing_desc">自動橋接邊界缺口，保持內部動態小地圖、血條與變動數字完整實心。</string>
+    <string name="settings_cutout_render_static_title">作為靜態 UI 元件渲染</string>
+    <string name="settings_cutout_render_static_desc">將隔離的 UI 顯示為清晰的靜態圖形，徹底消除背景動態穿透與視訊壓縮雜訊。</string>
+    <string name="settings_cutout_stream_delay_title">畫面延遲</string>
+    <string name="settings_cutout_stream_delay_desc">將切角視訊延遲 N 幀，以便在內容變更前乾淨地套用缺少凍結與模糊</string>
+    <string name="settings_cutout_stream_delay_off">0 幀 (即時)</string>
+    <string name="settings_cutout_stream_delay_frames">%1$d 幀 (~%2$d 毫秒)</string>
+    <string name="settings_mirror_auto_tuning_prompt">正在隔離 HUD / UI 元素... 請在遊戲中移動視角或角色！（剩餘 %d 秒）</string>
+    <string name="settings_mirror_auto_tuning_in_progress">校準進行中</string>
+    <string name="settings_mirror_auto_tuning_secondary_prompt">正在擷取畫面... 請在副螢幕完成或取消。</string>
+    <string name="settings_mirror_auto_tune_success">已隔離 HUD / UI：%s</string>
+    <string name="mirror_calibration_title">HUD / UI 隔離校準</string>
+    <string name="mirror_anchor_calibration_title">參考錨點校準</string>
+    <string name="mirror_calibration_instruction">主螢幕現已無遮擋。請在遊戲中移動角色或旋轉視角，以便演算法將 HUD 與 UI 元素與動態背景分離。</string>
+    <string name="mirror_anchor_calibration_instruction">主螢幕現已無遮擋。請在遊戲中移動角色或旋轉視角。動態背景將在預覽中變為透明。當僅剩靜態參考元素時點擊完成。</string>
+    <string name="mirror_calibration_instruction_preview">主螢幕現已無遮擋。請在遊戲中移動角色或旋轉視角。動態背景將在預覽中變為透明。當預期內容完全隔離後點擊完成。</string>
+    <string name="mirror_calibration_cancel">取消</string>
+    <string name="mirror_calibration_finish">完成</string>
+    <string name="mirror_calibration_sampling">取樣中...</string>
+    <string name="mirror_calibration_frames_count">%d 幀</string>
+    <string name="mirror_calibration_preview_desc">校準即時預覽</string>
+    <string name="mirror_calibration_dynamic_pct">%d%% 動態</string>
+    <string name="mirror_calibration_time_remaining">剩餘 %d 秒</string>
+    <string name="settings_cutout_anchor_position_title">在螢幕上定位錨點</string>
+    <string name="mirror_anchor_selector_title">視覺錨點</string>
+    <string name="mirror_anchor_selector_hint">將方框定位於靜態參考元素（例如頭像或圖示）上方</string>
+    <string name="mirror_anchor_selector_done">完成</string>
     <string name="settings_mirror_projection_on">開啟</string>
     <string name="settings_mirror_projection_off">關閉</string>
     <string name="macropad_editor_section_actions">操作</string>
@@ -896,6 +978,16 @@ Open Settings to create a layout.</string>
     <string name="quick_menu_show_macropad">切換至遊戲設定檔</string>
     <string name="quick_menu_auto_mode">自動切換</string>
     <string name="toast_auto_switch_off">自動切換: 關閉</string>
+    <string name="toast_anchor_conflict_two">錨點衝突：「%1$s」與「%2$s」同時符合</string>
+    <string name="toast_anchor_conflict_multiple">錨點衝突：%1$s 同時符合</string>
+
+    <!-- MacroPad Editor Auto Switch Reactivation Modal -->
+    <string name="macropad_reactivate_auto_switch_title">重新啟用自動切換？</string>
+    <string name="macropad_reactivate_auto_switch_message">自動切換已在 MacroPad 編輯器中停用。您要重新開啟它嗎？</string>
+    <string name="macropad_reactivate_auto_switch_confirm">重新啟用自動切換</string>
+    <string name="macropad_reactivate_auto_switch_confirm_desc">恢復設定檔與版面配置的自動切換</string>
+    <string name="macropad_reactivate_auto_switch_dismiss">保持自動切換關閉</string>
+    <string name="macropad_reactivate_auto_switch_dismiss_desc">維持手動設定檔模式</string>
 
     <!-- Update Check Strings -->
     <string name="settings_update_available_short">有可用更新</string>

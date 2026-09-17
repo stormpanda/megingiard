@@ -35,6 +35,11 @@ enum class AspectRatioMode {
  * @param opacity     Transparency level [0.0, 1.0] of this cutout.
  * @param shape       The visual shape of this cutout (rectangle or circle).
  * @param aspectRatioMode The mode specifying how aspect ratio is locked between top crop and bottom bounds.
+ * @param hasTransparencyMask Whether an auto-tuned transparency mask bitmap is present for this cutout.
+ * @param maskTranslucency Semi-transparent foreground capture sensitivity level (0..100%), preserving dials and glows.
+ * @param maskSensitivity Color variance threshold (0..255, default 14) for background detection.
+ * @param maskCavityHealing Whether morphological closing bridges gaps to protect internal animated meters and widgets.
+ * @param renderAsStaticAsset Whether this isolated cutout renders as a clean pre-rendered static RGBA asset bypassing live stream.
  */
 @Serializable
 data class ScreenCutout(
@@ -56,6 +61,11 @@ data class ScreenCutout(
     val touchProjectionEnabled: Boolean = false,
     val shape: CutoutShape = CutoutShape.RECTANGLE,
     val aspectRatioMode: AspectRatioMode = if (keepAspectRatio) AspectRatioMode.TOP else AspectRatioMode.BOTTOM,
+    val hasTransparencyMask: Boolean = false,
+    val maskTranslucency: Int = 0,
+    val maskSensitivity: Int = 14,
+    val maskCavityHealing: Boolean = true,
+    val renderAsStaticAsset: Boolean = false,
 ) {
     companion object {
         val FULLSCREEN =

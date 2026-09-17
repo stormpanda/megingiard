@@ -82,8 +82,10 @@ import com.stormpanda.megingiard.macropad.TouchRecordingManager
 import com.stormpanda.megingiard.macropad.TouchRecordingSheet
 import com.stormpanda.megingiard.macropad.TouchRecordingState
 import com.stormpanda.megingiard.macropad.triggerHapticFeedback
+import com.stormpanda.megingiard.mirror.AutoTuneCalibrationSheet
 import com.stormpanda.megingiard.mirror.CutoutLayoutEditor
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.mirror.VisualAutoTuneCoordinator
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdSetupWizardDialog
@@ -441,9 +443,21 @@ fun MainAppScreen() {
                 )
             }
 
+            val isAutoTuning by VisualAutoTuneCoordinator.isCalibrating.collectAsStateWithLifecycle()
+            if (isAutoTuning) {
+                AutoTuneCalibrationSheet(
+                    onCancel = {
+                        VisualAutoTuneCoordinator.cancelCalibration()
+                    },
+                    onFinish = {
+                        VisualAutoTuneCoordinator.finishCalibration()
+                    },
+                )
+            }
+
             // Quick Menu Bar + Quick Menu overlay — rendered on secondary display,
-            // suppressed only when fullscreen keyboard/mouse is active.
-            if (!isFullscreenKeyboardActive && !isFullscreenMouseActive) {
+            // suppressed only when fullscreen keyboard/mouse is active or auto-tuning is active.
+            if (!isFullscreenKeyboardActive && !isFullscreenMouseActive && !isAutoTuning) {
                 QuickMenuBar()
             }
 

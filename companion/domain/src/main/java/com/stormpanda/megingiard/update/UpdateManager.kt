@@ -72,13 +72,30 @@ object UpdateManager {
         AppLog.d(TAG, "UpdateManager initialized with shared DataStore and scope")
     }
 
+    fun resetForTesting(
+        dataStore: DataStore<Preferences>? = null,
+        scope: CoroutineScope? = null,
+    ) {
+        this.dataStore = dataStore
+        this.scope = scope
+        _autoUpdateCheckEnabled.value = true
+        _updateAvailable.value = false
+        _latestReleaseInfo.value = null
+        _isChecking.value = false
+        _lastCheckTime.value = 0L
+        _checkError.value = null
+        isLoadedFromDataStore = false
+        pendingCheckVersion = null
+        pendingCheckApiUrl = null
+    }
+
     internal fun loadFrom(
         prefs: Preferences,
         currentVersion: String = "",
     ) {
         val firstLoad = !isLoadedFromDataStore
         isLoadedFromDataStore = true
-        _autoUpdateCheckEnabled.value = prefs[KEY_AUTO_UPDATE_CHECK_ENABLED] ?: true
+        prefs[KEY_AUTO_UPDATE_CHECK_ENABLED]?.let { _autoUpdateCheckEnabled.value = it }
 
         val tag = prefs[KEY_LATEST_RELEASE_TAG] ?: ""
         val url = prefs[KEY_LATEST_RELEASE_URL] ?: ""

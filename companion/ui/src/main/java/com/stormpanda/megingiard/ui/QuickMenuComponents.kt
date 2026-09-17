@@ -6,6 +6,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -16,9 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -87,23 +86,16 @@ private fun <T> ScrollableSelectionRow(
     colors: AppColors,
     onItemSelected: (T) -> Unit,
 ) {
-    val listState = rememberLazyListState()
+    val scrollState = rememberScrollState()
 
-    LaunchedEffect(selectedId, items) {
-        if (selectedId != null) {
-            val index = items.indexOfFirst { itemId(it) == selectedId }
-            if (index >= 0) {
-                listState.animateScrollToItem(index)
-            }
-        }
-    }
-
-    LazyRow(
-        state = listState,
-        modifier = Modifier.fillMaxWidth(),
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .horizontalScroll(scrollState),
         horizontalArrangement = Arrangement.spacedBy(PM_CHIP_SPACING),
     ) {
-        items(items, key = { itemId(it) }) { item ->
+        items.forEach { item ->
             val name = itemName(item)
             AppSelectableChip(
                 text = name,

@@ -205,14 +205,19 @@ class MacroPadNavStateTest {
     }
 
     @Test
-    fun `MirrorAdvancedSettings has correct parentSection MIRROR`() {
+    fun `MirrorAdvancedSettings and CutoutAdvancedSettings have correct parentSection MIRROR`() {
         val advancedSubPage = MacroPadSubPage.MirrorAdvancedSettings(layoutId = "layout-123")
         assertEquals(EditorSection.MIRROR, advancedSubPage.parentSection)
         assertEquals("layout-123", advancedSubPage.layoutId)
 
+        val cutoutAdvancedSubPage = MacroPadSubPage.CutoutAdvancedSettings(cutoutId = "cutout-abc")
+        assertEquals(EditorSection.MIRROR, cutoutAdvancedSubPage.parentSection)
+        assertEquals("cutout-abc", cutoutAdvancedSubPage.cutoutId)
+
         MacroPadNavState.selectSection(EditorSection.MIRROR)
         MacroPadNavState.push(advancedSubPage)
-        assertNav(EditorSection.MIRROR, listOf(advancedSubPage))
+        MacroPadNavState.push(cutoutAdvancedSubPage)
+        assertNav(EditorSection.MIRROR, listOf(advancedSubPage, cutoutAdvancedSubPage))
     }
 
     @Test
@@ -228,5 +233,21 @@ class MacroPadNavStateTest {
         MacroPadNavState.selectSection(EditorSection.PROFILES)
         MacroPadNavState.setStack(emptyList())
         assertNav(EditorSection.PROFILES)
+    }
+
+    @Test
+    fun `AutomaticLayoutSwitching defaults to parentSection AUTOMATION but respects section parameter`() {
+        val defaultAutoSwitch = MacroPadSubPage.AutomaticLayoutSwitching(layoutId = "lay-auto-1")
+        assertEquals(EditorSection.AUTOMATION, defaultAutoSwitch.parentSection)
+        assertEquals("lay-auto-1", defaultAutoSwitch.layoutId)
+
+        val layoutsAutoSwitch =
+            MacroPadSubPage.AutomaticLayoutSwitching(layoutId = "lay-auto-2", section = EditorSection.LAYOUTS)
+        assertEquals(EditorSection.LAYOUTS, layoutsAutoSwitch.parentSection)
+        assertEquals("lay-auto-2", layoutsAutoSwitch.layoutId)
+
+        MacroPadNavState.selectSection(EditorSection.AUTOMATION)
+        MacroPadNavState.push(defaultAutoSwitch)
+        assertNav(EditorSection.AUTOMATION, listOf(defaultAutoSwitch))
     }
 }

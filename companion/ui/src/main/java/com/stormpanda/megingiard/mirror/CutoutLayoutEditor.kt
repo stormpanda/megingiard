@@ -689,8 +689,8 @@ internal fun adjustSourceCropToAspectRatio(
         newW = newH * factor
     }
 
-    val newX = (centerX - newW / 2f).coerceIn(0f, 1f - newW)
-    val newY = (centerY - newH / 2f).coerceIn(0f, 1f - newH)
+    val newX = (centerX - newW / 2f).coerceIn(0f, (1f - newW).coerceAtLeast(0f))
+    val newY = (centerY - newH / 2f).coerceIn(0f, (1f - newH).coerceAtLeast(0f))
 
     return cutout.copy(
         srcX = newX,

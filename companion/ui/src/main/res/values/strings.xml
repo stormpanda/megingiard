@@ -361,6 +361,7 @@ Open Settings to create a layout.</string>
 
     <!-- MacroPad editor section headers -->
     <string name="macropad_editor_section_layout">Layout</string>
+    <string name="macropad_editor_section_automation">Automation</string>
     <string name="macropad_editor_section_buttons">Buttons</string>
     <string name="macropad_editor_section_button_settings">Button Settings</string>
     <string name="macropad_editor_section_button_colors">Button Colors</string>
@@ -389,6 +390,44 @@ Open Settings to create a layout.</string>
     <string name="layout_settings_bg_image_adjustments">Image Adjustments &amp; Masking</string>
     <string name="layout_settings_bg_section_title">Background</string>
     <string name="layout_settings_bg_image_dimming_title">Dimming</string>
+    <!-- Automatic Layout Switching & Visual Anchor -->
+    <string name="layout_settings_auto_switch_section_title">Visual Reference Anchor</string>
+    <string name="layout_settings_auto_switch_title">Visual Reference Anchor</string>
+    <string name="layout_settings_auto_switch_enabled_desc">Visual anchor active • Freezes or blurs cutouts when content is absent</string>
+    <string name="layout_settings_auto_switch_disabled_desc">Freeze or blur cutouts or switch layouts when intended content is not shown on screen</string>
+    <string name="layout_settings_visual_anchor_title">Visual Reference Anchor</string>
+    <string name="layout_settings_visual_anchor_desc">Monitors a reference region on the primary display to freeze or blur cutouts when intended content is not shown in-game.</string>
+    <string name="layout_settings_visual_anchor_position_title">Position Reference Anchor</string>
+    <string name="layout_settings_visual_anchor_position_desc">Adjust the reference bounding box on the primary display</string>
+    <string name="layout_settings_visual_anchor_calibrate_title">Calibrate Reference Anchor</string>
+    <string name="layout_settings_visual_anchor_calibrate_desc">Sample reference area to detect stable anchor points</string>
+    <string name="layout_settings_visual_anchor_recalibrate_title">Recalibrate Reference Anchor</string>
+    <string name="layout_settings_visual_anchor_recalibrate_desc">Update anchor points from live game screen</string>
+    <string name="layout_settings_visual_anchor_status_calibrated">Calibrated (%1$d reference points)</string>
+    <string name="layout_settings_visual_anchor_stream_delay_desc">Buffer frames to eliminate visual tearing when UI disappears</string>
+    <string name="layout_settings_visual_anchor_freeze_title">Freeze Inactive Cutouts</string>
+    <string name="layout_settings_visual_anchor_freeze_desc">Hold the last valid frame when the reference anchor is lost. If disabled, cutouts continue live playback.</string>
+    <string name="layout_settings_visual_anchor_blur_title">Blur Inactive Cutouts</string>
+    <string name="layout_settings_visual_anchor_blur_desc">Apply frosted-glass blur when the reference anchor is lost.</string>
+    <string name="layout_settings_visual_anchor_remove_title">Delete Anchor Calibration</string>
+    <string name="layout_settings_visual_anchor_remove_desc">Remove calibrated reference signature and disable visual anchor</string>
+    <string name="help_layout_settings_auto_switch_desc">Configure visual anchoring and automatic layout switching for this layout. Monitors a reference region on the primary screen to freeze or blur cutouts or switch layouts whenever this layout\'s intended content is not shown.</string>
+
+    <string name="settings_profile_automation_header">Automation</string>
+    <string name="settings_profile_auto_layout_switching_title">Automatic Layout Switching</string>
+    <string name="settings_profile_auto_layout_switching_desc">Automatically switch to the first layout in this profile whose reference anchor is present on screen</string>
+    <string name="automation_layout_anchors_section_title">Layout Reference Anchors</string>
+    <string name="automation_no_anchors_warning">No layouts in this profile have a visual reference anchor calibrated. Configure anchors below to enable automatic switching.</string>
+    <string name="automation_anchors_status_summary">%1$d of %2$d layouts have a calibrated visual reference anchor.</string>
+    <string name="automation_configure_anchors_title">Configure Layout Anchors</string>
+    <string name="automation_configure_anchors_desc">Configure reference anchors to freeze cutouts or switch layouts when intended content is not shown</string>
+    <string name="automation_anchor_present_badge">PRESENT</string>
+    <string name="automation_anchor_lost_badge">LOST</string>
+    <string name="automation_anchor_active_badge">Active</string>
+    <string name="automation_anchor_calibrated_badge">Calibrated</string>
+    <string name="automation_anchor_configure_badge">Configure</string>
+    <string name="automation_anchor_not_configured">No visual anchor configured</string>
+
     <string name="layout_settings_colors_section_title">Button Color Defaults</string>
     <string name="layout_settings_color_text">Text &amp; Icon Color</string>
     <string name="layout_settings_color_border">Border Color</string>
@@ -622,6 +661,51 @@ Open Settings to create a layout.</string>
     <string name="mirror_editor_shape_mode">Cutout Shape</string>
     <string name="mirror_editor_shape_desc">Switch between rectangular and circular viewport rendering</string>
     <string name="settings_mirror_cutout_summary_fmt">Smoothing: %1$s • Projection: %2$s</string>
+    <string name="settings_mirror_cutout_summary_with_filter_fmt">Smoothing: %1$s • %2$s • Projection: %3$s</string>
+    <string name="settings_mirror_cutout_filter_transparency_mask">HUD / UI Isolation</string>
+    <string name="settings_cutout_advanced_title">Advanced Cutout Settings</string>
+    <string name="settings_cutout_advanced_desc">HUD / UI isolation and translucency adjustments</string>
+    <string name="settings_cutout_convert_smart_title">Isolate HUD / UI Elements</string>
+    <string name="settings_cutout_convert_smart_desc">Isolates stationary HUD and UI elements from moving background scenery using transparency masking</string>
+    <string name="settings_cutout_recalibrate_smart_title">Re-Calibrate HUD / UI Mask</string>
+    <string name="settings_cutout_recalibrate_smart_desc">Samples screen frames again to update the background transparency mask</string>
+    <string name="settings_cutout_remove_smart_title">Remove HUD / UI Isolation</string>
+    <string name="settings_cutout_remove_smart_desc">Removes background transparency mask, reverting to a standard live mirror cutout</string>
+    <string name="settings_cutout_sensitivity_title">Isolation Sensitivity</string>
+    <string name="settings_cutout_sensitivity_desc">Controls background removal threshold. Higher values remove more background; lower values preserve fine lines.</string>
+    <string name="settings_cutout_sensitivity_value_fmt">%1$d%% (%2$d)</string>
+    <string name="settings_cutout_translucency_title">Cutout Translucency</string>
+    <string name="settings_cutout_translucency_desc">Recovers semi-transparent elements, inner details, and translucent effects</string>
+    <string name="settings_mirror_cutout_translucency_off">Off</string>
+    <string name="settings_cutout_features_section">Isolation Features</string>
+    <string name="settings_cutout_cavity_healing_title">Cavity &amp; Gauge Healing</string>
+    <string name="settings_cutout_cavity_healing_desc">Bridges boundary gaps to keep internal minimap radars, health meters, and changing numbers solid.</string>
+    <string name="settings_cutout_render_static_title">Render as Static UI Asset</string>
+    <string name="settings_cutout_render_static_desc">Displays the isolated UI as a clean static graphic, eliminating moving background bleed-through and video compression noise.</string>
+    <string name="settings_cutout_stream_delay_title">Stream Delay</string>
+    <string name="settings_cutout_stream_delay_desc">Delays cutout video by N frames so absence freeze and blur are applied cleanly before content changes</string>
+    <string name="settings_cutout_stream_delay_off">0 frames (Real-time)</string>
+    <string name="settings_cutout_stream_delay_frames">%1$d frames (~%2$d ms)</string>
+    <string name="settings_mirror_auto_tuning_prompt">Isolating HUD / UI elements... Move your camera or character in-game! (%ds left)</string>
+    <string name="settings_mirror_auto_tuning_in_progress">Calibration in Progress</string>
+    <string name="settings_mirror_auto_tuning_secondary_prompt">Sampling frames... Complete or cancel on the secondary screen.</string>
+    <string name="settings_mirror_auto_tune_success">HUD / UI Isolated: %s</string>
+    <string name="mirror_calibration_title">HUD / UI Calibration</string>
+    <string name="mirror_anchor_calibration_title">Reference Anchor Calibration</string>
+    <string name="mirror_calibration_instruction">The top screen is unobstructed. Move your character or rotate the camera in-game now so the algorithm can isolate HUD and UI elements from the moving background.</string>
+    <string name="mirror_anchor_calibration_instruction">The top screen is unobstructed. Move your character or rotate the camera in-game. Dynamic scenery will turn transparent in the preview. Tap Finish once only stationary reference elements remain.</string>
+    <string name="mirror_calibration_instruction_preview">The top screen is unobstructed. Move your character or rotate the camera in-game. Dynamic scenery will turn transparent in the preview. Tap Finish once your intended content is clearly isolated.</string>
+    <string name="mirror_calibration_cancel">Cancel</string>
+    <string name="mirror_calibration_finish">Finish</string>
+    <string name="mirror_calibration_sampling">Sampling...</string>
+    <string name="mirror_calibration_frames_count">%d frames</string>
+    <string name="mirror_calibration_preview_desc">Calibration Live Preview</string>
+    <string name="mirror_calibration_dynamic_pct">%d%% dynamic</string>
+    <string name="mirror_calibration_time_remaining">%ds left</string>
+    <string name="settings_cutout_anchor_position_title">Position Anchor on Screen</string>
+    <string name="mirror_anchor_selector_title">Visual Anchor</string>
+    <string name="mirror_anchor_selector_hint">Position box over a static reference element (e.g. portrait or icon)</string>
+    <string name="mirror_anchor_selector_done">Done</string>
     <string name="settings_mirror_projection_on">On</string>
     <string name="settings_mirror_projection_off">Off</string>
     <string name="macropad_editor_section_actions">Actions</string>
@@ -691,7 +775,7 @@ Open Settings to create a layout.</string>
     <string name="help_quickmenu_profiles_desc">Tap a chip to instantly switch to a different game profile (deactivates Auto Switch). The currently active profile is highlighted. Profiles and their layouts are created and managed in the Edit Profile/Layout screen.</string>
     <string name="help_quickmenu_layouts_desc">Tap a chip to switch to a different layout within the current profile (deactivates Auto Switch). Only layouts marked as enabled in the editor appear here.</string>
     <string name="help_quickmenu_auto_switch_label">Auto Switch</string>
-    <string name="help_quickmenu_auto_switch_desc">Toggles dynamic profile auto-matching ON/OFF. When ON, profiles and companion views switch automatically based on the active game or emulator. When OFF, profile auto-matching is paused.</string>
+    <string name="help_quickmenu_auto_switch_desc">Toggles dynamic auto-matching ON/OFF. When ON, profiles, layouts, and companion views switch automatically based on the active game, emulator, and on-screen anchors. When OFF, automatic switching is paused.</string>
     <string name="help_quickmenu_view_switch_label">Switch to Hub / Game Profile</string>
     <string name="help_quickmenu_view_switch_desc">Switches manually between the Companion Hub dashboard and the active Game Profile layout (deactivates Auto Switch).</string>
     <string name="help_quickmenu_edit_desc">Opens the Edit Profile/Layout screen where you can add, move, and configure buttons, manage profiles and layouts, and create or edit macros.</string>
@@ -900,6 +984,16 @@ Open Settings to create a layout.</string>
     <string name="quick_menu_show_macropad">Switch to Game Profile</string>
     <string name="quick_menu_auto_mode">Auto Switch</string>
     <string name="toast_auto_switch_off">Auto Switch: off</string>
+    <string name="toast_anchor_conflict_two">Anchor conflict: \"%1$s\" and \"%2$s\" both match</string>
+    <string name="toast_anchor_conflict_multiple">Anchor conflict: %1$s all match</string>
+
+    <!-- MacroPad Editor Auto Switch Reactivation Modal -->
+    <string name="macropad_reactivate_auto_switch_title">Reactivate Auto Switch?</string>
+    <string name="macropad_reactivate_auto_switch_message">Auto Switch was turned off while in the MacroPad editor. Would you like to turn it back on?</string>
+    <string name="macropad_reactivate_auto_switch_confirm">Reactivate Auto Switch</string>
+    <string name="macropad_reactivate_auto_switch_confirm_desc">Restore automatic profile and layout switching</string>
+    <string name="macropad_reactivate_auto_switch_dismiss">Keep Auto Switch Off</string>
+    <string name="macropad_reactivate_auto_switch_dismiss_desc">Remain in manual profile mode</string>
 
     <!-- Update Check Strings -->
     <string name="settings_update_available_short">Update available</string>

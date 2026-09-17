@@ -70,6 +70,7 @@ import com.stormpanda.megingiard.input.InjectorLifecycleManager
 import com.stormpanda.megingiard.log.LogReportManager
 import com.stormpanda.megingiard.macropad.AppLauncherManager
 import com.stormpanda.megingiard.macropad.BackgroundPickerManager
+import com.stormpanda.megingiard.macropad.LayoutTransitionManager
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
@@ -233,12 +234,14 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         AppLog.i(TAG, "onDestroy")
+        LayoutTransitionManager.unregisterWindowProvider()
         InjectorLifecycleManager.stopAll()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
         super.onCreate(savedInstanceState)
+        LayoutTransitionManager.registerWindowProvider { window }
 
         if (savedInstanceState == null && display?.displayId != Display.DEFAULT_DISPLAY) {
             PrimaryFocusAnchorActivity.anchorPrimaryFocus(this)
@@ -460,6 +463,8 @@ class MainActivity : ComponentActivity() {
                     AppStateManager.promptInFlight,
                     ScreenCaptureManager.isCapturing,
                     MacroPadState.activeLayout,
+                    MacroPadState.activeProfile,
+                    AppStateManager.companionViewMode,
                     AppStateManager.isOnValidScreen,
                     OnboardingWizardManager.isWizardActive,
                     AppStateManager.isFullscreenMouseActive,
@@ -469,11 +474,19 @@ class MainActivity : ComponentActivity() {
                     val promptInFlight = values[0] as Boolean
                     val capturing = values[1] as Boolean
                     val currentLayout = values[2] as? PadLayout
-                    val onValidScreen = values[3] as Boolean
-                    val wizardActive = values[4] as Boolean
-                    val isFullscreenMouseActive = values[5] as Boolean
-                    val isFullscreenKeyboardActive = values[6] as Boolean
-                    val wasMirroringStartedByTouchpad = values[7] as Boolean
+                    val profile = values[3] as? PadProfile
+                    val viewMode = values[4] as CompanionViewMode
+                    val onValidScreen = values[5] as Boolean
+                    val wizardActive = values[6] as Boolean
+                    val isFullscreenMouseActive = values[7] as Boolean
+                    val isFullscreenKeyboardActive = values[8] as Boolean
+                    val wasMirroringStartedByTouchpad = values[9] as Boolean
+
+                    val isAutoSwitchEligible =
+                        viewMode == CompanionViewMode.AUTO &&
+                            profile?.autoLayoutSwitching == true
+                    val hasAnyAnchoredLayout =
+                        profile?.layouts?.any { it.visualAnchor.enabled } == true
 
                     MirrorRuntimePolicyState(
                         promptInFlight = promptInFlight,
@@ -481,6 +494,7 @@ class MainActivity : ComponentActivity() {
                         isCapturing = capturing,
                         layoutId = currentLayout?.id,
                         layoutWantsMirror = currentLayout?.mirrorAutoStart == true,
+                        autoSwitchWantsMirror = isAutoSwitchEligible && hasAnyAnchoredLayout,
                         tutorialsActive = wizardActive,
                         isFullscreenMouseActive = isFullscreenMouseActive,
                         isFullscreenKeyboardActive = isFullscreenKeyboardActive,

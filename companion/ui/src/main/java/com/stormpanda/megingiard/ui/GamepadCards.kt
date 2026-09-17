@@ -678,6 +678,7 @@ fun GamepadActionCard(
     isDestructive: Boolean = false,
     alwaysShowFullDescription: Boolean = false,
     itemKey: Any? = title,
+    cardFocusRequester: FocusRequester = remember { FocusRequester() },
     onFocusChanged: ((Boolean) -> Unit)? = null,
 ) {
     val colors = LocalAppColors.current
@@ -710,6 +711,7 @@ fun GamepadActionCard(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier,
+        cardFocusRequester = cardFocusRequester,
         itemKey = itemKey,
         cardBgColor = effectiveBg,
         onFocusChanged = onFocusChanged,

@@ -1,6 +1,5 @@
 package com.stormpanda.megingiard.macropad
 
-import com.stormpanda.megingiard.macropad.ProfileAssociation
 import com.stormpanda.megingiard.mirror.ScreenCutout
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -75,6 +74,7 @@ class MacroPadStateTest {
         buttonBgColor: ColorOption = ColorOption.Neutral,
         mirrorEdgeBlendWidth: Float = 0f,
         mirrorConfigured: Boolean = false,
+        visualAnchor: LayoutVisualAnchor = LayoutVisualAnchor(),
     ) = PadLayout(
         id = id,
         name = name,
@@ -92,6 +92,7 @@ class MacroPadStateTest {
         buttonBgColor = buttonBgColor,
         mirrorEdgeBlendWidth = mirrorEdgeBlendWidth,
         mirrorConfigured = mirrorConfigured,
+        visualAnchor = visualAnchor,
     )
 
     private fun testProfile(
@@ -343,18 +344,28 @@ class MacroPadStateTest {
     fun `copyLayoutToProfile duplicates layout and maps referenced macros when cross-profile`() {
         val m1 = Macro(id = "macro-1", name = "Fire", steps = emptyList())
         val btn = testButton(id = "btn-1", action = PadAction.Macro("macro-1"))
-        val l1 = testLayout(id = "layout-1", name = "Lay1", buttons = listOf(btn))
+        val l1 =
+            testLayout(
+                id = "layout-1",
+                name = "Lay1",
+                buttons = listOf(btn),
+                visualAnchor = LayoutVisualAnchor(enabled = true, srcY = 0.3f),
+            )
         val p1 = testProfile(id = "p1", layouts = listOf(l1), macros = listOf(m1))
         val p2 = testProfile(id = "p2", layouts = listOf(testLayout(id = "layout-2", name = "Lay2")))
         loadProfiles(p1, p2, activeId = "p1")
 
-        MacroPadState.copyLayoutToProfile(l1, "p1", "p2")
+        val newId = MacroPadState.copyLayoutToProfile(l1, "p1", "p2")
+        assertNotNull(newId)
 
         val targetProfile = MacroPadState.profiles.value.first { it.id == "p2" }
         assertEquals(2, targetProfile.layouts.size)
         val copiedLayout = targetProfile.layouts.first { it.id != "layout-2" }
+        assertEquals(newId, copiedLayout.id)
         assertEquals("Lay1", copiedLayout.name)
         assertEquals(1, copiedLayout.buttons.size)
+        assertTrue(copiedLayout.visualAnchor.enabled)
+        assertEquals(0.3f, copiedLayout.visualAnchor.srcY, 0.001f)
 
         assertEquals(1, targetProfile.macros.size)
         val copiedMacro = targetProfile.macros.first()
@@ -432,6 +443,7 @@ class MacroPadStateTest {
                 buttons = listOf(btn),
                 mirrorEdgeBlendWidth = 25f,
                 mirrorCutouts = listOf(cutout),
+                visualAnchor = LayoutVisualAnchor(enabled = true, srcX = 0.2f),
             )
         loadProfiles(testProfile(id = "p1", layouts = listOf(l1), activeLayoutId = "layout-1"))
 
@@ -454,6 +466,8 @@ class MacroPadStateTest {
         assertTrue(dupCutout.touchProjectionEnabled)
         assertTrue(dupCutout.motionSmoothing)
         assertEquals(75, dupCutout.motionSmoothingStrength)
+        assertTrue(duplicated.visualAnchor.enabled)
+        assertEquals(0.2f, duplicated.visualAnchor.srcX, 0.001f)
     }
 
     @Test
@@ -966,5 +980,53 @@ class MacroPadStateTest {
 
         val result = MacroPadState.getDefaultOrFirstProfile()
         assertEquals(p1.id, result?.id)
+    }
+
+    @Test
+    fun `updateCutout updates existing cutout in active layout`() {
+        val cutout1 =
+            ScreenCutout(
+                id = "c1",
+                name = "Map",
+                srcX = 0f,
+                srcY = 0f,
+                srcWidth = 0.5f,
+                srcHeight = 0.5f,
+                destX = 0f,
+                destY = 0f,
+                destWidth = 0.5f,
+                destHeight = 0.5f,
+                hasTransparencyMask = false,
+            )
+        val cutout2 =
+            ScreenCutout(
+                id = "c2",
+                name = "HP",
+                srcX = 0.5f,
+                srcY = 0.5f,
+                srcWidth = 0.5f,
+                srcHeight = 0.5f,
+                destX = 0.5f,
+                destY = 0.5f,
+                destWidth = 0.5f,
+                destHeight = 0.5f,
+                hasTransparencyMask = false,
+            )
+        val layout = testLayout(id = "l1", mirrorCutouts = listOf(cutout1, cutout2))
+        val profile = testProfile(id = "p1", layouts = listOf(layout), activeLayoutId = "l1")
+        loadProfiles(profile)
+
+        val updatedCutout = cutout1.copy(hasTransparencyMask = true, opacity = 0.85f)
+        MacroPadState.updateCutout(updatedCutout)
+
+        val cutouts = MacroPadState.activeLayout.value?.mirrorCutouts
+        assertNotNull(cutouts)
+        assertEquals(2, cutouts?.size)
+        val resultCutout = cutouts?.first { it.id == "c1" }
+        assertEquals(true, resultCutout?.hasTransparencyMask)
+        assertEquals(0.85f, resultCutout?.opacity)
+        // Verify untouched cutout2 is preserved
+        val untouched = cutouts?.first { it.id == "c2" }
+        assertEquals(false, untouched?.hasTransparencyMask)
     }
 }

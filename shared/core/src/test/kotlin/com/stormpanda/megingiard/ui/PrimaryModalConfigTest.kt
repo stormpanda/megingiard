@@ -20,6 +20,7 @@ class PrimaryModalConfigTest {
         assertTrue(types.contains(PrimaryModalType.PROFILE_SETTINGS))
         assertTrue(types.contains(PrimaryModalType.MACRO_TIMELINE_EDITOR))
         assertTrue(types.contains(PrimaryModalType.MACROPAD_INSPECTOR))
+        assertTrue(types.contains(PrimaryModalType.REACTIVATE_AUTO_SWITCH))
     }
 
     @Test

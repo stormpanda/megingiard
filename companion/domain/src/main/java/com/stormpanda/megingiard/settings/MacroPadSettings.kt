@@ -90,11 +90,21 @@ object MacroPadSettings {
         }
     }
 
+    fun resetForTesting() {
+        _gamepadSwapFaceButtons.value = false
+        _privdPromptDismissed.value = false
+        _deadzoneLeft.value = PRIVD_DEFAULT_DEADZONE
+        _deadzoneRight.value = PRIVD_DEFAULT_DEADZONE
+        hasLoadedOnce = false
+        lastLoadedProfilesJson = null
+        lastLoadedActiveProfileId = null
+    }
+
     internal fun loadFrom(prefs: Preferences) {
-        _gamepadSwapFaceButtons.value = prefs[KEY_GAMEPAD_SWAP_FACE_BUTTONS] ?: false
-        _privdPromptDismissed.value = prefs[KEY_PRIVD_PROMPT_DISMISSED] ?: false
-        _deadzoneLeft.value = prefs[KEY_PRIVD_DEADZONE_LEFT] ?: PRIVD_DEFAULT_DEADZONE
-        _deadzoneRight.value = prefs[KEY_PRIVD_DEADZONE_RIGHT] ?: PRIVD_DEFAULT_DEADZONE
+        prefs[KEY_GAMEPAD_SWAP_FACE_BUTTONS]?.let { _gamepadSwapFaceButtons.value = it }
+        prefs[KEY_PRIVD_PROMPT_DISMISSED]?.let { _privdPromptDismissed.value = it }
+        prefs[KEY_PRIVD_DEADZONE_LEFT]?.let { _deadzoneLeft.value = it }
+        prefs[KEY_PRIVD_DEADZONE_RIGHT]?.let { _deadzoneRight.value = it }
 
         // MacroPad profiles
         val macropadProfilesJson = prefs[KEY_MACROPAD_PROFILES]

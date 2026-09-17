@@ -33,8 +33,6 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.catalog.DisplayDetector
-import com.stormpanda.megingiard.macropad.EditorSection
-import com.stormpanda.megingiard.mirror.MirrorEditorTopOverlay
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.settings.AppLanguage
@@ -42,7 +40,6 @@ import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -65,6 +62,8 @@ object PrimaryOverlayManager {
     private var lifecycleOwner: WindowOverlayLifecycleOwner? = null
     private var wasFrozenForModal = false
     private val mainHandler = Handler(Looper.getMainLooper())
+    private var pendingHideRunnable: Runnable? = null
+    private const val HIDE_DEBOUNCE_MS = 32L
 
     fun init(app: Application) {
         if (application != null) return
@@ -73,41 +72,31 @@ object PrimaryOverlayManager {
         scope = coroutineScope
 
         coroutineScope.launch {
-            combine(
-                AppStateManager.activePrimaryModal,
-                AppStateManager.isViewportEditActive,
-            ) { modal, isEdit ->
-                Pair(modal != null, isEdit)
-            }.collect { (hasModal, isEdit) ->
-                handleOverlayState(hasModal, isEdit)
+            AppStateManager.activePrimaryModal.collect { modal ->
+                handleOverlayState(modal)
             }
         }
         AppLog.i(TAG, "PrimaryOverlayManager initialized")
     }
 
-    private fun handleOverlayState(
-        hasModal: Boolean,
-        isEdit: Boolean,
-    ) {
+    private fun handleOverlayState(modal: PrimaryModalConfig?) {
         if (Looper.myLooper() == Looper.getMainLooper()) {
-            handleOverlayStateOnMainThread(hasModal, isEdit)
+            handleOverlayStateOnMainThread(modal)
         } else {
-            mainHandler.post { handleOverlayStateOnMainThread(hasModal, isEdit) }
+            mainHandler.post { handleOverlayStateOnMainThread(modal) }
         }
     }
 
-    private fun handleOverlayStateOnMainThread(
-        hasModal: Boolean,
-        isEdit: Boolean,
-    ) {
-        val shouldShow = hasModal || isEdit
-        if (!shouldShow) {
-            hideOverlayOnMainThread()
+    private fun handleOverlayStateOnMainThread(modal: PrimaryModalConfig?) {
+        if (modal == null) {
+            scheduleHideOverlay()
             return
         }
+        cancelPendingHide()
 
+        val isViewportEditor = modal.type == PrimaryModalType.MIRROR_VIEWPORT_EDITOR
         // Adjust mirror freeze state: freeze only for opaque configuration modals, not for viewport editor.
-        if (hasModal && !isEdit) {
+        if (!isViewportEditor) {
             if (!wasFrozenForModal && ScreenCaptureManager.isCapturing.value && !ScreenCaptureManager.isFrozen.value) {
                 AppLog.i(TAG, "Freezing mirror capture for primary modal dialog")
                 wasFrozenForModal = true
@@ -125,6 +114,24 @@ object PrimaryOverlayManager {
         }
 
         showOverlayOnMainThread()
+    }
+
+    private fun scheduleHideOverlay() {
+        if (pendingHideRunnable != null) return
+        val runnable =
+            Runnable {
+                pendingHideRunnable = null
+                hideOverlayOnMainThread()
+            }
+        pendingHideRunnable = runnable
+        mainHandler.postDelayed(runnable, HIDE_DEBOUNCE_MS)
+    }
+
+    private fun cancelPendingHide() {
+        pendingHideRunnable?.let {
+            mainHandler.removeCallbacks(it)
+            pendingHideRunnable = null
+        }
     }
 
     private fun showOverlayOnMainThread() {
@@ -236,19 +243,9 @@ object PrimaryOverlayManager {
                                 if (owner.onBackPressedDispatcher.hasEnabledCallbacks()) {
                                     owner.onBackPressedDispatcher.onBackPressed()
                                 } else {
-                                    if (AppStateManager.isViewportEditActive.value) {
-                                        AppStateManager.setViewportEditActive(false)
-                                        AppStateManager.openPrimaryModal(
-                                            PrimaryModalConfig(
-                                                type = PrimaryModalType.MACROPAD_EDITOR,
-                                                payload = PrimaryModalPayload.MacroPad(section = EditorSection.MIRROR),
-                                            ),
-                                        )
-                                    } else {
-                                        AppStateManager.closePrimaryModal()
-                                        AppStateManager.setActiveCropCutoutId(null)
-                                        AppStateManager.setSelectedCutoutId(null)
-                                    }
+                                    AppStateManager.closePrimaryModal()
+                                    AppStateManager.setActiveCropCutoutId(null)
+                                    AppStateManager.setSelectedCutoutId(null)
                                 }
                                 true
                             }
@@ -293,7 +290,6 @@ object PrimaryOverlayManager {
                         val userAccentArgb by SettingsManager.accentColor.collectAsStateWithLifecycle()
                         val appColors = paletteFor(themeMode, Color(userAccentArgb))
                         val activeModal by AppStateManager.activePrimaryModal.collectAsStateWithLifecycle()
-                        val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsStateWithLifecycle()
 
                         val appLanguage by SettingsManager.appLanguage.collectAsStateWithLifecycle()
                         val localeContext =
@@ -324,34 +320,14 @@ object PrimaryOverlayManager {
                                     modifier = Modifier.fillMaxSize(),
                                     color = Color.Transparent,
                                 ) {
-                                    when {
-                                        isViewportEditActive -> {
-                                            val closeViewportEdit = {
-                                                AppStateManager.setViewportEditActive(false)
-                                                AppStateManager.openPrimaryModal(
-                                                    PrimaryModalConfig(
-                                                        type = PrimaryModalType.MACROPAD_EDITOR,
-                                                        payload = PrimaryModalPayload.MacroPad(section = EditorSection.MIRROR),
-                                                    ),
-                                                )
-                                            }
-                                            MirrorEditorTopOverlay(
-                                                onDone = closeViewportEdit,
-                                                onCancel = closeViewportEdit,
-                                            )
-                                        }
-
-                                        else -> {
-                                            activeModal?.let { modal ->
-                                                PrimaryModalHost(
-                                                    config = modal,
-                                                    onDismiss = {
-                                                        AppLog.d(TAG, "Dismissing primary modal: ${modal.type}")
-                                                        AppStateManager.closePrimaryModal()
-                                                    },
-                                                )
-                                            }
-                                        }
+                                    activeModal?.let { modal ->
+                                        PrimaryModalHost(
+                                            config = modal,
+                                            onDismiss = {
+                                                AppLog.d(TAG, "Dismissing primary modal: ${modal.type}")
+                                                AppStateManager.closePrimaryModal()
+                                            },
+                                        )
                                     }
                                 }
                             }
@@ -362,6 +338,7 @@ object PrimaryOverlayManager {
             wm.addView(view, params)
             view.post {
                 view.requestFocus()
+                PrimaryOverlayInputBridge.sendFocusRecovery(KeyEvent.KEYCODE_DPAD_DOWN)
             }
             overlayView = view
             AppLog.i(TAG, "Primary overlay window successfully attached to Display 0 WindowManager (non-activity)")

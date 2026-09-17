@@ -382,6 +382,29 @@ class MirrorCoordinateTransformTest {
     }
 
     @Test
+    fun `clampCutoutDrag handles width or height exceeding 1f without crashing on empty coerce range`() {
+        val allCutouts =
+            listOf(
+                cutout("1", destX = 0f, destY = 0f, destWidth = 1.0000178f, destHeight = 0.5f),
+            )
+        // Must not throw IllegalArgumentException: Cannot coerce value to an empty range
+        val (x, y) = clampCutoutDrag("1", 0f, 0f, 0.1f, 0.2f, 1.0000178f, 0.5f, allCutouts)
+        assertEquals(0f, x, EPS)
+        assertEquals(0.2f, y, EPS)
+    }
+
+    @Test
+    fun `clampCutoutDrag handles full screen cutout without crashing`() {
+        val allCutouts =
+            listOf(
+                cutout("1", destX = 0f, destY = 0f, destWidth = 1f, destHeight = 1f),
+            )
+        val (x, y) = clampCutoutDrag("1", 0f, 0f, 0.1f, 0.2f, 1f, 1f, allCutouts)
+        assertEquals(0f, x, EPS)
+        assertEquals(0f, y, EPS)
+    }
+
+    @Test
     fun `adjustDestSizeToAspectRatio fits destination size correctly`() {
         val (w, h) =
             adjustDestSizeToAspectRatio(
@@ -1405,5 +1428,46 @@ class MirrorCoordinateTransformTest {
                 targetNormRatio = normRatio,
             )
         assertTrue(expanded10Steps.w > singleStep.w)
+    }
+
+    @Test
+    fun `calculateResizedBounds supports custom minSizeRatio for visual anchor scaling`() {
+        val screenW = 1000f
+        val screenH = 1000f
+        val minAnchorRatio = 0.04f
+
+        // Starting at exactly minAnchorRatio: 40px out of 1000px
+        val atMin =
+            calculateResizedBounds(
+                normX = 0.500f,
+                normY = 0.500f,
+                normW = 0.040f,
+                normH = 0.040f,
+                screenWidth = screenW,
+                screenHeight = screenH,
+                dx = -10,
+                dy = 10,
+                minSizeRatio = minAnchorRatio,
+            )
+        // Must clamp to 0.040f (40px)
+        assertEquals(0.040f, atMin.width, EPS)
+        assertEquals(0.040f, atMin.height, EPS)
+
+        // D-Pad UP (dy < 0) expands height symmetrically from center
+        val expandedUp =
+            calculateResizedBounds(
+                normX = 0.500f,
+                normY = 0.500f,
+                normW = 0.040f,
+                normH = 0.040f,
+                screenWidth = screenW,
+                screenHeight = screenH,
+                dx = 0,
+                dy = -2,
+                minSizeRatio = minAnchorRatio,
+            )
+        // Expanded by 2px: top border -1px (0.499f), height 0.042f
+        assertEquals(0.499f, expandedUp.y, EPS)
+        assertEquals(0.042f, expandedUp.height, EPS)
     }
 }

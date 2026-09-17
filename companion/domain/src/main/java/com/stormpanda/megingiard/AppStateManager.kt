@@ -392,6 +392,16 @@ object AppStateManager {
     private val _companionViewMode = MutableStateFlow(CompanionViewMode.AUTO)
     val companionViewMode: StateFlow<CompanionViewMode> = _companionViewMode.asStateFlow()
 
+    private val _wasAutoSwitchDeactivatedInEditor = MutableStateFlow(false)
+    val wasAutoSwitchDeactivatedInEditor: StateFlow<Boolean> = _wasAutoSwitchDeactivatedInEditor.asStateFlow()
+
+    private var wasAutoSwitchActiveWhenEditorOpened = false
+
+    fun resetAutoSwitchDeactivatedInEditor() {
+        AppLog.d(TAG, "resetAutoSwitchDeactivatedInEditor")
+        _wasAutoSwitchDeactivatedInEditor.value = false
+    }
+
     private val _autoSwitchOffToastEvent =
         MutableSharedFlow<Unit>(
             extraBufferCapacity = 1,
@@ -420,6 +430,14 @@ object AppStateManager {
         if (previousMode == CompanionViewMode.AUTO && mode != CompanionViewMode.AUTO && !isAutoSwitchButton) {
             AppLog.i(TAG, "Auto Switch turned off by non-button -> emitting toast signal")
             _autoSwitchOffToastEvent.tryEmit(Unit)
+        }
+        if (isEditorActive.value) {
+            if (mode == CompanionViewMode.AUTO) {
+                wasAutoSwitchActiveWhenEditorOpened = true
+                _wasAutoSwitchDeactivatedInEditor.value = false
+            } else if (wasAutoSwitchActiveWhenEditorOpened) {
+                _wasAutoSwitchDeactivatedInEditor.value = true
+            }
         }
         if (mode == CompanionViewMode.AUTO) {
             AutoSwitchCoordinator.reevaluateAutoState()
@@ -487,7 +505,23 @@ object AppStateManager {
                 _selectedCutoutId.value = payload.cutoutId
             }
 
+            is PrimaryModalPayload.MirrorViewportEditor -> {
+                if (payload.cutoutId != null) {
+                    _selectedCutoutId.value = payload.cutoutId
+                }
+            }
+
             else -> {}
+        }
+        if (config.type == PrimaryModalType.MIRROR_VIEWPORT_EDITOR) {
+            ScreenCaptureManager.setFollowActive(false, persist = true)
+            _activeCropCutoutId.value = _selectedCutoutId.value
+            _isMirrorEditorBackgroundHidden.value = false
+            _companionSurfaceMode.value = CompanionSurfaceMode.VIEWPORT_EDIT
+            MacroPadState.activeLayout.value?.id?.let { layoutId ->
+                MacroPadState.setLayoutMirrorAutoStart(layoutId, true)
+            }
+            requestMirrorStart()
         }
     }
 
@@ -511,6 +545,20 @@ object AppStateManager {
                 openPrimaryModal(destination.toPrimaryModalConfig())
             }
         }
+    }
+
+    /**
+     * Atomically suspends the current modal state and transitions directly to [newConfig]
+     * without emitting an intermediate null state or causing overlay window teardown.
+     */
+    fun suspendCurrentAndOpen(
+        newConfig: PrimaryModalConfig,
+        overrideConfig: PrimaryModalConfig? = null,
+    ) {
+        val configToSuspend = overrideConfig ?: _activePrimaryModal.value
+        AppLog.i(TAG, "suspendCurrentAndOpen: saving config=$configToSuspend, opening newConfig=$newConfig")
+        _suspendedPrimaryModal.value = configToSuspend
+        openPrimaryModal(newConfig)
     }
 
     /**
@@ -545,12 +593,18 @@ object AppStateManager {
     }
 
     fun closePrimaryModal() {
-        AppLog.i(TAG, "closePrimaryModal: currentModal=${_activePrimaryModal.value?.type}")
+        val currentType = _activePrimaryModal.value?.type
+        AppLog.i(TAG, "closePrimaryModal: currentModal=$currentType")
         _activePrimaryModal.value = null
         _activeCropCutoutId.value = null
         _selectedCutoutId.value = null
         _isMirrorEditorBackgroundHidden.value = false
         _currentNavDestination.value = null
+        if (currentType == PrimaryModalType.MIRROR_VIEWPORT_EDITOR &&
+            _companionSurfaceMode.value == CompanionSurfaceMode.VIEWPORT_EDIT
+        ) {
+            _companionSurfaceMode.value = CompanionSurfaceMode.MACROPAD
+        }
     }
 
     fun setActiveCropCutoutId(id: String?) {
@@ -658,16 +712,16 @@ object AppStateManager {
     fun setViewportEditActive(active: Boolean) {
         AppLog.i(TAG, "setViewportEditActive($active)")
         if (active) {
-            ScreenCaptureManager.setFollowActive(false, persist = true)
-            _activeCropCutoutId.value = _selectedCutoutId.value
-            _isMirrorEditorBackgroundHidden.value = false
-            _companionSurfaceMode.value = CompanionSurfaceMode.VIEWPORT_EDIT
+            openPrimaryModal(PrimaryModalConfig(PrimaryModalType.MIRROR_VIEWPORT_EDITOR))
         } else {
             _selectedCutoutId.value = null
             _activeCropCutoutId.value = null
             _isMirrorEditorBackgroundHidden.value = false
             if (_companionSurfaceMode.value == CompanionSurfaceMode.VIEWPORT_EDIT) {
                 _companionSurfaceMode.value = CompanionSurfaceMode.MACROPAD
+            }
+            if (_activePrimaryModal.value?.type == PrimaryModalType.MIRROR_VIEWPORT_EDITOR) {
+                closePrimaryModal()
             }
         }
     }
@@ -724,6 +778,21 @@ object AppStateManager {
 
     init {
         scope.launch {
+            var wasActive = false
+            isEditorActive.collect { active ->
+                if (active && !wasActive) {
+                    wasAutoSwitchActiveWhenEditorOpened = (_companionViewMode.value == CompanionViewMode.AUTO)
+                    _wasAutoSwitchDeactivatedInEditor.value = false
+                    AppLog.d(TAG, "isEditorActive=true, wasAutoSwitchActiveWhenEditorOpened=$wasAutoSwitchActiveWhenEditorOpened")
+                } else if (!active && wasActive) {
+                    _wasAutoSwitchDeactivatedInEditor.value = false
+                    wasAutoSwitchActiveWhenEditorOpened = false
+                    AppLog.d(TAG, "isEditorActive=false, reset auto switch editor state")
+                }
+                wasActive = active
+            }
+        }
+        scope.launch {
             _companionSurfaceMode.collect { mode ->
                 if (mode != CompanionSurfaceMode.KEYBOARD && isKeyboardSettingsOpen.value) {
                     setKeyboardSettingsOpen(false)
@@ -739,7 +808,9 @@ object AppStateManager {
                 val newId = layout?.id
                 if (lastActiveLayoutId != null && newId != lastActiveLayoutId) {
                     AppLog.d(TAG, "activeLayout changed from $lastActiveLayoutId to $newId; checking modal dismissal")
-                    if (_activePrimaryModal.value == null && !_isQuickMenuOpen.value) {
+                    if (_activePrimaryModal.value?.type == PrimaryModalType.MIRROR_VIEWPORT_EDITOR) {
+                        setViewportEditActive(false)
+                    } else if (_activePrimaryModal.value == null && !_isQuickMenuOpen.value) {
                         closeActiveModal()
                     }
                 }

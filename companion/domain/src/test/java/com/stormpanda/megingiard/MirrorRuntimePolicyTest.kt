@@ -21,6 +21,7 @@ class MirrorRuntimePolicyTest {
         isCapturing: Boolean = false,
         layoutId: String? = LAYOUT_A,
         layoutWantsMirror: Boolean = true,
+        autoSwitchWantsMirror: Boolean = false,
         privdMirrorConnecting: Boolean = false,
         tutorialsActive: Boolean = false,
     ) = MirrorRuntimePolicyState(
@@ -29,6 +30,7 @@ class MirrorRuntimePolicyTest {
         isCapturing = isCapturing,
         layoutId = layoutId,
         layoutWantsMirror = layoutWantsMirror,
+        autoSwitchWantsMirror = autoSwitchWantsMirror,
         privdMirrorConnecting = privdMirrorConnecting,
         tutorialsActive = tutorialsActive,
     )
@@ -55,6 +57,34 @@ class MirrorRuntimePolicyTest {
     @Test
     fun `stops when active layout does not want mirror while capture is running`() {
         assertEquals(MirrorRuntimeAction.STOP, decideMirrorRuntimeAction(policyState(isCapturing = true, layoutWantsMirror = false)))
+    }
+
+    @Test
+    fun `does not stop when active layout does not want mirror but auto switch wants mirror while capturing`() {
+        assertEquals(
+            MirrorRuntimeAction.NONE,
+            decideMirrorRuntimeAction(
+                policyState(
+                    isCapturing = true,
+                    layoutWantsMirror = false,
+                    autoSwitchWantsMirror = true,
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun `starts when active layout does not want mirror but auto switch wants mirror and capture stopped`() {
+        assertEquals(
+            MirrorRuntimeAction.START,
+            decideMirrorRuntimeAction(
+                policyState(
+                    isCapturing = false,
+                    layoutWantsMirror = false,
+                    autoSwitchWantsMirror = true,
+                ),
+            ),
+        )
     }
 
     @Test

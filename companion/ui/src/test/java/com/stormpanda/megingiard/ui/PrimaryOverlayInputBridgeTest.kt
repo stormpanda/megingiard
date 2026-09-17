@@ -3,14 +3,10 @@ package com.stormpanda.megingiard.ui
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -20,23 +16,21 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowLooper
+import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
 class PrimaryOverlayInputBridgeTest {
-    private val testDispatcher = StandardTestDispatcher()
-
     @Before
     fun setUp() {
-        Dispatchers.setMain(testDispatcher)
         PrimaryOverlayInputBridge.resetJoystickState()
     }
 
     @After
     fun tearDown() {
         PrimaryOverlayInputBridge.resetJoystickState()
-        Dispatchers.resetMain()
     }
 
     private fun createJoystickMotionEvent(
@@ -152,12 +146,12 @@ class PrimaryOverlayInputBridgeTest {
             assertTrue(handled)
             assertEquals(1, downEvents.size)
 
-            testScheduler.advanceTimeBy(400)
+            ShadowLooper.idleMainLooper(400, TimeUnit.MILLISECONDS)
             assertTrue(downEvents.size >= 2)
 
             PrimaryOverlayInputBridge.processGenericMotionEvent(createJoystickMotionEvent(axisY = 0f)) { _, _ -> }
             val countAfterRelease = downEvents.size
-            testScheduler.advanceTimeBy(500)
+            ShadowLooper.idleMainLooper(500, TimeUnit.MILLISECONDS)
             assertEquals(countAfterRelease, downEvents.size)
         }
 

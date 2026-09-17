@@ -159,6 +159,12 @@ internal sealed interface MacroPadSubPage {
         override val parentSection = EditorSection.MIRROR
     }
 
+    data class CutoutAdvancedSettings(
+        val cutoutId: String,
+    ) : MacroPadSubPage {
+        override val parentSection = EditorSection.MIRROR
+    }
+
     data class MirrorAdvancedSettings(
         val layoutId: String,
     ) : MacroPadSubPage {
@@ -169,6 +175,13 @@ internal sealed interface MacroPadSubPage {
         val layoutId: String,
     ) : MacroPadSubPage {
         override val parentSection = EditorSection.LAYOUTS
+    }
+
+    data class AutomaticLayoutSwitching(
+        val layoutId: String,
+        val section: EditorSection = EditorSection.AUTOMATION,
+    ) : MacroPadSubPage {
+        override val parentSection = section
     }
 
     data class CopyLayout(

@@ -58,6 +58,7 @@ fun EmbeddedMirrorView(
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsStateWithLifecycle()
     val layout by MacroPadState.activeLayout.collectAsStateWithLifecycle()
     val screenshotRequested by ScreenCaptureManager.screenshotRequested.collectAsStateWithLifecycle()
+    val presenceRevision by AnchorPresenceManager.presenceRevision.collectAsStateWithLifecycle()
 
     val effectiveCutouts = overrideCutouts ?: cutouts
     val effectiveShowLayoutBackground = showLayoutBackground && !(isViewportEditActive && isMirrorEditorBackgroundHidden)
@@ -105,8 +106,9 @@ fun EmbeddedMirrorView(
                     val smoothingCutout = if (!isMouseActive) activeCutouts.firstOrNull { it.motionSmoothing } else null
                     val effectiveStrength = smoothingCutout?.motionSmoothingStrength ?: 0
 
+                    val wantsSmoother = surfaceOwner == MasterSurfaceRegistry.OWNER_MACROPAD
                     var smoother = gpuMotionSmoother
-                    if (smoother == null && width > 0 && height > 0) {
+                    if (smoother == null && width > 0 && height > 0 && wantsSmoother) {
                         AppLog.i(
                             TAG,
                             "[$surfaceOwner] Initializing GpuMotionSmoother unified pipeline for master Surface (strength=$effectiveStrength)",
@@ -114,14 +116,21 @@ fun EmbeddedMirrorView(
                         smoother = GpuMotionSmoother(master, width, height, effectiveStrength)
                         gpuMotionSmoother = smoother
                         val inSurface = smoother.inputSurface
-                        if (inSurface != null) {
+                        if (inSurface != null && inSurface.isValid) {
                             currentRoutedSurface = inSurface
                             MasterSurfaceRegistry.registerMasterSurface(surfaceOwner, inSurface, surfacePriority)
+                        } else {
+                            AppLog.w(
+                                TAG,
+                                "[$surfaceOwner] GpuMotionSmoother failed to initialize; falling back to direct master surface",
+                            )
+                            currentRoutedSurface = master
+                            MasterSurfaceRegistry.registerMasterSurface(surfaceOwner, master, surfacePriority)
                         }
                     } else if (smoother != null) {
                         smoother.updateStrength(effectiveStrength)
                         val inSurface = smoother.inputSurface
-                        if (inSurface != null && currentRoutedSurface != inSurface) {
+                        if (inSurface != null && inSurface.isValid && currentRoutedSurface != inSurface) {
                             currentRoutedSurface = inSurface
                             MasterSurfaceRegistry.registerMasterSurface(surfaceOwner, inSurface, surfacePriority)
                         }
@@ -172,7 +181,13 @@ fun EmbeddedMirrorView(
         } else if (!isFrozen) {
             mcc?.isFrozen = false
             mcc?.frozenBitmap = null
+            ScreenCaptureManager.setFrozenBitmap(null)
         }
+    }
+
+    // React to visual anchor presence state changes (instant freeze / unfreeze transition)
+    LaunchedEffect(presenceRevision) {
+        containerHolder.container?.invalidate()
     }
 
     DisposableEffect(surfaceOwner, surfacePriority) {
@@ -184,6 +199,7 @@ fun EmbeddedMirrorView(
             MasterSurfaceRegistry.unregisterMasterSurface(surfaceOwner, surfaceToClear)
             containerHolder.masterSurface?.release()
             containerHolder.masterSurface = null
+            containerHolder.textureView?.let { MirrorFrameSampler.unregisterTextureView(it) }
         }
     }
 
@@ -241,6 +257,7 @@ fun EmbeddedMirrorView(
                         st.setDefaultBufferSize(currentSrcW, currentSrcH)
                         val surface = Surface(st)
                         containerHolder.masterSurface = surface
+                        MirrorFrameSampler.registerTextureView(tv, surface)
                         try {
                             val fps = ScreenCaptureManager.maxFps.value
                             AppLog.i(TAG, "Setting initial surface frame rate to $fps FPS")
@@ -265,6 +282,7 @@ fun EmbeddedMirrorView(
 
                     override fun onSurfaceTextureDestroyed(st: SurfaceTexture): Boolean {
                         AppLog.d(TAG, "master TextureView surface destroyed for $surfaceOwner")
+                        MirrorFrameSampler.unregisterTextureView(tv)
                         val surfaceToClear = containerHolder.currentRoutedSurface ?: containerHolder.masterSurface
                         containerHolder.gpuMotionSmoother?.release()
                         containerHolder.gpuMotionSmoother = null
@@ -291,6 +309,7 @@ fun EmbeddedMirrorView(
         update = { mcc ->
             mcc.cutouts = effectiveCutouts
             mcc.isFrozen = isFrozen
+            mcc.isViewportEditActive = isViewportEditActive
             mcc.frozenBitmap = frozenBitmap
             mcc.viewportScale = if (overrideCutouts != null) 1f else scale
             mcc.viewportOffsetX = if (overrideCutouts != null) 0f else offsetX

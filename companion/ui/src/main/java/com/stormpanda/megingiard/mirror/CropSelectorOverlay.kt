@@ -204,8 +204,8 @@ fun CropSelectorOverlay(
                                 val curCutout = currentCutoutState.value
                                 accumulatedX += dragAmount.x
                                 accumulatedY += dragAmount.y
-                                val newX = (dragStartX + accumulatedX / screenW).coerceIn(0f, 1f - curCutout.srcWidth)
-                                val newY = (dragStartY + accumulatedY / screenH).coerceIn(0f, 1f - curCutout.srcHeight)
+                                val newX = (dragStartX + accumulatedX / screenW).coerceIn(0f, (1f - curCutout.srcWidth).coerceAtLeast(0f))
+                                val newY = (dragStartY + accumulatedY / screenH).coerceIn(0f, (1f - curCutout.srcHeight).coerceAtLeast(0f))
 
                                 val updated =
                                     curLayout.mirrorCutouts.map {

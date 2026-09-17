@@ -398,6 +398,69 @@ data class BackgroundTouchpadConfig(
  *                                    (ambient overlay). Defaults to [ButtonColorStyle.NEUTRAL].
  * @param backgroundTouchpad          Per-layout background touchpad settings for relative mouse.
  */
+const val DEFAULT_LAYOUT_STREAM_DELAY_FRAMES = 2
+const val MIN_LAYOUT_STREAM_DELAY_FRAMES = 1
+const val MAX_LAYOUT_STREAM_DELAY_FRAMES = 10
+const val DEFAULT_LAYOUT_ANCHOR_SIZE = 0.15f
+
+/**
+ * Visual reference anchor configuration for a [PadLayout].
+ *
+ * When [enabled], samples the primary display at [srcX], [srcY], [srcWidth], [srcHeight]
+ * to evaluate the presence of the layout's visual reference anchor.
+ * If the reference signature is lost (i.e. intended content is not shown on screen), all cutouts in the
+ * layout freeze simultaneously, retaining their pristine delayed frames from the ring buffer.
+ *
+ * [streamDelayFrames] enforces a minimum of 1 frame (1..10) to guarantee ring buffer availability
+ * and eliminate the need for periodic background frame sampling.
+ */
+@Serializable
+data class LayoutVisualAnchor(
+    val enabled: Boolean = false,
+    val srcX: Float = 0f,
+    val srcY: Float = 0f,
+    val srcWidth: Float = DEFAULT_LAYOUT_ANCHOR_SIZE,
+    val srcHeight: Float = DEFAULT_LAYOUT_ANCHOR_SIZE,
+    val streamDelayFrames: Int = DEFAULT_LAYOUT_STREAM_DELAY_FRAMES,
+    val lostAnchorEffects: Set<CutoutLostAnchorEffect> = DEFAULT_LOST_ANCHOR_EFFECTS,
+    @Deprecated("Migrated to lostAnchorEffects")
+    val blurCutoutsOnLoss: Boolean = true,
+) {
+    /**
+     * Checks whether the specified [CutoutLostAnchorEffect] is enabled.
+     * Respects legacy [blurCutoutsOnLoss] if [lostAnchorEffects] was not customized.
+     */
+    fun hasEffect(effect: CutoutLostAnchorEffect): Boolean {
+        if (effect == CutoutLostAnchorEffect.BLUR && !blurCutoutsOnLoss && lostAnchorEffects == DEFAULT_LOST_ANCHOR_EFFECTS) {
+            return false
+        }
+        return effect in lostAnchorEffects
+    }
+
+    /**
+     * Returns a copy with the specified [effect] toggled to [enabled].
+     */
+    fun withEffect(
+        effect: CutoutLostAnchorEffect,
+        enabled: Boolean,
+    ): LayoutVisualAnchor {
+        val baseEffects =
+            if (!blurCutoutsOnLoss && lostAnchorEffects == DEFAULT_LOST_ANCHOR_EFFECTS) {
+                setOf(CutoutLostAnchorEffect.FREEZE)
+            } else {
+                lostAnchorEffects
+            }
+        val updated = if (enabled) baseEffects + effect else baseEffects - effect
+        return copy(
+            lostAnchorEffects = updated,
+            blurCutoutsOnLoss = if (effect == CutoutLostAnchorEffect.BLUR) enabled else blurCutoutsOnLoss,
+        )
+    }
+
+    val freezeCutoutsOnLoss: Boolean
+        get() = hasEffect(CutoutLostAnchorEffect.FREEZE)
+}
+
 @Serializable
 data class PadLayout(
     val id: String,
@@ -434,6 +497,7 @@ data class PadLayout(
     val backgroundImageDim: Float = 0f,
     val bgScaleMode: BackgroundScaleMode = BackgroundScaleMode.FILL,
     val backgroundTouchpad: BackgroundTouchpadConfig = BackgroundTouchpadConfig(),
+    val visualAnchor: LayoutVisualAnchor = LayoutVisualAnchor(),
 )
 
 /**
@@ -483,6 +547,7 @@ data class PadProfile(
     val enableTouch: Boolean = false,
     val isDefault: Boolean = false,
     val association: ProfileAssociation? = null,
+    val autoLayoutSwitching: Boolean = false,
 ) {
     fun matches(
         focusedPackage: String?,
@@ -535,6 +600,7 @@ private class PadProfileSurrogate(
     val isDefault: Boolean = false,
     val association: ProfileAssociation? = null,
     val associatedPackage: String? = null,
+    val autoLayoutSwitching: Boolean = false,
 )
 
 object PadProfileSerializer : KSerializer<PadProfile> {
@@ -557,6 +623,7 @@ object PadProfileSerializer : KSerializer<PadProfile> {
                 enableTouch = value.enableTouch,
                 isDefault = value.isDefault,
                 association = value.association,
+                autoLayoutSwitching = value.autoLayoutSwitching,
             )
         encoder.encodeSerializableValue(PadProfileSurrogate.serializer(), surrogate)
     }
@@ -579,6 +646,7 @@ object PadProfileSerializer : KSerializer<PadProfile> {
             enableTouch = surrogate.enableTouch,
             isDefault = surrogate.isDefault,
             association = finalAssoc,
+            autoLayoutSwitching = surrogate.autoLayoutSwitching,
         )
     }
 }

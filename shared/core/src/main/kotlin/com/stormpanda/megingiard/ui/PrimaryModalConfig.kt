@@ -19,12 +19,18 @@ enum class PrimaryModalType {
     PROFILE_SETTINGS,
     MACRO_TIMELINE_EDITOR,
     CROP_SELECTOR,
+    ANCHOR_SELECTOR,
+    MIRROR_VIEWPORT_EDITOR,
+    REACTIVATE_AUTO_SWITCH,
 }
 
 /**
  * Optional contextual data passed when opening a primary screen modal.
  */
 sealed interface PrimaryModalPayload {
+    data class MirrorViewportEditor(
+        val cutoutId: String? = null,
+    ) : PrimaryModalPayload
     data class ButtonInspector(
         val buttonId: String,
     ) : PrimaryModalPayload
@@ -40,6 +46,10 @@ sealed interface PrimaryModalPayload {
 
     data class CropSelector(
         val cutoutId: String,
+    ) : PrimaryModalPayload
+
+    data class AnchorSelector(
+        val layoutId: String,
     ) : PrimaryModalPayload
 
     data class GlobalSettings(

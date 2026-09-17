@@ -21,11 +21,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
-import com.stormpanda.megingiard.macropad.EditorSection
-import com.stormpanda.megingiard.mirror.MirrorEditorTopOverlay
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.settings.SettingsManager
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 private const val TAG = "PrimaryOverlayActivity"
@@ -46,8 +43,9 @@ class PrimaryOverlayActivity : ComponentActivity() {
         AppLog.i(TAG, "onCreate: started on display=$displayId")
 
         wasFrozenForModal = savedInstanceState?.getBoolean("wasFrozenForModal") ?: false
-        val initialModal = AppStateManager.activePrimaryModal.value != null
-        if (savedInstanceState == null && initialModal && ScreenCaptureManager.isCapturing.value && !ScreenCaptureManager.isFrozen.value) {
+        val initialModal = AppStateManager.activePrimaryModal.value
+        val shouldFreezeInitially = initialModal != null && initialModal.type != PrimaryModalType.MIRROR_VIEWPORT_EDITOR
+        if (savedInstanceState == null && shouldFreezeInitially && ScreenCaptureManager.isCapturing.value && !ScreenCaptureManager.isFrozen.value) {
             AppLog.i(TAG, "Freezing mirror capture for primary modal activity")
             wasFrozenForModal = true
             ScreenCaptureManager.setFrozen(true)
@@ -62,19 +60,14 @@ class PrimaryOverlayActivity : ComponentActivity() {
         windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
 
         lifecycleScope.launch {
-            combine(
-                AppStateManager.activePrimaryModal,
-                AppStateManager.isViewportEditActive,
-            ) { modal, isEdit ->
-                Pair(modal != null, isEdit)
-            }.collect { (hasModal, isEdit) ->
-                if (!hasModal && !isEdit) {
+            AppStateManager.activePrimaryModal.collect { modal ->
+                if (modal == null) {
                     AppLog.i(TAG, "All primary overlays inactive -> finishing activity")
                     finish()
                     return@collect
                 }
 
-                if (hasModal && !isEdit) {
+                if (modal.type != PrimaryModalType.MIRROR_VIEWPORT_EDITOR) {
                     if (!wasFrozenForModal && ScreenCaptureManager.isCapturing.value && !ScreenCaptureManager.isFrozen.value) {
                         AppLog.i(TAG, "Freezing mirror capture for primary modal activity")
                         wasFrozenForModal = true
@@ -97,7 +90,6 @@ class PrimaryOverlayActivity : ComponentActivity() {
             val userAccentArgb by SettingsManager.accentColor.collectAsStateWithLifecycle()
             val appColors = paletteFor(themeMode, Color(userAccentArgb))
             val activeModal by AppStateManager.activePrimaryModal.collectAsStateWithLifecycle()
-            val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsStateWithLifecycle()
 
             MaterialTheme(
                 colorScheme = colorSchemeFor(appColors, themeMode),
@@ -111,34 +103,14 @@ class PrimaryOverlayActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         color = Color.Transparent,
                     ) {
-                        when {
-                            isViewportEditActive -> {
-                                val closeViewportEdit = {
-                                    AppStateManager.setViewportEditActive(false)
-                                    AppStateManager.openPrimaryModal(
-                                        PrimaryModalConfig(
-                                            type = PrimaryModalType.MACROPAD_EDITOR,
-                                            payload = PrimaryModalPayload.MacroPad(section = EditorSection.MIRROR),
-                                        ),
-                                    )
-                                }
-                                MirrorEditorTopOverlay(
-                                    onDone = closeViewportEdit,
-                                    onCancel = closeViewportEdit,
-                                )
-                            }
-
-                            else -> {
-                                activeModal?.let { modal ->
-                                    PrimaryModalHost(
-                                        config = modal,
-                                        onDismiss = {
-                                            AppLog.d(TAG, "Dismissing primary modal: ${modal.type}")
-                                            AppStateManager.closePrimaryModal()
-                                        },
-                                    )
-                                }
-                            }
+                        activeModal?.let { modal ->
+                            PrimaryModalHost(
+                                config = modal,
+                                onDismiss = {
+                                    AppLog.d(TAG, "Dismissing primary modal: ${modal.type}")
+                                    AppStateManager.closePrimaryModal()
+                                },
+                            )
                         }
                     }
                 }

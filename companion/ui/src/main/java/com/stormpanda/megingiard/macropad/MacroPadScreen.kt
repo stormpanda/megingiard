@@ -50,6 +50,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onKeyEvent
@@ -176,9 +177,7 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
     }
 
     val isCapturing by ScreenCaptureManager.isCapturing.collectAsStateWithLifecycle()
-    val cutouts by ScreenCaptureManager.cutouts.collectAsStateWithLifecycle()
-    val hasCutouts = cutouts.isNotEmpty()
-    val showEmbeddedMirror = isCapturing && hasCutouts
+    val showEmbeddedMirror = isCapturing
 
     // Plain canvas background of MacroPad is strictly theme-invariant and always pitch black (Color.Black).
     Box(
@@ -234,6 +233,8 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
             )
         }
 
+        LayoutTransitionSnapshotOverlay()
+
         val activeToast by DialogToastManager.currentToast.collectAsStateWithLifecycle()
         if (!isEditorActive && !isViewportEditActive) {
             DialogToastPill(
@@ -244,6 +245,26 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
                         .padding(top = 12.dp, start = 24.dp, end = 24.dp),
             )
         }
+    }
+}
+
+@Composable
+private fun LayoutTransitionSnapshotOverlay() {
+    val transitionSnapshot by LayoutTransitionManager.transitionSnapshot.collectAsStateWithLifecycle()
+    val transitionAlpha by LayoutTransitionManager.transitionAlpha.collectAsStateWithLifecycle()
+    val activeSnapshot = transitionSnapshot
+    if (activeSnapshot != null && !activeSnapshot.isRecycled && transitionAlpha > 0f) {
+        Image(
+            bitmap = activeSnapshot.asImageBitmap(),
+            contentDescription = null,
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .clip(MP_SCREEN_SHAPE)
+                    .graphicsLayer {
+                        alpha = transitionAlpha
+                    },
+        )
     }
 }
 
