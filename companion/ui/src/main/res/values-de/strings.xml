@@ -1126,13 +1126,15 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_delete_button_desc">Löscht \'%1$s\' aus diesem Layout</string>
     <string name="macropad_editor_edit_button_positions">Tastenpositionen bearbeiten</string>
     <string name="macropad_editor_edit_button_positions_card_desc">Tasten per Touch oder D-Pad präzise bewegen</string>
-    <string name="macropad_editor_move_buttons_info">Bewege Tasten direkt durch Ziehen auf dem unteren Bildschirm oder wähle unten eine Taste, um sie mit dem Steuerkreuz oder linken Stick pixelgenau zu verschieben.</string>
+    <string name="macropad_editor_move_buttons_info">Bewege Tasten direkt durch Ziehen auf dem unteren Bildschirm oder wähle unten eine Taste, um sie mit dem Steuerkreuz zu verschieben (halte L2 oder R2 für feine 1-Pixel-Schritte).</string>
     <string name="macropad_editor_manage_buttons">Tasten verwalten</string>
     <string name="macropad_editor_reorder_buttons">Tasten neu anordnen</string>
     <string name="macropad_editor_reorder_buttons_enabled_desc">Tastenreihenfolge anpassen</string>
     <string name="macropad_editor_reorder_buttons_disabled_desc">Taste auswählen, um Einstellungen zu bearbeiten</string>
     <string name="macropad_editor_snap_grid">Raster-Modus</string>
     <string name="macropad_editor_snap_grid_desc">Ausrichtungsraster auf der Arbeitsfläche anzeigen</string>
+    <string name="macropad_editor_snap_alignment">An Ausrichtung einrasten</string>
+    <string name="macropad_editor_snap_alignment_desc">Tastenmitten magnetisch an anderen Tasten ausrichten</string>
     <string name="macropad_editor_grid_off_label">Aus</string>
     <string name="macropad_editor_grid_rectangular_label">Rechteckig</string>
     <string name="macropad_editor_grid_radial_label">Radial</string>

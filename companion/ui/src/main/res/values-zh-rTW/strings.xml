@@ -1120,13 +1120,15 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_delete_button_desc">從此配置中刪除「%1$s」</string>
     <string name="macropad_editor_edit_button_positions">編輯按鈕位置</string>
     <string name="macropad_editor_edit_button_positions_card_desc">透過觸控或十字鍵精確移動按鈕</string>
-    <string name="macropad_editor_move_buttons_info">直接在下螢幕拖曳按鈕，或在下方選取按鈕以透過十字鍵或左搖桿逐像素移動。</string>
+    <string name="macropad_editor_move_buttons_info">直接在下螢幕拖曳按鈕，或在下方選取按鈕以透過十字鍵移動（按住 L2 或 R2 可進行 1 像素微調）。</string>
     <string name="macropad_editor_manage_buttons">管理按鈕</string>
     <string name="macropad_editor_reorder_buttons">重新排列按鈕</string>
     <string name="macropad_editor_reorder_buttons_enabled_desc">調整按鈕排列順序</string>
     <string name="macropad_editor_reorder_buttons_disabled_desc">選擇按鈕以編輯設定</string>
     <string name="macropad_editor_snap_grid">網格對齊模式</string>
     <string name="macropad_editor_snap_grid_desc">在畫布上顯示對齊網格</string>
+    <string name="macropad_editor_snap_alignment">對齊吸附</string>
+    <string name="macropad_editor_snap_alignment_desc">將按鈕中心磁吸對齊至其他按鈕</string>
     <string name="macropad_editor_grid_off_label">關閉</string>
     <string name="macropad_editor_grid_rectangular_label">矩形</string>
     <string name="macropad_editor_grid_radial_label">放射狀</string>

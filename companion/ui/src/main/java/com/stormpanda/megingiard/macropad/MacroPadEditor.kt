@@ -34,6 +34,7 @@ import androidx.compose.material.icons.automirrored.rounded.ViewQuilt
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.CenterFocusStrong
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Delete
@@ -64,6 +65,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -2438,6 +2440,18 @@ private fun ButtonsDeck(
         }
 
         item {
+            val buttonAlignmentSnapping by MacroPadSettings.buttonAlignmentSnapping.collectAsStateWithLifecycle()
+            GamepadToggleCard(
+                title = stringResource(R.string.macropad_editor_snap_alignment),
+                description = stringResource(R.string.macropad_editor_snap_alignment_desc),
+                checked = buttonAlignmentSnapping,
+                onCheckedChange = { MacroPadSettings.setButtonAlignmentSnapping(it) },
+                icon = Icons.Rounded.CenterFocusStrong,
+                onFocusChanged = { if (it) MacroPadState.setSelectedButtonId(null) },
+            )
+        }
+
+        item {
             GamepadActionCard(
                 title = stringResource(R.string.macropad_editor_add_button),
                 description = stringResource(R.string.macropad_editor_create_button_desc),
@@ -2539,8 +2553,11 @@ private fun EditButtonPositionsSubPageContent(
     val buttons = layout?.buttons ?: emptyList()
     val coroutineScope = rememberCoroutineScope()
     val selectedButtonId by MacroPadState.selectedButtonId.collectAsStateWithLifecycle()
+    val buttonAlignmentSnapping by MacroPadSettings.buttonAlignmentSnapping.collectAsStateWithLifecycle()
     val cardRequesters = remember { mutableMapOf<String, FocusRequester>() }
     var movingButtonId by remember { mutableStateOf<String?>(null) }
+    var isTriggerHeld by remember { mutableStateOf(false) }
+    val isTriggerHeldState = rememberUpdatedState(isTriggerHeld)
     var activeRepeatJob by remember { mutableStateOf<Job?>(null) }
     var activeDirectionKey by remember { mutableIntStateOf(0) }
 
@@ -2548,6 +2565,7 @@ private fun EditButtonPositionsSubPageContent(
         activeRepeatJob?.cancel()
         activeRepeatJob = null
         activeDirectionKey = 0
+        isTriggerHeld = false
     }
 
     // Intercept system back gesture/button when precision moving
@@ -2589,10 +2607,20 @@ private fun EditButtonPositionsSubPageContent(
     ) {
         val currentLayout = MacroPadState.activeLayout.value ?: return
         val targetBtn = currentLayout.buttons.firstOrNull { it.id == btnId } ?: return
-        val stepX = 1f / MPE_CANVAS_WIDTH_PX
-        val stepY = 1f / MPE_CANVAS_HEIGHT_PX
-        val newX = (targetBtn.posX + dx * stepX).coerceIn(MPE_EDGE_MARGIN, 1f - MPE_EDGE_MARGIN)
-        val newY = (targetBtn.posY + dy * stepY).coerceIn(MPE_EDGE_MARGIN, 1f - MPE_EDGE_MARGIN)
+        val stepMultiplier = if (isTriggerHeldState.value) MPE_FINE_STEP_PX else MPE_NORMAL_STEP_PX
+        val (newX, newY) =
+            calculateGamepadButtonMove(
+                currentNormX = targetBtn.posX,
+                currentNormY = targetBtn.posY,
+                dirX = dx,
+                dirY = dy,
+                stepMultiplierPx = stepMultiplier,
+                movingButtonId = btnId,
+                otherButtons = currentLayout.buttons,
+                canvasW = MPE_CANVAS_WIDTH_PX,
+                canvasH = MPE_CANVAS_HEIGHT_PX,
+                alignmentSnappingEnabled = buttonAlignmentSnapping,
+            )
         if (newX != targetBtn.posX || newY != targetBtn.posY) {
             val updated =
                 currentLayout.buttons.map {
@@ -2631,6 +2659,19 @@ private fun EditButtonPositionsSubPageContent(
     GamepadInfoBox(
         text = stringResource(R.string.macropad_editor_move_buttons_info),
         iconTint = accentColor,
+    )
+
+    GamepadToggleCard(
+        title = stringResource(R.string.macropad_editor_snap_alignment),
+        description = stringResource(R.string.macropad_editor_snap_alignment_desc),
+        checked = buttonAlignmentSnapping,
+        onCheckedChange = { MacroPadSettings.setButtonAlignmentSnapping(it) },
+        icon = Icons.Rounded.CenterFocusStrong,
+        onFocusChanged = { isFocused ->
+            if (isFocused && movingButtonId == null) {
+                MacroPadState.setSelectedButtonId(null)
+            }
+        },
     )
 
     if (buttons.isEmpty()) {
@@ -2687,6 +2728,30 @@ private fun EditButtonPositionsSubPageContent(
                         onDismissAdjustment = {
                             stopMovingImmediate()
                             movingButtonId = null
+                        },
+                        onModifierKeyDown = { keyCode ->
+                            when (keyCode) {
+                                KeyEvent.KEYCODE_BUTTON_L2, KeyEvent.KEYCODE_BUTTON_R2 -> {
+                                    isTriggerHeld = true
+                                    true
+                                }
+
+                                else -> {
+                                    false
+                                }
+                            }
+                        },
+                        onModifierKeyUp = { keyCode ->
+                            when (keyCode) {
+                                KeyEvent.KEYCODE_BUTTON_L2, KeyEvent.KEYCODE_BUTTON_R2 -> {
+                                    isTriggerHeld = false
+                                    true
+                                }
+
+                                else -> {
+                                    false
+                                }
+                            }
                         },
                     )
                 },
