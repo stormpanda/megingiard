@@ -164,7 +164,8 @@ internal fun PadCanvas(
     accentColor: Color,
     gridMode: GridMode,
     isLocked: Boolean,
-    isCropping: Boolean = false,
+    isCroppingBackground: Boolean = false,
+    isCroppingMask: Boolean = false,
     transparentBackground: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
@@ -196,9 +197,40 @@ internal fun PadCanvas(
         }
     }
 
+    var maskBitmap by remember(layout?.maskImagePath, layout?.maskImageVersion) { mutableStateOf<ImageBitmap?>(null) }
+    LaunchedEffect(layout?.maskImagePath, layout?.maskImageVersion) {
+        val path = layout?.maskImagePath
+        if (path != null) {
+            try {
+                val decoded = MacroPadMediaRepository.loadScaledBitmap(context, path)
+                maskBitmap = decoded?.asImageBitmap()
+            } catch (e: Exception) {
+                AppLog.e(TAG, "Failed to decode mask image $path", e)
+                maskBitmap = null
+            }
+        } else {
+            maskBitmap = null
+        }
+    }
+
     val bgImageDimFilter =
         remember(layout?.backgroundImageDim) {
             dimColorFilter(layout?.backgroundImageDim ?: 0f)
+        }
+
+    val maskImageDimFilter =
+        remember(layout?.maskImageDim) {
+            dimColorFilter(layout?.maskImageDim ?: 0f)
+        }
+
+    val isCropping = isCroppingBackground || isCroppingMask
+    val activeCropBitmap =
+        if (isCroppingBackground) {
+            bgBitmap
+        } else if (isCroppingMask) {
+            maskBitmap
+        } else {
+            null
         }
 
     var lockSymbolVisible by remember { mutableStateOf(false) }
@@ -234,19 +266,29 @@ internal fun PadCanvas(
             ).onSizeChanged { canvasSize = it }
 
     val cropModifier =
-        if (isCropping && bgBitmap != null && canvasSize.width > 0 && canvasSize.height > 0) {
-            Modifier.pointerInput(canvasSize, isCropping, bgBitmap != null) {
+        if (isCropping && activeCropBitmap != null && canvasSize.width > 0 && canvasSize.height > 0) {
+            Modifier.pointerInput(canvasSize, isCroppingBackground, isCroppingMask, activeCropBitmap) {
                 detectTransformGestures { _, pan, zoom, _ ->
                     val cw = canvasSize.width.toFloat()
                     val ch = canvasSize.height.toFloat()
-                    val bitmap = bgBitmap ?: return@detectTransformGestures
+                    val bitmap = activeCropBitmap
                     val iw = bitmap.width.toFloat()
                     val ih = bitmap.height.toFloat()
                     if (cw > 0f && ch > 0f && iw > 0f && ih > 0f) {
                         val currentLayout = MacroPadState.previewLayout.value ?: layout
-                        val mode = currentLayout?.bgScaleMode ?: BackgroundScaleMode.FILL
+                        val mode =
+                            if (isCroppingBackground) {
+                                currentLayout?.bgScaleMode ?: BackgroundScaleMode.FILL
+                            } else {
+                                currentLayout?.maskScaleMode ?: BackgroundScaleMode.FILL
+                            }
                         if (mode != BackgroundScaleMode.STRETCH) {
-                            val currentScale = currentLayout?.bgImageScale ?: 1f
+                            val currentScale =
+                                if (isCroppingBackground) {
+                                    currentLayout?.bgImageScale ?: 1f
+                                } else {
+                                    currentLayout?.maskImageScale ?: 1f
+                                }
                             val newScale = (currentScale * zoom).coerceIn(PC_CROP_MIN_SCALE, PC_CROP_MAX_SCALE)
 
                             val scaleBase =
@@ -259,15 +301,21 @@ internal fun PadCanvas(
                             val hs = ih * scaleBase
 
                             val (maxTx, maxTy) = ViewportMath.getMaxOffsets(cw, ch, ws, hs, newScale)
-                            val currentPixelX = (currentLayout?.bgImageOffsetX ?: 0f) * cw
-                            val currentPixelY = (currentLayout?.bgImageOffsetY ?: 0f) * ch
+                            val currentPixelX =
+                                ((if (isCroppingBackground) currentLayout?.bgImageOffsetX else currentLayout?.maskImageOffsetX) ?: 0f) * cw
+                            val currentPixelY =
+                                ((if (isCroppingBackground) currentLayout?.bgImageOffsetY else currentLayout?.maskImageOffsetY) ?: 0f) * ch
                             val clampedX = (currentPixelX + pan.x).coerceIn(-maxTx, maxTx)
                             val clampedY = (currentPixelY + pan.y).coerceIn(-maxTy, maxTy)
 
                             val normX = if (cw > 0f) clampedX / cw else 0f
                             val normY = if (ch > 0f) clampedY / ch else 0f
 
-                            MacroPadState.updatePreviewBackgroundCrop(newScale, normX, normY)
+                            if (isCroppingBackground) {
+                                MacroPadState.updatePreviewBackgroundCrop(newScale, normX, normY)
+                            } else {
+                                MacroPadState.updatePreviewMaskCrop(newScale, normX, normY)
+                            }
                         }
                     }
                 }
@@ -277,48 +325,35 @@ internal fun PadCanvas(
         }
 
     Box(modifier = padModifier.then(cropModifier)) {
-        if (!shouldHideBackground && !transparentBackground && bgBitmap != null) {
+        if (!shouldHideBackground && !transparentBackground && (bgBitmap != null || maskBitmap != null)) {
             Canvas(modifier = Modifier.fillMaxSize()) {
-                val cw = size.width
-                val ch = size.height
-                val iw = bgBitmap!!.width.toFloat()
-                val ih = bgBitmap!!.height.toFloat()
-                if (cw > 0f && ch > 0f && iw > 0f && ih > 0f) {
-                    val currentLayout = MacroPadState.previewLayout.value ?: layout
+                val currentLayout = MacroPadState.previewLayout.value ?: layout
+                if (bgBitmap != null) {
                     val mode = currentLayout?.bgScaleMode ?: layout?.bgScaleMode ?: BackgroundScaleMode.FILL
-                    val (dstOffset, dstSize) =
-                        when (mode) {
-                            BackgroundScaleMode.STRETCH -> {
-                                IntOffset.Zero to IntSize(cw.toInt(), ch.toInt())
-                            }
-
-                            BackgroundScaleMode.FIT, BackgroundScaleMode.FILL -> {
-                                val scale = layout?.bgImageScale ?: 1f
-                                val scaleBase =
-                                    if (mode == BackgroundScaleMode.FIT) {
-                                        ViewportMath.calculateAspectFitScale(cw, ch, iw, ih)
-                                    } else {
-                                        ViewportMath.calculateAspectFillScale(cw, ch, iw, ih)
-                                    }
-                                val ws = iw * scaleBase
-                                val hs = ih * scaleBase
-
-                                val maxTx = ((ws * scale - cw) / 2f).coerceAtLeast(0f)
-                                val maxTy = ((hs * scale - ch) / 2f).coerceAtLeast(0f)
-                                val clampedX = ((layout?.bgImageOffsetX ?: 0f) * cw).coerceIn(-maxTx, maxTx)
-                                val clampedY = ((layout?.bgImageOffsetY ?: 0f) * ch).coerceIn(-maxTy, maxTy)
-
-                                IntOffset(
-                                    ((cw - ws * scale) / 2f + clampedX).toInt(),
-                                    ((ch - hs * scale) / 2f + clampedY).toInt(),
-                                ) to IntSize((ws * scale).toInt(), (hs * scale).toInt())
-                            }
-                        }
-                    drawImage(
-                        image = bgBitmap!!,
-                        dstOffset = dstOffset,
-                        dstSize = dstSize,
+                    val scale = currentLayout?.bgImageScale ?: layout?.bgImageScale ?: 1f
+                    val offX = currentLayout?.bgImageOffsetX ?: layout?.bgImageOffsetX ?: 0f
+                    val offY = currentLayout?.bgImageOffsetY ?: layout?.bgImageOffsetY ?: 0f
+                    drawAdjustedBitmap(
+                        bitmap = bgBitmap!!,
+                        scaleMode = mode,
+                        userScale = scale,
+                        offsetX = offX,
+                        offsetY = offY,
                         colorFilter = bgImageDimFilter,
+                    )
+                }
+                if (maskBitmap != null) {
+                    val mode = currentLayout?.maskScaleMode ?: layout?.maskScaleMode ?: BackgroundScaleMode.FILL
+                    val scale = currentLayout?.maskImageScale ?: layout?.maskImageScale ?: 1f
+                    val offX = currentLayout?.maskImageOffsetX ?: layout?.maskImageOffsetX ?: 0f
+                    val offY = currentLayout?.maskImageOffsetY ?: layout?.maskImageOffsetY ?: 0f
+                    drawAdjustedBitmap(
+                        bitmap = maskBitmap!!,
+                        scaleMode = mode,
+                        userScale = scale,
+                        offsetX = offX,
+                        offsetY = offY,
+                        colorFilter = maskImageDimFilter,
                     )
                 }
             }
@@ -963,4 +998,51 @@ private fun HighlightPointer(
             modifier = Modifier.rotate(rotation),
         )
     }
+}
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawAdjustedBitmap(
+    bitmap: ImageBitmap,
+    scaleMode: BackgroundScaleMode,
+    userScale: Float,
+    offsetX: Float,
+    offsetY: Float,
+    colorFilter: androidx.compose.ui.graphics.ColorFilter?,
+) {
+    val cw = size.width
+    val ch = size.height
+    val iw = bitmap.width.toFloat()
+    val ih = bitmap.height.toFloat()
+    if (cw <= 0f || ch <= 0f || iw <= 0f || ih <= 0f) return
+
+    val (dstOffset, dstSize) =
+        when (scaleMode) {
+            BackgroundScaleMode.STRETCH -> {
+                IntOffset.Zero to IntSize(cw.toInt(), ch.toInt())
+            }
+
+            BackgroundScaleMode.FIT, BackgroundScaleMode.FILL -> {
+                val scaleBase =
+                    if (scaleMode == BackgroundScaleMode.FIT) {
+                        ViewportMath.calculateAspectFitScale(cw, ch, iw, ih)
+                    } else {
+                        ViewportMath.calculateAspectFillScale(cw, ch, iw, ih)
+                    }
+                val ws = iw * scaleBase
+                val hs = ih * scaleBase
+                val maxTx = ((ws * userScale - cw) / 2f).coerceAtLeast(0f)
+                val maxTy = ((hs * userScale - ch) / 2f).coerceAtLeast(0f)
+                val clampedX = (offsetX * cw).coerceIn(-maxTx, maxTx)
+                val clampedY = (offsetY * ch).coerceIn(-maxTy, maxTy)
+                IntOffset(
+                    ((cw - ws * userScale) / 2f + clampedX).toInt(),
+                    ((ch - hs * userScale) / 2f + clampedY).toInt(),
+                ) to IntSize((ws * userScale).toInt(), (hs * userScale).toInt())
+            }
+        }
+    drawImage(
+        image = bitmap,
+        dstOffset = dstOffset,
+        dstSize = dstSize,
+        colorFilter = colorFilter,
+    )
 }

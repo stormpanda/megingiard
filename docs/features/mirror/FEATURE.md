@@ -349,9 +349,13 @@ The master texture surface buffer allocation matches the source resolution. The 
 ### Custom Background Image & Masking Support
 
 - `EmbeddedMirrorView` collects updates from `MacroPadState.activeLayout` to dynamically react to layout changes.
-- When a layout custom background image is selected, it is decoded asynchronously (`Dispatchers.IO`) as a `Bitmap`.
-- **Background Mode (`useBackgroundImageAsMask = false`)**: The bitmap is applied behind the cutouts. Mirrored cutouts are drawn on top. If no background image is set (or it is removed), the background falls back to the app theme background.
-- **Mask Mode (`useBackgroundImageAsMask = true`)**: The bitmap is passed directly to `MultiCutoutContainer`. Inside `MultiCutoutContainer.dispatchDraw`, cutouts are rendered in a two-pass architecture: cutouts with `renderAboveMask = false` (the default) are drawn first underneath the background mask overlay, the background mask bitmap is rendered on top, and cutouts with `renderAboveMask = true` are drawn above the background mask overlay, while remaining underneath Compose MacroPad buttons. This allows live video streams to shine through transparent mask cutouts while keeping foreground HUD elements, gauges, and buttons legible on top of the mask.
+- When a layout custom background image (`backgroundImagePath`) and/or mask overlay image (`maskImagePath`) is selected, they are decoded asynchronously (`Dispatchers.IO`) as `Bitmap`s.
+- `MultiCutoutContainer.dispatchDraw` executes a multi-pass drawing architecture:
+  - **Pass 0 (Background Bitmap)**: If `bgBitmap` is present, it is rendered on the canvas behind all cutouts using its layout scaling (`bgScaleMode`), cropping scale (`bgImageScale`), and offsets (`bgImageOffsetX/Y`). If absent, the canvas base remains theme-invariant pitch black (`Color.Black`).
+  - **Pass 1 (Below-Mask Cutouts)**: Mirrored cutouts configured with `renderAboveMask = false` (the default) are drawn above the background bitmap.
+  - **Pass 1.5 (Mask Overlay Bitmap)**: If `maskBitmap` is present, it is rendered directly above the Pass 1 cutouts using its layout scaling (`maskScaleMode`), cropping scale (`maskImageScale`), and offsets (`maskImageOffsetX/Y`). This allows live video streams to shine through transparent mask cutouts.
+  - **Pass 2 (Above-Mask Cutouts)**: Mirrored cutouts configured with `renderAboveMask = true` are drawn above the mask overlay bitmap.
+  - **Pass 3 (Compose UI Buttons)**: Compose MacroPad buttons and HUD elements are rendered on the top-most layer above all cutouts and masks.
 
 ### Ambient Dimming Support
 

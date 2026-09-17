@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Build
 import android.provider.OpenableColumns
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.macropad.BackgroundScaleMode
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadAction
 import com.stormpanda.megingiard.macropad.PadProfile
@@ -340,6 +341,19 @@ object ConfigManager {
         return null
     }
 
+    private fun resolveLayoutMaskFile(
+        context: Context,
+        maskPath: String?,
+        layoutId: String,
+    ): File? {
+        if (maskPath.isNullOrEmpty()) return null
+        val fileByPath = File(context.filesDir, maskPath)
+        if (fileByPath.exists() && fileByPath.isFile) return fileByPath
+        val fileByLayoutId = File(File(context.filesDir, "masks"), "mask_$layoutId")
+        if (fileByLayoutId.exists() && fileByLayoutId.isFile) return fileByLayoutId
+        return null
+    }
+
     private fun collectLayoutBackgroundFiles(
         context: Context,
         profiles: List<PadProfile>,
@@ -347,9 +361,13 @@ object ConfigManager {
         buildMap {
             for (profile in profiles) {
                 for (layout in profile.layouts) {
-                    val file = resolveLayoutBackgroundFile(context, layout.backgroundImagePath, layout.id)
-                    if (file != null) {
-                        put("bg_${layout.id}", file)
+                    val bgFile = resolveLayoutBackgroundFile(context, layout.backgroundImagePath, layout.id)
+                    if (bgFile != null) {
+                        put("bg_${layout.id}", bgFile)
+                    }
+                    val maskFile = resolveLayoutMaskFile(context, layout.maskImagePath, layout.id)
+                    if (maskFile != null) {
+                        put("mask_${layout.id}", maskFile)
                     }
                 }
             }
@@ -588,6 +606,64 @@ object ConfigManager {
 
     // ── MacroPad import with UUID remapping ─────────────────────────────────
 
+    private fun extractOrCopyMedia(
+        context: Context,
+        images: Map<String, ByteArray>,
+        targetDir: File,
+        dirPrefix: String,
+        prefix: String,
+        oldLayoutId: String,
+        newLayoutId: String,
+        currentPath: String?,
+        destPrefix: String = prefix,
+    ): String? {
+        val keyFromPath = currentPath?.substringAfterLast("/")?.removePrefix("${prefix}_")
+        val imageBytes =
+            images["${prefix}_$oldLayoutId"]
+                ?: images["$dirPrefix/${prefix}_$oldLayoutId"]
+                ?: (if (prefix == "bg") images[oldLayoutId] else null)
+                ?: keyFromPath?.let { key -> images[key] ?: images["${prefix}_$key"] ?: images["$dirPrefix/${prefix}_$key"] }
+
+        if (imageBytes != null) {
+            val destFile = File(targetDir, "${destPrefix}_$newLayoutId")
+            return runCatching {
+                destFile.writeBytes(imageBytes)
+                "$dirPrefix/${destPrefix}_$newLayoutId"
+            }.getOrElse { e ->
+                AppLog.e(TAG, "Failed to write extracted $prefix for layout $newLayoutId", e)
+                null
+            }
+        }
+
+        if (!currentPath.isNullOrEmpty()) {
+            val srcFile = File(context.filesDir, currentPath)
+            val filesDirCanonical = context.filesDir.canonicalPath
+            val isSafePath =
+                !currentPath.contains("..") &&
+                    runCatching { srcFile.canonicalPath.startsWith(filesDirCanonical) }.getOrDefault(false)
+            val srcFileFallback = File(targetDir, "${prefix}_$oldLayoutId")
+            val existingSrc =
+                if (isSafePath && srcFile.exists()) {
+                    srcFile
+                } else if (srcFileFallback.exists()) {
+                    srcFileFallback
+                } else {
+                    null
+                }
+            if (existingSrc != null) {
+                val destFile = File(targetDir, "${destPrefix}_$newLayoutId")
+                return runCatching {
+                    existingSrc.copyTo(destFile, overwrite = true)
+                    "$dirPrefix/${destPrefix}_$newLayoutId"
+                }.getOrElse { e ->
+                    AppLog.e(TAG, "Failed to copy local $prefix for layout $newLayoutId", e)
+                    null
+                }
+            }
+        }
+        return null
+    }
+
     /**
      * Imports profiles with new UUIDs so they don't collide with existing ones.
      */
@@ -598,10 +674,12 @@ object ConfigManager {
     ) {
         AppLog.d(TAG, "importMacroPadData: ${profiles.size} profiles (images map size=${images.size})")
         val backgroundsDir = File(context.filesDir, "backgrounds")
-        if (!backgroundsDir.exists() &&
-            (images.isNotEmpty() || profiles.any { p -> p.layouts.any { !it.backgroundImagePath.isNullOrEmpty() } })
-        ) {
+        val masksDir = File(context.filesDir, "masks")
+        if (!backgroundsDir.exists()) {
             backgroundsDir.mkdirs()
+        }
+        if (!masksDir.exists()) {
+            masksDir.mkdirs()
         }
 
         for (profile in profiles) {
@@ -617,64 +695,112 @@ object ConfigManager {
                     macro.copy(id = newId)
                 }
 
-            // Remap macro references in button actions and handle background image copying/extraction
+            // Remap macro references in button actions and handle background/mask image copying/extraction
             val remappedLayouts =
                 profile.layouts.map { layout ->
                     val oldLayoutId = layout.id
                     val newLayoutId = UUID.randomUUID().toString()
 
-                    val bgKeyFromPath = layout.backgroundImagePath?.substringAfterLast("/")?.removePrefix("bg_")
-                    val imageBytes =
-                        images[oldLayoutId]
-                            ?: images["bg_$oldLayoutId"]
-                            ?: images["backgrounds/bg_$oldLayoutId"]
-                            ?: bgKeyFromPath?.let { key -> images[key] ?: images["bg_$key"] ?: images["backgrounds/bg_$key"] }
+                    @Suppress("DEPRECATION")
+                    val isLegacyMask = layout.useBackgroundImageAsMask
 
-                    val newBgPath: String? =
-                        if (imageBytes != null) {
-                            val destFile = File(backgroundsDir, "bg_$newLayoutId")
-                            runCatching {
-                                destFile.writeBytes(imageBytes)
-                                "backgrounds/bg_$newLayoutId"
-                            }.getOrElse { e ->
-                                AppLog.e(TAG, "Failed to write extracted background for layout $newLayoutId", e)
-                                null
-                            }
-                        } else if (!layout.backgroundImagePath.isNullOrEmpty()) {
-                            val bgPath = layout.backgroundImagePath!!
-                            val srcFile = File(context.filesDir, bgPath)
-                            val filesDirCanonical = context.filesDir.canonicalPath
-                            val isSafePath =
-                                !bgPath.contains("..") &&
-                                    runCatching { srcFile.canonicalPath.startsWith(filesDirCanonical) }.getOrDefault(false)
-                            val srcFileFallback = File(backgroundsDir, "bg_$oldLayoutId")
-                            val existingSrc =
-                                if (isSafePath && srcFile.exists()) {
-                                    srcFile
-                                } else if (srcFileFallback.exists()) {
-                                    srcFileFallback
-                                } else {
-                                    null
-                                }
-                            if (existingSrc != null) {
-                                val destFile = File(backgroundsDir, "bg_$newLayoutId")
-                                runCatching {
-                                    existingSrc.copyTo(destFile, overwrite = true)
-                                    "backgrounds/bg_$newLayoutId"
-                                }.getOrElse { e ->
-                                    AppLog.e(TAG, "Failed to copy local background for layout $newLayoutId", e)
-                                    null
-                                }
-                            } else {
-                                null
-                            }
-                        } else {
-                            null
-                        }
+                    val newBgPath: String?
+                    val newMaskPath: String?
+                    val finalBgScale: Float
+                    val finalBgOffsetX: Float
+                    val finalBgOffsetY: Float
+                    val finalBgDim: Float
+                    val finalBgScaleMode: BackgroundScaleMode
+                    val finalMaskScale: Float
+                    val finalMaskOffsetX: Float
+                    val finalMaskOffsetY: Float
+                    val finalMaskDim: Float
+                    val finalMaskScaleMode: BackgroundScaleMode
+
+                    if (isLegacyMask) {
+                        newMaskPath =
+                            extractOrCopyMedia(
+                                context,
+                                images,
+                                masksDir,
+                                "masks",
+                                "bg",
+                                oldLayoutId,
+                                newLayoutId,
+                                layout.backgroundImagePath,
+                                destPrefix = "mask",
+                            ) ?: extractOrCopyMedia(
+                                context,
+                                images,
+                                masksDir,
+                                "masks",
+                                "mask",
+                                oldLayoutId,
+                                newLayoutId,
+                                layout.maskImagePath,
+                                destPrefix = "mask",
+                            )
+                        newBgPath = null
+                        finalBgScale = 1f
+                        finalBgOffsetX = 0f
+                        finalBgOffsetY = 0f
+                        finalBgDim = 0f
+                        finalBgScaleMode = BackgroundScaleMode.FILL
+                        finalMaskScale = layout.bgImageScale
+                        finalMaskOffsetX = layout.bgImageOffsetX
+                        finalMaskOffsetY = layout.bgImageOffsetY
+                        finalMaskDim = layout.backgroundImageDim
+                        finalMaskScaleMode = layout.bgScaleMode
+                    } else {
+                        newBgPath =
+                            extractOrCopyMedia(
+                                context,
+                                images,
+                                backgroundsDir,
+                                "backgrounds",
+                                "bg",
+                                oldLayoutId,
+                                newLayoutId,
+                                layout.backgroundImagePath,
+                            )
+                        newMaskPath =
+                            extractOrCopyMedia(
+                                context,
+                                images,
+                                masksDir,
+                                "masks",
+                                "mask",
+                                oldLayoutId,
+                                newLayoutId,
+                                layout.maskImagePath,
+                            )
+                        finalBgScale = layout.bgImageScale
+                        finalBgOffsetX = layout.bgImageOffsetX
+                        finalBgOffsetY = layout.bgImageOffsetY
+                        finalBgDim = layout.backgroundImageDim
+                        finalBgScaleMode = layout.bgScaleMode
+                        finalMaskScale = layout.maskImageScale
+                        finalMaskOffsetX = layout.maskImageOffsetX
+                        finalMaskOffsetY = layout.maskImageOffsetY
+                        finalMaskDim = layout.maskImageDim
+                        finalMaskScaleMode = layout.maskScaleMode
+                    }
 
                     layout.copy(
                         id = newLayoutId,
                         backgroundImagePath = newBgPath,
+                        useBackgroundImageAsMask = false,
+                        bgImageScale = finalBgScale,
+                        bgImageOffsetX = finalBgOffsetX,
+                        bgImageOffsetY = finalBgOffsetY,
+                        backgroundImageDim = finalBgDim,
+                        bgScaleMode = finalBgScaleMode,
+                        maskImagePath = newMaskPath,
+                        maskImageScale = finalMaskScale,
+                        maskImageOffsetX = finalMaskOffsetX,
+                        maskImageOffsetY = finalMaskOffsetY,
+                        maskImageDim = finalMaskDim,
+                        maskScaleMode = finalMaskScaleMode,
                         buttons =
                             layout.buttons.map { button ->
                                 button.copy(

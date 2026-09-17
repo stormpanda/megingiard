@@ -1032,7 +1032,7 @@ private fun HideBackgroundCard(
     onFocusChanged: ((Boolean) -> Unit)? = null,
 ) {
     val isHidden by AppStateManager.isMirrorEditorBackgroundHidden.collectAsStateWithLifecycle()
-    val hasBackground = !layout?.backgroundImagePath.isNullOrEmpty()
+    val hasBackground = !layout?.backgroundImagePath.isNullOrEmpty() || !layout?.maskImagePath.isNullOrEmpty()
 
     val label =
         if (!hasBackground) {

@@ -43,6 +43,7 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Grid4x4
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.OpenWith
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -145,6 +146,7 @@ private fun EditorSection.titleResId(): Int =
         EditorSection.AUTOMATION -> R.string.macropad_editor_section_automation
         EditorSection.MIRROR -> R.string.quick_menu_screen_mirroring
         EditorSection.BACKGROUND -> R.string.layout_settings_bg_section_title
+        EditorSection.MASK -> R.string.layout_settings_mask_section_title
         EditorSection.BUTTONS -> R.string.macropad_editor_section_buttons
         EditorSection.MACROS -> R.string.macropad_editor_manage_macros
     }
@@ -157,6 +159,7 @@ private fun EditorSection.icon(): ImageVector =
         EditorSection.AUTOMATION -> Icons.Rounded.AutoAwesome
         EditorSection.MIRROR -> Icons.Rounded.Videocam
         EditorSection.BACKGROUND -> Icons.Rounded.Wallpaper
+        EditorSection.MASK -> Icons.Rounded.Layers
         EditorSection.BUTTONS -> Icons.Rounded.SmartButton
         EditorSection.MACROS -> Icons.AutoMirrored.Rounded.PlaylistPlay
     }
@@ -253,13 +256,14 @@ fun MacroPadEditor(
                 it is MacroPadSubPage.SteamGridDbScrape
             }
         val isBackgroundSection = selectedSection == EditorSection.BACKGROUND
+        val isMaskSection = selectedSection == EditorSection.MASK
         if (!hasAppearanceSubPages) {
             appearanceDraft = null
         }
         if (!hasButtonSubPages) {
             buttonDraft = null
         }
-        if (!hasAppearanceSubPages && !hasButtonSubPages && !hasBackgroundSubPages && !isBackgroundSection) {
+        if (!hasAppearanceSubPages && !hasButtonSubPages && !hasBackgroundSubPages && !isBackgroundSection && !isMaskSection) {
             MacroPadState.clearPreviewLayout()
         }
     }
@@ -400,12 +404,22 @@ fun MacroPadEditor(
                                                     val layoutMapping = MacroPadState.duplicateProfile(originalProfile.id)
                                                     if (layoutMapping != null) {
                                                         for (origLayout in originalLayouts) {
-                                                            val originalPath = origLayout.backgroundImagePath
+                                                            val originalBgPath = origLayout.backgroundImagePath
+                                                            val originalMaskPath = origLayout.maskImagePath
                                                             val newLayoutId = layoutMapping[origLayout.id]
                                                             if (newLayoutId != null) {
-                                                                if (originalPath != null) {
+                                                                if (originalBgPath != null) {
                                                                     scope.launch {
                                                                         MacroPadMediaRepository.duplicateBackgroundImage(
+                                                                            context,
+                                                                            origLayout.id,
+                                                                            newLayoutId,
+                                                                        )
+                                                                    }
+                                                                }
+                                                                if (originalMaskPath != null) {
+                                                                    scope.launch {
+                                                                        MacroPadMediaRepository.duplicateMaskImage(
                                                                             context,
                                                                             origLayout.id,
                                                                             newLayoutId,
@@ -451,12 +465,22 @@ fun MacroPadEditor(
                                                 },
                                                 onDuplicateLayout = {
                                                     val originalLayout = activeLayout
-                                                    val originalPath = originalLayout?.backgroundImagePath
+                                                    val originalBgPath = originalLayout?.backgroundImagePath
+                                                    val originalMaskPath = originalLayout?.maskImagePath
                                                     val newLayoutId = originalLayout?.id?.let { MacroPadState.duplicateLayout(it) }
                                                     if (originalLayout != null && newLayoutId != null) {
-                                                        if (originalPath != null) {
+                                                        if (originalBgPath != null) {
                                                             scope.launch {
                                                                 MacroPadMediaRepository.duplicateBackgroundImage(
+                                                                    context,
+                                                                    originalLayout.id,
+                                                                    newLayoutId,
+                                                                )
+                                                            }
+                                                        }
+                                                        if (originalMaskPath != null) {
+                                                            scope.launch {
+                                                                MacroPadMediaRepository.duplicateMaskImage(
                                                                     context,
                                                                     originalLayout.id,
                                                                     newLayoutId,
@@ -542,7 +566,6 @@ fun MacroPadEditor(
                                                     },
                                                     onConfirm = {
                                                         bgImagePath,
-                                                        useAsMask,
                                                         bgChanged,
                                                         bgScale,
                                                         bgOffsetX,
@@ -554,7 +577,6 @@ fun MacroPadEditor(
                                                         MacroPadState.updateLayout(
                                                             activeLayout.copy(
                                                                 backgroundImagePath = bgImagePath,
-                                                                useBackgroundImageAsMask = useAsMask,
                                                                 backgroundImageVersion =
                                                                     if (bgChanged) activeLayout.backgroundImageVersion + 1 else activeLayout.backgroundImageVersion,
                                                                 bgImageScale = bgScale,
@@ -562,6 +584,45 @@ fun MacroPadEditor(
                                                                 bgImageOffsetY = bgOffsetY,
                                                                 backgroundImageDim = bgDim,
                                                                 bgScaleMode = bgScaleMode,
+                                                            ),
+                                                        )
+                                                        DialogToastManager.show(
+                                                            context.getString(R.string.gamepad_action_save_and_exit_desc),
+                                                        )
+                                                    },
+                                                )
+                                            }
+                                        }
+
+                                        EditorSection.MASK -> {
+                                            if (activeLayout != null) {
+                                                LayoutMaskSubPageContent(
+                                                    layout = activeLayout,
+                                                    profileName = profile.name,
+                                                    accentColor = colors.accent,
+                                                    onDiscard = {
+                                                        MacroPadState.clearPreviewLayout()
+                                                    },
+                                                    onConfirm = {
+                                                        maskImagePath,
+                                                        maskChanged,
+                                                        maskScale,
+                                                        maskOffsetX,
+                                                        maskOffsetY,
+                                                        maskDim,
+                                                        maskScaleMode,
+                                                        ->
+                                                        MacroPadState.clearPreviewLayout()
+                                                        MacroPadState.updateLayout(
+                                                            activeLayout.copy(
+                                                                maskImagePath = maskImagePath,
+                                                                maskImageVersion =
+                                                                    if (maskChanged) activeLayout.maskImageVersion + 1 else activeLayout.maskImageVersion,
+                                                                maskImageScale = maskScale,
+                                                                maskImageOffsetX = maskOffsetX,
+                                                                maskImageOffsetY = maskOffsetY,
+                                                                maskImageDim = maskDim,
+                                                                maskScaleMode = maskScaleMode,
                                                             ),
                                                         )
                                                         DialogToastManager.show(

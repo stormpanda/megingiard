@@ -121,7 +121,7 @@ class ConfigExportImportStructureTest {
             while (entry != null) {
                 if (entry.name == "config.json") {
                     extractedJson = zis.readBytes().toString(Charsets.UTF_8)
-                } else if (entry.name.startsWith("backgrounds/")) {
+                } else if (entry.name.startsWith("backgrounds/") || entry.name.startsWith("masks/")) {
                     extractedImages[entry.name] = zis.readBytes()
                 }
                 zis.closeEntry()
@@ -503,5 +503,81 @@ class ConfigExportImportStructureTest {
                 profileName = "ProfileShareToImport",
                 imageKey = "bg_layout-profile-share-bg-1",
             )
+        }
+
+    @Test
+    fun testApplyImportRestoresMaskImages() =
+        runBlocking {
+            val context: Context = RuntimeEnvironment.getApplication()
+            val layoutId = "layout-mask-test-1"
+            val profileName = "ProfileWithMask"
+            val mockImageBytes = "mock_mask_bytes".toByteArray(Charsets.UTF_8)
+            val maskLayout = PadLayout(id = layoutId, name = "LayoutWithMask", maskImagePath = "masks/mask_$layoutId")
+            val maskProfile = PadProfile(id = "p-$layoutId", name = profileName, layouts = listOf(maskLayout))
+            val export =
+                MegingiardExport(
+                    schemaVersion = SCHEMA_VERSION,
+                    metadata = testMetadata,
+                    checksum = "dummy",
+                    settings = emptyMap(),
+                    profiles = listOf(maskProfile),
+                )
+            val imagesMap = mapOf("mask_$layoutId" to mockImageBytes)
+
+            ConfigManager.applyImport(context, export, imagesMap)
+
+            val importedProfile = MacroPadState.profiles.value.find { it.name == profileName }
+            assertNotNull(importedProfile)
+            val importedLayout = importedProfile!!.layouts.first()
+            assertNotNull(importedLayout.maskImagePath)
+            assertTrue(importedLayout.maskImagePath!!.startsWith("masks/mask_"))
+
+            val savedFile = File(context.filesDir, importedLayout.maskImagePath!!)
+            assertTrue(savedFile.exists())
+            assertTrue(savedFile.readBytes().contentEquals(mockImageBytes))
+        }
+
+    @Test
+    fun testApplyImportMigratesLegacyUseBackgroundImageAsMask() =
+        runBlocking {
+            val context: Context = RuntimeEnvironment.getApplication()
+            val layoutId = "legacy-mask-layout-1"
+            val profileName = "LegacyMaskProfile"
+            val mockImageBytes = "mock_legacy_mask_bytes".toByteArray(Charsets.UTF_8)
+            val legacyLayout =
+                PadLayout(
+                    id = layoutId,
+                    name = "LegacyMaskLayout",
+                    backgroundImagePath = "backgrounds/bg_$layoutId",
+                    useBackgroundImageAsMask = true,
+                    backgroundImageDim = 0.25f,
+                    bgImageScale = 1.2f,
+                )
+            val profile = PadProfile(id = "p-$layoutId", name = profileName, layouts = listOf(legacyLayout))
+            val export =
+                MegingiardExport(
+                    schemaVersion = SCHEMA_VERSION,
+                    metadata = testMetadata,
+                    checksum = "dummy",
+                    settings = emptyMap(),
+                    profiles = listOf(profile),
+                )
+            val imagesMap = mapOf("bg_$layoutId" to mockImageBytes)
+
+            ConfigManager.applyImport(context, export, imagesMap)
+
+            val importedProfile = MacroPadState.profiles.value.find { it.name == profileName }
+            assertNotNull(importedProfile)
+            val importedLayout = importedProfile!!.layouts.first()
+            assertEquals(null, importedLayout.backgroundImagePath)
+            assertEquals(false, importedLayout.useBackgroundImageAsMask)
+            assertNotNull(importedLayout.maskImagePath)
+            assertTrue(importedLayout.maskImagePath!!.startsWith("masks/mask_"))
+            assertEquals(0.25f, importedLayout.maskImageDim, 0.001f)
+            assertEquals(1.2f, importedLayout.maskImageScale, 0.001f)
+
+            val savedFile = File(context.filesDir, importedLayout.maskImagePath!!)
+            assertTrue(savedFile.exists())
+            assertTrue(savedFile.readBytes().contentEquals(mockImageBytes))
         }
 }

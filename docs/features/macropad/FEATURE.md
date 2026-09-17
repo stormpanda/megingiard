@@ -234,10 +234,10 @@ Each button supports one of the following actions:
 
 ### FR-P9a: Custom Background Image
 
-- Users can choose a **custom background image** to be displayed behind the MacroPad buttons.
+- Users can choose a **custom background image** to be displayed behind the MacroPad buttons and underneath screen mirror cutouts.
 - The configuration is situated in the **Background** section of the layout editor (`LayoutBackgroundSubPageContent`).
 - Tapping "Browse Local" opens the system document picker (`image/*`), while "Search SteamGridDB" allows scraping game artwork directly.
-- **Dual-Screen Live In-Flight Preview:** Choosing a background image, adjusting the dimming slider, toggling "Use as mask", clearing/deleting the image, or adjusting crop pan/zoom transformations streams in-flight preview state (`MacroPadState.previewLayout`) immediately to the secondary bottom display (`PadCanvas`) in real time, allowing users to see the exact composition before saving.
+- **Dual-Screen Live In-Flight Preview:** Choosing a background image, adjusting the dimming slider, clearing/deleting the image, or adjusting crop pan/zoom transformations streams in-flight preview state (`MacroPadState.previewLayout`) immediately to the secondary bottom display (`PadCanvas`) in real time, allowing users to see the exact composition before saving.
 - **In-Place Crop Toggle & Bottom-Screen Gestures:** Tapping the "Crop" toggle card activates cropping mode directly (`MacroPadState.isCroppingBackground = true`). While active:
   - The bottom screen (`PadCanvas`) is highlighted with an accent color border (matching button move mode).
   - Button dragging/interaction is disabled on the bottom screen so users can freely pinch to zoom (100%–500%) and drag to pan the background image directly on the secondary display.
@@ -247,8 +247,23 @@ Each button supports one of the following actions:
 - To prevent permissions from expiring and keep layouts self-contained, the chosen image is copied to the app's internal files directory as `backgrounds/bg_<layoutId>`.
 - The `backgroundImagePath` parameter in `PadLayout` stores a relative path (e.g. `backgrounds/bg_<layoutId>`) along with `bgImageScale`, `bgImageOffsetX`, and `bgImageOffsetY` crop properties to maintain portability and compatibility with Megingiard's profile import/export features.
 - In **Use Mode** (`PadSurface`), **Layout Editor** (`PadCanvas`), and **Embedded Mirror** (`EmbeddedMirrorView`), the image is loaded asynchronously and rendered applying the layout's background image crop settings (scale and translations) behind the buttons.
-- **Use as Mask**: The layout settings overlay includes a "Use as mask" toggle (visible only when an image is selected). When enabled (`useBackgroundImageAsMask = true`), the background image is layered *on top* of the screen mirroring cutouts but *below* the MacroPad buttons. This allows the mirrored screen regions to show through any transparent/semi-transparent windows of the background image, serving as a custom overlay frame.
 - When a layout is deleted or its background image is removed/cleared, the associated image file on disk is deleted.
+
+### FR-P9b: Custom Mask Overlay Image
+
+- Users can configure a **custom mask overlay image** to be displayed *on top* of below-mask screen mirror cutouts but *below* above-mask cutouts and MacroPad buttons.
+- A layout can simultaneously configure both an independent background image (`backgroundImagePath`) AND a mask image (`maskImagePath`).
+- The configuration is situated in a dedicated **Mask** section of the layout editor (`EditorSection.MASK`, `LayoutMaskSubPageContent`).
+- **Options & Controls:**
+  - **Browse Local Images:** Opens the system document picker (`image/*`). (SteamGridDB scraping is omitted for masks).
+  - **Scaling Mode:** Configurable as `Fill`, `Fit`, or `Stretch`.
+  - **In-Place Crop Toggle & Bottom-Screen Gestures:** Tapping "Crop" activates cropping mode (`MacroPadState.isCroppingMask = true`), enabling interactive pinch-to-zoom (100%–500%) and drag-to-pan gestures on the bottom display (`PadCanvas`).
+  - **Dimming Slider:** Independent dimming control (`0%` to `90%`).
+  - **Remove Mask Image:** Two-step inline confirmation card to remove the mask.
+  - **Save & Exit Confirmation:** Supports live draft preview and back-intercepted Save & Exit / Discard & Exit confirmation.
+- The chosen mask is saved to the internal files directory as `masks/mask_<layoutId>`.
+- Legacy layout migration: on load or import, layouts with `useBackgroundImageAsMask = true` are automatically migrated to `maskImagePath = "masks/mask_<layoutId>"` and `maskImage*` properties, clearing `backgroundImagePath` and setting `useBackgroundImageAsMask = false`.
+- When a layout is deleted or its mask image is removed, the associated mask file on disk is deleted.
 
 ### FR-P9b: Per-Layout Background Touchpad
 

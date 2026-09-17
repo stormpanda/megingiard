@@ -324,7 +324,9 @@ fun RestoreReviewSubPage(
     val macrosCount = export.profiles.sumOf { it.macros.size }
     val imageCount =
         ConfigManager.getPendingInAppImageCount().takeIf { it > 0 }
-            ?: export.profiles.sumOf { p -> p.layouts.count { !it.backgroundImagePath.isNullOrEmpty() } }
+            ?: export.profiles.sumOf { p ->
+                p.layouts.count { !it.backgroundImagePath.isNullOrEmpty() || !it.maskImagePath.isNullOrEmpty() }
+            }
 
     val includedSections =
         listOf(

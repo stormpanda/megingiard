@@ -55,12 +55,15 @@ internal class MultiCutoutContainer(
     private val srcHeight: Int,
 ) : FrameLayout(context) {
     private val bgDimPaint = Paint()
+    private val maskDimPaint = Paint()
     private val ambientDimPaint =
         Paint().apply {
             style = Paint.Style.FILL
         }
     private val bgSrcRect = Rect()
     private val bgDestRect = RectF()
+    private val overlayMaskSrcRect = Rect()
+    private val overlayMaskDestRect = RectF()
     var cutouts: List<ScreenCutout> = emptyList()
         set(value) {
             field = value
@@ -86,7 +89,7 @@ internal class MultiCutoutContainer(
             field = value
             invalidate()
         }
-    var useAsMask: Boolean = false
+    var maskBitmap: Bitmap? = null
         set(value) {
             field = value
             invalidate()
@@ -121,6 +124,36 @@ internal class MultiCutoutContainer(
                 invalidate()
             }
         }
+    var maskImageScale: Float = 1f
+        set(value) {
+            field = value
+            invalidate()
+        }
+    var maskImageOffsetX: Float = 0f
+        set(value) {
+            field = value
+            invalidate()
+        }
+    var maskImageOffsetY: Float = 0f
+        set(value) {
+            field = value
+            invalidate()
+        }
+    var maskImageDim: Float = 0f
+        set(value) {
+            if (field != value) {
+                field = value
+                updateMaskDimPaint()
+                invalidate()
+            }
+        }
+    var maskScaleMode: BackgroundScaleMode = BackgroundScaleMode.FILL
+        set(value) {
+            if (field != value) {
+                field = value
+                invalidate()
+            }
+        }
 
     private fun updateBgDimPaint() {
         val dim = bgImageDim
@@ -133,6 +166,20 @@ internal class MultiCutoutContainer(
             bgDimPaint.colorFilter = ColorMatrixColorFilter(matrix)
         } else {
             bgDimPaint.colorFilter = null
+        }
+    }
+
+    private fun updateMaskDimPaint() {
+        val dim = maskImageDim
+        if (dim > 0f) {
+            val scale = 1f - dim
+            val matrix =
+                ColorMatrix().apply {
+                    setScale(scale, scale, scale, 1f)
+                }
+            maskDimPaint.colorFilter = ColorMatrixColorFilter(matrix)
+        } else {
+            maskDimPaint.colorFilter = null
         }
     }
 
@@ -166,6 +213,40 @@ internal class MultiCutoutContainer(
             bgSrcRect.set(0, 0, bitmap.width, bitmap.height)
             bgDestRect.set(-ws / 2f, -hs / 2f, ws / 2f, hs / 2f)
             canvas.drawBitmap(bitmap, bgSrcRect, bgDestRect, paint)
+            canvas.restore()
+        }
+    }
+
+    private fun drawMaskBitmap(
+        canvas: Canvas,
+        bitmap: Bitmap,
+        parentW: Float,
+        parentH: Float,
+    ) {
+        val paint = if (maskImageDim > 0f) maskDimPaint else null
+        if (maskScaleMode == BackgroundScaleMode.STRETCH) {
+            overlayMaskSrcRect.set(0, 0, bitmap.width, bitmap.height)
+            overlayMaskDestRect.set(0f, 0f, parentW, parentH)
+            canvas.drawBitmap(bitmap, overlayMaskSrcRect, overlayMaskDestRect, paint)
+        } else {
+            canvas.save()
+            val iw = bitmap.width.toFloat()
+            val ih = bitmap.height.toFloat()
+            val scaleBase =
+                if (maskScaleMode == BackgroundScaleMode.FIT) {
+                    ViewportMath.calculateAspectFitScale(parentW, parentH, iw, ih)
+                } else {
+                    ViewportMath.calculateAspectFillScale(parentW, parentH, iw, ih)
+                }
+            val ws = iw * scaleBase
+            val hs = ih * scaleBase
+
+            canvas.translate(parentW / 2f + maskImageOffsetX * parentW, parentH / 2f + maskImageOffsetY * parentH)
+            canvas.scale(maskImageScale, maskImageScale)
+
+            overlayMaskSrcRect.set(0, 0, bitmap.width, bitmap.height)
+            overlayMaskDestRect.set(-ws / 2f, -hs / 2f, ws / 2f, hs / 2f)
+            canvas.drawBitmap(bitmap, overlayMaskSrcRect, overlayMaskDestRect, paint)
             canvas.restore()
         }
     }
@@ -805,7 +886,7 @@ internal class MultiCutoutContainer(
         val overallSaveCount = canvas.save()
         try {
             val bg = bgBitmap
-            if (!useAsMask && bg != null) {
+            if (bg != null) {
                 drawBackgroundBitmap(canvas, bg, parentW, parentH)
             }
 
@@ -875,10 +956,10 @@ internal class MultiCutoutContainer(
                 canvas.restoreToCount(belowLayerSaveCount)
             }
 
-            // Background mask pass: if useAsMask is enabled, draw background mask above Pass 1 cutouts
-            val mask = bgBitmap
-            if (useAsMask && mask != null) {
-                drawBackgroundBitmap(canvas, mask, parentW, parentH)
+            // Overlay mask pass: if maskBitmap is present, draw mask image above Pass 1 cutouts
+            val mask = maskBitmap
+            if (mask != null) {
+                drawMaskBitmap(canvas, mask, parentW, parentH)
             }
 
             // Pass 2: Cutouts rendered above background mask (below Compose MacroPad buttons)
