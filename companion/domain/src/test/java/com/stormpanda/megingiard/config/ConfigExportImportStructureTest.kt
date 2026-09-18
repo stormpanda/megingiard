@@ -396,6 +396,62 @@ class ConfigExportImportStructureTest {
         assertEquals("FullBackupProfile", parsed.profiles[0].name)
     }
 
+    @Test
+    fun testFullBackupWithMaskAndBackgroundRoundTrip() {
+        val mockBgBytes = "fake_webp_bg_bytes".toByteArray(Charsets.UTF_8)
+        val mockMaskBytes = "fake_webp_mask_bytes".toByteArray(Charsets.UTF_8)
+        val layoutId = "layout-full-mask-bg-1"
+        val bgAndMaskLayout =
+            PadLayout(
+                id = layoutId,
+                name = "LayoutWithBgAndMask",
+                backgroundImagePath = "backgrounds/bg_$layoutId",
+                maskImagePath = "masks/mask_$layoutId",
+            )
+        val profile = PadProfile(id = "profile-full-mask-bg", name = "FullBackupMaskProfile", layouts = listOf(bgAndMaskLayout))
+        val settingsMap = mapOf("global" to mapOf("accent_color" to kotlinx.serialization.json.JsonPrimitive(-16743169)))
+        val imageHashes =
+            mapOf(
+                "bg_$layoutId" to HmacUtil.sha256Hex(mockBgBytes).lowercase(),
+                "mask_$layoutId" to HmacUtil.sha256Hex(mockMaskBytes).lowercase(),
+            )
+
+        val validChecksum = invokeComputeChecksum(settingsMap, listOf(profile), imageHashes)
+        val export =
+            MegingiardExport(
+                schemaVersion = SCHEMA_VERSION,
+                metadata = testMetadata,
+                checksum = validChecksum,
+                settings = settingsMap,
+                profiles = listOf(profile),
+            )
+
+        val jsonStr = testJson.encodeToString(MegingiardExport.serializer(), export)
+        val zipBytes =
+            zipArchive(
+                jsonStr,
+                mapOf(
+                    "backgrounds/bg_$layoutId" to mockBgBytes,
+                    "backgrounds/mask_$layoutId" to mockMaskBytes,
+                ),
+            )
+
+        assertTrue(zipBytes.size > 4)
+        assertEquals(0x50.toByte(), zipBytes[0])
+
+        val (extractedJson, extractedImages) = unzipArchive(zipBytes)
+        assertTrue(extractedJson != null)
+        assertTrue(extractedImages["backgrounds/bg_$layoutId"]!!.contentEquals(mockBgBytes))
+        assertTrue(extractedImages["backgrounds/mask_$layoutId"]!!.contentEquals(mockMaskBytes))
+
+        val parsed = ConfigManager.parseAndVerify(extractedJson!!, extractedImages)
+        assertEquals(validChecksum, parsed.checksum)
+        assertEquals(1, parsed.profiles.size)
+        assertEquals("FullBackupMaskProfile", parsed.profiles[0].name)
+        assertEquals("backgrounds/bg_$layoutId", parsed.profiles[0].layouts[0].backgroundImagePath)
+        assertEquals("masks/mask_$layoutId", parsed.profiles[0].layouts[0].maskImagePath)
+    }
+
     // ── 3. Profile Share (Without Backgrounds) ────────────────────────────────
 
     @Test

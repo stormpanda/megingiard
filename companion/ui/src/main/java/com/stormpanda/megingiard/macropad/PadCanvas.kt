@@ -45,9 +45,11 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -1000,13 +1002,13 @@ private fun HighlightPointer(
     }
 }
 
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawAdjustedBitmap(
+internal fun DrawScope.drawAdjustedBitmap(
     bitmap: ImageBitmap,
     scaleMode: BackgroundScaleMode,
     userScale: Float,
     offsetX: Float,
     offsetY: Float,
-    colorFilter: androidx.compose.ui.graphics.ColorFilter?,
+    colorFilter: ColorFilter?,
 ) {
     val cw = size.width
     val ch = size.height

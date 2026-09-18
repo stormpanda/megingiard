@@ -513,8 +513,12 @@ object ConfigManager {
                             val entryBytes = zip.readBytes()
                             if (entryName == "config.json" || entryName.endsWith(".json")) {
                                 jsonText = entryBytes.toString(Charsets.UTF_8)
-                            } else if (entryName.startsWith("backgrounds/") || entryName.startsWith("bg_")) {
-                                val key = entryName.removePrefix("backgrounds/").removePrefix("bg_")
+                            } else if (entryName.startsWith("backgrounds/") ||
+                                entryName.startsWith("masks/") ||
+                                entryName.startsWith("bg_") ||
+                                entryName.startsWith("mask_")
+                            ) {
+                                val key = entryName.removePrefix("backgrounds/").removePrefix("masks/").removePrefix("bg_")
                                 imagesMap[key] = entryBytes
                             }
                         }
@@ -863,7 +867,12 @@ object ConfigManager {
         val imageHashes =
             extractedImages
                 .mapKeys { (k, _) ->
-                    if (k.startsWith("bg_")) k else "bg_${k.removePrefix("backgrounds/").removePrefix("bg_")}"
+                    val cleanKey = k.removePrefix("backgrounds/").removePrefix("masks/")
+                    if (cleanKey.startsWith("bg_") || cleanKey.startsWith("mask_")) {
+                        cleanKey
+                    } else {
+                        "bg_${cleanKey.removePrefix("bg_")}"
+                    }
                 }.mapValues { (_, bytes) ->
                     HmacUtil
                         .sha256Hex(bytes)
