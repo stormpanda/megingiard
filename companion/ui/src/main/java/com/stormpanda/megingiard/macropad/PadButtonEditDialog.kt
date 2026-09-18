@@ -154,7 +154,6 @@ internal fun EditButtonSubPageContent(
     DisposableEffect(stableButtonId) {
         MacroPadState.setSelectedButtonId(stableButtonId)
         onDispose {
-            MacroPadState.setSelectedButtonId(null)
             MacroPadState.setPreviewButton(null)
         }
     }

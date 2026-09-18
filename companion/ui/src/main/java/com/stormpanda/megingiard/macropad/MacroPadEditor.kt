@@ -1444,7 +1444,7 @@ fun MacroPadEditor(
                                                     MacroPadNavState.pop()
                                                 },
                                                 onCopyToLayout = { btn ->
-                                                    MacroPadNavState.push(MacroPadSubPage.CopyButton(btn))
+                                                    pushSubPageFromEdit(btn, MacroPadSubPage.CopyButton(btn))
                                                 },
                                                 onDelete = { btn ->
                                                     buttonDraft = null
@@ -1882,6 +1882,9 @@ fun MacroPadEditor(
                                                         targetLayoutId,
                                                     )
                                                     MacroPadNavState.pop()
+                                                    DialogToastManager.show(
+                                                        context.getString(R.string.macropad_button_copied_toast),
+                                                    )
                                                 },
                                             )
                                         }
@@ -2451,7 +2454,16 @@ private fun ButtonsDeck(
     val gridMode by MacroPadState.gridMode.collectAsStateWithLifecycle()
     var isReordering by remember { mutableStateOf(false) }
 
-    val lazyListState = rememberLazyListState()
+    val initialButtonIndex = remember { buttons.indexOfFirst { it.id == MacroPadState.selectedButtonId.value } }
+    val lazyListState =
+        rememberLazyListState(
+            initialFirstVisibleItemIndex =
+                if (initialButtonIndex >= 0) {
+                    (initialButtonIndex + MPE_BUTTON_HEADER_COUNT).coerceIn(0, buttons.size + MPE_BUTTON_HEADER_COUNT - 1)
+                } else {
+                    0
+                },
+        )
     var movingItemKey by remember { mutableStateOf<Any?>(null) }
     val movingIndex = if (movingItemKey != null) buttons.indexOfFirst { it.id == movingItemKey } else -1
 
@@ -2567,6 +2579,7 @@ private fun ButtonsDeck(
                     description = describePadButton(btn),
                     icon = btn.action.toCategory().icon(),
                     onClick = { onEditButton(btn) },
+                    itemKey = btn.id,
                     onFocusChanged = { isFocused ->
                         if (isFocused) {
                             MacroPadState.setSelectedButtonId(btn.id)
@@ -2888,6 +2901,7 @@ private fun MacrosDeck(
                 description = stepCountDesc,
                 icon = Icons.AutoMirrored.Rounded.PlaylistPlay,
                 onClick = { onEditMacro(macro) },
+                itemKey = macro.id,
             )
         }
     }

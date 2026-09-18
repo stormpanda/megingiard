@@ -250,4 +250,29 @@ class MacroPadNavStateTest {
         MacroPadNavState.push(defaultAutoSwitch)
         assertNav(EditorSection.AUTOMATION, listOf(defaultAutoSwitch))
     }
+
+    @Test
+    fun `CopyButton and CopyLayout have correct parentSection and stack behavior`() {
+        val testButton =
+            PadButton(
+                id = "btn-1",
+                label = "A",
+                posX = 0.5f,
+                posY = 0.5f,
+                action = PadAction.KeyboardKey(keycode = 30, label = "A"),
+            )
+        val copyButton = MacroPadSubPage.CopyButton(button = testButton)
+        assertEquals(EditorSection.BUTTONS, copyButton.parentSection)
+        assertEquals(testButton, copyButton.button)
+
+        val copyLayout = MacroPadSubPage.CopyLayout(layoutId = "layout-1")
+        assertEquals(EditorSection.LAYOUTS, copyLayout.parentSection)
+        assertEquals("layout-1", copyLayout.layoutId)
+
+        MacroPadNavState.selectSection(EditorSection.BUTTONS)
+        MacroPadNavState.push(copyButton)
+        assertNav(EditorSection.BUTTONS, listOf(copyButton))
+        assertTrue(MacroPadNavState.pop())
+        assertNav(EditorSection.BUTTONS)
+    }
 }
