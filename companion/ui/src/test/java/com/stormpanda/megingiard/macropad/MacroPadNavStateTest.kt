@@ -275,4 +275,37 @@ class MacroPadNavStateTest {
         assertTrue(MacroPadNavState.pop())
         assertNav(EditorSection.BUTTONS)
     }
+
+    @Test
+    fun `ChooseMouseAction and EditButton stack flow preserves draft with ScrollWheel and Trackpoint`() {
+        val initialDraft =
+            PadButton(
+                id = "btn-mouse-1",
+                label = "Mouse Button",
+                posX = 0.5f,
+                posY = 0.5f,
+                action = PadAction.MouseButton(MouseButton.LEFT),
+            )
+        MacroPadNavState.selectSection(EditorSection.BUTTONS)
+        MacroPadNavState.push(MacroPadSubPage.EditButton(button = null, draftButton = initialDraft))
+        assertNav(EditorSection.BUTTONS, listOf(MacroPadSubPage.EditButton(button = null, draftButton = initialDraft)))
+
+        val mouseSubPage = MacroPadSubPage.ChooseMouseAction(button = null, draftButton = initialDraft)
+        assertEquals(EditorSection.BUTTONS, mouseSubPage.parentSection)
+        MacroPadNavState.push(mouseSubPage)
+
+        val updatedDraft =
+            initialDraft.copy(
+                action = PadAction.ScrollWheel,
+                buttonSize = ButtonSize.SIZE_1X2,
+            )
+        MacroPadNavState.setStack(listOf(MacroPadSubPage.EditButton(button = null, draftButton = updatedDraft)))
+
+        assertNav(EditorSection.BUTTONS, listOf(MacroPadSubPage.EditButton(button = null, draftButton = updatedDraft)))
+        assertEquals(PadAction.ScrollWheel, (MacroPadNavState.subPageStack.value.first() as MacroPadSubPage.EditButton).draftButton?.action)
+        assertEquals(
+            ButtonSize.SIZE_1X2,
+            (MacroPadNavState.subPageStack.value.first() as MacroPadSubPage.EditButton).draftButton?.buttonSize,
+        )
+    }
 }

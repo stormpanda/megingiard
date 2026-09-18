@@ -171,6 +171,7 @@ private fun applyActionToDraftButton(
     draftButton.copy(
         action = newAction,
         buttonSize = if (newAction is PadAction.ScrollWheel) ButtonSize.SIZE_1X2 else draftButton.buttonSize,
+        buttonShape = if (newAction is PadAction.TrackpointMove) ButtonShape.CIRCLE else draftButton.buttonShape,
     )
 
 private fun swapButtons(
