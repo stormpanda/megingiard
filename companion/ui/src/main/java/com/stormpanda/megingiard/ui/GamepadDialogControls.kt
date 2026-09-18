@@ -150,34 +150,44 @@ fun rememberSaveExitPromptState(
     val activeCategoryRequester = LocalActiveCategoryRequester.current
     val firstContentRequester = LocalFirstContentRequester.current
 
+    val transferFocusToSidebar: () -> Unit = {
+        try {
+            inputModeManager.requestInputMode(InputMode.Keyboard)
+            if (activeCategoryRequester != null) {
+                try {
+                    activeCategoryRequester.requestFocus()
+                } catch (_: Exception) {
+                    focusRequester.requestFocus()
+                }
+            } else {
+                focusRequester.requestFocus()
+            }
+        } catch (_: Exception) {
+            coroutineScope.launch {
+                delay(50)
+                try {
+                    activeCategoryRequester?.requestFocus() ?: focusRequester.requestFocus()
+                } catch (_: Exception) {
+                }
+            }
+        }
+    }
+
     return remember(showExitPrompt, focusRequester, bringIntoViewRequester, activeCategoryRequester, firstContentRequester) {
         SaveExitPromptState(
             showExitPrompt = showExitPrompt,
             focusRequester = focusRequester,
             bringIntoViewRequester = bringIntoViewRequester,
-            onSave = { currentOnSave() },
+            onSave = {
+                val wasShowingPrompt = showExitPrompt
+                currentOnSave()
+                if (wasShowingPrompt) {
+                    transferFocusToSidebar()
+                }
+            },
             onDiscard = {
                 currentOnDiscard()
-                try {
-                    inputModeManager.requestInputMode(InputMode.Keyboard)
-                    if (activeCategoryRequester != null) {
-                        try {
-                            activeCategoryRequester.requestFocus()
-                        } catch (_: Exception) {
-                            focusRequester.requestFocus()
-                        }
-                    } else {
-                        focusRequester.requestFocus()
-                    }
-                } catch (_: Exception) {
-                    coroutineScope.launch {
-                        delay(50)
-                        try {
-                            activeCategoryRequester?.requestFocus() ?: focusRequester.requestFocus()
-                        } catch (_: Exception) {
-                        }
-                    }
-                }
+                transferFocusToSidebar()
             },
             dismissPrompt = {
                 showExitPrompt = false
