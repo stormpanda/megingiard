@@ -105,14 +105,14 @@ internal fun LayoutMaskSubPageContent(
     val colors = LocalAppColors.current
     val scope = rememberCoroutineScope()
 
-    var pendingImageUri by remember { mutableStateOf<Uri?>(null) }
+    var pendingImageUri by remember(layout) { mutableStateOf<Uri?>(null) }
     var currentMaskPath by remember(layout) { mutableStateOf(layout.maskImagePath) }
     var maskScale by remember(layout) { mutableFloatStateOf(layout.maskImageScale) }
     var maskOffsetX by remember(layout) { mutableFloatStateOf(layout.maskImageOffsetX) }
     var maskOffsetY by remember(layout) { mutableFloatStateOf(layout.maskImageOffsetY) }
     var maskImageDim by remember(layout) { mutableFloatStateOf(layout.maskImageDim) }
     var maskScaleMode by remember(layout) { mutableStateOf(layout.maskScaleMode) }
-    var isCropActive by remember { mutableStateOf(false) }
+    var isCropActive by remember(layout) { mutableStateOf(false) }
 
     var previewBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
     var isSaving by remember { mutableStateOf(false) }
@@ -376,6 +376,8 @@ internal fun LayoutMaskSubPageContent(
                             } else {
                                 currentMaskPath
                             }
+                        pendingImageUri = null
+                        currentMaskPath = finalMaskPath
                         onConfirm(finalMaskPath, maskChanged, maskScale, maskOffsetX, maskOffsetY, maskImageDim, maskScaleMode)
                         isSaving = false
                     }

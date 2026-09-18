@@ -110,14 +110,14 @@ internal fun LayoutBackgroundSubPageContent(
     val colors = LocalAppColors.current
     val scope = rememberCoroutineScope()
 
-    var pendingImageUri by remember { mutableStateOf<Uri?>(null) }
+    var pendingImageUri by remember(layout) { mutableStateOf<Uri?>(null) }
     var currentBgPath by remember(layout) { mutableStateOf(layout.backgroundImagePath) }
     var bgScale by remember(layout) { mutableFloatStateOf(layout.bgImageScale) }
     var bgOffsetX by remember(layout) { mutableFloatStateOf(layout.bgImageOffsetX) }
     var bgOffsetY by remember(layout) { mutableFloatStateOf(layout.bgImageOffsetY) }
     var bgImageDim by remember(layout) { mutableFloatStateOf(layout.backgroundImageDim) }
     var bgScaleMode by remember(layout) { mutableStateOf(layout.bgScaleMode) }
-    var isCropActive by remember { mutableStateOf(false) }
+    var isCropActive by remember(layout) { mutableStateOf(false) }
 
     var previewBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
     var isSaving by remember { mutableStateOf(false) }
@@ -394,6 +394,8 @@ internal fun LayoutBackgroundSubPageContent(
                             } else {
                                 currentBgPath
                             }
+                        pendingImageUri = null
+                        currentBgPath = finalBgPath
                         onConfirm(finalBgPath, bgChanged, bgScale, bgOffsetX, bgOffsetY, bgImageDim, bgScaleMode)
                         isSaving = false
                     }
