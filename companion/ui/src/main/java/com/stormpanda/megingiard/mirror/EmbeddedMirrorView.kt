@@ -67,6 +67,10 @@ fun EmbeddedMirrorView(
         mutableStateOf<Bitmap?>(null)
     }
 
+    var maskBitmap by remember(layout?.maskImagePath, layout?.maskImageVersion, effectiveShowLayoutBackground) {
+        mutableStateOf<Bitmap?>(null)
+    }
+
     LaunchedEffect(layout?.backgroundImagePath, layout?.backgroundImageVersion, effectiveShowLayoutBackground) {
         if (!effectiveShowLayoutBackground) {
             bgBitmap = null
@@ -84,6 +88,26 @@ fun EmbeddedMirrorView(
             }
         } else {
             bgBitmap = null
+        }
+    }
+
+    LaunchedEffect(layout?.maskImagePath, layout?.maskImageVersion, effectiveShowLayoutBackground) {
+        if (!effectiveShowLayoutBackground) {
+            maskBitmap = null
+            return@LaunchedEffect
+        }
+        val path = layout?.maskImagePath
+        if (path != null) {
+            withContext(Dispatchers.IO) {
+                try {
+                    maskBitmap = MacroPadMediaRepository.loadScaledBitmap(context, path)
+                } catch (e: Exception) {
+                    AppLog.e(TAG, "Failed to load mask image for EmbeddedMirrorView", e)
+                    maskBitmap = null
+                }
+            }
+        } else {
+            maskBitmap = null
         }
     }
 
@@ -315,13 +339,20 @@ fun EmbeddedMirrorView(
             mcc.viewportOffsetX = if (overrideCutouts != null) 0f else offsetX
             mcc.viewportOffsetY = if (overrideCutouts != null) 0f else offsetY
             mcc.bgBitmap = bgBitmap
-            mcc.useAsMask = effectiveShowLayoutBackground && layout?.useBackgroundImageAsMask == true
             mcc.bgImageScale = if (effectiveShowLayoutBackground) layout?.bgImageScale ?: 1f else 1f
             mcc.bgImageOffsetX = if (effectiveShowLayoutBackground) layout?.bgImageOffsetX ?: 0f else 0f
             mcc.bgImageOffsetY = if (effectiveShowLayoutBackground) layout?.bgImageOffsetY ?: 0f else 0f
             mcc.bgImageDim = if (effectiveShowLayoutBackground) layout?.backgroundImageDim ?: 0f else 0f
             mcc.bgScaleMode =
                 if (effectiveShowLayoutBackground) layout?.bgScaleMode ?: BackgroundScaleMode.FILL else BackgroundScaleMode.FILL
+
+            mcc.maskBitmap = maskBitmap
+            mcc.maskImageScale = if (effectiveShowLayoutBackground) layout?.maskImageScale ?: 1f else 1f
+            mcc.maskImageOffsetX = if (effectiveShowLayoutBackground) layout?.maskImageOffsetX ?: 0f else 0f
+            mcc.maskImageOffsetY = if (effectiveShowLayoutBackground) layout?.maskImageOffsetY ?: 0f else 0f
+            mcc.maskImageDim = if (effectiveShowLayoutBackground) layout?.maskImageDim ?: 0f else 0f
+            mcc.maskScaleMode =
+                if (effectiveShowLayoutBackground) layout?.maskScaleMode ?: BackgroundScaleMode.FILL else BackgroundScaleMode.FILL
             mcc.ambientDim = if (overrideCutouts == null) layout?.ambientDim ?: 0f else 0f
 
             val tv = containerHolder.textureView

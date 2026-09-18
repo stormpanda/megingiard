@@ -11,9 +11,10 @@ import java.io.File
 
 private const val TAG = "MacroPadMediaRepo"
 private const val BACKGROUNDS_DIR = "backgrounds"
+private const val MASKS_DIR = "masks"
 
 /**
- * Encapsulates filesystem and bitmap storage operations for MacroPad layout backgrounds.
+ * Encapsulates filesystem and bitmap storage operations for MacroPad layout backgrounds and masks.
  */
 object MacroPadMediaRepository {
     /**
@@ -132,6 +133,89 @@ object MacroPadMediaRepository {
                     "$BACKGROUNDS_DIR/bg_$newLayoutId"
                 } catch (e: Exception) {
                     AppLog.e(TAG, "Failed to copy background file from $originalLayoutId to $newLayoutId", e)
+                    null
+                }
+            } else {
+                null
+            }
+        }
+
+    /**
+     * Saves a mask image from [srcUri] to `masks/mask_[layoutId]` as a WebP image.
+     * Returns the relative storage path or `null` if saving failed.
+     */
+    suspend fun saveMaskImage(
+        context: Context,
+        layoutId: String,
+        srcUri: Uri,
+    ): String? =
+        withContext(Dispatchers.IO) {
+            val masksDir = File(context.filesDir, MASKS_DIR)
+            if (!masksDir.exists()) {
+                masksDir.mkdirs()
+            }
+            val destFile = File(masksDir, "mask_$layoutId")
+            val (targetW, targetH) = BitmapUtils.getScreenTargetDimensions(context)
+            val saved =
+                BitmapUtils.saveScaledWebp(
+                    context = context,
+                    srcUri = srcUri,
+                    srcFile = null,
+                    destFile = destFile,
+                    targetW = targetW,
+                    targetH = targetH,
+                )
+            if (saved) {
+                "$MASKS_DIR/mask_$layoutId"
+            } else {
+                null
+            }
+        }
+
+    /**
+     * Deletes the mask image associated with [layoutId] if it exists.
+     */
+    suspend fun deleteMaskImage(
+        context: Context,
+        layoutId: String,
+    ): Boolean =
+        withContext(Dispatchers.IO) {
+            val masksDir = File(context.filesDir, MASKS_DIR)
+            val destFile = File(masksDir, "mask_$layoutId")
+            if (destFile.exists()) {
+                try {
+                    destFile.delete()
+                } catch (e: Exception) {
+                    AppLog.e(TAG, "Failed to delete mask file for layout $layoutId", e)
+                    false
+                }
+            } else {
+                true
+            }
+        }
+
+    /**
+     * Copies the mask image from [originalLayoutId] to [newLayoutId].
+     * Returns the relative storage path or `null` if no source mask existed or copy failed.
+     */
+    suspend fun duplicateMaskImage(
+        context: Context,
+        originalLayoutId: String,
+        newLayoutId: String,
+    ): String? =
+        withContext(Dispatchers.IO) {
+            val masksDir = File(context.filesDir, MASKS_DIR)
+            val srcFile = File(masksDir, "mask_$originalLayoutId")
+            if (srcFile.exists()) {
+                if (!masksDir.exists()) {
+                    masksDir.mkdirs()
+                }
+                val destFile = File(masksDir, "mask_$newLayoutId")
+                try {
+                    srcFile.copyTo(destFile, overwrite = true)
+                    "$MASKS_DIR/mask_$newLayoutId"
+                } catch (e: Exception) {
+                    AppLog.e(TAG, "Failed to copy mask file from $originalLayoutId to $newLayoutId", e)
                     null
                 }
             } else {

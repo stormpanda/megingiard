@@ -246,6 +246,7 @@ When MacroPad data is imported, `ConfigManager.importMacroPadData()`:
    aren't already inside the profile and adopts them with new UUIDs.
 4. Remaps every `PadButton` whose action is `PadAction.Macro` via `macroIdMap`
    (falls back to original ID if not mapped).
+5. For each layout containing custom background images (`backgrounds/bg_<layoutId>`) or mask overlay images (`masks/mask_<layoutId>`), copies or extracts the media files into the target directories (`backgrounds/` and `masks/`) under new UUID paths. For legacy archives with `useBackgroundImageAsMask = true`, automatically migrates the image and adjustment properties into `masks/mask_<newLayoutId>` and clears `useBackgroundImageAsMask`.
 
 This guarantees imported data never collides with existing data even when re-importing the same
 file multiple times.

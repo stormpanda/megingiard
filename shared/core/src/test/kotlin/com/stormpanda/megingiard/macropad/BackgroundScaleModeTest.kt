@@ -90,5 +90,21 @@ class BackgroundScaleModeTest {
 
         val layout = json.decodeFromString<PadLayout>(legacyJson)
         assertEquals(BackgroundScaleMode.FILL, layout.bgScaleMode)
+        assertEquals(BackgroundScaleMode.FILL, layout.maskScaleMode)
+    }
+
+    @Test
+    fun `PadLayout with explicit maskScaleMode survives round-trip`() {
+        for (mode in BackgroundScaleMode.entries) {
+            val layout =
+                PadLayout(
+                    id = "layout-mask-test",
+                    name = "Mask Scale Test Layout",
+                    maskScaleMode = mode,
+                )
+            val encoded = json.encodeToString(layout)
+            val decoded = json.decodeFromString<PadLayout>(encoded)
+            assertEquals(mode, decoded.maskScaleMode)
+        }
     }
 }

@@ -33,6 +33,12 @@ class MacroPadLayoutEmptyTest {
     }
 
     @Test
+    fun `PadLayout with mask image is not empty`() {
+        val layout = PadLayout(id = "l1", name = "With Mask", maskImagePath = "masks/mask_1.png")
+        assertFalse(layout.isEmpty())
+    }
+
+    @Test
     fun `PadLayout with mirror cutouts is not empty`() {
         val layout =
             PadLayout(

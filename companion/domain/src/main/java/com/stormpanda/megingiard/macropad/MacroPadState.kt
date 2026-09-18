@@ -168,6 +168,7 @@ object MacroPadState {
         AppLog.d(TAG, "clearPreviewLayout()")
         _previewLayout.value = null
         _isCroppingBackground.value = false
+        _isCroppingMask.value = false
         recomputeActiveState()
     }
 
@@ -195,12 +196,27 @@ object MacroPadState {
         offsetX: Float,
         offsetY: Float,
     ) {
-        val current = _previewLayout.value ?: return
+        val current = _previewLayout.value ?: activeLayout.value ?: return
         _previewLayout.value =
             current.copy(
                 bgImageScale = scale,
                 bgImageOffsetX = offsetX,
                 bgImageOffsetY = offsetY,
+            )
+        recomputeActiveState()
+    }
+
+    fun updatePreviewMaskCrop(
+        scale: Float,
+        offsetX: Float,
+        offsetY: Float,
+    ) {
+        val current = _previewLayout.value ?: activeLayout.value ?: return
+        _previewLayout.value =
+            current.copy(
+                maskImageScale = scale,
+                maskImageOffsetX = offsetX,
+                maskImageOffsetY = offsetY,
             )
         recomputeActiveState()
     }
@@ -230,6 +246,14 @@ object MacroPadState {
     fun setCroppingBackground(cropping: Boolean) {
         AppLog.d(TAG, "setCroppingBackground($cropping)")
         _isCroppingBackground.value = cropping
+    }
+
+    private val _isCroppingMask = MutableStateFlow(false)
+    val isCroppingMask: StateFlow<Boolean> = _isCroppingMask.asStateFlow()
+
+    fun setCroppingMask(cropping: Boolean) {
+        AppLog.d(TAG, "setCroppingMask($cropping)")
+        _isCroppingMask.value = cropping
     }
 
     private val _gridMode = MutableStateFlow(GridMode.OFF)
@@ -347,6 +371,27 @@ object MacroPadState {
                                         buttonBgColor = ColorOption.Neutral,
                                         buttonColorNoMirror = null,
                                         buttonColorMirror = null,
+                                    )
+                            }
+                            @Suppress("DEPRECATION")
+                            if (current.useBackgroundImageAsMask) {
+                                needsSave = true
+                                changed = true
+                                current =
+                                    current.copy(
+                                        maskImagePath = current.backgroundImagePath,
+                                        maskImageScale = current.bgImageScale,
+                                        maskImageOffsetX = current.bgImageOffsetX,
+                                        maskImageOffsetY = current.bgImageOffsetY,
+                                        maskImageDim = current.backgroundImageDim,
+                                        maskScaleMode = current.bgScaleMode,
+                                        backgroundImagePath = null,
+                                        bgImageScale = 1f,
+                                        bgImageOffsetX = 0f,
+                                        bgImageOffsetY = 0f,
+                                        backgroundImageDim = 0f,
+                                        bgScaleMode = BackgroundScaleMode.FILL,
+                                        useBackgroundImageAsMask = false,
                                     )
                             }
                             val migratedBg = migrateButtonBgColorOption(current.buttonBgColor) ?: current.buttonBgColor
@@ -540,6 +585,8 @@ object MacroPadState {
                     buttons = layout.buttons.cloneWithMacroMapping(macroMapping),
                     backgroundImagePath = layout.backgroundImagePath?.let { "backgrounds/bg_$targetLayoutId" },
                     backgroundImageVersion = 0,
+                    maskImagePath = layout.maskImagePath?.let { "masks/mask_$targetLayoutId" },
+                    maskImageVersion = 0,
                 )
             }
 
@@ -670,6 +717,8 @@ object MacroPadState {
                 mirrorCutouts = copiedCutouts,
                 backgroundImagePath = layout.backgroundImagePath?.let { "backgrounds/bg_$newLayoutId" },
                 backgroundImageVersion = 0,
+                maskImagePath = layout.maskImagePath?.let { "masks/mask_$newLayoutId" },
+                maskImageVersion = 0,
                 visualAnchor = layout.visualAnchor,
             )
 
@@ -839,6 +888,8 @@ object MacroPadState {
                 mirrorCutouts = copiedCutouts,
                 backgroundImagePath = layout.backgroundImagePath?.let { "backgrounds/bg_$newLayoutId" },
                 backgroundImageVersion = 0,
+                maskImagePath = layout.maskImagePath?.let { "masks/mask_$newLayoutId" },
+                maskImageVersion = 0,
                 visualAnchor = layout.visualAnchor,
             )
 

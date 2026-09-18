@@ -485,6 +485,7 @@ data class PadLayout(
     @Deprecated("Use buttonTextColor, buttonBorderColor, buttonBgColor instead")
     val buttonColorMirror: ButtonColorStyle? = null,
     val backgroundImagePath: String? = null,
+    @Deprecated("Migrated to maskImagePath; kept for backward-compatible deserialization")
     val useBackgroundImageAsMask: Boolean = false,
     @Transient val backgroundImageVersion: Int = 0,
     val buttonTextColor: ColorOption = ColorOption.Neutral,
@@ -496,17 +497,25 @@ data class PadLayout(
     val bgImageOffsetY: Float = 0f,
     val backgroundImageDim: Float = 0f,
     val bgScaleMode: BackgroundScaleMode = BackgroundScaleMode.FILL,
+    val maskImagePath: String? = null,
+    @Transient val maskImageVersion: Int = 0,
+    val maskImageScale: Float = 1f,
+    val maskImageOffsetX: Float = 0f,
+    val maskImageOffsetY: Float = 0f,
+    val maskImageDim: Float = 0f,
+    val maskScaleMode: BackgroundScaleMode = BackgroundScaleMode.FILL,
     val backgroundTouchpad: BackgroundTouchpadConfig = BackgroundTouchpadConfig(),
     val visualAnchor: LayoutVisualAnchor = LayoutVisualAnchor(),
 )
 
 /**
- * Returns true if this layout has no buttons, no background image, no screen cutouts,
+ * Returns true if this layout has no buttons, no background image, no mask image, no screen cutouts,
  * and no background touchpad enabled (i.e. is an untouched / empty layout).
  */
 fun PadLayout.isEmpty(): Boolean =
     buttons.isEmpty() &&
         backgroundImagePath == null &&
+        maskImagePath == null &&
         mirrorCutouts.isEmpty() &&
         !backgroundTouchpad.enabled
 

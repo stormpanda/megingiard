@@ -160,6 +160,7 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsStateWithLifecycle()
     val isEditingPositions by MacroPadState.isEditingButtonPositions.collectAsStateWithLifecycle()
     val isCroppingBackground by MacroPadState.isCroppingBackground.collectAsStateWithLifecycle()
+    val isCroppingMask by MacroPadState.isCroppingMask.collectAsStateWithLifecycle()
     val gridMode by MacroPadState.gridMode.collectAsStateWithLifecycle()
     val colors = LocalAppColors.current
     var lastFeedbackAtMs by remember { mutableLongStateOf(0L) }
@@ -210,7 +211,8 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
                 accentColor = colors.accent,
                 gridMode = gridMode,
                 isLocked = !isEditingPositions,
-                isCropping = isCroppingBackground,
+                isCroppingBackground = isCroppingBackground,
+                isCroppingMask = isCroppingMask,
                 transparentBackground = showEmbeddedMirror,
                 modifier = Modifier.fillMaxSize(),
             )
@@ -305,9 +307,30 @@ internal fun PadSurface(
         }
     }
 
+    var maskBitmap by remember(layout.maskImagePath, layout.maskImageVersion) { mutableStateOf<ImageBitmap?>(null) }
+    LaunchedEffect(layout.maskImagePath, layout.maskImageVersion) {
+        val path = layout.maskImagePath
+        if (path != null) {
+            try {
+                val decoded = MacroPadMediaRepository.loadScaledBitmap(context, path)
+                maskBitmap = decoded?.asImageBitmap()
+            } catch (e: Exception) {
+                AppLog.e(TAG, "Failed to decode mask image $path", e)
+                maskBitmap = null
+            }
+        } else {
+            maskBitmap = null
+        }
+    }
+
     val bgImageDimFilter =
         remember(layout.backgroundImageDim) {
             dimColorFilter(layout.backgroundImageDim)
+        }
+
+    val maskImageDimFilter =
+        remember(layout.maskImageDim) {
+            dimColorFilter(layout.maskImageDim)
         }
 
     // Create hit-test engine with density-aware dp→px converter and haptic callback
@@ -609,44 +632,26 @@ internal fun PadSurface(
                         }
                     },
         ) {
-            if (bgBitmap != null && !transparentBackground) {
+            if ((bgBitmap != null || maskBitmap != null) && !transparentBackground) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
-                    val cw = size.width
-                    val ch = size.height
-                    val iw = bgBitmap!!.width.toFloat()
-                    val ih = bgBitmap!!.height.toFloat()
-                    if (cw > 0f && ch > 0f && iw > 0f && ih > 0f) {
-                        val (dstOffset, dstSize) =
-                            when (layout.bgScaleMode) {
-                                BackgroundScaleMode.STRETCH -> {
-                                    IntOffset.Zero to IntSize(cw.toInt(), ch.toInt())
-                                }
-
-                                BackgroundScaleMode.FIT, BackgroundScaleMode.FILL -> {
-                                    val userScale = layout.bgImageScale
-                                    val scaleBase =
-                                        if (layout.bgScaleMode == BackgroundScaleMode.FIT) {
-                                            ViewportMath.calculateAspectFitScale(cw, ch, iw, ih)
-                                        } else {
-                                            ViewportMath.calculateAspectFillScale(cw, ch, iw, ih)
-                                        }
-                                    val ws = iw * scaleBase
-                                    val hs = ih * scaleBase
-                                    val maxTx = ((ws * userScale - cw) / 2f).coerceAtLeast(0f)
-                                    val maxTy = ((hs * userScale - ch) / 2f).coerceAtLeast(0f)
-                                    val clampedX = (layout.bgImageOffsetX * cw).coerceIn(-maxTx, maxTx)
-                                    val clampedY = (layout.bgImageOffsetY * ch).coerceIn(-maxTy, maxTy)
-                                    IntOffset(
-                                        ((cw - ws * userScale) / 2f + clampedX).toInt(),
-                                        ((ch - hs * userScale) / 2f + clampedY).toInt(),
-                                    ) to IntSize((ws * userScale).toInt(), (hs * userScale).toInt())
-                                }
-                            }
-                        drawImage(
-                            image = bgBitmap!!,
-                            dstOffset = dstOffset,
-                            dstSize = dstSize,
+                    if (bgBitmap != null) {
+                        drawAdjustedBitmap(
+                            bitmap = bgBitmap!!,
+                            scaleMode = layout.bgScaleMode,
+                            userScale = layout.bgImageScale,
+                            offsetX = layout.bgImageOffsetX,
+                            offsetY = layout.bgImageOffsetY,
                             colorFilter = bgImageDimFilter,
+                        )
+                    }
+                    if (maskBitmap != null) {
+                        drawAdjustedBitmap(
+                            bitmap = maskBitmap!!,
+                            scaleMode = layout.maskScaleMode,
+                            userScale = layout.maskImageScale,
+                            offsetX = layout.maskImageOffsetX,
+                            offsetY = layout.maskImageOffsetY,
+                            colorFilter = maskImageDimFilter,
                         )
                     }
                 }

@@ -10,6 +10,7 @@ enum class EditorSection {
     AUTOMATION,
     MIRROR,
     BACKGROUND,
+    MASK,
     BUTTONS,
     MACROS,
 }

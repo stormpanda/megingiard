@@ -387,9 +387,18 @@ Open Settings to create a layout.</string>
     <string name="bg_scale_mode_fill">Ausfüllen</string>
     <string name="bg_scale_mode_fit">Einpassen</string>
     <string name="bg_scale_mode_stretch">Strecken</string>
-    <string name="layout_settings_bg_image_adjustments">Bildanpassungen &amp; Maskierung</string>
+    <string name="layout_settings_bg_image_adjustments">Bildanpassungen</string>
     <string name="layout_settings_bg_section_title">Hintergrund</string>
     <string name="layout_settings_bg_image_dimming_title">Dimmung</string>
+
+    <!-- Layout mask image settings -->
+    <string name="layout_settings_mask_section_title">Maske</string>
+    <string name="layout_settings_mask_image_none">Keine ausgewählt</string>
+    <string name="layout_settings_mask_image_browse_local">Lokale Bilder durchsuchen</string>
+    <string name="layout_settings_mask_image_adjustments">Bildanpassungen</string>
+    <string name="layout_settings_mask_scale_mode_desc">Wähle, wie das Maskenbild an das Seitenverhältnis des Bildschirms angepasst wird.</string>
+    <string name="layout_settings_mask_image_crop_desc">Auf dem unteren Bildschirm mit zwei Fingern zoomen und durch Ziehen verschieben.</string>
+    <string name="layout_settings_mask_image_crop_disabled_stretch">Zuschneiden und Positionieren sind deaktiviert, wenn Strecken aktiv ist.</string>
     <!-- Automatic Layout Switching & Visual Anchor -->
     <string name="layout_settings_auto_switch_section_title">Visueller Referenzanker</string>
     <string name="layout_settings_auto_switch_title">Visueller Referenzanker</string>
@@ -1161,6 +1170,8 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_bg_storage_desc">Bild aus dem Gerätespeicher wählen</string>
     <string name="macropad_editor_remove_bg_image">Hintergrundbild entfernen</string>
     <string name="macropad_editor_remove_bg_image_desc">Entfernt das Hintergrundbild aus diesem Layout</string>
+    <string name="macropad_editor_remove_mask_image">Maskenbild entfernen</string>
+    <string name="macropad_editor_remove_mask_image_desc">Entfernt das Maskenbild aus diesem Layout</string>
 
     <!-- Pad Button Edit Dialog -->
     <string name="macropad_btn_shape_desc">Geometrie der interaktiven Tastenkappe</string>
@@ -1234,6 +1245,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_button_delete_confirm_title">Diesen Button wirklich löschen?</string>
     <string name="macropad_macro_delete_confirm_title">\"%1$s\" wirklich löschen?</string>
     <string name="macropad_editor_bg_delete_confirm_title">Hintergrundbild entfernen?</string>
+    <string name="macropad_editor_mask_delete_confirm_title">Maskenbild entfernen?</string>
     <string name="macropad_profile_unlink_app">App/Spiel-Verknüpfung aufheben</string>
     <string name="macropad_profile_unlink_app_confirm_title">Verknüpfung von \"%1$s\" wirklich aufheben?</string>
     <string name="macropad_profile_unlink_app_desc">Verknüpfung mit %1$s aufheben</string>
