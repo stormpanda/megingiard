@@ -74,6 +74,11 @@ object MacroPadSettings {
     /** Dead zone radius for the right analog stick during physical gamepad recording (0.0–1.0). */
     val deadzoneRight: StateFlow<Float> = _deadzoneRight.asStateFlow()
 
+    private val _buttonAlignmentSnapping = MutableStateFlow(true)
+
+    /** Persisted preference for magnetically snapping button centers to align with other buttons during layout editing. */
+    val buttonAlignmentSnapping: StateFlow<Boolean> = _buttonAlignmentSnapping.asStateFlow()
+
     internal fun init(
         dataStore: DataStore<Preferences>,
         scope: CoroutineScope,
@@ -95,6 +100,7 @@ object MacroPadSettings {
         _privdPromptDismissed.value = false
         _deadzoneLeft.value = PRIVD_DEFAULT_DEADZONE
         _deadzoneRight.value = PRIVD_DEFAULT_DEADZONE
+        _buttonAlignmentSnapping.value = true
         hasLoadedOnce = false
         lastLoadedProfilesJson = null
         lastLoadedActiveProfileId = null
@@ -105,6 +111,7 @@ object MacroPadSettings {
         prefs[KEY_PRIVD_PROMPT_DISMISSED]?.let { _privdPromptDismissed.value = it }
         prefs[KEY_PRIVD_DEADZONE_LEFT]?.let { _deadzoneLeft.value = it }
         prefs[KEY_PRIVD_DEADZONE_RIGHT]?.let { _deadzoneRight.value = it }
+        prefs[KEY_MACROPAD_SNAP_ALIGNMENT]?.let { _buttonAlignmentSnapping.value = it }
 
         // MacroPad profiles
         val macropadProfilesJson = prefs[KEY_MACROPAD_PROFILES]
@@ -164,6 +171,18 @@ object MacroPadSettings {
 
     fun setDeadzoneRight(value: Float) {
         updateSettingPref(KEY_PRIVD_DEADZONE_RIGHT, value, _deadzoneRight, optionalScope, optionalDataStore, TAG, "setDeadzoneRight")
+    }
+
+    fun setButtonAlignmentSnapping(value: Boolean) {
+        updateSettingPref(
+            KEY_MACROPAD_SNAP_ALIGNMENT,
+            value,
+            _buttonAlignmentSnapping,
+            optionalScope,
+            optionalDataStore,
+            TAG,
+            "setButtonAlignmentSnapping",
+        )
     }
 
     /**

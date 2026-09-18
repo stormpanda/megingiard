@@ -643,6 +643,8 @@ Open Settings to create a layout.</string>
     <!-- Cutout Layout Editor Toolbar Short Labels -->
     <string name="mirror_editor_toolbar_done">完成</string>
     <string name="mirror_editor_toolbar_cancel">取消</string>
+    <string name="mirror_editor_snap_alignment">對齊吸附</string>
+    <string name="mirror_editor_snap_alignment_desc">將區塊中心點磁吸對齊至其他區塊</string>
     <string name="mirror_editor_toolbar_shape_circle">圓形</string>
     <string name="mirror_editor_toolbar_shape_rect">矩形</string>
     <string name="settings_mirror_touch_projection">觸控投影</string>
@@ -662,6 +664,8 @@ Open Settings to create a layout.</string>
     <string name="settings_mirror_cutout_summary_fmt">平滑化: %1$s • 投影: %2$s</string>
     <string name="settings_mirror_cutout_summary_with_filter_fmt">平滑化：%1$s • %2$s • 投影：%3$s</string>
     <string name="settings_mirror_cutout_filter_transparency_mask">HUD / UI 隔離</string>
+    <string name="settings_cutout_render_above_mask_title">在背景遮罩上方渲染</string>
+    <string name="settings_cutout_render_above_mask_desc">將此裁切區域渲染在佈局背景遮罩之上，同時保持在 MacroPad 按鈕之下</string>
     <string name="settings_cutout_advanced_title">進階切角設定</string>
     <string name="settings_cutout_advanced_desc">HUD / UI 隔離校準與半透明度還原</string>
     <string name="settings_cutout_convert_smart_title">隔離 HUD / UI 元素</string>
@@ -1120,13 +1124,15 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_delete_button_desc">從此配置中刪除「%1$s」</string>
     <string name="macropad_editor_edit_button_positions">編輯按鈕位置</string>
     <string name="macropad_editor_edit_button_positions_card_desc">透過觸控或十字鍵精確移動按鈕</string>
-    <string name="macropad_editor_move_buttons_info">直接在下螢幕拖曳按鈕，或在下方選取按鈕以透過十字鍵或左搖桿逐像素移動。</string>
+    <string name="macropad_editor_move_buttons_info">直接在下螢幕拖曳按鈕，或在下方選取按鈕以透過十字鍵移動（按住 L2 或 R2 可進行 1 像素微調）。</string>
     <string name="macropad_editor_manage_buttons">管理按鈕</string>
     <string name="macropad_editor_reorder_buttons">重新排列按鈕</string>
     <string name="macropad_editor_reorder_buttons_enabled_desc">調整按鈕排列順序</string>
     <string name="macropad_editor_reorder_buttons_disabled_desc">選擇按鈕以編輯設定</string>
     <string name="macropad_editor_snap_grid">網格對齊模式</string>
     <string name="macropad_editor_snap_grid_desc">在畫布上顯示對齊網格</string>
+    <string name="macropad_editor_snap_alignment">對齊吸附</string>
+    <string name="macropad_editor_snap_alignment_desc">將按鈕中心磁吸對齊至其他按鈕</string>
     <string name="macropad_editor_grid_off_label">關閉</string>
     <string name="macropad_editor_grid_rectangular_label">矩形</string>
     <string name="macropad_editor_grid_radial_label">放射狀</string>

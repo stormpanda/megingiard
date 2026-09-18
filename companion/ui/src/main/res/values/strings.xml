@@ -644,6 +644,8 @@ Open Settings to create a layout.</string>
     <!-- Cutout Layout Editor Toolbar Short Labels -->
     <string name="mirror_editor_toolbar_done">Done</string>
     <string name="mirror_editor_toolbar_cancel">Cancel</string>
+    <string name="mirror_editor_snap_alignment">Snap to Alignment</string>
+    <string name="mirror_editor_snap_alignment_desc">Magnetically snap cutout centers to align with other cutouts</string>
     <string name="mirror_editor_toolbar_shape_circle">Circle</string>
     <string name="mirror_editor_toolbar_shape_rect">Rectangle</string>
     <string name="settings_mirror_touch_projection">Touch Projection</string>
@@ -663,6 +665,8 @@ Open Settings to create a layout.</string>
     <string name="settings_mirror_cutout_summary_fmt">Smoothing: %1$s • Projection: %2$s</string>
     <string name="settings_mirror_cutout_summary_with_filter_fmt">Smoothing: %1$s • %2$s • Projection: %3$s</string>
     <string name="settings_mirror_cutout_filter_transparency_mask">HUD / UI Isolation</string>
+    <string name="settings_cutout_render_above_mask_title">Render Above Background Mask</string>
+    <string name="settings_cutout_render_above_mask_desc">Renders this cutout above layout background masks while remaining below MacroPad buttons</string>
     <string name="settings_cutout_advanced_title">Advanced Cutout Settings</string>
     <string name="settings_cutout_advanced_desc">HUD / UI isolation and translucency adjustments</string>
     <string name="settings_cutout_convert_smart_title">Isolate HUD / UI Elements</string>
@@ -1126,13 +1130,15 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_delete_button_desc">Delete \'%1$s\' from this layout</string>
     <string name="macropad_editor_edit_button_positions">Edit Button Positions</string>
     <string name="macropad_editor_edit_button_positions_card_desc">Move buttons via touch or D-pad precision</string>
-    <string name="macropad_editor_move_buttons_info">Drag buttons directly on the bottom screen, or select a button below to move it pixel-by-pixel with the D-pad or Left Stick.</string>
+    <string name="macropad_editor_move_buttons_info">Drag buttons directly on the bottom screen, or select a button below to move it with the D-pad (hold L2 or R2 for fine 1px movement).</string>
     <string name="macropad_editor_manage_buttons">Manage Buttons</string>
     <string name="macropad_editor_reorder_buttons">Reorder Buttons</string>
     <string name="macropad_editor_reorder_buttons_enabled_desc">Use controls to rearrange the button list</string>
     <string name="macropad_editor_reorder_buttons_disabled_desc">Select a button to edit its configuration</string>
     <string name="macropad_editor_snap_grid">Snap Grid Mode</string>
     <string name="macropad_editor_snap_grid_desc">Display alignment grid on canvas</string>
+    <string name="macropad_editor_snap_alignment">Snap to Alignment</string>
+    <string name="macropad_editor_snap_alignment_desc">Magnetically snap button centers to align with other buttons</string>
     <string name="macropad_editor_grid_off_label">Off</string>
     <string name="macropad_editor_grid_rectangular_label">Rectangular</string>
     <string name="macropad_editor_grid_radial_label">Radial</string>

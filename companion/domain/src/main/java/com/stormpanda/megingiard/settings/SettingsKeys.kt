@@ -31,6 +31,7 @@ internal val KEY_STEAMGRIDDB_API_TOKEN = stringPreferencesKey("steamgriddb_api_t
 internal val KEY_REMEMBER_VIEWPORT = booleanPreferencesKey("mirror_remember_viewport")
 internal val KEY_REMEMBER_LOCK = booleanPreferencesKey("mirror_remember_lock")
 internal val KEY_REMEMBER_PROJECTION = booleanPreferencesKey("mirror_remember_projection")
+internal val KEY_MIRROR_SNAP_ALIGNMENT = booleanPreferencesKey("mirror_snap_alignment")
 // Mirror session state persistence — saved values (viewport moved to PadLayout.mirrorSaved*)
 
 // Appearance
@@ -78,6 +79,9 @@ internal val KEY_GAMEPAD_SWAP_FACE_BUTTONS = booleanPreferencesKey("gamepad_swap
 
 // MacroPad — 10 most recently used colors (stored as comma-separated ARGB integers)
 internal val KEY_MACROPAD_RECENT_COLORS = stringPreferencesKey("macropad_recent_colors")
+
+// MacroPad — button alignment snapping toggle
+internal val KEY_MACROPAD_SNAP_ALIGNMENT = booleanPreferencesKey("macropad_snap_alignment")
 
 internal val KEY_PRIVD_PROMPT_DISMISSED = booleanPreferencesKey("privd_prompt_dismissed")
 
@@ -127,6 +131,7 @@ private val MIRROR_KEYS: Set<Preferences.Key<*>> =
         KEY_REMEMBER_VIEWPORT,
         KEY_REMEMBER_LOCK,
         KEY_REMEMBER_PROJECTION,
+        KEY_MIRROR_SNAP_ALIGNMENT,
     )
 private val TOUCHPAD_KEYS: Set<Preferences.Key<*>> =
     setOf(
@@ -160,6 +165,7 @@ private val MACROPAD_SETTINGS_KEYS: Set<Preferences.Key<*>> =
         KEY_MACROPAD_AMBIENT_APPLY_THEME,
         KEY_GAMEPAD_SWAP_FACE_BUTTONS,
         KEY_MACROPAD_RECENT_COLORS,
+        KEY_MACROPAD_SNAP_ALIGNMENT,
         KEY_PRIVD_DEADZONE_LEFT,
         KEY_PRIVD_DEADZONE_RIGHT,
     )
@@ -205,6 +211,7 @@ internal val BOOLEAN_KEYS: Set<Preferences.Key<*>> =
         KEY_REMEMBER_VIEWPORT,
         KEY_REMEMBER_LOCK,
         KEY_REMEMBER_PROJECTION,
+        KEY_MIRROR_SNAP_ALIGNMENT,
         KEY_KB_TRACKPOINT_ENABLED,
         KEY_KB_REPEAT_ENABLED,
         KEY_KB_FULLSCREEN,
@@ -223,6 +230,7 @@ internal val BOOLEAN_KEYS: Set<Preferences.Key<*>> =
         KEY_GAMEPAD_SWAP_FACE_BUTTONS,
         KEY_MACROPAD_AMBIENT_PREVIEW,
         KEY_MACROPAD_AMBIENT_APPLY_THEME,
+        KEY_MACROPAD_SNAP_ALIGNMENT,
         KEY_SAVED_LOCKED,
         KEY_SAVED_PROJECTION,
         KEY_SHOW_MACRO_EDITOR_TUTORIAL,

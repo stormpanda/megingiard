@@ -21,6 +21,7 @@ import android.graphics.RectF
 import android.graphics.RenderEffect
 import android.graphics.RenderNode
 import android.graphics.Shader
+import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.FrameLayout
 import com.stormpanda.megingiard.AppLog
@@ -28,6 +29,7 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.macropad.BackgroundScaleMode
 import com.stormpanda.megingiard.macropad.CutoutLostAnchorEffect
 import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.math.ViewportMath
 import kotlin.math.abs
 import kotlin.math.max
@@ -438,6 +440,350 @@ internal class MultiCutoutContainer(
         }
     }
 
+    private fun drawSingleCutout(
+        canvas: Canvas,
+        cutout: ScreenCutout,
+        parentW: Float,
+        parentH: Float,
+        edgeBlending: Boolean,
+        tolerance: Float,
+        blendW: Float,
+        isTargetFrozen: Boolean,
+        effectiveManualFrozen: Boolean,
+        shouldBlur: Boolean,
+        activeLayout: PadLayout?,
+        isLayoutAnchorActive: Boolean,
+        drawTime: Long,
+        masterView: View?,
+    ): Boolean {
+        var masterViewDrawn = false
+        val dw = (cutout.destWidth * parentW).roundToInt().toFloat()
+        val dh = (cutout.destHeight * parentH).roundToInt().toFloat()
+        val dx = (cutout.destX * parentW).roundToInt().toFloat()
+        val dy = (cutout.destY * parentH).roundToInt().toFloat()
+
+        val sw = cutout.srcWidth * srcWidth
+        val sh = cutout.srcHeight * srcHeight
+        val sx = cutout.srcX * srcWidth
+        val sy = cutout.srcY * srcHeight
+
+        if (dw <= 0f || dh <= 0f || sw <= 0f || sh <= 0f) return false
+
+        val touchesLeft = edgeBlending && (cutout.destX > tolerance)
+        val touchesRight = edgeBlending && (cutout.destX + cutout.destWidth < 1.0f - tolerance)
+        val touchesTop = edgeBlending && (cutout.destY > tolerance)
+        val touchesBottom = edgeBlending && (cutout.destY + cutout.destHeight < 1.0f - tolerance)
+
+        val leftExt = if (touchesLeft) (blendW / 2f).roundToInt().toFloat() else 0f
+        val rightExt = if (touchesRight) (blendW / 2f).roundToInt().toFloat() else 0f
+        val topExt = if (touchesTop) (blendW / 2f).roundToInt().toFloat() else 0f
+        val bottomExt = if (touchesBottom) (blendW / 2f).roundToInt().toFloat() else 0f
+        val hasTouching = leftExt > 0f || rightExt > 0f || topExt > 0f || bottomExt > 0f
+        val hasTransparencyMask = cutout.hasTransparencyMask && CutoutMaskManager.hasMask(context, cutout.id)
+
+        val saveCount =
+            if (cutout.opacity < 1f || hasTouching || hasTransparencyMask) {
+                cutoutPaint.alpha = (cutout.opacity * MCC_MAX_ALPHA_FLOAT).roundToInt().coerceIn(0, MCC_MAX_ALPHA_INT)
+                if (hasTouching) {
+                    cutoutPaint.xfermode = addXfermode
+                } else {
+                    cutoutPaint.xfermode = null
+                }
+                val clipLeft = dx - leftExt
+                val clipTop = dy - topExt
+                val clipRight = dx + dw + rightExt
+                val clipBottom = dy + dh + bottomExt
+                canvas.saveLayer(clipLeft, clipTop, clipRight, clipBottom, cutoutPaint)
+            } else {
+                canvas.save()
+                canvas.clipRect(dx, dy, dx + dw, dy + dh)
+                0
+            }
+
+        try {
+            canvas.translate(dx, dy)
+            if (cutout.shape == CutoutShape.CIRCLE) {
+                circlePath.reset()
+                val r = min(dw, dh) / 2f
+                circlePath.addCircle(dw / 2f, dh / 2f, r, Path.Direction.CW)
+                canvas.clipPath(circlePath)
+            }
+
+            val blurAlpha =
+                cutoutBlurAlphas[cutout.id] ?: (if (shouldBlur) FULL_ALPHA_FLOAT else 0f)
+
+            val cachedFrozenFrame = AnchorPresenceManager.getFrozenFrame(context, cutout.id)
+            val fullFrozenBitmap = if (cachedFrozenFrame == null && effectiveManualFrozen) frozenBitmap else null
+            val hasFrozenBitmap =
+                (cachedFrozenFrame != null && !cachedFrozenFrame.isRecycled) ||
+                    (fullFrozenBitmap != null && !fullFrozenBitmap.isRecycled)
+            val frozenBitmapToDraw = cachedFrozenFrame ?: fullFrozenBitmap
+            val isCropped = cachedFrozenFrame != null
+
+            val effectiveDelay =
+                if (activeLayout != null && isLayoutAnchorActive) {
+                    activeLayout.visualAnchor.streamDelayFrames
+                } else {
+                    0
+                }
+            val delayedFrame =
+                if (effectiveDelay > 0) {
+                    AnchorPresenceManager.getDelayedFrame(cutout.id, effectiveDelay)
+                } else {
+                    null
+                }
+
+            val staticAssetBitmap =
+                if (cutout.renderAsStaticAsset && hasTransparencyMask) {
+                    CutoutMaskManager.getStaticAsset(
+                        context = context,
+                        cutoutId = cutout.id,
+                        translucency = cutout.maskTranslucency,
+                        sensitivity = cutout.maskSensitivity,
+                        cavityHealing = cutout.maskCavityHealing,
+                    )
+                } else {
+                    null
+                }
+            val isStaticAssetDrawn = staticAssetBitmap != null && !staticAssetBitmap.isRecycled
+
+            // 1. Base Layer
+            if (isStaticAssetDrawn) {
+                cutoutDestRect.set(0f, 0f, dw, dh)
+                canvas.drawBitmap(staticAssetBitmap!!, null, cutoutDestRect, frozenFramePaint)
+            } else if (isTargetFrozen && hasFrozenBitmap && frozenBitmapToDraw != null) {
+                // Freeze active: render sharp frozen frame base layer
+                // (Live video feed is completely cut off, preventing video flicker/leakage during content transitions)
+                if (blurAlpha < FULL_ALPHA_FLOAT) {
+                    frozenFramePaint.alpha = MCC_MAX_ALPHA_INT
+                    drawFrozenBitmapToCanvas(
+                        canvas,
+                        frozenBitmapToDraw,
+                        isCropped,
+                        dw,
+                        dh,
+                        sw,
+                        sh,
+                        sx,
+                        sy,
+                        frozenFramePaint,
+                    )
+                }
+            } else {
+                // Live / Unfreezing: render live/delayed video stream base layer
+                if (delayedFrame != null && !delayedFrame.isRecycled) {
+                    cutoutDestRect.set(0f, 0f, dw, dh)
+                    canvas.drawBitmap(delayedFrame, null, cutoutDestRect, delayedFramePaint)
+                } else {
+                    val isFollowActive = ScreenCaptureManager.isFollowActive.value
+                    val isUncropped =
+                        cutout.srcWidth >= MCC_UNCROPPED_THRESHOLD && cutout.srcHeight >= MCC_UNCROPPED_THRESHOLD
+                    val liveSaveCount = canvas.save()
+                    try {
+                        if (cutouts.size == 1 && isFollowActive && isUncropped) {
+                            canvas.translate(viewportOffsetX, viewportOffsetY)
+                            canvas.scale(viewportScale, viewportScale, dw / 2f, dh / 2f)
+
+                            val srcRatio = srcWidth.toFloat() / srcHeight.toFloat()
+                            val destRatio = dw / dh
+
+                            var fitW = dw
+                            var fitH = dh
+                            if (srcRatio > destRatio) {
+                                fitH = dw / srcRatio
+                            } else {
+                                fitW = dh * srcRatio
+                            }
+
+                            val fitX = (dw - fitW) / 2f
+                            val fitY = (dh - fitH) / 2f
+                            canvas.translate(fitX, fitY)
+
+                            val scaleX = fitW / srcWidth
+                            val scaleY = fitH / srcHeight
+                            canvas.scale(scaleX, scaleY)
+                        } else {
+                            val scaleX = dw / sw
+                            val scaleY = dh / sh
+                            canvas.translate(-sx * scaleX, -sy * scaleY)
+                            canvas.scale(scaleX, scaleY)
+                        }
+
+                        if (masterView != null) {
+                            drawChild(canvas, masterView, drawTime)
+                            masterViewDrawn = true
+                        }
+                    } finally {
+                        canvas.restoreToCount(liveSaveCount)
+                    }
+                }
+            }
+
+            // 2. Top Frosted Blur Layer (8px blur, opacity = blurAlpha)
+            val bitmapToBlur = if (isTargetFrozen) frozenBitmapToDraw else (delayedFrame ?: frozenBitmapToDraw)
+            if (!isStaticAssetDrawn && blurAlpha > MIN_ALPHA_THRESHOLD && bitmapToBlur != null && !bitmapToBlur.isRecycled) {
+                val intDw = dw.roundToInt().coerceAtLeast(1)
+                val intDh = dh.roundToInt().coerceAtLeast(1)
+                val renderNode =
+                    try {
+                        val node =
+                            cutoutRenderNodes.getOrPut(cutout.id) { RenderNode("CutoutBlur_${cutout.id}") }
+                        val needsRecord =
+                            cutoutRenderNodeBitmaps[cutout.id] !== bitmapToBlur ||
+                                cutoutRenderNodeWidths[cutout.id] != intDw ||
+                                cutoutRenderNodeHeights[cutout.id] != intDh
+
+                        if (needsRecord) {
+                            node.setPosition(0, 0, intDw, intDh)
+                            node.setRenderEffect(
+                                RenderEffect.createBlurEffect(
+                                    TARGET_BLUR_RADIUS,
+                                    TARGET_BLUR_RADIUS,
+                                    Shader.TileMode.CLAMP,
+                                ),
+                            )
+                            val recCanvas = node.beginRecording()
+                            try {
+                                frozenFramePaint.alpha = MCC_MAX_ALPHA_INT
+                                frozenFramePaint.colorFilter = frozenInactiveColorFilter
+                                drawFrozenBitmapToCanvas(
+                                    recCanvas,
+                                    bitmapToBlur,
+                                    bitmapToBlur !== fullFrozenBitmap,
+                                    dw,
+                                    dh,
+                                    sw,
+                                    sh,
+                                    sx,
+                                    sy,
+                                    frozenFramePaint,
+                                )
+                            } finally {
+                                frozenFramePaint.colorFilter = null
+                                node.endRecording()
+                            }
+                            cutoutRenderNodeBitmaps[cutout.id] = bitmapToBlur
+                            cutoutRenderNodeWidths[cutout.id] = intDw
+                            cutoutRenderNodeHeights[cutout.id] = intDh
+                        }
+                        node.setAlpha(blurAlpha.coerceIn(0f, FULL_ALPHA_FLOAT))
+                        node
+                    } catch (e: Throwable) {
+                        AppLog.w(TAG, "RenderNode blur setup failed: ${e.message}")
+                        null
+                    }
+
+                if (renderNode != null) {
+                    canvas.drawRenderNode(renderNode)
+                } else {
+                    frozenFramePaint.alpha =
+                        (blurAlpha * MCC_MAX_ALPHA_FLOAT).roundToInt().coerceIn(0, MCC_MAX_ALPHA_INT)
+                    frozenFramePaint.colorFilter = frozenInactiveColorFilter
+                    drawFrozenBitmapToCanvas(
+                        canvas,
+                        bitmapToBlur,
+                        bitmapToBlur !== fullFrozenBitmap,
+                        dw,
+                        dh,
+                        sw,
+                        sh,
+                        sx,
+                        sy,
+                        frozenFramePaint,
+                    )
+                    frozenFramePaint.colorFilter = null
+                    frozenFramePaint.alpha = MCC_MAX_ALPHA_INT
+                }
+            }
+
+            if (ambientDim > 0f) {
+                canvas.drawRect(0f, 0f, dw, dh, ambientDimPaint)
+            }
+
+            if (cutout.shape == CutoutShape.CIRCLE) {
+                if (edgeBlending) {
+                    val r = min(dw, dh) / 2f
+                    val stop = max(0f, r - blendW) / r
+                    if (r != cachedCircleRadius || stop != cachedCircleStop) {
+                        circleBlendStops[1] = stop
+                        cachedCircleRadius = r
+                        cachedCircleStop = stop
+                        cachedCircleShader =
+                            RadialGradient(
+                                dw / 2f,
+                                dh / 2f,
+                                r,
+                                circleBlendColors,
+                                circleBlendStops,
+                                Shader.TileMode.CLAMP,
+                            )
+                    }
+                    blendPaint.shader = cachedCircleShader
+                    canvas.drawRect(0f, 0f, dw, dh, blendPaint)
+                    blendPaint.shader = null
+                }
+            } else if (hasTouching) {
+                fun drawEdgeBlend(
+                    shader: LinearGradient,
+                    scaleX: Float,
+                    scaleY: Float,
+                    transX: Float,
+                    transY: Float,
+                ) {
+                    shaderMatrix.reset()
+                    shaderMatrix.setScale(scaleX, scaleY)
+                    shaderMatrix.postTranslate(transX, transY)
+                    shader.setLocalMatrix(shaderMatrix)
+                    blendPaint.shader = shader
+                    canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
+                }
+                if (touchesLeft) drawEdgeBlend(horizontalGradientShader, 2f * leftExt, 1f, -leftExt, 0f)
+                if (touchesRight) {
+                    drawEdgeBlend(
+                        horizontalReverseGradientShader,
+                        2f * rightExt,
+                        1f,
+                        dw - rightExt,
+                        0f,
+                    )
+                }
+                if (touchesTop) drawEdgeBlend(verticalGradientShader, 1f, 2f * topExt, 0f, -topExt)
+                if (touchesBottom) {
+                    drawEdgeBlend(
+                        verticalReverseGradientShader,
+                        1f,
+                        2f * bottomExt,
+                        0f,
+                        dh - bottomExt,
+                    )
+                }
+                blendPaint.shader = null
+            }
+
+            if (hasTransparencyMask && !isStaticAssetDrawn) {
+                val maskBitmap =
+                    CutoutMaskManager.getMask(
+                        context = context,
+                        cutoutId = cutout.id,
+                        translucency = cutout.maskTranslucency,
+                        sensitivity = cutout.maskSensitivity,
+                        cavityHealing = cutout.maskCavityHealing,
+                    )
+                if (maskBitmap != null && !maskBitmap.isRecycled) {
+                    maskDestRect.set(0f, 0f, dw, dh)
+                    canvas.drawBitmap(maskBitmap, null, maskDestRect, transparencyMaskPaint)
+                }
+            }
+        } finally {
+            if (cutout.opacity < 1f || hasTouching || hasTransparencyMask) {
+                canvas.restoreToCount(saveCount)
+            } else {
+                canvas.restore()
+            }
+        }
+        return masterViewDrawn
+    }
+
     override fun dispatchDraw(canvas: Canvas) {
         val masterView = if (childCount > 0) getChildAt(0) else null
         if (masterView == null && (!isFrozen || frozenBitmap == null)) return
@@ -463,25 +809,7 @@ internal class MultiCutoutContainer(
                 drawBackgroundBitmap(canvas, bg, parentW, parentH)
             }
 
-            var hasAnyTouchingEdge = false
-            if (edgeBlending && cutouts.size > 1) {
-                for (i in cutouts.indices) {
-                    val c = cutouts[i]
-                    if (c.destX > tolerance || c.destX + c.destWidth < 1.0f - tolerance ||
-                        c.destY > tolerance || c.destY + c.destHeight < 1.0f - tolerance
-                    ) {
-                        hasAnyTouchingEdge = true
-                        break
-                    }
-                }
-            }
-
-            val cutoutsLayerSaveCount =
-                if (hasAnyTouchingEdge) {
-                    canvas.saveLayer(0f, 0f, parentW, parentH, null)
-                } else {
-                    canvas.save()
-                }
+            val (aboveMaskCutouts, belowMaskCutouts) = cutouts.partition { it.renderAboveMask }
 
             val isEditing = isViewportEditActive || AppStateManager.isViewportEditActive.value
             val activeLayout = MacroPadState.activeLayout.value
@@ -499,330 +827,107 @@ internal class MultiCutoutContainer(
             val effectiveManualFrozen = !isEditing && isFrozen
             val isTargetFrozen = effectiveManualFrozen || shouldFreeze
 
-            for (cutout in cutouts) {
-                val dw = (cutout.destWidth * parentW).roundToInt().toFloat()
-                val dh = (cutout.destHeight * parentH).roundToInt().toFloat()
-                val dx = (cutout.destX * parentW).roundToInt().toFloat()
-                val dy = (cutout.destY * parentH).roundToInt().toFloat()
+            // Pass 1: Cutouts rendered below background mask
+            var hasAnyBelowTouchingEdge = false
+            if (edgeBlending && belowMaskCutouts.size > 1) {
+                for (i in belowMaskCutouts.indices) {
+                    val c = belowMaskCutouts[i]
+                    if (c.destX > tolerance || c.destX + c.destWidth < 1.0f - tolerance ||
+                        c.destY > tolerance || c.destY + c.destHeight < 1.0f - tolerance
+                    ) {
+                        hasAnyBelowTouchingEdge = true
+                        break
+                    }
+                }
+            }
 
-                val sw = cutout.srcWidth * srcWidth
-                val sh = cutout.srcHeight * srcHeight
-                val sx = cutout.srcX * srcWidth
-                val sy = cutout.srcY * srcHeight
+            val belowLayerSaveCount =
+                if (hasAnyBelowTouchingEdge) {
+                    canvas.saveLayer(0f, 0f, parentW, parentH, null)
+                } else {
+                    canvas.save()
+                }
 
-                if (dw <= 0f || dh <= 0f || sw <= 0f || sh <= 0f) continue
+            try {
+                for (cutout in belowMaskCutouts) {
+                    val drew =
+                        drawSingleCutout(
+                            canvas = canvas,
+                            cutout = cutout,
+                            parentW = parentW,
+                            parentH = parentH,
+                            edgeBlending = edgeBlending,
+                            tolerance = tolerance,
+                            blendW = blendW,
+                            isTargetFrozen = isTargetFrozen,
+                            effectiveManualFrozen = effectiveManualFrozen,
+                            shouldBlur = shouldBlur,
+                            activeLayout = activeLayout,
+                            isLayoutAnchorActive = isLayoutAnchorActive,
+                            drawTime = drawTime,
+                            masterView = masterView,
+                        )
+                    if (drew) {
+                        masterViewDrawn = true
+                    }
+                }
+            } finally {
+                canvas.restoreToCount(belowLayerSaveCount)
+            }
 
-                val touchesLeft = edgeBlending && (cutout.destX > tolerance)
-                val touchesRight = edgeBlending && (cutout.destX + cutout.destWidth < 1.0f - tolerance)
-                val touchesTop = edgeBlending && (cutout.destY > tolerance)
-                val touchesBottom = edgeBlending && (cutout.destY + cutout.destHeight < 1.0f - tolerance)
+            // Background mask pass: if useAsMask is enabled, draw background mask above Pass 1 cutouts
+            val mask = bgBitmap
+            if (useAsMask && mask != null) {
+                drawBackgroundBitmap(canvas, mask, parentW, parentH)
+            }
 
-                val leftExt = if (touchesLeft) (blendW / 2f).roundToInt().toFloat() else 0f
-                val rightExt = if (touchesRight) (blendW / 2f).roundToInt().toFloat() else 0f
-                val topExt = if (touchesTop) (blendW / 2f).roundToInt().toFloat() else 0f
-                val bottomExt = if (touchesBottom) (blendW / 2f).roundToInt().toFloat() else 0f
-                val hasTouching = leftExt > 0f || rightExt > 0f || topExt > 0f || bottomExt > 0f
-                val hasTransparencyMask = cutout.hasTransparencyMask && CutoutMaskManager.hasMask(context, cutout.id)
-
-                val saveCount =
-                    if (cutout.opacity < 1f || hasTouching || hasTransparencyMask) {
-                        cutoutPaint.alpha = (cutout.opacity * 255).toInt()
-                        if (hasTouching) {
-                            cutoutPaint.xfermode = addXfermode
-                        } else {
-                            cutoutPaint.xfermode = null
+            // Pass 2: Cutouts rendered above background mask (below Compose MacroPad buttons)
+            if (aboveMaskCutouts.isNotEmpty()) {
+                var hasAnyAboveTouchingEdge = false
+                if (edgeBlending && aboveMaskCutouts.size > 1) {
+                    for (i in aboveMaskCutouts.indices) {
+                        val c = aboveMaskCutouts[i]
+                        if (c.destX > tolerance || c.destX + c.destWidth < 1.0f - tolerance ||
+                            c.destY > tolerance || c.destY + c.destHeight < 1.0f - tolerance
+                        ) {
+                            hasAnyAboveTouchingEdge = true
+                            break
                         }
-                        val clipLeft = dx - leftExt
-                        val clipTop = dy - topExt
-                        val clipRight = dx + dw + rightExt
-                        val clipBottom = dy + dh + bottomExt
-                        canvas.saveLayer(clipLeft, clipTop, clipRight, clipBottom, cutoutPaint)
+                    }
+                }
+
+                val aboveLayerSaveCount =
+                    if (hasAnyAboveTouchingEdge) {
+                        canvas.saveLayer(0f, 0f, parentW, parentH, null)
                     } else {
                         canvas.save()
-                        canvas.clipRect(dx, dy, dx + dw, dy + dh)
-                        0
                     }
 
                 try {
-                    canvas.translate(dx, dy)
-                    if (cutout.shape == CutoutShape.CIRCLE) {
-                        circlePath.reset()
-                        val r = min(dw, dh) / 2f
-                        circlePath.addCircle(dw / 2f, dh / 2f, r, Path.Direction.CW)
-                        canvas.clipPath(circlePath)
-                    }
-
-                    val blurAlpha =
-                        cutoutBlurAlphas[cutout.id] ?: (if (shouldBlur) FULL_ALPHA_FLOAT else 0f)
-
-                    val cachedFrozenFrame = AnchorPresenceManager.getFrozenFrame(context, cutout.id)
-                    val fullFrozenBitmap = if (cachedFrozenFrame == null && effectiveManualFrozen) frozenBitmap else null
-                    val hasFrozenBitmap =
-                        (cachedFrozenFrame != null && !cachedFrozenFrame.isRecycled) ||
-                            (fullFrozenBitmap != null && !fullFrozenBitmap.isRecycled)
-                    val frozenBitmapToDraw = cachedFrozenFrame ?: fullFrozenBitmap
-                    val isCropped = cachedFrozenFrame != null
-
-                    val effectiveDelay =
-                        if (activeLayout != null && isLayoutAnchorActive) {
-                            activeLayout.visualAnchor.streamDelayFrames
-                        } else {
-                            0
-                        }
-                    val delayedFrame =
-                        if (effectiveDelay > 0) {
-                            AnchorPresenceManager.getDelayedFrame(cutout.id, effectiveDelay)
-                        } else {
-                            null
-                        }
-
-                    val staticAssetBitmap =
-                        if (cutout.renderAsStaticAsset && hasTransparencyMask) {
-                            CutoutMaskManager.getStaticAsset(
-                                context = context,
-                                cutoutId = cutout.id,
-                                translucency = cutout.maskTranslucency,
-                                sensitivity = cutout.maskSensitivity,
-                                cavityHealing = cutout.maskCavityHealing,
+                    for (cutout in aboveMaskCutouts) {
+                        val drew =
+                            drawSingleCutout(
+                                canvas = canvas,
+                                cutout = cutout,
+                                parentW = parentW,
+                                parentH = parentH,
+                                edgeBlending = edgeBlending,
+                                tolerance = tolerance,
+                                blendW = blendW,
+                                isTargetFrozen = isTargetFrozen,
+                                effectiveManualFrozen = effectiveManualFrozen,
+                                shouldBlur = shouldBlur,
+                                activeLayout = activeLayout,
+                                isLayoutAnchorActive = isLayoutAnchorActive,
+                                drawTime = drawTime,
+                                masterView = masterView,
                             )
-                        } else {
-                            null
-                        }
-                    val isStaticAssetDrawn = staticAssetBitmap != null && !staticAssetBitmap.isRecycled
-
-                    // 1. Base Layer
-                    if (isStaticAssetDrawn) {
-                        cutoutDestRect.set(0f, 0f, dw, dh)
-                        canvas.drawBitmap(staticAssetBitmap!!, null, cutoutDestRect, frozenFramePaint)
-                    } else if (isTargetFrozen && hasFrozenBitmap && frozenBitmapToDraw != null) {
-                        // Freeze active: render sharp frozen frame base layer
-                        // (Live video feed is completely cut off, preventing video flicker/leakage during content transitions)
-                        if (blurAlpha < FULL_ALPHA_FLOAT) {
-                            frozenFramePaint.alpha = MCC_MAX_ALPHA_INT
-                            drawFrozenBitmapToCanvas(
-                                canvas,
-                                frozenBitmapToDraw,
-                                isCropped,
-                                dw,
-                                dh,
-                                sw,
-                                sh,
-                                sx,
-                                sy,
-                                frozenFramePaint,
-                            )
-                        }
-                    } else {
-                        // Live / Unfreezing: render live/delayed video stream base layer
-                        if (delayedFrame != null && !delayedFrame.isRecycled) {
-                            cutoutDestRect.set(0f, 0f, dw, dh)
-                            canvas.drawBitmap(delayedFrame, null, cutoutDestRect, delayedFramePaint)
-                        } else {
-                            val isFollowActive = ScreenCaptureManager.isFollowActive.value
-                            val isUncropped =
-                                cutout.srcWidth >= MCC_UNCROPPED_THRESHOLD && cutout.srcHeight >= MCC_UNCROPPED_THRESHOLD
-                            val liveSaveCount = canvas.save()
-                            try {
-                                if (cutouts.size == 1 && isFollowActive && isUncropped) {
-                                    canvas.translate(viewportOffsetX, viewportOffsetY)
-                                    canvas.scale(viewportScale, viewportScale, dw / 2f, dh / 2f)
-
-                                    val srcRatio = srcWidth.toFloat() / srcHeight.toFloat()
-                                    val destRatio = dw / dh
-
-                                    var fitW = dw
-                                    var fitH = dh
-                                    if (srcRatio > destRatio) {
-                                        fitH = dw / srcRatio
-                                    } else {
-                                        fitW = dh * srcRatio
-                                    }
-
-                                    val fitX = (dw - fitW) / 2f
-                                    val fitY = (dh - fitH) / 2f
-                                    canvas.translate(fitX, fitY)
-
-                                    val scaleX = fitW / srcWidth
-                                    val scaleY = fitH / srcHeight
-                                    canvas.scale(scaleX, scaleY)
-                                } else {
-                                    val scaleX = dw / sw
-                                    val scaleY = dh / sh
-                                    canvas.translate(-sx * scaleX, -sy * scaleY)
-                                    canvas.scale(scaleX, scaleY)
-                                }
-
-                                if (masterView != null) {
-                                    drawChild(canvas, masterView, drawTime)
-                                    masterViewDrawn = true
-                                }
-                            } finally {
-                                canvas.restoreToCount(liveSaveCount)
-                            }
-                        }
-                    }
-
-                    // 2. Top Frosted Blur Layer (8px blur, opacity = blurAlpha)
-                    val bitmapToBlur = if (isTargetFrozen) frozenBitmapToDraw else (delayedFrame ?: frozenBitmapToDraw)
-                    if (!isStaticAssetDrawn && blurAlpha > MIN_ALPHA_THRESHOLD && bitmapToBlur != null && !bitmapToBlur.isRecycled) {
-                        val intDw = dw.roundToInt().coerceAtLeast(1)
-                        val intDh = dh.roundToInt().coerceAtLeast(1)
-                        val renderNode =
-                            try {
-                                val node =
-                                    cutoutRenderNodes.getOrPut(cutout.id) { RenderNode("CutoutBlur_${cutout.id}") }
-                                val needsRecord =
-                                    cutoutRenderNodeBitmaps[cutout.id] !== bitmapToBlur ||
-                                        cutoutRenderNodeWidths[cutout.id] != intDw ||
-                                        cutoutRenderNodeHeights[cutout.id] != intDh
-
-                                if (needsRecord) {
-                                    node.setPosition(0, 0, intDw, intDh)
-                                    node.setRenderEffect(
-                                        RenderEffect.createBlurEffect(
-                                            TARGET_BLUR_RADIUS,
-                                            TARGET_BLUR_RADIUS,
-                                            Shader.TileMode.CLAMP,
-                                        ),
-                                    )
-                                    val recCanvas = node.beginRecording()
-                                    try {
-                                        frozenFramePaint.alpha = MCC_MAX_ALPHA_INT
-                                        frozenFramePaint.colorFilter = frozenInactiveColorFilter
-                                        drawFrozenBitmapToCanvas(
-                                            recCanvas,
-                                            bitmapToBlur,
-                                            bitmapToBlur !== fullFrozenBitmap,
-                                            dw,
-                                            dh,
-                                            sw,
-                                            sh,
-                                            sx,
-                                            sy,
-                                            frozenFramePaint,
-                                        )
-                                    } finally {
-                                        frozenFramePaint.colorFilter = null
-                                        node.endRecording()
-                                    }
-                                    cutoutRenderNodeBitmaps[cutout.id] = bitmapToBlur
-                                    cutoutRenderNodeWidths[cutout.id] = intDw
-                                    cutoutRenderNodeHeights[cutout.id] = intDh
-                                }
-                                node.setAlpha(blurAlpha.coerceIn(0f, FULL_ALPHA_FLOAT))
-                                node
-                            } catch (e: Throwable) {
-                                AppLog.w(TAG, "RenderNode blur setup failed: ${e.message}")
-                                null
-                            }
-
-                        if (renderNode != null) {
-                            canvas.drawRenderNode(renderNode)
-                        } else {
-                            frozenFramePaint.alpha =
-                                (blurAlpha * MCC_MAX_ALPHA_FLOAT).roundToInt().coerceIn(0, MCC_MAX_ALPHA_INT)
-                            frozenFramePaint.colorFilter = frozenInactiveColorFilter
-                            drawFrozenBitmapToCanvas(
-                                canvas,
-                                bitmapToBlur,
-                                bitmapToBlur !== fullFrozenBitmap,
-                                dw,
-                                dh,
-                                sw,
-                                sh,
-                                sx,
-                                sy,
-                                frozenFramePaint,
-                            )
-                            frozenFramePaint.colorFilter = null
-                            frozenFramePaint.alpha = MCC_MAX_ALPHA_INT
-                        }
-                    }
-
-                    if (ambientDim > 0f) {
-                        canvas.drawRect(0f, 0f, dw, dh, ambientDimPaint)
-                    }
-
-                    if (cutout.shape == CutoutShape.CIRCLE) {
-                        if (edgeBlending) {
-                            val r = min(dw, dh) / 2f
-                            val stop = max(0f, r - blendW) / r
-                            if (r != cachedCircleRadius || stop != cachedCircleStop) {
-                                circleBlendStops[1] = stop
-                                cachedCircleRadius = r
-                                cachedCircleStop = stop
-                                cachedCircleShader =
-                                    RadialGradient(
-                                        dw / 2f,
-                                        dh / 2f,
-                                        r,
-                                        circleBlendColors,
-                                        circleBlendStops,
-                                        Shader.TileMode.CLAMP,
-                                    )
-                            }
-                            blendPaint.shader = cachedCircleShader
-                            canvas.drawRect(0f, 0f, dw, dh, blendPaint)
-                            blendPaint.shader = null
-                        }
-                    } else if (hasTouching) {
-                        fun drawEdgeBlend(
-                            shader: LinearGradient,
-                            scaleX: Float,
-                            scaleY: Float,
-                            transX: Float,
-                            transY: Float,
-                        ) {
-                            shaderMatrix.reset()
-                            shaderMatrix.setScale(scaleX, scaleY)
-                            shaderMatrix.postTranslate(transX, transY)
-                            shader.setLocalMatrix(shaderMatrix)
-                            blendPaint.shader = shader
-                            canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
-                        }
-                        if (touchesLeft) drawEdgeBlend(horizontalGradientShader, 2f * leftExt, 1f, -leftExt, 0f)
-                        if (touchesRight) {
-                            drawEdgeBlend(
-                                horizontalReverseGradientShader,
-                                2f * rightExt,
-                                1f,
-                                dw - rightExt,
-                                0f,
-                            )
-                        }
-                        if (touchesTop) drawEdgeBlend(verticalGradientShader, 1f, 2f * topExt, 0f, -topExt)
-                        if (touchesBottom) {
-                            drawEdgeBlend(
-                                verticalReverseGradientShader,
-                                1f,
-                                2f * bottomExt,
-                                0f,
-                                dh - bottomExt,
-                            )
-                        }
-                        blendPaint.shader = null
-                    }
-
-                    if (hasTransparencyMask && !isStaticAssetDrawn) {
-                        val maskBitmap =
-                            CutoutMaskManager.getMask(
-                                context = context,
-                                cutoutId = cutout.id,
-                                translucency = cutout.maskTranslucency,
-                                sensitivity = cutout.maskSensitivity,
-                                cavityHealing = cutout.maskCavityHealing,
-                            )
-                        if (maskBitmap != null && !maskBitmap.isRecycled) {
-                            maskDestRect.set(0f, 0f, dw, dh)
-                            canvas.drawBitmap(maskBitmap, null, maskDestRect, transparencyMaskPaint)
+                        if (drew) {
+                            masterViewDrawn = true
                         }
                     }
                 } finally {
-                    if (cutout.opacity < 1f || hasTouching || hasTransparencyMask) {
-                        canvas.restoreToCount(saveCount)
-                    } else {
-                        canvas.restore()
-                    }
+                    canvas.restoreToCount(aboveLayerSaveCount)
                 }
             }
 
@@ -832,13 +937,7 @@ internal class MultiCutoutContainer(
                 drawChild(canvas, masterView, drawTime)
                 canvas.drawRect(0f, 0f, 1f, 1f, maskPaint)
                 canvas.restoreToCount(saveCount)
-            }
-
-            canvas.restoreToCount(cutoutsLayerSaveCount)
-
-            val mask = bgBitmap
-            if (useAsMask && mask != null) {
-                drawBackgroundBitmap(canvas, mask, parentW, parentH)
+                masterViewDrawn = true
             }
         } finally {
             canvas.restoreToCount(overallSaveCount)

@@ -41,6 +41,9 @@ object MirrorSettings {
     private val _rememberProjection = MutableStateFlow(false)
     val rememberProjection: StateFlow<Boolean> = _rememberProjection.asStateFlow()
 
+    private val _cutoutAlignmentSnapping = MutableStateFlow(true)
+    val cutoutAlignmentSnapping: StateFlow<Boolean> = _cutoutAlignmentSnapping.asStateFlow()
+
     internal fun init(
         dataStore: DataStore<Preferences>,
         scope: CoroutineScope,
@@ -53,6 +56,7 @@ object MirrorSettings {
         _rememberViewport.value = prefs[KEY_REMEMBER_VIEWPORT] ?: false
         _rememberLock.value = prefs[KEY_REMEMBER_LOCK] ?: false
         _rememberProjection.value = prefs[KEY_REMEMBER_PROJECTION] ?: false
+        _cutoutAlignmentSnapping.value = prefs[KEY_MIRROR_SNAP_ALIGNMENT] ?: true
     }
 
     private val optionalDataStore: DataStore<Preferences>?
@@ -79,6 +83,25 @@ object MirrorSettings {
             TAG,
             "setRememberProjection",
         )
+    }
+
+    fun setCutoutAlignmentSnapping(value: Boolean) {
+        updateSettingPref(
+            KEY_MIRROR_SNAP_ALIGNMENT,
+            value,
+            _cutoutAlignmentSnapping,
+            optionalScope,
+            optionalDataStore,
+            TAG,
+            "setCutoutAlignmentSnapping",
+        )
+    }
+
+    internal fun resetForTesting() {
+        _rememberViewport.value = false
+        _rememberLock.value = false
+        _rememberProjection.value = false
+        _cutoutAlignmentSnapping.value = true
     }
 
     /** Persists the current mirror session state for aspects the user opted to remember. */

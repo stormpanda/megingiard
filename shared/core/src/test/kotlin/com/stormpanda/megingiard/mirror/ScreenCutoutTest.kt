@@ -23,6 +23,7 @@ class ScreenCutoutTest {
         assertFalse(fullscreen.motionSmoothing)
         assertFalse(fullscreen.followTouch)
         assertFalse(fullscreen.touchProjectionEnabled)
+        assertFalse(fullscreen.renderAboveMask)
     }
 
     @Test
@@ -43,5 +44,6 @@ class ScreenCutoutTest {
         // 1080 / 1920 = 0.5625
         assertEquals(0.5625f, cutout.destHeight, 0.0001f)
         assertEquals((1f - 0.5625f) / 2f, cutout.destY, 0.0001f)
+        assertFalse(cutout.renderAboveMask)
     }
 }

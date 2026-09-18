@@ -43,6 +43,7 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AspectRatio
+import androidx.compose.material.icons.rounded.CenterFocusStrong
 import androidx.compose.material.icons.rounded.Circle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Crop
@@ -110,6 +111,8 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
+import com.stormpanda.megingiard.math.calculateGamepadCutoutMove
+import com.stormpanda.megingiard.settings.MirrorSettings
 import com.stormpanda.megingiard.ui.BumperDirection
 import com.stormpanda.megingiard.ui.DialogToastManager
 import com.stormpanda.megingiard.ui.DialogToastPill
@@ -130,6 +133,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.UUID
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.roundToInt
 import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
@@ -181,6 +185,7 @@ fun MirrorEditorTopOverlay(
     val hasChanges = currentCutouts != savedCutouts
 
     val selectedCutoutId by AppStateManager.selectedCutoutId.collectAsStateWithLifecycle()
+    val cutoutAlignmentSnapping by MirrorSettings.cutoutAlignmentSnapping.collectAsStateWithLifecycle()
     val cutouts = layout.mirrorCutouts
     val selectedCutout = cutouts.find { it.id == selectedCutoutId } ?: cutouts.firstOrNull()
 
@@ -391,15 +396,45 @@ fun MirrorEditorTopOverlay(
         dx: Int,
         dy: Int,
     ) = updateCutout(cutoutId) { cur, _ ->
-        val stepX = 1f / secScreenW
-        val stepY = 1f / secScreenH
+        val dirX =
+            if (dx > 0) {
+                1
+            } else if (dx < 0) {
+                -1
+            } else {
+                0
+            }
+        val dirY =
+            if (dy > 0) {
+                1
+            } else if (dy < 0) {
+                -1
+            } else {
+                0
+            }
+        val stepMultiplierPx = max(abs(dx), abs(dy)).toFloat().coerceAtLeast(1f)
+        val (candX, candY) =
+            calculateGamepadCutoutMove(
+                currentDestX = cur.destX,
+                currentDestY = cur.destY,
+                destWidth = cur.destWidth,
+                destHeight = cur.destHeight,
+                dirX = dirX,
+                dirY = dirY,
+                stepMultiplierPx = stepMultiplierPx,
+                movingCutoutId = cur.id,
+                otherCutouts = cutouts,
+                canvasW = secScreenW,
+                canvasH = secScreenH,
+                alignmentSnappingEnabled = cutoutAlignmentSnapping,
+            )
         val (clampedX, clampedY) =
             clampCutoutDrag(
                 cutoutId = cur.id,
                 originalX = cur.destX,
                 originalY = cur.destY,
-                targetX = cur.destX + dx * stepX,
-                targetY = cur.destY + dy * stepY,
+                targetX = candX,
+                targetY = candY,
                 width = cur.destWidth,
                 height = cur.destHeight,
                 allCutouts = cutouts,
@@ -589,7 +624,10 @@ fun MirrorEditorTopOverlay(
                     layout = layout,
                 )
 
-                // Item 6: Add Cutout
+                // Item 6: Snap to Alignment
+                SnapAlignmentCard()
+
+                // Item 7: Add Cutout
                 ToolboxActionCard(
                     title = stringResource(R.string.mirror_editor_add_cutout),
                     icon = Icons.Rounded.Add,
@@ -1024,6 +1062,40 @@ private fun HideBackgroundCard(
         GamepadPill(
             text = label,
             isHighlighted = isFocused && hasBackground,
+        )
+    }
+}
+
+@Composable
+private fun SnapAlignmentCard(
+    modifier: Modifier = Modifier,
+    cardFocusRequester: FocusRequester = remember { FocusRequester() },
+    onFocusChanged: ((Boolean) -> Unit)? = null,
+) {
+    val snapEnabled by MirrorSettings.cutoutAlignmentSnapping.collectAsStateWithLifecycle()
+
+    fun toggle() {
+        MirrorSettings.setCutoutAlignmentSnapping(!snapEnabled)
+    }
+
+    ToolboxCard(
+        onClick = { toggle() },
+        onLeftKey = { if (snapEnabled) MirrorSettings.setCutoutAlignmentSnapping(false) },
+        onRightKey = { if (!snapEnabled) MirrorSettings.setCutoutAlignmentSnapping(true) },
+        onFocusChanged = onFocusChanged,
+        cardFocusRequester = cardFocusRequester,
+        icon = Icons.Rounded.CenterFocusStrong,
+        title = stringResource(R.string.mirror_editor_snap_alignment),
+        modifier = modifier,
+    ) { isFocused ->
+        GamepadPill(
+            text =
+                if (snapEnabled) {
+                    stringResource(R.string.settings_mirror_projection_on)
+                } else {
+                    stringResource(R.string.settings_mirror_projection_off)
+                },
+            isHighlighted = isFocused,
         )
     }
 }

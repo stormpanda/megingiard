@@ -43,6 +43,11 @@ class MacroPadSettingsTest {
         MacroPadSettings.setDeadzoneRight(0.30f)
         assertEquals(0.30f, MacroPadSettings.deadzoneRight.value, 0.001f)
 
+        MacroPadSettings.setButtonAlignmentSnapping(false)
+        assertFalse(MacroPadSettings.buttonAlignmentSnapping.value)
+        MacroPadSettings.setButtonAlignmentSnapping(true)
+        assertTrue(MacroPadSettings.buttonAlignmentSnapping.value)
+
         MacroPadSettings.saveMacroPadData()
     }
 }

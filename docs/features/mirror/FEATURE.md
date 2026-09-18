@@ -24,7 +24,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - While Screen Mirroring edit mode is active:
   - **Top Screen (Display 0):** `PrimaryOverlayManager` hosts `MirrorEditorTopOverlay`. It renders the live crop bounding box and handles (`CropSelectorOverlay`) for the selected cutout over the un-frozen live game stream, combined with a 2D draggable, compact vertical toolbox with unified scroll container and collapsible single-card height mode.
   - **Controller Navigation & Layout:** The top-screen vertical toolbox is 100% navigable with D-Pad and left stick, requiring no button hotkeys:
-    - **Unified Scroll Container:** Items reside in a single vertical scroll container. When collapsed, the container height constrains to a single card height (38 dp) and native 2D focus traversal smoothly scrolls focused items into view.
+    - **Unified Scroll Container:** Items reside in a single vertical scroll container with a maximum expanded height capped at 6.5 items (`TOOLBOX_MAX_CONTENT_HEIGHT = 283 dp`) so overflowing options remain partially visible as a clear scroll affordance. When collapsed, the container height constrains to a single card height (38 dp) and native 2D focus traversal smoothly scrolls focused items into view.
     - **Dynamic Viewport Boundary Clamping:** When expanded, the container automatically shifts upward if its height would exceed the bottom screen boundary, guaranteeing the entire toolbox remains 100% visible on Display 0.
     - **Bidirectional Focus Loop:** Focus smoothly wraps between the top cutout selector card and the bottom drag handle collapse button.
     - **Cutout Selector:** Pressing A enters Tier-2 selection mode (capsule illuminates with glowing accent border); D-Pad Left/Right cycles active cutout (with wrap-around); pressing A or B/Back exits selection mode.
@@ -37,10 +37,11 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
       - In normal mode, holding D-Pad Up/Down/Left/Right moves target cutout destination coordinates on the secondary screen in 10 px increments with acceleration. Holding **L2** switches to 1 px precision micro-steps.
       - When holding **R2**, D-Pad Up/Down/Right/Left resizes destination bounds in 10 px increments (or 1 px holding **L2**) while alternating opposite borders symmetrically around the center. If `AspectRatioMode.BOTTOM` is active, source crop bounds on the primary display adjust automatically. Pressing A/B/Back exits adjustment mode.
     - **Hide Background (Temporary Editor Toggle):** Toggles layout background image visibility on the secondary display during editing without modifying saved layout properties. If the layout has no background image, the card is disabled displaying `None`. Toggling hidden (`Hidden`) suppresses the background in `EmbeddedMirrorView` and `PadCanvas` to provide a clean black canvas for easy cutout boundary adjustments.
+    - **Snap to Alignment (Cutout Snapping Toggle):** Toggles magnetic alignment snapping (`MirrorSettings.cutoutAlignmentSnapping`) for cutout destination centers. When enabled, dragging or moving cutouts with gamepad magnetically snaps their centers to align with sibling cutouts.
     - **Add Cutout:** Finds an available non-overlapping canvas slot (`CutoutPlacementHelper.findAvailableSlot`) and adds a new cutout. If no space is available, prompts user with a toast.
     - **Delete Cutout:** Two-step confirmation (`[ DEL ]` → `[ CONFIRM ]`) deletes the selected cutout.
     - **Save Changes / Exit Row:** Commits cutout changes to active layout or prompts for Save/Discard on back.
-  - **Bottom Screen (Display 4):** `CutoutLayoutEditor` renders an unobstructed touch canvas with destination bounding boxes and draggable corner resize handles for direct touch manipulation without floating toolbar obstruction.
+  - **Bottom Screen (Display 4):** `CutoutLayoutEditor` renders an unobstructed touch canvas with destination bounding boxes and draggable corner/edge resize handles for direct touch manipulation without floating toolbar obstruction. It also hosts the PowerPoint-style Smart Alignment Guides overlay (`CutoutAlignmentGuidesOverlay`), dynamically displaying dashed lines and concentric rings/dots whenever the selected cutout's center aligns with any sibling cutout's center X or Y coordinate.
 
 ### FR-M3: Freeze Frame
 
@@ -184,7 +185,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
   - **Render as Static UI Asset Toggle:** An optional switch allowing the cutout to bypass live video stream rendering and render the clean, pre-rendered 32-bit RGBA static asset directly. This completely eliminates moving background scenery bleed-through and video compression noise behind semi-transparent elements (e.g. sparkles, decorative frames, touch buttons).
   - **Re-Calibrate HUD / UI Mask:** An action card allowing the user to re-sample screen frames to refresh the mask and freeze frame.
   - **Remove HUD / UI Isolation:** A two-step destructive confirmation card that deletes calibration files from disk and reverts the cutout back to a standard live rectangular/circular mirror cutout (`hasTransparencyMask = false`).
-- Mask state is persisted per-cutout in `ScreenCutout` (`hasTransparencyMask: Boolean`, `maskTranslucency: Int = 0`, `maskSensitivity: Int = 14`, `maskCavityHealing: Boolean = true`, `renderAsStaticAsset: Boolean = false`).
+- Mask state and layering are persisted per-cutout in `ScreenCutout` (`hasTransparencyMask: Boolean`, `maskTranslucency: Int = 0`, `maskSensitivity: Int = 14`, `maskCavityHealing: Boolean = true`, `renderAsStaticAsset: Boolean = false`, `renderAboveMask: Boolean = false`).
 
 ### FR-M18: Automatic Layout Switching & Layout-Level Visual Reference Anchors
 
@@ -350,7 +351,7 @@ The master texture surface buffer allocation matches the source resolution. The 
 - `EmbeddedMirrorView` collects updates from `MacroPadState.activeLayout` to dynamically react to layout changes.
 - When a layout custom background image is selected, it is decoded asynchronously (`Dispatchers.IO`) as a `Bitmap`.
 - **Background Mode (`useBackgroundImageAsMask = false`)**: The bitmap is applied behind the cutouts. Mirrored cutouts are drawn on top. If no background image is set (or it is removed), the background falls back to the app theme background.
-- **Mask Mode (`useBackgroundImageAsMask = true`)**: The bitmap is passed directly to `MultiCutoutContainer`. Inside `MultiCutoutContainer.dispatchDraw`, the bitmap is drawn *on top* of the rendered mirrored cutouts, serving as an overlay mask. This allows the mirrored screen viewports to show through any transparent regions in the background image.
+- **Mask Mode (`useBackgroundImageAsMask = true`)**: The bitmap is passed directly to `MultiCutoutContainer`. Inside `MultiCutoutContainer.dispatchDraw`, cutouts are rendered in a two-pass architecture: cutouts with `renderAboveMask = false` (the default) are drawn first underneath the background mask overlay, the background mask bitmap is rendered on top, and cutouts with `renderAboveMask = true` are drawn above the background mask overlay, while remaining underneath Compose MacroPad buttons. This allows live video streams to shine through transparent mask cutouts while keeping foreground HUD elements, gauges, and buttons legible on top of the mask.
 
 ### Ambient Dimming Support
 
@@ -605,12 +606,14 @@ HUD / UI isolation is implemented via hardware-accelerated transparency mask ble
 | `TouchScreenObserver.kt`              | Listens to raw `/dev/input/event6` touchscreen events in background thread and maps coordinates            |
 | `CropSelectorOverlay.kt`              | Primary display crop selector overlay Composable UI                                                        |
 | `CropSelectorActivity.kt`             | Translucent Activity hosting CropSelectorOverlay on the primary display                                    |
-| `CutoutLayoutEditor.kt`               | Secondary display cutout placement arrange editor                                                          |
+| `CutoutLayoutEditor.kt`               | Secondary display cutout placement arrange editor and visual alignment guides overlay (`CutoutAlignmentGuidesOverlay`) |
+| `MirrorEditorTopOverlay.kt`           | Top-screen vertical controller toolbox and live crop bounds overlay                                         |
 | `ScreenCutout.kt`                     | Serializable data model representing a crop/placement pair with cutout isolation filter configuration      |
 | `MirrorFrameSampler.kt`               | Low-latency hardware layer TextureView crop extraction for anchor calibration and real-time presence detection |
 | `AnchorPresenceManager.kt`            | Real-time 60 Hz visual anchor presence detection, zero-allocation ring buffers, freeze caching, and layout auto-switching |
 | `VisualAnchorSignature.kt`            | Serializable data model representing visual anchor reference points and color signatures                   |
 | `AnchorPresenceEvaluator.kt`          | Mathematical evaluation of sample frame points against reference signature                                 |
 | `CutoutLostAnchorEffect.kt`           | Serializable enum modeling extensible cutout behavior on visual anchor loss (Freeze, Blur)                 |
+| `../math/AlignmentMath.kt`            | Shared pure Kotlin math helper in `:shared:core`: generalized center snapping, button adapters, cutout adapters (`calculateCutoutAlignmentSnap`, `calculateGamepadCutoutMove`, `findAlignedCutoutCenterGuides`), and grid algorithms |
 | `../input/TouchInjector.kt`           | Shared injection facade (also used by Touchpad)                                                            |
 | `../input/ShellInputInjector.kt`      | Shared native binary lifecycle and command queue                                                           |
