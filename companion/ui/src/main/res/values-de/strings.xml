@@ -93,6 +93,17 @@ Open Settings to create a layout.</string>
     <string name="macropad_trackpoint_size_small">Klein</string>
     <string name="macropad_trackpoint_size_medium">Mittel</string>
     <string name="macropad_trackpoint_size_large">Groß</string>
+    <string name="macropad_trackpoint_mode_title">Tracking-Modus</string>
+    <string name="macropad_trackpoint_mode_mouse">Relative Maus</string>
+    <string name="macropad_trackpoint_mode_mouse_desc">Bewegt den Mauszeiger über relative Mausevents</string>
+    <string name="macropad_trackpoint_mode_touch">Virtuelle Berührung</string>
+    <string name="macropad_trackpoint_mode_touch_desc">Überträgt Wischgesten in absolute Touch-Eingaben</string>
+    <string name="macropad_trackpoint_size_title">Trackpoint-Größe</string>
+    <string name="macropad_trackpoint_size_desc">Bestimmt den Durchmesser der interaktiven Kreisfläche</string>
+    <string name="macropad_trackpoint_sensitivity_title">Zeiger-Empfindlichkeit</string>
+    <string name="macropad_trackpoint_sensitivity_desc">Multiplikator für die Zeiger- und Wischgeschwindigkeit</string>
+    <string name="macropad_fullscreen_mouse_sensitivity_title">Mausempfindlichkeit</string>
+    <string name="macropad_fullscreen_mouse_sensitivity_desc">Multiplikator für die Zeigergeschwindigkeit im Vollbild-Mausmodus</string>
     <string name="macropad_editor_section_haptic">Haptisches Feedback</string>
     <string name="macropad_haptic_off">Aus</string>
     <string name="macropad_haptic_light">Leicht</string>
