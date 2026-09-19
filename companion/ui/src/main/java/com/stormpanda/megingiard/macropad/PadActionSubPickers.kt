@@ -2,9 +2,13 @@ package com.stormpanda.megingiard.macropad
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ControlCamera
+import androidx.compose.material.icons.rounded.CropFree
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Keyboard
+import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.SmartButton
+import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -21,10 +25,21 @@ import com.stormpanda.megingiard.ui.BumperDirection
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
 import com.stormpanda.megingiard.ui.GamepadInfoBox
+import com.stormpanda.megingiard.ui.GamepadStepperCard
 import com.stormpanda.megingiard.ui.cycle
 import com.stormpanda.megingiard.ui.firstDeckItem
+import java.util.Locale
+import kotlin.math.roundToInt
 
 private const val TAG = "PadActionSubPickers"
+
+private const val TP_SENSITIVITY_MIN = 0.1f
+private const val TP_SENSITIVITY_MAX = 5.0f
+private const val TP_SENSITIVITY_STEP = 0.1f
+
+private const val FS_MOUSE_SENSITIVITY_MIN = 0.1f
+private const val FS_MOUSE_SENSITIVITY_MAX = 5.0f
+private const val FS_MOUSE_SENSITIVITY_STEP = 0.1f
 
 @Composable
 internal fun KeyboardKeyPicker(
@@ -172,5 +187,118 @@ internal fun MacroPicker(
         icon = Icons.Rounded.SmartButton,
         onClick = onOpenMacroPicker,
         modifier = Modifier.firstDeckItem(isFirstItem),
+    )
+}
+
+@Composable
+internal fun TrackpointPicker(
+    current: PadAction.TrackpointMove,
+    onOpenPicker: () -> Unit,
+    onChange: (PadAction) -> Unit,
+    isFirstItem: Boolean = false,
+) {
+    AppLog.d(TAG, "TrackpointPicker: mode=${current.mode} size=${current.size} sens=${current.sensitivity}")
+
+    GamepadActionCard(
+        title = stringResource(R.string.macropad_action_group_mouse),
+        description = stringResource(R.string.macropad_action_group_mouse_desc),
+        actionText = current.displayLabel(),
+        icon = Icons.Rounded.ControlCamera,
+        onClick = onOpenPicker,
+        modifier = Modifier.firstDeckItem(isFirstItem),
+    )
+
+    val isMouseMode = current.mode == TrackpointMode.PHYSICAL_MOUSE
+    GamepadChoiceCard(
+        title = stringResource(R.string.macropad_trackpoint_mode_title),
+        description =
+            stringResource(
+                if (isMouseMode) {
+                    R.string.macropad_trackpoint_mode_mouse_desc
+                } else {
+                    R.string.macropad_trackpoint_mode_touch_desc
+                },
+            ),
+        selectedText =
+            stringResource(
+                if (isMouseMode) {
+                    R.string.macropad_trackpoint_mode_mouse
+                } else {
+                    R.string.macropad_trackpoint_mode_touch
+                },
+            ),
+        icon = Icons.Rounded.ControlCamera,
+        onPrevious = {
+            val nextMode = if (isMouseMode) TrackpointMode.VIRTUAL_TOUCH else TrackpointMode.PHYSICAL_MOUSE
+            onChange(current.copy(mode = nextMode))
+        },
+        onNext = {
+            val nextMode = if (isMouseMode) TrackpointMode.VIRTUAL_TOUCH else TrackpointMode.PHYSICAL_MOUSE
+            onChange(current.copy(mode = nextMode))
+        },
+    )
+
+    GamepadChoiceCard(
+        title = stringResource(R.string.macropad_trackpoint_size_title),
+        description = stringResource(R.string.macropad_trackpoint_size_desc),
+        selectedText = stringResource(current.size.labelResId()),
+        icon = Icons.Rounded.CropFree,
+        onPrevious = {
+            val nextSize = TrackpointSize.entries.cycle(current.size, BumperDirection.PREV)
+            onChange(current.copy(size = nextSize))
+        },
+        onNext = {
+            val nextSize = TrackpointSize.entries.cycle(current.size, BumperDirection.NEXT)
+            onChange(current.copy(size = nextSize))
+        },
+    )
+
+    GamepadStepperCard(
+        title = stringResource(R.string.macropad_trackpoint_sensitivity_title),
+        description = stringResource(R.string.macropad_trackpoint_sensitivity_desc),
+        valueText = String.format(Locale.US, "%.1f×", current.sensitivity),
+        icon = Icons.Rounded.Speed,
+        onDecrement = {
+            val stepped = ((current.sensitivity - TP_SENSITIVITY_STEP) * 10f).roundToInt() / 10f
+            onChange(current.copy(sensitivity = stepped.coerceIn(TP_SENSITIVITY_MIN, TP_SENSITIVITY_MAX)))
+        },
+        onIncrement = {
+            val stepped = ((current.sensitivity + TP_SENSITIVITY_STEP) * 10f).roundToInt() / 10f
+            onChange(current.copy(sensitivity = stepped.coerceIn(TP_SENSITIVITY_MIN, TP_SENSITIVITY_MAX)))
+        },
+    )
+}
+
+@Composable
+internal fun FullScreenMousePicker(
+    current: PadAction.FullScreenMouse,
+    onOpenPicker: () -> Unit,
+    onChange: (PadAction) -> Unit,
+    isFirstItem: Boolean = false,
+) {
+    AppLog.d(TAG, "FullScreenMousePicker: sens=${current.sensitivity}")
+
+    GamepadActionCard(
+        title = stringResource(R.string.macropad_action_group_other),
+        description = stringResource(R.string.macropad_action_group_other_desc),
+        actionText = current.displayLabel(),
+        icon = Icons.Rounded.Layers,
+        onClick = onOpenPicker,
+        modifier = Modifier.firstDeckItem(isFirstItem),
+    )
+
+    GamepadStepperCard(
+        title = stringResource(R.string.macropad_fullscreen_mouse_sensitivity_title),
+        description = stringResource(R.string.macropad_fullscreen_mouse_sensitivity_desc),
+        valueText = String.format(Locale.US, "%.1f×", current.sensitivity),
+        icon = Icons.Rounded.Speed,
+        onDecrement = {
+            val stepped = ((current.sensitivity - FS_MOUSE_SENSITIVITY_STEP) * 10f).roundToInt() / 10f
+            onChange(current.copy(sensitivity = stepped.coerceIn(FS_MOUSE_SENSITIVITY_MIN, FS_MOUSE_SENSITIVITY_MAX)))
+        },
+        onIncrement = {
+            val stepped = ((current.sensitivity + FS_MOUSE_SENSITIVITY_STEP) * 10f).roundToInt() / 10f
+            onChange(current.copy(sensitivity = stepped.coerceIn(FS_MOUSE_SENSITIVITY_MIN, FS_MOUSE_SENSITIVITY_MAX)))
+        },
     )
 }

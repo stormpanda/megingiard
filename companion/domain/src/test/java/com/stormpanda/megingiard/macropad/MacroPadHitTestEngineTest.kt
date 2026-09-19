@@ -111,6 +111,18 @@ class MacroPadHitTestEngineTest {
     }
 
     @Test
+    fun `virtual touch trackpoint scales movement with sensitivity setting`() {
+        val highSensButton =
+            centeredButton(PadAction.TrackpointMove(TrackpointSize.MEDIUM, TrackpointMode.VIRTUAL_TOUCH, sensitivity = 2.0f))
+        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(highSensButton), enabledProfile, false)
+        queue.clear()
+
+        engine.onMove(0L, 550f, 480f, 50f, -20f, listOf(highSensButton), enabledProfile)
+        assertEquals(1, queue.size)
+        assertTouch(TouchAction.MOVE, 660, 1260)
+    }
+
+    @Test
     fun `virtual touch trackpoint release injects UP event at last position`() {
         engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton), enabledProfile, false)
         engine.onMove(0L, 550f, 480f, 50f, -20f, listOf(trackpointButton), enabledProfile)

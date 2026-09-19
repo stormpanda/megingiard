@@ -200,6 +200,7 @@ sealed class PadAction {
     data class TrackpointMove(
         val size: TrackpointSize = TrackpointSize.MEDIUM,
         val mode: TrackpointMode = TrackpointMode.PHYSICAL_MOUSE,
+        val sensitivity: Float = 1.0f,
     ) : PadAction()
 
     /**

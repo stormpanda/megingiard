@@ -15,6 +15,8 @@ import kotlin.math.sqrt
 private const val TAG = "MacroPadHitTest"
 
 private const val MP_TRACKPOINT_SENSITIVITY = 3f
+private const val MP_TRACKPOINT_SENSITIVITY_MIN = 0.1f
+private const val MP_TRACKPOINT_SENSITIVITY_MAX = 5.0f
 private const val MP_SCROLL_SENSITIVITY_PX = 12f
 private const val LOGICAL_SCREEN_WIDTH = 1920f
 private const val LOGICAL_SCREEN_HEIGHT = 1080f
@@ -220,10 +222,13 @@ class MacroPadHitTestEngine(
         when {
             mappedBtn.action is PadAction.TrackpointMove -> {
                 val tpAction = mappedBtn.action as PadAction.TrackpointMove
+                val effectiveSens =
+                    MP_TRACKPOINT_SENSITIVITY *
+                        tpAction.sensitivity.coerceIn(MP_TRACKPOINT_SENSITIVITY_MIN, MP_TRACKPOINT_SENSITIVITY_MAX)
                 if (tpAction.mode == TrackpointMode.VIRTUAL_TOUCH) {
                     if (lastTpPos != null) {
-                        val dxNormalized = (deltaX * MP_TRACKPOINT_SENSITIVITY) / LOGICAL_SCREEN_WIDTH
-                        val dyNormalized = (deltaY * MP_TRACKPOINT_SENSITIVITY) / LOGICAL_SCREEN_HEIGHT
+                        val dxNormalized = (deltaX * effectiveSens) / LOGICAL_SCREEN_WIDTH
+                        val dyNormalized = (deltaY * effectiveSens) / LOGICAL_SCREEN_HEIGHT
 
                         val currentDxSign =
                             if (dxNormalized > 0f) {
@@ -260,15 +265,15 @@ class MacroPadHitTestEngine(
                         virtualCursorX = (virtualCursorX + dxNormalized).coerceIn(0f, 1f)
                         virtualCursorY = (virtualCursorY + dyNormalized).coerceIn(0f, 1f)
                         TouchInjector.injectTouch(TouchAction.MOVE, unclampedCursorX, unclampedCursorY)
-                        val dx = (deltaX * MP_TRACKPOINT_SENSITIVITY).roundToInt()
-                        val dy = (deltaY * MP_TRACKPOINT_SENSITIVITY).roundToInt()
+                        val dx = (deltaX * effectiveSens).roundToInt()
+                        val dy = (deltaY * effectiveSens).roundToInt()
                         val mag = sqrt((dx * dx + dy * dy).toFloat())
                         if (mag > 0f) triggerHaptic(mappedBtn, mag)
                     }
                 } else {
                     if (lastTpPos != null) {
-                        val dx = (deltaX * MP_TRACKPOINT_SENSITIVITY).roundToInt()
-                        val dy = (deltaY * MP_TRACKPOINT_SENSITIVITY).roundToInt()
+                        val dx = (deltaX * effectiveSens).roundToInt()
+                        val dy = (deltaY * effectiveSens).roundToInt()
                         if (dx != 0 || dy != 0) {
                             MouseInjector.moveMouse(dx, dy)
                             val mag = sqrt((dx * dx + dy * dy).toFloat())

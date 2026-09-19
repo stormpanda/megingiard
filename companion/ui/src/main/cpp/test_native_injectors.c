@@ -1,40 +1,11 @@
+#define TEST_MOCK_WRITE_EVENT
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 #include <stdint.h>
 
-#if defined(__linux__) || defined(__ANDROID__)
-#include <linux/input.h>
-#include <linux/uinput.h>
-#else
-// Mock input_event struct for non-Linux host platforms (e.g. macOS clang)
-struct timeval_compat {
-    long tv_sec;
-    long tv_usec;
-};
-
-struct input_event {
-    struct timeval_compat time;
-    uint16_t type;
-    uint16_t code;
-    int32_t value;
-};
-
-#define EV_SYN 0x00
-#define EV_KEY 0x01
-#define EV_REL 0x02
-#define EV_ABS 0x03
-#define SYN_REPORT 0
-#define REL_X 0x00
-#define REL_Y 0x01
-#define REL_WHEEL 0x08
-#define ABS_MT_SLOT 0x2f
-#define ABS_MT_TRACKING_ID 0x39
-#define ABS_MT_POSITION_X 0x35
-#define ABS_MT_POSITION_Y 0x36
-#define BTN_TOUCH 0x14a
-#endif
+#include "cmd_parsers.h"
 
 typedef struct {
     uint16_t type;
@@ -44,89 +15,15 @@ typedef struct {
 
 static MockEvent g_events[16];
 static int g_event_count = 0;
+static const int MOCK_FD = 42;
 
-static void mock_write_event(uint16_t type, uint16_t code, int32_t value) {
+void mock_write_event(uint16_t type, uint16_t code, int32_t value) {
     if (g_event_count < 16) {
         g_events[g_event_count].type = type;
         g_events[g_event_count].code = code;
         g_events[g_event_count].value = value;
         g_event_count++;
     }
-}
-
-// ── Keyboard Protocol Parser ──
-static int parse_key_command(const char *line) {
-    char action[4];
-    int code;
-    if (sscanf(line, "%3s %d", action, &code) != 2) return 0;
-    if (code < 1 || code > 464) return 0;
-
-    if (strcmp(action, "KD") == 0) {
-        mock_write_event(EV_KEY, (uint16_t)code, 1);
-        mock_write_event(EV_SYN, SYN_REPORT, 0);
-        return 1;
-    } else if (strcmp(action, "KU") == 0) {
-        mock_write_event(EV_KEY, (uint16_t)code, 0);
-        mock_write_event(EV_SYN, SYN_REPORT, 0);
-        return 1;
-    }
-    return 0;
-}
-
-// ── Mouse Protocol Parser ──
-static int parse_mouse_command(const char *line) {
-    char action[4];
-    int p1, p2;
-    if (sscanf(line, "%3s %d %d", action, &p1, &p2) != 3) {
-        if (sscanf(line, "%3s %d", action, &p1) != 2) return 0;
-        p2 = 0;
-    }
-
-    if (strcmp(action, "MB") == 0) {
-        mock_write_event(EV_KEY, (uint16_t)p1, p2);
-        mock_write_event(EV_SYN, SYN_REPORT, 0);
-        return 1;
-    } else if (strcmp(action, "MM") == 0) {
-        mock_write_event(EV_REL, REL_X, p1);
-        mock_write_event(EV_REL, REL_Y, p2);
-        mock_write_event(EV_SYN, SYN_REPORT, 0);
-        return 1;
-    } else if (strcmp(action, "MW") == 0) {
-        mock_write_event(EV_REL, REL_WHEEL, p2);
-        mock_write_event(EV_SYN, SYN_REPORT, 0);
-        return 1;
-    }
-    return 0;
-}
-
-// ── Touch Protocol Parser ──
-static int parse_touch_command(const char *line) {
-    char action[4];
-    int slot, x, y;
-    if (strncmp(line, "U ", 2) == 0 && sscanf(line, "U %d", &slot) == 1) {
-        mock_write_event(EV_ABS, ABS_MT_SLOT, slot);
-        mock_write_event(EV_ABS, ABS_MT_TRACKING_ID, -1);
-        mock_write_event(EV_SYN, SYN_REPORT, 0);
-        return 1;
-    }
-    if (sscanf(line, "%3s %d %d %d", action, &slot, &x, &y) == 4) {
-        if (strcmp(action, "D") == 0) {
-            mock_write_event(EV_ABS, ABS_MT_SLOT, slot);
-            mock_write_event(EV_ABS, ABS_MT_TRACKING_ID, slot + 1);
-            mock_write_event(EV_ABS, ABS_MT_POSITION_X, x);
-            mock_write_event(EV_ABS, ABS_MT_POSITION_Y, y);
-            mock_write_event(EV_KEY, BTN_TOUCH, 1);
-            mock_write_event(EV_SYN, SYN_REPORT, 0);
-            return 1;
-        } else if (strcmp(action, "M") == 0) {
-            mock_write_event(EV_ABS, ABS_MT_SLOT, slot);
-            mock_write_event(EV_ABS, ABS_MT_POSITION_X, x);
-            mock_write_event(EV_ABS, ABS_MT_POSITION_Y, y);
-            mock_write_event(EV_SYN, SYN_REPORT, 0);
-            return 1;
-        }
-    }
-    return 0;
 }
 
 // ── Unit Tests ──
@@ -140,29 +37,45 @@ static void test_input_event_struct_size(void) {
 static void test_key_protocol_parsing(void) {
     printf("[TEST] Keyboard protocol parsing... ");
     g_event_count = 0;
-    int res = parse_key_command("KD 30\n");
+    int res = parse_key_command("KD 30\n", MOCK_FD);
     assert(res == 1);
     assert(g_event_count == 2);
     assert(g_events[0].type == EV_KEY);
     assert(g_events[0].code == 30);
     assert(g_events[0].value == 1);
     assert(g_events[1].type == EV_SYN);
+    assert(g_events[1].code == SYN_REPORT);
 
     g_event_count = 0;
-    res = parse_key_command("KU 30\n");
+    res = parse_key_command("KU 30\n", MOCK_FD);
     assert(res == 1);
+    assert(g_event_count == 2);
+    assert(g_events[0].type == EV_KEY);
+    assert(g_events[0].code == 30);
     assert(g_events[0].value == 0);
+    assert(g_events[1].type == EV_SYN);
 
     // Out of bounds keycode check
-    res = parse_key_command("KD 9999\n");
+    res = parse_key_command("KD 9999\n", MOCK_FD);
     assert(res == 0);
+
+    // Invalid format check
+    res = parse_key_command("INVALID\n", MOCK_FD);
+    assert(res == 0);
+
+    // Negative fd check
+    res = parse_key_command("KD 30\n", -1);
+    assert(res == 0);
+
     printf("PASS\n");
 }
 
 static void test_mouse_protocol_parsing(void) {
     printf("[TEST] Mouse protocol parsing... ");
+
+    // Relative movement
     g_event_count = 0;
-    int res = parse_mouse_command("MM 10 -5\n");
+    int res = parse_mouse_command("MM 10 -5\n", MOCK_FD);
     assert(res == 1);
     assert(g_event_count == 3);
     assert(g_events[0].type == EV_REL);
@@ -171,25 +84,189 @@ static void test_mouse_protocol_parsing(void) {
     assert(g_events[1].type == EV_REL);
     assert(g_events[1].code == REL_Y);
     assert(g_events[1].value == -5);
+    assert(g_events[2].type == EV_SYN);
+
+    // Scroll wheel
+    g_event_count = 0;
+    res = parse_mouse_command("MW 3\n", MOCK_FD);
+    assert(res == 1);
+    assert(g_event_count == 2);
+    assert(g_events[0].type == EV_REL);
+    assert(g_events[0].code == REL_WHEEL);
+    assert(g_events[0].value == 3);
+    assert(g_events[1].type == EV_SYN);
+
+    // Mouse button left down / up
+    g_event_count = 0;
+    res = parse_mouse_command("MB L D\n", MOCK_FD);
+    assert(res == 1);
+    assert(g_event_count == 2);
+    assert(g_events[0].type == EV_KEY);
+    assert(g_events[0].code == BTN_LEFT);
+    assert(g_events[0].value == 1);
+    assert(g_events[1].type == EV_SYN);
+
+    g_event_count = 0;
+    res = parse_mouse_command("MB L U\n", MOCK_FD);
+    assert(res == 1);
+    assert(g_event_count == 2);
+    assert(g_events[0].type == EV_KEY);
+    assert(g_events[0].code == BTN_LEFT);
+    assert(g_events[0].value == 0);
+    assert(g_events[1].type == EV_SYN);
+
+    // Mouse button right down / up
+    g_event_count = 0;
+    res = parse_mouse_command("MB R D\n", MOCK_FD);
+    assert(res == 1);
+    assert(g_event_count == 2);
+    assert(g_events[0].type == EV_KEY);
+    assert(g_events[0].code == BTN_RIGHT);
+    assert(g_events[0].value == 1);
+
+    // Mouse button middle down
+    g_event_count = 0;
+    res = parse_mouse_command("MB M D\n", MOCK_FD);
+    assert(res == 1);
+    assert(g_event_count == 2);
+    assert(g_events[0].type == EV_KEY);
+    assert(g_events[0].code == BTN_MIDDLE);
+    assert(g_events[0].value == 1);
+
+    // Mouse button 4 (BTN_SIDE) down
+    g_event_count = 0;
+    res = parse_mouse_command("MB 4 D\n", MOCK_FD);
+    assert(res == 1);
+    assert(g_event_count == 2);
+    assert(g_events[0].type == EV_KEY);
+    assert(g_events[0].code == BTN_SIDE);
+    assert(g_events[0].value == 1);
+
+    // Mouse button 5 (BTN_EXTRA) down
+    g_event_count = 0;
+    res = parse_mouse_command("MB 5 D\n", MOCK_FD);
+    assert(res == 1);
+    assert(g_event_count == 2);
+    assert(g_events[0].type == EV_KEY);
+    assert(g_events[0].code == BTN_EXTRA);
+    assert(g_events[0].value == 1);
+
+    // Invalid button code
+    res = parse_mouse_command("MB X D\n", MOCK_FD);
+    assert(res == 0);
+
+    // Invalid format
+    res = parse_mouse_command("MB\n", MOCK_FD);
+    assert(res == 0);
+
+    // Negative fd check
+    res = parse_mouse_command("MB L D\n", -1);
+    assert(res == 0);
+
     printf("PASS\n");
 }
 
 static void test_touch_protocol_parsing(void) {
     printf("[TEST] Touch protocol parsing... ");
+    int active_slots = 0;
+
+    // Multi-touch Down
     g_event_count = 0;
-    int res = parse_touch_command("D 0 500 1000\n");
+    int res = parse_touch_command("D 0 500 1000\n", MOCK_FD, &active_slots);
+    assert(res == 1);
+    assert(active_slots == 1);
+    assert(g_events[0].type == EV_ABS);
+    assert(g_events[0].code == ABS_MT_SLOT);
+    assert(g_events[0].value == 0);
+    assert(g_events[1].type == EV_ABS);
+    assert(g_events[1].code == ABS_MT_TRACKING_ID);
+    assert(g_events[1].value == 1);
+    assert(g_events[2].type == EV_ABS);
+    assert(g_events[2].code == ABS_MT_POSITION_X);
+    assert(g_events[2].value == 500);
+    assert(g_events[3].type == EV_ABS);
+    assert(g_events[3].code == ABS_MT_POSITION_Y);
+    assert(g_events[3].value == 1000);
+    assert(g_events[4].type == EV_KEY);
+    assert(g_events[4].code == BTN_TOUCH);
+    assert(g_events[4].value == 1);
+
+    // Multi-touch Move
+    g_event_count = 0;
+    res = parse_touch_command("M 0 520 1010\n", MOCK_FD, &active_slots);
     assert(res == 1);
     assert(g_events[0].type == EV_ABS);
     assert(g_events[0].code == ABS_MT_SLOT);
     assert(g_events[0].value == 0);
-    assert(g_events[2].code == ABS_MT_POSITION_X);
-    assert(g_events[2].value == 500);
+    assert(g_events[1].type == EV_ABS);
+    assert(g_events[1].code == ABS_MT_POSITION_X);
+    assert(g_events[1].value == 520);
+    assert(g_events[2].type == EV_ABS);
+    assert(g_events[2].code == ABS_MT_POSITION_Y);
+    assert(g_events[2].value == 1010);
 
+    // Multi-touch Up
     g_event_count = 0;
-    res = parse_touch_command("U 0\n");
+    res = parse_touch_command("U 0\n", MOCK_FD, &active_slots);
     assert(res == 1);
+    assert(active_slots == 0);
+    assert(g_events[0].type == EV_ABS);
+    assert(g_events[0].code == ABS_MT_SLOT);
+    assert(g_events[0].value == 0);
+    assert(g_events[1].type == EV_ABS);
     assert(g_events[1].code == ABS_MT_TRACKING_ID);
     assert(g_events[1].value == -1);
+    assert(g_events[2].type == EV_KEY);
+    assert(g_events[2].code == BTN_TOUCH);
+    assert(g_events[2].value == 0);
+
+    // Invalid format
+    res = parse_touch_command("INVALID\n", MOCK_FD, &active_slots);
+    assert(res == 0);
+
+    printf("PASS\n");
+}
+
+static void test_gamepad_protocol_parsing(void) {
+    printf("[TEST] Gamepad protocol parsing... ");
+
+    // Gamepad button down / up
+    g_event_count = 0;
+    int res = parse_gamepad_command("GD 304\n", MOCK_FD);
+    assert(res == 1);
+    assert(g_event_count == 2);
+    assert(g_events[0].type == EV_KEY);
+    assert(g_events[0].code == 304);
+    assert(g_events[0].value == 1);
+    assert(g_events[1].type == EV_SYN);
+
+    g_event_count = 0;
+    res = parse_gamepad_command("GU 304\n", MOCK_FD);
+    assert(res == 1);
+    assert(g_events[0].type == EV_KEY);
+    assert(g_events[0].code == 304);
+    assert(g_events[0].value == 0);
+
+    // D-Pad Hat
+    g_event_count = 0;
+    res = parse_gamepad_command("HD 0 1\n", MOCK_FD);
+    assert(res == 1);
+    assert(g_events[0].type == EV_ABS);
+    assert(g_events[0].code == ABS_HAT0X);
+    assert(g_events[0].value == 1);
+
+    // Joystick Axis
+    g_event_count = 0;
+    res = parse_gamepad_command("JS 0 15000\n", MOCK_FD);
+    assert(res == 1);
+    assert(g_events[0].type == EV_ABS);
+    assert(g_events[0].code == ABS_X);
+    assert(g_events[0].value == 15000);
+
+    // Invalid format
+    res = parse_gamepad_command("INVALID\n", MOCK_FD);
+    assert(res == 0);
+
     printf("PASS\n");
 }
 
@@ -199,6 +276,7 @@ int main(void) {
     test_key_protocol_parsing();
     test_mouse_protocol_parsing();
     test_touch_protocol_parsing();
+    test_gamepad_protocol_parsing();
     printf("All Native C unit tests PASSED successfully!\n");
     return 0;
 }
