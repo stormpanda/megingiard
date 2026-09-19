@@ -39,6 +39,7 @@ import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.TrackChanges
 import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -123,6 +124,11 @@ private val IH_BUTTON_ICON_SIZE = 16.dp
 private val IH_BUTTON_ICON_SPACING = 6.dp
 private const val IH_HIGHLIGHT_ALPHA = 0.15f
 private val IH_BUTTON_SPACING = 10.dp
+private val IH_DROPDOWN_LINKED_ICON_SIZE = 16.dp
+private const val IH_DROPDOWN_LINKED_ICON_ALPHA = 0.7f
+private val IH_DIALOG_ICON_SIZE = 32.dp
+private val IH_DIALOG_BUTTON_CORNER_RADIUS = 8.dp
+private val IH_DIALOG_BUTTON_SHAPE = RoundedCornerShape(IH_DIALOG_BUTTON_CORNER_RADIUS)
 
 private val IH_BATTERY_LOW_COLOR = Color(0xFFE57373)
 
@@ -185,6 +191,71 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
     val batteryState = rememberBatteryState()
     var timeText by remember { mutableStateOf("") }
     var showHubHelp by remember { mutableStateOf(false) }
+    var profileToRelink by remember { mutableStateOf<PadProfile?>(null) }
+
+    val context = LocalContext.current
+    val profiles by MacroPadState.profiles.collectAsStateWithLifecycle()
+    val installedApps by InstalledAppsManager.installedApps.collectAsStateWithLifecycle()
+
+    val targetInfo =
+        remember(
+            hoveredPackage,
+            hoveredAppLabel,
+            hoveredRomPath,
+            hoveredRomIdentifier,
+            hoveredSystemId,
+            activeSession,
+            lastDetectedSession,
+            focusedAppPackageName,
+            focusedRomPath,
+            focusedRomIdentifier,
+            installedApps,
+        ) {
+            resolveTargetAppInfo(
+                hoveredPackage = hoveredPackage,
+                hoveredAppLabel = hoveredAppLabel,
+                hoveredRomPath = hoveredRomPath,
+                hoveredRomIdentifier = hoveredRomIdentifier,
+                hoveredSystemId = hoveredSystemId,
+                activeSession = activeSession,
+                lastDetectedSession = lastDetectedSession,
+                focusedAppPackageName = focusedAppPackageName,
+                focusedRomPath = focusedRomPath,
+                focusedRomIdentifier = focusedRomIdentifier,
+                installedApps = installedApps,
+                resolveAppLabel = { pkg -> resolveAppLabel(context, pkg) },
+            )
+        }
+
+    val targetPkg = targetInfo.pkg
+    val targetLabel = targetInfo.label
+    val targetRom = targetInfo.romPath
+    val targetRomIdentifier = targetInfo.romIdentifier ?: targetInfo.romPath
+    val targetSystem = targetInfo.systemId
+
+    val associatedProfile =
+        remember(profiles, targetPkg, targetRomIdentifier, targetSystem) {
+            if (targetPkg == null) {
+                null
+            } else {
+                profiles.firstOrNull { profile ->
+                    profile.association?.romFileName != null &&
+                        profile.matches(targetPkg, targetRomIdentifier, targetSystem)
+                } ?: profiles.firstOrNull { profile ->
+                    profile.association?.romFileName == null &&
+                        profile.matches(targetPkg, targetRomIdentifier, targetSystem)
+                }
+            }
+        }
+
+    LaunchedEffect(targetPkg, targetRomIdentifier, associatedProfile?.id) {
+        if (targetPkg != null) {
+            AppLog.d(
+                TAG,
+                "Hero target resolved: pkg=$targetPkg, rom=$targetRom, romId=$targetRomIdentifier, sys=$targetSystem, profile=${associatedProfile?.name}",
+            )
+        }
+    }
 
     LaunchedEffect(Unit) {
         val formatter = DateTimeFormatter.ofPattern("HH:mm")
@@ -311,70 +382,6 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 // 1. Featured Hero Game / Companion Card
-                val context = LocalContext.current
-                val profiles by MacroPadState.profiles.collectAsStateWithLifecycle()
-                val installedApps by InstalledAppsManager.installedApps.collectAsStateWithLifecycle()
-
-                val targetInfo =
-                    remember(
-                        hoveredPackage,
-                        hoveredAppLabel,
-                        hoveredRomPath,
-                        hoveredRomIdentifier,
-                        hoveredSystemId,
-                        activeSession,
-                        lastDetectedSession,
-                        focusedAppPackageName,
-                        focusedRomPath,
-                        focusedRomIdentifier,
-                        installedApps,
-                    ) {
-                        resolveTargetAppInfo(
-                            hoveredPackage = hoveredPackage,
-                            hoveredAppLabel = hoveredAppLabel,
-                            hoveredRomPath = hoveredRomPath,
-                            hoveredRomIdentifier = hoveredRomIdentifier,
-                            hoveredSystemId = hoveredSystemId,
-                            activeSession = activeSession,
-                            lastDetectedSession = lastDetectedSession,
-                            focusedAppPackageName = focusedAppPackageName,
-                            focusedRomPath = focusedRomPath,
-                            focusedRomIdentifier = focusedRomIdentifier,
-                            installedApps = installedApps,
-                            resolveAppLabel = { pkg -> resolveAppLabel(context, pkg) },
-                        )
-                    }
-
-                val targetPkg = targetInfo.pkg
-                val targetLabel = targetInfo.label
-                val targetRom = targetInfo.romPath
-                val targetRomIdentifier = targetInfo.romIdentifier ?: targetInfo.romPath
-                val targetSystem = targetInfo.systemId
-
-                val associatedProfile =
-                    remember(profiles, targetPkg, targetRomIdentifier, targetSystem) {
-                        if (targetPkg == null) {
-                            null
-                        } else {
-                            profiles.firstOrNull { profile ->
-                                profile.association?.romFileName != null &&
-                                    profile.matches(targetPkg, targetRomIdentifier, targetSystem)
-                            } ?: profiles.firstOrNull { profile ->
-                                profile.association?.romFileName == null &&
-                                    profile.matches(targetPkg, targetRomIdentifier, targetSystem)
-                            }
-                        }
-                    }
-
-                LaunchedEffect(targetPkg, targetRomIdentifier, associatedProfile?.id) {
-                    if (targetPkg != null) {
-                        AppLog.d(
-                            TAG,
-                            "Hero target resolved: pkg=$targetPkg, rom=$targetRom, romId=$targetRomIdentifier, sys=$targetSystem, profile=${associatedProfile?.name}",
-                        )
-                    }
-                }
-
                 HeroCompanionCard(
                     targetPackage = targetPkg,
                     targetLabel = targetLabel,
@@ -385,6 +392,7 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                     activeProfile = activeProfile,
                     profiles = profiles,
                     colors = colors,
+                    onRelinkRequested = { profile -> profileToRelink = profile },
                 )
 
                 Spacer(modifier = Modifier.weight(1f))
@@ -405,6 +413,92 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
             visible = showHubHelp,
             onDismiss = { showHubHelp = false },
         )
+
+        profileToRelink?.let { pendingProfile ->
+            val currentTarget =
+                resolveAssociationTargetLabel(pendingProfile.association) { pkg ->
+                    resolveAppLabel(context, pkg)
+                } ?: pendingProfile.name
+            val newTarget =
+                targetLabel
+                    ?: targetRomIdentifier
+                    ?: targetPkg
+                    ?: stringResource(R.string.integration_home_hovered_game)
+
+            AppAlertDialog(
+                onDismissRequest = { profileToRelink = null },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Rounded.Warning,
+                        contentDescription = null,
+                        tint = colors.accent,
+                        modifier = Modifier.size(IH_DIALOG_ICON_SIZE),
+                    )
+                },
+                title = {
+                    Text(
+                        text = stringResource(R.string.integration_home_relink_dialog_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = colors.onSurface,
+                    )
+                },
+                text = {
+                    Text(
+                        text =
+                            stringResource(
+                                R.string.integration_home_relink_dialog_message,
+                                pendingProfile.name,
+                                currentTarget,
+                                newTarget,
+                            ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = colors.onSurfaceSecondary,
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            val pkg = targetPkg ?: return@Button
+                            val romTarget = targetRomIdentifier ?: targetRom
+                            val romFileName = romTarget?.substringAfterLast('/')?.substringAfterLast('\\')
+                            val assoc =
+                                ProfileAssociation(
+                                    packageName = pkg,
+                                    systemId = targetSystem,
+                                    romFileName = romFileName,
+                                )
+                            MacroPadState.updateProfile(pendingProfile.copy(association = assoc))
+                            profileToRelink = null
+                        },
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor = colors.accent,
+                                contentColor = colors.onAccent,
+                            ),
+                        shape = IH_DIALOG_BUTTON_SHAPE,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.integration_home_relink_dialog_confirm),
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                },
+                dismissButton = {
+                    OutlinedButton(
+                        onClick = { profileToRelink = null },
+                        border = BorderStroke(IH_BORDER_WIDTH, colors.controlOverlayBorder),
+                        colors =
+                            ButtonDefaults.outlinedButtonColors(
+                                contentColor = colors.onSurface,
+                            ),
+                        shape = IH_DIALOG_BUTTON_SHAPE,
+                    ) {
+                        Text(text = stringResource(R.string.integration_home_relink_dialog_cancel))
+                    }
+                },
+            )
+        }
     }
 }
 
@@ -472,10 +566,10 @@ private fun HeroCompanionCard(
     activeProfile: PadProfile?,
     profiles: List<PadProfile>,
     colors: AppColors,
+    onRelinkRequested: (PadProfile) -> Unit,
 ) {
     val context = LocalContext.current
     var expandedDropdown by remember { mutableStateOf(false) }
-    val unassignedProfiles = remember(profiles) { profiles.filter { it.association == null } }
 
     val hasActiveGame = targetLabel != null || targetPackage != null
 
@@ -721,32 +815,77 @@ private fun HeroCompanionCard(
                                     onDismissRequest = { expandedDropdown = false },
                                     modifier = Modifier.background(colors.surface),
                                 ) {
-                                    if (unassignedProfiles.isEmpty()) {
+                                    if (profiles.isEmpty()) {
                                         DropdownMenuItem(
                                             text = {
                                                 Text(
-                                                    text = stringResource(R.string.integration_home_no_unassigned_profiles),
+                                                    text = stringResource(R.string.integration_home_no_profiles),
                                                     color = colors.onSurfaceSecondary,
                                                 )
                                             },
                                             onClick = { expandedDropdown = false },
                                         )
                                     } else {
-                                        unassignedProfiles.forEach { profile ->
+                                        profiles.forEach { profile ->
+                                            val isAlreadyLinked = profile.association != null
+                                            val linkedTarget =
+                                                if (isAlreadyLinked) {
+                                                    resolveAssociationTargetLabel(profile.association) { pkg ->
+                                                        resolveAppLabel(context, pkg)
+                                                    }
+                                                } else {
+                                                    null
+                                                }
                                             DropdownMenuItem(
-                                                text = { Text(profile.name, color = colors.onSurface) },
+                                                text = {
+                                                    Column {
+                                                        Text(
+                                                            text = profile.name,
+                                                            color = colors.onSurface,
+                                                            style = MaterialTheme.typography.bodyMedium,
+                                                        )
+                                                        if (linkedTarget != null) {
+                                                            Text(
+                                                                text =
+                                                                    stringResource(
+                                                                        R.string.integration_home_profile_already_linked_to,
+                                                                        linkedTarget,
+                                                                    ),
+                                                                color = colors.onSurfaceSecondary,
+                                                                style = MaterialTheme.typography.bodySmall,
+                                                            )
+                                                        }
+                                                    }
+                                                },
+                                                trailingIcon =
+                                                    if (isAlreadyLinked) {
+                                                        {
+                                                            Icon(
+                                                                imageVector = Icons.Rounded.Link,
+                                                                contentDescription = null,
+                                                                tint = colors.accent.copy(alpha = IH_DROPDOWN_LINKED_ICON_ALPHA),
+                                                                modifier = Modifier.size(IH_DROPDOWN_LINKED_ICON_SIZE),
+                                                            )
+                                                        }
+                                                    } else {
+                                                        null
+                                                    },
                                                 onClick = {
                                                     expandedDropdown = false
-                                                    val targetRom = targetRomIdentifier ?: targetRomPath
-                                                    val romFileName = targetRom?.substringAfterLast('/')?.substringAfterLast('\\')
-                                                    val assoc =
-                                                        ProfileAssociation(
-                                                            packageName = targetPackage,
-                                                            systemId = targetSystemId,
-                                                            romFileName = romFileName,
-                                                        )
-                                                    val updatedProfile = profile.copy(association = assoc)
-                                                    MacroPadState.updateProfile(updatedProfile)
+                                                    if (isAlreadyLinked) {
+                                                        onRelinkRequested(profile)
+                                                    } else {
+                                                        val targetRom = targetRomIdentifier ?: targetRomPath
+                                                        val romFileName = targetRom?.substringAfterLast('/')?.substringAfterLast('\\')
+                                                        val assoc =
+                                                            ProfileAssociation(
+                                                                packageName = targetPackage,
+                                                                systemId = targetSystemId,
+                                                                romFileName = romFileName,
+                                                            )
+                                                        val updatedProfile = profile.copy(association = assoc)
+                                                        MacroPadState.updateProfile(updatedProfile)
+                                                    }
                                                 },
                                             )
                                         }
@@ -1100,5 +1239,20 @@ private fun resolveAppLabel(
         pm.getApplicationLabel(appInfo).toString()
     } catch (e: Exception) {
         packageName
+    }
+}
+
+internal fun resolveAssociationTargetLabel(
+    association: ProfileAssociation?,
+    resolveAppLabel: (String) -> String? = { null },
+): String? {
+    val assoc = association ?: return null
+    val romName = assoc.romFileName
+    return if (!romName.isNullOrBlank()) {
+        romName
+    } else {
+        assoc.packageName.let { pkg ->
+            resolveAppLabel(pkg) ?: pkg
+        }
     }
 }

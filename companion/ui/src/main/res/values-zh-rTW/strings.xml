@@ -973,6 +973,12 @@ Open Settings to create a layout.</string>
     <string name="integration_home_create_profile">建立設定檔</string>
     <string name="integration_home_link_existing">連結既有設定檔</string>
     <string name="integration_home_no_unassigned_profiles">沒有未指派的設定檔</string>
+    <string name="integration_home_no_profiles">沒有可用的設定檔</string>
+    <string name="integration_home_profile_already_linked_to">已連結：%1$s</string>
+    <string name="integration_home_relink_dialog_title">重新連結設定檔？</string>
+    <string name="integration_home_relink_dialog_message">設定檔「%1$s」目前已連結至「%2$s」。將其連結至「%3$s」將會覆寫先前的關聯。確定要繼續嗎？</string>
+    <string name="integration_home_relink_dialog_confirm">重新連結</string>
+    <string name="integration_home_relink_dialog_cancel">取消</string>
     <string name="integration_home_new_profile">新增設定檔</string>
     <string name="integration_home_default_layout">預設</string>
     <string name="integration_home_show_macropad">顯示</string>

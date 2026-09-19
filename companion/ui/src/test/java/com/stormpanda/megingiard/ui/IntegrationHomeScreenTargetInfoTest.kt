@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.ui
 
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
+import com.stormpanda.megingiard.macropad.ProfileAssociation
 import com.stormpanda.megingiard.session.ActiveGameSession
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -195,5 +196,50 @@ class IntegrationHomeScreenTargetInfoTest {
         assertNull(target.romPath)
         assertEquals("Boltgun.steam", target.romIdentifier)
         assertEquals("pc", target.systemId)
+    }
+
+    @Test
+    fun resolveAssociationTargetLabel_nullAssociationReturnsNull() {
+        val label = resolveAssociationTargetLabel(null)
+        assertNull(label)
+    }
+
+    @Test
+    fun resolveAssociationTargetLabel_romFileNameTakesPriority() {
+        val assoc =
+            ProfileAssociation(
+                packageName = "com.retroarch.game",
+                systemId = "snes",
+                romFileName = "Super Mario World.sfc",
+            )
+        val label = resolveAssociationTargetLabel(assoc) { "RetroArch" }
+        assertEquals("Super Mario World.sfc", label)
+    }
+
+    @Test
+    fun resolveAssociationTargetLabel_fallsBackToResolvedAppLabel() {
+        val assoc =
+            ProfileAssociation(
+                packageName = "com.retroarch.game",
+                systemId = null,
+                romFileName = null,
+            )
+        val label =
+            resolveAssociationTargetLabel(assoc) { pkg ->
+                if (pkg == "com.retroarch.game") "RetroArch Emulator" else null
+            }
+        assertEquals("RetroArch Emulator", label)
+    }
+
+    @Test
+    fun resolveAssociationTargetLabel_fallsBackToPackageNameWhenResolverReturnsNull() {
+        val assoc =
+            ProfileAssociation(
+                packageName = "com.unknown.emulator",
+                systemId = null,
+                romFileName = null,
+            )
+        val label = resolveAssociationTargetLabel(assoc) { null }
+        assertEquals("com.unknown.emulator", label)
     }
 }

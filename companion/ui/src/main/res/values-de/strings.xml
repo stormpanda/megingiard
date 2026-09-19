@@ -990,6 +990,12 @@ Open Settings to create a layout.</string>
     <string name="integration_home_create_profile">Erstellen</string>
     <string name="integration_home_link_existing">Verknüpfen</string>
     <string name="integration_home_no_unassigned_profiles">Keine unzugewiesenen Profile</string>
+    <string name="integration_home_no_profiles">Keine Profile verfügbar</string>
+    <string name="integration_home_profile_already_linked_to">Verknüpft: %1$s</string>
+    <string name="integration_home_relink_dialog_title">Profil neu verknüpfen?</string>
+    <string name="integration_home_relink_dialog_message">Das Profil „%1$s“ ist derzeit mit „%2$s“ verknüpft. Das Verknüpfen mit „%3$s“ überschreibt die bisherige Zuweisung. Möchtest du fortfahren?</string>
+    <string name="integration_home_relink_dialog_confirm">Neu verknüpfen</string>
+    <string name="integration_home_relink_dialog_cancel">Abbrechen</string>
     <string name="integration_home_new_profile">Neues Profil</string>
     <string name="integration_home_default_layout">Standard</string>
     <string name="integration_home_show_macropad">Anzeigen</string>
