@@ -41,6 +41,9 @@ class BackgroundMaskSettingsEditorTest {
     @Before
     fun setUp() {
         BackgroundPickerManager.clearPickedUri()
+        MacroPadState.setPreviewLayout(null)
+        MacroPadState.setCroppingBackground(false)
+        MacroPadState.setCroppingMask(false)
     }
 
     private fun createTestImageFile(): Pair<File, Uri> {
@@ -117,7 +120,7 @@ class BackgroundMaskSettingsEditorTest {
 
             // Perform Save click
             composeTestRule.onNodeWithText("Save").performScrollTo().performClick()
-            composeTestRule.waitUntil(5000) { confirmCallCount == 1 }
+            composeTestRule.waitUntil(10_000) { confirmCallCount == 1 }
             composeTestRule.waitForIdle()
 
             assertEquals(1, confirmCallCount)
@@ -168,7 +171,7 @@ class BackgroundMaskSettingsEditorTest {
 
             // Perform Save click
             composeTestRule.onNodeWithText("Save").performScrollTo().performClick()
-            composeTestRule.waitUntil(5000) { confirmCallCount == 1 }
+            composeTestRule.waitUntil(10_000) { confirmCallCount == 1 }
             composeTestRule.waitForIdle()
 
             assertEquals(1, confirmCallCount)

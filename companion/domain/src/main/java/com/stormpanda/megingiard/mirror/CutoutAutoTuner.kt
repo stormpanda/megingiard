@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.mirror
 
 import com.stormpanda.megingiard.AppLog
+import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
@@ -234,6 +235,10 @@ object CutoutAutoTuner {
     /**
      * Extracts a compact, spatially stratified [VisualAnchorSignature] from stationary pixels
      * across an 8x8 grid over the cutout.
+     *
+     * In each grid cell, pixels with the lowest temporal variance (most stationary) are prioritized.
+     * When multiple candidate pixels tie for minimum variance (e.g. static UI background vs. static text/icons),
+     * the candidate that maximizes color diversity relative to already-chosen anchor points is selected.
      */
     fun extractAnchorSignature(
         varianceMap: ByteArray,
@@ -249,6 +254,7 @@ object CutoutAutoTuner {
         val points = ArrayList<AnchorPoint>()
         val cellW = width.toFloat() / SIGNATURE_GRID_COLS.toFloat()
         val cellH = height.toFloat() / SIGNATURE_GRID_ROWS.toFloat()
+        val frameCount = frames.size
 
         for (gy in 0 until SIGNATURE_GRID_ROWS) {
             val yStart = (gy * cellH).toInt().coerceIn(0, height - 1)
@@ -261,15 +267,26 @@ object CutoutAutoTuner {
                 var bestX = -1
                 var bestY = -1
                 var minVar = Int.MAX_VALUE
+                var bestDiversity = -1
 
                 for (y in yStart until yEnd) {
                     val rowOffset = y * width
                     for (x in xStart until xEnd) {
                         val v = varianceMap[rowOffset + x].toInt() and COLOR_BYTE_MASK
-                        if (v <= MAX_ANCHOR_VARIANCE && v < minVar) {
-                            minVar = v
-                            bestX = x
-                            bestY = y
+                        if (v <= MAX_ANCHOR_VARIANCE) {
+                            if (v < minVar) {
+                                minVar = v
+                                bestX = x
+                                bestY = y
+                                bestDiversity = computeColorDiversity(frames, rowOffset + x, frameCount, points)
+                            } else if (v == minVar) {
+                                val candidateDiversity = computeColorDiversity(frames, rowOffset + x, frameCount, points)
+                                if (candidateDiversity > bestDiversity) {
+                                    bestDiversity = candidateDiversity
+                                    bestX = x
+                                    bestY = y
+                                }
+                            }
                         }
                     }
                 }
@@ -285,7 +302,6 @@ object CutoutAutoTuner {
                         sumG += (rgb shr SHIFT_GREEN) and COLOR_BYTE_MASK
                         sumB += rgb and COLOR_BYTE_MASK
                     }
-                    val frameCount = frames.size
                     val avgR = sumR / frameCount
                     val avgG = sumG / frameCount
                     val avgB = sumB / frameCount
@@ -299,6 +315,42 @@ object CutoutAutoTuner {
 
         AppLog.d(TAG, "Extracted ${points.size} anchor signature points for cutout '$cutoutId' (${width}x$height)")
         return VisualAnchorSignature(cutoutId, points)
+    }
+
+    /**
+     * Computes the minimum Manhattan color distance from a candidate pixel's temporal average RGB
+     * to any existing [AnchorPoint] in [existingPoints].
+     *
+     * Returns [Int.MAX_VALUE] if [existingPoints] is empty, treating initial candidates with maximum novelty.
+     */
+    private fun computeColorDiversity(
+        frames: List<IntArray>,
+        pixelIdx: Int,
+        frameCount: Int,
+        existingPoints: List<AnchorPoint>,
+    ): Int {
+        if (existingPoints.isEmpty()) return Int.MAX_VALUE
+        var sumR = 0
+        var sumG = 0
+        var sumB = 0
+        for (frame in frames) {
+            val rgb = frame[pixelIdx]
+            sumR += (rgb shr SHIFT_RED) and COLOR_BYTE_MASK
+            sumG += (rgb shr SHIFT_GREEN) and COLOR_BYTE_MASK
+            sumB += rgb and COLOR_BYTE_MASK
+        }
+        val avgR = sumR / frameCount
+        val avgG = sumG / frameCount
+        val avgB = sumB / frameCount
+
+        var minDistance = Int.MAX_VALUE
+        for (pt in existingPoints) {
+            val dist = abs(avgR - pt.r) + abs(avgG - pt.g) + abs(avgB - pt.b)
+            if (dist < minDistance) {
+                minDistance = dist
+            }
+        }
+        return minDistance
     }
 
     /**

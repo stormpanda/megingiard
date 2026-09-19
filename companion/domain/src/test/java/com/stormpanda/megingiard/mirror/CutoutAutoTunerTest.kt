@@ -658,4 +658,81 @@ class CutoutAutoTunerTest {
         val centerAlpha = (maskFull[5 * testW + 5] ushr 24) and 0xFF
         assertTrue("At translucency 100%, variance 200 is within 255 ceiling", centerAlpha > 0)
     }
+
+    @Test
+    fun `extractAnchorSignature favors color diversity among zero-variance stationary pixels`() {
+        val testW = 16
+        val testH = 16
+        val testCount = testW * testH
+        val varianceMap = ByteArray(testCount) { 0 } // all zero variance
+
+        // Grid is 8x8, each cell is 2x2 pixels.
+        // Cell (0,0): pixels at x in [0,1], y in [0,1] -> all white (255, 255, 255)
+        // Cell (1,0): pixels at x in [2,3], y in [0,1] -> (2,0) is white, (3,0) is black (0, 0, 0)
+        val frames =
+            List(3) {
+                IntArray(testCount) { idx ->
+                    val x = idx % testW
+                    val y = idx / testW
+                    if (x == 3 && y == 0) {
+                        colorArgb(0, 0, 0) // black detail inside cell (1,0)
+                    } else {
+                        colorArgb(255, 255, 255) // white background everywhere else
+                    }
+                }
+            }
+
+        val signature = CutoutAutoTuner.extractAnchorSignature(varianceMap, frames, testW, testH, "diversity_test")
+        assertEquals("diversity_test", signature.cutoutId)
+        assertEquals(64, signature.points.size)
+
+        // Cell (0,0) point (u < 0.125, v < 0.125) must be white
+        val cell00 = signature.points.first { it.u < 0.125f && it.v < 0.125f }
+        assertEquals(255, cell00.r)
+        assertEquals(255, cell00.g)
+        assertEquals(255, cell00.b)
+
+        // Cell (1,0) point (0.125 < u < 0.25, v < 0.125) must pick black (3,0) instead of the first raster white (2,0)
+        val cell10 = signature.points.first { it.u in 0.125f..0.25f && it.v < 0.125f }
+        assertEquals("Cell (1,0) should pick black pixel due to color diversity tiebreaker", 0, cell10.r)
+        assertEquals("Cell (1,0) should pick black pixel due to color diversity tiebreaker", 0, cell10.g)
+        assertEquals("Cell (1,0) should pick black pixel due to color diversity tiebreaker", 0, cell10.b)
+    }
+
+    @Test
+    fun `extractAnchorSignature with diverse stationary colors prevents false positive on full white screen`() {
+        val testW = 16
+        val testH = 16
+        val testCount = testW * testH
+        val varianceMap = ByteArray(testCount) { 0 }
+
+        // Create an element with 50% white background and 50% dark/colored graphics
+        val frames =
+            List(3) {
+                IntArray(testCount) { idx ->
+                    val y = idx / testW
+                    if (y < 8) {
+                        colorArgb(255, 255, 255) // top half white
+                    } else {
+                        colorArgb(20, 20, 30) // bottom half dark
+                    }
+                }
+            }
+
+        val signature = CutoutAutoTuner.extractAnchorSignature(varianceMap, frames, testW, testH, "contrast_test")
+        assertEquals(64, signature.points.size)
+
+        // Evaluate signature against a full-white screen (e.g. loading screen)
+        val matchRatio =
+            AnchorPresenceEvaluator.evaluateMatchRatio(signature) { _, _ ->
+                colorArgb(255, 255, 255)
+            }
+
+        // Only the 32 white points match (50%), which is below the 65% PRESENT threshold
+        assertEquals(0.50f, matchRatio, 0.01f)
+        assertTrue(
+            "Match ratio on white screen must be strictly below MATCH_THRESHOLD_PRESENT (0.65)",
+            matchRatio < AnchorPresenceEvaluator.MATCH_THRESHOLD_PRESENT,
+        )
+    }
 }
