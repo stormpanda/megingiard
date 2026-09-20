@@ -138,23 +138,46 @@ Modifier.focusProperties {
 When entering or leaving a sub-page, `GamepadTwoPaneScaffold` observes changes to `effectiveNavKey`:
 
 ```kotlin
-fun performFocus(): Boolean {
+fun performFocus(allowFallback: Boolean = false): Boolean {
     inputModeManager.requestInputMode(InputMode.Keyboard)
     if (isBackTransition) {
-        val parentKey = savedFocusKeyByDepth[newDepth]
-        val parentRequester = if (parentKey != null) activeDeckCardRequesters[parentKey] else null
-        if (parentRequester != null) {
-            try {
-                parentRequester.requestFocus()
-                return true
-            } catch (_: IllegalStateException) {
-                savedFocusKeyByDepth.remove(newDepth)
+        val parentKey = savedFocusKeys?.get(newDepth) ?: savedFocusKeyByDepth[newDepth]
+        if (parentKey != null) {
+            val parentRequester = activeDeckCardRequesters[parentKey]
+            if (parentRequester != null) {
+                try {
+                    parentRequester.requestFocus()
+                    return true
+                } catch (_: IllegalStateException) {
+                    savedFocusKeyByDepth.remove(newDepth)
+                    onRemoveFocusedKey?.invoke(newDepth)
+                }
+            }
+            if (!allowFallback) {
+                return false
             }
         }
         try {
             firstContentRequester.requestFocus()
             return true
         } catch (_: IllegalStateException) {
+            if (allowFallback) {
+                val fallbackRequester = activeDeckCardRequesters.values.firstOrNull()
+                if (fallbackRequester != null) {
+                    try {
+                        fallbackRequester.requestFocus()
+                        return true
+                    } catch (_: IllegalStateException) {
+                    }
+                }
+                if (newDepth == 0) {
+                    try {
+                        activeCategoryRequester.requestFocus()
+                        return true
+                    } catch (_: IllegalStateException) {
+                    }
+                }
+            }
             return false
         }
     } else {
@@ -162,16 +185,26 @@ fun performFocus(): Boolean {
             firstContentRequester.requestFocus()
             return true
         } catch (_: IllegalStateException) {
+            if (allowFallback) {
+                val fallbackRequester = activeDeckCardRequesters.values.firstOrNull()
+                if (fallbackRequester != null) {
+                    try {
+                        fallbackRequester.requestFocus()
+                        return true
+                    } catch (_: IllegalStateException) {
+                    }
+                }
+            }
             return false
         }
     }
 }
 
 // Attempt immediate synchronous focus on frame 0; fallback to delay only if unattached
-if (!performFocus()) {
+if (!performFocus(allowFallback = false)) {
     delay(GS_INITIAL_FOCUS_DELAY_MS)
     try {
-        performFocus()
+        performFocus(allowFallback = true)
     } catch (_: IllegalStateException) {
         AppLog.d(TAG, "GamepadTwoPaneScaffold: focus requester unattached on auto focus restore")
     }

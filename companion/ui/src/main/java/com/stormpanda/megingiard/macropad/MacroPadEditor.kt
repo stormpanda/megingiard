@@ -2572,11 +2572,18 @@ private fun ButtonsDeck(
 ) {
     val colors = LocalAppColors.current
     val buttons = layout?.buttons ?: emptyList()
-    val isEditingPositions by MacroPadState.isEditingButtonPositions.collectAsStateWithLifecycle()
     val gridMode by MacroPadState.gridMode.collectAsStateWithLifecycle()
     var isReordering by remember { mutableStateOf(false) }
 
-    val initialButtonIndex = remember { buttons.indexOfFirst { it.id == MacroPadState.selectedButtonId.value } }
+    val parentFocusKey = remember { MacroPadNavState.savedFocusKeysByDepth.value[0] }
+    val initialButtonIndex =
+        remember {
+            if (parentFocusKey != null && buttons.any { it.id == parentFocusKey }) {
+                buttons.indexOfFirst { it.id == parentFocusKey }
+            } else {
+                -1
+            }
+        }
     val lazyListState =
         rememberLazyListState(
             initialFirstVisibleItemIndex =

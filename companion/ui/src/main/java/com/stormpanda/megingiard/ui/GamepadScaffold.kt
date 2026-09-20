@@ -601,6 +601,25 @@ fun GamepadTwoPaneScaffold(
                             AppLog.d(TAG, "GamepadTwoPaneScaffold: fallback focus on first item at depth $newDepth")
                             return true
                         } catch (_: IllegalStateException) {
+                            if (allowFallback) {
+                                val fallbackRequester = activeDeckCardRequesters.values.firstOrNull()
+                                if (fallbackRequester != null) {
+                                    try {
+                                        fallbackRequester.requestFocus()
+                                        AppLog.d(TAG, "GamepadTwoPaneScaffold: fallback focus on active deck card at depth $newDepth")
+                                        return true
+                                    } catch (_: IllegalStateException) {
+                                    }
+                                }
+                                if (newDepth == 0) {
+                                    try {
+                                        activeCategoryRequester.requestFocus()
+                                        AppLog.d(TAG, "GamepadTwoPaneScaffold: fallback focus on sidebar category at depth 0")
+                                        return true
+                                    } catch (_: IllegalStateException) {
+                                    }
+                                }
+                            }
                             return false
                         }
                     } else {
@@ -609,6 +628,20 @@ fun GamepadTwoPaneScaffold(
                             AppLog.d(TAG, "GamepadTwoPaneScaffold: focused first item entering sub-menu at depth $newDepth")
                             return true
                         } catch (_: IllegalStateException) {
+                            if (allowFallback) {
+                                val fallbackRequester = activeDeckCardRequesters.values.firstOrNull()
+                                if (fallbackRequester != null) {
+                                    try {
+                                        fallbackRequester.requestFocus()
+                                        AppLog.d(
+                                            TAG,
+                                            "GamepadTwoPaneScaffold: fallback focus on active deck card entering sub-menu at depth $newDepth",
+                                        )
+                                        return true
+                                    } catch (_: IllegalStateException) {
+                                    }
+                                }
+                            }
                             return false
                         }
                     }
