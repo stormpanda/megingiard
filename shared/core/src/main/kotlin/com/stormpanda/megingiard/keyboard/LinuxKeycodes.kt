@@ -108,4 +108,63 @@ object LinuxKeycodes {
     // Extra
     const val KEY_SYSRQ = 99 // Print Screen
     const val KEY_102ND = 86 // Key between Shift and Z on ISO keyboards (< >)
+    const val KEY_FN = 464
+    const val KEY_MAX = 464
+
+    /**
+     * Data class representing a keycode mapping with optional Shift modifier requirement.
+     */
+    data class KeyMapping(
+        val keycode: Int,
+        val label: String,
+        val shift: Boolean = false,
+    )
+
+    /**
+     * Resolves a printable character or control character to its standard Linux keycode mapping.
+     * Returns null for unmapped characters.
+     */
+    fun charToKeyMapping(char: Char): KeyMapping? =
+        when (char) {
+            in 'a'..'z' -> KeyMapping(KEY_A + (char - 'a'), char.uppercase(), shift = false)
+            in 'A'..'Z' -> KeyMapping(KEY_A + (char - 'A'), char.toString(), shift = true)
+            '0' -> KeyMapping(KEY_0, "0", shift = false)
+            in '1'..'9' -> KeyMapping(KEY_1 + (char - '1'), char.toString(), shift = false)
+            ' ' -> KeyMapping(KEY_SPACE, "Space", shift = false)
+            '\n' -> KeyMapping(KEY_ENTER, "Enter", shift = false)
+            '\t' -> KeyMapping(KEY_TAB, "Tab", shift = false)
+            '-' -> KeyMapping(KEY_MINUS, "-", shift = false)
+            '_' -> KeyMapping(KEY_MINUS, "_", shift = true)
+            '=' -> KeyMapping(KEY_EQUAL, "=", shift = false)
+            '+' -> KeyMapping(KEY_EQUAL, "+", shift = true)
+            '.' -> KeyMapping(KEY_DOT, ".", shift = false)
+            '>' -> KeyMapping(KEY_DOT, ">", shift = true)
+            ',' -> KeyMapping(KEY_COMMA, ",", shift = false)
+            '<' -> KeyMapping(KEY_COMMA, "<", shift = true)
+            '/' -> KeyMapping(KEY_SLASH, "/", shift = false)
+            '?' -> KeyMapping(KEY_SLASH, "?", shift = true)
+            ';' -> KeyMapping(KEY_SEMICOLON, ";", shift = false)
+            ':' -> KeyMapping(KEY_SEMICOLON, ":", shift = true)
+            '\'' -> KeyMapping(KEY_APOSTROPHE, "'", shift = false)
+            '"' -> KeyMapping(KEY_APOSTROPHE, "\"", shift = true)
+            '\\' -> KeyMapping(KEY_BACKSLASH, "\\", shift = false)
+            '|' -> KeyMapping(KEY_BACKSLASH, "|", shift = true)
+            '`' -> KeyMapping(KEY_GRAVE, "`", shift = false)
+            '~' -> KeyMapping(KEY_GRAVE, "~", shift = true)
+            '[' -> KeyMapping(KEY_LEFTBRACE, "[", shift = false)
+            '{' -> KeyMapping(KEY_LEFTBRACE, "{", shift = true)
+            ']' -> KeyMapping(KEY_RIGHTBRACE, "]", shift = false)
+            '}' -> KeyMapping(KEY_RIGHTBRACE, "}", shift = true)
+            '!' -> KeyMapping(KEY_1, "!", shift = true)
+            '@' -> KeyMapping(KEY_2, "@", shift = true)
+            '#' -> KeyMapping(KEY_3, "#", shift = true)
+            '$' -> KeyMapping(KEY_4, "$", shift = true)
+            '%' -> KeyMapping(KEY_5, "%", shift = true)
+            '^' -> KeyMapping(KEY_6, "^", shift = true)
+            '&' -> KeyMapping(KEY_7, "&", shift = true)
+            '*' -> KeyMapping(KEY_8, "*", shift = true)
+            '(' -> KeyMapping(KEY_9, "(", shift = true)
+            ')' -> KeyMapping(KEY_0, ")", shift = true)
+            else -> null
+        }
 }

@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Gesture
 import androidx.compose.material.icons.rounded.HourglassEmpty
+import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.Save
@@ -55,6 +56,7 @@ internal fun MacroTimelineSubPageContent(
     savedMacro: Macro? = null,
     accentColor: Color,
     onOpenManualSteps: (Macro) -> Unit,
+    onOpenTextSequence: (Macro) -> Unit,
     onDiscard: () -> Unit = {},
     onSave: (Macro) -> Unit,
     onDelete: () -> Unit = {},
@@ -296,6 +298,18 @@ internal fun MacroTimelineSubPageContent(
         onClick = {
             syncDraftToNavState(currentMacro)
             onOpenManualSteps(currentMacro)
+        },
+    )
+
+    GamepadActionCard(
+        title = stringResource(R.string.macropad_macro_create_text_sequence_title),
+        description = stringResource(R.string.macropad_macro_create_text_sequence_desc),
+        actionText = stringResource(R.string.macropad_macro_text_sequence_generate),
+        icon = Icons.Rounded.Keyboard,
+        itemKey = "macro_text_sequence",
+        onClick = {
+            syncDraftToNavState(currentMacro)
+            onOpenTextSequence(currentMacro)
         },
     )
 

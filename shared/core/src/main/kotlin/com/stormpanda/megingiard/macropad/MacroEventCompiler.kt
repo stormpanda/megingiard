@@ -7,7 +7,17 @@ import com.stormpanda.megingiard.input.TouchAction
 private const val ABS_FULL_DEFLECTION = 32768
 
 /** Event types emitted by [buildMacroEventList]. */
-enum class MacroEventType { BUTTON_DOWN, BUTTON_UP, JOYSTICK_SET, HAT, TOUCH_DOWN, TOUCH_MOVE, TOUCH_UP }
+enum class MacroEventType {
+    BUTTON_DOWN,
+    BUTTON_UP,
+    JOYSTICK_SET,
+    HAT,
+    TOUCH_DOWN,
+    TOUCH_MOVE,
+    TOUCH_UP,
+    KEY_DOWN,
+    KEY_UP,
+}
 
 /**
  * A single discrete input event compiled from a [MacroStep].
@@ -35,6 +45,7 @@ val MacroEvent.isReset: Boolean
         when (type) {
             MacroEventType.BUTTON_UP,
             MacroEventType.TOUCH_UP,
+            MacroEventType.KEY_UP,
             -> true
 
             MacroEventType.JOYSTICK_SET,
@@ -136,6 +147,19 @@ fun buildMacroEventList(macro: Macro): List<MacroEvent> =
                     val stepEndMs = step.startTimeMs + step.durationMs
                     for ((pointerId, pos) in activePointers) {
                         events += MacroEvent(stepEndMs, MacroEventType.TOUCH_UP, pointerId, 0, pos.first, pos.second)
+                    }
+                }
+
+                is MacroStep.KeyboardKeyTap -> {
+                    for (mod in step.modifiers) {
+                        events += MacroEvent(step.startTimeMs, MacroEventType.KEY_DOWN, mod, 0)
+                    }
+                    events += MacroEvent(step.startTimeMs, MacroEventType.KEY_DOWN, step.keycode, 0)
+
+                    val endTime = step.startTimeMs + step.durationMs
+                    events += MacroEvent(endTime, MacroEventType.KEY_UP, step.keycode, 0)
+                    for (mod in step.modifiers.asReversed()) {
+                        events += MacroEvent(endTime, MacroEventType.KEY_UP, mod, 0)
                     }
                 }
             }

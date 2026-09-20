@@ -48,8 +48,15 @@ class KeyboardViewModel(
     private val _keyboardMode = MutableStateFlow(KeyboardMode.LETTERS)
     val keyboardMode: StateFlow<KeyboardMode> = _keyboardMode.asStateFlow()
 
+    private val _isMacroRowVisible = MutableStateFlow(false)
+    val isMacroRowVisible: StateFlow<Boolean> = _isMacroRowVisible.asStateFlow()
+
     fun setKeyboardMode(mode: KeyboardMode) {
         _keyboardMode.value = mode
+    }
+
+    fun toggleMacroRow() {
+        _isMacroRowVisible.value = !_isMacroRowVisible.value
     }
 
     fun setKbTouchpadEnabled(value: Boolean) = KeyboardSettings.setKbTouchpadEnabled(value)

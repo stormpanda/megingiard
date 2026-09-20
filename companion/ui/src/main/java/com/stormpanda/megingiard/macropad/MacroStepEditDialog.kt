@@ -4,6 +4,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.NearMe
 import androidx.compose.material.icons.rounded.OpenWith
 import androidx.compose.material.icons.rounded.Save
@@ -24,6 +25,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.ui.BumperDirection
 import com.stormpanda.megingiard.ui.GamepadActionCard
@@ -52,6 +54,7 @@ private const val MSD_PERCENT_SLIDER_STEP = 5f
 private enum class StepType(
     val labelResId: Int,
 ) {
+    KEYBOARD(R.string.macropad_macro_step_type_keyboard),
     GAMEPAD(R.string.macropad_macro_step_type_gamepad),
     JOYSTICK(R.string.macropad_macro_step_type_joystick),
     JOYSTICK_PATH(R.string.macropad_macro_step_type_joystick_path),
@@ -94,6 +97,7 @@ internal fun MacroStepEditSubPageContent(
     initialShiftMode: ShiftMode,
     onConfirm: (MacroStep, ShiftMode) -> Unit,
     onDiscard: () -> Unit,
+    onOpenKeyboardPicker: ((MacroStep.KeyboardKeyTap) -> Unit)? = null,
     onDuplicate: ((MacroStep) -> Unit)? = null,
     onDelete: (() -> Unit)? = null,
 ) {
@@ -102,13 +106,14 @@ internal fun MacroStepEditSubPageContent(
 
     val initialType =
         when (step) {
+            is MacroStep.KeyboardKeyTap -> StepType.KEYBOARD
             is MacroStep.GamepadButtonTap -> StepType.GAMEPAD
             is MacroStep.JoystickMove -> StepType.JOYSTICK
             is MacroStep.DPadTap -> StepType.DPAD
             is MacroStep.TouchTap -> StepType.TOUCH
             is MacroStep.JoystickPath -> StepType.JOYSTICK_PATH
             is MacroStep.TouchPath -> StepType.TOUCH_PATH
-            null -> StepType.GAMEPAD
+            null -> StepType.KEYBOARD
         }
 
     val initialStartMs =
@@ -122,6 +127,20 @@ internal fun MacroStepEditSubPageContent(
     var startMs by remember { mutableIntStateOf(initialStartMs) }
     var durMs by remember { mutableIntStateOf(initialDurationMs) }
     var shiftMode by remember { mutableStateOf(initialShiftMode) }
+
+    // KeyboardKeyTap state
+    var kbKeycode by remember {
+        mutableIntStateOf(if (step is MacroStep.KeyboardKeyTap) step.keycode else LinuxKeycodes.KEY_SPACE)
+    }
+    var kbLabel by remember {
+        mutableStateOf(if (step is MacroStep.KeyboardKeyTap) step.label else "Space")
+    }
+    var kbMod1 by remember {
+        mutableStateOf(if (step is MacroStep.KeyboardKeyTap) step.modifiers.getOrNull(0) else null)
+    }
+    var kbMod2 by remember {
+        mutableStateOf(if (step is MacroStep.KeyboardKeyTap) step.modifiers.getOrNull(1) else null)
+    }
 
     // GamepadButtonTap state
     val initPreset =
@@ -198,6 +217,16 @@ internal fun MacroStepEditSubPageContent(
     // Construct the active MacroStep
     val constructedStep: MacroStep =
         when (stepType) {
+            StepType.KEYBOARD -> {
+                MacroStep.KeyboardKeyTap(
+                    startTimeMs = startMs.toLong(),
+                    durationMs = durMs.toLong(),
+                    keycode = kbKeycode,
+                    label = kbLabel,
+                    modifiers = listOfNotNull(kbMod1, kbMod2),
+                )
+            }
+
             StepType.GAMEPAD -> {
                 MacroStep.GamepadButtonTap(
                     startTimeMs = startMs.toLong(),
@@ -298,6 +327,61 @@ internal fun MacroStepEditSubPageContent(
     )
 
     when (stepType) {
+        StepType.KEYBOARD -> {
+            val noneLabel = stringResource(R.string.macropad_modifier_none)
+
+            fun modifierLabel(code: Int?): String =
+                code?.let { selectedCode ->
+                    MODIFIER_PRESETS.firstOrNull { it.first == selectedCode }?.second
+                } ?: noneLabel
+
+            GamepadActionCard(
+                title = stringResource(R.string.macropad_picker_label_key),
+                description = stringResource(R.string.macropad_picker_label_key_desc),
+                actionText = kbLabel.ifBlank { null },
+                icon = Icons.Rounded.Keyboard,
+                onClick = {
+                    onOpenKeyboardPicker?.invoke(
+                        MacroStep.KeyboardKeyTap(
+                            startTimeMs = startMs.toLong(),
+                            durationMs = durMs.toLong(),
+                            keycode = kbKeycode,
+                            label = kbLabel,
+                            modifiers = listOfNotNull(kbMod1, kbMod2),
+                        ),
+                    )
+                },
+            )
+
+            val mod1Options = listOf<Int?>(null) + MODIFIER_PRESETS.map { it.first }.filter { it != kbMod2 }
+            GamepadChoiceCard(
+                title = stringResource(R.string.macropad_picker_label_mod_1),
+                description = stringResource(R.string.macropad_picker_label_mod_desc),
+                selectedText = modifierLabel(kbMod1),
+                icon = Icons.Rounded.Keyboard,
+                onPrevious = {
+                    kbMod1 = mod1Options.cycle(kbMod1, BumperDirection.PREV)
+                },
+                onNext = {
+                    kbMod1 = mod1Options.cycle(kbMod1, BumperDirection.NEXT)
+                },
+            )
+
+            val mod2Options = listOf<Int?>(null) + MODIFIER_PRESETS.map { it.first }.filter { it != kbMod1 }
+            GamepadChoiceCard(
+                title = stringResource(R.string.macropad_picker_label_mod_2),
+                description = stringResource(R.string.macropad_picker_label_mod_desc),
+                selectedText = modifierLabel(kbMod2),
+                icon = Icons.Rounded.Keyboard,
+                onPrevious = {
+                    kbMod2 = mod2Options.cycle(kbMod2, BumperDirection.PREV)
+                },
+                onNext = {
+                    kbMod2 = mod2Options.cycle(kbMod2, BumperDirection.NEXT)
+                },
+            )
+        }
+
         StepType.GAMEPAD -> {
             val presets = GamepadKeycodes.PRESETS
             GamepadChoiceCard(

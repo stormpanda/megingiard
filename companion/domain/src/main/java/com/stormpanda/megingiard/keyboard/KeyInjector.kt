@@ -52,8 +52,10 @@ object KeyInjector {
 
     val isRunning: Boolean get() = router.isRunning { ShellKeyInjector.isRunning }
 
+    fun isValidKeycode(linuxKeycode: Int): Boolean = linuxKeycode in 1..LinuxKeycodes.KEY_MAX
+
     fun keyDown(linuxKeycode: Int) {
-        if (linuxKeycode !in 1..255) {
+        if (!isValidKeycode(linuxKeycode)) {
             AppLog.w(TAG, "Ignoring out-of-range linuxKeycode: $linuxKeycode for keyDown")
             return
         }
@@ -64,7 +66,7 @@ object KeyInjector {
     }
 
     fun keyUp(linuxKeycode: Int) {
-        if (linuxKeycode !in 1..255) {
+        if (!isValidKeycode(linuxKeycode)) {
             AppLog.w(TAG, "Ignoring out-of-range linuxKeycode: $linuxKeycode for keyUp")
             return
         }

@@ -687,6 +687,9 @@ fun MacroPadEditor(
                                             is MacroPadSubPage.MacroTimeline -> page.copy(draftMacro = updatedMacro)
                                             is MacroPadSubPage.ManualMacroSteps -> page.copy(draftMacro = updatedMacro)
                                             is MacroPadSubPage.ReorderMacroSteps -> page.copy(draftMacro = updatedMacro)
+                                            is MacroPadSubPage.MacroStepEdit -> page.copy(draftMacro = updatedMacro)
+                                            is MacroPadSubPage.ChooseKeyboardKeyForStep -> page.copy(draftMacro = updatedMacro)
+                                            is MacroPadSubPage.TextSequenceGenerator -> page.copy(draftMacro = updatedMacro)
                                             else -> page
                                         }
                                     }
@@ -1967,6 +1970,16 @@ fun MacroPadEditor(
                                                     }
                                                 },
                                                 onBuildManual = { handleCreateMacro() },
+                                                onTextSequence = {
+                                                    handleCreateMacro { newMacro ->
+                                                        MacroPadNavState.push(
+                                                            MacroPadSubPage.TextSequenceGenerator(
+                                                                macro = null,
+                                                                draftMacro = newMacro,
+                                                            ),
+                                                        )
+                                                    }
+                                                },
                                                 onRecordTouchTap = {
                                                     handleCreateMacro {
                                                         AppStateManager.suspendCurrentAndDismiss()
@@ -2013,6 +2026,23 @@ fun MacroPadEditor(
                                                                 }
                                                             } +
                                                                 MacroPadSubPage.ManualMacroSteps(
+                                                                    macro = currentSubPage.macro,
+                                                                    draftMacro = draftMacro,
+                                                                )
+                                                        MacroPadNavState.setStack(updatedStack)
+                                                    },
+                                                    onOpenTextSequence = { draftMacro ->
+                                                        val updatedStack =
+                                                            subPageStack.map { page ->
+                                                                if (page is MacroPadSubPage.MacroTimeline &&
+                                                                    page.macroId == draftMacro.id
+                                                                ) {
+                                                                    page.copy(draftMacro = draftMacro)
+                                                                } else {
+                                                                    page
+                                                                }
+                                                            } +
+                                                                MacroPadSubPage.TextSequenceGenerator(
                                                                     macro = currentSubPage.macro,
                                                                     draftMacro = draftMacro,
                                                                 )
@@ -2103,7 +2133,8 @@ fun MacroPadEditor(
                                         if (macro != null &&
                                             (currentSubPage.stepIndex == null || currentSubPage.stepIndex < macro.steps.size)
                                         ) {
-                                            val step = currentSubPage.stepIndex?.let { macro.steps.getOrNull(it) }
+                                            val step =
+                                                currentSubPage.draftStep ?: currentSubPage.stepIndex?.let { macro.steps.getOrNull(it) }
                                             GamepadDeck(
                                                 breadcrumbs =
                                                     listOf(
@@ -2125,6 +2156,16 @@ fun MacroPadEditor(
                                                     accentColor = colors.accent,
                                                     suggestedStartTimeMs = macro.steps.totalDurationMs(),
                                                     initialShiftMode = ShiftMode.END_DELTA,
+                                                    onOpenKeyboardPicker = { kbStep ->
+                                                        MacroPadNavState.push(
+                                                            MacroPadSubPage.ChooseKeyboardKeyForStep(
+                                                                macro = currentSubPage.macro,
+                                                                draftMacro = macro,
+                                                                stepIndex = currentSubPage.stepIndex,
+                                                                draftStep = kbStep,
+                                                            ),
+                                                        )
+                                                    },
                                                     onConfirm = { newStep, shiftMode ->
                                                         val (updatedSteps, targetIndex) =
                                                             if (currentSubPage.stepIndex != null && step != null) {
@@ -2251,6 +2292,86 @@ fun MacroPadEditor(
                                                     ),
                                                 emptyMessage = stringResource(R.string.macropad_macro_reorder_steps_empty),
                                             )
+                                        }
+                                    }
+
+                                    is MacroPadSubPage.ChooseKeyboardKeyForStep -> {
+                                        val effectiveKeyTap =
+                                            currentSubPage.draftStep ?: MacroStep.KeyboardKeyTap(
+                                                startTimeMs = 0L,
+                                                durationMs = 50L,
+                                                keycode = LinuxKeycodes.KEY_SPACE,
+                                                label = "Space",
+                                            )
+                                        val macro =
+                                            currentSubPage.effectiveMacro
+                                                ?: profile?.macros?.firstOrNull { it.id == currentSubPage.macroId }
+                                                ?: profiles.flatMap { it.macros }.firstOrNull { it.id == currentSubPage.macroId }
+                                        GamepadDeck(
+                                            breadcrumbs =
+                                                listOf(
+                                                    stringResource(R.string.macropad_editor_manage_macros),
+                                                    macro?.name?.ifBlank { stringResource(R.string.macropad_editor_open_timeline_title) }
+                                                        ?: "",
+                                                    stringResource(R.string.macropad_picker_visual_keyboard_title),
+                                                ),
+                                        ) {
+                                            VisualKeyboardPicker(
+                                                selectedKeycode = effectiveKeyTap.keycode,
+                                                accentColor = colors.accent,
+                                                onSelectKey = { keycode, label ->
+                                                    val updatedStep = effectiveKeyTap.copy(keycode = keycode, label = label)
+                                                    MacroPadNavState.setStack(
+                                                        subPageStack.dropLast(1).map { page ->
+                                                            if (page is MacroPadSubPage.MacroStepEdit &&
+                                                                page.macroId == currentSubPage.macroId
+                                                            ) {
+                                                                page.copy(draftStep = updatedStep)
+                                                            } else {
+                                                                page
+                                                            }
+                                                        },
+                                                    )
+                                                },
+                                            )
+                                        }
+                                    }
+
+                                    is MacroPadSubPage.TextSequenceGenerator -> {
+                                        val macro =
+                                            currentSubPage.effectiveMacro
+                                                ?: profile?.macros?.firstOrNull { it.id == currentSubPage.macroId }
+                                                ?: profiles.flatMap { it.macros }.firstOrNull { it.id == currentSubPage.macroId }
+                                        if (macro != null) {
+                                            GamepadDeck(
+                                                breadcrumbs =
+                                                    listOf(
+                                                        stringResource(R.string.macropad_editor_manage_macros),
+                                                        macro.name.ifBlank { stringResource(R.string.macropad_editor_open_timeline_title) },
+                                                        stringResource(R.string.macropad_macro_text_sequence_title),
+                                                    ),
+                                            ) {
+                                                TextSequenceGeneratorSubPageContent(
+                                                    macroName = macro.name,
+                                                    suggestedStartTimeMs = macro.steps.totalDurationMs(),
+                                                    accentColor = colors.accent,
+                                                    onGenerate = { generatedSteps ->
+                                                        val updatedMacro = macro.copy(steps = macro.steps + generatedSteps)
+                                                        val updatedStack = updateStackDraftMacro(subPageStack.dropLast(1), updatedMacro)
+                                                        MacroPadNavState.setStack(updatedStack)
+                                                        if (currentSubPage.macro != null) {
+                                                            MacroPadState.updateMacro(updatedMacro)
+                                                        }
+                                                        DialogToastManager.show(
+                                                            context.getString(
+                                                                R.string.macropad_macro_text_sequence_toast,
+                                                                generatedSteps.size,
+                                                            ),
+                                                        )
+                                                    },
+                                                    onDiscard = { MacroPadNavState.pop() },
+                                                )
+                                            }
                                         }
                                     }
 

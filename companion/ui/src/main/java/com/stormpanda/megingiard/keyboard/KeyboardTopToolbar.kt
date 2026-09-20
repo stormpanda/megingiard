@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.ContentCut
 import androidx.compose.material.icons.rounded.ContentPaste
@@ -106,10 +107,17 @@ internal fun KeyboardTopToolbar(
         Spacer(modifier = Modifier.weight(1f))
 
         // Action icons on the right
+        val isMacroRowVisible by viewModel.isMacroRowVisible.collectAsStateWithLifecycle()
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            ToolbarIcon(
+                imageVector = Icons.AutoMirrored.Rounded.PlaylistPlay,
+                contentDescription = stringResource(R.string.cd_kb_macros),
+                tint = if (isMacroRowVisible) accentColor else null,
+                onClick = { viewModel.toggleMacroRow() },
+            )
             ToolbarIcon(
                 imageVector = Icons.Rounded.SelectAll,
                 contentDescription = stringResource(R.string.cd_kb_select_all),
@@ -131,6 +139,39 @@ internal fun KeyboardTopToolbar(
                 onClick = { viewModel.paste() },
             )
         }
+    }
+}
+
+@Composable
+private fun ToolbarIcon(
+    imageVector: ImageVector,
+    contentDescription: String,
+    tint: Color? = null,
+    onClick: () -> Unit = {},
+) {
+    val colors = LocalAppColors.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    Box(
+        modifier =
+            Modifier
+                .size(KB_CLOSE_BUTTON_SIZE)
+                .offset(y = 2.dp)
+                .clip(CircleShape)
+                .background(if (isPressed) colors.keyPressed else Color.Transparent)
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    onClick = onClick,
+                ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = imageVector,
+            contentDescription = contentDescription,
+            tint = tint ?: colors.onSurface.copy(alpha = 0.8f),
+            modifier = Modifier.size(KB_ICON_SIZE_MEDIUM),
+        )
     }
 }
 
@@ -177,38 +218,6 @@ private fun ModifierButton(
             }
         },
     )
-}
-
-@Composable
-private fun ToolbarIcon(
-    imageVector: ImageVector,
-    contentDescription: String,
-    onClick: () -> Unit = {},
-) {
-    val colors = LocalAppColors.current
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    Box(
-        modifier =
-            Modifier
-                .size(KB_CLOSE_BUTTON_SIZE)
-                .offset(y = 2.dp)
-                .clip(CircleShape)
-                .background(if (isPressed) colors.keyPressed else Color.Transparent)
-                .clickable(
-                    interactionSource = interactionSource,
-                    indication = null,
-                    onClick = onClick,
-                ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = imageVector,
-            contentDescription = contentDescription,
-            tint = colors.onSurface.copy(alpha = 0.8f),
-            modifier = Modifier.size(KB_ICON_SIZE_MEDIUM),
-        )
-    }
 }
 
 @Composable
