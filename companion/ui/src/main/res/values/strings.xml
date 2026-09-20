@@ -542,7 +542,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_text_sequence_generate">Generate Steps</string>
     <string name="macropad_macro_text_sequence_toast">%1$d keyboard steps added to macro</string>
     <string name="cd_kb_macros">Toggle macro bar</string>
-    <string name="kb_macro_quick_row_empty">No macros found in active profile</string>
+    <string name="kb_macro_quick_row_empty">No keyboard macros in active profile</string>
     <string name="macropad_macro_step_short_samples_count">(%1$d pts)</string>
     <string name="macropad_macro_step_joystick_path_short">%1$s (%2$d pts)</string>
     <string name="macropad_macro_step_touch_path_details">Gesture Path: %1$d points recorded.</string>

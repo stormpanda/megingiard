@@ -217,4 +217,38 @@ class MacroKeyboardStepTest {
         assertTrue(step2.startTimeMs in 190L..210L)
         assertTrue(step2.durationMs in 40L..60L)
     }
+
+    @Test
+    fun `hasKeyboardSteps returns true only when macro contains KeyboardKeyTap`() {
+        val keyboardMacro =
+            Macro(
+                id = "kb",
+                name = "Keyboard Macro",
+                steps = listOf(MacroStep.KeyboardKeyTap(0L, 50L, LinuxKeycodes.KEY_ENTER, "Enter")),
+            )
+        assertTrue(keyboardMacro.hasKeyboardSteps)
+
+        val gamepadMacro =
+            Macro(
+                id = "gp",
+                name = "Gamepad Macro",
+                steps = listOf(MacroStep.GamepadButtonTap(0L, 50L, 304, "A")),
+            )
+        assertFalse(gamepadMacro.hasKeyboardSteps)
+
+        val mixedMacro =
+            Macro(
+                id = "mixed",
+                name = "Mixed Macro",
+                steps =
+                    listOf(
+                        MacroStep.GamepadButtonTap(0L, 50L, 304, "A"),
+                        MacroStep.KeyboardKeyTap(100L, 50L, LinuxKeycodes.KEY_SPACE, "Space"),
+                    ),
+            )
+        assertTrue(mixedMacro.hasKeyboardSteps)
+
+        val emptyMacro = Macro(id = "empty", name = "Empty Macro", steps = emptyList())
+        assertFalse(emptyMacro.hasKeyboardSteps)
+    }
 }

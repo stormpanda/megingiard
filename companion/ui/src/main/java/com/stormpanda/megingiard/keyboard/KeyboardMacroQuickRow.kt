@@ -43,6 +43,7 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.Macro
 import com.stormpanda.megingiard.macropad.MacroExecutor
 import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.macropad.hasKeyboardSteps
 import com.stormpanda.megingiard.ui.LocalAppColors
 
 private const val TAG = "KeyboardMacroQuickRow"
@@ -60,7 +61,8 @@ internal fun KeyboardMacroQuickRow(
     val colors = LocalAppColors.current
     val activeProfile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
     val runningMacroIds by MacroExecutor.runningMacroIds.collectAsStateWithLifecycle()
-    val macros = activeProfile?.macros ?: emptyList()
+    val allMacros = activeProfile?.macros ?: emptyList()
+    val keyboardMacros = remember(allMacros) { allMacros.filter { it.hasKeyboardSteps } }
 
     AnimatedVisibility(
         visible = visible,
@@ -77,7 +79,7 @@ internal fun KeyboardMacroQuickRow(
                     .padding(horizontal = 8.dp, vertical = 4.dp),
             contentAlignment = Alignment.CenterStart,
         ) {
-            if (macros.isEmpty()) {
+            if (keyboardMacros.isEmpty()) {
                 Text(
                     text = stringResource(R.string.kb_macro_quick_row_empty),
                     color = colors.onSurfaceSecondary,
@@ -94,7 +96,7 @@ internal fun KeyboardMacroQuickRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    macros.forEach { macro ->
+                    keyboardMacros.forEach { macro ->
                         val isRunning = macro.id in runningMacroIds
                         MacroQuickChip(
                             macro = macro,

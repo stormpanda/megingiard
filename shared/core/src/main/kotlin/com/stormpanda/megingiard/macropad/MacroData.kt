@@ -252,6 +252,10 @@ data class Macro(
     val randomizeTimingRangeMs: Int = 20,
 )
 
+/** Returns true if this macro contains at least one [MacroStep.KeyboardKeyTap] step. */
+val Macro.hasKeyboardSteps: Boolean
+    get() = steps.any { it is MacroStep.KeyboardKeyTap }
+
 /**
  * Returns a copy of this macro where every step has been randomized by timing and duration
  * using [random], if timing randomization is enabled.

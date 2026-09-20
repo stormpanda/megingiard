@@ -128,7 +128,8 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
 
 - The virtual keyboard top toolbar MUST include a dedicated **Macro Trigger Icon** (`Icons.AutoMirrored.Rounded.PlaylistPlay`) on the right action side.
 - Tapping the icon toggles an animated **Quick Macro Row** (`KeyboardMacroQuickRow`) positioned above the keyboard layout grid.
-- The row displays horizontal scrollable chips representing all macros defined in the active `PadProfile`.
+- The row displays horizontal scrollable chips representing all macros containing keyboard keystrokes (`macro.hasKeyboardSteps`) defined in the active `PadProfile`. Gamepad-only or touch-only macros are filtered out to keep the quick row contextually focused.
+- If no keyboard macros exist in the active profile, an empty-state message is shown.
 - Tapping any macro chip triggers playback via `MacroExecutor.execute(macro)` (or stops it via `MacroExecutor.stop(macro.id)` if already running).
 - Running macros display active accent styling and a stop indicator in real-time driven by `MacroExecutor.runningMacroIds`.
 - When the macro row is opened, the keyboard container height expands dynamically by `36 dp` to prevent visual compression of the main key layout.

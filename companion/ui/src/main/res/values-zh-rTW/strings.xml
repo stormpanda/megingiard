@@ -530,7 +530,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_text_sequence_generate">產生步驟</string>
     <string name="macropad_macro_text_sequence_toast">已將 %1$d 個鍵盤步驟新增至巨集</string>
     <string name="cd_kb_macros">切換巨集列</string>
-    <string name="kb_macro_quick_row_empty">目前設定檔中沒有巨集</string>
+    <string name="kb_macro_quick_row_empty">目前設定檔中沒有鍵盤巨集</string>
     <string name="macropad_macro_step_short_samples_count">(%1$d 點)</string>
     <string name="macropad_macro_step_joystick_path_short">%1$s (%2$d 點)</string>
     <string name="macropad_macro_step_touch_path_details">手勢路徑: 已錄製 %1$d 個點。</string>

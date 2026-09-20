@@ -542,7 +542,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_text_sequence_generate">Schritte generieren</string>
     <string name="macropad_macro_text_sequence_toast">%1$d Tastaturschritte zum Makro hinzugefügt</string>
     <string name="cd_kb_macros">Makroleiste umschalten</string>
-    <string name="kb_macro_quick_row_empty">Keine Makros im aktiven Profil vorhanden</string>
+    <string name="kb_macro_quick_row_empty">Keine Tastatur-Makros im aktiven Profil</string>
     <string name="macropad_macro_step_short_samples_count">(%1$d Pkt.)</string>
     <string name="macropad_macro_step_joystick_path_short">%1$s (%2$d Pkt.)</string>
     <string name="macropad_macro_step_touch_path_details">Gestenpfad: %1$d Punkte aufgezeichnet.</string>
