@@ -308,4 +308,40 @@ class MacroPadNavStateTest {
             (MacroPadNavState.subPageStack.value.first() as MacroPadSubPage.EditButton).draftButton?.buttonSize,
         )
     }
+
+    @Test
+    fun `AppPicker and EditButton stack flow preserves custom label on app launcher`() {
+        val initialDraft =
+            PadButton(
+                id = "btn-app-1",
+                label = "RetroArch",
+                posX = 0.5f,
+                posY = 0.5f,
+                action = PadAction.AppLauncher(packageName = "com.retroarch"),
+            )
+        MacroPadNavState.selectSection(EditorSection.BUTTONS)
+        MacroPadNavState.push(MacroPadSubPage.EditButton(button = null, draftButton = initialDraft))
+        MacroPadNavState.push(MacroPadSubPage.AppPicker)
+
+        assertEquals(EditorSection.BUTTONS, MacroPadSubPage.AppPicker.parentSection)
+        assertNav(
+            EditorSection.BUTTONS,
+            listOf(
+                MacroPadSubPage.EditButton(button = null, draftButton = initialDraft),
+                MacroPadSubPage.AppPicker,
+            ),
+        )
+
+        val updatedDraft =
+            initialDraft.copy(
+                label = "My Custom App",
+                action = PadAction.AppLauncher(packageName = "com.custom.app"),
+            )
+        MacroPadNavState.setStack(listOf(MacroPadSubPage.EditButton(button = null, draftButton = updatedDraft)))
+
+        assertNav(EditorSection.BUTTONS, listOf(MacroPadSubPage.EditButton(button = null, draftButton = updatedDraft)))
+        val currentEditButton = MacroPadNavState.subPageStack.value.first() as MacroPadSubPage.EditButton
+        assertEquals("My Custom App", currentEditButton.draftButton?.label)
+        assertEquals(PadAction.AppLauncher("com.custom.app"), currentEditButton.draftButton?.action)
+    }
 }

@@ -825,6 +825,8 @@ fun MacroPadEditor(
                                                 assignedPackages = emptySet(),
                                                 accentColor = colors.accent,
                                                 onSelectApp = { pkg ->
+                                                    val appName = resolveAppName(context, pkg)
+                                                    val defaultLabel = context.getString(R.string.macropad_editor_new_button_default_label)
                                                     MacroPadNavState.setStack(
                                                         subPageStack.dropLast(1).map { subPage ->
                                                             if (subPage is MacroPadSubPage.EditButton) {
@@ -834,15 +836,21 @@ fun MacroPadEditor(
                                                                         ?: subPage.button
                                                                         ?: PadButton(
                                                                             id = UUID.randomUUID().toString(),
-                                                                            label =
-                                                                                context.getString(
-                                                                                    R.string.macropad_editor_new_button_default_label,
-                                                                                ),
+                                                                            label = defaultLabel,
                                                                             posX = 0.5f,
                                                                             posY = 0.5f,
                                                                             action = PadAction.AppLauncher(pkg),
                                                                         )
-                                                                val newBtn = draft.copy(action = PadAction.AppLauncher(pkg))
+                                                                val newBtn =
+                                                                    draft.copy(
+                                                                        label =
+                                                                            if (draft.label == defaultLabel || draft.label.isBlank()) {
+                                                                                appName.ifBlank { draft.label }
+                                                                            } else {
+                                                                                draft.label
+                                                                            },
+                                                                        action = PadAction.AppLauncher(pkg),
+                                                                    )
                                                                 buttonDraft = newBtn
                                                                 subPage.copy(draftButton = newBtn)
                                                             } else {

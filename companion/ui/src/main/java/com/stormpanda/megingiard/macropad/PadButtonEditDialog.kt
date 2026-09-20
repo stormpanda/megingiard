@@ -263,7 +263,7 @@ internal fun EditButtonSubPageContent(
     val isConfirmEnabled =
         when {
             action is PadAction.ScrollWheel || action is PadAction.TrackpointMove -> true
-            action is PadAction.AppLauncher -> (action as PadAction.AppLauncher).packageName.isNotBlank()
+            action is PadAction.AppLauncher -> (action as PadAction.AppLauncher).packageName.isNotBlank() && label.isNotBlank()
             action is PadAction.Macro -> label.isNotBlank() && macros.any { it.id == (action as PadAction.Macro).macroId }
             else -> label.isNotBlank()
         }
@@ -289,7 +289,8 @@ internal fun EditButtonSubPageContent(
     val currentBorder = resolveColorOption(effectiveBorderOpt, globalAccentColor, MP_AMBIENT_NEUTRAL_BORDER)
     val currentBg = resolveBgColorOption(effectiveBgOpt, globalAccentColor)
 
-    val showLabelAndIcon = action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove && action !is PadAction.AppLauncher
+    val showLabel = action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove
+    val showIconPicker = action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove && action !is PadAction.AppLauncher
 
     val promptState =
         rememberSaveExitPromptState(
@@ -304,7 +305,7 @@ internal fun EditButtonSubPageContent(
         )
 
     // Label & Icon input
-    if (showLabelAndIcon) {
+    if (showLabel) {
         GamepadTextFieldCard(
             title = stringResource(R.string.macropad_editor_button_label),
             description = stringResource(R.string.macropad_editor_button_label_desc),
@@ -314,7 +315,9 @@ internal fun EditButtonSubPageContent(
             icon = Icons.Rounded.Edit,
             modifier = Modifier.firstDeckItem(),
         )
+    }
 
+    if (showIconPicker) {
         GamepadActionCard(
             title = stringResource(R.string.macropad_icon_picker_title),
             description = if (iconName != null) iconName!! else stringResource(R.string.macropad_icon_picker_search),
@@ -335,7 +338,7 @@ internal fun EditButtonSubPageContent(
 
     ActionPicker(
         current = action,
-        isFirstItem = !showLabelAndIcon,
+        isFirstItem = !showLabel,
         onOpenMacroPicker = {
             onOpenMacroPicker?.invoke(currentButton)
         },

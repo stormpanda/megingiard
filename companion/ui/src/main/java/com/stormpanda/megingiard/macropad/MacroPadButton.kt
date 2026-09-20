@@ -372,7 +372,7 @@ internal fun AppLauncherFace(
             }
         Image(
             bitmap = bitmap,
-            contentDescription = resolvedName.ifBlank { action.packageName },
+            contentDescription = btn.label.ifBlank { resolvedName.ifBlank { action.packageName } },
             colorFilter = colorFilter,
             modifier = Modifier.size(targetSize),
         )
