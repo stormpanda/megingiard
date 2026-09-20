@@ -143,6 +143,7 @@ fun GamepadFocusCard(
     )
 
     var lastCustomConsumedDownKeyCode by remember { mutableIntStateOf(0) }
+    var lastActionDownKeyCode by remember { mutableIntStateOf(0) }
 
     val keyModifier =
         Modifier.onKeyEvent { keyEvent ->
@@ -150,52 +151,79 @@ fun GamepadFocusCard(
             if (keyEvent.type == KeyEventType.KeyDown) {
                 if (onCustomKeyEvent != null && onCustomKeyEvent(keyEvent)) {
                     lastCustomConsumedDownKeyCode = keyCode
+                    lastActionDownKeyCode = 0
                     return@onKeyEvent true
                 }
                 lastCustomConsumedDownKeyCode = 0
+                when (keyCode) {
+                    KeyEvent.KEYCODE_BUTTON_A,
+                    KeyEvent.KEYCODE_DPAD_CENTER,
+                    KeyEvent.KEYCODE_ENTER,
+                    KeyEvent.KEYCODE_NUMPAD_ENTER,
+                    -> {
+                        lastActionDownKeyCode = keyCode
+                        return@onKeyEvent true
+                    }
+
+                    else -> {
+                        lastActionDownKeyCode = 0
+                        return@onKeyEvent false
+                    }
+                }
             } else if (keyEvent.type == KeyEventType.KeyUp) {
                 if (lastCustomConsumedDownKeyCode == keyCode && keyCode != 0) {
                     lastCustomConsumedDownKeyCode = 0
+                    lastActionDownKeyCode = 0
                     onCustomKeyEvent?.invoke(keyEvent)
                     return@onKeyEvent true
                 }
                 if (onCustomKeyEvent != null && onCustomKeyEvent(keyEvent)) {
+                    lastActionDownKeyCode = 0
                     return@onKeyEvent true
                 }
-            }
 
-            when (keyCode) {
-                KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
-                    if (keyEvent.type == KeyEventType.KeyUp) {
-                        if (enabled && onClick != null) {
+                when (keyCode) {
+                    KeyEvent.KEYCODE_BUTTON_A,
+                    KeyEvent.KEYCODE_DPAD_CENTER,
+                    KeyEvent.KEYCODE_ENTER,
+                    KeyEvent.KEYCODE_NUMPAD_ENTER,
+                    -> {
+                        val wasDownOnCard = lastActionDownKeyCode == keyCode
+                        lastActionDownKeyCode = 0
+                        if (wasDownOnCard && enabled && onClick != null) {
                             onClick()
                         }
-                    }
-                    // Consume both KeyDown and KeyUp so clickable does not double-fire
-                    true
-                }
-
-                KeyEvent.KEYCODE_DPAD_LEFT -> {
-                    if (keyEvent.type == KeyEventType.KeyUp && enabled && onLeftKey != null) {
-                        onLeftKey()
+                        // Consume both KeyDown and KeyUp so clickable does not double-fire
                         true
-                    } else {
+                    }
+
+                    KeyEvent.KEYCODE_DPAD_LEFT -> {
+                        lastActionDownKeyCode = 0
+                        if (enabled && onLeftKey != null) {
+                            onLeftKey()
+                            true
+                        } else {
+                            false
+                        }
+                    }
+
+                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                        lastActionDownKeyCode = 0
+                        if (enabled && onRightKey != null) {
+                            onRightKey()
+                            true
+                        } else {
+                            false
+                        }
+                    }
+
+                    else -> {
+                        lastActionDownKeyCode = 0
                         false
                     }
                 }
-
-                KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                    if (keyEvent.type == KeyEventType.KeyUp && enabled && onRightKey != null) {
-                        onRightKey()
-                        true
-                    } else {
-                        false
-                    }
-                }
-
-                else -> {
-                    false
-                }
+            } else {
+                false
             }
         }
 

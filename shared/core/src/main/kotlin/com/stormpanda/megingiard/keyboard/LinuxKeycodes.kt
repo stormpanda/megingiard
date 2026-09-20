@@ -108,4 +108,109 @@ object LinuxKeycodes {
     // Extra
     const val KEY_SYSRQ = 99 // Print Screen
     const val KEY_102ND = 86 // Key between Shift and Z on ISO keyboards (< >)
+    const val KEY_FN = 464
+    const val KEY_MAX = 464
+
+    /**
+     * Data class representing a keycode mapping with optional Shift modifier requirement.
+     */
+    data class KeyMapping(
+        val keycode: Int,
+        val label: String,
+        val shift: Boolean = false,
+    )
+
+    /**
+     * Resolves a printable character or control character to its standard Linux keycode mapping.
+     * Returns null for unmapped characters.
+     */
+    fun charToKeyMapping(char: Char): KeyMapping? {
+        if (char in 'a'..'z') {
+            val code = letterToKeycode(char) ?: return null
+            return KeyMapping(code, char.uppercase(), shift = false)
+        }
+        if (char in 'A'..'Z') {
+            val code = letterToKeycode(char.lowercaseChar()) ?: return null
+            return KeyMapping(code, char.toString(), shift = true)
+        }
+        return when (char) {
+            '0' -> KeyMapping(KEY_0, "0", shift = false)
+            '1' -> KeyMapping(KEY_1, "1", shift = false)
+            '2' -> KeyMapping(KEY_2, "2", shift = false)
+            '3' -> KeyMapping(KEY_3, "3", shift = false)
+            '4' -> KeyMapping(KEY_4, "4", shift = false)
+            '5' -> KeyMapping(KEY_5, "5", shift = false)
+            '6' -> KeyMapping(KEY_6, "6", shift = false)
+            '7' -> KeyMapping(KEY_7, "7", shift = false)
+            '8' -> KeyMapping(KEY_8, "8", shift = false)
+            '9' -> KeyMapping(KEY_9, "9", shift = false)
+            ' ' -> KeyMapping(KEY_SPACE, "Space", shift = false)
+            '\n' -> KeyMapping(KEY_ENTER, "Enter", shift = false)
+            '\t' -> KeyMapping(KEY_TAB, "Tab", shift = false)
+            '-' -> KeyMapping(KEY_MINUS, "-", shift = false)
+            '_' -> KeyMapping(KEY_MINUS, "_", shift = true)
+            '=' -> KeyMapping(KEY_EQUAL, "=", shift = false)
+            '+' -> KeyMapping(KEY_EQUAL, "+", shift = true)
+            '.' -> KeyMapping(KEY_DOT, ".", shift = false)
+            '>' -> KeyMapping(KEY_DOT, ">", shift = true)
+            ',' -> KeyMapping(KEY_COMMA, ",", shift = false)
+            '<' -> KeyMapping(KEY_COMMA, "<", shift = true)
+            '/' -> KeyMapping(KEY_SLASH, "/", shift = false)
+            '?' -> KeyMapping(KEY_SLASH, "?", shift = true)
+            ';' -> KeyMapping(KEY_SEMICOLON, ";", shift = false)
+            ':' -> KeyMapping(KEY_SEMICOLON, ":", shift = true)
+            '\'' -> KeyMapping(KEY_APOSTROPHE, "'", shift = false)
+            '"' -> KeyMapping(KEY_APOSTROPHE, "\"", shift = true)
+            '\\' -> KeyMapping(KEY_BACKSLASH, "\\", shift = false)
+            '|' -> KeyMapping(KEY_BACKSLASH, "|", shift = true)
+            '`' -> KeyMapping(KEY_GRAVE, "`", shift = false)
+            '~' -> KeyMapping(KEY_GRAVE, "~", shift = true)
+            '[' -> KeyMapping(KEY_LEFTBRACE, "[", shift = false)
+            '{' -> KeyMapping(KEY_LEFTBRACE, "{", shift = true)
+            ']' -> KeyMapping(KEY_RIGHTBRACE, "]", shift = false)
+            '}' -> KeyMapping(KEY_RIGHTBRACE, "}", shift = true)
+            '!' -> KeyMapping(KEY_1, "!", shift = true)
+            '@' -> KeyMapping(KEY_2, "@", shift = true)
+            '#' -> KeyMapping(KEY_3, "#", shift = true)
+            '$' -> KeyMapping(KEY_4, "$", shift = true)
+            '%' -> KeyMapping(KEY_5, "%", shift = true)
+            '^' -> KeyMapping(KEY_6, "^", shift = true)
+            '&' -> KeyMapping(KEY_7, "&", shift = true)
+            '*' -> KeyMapping(KEY_8, "*", shift = true)
+            '(' -> KeyMapping(KEY_9, "(", shift = true)
+            ')' -> KeyMapping(KEY_0, ")", shift = true)
+            else -> null
+        }
+    }
+
+    private fun letterToKeycode(char: Char): Int? =
+        when (char) {
+            'a' -> KEY_A
+            'b' -> KEY_B
+            'c' -> KEY_C
+            'd' -> KEY_D
+            'e' -> KEY_E
+            'f' -> KEY_F
+            'g' -> KEY_G
+            'h' -> KEY_H
+            'i' -> KEY_I
+            'j' -> KEY_J
+            'k' -> KEY_K
+            'l' -> KEY_L
+            'm' -> KEY_M
+            'n' -> KEY_N
+            'o' -> KEY_O
+            'p' -> KEY_P
+            'q' -> KEY_Q
+            'r' -> KEY_R
+            's' -> KEY_S
+            't' -> KEY_T
+            'u' -> KEY_U
+            'v' -> KEY_V
+            'w' -> KEY_W
+            'x' -> KEY_X
+            'y' -> KEY_Y
+            'z' -> KEY_Z
+            else -> null
+        }
 }

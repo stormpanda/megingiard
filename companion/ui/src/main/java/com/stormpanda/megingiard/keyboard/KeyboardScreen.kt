@@ -91,7 +91,16 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
 
     // Sub-mode and layout tracking
     val keyboardMode by viewModel.keyboardMode.collectAsStateWithLifecycle()
-    val targetContainerHeight = if (keyboardMode == KeyboardMode.FULL) 270.dp else 262.dp
+    val isMacroRowVisible by viewModel.isMacroRowVisible.collectAsStateWithLifecycle()
+    val baseContainerHeight = if (keyboardMode == KeyboardMode.FULL) 270.dp else 262.dp
+    val targetContainerHeight =
+        if (isMacroRowVisible &&
+            keyboardMode != KeyboardMode.FULL
+        ) {
+            baseContainerHeight + 36.dp
+        } else {
+            baseContainerHeight
+        }
     val animatedContainerHeight by animateDpAsState(
         targetValue = targetContainerHeight,
         animationSpec = tween(300),
@@ -314,6 +323,11 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                     ) {
                         KeyboardTopToolbar(
                             activeState = activeState,
+                            accentColor = accentColor,
+                        )
+
+                        KeyboardMacroQuickRow(
+                            visible = isMacroRowVisible && activeState.mode != KeyboardMode.FULL,
                             accentColor = accentColor,
                         )
 

@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.macropad
 
 import android.content.Context
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.NearMe
 import androidx.compose.material.icons.rounded.OpenWith
 import androidx.compose.material.icons.rounded.SportsEsports
@@ -82,6 +83,19 @@ internal fun shortStepLabel(
         is MacroStep.TouchPath -> {
             gestureLabel
         }
+
+        is MacroStep.KeyboardKeyTap -> {
+            val modPrefix =
+                step.modifiers
+                    .mapNotNull { mod ->
+                        MODIFIER_PRESETS.firstOrNull { it.first == mod }?.second
+                    }.joinToString("+")
+            if (modPrefix.isNotBlank()) {
+                "$modPrefix+${step.label}"
+            } else {
+                step.label
+            }
+        }
     }
 
 internal fun stepIcon(step: MacroStep): ImageVector =
@@ -90,6 +104,7 @@ internal fun stepIcon(step: MacroStep): ImageVector =
         is MacroStep.JoystickMove, is MacroStep.JoystickPath -> Icons.Rounded.NearMe
         is MacroStep.DPadTap -> Icons.Rounded.OpenWith
         is MacroStep.TouchTap, is MacroStep.TouchPath -> Icons.Rounded.TouchApp
+        is MacroStep.KeyboardKeyTap -> Icons.Rounded.Keyboard
     }
 
 internal fun stepTypeLabelRes(step: MacroStep): Int =
@@ -100,6 +115,7 @@ internal fun stepTypeLabelRes(step: MacroStep): Int =
         is MacroStep.TouchTap -> R.string.macropad_macro_step_type_touch
         is MacroStep.JoystickPath -> R.string.macropad_macro_step_type_joystick_path
         is MacroStep.TouchPath -> R.string.macropad_macro_step_type_touch_path
+        is MacroStep.KeyboardKeyTap -> R.string.macropad_macro_step_type_keyboard
     }
 
 @Composable
@@ -151,6 +167,19 @@ internal fun stepActionDescription(
 
         is MacroStep.TouchPath -> {
             context.getString(R.string.macropad_macro_step_short_samples_count, step.samples.size)
+        }
+
+        is MacroStep.KeyboardKeyTap -> {
+            val modText =
+                step.modifiers
+                    .mapNotNull { mod ->
+                        MODIFIER_PRESETS.firstOrNull { it.first == mod }?.second
+                    }.joinToString(", ")
+            if (modText.isNotBlank()) {
+                "${step.label} ($modText)"
+            } else {
+                step.label
+            }
         }
     }
 

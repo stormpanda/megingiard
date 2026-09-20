@@ -121,6 +121,22 @@ sealed class MacroStep {
         override val durationMs: Long,
         val samples: List<TouchSample>,
     ) : MacroStep()
+
+    /**
+     * Injects a keyboard key press with [keycode] and optional [modifiers] held for
+     * [durationMs] milliseconds, beginning [startTimeMs] milliseconds after macro start.
+     * [keycode] is a Linux input-event keycode.
+     * [modifiers] are optional modifier keycodes (e.g. Ctrl, Shift, Alt, Meta, Fn).
+     */
+    @Serializable
+    @SerialName("keyboard_key_tap")
+    data class KeyboardKeyTap(
+        override val startTimeMs: Long,
+        override val durationMs: Long,
+        val keycode: Int,
+        val label: String,
+        val modifiers: List<Int> = emptyList(),
+    ) : MacroStep()
 }
 
 /**
@@ -190,6 +206,7 @@ fun MacroStep.withStartTime(newStartTimeMs: Long): MacroStep =
         is MacroStep.TouchTap -> copy(startTimeMs = newStartTimeMs)
         is MacroStep.JoystickPath -> copy(startTimeMs = newStartTimeMs)
         is MacroStep.TouchPath -> copy(startTimeMs = newStartTimeMs)
+        is MacroStep.KeyboardKeyTap -> copy(startTimeMs = newStartTimeMs)
     }
 
 /** Returns a copy of this step with [startTimeMs] and [durationMs] replaced by [newStartTimeMs] and [newDurationMs]. */
@@ -204,6 +221,7 @@ fun MacroStep.withTiming(
         is MacroStep.TouchTap -> copy(startTimeMs = newStartTimeMs, durationMs = newDurationMs)
         is MacroStep.JoystickPath -> copy(startTimeMs = newStartTimeMs, durationMs = newDurationMs)
         is MacroStep.TouchPath -> copy(startTimeMs = newStartTimeMs, durationMs = newDurationMs)
+        is MacroStep.KeyboardKeyTap -> copy(startTimeMs = newStartTimeMs, durationMs = newDurationMs)
     }
 
 /** Returns a new list where every step's start time is shifted by [offsetMs]. */
@@ -233,6 +251,10 @@ data class Macro(
     val randomizeTimingEnabled: Boolean = false,
     val randomizeTimingRangeMs: Int = 20,
 )
+
+/** Returns true if this macro contains at least one [MacroStep.KeyboardKeyTap] step. */
+val Macro.hasKeyboardSteps: Boolean
+    get() = steps.any { it is MacroStep.KeyboardKeyTap }
 
 /**
  * Returns a copy of this macro where every step has been randomized by timing and duration

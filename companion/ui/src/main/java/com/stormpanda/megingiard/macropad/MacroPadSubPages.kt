@@ -308,8 +308,34 @@ internal sealed interface MacroPadSubPage {
         val draftMacro: Macro? = null,
         val macroId: String = draftMacro?.id ?: macro?.id ?: "",
         val stepIndex: Int? = null,
+        val draftStep: MacroStep? = null,
     ) : MacroPadSubPage {
-        constructor(macroId: String, stepIndex: Int?) : this(macro = null, draftMacro = null, macroId = macroId, stepIndex = stepIndex)
+        constructor(
+            macroId: String,
+            stepIndex: Int?,
+        ) : this(macro = null, draftMacro = null, macroId = macroId, stepIndex = stepIndex, draftStep = null)
+
+        val effectiveMacro: Macro? get() = draftMacro ?: macro
+        override val parentSection = EditorSection.MACROS
+    }
+
+    data class ChooseKeyboardKeyForStep(
+        val macro: Macro? = null,
+        val draftMacro: Macro? = null,
+        val macroId: String = draftMacro?.id ?: macro?.id ?: "",
+        val stepIndex: Int? = null,
+        val draftStep: MacroStep.KeyboardKeyTap? = null,
+    ) : MacroPadSubPage {
+        val effectiveMacro: Macro? get() = draftMacro ?: macro
+        override val parentSection = EditorSection.MACROS
+    }
+
+    data class TextSequenceGenerator(
+        val macro: Macro? = null,
+        val draftMacro: Macro? = null,
+        val macroId: String = draftMacro?.id ?: macro?.id ?: "",
+    ) : MacroPadSubPage {
+        constructor(macroId: String) : this(macro = null, draftMacro = null, macroId = macroId)
 
         val effectiveMacro: Macro? get() = draftMacro ?: macro
         override val parentSection = EditorSection.MACROS

@@ -4,6 +4,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.input.TouchAction
 import com.stormpanda.megingiard.input.TouchInjector
+import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.privd.PrivdClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -164,8 +165,9 @@ object MacroExecutor {
 
         // Track every input that is currently "live" so we can release them all if execution
         // is stopped or cancelled mid-sequence. Covers all virtual devices that MacroExecutor
-        // can drive: gamepad (buttons, axes, hat) and touch.
+        // can drive: gamepad (buttons, axes, hat), keyboard, and touch.
         val pressedButtons = mutableSetOf<Int>()
+        val pressedKeys = mutableSetOf<Int>()
         val activeAxes = mutableMapOf<Int, Int>() // axis code → last non-zero value
         var liveHatX = 0
         var liveHatY = 0
@@ -228,6 +230,16 @@ object MacroExecutor {
                             liveTouchPos = null
                             TouchInjector.injectTouch(event.code, TouchAction.UP, event.normX, event.normY)
                         }
+
+                        MacroEventType.KEY_DOWN -> {
+                            pressedKeys += event.code
+                            KeyInjector.keyDown(event.code)
+                        }
+
+                        MacroEventType.KEY_UP -> {
+                            pressedKeys -= event.code
+                            KeyInjector.keyUp(event.code)
+                        }
                     }
                 }
                 AppLog.d(TAG, "macro '${macro.name}' iteration complete (${events.size} events) loop=${macro.loopEnabled}")
@@ -238,11 +250,12 @@ object MacroExecutor {
         } finally {
             AppLog.d(
                 TAG,
-                "macro '${macro.name}' done (buttons=${pressedButtons.size} axes=${activeAxes.size} hat=$liveHatX,$liveHatY touch=${liveTouchPos != null})",
+                "macro '${macro.name}' done (buttons=${pressedButtons.size} keys=${pressedKeys.size} axes=${activeAxes.size} hat=$liveHatX,$liveHatY touch=${liveTouchPos != null})",
             )
             // Release all inputs that are still active. This handles early cancellation
             // (user taps stop mid-sequence) in addition to the normal end-of-sequence reset.
             pressedButtons.forEach { GamepadInjector.buttonUp(it) }
+            pressedKeys.forEach { KeyInjector.keyUp(it) }
             activeAxes.keys.forEach { GamepadInjector.joystick(it, 0) }
             if (liveHatX != 0 || liveHatY != 0) {
                 GamepadInjector.hat(axis = 0, value = 0)

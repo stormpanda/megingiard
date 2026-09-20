@@ -149,4 +149,5 @@ internal val MODIFIER_PRESETS: List<Pair<Int, String>> =
         LinuxKeycodes.KEY_LEFTALT to "Alt",
         LinuxKeycodes.KEY_RIGHTALT to "AltGr",
         LinuxKeycodes.KEY_LEFTMETA to "Meta/Win",
+        LinuxKeycodes.KEY_FN to "Fn",
     )

@@ -45,6 +45,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
@@ -391,7 +392,57 @@ fun GamepadTextFieldCard(
                                 .fillMaxWidth()
                                 .focusProperties {
                                     canFocus = true
-                                }.focusRequester(textFieldFocusRequester),
+                                }.focusRequester(textFieldFocusRequester)
+                                .onPreviewKeyEvent { keyEvent ->
+                                    val keyCode = keyEvent.nativeKeyEvent.keyCode
+                                    if (keyEvent.type == KeyEventType.KeyDown) {
+                                        when (keyCode) {
+                                            KeyEvent.KEYCODE_ENTER,
+                                            KeyEvent.KEYCODE_NUMPAD_ENTER,
+                                            -> {
+                                                if (singleLine) {
+                                                    onValueChange(draftValue.text.trim())
+                                                    isEditing = false
+                                                    true
+                                                } else {
+                                                    false
+                                                }
+                                            }
+
+                                            KeyEvent.KEYCODE_ESCAPE,
+                                            KeyEvent.KEYCODE_BUTTON_B,
+                                            KeyEvent.KEYCODE_BACK,
+                                            KeyEvent.KEYCODE_BUTTON_A,
+                                            KeyEvent.KEYCODE_DPAD_CENTER,
+                                            -> {
+                                                onValueChange(draftValue.text.trim())
+                                                isEditing = false
+                                                true
+                                            }
+
+                                            else -> {
+                                                false
+                                            }
+                                        }
+                                    } else if (keyEvent.type == KeyEventType.KeyUp) {
+                                        when (keyCode) {
+                                            KeyEvent.KEYCODE_ENTER,
+                                            KeyEvent.KEYCODE_NUMPAD_ENTER,
+                                            -> singleLine
+
+                                            KeyEvent.KEYCODE_ESCAPE,
+                                            KeyEvent.KEYCODE_BUTTON_B,
+                                            KeyEvent.KEYCODE_BACK,
+                                            KeyEvent.KEYCODE_BUTTON_A,
+                                            KeyEvent.KEYCODE_DPAD_CENTER,
+                                            -> true
+
+                                            else -> false
+                                        }
+                                    } else {
+                                        false
+                                    }
+                                },
                     )
                 }
             }

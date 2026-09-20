@@ -124,6 +124,16 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
 - If the user manually collapses or dismisses the virtual keyboard while an editable field remains focused, the system MUST record hysteresis (`userDismissedFieldId`) to avoid aggressively re-opening the keyboard until focus changes to another field or the user explicitly taps the field again.
 - Megingiard relies on Android's native hardware keyboard detection (`show_ime_with_hard_keyboard = 0`) to keep the top-screen soft keyboard (Gboard) hidden without tearing down or finishing the application's active `InputConnection`. Forced suppression via `SHOW_MODE_HIDDEN` MUST NOT be used, as it causes Chromium and other input-connection engines to suspend text rendering until the IME session is restored.
 
+### FR-K13: Quick Macro Trigger Toolbar & Row
+
+- The virtual keyboard top toolbar MUST include a dedicated **Macro Trigger Icon** (`Icons.AutoMirrored.Rounded.PlaylistPlay`) on the right action side.
+- Tapping the icon toggles an animated **Quick Macro Row** (`KeyboardMacroQuickRow`) positioned above the keyboard layout grid.
+- The row displays horizontal scrollable chips representing all macros containing keyboard keystrokes (`macro.hasKeyboardSteps`) defined in the active `PadProfile`. Gamepad-only or touch-only macros are filtered out to keep the quick row contextually focused.
+- If no keyboard macros exist in the active profile, an empty-state message is shown.
+- Tapping any macro chip triggers playback via `MacroExecutor.execute(macro)` (or stops it via `MacroExecutor.stop(macro.id)` if already running).
+- Running macros display active accent styling and a stop indicator in real-time driven by `MacroExecutor.runningMacroIds`.
+- When the macro row is opened, the keyboard container height expands dynamically by `36 dp` to prevent visual compression of the main key layout.
+
 ---
 
 ## Technical Implementation

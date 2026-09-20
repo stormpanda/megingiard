@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.macropad
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Gesture
+import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.Tune
@@ -19,6 +20,7 @@ private const val TAG = "ChooseMacroModeSubPage"
 private enum class MacroCreationChoice {
     RECORD_GAMEPAD,
     BUILD_MANUAL,
+    TEXT_SEQUENCE,
     RECORD_TOUCH_TAP,
     RECORD_TOUCH_GESTURE,
 }
@@ -45,6 +47,12 @@ private val MACRO_CHOICE_ITEMS =
             icon = Icons.Rounded.Tune,
         ),
         MacroChoiceItem(
+            choice = MacroCreationChoice.TEXT_SEQUENCE,
+            titleRes = R.string.macropad_macro_create_text_sequence_title,
+            descRes = R.string.macropad_macro_create_text_sequence_desc,
+            icon = Icons.Rounded.Keyboard,
+        ),
+        MacroChoiceItem(
             choice = MacroCreationChoice.RECORD_TOUCH_TAP,
             titleRes = R.string.macropad_macro_create_record_touch_tap_title,
             descRes = R.string.macropad_macro_create_record_touch_tap_desc,
@@ -62,6 +70,7 @@ private val MACRO_CHOICE_ITEMS =
 internal fun ChooseMacroModeSubPageContent(
     onRecordGamepad: () -> Unit,
     onBuildManual: () -> Unit,
+    onTextSequence: () -> Unit,
     onRecordTouchTap: () -> Unit,
     onRecordTouchGesture: () -> Unit,
     modifier: Modifier = Modifier,
@@ -81,6 +90,7 @@ internal fun ChooseMacroModeSubPageContent(
                 when (item.choice) {
                     MacroCreationChoice.RECORD_GAMEPAD -> onRecordGamepad()
                     MacroCreationChoice.BUILD_MANUAL -> onBuildManual()
+                    MacroCreationChoice.TEXT_SEQUENCE -> onTextSequence()
                     MacroCreationChoice.RECORD_TOUCH_TAP -> onRecordTouchTap()
                     MacroCreationChoice.RECORD_TOUCH_GESTURE -> onRecordTouchGesture()
                 }
