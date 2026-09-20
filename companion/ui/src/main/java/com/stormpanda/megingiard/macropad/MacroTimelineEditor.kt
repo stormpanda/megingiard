@@ -230,7 +230,6 @@ internal fun MacroTimelineSubPageContent(
     if (!physicalRecordingAvailable) {
         GamepadInfoBox(
             text = stringResource(R.string.macropad_macro_privd_required_banner),
-            modifier = Modifier.firstDeckItem(),
         )
     }
 
@@ -240,7 +239,7 @@ internal fun MacroTimelineSubPageContent(
         value = localName,
         onValueChange = { localName = it },
         placeholder = stringResource(R.string.macropad_macro_default_name),
-        modifier = if (physicalRecordingAvailable) Modifier.firstDeckItem() else Modifier,
+        modifier = Modifier.firstDeckItem(),
     )
 
     GamepadActionCard(

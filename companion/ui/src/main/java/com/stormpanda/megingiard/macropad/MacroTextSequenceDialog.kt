@@ -115,7 +115,6 @@ internal fun TextSequenceGeneratorSubPageContent(
 
     GamepadInfoBox(
         text = stringResource(R.string.macropad_macro_text_sequence_info),
-        modifier = Modifier.firstDeckItem(),
     )
 
     GamepadTextFieldCard(
@@ -124,6 +123,7 @@ internal fun TextSequenceGeneratorSubPageContent(
         value = textInput,
         onValueChange = { textInput = it },
         placeholder = stringResource(R.string.macropad_macro_text_sequence_placeholder),
+        modifier = Modifier.firstDeckItem(),
     )
 
     GamepadSectionHeader(
