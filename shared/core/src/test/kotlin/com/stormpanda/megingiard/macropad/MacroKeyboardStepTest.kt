@@ -78,6 +78,62 @@ class MacroKeyboardStepTest {
         assertNotNull(mappingUpperA)
         assertEquals(LinuxKeycodes.KEY_A, mappingUpperA!!.keycode)
         assertTrue(mappingUpperA.shift)
+
+        // Verify "hello" produces correct keycodes KEY_H, KEY_E, KEY_L, KEY_L, KEY_O
+        val helloKeycodes = "hello".map { LinuxKeycodes.charToKeyMapping(it)?.keycode }
+        assertEquals(
+            listOf(
+                LinuxKeycodes.KEY_H,
+                LinuxKeycodes.KEY_E,
+                LinuxKeycodes.KEY_L,
+                LinuxKeycodes.KEY_L,
+                LinuxKeycodes.KEY_O,
+            ),
+            helloKeycodes,
+        )
+
+        // Verify all 26 letters map to expected Linux keycodes
+        val expectedAlphabet =
+            mapOf(
+                'a' to LinuxKeycodes.KEY_A,
+                'b' to LinuxKeycodes.KEY_B,
+                'c' to LinuxKeycodes.KEY_C,
+                'd' to LinuxKeycodes.KEY_D,
+                'e' to LinuxKeycodes.KEY_E,
+                'f' to LinuxKeycodes.KEY_F,
+                'g' to LinuxKeycodes.KEY_G,
+                'h' to LinuxKeycodes.KEY_H,
+                'i' to LinuxKeycodes.KEY_I,
+                'j' to LinuxKeycodes.KEY_J,
+                'k' to LinuxKeycodes.KEY_K,
+                'l' to LinuxKeycodes.KEY_L,
+                'm' to LinuxKeycodes.KEY_M,
+                'n' to LinuxKeycodes.KEY_N,
+                'o' to LinuxKeycodes.KEY_O,
+                'p' to LinuxKeycodes.KEY_P,
+                'q' to LinuxKeycodes.KEY_Q,
+                'r' to LinuxKeycodes.KEY_R,
+                's' to LinuxKeycodes.KEY_S,
+                't' to LinuxKeycodes.KEY_T,
+                'u' to LinuxKeycodes.KEY_U,
+                'v' to LinuxKeycodes.KEY_V,
+                'w' to LinuxKeycodes.KEY_W,
+                'x' to LinuxKeycodes.KEY_X,
+                'y' to LinuxKeycodes.KEY_Y,
+                'z' to LinuxKeycodes.KEY_Z,
+            )
+
+        for ((char, expectedCode) in expectedAlphabet) {
+            val lowerMap = LinuxKeycodes.charToKeyMapping(char)
+            assertNotNull("Mapping for '$char' should not be null", lowerMap)
+            assertEquals("Lower '$char' keycode mismatch", expectedCode, lowerMap!!.keycode)
+            assertFalse("Lower '$char' should not require shift", lowerMap.shift)
+
+            val upperMap = LinuxKeycodes.charToKeyMapping(char.uppercaseChar())
+            assertNotNull("Mapping for '${char.uppercaseChar()}' should not be null", upperMap)
+            assertEquals("Upper '${char.uppercaseChar()}' keycode mismatch", expectedCode, upperMap!!.keycode)
+            assertTrue("Upper '${char.uppercaseChar()}' should require shift", upperMap.shift)
+        }
     }
 
     @Test

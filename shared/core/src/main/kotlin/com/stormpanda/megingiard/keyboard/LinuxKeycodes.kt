@@ -124,12 +124,26 @@ object LinuxKeycodes {
      * Resolves a printable character or control character to its standard Linux keycode mapping.
      * Returns null for unmapped characters.
      */
-    fun charToKeyMapping(char: Char): KeyMapping? =
-        when (char) {
-            in 'a'..'z' -> KeyMapping(KEY_A + (char - 'a'), char.uppercase(), shift = false)
-            in 'A'..'Z' -> KeyMapping(KEY_A + (char - 'A'), char.toString(), shift = true)
+    fun charToKeyMapping(char: Char): KeyMapping? {
+        if (char in 'a'..'z') {
+            val code = letterToKeycode(char) ?: return null
+            return KeyMapping(code, char.uppercase(), shift = false)
+        }
+        if (char in 'A'..'Z') {
+            val code = letterToKeycode(char.lowercaseChar()) ?: return null
+            return KeyMapping(code, char.toString(), shift = true)
+        }
+        return when (char) {
             '0' -> KeyMapping(KEY_0, "0", shift = false)
-            in '1'..'9' -> KeyMapping(KEY_1 + (char - '1'), char.toString(), shift = false)
+            '1' -> KeyMapping(KEY_1, "1", shift = false)
+            '2' -> KeyMapping(KEY_2, "2", shift = false)
+            '3' -> KeyMapping(KEY_3, "3", shift = false)
+            '4' -> KeyMapping(KEY_4, "4", shift = false)
+            '5' -> KeyMapping(KEY_5, "5", shift = false)
+            '6' -> KeyMapping(KEY_6, "6", shift = false)
+            '7' -> KeyMapping(KEY_7, "7", shift = false)
+            '8' -> KeyMapping(KEY_8, "8", shift = false)
+            '9' -> KeyMapping(KEY_9, "9", shift = false)
             ' ' -> KeyMapping(KEY_SPACE, "Space", shift = false)
             '\n' -> KeyMapping(KEY_ENTER, "Enter", shift = false)
             '\t' -> KeyMapping(KEY_TAB, "Tab", shift = false)
@@ -165,6 +179,38 @@ object LinuxKeycodes {
             '*' -> KeyMapping(KEY_8, "*", shift = true)
             '(' -> KeyMapping(KEY_9, "(", shift = true)
             ')' -> KeyMapping(KEY_0, ")", shift = true)
+            else -> null
+        }
+    }
+
+    private fun letterToKeycode(char: Char): Int? =
+        when (char) {
+            'a' -> KEY_A
+            'b' -> KEY_B
+            'c' -> KEY_C
+            'd' -> KEY_D
+            'e' -> KEY_E
+            'f' -> KEY_F
+            'g' -> KEY_G
+            'h' -> KEY_H
+            'i' -> KEY_I
+            'j' -> KEY_J
+            'k' -> KEY_K
+            'l' -> KEY_L
+            'm' -> KEY_M
+            'n' -> KEY_N
+            'o' -> KEY_O
+            'p' -> KEY_P
+            'q' -> KEY_Q
+            'r' -> KEY_R
+            's' -> KEY_S
+            't' -> KEY_T
+            'u' -> KEY_U
+            'v' -> KEY_V
+            'w' -> KEY_W
+            'x' -> KEY_X
+            'y' -> KEY_Y
+            'z' -> KEY_Z
             else -> null
         }
 }
