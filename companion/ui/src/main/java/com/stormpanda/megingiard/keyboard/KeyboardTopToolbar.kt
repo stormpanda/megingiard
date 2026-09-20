@@ -59,6 +59,14 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private val KTT_BUTTON_SHAPE = RoundedCornerShape(4.dp)
+private val KTT_BUTTON_HEIGHT = 28.dp
+private val KTT_BUTTON_WIDTH = 54.dp
+private val KTT_BUTTON_BORDER_WIDTH = 1.dp
+private val KTT_BUTTON_FONT_SIZE = 10.sp
+private const val KTT_ACTIVE_ALPHA = 0.7f
+private const val KTT_INACTIVE_BORDER_ALPHA = 0.35f
+private const val KTT_CONTENT_ALPHA = 0.8f
+private const val KTT_MODIFIER_HOLD_DELAY_MS = 300L
 
 @Composable
 internal fun KeyboardTopToolbar(
@@ -169,7 +177,7 @@ private fun ToolbarIcon(
         Icon(
             imageVector = imageVector,
             contentDescription = contentDescription,
-            tint = tint ?: colors.onSurface.copy(alpha = 0.8f),
+            tint = tint ?: colors.onSurface.copy(alpha = KTT_CONTENT_ALPHA),
             modifier = Modifier.size(KB_ICON_SIZE_MEDIUM),
         )
     }
@@ -187,9 +195,9 @@ private fun ModifierButton(
     val state by KeyboardState.stateFor(id).collectAsStateWithLifecycle()
     val isActive = state != ModifierState.INACTIVE
 
-    val bg = if (isActive) accentColor.copy(alpha = 0.7f) else Color.Transparent
-    val contentColor = if (isActive) colors.onSurface else colors.onSurface.copy(alpha = 0.8f)
-    val borderColor = if (isActive) Color.Transparent else colors.onSurface.copy(alpha = 0.35f)
+    val bg = if (isActive) accentColor.copy(alpha = KTT_ACTIVE_ALPHA) else Color.Transparent
+    val contentColor = if (isActive) colors.onSurface else colors.onSurface.copy(alpha = KTT_CONTENT_ALPHA)
+    val borderColor = if (isActive) Color.Transparent else colors.onSurface.copy(alpha = KTT_INACTIVE_BORDER_ALPHA)
 
     val scope = rememberCoroutineScope()
 
@@ -203,7 +211,7 @@ private fun ModifierButton(
             KeyboardState.onModifierTouchDown(id)
             val job =
                 scope.launch {
-                    delay(300L)
+                    delay(KTT_MODIFIER_HOLD_DELAY_MS)
                     val code = KeyboardState.onModifierLongPress(id, keycode)
                     if (code != null) {
                         KeyInjector.keyDown(code)
@@ -230,8 +238,8 @@ private fun ToolbarKeyButton(
     var isPressed by remember { mutableStateOf(false) }
 
     val bg = if (isPressed) colors.keyPressed else Color.Transparent
-    val contentColor = if (isPressed) colors.onSurface else colors.onSurface.copy(alpha = 0.8f)
-    val borderColor = if (isPressed) Color.Transparent else colors.onSurface.copy(alpha = 0.35f)
+    val contentColor = if (isPressed) colors.onSurface else colors.onSurface.copy(alpha = KTT_CONTENT_ALPHA)
+    val borderColor = if (isPressed) Color.Transparent else colors.onSurface.copy(alpha = KTT_INACTIVE_BORDER_ALPHA)
 
     BaseToolbarButton(
         label = label,
@@ -264,10 +272,10 @@ private fun BaseToolbarButton(
     Box(
         modifier =
             modifier
-                .height(28.dp)
-                .width(54.dp)
+                .height(KTT_BUTTON_HEIGHT)
+                .width(KTT_BUTTON_WIDTH)
                 .border(
-                    width = 1.dp,
+                    width = KTT_BUTTON_BORDER_WIDTH,
                     color = borderColor,
                     shape = KTT_BUTTON_SHAPE,
                 ).clip(KTT_BUTTON_SHAPE)
@@ -284,7 +292,7 @@ private fun BaseToolbarButton(
             style =
                 MaterialTheme.typography.labelSmall.copy(
                     fontWeight = FontWeight.Bold,
-                    fontSize = 10.sp,
+                    fontSize = KTT_BUTTON_FONT_SIZE,
                 ),
         )
     }

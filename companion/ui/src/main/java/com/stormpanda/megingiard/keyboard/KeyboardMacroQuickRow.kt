@@ -51,6 +51,16 @@ private const val TAG = "KeyboardMacroQuickRow"
 private val KMQ_ROW_HEIGHT = 36.dp
 private val KMQ_CHIP_HEIGHT = 28.dp
 private val KMQ_CHIP_SHAPE = RoundedCornerShape(14.dp)
+private val KMQ_FONT_SIZE = 11.sp
+private val KMQ_CHIP_ICON_SIZE = 16.dp
+private val KMQ_CHIP_BORDER_WIDTH = 1.dp
+private const val KMQ_RUNNING_BG_ALPHA = 0.85f
+private val KMQ_PADDING_H = 8.dp
+private val KMQ_PADDING_V = 4.dp
+private val KMQ_EMPTY_PADDING_START = 4.dp
+private val KMQ_CHIP_PADDING_H = 10.dp
+private val KMQ_CHIP_SPACING = 8.dp
+private val KMQ_CHIP_CONTENT_SPACING = 6.dp
 
 @Composable
 internal fun KeyboardMacroQuickRow(
@@ -76,16 +86,16 @@ internal fun KeyboardMacroQuickRow(
                     .fillMaxWidth()
                     .height(KMQ_ROW_HEIGHT)
                     .background(colors.keyboardBackground)
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                    .padding(horizontal = KMQ_PADDING_H, vertical = KMQ_PADDING_V),
             contentAlignment = Alignment.CenterStart,
         ) {
             if (keyboardMacros.isEmpty()) {
                 Text(
                     text = stringResource(R.string.kb_macro_quick_row_empty),
                     color = colors.onSurfaceSecondary,
-                    fontSize = 11.sp,
+                    fontSize = KMQ_FONT_SIZE,
                     style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(start = 4.dp),
+                    modifier = Modifier.padding(start = KMQ_EMPTY_PADDING_START),
                 )
             } else {
                 Row(
@@ -93,7 +103,7 @@ internal fun KeyboardMacroQuickRow(
                         Modifier
                             .fillMaxWidth()
                             .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(KMQ_CHIP_SPACING),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     keyboardMacros.forEach { macro ->
@@ -128,7 +138,7 @@ private fun MacroQuickChip(
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
-    val bg = if (isRunning) accentColor.copy(alpha = 0.85f) else colors.surfaceVariant
+    val bg = if (isRunning) accentColor.copy(alpha = KMQ_RUNNING_BG_ALPHA) else colors.surfaceVariant
     val contentColor = if (isRunning) colors.onAccent else colors.onSurface
     val borderColor = if (isRunning) accentColor else colors.divider
 
@@ -138,25 +148,25 @@ private fun MacroQuickChip(
                 .height(KMQ_CHIP_HEIGHT)
                 .clip(KMQ_CHIP_SHAPE)
                 .background(bg)
-                .border(width = 1.dp, color = borderColor, shape = KMQ_CHIP_SHAPE)
+                .border(width = KMQ_CHIP_BORDER_WIDTH, color = borderColor, shape = KMQ_CHIP_SHAPE)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
                     onClick = onClick,
-                ).padding(horizontal = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ).padding(horizontal = KMQ_CHIP_PADDING_H),
+        horizontalArrangement = Arrangement.spacedBy(KMQ_CHIP_CONTENT_SPACING),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
             imageVector = if (isRunning) Icons.Rounded.Stop else Icons.AutoMirrored.Rounded.PlaylistPlay,
             contentDescription = null,
             tint = contentColor,
-            modifier = Modifier.size(16.dp),
+            modifier = Modifier.size(KMQ_CHIP_ICON_SIZE),
         )
         Text(
             text = macro.name,
             color = contentColor,
-            fontSize = 11.sp,
+            fontSize = KMQ_FONT_SIZE,
             fontWeight = if (isRunning) FontWeight.Bold else FontWeight.Medium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,

@@ -33,6 +33,8 @@ private const val MTSD_DEFAULT_KEY_DURATION_MS = 50L
 private const val MTSD_DEFAULT_PAUSE_MS = 30L
 private const val MTSD_MAX_SLIDER_MS = 500f
 private const val MTSD_TIME_SLIDER_STEP = 10f
+private const val MTSD_MAX_START_TIME_BUFFER_MS = 5000L
+private const val MTSD_MIN_MAX_START_TIME_MS = 1000L
 
 /**
  * Generates a list of [MacroStep.KeyboardKeyTap]s from [text] starting at [startOffsetMs].
@@ -155,11 +157,12 @@ internal fun TextSequenceGeneratorSubPageContent(
         onValueChange = { pauseBetweenKeysMs = it.roundToInt().coerceIn(0, MTSD_MAX_SLIDER_MS.toInt()) },
     )
 
+    val maxStartMs = (suggestedStartTimeMs + MTSD_MAX_START_TIME_BUFFER_MS).coerceAtLeast(MTSD_MIN_MAX_START_TIME_MS).toFloat()
     GamepadSliderCard(
         title = stringResource(R.string.macropad_macro_step_start_ms),
         description = stringResource(R.string.macropad_macro_step_start_desc),
         value = startOffsetMs.toFloat(),
-        valueRange = 0f..(suggestedStartTimeMs + 5000L).coerceAtLeast(1000L).toFloat(),
+        valueRange = 0f..maxStartMs,
         step = MTSD_TIME_SLIDER_STEP,
         fineStep = 1f,
         valueLabel = "$startOffsetMs ms",

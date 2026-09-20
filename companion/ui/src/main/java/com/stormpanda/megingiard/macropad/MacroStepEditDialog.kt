@@ -50,6 +50,8 @@ private const val MSD_MAX_START_TIME_BUFFER_MS = 5000L
 private const val MSD_MAX_DURATION_MS = 5000L
 private const val MSD_TIME_SLIDER_STEP = 25f
 private const val MSD_PERCENT_SLIDER_STEP = 5f
+private const val MSD_STICK_DEFLECTION_THRESHOLD = 0.35f
+private const val MSD_STICK_EPSILON = 0.001f
 
 private enum class StepType(
     val labelResId: Int,
@@ -160,14 +162,14 @@ internal fun MacroStepEditSubPageContent(
             val mag = sqrt(step.x * step.x + step.y * step.y)
             val dx =
                 when {
-                    step.x / mag > 0.35f -> 1
-                    step.x / mag < -0.35f -> -1
+                    step.x / mag > MSD_STICK_DEFLECTION_THRESHOLD -> 1
+                    step.x / mag < -MSD_STICK_DEFLECTION_THRESHOLD -> -1
                     else -> 0
                 }
             val dy =
                 when {
-                    step.y / mag > 0.35f -> 1
-                    step.y / mag < -0.35f -> -1
+                    step.y / mag > MSD_STICK_DEFLECTION_THRESHOLD -> 1
+                    step.y / mag < -MSD_STICK_DEFLECTION_THRESHOLD -> -1
                     else -> 0
                 }
             findDirectionIndex(dx, dy)
@@ -240,7 +242,7 @@ internal fun MacroStepEditSubPageContent(
                 val dir = MSD_DIRECTIONS[selectedJoyDirIdx]
                 val unitX = dir.dirX.toFloat()
                 val unitY = dir.dirY.toFloat()
-                val len = sqrt(unitX * unitX + unitY * unitY).coerceAtLeast(0.001f)
+                val len = sqrt(unitX * unitX + unitY * unitY).coerceAtLeast(MSD_STICK_EPSILON)
                 val normX = (unitX / len) * joyMagnitude
                 val normY = (unitY / len) * joyMagnitude
                 MacroStep.JoystickMove(
