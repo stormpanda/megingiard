@@ -735,4 +735,57 @@ class CutoutAutoTunerTest {
             matchRatio < AnchorPresenceEvaluator.MATCH_THRESHOLD_PRESENT,
         )
     }
+
+    @Test
+    fun `extractAnchorSignature on static icon penalizes anti-aliased edge pixels and survives 1-pixel jitter`() {
+        val testW = 24
+        val testH = 24
+        val testCount = testW * testH
+        val varianceMap = ByteArray(testCount) { 0 }
+
+        val darkColor = colorArgb(34, 34, 50)
+        val tanColor = colorArgb(211, 188, 142)
+        val blendColor = colorArgb(122, 111, 96) // Halfway anti-aliased edge blend
+
+        // 24x24 frame:
+        // Background: darkColor
+        // Inside x in 8..15, y in 8..15: solid tan icon interior
+        // Border of icon: x in (7, 16) or y in (7, 16): blendColor anti-aliased border
+        val frames =
+            List(3) {
+                IntArray(testCount) { idx ->
+                    val x = idx % testW
+                    val y = idx / testW
+                    when {
+                        x in 8..15 && y in 8..15 -> tanColor
+                        x in 7..16 && y in 7..16 -> blendColor
+                        else -> darkColor
+                    }
+                }
+            }
+
+        val signature = CutoutAutoTuner.extractAnchorSignature(varianceMap, frames, testW, testH, "edge_penalty_test")
+        assertEquals(64, signature.points.size)
+
+        // Selected points should heavily penalize transitional edge blend pixels (<= 2 for boundary-only cells)
+        val blendPoints = signature.points.filter { it.r == 122 && it.g == 111 && it.b == 96 }
+        assertTrue(
+            "Selected points should heavily penalize transitional edge blend pixels (found ${blendPoints.size})",
+            blendPoints.size <= 2,
+        )
+
+        // Verify that under a 1-pixel shift (simulating subpixel TextureView readback drift),
+        // the match ratio remains well above the 65% PRESENT threshold
+        val matchRatioShift =
+            AnchorPresenceEvaluator.evaluateMatchRatio(signature) { u, v ->
+                val px = ((u * testW).toInt() + 1).coerceIn(0, testW - 1)
+                val py = (v * testH).toInt().coerceIn(0, testH - 1)
+                frames[0][py * testW + px]
+            }
+
+        assertTrue(
+            "Match ratio under 1-pixel shift ($matchRatioShift) must exceed MATCH_THRESHOLD_PRESENT (0.65)",
+            matchRatioShift >= AnchorPresenceEvaluator.MATCH_THRESHOLD_PRESENT,
+        )
+    }
 }

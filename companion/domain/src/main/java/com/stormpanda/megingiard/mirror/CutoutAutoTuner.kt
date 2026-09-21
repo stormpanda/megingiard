@@ -41,6 +41,8 @@ private const val SIGNATURE_GRID_COLS = 8
 private const val SIGNATURE_GRID_ROWS = 8
 private const val MAX_ANCHOR_VARIANCE = 10
 private const val HALF_PIXEL_OFFSET = 0.5f
+private const val MAX_MANHATTAN_COLOR_DISTANCE = 765
+private const val GRADIENT_PENALTY_DIVISOR = 2
 
 /**
  * Result returned by [CutoutAutoTuner.analyze].
@@ -238,7 +240,8 @@ object CutoutAutoTuner {
      *
      * In each grid cell, pixels with the lowest temporal variance (most stationary) are prioritized.
      * When multiple candidate pixels tie for minimum variance (e.g. static UI background vs. static text/icons),
-     * the candidate that maximizes color diversity relative to already-chosen anchor points is selected.
+     * candidates are scored balancing color diversity against local spatial edge gradients so solid interior
+     * plateaus are favored over fragile anti-aliased edge contours.
      */
     fun extractAnchorSignature(
         varianceMap: ByteArray,
@@ -255,6 +258,7 @@ object CutoutAutoTuner {
         val cellW = width.toFloat() / SIGNATURE_GRID_COLS.toFloat()
         val cellH = height.toFloat() / SIGNATURE_GRID_ROWS.toFloat()
         val frameCount = frames.size
+        val referenceFrame = frames.first()
 
         for (gy in 0 until SIGNATURE_GRID_ROWS) {
             val yStart = (gy * cellH).toInt().coerceIn(0, height - 1)
@@ -267,22 +271,25 @@ object CutoutAutoTuner {
                 var bestX = -1
                 var bestY = -1
                 var minVar = Int.MAX_VALUE
-                var bestDiversity = -1
+                var bestScore = Int.MIN_VALUE
 
                 for (y in yStart until yEnd) {
                     val rowOffset = y * width
                     for (x in xStart until xEnd) {
                         val v = varianceMap[rowOffset + x].toInt() and COLOR_BYTE_MASK
                         if (v <= MAX_ANCHOR_VARIANCE) {
+                            val candidateDiversity = computeColorDiversity(frames, rowOffset + x, frameCount, points)
+                            val gradient = computeSpatialGradient(referenceFrame, x, y, width, height)
+                            val score = candidateDiversity - (gradient / GRADIENT_PENALTY_DIVISOR)
+
                             if (v < minVar) {
                                 minVar = v
+                                bestScore = score
                                 bestX = x
                                 bestY = y
-                                bestDiversity = computeColorDiversity(frames, rowOffset + x, frameCount, points)
                             } else if (v == minVar) {
-                                val candidateDiversity = computeColorDiversity(frames, rowOffset + x, frameCount, points)
-                                if (candidateDiversity > bestDiversity) {
-                                    bestDiversity = candidateDiversity
+                                if (score > bestScore) {
+                                    bestScore = score
                                     bestX = x
                                     bestY = y
                                 }
@@ -318,10 +325,55 @@ object CutoutAutoTuner {
     }
 
     /**
+     * Computes the central difference spatial gradient (horizontal and vertical Manhattan edge strength)
+     * for a pixel at ([x], [y]) within [frame].
+     *
+     * Solid interior pixels have a gradient near 0, while transitional/anti-aliased edge boundaries
+     * have a large gradient (> 100).
+     */
+    private fun computeSpatialGradient(
+        frame: IntArray,
+        x: Int,
+        y: Int,
+        width: Int,
+        height: Int,
+    ): Int {
+        val leftX = if (x > 0) x - 1 else 0
+        val rightX = if (x < width - 1) x + 1 else width - 1
+        val topY = if (y > 0) y - 1 else 0
+        val bottomY = if (y < height - 1) y + 1 else height - 1
+
+        val leftRgb = frame[y * width + leftX]
+        val rightRgb = frame[y * width + rightX]
+        val topRgb = frame[topY * width + x]
+        val bottomRgb = frame[bottomY * width + x]
+
+        val lrR = (leftRgb shr SHIFT_RED) and COLOR_BYTE_MASK
+        val lrG = (leftRgb shr SHIFT_GREEN) and COLOR_BYTE_MASK
+        val lrB = leftRgb and COLOR_BYTE_MASK
+
+        val rrR = (rightRgb shr SHIFT_RED) and COLOR_BYTE_MASK
+        val rrG = (rightRgb shr SHIFT_GREEN) and COLOR_BYTE_MASK
+        val rrB = rightRgb and COLOR_BYTE_MASK
+
+        val trR = (topRgb shr SHIFT_RED) and COLOR_BYTE_MASK
+        val trG = (topRgb shr SHIFT_GREEN) and COLOR_BYTE_MASK
+        val trB = topRgb and COLOR_BYTE_MASK
+
+        val brR = (bottomRgb shr SHIFT_RED) and COLOR_BYTE_MASK
+        val brG = (bottomRgb shr SHIFT_GREEN) and COLOR_BYTE_MASK
+        val brB = bottomRgb and COLOR_BYTE_MASK
+
+        val horizDiff = abs(lrR - rrR) + abs(lrG - rrG) + abs(lrB - rrB)
+        val vertDiff = abs(trR - brR) + abs(trG - brG) + abs(trB - brB)
+        return horizDiff + vertDiff
+    }
+
+    /**
      * Computes the minimum Manhattan color distance from a candidate pixel's temporal average RGB
      * to any existing [AnchorPoint] in [existingPoints].
      *
-     * Returns [Int.MAX_VALUE] if [existingPoints] is empty, treating initial candidates with maximum novelty.
+     * Returns [MAX_MANHATTAN_COLOR_DISTANCE] if [existingPoints] is empty, treating initial candidates with maximum novelty.
      */
     private fun computeColorDiversity(
         frames: List<IntArray>,
@@ -329,7 +381,7 @@ object CutoutAutoTuner {
         frameCount: Int,
         existingPoints: List<AnchorPoint>,
     ): Int {
-        if (existingPoints.isEmpty()) return Int.MAX_VALUE
+        if (existingPoints.isEmpty()) return MAX_MANHATTAN_COLOR_DISTANCE
         var sumR = 0
         var sumG = 0
         var sumB = 0

@@ -465,7 +465,12 @@ object AnchorPresenceManager {
                     frame.getPixel(localX, localY)
                 }
 
-            return matchRatio >= AnchorPresenceEvaluator.MATCH_THRESHOLD_PRESENT
+            val isMatch = matchRatio >= AnchorPresenceEvaluator.MATCH_THRESHOLD_PRESENT
+            AppLog.d(
+                TAG,
+                "Candidate layout '${candidate.name}' (${candidate.id}) matchRatio=${(matchRatio * 100).toInt()}% (threshold=${(AnchorPresenceEvaluator.MATCH_THRESHOLD_PRESENT * 100).toInt()}%, matched=$isMatch)",
+            )
+            return isMatch
         } finally {
             if (frame != reusableCandidateCropBitmap && frame != ScreenCaptureManager.frozenBitmap.value) {
                 frame.recycle()
