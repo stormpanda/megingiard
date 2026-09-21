@@ -44,32 +44,33 @@ object CutoutGestureMath {
         val rawDx = -deltaNormX * current.srcWidth
         val rawDy = -deltaNormY * current.srcHeight
 
-        val rawX = current.srcX + rawDx
-        val rawY = current.srcY + rawDy
+        val newX = applyElasticDelta(current.srcX, rawDx, current.srcWidth)
+        val newY = applyElasticDelta(current.srcY, rawDy, current.srcHeight)
 
-        val dampenedX = applyElasticResistance(rawX, current.srcWidth)
-        val dampenedY = applyElasticResistance(rawY, current.srcHeight)
-
-        return current.copy(srcX = dampenedX, srcY = dampenedY)
+        return current.copy(srcX = newX, srcY = newY)
     }
 
     /**
-     * Applies a pinch-to-zoom transformation around a normalized focal point.
+     * Applies a combined pinch-to-zoom and pan transformation around a normalized focal point.
      * Preserves aspect ratio and clamps zoom factor between 1.0x (full frame max) and 10.0x magnification.
      *
      * @param current The current active source crop.
      * @param defaultCrop The base/saved cutout crop anchor.
      * @param scaleFactor The zoom multiplier (> 1 means zooming in / magnifying).
+     * @param deltaNormX Normalized midpoint pan X delta relative to cutout width (dx / destWidthPx).
+     * @param deltaNormY Normalized midpoint pan Y delta relative to cutout height (dy / destHeightPx).
      * @param focalNormX Normalized focal X inside destination cutout [0, 1].
      * @param focalNormY Normalized focal Y inside destination cutout [0, 1].
-     * @return Updated source crop after zoom.
+     * @return Updated source crop after zoom and translation.
      */
-    fun applyPinchZoom(
+    fun applyPinchZoomAndPan(
         current: NormalizedCrop,
         defaultCrop: NormalizedCrop,
         scaleFactor: Float,
-        focalNormX: Float,
-        focalNormY: Float,
+        deltaNormX: Float = 0f,
+        deltaNormY: Float = 0f,
+        focalNormX: Float = 0.5f,
+        focalNormY: Float = 0.5f,
     ): NormalizedCrop {
         if (scaleFactor <= 0f) return current
 
@@ -87,8 +88,14 @@ object CutoutGestureMath {
         val newSrcX = focalSrcX - focalNormX.coerceIn(0f, 1f) * finalWidth
         val newSrcY = focalSrcY - focalNormY.coerceIn(0f, 1f) * targetHeight
 
-        val dampenedX = applyElasticResistance(newSrcX, finalWidth)
-        val dampenedY = applyElasticResistance(newSrcY, targetHeight)
+        val rawDx = -deltaNormX * finalWidth
+        val rawDy = -deltaNormY * targetHeight
+
+        val targetSrcX = newSrcX + rawDx
+        val targetSrcY = newSrcY + rawDy
+
+        val dampenedX = applyElasticDelta(current.srcX, targetSrcX - current.srcX, finalWidth)
+        val dampenedY = applyElasticDelta(current.srcY, targetSrcY - current.srcY, targetHeight)
 
         return NormalizedCrop(
             srcX = dampenedX,
@@ -97,6 +104,26 @@ object CutoutGestureMath {
             srcHeight = targetHeight,
         )
     }
+
+    /**
+     * Backward-compatible overload for pure pinch zoom.
+     */
+    fun applyPinchZoom(
+        current: NormalizedCrop,
+        defaultCrop: NormalizedCrop,
+        scaleFactor: Float,
+        focalNormX: Float,
+        focalNormY: Float,
+    ): NormalizedCrop =
+        applyPinchZoomAndPan(
+            current = current,
+            defaultCrop = defaultCrop,
+            scaleFactor = scaleFactor,
+            deltaNormX = 0f,
+            deltaNormY = 0f,
+            focalNormX = focalNormX,
+            focalNormY = focalNormY,
+        )
 
     /**
      * Clamps a crop strictly to valid primary screen bounds [0, 1].
@@ -149,15 +176,38 @@ object CutoutGestureMath {
             abs(a.srcWidth - b.srcWidth) < epsilon &&
             abs(a.srcHeight - b.srcHeight) < epsilon
 
-    private fun applyElasticResistance(
-        pos: Float,
+    internal fun applyElasticDelta(
+        currentPos: Float,
+        delta: Float,
         size: Float,
     ): Float {
         val maxPos = (1f - size).coerceAtLeast(0f)
+        val targetPos = currentPos + delta
+
         return when {
-            pos < 0f -> pos * ELASTIC_DAMPENING_FACTOR
-            pos > maxPos -> maxPos + (pos - maxPos) * ELASTIC_DAMPENING_FACTOR
-            else -> pos
+            targetPos < 0f -> {
+                if (currentPos <= 0f) {
+                    if (delta < 0f) currentPos + delta * ELASTIC_DAMPENING_FACTOR else targetPos
+                } else {
+                    val insidePortion = -currentPos
+                    val outsidePortion = delta - insidePortion
+                    0f + outsidePortion * ELASTIC_DAMPENING_FACTOR
+                }
+            }
+
+            targetPos > maxPos -> {
+                if (currentPos >= maxPos) {
+                    if (delta > 0f) currentPos + delta * ELASTIC_DAMPENING_FACTOR else targetPos
+                } else {
+                    val insidePortion = maxPos - currentPos
+                    val outsidePortion = delta - insidePortion
+                    maxPos + outsidePortion * ELASTIC_DAMPENING_FACTOR
+                }
+            }
+
+            else -> {
+                targetPos
+            }
         }
     }
 }

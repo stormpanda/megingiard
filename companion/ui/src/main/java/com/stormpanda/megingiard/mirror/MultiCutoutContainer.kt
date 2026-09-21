@@ -653,7 +653,8 @@ internal class MultiCutoutContainer(
                 }
             } else {
                 // Live / Unfreezing: render live/delayed video stream base layer
-                if (delayedFrame != null && !delayedFrame.isRecycled) {
+                val isInteracting = InteractiveCutoutController.isCutoutActivelyInteracting(cutout.id)
+                if (delayedFrame != null && !delayedFrame.isRecycled && !isInteracting) {
                     cutoutDestRect.set(0f, 0f, dw, dh)
                     canvas.drawBitmap(delayedFrame, null, cutoutDestRect, delayedFramePaint)
                 } else {
@@ -662,7 +663,7 @@ internal class MultiCutoutContainer(
                         cutout.srcWidth >= MCC_UNCROPPED_THRESHOLD && cutout.srcHeight >= MCC_UNCROPPED_THRESHOLD
                     val liveSaveCount = canvas.save()
                     try {
-                        if (cutouts.size == 1 && isFollowActive && isUncropped) {
+                        if (cutouts.size == 1 && isFollowActive && isUncropped && !cutout.interactivePanZoom && !isInteracting) {
                             canvas.translate(viewportOffsetX, viewportOffsetY)
                             canvas.scale(viewportScale, viewportScale, dw / 2f, dh / 2f)
 

@@ -57,6 +57,48 @@ class CutoutGestureMathTest {
     }
 
     @Test
+    fun `applyPan applies elastic dampening incrementally without compounding decay`() {
+        val initial = NormalizedCrop(srcX = 0.0f, srcY = 0.0f, srcWidth = 1.0f, srcHeight = 1.0f)
+        // Drag 1: deltaNormX = 0.1 -> rawDx = -0.1 -> srcX = -0.035
+        val frame1 = CutoutGestureMath.applyPan(initial, deltaNormX = 0.1f, deltaNormY = 0.0f)
+        assertEquals(-0.035f, frame1.srcX, 0.0001f)
+
+        // Drag 2: another deltaNormX = 0.1 -> rawDx = -0.1 -> srcX = -0.035 + (-0.1 * 0.35) = -0.070
+        val frame2 = CutoutGestureMath.applyPan(frame1, deltaNormX = 0.1f, deltaNormY = 0.0f)
+        assertEquals(-0.070f, frame2.srcX, 0.0001f)
+
+        // Moving back toward bounds (deltaNormX = -0.05) is 100% responsive without dampening
+        val frame3 = CutoutGestureMath.applyPan(frame2, deltaNormX = -0.05f, deltaNormY = 0.0f)
+        assertEquals(-0.020f, frame3.srcX, 0.0001f)
+    }
+
+    @Test
+    fun `applyPinchZoomAndPan applies simultaneous zoom and translation`() {
+        val defaultCrop = NormalizedCrop(srcX = 0.2f, srcY = 0.2f, srcWidth = 0.4f, srcHeight = 0.2f)
+        val current = defaultCrop
+        val transformed =
+            CutoutGestureMath.applyPinchZoomAndPan(
+                current = current,
+                defaultCrop = defaultCrop,
+                scaleFactor = 2.0f,
+                deltaNormX = 0.1f,
+                deltaNormY = 0.05f,
+                focalNormX = 0.5f,
+                focalNormY = 0.5f,
+            )
+
+        // 2x magnification: width=0.2, height=0.1
+        assertEquals(0.2f, transformed.srcWidth, 0.0001f)
+        assertEquals(0.1f, transformed.srcHeight, 0.0001f)
+
+        // Focal zoom center = (0.3, 0.25), then pan dx = -0.1 * 0.2 = -0.02, dy = -0.05 * 0.1 = -0.005
+        // newSrcX = 0.3 - 0.02 = 0.28
+        // newSrcY = 0.25 - 0.005 = 0.245
+        assertEquals(0.28f, transformed.srcX, 0.0001f)
+        assertEquals(0.245f, transformed.srcY, 0.0001f)
+    }
+
+    @Test
     fun `clampToScreenBounds clamps invalid negative and overflow coordinates`() {
         val outOfBounds = NormalizedCrop(srcX = -0.1f, srcY = 0.8f, srcWidth = 0.5f, srcHeight = 0.5f)
         val clamped = CutoutGestureMath.clampToScreenBounds(outOfBounds)

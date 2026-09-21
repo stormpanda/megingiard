@@ -45,6 +45,7 @@ object InteractiveCutoutController {
     private val animationJobs = mutableMapOf<String, Job>()
 
     var onHapticFeedback: (() -> Unit)? = null
+    var onCropUpdated: (() -> Unit)? = null
     internal var timeProvider: () -> Long = { SystemClock.elapsedRealtime() }
 
     internal var scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -95,8 +96,14 @@ object InteractiveCutoutController {
         pointers.removeAll { it.id == pointerId }
         pointers.add(PointerRecord(id = pointerId, x = xPx, y = yPx))
         AppLog.d(TAG, "onPress pointer=$pointerId on cutout=$cutoutId (active count=${pointers.size})")
+        onCropUpdated?.invoke()
         return true
     }
+
+    fun isCutoutActivelyInteracting(cutoutId: String): Boolean =
+        (trackedPointers[cutoutId]?.isNotEmpty() == true) ||
+            _overrideCrops.value.containsKey(cutoutId) ||
+            animationJobs.containsKey(cutoutId)
 
     /**
      * Handles pointer movement (1-finger pan or 2-finger pinch-to-zoom).
@@ -136,6 +143,7 @@ object InteractiveCutoutController {
             val deltaNormY = deltaY / destH
 
             val newCrop = CutoutGestureMath.applyPan(currentCrop, deltaNormX, deltaNormY)
+            AppLog.d(TAG, "onMove 1-finger cutout=$cutoutId delta=($deltaNormX, $deltaNormY) crop=$newCrop")
             updateOverrideCrop(cutoutId, newCrop)
             return true
         } else if (pointers.size >= 2) {
@@ -144,17 +152,38 @@ object InteractiveCutoutController {
             val prevDist = hypot(prevX - otherPointer.x, prevY - otherPointer.y).coerceAtLeast(MIN_PINCH_DISTANCE_PX)
             val curDist = hypot(xPx - otherPointer.x, yPx - otherPointer.y).coerceAtLeast(MIN_PINCH_DISTANCE_PX)
 
+            val prevMidX = (prevX + otherPointer.x) / 2f
+            val prevMidY = (prevY + otherPointer.y) / 2f
+            val curMidX = (xPx + otherPointer.x) / 2f
+            val curMidY = (yPx + otherPointer.y) / 2f
+
+            val midDeltaX = curMidX - prevMidX
+            val midDeltaY = curMidY - prevMidY
+
             currentPointer.x = xPx
             currentPointer.y = yPx
 
             val scaleFactor = curDist / prevDist
+            val deltaNormX = midDeltaX / destW
+            val deltaNormY = midDeltaY / destH
 
-            val focalCenterX = (xPx + otherPointer.x) / 2f
-            val focalCenterY = (yPx + otherPointer.y) / 2f
-            val focalNormX = ((focalCenterX - destLeft) / destW).coerceIn(0f, 1f)
-            val focalNormY = ((focalCenterY - destTop) / destH).coerceIn(0f, 1f)
+            val focalNormX = ((curMidX - destLeft) / destW).coerceIn(0f, 1f)
+            val focalNormY = ((curMidY - destTop) / destH).coerceIn(0f, 1f)
 
-            val newCrop = CutoutGestureMath.applyPinchZoom(currentCrop, defaultCrop, scaleFactor, focalNormX, focalNormY)
+            val newCrop =
+                CutoutGestureMath.applyPinchZoomAndPan(
+                    current = currentCrop,
+                    defaultCrop = defaultCrop,
+                    scaleFactor = scaleFactor,
+                    deltaNormX = deltaNormX,
+                    deltaNormY = deltaNormY,
+                    focalNormX = focalNormX,
+                    focalNormY = focalNormY,
+                )
+            AppLog.d(
+                TAG,
+                "onMove 2-finger cutout=$cutoutId scale=$scaleFactor midDelta=($deltaNormX, $deltaNormY) crop=$newCrop",
+            )
             updateOverrideCrop(cutoutId, newCrop)
             return true
         }
@@ -281,12 +310,14 @@ object InteractiveCutoutController {
         val next = _overrideCrops.value.toMutableMap()
         next[cutoutId] = crop
         _overrideCrops.value = next
+        onCropUpdated?.invoke()
     }
 
     private fun removeOverrideCrop(cutoutId: String) {
         val next = _overrideCrops.value.toMutableMap()
         next.remove(cutoutId)
         _overrideCrops.value = next
+        onCropUpdated?.invoke()
     }
 
     private fun findInteractiveCutoutAt(

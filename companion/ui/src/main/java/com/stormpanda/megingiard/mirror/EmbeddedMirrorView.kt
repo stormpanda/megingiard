@@ -221,7 +221,11 @@ fun EmbeddedMirrorView(
     }
 
     DisposableEffect(surfaceOwner, surfacePriority) {
+        InteractiveCutoutController.onCropUpdated = {
+            containerHolder.container?.postInvalidateOnAnimation()
+        }
         onDispose {
+            InteractiveCutoutController.onCropUpdated = null
             val surfaceToClear = containerHolder.currentRoutedSurface ?: containerHolder.masterSurface
             containerHolder.gpuMotionSmoother?.release()
             containerHolder.gpuMotionSmoother = null
