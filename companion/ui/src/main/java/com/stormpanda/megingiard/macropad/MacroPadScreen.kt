@@ -654,6 +654,7 @@ internal fun PadSurface(
                             }
                         } finally {
                             engine.releaseAll(layout.buttons)
+                            InteractiveCutoutController.cancelAllAnimations()
                             if (isTouchProjectionActive) {
                                 projectionController.reset()
                             }
