@@ -269,8 +269,8 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
     - Dragging past top-screen boundaries `[0, 1]` applies elastic overscroll dampening resistance (rubber-banding).
   - **Double-Tap Reset:** Double-tapping anywhere on an interactive cutout resets the viewport back to the layout's saved default crop via a smooth lerp animation (`SNAP_BACK_DURATION_MS = 250L`) accompanied by a light haptic tick.
   - **Configurable Snap-Back Modes (`CutoutSnapBackMode`):**
+    - **Off (`OFF`, default):** Releasing fingers holds the panned/zoomed viewport in place. If the viewport was dragged into elastic overscroll past the screen edges, releasing fingers triggers an elastic bounce-back animation (`BOUNCE_BACK_DURATION_MS = 200L`) to the nearest valid screen boundary. The viewport remains in this state until double-tapped or overridden.
     - **Instant (`INSTANT`):** Releasing all fingers immediately triggers a smooth lerp animation (`SNAP_BACK_DURATION_MS = 250L`) returning the source crop to its default anchor position, accompanied by a light haptic tick.
-    - **Off (`OFF`):** Releasing fingers holds the panned/zoomed viewport in place. If the viewport was dragged into elastic overscroll past the screen edges, releasing fingers triggers an elastic bounce-back animation (`BOUNCE_BACK_DURATION_MS = 200L`) to the nearest valid screen boundary. The viewport remains in this state until double-tapped or overridden.
   - **Follow Touch Precedence:** If a cutout has both Follow Touch and Interactive Viewport enabled, manual pan/zoom operates freely. Any subsequent touch received on the top screen immediately takes over and re-centers the crop on the newly touched coordinates.
   - **Transient Viewport State:** On-the-fly gesture manipulation operates strictly on transient in-memory viewports (`InteractiveCutoutController.overrideCrops`). The saved layout profile configuration is never overwritten.
 

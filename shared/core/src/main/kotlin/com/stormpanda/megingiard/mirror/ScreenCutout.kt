@@ -77,7 +77,7 @@ data class ScreenCutout(
     val renderAsStaticAsset: Boolean = false,
     val renderAboveMask: Boolean = false,
     val interactivePanZoom: Boolean = false,
-    val snapBackMode: CutoutSnapBackMode = CutoutSnapBackMode.INSTANT,
+    val snapBackMode: CutoutSnapBackMode = CutoutSnapBackMode.OFF,
 ) {
     companion object {
         val FULLSCREEN =

@@ -331,10 +331,10 @@ internal fun CutoutSettingsSubPageContent(
     if (cutout.interactivePanZoom) {
         val snapBackModes =
             listOf(
-                stringResource(R.string.settings_cutout_snap_back_instant),
                 stringResource(R.string.settings_cutout_snap_back_off),
+                stringResource(R.string.settings_cutout_snap_back_instant),
             )
-        val currentSnapBackIdx = if (cutout.snapBackMode == CutoutSnapBackMode.INSTANT) 0 else 1
+        val currentSnapBackIdx = if (cutout.snapBackMode == CutoutSnapBackMode.OFF) 0 else 1
 
         GamepadChoiceCard(
             title = stringResource(R.string.settings_cutout_snap_back_title),
@@ -343,11 +343,11 @@ internal fun CutoutSettingsSubPageContent(
             icon = Icons.Rounded.Replay,
             itemKey = "cutout_${cutout.id}_snap_back_mode",
             onPrevious = {
-                val newMode = if (currentSnapBackIdx == 0) CutoutSnapBackMode.OFF else CutoutSnapBackMode.INSTANT
+                val newMode = if (currentSnapBackIdx == 0) CutoutSnapBackMode.INSTANT else CutoutSnapBackMode.OFF
                 onUpdateCutout(cutout.copy(snapBackMode = newMode), false)
             },
             onNext = {
-                val newMode = if (currentSnapBackIdx == 0) CutoutSnapBackMode.OFF else CutoutSnapBackMode.INSTANT
+                val newMode = if (currentSnapBackIdx == 0) CutoutSnapBackMode.INSTANT else CutoutSnapBackMode.OFF
                 onUpdateCutout(cutout.copy(snapBackMode = newMode), false)
             },
         )

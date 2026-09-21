@@ -23,7 +23,7 @@ class InteractiveCutoutControllerTest {
 
     private fun sampleInteractiveCutout(
         id: String = "interactive-1",
-        snapBackMode: CutoutSnapBackMode = CutoutSnapBackMode.INSTANT,
+        snapBackMode: CutoutSnapBackMode = CutoutSnapBackMode.OFF,
     ) = ScreenCutout(
         id = id,
         name = "Interactive 1",
