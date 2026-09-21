@@ -705,6 +705,12 @@ Open Settings to create a layout.</string>
     <string name="settings_mirror_cutout_filter_transparency_mask">HUD / UI-Isolierung</string>
     <string name="settings_cutout_render_above_mask_title">Über Hintergrundmaske rendern</string>
     <string name="settings_cutout_render_above_mask_desc">Rendert diesen Ausschnitt über Layout-Hintergrundmasken, bleibt jedoch unter MacroPad-Tasten</string>
+    <string name="settings_cutout_interactive_viewport_title">Interaktiver Bildausschnitt</string>
+    <string name="settings_cutout_interactive_viewport_desc">Ermöglicht Verschieben und Zoomen (Pinch-to-Zoom) über Gesten auf dem zweiten Bildschirm</string>
+    <string name="settings_cutout_snap_back_title">Rückstellmodus</string>
+    <string name="settings_cutout_snap_back_desc">Legt fest, ob der Bildausschnitt beim Loslassen zurückspringt oder bis zum Doppeltippen verbleibt</string>
+    <string name="settings_cutout_snap_back_instant">Sofort (Beim Loslassen)</string>
+    <string name="settings_cutout_snap_back_off">Aus (Doppeltippen zum Zurücksetzen)</string>
     <string name="settings_cutout_advanced_title">Erweiterte Ausschnitt-Einstellungen</string>
     <string name="settings_cutout_advanced_desc">HUD / UI-Isolierung und Transparenz-Wiederherstellung</string>
     <string name="settings_cutout_convert_smart_title">HUD / UI-Elemente isolieren</string>

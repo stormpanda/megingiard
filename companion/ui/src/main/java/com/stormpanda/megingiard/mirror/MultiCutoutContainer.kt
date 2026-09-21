@@ -538,15 +538,16 @@ internal class MultiCutoutContainer(
         masterView: View?,
     ): Boolean {
         var masterViewDrawn = false
+        val effectiveCrop = InteractiveCutoutController.getEffectiveCrop(cutout)
         val dw = (cutout.destWidth * parentW).roundToInt().toFloat()
         val dh = (cutout.destHeight * parentH).roundToInt().toFloat()
         val dx = (cutout.destX * parentW).roundToInt().toFloat()
         val dy = (cutout.destY * parentH).roundToInt().toFloat()
 
-        val sw = cutout.srcWidth * srcWidth
-        val sh = cutout.srcHeight * srcHeight
-        val sx = cutout.srcX * srcWidth
-        val sy = cutout.srcY * srcHeight
+        val sw = effectiveCrop.srcWidth * srcWidth
+        val sh = effectiveCrop.srcHeight * srcHeight
+        val sx = effectiveCrop.srcX * srcWidth
+        val sy = effectiveCrop.srcY * srcHeight
 
         if (dw <= 0f || dh <= 0f || sw <= 0f || sh <= 0f) return false
 

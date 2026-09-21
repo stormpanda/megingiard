@@ -23,6 +23,41 @@ class ScreenCutoutFilterTest {
     }
 
     @Test
+    fun `verify default interactivePanZoom and snapBackMode on ScreenCutout`() {
+        val cutout = ScreenCutout.FULLSCREEN
+        assertFalse(cutout.interactivePanZoom)
+        assertEquals(CutoutSnapBackMode.INSTANT, cutout.snapBackMode)
+    }
+
+    @Test
+    fun `verify serialization roundtrip with interactivePanZoom and snapBackMode`() {
+        val original =
+            ScreenCutout(
+                id = "cutout_interactive",
+                name = "Interactive Cutout",
+                srcX = 0.1f,
+                srcY = 0.1f,
+                srcWidth = 0.3f,
+                srcHeight = 0.3f,
+                destX = 0.2f,
+                destY = 0.2f,
+                destWidth = 0.4f,
+                destHeight = 0.4f,
+                interactivePanZoom = true,
+                snapBackMode = CutoutSnapBackMode.OFF,
+            )
+
+        val serialized = json.encodeToString(ScreenCutout.serializer(), original)
+        assertTrue(serialized.contains("interactivePanZoom"))
+        assertTrue(serialized.contains("snapBackMode"))
+
+        val deserialized = json.decodeFromString(ScreenCutout.serializer(), serialized)
+        assertEquals(original, deserialized)
+        assertTrue(deserialized.interactivePanZoom)
+        assertEquals(CutoutSnapBackMode.OFF, deserialized.snapBackMode)
+    }
+
+    @Test
     fun `verify serialization roundtrip with renderAboveMask`() {
         val original =
             ScreenCutout(
