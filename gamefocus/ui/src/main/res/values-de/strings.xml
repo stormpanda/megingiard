@@ -37,6 +37,7 @@
     <string name="steamgriddb_status_fetching">Cover-Motive werden geladen</string>
     <string name="gamefocus_option_change_search_term">Suchbegriff ändern</string>
     <string name="gamefocus_option_use_app_icon">App-Icon verwenden</string>
+    <string name="gamefocus_option_use_default_icon">Standard-Icon verwenden</string>
 
     <string name="gamefocus_library_tab_apps">Android-Apps</string>
     <string name="gamefocus_library_tab_games">Android-Spiele</string>

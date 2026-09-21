@@ -14,6 +14,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -188,5 +189,47 @@ class SteamGridDbToPaletteSyncPipelineE2ETest {
 
         assertEquals(primaryArgb, ipcBundle.getInt(MegingiardIpcContract.COLUMN_HOVERED_PRIMARY_COLOR))
         assertEquals(secondaryArgb, ipcBundle.getInt(MegingiardIpcContract.COLUMN_HOVERED_SECONDARY_COLOR))
+    }
+
+    @Test
+    fun testUseAppIconFlowE2E() {
+        // 1. Setup an app with an existing cover
+        val testBitmap = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888)
+        val coverFile = File(tempDir, "use_app_icon_cover.png")
+        FileOutputStream(coverFile).use { out ->
+            testBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+        }
+        assertTrue(coverFile.exists())
+
+        val appWithCover =
+            InstalledAppInfo(
+                packageName = "com.example.useappicontest",
+                activityName = "MainActivity",
+                label = "App Icon Test",
+                coverPath = coverFile.absolutePath,
+            )
+
+        val defaultPrimary = Color(0xFF1E293B)
+        val defaultSecondary = Color(0xFF334155)
+
+        // 2. Extract palette with cover
+        val coverPalette = AppPaletteExtractor.extractColors(appWithCover, defaultPrimary, defaultSecondary)
+        assertNotNull(coverPalette)
+        assertNotNull(AppPaletteExtractor.getCachedColorsOrNull(appWithCover))
+
+        // 3. Revert to app icon: delete file on disk, invalidate palette, update coverPath to null
+        assertTrue(coverFile.delete())
+        assertFalse(coverFile.exists())
+
+        AppPaletteExtractor.invalidatePalette(appWithCover.packageName)
+        assertNull(AppPaletteExtractor.getCachedColorsOrNull(appWithCover))
+
+        val appWithoutCover = appWithCover.withCover(null)
+        assertNull(appWithoutCover.coverPath)
+        assertNull(FocusImageCache.getCoverBitmap(appWithoutCover))
+
+        // 4. Extract palette without cover -> should extract or use defaults without crashing
+        val iconPalette = AppPaletteExtractor.extractColors(appWithoutCover, defaultPrimary, defaultSecondary)
+        assertNotNull(iconPalette)
     }
 }

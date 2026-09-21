@@ -43,10 +43,11 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 
 ### FR-GF4: Gamepad Artwork Editor & Options Menu
 
-- Pressing the Gamepad `Y` button (`KEYCODE_BUTTON_Y` or `Y` key) on any highlighted poster MUST launch Megingiard's native `SteamGridDbScrapeDialog` allowing artwork search and selection.
-- An expandable frameless options menu (`ExpandableOptionsMenu`) MUST be available on posters, allowing users to toggle between custom cover art and native app icons, or trigger re-scraping.
+- Pressing the Gamepad `Y` button (`KEYCODE_BUTTON_Y` or `Y` key) on any highlighted poster MUST open the action menu, and selecting "Edit" MUST open Megingiard's native `GameFocusArtworkDialog` allowing artwork search and selection.
+- The artwork dialog MUST open even if `SettingsManager.steamGridDbApiToken` is unconfigured or blank, displaying an inline informational notice that online SteamGridDB scraping requires an API token while keeping the options menu accessible so users can revert to the native app icon ("Use App Icon" for Android apps, "Use Default Icon" for ROMs) or dismiss without being blocked by an alert popup.
+- An expandable frameless options menu (`ExpandableActionsMenu`) MUST be available on posters, allowing users to toggle between custom cover art and native app icons, or trigger re-scraping.
 - The options menu uses Material Symbol ligatures (`menu`, `gamepad_up`, `gamepad_right`), smooth spread-and-fade animations, and intercepts D-pad / Gamepad hat input (`MotionEvent.AXIS_HAT_X`/`Y`) while open to prevent unwanted carousel scrolling.
-- Toggling "Use App Icon" MUST immediately display the app icon without fallback block glitches or requiring offscreen scrolling.
+- Toggling "Use App Icon" (or "Use Default Icon") MUST immediately await disk cover deletion, invalidate the palette cache, mark the package as scraped in `gamefocus_scraped_apps.txt` to prevent automated background re-scraping, and display the app icon (or ROM logo with `ContentScale.Fit`) without fallback block glitches or requiring offscreen scrolling. Poster cards and the library grid dynamically adapt their card backgrounds to the extracted app icon palette.
 
 ### FR-GF5: Dynamic Palette Gradients & Ambient Glow
 

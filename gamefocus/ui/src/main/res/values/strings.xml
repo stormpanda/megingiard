@@ -37,6 +37,7 @@
     <string name="steamgriddb_status_fetching">Fetching game covers</string>
     <string name="gamefocus_option_change_search_term">Change Search Term</string>
     <string name="gamefocus_option_use_app_icon">Use App Icon</string>
+    <string name="gamefocus_option_use_default_icon">Use Default Icon</string>
 
     <string name="gamefocus_library_tab_apps">Android Apps</string>
     <string name="gamefocus_library_tab_games">Android Games</string>

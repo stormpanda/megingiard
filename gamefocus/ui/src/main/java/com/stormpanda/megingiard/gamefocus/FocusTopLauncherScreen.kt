@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -86,7 +87,6 @@ import com.stormpanda.megingiard.catalog.LibraryTab
 import com.stormpanda.megingiard.catalog.RomManager
 import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
 import com.stormpanda.megingiard.math.floorMod
-import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.ExpandableActionItem
 import com.stormpanda.megingiard.ui.ExpandableActionsMenu
 import com.stormpanda.megingiard.ui.ExpandableMenuOrientation
@@ -234,7 +234,6 @@ fun FocusTopLauncherScreen(
     val categoryApps = getAppsForCategory(selectedCategory)
     val uniqueLetters = remember(categoryApps) { LetterNavigationHelper.getUniqueStartingLetters(categoryApps) }
 
-    var showApiTokenMissingDialog by remember { mutableStateOf(false) }
     var lastHighlightedPackages by remember { mutableStateOf<Map<GameFocusCategory, String>>(emptyMap()) }
 
     val gamesPagerState = rememberPagerState(initialPage = 0) { getAppsForCategory(GameFocusCategory.GAMES).size }
@@ -600,7 +599,14 @@ fun FocusTopLauncherScreen(
                                                 posterCornerRadius = FTL_POSTER_CORNER_RADIUS,
                                                 cardBackgroundColor = { actualIndex, isSelected ->
                                                     val appInfo = currentCategoryApps.getOrNull(actualIndex)
-                                                    val palette = appInfo?.let { AppPaletteExtractor.getCachedColorsOrNull(it) }
+                                                    val palette =
+                                                        if (isSelected && appInfo?.packageName == backgroundApp?.packageName &&
+                                                            activePalette.isExtracted
+                                                        ) {
+                                                            activePalette
+                                                        } else {
+                                                            appInfo?.let { AppPaletteExtractor.getCachedColorsOrNull(it) }
+                                                        }
                                                     if (palette != null && palette.isExtracted) {
                                                         palette.darkenedPrimaryColor
                                                     } else if (isSelected) {
@@ -786,57 +792,19 @@ fun FocusTopLauncherScreen(
 
                     // Custom Megingiard Artwork Selection Modal Dialog
                     if (editingAppInfo != null) {
-                        if (apiKey.isBlank()) {
-                            showApiTokenMissingDialog = true
-                        } else {
-                            GameFocusArtworkDialog(
-                                appInfo = editingAppInfo,
-                                apiKey = apiKey,
-                                virtualIndex = dialogVirtualIndex,
-                                onVirtualIndexChange = onDialogVirtualIndexChange,
-                                confirmTrigger = confirmDialogTrigger,
-                                l1Trigger = dialogL1Trigger,
-                                r1Trigger = dialogR1Trigger,
-                                isOptionsMenuExpanded = isOptionsMenuExpanded,
-                                onOptionsMenuExpandedChange = onOptionsMenuExpandedChange,
-                                dpadUpTrigger = dpadUpTrigger,
-                                dpadRightTrigger = dpadRightTrigger,
-                                onDismiss = onDismissEditingApp,
-                            )
-                        }
-                    }
-
-                    if (showApiTokenMissingDialog) {
-                        AppAlertDialog(
-                            onDismissRequest = {
-                                showApiTokenMissingDialog = false
-                                onDismissEditingApp()
-                            },
-                            title = {
-                                Text(
-                                    text = stringResource(R.string.steamgriddb_token_missing_title),
-                                    style = MaterialTheme.typography.titleLarge.copy(color = appColors.onSurface),
-                                )
-                            },
-                            text = {
-                                Text(
-                                    text = stringResource(R.string.steamgriddb_token_missing_message),
-                                    style = MaterialTheme.typography.bodyMedium.copy(color = appColors.onSurfaceSecondary),
-                                )
-                            },
-                            confirmButton = {
-                                TextButton(
-                                    onClick = {
-                                        showApiTokenMissingDialog = false
-                                        onDismissEditingApp()
-                                    },
-                                ) {
-                                    Text(
-                                        text = stringResource(R.string.steamgriddb_error_dismiss),
-                                        color = appColors.accent,
-                                    )
-                                }
-                            },
+                        GameFocusArtworkDialog(
+                            appInfo = editingAppInfo,
+                            apiKey = apiKey,
+                            virtualIndex = dialogVirtualIndex,
+                            onVirtualIndexChange = onDialogVirtualIndexChange,
+                            confirmTrigger = confirmDialogTrigger,
+                            l1Trigger = dialogL1Trigger,
+                            r1Trigger = dialogR1Trigger,
+                            isOptionsMenuExpanded = isOptionsMenuExpanded,
+                            onOptionsMenuExpandedChange = onOptionsMenuExpandedChange,
+                            dpadUpTrigger = dpadUpTrigger,
+                            dpadRightTrigger = dpadRightTrigger,
+                            onDismiss = onDismissEditingApp,
                         )
                     }
                 }
@@ -1185,10 +1153,18 @@ private fun PosterCardContent(
             Image(
                 bitmap = currentIcon,
                 contentDescription = appInfo.label,
+                contentScale = ContentScale.Fit,
                 modifier =
-                    Modifier
-                        .size(FTL_ICON_SIZE)
-                        .aspectRatio(1f),
+                    if (appInfo.isRom) {
+                        Modifier
+                            .fillMaxWidth(0.85f)
+                            .heightIn(max = FTL_ICON_SIZE)
+                            .padding(horizontal = 4.dp)
+                    } else {
+                        Modifier
+                            .size(FTL_ICON_SIZE)
+                            .aspectRatio(1f)
+                    },
             )
         } else {
             Box(

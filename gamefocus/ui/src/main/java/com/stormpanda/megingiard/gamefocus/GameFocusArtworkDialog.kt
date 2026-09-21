@@ -128,16 +128,18 @@ fun GameFocusArtworkDialog(
     val useAppIcon =
         remember(appInfo.packageName) {
             {
-                scope.launch(Dispatchers.IO) {
-                    val coversDir = File(context.cacheDir, "gamefocus_covers")
-                    val targetFile = File(coversDir, "${appInfo.packageName}.png")
-                    if (targetFile.exists()) targetFile.delete()
+                scope.launch {
+                    withContext(Dispatchers.IO) {
+                        val coversDir = File(context.cacheDir, "gamefocus_covers")
+                        val targetFile = File(coversDir, "${appInfo.packageName}.png")
+                        if (targetFile.exists()) targetFile.delete()
+                    }
+                    AppPaletteExtractor.invalidatePalette(appInfo.packageName)
+                    InstalledAppsManager.updateAppCover(appInfo.packageName, null)
+                    InstalledAppsManager.markAppAsScraped(context, appInfo.packageName)
+                    AppLog.i(TAG, "Reverted to app icon for ${appInfo.packageName}")
+                    onDismiss()
                 }
-                AppPaletteExtractor.invalidatePalette(appInfo.packageName)
-                InstalledAppsManager.updateAppCover(appInfo.packageName, null)
-                InstalledAppsManager.markAppAsScraped(context, appInfo.packageName)
-                AppLog.i(TAG, "Reverted to app icon for ${appInfo.packageName}")
-                onDismiss()
             }
         }
 
@@ -166,7 +168,14 @@ fun GameFocusArtworkDialog(
     }
 
     // Search for games matching current searchQuery
-    LaunchedEffect(searchQuery) {
+    LaunchedEffect(searchQuery, apiKey) {
+        if (apiKey.isBlank()) {
+            isSearchLoading = false
+            errorMessage = context.getString(R.string.steamgriddb_token_missing_message)
+            games = emptyList()
+            selectedGameIndex = 0
+            return@LaunchedEffect
+        }
         AppLog.i(TAG, "Searching SteamGridDB games for '$searchQuery'")
         isSearchLoading = true
         errorMessage = null
@@ -491,7 +500,12 @@ fun GameFocusArtworkDialog(
                                 onClick = { isEditingQuery = true },
                             ),
                             ExpandableActionItem(
-                                label = stringResource(R.string.gamefocus_option_use_app_icon),
+                                label =
+                                    if (appInfo.isRom) {
+                                        stringResource(R.string.gamefocus_option_use_default_icon)
+                                    } else {
+                                        stringResource(R.string.gamefocus_option_use_app_icon)
+                                    },
                                 iconSymbol = "gamepad_right",
                                 onClick = { useAppIcon() },
                             ),

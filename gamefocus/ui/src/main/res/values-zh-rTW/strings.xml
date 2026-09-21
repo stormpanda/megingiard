@@ -37,6 +37,7 @@
     <string name="steamgriddb_status_fetching">正在取得遊戲封面</string>
     <string name="gamefocus_option_change_search_term">更改搜尋關鍵字</string>
     <string name="gamefocus_option_use_app_icon">使用應用程式圖示</string>
+    <string name="gamefocus_option_use_default_icon">使用預設圖示</string>
 
     <string name="gamefocus_library_tab_apps">Android 應用程式</string>
     <string name="gamefocus_library_tab_games">Android 遊戲</string>

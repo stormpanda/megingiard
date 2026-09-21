@@ -360,19 +360,7 @@ object InstalledAppsManager {
             val currentApps = installedApps.value
             val missingCovers =
                 currentApps.filter { app ->
-                    val coverFile = File(coversDir, "${app.packageName}.png")
-                    val logosDir = File(context.cacheDir, "gamefocus_logos")
-                    val logoFile = File(logosDir, "${app.packageName}.png")
-
-                    val hasCover = coverFile.exists() && coverFile.length() > 0L
-                    val hasLogo = logoFile.exists() && logoFile.length() > 0L
-
-                    val isScraped = scrapedSet.contains(app.packageName)
-                    if (app.isRom) {
-                        !isScraped || !hasCover || !hasLogo
-                    } else {
-                        !isScraped || !hasCover
-                    }
+                    !scrapedSet.contains(app.packageName)
                 }
             if (missingCovers.isEmpty()) {
                 AppLog.d(TAG, "No un-scraped apps missing cover art or logo")
