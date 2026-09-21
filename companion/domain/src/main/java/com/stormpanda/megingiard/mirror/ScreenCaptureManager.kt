@@ -309,6 +309,7 @@ object ScreenCaptureManager {
         ny: Float,
     ) {
         val targetCutout = _cutouts.value.find { it.followTouch } ?: return
+        InteractiveCutoutController.onFollowTouchReceived(targetCutout.id)
         val targetSrcX = (nx - targetCutout.srcWidth / 2f).coerceIn(0f, (1f - targetCutout.srcWidth).coerceAtLeast(0f))
         val targetSrcY = (ny - targetCutout.srcHeight / 2f).coerceIn(0f, (1f - targetCutout.srcHeight).coerceAtLeast(0f))
 
@@ -375,7 +376,7 @@ object ScreenCaptureManager {
             }
     }
 
-    /** Resets all transient mirror session state (lock, projection, freeze, follow). */
+    /** Resets all transient mirror session state (lock, projection, freeze, follow, interactive cutouts). */
     fun resetMirrorSessionState() {
         AppLog.i(TAG, "resetMirrorSessionState")
         _isLocked.value = false
@@ -383,5 +384,6 @@ object ScreenCaptureManager {
         setFrozenBitmap(null)
         clearScreenshotPreview()
         if (_isFollowActive.value) setFollowActive(false)
+        InteractiveCutoutController.reset()
     }
 }

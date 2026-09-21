@@ -705,6 +705,12 @@ Open Settings to create a layout.</string>
     <string name="settings_mirror_cutout_filter_transparency_mask">HUD / UI Isolation</string>
     <string name="settings_cutout_render_above_mask_title">Render Above Background Mask</string>
     <string name="settings_cutout_render_above_mask_desc">Renders this cutout above layout background masks while remaining below MacroPad buttons</string>
+    <string name="settings_cutout_interactive_viewport_title">Interactive Viewport</string>
+    <string name="settings_cutout_interactive_viewport_desc">Allow panning and pinch-to-zoom on this cutout using gestures on the secondary screen</string>
+    <string name="settings_cutout_snap_back_title">Snap-Back Mode</string>
+    <string name="settings_cutout_snap_back_desc">Choose whether the viewport snaps back on release or stays panned until double-tapped</string>
+    <string name="settings_cutout_snap_back_instant">Instant (On release)</string>
+    <string name="settings_cutout_snap_back_off">Off (Double-tap to reset)</string>
     <string name="settings_cutout_advanced_title">Advanced Cutout Settings</string>
     <string name="settings_cutout_advanced_desc">HUD / UI isolation and translucency adjustments</string>
     <string name="settings_cutout_convert_smart_title">Isolate HUD / UI Elements</string>

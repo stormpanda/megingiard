@@ -59,6 +59,7 @@ fun EmbeddedMirrorView(
     val layout by MacroPadState.activeLayout.collectAsStateWithLifecycle()
     val screenshotRequested by ScreenCaptureManager.screenshotRequested.collectAsStateWithLifecycle()
     val presenceRevision by AnchorPresenceManager.presenceRevision.collectAsStateWithLifecycle()
+    val interactiveOverrides by InteractiveCutoutController.overrideCrops.collectAsStateWithLifecycle()
 
     val effectiveCutouts = overrideCutouts ?: cutouts
     val effectiveShowLayoutBackground = showLayoutBackground && !(isViewportEditActive && isMirrorEditorBackgroundHidden)
@@ -214,8 +215,17 @@ fun EmbeddedMirrorView(
         containerHolder.container?.invalidate()
     }
 
+    // React to interactive cutout viewport gesture and snap-back changes
+    LaunchedEffect(interactiveOverrides) {
+        containerHolder.container?.invalidate()
+    }
+
     DisposableEffect(surfaceOwner, surfacePriority) {
+        InteractiveCutoutController.onCropUpdated = {
+            containerHolder.container?.postInvalidateOnAnimation()
+        }
         onDispose {
+            InteractiveCutoutController.onCropUpdated = null
             val surfaceToClear = containerHolder.currentRoutedSurface ?: containerHolder.masterSurface
             containerHolder.gpuMotionSmoother?.release()
             containerHolder.gpuMotionSmoother = null

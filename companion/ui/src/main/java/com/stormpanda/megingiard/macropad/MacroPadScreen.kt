@@ -75,6 +75,7 @@ import com.stormpanda.megingiard.BitmapUtils
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.math.ViewportMath
 import com.stormpanda.megingiard.mirror.EmbeddedMirrorView
+import com.stormpanda.megingiard.mirror.InteractiveCutoutController
 import com.stormpanda.megingiard.mirror.MasterSurfaceRegistry
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.TouchProjectionController
@@ -397,9 +398,16 @@ internal fun PadSurface(
         }
     }
 
+    LaunchedEffect(vibrator) {
+        InteractiveCutoutController.onHapticFeedback = {
+            triggerHaptic(vibrator, HapticStrength.LIGHT, 0, 0)
+        }
+    }
+
     DisposableEffect(Unit) {
         onDispose {
             TouchScreenObserver.stop("MacroPadScreen_FollowMode")
+            InteractiveCutoutController.onHapticFeedback = null
         }
     }
 
@@ -469,6 +477,9 @@ internal fun PadSurface(
                                         if (!change.pressed && change.previousPressed) {
                                             if (engine.isPointerTracked(id)) {
                                                 engine.onRelease(id, layout.buttons, profile)
+                                                change.consume()
+                                            } else if (InteractiveCutoutController.isPointerTracked(id)) {
+                                                InteractiveCutoutController.onRelease(id, layout.mirrorCutouts)
                                                 change.consume()
                                             } else if (isTouchProjectionActive) {
                                                 projectionController.onRelease(
@@ -563,6 +574,16 @@ internal fun PadSurface(
                                                                 pointerCount = event.changes.size,
                                                             )
                                                         }
+                                                    } else if (InteractiveCutoutController.onPress(
+                                                            pointerId = id,
+                                                            xPx = change.position.x,
+                                                            yPx = change.position.y,
+                                                            boxW = w,
+                                                            boxH = h,
+                                                            cutouts = layout.mirrorCutouts,
+                                                        )
+                                                    ) {
+                                                        change.consume()
                                                     } else if (bgTouchpadActive) {
                                                         bgTouchpadProcessor.onPress(
                                                             id,
@@ -588,6 +609,16 @@ internal fun PadSurface(
                                                         delta.y,
                                                         layout.buttons,
                                                         profile,
+                                                    )
+                                                    change.consume()
+                                                } else if (InteractiveCutoutController.isPointerTracked(id)) {
+                                                    InteractiveCutoutController.onMove(
+                                                        pointerId = id,
+                                                        xPx = change.position.x,
+                                                        yPx = change.position.y,
+                                                        boxW = w,
+                                                        boxH = h,
+                                                        cutouts = layout.mirrorCutouts,
                                                     )
                                                     change.consume()
                                                 } else if (isTouchProjectionActive) {
@@ -623,6 +654,7 @@ internal fun PadSurface(
                             }
                         } finally {
                             engine.releaseAll(layout.buttons)
+                            InteractiveCutoutController.cancelAllAnimations()
                             if (isTouchProjectionActive) {
                                 projectionController.reset()
                             }

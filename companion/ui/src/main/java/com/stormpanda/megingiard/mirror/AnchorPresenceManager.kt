@@ -196,10 +196,11 @@ object AnchorPresenceManager {
                 layoutAnchor.streamDelayFrames.coerceIn(MIN_LAYOUT_STREAM_DELAY_FRAMES, MAX_LAYOUT_STREAM_DELAY_FRAMES)
 
             for (cutout in allCutouts) {
-                minNormX = minOf(minNormX, cutout.srcX)
-                minNormY = minOf(minNormY, cutout.srcY)
-                maxNormX = maxOf(maxNormX, cutout.srcX + cutout.srcWidth)
-                maxNormY = maxOf(maxNormY, cutout.srcY + cutout.srcHeight)
+                val effectiveCrop = CutoutGestureMath.clampToScreenBounds(InteractiveCutoutController.getEffectiveCrop(cutout))
+                minNormX = minOf(minNormX, effectiveCrop.srcX)
+                minNormY = minOf(minNormY, effectiveCrop.srcY)
+                maxNormX = maxOf(maxNormX, effectiveCrop.srcX + effectiveCrop.srcWidth)
+                maxNormY = maxOf(maxNormY, effectiveCrop.srcY + effectiveCrop.srcHeight)
             }
 
             val cropLeft = (minNormX * srcW).roundToInt().coerceIn(0, srcW - 1)
@@ -234,12 +235,13 @@ object AnchorPresenceManager {
                 var anyStateChanged = false
 
                 for (cutout in allCutouts) {
-                    val cX = (cutout.srcX * srcW).roundToInt().coerceIn(0, srcW - 1)
-                    val cY = (cutout.srcY * srcH).roundToInt().coerceIn(0, srcH - 1)
-                    val cRight = ((cutout.srcX + cutout.srcWidth) * srcW).roundToInt().coerceIn(cX + 1, srcW)
-                    val cBottom = ((cutout.srcY + cutout.srcHeight) * srcH).roundToInt().coerceIn(cY + 1, srcH)
-                    val cW = cRight - cX
-                    val cH = cBottom - cY
+                    val effectiveCrop = CutoutGestureMath.clampToScreenBounds(InteractiveCutoutController.getEffectiveCrop(cutout))
+                    val cX = (effectiveCrop.srcX * srcW).roundToInt().coerceIn(0, srcW - 1)
+                    val cY = (effectiveCrop.srcY * srcH).roundToInt().coerceIn(0, srcH - 1)
+                    val cRight = ((effectiveCrop.srcX + effectiveCrop.srcWidth) * srcW).roundToInt().coerceIn(cX + 1, srcW)
+                    val cBottom = ((effectiveCrop.srcY + effectiveCrop.srcHeight) * srcH).roundToInt().coerceIn(cY + 1, srcH)
+                    val cW = (cRight - cX).coerceAtLeast(1)
+                    val cH = (cBottom - cY).coerceAtLeast(1)
 
                     val localCropX = (cX - cropLeft).coerceIn(0, frameW - 1)
                     val localCropY = (cY - cropTop).coerceIn(0, frameH - 1)

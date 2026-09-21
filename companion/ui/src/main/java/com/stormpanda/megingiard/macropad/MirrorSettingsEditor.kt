@@ -11,10 +11,12 @@ import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.Opacity
+import androidx.compose.material.icons.rounded.Replay
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material.icons.rounded.ZoomIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -32,6 +34,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.math.nextItem
 import com.stormpanda.megingiard.mirror.CutoutMaskManager
+import com.stormpanda.megingiard.mirror.CutoutSnapBackMode
 import com.stormpanda.megingiard.mirror.MAX_SENSITIVITY
 import com.stormpanda.megingiard.mirror.MAX_TRANSLUCENCY
 import com.stormpanda.megingiard.mirror.MIN_SENSITIVITY
@@ -279,7 +282,7 @@ internal fun CutoutSettingsSubPageContent(
             itemKey = "cutout_${cutout.id}_projection",
             cardFocusRequester = projectionFocusRequester,
             onConfirm = {
-                onUpdateCutout(cutout.copy(touchProjectionEnabled = true), true)
+                onUpdateCutout(cutout.copy(touchProjectionEnabled = true, interactivePanZoom = false), true)
                 ScreenCaptureManager.setLocked(true)
                 restoreFocusTrigger++
             },
@@ -293,7 +296,13 @@ internal fun CutoutSettingsSubPageContent(
             itemKey = "cutout_${cutout.id}_projection",
             cardFocusRequester = projectionFocusRequester,
             onCheckedChange = { isChecked ->
-                onUpdateCutout(cutout.copy(touchProjectionEnabled = isChecked), false)
+                onUpdateCutout(
+                    cutout.copy(
+                        touchProjectionEnabled = isChecked,
+                        interactivePanZoom = if (isChecked) false else cutout.interactivePanZoom,
+                    ),
+                    false,
+                )
                 if (isChecked) {
                     ScreenCaptureManager.setLocked(true)
                 }
@@ -301,7 +310,50 @@ internal fun CutoutSettingsSubPageContent(
         )
     }
 
-    // 4. Render Above Mask
+    // 4. Interactive Viewport (Pan & Zoom)
+    GamepadToggleCard(
+        title = stringResource(R.string.settings_cutout_interactive_viewport_title),
+        description = stringResource(R.string.settings_cutout_interactive_viewport_desc),
+        checked = cutout.interactivePanZoom,
+        icon = Icons.Rounded.ZoomIn,
+        itemKey = "cutout_${cutout.id}_interactive_viewport",
+        onCheckedChange = { isChecked ->
+            onUpdateCutout(
+                cutout.copy(
+                    interactivePanZoom = isChecked,
+                    touchProjectionEnabled = if (isChecked) false else cutout.touchProjectionEnabled,
+                ),
+                false,
+            )
+        },
+    )
+
+    if (cutout.interactivePanZoom) {
+        val snapBackModes =
+            listOf(
+                stringResource(R.string.settings_cutout_snap_back_off),
+                stringResource(R.string.settings_cutout_snap_back_instant),
+            )
+        val currentSnapBackIdx = if (cutout.snapBackMode == CutoutSnapBackMode.OFF) 0 else 1
+
+        GamepadChoiceCard(
+            title = stringResource(R.string.settings_cutout_snap_back_title),
+            description = stringResource(R.string.settings_cutout_snap_back_desc),
+            selectedText = snapBackModes[currentSnapBackIdx],
+            icon = Icons.Rounded.Replay,
+            itemKey = "cutout_${cutout.id}_snap_back_mode",
+            onPrevious = {
+                val newMode = if (currentSnapBackIdx == 0) CutoutSnapBackMode.INSTANT else CutoutSnapBackMode.OFF
+                onUpdateCutout(cutout.copy(snapBackMode = newMode), false)
+            },
+            onNext = {
+                val newMode = if (currentSnapBackIdx == 0) CutoutSnapBackMode.INSTANT else CutoutSnapBackMode.OFF
+                onUpdateCutout(cutout.copy(snapBackMode = newMode), false)
+            },
+        )
+    }
+
+    // 5. Render Above Mask
     GamepadToggleCard(
         title = stringResource(R.string.settings_cutout_render_above_mask_title),
         description = stringResource(R.string.settings_cutout_render_above_mask_desc),
@@ -313,7 +365,7 @@ internal fun CutoutSettingsSubPageContent(
         },
     )
 
-    // 5. Advanced Cutout Settings (HUD / UI Isolation)
+    // 6. Advanced Cutout Settings (HUD / UI Isolation)
     GamepadActionCard(
         title = stringResource(R.string.settings_cutout_advanced_title),
         description = stringResource(R.string.settings_cutout_advanced_desc),

@@ -256,6 +256,24 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
   - Upon completion or cancellation, snapshot bitmaps are strictly recycled per §7.3 of `AGENTS.md`.
   - When the Quick Menu is open, snapshot capturing is bypassed to avoid freezing Quick Menu cards into the transition frame.
 
+### FR-M19: Interactive Cutout Viewport (Pan & Pinch-to-Zoom with Snap-Back)
+
+- The user MUST be able to enable "Interactive Viewport" (`interactivePanZoom: Boolean`) on any cutout in the Screen Mirroring cutout settings sub-page (`CutoutSettingsSubPageContent`).
+- Enabling Interactive Viewport MUST automatically disable Touch Projection on that cutout (and vice versa; they are mutually exclusive).
+- When active during gameplay (live mirror or frozen frame):
+  - **1-Finger Drag (Pan):** Panning with 1 finger on the cutout shifts the source crop window inside the cutout's fixed frame on the secondary screen, moving the view across the primary display in real time.
+  - **2-Finger Pinch (Zoom & Pan):** Pinching with 2 fingers zooms in/out (magnifying or demagnifying) and pans simultaneously around the gesture focal point while preserving the cutout's configured aspect ratio.
+  - **Zoom & Pan Bounds:**
+    - Max zoom-out is strictly capped at full screen (1.0x, no zooming out into void).
+    - Max zoom-in is capped at 10x magnification.
+    - Dragging past top-screen boundaries `[0, 1]` applies elastic overscroll dampening resistance (rubber-banding).
+  - **Double-Tap Reset:** Double-tapping anywhere on an interactive cutout resets the viewport back to the layout's saved default crop via a smooth lerp animation (`SNAP_BACK_DURATION_MS = 250L`) accompanied by a light haptic tick.
+  - **Configurable Snap-Back Modes (`CutoutSnapBackMode`):**
+    - **Off (`OFF`, default):** Releasing fingers holds the panned/zoomed viewport in place. If the viewport was dragged into elastic overscroll past the screen edges, releasing fingers triggers an elastic bounce-back animation (`BOUNCE_BACK_DURATION_MS = 200L`) to the nearest valid screen boundary. The viewport remains in this state until double-tapped or overridden.
+    - **Instant (`INSTANT`):** Releasing all fingers immediately triggers a smooth lerp animation (`SNAP_BACK_DURATION_MS = 250L`) returning the source crop to its default anchor position, accompanied by a light haptic tick.
+  - **Follow Touch Precedence:** If a cutout has both Follow Touch and Interactive Viewport enabled, manual pan/zoom operates freely. Any subsequent touch received on the top screen immediately takes over and re-centers the crop on the newly touched coordinates.
+  - **Transient Viewport State:** On-the-fly gesture manipulation operates strictly on transient in-memory viewports (`InteractiveCutoutController.overrideCrops`). The saved layout profile configuration is never overwritten.
+
 ---
 
 ## Technical Implementation
@@ -608,6 +626,8 @@ HUD / UI isolation is implemented via hardware-accelerated transparency mask ble
 | `VisualAutoTuneCoordinator.kt`        | Orchestrates interactive calibration lifecycle, live preview streaming, overlay suspension, and mask/anchor generation |
 | `AutoTuneCalibrationSheet.kt`         | Secondary screen interactive calibration sheet with live dynamic transparency preview and user Finish/Cancel actions |
 | `ScreenCaptureManager.kt`             | Singleton state: scale, offset, freeze, lock, touch-projection state, frozen bitmap, follow state          |
+| `InteractiveCutoutController.kt`      | Transient interactive cutout viewport controller: pan, pinch-zoom, elastic bounce-back, and snap-back animations |
+| `CutoutGestureMath.kt`                | Shared pure Kotlin math helper in `:shared:core`: pan delta, pinch zoom, bounds clamping, and lerp math   |
 | `TouchScreenObserver.kt`              | Listens to raw `/dev/input/event6` touchscreen events in background thread and maps coordinates            |
 | `CropSelectorOverlay.kt`              | Primary display crop selector overlay Composable UI                                                        |
 | `CropSelectorActivity.kt`             | Translucent Activity hosting CropSelectorOverlay on the primary display                                    |

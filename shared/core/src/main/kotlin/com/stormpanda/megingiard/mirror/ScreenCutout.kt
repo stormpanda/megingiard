@@ -16,6 +16,12 @@ enum class AspectRatioMode {
     BOTTOM,
 }
 
+@Serializable
+enum class CutoutSnapBackMode {
+    OFF,
+    INSTANT,
+}
+
 /**
  * Represents a single cropped section of the primary display (source)
  * that is displayed and positioned on the secondary display (destination).
@@ -41,6 +47,8 @@ enum class AspectRatioMode {
  * @param maskCavityHealing Whether morphological closing bridges gaps to protect internal animated meters and widgets.
  * @param renderAsStaticAsset Whether this isolated cutout renders as a clean pre-rendered static RGBA asset bypassing live stream.
  * @param renderAboveMask Whether this cutout is composited above layout background masks while remaining below MacroPad buttons.
+ * @param interactivePanZoom Whether this cutout supports on-the-fly gesture pan and pinch-to-zoom manipulation on the secondary screen.
+ * @param snapBackMode Defines whether the interactive viewport snaps back on release (INSTANT) or stays panned until double-tapped (OFF).
  */
 @Serializable
 data class ScreenCutout(
@@ -68,6 +76,8 @@ data class ScreenCutout(
     val maskCavityHealing: Boolean = true,
     val renderAsStaticAsset: Boolean = false,
     val renderAboveMask: Boolean = false,
+    val interactivePanZoom: Boolean = false,
+    val snapBackMode: CutoutSnapBackMode = CutoutSnapBackMode.OFF,
 ) {
     companion object {
         val FULLSCREEN =
