@@ -149,4 +149,85 @@ class AnchorPresenceEvaluatorTest {
         assertEquals(AnchorPresenceState.PRESENT, state4)
         assertEquals(0, count4)
     }
+
+    @Test
+    fun `matchesSparseProbe returns false when point count is less than 16`() {
+        val points = (0 until 15).map { AnchorPoint(it * 0.05f, it * 0.05f, 255, 255, 255) }
+        val signature = VisualAnchorSignature("small", points)
+        val matched = AnchorPresenceEvaluator.matchesSparseProbe(signature) { _, _ -> colorArgb(255, 255, 255) }
+        org.junit.Assert.assertFalse(matched)
+    }
+
+    @Test
+    fun `matchesSparseProbe returns true when all 16 sparse probe points match`() {
+        val points = (0 until 64).map { AnchorPoint(it * 0.01f, it * 0.01f, 200, 200, 200) }
+        val signature = VisualAnchorSignature("grid", points)
+        val sampledIndices = mutableListOf<Float>()
+
+        val matched =
+            AnchorPresenceEvaluator.matchesSparseProbe(signature) { u, _ ->
+                sampledIndices.add(u)
+                colorArgb(200, 200, 200)
+            }
+
+        org.junit.Assert.assertTrue(matched)
+        // Exactly 16 points sampled instead of 64
+        assertEquals(16, sampledIndices.size)
+    }
+
+    @Test
+    fun `matchesSparseProbe returns false immediately when a single sparse probe point diverges`() {
+        val points = (0 until 64).map { AnchorPoint(it * 0.01f, it * 0.01f, 200, 200, 200) }
+        val signature = VisualAnchorSignature("grid", points)
+        var sampleCount = 0
+
+        val matched =
+            AnchorPresenceEvaluator.matchesSparseProbe(signature) { u, _ ->
+                sampleCount++
+                if (sampleCount == 3) {
+                    colorArgb(0, 0, 0) // Divergent pixel
+                } else {
+                    colorArgb(200, 200, 200)
+                }
+            }
+
+        org.junit.Assert.assertFalse(matched)
+        // Aborted early on 3rd sample
+        assertEquals(3, sampleCount)
+    }
+
+    @Test
+    fun `matchesWithEarlyBailout returns true early when required matches are reached`() {
+        val points = (0 until 64).map { AnchorPoint(it * 0.01f, it * 0.01f, 200, 200, 200) }
+        val signature = VisualAnchorSignature("grid", points)
+        var sampleCount = 0
+
+        val matched =
+            AnchorPresenceEvaluator.matchesWithEarlyBailout(signature) { _, _ ->
+                sampleCount++
+                colorArgb(200, 200, 200)
+            }
+
+        org.junit.Assert.assertTrue(matched)
+        // Required matches = 64 * 0.65 = 41. It terminates at sample 41, saving 23 pixel reads!
+        assertEquals(41, sampleCount)
+    }
+
+    @Test
+    fun `matchesWithEarlyBailout returns false early when max mismatches are exceeded`() {
+        val points = (0 until 64).map { AnchorPoint(it * 0.01f, it * 0.01f, 200, 200, 200) }
+        val signature = VisualAnchorSignature("grid", points)
+        var sampleCount = 0
+
+        val matched =
+            AnchorPresenceEvaluator.matchesWithEarlyBailout(signature) { _, _ ->
+                sampleCount++
+                colorArgb(0, 0, 0) // All divergent
+            }
+
+        org.junit.Assert.assertFalse(matched)
+        // Required matches = 41. Max mismatches = 64 - 41 = 23.
+        // On 24th mismatch, it aborts early! Saves 40 pixel reads!
+        assertEquals(24, sampleCount)
+    }
 }

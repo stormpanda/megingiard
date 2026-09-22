@@ -72,6 +72,7 @@ internal class MultiCutoutContainer(
             val (above, below) = value.partition { it.renderAboveMask }
             aboveMaskCutouts = above
             belowMaskCutouts = below
+            pruneStaleCutoutResources(value)
             invalidate()
         }
     var isFrozen: Boolean = false
@@ -355,13 +356,14 @@ internal class MultiCutoutContainer(
     private val cutoutRenderNodeBitmaps = mutableMapOf<String, Bitmap>()
     private val cutoutRenderNodeWidths = mutableMapOf<String, Int>()
     private val cutoutRenderNodeHeights = mutableMapOf<String, Int>()
+    private val layerBoundsRect = RectF()
 
-    private fun updateCutoutTransitions() {
+    private fun pruneStaleCutoutResources(activeCutouts: List<ScreenCutout>) {
         if (cutoutRenderNodes.isNotEmpty()) {
             val iterator = cutoutRenderNodes.entries.iterator()
             while (iterator.hasNext()) {
                 val entry = iterator.next()
-                if (cutouts.none { it.id == entry.key }) {
+                if (activeCutouts.none { it.id == entry.key }) {
                     entry.value.discardDisplayList()
                     iterator.remove()
                     cutoutRenderNodeBitmaps.remove(entry.key)
@@ -375,14 +377,46 @@ internal class MultiCutoutContainer(
             val iterator = cutoutWasFrozen.keys.iterator()
             while (iterator.hasNext()) {
                 val id = iterator.next()
-                if (cutouts.none { it.id == id }) {
+                if (activeCutouts.none { it.id == id }) {
                     cutoutTransitionAnimators.remove(id)?.cancel()
                     cutoutBlurAlphas.remove(id)
                     iterator.remove()
                 }
             }
         }
+    }
 
+    private fun computeCutoutsBounds(
+        cutouts: List<ScreenCutout>,
+        parentW: Float,
+        parentH: Float,
+        blendW: Float,
+        outRect: RectF,
+    ) {
+        var minX = parentW
+        var minY = parentH
+        var maxX = 0f
+        var maxY = 0f
+        for (i in cutouts.indices) {
+            val c = cutouts[i]
+            val dx = (c.destX * parentW).roundToInt().toFloat()
+            val dy = (c.destY * parentH).roundToInt().toFloat()
+            val dw = (c.destWidth * parentW).roundToInt().toFloat()
+            val dh = (c.destHeight * parentH).roundToInt().toFloat()
+            if (dx - blendW < minX) minX = dx - blendW
+            if (dy - blendW < minY) minY = dy - blendW
+            if (dx + dw + blendW > maxX) maxX = dx + dw + blendW
+            if (dy + dh + blendW > maxY) maxY = dy + dh + blendW
+        }
+        outRect.set(
+            minX.coerceIn(0f, parentW),
+            minY.coerceIn(0f, parentH),
+            maxX.coerceIn(0f, parentW),
+            maxY.coerceIn(0f, parentH),
+        )
+    }
+
+    private fun updateCutoutTransitions() {
         val isEditing = isViewportEditActive || AppStateManager.isViewportEditActive.value
 
         val activeLayout = MacroPadState.activeLayout.value
@@ -953,7 +987,8 @@ internal class MultiCutoutContainer(
 
             val belowLayerSaveCount =
                 if (hasAnyBelowTouchingEdge) {
-                    canvas.saveLayer(0f, 0f, parentW, parentH, null)
+                    computeCutoutsBounds(belowMaskCutouts, parentW, parentH, blendW, layerBoundsRect)
+                    canvas.saveLayer(layerBoundsRect, null)
                 } else {
                     canvas.save()
                 }
@@ -1008,7 +1043,8 @@ internal class MultiCutoutContainer(
 
                 val aboveLayerSaveCount =
                     if (hasAnyAboveTouchingEdge) {
-                        canvas.saveLayer(0f, 0f, parentW, parentH, null)
+                        computeCutoutsBounds(aboveMaskCutouts, parentW, parentH, blendW, layerBoundsRect)
+                        canvas.saveLayer(layerBoundsRect, null)
                     } else {
                         canvas.save()
                     }

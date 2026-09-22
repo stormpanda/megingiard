@@ -237,4 +237,19 @@ class AnchorPresenceManagerTest {
         assertTrue(message.contains("\"Skills\""))
         assertTrue(message.contains("all match") || message.contains("stimmen überein") || message.contains("同時符合"))
     }
+
+    @Test
+    fun `computeLostCheckInterval respects tiered backoff intervals`() {
+        // Fast tier (< 2s)
+        assertEquals(33L, AnchorPresenceManager.computeLostCheckInterval(0L))
+        assertEquals(33L, AnchorPresenceManager.computeLostCheckInterval(1_999L))
+
+        // Medium tier (2s - 5s)
+        assertEquals(100L, AnchorPresenceManager.computeLostCheckInterval(2_000L))
+        assertEquals(100L, AnchorPresenceManager.computeLostCheckInterval(4_999L))
+
+        // Slow tier (>= 5s)
+        assertEquals(500L, AnchorPresenceManager.computeLostCheckInterval(5_000L))
+        assertEquals(500L, AnchorPresenceManager.computeLostCheckInterval(60_000L))
+    }
 }
