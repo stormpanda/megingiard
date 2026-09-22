@@ -81,8 +81,12 @@ private const val CLE_ROTATION_BR = -45f
 
 private val CLE_RECT_SHAPE = RectangleShape
 private val CLE_EDGE_HANDLE_SHAPE = RoundedCornerShape(CLE_EDGE_HANDLE_CORNER)
-private val CLE_BADGE_SHAPE = RoundedCornerShape(4.dp)
+private val CLE_BADGE_CORNER = 4.dp
+private val CLE_BADGE_SHAPE = RoundedCornerShape(CLE_BADGE_CORNER)
 private val CLE_MIN_BADGE_HEIGHT = 24.dp
+private val CLE_BADGE_PADDING_HORIZONTAL = 6.dp
+private val CLE_BADGE_PADDING_VERTICAL = 2.dp
+private const val CLE_BADGE_BG_ALPHA = 0.5f
 private const val CLE_UNSELECTED_BORDER_ALPHA = 0.15f
 private const val CLE_SELECTED_BORDER_ALPHA = 0.75f
 
@@ -286,8 +290,8 @@ fun CutoutLayoutEditor() {
                             modifier =
                                 Modifier
                                     .align(Alignment.Center)
-                                    .background(Color.Black.copy(alpha = 0.5f), CLE_BADGE_SHAPE)
-                                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                                    .background(Color.Black.copy(alpha = CLE_BADGE_BG_ALPHA), CLE_BADGE_SHAPE)
+                                    .padding(horizontal = CLE_BADGE_PADDING_HORIZONTAL, vertical = CLE_BADGE_PADDING_VERTICAL),
                         )
                     }
                 }
