@@ -1470,4 +1470,75 @@ class MirrorCoordinateTransformTest {
         assertEquals(0.499f, expandedUp.y, EPS)
         assertEquals(0.042f, expandedUp.height, EPS)
     }
+
+    @Test
+    fun `calculateResizedBounds shrinks down to 1 percent default minimum`() {
+        val screenW = 1000f
+        val screenH = 1000f
+
+        // Shrinking past 0.05f succeeds and clamps at MIN_GAMEPAD_CUTOUT_SIZE (0.010f / 10px)
+        val shrunk =
+            calculateResizedBounds(
+                normX = 0.500f,
+                normY = 0.500f,
+                normW = 0.030f,
+                normH = 0.030f,
+                screenWidth = screenW,
+                screenHeight = screenH,
+                dx = -100,
+                dy = 100,
+            )
+        assertEquals(MIN_GAMEPAD_CUTOUT_SIZE, shrunk.width, EPS)
+        assertEquals(MIN_GAMEPAD_CUTOUT_SIZE, shrunk.height, EPS)
+    }
+
+    @Test
+    fun `calculateProportionalResizedBounds shrinks down to 1 percent default minimum`() {
+        val screenW = 1000f
+        val screenH = 1000f
+
+        val shrunk =
+            calculateProportionalResizedBounds(
+                normX = 0.500f,
+                normY = 0.500f,
+                normW = 0.030f,
+                normH = 0.030f,
+                screenWidth = screenW,
+                screenHeight = screenH,
+                stepDelta = -100,
+                targetNormRatio = 1f,
+            )
+        assertEquals(MIN_GAMEPAD_CUTOUT_SIZE, shrunk.w, EPS)
+        assertEquals(MIN_GAMEPAD_CUTOUT_SIZE, shrunk.h, EPS)
+    }
+
+    @Test
+    fun `isCutoutGeometryValid allows 1 percent size by default and rejects below 1 percent`() {
+        val others = emptyList<ScreenCutout>()
+        // 1% (0.010f) is valid
+        assertTrue(isCutoutGeometryValid(x = 0.100f, y = 0.100f, w = 0.010f, h = 0.010f, others = others))
+        // 0.5% (0.005f) is below default minimum
+        assertFalse(isCutoutGeometryValid(x = 0.100f, y = 0.100f, w = 0.005f, h = 0.010f, others = others))
+        assertFalse(isCutoutGeometryValid(x = 0.100f, y = 0.100f, w = 0.010f, h = 0.005f, others = others))
+    }
+
+    @Test
+    fun `clampCutoutResize enforces 5 percent touch minimum by default`() {
+        val others = emptyList<ScreenCutout>()
+        val shrunk =
+            clampCutoutResize(
+                cutoutId = "test",
+                handle = ResizeHandle.BOTTOM,
+                originalX = 0.100f,
+                originalY = 0.100f,
+                originalWidth = 0.200f,
+                originalHeight = 0.200f,
+                targetX = 0.100f,
+                targetY = 0.100f,
+                targetWidth = 0.200f,
+                targetHeight = 0.020f,
+                allCutouts = others,
+            )
+        assertEquals(MIN_TOUCH_CUTOUT_SIZE, shrunk.h, EPS)
+    }
 }

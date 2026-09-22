@@ -82,6 +82,7 @@ private val CLE_RECT_CORNER = 4.dp
 private val CLE_RECT_SHAPE = RoundedCornerShape(CLE_RECT_CORNER)
 private val CLE_EDGE_HANDLE_SHAPE = RoundedCornerShape(CLE_EDGE_HANDLE_CORNER)
 private val CLE_BADGE_SHAPE = RoundedCornerShape(4.dp)
+private val CLE_MIN_BADGE_HEIGHT = 24.dp
 private const val CLE_UNSELECTED_BG_ALPHA = 0.05f
 private const val CLE_UNSELECTED_BORDER_ALPHA = 0.15f
 private const val CLE_SELECTED_BORDER_ALPHA = 0.75f
@@ -287,16 +288,18 @@ fun CutoutLayoutEditor() {
                                     ),
                         )
                     }
-                    Text(
-                        text = cutout.name.ifBlank { "Cutout" },
-                        color = if (isSelected) colors.accent else Color.White,
-                        style = MaterialTheme.typography.labelMedium,
-                        modifier =
-                            Modifier
-                                .align(Alignment.Center)
-                                .background(Color.Black.copy(alpha = 0.5f), CLE_BADGE_SHAPE)
-                                .padding(horizontal = 6.dp, vertical = 2.dp),
-                    )
+                    if (!isSelected && destH >= with(density) { CLE_MIN_BADGE_HEIGHT.toPx() }) {
+                        Text(
+                            text = cutout.name.ifBlank { "Cutout" },
+                            color = Color.White,
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier =
+                                Modifier
+                                    .align(Alignment.Center)
+                                    .background(Color.Black.copy(alpha = 0.5f), CLE_BADGE_SHAPE)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                        )
+                    }
                 }
 
                 // Show drag handles if selected
@@ -455,123 +458,125 @@ fun CutoutLayoutEditor() {
                         MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
                     }
 
-                    if (cutout.aspectRatioMode == AspectRatioMode.TOP) {
-                        // ── CORNER Handles (Aspect ratio locked to TOP) ──────────────────
-                        val cornerMarginPx = with(density) { CLE_CORNER_HANDLE_MARGIN.toPx() }
-                        val handleThicknessPx = with(density) { CLE_EDGE_HANDLE_THICKNESS.toPx() }
-                        val cornerTouchSizePx = with(density) { CLE_CORNER_TOUCH_SIZE.toPx() }
+                    if (cutout.destWidth >= MIN_TOUCH_CUTOUT_SIZE && cutout.destHeight >= MIN_TOUCH_CUTOUT_SIZE) {
+                        if (cutout.aspectRatioMode == AspectRatioMode.TOP) {
+                            // ── CORNER Handles (Aspect ratio locked to TOP) ──────────────────
+                            val cornerMarginPx = with(density) { CLE_CORNER_HANDLE_MARGIN.toPx() }
+                            val handleThicknessPx = with(density) { CLE_EDGE_HANDLE_THICKNESS.toPx() }
+                            val cornerTouchSizePx = with(density) { CLE_CORNER_TOUCH_SIZE.toPx() }
 
-                        val corners =
-                            listOf(
-                                CornerHandleDef(
-                                    destLeft - cornerMarginPx - handleThicknessPx / 2f,
-                                    destTop - cornerMarginPx - handleThicknessPx / 2f,
-                                    CLE_ROTATION_TL,
-                                    ResizeHandle.TOP_LEFT,
-                                ),
-                                CornerHandleDef(
-                                    destLeft + destW + cornerMarginPx + handleThicknessPx / 2f,
-                                    destTop - cornerMarginPx - handleThicknessPx / 2f,
-                                    CLE_ROTATION_TR,
-                                    ResizeHandle.TOP_RIGHT,
-                                ),
-                                CornerHandleDef(
-                                    destLeft - cornerMarginPx - handleThicknessPx / 2f,
-                                    destTop + destH + cornerMarginPx + handleThicknessPx / 2f,
-                                    CLE_ROTATION_BL,
-                                    ResizeHandle.BOTTOM_LEFT,
-                                ),
-                                CornerHandleDef(
-                                    destLeft + destW + cornerMarginPx + handleThicknessPx / 2f,
-                                    destTop + destH + cornerMarginPx + handleThicknessPx / 2f,
-                                    CLE_ROTATION_BR,
-                                    ResizeHandle.BOTTOM_RIGHT,
-                                ),
-                            )
-
-                        corners.forEach { def ->
-                            ResizeHandleView(
-                                offset =
-                                    IntOffset(
-                                        (def.centerX - cornerTouchSizePx / 2f).roundToInt(),
-                                        (def.centerY - cornerTouchSizePx / 2f).roundToInt(),
+                            val corners =
+                                listOf(
+                                    CornerHandleDef(
+                                        destLeft - cornerMarginPx - handleThicknessPx / 2f,
+                                        destTop - cornerMarginPx - handleThicknessPx / 2f,
+                                        CLE_ROTATION_TL,
+                                        ResizeHandle.TOP_LEFT,
                                     ),
-                                touchWidth = CLE_CORNER_TOUCH_SIZE,
-                                touchHeight = CLE_CORNER_TOUCH_SIZE,
-                                handleWidth = CLE_EDGE_HANDLE_LENGTH,
-                                handleHeight = CLE_EDGE_HANDLE_THICKNESS,
-                                rotation = def.rotation,
-                                color = colors.accent,
-                                onDragStart = { captureDragStart() },
-                                onDrag = { totalDx, totalDy -> handleCornerDrag(def.handle, totalDx, totalDy) },
-                            )
-                        }
-                    } else {
-                        // ── EDGE Handles (FREE or BOTTOM aspect ratio) ───────────────────
-                        val marginPx = with(density) { CLE_EDGE_HANDLE_MARGIN.toPx() }
-                        val handleThicknessPx = with(density) { CLE_EDGE_HANDLE_THICKNESS.toPx() }
-                        val touchLengthPx = with(density) { CLE_EDGE_TOUCH_LENGTH.toPx() }
-                        val touchThicknessPx = with(density) { CLE_EDGE_TOUCH_THICKNESS.toPx() }
+                                    CornerHandleDef(
+                                        destLeft + destW + cornerMarginPx + handleThicknessPx / 2f,
+                                        destTop - cornerMarginPx - handleThicknessPx / 2f,
+                                        CLE_ROTATION_TR,
+                                        ResizeHandle.TOP_RIGHT,
+                                    ),
+                                    CornerHandleDef(
+                                        destLeft - cornerMarginPx - handleThicknessPx / 2f,
+                                        destTop + destH + cornerMarginPx + handleThicknessPx / 2f,
+                                        CLE_ROTATION_BL,
+                                        ResizeHandle.BOTTOM_LEFT,
+                                    ),
+                                    CornerHandleDef(
+                                        destLeft + destW + cornerMarginPx + handleThicknessPx / 2f,
+                                        destTop + destH + cornerMarginPx + handleThicknessPx / 2f,
+                                        CLE_ROTATION_BR,
+                                        ResizeHandle.BOTTOM_RIGHT,
+                                    ),
+                                )
 
-                        val topCenterY = destTop - marginPx - handleThicknessPx / 2f
-                        val bottomCenterY = destTop + destH + marginPx + handleThicknessPx / 2f
-                        val leftCenterX = destLeft - marginPx - handleThicknessPx / 2f
-                        val rightCenterX = destLeft + destW + marginPx + handleThicknessPx / 2f
+                            corners.forEach { def ->
+                                ResizeHandleView(
+                                    offset =
+                                        IntOffset(
+                                            (def.centerX - cornerTouchSizePx / 2f).roundToInt(),
+                                            (def.centerY - cornerTouchSizePx / 2f).roundToInt(),
+                                        ),
+                                    touchWidth = CLE_CORNER_TOUCH_SIZE,
+                                    touchHeight = CLE_CORNER_TOUCH_SIZE,
+                                    handleWidth = CLE_EDGE_HANDLE_LENGTH,
+                                    handleHeight = CLE_EDGE_HANDLE_THICKNESS,
+                                    rotation = def.rotation,
+                                    color = colors.accent,
+                                    onDragStart = { captureDragStart() },
+                                    onDrag = { totalDx, totalDy -> handleCornerDrag(def.handle, totalDx, totalDy) },
+                                )
+                            }
+                        } else {
+                            // ── EDGE Handles (FREE or BOTTOM aspect ratio) ───────────────────
+                            val marginPx = with(density) { CLE_EDGE_HANDLE_MARGIN.toPx() }
+                            val handleThicknessPx = with(density) { CLE_EDGE_HANDLE_THICKNESS.toPx() }
+                            val touchLengthPx = with(density) { CLE_EDGE_TOUCH_LENGTH.toPx() }
+                            val touchThicknessPx = with(density) { CLE_EDGE_TOUCH_THICKNESS.toPx() }
 
-                        val horizTouchX = (destLeft + destW / 2f) - touchLengthPx / 2f
-                        val vertTouchY = (destTop + destH / 2f) - touchLengthPx / 2f
+                            val topCenterY = destTop - marginPx - handleThicknessPx / 2f
+                            val bottomCenterY = destTop + destH + marginPx + handleThicknessPx / 2f
+                            val leftCenterX = destLeft - marginPx - handleThicknessPx / 2f
+                            val rightCenterX = destLeft + destW + marginPx + handleThicknessPx / 2f
 
-                        val edges =
-                            listOf(
-                                EdgeHandleDef(
-                                    horizTouchX,
-                                    topCenterY - touchThicknessPx / 2f,
-                                    CLE_EDGE_TOUCH_LENGTH,
-                                    CLE_EDGE_TOUCH_THICKNESS,
-                                    CLE_EDGE_HANDLE_LENGTH,
-                                    CLE_EDGE_HANDLE_THICKNESS,
-                                    ResizeHandle.TOP,
-                                ),
-                                EdgeHandleDef(
-                                    horizTouchX,
-                                    bottomCenterY - touchThicknessPx / 2f,
-                                    CLE_EDGE_TOUCH_LENGTH,
-                                    CLE_EDGE_TOUCH_THICKNESS,
-                                    CLE_EDGE_HANDLE_LENGTH,
-                                    CLE_EDGE_HANDLE_THICKNESS,
-                                    ResizeHandle.BOTTOM,
-                                ),
-                                EdgeHandleDef(
-                                    leftCenterX - touchThicknessPx / 2f,
-                                    vertTouchY,
-                                    CLE_EDGE_TOUCH_THICKNESS,
-                                    CLE_EDGE_TOUCH_LENGTH,
-                                    CLE_EDGE_HANDLE_THICKNESS,
-                                    CLE_EDGE_HANDLE_LENGTH,
-                                    ResizeHandle.LEFT,
-                                ),
-                                EdgeHandleDef(
-                                    rightCenterX - touchThicknessPx / 2f,
-                                    vertTouchY,
-                                    CLE_EDGE_TOUCH_THICKNESS,
-                                    CLE_EDGE_TOUCH_LENGTH,
-                                    CLE_EDGE_HANDLE_THICKNESS,
-                                    CLE_EDGE_HANDLE_LENGTH,
-                                    ResizeHandle.RIGHT,
-                                ),
-                            )
+                            val horizTouchX = (destLeft + destW / 2f) - touchLengthPx / 2f
+                            val vertTouchY = (destTop + destH / 2f) - touchLengthPx / 2f
 
-                        edges.forEach { def ->
-                            ResizeHandleView(
-                                offset = IntOffset(def.touchX.roundToInt(), def.touchY.roundToInt()),
-                                touchWidth = def.touchWidth,
-                                touchHeight = def.touchHeight,
-                                handleWidth = def.handleWidth,
-                                handleHeight = def.handleHeight,
-                                color = colors.accent,
-                                onDragStart = { captureDragStart() },
-                                onDrag = { totalDx, totalDy -> handleEdgeDrag(def.handle, totalDx, totalDy) },
-                            )
+                            val edges =
+                                listOf(
+                                    EdgeHandleDef(
+                                        horizTouchX,
+                                        topCenterY - touchThicknessPx / 2f,
+                                        CLE_EDGE_TOUCH_LENGTH,
+                                        CLE_EDGE_TOUCH_THICKNESS,
+                                        CLE_EDGE_HANDLE_LENGTH,
+                                        CLE_EDGE_HANDLE_THICKNESS,
+                                        ResizeHandle.TOP,
+                                    ),
+                                    EdgeHandleDef(
+                                        horizTouchX,
+                                        bottomCenterY - touchThicknessPx / 2f,
+                                        CLE_EDGE_TOUCH_LENGTH,
+                                        CLE_EDGE_TOUCH_THICKNESS,
+                                        CLE_EDGE_HANDLE_LENGTH,
+                                        CLE_EDGE_HANDLE_THICKNESS,
+                                        ResizeHandle.BOTTOM,
+                                    ),
+                                    EdgeHandleDef(
+                                        leftCenterX - touchThicknessPx / 2f,
+                                        vertTouchY,
+                                        CLE_EDGE_TOUCH_THICKNESS,
+                                        CLE_EDGE_TOUCH_LENGTH,
+                                        CLE_EDGE_HANDLE_THICKNESS,
+                                        CLE_EDGE_HANDLE_LENGTH,
+                                        ResizeHandle.LEFT,
+                                    ),
+                                    EdgeHandleDef(
+                                        rightCenterX - touchThicknessPx / 2f,
+                                        vertTouchY,
+                                        CLE_EDGE_TOUCH_THICKNESS,
+                                        CLE_EDGE_TOUCH_LENGTH,
+                                        CLE_EDGE_HANDLE_THICKNESS,
+                                        CLE_EDGE_HANDLE_LENGTH,
+                                        ResizeHandle.RIGHT,
+                                    ),
+                                )
+
+                            edges.forEach { def ->
+                                ResizeHandleView(
+                                    offset = IntOffset(def.touchX.roundToInt(), def.touchY.roundToInt()),
+                                    touchWidth = def.touchWidth,
+                                    touchHeight = def.touchHeight,
+                                    handleWidth = def.handleWidth,
+                                    handleHeight = def.handleHeight,
+                                    color = colors.accent,
+                                    onDragStart = { captureDragStart() },
+                                    onDrag = { totalDx, totalDy -> handleEdgeDrag(def.handle, totalDx, totalDy) },
+                                )
+                            }
                         }
                     }
                 }
