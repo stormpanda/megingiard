@@ -74,6 +74,11 @@ object AnchorPresenceManager {
 
     private var lastAutoSwitchTimeMs = 0L
     private var lostStateStartMs = 0L
+    private var sparseProbePhase = 0
+
+    @VisibleForTesting
+    internal val currentSparseProbePhase: Int
+        get() = sparseProbePhase
 
     private val _presenceRevision = MutableStateFlow(0)
     val presenceRevision: StateFlow<Int> = _presenceRevision.asStateFlow()
@@ -155,6 +160,7 @@ object AnchorPresenceManager {
     internal fun clearAllBuffers() {
         AppLog.d(TAG, "Clearing and recycling all ring buffer and freeze frame bitmaps")
         lostStateStartMs = 0L
+        sparseProbePhase = 0
         cutoutRingBuffers.values.forEach { it.recycle() }
         cutoutRingBuffers.clear()
         lastValidFrameBitmaps.values.forEach { if (!it.isRecycled) it.recycle() }
@@ -275,10 +281,12 @@ object AnchorPresenceManager {
                     val curState = layoutStates[activeLayout.id] ?: AnchorPresenceState.PRESENT
                     val curCount = layoutConsecutiveCounts[activeLayout.id] ?: 0
 
-                    // 16-point sparse probe during steady PRESENT state (0 mismatches): skips remaining 48 pixels
+                    // 16-point stratified rotating sparse probe during steady PRESENT state (0 mismatches): skips remaining 48 pixels
                     val matchesSparse =
                         if (curState == AnchorPresenceState.PRESENT && curCount == 0) {
-                            AnchorPresenceEvaluator.matchesSparseProbe(signature) { u, v ->
+                            val phase = sparseProbePhase
+                            sparseProbePhase = (sparseProbePhase + 1) and (AnchorPresenceEvaluator.SPARSE_PROBE_PHASE_COUNT - 1)
+                            AnchorPresenceEvaluator.matchesSparseProbe(signature, phase) { u, v ->
                                 val globalU = layoutAnchor.srcX + u * layoutAnchor.srcWidth
                                 val globalV = layoutAnchor.srcY + v * layoutAnchor.srcHeight
                                 val px = (globalU * frameW).roundToInt().coerceIn(0, frameW - 1)
@@ -286,6 +294,7 @@ object AnchorPresenceManager {
                                 frame.getPixel(px, py)
                             }
                         } else {
+                            sparseProbePhase = 0
                             false
                         }
 
@@ -530,6 +539,7 @@ object AnchorPresenceManager {
      */
     fun clearLayout(layoutId: String) {
         lostStateStartMs = 0L
+        sparseProbePhase = 0
         layoutStates.remove(layoutId)
         layoutConsecutiveCounts.remove(layoutId)
     }
