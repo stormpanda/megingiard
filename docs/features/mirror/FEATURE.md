@@ -240,13 +240,20 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
     - **Anchor Conflict Detection & Warning Toast:** If two or more candidate layout anchors match at the same time ($\ge 65\%$ match ratio), a custom error/warning toast pill is displayed via `DialogToastManager` naming the conflicting layouts (e.g. `Anchor conflict: "Inventory" and "Map" both match`) with `Icons.Rounded.Warning`, alerting the user that the anchors overlap.
     - A 500 ms cooldown (`AUTO_SWITCH_COOLDOWN_MS`) prevents rapid thrashing between candidate layouts.
     - Once switched, candidate scanning stops completely until the newly active layout's anchor is lost again. If no candidate layout matches, the current layout remains active and frozen.
-  - **Hardware-Layer TextureView Sampling (`MirrorFrameSampler`):**
-    - High-frequency presence sampling (~60 Hz for active layout, ~30 Hz for candidate layouts) requires low-latency crop extraction.
+  - **Hardware-Layer TextureView Sampling & Zero-Copy Pipeline (`MirrorFrameSampler`, `AnchorPresenceManager`):**
+    - High-frequency presence sampling (~60 Hz for active layout, ~30 Hz for candidate layouts) requires low-latency, battery-efficient frame extraction.
     - Android's native `PixelCopy.request(Surface, ...)` relies on `Surface::getLastQueuedBuffer` in C++ (`libs/gui/Surface.cpp`), which returns `null` for cross-process producer surfaces (such as `masterSurface` fed across Binder by `DirectMirrorServer` / SurfaceFlinger), failing with code 3 (`ERROR_SOURCE_NO_DATA`).
-    - To eliminate sampling stalls, `MirrorFrameSampler.captureCrop` extracts crops directly from the hardware layer `TextureView` on `Dispatchers.Main.immediate` using `tv.getBitmap(reusableFullFrameBitmap)` and draws into the target crop buffer via `Canvas.drawBitmap`. On the AYN Thor's Snapdragon 8 Gen 2, this executes in ~1 ms with zero GC heap allocation. When mirroring is frozen or the view is detached, it falls back to software-cropping `ScreenCaptureManager.frozenBitmap`.
-  - **Thread-Safe Presence Monitoring Lifecycle (`AnchorPresenceManager`):**
-    - Reusable crop buffers (`reusableCropBitmap`, `reusableCandidateCropBitmap`) are managed safely across monitoring loop cycles.
-    - When monitoring stops (e.g. layout or profile switch), `updateMonitoringLoop()` cancels `monitorJob` without asynchronously destroying reusable buffers from the caller thread. This eliminates native SIGABRT crashes in `libhwui.so` caused by mid-operation bitmap recycling while avoiding unnecessary object churn.
+    - **Single Master Readback per Tick:** To eliminate GPU pipeline stalls and bus bandwidth saturation, `AnchorPresenceManager` captures the master frame exactly once per tick via `MirrorFrameSampler.captureFullFrame()`.
+    - **Direct Candidate Layout Probing:** In candidate scanning (`processCandidateScan`), all candidate layouts are evaluated against the single master frame by sampling normalized UV coordinates directly via `frame.getPixel(px, py)` with 0 additional GPU readbacks, 0 bitmap allocations, and 0 intermediate canvas blits.
+    - **Zero-Copy Stream Delay Ring Buffer:** Cutout delayed frames are populated by blitting directly from the master frame into `CutoutFrameRingBuffer.pushFrame(frame, cX, cY)`, completely eliminating intermediate crop bitmaps.
+  - **Thread-Safe Presence Monitoring & Buffer Lifecycle (`AnchorPresenceManager`):**
+    - Ring buffers and frozen frames are kept in thread-safe collections (`cutoutRingBuffers`, `lastValidFrameBitmaps`).
+    - When mirroring stops (`isCapturing == false`), `clearAllBuffers()` is invoked, immediately recycling all historical ring buffer bitmaps and cached freeze frames to prevent background memory retention.
+    - Stale ring buffers for removed or re-dimensioned cutouts are cleaned up dynamically with zero allocation.
+  - **Zero-Allocation Rendering & Compose Decoupling (`MultiCutoutContainer`, `EmbeddedMirrorView`):**
+    - In `MultiCutoutContainer`, cutouts are pre-partitioned into `aboveMaskCutouts` and `belowMaskCutouts` upon property updates, eliminating `cutouts.partition { ... }` list allocations from the high-frequency `dispatchDraw` loop.
+    - Edge blending is encapsulated in a dedicated private member method `renderEdgeBlend`, eliminating function and lambda object allocations on every draw frame.
+    - In `EmbeddedMirrorView`, `interactiveOverrides` and `presenceRevision` are decoupled from Compose state collection (`collectAsStateWithLifecycle`), eliminating full Compose recompositions and surface re-routing during active cutout pan/pinch gestures or anchor state transitions. High-frequency invalidations invoke `postInvalidateOnAnimation()` directly on `MultiCutoutContainer`.
   - **Quick Menu Interaction & Manual Override:** Selecting a profile or layout manually in the `QuickMenu` automatically disengages autonomous mode (`CompanionViewMode.MACROPAD`) and triggers an informational toast ("Auto Switch turned off"). Tapping the shimmering `AUTO` chip re-engages autonomous mode (`CompanionViewMode.AUTO`).
 - **Hardware-Accelerated Layout Crossfade Transitions (`LayoutTransitionManager`):**
   - Switching between MacroPad layouts (autonomously via `AnchorPresenceManager` or in-game via gamepad/swipe shortcuts) executes a smooth 300 ms crossfade transition.

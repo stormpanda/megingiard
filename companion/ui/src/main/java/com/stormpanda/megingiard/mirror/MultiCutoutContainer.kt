@@ -64,9 +64,14 @@ internal class MultiCutoutContainer(
     private val bgDestRect = RectF()
     private val overlayMaskSrcRect = Rect()
     private val overlayMaskDestRect = RectF()
+    private var aboveMaskCutouts: List<ScreenCutout> = emptyList()
+    private var belowMaskCutouts: List<ScreenCutout> = emptyList()
     var cutouts: List<ScreenCutout> = emptyList()
         set(value) {
             field = value
+            val (above, below) = value.partition { it.renderAboveMask }
+            aboveMaskCutouts = above
+            belowMaskCutouts = below
             invalidate()
         }
     var isFrozen: Boolean = false
@@ -806,38 +811,42 @@ internal class MultiCutoutContainer(
                     blendPaint.shader = null
                 }
             } else if (hasTouching) {
-                fun drawEdgeBlend(
-                    shader: LinearGradient,
-                    scaleX: Float,
-                    scaleY: Float,
-                    transX: Float,
-                    transY: Float,
-                ) {
-                    shaderMatrix.reset()
-                    shaderMatrix.setScale(scaleX, scaleY)
-                    shaderMatrix.postTranslate(transX, transY)
-                    shader.setLocalMatrix(shaderMatrix)
-                    blendPaint.shader = shader
-                    canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
+                val rLeft = -leftExt
+                val rTop = -topExt
+                val rRight = dw + rightExt
+                val rBottom = dh + bottomExt
+                if (touchesLeft) {
+                    renderEdgeBlend(canvas, horizontalGradientShader, 2f * leftExt, 1f, -leftExt, 0f, rLeft, rTop, rRight, rBottom)
                 }
-                if (touchesLeft) drawEdgeBlend(horizontalGradientShader, 2f * leftExt, 1f, -leftExt, 0f)
                 if (touchesRight) {
-                    drawEdgeBlend(
+                    renderEdgeBlend(
+                        canvas,
                         horizontalReverseGradientShader,
                         2f * rightExt,
                         1f,
                         dw - rightExt,
                         0f,
+                        rLeft,
+                        rTop,
+                        rRight,
+                        rBottom,
                     )
                 }
-                if (touchesTop) drawEdgeBlend(verticalGradientShader, 1f, 2f * topExt, 0f, -topExt)
+                if (touchesTop) {
+                    renderEdgeBlend(canvas, verticalGradientShader, 1f, 2f * topExt, 0f, -topExt, rLeft, rTop, rRight, rBottom)
+                }
                 if (touchesBottom) {
-                    drawEdgeBlend(
+                    renderEdgeBlend(
+                        canvas,
                         verticalReverseGradientShader,
                         1f,
                         2f * bottomExt,
                         0f,
                         dh - bottomExt,
+                        rLeft,
+                        rTop,
+                        rRight,
+                        rBottom,
                     )
                 }
                 blendPaint.shader = null
@@ -867,6 +876,26 @@ internal class MultiCutoutContainer(
         return masterViewDrawn
     }
 
+    private fun renderEdgeBlend(
+        canvas: Canvas,
+        shader: LinearGradient,
+        scaleX: Float,
+        scaleY: Float,
+        transX: Float,
+        transY: Float,
+        rectLeft: Float,
+        rectTop: Float,
+        rectRight: Float,
+        rectBottom: Float,
+    ) {
+        shaderMatrix.reset()
+        shaderMatrix.setScale(scaleX, scaleY)
+        shaderMatrix.postTranslate(transX, transY)
+        shader.setLocalMatrix(shaderMatrix)
+        blendPaint.shader = shader
+        canvas.drawRect(rectLeft, rectTop, rectRight, rectBottom, blendPaint)
+    }
+
     override fun dispatchDraw(canvas: Canvas) {
         val masterView = if (childCount > 0) getChildAt(0) else null
         if (masterView == null && (!isFrozen || frozenBitmap == null)) return
@@ -891,8 +920,6 @@ internal class MultiCutoutContainer(
             if (bg != null) {
                 drawBackgroundBitmap(canvas, bg, parentW, parentH)
             }
-
-            val (aboveMaskCutouts, belowMaskCutouts) = cutouts.partition { it.renderAboveMask }
 
             val isEditing = isViewportEditActive || AppStateManager.isViewportEditActive.value
             val activeLayout = MacroPadState.activeLayout.value

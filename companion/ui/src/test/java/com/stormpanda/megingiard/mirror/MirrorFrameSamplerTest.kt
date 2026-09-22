@@ -236,4 +236,38 @@ class MirrorFrameSamplerTest {
 
             MirrorFrameSampler.unregisterTextureView(tv)
         }
+
+    @Test
+    fun testCaptureFullFrameReturnsNullWhenNothingAvailable() =
+        runTest {
+            val result = MirrorFrameSampler.captureFullFrame()
+            assertNull(result)
+        }
+
+    @Test
+    fun testCaptureFullFrameWithAttachedTextureView() =
+        runTest {
+            val activityController = Robolectric.buildActivity(android.app.Activity::class.java).setup()
+            controller = activityController
+            val activity = activityController.get()
+
+            val container = FrameLayout(activity)
+            val tv = TextureView(activity)
+            tv.setSurfaceTexture(SurfaceTexture(1))
+            container.addView(tv, 200, 200)
+            activity.setContentView(container)
+
+            container.measure(200, 200)
+            container.layout(0, 0, 200, 200)
+            tv.layout(0, 0, 200, 200)
+
+            MirrorFrameSampler.registerTextureView(tv)
+
+            val fullFrame = MirrorFrameSampler.captureFullFrame()
+            assertNotNull(fullFrame)
+            assertEquals(200, fullFrame!!.width)
+            assertEquals(200, fullFrame.height)
+
+            MirrorFrameSampler.unregisterTextureView(tv)
+        }
 }

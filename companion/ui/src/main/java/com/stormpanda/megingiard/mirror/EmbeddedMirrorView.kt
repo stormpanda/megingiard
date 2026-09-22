@@ -58,8 +58,6 @@ fun EmbeddedMirrorView(
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsStateWithLifecycle()
     val layout by MacroPadState.activeLayout.collectAsStateWithLifecycle()
     val screenshotRequested by ScreenCaptureManager.screenshotRequested.collectAsStateWithLifecycle()
-    val presenceRevision by AnchorPresenceManager.presenceRevision.collectAsStateWithLifecycle()
-    val interactiveOverrides by InteractiveCutoutController.overrideCrops.collectAsStateWithLifecycle()
 
     val effectiveCutouts = overrideCutouts ?: cutouts
     val effectiveShowLayoutBackground = showLayoutBackground && !(isViewportEditActive && isMirrorEditorBackgroundHidden)
@@ -211,13 +209,10 @@ fun EmbeddedMirrorView(
     }
 
     // React to visual anchor presence state changes (instant freeze / unfreeze transition)
-    LaunchedEffect(presenceRevision) {
-        containerHolder.container?.invalidate()
-    }
-
-    // React to interactive cutout viewport gesture and snap-back changes
-    LaunchedEffect(interactiveOverrides) {
-        containerHolder.container?.invalidate()
+    LaunchedEffect(Unit) {
+        AnchorPresenceManager.presenceRevision.collect {
+            containerHolder.container?.postInvalidateOnAnimation()
+        }
     }
 
     DisposableEffect(surfaceOwner, surfacePriority) {

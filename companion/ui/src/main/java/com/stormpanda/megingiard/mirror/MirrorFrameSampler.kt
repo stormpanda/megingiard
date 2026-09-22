@@ -31,6 +31,10 @@ internal object MirrorFrameSampler {
     @Volatile
     private var reusableFullFrameBitmap: Bitmap? = null
 
+    private val reusableCanvas = Canvas()
+    private val reusableSrcRect = Rect()
+    private val reusableDstRect = Rect()
+
     fun registerTextureView(
         tv: TextureView,
         surface: Surface? = null,
@@ -49,6 +53,80 @@ internal object MirrorFrameSampler {
                 if (!it.isRecycled) it.recycle()
             }
             reusableFullFrameBitmap = null
+        }
+    }
+
+    /**
+     * Captures the full master video frame directly from the active mirror stream.
+     * Renders into [reusableBitmap] if provided and dimensions match, or uses internal [reusableFullFrameBitmap].
+     * If frozen, returns [ScreenCaptureManager.frozenBitmap].
+     * Dispatches to [Dispatchers.Main.immediate] to interact with [TextureView].
+     */
+    suspend fun captureFullFrame(reusableBitmap: Bitmap? = null): Bitmap? {
+        val isFrozen = ScreenCaptureManager.isFrozen.value
+        val frozen = if (isFrozen) ScreenCaptureManager.frozenBitmap.value else null
+        if (frozen != null) {
+            if (reusableBitmap != null &&
+                reusableBitmap.width == frozen.width &&
+                reusableBitmap.height == frozen.height &&
+                !reusableBitmap.isRecycled
+            ) {
+                synchronized(reusableCanvas) {
+                    synchronized(frozen) {
+                        if (!frozen.isRecycled) {
+                            reusableCanvas.setBitmap(reusableBitmap)
+                            reusableSrcRect.set(0, 0, frozen.width, frozen.height)
+                            reusableDstRect.set(0, 0, frozen.width, frozen.height)
+                            reusableCanvas.drawBitmap(frozen, reusableSrcRect, reusableDstRect, null)
+                            reusableCanvas.setBitmap(null)
+                            return reusableBitmap
+                        }
+                    }
+                }
+            }
+            return frozen
+        }
+
+        return withContext(Dispatchers.Main.immediate) {
+            val tv = activeTextureView?.get()
+            if (tv != null && tv.isAvailable && tv.isAttachedToWindow && tv.width > 0 && tv.height > 0) {
+                val fullW = tv.width
+                val fullH = tv.height
+                val target =
+                    if (reusableBitmap != null &&
+                        reusableBitmap.width == fullW &&
+                        reusableBitmap.height == fullH &&
+                        !reusableBitmap.isRecycled
+                    ) {
+                        reusableBitmap
+                    } else {
+                        var fullFrame = reusableFullFrameBitmap
+                        if (fullFrame == null || fullFrame.width != fullW || fullFrame.height != fullH || fullFrame.isRecycled) {
+                            if (fullFrame != null && !fullFrame.isRecycled) {
+                                fullFrame.recycle()
+                            }
+                            fullFrame =
+                                try {
+                                    Bitmap.createBitmap(fullW, fullH, Bitmap.Config.ARGB_8888)
+                                } catch (e: OutOfMemoryError) {
+                                    AppLog.e(TAG, "OOM allocating reusable full frame bitmap (${fullW}x$fullH)", e)
+                                    null
+                                }
+                            reusableFullFrameBitmap = fullFrame
+                        }
+                        fullFrame
+                    }
+
+                if (target != null && !target.isRecycled) {
+                    try {
+                        tv.getBitmap(target)
+                        return@withContext target
+                    } catch (e: Exception) {
+                        AppLog.e(TAG, "Error capturing full frame from TextureView", e)
+                    }
+                }
+            }
+            null
         }
     }
 
@@ -80,13 +158,16 @@ internal object MirrorFrameSampler {
                 } else {
                     Bitmap.createBitmap(cropW, cropH, Bitmap.Config.ARGB_8888)
                 }
-            val canvas = Canvas(target)
-            val src = Rect(cropRect)
-            val dst = Rect(0, 0, cropW, cropH)
-            synchronized(frozen) {
-                if (!frozen.isRecycled) {
-                    canvas.drawBitmap(frozen, src, dst, null)
-                    return target
+            synchronized(reusableCanvas) {
+                synchronized(frozen) {
+                    if (!frozen.isRecycled) {
+                        reusableCanvas.setBitmap(target)
+                        reusableSrcRect.set(cropRect)
+                        reusableDstRect.set(0, 0, cropW, cropH)
+                        reusableCanvas.drawBitmap(frozen, reusableSrcRect, reusableDstRect, null)
+                        reusableCanvas.setBitmap(null)
+                        return target
+                    }
                 }
             }
             if (target !== reusableBitmap && !target.isRecycled) {
@@ -128,10 +209,13 @@ internal object MirrorFrameSampler {
                             } else {
                                 Bitmap.createBitmap(cropW, cropH, Bitmap.Config.ARGB_8888)
                             }
-                        val canvas = Canvas(target)
-                        val src = Rect(cropRect)
-                        val dst = Rect(0, 0, cropW, cropH)
-                        canvas.drawBitmap(fullFrame, src, dst, null)
+                        synchronized(reusableCanvas) {
+                            reusableCanvas.setBitmap(target)
+                            reusableSrcRect.set(cropRect)
+                            reusableDstRect.set(0, 0, cropW, cropH)
+                            reusableCanvas.drawBitmap(fullFrame, reusableSrcRect, reusableDstRect, null)
+                            reusableCanvas.setBitmap(null)
+                        }
                         return@withContext target
                     } catch (e: Exception) {
                         AppLog.e(TAG, "Error capturing crop from TextureView", e)
@@ -184,10 +268,13 @@ internal object MirrorFrameSampler {
                         reusableBitmap.height == height &&
                         !reusableBitmap.isRecycled
                     ) {
-                        val canvas = Canvas(reusableBitmap)
-                        val srcRect = Rect(0, 0, frozen.width, frozen.height)
-                        val dstRect = Rect(0, 0, width, height)
-                        canvas.drawBitmap(frozen, srcRect, dstRect, null)
+                        synchronized(reusableCanvas) {
+                            reusableCanvas.setBitmap(reusableBitmap)
+                            reusableSrcRect.set(0, 0, frozen.width, frozen.height)
+                            reusableDstRect.set(0, 0, width, height)
+                            reusableCanvas.drawBitmap(frozen, reusableSrcRect, reusableDstRect, null)
+                            reusableCanvas.setBitmap(null)
+                        }
                         reusableBitmap
                     } else {
                         Bitmap.createScaledBitmap(frozen, width, height, true)

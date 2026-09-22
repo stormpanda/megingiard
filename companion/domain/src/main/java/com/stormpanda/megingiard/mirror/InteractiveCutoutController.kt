@@ -54,6 +54,10 @@ object InteractiveCutoutController {
             field = value
         }
 
+    fun hasOverride(cutoutId: String): Boolean = _overrideCrops.value.containsKey(cutoutId)
+
+    fun getOverrideCrop(cutoutId: String): NormalizedCrop? = _overrideCrops.value[cutoutId]
+
     fun getEffectiveCrop(cutout: ScreenCutout): NormalizedCrop = _overrideCrops.value[cutout.id] ?: NormalizedCrop.fromCutout(cutout)
 
     /**

@@ -111,6 +111,15 @@ class AnchorPresenceManagerTest {
             viewMode = CompanionViewMode.MACROPAD,
         )
         assertFalse(AnchorPresenceManager.isMonitoring)
+        assertEquals(0, AnchorPresenceManager.ringBufferCount)
+        assertEquals(0, AnchorPresenceManager.lastValidFrameCount)
+    }
+
+    @Test
+    fun `clearAllBuffers empties all ring buffers and freeze frame bitmaps`() {
+        AnchorPresenceManager.clearAllBuffers()
+        assertEquals(0, AnchorPresenceManager.ringBufferCount)
+        assertEquals(0, AnchorPresenceManager.lastValidFrameCount)
     }
 
     @Test
