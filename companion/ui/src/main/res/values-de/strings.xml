@@ -758,10 +758,12 @@ Open Settings to create a layout.</string>
     <string name="mirror_calibration_resume">Fortsetzen</string>
     <string name="mirror_calibration_paused_badge">PAUSIERT</string>
     <string name="mirror_calibration_paused_instruction">Kalibrierung pausiert. Ändere die Spielszene, kehre zu deiner Anker-Ansicht zurück und tippe auf Fortsetzen.</string>
-    <string name="mirror_anchor_save_calibrate_dialog_title">Anker jetzt kalibrieren?</string>
-    <string name="mirror_anchor_save_calibrate_dialog_message">Eine sofortige Kalibrierung tastet das Live-Spiel ab und sichert eine zuverlässige Erkennung.</string>
-    <string name="mirror_anchor_save_calibrate_dialog_confirm">Kalibrieren</string>
-    <string name="mirror_anchor_save_calibrate_dialog_dismiss">Später</string>
+    <string name="mirror_anchor_calibrate_prompt_title">Referenzanker kalibrieren?</string>
+    <string name="mirror_anchor_calibrate_prompt_message">Die Anker-Signatur jetzt per Live-Video-Abtastung auf dem zweiten Bildschirm kalibrieren.</string>
+    <string name="mirror_anchor_calibrate_prompt_confirm">Jetzt kalibrieren</string>
+    <string name="mirror_anchor_calibrate_prompt_confirm_desc">Live-Kalibrierung der Anker-Präsenz sofort starten</string>
+    <string name="mirror_anchor_calibrate_prompt_dismiss">Später kalibrieren</string>
+    <string name="mirror_anchor_calibrate_prompt_dismiss_desc">Position speichern und zu den Layout-Einstellungen zurückkehren</string>
     <string name="settings_mirror_projection_on">Ein</string>
     <string name="settings_mirror_projection_off">Aus</string>
     <string name="macropad_editor_section_actions">Aktionen</string>
