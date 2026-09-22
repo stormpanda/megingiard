@@ -1541,4 +1541,178 @@ class MirrorCoordinateTransformTest {
             )
         assertEquals(MIN_TOUCH_CUTOUT_SIZE, shrunk.h, EPS)
     }
+
+    @Test
+    fun `adjustSourceCropToAspectRatio clamps to 1 percent minimum for extremely flat target cutout`() {
+        // Flat destination cutout: destWidth = 0.8f, destHeight = 0.015f
+        val cutout =
+            ScreenCutout(
+                id = "test",
+                srcX = 0.2f,
+                srcY = 0.2f,
+                srcWidth = 0.2f,
+                srcHeight = 0.2f,
+                destX = 0.1f,
+                destY = 0.1f,
+                destWidth = 0.8f,
+                destHeight = 0.015f,
+                aspectRatioMode = AspectRatioMode.BOTTOM,
+            )
+        val adjusted =
+            adjustSourceCropToAspectRatio(
+                cutout = cutout,
+                screenW = 1080f,
+                screenH = 1240f,
+                srcW = 1920f,
+                srcH = 1080f,
+            )
+        // Height must not collapse below MIN_GAMEPAD_CUTOUT_SIZE (0.01f)
+        assertTrue(adjusted.srcHeight >= MIN_GAMEPAD_CUTOUT_SIZE)
+        assertTrue(adjusted.srcWidth >= MIN_GAMEPAD_CUTOUT_SIZE)
+        assertTrue(adjusted.srcWidth <= 1f)
+        assertTrue(adjusted.srcHeight <= 1f)
+        assertTrue(adjusted.srcX >= 0f && adjusted.srcX + adjusted.srcWidth <= 1f)
+        assertTrue(adjusted.srcY >= 0f && adjusted.srcY + adjusted.srcHeight <= 1f)
+
+        // Verify ratio matches expected factor
+        val targetRatio = (0.8f * 1080f) / (0.015f * 1240f)
+        val factor = targetRatio * (1080f / 1920f)
+        assertEquals(factor, adjusted.srcWidth / adjusted.srcHeight, 0.01f)
+    }
+
+    @Test
+    fun `adjustSourceCropToAspectRatio clamps to 1 percent minimum for extremely tall target cutout`() {
+        // Tall destination cutout: destWidth = 0.015f, destHeight = 0.8f
+        val cutout =
+            ScreenCutout(
+                id = "test",
+                srcX = 0.2f,
+                srcY = 0.2f,
+                srcWidth = 0.2f,
+                srcHeight = 0.2f,
+                destX = 0.1f,
+                destY = 0.1f,
+                destWidth = 0.015f,
+                destHeight = 0.8f,
+                aspectRatioMode = AspectRatioMode.BOTTOM,
+            )
+        val adjusted =
+            adjustSourceCropToAspectRatio(
+                cutout = cutout,
+                screenW = 1080f,
+                screenH = 1240f,
+                srcW = 1920f,
+                srcH = 1080f,
+            )
+        // Width must not collapse below MIN_GAMEPAD_CUTOUT_SIZE (0.01f)
+        assertTrue(adjusted.srcWidth >= MIN_GAMEPAD_CUTOUT_SIZE)
+        assertTrue(adjusted.srcHeight >= MIN_GAMEPAD_CUTOUT_SIZE)
+        assertTrue(adjusted.srcWidth <= 1f)
+        assertTrue(adjusted.srcHeight <= 1f)
+        assertTrue(adjusted.srcX >= 0f && adjusted.srcX + adjusted.srcWidth <= 1f)
+        assertTrue(adjusted.srcY >= 0f && adjusted.srcY + adjusted.srcHeight <= 1f)
+
+        // Verify ratio matches expected factor
+        val targetRatio = (0.015f * 1080f) / (0.8f * 1240f)
+        val factor = targetRatio * (1080f / 1920f)
+        assertEquals(factor, adjusted.srcWidth / adjusted.srcHeight, 0.01f)
+    }
+
+    @Test
+    fun `calculateProportionalResizedBounds heals and expands from sub-minimum size`() {
+        val screenW = 1920f
+        val screenH = 1080f
+        val targetNormRatio = 20f // wide ratio: w / h = 20
+        // minW = max(0.01f, 0.01f * 20f) = 0.20f, minH = 0.01f
+        // Start from sub-minimum dimensions (e.g. w = 0.05f, h = 0.0025f)
+        val healed =
+            calculateProportionalResizedBounds(
+                normX = 0.4f,
+                normY = 0.4f,
+                normW = 0.05f,
+                normH = 0.0025f,
+                screenWidth = screenW,
+                screenHeight = screenH,
+                stepDelta = 1,
+                targetNormRatio = targetNormRatio,
+            )
+        // Expanding must immediately heal up to minW (0.20f) instead of locking up
+        assertEquals(0.20f, healed.w, EPS)
+        assertEquals(0.01f, healed.h, EPS)
+        assertEquals(targetNormRatio, healed.w / healed.h, EPS)
+    }
+
+    @Test
+    fun `calculateProportionalResizedBounds resizes wide aspect ratio cutouts smoothly down to 1 percent height`() {
+        val screenW = 1920f
+        val screenH = 1080f
+        val targetNormRatio = 25f // w / h = 25
+        // Start at w = 0.50f, h = 0.02f
+        val expanded =
+            calculateProportionalResizedBounds(
+                normX = 0.2f,
+                normY = 0.2f,
+                normW = 0.50f,
+                normH = 0.02f,
+                screenWidth = screenW,
+                screenHeight = screenH,
+                stepDelta = 5,
+                targetNormRatio = targetNormRatio,
+            )
+        assertTrue(expanded.w > 0.50f)
+        assertTrue(expanded.h > 0.02f)
+        assertEquals(targetNormRatio, expanded.w / expanded.h, 0.01f)
+
+        // Shrink all the way down: minH is 0.01f, minW is 0.25f
+        val clampedShrunk =
+            calculateProportionalResizedBounds(
+                normX = 0.2f,
+                normY = 0.2f,
+                normW = 0.50f,
+                normH = 0.02f,
+                screenWidth = screenW,
+                screenHeight = screenH,
+                stepDelta = -1000,
+                targetNormRatio = targetNormRatio,
+            )
+        assertEquals(0.25f, clampedShrunk.w, EPS)
+        assertEquals(0.01f, clampedShrunk.h, EPS)
+    }
+
+    @Test
+    fun `adjustDestSizeToAspectRatio clamps to 1 percent minimum`() {
+        // High cropRatio (very flat) with small destWidth
+        val (targetW, targetH) =
+            adjustDestSizeToAspectRatio(
+                destX = 0.1f,
+                destY = 0.1f,
+                destWidth = 0.05f,
+                destHeight = 0.05f,
+                cropRatio = 30f,
+                screenW = 1080f,
+                screenH = 1240f,
+            )
+        assertTrue(targetH >= MIN_GAMEPAD_CUTOUT_SIZE)
+        assertTrue(targetW >= MIN_GAMEPAD_CUTOUT_SIZE)
+    }
+
+    @Test
+    fun `calculateResizedBounds allows expanding from below minW and minH`() {
+        val screenW = 1000f
+        val screenH = 1000f
+        // Start with width below minW (e.g. 5px / 0.005f where minW is 10px / 0.01f)
+        val expandedW =
+            calculateResizedBounds(
+                normX = 0.5f,
+                normY = 0.5f,
+                normW = 0.005f,
+                normH = 0.005f,
+                screenWidth = screenW,
+                screenHeight = screenH,
+                dx = 5,
+                dy = 0,
+            )
+        // Must expand 5px to 10px (0.010f) rather than being blocked
+        assertEquals(0.010f, expandedW.width, EPS)
+    }
 }

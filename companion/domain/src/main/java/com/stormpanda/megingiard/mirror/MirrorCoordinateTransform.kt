@@ -272,6 +272,73 @@ fun clampCutoutDrag(
     return Pair(originalX, originalY)
 }
 
+fun adjustSourceCropToAspectRatio(
+    cutout: ScreenCutout,
+    screenW: Float,
+    screenH: Float,
+    srcW: Float,
+    srcH: Float,
+    baseSrcX: Float = cutout.srcX,
+    baseSrcY: Float = cutout.srcY,
+    baseSrcW: Float = cutout.srcWidth,
+    baseSrcH: Float = cutout.srcHeight,
+    minSize: Float = MIN_GAMEPAD_CUTOUT_SIZE,
+): ScreenCutout {
+    if (screenW <= 0f || screenH <= 0f || srcW <= 0f || srcH <= 0f ||
+        cutout.destWidth <= 0f || cutout.destHeight <= 0f
+    ) {
+        return cutout
+    }
+
+    val targetRatio = (cutout.destWidth * screenW) / (cutout.destHeight * screenH)
+    if (targetRatio <= 0f) return cutout
+    val factor = targetRatio * (srcH / srcW)
+    if (factor <= 0f) return cutout
+
+    val safeBaseW = baseSrcW.coerceIn(minSize, 1f)
+    val safeBaseH = baseSrcH.coerceIn(minSize, 1f)
+    val centerX = baseSrcX + safeBaseW / 2f
+    val centerY = baseSrcY + safeBaseH / 2f
+
+    var candW: Float
+    var candH: Float
+
+    if (factor > safeBaseW / safeBaseH) {
+        candW = safeBaseW
+        candH = candW / factor
+    } else {
+        candH = safeBaseH
+        candW = candH * factor
+    }
+
+    if (candH < minSize) {
+        candH = minSize
+        candW = (candH * factor).coerceIn(minSize, 1f)
+    }
+    if (candW < minSize) {
+        candW = minSize
+        candH = (candW / factor).coerceIn(minSize, 1f)
+    }
+    if (candW > 1f) {
+        candW = 1f
+        candH = (candW / factor).coerceIn(minSize, 1f)
+    }
+    if (candH > 1f) {
+        candH = 1f
+        candW = (candH * factor).coerceIn(minSize, 1f)
+    }
+
+    val newX = (centerX - candW / 2f).coerceIn(0f, (1f - candW).coerceAtLeast(0f))
+    val newY = (centerY - candH / 2f).coerceIn(0f, (1f - candH).coerceAtLeast(0f))
+
+    return cutout.copy(
+        srcX = newX,
+        srcY = newY,
+        srcWidth = candW,
+        srcHeight = candH,
+    )
+}
+
 fun adjustDestSizeToAspectRatio(
     destX: Float,
     destY: Float,
@@ -280,23 +347,37 @@ fun adjustDestSizeToAspectRatio(
     cropRatio: Float,
     screenW: Float,
     screenH: Float,
+    minCutoutSize: Float = MIN_GAMEPAD_CUTOUT_SIZE,
 ): Pair<Float, Float> {
     if (screenW <= 0f || screenH <= 0f || cropRatio <= 0f) return Pair(destWidth, destHeight)
 
     val normRatio = cropRatio * (screenH / screenW)
-    var targetH = destWidth / normRatio
-    var targetW = destWidth
+    if (normRatio <= 0f) return Pair(destWidth, destHeight)
 
-    val maxH = 1f - destY
+    val maxH = (1f - destY).coerceIn(minCutoutSize, 1f)
+    val maxW = (1f - destX).coerceIn(minCutoutSize, 1f)
+
+    var targetW = destWidth.coerceIn(minCutoutSize, maxW)
+    var targetH = targetW / normRatio
+
     if (targetH > maxH) {
         targetH = maxH
-        targetW = targetH * normRatio
+        targetW = (targetH * normRatio).coerceIn(minCutoutSize, maxW)
     }
 
-    val maxW = 1f - destX
+    if (targetH < minCutoutSize) {
+        targetH = minCutoutSize
+        targetW = (targetH * normRatio).coerceIn(minCutoutSize, maxW)
+    }
+
     if (targetW > maxW) {
         targetW = maxW
-        targetH = targetW / normRatio
+        targetH = (targetW / normRatio).coerceIn(minCutoutSize, maxH)
+    }
+
+    if (targetW < minCutoutSize) {
+        targetW = minCutoutSize
+        targetH = (targetW / normRatio).coerceIn(minCutoutSize, maxH)
     }
 
     return Pair(targetW, targetH)
@@ -819,7 +900,10 @@ fun calculateResizedBounds(
         if (testPxX < 0 || testPxY < 0 || testPxX + testPxW > maxW || testPxY + testPxH > maxH) {
             return false
         }
-        if (testPxW < minW || testPxH < minH) {
+        if (testPxW < minW && testPxW < pxW) {
+            return false
+        }
+        if (testPxH < minH && testPxH < pxH) {
             return false
         }
         if (others.isEmpty()) {
@@ -1123,10 +1207,12 @@ fun calculateProportionalResizedBounds(
     val stepW = if (targetNormRatio >= 1f) (1f / screenWidth) * targetNormRatio else (1f / screenWidth)
     val stepH = stepW / targetNormRatio
 
-    val minW = max(minSizeRatio, minSizeRatio * targetNormRatio)
-    val minH = minW / targetNormRatio
-    val maxW = min(1f, targetNormRatio)
+    val rawMinW = max(minSizeRatio, minSizeRatio * targetNormRatio)
+    val rawMaxW = min(1f, targetNormRatio)
+    val maxW = max(rawMaxW, minSizeRatio)
+    val minW = min(rawMinW, maxW)
     val maxH = maxW / targetNormRatio
+    val minH = minW / targetNormRatio
 
     val singleDelta = if (stepDelta > 0) 1 else -1
     var curW = normW
@@ -1134,10 +1220,26 @@ fun calculateProportionalResizedBounds(
     var curY = normY
 
     repeat(abs(stepDelta)) {
-        val targetW = if (singleDelta > 0) curW + stepW else curW - stepW
+        val targetW =
+            if (singleDelta > 0) {
+                when {
+                    curW < minW -> minW
+                    curW < maxW && curW + stepW > maxW -> maxW
+                    else -> curW + stepW
+                }
+            } else {
+                when {
+                    curW > maxW -> maxW
+                    curW > minW && curW - stepW < minW -> minW
+                    else -> curW - stepW
+                }
+            }
         val targetH = targetW / targetNormRatio
 
-        if (targetW < minW || targetH < minH || targetW > maxW || targetH > maxH) {
+        if (singleDelta > 0 && (targetW > maxW || targetH > maxH)) {
+            return ScreenCutoutGeometry(curX, curY, curW, curW / targetNormRatio)
+        }
+        if (singleDelta < 0 && (targetW < minW || targetH < minH)) {
             return ScreenCutoutGeometry(curX, curY, curW, curW / targetNormRatio)
         }
 

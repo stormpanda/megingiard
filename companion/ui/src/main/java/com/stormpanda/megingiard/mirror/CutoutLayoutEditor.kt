@@ -729,45 +729,6 @@ private fun ResizeHandleView(
     }
 }
 
-internal fun adjustSourceCropToAspectRatio(
-    cutout: ScreenCutout,
-    screenW: Float,
-    screenH: Float,
-    srcW: Float,
-    srcH: Float,
-    baseSrcX: Float = cutout.srcX,
-    baseSrcY: Float = cutout.srcY,
-    baseSrcW: Float = cutout.srcWidth,
-    baseSrcH: Float = cutout.srcHeight,
-): ScreenCutout {
-    val targetRatio = (cutout.destWidth * screenW) / (cutout.destHeight * screenH)
-    val factor = targetRatio * (srcH / srcW)
-
-    val centerX = baseSrcX + baseSrcW / 2f
-    val centerY = baseSrcY + baseSrcH / 2f
-
-    val newW: Float
-    val newH: Float
-
-    if (factor > baseSrcW / baseSrcH) {
-        newW = baseSrcW
-        newH = newW / factor
-    } else {
-        newH = baseSrcH
-        newW = newH * factor
-    }
-
-    val newX = (centerX - newW / 2f).coerceIn(0f, (1f - newW).coerceAtLeast(0f))
-    val newY = (centerY - newH / 2f).coerceIn(0f, (1f - newH).coerceAtLeast(0f))
-
-    return cutout.copy(
-        srcX = newX,
-        srcY = newY,
-        srcWidth = newW,
-        srcHeight = newH,
-    )
-}
-
 @Composable
 private fun CutoutAlignmentGuidesOverlay(
     alignedXs: List<Float>,
