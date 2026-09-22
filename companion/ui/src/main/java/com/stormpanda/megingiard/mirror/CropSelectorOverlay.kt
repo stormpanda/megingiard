@@ -1,7 +1,6 @@
 package com.stormpanda.megingiard.mirror
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -35,7 +34,6 @@ import kotlin.math.roundToInt
 private const val TAG = "CropSelectorOverlay"
 private const val MIN_TOUCH_CROP_SIZE = MIN_TOUCH_CUTOUT_SIZE
 private const val CS_SCRIM_ALPHA = 0.35f
-private val CS_BORDER_WIDTH = 1.dp
 private val CS_EDGE_HANDLE_LENGTH = 36.dp
 private val CS_EDGE_HANDLE_THICKNESS = 6.dp
 private val CS_EDGE_HANDLE_MARGIN = 6.dp
@@ -176,20 +174,7 @@ fun CropSelectorOverlay(
                     ).background(MaterialTheme.colorScheme.scrim.copy(alpha = CS_SCRIM_ALPHA)),
         )
 
-        // 2. Outset crop rectangle border (positioned strictly outside crop area so no border pixels are captured into mirror stream)
-        Box(
-            modifier =
-                Modifier
-                    .offset {
-                        val bwPx = with(density) { CS_BORDER_WIDTH.roundToPx() }
-                        IntOffset(cropLeft.roundToInt() - bwPx, cropTop.roundToInt() - bwPx)
-                    }.size(
-                        width = with(density) { cropW.toDp() + CS_BORDER_WIDTH * 2 },
-                        height = with(density) { cropH.toDp() + CS_BORDER_WIDTH * 2 },
-                    ).border(CS_BORDER_WIDTH, colors.accent.copy(alpha = 0.75f)),
-        )
-
-        // Drag area covering the exact crop rectangle
+        // 2. Drag area covering the exact crop rectangle
         Box(
             modifier =
                 Modifier

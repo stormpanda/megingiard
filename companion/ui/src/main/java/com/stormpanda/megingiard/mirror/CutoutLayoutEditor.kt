@@ -35,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -78,8 +79,7 @@ private const val CLE_ROTATION_TR = 45f
 private const val CLE_ROTATION_BL = 45f
 private const val CLE_ROTATION_BR = -45f
 
-private val CLE_RECT_CORNER = 4.dp
-private val CLE_RECT_SHAPE = RoundedCornerShape(CLE_RECT_CORNER)
+private val CLE_RECT_SHAPE = RectangleShape
 private val CLE_EDGE_HANDLE_SHAPE = RoundedCornerShape(CLE_EDGE_HANDLE_CORNER)
 private val CLE_BADGE_SHAPE = RoundedCornerShape(4.dp)
 private val CLE_MIN_BADGE_HEIGHT = 24.dp
