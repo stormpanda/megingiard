@@ -35,7 +35,12 @@ import kotlin.math.roundToInt
 private const val TAG = "AnchorPresenceManager"
 
 private const val PRESENCE_CHECK_INTERVAL_ACTIVE_MS = 16L // ~60 Hz (1-frame instant content absence detection)
-private const val PRESENCE_CHECK_INTERVAL_LOST_MS = 33L // ~30 Hz prompt recovery when anchor returns
+private const val PRESENCE_CHECK_INTERVAL_LOST_FAST_MS = 33L // ~30 Hz prompt recovery (0–2s)
+private const val PRESENCE_CHECK_INTERVAL_LOST_MEDIUM_MS = 100L // ~10 Hz candidate polling during cutscenes (2–5s)
+private const val PRESENCE_CHECK_INTERVAL_LOST_SLOW_MS = 500L // ~2 Hz idle polling during long loading screens (>5s)
+
+private const val LOST_BACKOFF_TIER_1_MS = 2_000L
+private const val LOST_BACKOFF_TIER_2_MS = 5_000L
 private const val AUTO_SWITCH_COOLDOWN_MS = 500L
 private const val DEFAULT_SOURCE_WIDTH = 1920
 private const val DEFAULT_SOURCE_HEIGHT = 1080
@@ -68,9 +73,23 @@ object AnchorPresenceManager {
         get() = lastValidFrameBitmaps.size
 
     private var lastAutoSwitchTimeMs = 0L
+    private var lostStateStartMs = 0L
+    private var sparseProbePhase = 0
+
+    @VisibleForTesting
+    internal val currentSparseProbePhase: Int
+        get() = sparseProbePhase
 
     private val _presenceRevision = MutableStateFlow(0)
     val presenceRevision: StateFlow<Int> = _presenceRevision.asStateFlow()
+
+    @VisibleForTesting
+    internal fun computeLostCheckInterval(elapsedMs: Long): Long =
+        when {
+            elapsedMs >= LOST_BACKOFF_TIER_2_MS -> PRESENCE_CHECK_INTERVAL_LOST_SLOW_MS
+            elapsedMs >= LOST_BACKOFF_TIER_1_MS -> PRESENCE_CHECK_INTERVAL_LOST_MEDIUM_MS
+            else -> PRESENCE_CHECK_INTERVAL_LOST_FAST_MS
+        }
 
     private data class CaptureState(
         val isCapturing: Boolean,
@@ -140,6 +159,8 @@ object AnchorPresenceManager {
 
     internal fun clearAllBuffers() {
         AppLog.d(TAG, "Clearing and recycling all ring buffer and freeze frame bitmaps")
+        lostStateStartMs = 0L
+        sparseProbePhase = 0
         cutoutRingBuffers.values.forEach { it.recycle() }
         cutoutRingBuffers.clear()
         lastValidFrameBitmaps.values.forEach { if (!it.isRecycled) it.recycle() }
@@ -156,7 +177,7 @@ object AnchorPresenceManager {
                 AppStateManager.isViewportEditActive.value ||
                 AppStateManager.activePrimaryModal.value != null
             ) {
-                delay(PRESENCE_CHECK_INTERVAL_LOST_MS)
+                delay(PRESENCE_CHECK_INTERVAL_LOST_FAST_MS)
                 continue
             }
 
@@ -185,7 +206,7 @@ object AnchorPresenceManager {
                         )
                     }
                 }
-                delay(PRESENCE_CHECK_INTERVAL_LOST_MS)
+                delay(PRESENCE_CHECK_INTERVAL_LOST_FAST_MS)
                 continue
             }
 
@@ -202,9 +223,18 @@ object AnchorPresenceManager {
                 }
             }
 
-            // 60 Hz during active display; 30 Hz when lost
+            // 60 Hz during active display; tiered back-off (33ms -> 100ms -> 500ms) when lost
             val isCurrentLost = layoutStates[activeLayout.id] == AnchorPresenceState.LOST
-            val checkInterval = if (!isCurrentLost) PRESENCE_CHECK_INTERVAL_ACTIVE_MS else PRESENCE_CHECK_INTERVAL_LOST_MS
+            if (isCurrentLost && lostStateStartMs == 0L) {
+                lostStateStartMs = SystemClock.uptimeMillis()
+            }
+            val checkInterval =
+                if (!isCurrentLost) {
+                    PRESENCE_CHECK_INTERVAL_ACTIVE_MS
+                } else {
+                    val elapsedSinceLost = (SystemClock.uptimeMillis() - lostStateStartMs).coerceAtLeast(0L)
+                    computeLostCheckInterval(elapsedSinceLost)
+                }
             delay(checkInterval)
 
             val layoutDelayFrames =
@@ -248,22 +278,48 @@ object AnchorPresenceManager {
                 // Evaluate active layout anchor signature directly against master frame
                 val signature = activeLayout.visualAnchor.signature
                 if (signature != null && signature.points.isNotEmpty()) {
-                    val matchRatio =
-                        AnchorPresenceEvaluator.evaluateMatchRatio(signature) { u, v ->
-                            val globalU = layoutAnchor.srcX + u * layoutAnchor.srcWidth
-                            val globalV = layoutAnchor.srcY + v * layoutAnchor.srcHeight
-                            val px = (globalU * frameW).roundToInt().coerceIn(0, frameW - 1)
-                            val py = (globalV * frameH).roundToInt().coerceIn(0, frameH - 1)
-                            frame.getPixel(px, py)
-                        }
-
                     val curState = layoutStates[activeLayout.id] ?: AnchorPresenceState.PRESENT
                     val curCount = layoutConsecutiveCounts[activeLayout.id] ?: 0
+
+                    // 16-point stratified rotating sparse probe during steady PRESENT state (0 mismatches): skips remaining 48 pixels
+                    val matchesSparse =
+                        if (curState == AnchorPresenceState.PRESENT && curCount == 0) {
+                            val phase = sparseProbePhase
+                            sparseProbePhase = (sparseProbePhase + 1) and (AnchorPresenceEvaluator.SPARSE_PROBE_PHASE_COUNT - 1)
+                            AnchorPresenceEvaluator.matchesSparseProbe(signature, phase) { u, v ->
+                                val globalU = layoutAnchor.srcX + u * layoutAnchor.srcWidth
+                                val globalV = layoutAnchor.srcY + v * layoutAnchor.srcHeight
+                                val px = (globalU * frameW).roundToInt().coerceIn(0, frameW - 1)
+                                val py = (globalV * frameH).roundToInt().coerceIn(0, frameH - 1)
+                                frame.getPixel(px, py)
+                            }
+                        } else {
+                            sparseProbePhase = 0
+                            false
+                        }
+
                     val (newState, newCount) =
-                        AnchorPresenceEvaluator.transitionState(curState, curCount, matchRatio, activeLayout.id)
+                        if (matchesSparse) {
+                            AnchorPresenceState.PRESENT to 0
+                        } else {
+                            val matchRatio =
+                                AnchorPresenceEvaluator.evaluateMatchRatio(signature) { u, v ->
+                                    val globalU = layoutAnchor.srcX + u * layoutAnchor.srcWidth
+                                    val globalV = layoutAnchor.srcY + v * layoutAnchor.srcHeight
+                                    val px = (globalU * frameW).roundToInt().coerceIn(0, frameW - 1)
+                                    val py = (globalV * frameH).roundToInt().coerceIn(0, frameH - 1)
+                                    frame.getPixel(px, py)
+                                }
+                            AnchorPresenceEvaluator.transitionState(curState, curCount, matchRatio, activeLayout.id)
+                        }
 
                     if (newState != curState) {
                         anyStateChanged = true
+                        if (newState == AnchorPresenceState.LOST) {
+                            lostStateStartMs = SystemClock.uptimeMillis()
+                        } else if (newState == AnchorPresenceState.PRESENT) {
+                            lostStateStartMs = 0L
+                        }
                     }
                     layoutStates[activeLayout.id] = newState
                     layoutConsecutiveCounts[activeLayout.id] = newCount
@@ -342,6 +398,7 @@ object AnchorPresenceManager {
                 "Candidate layout '${primary.name}' (${primary.id}) matched anchor! Auto-switching layout.",
             )
             lastAutoSwitchTimeMs = now
+            lostStateStartMs = 0L
             layoutStates[primary.id] = AnchorPresenceState.PRESENT
             layoutConsecutiveCounts[primary.id] = 0
             LayoutTransitionManager.switchLayout(primary.id)
@@ -411,8 +468,8 @@ object AnchorPresenceManager {
         val frameH = frame.height
         if (frameW <= 0 || frameH <= 0) return false
 
-        val matchRatio =
-            AnchorPresenceEvaluator.evaluateMatchRatio(signature) { u, v ->
+        val isMatch =
+            AnchorPresenceEvaluator.matchesWithEarlyBailout(signature) { u, v ->
                 val globalU = anchor.srcX + u * anchor.srcWidth
                 val globalV = anchor.srcY + v * anchor.srcHeight
                 val px = (globalU * frameW).roundToInt().coerceIn(0, frameW - 1)
@@ -420,10 +477,9 @@ object AnchorPresenceManager {
                 frame.getPixel(px, py)
             }
 
-        val isMatch = matchRatio >= AnchorPresenceEvaluator.MATCH_THRESHOLD_PRESENT
         AppLog.d(
             TAG,
-            "Candidate layout '${candidate.name}' (${candidate.id}) matchRatio=${(matchRatio * 100).toInt()}% (threshold=${(AnchorPresenceEvaluator.MATCH_THRESHOLD_PRESENT * 100).toInt()}%, matched=$isMatch)",
+            "Candidate layout '${candidate.name}' (${candidate.id}) matched=$isMatch via early bailout evaluation",
         )
         return isMatch
     }
@@ -482,6 +538,8 @@ object AnchorPresenceManager {
      * Clears presence state for layout [layoutId].
      */
     fun clearLayout(layoutId: String) {
+        lostStateStartMs = 0L
+        sparseProbePhase = 0
         layoutStates.remove(layoutId)
         layoutConsecutiveCounts.remove(layoutId)
     }
