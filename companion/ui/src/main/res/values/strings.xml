@@ -783,7 +783,7 @@ Open Settings to create a layout.</string>
     <string name="help_mirror_editor_shape_label">Shape</string>
     <string name="help_mirror_editor_shape_desc">Toggles the selected cutout between rectangle and circle shapes. Useful for game mini-maps or round gauges that look better clipped to a circle.</string>
     <string name="help_mirror_editor_adjust_label">Adjust Coordinates</string>
-    <string name="help_mirror_editor_adjust_desc">Enters fine-tuning mode. Use D-Pad to move the cutout pixel-by-pixel. Hold R2 while pressing D-Pad to resize the cutout (expanding or shrinking symmetrically around its center).</string>
+    <string name="help_mirror_editor_adjust_desc" formatted="false">Enters fine-tuning mode. Use D-Pad to move the cutout pixel-by-pixel. Hold R2 while pressing D-Pad to resize the cutout (expanding or shrinking symmetrically around its center, down to 1% of the screen). Below 5%, touch resize handles are hidden to keep the display clear.</string>
     <string name="help_mirror_editor_hide_bg_desc">Temporarily hides the layout background image on the secondary display while editing to make it easier to see and adjust cutout boundaries. Does not change your saved layout settings.</string>
     <string name="help_mirror_editor_section_finish">Finish</string>
     <string name="help_mirror_editor_done_desc">Saves all changes made in this session and closes the editor. The updated cutout layout becomes immediately active.</string>

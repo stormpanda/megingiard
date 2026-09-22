@@ -764,7 +764,7 @@ Open Settings to create a layout.</string>
     <string name="help_mirror_editor_shape_label">形狀</string>
     <string name="help_mirror_editor_shape_desc">在矩形與圓形之間切換所選區塊的形狀。適用於遊戲小地圖或圓形儀表，圓形裁切外觀更佳。</string>
     <string name="help_mirror_editor_adjust_label">調整座標</string>
-    <string name="help_mirror_editor_adjust_desc">進入微調模式。使用方向鍵逐像素移動區塊。按住 R2 同時按方向鍵可調整區塊大小（繞中心點對稱放大或縮小）。</string>
+    <string name="help_mirror_editor_adjust_desc" formatted="false">進入微調模式。使用方向鍵逐像素移動區塊。按住 R2 同時按方向鍵可調整區塊大小（繞中心點對稱放大或縮小，最小可縮至螢幕的 1%）。低於 5% 時將隱藏觸控控制點以保持畫面清晰。</string>
     <string name="help_mirror_editor_hide_bg_desc">在編輯時暫時隱藏下螢幕上的配置背景圖片，以便更容易看清並調整區塊邊界。這不會變更您已儲存的配置設定。</string>
     <string name="help_mirror_editor_section_finish">完成</string>
     <string name="help_mirror_editor_done_desc">儲存本次的所有變更並關閉編輯器。更新後的區塊配置會立即生效。</string>
