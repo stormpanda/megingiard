@@ -754,6 +754,14 @@ Open Settings to create a layout.</string>
     <string name="mirror_anchor_selector_title">Visueller Anker</string>
     <string name="mirror_anchor_selector_hint">Rahmen über einem statischen Referenzelement (z. B. Porträt oder Icon) platzieren</string>
     <string name="mirror_anchor_selector_done">Fertig</string>
+    <string name="mirror_calibration_pause">Pausieren</string>
+    <string name="mirror_calibration_resume">Fortsetzen</string>
+    <string name="mirror_calibration_paused_badge">PAUSIERT</string>
+    <string name="mirror_calibration_paused_instruction">Kalibrierung pausiert. Ändere die Spielszene, kehre zu deiner Anker-Ansicht zurück und tippe auf Fortsetzen.</string>
+    <string name="mirror_anchor_save_calibrate_dialog_title">Anker jetzt kalibrieren?</string>
+    <string name="mirror_anchor_save_calibrate_dialog_message">Eine sofortige Kalibrierung tastet das Live-Spiel ab und sichert eine zuverlässige Erkennung.</string>
+    <string name="mirror_anchor_save_calibrate_dialog_confirm">Kalibrieren</string>
+    <string name="mirror_anchor_save_calibrate_dialog_dismiss">Später</string>
     <string name="settings_mirror_projection_on">Ein</string>
     <string name="settings_mirror_projection_off">Aus</string>
     <string name="macropad_editor_section_actions">Aktionen</string>

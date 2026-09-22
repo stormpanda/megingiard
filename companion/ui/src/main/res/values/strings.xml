@@ -754,6 +754,14 @@ Open Settings to create a layout.</string>
     <string name="mirror_anchor_selector_title">Visual Anchor</string>
     <string name="mirror_anchor_selector_hint">Position box over a static reference element (e.g. portrait or icon)</string>
     <string name="mirror_anchor_selector_done">Done</string>
+    <string name="mirror_calibration_pause">Pause</string>
+    <string name="mirror_calibration_resume">Resume</string>
+    <string name="mirror_calibration_paused_badge">PAUSED</string>
+    <string name="mirror_calibration_paused_instruction">Calibration paused. Change game scenery, return to your anchor view, then tap Resume.</string>
+    <string name="mirror_anchor_save_calibrate_dialog_title">Calibrate Anchor Now?</string>
+    <string name="mirror_anchor_save_calibrate_dialog_message">Calibrating right away samples the live game screen to ensure reliable detection.</string>
+    <string name="mirror_anchor_save_calibrate_dialog_confirm">Calibrate</string>
+    <string name="mirror_anchor_save_calibrate_dialog_dismiss">Later</string>
     <string name="settings_mirror_projection_on">On</string>
     <string name="settings_mirror_projection_off">Off</string>
     <string name="macropad_editor_section_actions">Actions</string>

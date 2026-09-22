@@ -14,7 +14,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.FilterCenterFocus
+import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -35,8 +41,10 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -44,6 +52,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.DialogToastManager
 import com.stormpanda.megingiard.ui.DialogToastPill
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -54,7 +63,7 @@ import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
 private const val TAG = "AnchorSelectorOverlay"
-private const val MIN_ANCHOR_SIZE = 0.04f
+private const val MIN_ANCHOR_SIZE = 0.01f
 private const val ASO_SCRIM_ALPHA = 0.40f
 private const val ASO_INITIAL_FOCUS_DELAY_MS = 80L
 
@@ -93,6 +102,7 @@ fun AnchorSelectorOverlay(
     val density = LocalDensity.current
 
     var isMinimized by remember { mutableStateOf(false) }
+    var showCalibratePrompt by remember { mutableStateOf(false) }
     val firstItemFocusRequester = remember { FocusRequester() }
     val collapseButtonFocusRequester = remember { FocusRequester() }
     val activeToast by DialogToastManager.currentToast.collectAsStateWithLifecycle()
@@ -129,7 +139,11 @@ fun AnchorSelectorOverlay(
         Modifier.onKeyEvent { keyEvent ->
             val keyCode = keyEvent.nativeKeyEvent.keyCode
             if (keyEvent.type == KeyEventType.KeyUp && isBackKey(keyCode)) {
-                onDismiss()
+                if (showCalibratePrompt) {
+                    showCalibratePrompt = false
+                } else {
+                    onDismiss()
+                }
                 true
             } else {
                 false
@@ -409,7 +423,7 @@ fun AnchorSelectorOverlay(
                 actionBadge = stringResource(R.string.gamepad_action_save),
                 isAccent = true,
                 cardBgColor = colors.accent.copy(alpha = 0.20f),
-                onClick = onDismiss,
+                onClick = { showCalibratePrompt = true },
             )
         }
 
@@ -421,6 +435,64 @@ fun AnchorSelectorOverlay(
                     .align(Alignment.TopCenter)
                     .padding(top = ASO_TOAST_TOP_PADDING),
         )
+
+        // 6. Post-Positioning Calibrate Now Prompt
+        if (showCalibratePrompt) {
+            val context = LocalContext.current
+            AppAlertDialog(
+                onDismissRequest = { showCalibratePrompt = false },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Rounded.Tune,
+                        contentDescription = null,
+                        tint = colors.accent,
+                    )
+                },
+                title = {
+                    Text(
+                        text = stringResource(R.string.mirror_anchor_save_calibrate_dialog_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                },
+                text = {
+                    Text(
+                        text = stringResource(R.string.mirror_anchor_save_calibrate_dialog_message),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showCalibratePrompt = false
+                            val layoutToCalibrate = currentLayoutState.value
+                            onDismiss()
+                            VisualAutoTuneCoordinator.startLayoutAnchorCalibration(context, layoutToCalibrate)
+                        },
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor = colors.accent,
+                                contentColor = colors.onAccent,
+                            ),
+                    ) {
+                        Text(stringResource(R.string.mirror_anchor_save_calibrate_dialog_confirm))
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            showCalibratePrompt = false
+                            onDismiss()
+                        },
+                    ) {
+                        Text(
+                            text = stringResource(R.string.mirror_anchor_save_calibrate_dialog_dismiss),
+                            color = colors.onSurfaceSecondary,
+                        )
+                    }
+                },
+            )
+        }
     }
 }
 

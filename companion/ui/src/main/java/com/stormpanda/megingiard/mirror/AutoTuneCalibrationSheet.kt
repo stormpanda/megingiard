@@ -15,10 +15,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -100,6 +103,7 @@ internal fun AutoTuneCalibrationSheet(
 
     val calibrationType by VisualAutoTuneCoordinator.calibrationType.collectAsStateWithLifecycle()
     val canFinish by VisualAutoTuneCoordinator.canFinish.collectAsStateWithLifecycle()
+    val isPaused by VisualAutoTuneCoordinator.isPaused.collectAsStateWithLifecycle()
 
     val title =
         when (calibrationType) {
@@ -108,9 +112,13 @@ internal fun AutoTuneCalibrationSheet(
         }
 
     val instruction =
-        when (calibrationType) {
-            CalibrationType.LAYOUT_ANCHOR -> stringResource(R.string.mirror_anchor_calibration_instruction)
-            else -> stringResource(R.string.mirror_calibration_instruction_preview)
+        if (isPaused) {
+            stringResource(R.string.mirror_calibration_paused_instruction)
+        } else {
+            when (calibrationType) {
+                CalibrationType.LAYOUT_ANCHOR -> stringResource(R.string.mirror_anchor_calibration_instruction)
+                else -> stringResource(R.string.mirror_calibration_instruction_preview)
+            }
         }
 
     BackHandler {
@@ -155,10 +163,20 @@ internal fun AutoTuneCalibrationSheet(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    PulsingRecordingDot(
-                        color = colors.accent,
-                        modifier = Modifier.size(PULSE_DOT_SIZE),
-                    )
+                    if (isPaused) {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .size(PULSE_DOT_SIZE)
+                                    .clip(CircleShape)
+                                    .background(colors.onSurfaceSecondary),
+                        )
+                    } else {
+                        PulsingRecordingDot(
+                            color = colors.accent,
+                            modifier = Modifier.size(PULSE_DOT_SIZE),
+                        )
+                    }
                     Spacer(Modifier.width(SPACING_M))
                     Text(
                         text = title,
@@ -172,7 +190,7 @@ internal fun AutoTuneCalibrationSheet(
                 }
 
                 // ── Live Preview Box with Checkerboard Transparency Background ──
-                CalibrationPreviewBox(bezelBrush = bezelBrush)
+                CalibrationPreviewBox(bezelBrush = bezelBrush, isPaused = isPaused)
 
                 // ── Instruction Prompt Box ──
                 Row(
@@ -200,7 +218,7 @@ internal fun AutoTuneCalibrationSheet(
                     )
                 }
 
-                // ── Action Buttons: Cancel and Finish ──
+                // ── Action Buttons: Cancel, Pause/Resume, and Finish ──
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(SPACING_M),
@@ -220,6 +238,30 @@ internal fun AutoTuneCalibrationSheet(
                         Text(
                             text = stringResource(R.string.mirror_calibration_cancel),
                             color = colors.onSurfaceSecondary,
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick = { VisualAutoTuneCoordinator.togglePause() },
+                        modifier = Modifier.weight(1f).height(BUTTON_HEIGHT),
+                        shape = RoundedCornerShape(BUTTON_CORNER_RADIUS),
+                    ) {
+                        Icon(
+                            imageVector = if (isPaused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
+                            contentDescription = null,
+                            modifier = Modifier.size(BUTTON_ICON_SIZE),
+                            tint = if (isPaused) colors.accent else colors.onSurfaceSecondary,
+                        )
+                        Spacer(Modifier.width(SPACING_S))
+                        Text(
+                            text =
+                                if (isPaused) {
+                                    stringResource(R.string.mirror_calibration_resume)
+                                } else {
+                                    stringResource(R.string.mirror_calibration_pause)
+                                },
+                            color = if (isPaused) colors.accent else colors.onSurfaceSecondary,
                             style = MaterialTheme.typography.labelLarge,
                         )
                     }
@@ -288,7 +330,10 @@ private fun SampleCounterBadge() {
 }
 
 @Composable
-private fun CalibrationPreviewBox(bezelBrush: Brush) {
+private fun CalibrationPreviewBox(
+    bezelBrush: Brush,
+    isPaused: Boolean,
+) {
     val colors = LocalAppColors.current
     val previewBitmap by VisualAutoTuneCoordinator.previewBitmap.collectAsStateWithLifecycle()
     val canFinish by VisualAutoTuneCoordinator.canFinish.collectAsStateWithLifecycle()
@@ -332,6 +377,44 @@ private fun CalibrationPreviewBox(bezelBrush: Brush) {
                 contentScale = ContentScale.Fit,
             )
 
+            // Paused state overlay badge
+            if (isPaused) {
+                Box(
+                    modifier =
+                        Modifier
+                            .matchParentSize()
+                            .background(Color.Black.copy(alpha = 0.50f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(SPACING_S),
+                        modifier =
+                            Modifier
+                                .clip(RoundedCornerShape(PILL_CORNER_RADIUS))
+                                .background(colors.surface)
+                                .border(
+                                    width = BORDER_WIDTH,
+                                    brush = bezelBrush,
+                                    shape = RoundedCornerShape(PILL_CORNER_RADIUS),
+                                ).padding(horizontal = PILL_HORIZONTAL_PADDING, vertical = PILL_VERTICAL_PADDING),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Pause,
+                            contentDescription = null,
+                            modifier = Modifier.size(BUTTON_ICON_SIZE),
+                            tint = colors.accent,
+                        )
+                        Text(
+                            text = stringResource(R.string.mirror_calibration_paused_badge),
+                            color = colors.onSurface,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                }
+            }
+
             // Dynamic transparency percentage pill
             if (canFinish && dynamicPercent > 0) {
                 Box(
@@ -353,20 +436,39 @@ private fun CalibrationPreviewBox(bezelBrush: Brush) {
                 }
             }
         } else {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(SPACING_S),
-            ) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(LOADING_INDICATOR_SIZE),
-                    color = colors.accent,
-                    strokeWidth = LOADING_STROKE_WIDTH,
-                )
-                Text(
-                    text = stringResource(R.string.mirror_calibration_sampling),
-                    color = colors.onSurfaceSecondary,
-                    style = MaterialTheme.typography.bodySmall,
-                )
+            if (isPaused) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(SPACING_S),
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Pause,
+                        contentDescription = null,
+                        tint = colors.accent,
+                        modifier = Modifier.size(BUTTON_ICON_SIZE),
+                    )
+                    Text(
+                        text = stringResource(R.string.mirror_calibration_paused_badge),
+                        color = colors.onSurfaceSecondary,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            } else {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(SPACING_S),
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(LOADING_INDICATOR_SIZE),
+                        color = colors.accent,
+                        strokeWidth = LOADING_STROKE_WIDTH,
+                    )
+                    Text(
+                        text = stringResource(R.string.mirror_calibration_sampling),
+                        color = colors.onSurfaceSecondary,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
             }
         }
     }

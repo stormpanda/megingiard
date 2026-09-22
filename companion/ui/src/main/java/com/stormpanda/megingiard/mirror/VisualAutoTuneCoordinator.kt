@@ -49,6 +49,9 @@ internal object VisualAutoTuneCoordinator {
     private val _isCalibrating = MutableStateFlow(false)
     val isCalibrating: StateFlow<Boolean> = _isCalibrating.asStateFlow()
 
+    private val _isPaused = MutableStateFlow(false)
+    val isPaused: StateFlow<Boolean> = _isPaused.asStateFlow()
+
     private val _calibrationType = MutableStateFlow(CalibrationType.NONE)
     val calibrationType: StateFlow<CalibrationType> = _calibrationType.asStateFlow()
 
@@ -103,6 +106,26 @@ internal object VisualAutoTuneCoordinator {
     }
 
     /**
+     * Toggles calibration pause state. When paused, frame sampling is suspended.
+     */
+    fun togglePause() {
+        if (_isCalibrating.value) {
+            _isPaused.value = !_isPaused.value
+            AppLog.i(TAG, "togglePause: isPaused=${_isPaused.value}")
+        }
+    }
+
+    /**
+     * Explicitly sets calibration pause state.
+     */
+    fun setPaused(paused: Boolean) {
+        if (_isCalibrating.value) {
+            _isPaused.value = paused
+            AppLog.i(TAG, "setPaused: isPaused=$paused")
+        }
+    }
+
+    /**
      * Starts the interactive auto-tune sampling sequence for [cutout].
      * Suspends the primary modal overlay on Display 0, unfreezes mirror capture,
      * streams live transparency previews, and restores the editor upon completion.
@@ -131,6 +154,7 @@ internal object VisualAutoTuneCoordinator {
                 _sampleCount.value = 0
                 _canFinish.value = false
                 _dynamicPercent.value = 0
+                _isPaused.value = false
                 setPreviewBitmap(null)
 
                 val sampledFrames = ArrayList<IntArray>()
@@ -139,11 +163,22 @@ internal object VisualAutoTuneCoordinator {
                 var tracker: CalibrationPreviewTracker? = null
                 var previewPixels: IntArray? = null
                 var cutoutFreezeBitmap: Bitmap? = null
-                val startTime = SystemClock.elapsedRealtime()
+                var totalSampledDurationMs = 0L
+                var lastLoopTime = SystemClock.elapsedRealtime()
 
                 try {
                     while (isActive && !isFinishRequested) {
-                        if (SystemClock.elapsedRealtime() - startTime >= MAX_CALIBRATION_DURATION_MS) {
+                        val now = SystemClock.elapsedRealtime()
+                        val loopElapsed = now - lastLoopTime
+                        lastLoopTime = now
+
+                        if (_isPaused.value) {
+                            delay(SAMPLE_INTERVAL_MS)
+                            continue
+                        }
+
+                        totalSampledDurationMs += loopElapsed
+                        if (totalSampledDurationMs >= MAX_CALIBRATION_DURATION_MS) {
                             AppLog.i(TAG, "Calibration reached maximum safety duration (${MAX_CALIBRATION_DURATION_MS}ms)")
                             break
                         }
@@ -275,6 +310,7 @@ internal object VisualAutoTuneCoordinator {
                     }
                     setPreviewBitmap(null)
                     _isCalibrating.value = false
+                    _isPaused.value = false
                     _calibrationType.value = CalibrationType.NONE
                     _canFinish.value = false
                     _sampleCount.value = 0
@@ -315,6 +351,7 @@ internal object VisualAutoTuneCoordinator {
                 _sampleCount.value = 0
                 _canFinish.value = false
                 _dynamicPercent.value = 0
+                _isPaused.value = false
                 setPreviewBitmap(null)
 
                 val sampledFrames = ArrayList<IntArray>()
@@ -322,12 +359,23 @@ internal object VisualAutoTuneCoordinator {
                 var cropH = 0
                 var tracker: CalibrationPreviewTracker? = null
                 var previewPixels: IntArray? = null
-                val startTime = SystemClock.elapsedRealtime()
+                var totalSampledDurationMs = 0L
+                var lastLoopTime = SystemClock.elapsedRealtime()
 
                 try {
                     val anchor = layout.visualAnchor
                     while (isActive && !isFinishRequested) {
-                        if (SystemClock.elapsedRealtime() - startTime >= MAX_CALIBRATION_DURATION_MS) {
+                        val now = SystemClock.elapsedRealtime()
+                        val loopElapsed = now - lastLoopTime
+                        lastLoopTime = now
+
+                        if (_isPaused.value) {
+                            delay(SAMPLE_INTERVAL_MS)
+                            continue
+                        }
+
+                        totalSampledDurationMs += loopElapsed
+                        if (totalSampledDurationMs >= MAX_CALIBRATION_DURATION_MS) {
                             AppLog.i(TAG, "Layout anchor calibration reached maximum safety duration (${MAX_CALIBRATION_DURATION_MS}ms)")
                             break
                         }
@@ -420,6 +468,7 @@ internal object VisualAutoTuneCoordinator {
                 } finally {
                     setPreviewBitmap(null)
                     _isCalibrating.value = false
+                    _isPaused.value = false
                     _calibrationType.value = CalibrationType.NONE
                     _canFinish.value = false
                     _sampleCount.value = 0
@@ -444,6 +493,7 @@ internal object VisualAutoTuneCoordinator {
         calibrationJob = null
         setPreviewBitmap(null)
         _isCalibrating.value = false
+        _isPaused.value = false
         _calibrationType.value = CalibrationType.NONE
         _canFinish.value = false
         _sampleCount.value = 0
