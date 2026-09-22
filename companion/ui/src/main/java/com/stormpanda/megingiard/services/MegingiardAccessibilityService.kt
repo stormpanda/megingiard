@@ -8,12 +8,16 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.res.Resources
+import android.database.ContentObserver
 import android.graphics.Bitmap
 import android.graphics.Path
+import android.net.Uri
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
 import android.os.LocaleList
+import android.os.Looper
 import android.provider.Settings
 import android.text.TextUtils
 import android.view.Display
@@ -23,6 +27,7 @@ import android.view.accessibility.AccessibilityWindowInfo
 import android.widget.Toast
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.PrimaryFocusAnchorActivity
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.AutoKeyboardFocusCoordinator
 import com.stormpanda.megingiard.macropad.AutoSwitchCoordinator
@@ -98,6 +103,8 @@ class MegingiardAccessibilityService : AccessibilityService() {
                 }
             }
         }
+
+        registerFocusChangeObserver()
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
@@ -114,8 +121,11 @@ class MegingiardAccessibilityService : AccessibilityService() {
             } else {
                 AppLog.d(
                     TAG,
-                    "onAccessibilityEvent: Ignoring window state change on secondary display (displayId=$displayId, package=$eventPackage)",
+                    "onAccessibilityEvent: Secondary display ($displayId) window state changed, package=$eventPackage",
                 )
+                // When an overlay, assistant, or IME window on secondary display changes or dismisses,
+                // ensure primary display retains window manager and input focus.
+                PrimaryFocusAnchorActivity.anchorPrimaryFocus(this)
             }
         }
         handleAutoKeyboardEvent(event, isPrimaryDisplay, eventPackage)
@@ -818,11 +828,48 @@ class MegingiardAccessibilityService : AccessibilityService() {
 
     override fun onDestroy() {
         super.onDestroy()
+        unregisterFocusChangeObserver()
         serviceScope.cancel()
         AutoKeyboardFocusCoordinator.reset()
         if (instance == this) instance = null
         AppLog.i(TAG, "onDestroy: Accessibility Service destroyed")
         AppStateManager.setAccessibilityActive(false)
+    }
+
+    private var focusChangeObserver: ContentObserver? = null
+
+    private fun registerFocusChangeObserver() {
+        try {
+            val uri = Settings.System.getUriFor("focus_change") ?: return
+            val observer =
+                object : ContentObserver(Handler(Looper.getMainLooper())) {
+                    override fun onChange(
+                        selfChange: Boolean,
+                        uri: Uri?,
+                    ) {
+                        super.onChange(selfChange, uri)
+                        AppLog.d(TAG, "focus_change setting changed -> re-anchoring primary focus")
+                        PrimaryFocusAnchorActivity.anchorPrimaryFocus(this@MegingiardAccessibilityService)
+                    }
+                }
+            contentResolver.registerContentObserver(uri, false, observer)
+            focusChangeObserver = observer
+            AppLog.i(TAG, "registerFocusChangeObserver: Registered ContentObserver for focus_change setting")
+        } catch (e: Exception) {
+            AppLog.w(TAG, "registerFocusChangeObserver: Failed to register focus_change ContentObserver: ${e.message}")
+        }
+    }
+
+    private fun unregisterFocusChangeObserver() {
+        focusChangeObserver?.let { observer ->
+            try {
+                contentResolver.unregisterContentObserver(observer)
+                AppLog.i(TAG, "unregisterFocusChangeObserver: Unregistered ContentObserver for focus_change setting")
+            } catch (e: Exception) {
+                AppLog.w(TAG, "unregisterFocusChangeObserver: Failed to unregister focus_change ContentObserver: ${e.message}")
+            }
+            focusChangeObserver = null
+        }
     }
 
     companion object {

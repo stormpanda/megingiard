@@ -18,6 +18,7 @@ import android.os.LocaleList
 import android.os.Looper
 import android.os.Process
 import android.view.Display
+import android.view.KeyEvent
 import android.view.PixelCopy
 import android.view.Window
 import android.view.WindowManager
@@ -223,6 +224,24 @@ class MainActivity : ComponentActivity() {
         val isValid = DisplayDetector.isValidScreen(currentDisplayId)
         AppStateManager.setOnValidScreen(isValid)
         AppStateManager.setActivityResumed(true)
+        if (currentDisplayId != Display.DEFAULT_DISPLAY) {
+            PrimaryFocusAnchorActivity.anchorPrimaryFocus(this)
+        }
+    }
+
+    override fun onTopResumedActivityChanged(isTopResumedActivity: Boolean) {
+        super.onTopResumedActivityChanged(isTopResumedActivity)
+        AppLog.d(TAG, "onTopResumedActivityChanged: isTopResumedActivity=$isTopResumedActivity")
+        if (isTopResumedActivity && (display?.displayId ?: Display.DEFAULT_DISPLAY) != Display.DEFAULT_DISPLAY) {
+            PrimaryFocusAnchorActivity.anchorPrimaryFocus(this)
+        }
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if ((display?.displayId ?: Display.DEFAULT_DISPLAY) != Display.DEFAULT_DISPLAY) {
+            PrimaryFocusAnchorActivity.anchorPrimaryFocus(this)
+        }
+        return super.dispatchKeyEvent(event)
     }
 
     override fun onStop() {
@@ -243,7 +262,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         LayoutTransitionManager.registerWindowProvider { window }
 
-        if (savedInstanceState == null && display?.displayId != Display.DEFAULT_DISPLAY) {
+        if (display?.displayId != Display.DEFAULT_DISPLAY) {
             PrimaryFocusAnchorActivity.anchorPrimaryFocus(this)
         }
 
@@ -790,6 +809,9 @@ class MainActivity : ComponentActivity() {
         val isValid = DisplayDetector.isValidScreen(currentDisplayId)
         AppLog.i(TAG, "onNewIntent: displayId=$currentDisplayId isValid=$isValid action=${intent.action}")
         AppStateManager.setOnValidScreen(isValid)
+        if (currentDisplayId != Display.DEFAULT_DISPLAY) {
+            PrimaryFocusAnchorActivity.anchorPrimaryFocus(this)
+        }
         handleIncomingIntent(intent)
     }
 
