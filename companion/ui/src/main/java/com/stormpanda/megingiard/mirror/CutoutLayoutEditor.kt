@@ -63,7 +63,7 @@ import kotlin.math.roundToInt
 
 private const val TAG = "CutoutLayoutEditor"
 private val CLE_BORDER_WIDTH = 1.dp
-private val CLE_SELECTED_BORDER_WIDTH = 2.dp
+private val CLE_SELECTED_BORDER_WIDTH = 1.dp
 private val CLE_EDGE_HANDLE_LENGTH = 36.dp
 private val CLE_EDGE_HANDLE_THICKNESS = 6.dp
 private val CLE_EDGE_HANDLE_MARGIN = 6.dp
@@ -83,7 +83,6 @@ private val CLE_RECT_SHAPE = RoundedCornerShape(CLE_RECT_CORNER)
 private val CLE_EDGE_HANDLE_SHAPE = RoundedCornerShape(CLE_EDGE_HANDLE_CORNER)
 private val CLE_BADGE_SHAPE = RoundedCornerShape(4.dp)
 private val CLE_MIN_BADGE_HEIGHT = 24.dp
-private const val CLE_UNSELECTED_BG_ALPHA = 0.05f
 private const val CLE_UNSELECTED_BORDER_ALPHA = 0.15f
 private const val CLE_SELECTED_BORDER_ALPHA = 0.75f
 
@@ -221,17 +220,27 @@ fun CutoutLayoutEditor() {
                                 )
                             },
                 ) {
+                    val borderWidth = if (isSelected) CLE_SELECTED_BORDER_WIDTH else CLE_BORDER_WIDTH
+                    val borderColor =
+                        if (isSelected) {
+                            colors.accent.copy(alpha = CLE_SELECTED_BORDER_ALPHA)
+                        } else {
+                            Color.White.copy(alpha = CLE_UNSELECTED_BORDER_ALPHA)
+                        }
+
                     if (isCircle) {
                         val diameterDp = with(density) { min(destW, destH).toDp() }
                         if (isSelected) {
-                            // Show collision rectangle bounding box in unselected style
+                            // Show collision rectangle bounding box in unselected style (outset)
                             Box(
                                 modifier =
                                     Modifier
-                                        .fillMaxSize()
-                                        .background(
-                                            color = Color.White.copy(alpha = CLE_UNSELECTED_BG_ALPHA),
-                                            shape = CLE_RECT_SHAPE,
+                                        .offset {
+                                            val bwPx = with(density) { CLE_BORDER_WIDTH.roundToPx() }
+                                            IntOffset(-bwPx, -bwPx)
+                                        }.size(
+                                            width = with(density) { destW.toDp() + CLE_BORDER_WIDTH * 2 },
+                                            height = with(density) { destH.toDp() + CLE_BORDER_WIDTH * 2 },
                                         ).border(
                                             width = CLE_BORDER_WIDTH,
                                             color = Color.White.copy(alpha = CLE_UNSELECTED_BORDER_ALPHA),
@@ -239,51 +248,32 @@ fun CutoutLayoutEditor() {
                                         ),
                             )
                         }
+                        // Outset circle border
                         Box(
                             modifier =
                                 Modifier
                                     .align(Alignment.Center)
-                                    .size(diameterDp)
-                                    .background(
-                                        color =
-                                            if (isSelected) {
-                                                Color.Transparent
-                                            } else {
-                                                Color.White.copy(alpha = CLE_UNSELECTED_BG_ALPHA)
-                                            },
-                                        shape = CircleShape,
-                                    ).border(
-                                        width = if (isSelected) CLE_SELECTED_BORDER_WIDTH else CLE_BORDER_WIDTH,
-                                        color =
-                                            if (isSelected) {
-                                                colors.accent.copy(alpha = CLE_SELECTED_BORDER_ALPHA)
-                                            } else {
-                                                Color.White.copy(alpha = CLE_UNSELECTED_BORDER_ALPHA)
-                                            },
+                                    .size(diameterDp + borderWidth * 2)
+                                    .border(
+                                        width = borderWidth,
+                                        color = borderColor,
                                         shape = CircleShape,
                                     ),
                         )
                     } else {
+                        // Outset rectangle border
                         Box(
                             modifier =
                                 Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        color =
-                                            if (isSelected) {
-                                                Color.Transparent
-                                            } else {
-                                                Color.White.copy(alpha = CLE_UNSELECTED_BG_ALPHA)
-                                            },
-                                        shape = CLE_RECT_SHAPE,
+                                    .offset {
+                                        val bwPx = with(density) { borderWidth.roundToPx() }
+                                        IntOffset(-bwPx, -bwPx)
+                                    }.size(
+                                        width = with(density) { destW.toDp() + borderWidth * 2 },
+                                        height = with(density) { destH.toDp() + borderWidth * 2 },
                                     ).border(
-                                        width = if (isSelected) CLE_SELECTED_BORDER_WIDTH else CLE_BORDER_WIDTH,
-                                        color =
-                                            if (isSelected) {
-                                                colors.accent.copy(alpha = CLE_SELECTED_BORDER_ALPHA)
-                                            } else {
-                                                Color.White.copy(alpha = CLE_UNSELECTED_BORDER_ALPHA)
-                                            },
+                                        width = borderWidth,
+                                        color = borderColor,
                                         shape = CLE_RECT_SHAPE,
                                     ),
                         )
