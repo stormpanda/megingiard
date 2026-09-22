@@ -29,6 +29,6 @@ data class AnchorPoint(
  */
 @Serializable
 data class VisualAnchorSignature(
-    val cutoutId: String,
-    val points: List<AnchorPoint>,
+    val cutoutId: String = "",
+    val points: List<AnchorPoint> = emptyList(),
 )

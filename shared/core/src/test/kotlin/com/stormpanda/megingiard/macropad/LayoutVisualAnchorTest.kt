@@ -1,9 +1,13 @@
 package com.stormpanda.megingiard.macropad
 
+import com.stormpanda.megingiard.mirror.AnchorPoint
+import com.stormpanda.megingiard.mirror.VisualAnchorSignature
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -31,6 +35,8 @@ class LayoutVisualAnchorTest {
         assertEquals(DEFAULT_LAYOUT_ANCHOR_SIZE, anchor.srcHeight, EPSILON)
         assertEquals(DEFAULT_LAYOUT_STREAM_DELAY_FRAMES, anchor.streamDelayFrames)
         assertEquals(DEFAULT_LOST_ANCHOR_EFFECTS, anchor.lostAnchorEffects)
+        assertNull(anchor.signature)
+        assertFalse(anchor.isCalibrated)
         assertTrue(anchor.hasEffect(CutoutLostAnchorEffect.FREEZE))
         assertTrue(anchor.hasEffect(CutoutLostAnchorEffect.BLUR))
         assertTrue(anchor.freezeCutoutsOnLoss)
@@ -90,6 +96,48 @@ class LayoutVisualAnchorTest {
         assertEquals(setOf(CutoutLostAnchorEffect.FREEZE), deserialized.lostAnchorEffects)
         assertTrue(deserialized.hasEffect(CutoutLostAnchorEffect.FREEZE))
         assertFalse(deserialized.hasEffect(CutoutLostAnchorEffect.BLUR))
+    }
+
+    @Test
+    fun `verify serialization round-trip of LayoutVisualAnchor with embedded signature`() {
+        val points =
+            listOf(
+                AnchorPoint(0.2f, 0.3f, 10, 20, 30),
+                AnchorPoint(0.4f, 0.5f, 40, 50, 60),
+            )
+        val original =
+            LayoutVisualAnchor(
+                enabled = true,
+                srcX = TEST_SRC_X,
+                srcY = TEST_SRC_Y,
+                srcWidth = TEST_SRC_WIDTH,
+                srcHeight = TEST_SRC_HEIGHT,
+                signature = VisualAnchorSignature(cutoutId = "test_layout", points = points),
+            )
+
+        assertTrue(original.isCalibrated)
+        val serialized = json.encodeToString(original)
+        assertTrue(serialized.contains("\"signature\""))
+        assertTrue(serialized.contains("\"points\""))
+
+        val deserialized = json.decodeFromString<LayoutVisualAnchor>(serialized)
+        assertEquals(original, deserialized)
+        assertTrue(deserialized.isCalibrated)
+        assertNotNull(deserialized.signature)
+        assertEquals("test_layout", deserialized.signature!!.cutoutId)
+        assertEquals(2, deserialized.signature!!.points.size)
+        assertEquals(10, deserialized.signature!!.points[0].r)
+        assertEquals(60, deserialized.signature!!.points[1].b)
+    }
+
+    @Test
+    fun `verify isCalibrated returns false when signature has empty points`() {
+        val emptySignatureAnchor =
+            LayoutVisualAnchor(
+                enabled = true,
+                signature = VisualAnchorSignature(cutoutId = "empty", points = emptyList()),
+            )
+        assertFalse(emptySignatureAnchor.isCalibrated)
     }
 
     @Test

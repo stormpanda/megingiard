@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import com.stormpanda.megingiard.AppLog
-import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.ConcurrentHashMap
@@ -12,33 +11,26 @@ import java.util.concurrent.ConcurrentHashMap
 private const val TAG = "CutoutMaskManager"
 private const val MASKS_DIR = "cutout_masks"
 private const val MASK_FILE_PREFIX = "mask_"
-private const val LAYOUT_ANCHOR_FILE_PREFIX = "layout_anchor_"
 private const val PNG_EXTENSION = ".png"
 private const val VARIANCE_EXTENSION = "_var.bin"
-private const val ANCHOR_EXTENSION = "_anchor.json"
 private const val FREEZE_EXTENSION = "_freeze.png"
 private const val PNG_QUALITY = 100
 
 /**
  * Manages in-memory caching and filesystem persistence for auto-tuned cutout transparency masks,
- * raw variance maps for dynamic translucency, layout anchor signatures for presence detection,
- * and high-resolution freeze frames for freeze frame preservation.
+ * raw variance maps for dynamic translucency, and high-resolution freeze frames for freeze frame preservation.
  *
  * Base masks are stored as lossless PNG files under `context.filesDir/cutout_masks/mask_<cutoutId>.png`.
  * Variance maps are stored as binary byte arrays under `context.filesDir/cutout_masks/mask_<cutoutId>_var.bin`.
- * Layout anchor signatures are stored as JSON under `context.filesDir/cutout_masks/layout_anchor_<layoutId>_anchor.json`.
  * Freeze frames are stored as PNG under `context.filesDir/cutout_masks/mask_<cutoutId>_freeze.png`.
  */
 object CutoutMaskManager {
-    private val json = Json { ignoreUnknownKeys = true }
     private val baseMaskCache = ConcurrentHashMap<String, Bitmap>()
     private val tunedMaskCache = ConcurrentHashMap<String, Bitmap>()
     private val varianceCache = ConcurrentHashMap<String, ByteArray>()
-    private val layoutAnchorCache = ConcurrentHashMap<String, VisualAnchorSignature>()
     private val freezeFrameCache = ConcurrentHashMap<String, Bitmap>()
     private val staticAssetCache = ConcurrentHashMap<String, Bitmap>()
     private val maskExistenceCache = ConcurrentHashMap<String, Boolean>()
-    private val layoutAnchorExistenceCache = ConcurrentHashMap<String, Boolean>()
 
     /**
      * Retrieves the transparency mask bitmap for [cutoutId] with optional [translucency] (0..100)
@@ -399,101 +391,4 @@ object CutoutMaskManager {
         context: Context,
         cutoutId: String,
     ): Boolean = hasMask(context, cutoutId)
-
-    /**
-     * Retrieves the reference anchor signature for [layoutId] if available.
-     */
-    fun getLayoutAnchorSignature(
-        context: Context,
-        layoutId: String,
-    ): VisualAnchorSignature? {
-        layoutAnchorCache[layoutId]?.let { return it }
-
-        val dir = File(context.filesDir, MASKS_DIR)
-        val file = File(dir, "$LAYOUT_ANCHOR_FILE_PREFIX$layoutId$ANCHOR_EXTENSION")
-        if (!file.exists()) return null
-
-        return try {
-            val text = file.readText()
-            val signature = json.decodeFromString(VisualAnchorSignature.serializer(), text)
-            layoutAnchorCache[layoutId] = signature
-            AppLog.d(TAG, "Loaded anchor signature for layout $layoutId (${signature.points.size} points) from disk")
-            signature
-        } catch (e: Exception) {
-            AppLog.e(TAG, "Failed to read anchor signature for layout $layoutId", e)
-            null
-        }
-    }
-
-    /**
-     * Persists [signature] as the reference anchor signature for [layoutId].
-     */
-    fun saveLayoutAnchorSignature(
-        context: Context,
-        layoutId: String,
-        signature: VisualAnchorSignature,
-    ) {
-        layoutAnchorCache[layoutId] = signature
-        layoutAnchorExistenceCache[layoutId] = true
-        try {
-            val dir = File(context.filesDir, MASKS_DIR)
-            if (!dir.exists()) dir.mkdirs()
-            val file = File(dir, "$LAYOUT_ANCHOR_FILE_PREFIX$layoutId$ANCHOR_EXTENSION")
-            file.writeText(json.encodeToString(VisualAnchorSignature.serializer(), signature))
-            AppLog.i(TAG, "Saved anchor signature for layout $layoutId (${signature.points.size} points)")
-        } catch (e: Exception) {
-            AppLog.e(TAG, "Failed to persist anchor signature for layout $layoutId", e)
-        }
-    }
-
-    /**
-     * Deletes the anchor signature for [layoutId] from memory and disk.
-     */
-    fun deleteLayoutAnchorSignature(
-        context: Context,
-        layoutId: String,
-    ) {
-        layoutAnchorCache.remove(layoutId)
-        layoutAnchorExistenceCache[layoutId] = false
-        try {
-            val dir = File(context.filesDir, MASKS_DIR)
-            val file = File(dir, "$LAYOUT_ANCHOR_FILE_PREFIX$layoutId$ANCHOR_EXTENSION")
-            if (file.exists()) {
-                file.delete()
-                AppLog.i(TAG, "Deleted anchor signature for layout $layoutId")
-            }
-        } catch (e: Exception) {
-            AppLog.e(TAG, "Failed to delete anchor signature for layout $layoutId", e)
-        }
-    }
-
-    /**
-     * Checks if a reference anchor signature is calibrated for [layoutId].
-     */
-    fun isLayoutAnchorCalibrated(
-        context: Context,
-        layoutId: String,
-    ): Boolean {
-        if (layoutAnchorCache.containsKey(layoutId)) return true
-        layoutAnchorExistenceCache[layoutId]?.let { return it }
-        val dir = File(context.filesDir, MASKS_DIR)
-        val file = File(dir, "$LAYOUT_ANCHOR_FILE_PREFIX$layoutId$ANCHOR_EXTENSION")
-        val exists = file.exists()
-        layoutAnchorExistenceCache[layoutId] = exists
-        return exists
-    }
-
-    /**
-     * Clones the reference anchor signature from [sourceLayoutId] to [targetLayoutId].
-     */
-    fun duplicateLayoutAnchorSignature(
-        context: Context,
-        sourceLayoutId: String,
-        targetLayoutId: String,
-    ) {
-        val signature = getLayoutAnchorSignature(context, sourceLayoutId) ?: return
-        val copiedSignature = signature.copy(cutoutId = targetLayoutId)
-        saveLayoutAnchorSignature(context, targetLayoutId, copiedSignature)
-        AppLog.i(TAG, "Duplicated anchor signature from $sourceLayoutId to $targetLayoutId")
-    }
 }

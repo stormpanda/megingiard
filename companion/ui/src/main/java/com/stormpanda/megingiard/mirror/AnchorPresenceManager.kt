@@ -259,7 +259,7 @@ object AnchorPresenceManager {
                     }
                 }
 
-                val signature = CutoutMaskManager.getLayoutAnchorSignature(context, activeLayout.id)
+                val signature = activeLayout.visualAnchor.signature
                 if (signature != null && signature.points.isNotEmpty()) {
                     val matchRatio =
                         AnchorPresenceEvaluator.evaluateMatchRatio(signature) { u, v ->
@@ -339,7 +339,7 @@ object AnchorPresenceManager {
                 ?.filter { candidate ->
                     candidate.id != excludedLayoutId &&
                         candidate.visualAnchor.enabled &&
-                        CutoutMaskManager.isLayoutAnchorCalibrated(context, candidate.id)
+                        candidate.visualAnchor.isCalibrated
                 }.orEmpty()
         if (candidates.isEmpty()) return
 
@@ -451,7 +451,7 @@ object AnchorPresenceManager {
             val frameH = frame.height
             if (frameW <= 0 || frameH <= 0) return false
 
-            val signature = CutoutMaskManager.getLayoutAnchorSignature(context, candidate.id) ?: return false
+            val signature = candidate.visualAnchor.signature ?: return false
             if (signature.points.isEmpty()) return false
 
             val matchRatio =

@@ -42,7 +42,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.mirror.CutoutMaskManager
 import com.stormpanda.megingiard.mirror.VisualAutoTuneCoordinator
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.GamepadActionCard
@@ -373,14 +372,8 @@ internal fun AutomaticLayoutSwitchingSubPageContent(
                 },
             )
 
-            val isCalibrated =
-                remember(layout.id, calibrationRevision) {
-                    CutoutMaskManager.isLayoutAnchorCalibrated(context, layout.id)
-                }
-            val signature =
-                remember(layout.id, calibrationRevision) {
-                    CutoutMaskManager.getLayoutAnchorSignature(context, layout.id)
-                }
+            val isCalibrated = layout.visualAnchor.isCalibrated
+            val signature = layout.visualAnchor.signature
 
             val calibTitle =
                 if (isCalibrated) {
@@ -485,11 +478,10 @@ internal fun AutomaticLayoutSwitchingSubPageContent(
                     isDestructive = true,
                     itemKey = "layout_${layout.id}_remove_anchor",
                     onConfirm = {
-                        CutoutMaskManager.deleteLayoutAnchorSignature(context, layout.id)
                         calibrationRevision++
                         onUpdateLayout(
                             layout.copy(
-                                visualAnchor = layout.visualAnchor.copy(enabled = false),
+                                visualAnchor = layout.visualAnchor.copy(enabled = false, signature = null),
                             ),
                         )
                     },

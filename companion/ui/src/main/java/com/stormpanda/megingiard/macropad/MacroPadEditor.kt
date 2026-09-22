@@ -88,7 +88,6 @@ import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.math.MPE_FINE_STEP_PX
 import com.stormpanda.megingiard.math.MPE_NORMAL_STEP_PX
 import com.stormpanda.megingiard.math.calculateGamepadButtonMove
-import com.stormpanda.megingiard.mirror.CutoutMaskManager
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.settings.MacroPadSettings
@@ -427,11 +426,6 @@ fun MacroPadEditor(
                                                                         )
                                                                     }
                                                                 }
-                                                                CutoutMaskManager.duplicateLayoutAnchorSignature(
-                                                                    context,
-                                                                    origLayout.id,
-                                                                    newLayoutId,
-                                                                )
                                                             }
                                                         }
                                                         val duplicatedProfile = MacroPadState.activeProfile.value
@@ -488,11 +482,6 @@ fun MacroPadEditor(
                                                                 )
                                                             }
                                                         }
-                                                        CutoutMaskManager.duplicateLayoutAnchorSignature(
-                                                            context,
-                                                            originalLayout.id,
-                                                            newLayoutId,
-                                                        )
                                                         val duplicatedLayout =
                                                             MacroPadState.activeProfile.value?.layouts?.firstOrNull {
                                                                 it.id ==
@@ -945,7 +934,6 @@ fun MacroPadEditor(
                                                             scope.launch {
                                                                 MacroPadMediaRepository.deleteBackgroundImage(context, lay.id)
                                                             }
-                                                            CutoutMaskManager.deleteLayoutAnchorSignature(context, lay.id)
                                                             appearanceDraft = null
                                                             MacroPadNavState.pop()
                                                             DialogToastManager.show(
@@ -1248,11 +1236,6 @@ fun MacroPadEditor(
                                                                     )
                                                                 }
                                                             }
-                                                            CutoutMaskManager.duplicateLayoutAnchorSignature(
-                                                                context,
-                                                                lay.id,
-                                                                newLayoutId,
-                                                            )
                                                         }
                                                         MacroPadNavState.pop()
                                                         DialogToastManager.show(

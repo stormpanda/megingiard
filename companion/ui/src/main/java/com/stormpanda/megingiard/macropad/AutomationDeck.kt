@@ -22,7 +22,6 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.mirror.AnchorPresenceManager
 import com.stormpanda.megingiard.mirror.AnchorPresenceState
-import com.stormpanda.megingiard.mirror.CutoutMaskManager
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadInfoBox
 import com.stormpanda.megingiard.ui.GamepadPill
@@ -60,7 +59,7 @@ internal fun AutomationDeckContent(
     val layouts = profile.layouts
     val calibratedLayouts =
         remember(profile.id, layouts, presenceRevision) {
-            layouts.filter { lay -> CutoutMaskManager.isLayoutAnchorCalibrated(context, lay.id) }
+            layouts.filter { lay -> lay.visualAnchor.isCalibrated }
         }
     val calibratedCount = calibratedLayouts.size
     val totalCount = layouts.size
@@ -97,14 +96,8 @@ internal fun AutomationDeckContent(
     }
 
     layouts.forEach { layout ->
-        val isCalibrated =
-            remember(layout.id, presenceRevision) {
-                CutoutMaskManager.isLayoutAnchorCalibrated(context, layout.id)
-            }
-        val signature =
-            remember(layout.id, presenceRevision) {
-                CutoutMaskManager.getLayoutAnchorSignature(context, layout.id)
-            }
+        val isCalibrated = layout.visualAnchor.isCalibrated
+        val signature = layout.visualAnchor.signature
         val isActive = layout.id == activeLayout?.id
         val presenceState =
             remember(layout.id, presenceRevision) {

@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.mirror.ScreenCutout
+import com.stormpanda.megingiard.mirror.VisualAnchorSignature
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -424,9 +425,16 @@ data class LayoutVisualAnchor(
     val srcHeight: Float = DEFAULT_LAYOUT_ANCHOR_SIZE,
     val streamDelayFrames: Int = DEFAULT_LAYOUT_STREAM_DELAY_FRAMES,
     val lostAnchorEffects: Set<CutoutLostAnchorEffect> = DEFAULT_LOST_ANCHOR_EFFECTS,
+    val signature: VisualAnchorSignature? = null,
     @Deprecated("Migrated to lostAnchorEffects")
     val blurCutoutsOnLoss: Boolean = true,
 ) {
+    /**
+     * Indicates whether this visual reference anchor has a valid calibrated signature with sample points.
+     */
+    val isCalibrated: Boolean
+        get() = signature != null && signature.points.isNotEmpty()
+
     /**
      * Checks whether the specified [CutoutLostAnchorEffect] is enabled.
      * Respects legacy [blurCutoutsOnLoss] if [lostAnchorEffects] was not customized.

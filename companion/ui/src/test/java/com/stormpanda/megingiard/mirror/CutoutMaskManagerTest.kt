@@ -162,83 +162,6 @@ class CutoutMaskManagerTest {
     }
 
     @Test
-    fun `saveLayoutAnchorSignature persists signature and getLayoutAnchorSignature retrieves it`() {
-        val context = RuntimeEnvironment.getApplication()
-        val layoutId = "test_layout_anchor_persist"
-        val signature =
-            VisualAnchorSignature(
-                cutoutId = layoutId,
-                points =
-                    listOf(
-                        AnchorPoint(0.2f, 0.3f, 10, 20, 30),
-                        AnchorPoint(0.4f, 0.5f, 40, 50, 60),
-                    ),
-            )
-
-        CutoutMaskManager.saveLayoutAnchorSignature(context, layoutId, signature)
-        val retrieved = CutoutMaskManager.getLayoutAnchorSignature(context, layoutId)
-
-        assertNotNull(retrieved)
-        assertEquals(layoutId, retrieved!!.cutoutId)
-        assertEquals(2, retrieved.points.size)
-        assertEquals(10, retrieved.points[0].r)
-        assertEquals(60, retrieved.points[1].b)
-
-        // Cleanup
-        CutoutMaskManager.deleteLayoutAnchorSignature(context, layoutId)
-        assertNull(CutoutMaskManager.getLayoutAnchorSignature(context, layoutId))
-    }
-
-    @Test
-    fun `isLayoutAnchorCalibrated returns true when signature exists and false after deletion`() {
-        val context = RuntimeEnvironment.getApplication()
-        val layoutId = "test_layout_calibrated"
-        assertFalse(CutoutMaskManager.isLayoutAnchorCalibrated(context, layoutId))
-
-        val signature =
-            VisualAnchorSignature(
-                cutoutId = layoutId,
-                points = listOf(AnchorPoint(0.1f, 0.1f, 100, 100, 100)),
-            )
-
-        CutoutMaskManager.saveLayoutAnchorSignature(context, layoutId, signature)
-        assertTrue(CutoutMaskManager.isLayoutAnchorCalibrated(context, layoutId))
-
-        CutoutMaskManager.deleteLayoutAnchorSignature(context, layoutId)
-        assertFalse(CutoutMaskManager.isLayoutAnchorCalibrated(context, layoutId))
-    }
-
-    @Test
-    fun `duplicateLayoutAnchorSignature clones signature with new layoutId`() {
-        val context = RuntimeEnvironment.getApplication()
-        val sourceId = "source_layout"
-        val targetId = "target_layout"
-
-        val signature =
-            VisualAnchorSignature(
-                cutoutId = sourceId,
-                points = listOf(AnchorPoint(0.1f, 0.2f, 11, 22, 33)),
-            )
-
-        CutoutMaskManager.saveLayoutAnchorSignature(context, sourceId, signature)
-        assertTrue(CutoutMaskManager.isLayoutAnchorCalibrated(context, sourceId))
-        assertFalse(CutoutMaskManager.isLayoutAnchorCalibrated(context, targetId))
-
-        CutoutMaskManager.duplicateLayoutAnchorSignature(context, sourceId, targetId)
-        assertTrue(CutoutMaskManager.isLayoutAnchorCalibrated(context, targetId))
-
-        val cloned = CutoutMaskManager.getLayoutAnchorSignature(context, targetId)
-        assertNotNull(cloned)
-        assertEquals(targetId, cloned!!.cutoutId)
-        assertEquals(1, cloned.points.size)
-        assertEquals(11, cloned.points[0].r)
-
-        // Cleanup
-        CutoutMaskManager.deleteLayoutAnchorSignature(context, sourceId)
-        CutoutMaskManager.deleteLayoutAnchorSignature(context, targetId)
-    }
-
-    @Test
     fun `getStaticAsset generates and caches 32-bit ARGB bitmap with freeze frame RGB and tuned mask alpha`() {
         val context = RuntimeEnvironment.getApplication()
         val cutoutId = "test_static_asset_cutout"
@@ -299,4 +222,3 @@ class CutoutMaskManagerTest {
         assertNull(CutoutMaskManager.getStaticAsset(context, cutoutId))
     }
 }
-

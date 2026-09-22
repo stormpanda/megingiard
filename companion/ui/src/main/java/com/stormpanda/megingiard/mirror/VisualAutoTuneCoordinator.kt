@@ -394,16 +394,11 @@ internal object VisualAutoTuneCoordinator {
 
                         val signature = result.anchorSignature
                         val hasValidSignature = signature != null && signature.points.isNotEmpty()
-                        if (signature != null && signature.points.isNotEmpty()) {
-                            withContext(Dispatchers.IO) {
-                                CutoutMaskManager.saveLayoutAnchorSignature(
-                                    context = context.applicationContext,
-                                    layoutId = layout.id,
-                                    signature = signature,
-                                )
-                            }
-                        }
-                        val updatedAnchor = layout.visualAnchor.copy(enabled = hasValidSignature)
+                        val updatedAnchor =
+                            layout.visualAnchor.copy(
+                                enabled = hasValidSignature,
+                                signature = if (hasValidSignature) signature else null,
+                            )
                         val updatedLayout = layout.copy(visualAnchor = updatedAnchor)
                         MacroPadState.updateLayout(updatedLayout)
                         _lastTunedPercent.value = null
