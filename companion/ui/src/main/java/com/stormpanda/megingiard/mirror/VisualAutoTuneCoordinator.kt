@@ -442,6 +442,20 @@ internal object VisualAutoTuneCoordinator {
 
                         val signature = result.anchorSignature
                         val hasValidSignature = signature != null && signature.points.isNotEmpty()
+                        if (hasValidSignature) {
+                            val refColorFrame = result.referenceColorFrame
+                            val freezeBitmap =
+                                if (refColorFrame != null && refColorFrame.size == cropW * cropH) {
+                                    Bitmap.createBitmap(refColorFrame, cropW, cropH, Bitmap.Config.ARGB_8888)
+                                } else if (sampledFrames.isNotEmpty()) {
+                                    Bitmap.createBitmap(sampledFrames.first(), cropW, cropH, Bitmap.Config.ARGB_8888)
+                                } else {
+                                    null
+                                }
+                            if (freezeBitmap != null) {
+                                CutoutMaskManager.saveFreezeFrame(context.applicationContext, layout.id, freezeBitmap)
+                            }
+                        }
                         val updatedAnchor =
                             layout.visualAnchor.copy(
                                 enabled = hasValidSignature,

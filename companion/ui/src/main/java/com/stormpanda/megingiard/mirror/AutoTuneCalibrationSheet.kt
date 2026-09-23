@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -47,6 +48,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
@@ -73,6 +75,7 @@ private val BUTTON_HEIGHT = 44.dp
 private val BUTTON_CORNER_RADIUS = 10.dp
 private val BUTTON_ICON_SIZE = 18.dp
 private val HINT_ICON_SIZE = 26.dp
+private val INSTRUCTION_BOX_MIN_HEIGHT = 56.dp
 private val SPACING_S = 8.dp
 private val SPACING_M = 12.dp
 private val SPACING_L = 16.dp
@@ -197,6 +200,7 @@ internal fun AutoTuneCalibrationSheet(
                     modifier =
                         Modifier
                             .fillMaxWidth()
+                            .heightIn(min = INSTRUCTION_BOX_MIN_HEIGHT)
                             .clip(RoundedCornerShape(BUTTON_CORNER_RADIUS))
                             .background(colors.surfaceVariant.copy(alpha = INSTRUCTION_BG_ALPHA))
                             .padding(SPACING_M),
@@ -214,6 +218,9 @@ internal fun AutoTuneCalibrationSheet(
                         color = colors.onSurfaceSecondary,
                         style = MaterialTheme.typography.bodySmall,
                         textAlign = TextAlign.Start,
+                        minLines = 2,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
                 }

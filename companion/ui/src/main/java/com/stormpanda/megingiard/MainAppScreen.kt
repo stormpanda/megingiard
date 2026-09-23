@@ -82,6 +82,10 @@ import com.stormpanda.megingiard.macropad.TouchRecordingManager
 import com.stormpanda.megingiard.macropad.TouchRecordingSheet
 import com.stormpanda.megingiard.macropad.TouchRecordingState
 import com.stormpanda.megingiard.macropad.triggerHapticFeedback
+import com.stormpanda.megingiard.mirror.AnchorPositioningCoordinator
+import com.stormpanda.megingiard.mirror.AnchorPositioningSheet
+import com.stormpanda.megingiard.mirror.AnchorTestCoordinator
+import com.stormpanda.megingiard.mirror.AnchorTestingSheet
 import com.stormpanda.megingiard.mirror.AutoTuneCalibrationSheet
 import com.stormpanda.megingiard.mirror.CutoutLayoutEditor
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
@@ -97,6 +101,8 @@ import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.IntegrationHomeScreen
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.PrimaryModalPayload
+import com.stormpanda.megingiard.ui.PrimaryModalType
 import com.stormpanda.megingiard.ui.PrivdReconnectPromptDialog
 import com.stormpanda.megingiard.ui.QuickMenuBar
 import com.stormpanda.megingiard.ui.QuickMenuBarLayout
@@ -455,9 +461,35 @@ fun MainAppScreen() {
                 )
             }
 
+            val activePrimaryModal by AppStateManager.activePrimaryModal.collectAsStateWithLifecycle()
+            val isAnchorPositioning = activePrimaryModal?.type == PrimaryModalType.ANCHOR_SELECTOR
+            if (isAnchorPositioning) {
+                val payload = activePrimaryModal?.payload as? PrimaryModalPayload.AnchorSelector
+                if (payload != null) {
+                    AnchorPositioningSheet(
+                        layoutId = payload.layoutId,
+                        onDone = {
+                            AnchorPositioningCoordinator.requestDone()
+                        },
+                    )
+                }
+            }
+
+            val isAnchorTesting by AnchorTestCoordinator.isTesting.collectAsStateWithLifecycle()
+            if (isAnchorTesting) {
+                AnchorTestingSheet(
+                    onDone = {
+                        AnchorTestCoordinator.stopTesting()
+                    },
+                )
+            }
+
             // Quick Menu Bar + Quick Menu overlay — rendered on secondary display,
-            // suppressed only when fullscreen keyboard/mouse is active or auto-tuning is active.
-            if (!isFullscreenKeyboardActive && !isFullscreenMouseActive && !isAutoTuning) {
+            // suppressed only when fullscreen keyboard/mouse is active, auto-tuning is active,
+            // anchor positioning is active, or anchor testing is active.
+            if (!isFullscreenKeyboardActive && !isFullscreenMouseActive && !isAutoTuning &&
+                !isAnchorPositioning && !isAnchorTesting
+            ) {
                 QuickMenuBar()
             }
 

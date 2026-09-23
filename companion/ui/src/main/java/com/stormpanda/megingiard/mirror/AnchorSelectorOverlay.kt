@@ -19,6 +19,7 @@ import androidx.compose.material.icons.rounded.FilterCenterFocus
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -102,6 +103,20 @@ fun AnchorSelectorOverlay(
     val firstItemFocusRequester = remember { FocusRequester() }
     val collapseButtonFocusRequester = remember { FocusRequester() }
     val activeToast by DialogToastManager.currentToast.collectAsStateWithLifecycle()
+    val isDoneRequested by AnchorPositioningCoordinator.isDoneRequested.collectAsStateWithLifecycle()
+
+    LaunchedEffect(isDoneRequested) {
+        if (isDoneRequested) {
+            AnchorPositioningCoordinator.consumeDoneRequest()
+            showCalibratePrompt = true
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            AnchorPositioningCoordinator.consumeDoneRequest()
+        }
+    }
 
     LaunchedEffect(Unit) {
         try {

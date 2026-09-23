@@ -21,6 +21,7 @@ import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
@@ -42,6 +43,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.mirror.AnchorTestCoordinator
 import com.stormpanda.megingiard.mirror.VisualAutoTuneCoordinator
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.GamepadActionCard
@@ -402,6 +404,16 @@ internal fun AutomaticLayoutSwitchingSubPageContent(
             )
 
             if (isCalibrated && signature != null && signature.points.isNotEmpty()) {
+                GamepadActionCard(
+                    title = stringResource(R.string.layout_settings_visual_anchor_test_title),
+                    description = stringResource(R.string.layout_settings_visual_anchor_test_desc),
+                    icon = Icons.Rounded.Visibility,
+                    itemKey = "layout_${layout.id}_test_anchor",
+                    onClick = {
+                        AnchorTestCoordinator.startTesting(context, layout)
+                    },
+                )
+
                 GamepadInfoBox(
                     text = stringResource(R.string.layout_settings_visual_anchor_status_calibrated, signature.points.size),
                     icon = Icons.Rounded.Anchor,
