@@ -755,6 +755,7 @@ Open Settings to create a layout.</string>
     <string name="mirror_anchor_selector_done">完成</string>
     <string name="mirror_calibration_pause">暫停</string>
     <string name="mirror_calibration_resume">繼續</string>
+    <string name="mirror_calibration_reset">重設校準</string>
     <string name="mirror_calibration_paused_badge">已暫停</string>
     <string name="mirror_calibration_paused_instruction">校準已暫停。請變更遊戲場景，返回錨點畫面，然後點擊繼續。</string>
     <string name="mirror_anchor_calibrate_prompt_title">校準參考錨點？</string>

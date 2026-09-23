@@ -756,6 +756,7 @@ Open Settings to create a layout.</string>
     <string name="mirror_anchor_selector_done">Fertig</string>
     <string name="mirror_calibration_pause">Pausieren</string>
     <string name="mirror_calibration_resume">Fortsetzen</string>
+    <string name="mirror_calibration_reset">Kalibrierung zurücksetzen</string>
     <string name="mirror_calibration_paused_badge">PAUSIERT</string>
     <string name="mirror_calibration_paused_instruction">Kalibrierung pausiert. Ändere die Spielszene, kehre zu deiner Anker-Ansicht zurück und tippe auf Fortsetzen.</string>
     <string name="mirror_anchor_calibrate_prompt_title">Referenzanker kalibrieren?</string>

@@ -79,6 +79,9 @@ internal object VisualAutoTuneCoordinator {
     @Volatile
     private var isFinishRequested = false
 
+    @Volatile
+    private var isResetRequested = false
+
     private var calibrationJob: Job? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
@@ -102,6 +105,16 @@ internal object VisualAutoTuneCoordinator {
         if (_isCalibrating.value && _canFinish.value) {
             AppLog.i(TAG, "finishCalibration requested by user")
             isFinishRequested = true
+        }
+    }
+
+    /**
+     * Resets currently collected frames and preview state during an active calibration session.
+     */
+    fun resetCalibration() {
+        if (_isCalibrating.value) {
+            AppLog.i(TAG, "resetCalibration requested by user")
+            isResetRequested = true
         }
     }
 
@@ -143,6 +156,7 @@ internal object VisualAutoTuneCoordinator {
         }
 
         isFinishRequested = false
+        isResetRequested = false
         calibrationJob =
             scope.launch {
                 AppLog.i(TAG, "Starting HUD/UI isolation calibration for cutout ${cutout.id}")
@@ -171,6 +185,23 @@ internal object VisualAutoTuneCoordinator {
                         val now = SystemClock.elapsedRealtime()
                         val loopElapsed = now - lastLoopTime
                         lastLoopTime = now
+
+                        if (isResetRequested) {
+                            isResetRequested = false
+                            AppLog.i(TAG, "Resetting active cutout calibration session samples")
+                            sampledFrames.clear()
+                            tracker = null
+                            previewPixels = null
+                            cutoutFreezeBitmap?.let {
+                                if (!it.isRecycled) it.recycle()
+                            }
+                            cutoutFreezeBitmap = null
+                            totalSampledDurationMs = 0L
+                            _sampleCount.value = 0
+                            _canFinish.value = false
+                            _dynamicPercent.value = 0
+                            setPreviewBitmap(null)
+                        }
 
                         if (_isPaused.value) {
                             delay(SAMPLE_INTERVAL_MS)
@@ -340,6 +371,7 @@ internal object VisualAutoTuneCoordinator {
         }
 
         isFinishRequested = false
+        isResetRequested = false
         calibrationJob =
             scope.launch {
                 AppLog.i(TAG, "Starting layout anchor calibration for layout ${layout.id}")
@@ -368,6 +400,19 @@ internal object VisualAutoTuneCoordinator {
                         val now = SystemClock.elapsedRealtime()
                         val loopElapsed = now - lastLoopTime
                         lastLoopTime = now
+
+                        if (isResetRequested) {
+                            isResetRequested = false
+                            AppLog.i(TAG, "Resetting layout anchor calibration session samples")
+                            sampledFrames.clear()
+                            tracker = null
+                            previewPixels = null
+                            totalSampledDurationMs = 0L
+                            _sampleCount.value = 0
+                            _canFinish.value = false
+                            _dynamicPercent.value = 0
+                            setPreviewBitmap(null)
+                        }
 
                         if (_isPaused.value) {
                             delay(SAMPLE_INTERVAL_MS)
@@ -520,6 +565,8 @@ internal object VisualAutoTuneCoordinator {
             AppLog.i(TAG, "Cancelling active visual calibration (resumeSuspended=$resumeSuspended)")
             calibrationJob?.cancel()
         }
+        isFinishRequested = false
+        isResetRequested = false
         calibrationJob = null
         setPreviewBitmap(null)
         _isCalibrating.value = false

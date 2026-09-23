@@ -41,4 +41,12 @@ class VisualAutoTuneCoordinatorTest {
         assertFalse(VisualAutoTuneCoordinator.isCalibrating.value)
         assertFalse(VisualAutoTuneCoordinator.isPaused.value)
     }
+
+    @Test
+    fun `resetCalibration does not change state when not calibrating`() {
+        assertFalse(VisualAutoTuneCoordinator.isCalibrating.value)
+        VisualAutoTuneCoordinator.resetCalibration()
+        assertFalse(VisualAutoTuneCoordinator.isCalibrating.value)
+        assertFalse(VisualAutoTuneCoordinator.isPaused.value)
+    }
 }

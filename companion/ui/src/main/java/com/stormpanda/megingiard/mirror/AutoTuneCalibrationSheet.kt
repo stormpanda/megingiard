@@ -4,6 +4,8 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +25,7 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -34,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,6 +48,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -54,6 +59,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.PulsingRecordingDot
+import com.stormpanda.megingiard.macropad.triggerHapticFeedback
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.blockPointerEvents
 import com.stormpanda.megingiard.ui.rememberBezelBrush
@@ -74,6 +80,8 @@ private val PILL_VERTICAL_PADDING = 4.dp
 private val BUTTON_HEIGHT = 44.dp
 private val BUTTON_CORNER_RADIUS = 10.dp
 private val BUTTON_ICON_SIZE = 18.dp
+private val RESET_BUTTON_SIZE = 28.dp
+private val RESET_ICON_SIZE = 16.dp
 private val HINT_ICON_SIZE = 26.dp
 private val INSTRUCTION_BOX_MIN_HEIGHT = 56.dp
 private val SPACING_S = 8.dp
@@ -104,6 +112,7 @@ internal fun AutoTuneCalibrationSheet(
 ) {
     val colors = LocalAppColors.current
     val bezelBrush = rememberBezelBrush()
+    val context = LocalContext.current
 
     val calibrationType by VisualAutoTuneCoordinator.calibrationType.collectAsStateWithLifecycle()
     val canFinish by VisualAutoTuneCoordinator.canFinish.collectAsStateWithLifecycle()
@@ -189,6 +198,37 @@ internal fun AutoTuneCalibrationSheet(
                         fontWeight = FontWeight.SemiBold,
                     )
                     Spacer(Modifier.weight(1f))
+
+                    // Reset button (circular icon button)
+                    Box(
+                        modifier =
+                            Modifier
+                                .size(RESET_BUTTON_SIZE)
+                                .clip(CircleShape)
+                                .background(colors.surfaceVariant)
+                                .border(
+                                    width = BORDER_WIDTH,
+                                    color = colors.divider,
+                                    shape = CircleShape,
+                                ).clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    onClick = {
+                                        triggerHapticFeedback(context)
+                                        VisualAutoTuneCoordinator.resetCalibration()
+                                    },
+                                ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Refresh,
+                            contentDescription = stringResource(R.string.mirror_calibration_reset),
+                            tint = colors.onSurfaceSecondary,
+                            modifier = Modifier.size(RESET_ICON_SIZE),
+                        )
+                    }
+
+                    Spacer(Modifier.width(SPACING_S))
 
                     SampleCounterBadge()
                 }

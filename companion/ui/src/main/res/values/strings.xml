@@ -756,6 +756,7 @@ Open Settings to create a layout.</string>
     <string name="mirror_anchor_selector_done">Done</string>
     <string name="mirror_calibration_pause">Pause</string>
     <string name="mirror_calibration_resume">Resume</string>
+    <string name="mirror_calibration_reset">Reset calibration</string>
     <string name="mirror_calibration_paused_badge">PAUSED</string>
     <string name="mirror_calibration_paused_instruction">Calibration paused. Change game scenery, return to your anchor view, then tap Resume.</string>
     <string name="mirror_anchor_calibrate_prompt_title">Calibrate Reference Anchor?</string>
