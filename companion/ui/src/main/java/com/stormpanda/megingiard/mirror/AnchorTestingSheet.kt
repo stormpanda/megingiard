@@ -49,6 +49,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -105,12 +106,6 @@ private val PROBE_MATCHED_COLOR = Color(0xFF00E676)
 private val PROBE_MISMATCHED_COLOR = Color(0xFFFF5252)
 private val PROBE_OUTLINE_COLOR = Color(0xCC000000)
 
-private data class ProbePointVisual(
-    val u: Float,
-    val v: Float,
-    val color: Color,
-)
-
 /**
  * Secondary display diagnostic overlay rendered on Display 4 during active anchor testing.
  *
@@ -134,24 +129,6 @@ internal fun AnchorTestingSheet(onDone: () -> Unit) {
     val targetPoints by AnchorTestCoordinator.targetPoints.collectAsStateWithLifecycle()
 
     var showProbes by rememberSaveable { mutableStateOf(true) }
-
-    val targetProbePoints =
-        remember(targetPoints, colors.accent) {
-            targetPoints.map { pt ->
-                ProbePointVisual(u = pt.u, v = pt.v, color = colors.accent)
-            }
-        }
-
-    val liveProbePoints =
-        remember(pointMatches) {
-            pointMatches.map { match ->
-                ProbePointVisual(
-                    u = match.point.u,
-                    v = match.point.v,
-                    color = if (match.isMatch) PROBE_MATCHED_COLOR else PROBE_MISMATCHED_COLOR,
-                )
-            }
-        }
 
     BackHandler {
         AppLog.i(TAG, "BackHandler triggered during anchor testing")
@@ -338,8 +315,24 @@ internal fun AnchorTestingSheet(onDone: () -> Unit) {
                         bitmap = referenceBitmap,
                         bezelBrush = bezelBrush,
                         isHighlightBorder = false,
-                        probePoints = targetProbePoints,
                         showProbes = showProbes,
+                        drawProbes = { fw, fh, left, top ->
+                            val outlineRadius = PROBE_OUTLINE_RADIUS.toPx()
+                            val fillRadius = PROBE_FILL_RADIUS.toPx()
+                            for (pt in targetPoints) {
+                                drawProbeDot(
+                                    u = pt.u,
+                                    v = pt.v,
+                                    fillColor = colors.accent,
+                                    fittedWidth = fw,
+                                    fittedHeight = fh,
+                                    left = left,
+                                    top = top,
+                                    outlineRadius = outlineRadius,
+                                    fillRadius = fillRadius,
+                                )
+                            }
+                        },
                         modifier = Modifier.weight(1f),
                     )
 
@@ -349,8 +342,25 @@ internal fun AnchorTestingSheet(onDone: () -> Unit) {
                         bitmap = liveCropBitmap,
                         bezelBrush = bezelBrush,
                         isHighlightBorder = isAnchorActive,
-                        probePoints = liveProbePoints,
                         showProbes = showProbes,
+                        drawProbes = { fw, fh, left, top ->
+                            val outlineRadius = PROBE_OUTLINE_RADIUS.toPx()
+                            val fillRadius = PROBE_FILL_RADIUS.toPx()
+                            for (match in pointMatches) {
+                                val color = if (match.isMatch) PROBE_MATCHED_COLOR else PROBE_MISMATCHED_COLOR
+                                drawProbeDot(
+                                    u = match.point.u,
+                                    v = match.point.v,
+                                    fillColor = color,
+                                    fittedWidth = fw,
+                                    fittedHeight = fh,
+                                    left = left,
+                                    top = top,
+                                    outlineRadius = outlineRadius,
+                                    fillRadius = fillRadius,
+                                )
+                            }
+                        },
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -419,9 +429,9 @@ private fun AnchorPreviewCard(
     bitmap: Bitmap?,
     bezelBrush: Brush,
     isHighlightBorder: Boolean,
-    probePoints: List<ProbePointVisual>?,
     showProbes: Boolean,
     modifier: Modifier = Modifier,
+    drawProbes: (DrawScope.(fittedWidth: Float, fittedHeight: Float, left: Float, top: Float) -> Unit)? = null,
 ) {
     val colors = LocalAppColors.current
     val checkerColor1 = colors.surfaceVariant
@@ -474,7 +484,7 @@ private fun AnchorPreviewCard(
                         .padding(SPACING_S)
                         .drawWithContent {
                             drawContent()
-                            if (showProbes && !probePoints.isNullOrEmpty()) {
+                            if (showProbes && drawProbes != null) {
                                 val bw = bitmap.width.toFloat()
                                 val bh = bitmap.height.toFloat()
                                 if (bw > 0f && bh > 0f) {
@@ -483,25 +493,7 @@ private fun AnchorPreviewCard(
                                     val fittedHeight = bh * scale
                                     val left = (size.width - fittedWidth) / 2f
                                     val top = (size.height - fittedHeight) / 2f
-
-                                    val outlineRadius = PROBE_OUTLINE_RADIUS.toPx()
-                                    val fillRadius = PROBE_FILL_RADIUS.toPx()
-
-                                    for (probe in probePoints) {
-                                        val cx = left + probe.u * fittedWidth
-                                        val cy = top + probe.v * fittedHeight
-                                        val center = Offset(cx, cy)
-                                        drawCircle(
-                                            color = PROBE_OUTLINE_COLOR,
-                                            radius = outlineRadius,
-                                            center = center,
-                                        )
-                                        drawCircle(
-                                            color = probe.color,
-                                            radius = fillRadius,
-                                            center = center,
-                                        )
-                                    }
+                                    drawProbes(fittedWidth, fittedHeight, left, top)
                                 }
                             }
                         },
@@ -527,4 +519,30 @@ private fun AnchorPreviewCard(
             )
         }
     }
+}
+
+private fun DrawScope.drawProbeDot(
+    u: Float,
+    v: Float,
+    fillColor: Color,
+    fittedWidth: Float,
+    fittedHeight: Float,
+    left: Float,
+    top: Float,
+    outlineRadius: Float,
+    fillRadius: Float,
+) {
+    val cx = left + u * fittedWidth
+    val cy = top + v * fittedHeight
+    val center = Offset(cx, cy)
+    drawCircle(
+        color = PROBE_OUTLINE_COLOR,
+        radius = outlineRadius,
+        center = center,
+    )
+    drawCircle(
+        color = fillColor,
+        radius = fillRadius,
+        center = center,
+    )
 }
