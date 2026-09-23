@@ -583,6 +583,52 @@ class CutoutAutoTunerTest {
     }
 
     @Test
+    fun `analyze populates calibratedFrame with transparent background and opaque stationary pixels`() {
+        val width = 10
+        val height = 10
+        val count = width * height
+        val frames = mutableListOf<IntArray>()
+
+        // 8 frames:
+        // Top 4 rows (pixels 0 until 40) are stationary Gold (255, 215, 0)
+        // Bottom 6 rows change color wildly between frames (0, 0, 0) and (255, 255, 255)
+        for (f in 0 until 8) {
+            val frame = IntArray(count)
+            val bgCol = if (f % 2 == 0) colorArgb(0, 0, 0) else colorArgb(255, 255, 255)
+            for (i in 0 until count) {
+                frame[i] =
+                    if (i < 40) {
+                        colorArgb(255, 215, 0)
+                    } else {
+                        bgCol
+                    }
+            }
+            frames.add(frame)
+        }
+
+        val result = CutoutAutoTuner.analyze(frames, width, height)
+        val calibrated = result.calibratedFrame
+        assertTrue("calibratedFrame must not be null", calibrated != null)
+        assertEquals(count, calibrated!!.size)
+
+        // Pixel in row 1 (deep inside stationary gold region): must be fully opaque Gold
+        val deepPixel = calibrated[15]
+        val deepAlpha = (deepPixel ushr 24) and 0xFF
+        val deepRed = (deepPixel shr 16) and 0xFF
+        val deepGreen = (deepPixel shr 8) and 0xFF
+        val deepBlue = deepPixel and 0xFF
+        assertEquals("Deep stationary pixel must be opaque", 255, deepAlpha)
+        assertEquals("Deep stationary pixel red", 255, deepRed)
+        assertEquals("Deep stationary pixel green", 215, deepGreen)
+        assertEquals("Deep stationary pixel blue", 0, deepBlue)
+
+        // Bottom row pixel (row 9, index 95): moving scenery, must be transparent (alpha == 0)
+        val bottomPixel = calibrated[95]
+        val bottomAlpha = (bottomPixel ushr 24) and 0xFF
+        assertEquals("Moving background pixel must be transparent", 0, bottomAlpha)
+    }
+
+    @Test
     fun `buildMask with sensitivity 0 keeps only zero variance pixels opaque`() {
         val testW = 10
         val testH = 10

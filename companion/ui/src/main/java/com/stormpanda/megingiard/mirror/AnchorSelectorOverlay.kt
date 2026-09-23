@@ -12,10 +12,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Anchor
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.FilterCenterFocus
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -35,6 +39,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
@@ -46,6 +51,7 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.ui.DialogToastManager
 import com.stormpanda.megingiard.ui.DialogToastPill
+import com.stormpanda.megingiard.ui.GamepadConfirmModal
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
 import com.stormpanda.megingiard.ui.firstDeckItem
@@ -54,7 +60,7 @@ import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
 private const val TAG = "AnchorSelectorOverlay"
-private const val MIN_ANCHOR_SIZE = 0.04f
+private const val MIN_ANCHOR_SIZE = 0.01f
 private const val ASO_SCRIM_ALPHA = 0.40f
 private const val ASO_INITIAL_FOCUS_DELAY_MS = 80L
 
@@ -93,9 +99,24 @@ fun AnchorSelectorOverlay(
     val density = LocalDensity.current
 
     var isMinimized by remember { mutableStateOf(false) }
+    var showCalibratePrompt by remember { mutableStateOf(false) }
     val firstItemFocusRequester = remember { FocusRequester() }
     val collapseButtonFocusRequester = remember { FocusRequester() }
     val activeToast by DialogToastManager.currentToast.collectAsStateWithLifecycle()
+    val isDoneRequested by AnchorPositioningCoordinator.isDoneRequested.collectAsStateWithLifecycle()
+
+    LaunchedEffect(isDoneRequested) {
+        if (isDoneRequested) {
+            AnchorPositioningCoordinator.consumeDoneRequest()
+            showCalibratePrompt = true
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            AnchorPositioningCoordinator.consumeDoneRequest()
+        }
+    }
 
     LaunchedEffect(Unit) {
         try {
@@ -115,11 +136,13 @@ fun AnchorSelectorOverlay(
 
     LaunchedEffect(Unit) {
         PrimaryOverlayInputBridge.focusRecoveryEvents.collect { keyCode ->
-            try {
-                firstItemFocusRequester.requestFocus()
-                AppLog.d(TAG, "AnchorSelectorOverlay: focus recovered on keyCode=$keyCode")
-            } catch (_: IllegalStateException) {
-                AppLog.w(TAG, "AnchorSelectorOverlay: focus requester unattached on focus recovery")
+            if (!showCalibratePrompt) {
+                try {
+                    firstItemFocusRequester.requestFocus()
+                    AppLog.d(TAG, "AnchorSelectorOverlay: focus recovered on keyCode=$keyCode")
+                } catch (_: IllegalStateException) {
+                    AppLog.w(TAG, "AnchorSelectorOverlay: focus requester unattached on focus recovery")
+                }
             }
         }
     }
@@ -128,7 +151,7 @@ fun AnchorSelectorOverlay(
     val rootKeyModifier =
         Modifier.onKeyEvent { keyEvent ->
             val keyCode = keyEvent.nativeKeyEvent.keyCode
-            if (keyEvent.type == KeyEventType.KeyUp && isBackKey(keyCode)) {
+            if (keyEvent.type == KeyEventType.KeyUp && isBackKey(keyCode) && !showCalibratePrompt) {
                 onDismiss()
                 true
             } else {
@@ -261,99 +284,102 @@ fun AnchorSelectorOverlay(
         )
 
         // 3. Horizontal and Vertical Edge Resize Handles (Touch)
-        var dragStartX by remember(layoutId) { mutableFloatStateOf(0f) }
-        var dragStartY by remember(layoutId) { mutableFloatStateOf(0f) }
-        var dragStartW by remember(layoutId) { mutableFloatStateOf(0f) }
-        var dragStartH by remember(layoutId) { mutableFloatStateOf(0f) }
         var anchorHToggle by remember(layoutId) { mutableIntStateOf(0) }
         var anchorVToggle by remember(layoutId) { mutableIntStateOf(0) }
 
-        fun captureDragStart() {
-            val crop = getCurrentCrop()
-            dragStartX = crop.x
-            dragStartY = crop.y
-            dragStartW = crop.width
-            dragStartH = crop.height
+        if (effectiveCrop.width >= MIN_TOUCH_CUTOUT_SIZE && effectiveCrop.height >= MIN_TOUCH_CUTOUT_SIZE) {
+            var dragStartX by remember(layoutId) { mutableFloatStateOf(0f) }
+            var dragStartY by remember(layoutId) { mutableFloatStateOf(0f) }
+            var dragStartW by remember(layoutId) { mutableFloatStateOf(0f) }
+            var dragStartH by remember(layoutId) { mutableFloatStateOf(0f) }
+
+            fun captureDragStart() {
+                val crop = getCurrentCrop()
+                dragStartX = crop.x
+                dragStartY = crop.y
+                dragStartW = crop.width
+                dragStartH = crop.height
+            }
+
+            val marginPx = with(density) { ASO_EDGE_HANDLE_MARGIN.toPx() }
+            val touchLengthPx = with(density) { ASO_EDGE_TOUCH_LENGTH.toPx() }
+            val touchThicknessPx = with(density) { ASO_EDGE_TOUCH_THICKNESS.toPx() }
+            val handleThicknessPx = with(density) { ASO_EDGE_HANDLE_THICKNESS.toPx() }
+
+            // Top Edge Handle (Horizontal pill)
+            val topCenterY = anchorTop - marginPx - handleThicknessPx / 2f
+            val topTouchX = (anchorLeft + anchorW / 2f) - touchLengthPx / 2f
+            val topTouchY = topCenterY - touchThicknessPx / 2f
+            AnchorResizeHandleView(
+                offset = IntOffset(topTouchX.roundToInt(), topTouchY.roundToInt()),
+                touchWidth = ASO_EDGE_TOUCH_LENGTH,
+                touchHeight = ASO_EDGE_TOUCH_THICKNESS,
+                handleWidth = ASO_EDGE_HANDLE_LENGTH,
+                handleHeight = ASO_EDGE_HANDLE_THICKNESS,
+                color = colors.accent,
+                onDragStart = { captureDragStart() },
+                onDrag = { _, totalDy ->
+                    val bottom = dragStartY + dragStartH
+                    val newY = (dragStartY + totalDy / screenH).coerceIn(0f, bottom - MIN_TOUCH_CUTOUT_SIZE)
+                    updateAnchorCrop(dragStartX, newY, dragStartW, bottom - newY)
+                },
+            )
+
+            // Bottom Edge Handle (Horizontal pill)
+            val bottomCenterY = anchorTop + anchorH + marginPx + handleThicknessPx / 2f
+            val bottomTouchX = (anchorLeft + anchorW / 2f) - touchLengthPx / 2f
+            val bottomTouchY = bottomCenterY - touchThicknessPx / 2f
+            AnchorResizeHandleView(
+                offset = IntOffset(bottomTouchX.roundToInt(), bottomTouchY.roundToInt()),
+                touchWidth = ASO_EDGE_TOUCH_LENGTH,
+                touchHeight = ASO_EDGE_TOUCH_THICKNESS,
+                handleWidth = ASO_EDGE_HANDLE_LENGTH,
+                handleHeight = ASO_EDGE_HANDLE_THICKNESS,
+                color = colors.accent,
+                onDragStart = { captureDragStart() },
+                onDrag = { _, totalDy ->
+                    val newH = ((dragStartY + dragStartH + totalDy / screenH).coerceIn(dragStartY + MIN_TOUCH_CUTOUT_SIZE, 1f)) - dragStartY
+                    updateAnchorCrop(dragStartX, dragStartY, dragStartW, newH)
+                },
+            )
+
+            // Left Edge Handle (Vertical pill)
+            val leftCenterX = anchorLeft - marginPx - handleThicknessPx / 2f
+            val leftTouchX = leftCenterX - touchThicknessPx / 2f
+            val leftTouchY = (anchorTop + anchorH / 2f) - touchLengthPx / 2f
+            AnchorResizeHandleView(
+                offset = IntOffset(leftTouchX.roundToInt(), leftTouchY.roundToInt()),
+                touchWidth = ASO_EDGE_TOUCH_THICKNESS,
+                touchHeight = ASO_EDGE_TOUCH_LENGTH,
+                handleWidth = ASO_EDGE_HANDLE_THICKNESS,
+                handleHeight = ASO_EDGE_HANDLE_LENGTH,
+                color = colors.accent,
+                onDragStart = { captureDragStart() },
+                onDrag = { totalDx, _ ->
+                    val right = dragStartX + dragStartW
+                    val newX = (dragStartX + totalDx / screenW).coerceIn(0f, right - MIN_TOUCH_CUTOUT_SIZE)
+                    updateAnchorCrop(newX, dragStartY, right - newX, dragStartH)
+                },
+            )
+
+            // Right Edge Handle (Vertical pill)
+            val rightCenterX = anchorLeft + anchorW + marginPx + handleThicknessPx / 2f
+            val rightTouchX = rightCenterX - touchThicknessPx / 2f
+            val rightTouchY = (anchorTop + anchorH / 2f) - touchLengthPx / 2f
+            AnchorResizeHandleView(
+                offset = IntOffset(rightTouchX.roundToInt(), rightTouchY.roundToInt()),
+                touchWidth = ASO_EDGE_TOUCH_THICKNESS,
+                touchHeight = ASO_EDGE_TOUCH_LENGTH,
+                handleWidth = ASO_EDGE_HANDLE_THICKNESS,
+                handleHeight = ASO_EDGE_HANDLE_LENGTH,
+                color = colors.accent,
+                onDragStart = { captureDragStart() },
+                onDrag = { totalDx, _ ->
+                    val newW = ((dragStartX + dragStartW + totalDx / screenW).coerceIn(dragStartX + MIN_TOUCH_CUTOUT_SIZE, 1f)) - dragStartX
+                    updateAnchorCrop(dragStartX, dragStartY, newW, dragStartH)
+                },
+            )
         }
-
-        val marginPx = with(density) { ASO_EDGE_HANDLE_MARGIN.toPx() }
-        val touchLengthPx = with(density) { ASO_EDGE_TOUCH_LENGTH.toPx() }
-        val touchThicknessPx = with(density) { ASO_EDGE_TOUCH_THICKNESS.toPx() }
-        val handleThicknessPx = with(density) { ASO_EDGE_HANDLE_THICKNESS.toPx() }
-
-        // Top Edge Handle (Horizontal pill)
-        val topCenterY = anchorTop - marginPx - handleThicknessPx / 2f
-        val topTouchX = (anchorLeft + anchorW / 2f) - touchLengthPx / 2f
-        val topTouchY = topCenterY - touchThicknessPx / 2f
-        AnchorResizeHandleView(
-            offset = IntOffset(topTouchX.roundToInt(), topTouchY.roundToInt()),
-            touchWidth = ASO_EDGE_TOUCH_LENGTH,
-            touchHeight = ASO_EDGE_TOUCH_THICKNESS,
-            handleWidth = ASO_EDGE_HANDLE_LENGTH,
-            handleHeight = ASO_EDGE_HANDLE_THICKNESS,
-            color = colors.accent,
-            onDragStart = { captureDragStart() },
-            onDrag = { _, totalDy ->
-                val bottom = dragStartY + dragStartH
-                val newY = (dragStartY + totalDy / screenH).coerceIn(0f, bottom - MIN_ANCHOR_SIZE)
-                updateAnchorCrop(dragStartX, newY, dragStartW, bottom - newY)
-            },
-        )
-
-        // Bottom Edge Handle (Horizontal pill)
-        val bottomCenterY = anchorTop + anchorH + marginPx + handleThicknessPx / 2f
-        val bottomTouchX = (anchorLeft + anchorW / 2f) - touchLengthPx / 2f
-        val bottomTouchY = bottomCenterY - touchThicknessPx / 2f
-        AnchorResizeHandleView(
-            offset = IntOffset(bottomTouchX.roundToInt(), bottomTouchY.roundToInt()),
-            touchWidth = ASO_EDGE_TOUCH_LENGTH,
-            touchHeight = ASO_EDGE_TOUCH_THICKNESS,
-            handleWidth = ASO_EDGE_HANDLE_LENGTH,
-            handleHeight = ASO_EDGE_HANDLE_THICKNESS,
-            color = colors.accent,
-            onDragStart = { captureDragStart() },
-            onDrag = { _, totalDy ->
-                val newH = ((dragStartY + dragStartH + totalDy / screenH).coerceIn(dragStartY + MIN_ANCHOR_SIZE, 1f)) - dragStartY
-                updateAnchorCrop(dragStartX, dragStartY, dragStartW, newH)
-            },
-        )
-
-        // Left Edge Handle (Vertical pill)
-        val leftCenterX = anchorLeft - marginPx - handleThicknessPx / 2f
-        val leftTouchX = leftCenterX - touchThicknessPx / 2f
-        val leftTouchY = (anchorTop + anchorH / 2f) - touchLengthPx / 2f
-        AnchorResizeHandleView(
-            offset = IntOffset(leftTouchX.roundToInt(), leftTouchY.roundToInt()),
-            touchWidth = ASO_EDGE_TOUCH_THICKNESS,
-            touchHeight = ASO_EDGE_TOUCH_LENGTH,
-            handleWidth = ASO_EDGE_HANDLE_THICKNESS,
-            handleHeight = ASO_EDGE_HANDLE_LENGTH,
-            color = colors.accent,
-            onDragStart = { captureDragStart() },
-            onDrag = { totalDx, _ ->
-                val right = dragStartX + dragStartW
-                val newX = (dragStartX + totalDx / screenW).coerceIn(0f, right - MIN_ANCHOR_SIZE)
-                updateAnchorCrop(newX, dragStartY, right - newX, dragStartH)
-            },
-        )
-
-        // Right Edge Handle (Vertical pill)
-        val rightCenterX = anchorLeft + anchorW + marginPx + handleThicknessPx / 2f
-        val rightTouchX = rightCenterX - touchThicknessPx / 2f
-        val rightTouchY = (anchorTop + anchorH / 2f) - touchLengthPx / 2f
-        AnchorResizeHandleView(
-            offset = IntOffset(rightTouchX.roundToInt(), rightTouchY.roundToInt()),
-            touchWidth = ASO_EDGE_TOUCH_THICKNESS,
-            touchHeight = ASO_EDGE_TOUCH_LENGTH,
-            handleWidth = ASO_EDGE_HANDLE_THICKNESS,
-            handleHeight = ASO_EDGE_HANDLE_LENGTH,
-            color = colors.accent,
-            onDragStart = { captureDragStart() },
-            onDrag = { totalDx, _ ->
-                val newW = ((dragStartX + dragStartW + totalDx / screenW).coerceIn(dragStartX + MIN_ANCHOR_SIZE, 1f)) - dragStartX
-                updateAnchorCrop(dragStartX, dragStartY, newW, dragStartH)
-            },
-        )
 
         // 4. Floating Controller Toolbox (Right Side)
         ToolboxContainer(
@@ -409,7 +435,7 @@ fun AnchorSelectorOverlay(
                 actionBadge = stringResource(R.string.gamepad_action_save),
                 isAccent = true,
                 cardBgColor = colors.accent.copy(alpha = 0.20f),
-                onClick = onDismiss,
+                onClick = { showCalibratePrompt = true },
             )
         }
 
@@ -421,6 +447,37 @@ fun AnchorSelectorOverlay(
                     .align(Alignment.TopCenter)
                     .padding(top = ASO_TOAST_TOP_PADDING),
         )
+
+        // 6. Post-Positioning Calibrate Now Prompt
+        if (showCalibratePrompt) {
+            val context = LocalContext.current
+            GamepadConfirmModal(
+                visible = true,
+                title = stringResource(R.string.mirror_anchor_calibrate_prompt_title),
+                description = stringResource(R.string.mirror_anchor_calibrate_prompt_message),
+                confirmTitle = stringResource(R.string.mirror_anchor_calibrate_prompt_confirm),
+                confirmDescription = stringResource(R.string.mirror_anchor_calibrate_prompt_confirm_desc),
+                confirmIcon = Icons.Rounded.Tune,
+                dismissTitle = stringResource(R.string.mirror_anchor_calibrate_prompt_dismiss),
+                dismissDescription = stringResource(R.string.mirror_anchor_calibrate_prompt_dismiss_desc),
+                dismissIcon = Icons.Rounded.Close,
+                headerIcon = Icons.Rounded.Anchor,
+                onConfirm = {
+                    showCalibratePrompt = false
+                    val layoutToCalibrate = currentLayoutState.value
+                    onDismiss()
+                    VisualAutoTuneCoordinator.startLayoutAnchorCalibration(context, layoutToCalibrate)
+                },
+                onDismissAction = {
+                    showCalibratePrompt = false
+                    onDismiss()
+                },
+                onCancel = {
+                    showCalibratePrompt = false
+                    onDismiss()
+                },
+            )
+        }
     }
 }
 

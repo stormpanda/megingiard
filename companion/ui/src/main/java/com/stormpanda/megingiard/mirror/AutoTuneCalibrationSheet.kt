@@ -4,6 +4,8 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,13 +14,18 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -30,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,15 +48,18 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.PulsingRecordingDot
+import com.stormpanda.megingiard.macropad.triggerHapticFeedback
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.blockPointerEvents
 import com.stormpanda.megingiard.ui.rememberBezelBrush
@@ -69,7 +80,10 @@ private val PILL_VERTICAL_PADDING = 4.dp
 private val BUTTON_HEIGHT = 44.dp
 private val BUTTON_CORNER_RADIUS = 10.dp
 private val BUTTON_ICON_SIZE = 18.dp
+private val RESET_BUTTON_SIZE = 28.dp
+private val RESET_ICON_SIZE = 16.dp
 private val HINT_ICON_SIZE = 26.dp
+private val INSTRUCTION_BOX_MIN_HEIGHT = 56.dp
 private val SPACING_S = 8.dp
 private val SPACING_M = 12.dp
 private val SPACING_L = 16.dp
@@ -77,6 +91,7 @@ private const val SCRIM_ALPHA = 0.55f
 private const val INSTRUCTION_BG_ALPHA = 0.5f
 private const val BADGE_BG_ALPHA = 0.75f
 private const val DISABLED_CONTENT_ALPHA = 0.5f
+private const val PAUSED_SCRIM_ALPHA = 0.50f
 private val BORDER_WIDTH = 1.dp
 private val LOADING_STROKE_WIDTH = 2.dp
 private val LOADING_INDICATOR_SIZE = 18.dp
@@ -97,9 +112,11 @@ internal fun AutoTuneCalibrationSheet(
 ) {
     val colors = LocalAppColors.current
     val bezelBrush = rememberBezelBrush()
+    val context = LocalContext.current
 
     val calibrationType by VisualAutoTuneCoordinator.calibrationType.collectAsStateWithLifecycle()
     val canFinish by VisualAutoTuneCoordinator.canFinish.collectAsStateWithLifecycle()
+    val isPaused by VisualAutoTuneCoordinator.isPaused.collectAsStateWithLifecycle()
 
     val title =
         when (calibrationType) {
@@ -108,9 +125,13 @@ internal fun AutoTuneCalibrationSheet(
         }
 
     val instruction =
-        when (calibrationType) {
-            CalibrationType.LAYOUT_ANCHOR -> stringResource(R.string.mirror_anchor_calibration_instruction)
-            else -> stringResource(R.string.mirror_calibration_instruction_preview)
+        if (isPaused) {
+            stringResource(R.string.mirror_calibration_paused_instruction)
+        } else {
+            when (calibrationType) {
+                CalibrationType.LAYOUT_ANCHOR -> stringResource(R.string.mirror_anchor_calibration_instruction)
+                else -> stringResource(R.string.mirror_calibration_instruction_preview)
+            }
         }
 
     BackHandler {
@@ -155,10 +176,20 @@ internal fun AutoTuneCalibrationSheet(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    PulsingRecordingDot(
-                        color = colors.accent,
-                        modifier = Modifier.size(PULSE_DOT_SIZE),
-                    )
+                    if (isPaused) {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .size(PULSE_DOT_SIZE)
+                                    .clip(CircleShape)
+                                    .background(colors.onSurfaceSecondary),
+                        )
+                    } else {
+                        PulsingRecordingDot(
+                            color = colors.accent,
+                            modifier = Modifier.size(PULSE_DOT_SIZE),
+                        )
+                    }
                     Spacer(Modifier.width(SPACING_M))
                     Text(
                         text = title,
@@ -168,17 +199,49 @@ internal fun AutoTuneCalibrationSheet(
                     )
                     Spacer(Modifier.weight(1f))
 
+                    // Reset button (circular icon button)
+                    Box(
+                        modifier =
+                            Modifier
+                                .size(RESET_BUTTON_SIZE)
+                                .clip(CircleShape)
+                                .background(colors.surfaceVariant)
+                                .border(
+                                    width = BORDER_WIDTH,
+                                    color = colors.divider,
+                                    shape = CircleShape,
+                                ).clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    onClick = {
+                                        triggerHapticFeedback(context)
+                                        VisualAutoTuneCoordinator.resetCalibration()
+                                    },
+                                ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Refresh,
+                            contentDescription = stringResource(R.string.mirror_calibration_reset),
+                            tint = colors.onSurfaceSecondary,
+                            modifier = Modifier.size(RESET_ICON_SIZE),
+                        )
+                    }
+
+                    Spacer(Modifier.width(SPACING_S))
+
                     SampleCounterBadge()
                 }
 
                 // ── Live Preview Box with Checkerboard Transparency Background ──
-                CalibrationPreviewBox(bezelBrush = bezelBrush)
+                CalibrationPreviewBox(bezelBrush = bezelBrush, isPaused = isPaused)
 
                 // ── Instruction Prompt Box ──
                 Row(
                     modifier =
                         Modifier
                             .fillMaxWidth()
+                            .heightIn(min = INSTRUCTION_BOX_MIN_HEIGHT)
                             .clip(RoundedCornerShape(BUTTON_CORNER_RADIUS))
                             .background(colors.surfaceVariant.copy(alpha = INSTRUCTION_BG_ALPHA))
                             .padding(SPACING_M),
@@ -196,11 +259,14 @@ internal fun AutoTuneCalibrationSheet(
                         color = colors.onSurfaceSecondary,
                         style = MaterialTheme.typography.bodySmall,
                         textAlign = TextAlign.Start,
+                        minLines = 2,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
                 }
 
-                // ── Action Buttons: Cancel and Finish ──
+                // ── Action Buttons: Cancel, Pause/Resume, and Finish ──
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(SPACING_M),
@@ -220,6 +286,30 @@ internal fun AutoTuneCalibrationSheet(
                         Text(
                             text = stringResource(R.string.mirror_calibration_cancel),
                             color = colors.onSurfaceSecondary,
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick = { VisualAutoTuneCoordinator.togglePause() },
+                        modifier = Modifier.weight(1f).height(BUTTON_HEIGHT),
+                        shape = RoundedCornerShape(BUTTON_CORNER_RADIUS),
+                    ) {
+                        Icon(
+                            imageVector = if (isPaused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
+                            contentDescription = null,
+                            modifier = Modifier.size(BUTTON_ICON_SIZE),
+                            tint = if (isPaused) colors.accent else colors.onSurfaceSecondary,
+                        )
+                        Spacer(Modifier.width(SPACING_S))
+                        Text(
+                            text =
+                                if (isPaused) {
+                                    stringResource(R.string.mirror_calibration_resume)
+                                } else {
+                                    stringResource(R.string.mirror_calibration_pause)
+                                },
+                            color = if (isPaused) colors.accent else colors.onSurfaceSecondary,
                             style = MaterialTheme.typography.labelLarge,
                         )
                     }
@@ -288,7 +378,10 @@ private fun SampleCounterBadge() {
 }
 
 @Composable
-private fun CalibrationPreviewBox(bezelBrush: Brush) {
+private fun CalibrationPreviewBox(
+    bezelBrush: Brush,
+    isPaused: Boolean,
+) {
     val colors = LocalAppColors.current
     val previewBitmap by VisualAutoTuneCoordinator.previewBitmap.collectAsStateWithLifecycle()
     val canFinish by VisualAutoTuneCoordinator.canFinish.collectAsStateWithLifecycle()
@@ -332,6 +425,44 @@ private fun CalibrationPreviewBox(bezelBrush: Brush) {
                 contentScale = ContentScale.Fit,
             )
 
+            // Paused state overlay badge
+            if (isPaused) {
+                Box(
+                    modifier =
+                        Modifier
+                            .matchParentSize()
+                            .background(Color.Black.copy(alpha = PAUSED_SCRIM_ALPHA)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(SPACING_S),
+                        modifier =
+                            Modifier
+                                .clip(RoundedCornerShape(PILL_CORNER_RADIUS))
+                                .background(colors.surface)
+                                .border(
+                                    width = BORDER_WIDTH,
+                                    brush = bezelBrush,
+                                    shape = RoundedCornerShape(PILL_CORNER_RADIUS),
+                                ).padding(horizontal = PILL_HORIZONTAL_PADDING, vertical = PILL_VERTICAL_PADDING),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Pause,
+                            contentDescription = null,
+                            modifier = Modifier.size(BUTTON_ICON_SIZE),
+                            tint = colors.accent,
+                        )
+                        Text(
+                            text = stringResource(R.string.mirror_calibration_paused_badge),
+                            color = colors.onSurface,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                }
+            }
+
             // Dynamic transparency percentage pill
             if (canFinish && dynamicPercent > 0) {
                 Box(
@@ -353,20 +484,39 @@ private fun CalibrationPreviewBox(bezelBrush: Brush) {
                 }
             }
         } else {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(SPACING_S),
-            ) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(LOADING_INDICATOR_SIZE),
-                    color = colors.accent,
-                    strokeWidth = LOADING_STROKE_WIDTH,
-                )
-                Text(
-                    text = stringResource(R.string.mirror_calibration_sampling),
-                    color = colors.onSurfaceSecondary,
-                    style = MaterialTheme.typography.bodySmall,
-                )
+            if (isPaused) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(SPACING_S),
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Pause,
+                        contentDescription = null,
+                        tint = colors.accent,
+                        modifier = Modifier.size(BUTTON_ICON_SIZE),
+                    )
+                    Text(
+                        text = stringResource(R.string.mirror_calibration_paused_badge),
+                        color = colors.onSurfaceSecondary,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            } else {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(SPACING_S),
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(LOADING_INDICATOR_SIZE),
+                        color = colors.accent,
+                        strokeWidth = LOADING_STROKE_WIDTH,
+                    )
+                    Text(
+                        text = stringResource(R.string.mirror_calibration_sampling),
+                        color = colors.onSurfaceSecondary,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
             }
         }
     }
