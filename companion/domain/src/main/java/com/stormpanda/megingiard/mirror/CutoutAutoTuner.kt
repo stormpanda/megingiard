@@ -56,6 +56,7 @@ private const val GRADIENT_PENALTY_DIVISOR = 2
  * @param varianceMap Raw per-pixel maximum color variation byte map used for dynamic translucency tuning.
  * @param anchorSignature Spatially distributed anchor sample points used for real-time presence detection.
  * @param referenceColorFrame Clean temporal average RGB frame calculated across all calibration samples.
+ * @param calibratedFrame Clean reference RGB frame with the calibrated transparency mask applied.
  */
 data class AutoTuneResult(
     val maskPixels: IntArray? = null,
@@ -67,6 +68,7 @@ data class AutoTuneResult(
     val varianceMap: ByteArray? = null,
     val anchorSignature: VisualAnchorSignature? = null,
     val referenceColorFrame: IntArray? = null,
+    val calibratedFrame: IntArray? = null,
 )
 
 /**
@@ -184,6 +186,7 @@ object CutoutAutoTuner {
 
         if (isStatic) {
             AppLog.i(TAG, "Static scene detected (motionPct=$motionPct%). All pixels stayed constant.")
+            val staticCalibratedFrame = buildStaticAsset(referenceColorFrame, rawMask, width, height)
             return AutoTuneResult(
                 maskPixels = rawMask,
                 maskWidth = width,
@@ -194,6 +197,7 @@ object CutoutAutoTuner {
                 varianceMap = varianceMap,
                 anchorSignature = signature,
                 referenceColorFrame = referenceColorFrame,
+                calibratedFrame = staticCalibratedFrame,
             )
         }
 
@@ -221,6 +225,8 @@ object CutoutAutoTuner {
             "Auto-Tune completed: $finalTransparentPct% background transparent (${width}x$height, ${signature.points.size} anchors)",
         )
 
+        val calibratedFrame = buildStaticAsset(referenceColorFrame, finalMask, width, height)
+
         return AutoTuneResult(
             maskPixels = finalMask,
             maskWidth = width,
@@ -231,6 +237,7 @@ object CutoutAutoTuner {
             varianceMap = varianceMap,
             anchorSignature = signature,
             referenceColorFrame = referenceColorFrame,
+            calibratedFrame = calibratedFrame,
         )
     }
 

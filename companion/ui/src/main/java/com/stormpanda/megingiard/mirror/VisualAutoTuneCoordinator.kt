@@ -443,9 +443,12 @@ internal object VisualAutoTuneCoordinator {
                         val signature = result.anchorSignature
                         val hasValidSignature = signature != null && signature.points.isNotEmpty()
                         if (hasValidSignature) {
+                            val calibratedFrame = result.calibratedFrame
                             val refColorFrame = result.referenceColorFrame
                             val freezeBitmap =
-                                if (refColorFrame != null && refColorFrame.size == cropW * cropH) {
+                                if (calibratedFrame != null && calibratedFrame.size == cropW * cropH) {
+                                    Bitmap.createBitmap(calibratedFrame, cropW, cropH, Bitmap.Config.ARGB_8888)
+                                } else if (refColorFrame != null && refColorFrame.size == cropW * cropH) {
                                     Bitmap.createBitmap(refColorFrame, cropW, cropH, Bitmap.Config.ARGB_8888)
                                 } else if (sampledFrames.isNotEmpty()) {
                                     Bitmap.createBitmap(sampledFrames.first(), cropW, cropH, Bitmap.Config.ARGB_8888)
@@ -453,7 +456,20 @@ internal object VisualAutoTuneCoordinator {
                                     null
                                 }
                             if (freezeBitmap != null) {
-                                CutoutMaskManager.saveFreezeFrame(context.applicationContext, layout.id, freezeBitmap)
+                                val mask = result.maskPixels
+                                if (mask != null && result.maskWidth > 0 && result.maskHeight > 0) {
+                                    val maskBitmap =
+                                        Bitmap.createBitmap(mask, result.maskWidth, result.maskHeight, Bitmap.Config.ARGB_8888)
+                                    CutoutMaskManager.saveMask(
+                                        context = context.applicationContext,
+                                        cutoutId = layout.id,
+                                        bitmap = maskBitmap,
+                                        varianceMap = result.varianceMap,
+                                        freezeFrame = freezeBitmap,
+                                    )
+                                } else {
+                                    CutoutMaskManager.saveFreezeFrame(context.applicationContext, layout.id, freezeBitmap)
+                                }
                             }
                         }
                         val updatedAnchor =

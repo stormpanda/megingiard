@@ -91,8 +91,9 @@ object AnchorTestCoordinator {
         _currentMatchRatio.value = 0f
         _isAnchorActive.value = false
 
-        // Load reference freeze frame
-        val freeze = CutoutMaskManager.getFreezeFrame(context.applicationContext, layout.id)
+        // Load reference calibrated bitmap (prefer pre-rendered static asset with mask, fallback to freeze frame)
+        val staticAsset = CutoutMaskManager.getStaticAsset(context.applicationContext, layout.id)
+        val freeze = staticAsset ?: CutoutMaskManager.getFreezeFrame(context.applicationContext, layout.id)
         if (freeze != null && !freeze.isRecycled) {
             try {
                 setReferenceBitmap(freeze.copy(Bitmap.Config.ARGB_8888, false))
