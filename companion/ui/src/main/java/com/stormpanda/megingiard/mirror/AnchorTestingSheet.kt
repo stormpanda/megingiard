@@ -119,15 +119,6 @@ internal fun AnchorTestingSheet(onDone: () -> Unit) {
     val colors = LocalAppColors.current
     val bezelBrush = rememberBezelBrush()
 
-    val matchRatio by AnchorTestCoordinator.currentMatchRatio.collectAsStateWithLifecycle()
-    val isAnchorActive by AnchorTestCoordinator.isAnchorActive.collectAsStateWithLifecycle()
-    val referenceBitmap by AnchorTestCoordinator.referenceBitmap.collectAsStateWithLifecycle()
-    val liveCropBitmap by AnchorTestCoordinator.liveCropBitmap.collectAsStateWithLifecycle()
-    val pointMatches by AnchorTestCoordinator.pointMatches.collectAsStateWithLifecycle()
-    val matchedPoints by AnchorTestCoordinator.matchedPointCount.collectAsStateWithLifecycle()
-    val totalPoints by AnchorTestCoordinator.totalPointCount.collectAsStateWithLifecycle()
-    val targetPoints by AnchorTestCoordinator.targetPoints.collectAsStateWithLifecycle()
-
     var showProbes by rememberSaveable { mutableStateOf(true) }
 
     BackHandler {
@@ -196,43 +187,8 @@ internal fun AnchorTestingSheet(onDone: () -> Unit) {
 
                     Spacer(Modifier.width(SPACING_M))
 
-                    // Combined points counter and match % pill
-                    val matchPct = (matchRatio * 100f).roundToInt().coerceIn(0, 100)
-                    Row(
-                        modifier =
-                            Modifier
-                                .clip(RoundedCornerShape(PILL_CORNER_RADIUS))
-                                .background(colors.surfaceVariant)
-                                .border(
-                                    width = BORDER_WIDTH,
-                                    color = colors.divider,
-                                    shape = RoundedCornerShape(PILL_CORNER_RADIUS),
-                                ).padding(horizontal = PILL_HORIZONTAL_PADDING, vertical = PILL_VERTICAL_PADDING),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(SPACING_XS),
-                    ) {
-                        if (totalPoints > 0) {
-                            Text(
-                                text = stringResource(R.string.mirror_anchor_test_points_counter, matchedPoints, totalPoints),
-                                color = if (isAnchorActive) colors.accent else colors.onSurfaceSecondary,
-                                style = MaterialTheme.typography.labelMedium,
-                                fontFamily = FontFamily.Monospace,
-                                fontWeight = FontWeight.Bold,
-                            )
-                            Text(
-                                text = "•",
-                                color = colors.divider,
-                                style = MaterialTheme.typography.labelSmall,
-                            )
-                        }
-                        Text(
-                            text = stringResource(R.string.mirror_anchor_test_match_pct, matchPct),
-                            color = if (isAnchorActive) colors.accent else colors.onSurfaceSecondary,
-                            style = MaterialTheme.typography.labelMedium,
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
+                    // Combined points counter and match % pill (isolated recomposition)
+                    TestingHeaderMatchStats()
 
                     Spacer(Modifier.width(SPACING_S))
 
@@ -264,44 +220,8 @@ internal fun AnchorTestingSheet(onDone: () -> Unit) {
 
                     Spacer(Modifier.width(SPACING_S))
 
-                    // ACTIVE / INACTIVE presence badge
-                    val badgeBg = if (isAnchorActive) colors.accent.copy(alpha = STATUS_ACTIVE_BG_ALPHA) else colors.surfaceVariant
-                    val badgeBorder = if (isAnchorActive) colors.accent else colors.divider
-                    val dotColor = if (isAnchorActive) colors.accent else colors.onSurfaceSecondary
-                    val statusText =
-                        if (isAnchorActive) {
-                            stringResource(R.string.mirror_anchor_test_active)
-                        } else {
-                            stringResource(R.string.mirror_anchor_test_inactive)
-                        }
-
-                    Row(
-                        modifier =
-                            Modifier
-                                .clip(RoundedCornerShape(PILL_CORNER_RADIUS))
-                                .background(badgeBg)
-                                .border(
-                                    width = BORDER_WIDTH,
-                                    color = badgeBorder,
-                                    shape = RoundedCornerShape(PILL_CORNER_RADIUS),
-                                ).padding(horizontal = PILL_HORIZONTAL_PADDING, vertical = PILL_VERTICAL_PADDING),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(SPACING_XS),
-                    ) {
-                        Box(
-                            modifier =
-                                Modifier
-                                    .size(STATUS_DOT_SIZE)
-                                    .clip(CircleShape)
-                                    .background(dotColor),
-                        )
-                        Text(
-                            text = statusText,
-                            color = if (isAnchorActive) colors.accent else colors.onSurfaceSecondary,
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
+                    // ACTIVE / INACTIVE presence badge (isolated recomposition)
+                    TestingHeaderStatusBadge()
                 }
 
                 // ── Dual Preview Row: Target Signature vs. Live Screen Crop ──
@@ -309,58 +229,17 @@ internal fun AnchorTestingSheet(onDone: () -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(SPACING_M),
                 ) {
-                    // Left: Target Reference Signature
-                    AnchorPreviewCard(
-                        title = stringResource(R.string.mirror_anchor_test_target_label),
-                        bitmap = referenceBitmap,
+                    // Left: Target Reference Signature (static once loaded)
+                    ReferencePreviewCard(
                         bezelBrush = bezelBrush,
-                        isHighlightBorder = false,
                         showProbes = showProbes,
-                        drawProbes = { fw, fh, left, top ->
-                            val outlineRadius = PROBE_OUTLINE_RADIUS.toPx()
-                            val fillRadius = PROBE_FILL_RADIUS.toPx()
-                            for (pt in targetPoints) {
-                                drawProbeDot(
-                                    u = pt.u,
-                                    v = pt.v,
-                                    fillColor = colors.accent,
-                                    fittedWidth = fw,
-                                    fittedHeight = fh,
-                                    left = left,
-                                    top = top,
-                                    outlineRadius = outlineRadius,
-                                    fillRadius = fillRadius,
-                                )
-                            }
-                        },
                         modifier = Modifier.weight(1f),
                     )
 
-                    // Right: Current Live Screen Feed
-                    AnchorPreviewCard(
-                        title = stringResource(R.string.mirror_anchor_test_current_label),
-                        bitmap = liveCropBitmap,
+                    // Right: Current Live Screen Feed (isolated 30Hz recomposition)
+                    LiveCropPreviewCard(
                         bezelBrush = bezelBrush,
-                        isHighlightBorder = isAnchorActive,
                         showProbes = showProbes,
-                        drawProbes = { fw, fh, left, top ->
-                            val outlineRadius = PROBE_OUTLINE_RADIUS.toPx()
-                            val fillRadius = PROBE_FILL_RADIUS.toPx()
-                            for (match in pointMatches) {
-                                val color = if (match.isMatch) PROBE_MATCHED_COLOR else PROBE_MISMATCHED_COLOR
-                                drawProbeDot(
-                                    u = match.point.u,
-                                    v = match.point.v,
-                                    fillColor = color,
-                                    fittedWidth = fw,
-                                    fittedHeight = fh,
-                                    left = left,
-                                    top = top,
-                                    outlineRadius = outlineRadius,
-                                    fillRadius = fillRadius,
-                                )
-                            }
-                        },
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -421,6 +300,171 @@ internal fun AnchorTestingSheet(onDone: () -> Unit) {
             }
         }
     }
+}
+
+@Composable
+private fun TestingHeaderMatchStats() {
+    val colors = LocalAppColors.current
+    val matchRatio by AnchorTestCoordinator.currentMatchRatio.collectAsStateWithLifecycle()
+    val isAnchorActive by AnchorTestCoordinator.isAnchorActive.collectAsStateWithLifecycle()
+    val matchedPoints by AnchorTestCoordinator.matchedPointCount.collectAsStateWithLifecycle()
+    val totalPoints by AnchorTestCoordinator.totalPointCount.collectAsStateWithLifecycle()
+
+    val matchPct = (matchRatio * 100f).roundToInt().coerceIn(0, 100)
+    Row(
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(PILL_CORNER_RADIUS))
+                .background(colors.surfaceVariant)
+                .border(
+                    width = BORDER_WIDTH,
+                    color = colors.divider,
+                    shape = RoundedCornerShape(PILL_CORNER_RADIUS),
+                ).padding(horizontal = PILL_HORIZONTAL_PADDING, vertical = PILL_VERTICAL_PADDING),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(SPACING_XS),
+    ) {
+        if (totalPoints > 0) {
+            Text(
+                text = stringResource(R.string.mirror_anchor_test_points_counter, matchedPoints, totalPoints),
+                color = if (isAnchorActive) colors.accent else colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.labelMedium,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = "•",
+                color = colors.divider,
+                style = MaterialTheme.typography.labelSmall,
+            )
+        }
+        Text(
+            text = stringResource(R.string.mirror_anchor_test_match_pct, matchPct),
+            color = if (isAnchorActive) colors.accent else colors.onSurfaceSecondary,
+            style = MaterialTheme.typography.labelMedium,
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+@Composable
+private fun TestingHeaderStatusBadge() {
+    val colors = LocalAppColors.current
+    val isAnchorActive by AnchorTestCoordinator.isAnchorActive.collectAsStateWithLifecycle()
+
+    val badgeBg = if (isAnchorActive) colors.accent.copy(alpha = STATUS_ACTIVE_BG_ALPHA) else colors.surfaceVariant
+    val badgeBorder = if (isAnchorActive) colors.accent else colors.divider
+    val dotColor = if (isAnchorActive) colors.accent else colors.onSurfaceSecondary
+    val statusText =
+        if (isAnchorActive) {
+            stringResource(R.string.mirror_anchor_test_active)
+        } else {
+            stringResource(R.string.mirror_anchor_test_inactive)
+        }
+
+    Row(
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(PILL_CORNER_RADIUS))
+                .background(badgeBg)
+                .border(
+                    width = BORDER_WIDTH,
+                    color = badgeBorder,
+                    shape = RoundedCornerShape(PILL_CORNER_RADIUS),
+                ).padding(horizontal = PILL_HORIZONTAL_PADDING, vertical = PILL_VERTICAL_PADDING),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(SPACING_XS),
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .size(STATUS_DOT_SIZE)
+                    .clip(CircleShape)
+                    .background(dotColor),
+        )
+        Text(
+            text = statusText,
+            color = if (isAnchorActive) colors.accent else colors.onSurfaceSecondary,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+@Composable
+private fun ReferencePreviewCard(
+    bezelBrush: Brush,
+    showProbes: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalAppColors.current
+    val referenceBitmap by AnchorTestCoordinator.referenceBitmap.collectAsStateWithLifecycle()
+    val targetPoints by AnchorTestCoordinator.targetPoints.collectAsStateWithLifecycle()
+
+    AnchorPreviewCard(
+        title = stringResource(R.string.mirror_anchor_test_target_label),
+        bitmap = referenceBitmap,
+        bezelBrush = bezelBrush,
+        isHighlightBorder = false,
+        showProbes = showProbes,
+        drawProbes = { fw, fh, left, top ->
+            val outlineRadius = PROBE_OUTLINE_RADIUS.toPx()
+            val fillRadius = PROBE_FILL_RADIUS.toPx()
+            for (pt in targetPoints) {
+                drawProbeDot(
+                    u = pt.u,
+                    v = pt.v,
+                    fillColor = colors.accent,
+                    fittedWidth = fw,
+                    fittedHeight = fh,
+                    left = left,
+                    top = top,
+                    outlineRadius = outlineRadius,
+                    fillRadius = fillRadius,
+                )
+            }
+        },
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun LiveCropPreviewCard(
+    bezelBrush: Brush,
+    showProbes: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val liveCropBitmap by AnchorTestCoordinator.liveCropBitmap.collectAsStateWithLifecycle()
+    val pointMatches by AnchorTestCoordinator.pointMatches.collectAsStateWithLifecycle()
+    val isAnchorActive by AnchorTestCoordinator.isAnchorActive.collectAsStateWithLifecycle()
+
+    AnchorPreviewCard(
+        title = stringResource(R.string.mirror_anchor_test_current_label),
+        bitmap = liveCropBitmap,
+        bezelBrush = bezelBrush,
+        isHighlightBorder = isAnchorActive,
+        showProbes = showProbes,
+        drawProbes = { fw, fh, left, top ->
+            val outlineRadius = PROBE_OUTLINE_RADIUS.toPx()
+            val fillRadius = PROBE_FILL_RADIUS.toPx()
+            for (match in pointMatches) {
+                val color = if (match.isMatch) PROBE_MATCHED_COLOR else PROBE_MISMATCHED_COLOR
+                drawProbeDot(
+                    u = match.point.u,
+                    v = match.point.v,
+                    fillColor = color,
+                    fittedWidth = fw,
+                    fittedHeight = fh,
+                    left = left,
+                    top = top,
+                    outlineRadius = outlineRadius,
+                    fillRadius = fillRadius,
+                )
+            }
+        },
+        modifier = modifier,
+    )
 }
 
 @Composable
