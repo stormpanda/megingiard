@@ -29,6 +29,9 @@ object AnchorPositioningCoordinator {
     fun consumeDoneRequest(): Boolean {
         val wasRequested = _isDoneRequested.value
         _isDoneRequested.value = false
+        if (wasRequested) {
+            AppLog.d(TAG, "consumeDoneRequest: request consumed")
+        }
         return wasRequested
     }
 }

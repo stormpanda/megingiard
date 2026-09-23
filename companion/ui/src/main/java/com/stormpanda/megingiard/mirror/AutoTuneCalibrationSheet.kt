@@ -83,6 +83,7 @@ private const val SCRIM_ALPHA = 0.55f
 private const val INSTRUCTION_BG_ALPHA = 0.5f
 private const val BADGE_BG_ALPHA = 0.75f
 private const val DISABLED_CONTENT_ALPHA = 0.5f
+private const val PAUSED_SCRIM_ALPHA = 0.50f
 private val BORDER_WIDTH = 1.dp
 private val LOADING_STROKE_WIDTH = 2.dp
 private val LOADING_INDICATOR_SIZE = 18.dp
@@ -390,7 +391,7 @@ private fun CalibrationPreviewBox(
                     modifier =
                         Modifier
                             .matchParentSize()
-                            .background(Color.Black.copy(alpha = 0.50f)),
+                            .background(Color.Black.copy(alpha = PAUSED_SCRIM_ALPHA)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Row(

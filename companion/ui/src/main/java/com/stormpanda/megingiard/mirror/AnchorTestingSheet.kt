@@ -94,6 +94,7 @@ private const val SCRIM_ALPHA = 0.55f
 private const val INSTRUCTION_BG_ALPHA = 0.5f
 private const val LABEL_BG_ALPHA = 0.80f
 private const val TOGGLE_ACTIVE_BG_ALPHA = 0.20f
+private const val STATUS_ACTIVE_BG_ALPHA = 0.20f
 private val BORDER_WIDTH = 1.dp
 private val ACTIVE_BORDER_WIDTH = 2.dp
 private val TOGGLE_BUTTON_SIZE = 28.dp
@@ -161,6 +162,7 @@ internal fun AnchorTestingSheet(onDone: () -> Unit) {
         AppLog.i(TAG, "AnchorTestingSheet visible on secondary display")
         onDispose {
             AppLog.i(TAG, "AnchorTestingSheet disposed")
+            AnchorTestCoordinator.stopTesting(resumeSuspended = false)
         }
     }
 
@@ -286,7 +288,7 @@ internal fun AnchorTestingSheet(onDone: () -> Unit) {
                     Spacer(Modifier.width(SPACING_S))
 
                     // ACTIVE / INACTIVE presence badge
-                    val badgeBg = if (isAnchorActive) colors.accent.copy(alpha = 0.20f) else colors.surfaceVariant
+                    val badgeBg = if (isAnchorActive) colors.accent.copy(alpha = STATUS_ACTIVE_BG_ALPHA) else colors.surfaceVariant
                     val badgeBorder = if (isAnchorActive) colors.accent else colors.divider
                     val dotColor = if (isAnchorActive) colors.accent else colors.onSurfaceSecondary
                     val statusText =

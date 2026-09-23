@@ -1,6 +1,8 @@
 package com.stormpanda.megingiard.mirror
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AnchorPresenceEvaluatorTest {
@@ -155,7 +157,7 @@ class AnchorPresenceEvaluatorTest {
         val points = (0 until 15).map { AnchorPoint(it * 0.05f, it * 0.05f, 255, 255, 255) }
         val signature = VisualAnchorSignature("small", points)
         val matched = AnchorPresenceEvaluator.matchesSparseProbe(signature) { _, _ -> colorArgb(255, 255, 255) }
-        org.junit.Assert.assertFalse(matched)
+        assertFalse(matched)
     }
 
     @Test
@@ -170,7 +172,7 @@ class AnchorPresenceEvaluatorTest {
                 colorArgb(200, 200, 200)
             }
 
-        org.junit.Assert.assertTrue(matched)
+        assertTrue(matched)
         // Exactly 16 points sampled instead of 64
         assertEquals(16, sampledIndices.size)
     }
@@ -191,7 +193,7 @@ class AnchorPresenceEvaluatorTest {
                 }
             }
 
-        org.junit.Assert.assertFalse(matched)
+        assertFalse(matched)
         // Aborted early on 3rd sample
         assertEquals(3, sampleCount)
     }
@@ -213,7 +215,7 @@ class AnchorPresenceEvaluatorTest {
         val uniqueSet = allIndices.toSet()
         assertEquals(64, uniqueSet.size)
         for (i in 0 until 64) {
-            org.junit.Assert.assertTrue(uniqueSet.contains(i))
+            assertTrue(uniqueSet.contains(i))
         }
     }
 
@@ -231,7 +233,7 @@ class AnchorPresenceEvaluatorTest {
                 if (idx == corruptedIndex) colorArgb(0, 0, 0) else colorArgb(200, 200, 200)
             }
         // Phase 0 does NOT sample the corrupted index -> remains true
-        org.junit.Assert.assertTrue(matchedPhase0)
+        assertTrue(matchedPhase0)
 
         val matchedPhase1 =
             AnchorPresenceEvaluator.matchesSparseProbe(signature, phase = 1) { u, _ ->
@@ -239,7 +241,7 @@ class AnchorPresenceEvaluatorTest {
                 if (idx == corruptedIndex) colorArgb(0, 0, 0) else colorArgb(200, 200, 200)
             }
         // Phase 1 DOES sample the corrupted index -> catches divergence and returns false!
-        org.junit.Assert.assertFalse(matchedPhase1)
+        assertFalse(matchedPhase1)
     }
 
     @Test
@@ -254,7 +256,7 @@ class AnchorPresenceEvaluatorTest {
                 colorArgb(200, 200, 200)
             }
 
-        org.junit.Assert.assertTrue(matched)
+        assertTrue(matched)
         // Required matches = 64 * 0.65 = 41. It terminates at sample 41, saving 23 pixel reads!
         assertEquals(41, sampleCount)
     }
@@ -271,9 +273,40 @@ class AnchorPresenceEvaluatorTest {
                 colorArgb(0, 0, 0) // All divergent
             }
 
-        org.junit.Assert.assertFalse(matched)
+        assertFalse(matched)
         // Required matches = 41. Max mismatches = 64 - 41 = 23.
         // On 24th mismatch, it aborts early! Saves 40 pixel reads!
         assertEquals(24, sampleCount)
+    }
+
+    @Test
+    fun `evaluatePointMatches with empty signature returns empty list`() {
+        val signature = VisualAnchorSignature("test", emptyList())
+        val results = AnchorPresenceEvaluator.evaluatePointMatches(signature) { _, _ -> colorArgb(255, 255, 255) }
+        assertTrue(results.isEmpty())
+    }
+
+    @Test
+    fun `evaluatePointMatches returns detailed point match results with correct diff and tolerance`() {
+        val points =
+            listOf(
+                AnchorPoint(0.1f, 0.1f, 200, 200, 200),
+                AnchorPoint(0.5f, 0.5f, 100, 100, 100),
+            )
+        val signature = VisualAnchorSignature("test", points)
+        // Point 0: provider returns (210, 210, 210) -> diff = 10 + 10 + 10 = 30 <= 45 -> isMatch = true
+        // Point 1: provider returns (0, 0, 0) -> diff = 100 + 100 + 100 = 300 > 45 -> isMatch = false
+        val results =
+            AnchorPresenceEvaluator.evaluatePointMatches(signature) { u, _ ->
+                if (u < 0.3f) colorArgb(210, 210, 210) else colorArgb(0, 0, 0)
+            }
+        assertEquals(2, results.size)
+        assertEquals(points[0], results[0].point)
+        assertTrue(results[0].isMatch)
+        assertEquals(30, results[0].diff)
+
+        assertEquals(points[1], results[1].point)
+        assertFalse(results[1].isMatch)
+        assertEquals(300, results[1].diff)
     }
 }

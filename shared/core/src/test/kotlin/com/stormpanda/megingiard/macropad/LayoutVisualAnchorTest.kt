@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.mirror.AnchorPoint
+import com.stormpanda.megingiard.mirror.AnchorPointMatchResult
 import com.stormpanda.megingiard.mirror.VisualAnchorSignature
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -243,5 +244,26 @@ class LayoutVisualAnchorTest {
         assertEquals("legacy_prof_1", parsed.id)
         assertEquals("Legacy Profile", parsed.name)
         assertFalse(parsed.autoLayoutSwitching)
+    }
+
+    @Test
+    fun `verify serialization round-trip of AnchorPointMatchResult`() {
+        val result =
+            AnchorPointMatchResult(
+                point = AnchorPoint(0.25f, 0.75f, 120, 200, 255),
+                isMatch = true,
+                diff = 18,
+            )
+        val serialized = json.encodeToString(result)
+        assertTrue(serialized.contains("\"isMatch\":true"))
+        assertTrue(serialized.contains("\"diff\":18"))
+
+        val deserialized = json.decodeFromString<AnchorPointMatchResult>(serialized)
+        assertEquals(result, deserialized)
+        assertEquals(0.25f, deserialized.point.u, EPSILON)
+        assertEquals(0.75f, deserialized.point.v, EPSILON)
+        assertEquals(120, deserialized.point.r)
+        assertTrue(deserialized.isMatch)
+        assertEquals(18, deserialized.diff)
     }
 }
