@@ -32,3 +32,17 @@ data class VisualAnchorSignature(
     val cutoutId: String = "",
     val points: List<AnchorPoint> = emptyList(),
 )
+
+/**
+ * Diagnostic evaluation result for a single reference anchor sample point.
+ *
+ * @param point The reference anchor sample point.
+ * @param isMatch True if the observed color is within detection tolerance of expected reference color.
+ * @param diff The absolute RGB difference sum (|ΔR| + |ΔG| + |ΔB|) observed.
+ */
+@Serializable
+data class AnchorPointMatchResult(
+    val point: AnchorPoint,
+    val isMatch: Boolean,
+    val diff: Int,
+)

@@ -226,7 +226,12 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
   - Display 0 remains completely unobstructed with 0 overlays, ensuring 100% uninterrupted 120Hz gameplay.
   - Display 4 hosts `AnchorTestingSheet` featuring:
     - **Dual Preview Area:** Displays the calibrated target reference signature (`AnchorPreviewCard`, rendering the calibrated anchor with dynamic background made transparent over a checkerboard background) alongside the live screen crop in real-time.
-    - **Real-Time Match Percentage & Presence Status:** Displays live match percentage (0–100%) and dynamic presence indicator (**ACTIVE** in green accent with active glowing border vs **INACTIVE** in dim secondary color), driven by the identical `AnchorPresenceEvaluator.transitionState` hysteresis engine used during actual gameplay.
+    - **Real-Time Match Percentage & Matched Points Counter:** Displays live match percentage (0–100%) and matched points counter badge (e.g. `54/64 pts • 84% match`) alongside a dynamic presence indicator (**ACTIVE** in green accent with active glowing border vs **INACTIVE** in dim secondary color), driven by the identical `AnchorPresenceEvaluator.transitionState` hysteresis engine used during actual gameplay.
+    - **Live Reference Probe Sample Points Overlay:**
+      - Overlays calibrated sample points directly onto both preview cards mapped with high mathematical precision to `ContentScale.Fit` fitted image coordinates.
+      - **Current Live Screen Card:** Renders high-contrast circular probe dots indicating whether each individual pixel currently matches the expected calibrated RGB values (vibrant green `#00E676` within tolerance) or mismatches (vibrant red `#FF5252`), enclosed in dark outlines for maximum contrast on all backgrounds.
+      - **Target Signature Card:** Renders subtle theme accent reference markers showing calibrated sample point locations.
+      - **Probe Points Visibility Toggle:** A dedicated circular toggle button (`Icons.Rounded.Visibility` / `Icons.Rounded.VisibilityOff`) in the header allows the user to easily show or hide probe dots across both preview cards at any time.
     - Single **[Done]** button and Gamepad Back handler to cleanly exit testing and restore Layout Settings.
 - **Extensible Inactive Cutout Effects on Anchor Loss (`CutoutLostAnchorEffect`, `LayoutVisualAnchor.lostAnchorEffects`, `AnchorPresenceManager`, `MultiCutoutContainer`):**
   - When visual anchoring is enabled and mirroring is active, `AnchorPresenceManager` evaluates the layout's anchor signature at ~60 Hz.

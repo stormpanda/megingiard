@@ -774,6 +774,8 @@ Open Settings to create a layout.</string>
     <string name="mirror_anchor_test_active">AKTIV</string>
     <string name="mirror_anchor_test_inactive">INAKTIV</string>
     <string name="mirror_anchor_test_match_pct">%d%% Übereinstimmung</string>
+    <string name="mirror_anchor_test_points_counter">%1$d/%2$d Pkt.</string>
+    <string name="mirror_anchor_test_toggle_probes">Referenzpunkte-Überlagerung umschalten</string>
     <string name="mirror_anchor_test_instruction">Spiele dein Spiel auf dem oberen Bildschirm. Wenn das Referenzelement sichtbar ist, schaltet die Statusanzeige auf AKTIV.</string>
     <string name="mirror_anchor_test_done">Fertig</string>
     <string name="settings_mirror_projection_on">Ein</string>

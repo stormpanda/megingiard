@@ -92,6 +92,29 @@ object AnchorPresenceEvaluator {
     }
 
     /**
+     * Evaluates each anchor point in [signature] against currently observed pixel colors
+     * and returns the list of detailed match results.
+     */
+    fun evaluatePointMatches(
+        signature: VisualAnchorSignature,
+        pixelColorProvider: (u: Float, v: Float) -> Int,
+    ): List<AnchorPointMatchResult> {
+        if (signature.points.isEmpty()) return emptyList()
+        return signature.points.map { pt ->
+            val color = pixelColorProvider(pt.u, pt.v)
+            val r = (color shr SHIFT_RED) and COLOR_BYTE_MASK
+            val g = (color shr SHIFT_GREEN) and COLOR_BYTE_MASK
+            val b = color and COLOR_BYTE_MASK
+            val diff = abs(r - pt.r) + abs(g - pt.g) + abs(b - pt.b)
+            AnchorPointMatchResult(
+                point = pt,
+                isMatch = diff <= ANCHOR_DIFF_TOLERANCE,
+                diff = diff,
+            )
+        }
+    }
+
+    /**
      * Rapidly checks if the signature is solidly present using a 16-point stratified, rotating subgrid.
      *
      * In an 8x8 signature (64 points), each phase [phase] (0..3) samples a spatially dispersed 16-point

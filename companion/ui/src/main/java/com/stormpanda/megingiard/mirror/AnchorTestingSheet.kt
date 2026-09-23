@@ -5,6 +5,8 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +25,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Anchor
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.SportsEsports
+import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -31,10 +35,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -84,8 +93,22 @@ private val SPACING_L = 16.dp
 private const val SCRIM_ALPHA = 0.55f
 private const val INSTRUCTION_BG_ALPHA = 0.5f
 private const val LABEL_BG_ALPHA = 0.80f
+private const val TOGGLE_ACTIVE_BG_ALPHA = 0.20f
 private val BORDER_WIDTH = 1.dp
 private val ACTIVE_BORDER_WIDTH = 2.dp
+private val TOGGLE_BUTTON_SIZE = 28.dp
+private val TOGGLE_ICON_SIZE = 16.dp
+private val PROBE_OUTLINE_RADIUS = 3.dp
+private val PROBE_FILL_RADIUS = 1.8.dp
+private val PROBE_MATCHED_COLOR = Color(0xFF00E676)
+private val PROBE_MISMATCHED_COLOR = Color(0xFFFF5252)
+private val PROBE_OUTLINE_COLOR = Color(0xCC000000)
+
+private data class ProbePointVisual(
+    val u: Float,
+    val v: Float,
+    val color: Color,
+)
 
 /**
  * Secondary display diagnostic overlay rendered on Display 4 during active anchor testing.
@@ -104,6 +127,30 @@ internal fun AnchorTestingSheet(onDone: () -> Unit) {
     val isAnchorActive by AnchorTestCoordinator.isAnchorActive.collectAsStateWithLifecycle()
     val referenceBitmap by AnchorTestCoordinator.referenceBitmap.collectAsStateWithLifecycle()
     val liveCropBitmap by AnchorTestCoordinator.liveCropBitmap.collectAsStateWithLifecycle()
+    val pointMatches by AnchorTestCoordinator.pointMatches.collectAsStateWithLifecycle()
+    val matchedPoints by AnchorTestCoordinator.matchedPointCount.collectAsStateWithLifecycle()
+    val totalPoints by AnchorTestCoordinator.totalPointCount.collectAsStateWithLifecycle()
+    val targetPoints by AnchorTestCoordinator.targetPoints.collectAsStateWithLifecycle()
+
+    var showProbes by rememberSaveable { mutableStateOf(true) }
+
+    val targetProbePoints =
+        remember(targetPoints, colors.accent) {
+            targetPoints.map { pt ->
+                ProbePointVisual(u = pt.u, v = pt.v, color = colors.accent)
+            }
+        }
+
+    val liveProbePoints =
+        remember(pointMatches) {
+            pointMatches.map { match ->
+                ProbePointVisual(
+                    u = match.point.u,
+                    v = match.point.v,
+                    color = if (match.isMatch) PROBE_MATCHED_COLOR else PROBE_MISMATCHED_COLOR,
+                )
+            }
+        }
 
     BackHandler {
         AppLog.i(TAG, "BackHandler triggered during anchor testing")
@@ -142,29 +189,37 @@ internal fun AnchorTestingSheet(onDone: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(SPACING_L),
             ) {
-                // ── Header row: Icon, Title, Match %, Status Pill ──
+                // ── Header row: Icon, Title, Points/Match % Pill, Probe Toggle, Status Pill ──
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Anchor,
-                        contentDescription = null,
-                        tint = colors.accent,
-                        modifier = Modifier.size(HEADER_ICON_SIZE),
-                    )
-                    Spacer(Modifier.width(SPACING_M))
-                    Text(
-                        text = stringResource(R.string.mirror_anchor_test_title),
-                        color = colors.onSurface,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Spacer(Modifier.weight(1f))
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Anchor,
+                            contentDescription = null,
+                            tint = colors.accent,
+                            modifier = Modifier.size(HEADER_ICON_SIZE),
+                        )
+                        Spacer(Modifier.width(SPACING_M))
+                        Text(
+                            text = stringResource(R.string.mirror_anchor_test_title),
+                            color = colors.onSurface,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
 
-                    // Match % pill
+                    Spacer(Modifier.width(SPACING_M))
+
+                    // Combined points counter and match % pill
                     val matchPct = (matchRatio * 100f).roundToInt().coerceIn(0, 100)
-                    Box(
+                    Row(
                         modifier =
                             Modifier
                                 .clip(RoundedCornerShape(PILL_CORNER_RADIUS))
@@ -174,13 +229,57 @@ internal fun AnchorTestingSheet(onDone: () -> Unit) {
                                     color = colors.divider,
                                     shape = RoundedCornerShape(PILL_CORNER_RADIUS),
                                 ).padding(horizontal = PILL_HORIZONTAL_PADDING, vertical = PILL_VERTICAL_PADDING),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(SPACING_XS),
                     ) {
+                        if (totalPoints > 0) {
+                            Text(
+                                text = stringResource(R.string.mirror_anchor_test_points_counter, matchedPoints, totalPoints),
+                                color = if (isAnchorActive) colors.accent else colors.onSurfaceSecondary,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Text(
+                                text = "•",
+                                color = colors.divider,
+                                style = MaterialTheme.typography.labelSmall,
+                            )
+                        }
                         Text(
                             text = stringResource(R.string.mirror_anchor_test_match_pct, matchPct),
                             color = if (isAnchorActive) colors.accent else colors.onSurfaceSecondary,
                             style = MaterialTheme.typography.labelMedium,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold,
+                        )
+                    }
+
+                    Spacer(Modifier.width(SPACING_S))
+
+                    // Probe points visibility toggle button
+                    Box(
+                        modifier =
+                            Modifier
+                                .size(TOGGLE_BUTTON_SIZE)
+                                .clip(CircleShape)
+                                .background(if (showProbes) colors.accent.copy(alpha = TOGGLE_ACTIVE_BG_ALPHA) else colors.surfaceVariant)
+                                .border(
+                                    width = BORDER_WIDTH,
+                                    color = if (showProbes) colors.accent else colors.divider,
+                                    shape = CircleShape,
+                                ).clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    onClick = { showProbes = !showProbes },
+                                ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = if (showProbes) Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff,
+                            contentDescription = stringResource(R.string.mirror_anchor_test_toggle_probes),
+                            tint = if (showProbes) colors.accent else colors.onSurfaceSecondary,
+                            modifier = Modifier.size(TOGGLE_ICON_SIZE),
                         )
                     }
 
@@ -237,6 +336,8 @@ internal fun AnchorTestingSheet(onDone: () -> Unit) {
                         bitmap = referenceBitmap,
                         bezelBrush = bezelBrush,
                         isHighlightBorder = false,
+                        probePoints = targetProbePoints,
+                        showProbes = showProbes,
                         modifier = Modifier.weight(1f),
                     )
 
@@ -246,6 +347,8 @@ internal fun AnchorTestingSheet(onDone: () -> Unit) {
                         bitmap = liveCropBitmap,
                         bezelBrush = bezelBrush,
                         isHighlightBorder = isAnchorActive,
+                        probePoints = liveProbePoints,
+                        showProbes = showProbes,
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -314,6 +417,8 @@ private fun AnchorPreviewCard(
     bitmap: Bitmap?,
     bezelBrush: Brush,
     isHighlightBorder: Boolean,
+    probePoints: List<ProbePointVisual>?,
+    showProbes: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
@@ -361,7 +466,43 @@ private fun AnchorPreviewCard(
             Image(
                 bitmap = bitmap.asImageBitmap(),
                 contentDescription = title,
-                modifier = Modifier.fillMaxSize().padding(SPACING_S),
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(SPACING_S)
+                        .drawWithContent {
+                            drawContent()
+                            if (showProbes && !probePoints.isNullOrEmpty()) {
+                                val bw = bitmap.width.toFloat()
+                                val bh = bitmap.height.toFloat()
+                                if (bw > 0f && bh > 0f) {
+                                    val scale = minOf(size.width / bw, size.height / bh)
+                                    val fittedWidth = bw * scale
+                                    val fittedHeight = bh * scale
+                                    val left = (size.width - fittedWidth) / 2f
+                                    val top = (size.height - fittedHeight) / 2f
+
+                                    val outlineRadius = PROBE_OUTLINE_RADIUS.toPx()
+                                    val fillRadius = PROBE_FILL_RADIUS.toPx()
+
+                                    for (probe in probePoints) {
+                                        val cx = left + probe.u * fittedWidth
+                                        val cy = top + probe.v * fittedHeight
+                                        val center = Offset(cx, cy)
+                                        drawCircle(
+                                            color = PROBE_OUTLINE_COLOR,
+                                            radius = outlineRadius,
+                                            center = center,
+                                        )
+                                        drawCircle(
+                                            color = probe.color,
+                                            radius = fillRadius,
+                                            center = center,
+                                        )
+                                    }
+                                }
+                            }
+                        },
                 contentScale = ContentScale.Fit,
             )
         }

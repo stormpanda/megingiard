@@ -773,6 +773,8 @@ Open Settings to create a layout.</string>
     <string name="mirror_anchor_test_active">已啟用</string>
     <string name="mirror_anchor_test_inactive">未啟用</string>
     <string name="mirror_anchor_test_match_pct">%d%% 相符</string>
+    <string name="mirror_anchor_test_points_counter">%1$d/%2$d 點</string>
+    <string name="mirror_anchor_test_toggle_probes">切換參考採樣點疊加層</string>
     <string name="mirror_anchor_test_instruction">在頂部螢幕上進行遊戲。當參考元素可見時，狀態指示器將切換為已啟用。</string>
     <string name="mirror_anchor_test_done">完成</string>
     <string name="settings_mirror_projection_on">開啟</string>

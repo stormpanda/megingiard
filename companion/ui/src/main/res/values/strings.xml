@@ -774,6 +774,8 @@ Open Settings to create a layout.</string>
     <string name="mirror_anchor_test_active">ACTIVE</string>
     <string name="mirror_anchor_test_inactive">INACTIVE</string>
     <string name="mirror_anchor_test_match_pct">%d%% match</string>
+    <string name="mirror_anchor_test_points_counter">%1$d/%2$d pts</string>
+    <string name="mirror_anchor_test_toggle_probes">Toggle reference probe points overlay</string>
     <string name="mirror_anchor_test_instruction">Play your game on the top screen. When the reference element is visible, the status indicator will turn ACTIVE.</string>
     <string name="mirror_anchor_test_done">Done</string>
     <string name="settings_mirror_projection_on">On</string>

@@ -48,6 +48,18 @@ object AnchorTestCoordinator {
     private val _liveCropBitmap = MutableStateFlow<Bitmap?>(null)
     val liveCropBitmap: StateFlow<Bitmap?> = _liveCropBitmap.asStateFlow()
 
+    private val _pointMatches = MutableStateFlow<List<AnchorPointMatchResult>>(emptyList())
+    val pointMatches: StateFlow<List<AnchorPointMatchResult>> = _pointMatches.asStateFlow()
+
+    private val _matchedPointCount = MutableStateFlow(0)
+    val matchedPointCount: StateFlow<Int> = _matchedPointCount.asStateFlow()
+
+    private val _totalPointCount = MutableStateFlow(0)
+    val totalPointCount: StateFlow<Int> = _totalPointCount.asStateFlow()
+
+    private val _targetPoints = MutableStateFlow<List<AnchorPoint>>(emptyList())
+    val targetPoints: StateFlow<List<AnchorPoint>> = _targetPoints.asStateFlow()
+
     private fun setReferenceBitmap(bitmap: Bitmap?) {
         val old = _referenceBitmap.value
         _referenceBitmap.value = bitmap
@@ -90,6 +102,11 @@ object AnchorTestCoordinator {
         _isTesting.value = true
         _currentMatchRatio.value = 0f
         _isAnchorActive.value = false
+        _pointMatches.value = emptyList()
+        _matchedPointCount.value = 0
+        val points = layout.visualAnchor.signature?.points ?: emptyList()
+        _targetPoints.value = points
+        _totalPointCount.value = points.size
 
         // Load reference calibrated bitmap (prefer pre-rendered static asset with mask, fallback to freeze frame)
         val staticAsset = CutoutMaskManager.getStaticAsset(context.applicationContext, layout.id)
@@ -137,11 +154,22 @@ object AnchorTestCoordinator {
                                 }
 
                                 if (signature != null && signature.points.isNotEmpty()) {
-                                    val matchRatio =
-                                        AnchorPresenceEvaluator.evaluateMatchRatio(signature) { u, v ->
+                                    val pointResults =
+                                        AnchorPresenceEvaluator.evaluatePointMatches(signature) { u, v ->
                                             val px = (u * crop.width).roundToInt().coerceIn(0, crop.width - 1)
                                             val py = (v * crop.height).roundToInt().coerceIn(0, crop.height - 1)
                                             crop.getPixel(px, py)
+                                        }
+                                    _pointMatches.value = pointResults
+                                    val matchedCount = pointResults.count { it.isMatch }
+                                    _matchedPointCount.value = matchedCount
+                                    _totalPointCount.value = pointResults.size
+
+                                    val matchRatio =
+                                        if (pointResults.isNotEmpty()) {
+                                            matchedCount.toFloat() / pointResults.size.toFloat()
+                                        } else {
+                                            0f
                                         }
                                     _currentMatchRatio.value = matchRatio
 
@@ -178,6 +206,10 @@ object AnchorTestCoordinator {
             _isTesting.value = false
             _isAnchorActive.value = false
             _currentMatchRatio.value = 0f
+            _pointMatches.value = emptyList()
+            _matchedPointCount.value = 0
+            _totalPointCount.value = 0
+            _targetPoints.value = emptyList()
 
             if (resumeSuspended) {
                 AppStateManager.resumeSuspended()

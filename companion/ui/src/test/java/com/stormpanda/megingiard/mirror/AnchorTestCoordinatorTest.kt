@@ -41,6 +41,14 @@ class AnchorTestCoordinatorTest {
     }
 
     @Test
+    fun `pointMatches and targetPoints default to empty and counts to zero`() {
+        assertTrue(AnchorTestCoordinator.pointMatches.value.isEmpty())
+        assertTrue(AnchorTestCoordinator.targetPoints.value.isEmpty())
+        assertEquals(0, AnchorTestCoordinator.matchedPointCount.value)
+        assertEquals(0, AnchorTestCoordinator.totalPointCount.value)
+    }
+
+    @Test
     fun `stopTesting resets all test states`() {
         AnchorTestCoordinator.stopTesting(resumeSuspended = false)
         assertFalse(AnchorTestCoordinator.isTesting.value)
@@ -48,6 +56,10 @@ class AnchorTestCoordinatorTest {
         assertEquals(0f, AnchorTestCoordinator.currentMatchRatio.value, 0.001f)
         assertNull(AnchorTestCoordinator.referenceBitmap.value)
         assertNull(AnchorTestCoordinator.liveCropBitmap.value)
+        assertTrue(AnchorTestCoordinator.pointMatches.value.isEmpty())
+        assertTrue(AnchorTestCoordinator.targetPoints.value.isEmpty())
+        assertEquals(0, AnchorTestCoordinator.matchedPointCount.value)
+        assertEquals(0, AnchorTestCoordinator.totalPointCount.value)
     }
 
     @Test
