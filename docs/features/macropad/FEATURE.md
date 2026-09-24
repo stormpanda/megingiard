@@ -15,7 +15,7 @@ The MacroPad feature turns the secondary display into a fully configurable butto
 
 ### FR-P1: Configurable Layout Profiles
 
-- The MacroPad MUST support **multiple named profiles** that can be created, renamed, and deleted at any time in the editor.
+- The MacroPad MUST support **multiple named profiles** that can be created, renamed, and deleted at any time in the editor. Deletion of the active profile is accessible from both the top-level **Profiles Deck** and the **Edit Profile** sub-menu via a two-step confirmation card (`GamepadTwoStepConfirmCard`). Attempting to delete the last remaining profile is rejected and displays a toast informing the user that the last profile cannot be deleted (`macropad_profile_cannot_delete_last_toast`).
 - Exactly **one profile is active** at a time; the active profile is displayed in use mode. Changing the active profile takes effect immediately.
   Each profile stores its own layout list, macro list, and device flags (see FR-P4, FR-P7, FR-P8).
 - Profiles MUST persist across app restarts via **DataStore** (serialised as JSON using `kotlinx.serialization`).
@@ -188,7 +188,7 @@ Each button supports one of the following actions:
 
 - Each profile MUST support **multiple named layouts** (`PadLayout`). Each layout has its own button list and background display settings.
 - Exactly **one layout is active** at a time within the active profile. Layout switching is performed via the current layout navigation controls in the MacroPad UI.
-- Layouts can be **created, renamed, and deleted** in the editor. The editor toolbar shows a horizontally scrollable layout bar with shared selectable chips for each layout. Long-press drag reorders layouts within the profile.
+- Layouts can be **created, renamed, and deleted** in the editor. Deletion of the active layout is accessible from both the top-level **Layouts Deck** and the **Edit Layout** sub-menu via a two-step confirmation card (`GamepadTwoStepConfirmCard`). The editor toolbar shows a horizontally scrollable layout bar with shared selectable chips for each layout. Long-press drag reorders layouts within the profile.
 - Each profile must retain at least one layout. When more than one layout exists, deleting a layout removes it, switches to the remaining layout if active, deletes associated background media, and shows a confirmation toast. Attempting to delete the last layout of a profile is rejected and displays a toast informing the user that the last layout cannot be deleted.
 - A new layout can be created as a **blank** layout with clean defaults (`mirrorCutouts = emptyList()`, no buttons, no background art). When creating a new layout, the full-screen **Layout Settings Editor** (`LayoutSettingsEditor`) is displayed immediately to configure the name and default button colors. Background configurations are managed separately via the Background toolbar button.
 - **Minimalist Ambient Empty State Placeholder:** When an active layout has zero configurations (`PadLayout.isEmpty()` is true — no buttons, no background image, no cutouts, and no background touchpad enabled) and screen mirroring is not active, `MacroPadScreen` renders a subtle dashed canvas border guide and a central glassmorphic pill badge (`EmptyLayoutPlaceholder`) with title, subtitle hint, and `rememberBezelBrush()` border. Tapping anywhere on the canvas or the central pill (or pressing `Button A` / `D-Pad Center` when focused) immediately opens the MacroPad Editor (`AppStateManager.setEditorActive(true)`), while edge swipes remain functional for opening the Quick Menu.

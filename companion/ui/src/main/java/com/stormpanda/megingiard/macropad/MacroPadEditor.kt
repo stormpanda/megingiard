@@ -438,6 +438,25 @@ fun MacroPadEditor(
                                                 onReorderProfiles = {
                                                     MacroPadNavState.push(MacroPadSubPage.ReorderProfiles)
                                                 },
+                                                onDeleteProfile = {
+                                                    val deletedName = profile.name
+                                                    val isDeleted = MacroPadState.deleteProfile(profile.id)
+                                                    if (isDeleted) {
+                                                        val layoutsToDelete = profile.layouts
+                                                        scope.launch {
+                                                            layoutsToDelete.forEach { lay ->
+                                                                MacroPadMediaRepository.deleteBackgroundImage(context, lay.id)
+                                                            }
+                                                        }
+                                                        DialogToastManager.show(
+                                                            context.getString(R.string.macropad_profile_deleted_toast, deletedName),
+                                                        )
+                                                    } else {
+                                                        DialogToastManager.show(
+                                                            context.getString(R.string.macropad_profile_cannot_delete_last_toast),
+                                                        )
+                                                    }
+                                                },
                                             )
                                         }
 
@@ -500,6 +519,24 @@ fun MacroPadEditor(
                                                 },
                                                 onReorderLayouts = {
                                                     MacroPadNavState.push(MacroPadSubPage.ReorderLayouts)
+                                                },
+                                                onDeleteLayout = {
+                                                    if (activeLayout != null) {
+                                                        val deletedName = activeLayout.name
+                                                        val isDeleted = MacroPadState.deleteLayout(activeLayout.id)
+                                                        if (isDeleted) {
+                                                            scope.launch {
+                                                                MacroPadMediaRepository.deleteBackgroundImage(context, activeLayout.id)
+                                                            }
+                                                            DialogToastManager.show(
+                                                                context.getString(R.string.macropad_layout_deleted_toast, deletedName),
+                                                            )
+                                                        } else {
+                                                            DialogToastManager.show(
+                                                                context.getString(R.string.macropad_layout_cannot_delete_last_toast),
+                                                            )
+                                                        }
+                                                    }
                                                 },
                                             )
                                         }
@@ -785,17 +822,23 @@ fun MacroPadEditor(
                                                 },
                                                 onDeleteProfile = {
                                                     val deletedName = prof.name
-                                                    val layoutsToDelete = prof.layouts
-                                                    scope.launch {
-                                                        layoutsToDelete.forEach { lay ->
-                                                            MacroPadMediaRepository.deleteBackgroundImage(context, lay.id)
+                                                    val isDeleted = MacroPadState.deleteProfile(prof.id)
+                                                    if (isDeleted) {
+                                                        val layoutsToDelete = prof.layouts
+                                                        scope.launch {
+                                                            layoutsToDelete.forEach { lay ->
+                                                                MacroPadMediaRepository.deleteBackgroundImage(context, lay.id)
+                                                            }
                                                         }
+                                                        MacroPadNavState.pop()
+                                                        DialogToastManager.show(
+                                                            context.getString(R.string.macropad_profile_deleted_toast, deletedName),
+                                                        )
+                                                    } else {
+                                                        DialogToastManager.show(
+                                                            context.getString(R.string.macropad_profile_cannot_delete_last_toast),
+                                                        )
                                                     }
-                                                    MacroPadState.deleteProfile(prof.id)
-                                                    MacroPadNavState.pop()
-                                                    DialogToastManager.show(
-                                                        context.getString(R.string.macropad_profile_deleted_toast, deletedName),
-                                                    )
                                                 },
                                             )
                                         }
@@ -2399,6 +2442,7 @@ private fun ProfilesDeck(
     onEditProfile: () -> Unit,
     onDuplicateProfile: () -> Unit,
     onReorderProfiles: () -> Unit,
+    onDeleteProfile: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val firstItemFocusRequester = remember { FocusRequester() }
@@ -2448,6 +2492,25 @@ private fun ProfilesDeck(
         icon = Icons.Rounded.SwapVert,
         onClick = onReorderProfiles,
     )
+
+    GamepadTwoStepConfirmCard(
+        title = stringResource(R.string.macropad_editor_delete_profile),
+        confirmTitle = stringResource(R.string.macropad_profile_delete_confirm_title, activeProfile.name),
+        description = stringResource(R.string.macropad_editor_delete_profile_desc, activeProfile.name),
+        actionText = stringResource(R.string.gamepad_action_delete),
+        confirmActionText = stringResource(R.string.gamepad_action_confirm),
+        isDestructive = true,
+        icon = Icons.Rounded.Delete,
+        onConfirm = {
+            onDeleteProfile()
+            scope.launch {
+                try {
+                    firstItemFocusRequester.requestFocus()
+                } catch (_: IllegalStateException) {
+                }
+            }
+        },
+    )
 }
 
 @Composable
@@ -2461,6 +2524,7 @@ private fun LayoutsDeck(
     onDuplicateLayout: () -> Unit,
     onCopyLayout: () -> Unit,
     onReorderLayouts: () -> Unit,
+    onDeleteLayout: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val firstItemFocusRequester = remember { FocusRequester() }
@@ -2528,6 +2592,27 @@ private fun LayoutsDeck(
         icon = Icons.Rounded.SwapVert,
         enabled = layouts.size > 1,
         onClick = onReorderLayouts,
+    )
+
+    val activeLayoutName = activeLayout?.name ?: stringResource(R.string.macropad_editor_none)
+    GamepadTwoStepConfirmCard(
+        title = stringResource(R.string.macropad_editor_delete_layout),
+        confirmTitle = stringResource(R.string.macropad_layout_delete_confirm_title, activeLayoutName),
+        description = stringResource(R.string.macropad_editor_delete_layout_desc, activeLayoutName),
+        actionText = stringResource(R.string.gamepad_action_delete),
+        confirmActionText = stringResource(R.string.gamepad_action_confirm),
+        isDestructive = true,
+        icon = Icons.Rounded.Delete,
+        enabled = activeLayout != null,
+        onConfirm = {
+            onDeleteLayout()
+            scope.launch {
+                try {
+                    firstItemFocusRequester.requestFocus()
+                } catch (_: IllegalStateException) {
+                }
+            }
+        },
     )
 }
 

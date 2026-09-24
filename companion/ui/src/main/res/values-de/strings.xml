@@ -1333,6 +1333,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_profile_no_app_linked">Keine App oder Spiel mit diesem Profil verknüpft</string>
     <string name="macropad_profile_unlinked_toast">App-Verknüpfung von \"%1$s\" aufgehoben</string>
     <string name="macropad_profile_deleted_toast">Profil \"%1$s\" gelöscht</string>
+    <string name="macropad_profile_cannot_delete_last_toast">Das letzte Profil kann nicht gelöscht werden</string>
     <string name="macropad_profile_duplicated_toast">Profil \"%1$s\" dupliziert und ausgewählt</string>
     <string name="macropad_layout_deleted_toast">Layout \"%1$s\" gelöscht</string>
     <string name="macropad_layout_cannot_delete_last_toast">Das letzte Layout kann nicht gelöscht werden</string>

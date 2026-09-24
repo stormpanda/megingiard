@@ -898,6 +898,51 @@ class MacroPadStateTest {
     }
 
     @Test
+    fun `deleteProfile with multiple profiles removes target profile, switches active profile, and returns true`() {
+        val p1 = testProfile(id = "p1", name = "Profile 1")
+        val p2 = testProfile(id = "p2", name = "Profile 2")
+        loadProfiles(p1, p2, activeId = "p1")
+
+        assertTrue(MacroPadState.deleteProfile("p1"))
+        assertEquals(1, MacroPadState.profiles.value.size)
+        assertEquals(
+            "p2",
+            MacroPadState.profiles.value
+                .first()
+                .id,
+        )
+        assertEquals("p2", MacroPadState.activeProfileId.value)
+        assertEquals("p2", MacroPadState.activeProfile.value?.id)
+    }
+
+    @Test
+    fun `deleteProfile with single profile returns false and preserves profile`() {
+        val p1 = testProfile(id = "p1", name = "Only Profile")
+        loadProfiles(p1, activeId = "p1")
+
+        assertFalse(MacroPadState.deleteProfile("p1"))
+        assertEquals(1, MacroPadState.profiles.value.size)
+        assertEquals(
+            "p1",
+            MacroPadState.profiles.value
+                .first()
+                .id,
+        )
+        assertEquals("p1", MacroPadState.activeProfileId.value)
+    }
+
+    @Test
+    fun `deleteProfile with non-existent profile returns false`() {
+        val p1 = testProfile(id = "p1", name = "Profile 1")
+        val p2 = testProfile(id = "p2", name = "Profile 2")
+        loadProfiles(p1, p2, activeId = "p1")
+
+        assertFalse(MacroPadState.deleteProfile("non-existent-id"))
+        assertEquals(2, MacroPadState.profiles.value.size)
+        assertEquals("p1", MacroPadState.activeProfileId.value)
+    }
+
+    @Test
     fun `nextLayout and previousLayout cycle through layouts correctly`() {
         val l1 = testLayout(id = "l1", name = "Layout 1")
         val l2 = testLayout(id = "l2", name = "Layout 2")

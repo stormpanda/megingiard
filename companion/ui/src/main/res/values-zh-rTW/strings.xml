@@ -1317,6 +1317,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_profile_no_app_linked">此設定檔尚未連結任何應用程式或遊戲</string>
     <string name="macropad_profile_unlinked_toast">已取消「%1$s」的應用程式連結</string>
     <string name="macropad_profile_deleted_toast">已刪除設定檔「%1$s」</string>
+    <string name="macropad_profile_cannot_delete_last_toast">無法刪除最後一個設定檔</string>
     <string name="macropad_profile_duplicated_toast">已複製並選取設定檔「%1$s」</string>
     <string name="macropad_layout_deleted_toast">已刪除版面配置「%1$s」</string>
     <string name="macropad_layout_cannot_delete_last_toast">無法刪除最後一個版面配置</string>

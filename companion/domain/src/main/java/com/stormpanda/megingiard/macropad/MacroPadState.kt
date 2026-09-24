@@ -481,7 +481,16 @@ object MacroPadState {
         MacroPadSettings.saveMacroPadData()
     }
 
-    fun deleteProfile(profileId: String) {
+    fun deleteProfile(profileId: String): Boolean {
+        if (_profiles.value.size <= 1) {
+            AppLog.w(TAG, "deleteProfile id=$profileId rejected: must keep at least one profile")
+            return false
+        }
+        val target = _profiles.value.firstOrNull { it.id == profileId }
+        if (target == null) {
+            AppLog.w(TAG, "deleteProfile id=$profileId not found")
+            return false
+        }
         val remaining = _profiles.value.filter { it.id != profileId }
         _profiles.value = remaining
         if (_activeProfileId.value == profileId) {
@@ -490,6 +499,7 @@ object MacroPadState {
         recomputeActiveState()
         AppLog.d(TAG, "deleteProfile id=$profileId → activeId=${_activeProfileId.value}")
         MacroPadSettings.saveMacroPadData()
+        return true
     }
 
     fun renameProfile(
