@@ -80,6 +80,8 @@ private const val CLE_ROTATION_TL = -45f
 private const val CLE_ROTATION_TR = 45f
 private const val CLE_ROTATION_BL = 45f
 private const val CLE_ROTATION_BR = -45f
+private const val CLE_ROTATION_90 = 90
+private const val CLE_ROTATION_270 = 270
 
 private val CLE_RECT_SHAPE = RectangleShape
 private val CLE_EDGE_HANDLE_SHAPE = RoundedCornerShape(CLE_EDGE_HANDLE_CORNER)
@@ -426,7 +428,7 @@ fun CutoutLayoutEditor() {
                             }
                         val rawCropRatio = (curCutout.srcWidth * srcWidth) / (curCutout.srcHeight * srcHeight)
                         val cropRatio =
-                            if (curCutout.rotation == 90 || curCutout.rotation == 270) {
+                            if (curCutout.rotation == CLE_ROTATION_90 || curCutout.rotation == CLE_ROTATION_270) {
                                 1f / rawCropRatio
                             } else {
                                 rawCropRatio

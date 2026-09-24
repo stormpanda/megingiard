@@ -63,6 +63,15 @@ class ScreenCutoutTest {
         assertEquals(CutoutFlipMode.HORIZONTAL, CutoutFlipMode.fromBooleans(horizontal = true, vertical = false))
         assertEquals(CutoutFlipMode.VERTICAL, CutoutFlipMode.fromBooleans(horizontal = false, vertical = true))
         assertEquals(CutoutFlipMode.BOTH, CutoutFlipMode.fromBooleans(horizontal = true, vertical = true))
+
+        assertFalse(CutoutFlipMode.NONE.horizontal)
+        assertFalse(CutoutFlipMode.NONE.vertical)
+        assertTrue(CutoutFlipMode.HORIZONTAL.horizontal)
+        assertFalse(CutoutFlipMode.HORIZONTAL.vertical)
+        assertFalse(CutoutFlipMode.VERTICAL.horizontal)
+        assertTrue(CutoutFlipMode.VERTICAL.vertical)
+        assertTrue(CutoutFlipMode.BOTH.horizontal)
+        assertTrue(CutoutFlipMode.BOTH.vertical)
     }
 
     @Test

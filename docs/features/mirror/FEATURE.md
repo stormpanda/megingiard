@@ -707,8 +707,9 @@ Mirrored cutouts support discrete 90° orientation changes (`rotation`: 0°, 90�
    - Flipping inversions are applied subsequently (`if (flipHorizontal) nx = 1.0 - nx`, `if (flipVertical) ny = 1.0 - ny`).
    - The resulting un-transformed normalized coordinate maps linearly onto the source crop rectangle `[cropX, cropX + cropWidth]` on the primary screen.
 
-4. **Interactive Gesture Inversion (`InteractiveCutoutController.transformPanDelta`)**:
+4. **Interactive Gesture Inversion (`InteractiveCutoutController.transformPanDelta`, `transformFocalPoint`)**:
    - Touch drag deltas `(dx, dy)` from 1-finger viewport panning are inversely transformed by the cutout's rotation and flip flags before being applied to the crop offset, ensuring panning feels natural regardless of cutout orientation.
+   - The 2-finger pinch-to-zoom focal point is transformed through the rotation angle and axial flip mappings into content space, preventing zoom anchor drift.
 
 ### Architectural Roadmap: Zero-Copy Hardware & IPC Pipeline
 

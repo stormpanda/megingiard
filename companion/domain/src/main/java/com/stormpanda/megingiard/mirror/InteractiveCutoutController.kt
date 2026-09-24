@@ -24,6 +24,10 @@ const val BOUNCE_BACK_DURATION_MS = 200L
 const val ANIMATION_FRAME_INTERVAL_MS = 16L
 const val MIN_PINCH_DISTANCE_PX = 10f
 
+private const val ROTATION_90 = 90
+private const val ROTATION_180 = 180
+private const val ROTATION_270 = 270
+
 data class PointerRecord(
     val id: Long,
     var x: Float,
@@ -187,8 +191,16 @@ object InteractiveCutoutController {
                     cutout.flipVertical,
                 )
 
-            val focalNormX = ((curMidX - destLeft) / destW).coerceIn(0f, 1f)
-            val focalNormY = ((curMidY - destTop) / destH).coerceIn(0f, 1f)
+            val rawFocalNormX = ((curMidX - destLeft) / destW).coerceIn(0f, 1f)
+            val rawFocalNormY = ((curMidY - destTop) / destH).coerceIn(0f, 1f)
+            val (focalNormX, focalNormY) =
+                transformFocalPoint(
+                    rawFocalNormX,
+                    rawFocalNormY,
+                    cutout.rotation,
+                    cutout.flipHorizontal,
+                    cutout.flipVertical,
+                )
 
             val newCrop =
                 CutoutGestureMath.applyPinchZoomAndPan(
@@ -408,16 +420,16 @@ internal fun transformPanDelta(
 ): Pair<Float, Float> {
     var dx =
         when (rotation) {
-            90 -> deltaNormY
-            180 -> -deltaNormX
-            270 -> -deltaNormY
+            ROTATION_90 -> deltaNormY
+            ROTATION_180 -> -deltaNormX
+            ROTATION_270 -> -deltaNormY
             else -> deltaNormX
         }
     var dy =
         when (rotation) {
-            90 -> -deltaNormX
-            180 -> -deltaNormY
-            270 -> deltaNormX
+            ROTATION_90 -> -deltaNormX
+            ROTATION_180 -> -deltaNormY
+            ROTATION_270 -> deltaNormX
             else -> deltaNormY
         }
     if (flipHorizontal) {
@@ -427,4 +439,37 @@ internal fun transformPanDelta(
         dy = -dy
     }
     return Pair(dx, dy)
+}
+
+internal fun transformFocalPoint(
+    focalNormX: Float,
+    focalNormY: Float,
+    rotation: Int,
+    flipHorizontal: Boolean,
+    flipVertical: Boolean,
+): Pair<Float, Float> {
+    val rx = focalNormX.coerceIn(0f, 1f)
+    val ry = focalNormY.coerceIn(0f, 1f)
+
+    var u =
+        when (rotation) {
+            ROTATION_90 -> ry
+            ROTATION_180 -> 1f - rx
+            ROTATION_270 -> 1f - ry
+            else -> rx
+        }
+    var v =
+        when (rotation) {
+            ROTATION_90 -> 1f - rx
+            ROTATION_180 -> 1f - ry
+            ROTATION_270 -> rx
+            else -> ry
+        }
+    if (flipHorizontal) {
+        u = 1f - u
+    }
+    if (flipVertical) {
+        v = 1f - v
+    }
+    return Pair(u.coerceIn(0f, 1f), v.coerceIn(0f, 1f))
 }

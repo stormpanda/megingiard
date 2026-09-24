@@ -23,11 +23,14 @@ enum class CutoutSnapBackMode {
 }
 
 @Serializable
-enum class CutoutFlipMode {
-    NONE,
-    HORIZONTAL,
-    VERTICAL,
-    BOTH,
+enum class CutoutFlipMode(
+    val horizontal: Boolean,
+    val vertical: Boolean,
+) {
+    NONE(horizontal = false, vertical = false),
+    HORIZONTAL(horizontal = true, vertical = false),
+    VERTICAL(horizontal = false, vertical = true),
+    BOTH(horizontal = true, vertical = true),
     ;
 
     companion object {

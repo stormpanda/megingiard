@@ -160,6 +160,11 @@ private const val METO_FALLBACK_SRC_HEIGHT = 1080f
 private const val METO_FALLBACK_SEC_WIDTH = 1240f
 private const val METO_FALLBACK_SEC_HEIGHT = 1080f
 
+private const val METO_ROTATION_STEP_DEGREES = 90
+private const val METO_ROTATION_FULL_DEGREES = 360
+private const val METO_ROTATION_90 = 90
+private const val METO_ROTATION_270 = 270
+
 /**
  * Top-Screen (Display 0) Overlay for the Screen Mirroring Editor.
  *
@@ -462,7 +467,7 @@ fun MirrorEditorTopOverlay(
             if (stepDelta == 0) return@updateCutout null
             val rawCropRatio = (cur.srcWidth * srcWidth) / (cur.srcHeight * srcHeight)
             val cropRatio =
-                if (cur.rotation == 90 || cur.rotation == 270) {
+                if (cur.rotation == METO_ROTATION_90 || cur.rotation == METO_ROTATION_270) {
                     1f / rawCropRatio
                 } else {
                     rawCropRatio
@@ -1026,7 +1031,8 @@ private fun RotationCard(
 
     fun applyRotation(stepDelta: Int) {
         val cutout = selectedCutout ?: return
-        val targetRotation = (cutout.rotation + stepDelta * 90 + 360) % 360
+        val targetRotation =
+            (cutout.rotation + stepDelta * METO_ROTATION_STEP_DEGREES + METO_ROTATION_FULL_DEGREES) % METO_ROTATION_FULL_DEGREES
         val rotated =
             calculateRotatedCutoutBounds(
                 cutout = cutout,
@@ -1090,14 +1096,7 @@ private fun FlipCard(
                 (currentIdx - 1 + modes.size) % modes.size
             }
         val nextMode = modes[nextIdx]
-        val (h, v) =
-            when (nextMode) {
-                CutoutFlipMode.NONE -> Pair(false, false)
-                CutoutFlipMode.HORIZONTAL -> Pair(true, false)
-                CutoutFlipMode.VERTICAL -> Pair(false, true)
-                CutoutFlipMode.BOTH -> Pair(true, true)
-            }
-        onUpdate(cutout.copy(flipHorizontal = h, flipVertical = v))
+        onUpdate(cutout.copy(flipHorizontal = nextMode.horizontal, flipVertical = nextMode.vertical))
     }
 
     ToolboxCard(

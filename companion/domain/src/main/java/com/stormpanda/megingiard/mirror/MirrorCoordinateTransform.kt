@@ -8,6 +8,9 @@ import kotlin.math.roundToInt
 private const val OVERLAP_TOLERANCE: Float = 0.0001f
 private const val BINARY_SEARCH_STEPS = 10
 private const val MIN_RESIZE_PX = 8
+private const val ROTATION_90 = 90
+private const val ROTATION_180 = 180
+private const val ROTATION_270 = 270
 
 /**
  * Maps a raw touch position on the mirror surface back through the current zoom/pan
@@ -111,17 +114,17 @@ fun projectCutoutCoordinates(
 
     var normU =
         when (rotation) {
-            90 -> ry
-            180 -> 1f - rx
-            270 -> 1f - ry
+            ROTATION_90 -> ry
+            ROTATION_180 -> 1f - rx
+            ROTATION_270 -> 1f - ry
             else -> rx
         }
 
     var normV =
         when (rotation) {
-            90 -> 1f - rx
-            180 -> 1f - ry
-            270 -> rx
+            ROTATION_90 -> 1f - rx
+            ROTATION_180 -> 1f - ry
+            ROTATION_270 -> rx
             else -> ry
         }
 
@@ -318,7 +321,7 @@ fun adjustSourceCropToAspectRatio(
 
     val rawTargetRatio = (cutout.destWidth * screenW) / (cutout.destHeight * screenH)
     if (rawTargetRatio <= 0f) return cutout
-    val isQuarter = (cutout.rotation == 90 || cutout.rotation == 270)
+    val isQuarter = (cutout.rotation == ROTATION_90 || cutout.rotation == ROTATION_270)
     val targetRatio = if (isQuarter) (1f / rawTargetRatio) else rawTargetRatio
     val factor = targetRatio * (srcH / srcW)
     if (factor <= 0f) return cutout
@@ -380,7 +383,7 @@ fun adjustDestSizeToAspectRatio(
 ): Pair<Float, Float> {
     if (screenW <= 0f || screenH <= 0f || cropRatio <= 0f) return Pair(destWidth, destHeight)
 
-    val isQuarter = (rotation == 90 || rotation == 270)
+    val isQuarter = (rotation == ROTATION_90 || rotation == ROTATION_270)
     val effectiveCropRatio = if (isQuarter) (1f / cropRatio) else cropRatio
 
     val normRatio = effectiveCropRatio * (screenH / screenW)
@@ -439,8 +442,8 @@ fun calculateRotatedCutoutBounds(
     screenW: Float = 0f,
     screenH: Float = 0f,
 ): ScreenCutout? {
-    val currentIsQuarter = (cutout.rotation == 90 || cutout.rotation == 270)
-    val targetIsQuarter = (targetRotation == 90 || targetRotation == 270)
+    val currentIsQuarter = (cutout.rotation == ROTATION_90 || cutout.rotation == ROTATION_270)
+    val targetIsQuarter = (targetRotation == ROTATION_90 || targetRotation == ROTATION_270)
     val isSwappingDimensions = currentIsQuarter != targetIsQuarter
 
     val newW =
