@@ -78,10 +78,11 @@ class AutoKeyboardFocusCoordinatorTest {
         }
 
     @Test
-    fun testWindowStateChangeClosesKeyboard() =
+    fun testWindowStateChangeClosesKeyboardOnPackageChange() =
         runTest(testDispatcher) {
             AutoKeyboardFocusCoordinator.onTextFieldFocused(
-                fieldId = "field1",
+                fieldId = "com.android.chrome:field1",
+                packageName = "com.android.chrome",
                 isClicked = true,
                 autoOpenEnabled = true,
             )
@@ -89,8 +90,14 @@ class AutoKeyboardFocusCoordinatorTest {
             assertTrue(AutoKeyboardFocusCoordinator.isKeyboardAutoOpened.value)
             assertTrue(AppStateManager.isFullscreenKeyboardActive.value)
 
-            // Change window
-            AutoKeyboardFocusCoordinator.onWindowStateChanged()
+            // Intra-app window change (e.g. Chrome suggestions dropdown) keeps keyboard open
+            AutoKeyboardFocusCoordinator.onWindowStateChanged(newPackage = "com.android.chrome")
+
+            assertTrue(AutoKeyboardFocusCoordinator.isKeyboardAutoOpened.value)
+            assertTrue(AppStateManager.isFullscreenKeyboardActive.value)
+
+            // Package change (e.g. user goes to launcher or another app) closes keyboard
+            AutoKeyboardFocusCoordinator.onWindowStateChanged(newPackage = "com.android.launcher3")
 
             assertFalse(AutoKeyboardFocusCoordinator.isKeyboardAutoOpened.value)
             assertFalse(AppStateManager.isFullscreenKeyboardActive.value)

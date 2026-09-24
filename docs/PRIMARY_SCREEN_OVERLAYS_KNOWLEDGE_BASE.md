@@ -133,11 +133,10 @@ The primary display has ample width (1920×1080). Single-column phone-style vert
   - Ensure state subscriptions in the overlay activity are wrapped in `lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED)` so coroutines suspend when inactive.
   - Recycle temporary bitmaps and tear down heavy allocations in `onDestroy()`.
 
-### 4.6 Accessibility Service, Package Awareness & Secondary Window Focus Anchoring
+### 4.6 Accessibility Service & Package Awareness
 * [`MegingiardAccessibilityService`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/ui/src/main/java/com/stormpanda/megingiard/services/MegingiardAccessibilityService.kt) listens for window state changes on the primary display to trigger automatic MacroPad profile switching via [`AutoSwitchCoordinator`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/domain/src/main/java/com/stormpanda/megingiard/macropad/AutoSwitchCoordinator.kt).
 * `AutoSwitchCoordinator` explicitly ignores package `com.stormpanda.megingiard` (`APP_PACKAGE_SELF`).
 * **Guarantee**: Because `PrimaryOverlayActivity` lives in `com.stormpanda.megingiard`, opening a settings overlay on the top screen will **not** trigger an unwanted profile switch away from the active game.
-* **Secondary Window Focus Anchoring**: `MegingiardAccessibilityService` also intercepts window state transitions on the secondary display (and Thor's system `focus_change` events) to automatically call `PrimaryFocusAnchorActivity.anchorPrimaryFocus(this)`. When temporary or third-party focusable windows on Display 4 close, this guarantees focus is immediately anchored back to Display 0 rather than leaving an unfocused `MainActivity` on Display 4 causing InputDispatcher ANR timeouts.
 
 ### 4.7 Dual-Screen Target Enforcement
 * Megingiard is built exclusively for dual-screen handhelds (AYN Thor).

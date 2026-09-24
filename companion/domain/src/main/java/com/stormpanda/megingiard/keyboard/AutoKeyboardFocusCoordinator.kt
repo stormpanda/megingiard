@@ -24,17 +24,20 @@ object AutoKeyboardFocusCoordinator {
     private val _isKeyboardAutoOpened = MutableStateFlow(false)
     val isKeyboardAutoOpened: StateFlow<Boolean> = _isKeyboardAutoOpened.asStateFlow()
 
+    private var activePackage: String? = null
     private var lastFocusedFieldId: String? = null
     private var userDismissedFieldId: String? = null
 
     /**
      * Called when an editable view on the primary display is focused or clicked.
      *
-     * @param fieldId Unique identifier for the focused field (e.g. windowId:nodeId).
+     * @param fieldId Unique identifier for the focused field (e.g. package:uniqueId).
+     * @param packageName Application package of the focused field.
      * @param isClicked Whether the event was explicitly triggered by user tap/click.
      */
     fun onTextFieldFocused(
         fieldId: String,
+        packageName: String? = null,
         isClicked: Boolean,
         autoOpenEnabled: Boolean = KeyboardSettings.kbAutoOpenOnFocus.value,
     ) {
@@ -49,9 +52,10 @@ object AutoKeyboardFocusCoordinator {
             return
         }
 
-        AppLog.d(TAG, "onTextFieldFocused: opening keyboard for field $fieldId (isClicked=$isClicked)")
+        AppLog.d(TAG, "onTextFieldFocused: opening keyboard for field $fieldId (pkg=$packageName, isClicked=$isClicked)")
         userDismissedFieldId = null
         lastFocusedFieldId = fieldId
+        activePackage = packageName
         _isKeyboardAutoOpened.value = true
 
         AppStateManager.setFullscreenKeyboardActive(true)
@@ -63,6 +67,7 @@ object AutoKeyboardFocusCoordinator {
     fun onNonEditableFocused() {
         lastFocusedFieldId = null
         userDismissedFieldId = null
+        activePackage = null
 
         if (_isKeyboardAutoOpened.value) {
             AppLog.d(TAG, "onNonEditableFocused: closing auto-opened keyboard")
@@ -73,13 +78,22 @@ object AutoKeyboardFocusCoordinator {
 
     /**
      * Called when the active window changes on the primary display.
+     *
+     * @param newPackage The package owning the new top/active window on the primary display.
+     * If [newPackage] matches the current [activePackage], the keyboard is kept open to avoid
+     * flickering on intra-app popups, suggestion dropdowns, or dialogs.
      */
-    fun onWindowStateChanged() {
+    fun onWindowStateChanged(newPackage: String? = null) {
         if (_isKeyboardAutoOpened.value) {
-            AppLog.d(TAG, "onWindowStateChanged: closing auto-opened keyboard due to window change")
+            if (newPackage != null && activePackage != null && newPackage == activePackage) {
+                AppLog.d(TAG, "onWindowStateChanged: intra-app window change in $newPackage, keeping keyboard open")
+                return
+            }
+            AppLog.d(TAG, "onWindowStateChanged: closing auto-opened keyboard due to package change (from=$activePackage to=$newPackage)")
             _isKeyboardAutoOpened.value = false
             lastFocusedFieldId = null
             userDismissedFieldId = null
+            activePackage = null
             AppStateManager.setFullscreenKeyboardActive(false)
         }
     }
@@ -104,5 +118,6 @@ object AutoKeyboardFocusCoordinator {
         _isKeyboardAutoOpened.value = false
         lastFocusedFieldId = null
         userDismissedFieldId = null
+        activePackage = null
     }
 }
