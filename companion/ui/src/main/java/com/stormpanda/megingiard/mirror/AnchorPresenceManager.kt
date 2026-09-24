@@ -35,7 +35,7 @@ import kotlin.math.roundToInt
 
 private const val TAG = "AnchorPresenceManager"
 
-private const val PRESENCE_CHECK_INTERVAL_ACTIVE_MS = 33L // ~30 Hz active presence evaluation (cuts GPU readbacks & Main-Thread stalls by 50%)
+private const val PRESENCE_CHECK_INTERVAL_ACTIVE_MS = 16L // ~60 Hz (1-frame instant content absence detection)
 private const val PRESENCE_CHECK_INTERVAL_LOST_FAST_MS = 33L // ~30 Hz prompt recovery (0–2s)
 private const val PRESENCE_CHECK_INTERVAL_LOST_MEDIUM_MS = 100L // ~10 Hz candidate polling during cutscenes (2–5s)
 private const val PRESENCE_CHECK_INTERVAL_LOST_SLOW_MS = 500L // ~2 Hz idle polling during long loading screens (>5s)
@@ -143,7 +143,7 @@ object AnchorPresenceManager {
 
         if (shouldMonitor) {
             if (monitorJob?.isActive != true) {
-                AppLog.i(TAG, "Starting visual anchor presence monitoring loop (active 30 Hz / recover 30 Hz)")
+                AppLog.i(TAG, "Starting visual anchor presence monitoring loop (active 60 Hz / recover 30 Hz)")
                 monitorJob = scope.launch { runMonitoringLoop() }
             }
         } else {
