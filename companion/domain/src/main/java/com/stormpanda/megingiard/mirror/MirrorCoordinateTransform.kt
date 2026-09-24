@@ -535,10 +535,13 @@ fun getTargetGeometryWithAspectRatio(
     screenW: Float,
     screenH: Float,
     minCutoutSize: Float = MIN_TOUCH_CUTOUT_SIZE,
+    rotation: Int = 0,
 ): ScreenCutoutGeometry {
     val dx = targetWidth - originalWidth
     val dy = targetHeight - originalHeight
-    val normRatio = cropRatio * (screenH / screenW)
+    val isQuarter = (rotation == ROTATION_90 || rotation == ROTATION_270)
+    val effectiveCropRatio = if (isQuarter && cropRatio > 0f) (1f / cropRatio) else cropRatio
+    val normRatio = effectiveCropRatio * (screenH / screenW)
 
     val originalRight = originalX + originalWidth
     val originalBottom = originalY + originalHeight
@@ -638,6 +641,7 @@ fun clampCutoutResize(
     screenW: Float = 0f,
     screenH: Float = 0f,
     minCutoutSize: Float = MIN_TOUCH_CUTOUT_SIZE,
+    rotation: Int = allCutouts.find { it.id == cutoutId }?.rotation ?: 0,
 ): ScreenCutoutGeometry {
     val others = allCutouts.filter { it.id != cutoutId }
 
@@ -657,6 +661,7 @@ fun clampCutoutResize(
                 screenW = screenW,
                 screenH = screenH,
                 minCutoutSize = minCutoutSize,
+                rotation = rotation,
             )
 
         val origGeom = ScreenCutoutGeometry(originalX, originalY, originalWidth, originalHeight)
@@ -1169,6 +1174,7 @@ fun calculateResizedBounds(
  * @param topScreenH Height in pixels of the primary screen.
  * @param cutoutRatio Physical aspect ratio of the follower/master cutout (cutoutWidthPx / cutoutHeightPx).
  * @param minSize Minimum normalized size.
+ * @param rotation Rotation angle of the cutout in degrees (0, 90, 180, 270).
  * @return The resulting clamped [ScreenCutoutGeometry].
  */
 fun clampCropResizeProportional(
@@ -1183,12 +1189,15 @@ fun clampCropResizeProportional(
     topScreenH: Float,
     cutoutRatio: Float,
     minSize: Float = MIN_TOUCH_CUTOUT_SIZE,
+    rotation: Int = 0,
 ): ScreenCutoutGeometry {
     if (topScreenW <= 0f || topScreenH <= 0f || cutoutRatio <= 0f) {
         return ScreenCutoutGeometry(originalX, originalY, originalWidth, originalHeight)
     }
 
-    val normCropRatio = cutoutRatio * (topScreenH / topScreenW)
+    val isQuarter = (rotation == ROTATION_90 || rotation == ROTATION_270)
+    val effectiveCutoutRatio = if (isQuarter && cutoutRatio > 0f) (1f / cutoutRatio) else cutoutRatio
+    val normCropRatio = effectiveCutoutRatio * (topScreenH / topScreenW)
     if (normCropRatio <= 0f) {
         return ScreenCutoutGeometry(originalX, originalY, originalWidth, originalHeight)
     }

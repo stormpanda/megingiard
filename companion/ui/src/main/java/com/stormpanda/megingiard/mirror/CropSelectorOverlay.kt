@@ -53,6 +53,8 @@ private const val CS_FALLBACK_SRC_WIDTH = 1920f
 private const val CS_FALLBACK_SRC_HEIGHT = 1080f
 private const val CS_FALLBACK_SEC_WIDTH = 1240f
 private const val CS_FALLBACK_SEC_HEIGHT = 1080f
+private const val CS_ROTATION_90 = 90
+private const val CS_ROTATION_270 = 270
 
 @Composable
 fun CropSelectorOverlay(
@@ -90,7 +92,9 @@ fun CropSelectorOverlay(
         var updated = cutout.copy(srcX = newX, srcY = newY, srcWidth = newW, srcHeight = newH)
         if (updated.aspectRatioMode == AspectRatioMode.TOP) {
             val cropRatio = (newW * srcWidth) / (newH * srcHeight)
-            val normRatio = cropRatio * (secScreenH / secScreenW)
+            val isQuarter = (updated.rotation == CS_ROTATION_90 || updated.rotation == CS_ROTATION_270)
+            val effectiveCropRatio = if (isQuarter && cropRatio > 0f) (1f / cropRatio) else cropRatio
+            val normRatio = effectiveCropRatio * (secScreenH / secScreenW)
             val (newDestW, newDestH) =
                 adjustDestSizeToAspectRatio(
                     destX = updated.destX,
@@ -100,6 +104,7 @@ fun CropSelectorOverlay(
                     cropRatio = cropRatio,
                     screenW = secScreenW,
                     screenH = secScreenH,
+                    rotation = updated.rotation,
                 )
 
             var finalW = newDestW
@@ -252,6 +257,7 @@ fun CropSelectorOverlay(
                     topScreenW = screenW,
                     topScreenH = screenH,
                     cutoutRatio = cutoutRatio,
+                    rotation = curCutout.rotation,
                 )
             val updated =
                 curLayout.mirrorCutouts.map {

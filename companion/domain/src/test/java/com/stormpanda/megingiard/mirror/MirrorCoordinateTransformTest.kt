@@ -54,6 +54,9 @@ private fun cutout(
     aspectRatioMode: AspectRatioMode = AspectRatioMode.TOP,
     motionSmoothing: Boolean = false,
     motionSmoothingStrength: Int = 85,
+    rotation: Int = 0,
+    flipHorizontal: Boolean = false,
+    flipVertical: Boolean = false,
 ) = ScreenCutout(
     id = id,
     name = name,
@@ -69,6 +72,9 @@ private fun cutout(
     aspectRatioMode = aspectRatioMode,
     motionSmoothing = motionSmoothing,
     motionSmoothingStrength = motionSmoothingStrength,
+    rotation = rotation,
+    flipHorizontal = flipHorizontal,
+    flipVertical = flipVertical,
 )
 
 private fun assertProject(
@@ -464,6 +470,41 @@ class MirrorCoordinateTransformTest {
             cropRatio = 1f,
             eps = 0.002f,
         )
+    }
+
+    @Test
+    fun `clampCutoutResize inverts aspect ratio for rotated cutouts`() {
+        val allCutouts =
+            listOf(
+                cutout("1", destX = 0.1f, destY = 0.1f, destWidth = 0.2f, destHeight = 0.2f, rotation = 90),
+            )
+        // With rotation 90, cropRatio = 2f (landscape 2:1 on top screen) becomes 0.5f (portrait 1:2 on secondary display)
+        // screenW = 1000, screenH = 1000, so normRatio = 0.5f
+        // Dragging BOTTOM_RIGHT from 0.2, 0.2 to target 0.4, 0.4:
+        // dx = 0.2, dy = 0.2
+        // abs(dx) >= abs(dy * 0.5) (0.2 >= 0.1), so finalW = 0.4, finalH = 0.4 / 0.5 = 0.8
+        val geom =
+            clampCutoutResize(
+                cutoutId = "1",
+                handle = ResizeHandle.BOTTOM_RIGHT,
+                originalX = 0.1f,
+                originalY = 0.1f,
+                originalWidth = 0.2f,
+                originalHeight = 0.2f,
+                targetX = 0.1f,
+                targetY = 0.1f,
+                targetWidth = 0.4f,
+                targetHeight = 0.4f,
+                allCutouts = allCutouts,
+                keepAspectRatio = true,
+                cropRatio = 2f,
+                screenW = 1000f,
+                screenH = 1000f,
+            )
+        assertEquals(0.1f, geom.x, EPS)
+        assertEquals(0.1f, geom.y, EPS)
+        assertEquals(0.4f, geom.w, EPS)
+        assertEquals(0.8f, geom.h, EPS)
     }
 
     @Test
@@ -1322,6 +1363,33 @@ class MirrorCoordinateTransformTest {
         assertEquals(0.5f, tl.w, EPS)
         assertEquals(0.5f, tl.h, EPS)
         assertEquals(expectedNormRatio, tl.w / tl.h, EPS)
+    }
+
+    @Test
+    fun `clampCropResizeProportional inverts cutout ratio for rotated cutouts`() {
+        val topW = 1920f
+        val topH = 1080f
+        val cutoutRatio = 16f / 9f // physical ratio 16:9 on secondary display
+        // With rotation = 90, effective cutout ratio is 9/16
+        val expectedNormRatio = (9f / 16f) * (topH / topW) // (9/16) * (1080/1920) = 0.31640625f
+
+        val br =
+            clampCropResizeProportional(
+                handle = ResizeHandle.BOTTOM_RIGHT,
+                originalX = 0.1f,
+                originalY = 0.1f,
+                originalWidth = 0.2f,
+                originalHeight = 0.2f,
+                totalDx = 192f, // +0.1 in screen fraction
+                totalDy = 108f, // +0.1 in screen fraction
+                topScreenW = topW,
+                topScreenH = topH,
+                cutoutRatio = cutoutRatio,
+                rotation = 90,
+            )
+        assertEquals(0.1f, br.x, EPS)
+        assertEquals(0.1f, br.y, EPS)
+        assertEquals(expectedNormRatio, br.w / br.h, EPS)
     }
 
     @Test

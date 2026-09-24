@@ -323,7 +323,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - **Transformed Coordinate Pipeline:**
   - **Touch Projection (`projectCutoutCoordinates`):** Touch events on rotated/flipped cutouts are mapped through rotation and flip transforms back into primary screen coordinates, guaranteeing that tapping visual elements on the secondary screen hits the exact source location.
   - **Interactive Gestures (`InteractiveCutoutController.transformPanDelta`):** One-finger pan vectors rotate according to cutout orientation so gesture viewport movement follows finger trajectory naturally.
-  - **Aspect Ratio Locking (`adjustSourceCropToAspectRatio`, `adjustDestSizeToAspectRatio`, corner resize):** Effective aspect ratios are inverted when rotated 90°/270° to prevent stretching and distortion.
+  - **Aspect Ratio Locking (`adjustSourceCropToAspectRatio`, `adjustDestSizeToAspectRatio`, `clampCutoutResize`, `clampCropResizeProportional`, `CropSelectorOverlay`, and Gamepad R2+D-Pad):** Effective aspect ratios are inverted when rotated 90°/270° across both primary crop and secondary cutout touch/gamepad resizing pipelines to prevent stretching and distortion.
 
 ---
 

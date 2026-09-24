@@ -80,8 +80,6 @@ private const val CLE_ROTATION_TL = -45f
 private const val CLE_ROTATION_TR = 45f
 private const val CLE_ROTATION_BL = 45f
 private const val CLE_ROTATION_BR = -45f
-private const val CLE_ROTATION_90 = 90
-private const val CLE_ROTATION_270 = 270
 
 private val CLE_RECT_SHAPE = RectangleShape
 private val CLE_EDGE_HANDLE_SHAPE = RoundedCornerShape(CLE_EDGE_HANDLE_CORNER)
@@ -426,13 +424,7 @@ fun CutoutLayoutEditor() {
                                 ResizeHandle.BOTTOM_LEFT, ResizeHandle.BOTTOM_RIGHT -> dragStartH + totalDy / screenH
                                 else -> dragStartH
                             }
-                        val rawCropRatio = (curCutout.srcWidth * srcWidth) / (curCutout.srcHeight * srcHeight)
-                        val cropRatio =
-                            if (curCutout.rotation == CLE_ROTATION_90 || curCutout.rotation == CLE_ROTATION_270) {
-                                1f / rawCropRatio
-                            } else {
-                                rawCropRatio
-                            }
+                        val cropRatio = (curCutout.srcWidth * srcWidth) / (curCutout.srcHeight * srcHeight)
                         val geom =
                             clampCutoutResize(
                                 cutoutId = curCutout.id,
@@ -450,6 +442,7 @@ fun CutoutLayoutEditor() {
                                 cropRatio = cropRatio,
                                 screenW = screenW,
                                 screenH = screenH,
+                                rotation = curCutout.rotation,
                             )
                         val updated =
                             curLayout.mirrorCutouts.map {
