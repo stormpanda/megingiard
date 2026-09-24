@@ -467,13 +467,9 @@ fun MirrorEditorTopOverlay(
                     0
                 }
             if (stepDelta == 0) return@updateCutout null
+            val isQuarter = (cur.rotation == METO_ROTATION_90 || cur.rotation == METO_ROTATION_270)
             val rawCropRatio = (cur.srcWidth * srcWidth) / (cur.srcHeight * srcHeight)
-            val cropRatio =
-                if (cur.rotation == METO_ROTATION_90 || cur.rotation == METO_ROTATION_270) {
-                    1f / rawCropRatio
-                } else {
-                    rawCropRatio
-                }
+            val cropRatio = if (isQuarter && rawCropRatio > 0f) (1f / rawCropRatio) else rawCropRatio
             val normRatio = cropRatio * (secScreenH / secScreenW)
             val geom =
                 calculateProportionalResizedBounds(

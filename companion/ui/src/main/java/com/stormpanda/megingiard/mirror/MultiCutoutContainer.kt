@@ -48,8 +48,8 @@ private const val MIN_ALPHA_THRESHOLD = 0.005f
 private const val FULL_ALPHA_FLOAT = 1.0f
 private const val FROZEN_INACTIVE_SATURATION = 0.6f
 private const val FROZEN_INACTIVE_BRIGHTNESS = 0.65f
-private const val ROTATION_90 = 90
-private const val ROTATION_270 = 270
+private const val MCC_ROTATION_90 = 90
+private const val MCC_ROTATION_270 = 270
 
 internal class MultiCutoutContainer(
     context: Context,
@@ -670,7 +670,7 @@ internal class MultiCutoutContainer(
                 }
             val isStaticAssetDrawn = staticAssetBitmap != null && !staticAssetBitmap.isRecycled
 
-            val isQuarterTurn = (cutout.rotation == ROTATION_90 || cutout.rotation == ROTATION_270)
+            val isQuarterTurn = (cutout.rotation == MCC_ROTATION_90 || cutout.rotation == MCC_ROTATION_270)
             val contentW = if (isQuarterTurn) dh else dw
             val contentH = if (isQuarterTurn) dw else dh
 
