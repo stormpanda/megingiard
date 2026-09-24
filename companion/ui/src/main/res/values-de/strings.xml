@@ -704,6 +704,13 @@ Open Settings to create a layout.</string>
     <string name="macropad_delete_cutout_desc">Diesen Ausschnitt dauerhaft aus dem Layout entfernen</string>
     <string name="mirror_editor_shape_mode">Ausschnittform</string>
     <string name="mirror_editor_shape_desc">Zwischen rechteckiger und kreisförmiger Darstellung wechseln</string>
+    <string name="mirror_editor_rotation_title">Drehung</string>
+    <string name="mirror_editor_rotate_blocked">Drehung blockiert: Kollision mit anderem Ausschnitt</string>
+    <string name="mirror_editor_flip_title">Spiegeln</string>
+    <string name="mirror_editor_flip_none">Keine</string>
+    <string name="mirror_editor_flip_horizontal">Horizontal</string>
+    <string name="mirror_editor_flip_vertical">Vertikal</string>
+    <string name="mirror_editor_flip_both">Beide</string>
     <string name="settings_mirror_cutout_summary_fmt">Glättung: %1$s • Projektion: %2$s</string>
     <string name="settings_mirror_cutout_summary_with_filter_fmt">Glättung: %1$s • %2$s • Projektion: %3$s</string>
     <string name="settings_mirror_cutout_filter_transparency_mask">HUD / UI-Isolierung</string>
@@ -811,6 +818,10 @@ Open Settings to create a layout.</string>
     <string name="help_mirror_editor_aspect_desc">Wechselt zwischen drei Seitenverhältnis-Modi für den ausgewählten Ausschnitt. Frei — keine Einschränkung, unabhängige Größenänderung. Oben — fixiert das Seitenverhältnis passend zum Crop-Bereich auf dem oberen Bildschirm. Unten — fixiert das Seitenverhältnis passend zum Ausschnitt auf dem unteren Bildschirm.</string>
     <string name="help_mirror_editor_shape_label">Form</string>
     <string name="help_mirror_editor_shape_desc">Wechselt die Form des ausgewählten Ausschnitts zwischen Rechteck und Kreis. Nützlich für Spielminiaturkarten oder runde Anzeigen, die im Kreis besser aussehen.</string>
+    <string name="help_mirror_editor_rotation_label">Drehung</string>
+    <string name="help_mirror_editor_rotation_desc">Dreht den ausgewählten Ausschnitt in 90°-Schritten (0°, 90°, 180°, 270°). Beim Wechsel zwischen Quer- und Hochformat passt sich der Rahmen automatisch kollisionsfrei an.</string>
+    <string name="help_mirror_editor_flip_label">Spiegeln</string>
+    <string name="help_mirror_editor_flip_desc">Schaltet zwischen den Spiegelungsmodi für den ausgewählten Ausschnitt um: Keine, Horizontal, Vertikal oder Beide.</string>
     <string name="help_mirror_editor_adjust_label">Koordinaten anpassen</string>
     <string name="help_mirror_editor_adjust_desc" formatted="false">Aktiviert den Feinjustierungsmodus. Verwende das Steuerkreuz zum pixelweisen Verschieben. Halte R2 gedrückt, während du das Steuerkreuz drückst, um die Größe symmetrisch zum Mittelpunkt zu ändern (bis zu 1 % der Bildschirmgröße). Unter 5 % werden Touch-Griffe ausgeblendet, um die Anzeige freizuhalten.</string>
     <string name="help_mirror_editor_hide_bg_desc">Blendet das Layout-Hintergrundbild auf dem sekundären Bildschirm während der Bearbeitung vorübergehend aus, um das Anpassen der Ausschnittgrenzen zu erleichtern. Ändert nicht Ihre gespeicherten Layouteinstellungen.</string>

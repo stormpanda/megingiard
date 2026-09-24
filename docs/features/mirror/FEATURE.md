@@ -28,17 +28,19 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
     - **Dynamic Viewport Boundary Clamping:** When expanded, the container automatically shifts upward if its height would exceed the bottom screen boundary, guaranteeing the entire toolbox remains 100% visible on Display 0.
     - **Bidirectional Focus Loop:** Focus smoothly wraps between the top cutout selector card and the bottom drag handle collapse button.
     - **Cutout Selector:** Pressing A enters Tier-2 selection mode (capsule illuminates with glowing accent border); D-Pad Left/Right cycles active cutout (with wrap-around); pressing A or B/Back exits selection mode.
+    - **Add Cutout:** Finds an available non-overlapping canvas slot (`CutoutPlacementHelper.findAvailableSlot`) and adds a new cutout. If no space is available, prompts user with a toast.
     - **Aspect Ratio Lock:** Cycles `FREE` → `TOP` → `BOTTOM` with D-Pad Left/Right or A.
-    - **Shape Toggle:** Toggles `RECTANGLE` ↔ `CIRCLE` with A.
     - **Adjust Top Cutout (Move & Resize Mode):** Pressing A enters Tier-2 adjustment mode with visual highlight and a top-screen toast notification informing the user ("Use D-Pad to move. Hold R2 to resize. Hold L2 for precision.").
       - In normal mode, holding D-Pad Up/Down/Left/Right moves source crop coordinates on Display 0 in 10 px increments with acceleration. Holding **L2** switches to 1 px precision micro-steps.
       - When holding **R2** (`KEYCODE_BUTTON_R2`), D-Pad Up increases vertical size by 10 px (or 1 px holding **L2**), alternating between top border and bottom border expansion to keep the center invariant; D-Pad Down decreases vertical size by 10 px (or 1 px holding **L2**) alternating borders; D-Pad Right increases horizontal size by 10 px (or 1 px holding **L2**) alternating right and left border expansion; D-Pad Left decreases horizontal size by 10 px (or 1 px holding **L2**) alternating borders. Resizing can shrink source crop dimensions down to **1% of screen size** (`MIN_GAMEPAD_CUTOUT_SIZE = 0.01f`). If `AspectRatioMode.TOP` is active, destination bounds on the secondary screen adjust automatically. Pressing A/B/Back exits adjustment mode.
     - **Adjust Bottom Cutout (Move & Resize Mode):** Pressing A enters Tier-2 adjustment mode with visual highlight and a top-screen toast notification.
       - In normal mode, holding D-Pad Up/Down/Left/Right moves target cutout destination coordinates on the secondary screen in 10 px increments with acceleration. Holding **L2** switches to 1 px precision micro-steps.
       - When holding **R2**, D-Pad Up/Down/Right/Left resizes destination bounds in 10 px increments (or 1 px holding **L2**) while alternating opposite borders symmetrically around the center. Resizing can shrink destination cutout dimensions down to **1% of screen size** (`MIN_GAMEPAD_CUTOUT_SIZE = 0.01f`). If `AspectRatioMode.BOTTOM` is active, source crop bounds on the primary display adjust automatically. Pressing A/B/Back exits adjustment mode.
+    - **Flip Mode:** Cycles mirror reflection mode (`NONE` → `HORIZONTAL` → `VERTICAL` → `BOTH`) with D-Pad Left/Right or Click.
+    - **Rotation Mode:** Rotates cutout in 90° increments (0°, 90°, 180°, 270°) with D-Pad Left/Right or Click, swapping physical pixel dimensions and preventing collisions.
+    - **Shape Toggle:** Toggles `RECTANGLE` ↔ `CIRCLE` with A.
     - **Hide Background (Temporary Editor Toggle):** Toggles layout background image visibility on the secondary display during editing without modifying saved layout properties. If the layout has no background image, the card is disabled displaying `None`. Toggling hidden (`Hidden`) suppresses the background in `EmbeddedMirrorView` and `PadCanvas` to provide a clean black canvas for easy cutout boundary adjustments.
     - **Snap to Alignment (Cutout Snapping Toggle):** Toggles magnetic alignment snapping (`MirrorSettings.cutoutAlignmentSnapping`) for cutout destination centers. When enabled, dragging or moving cutouts with gamepad magnetically snaps their centers to align with sibling cutouts.
-    - **Add Cutout:** Finds an available non-overlapping canvas slot (`CutoutPlacementHelper.findAvailableSlot`) and adds a new cutout. If no space is available, prompts user with a toast.
     - **Delete Cutout:** Two-step confirmation (`[ DEL ]` → `[ CONFIRM ]`) deletes the selected cutout.
     - **Save Changes / Exit Row:** Commits cutout changes to active layout or prompts for Save/Discard on back.
   - **Bottom Screen (Display 4):** `CutoutLayoutEditor` renders an unobstructed touch canvas with destination bounding boxes and draggable corner/edge resize handles for direct touch manipulation without floating toolbar obstruction. To keep the active area clear when calibrating small cuts, the center name badge is omitted for the selected cutout, and for unselected cutouts it is only rendered if height is at least 24 dp. Touch resize handles enforce a 5% minimum (`MIN_TOUCH_CUTOUT_SIZE = 0.05f`); when either width or height is below 5%, touch resize handles are hidden while moving via touch remains available. It also hosts the PowerPoint-style Smart Alignment Guides overlay (`CutoutAlignmentGuidesOverlay`), dynamically displaying dashed lines and concentric rings/dots whenever the selected cutout's center aligns with any sibling cutout's center X or Y coordinate.
@@ -310,6 +312,20 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
     - **Instant (`INSTANT`):** Releasing all fingers immediately triggers a smooth lerp animation (`SNAP_BACK_DURATION_MS = 250L`) returning the source crop to its default anchor position, accompanied by a light haptic tick.
   - **Follow Touch Precedence:** If a cutout has both Follow Touch and Interactive Viewport enabled, manual pan/zoom operates freely. Any subsequent touch received on the top screen immediately takes over and re-centers the crop on the newly touched coordinates.
   - **Transient Viewport State:** On-the-fly gesture manipulation operates strictly on transient in-memory viewports (`InteractiveCutoutController.overrideCrops`). The saved layout profile configuration is never overwritten.
+
+### FR-M24: Mirrored Cutout Rotation and Flipping
+
+- The user MUST be able to rotate any mirrored cutout on the secondary display in 90° discrete increments (`0°`, `90°`, `180°`, `270°`) and flip it across axes (`None`, `Horizontal`, `Vertical`, `Both`).
+- Controls for rotation and flipping are hosted directly within the Screen Mirroring Editor toolbox on the primary display (`MirrorEditorTopOverlay`):
+  - **Rotation Card (`RotationCard`):** Displays current rotation angle in degrees with `Icons.AutoMirrored.Rounded.RotateRight`. D-Pad Right / Click advances $+90^\circ$, D-Pad Left advances $-90^\circ$.
+  - **Flip Card (`FlipCard`):** Compact cycle card with `Icons.Rounded.Flip`, stepping through `None` $\to$ `Horizontal` $\to$ `Vertical` $\to$ `Both`.
+- **Center-Anchored Bounding Box Swapping & Collision Prevention (`calculateRotatedCutoutBounds`):**
+  - When rotating between landscape and portrait (0°/180° $\leftrightarrow$ 90°/270°), the destination bounding box swaps physical pixel dimensions (converting normalized height and width through screen aspect ratio) around the cutout's midpoint and clamps within screen edges.
+  - If the rotated bounding box collides with another cutout or exceeds screen bounds, rotation is prevented and an informational toast notification (`"Cannot rotate: blocked by another cutout"`) is presented.
+- **Transformed Coordinate Pipeline:**
+  - **Touch Projection (`projectCutoutCoordinates`):** Touch events on rotated/flipped cutouts are mapped through rotation and flip transforms back into primary screen coordinates, guaranteeing that tapping visual elements on the secondary screen hits the exact source location.
+  - **Interactive Gestures (`InteractiveCutoutController.transformPanDelta`):** One-finger pan vectors rotate according to cutout orientation so gesture viewport movement follows finger trajectory naturally.
+  - **Aspect Ratio Locking (`adjustSourceCropToAspectRatio`, `adjustDestSizeToAspectRatio`, `clampCutoutResize`, `clampCropResizeProportional`, `CropSelectorOverlay`, and Gamepad R2+D-Pad):** Effective aspect ratios are inverted when rotated 90°/270° across both primary crop and secondary cutout touch/gamepad resizing pipelines to prevent stretching and distortion.
 
 ---
 
@@ -653,6 +669,50 @@ HUD / UI isolation is implemented via hardware-accelerated transparency mask ble
      - Bypasses the live video stream entirely during rendering, displaying a clean, pristine UI asset with zero background motion bleed-through or compression noise.
    - Stationary UI graphics remain 100% visible and render live at 60/120 FPS with zero copy overhead, while moving background pixels become 100% transparent.
 
+### Cutout Rotation and Flip Transformations (`MultiCutoutContainer.kt`, `MirrorCoordinateTransform.kt`)
+
+Mirrored cutouts support discrete 90° orientation changes (`rotation`: 0°, 90°, 180°, 270°) and axial reflections (`flipHorizontal`, `flipVertical`).
+
+1. **Rendering & Compositing (`MultiCutoutContainer.kt`)**:
+   - `MultiCutoutContainer.drawSingleCutout` applies local canvas transformations prior to rendering content:
+     ```kotlin
+     val isQuarterTurn = cutout.rotation == 90 || cutout.rotation == 270
+     val contentW = if (isQuarterTurn) dh else dw
+     val contentH = if (isQuarterTurn) dw else dh
+     canvas.save()
+     canvas.translate(dx + dw / 2f, dy + dh / 2f)
+     if (cutout.rotation != 0) canvas.rotate(cutout.rotation.toFloat())
+     if (cutout.flipHorizontal || cutout.flipVertical) {
+         canvas.scale(
+             if (cutout.flipHorizontal) -1f else 1f,
+             if (cutout.flipVertical) -1f else 1f
+         )
+     }
+     canvas.translate(-contentW / 2f, -contentH / 2f)
+     ```
+   - Content feeds (video stream, frozen frames, delayed frame buffers, static UI assets), frosted blur backgrounds, and `DST_IN` hardware transparency masks render in unrotated content bounds `(contentW, contentH)`. This ensures that transparency masks and blur layers rotate and flip synchronously with the source video.
+   - Screen-space boundary effects (ambient dimming veils and hybrid edge blending gradients) are rendered in unrotated screen bounds `(dw, dh)` outside the transformed canvas scope.
+
+2. **Bounding Box Geometry & Collision Prevention (`MirrorCoordinateTransform.calculateRotatedCutoutBounds`)**:
+   - Swapping between landscape and portrait orientations (0°/180° $\leftrightarrow$ 90°/270°) swaps destination physical pixel dimensions using `newW = (cutout.destHeight * screenH) / screenW` and `newH = (cutout.destWidth * screenW) / screenH`.
+   - The cutout's destination origin `(destX, destY)` is adjusted so that the bounding box expands or contracts symmetrically around its center point: `newX = centerX - newW / 2f`, `newY = centerY - newH / 2f`.
+   - The new bounds are clamped to screen dimensions `[0, screenWidth - newW]`, `[0, screenHeight - newH]`.
+   - If the newly calculated bounds overlap any sibling cutouts (`rectsOverlap`) or if minimum screen dimensions cannot accommodate the rotated footprint, rotation is rejected and the editor notifies the user via toast (`R.string.mirror_editor_rotate_blocked`).
+
+3. **Touch Projection Inversion (`MirrorCoordinateTransform.projectCutoutCoordinates`)**:
+   - Secondary screen touch coordinates `(touchX, touchY)` within `[destX, destX + destWidth]` and `[destY, destY + destHeight]` are normalized into `[0.0, 1.0]` relative to the rotated bounding box.
+   - The normalized coordinate `(nx, ny)` is inverted through the active rotation angle:
+     - 0°: `(nx, ny)`
+     - 90°: `(ny, 1.0 - nx)`
+     - 180°: `(1.0 - nx, 1.0 - ny)`
+     - 270°: `(1.0 - ny, nx)`
+   - Flipping inversions are applied subsequently (`if (flipHorizontal) nx = 1.0 - nx`, `if (flipVertical) ny = 1.0 - ny`).
+   - The resulting un-transformed normalized coordinate maps linearly onto the source crop rectangle `[cropX, cropX + cropWidth]` on the primary screen.
+
+4. **Interactive Gesture Inversion (`InteractiveCutoutController.transformPanDelta`, `transformFocalPoint`)**:
+   - Touch drag deltas `(dx, dy)` from 1-finger viewport panning are inversely transformed by the cutout's rotation and flip flags before being applied to the crop offset, ensuring panning feels natural regardless of cutout orientation.
+   - The 2-finger pinch-to-zoom focal point is transformed through the rotation angle and axial flip mappings into content space, preventing zoom anchor drift.
+
 ### Architectural Roadmap: Zero-Copy Hardware & IPC Pipeline
 
 For future iterations of the privileged mirroring backend (`:mirrorserver` / `DirectMirrorServer`), an IPC and hardware-level optimization roadmap is established:
@@ -669,7 +729,8 @@ For future iterations of the privileged mirroring backend (`:mirrorserver` / `Di
 | `ScreenCaptureService.kt`             | Foreground service; `MediaProjection` token; `VirtualDisplay` lifecycle                                    |
 | `EmbeddedMirrorView.kt`               | Main Compose embedded mirror view hosting `MultiCutoutContainer`                                           |
 | `MasterSurfaceRegistry.kt`            | Process-wide master surface holder bridging `ThrottledTextureView` to `ScreenCaptureService`               |
-| `MultiCutoutContainer.kt`             | Multi-cutout canvas rendering, clipping, hybrid edge blending, and PorterDuff DST_IN transparency masking   |
+| `MultiCutoutContainer.kt`             | Multi-cutout canvas rendering, clipping, hybrid edge blending, rotation/flip transforms, and PorterDuff DST_IN transparency masking |
+| `MirrorCoordinateTransform.kt`        | Pure coordinate transformations: touch projection inversion, rotated bounds calculation, aspect ratio adjustment |
 | `CutoutMaskManager.kt`                | Manages disk persistence and in-memory bitmap cache for cutout transparency masks                          |
 | `CutoutAutoTuner.kt`                  | Computer vision engine for pixel-level color change detection, despeckling, and Gaussian anti-aliasing      |
 | `VisualAutoTuneCoordinator.kt`        | Orchestrates interactive calibration lifecycle, live preview streaming, overlay suspension, and mask/anchor generation |

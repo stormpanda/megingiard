@@ -14,12 +14,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.RotateRight
 import androidx.compose.material.icons.rounded.AspectRatio
 import androidx.compose.material.icons.rounded.CenterFocusStrong
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Crop
 import androidx.compose.material.icons.rounded.CropSquare
+import androidx.compose.material.icons.rounded.Flip
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -440,6 +442,7 @@ fun CutoutLayoutEditor() {
                                 cropRatio = cropRatio,
                                 screenW = screenW,
                                 screenH = screenH,
+                                rotation = curCutout.rotation,
                             )
                         val updated =
                             curLayout.mirrorCutouts.map {
@@ -640,24 +643,34 @@ internal fun CutoutLayoutEditorHelpModal(
             description = stringResource(R.string.help_mirror_editor_aspect_desc),
         )
         HelpEntry(
-            icon = Icons.Rounded.CropSquare,
-            label = stringResource(R.string.help_mirror_editor_shape_label),
-            description = stringResource(R.string.help_mirror_editor_shape_desc),
-        )
-        HelpEntry(
-            icon = Icons.Rounded.CenterFocusStrong,
-            label = stringResource(R.string.mirror_editor_snap_alignment),
-            description = stringResource(R.string.mirror_editor_snap_alignment_desc),
-        )
-        HelpEntry(
             icon = Icons.Rounded.Crop,
             label = stringResource(R.string.help_mirror_editor_adjust_label),
             description = stringResource(R.string.help_mirror_editor_adjust_desc),
         )
         HelpEntry(
+            icon = Icons.Rounded.Flip,
+            label = stringResource(R.string.help_mirror_editor_flip_label),
+            description = stringResource(R.string.help_mirror_editor_flip_desc),
+        )
+        HelpEntry(
+            icon = Icons.AutoMirrored.Rounded.RotateRight,
+            label = stringResource(R.string.help_mirror_editor_rotation_label),
+            description = stringResource(R.string.help_mirror_editor_rotation_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.CropSquare,
+            label = stringResource(R.string.help_mirror_editor_shape_label),
+            description = stringResource(R.string.help_mirror_editor_shape_desc),
+        )
+        HelpEntry(
             icon = Icons.Rounded.VisibilityOff,
             label = stringResource(R.string.mirror_editor_hide_background),
             description = stringResource(R.string.help_mirror_editor_hide_bg_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.CenterFocusStrong,
+            label = stringResource(R.string.mirror_editor_snap_alignment),
+            description = stringResource(R.string.mirror_editor_snap_alignment_desc),
         )
 
         HelpSection(stringResource(R.string.help_mirror_editor_section_finish))

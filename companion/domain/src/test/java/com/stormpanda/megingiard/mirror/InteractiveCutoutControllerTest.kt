@@ -224,4 +224,81 @@ class InteractiveCutoutControllerTest {
         // Crop width should have decreased from 0.4 due to magnification
         assertTrue(effective.srcWidth < 0.4f)
     }
+
+    @Test
+    fun `transformPanDelta rotates and flips pan deltas correctly`() {
+        val rawX = 0.2f
+        val rawY = 0.1f
+
+        // 0 deg, no flip
+        val deg0 = transformPanDelta(rawX, rawY, rotation = 0, flipHorizontal = false, flipVertical = false)
+        assertEquals(0.2f, deg0.first, 0.0001f)
+        assertEquals(0.1f, deg0.second, 0.0001f)
+
+        // 90 deg: dx = rawY = 0.1, dy = -rawX = -0.2
+        val deg90 = transformPanDelta(rawX, rawY, rotation = 90, flipHorizontal = false, flipVertical = false)
+        assertEquals(0.1f, deg90.first, 0.0001f)
+        assertEquals(-0.2f, deg90.second, 0.0001f)
+
+        // 180 deg: dx = -rawX = -0.2, dy = -rawY = -0.1
+        val deg180 = transformPanDelta(rawX, rawY, rotation = 180, flipHorizontal = false, flipVertical = false)
+        assertEquals(-0.2f, deg180.first, 0.0001f)
+        assertEquals(-0.1f, deg180.second, 0.0001f)
+
+        // 270 deg: dx = -rawY = -0.1, dy = rawX = 0.2
+        val deg270 = transformPanDelta(rawX, rawY, rotation = 270, flipHorizontal = false, flipVertical = false)
+        assertEquals(-0.1f, deg270.first, 0.0001f)
+        assertEquals(0.2f, deg270.second, 0.0001f)
+
+        // Horizontal flip on 0 deg: dx = -rawX = -0.2, dy = rawY = 0.1
+        val flipH = transformPanDelta(rawX, rawY, rotation = 0, flipHorizontal = true, flipVertical = false)
+        assertEquals(-0.2f, flipH.first, 0.0001f)
+        assertEquals(0.1f, flipH.second, 0.0001f)
+
+        // Vertical flip on 0 deg: dx = rawX = 0.2, dy = -rawY = -0.1
+        val flipV = transformPanDelta(rawX, rawY, rotation = 0, flipHorizontal = false, flipVertical = true)
+        assertEquals(0.2f, flipV.first, 0.0001f)
+        assertEquals(-0.1f, flipV.second, 0.0001f)
+    }
+
+    @Test
+    fun `transformFocalPoint rotates and flips pinch focal point correctly`() {
+        val rawX = 0.2f
+        val rawY = 0.3f
+
+        // 0 deg, no flip: (0.2, 0.3)
+        val deg0 = transformFocalPoint(rawX, rawY, rotation = 0, flipHorizontal = false, flipVertical = false)
+        assertEquals(0.2f, deg0.first, 0.0001f)
+        assertEquals(0.3f, deg0.second, 0.0001f)
+
+        // 90 deg: u = rawY = 0.3, v = 1 - rawX = 0.8
+        val deg90 = transformFocalPoint(rawX, rawY, rotation = 90, flipHorizontal = false, flipVertical = false)
+        assertEquals(0.3f, deg90.first, 0.0001f)
+        assertEquals(0.8f, deg90.second, 0.0001f)
+
+        // 180 deg: u = 1 - rawX = 0.8, v = 1 - rawY = 0.7
+        val deg180 = transformFocalPoint(rawX, rawY, rotation = 180, flipHorizontal = false, flipVertical = false)
+        assertEquals(0.8f, deg180.first, 0.0001f)
+        assertEquals(0.7f, deg180.second, 0.0001f)
+
+        // 270 deg: u = 1 - rawY = 0.7, v = rawX = 0.2
+        val deg270 = transformFocalPoint(rawX, rawY, rotation = 270, flipHorizontal = false, flipVertical = false)
+        assertEquals(0.7f, deg270.first, 0.0001f)
+        assertEquals(0.2f, deg270.second, 0.0001f)
+
+        // Horizontal flip on 0 deg: u = 1 - 0.2 = 0.8, v = 0.3
+        val flipH = transformFocalPoint(rawX, rawY, rotation = 0, flipHorizontal = true, flipVertical = false)
+        assertEquals(0.8f, flipH.first, 0.0001f)
+        assertEquals(0.3f, flipH.second, 0.0001f)
+
+        // Vertical flip on 0 deg: u = 0.2, v = 1 - 0.3 = 0.7
+        val flipV = transformFocalPoint(rawX, rawY, rotation = 0, flipHorizontal = false, flipVertical = true)
+        assertEquals(0.2f, flipV.first, 0.0001f)
+        assertEquals(0.7f, flipV.second, 0.0001f)
+
+        // Both flips on 0 deg: (0.8, 0.7)
+        val flipBoth = transformFocalPoint(rawX, rawY, rotation = 0, flipHorizontal = true, flipVertical = true)
+        assertEquals(0.8f, flipBoth.first, 0.0001f)
+        assertEquals(0.7f, flipBoth.second, 0.0001f)
+    }
 }

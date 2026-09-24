@@ -41,6 +41,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.rounded.RotateRight
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AspectRatio
 import androidx.compose.material.icons.rounded.CenterFocusStrong
@@ -50,6 +51,7 @@ import androidx.compose.material.icons.rounded.Crop
 import androidx.compose.material.icons.rounded.CropSquare
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.FilterCenterFocus
+import androidx.compose.material.icons.rounded.Flip
 import androidx.compose.material.icons.rounded.OpenWith
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.UnfoldLess
@@ -157,6 +159,11 @@ private const val METO_FALLBACK_SRC_WIDTH = 1920f
 private const val METO_FALLBACK_SRC_HEIGHT = 1080f
 private const val METO_FALLBACK_SEC_WIDTH = 1240f
 private const val METO_FALLBACK_SEC_HEIGHT = 1080f
+
+private const val METO_ROTATION_STEP_DEGREES = 90
+private const val METO_ROTATION_FULL_DEGREES = 360
+private const val METO_ROTATION_90 = 90
+private const val METO_ROTATION_270 = 270
 
 /**
  * Top-Screen (Display 0) Overlay for the Screen Mirroring Editor.
@@ -332,7 +339,9 @@ fun MirrorEditorTopOverlay(
                     0
                 }
             if (stepDelta == 0) return@updateCutout null
-            val cutoutRatio = (cur.destWidth * secScreenW) / (cur.destHeight * secScreenH)
+            val isQuarter = (cur.rotation == METO_ROTATION_90 || cur.rotation == METO_ROTATION_270)
+            val rawCutoutRatio = (cur.destWidth * secScreenW) / (cur.destHeight * secScreenH)
+            val cutoutRatio = if (isQuarter && rawCutoutRatio > 0f) (1f / rawCutoutRatio) else rawCutoutRatio
             val normCropRatio = cutoutRatio * (srcHeight / srcWidth)
             val geom =
                 calculateProportionalResizedBounds(
@@ -382,6 +391,7 @@ fun MirrorEditorTopOverlay(
                     cropRatio = cropRatio,
                     screenW = secScreenW,
                     screenH = secScreenH,
+                    rotation = updated.rotation,
                 )
             if (!isCutoutGeometryValid(updated.destX, updated.destY, newDestW, newDestH, others)) {
                 return@updateCutout null
@@ -457,7 +467,9 @@ fun MirrorEditorTopOverlay(
                     0
                 }
             if (stepDelta == 0) return@updateCutout null
-            val cropRatio = (cur.srcWidth * srcWidth) / (cur.srcHeight * srcHeight)
+            val isQuarter = (cur.rotation == METO_ROTATION_90 || cur.rotation == METO_ROTATION_270)
+            val rawCropRatio = (cur.srcWidth * srcWidth) / (cur.srcHeight * srcHeight)
+            val cropRatio = if (isQuarter && rawCropRatio > 0f) (1f / rawCropRatio) else rawCropRatio
             val normRatio = cropRatio * (secScreenH / secScreenW)
             val geom =
                 calculateProportionalResizedBounds(
@@ -563,71 +575,7 @@ fun MirrorEditorTopOverlay(
                             },
                 )
 
-                // Item 1: Fixed Aspect Ratio Mode
-                AspectRatioCard(
-                    selectedCutout = selectedCutout,
-                    srcWidth = srcWidth,
-                    srcHeight = srcHeight,
-                    secScreenW = secScreenW,
-                    secScreenH = secScreenH,
-                    onUpdate = { updatedCutout ->
-                        val updatedList =
-                            cutouts.map {
-                                if (it.id == updatedCutout.id) updatedCutout else it
-                            }
-                        MacroPadState.updateLayout(layout.copy(mirrorCutouts = updatedList))
-                    },
-                )
-
-                // Item 2: Shape Mode
-                ShapeToggleCard(
-                    selectedCutout = selectedCutout,
-                    onUpdate = { updatedCutout ->
-                        val updatedList =
-                            cutouts.map {
-                                if (it.id == updatedCutout.id) updatedCutout else it
-                            }
-                        MacroPadState.updateLayout(layout.copy(mirrorCutouts = updatedList))
-                    },
-                )
-
-                // Item 3: Adjust Top Cutout Coordinates (Source Screen)
-                AdjustCoordinatesCard(
-                    title = stringResource(R.string.mirror_editor_adjust_top_cutout),
-                    icon = Icons.Rounded.Crop,
-                    enabled = selectedCutout != null,
-                    resetKey = selectedCutout?.id,
-                    onMove = { dx, dy ->
-                        selectedCutout?.id?.let { moveTopCutout(it, dx, dy) }
-                    },
-                    onResize = { dx, dy ->
-                        selectedCutout?.id?.let { resizeTopCutout(it, dx, dy) }
-                    },
-                )
-
-                // Item 4: Adjust Bottom Cutout Coordinates (Target Screen)
-                AdjustCoordinatesCard(
-                    title = stringResource(R.string.mirror_editor_adjust_bottom_cutout),
-                    icon = Icons.Rounded.OpenWith,
-                    enabled = selectedCutout != null,
-                    resetKey = selectedCutout?.id,
-                    onMove = { dx, dy ->
-                        selectedCutout?.id?.let { moveBottomCutout(it, dx, dy) }
-                    },
-                    onResize = { dx, dy ->
-                        selectedCutout?.id?.let { resizeBottomCutout(it, dx, dy) }
-                    },
-                )
-
-                // Item 5: Temporarily Hide Background
-                HideBackgroundCard(
-                    layout = layout,
-                )
-
-                // Item 6: Snap to Alignment
-                SnapAlignmentCard()
-
-                // Item 7: Add Cutout
+                // Item 1: Add Cutout
                 ToolboxActionCard(
                     title = stringResource(R.string.mirror_editor_add_cutout),
                     icon = Icons.Rounded.Add,
@@ -680,7 +628,98 @@ fun MirrorEditorTopOverlay(
                     },
                 )
 
-                // Item 7: Delete Cutout
+                // Item 2: Fixed Aspect Ratio Mode
+                AspectRatioCard(
+                    selectedCutout = selectedCutout,
+                    srcWidth = srcWidth,
+                    srcHeight = srcHeight,
+                    secScreenW = secScreenW,
+                    secScreenH = secScreenH,
+                    onUpdate = { updatedCutout ->
+                        val updatedList =
+                            cutouts.map {
+                                if (it.id == updatedCutout.id) updatedCutout else it
+                            }
+                        MacroPadState.updateLayout(layout.copy(mirrorCutouts = updatedList))
+                    },
+                )
+
+                // Item 3: Adjust Top Cutout Coordinates (Source Screen)
+                AdjustCoordinatesCard(
+                    title = stringResource(R.string.mirror_editor_adjust_top_cutout),
+                    icon = Icons.Rounded.Crop,
+                    enabled = selectedCutout != null,
+                    resetKey = selectedCutout?.id,
+                    onMove = { dx, dy ->
+                        selectedCutout?.id?.let { moveTopCutout(it, dx, dy) }
+                    },
+                    onResize = { dx, dy ->
+                        selectedCutout?.id?.let { resizeTopCutout(it, dx, dy) }
+                    },
+                )
+
+                // Item 4: Adjust Bottom Cutout Coordinates (Target Screen)
+                AdjustCoordinatesCard(
+                    title = stringResource(R.string.mirror_editor_adjust_bottom_cutout),
+                    icon = Icons.Rounded.OpenWith,
+                    enabled = selectedCutout != null,
+                    resetKey = selectedCutout?.id,
+                    onMove = { dx, dy ->
+                        selectedCutout?.id?.let { moveBottomCutout(it, dx, dy) }
+                    },
+                    onResize = { dx, dy ->
+                        selectedCutout?.id?.let { resizeBottomCutout(it, dx, dy) }
+                    },
+                )
+
+                // Item 5: Flip Mode
+                FlipCard(
+                    selectedCutout = selectedCutout,
+                    onUpdate = { updatedCutout ->
+                        val updatedList =
+                            cutouts.map {
+                                if (it.id == updatedCutout.id) updatedCutout else it
+                            }
+                        MacroPadState.updateLayout(layout.copy(mirrorCutouts = updatedList))
+                    },
+                )
+
+                // Item 6: Rotation Mode
+                RotationCard(
+                    selectedCutout = selectedCutout,
+                    allCutouts = cutouts,
+                    secScreenW = secScreenW,
+                    secScreenH = secScreenH,
+                    onUpdate = { updatedCutout ->
+                        val updatedList =
+                            cutouts.map {
+                                if (it.id == updatedCutout.id) updatedCutout else it
+                            }
+                        MacroPadState.updateLayout(layout.copy(mirrorCutouts = updatedList))
+                    },
+                )
+
+                // Item 7: Shape Mode
+                ShapeToggleCard(
+                    selectedCutout = selectedCutout,
+                    onUpdate = { updatedCutout ->
+                        val updatedList =
+                            cutouts.map {
+                                if (it.id == updatedCutout.id) updatedCutout else it
+                            }
+                        MacroPadState.updateLayout(layout.copy(mirrorCutouts = updatedList))
+                    },
+                )
+
+                // Item 8: Temporarily Hide Background
+                HideBackgroundCard(
+                    layout = layout,
+                )
+
+                // Item 9: Snap to Alignment
+                SnapAlignmentCard()
+
+                // Item 10: Delete Cutout
                 DeleteCutoutCard(
                     selectedCutout = selectedCutout,
                     onDelete = { cutoutId ->
@@ -690,7 +729,7 @@ fun MirrorEditorTopOverlay(
                     },
                 )
 
-                // Item 8: Save Changes / Save & Discard Exit Row
+                // Item 11: Save Changes / Save & Discard Exit Row
                 ToolboxSaveExitRow(
                     showExitPrompt = showExitPrompt,
                     hasChanges = hasChanges,
@@ -898,6 +937,7 @@ private fun AspectRatioCard(
                     cropRatio = cropRatio,
                     screenW = secScreenW,
                     screenH = secScreenH,
+                    rotation = updatedCutout.rotation,
                 )
             updatedCutout = updatedCutout.copy(destWidth = newDestW, destHeight = newDestH)
         } else if (nextMode == AspectRatioMode.BOTTOM) {
@@ -967,6 +1007,109 @@ private fun ShapeToggleCard(
     ) { isFocused ->
         GamepadPill(
             text = shapeLabel,
+            isHighlighted = isFocused,
+        )
+    }
+}
+
+@Composable
+private fun RotationCard(
+    selectedCutout: ScreenCutout?,
+    allCutouts: List<ScreenCutout>,
+    secScreenW: Float,
+    secScreenH: Float,
+    onUpdate: (ScreenCutout) -> Unit,
+    modifier: Modifier = Modifier,
+    cardFocusRequester: FocusRequester = remember { FocusRequester() },
+    onFocusChanged: ((Boolean) -> Unit)? = null,
+) {
+    val context = LocalContext.current
+    val enabled = selectedCutout != null
+    val currentRotation = selectedCutout?.rotation ?: 0
+
+    fun applyRotation(stepDelta: Int) {
+        val cutout = selectedCutout ?: return
+        val targetRotation =
+            (cutout.rotation + stepDelta * METO_ROTATION_STEP_DEGREES + METO_ROTATION_FULL_DEGREES) % METO_ROTATION_FULL_DEGREES
+        val rotated =
+            calculateRotatedCutoutBounds(
+                cutout = cutout,
+                targetRotation = targetRotation,
+                allCutouts = allCutouts,
+                screenW = secScreenW,
+                screenH = secScreenH,
+            )
+        if (rotated != null) {
+            onUpdate(rotated)
+        } else {
+            DialogToastManager.show(context.getString(R.string.mirror_editor_rotate_blocked))
+        }
+    }
+
+    ToolboxCard(
+        onClick = { applyRotation(1) },
+        onLeftKey = { applyRotation(-1) },
+        onRightKey = { applyRotation(1) },
+        onFocusChanged = onFocusChanged,
+        cardFocusRequester = cardFocusRequester,
+        enabled = enabled,
+        icon = Icons.AutoMirrored.Rounded.RotateRight,
+        title = stringResource(R.string.mirror_editor_rotation_title),
+        modifier = modifier,
+    ) { isFocused ->
+        GamepadPill(
+            text = "$currentRotation°",
+            isHighlighted = isFocused,
+        )
+    }
+}
+
+@Composable
+private fun FlipCard(
+    selectedCutout: ScreenCutout?,
+    onUpdate: (ScreenCutout) -> Unit,
+    modifier: Modifier = Modifier,
+    cardFocusRequester: FocusRequester = remember { FocusRequester() },
+    onFocusChanged: ((Boolean) -> Unit)? = null,
+) {
+    val enabled = selectedCutout != null
+    val currentMode = selectedCutout?.flipMode ?: CutoutFlipMode.NONE
+
+    val flipLabel =
+        when (currentMode) {
+            CutoutFlipMode.NONE -> stringResource(R.string.mirror_editor_flip_none)
+            CutoutFlipMode.HORIZONTAL -> stringResource(R.string.mirror_editor_flip_horizontal)
+            CutoutFlipMode.VERTICAL -> stringResource(R.string.mirror_editor_flip_vertical)
+            CutoutFlipMode.BOTH -> stringResource(R.string.mirror_editor_flip_both)
+        }
+
+    fun cycleFlip(forward: Boolean) {
+        val cutout = selectedCutout ?: return
+        val modes = CutoutFlipMode.entries
+        val currentIdx = modes.indexOf(cutout.flipMode)
+        val nextIdx =
+            if (forward) {
+                (currentIdx + 1) % modes.size
+            } else {
+                (currentIdx - 1 + modes.size) % modes.size
+            }
+        val nextMode = modes[nextIdx]
+        onUpdate(cutout.copy(flipHorizontal = nextMode.horizontal, flipVertical = nextMode.vertical))
+    }
+
+    ToolboxCard(
+        onClick = { cycleFlip(forward = true) },
+        onLeftKey = { cycleFlip(forward = false) },
+        onRightKey = { cycleFlip(forward = true) },
+        onFocusChanged = onFocusChanged,
+        cardFocusRequester = cardFocusRequester,
+        enabled = enabled,
+        icon = Icons.Rounded.Flip,
+        title = stringResource(R.string.mirror_editor_flip_title),
+        modifier = modifier,
+    ) { isFocused ->
+        GamepadPill(
+            text = flipLabel,
             isHighlighted = isFocused,
         )
     }

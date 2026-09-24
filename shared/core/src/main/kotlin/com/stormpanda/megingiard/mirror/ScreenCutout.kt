@@ -22,6 +22,31 @@ enum class CutoutSnapBackMode {
     INSTANT,
 }
 
+@Serializable
+enum class CutoutFlipMode(
+    val horizontal: Boolean,
+    val vertical: Boolean,
+) {
+    NONE(horizontal = false, vertical = false),
+    HORIZONTAL(horizontal = true, vertical = false),
+    VERTICAL(horizontal = false, vertical = true),
+    BOTH(horizontal = true, vertical = true),
+    ;
+
+    companion object {
+        fun fromBooleans(
+            horizontal: Boolean,
+            vertical: Boolean,
+        ): CutoutFlipMode =
+            when {
+                horizontal && vertical -> BOTH
+                horizontal -> HORIZONTAL
+                vertical -> VERTICAL
+                else -> NONE
+            }
+    }
+}
+
 /**
  * Represents a single cropped section of the primary display (source)
  * that is displayed and positioned on the secondary display (destination).
@@ -49,6 +74,9 @@ enum class CutoutSnapBackMode {
  * @param renderAboveMask Whether this cutout is composited above layout background masks while remaining below MacroPad buttons.
  * @param interactivePanZoom Whether this cutout supports on-the-fly gesture pan and pinch-to-zoom manipulation on the secondary screen.
  * @param snapBackMode Defines whether the interactive viewport snaps back on release (INSTANT) or stays panned until double-tapped (OFF).
+ * @param rotation Clockwise rotation angle in degrees (0, 90, 180, 270).
+ * @param flipHorizontal Whether this cutout is mirrored horizontally across its vertical axis.
+ * @param flipVertical Whether this cutout is mirrored vertically across its horizontal axis.
  */
 @Serializable
 data class ScreenCutout(
@@ -78,7 +106,13 @@ data class ScreenCutout(
     val renderAboveMask: Boolean = false,
     val interactivePanZoom: Boolean = false,
     val snapBackMode: CutoutSnapBackMode = CutoutSnapBackMode.OFF,
+    val rotation: Int = 0,
+    val flipHorizontal: Boolean = false,
+    val flipVertical: Boolean = false,
 ) {
+    val flipMode: CutoutFlipMode
+        get() = CutoutFlipMode.fromBooleans(flipHorizontal, flipVertical)
+
     companion object {
         val FULLSCREEN =
             ScreenCutout(

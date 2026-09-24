@@ -8,6 +8,9 @@ import kotlin.math.roundToInt
 private const val OVERLAP_TOLERANCE: Float = 0.0001f
 private const val BINARY_SEARCH_STEPS = 10
 private const val MIN_RESIZE_PX = 8
+private const val ROTATION_90 = 90
+private const val ROTATION_180 = 180
+private const val ROTATION_270 = 270
 
 /**
  * Maps a raw touch position on the mirror surface back through the current zoom/pan
@@ -94,6 +97,9 @@ fun projectCutoutCoordinates(
     srcWidth: Float,
     srcHeight: Float,
     clampToEdge: Boolean = false,
+    rotation: Int = 0,
+    flipHorizontal: Boolean = false,
+    flipVertical: Boolean = false,
 ): Pair<Float, Float>? {
     if (destWidth <= 0f || destHeight <= 0f) return null
 
@@ -106,8 +112,31 @@ fun projectCutoutCoordinates(
     val rx = ((touchX - destLeft) / destWidth).coerceIn(0f, 1f)
     val ry = ((touchY - destTop) / destHeight).coerceIn(0f, 1f)
 
-    val px = srcX + rx * srcWidth
-    val py = srcY + ry * srcHeight
+    var normU =
+        when (rotation) {
+            ROTATION_90 -> ry
+            ROTATION_180 -> 1f - rx
+            ROTATION_270 -> 1f - ry
+            else -> rx
+        }
+
+    var normV =
+        when (rotation) {
+            ROTATION_90 -> 1f - rx
+            ROTATION_180 -> 1f - ry
+            ROTATION_270 -> rx
+            else -> ry
+        }
+
+    if (flipHorizontal) {
+        normU = 1f - normU
+    }
+    if (flipVertical) {
+        normV = 1f - normV
+    }
+
+    val px = srcX + normU * srcWidth
+    val py = srcY + normV * srcHeight
 
     return Pair(px.coerceIn(0f, 1f), py.coerceIn(0f, 1f))
 }
@@ -290,8 +319,10 @@ fun adjustSourceCropToAspectRatio(
         return cutout
     }
 
-    val targetRatio = (cutout.destWidth * screenW) / (cutout.destHeight * screenH)
-    if (targetRatio <= 0f) return cutout
+    val rawTargetRatio = (cutout.destWidth * screenW) / (cutout.destHeight * screenH)
+    if (rawTargetRatio <= 0f) return cutout
+    val isQuarter = (cutout.rotation == ROTATION_90 || cutout.rotation == ROTATION_270)
+    val targetRatio = if (isQuarter) (1f / rawTargetRatio) else rawTargetRatio
     val factor = targetRatio * (srcH / srcW)
     if (factor <= 0f) return cutout
 
@@ -348,10 +379,14 @@ fun adjustDestSizeToAspectRatio(
     screenW: Float,
     screenH: Float,
     minCutoutSize: Float = MIN_GAMEPAD_CUTOUT_SIZE,
+    rotation: Int = 0,
 ): Pair<Float, Float> {
     if (screenW <= 0f || screenH <= 0f || cropRatio <= 0f) return Pair(destWidth, destHeight)
 
-    val normRatio = cropRatio * (screenH / screenW)
+    val isQuarter = (rotation == ROTATION_90 || rotation == ROTATION_270)
+    val effectiveCropRatio = if (isQuarter) (1f / cropRatio) else cropRatio
+
+    val normRatio = effectiveCropRatio * (screenH / screenW)
     if (normRatio <= 0f) return Pair(destWidth, destHeight)
 
     val maxH = (1f - destY).coerceIn(minCutoutSize, 1f)
@@ -381,6 +416,81 @@ fun adjustDestSizeToAspectRatio(
     }
 
     return Pair(targetW, targetH)
+}
+
+/**
+ * Calculates new destination bounds for a cutout when rotating to [targetRotation].
+ *
+ * If rotating between landscape and portrait (0°/180° <-> 90°/270°), destination physical pixel
+ * dimensions are swapped (converting normalized dimensions through [screenW] and [screenH])
+ * while remaining centered around the cutout's current midpoint and clamped to screen bounds.
+ *
+ * @param cutout The cutout to rotate.
+ * @param targetRotation Target rotation angle in degrees (0, 90, 180, 270).
+ * @param allCutouts Sibling cutouts used for collision detection.
+ * @param maxDimension Maximum normalized dimension (defaults to 1.0f).
+ * @param screenW Secondary display surface width in physical pixels (used to preserve physical aspect ratio).
+ * @param screenH Secondary display surface height in physical pixels (used to preserve physical aspect ratio).
+ * @return The updated [ScreenCutout] if the rotated cutout fits without colliding with any
+ * other cutout in [allCutouts], or `null` if the rotation is blocked by collision or boundaries.
+ */
+fun calculateRotatedCutoutBounds(
+    cutout: ScreenCutout,
+    targetRotation: Int,
+    allCutouts: List<ScreenCutout>,
+    maxDimension: Float = 1.0f,
+    screenW: Float = 0f,
+    screenH: Float = 0f,
+): ScreenCutout? {
+    val currentIsQuarter = (cutout.rotation == ROTATION_90 || cutout.rotation == ROTATION_270)
+    val targetIsQuarter = (targetRotation == ROTATION_90 || targetRotation == ROTATION_270)
+    val isSwappingDimensions = currentIsQuarter != targetIsQuarter
+
+    val newW =
+        if (!isSwappingDimensions) {
+            cutout.destWidth
+        } else if (screenW > 0f && screenH > 0f) {
+            (cutout.destHeight * screenH) / screenW
+        } else {
+            cutout.destHeight
+        }
+
+    val newH =
+        if (!isSwappingDimensions) {
+            cutout.destHeight
+        } else if (screenW > 0f && screenH > 0f) {
+            (cutout.destWidth * screenW) / screenH
+        } else {
+            cutout.destWidth
+        }
+
+    if (newW > maxDimension || newH > maxDimension) {
+        return null
+    }
+
+    val centerX = cutout.destX + cutout.destWidth / 2f
+    val centerY = cutout.destY + cutout.destHeight / 2f
+
+    val targetX = (centerX - newW / 2f).coerceIn(0f, (maxDimension - newW).coerceAtLeast(0f))
+    val targetY = (centerY - newH / 2f).coerceIn(0f, (maxDimension - newH).coerceAtLeast(0f))
+
+    val others = allCutouts.filter { it.id != cutout.id }
+    val hasOverlap =
+        others.any { other ->
+            rectsOverlap(targetX, targetY, newW, newH, other)
+        }
+
+    if (hasOverlap) {
+        return null
+    }
+
+    return cutout.copy(
+        rotation = targetRotation,
+        destX = targetX,
+        destY = targetY,
+        destWidth = newW,
+        destHeight = newH,
+    )
 }
 
 fun isCutoutGeometryValid(
@@ -425,10 +535,13 @@ fun getTargetGeometryWithAspectRatio(
     screenW: Float,
     screenH: Float,
     minCutoutSize: Float = MIN_TOUCH_CUTOUT_SIZE,
+    rotation: Int = 0,
 ): ScreenCutoutGeometry {
     val dx = targetWidth - originalWidth
     val dy = targetHeight - originalHeight
-    val normRatio = cropRatio * (screenH / screenW)
+    val isQuarter = (rotation == ROTATION_90 || rotation == ROTATION_270)
+    val effectiveCropRatio = if (isQuarter && cropRatio > 0f) (1f / cropRatio) else cropRatio
+    val normRatio = effectiveCropRatio * (screenH / screenW)
 
     val originalRight = originalX + originalWidth
     val originalBottom = originalY + originalHeight
@@ -528,6 +641,7 @@ fun clampCutoutResize(
     screenW: Float = 0f,
     screenH: Float = 0f,
     minCutoutSize: Float = MIN_TOUCH_CUTOUT_SIZE,
+    rotation: Int = allCutouts.find { it.id == cutoutId }?.rotation ?: 0,
 ): ScreenCutoutGeometry {
     val others = allCutouts.filter { it.id != cutoutId }
 
@@ -547,6 +661,7 @@ fun clampCutoutResize(
                 screenW = screenW,
                 screenH = screenH,
                 minCutoutSize = minCutoutSize,
+                rotation = rotation,
             )
 
         val origGeom = ScreenCutoutGeometry(originalX, originalY, originalWidth, originalHeight)
@@ -1059,6 +1174,7 @@ fun calculateResizedBounds(
  * @param topScreenH Height in pixels of the primary screen.
  * @param cutoutRatio Physical aspect ratio of the follower/master cutout (cutoutWidthPx / cutoutHeightPx).
  * @param minSize Minimum normalized size.
+ * @param rotation Rotation angle of the cutout in degrees (0, 90, 180, 270).
  * @return The resulting clamped [ScreenCutoutGeometry].
  */
 fun clampCropResizeProportional(
@@ -1073,12 +1189,15 @@ fun clampCropResizeProportional(
     topScreenH: Float,
     cutoutRatio: Float,
     minSize: Float = MIN_TOUCH_CUTOUT_SIZE,
+    rotation: Int = 0,
 ): ScreenCutoutGeometry {
     if (topScreenW <= 0f || topScreenH <= 0f || cutoutRatio <= 0f) {
         return ScreenCutoutGeometry(originalX, originalY, originalWidth, originalHeight)
     }
 
-    val normCropRatio = cutoutRatio * (topScreenH / topScreenW)
+    val isQuarter = (rotation == ROTATION_90 || rotation == ROTATION_270)
+    val effectiveCutoutRatio = if (isQuarter && cutoutRatio > 0f) (1f / cutoutRatio) else cutoutRatio
+    val normCropRatio = effectiveCutoutRatio * (topScreenH / topScreenW)
     if (normCropRatio <= 0f) {
         return ScreenCutoutGeometry(originalX, originalY, originalWidth, originalHeight)
     }
