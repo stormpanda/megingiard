@@ -12,11 +12,15 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.view.Surface
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.macropad.LayoutVisualAnchor
+import com.stormpanda.megingiard.macropad.MAX_LAYOUT_STREAM_DELAY_FRAMES
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 private const val TAG = "GpuMotionSmoother"
 
@@ -107,17 +111,18 @@ private val FULL_QUAD_TEX_COORDS =
     )
 
 /**
- * 100% GPU-accelerated temporal frame blender for screen mirroring motion smoothing.
+ * 100% GPU-accelerated temporal frame blender and FBO stream delay queue for screen mirroring.
  *
- * Runs an OpenGL ES 2.0 ping-pong FBO pipeline on a dedicated GL thread. Blends incoming OES
- * frames from MediaProjection/DirectMirrorServer with previous frame textures entirely inside
- * GPU VRAM — eliminating TextureView.getBitmap() CPU readbacks, frame truncation, and brightness darkening.
+ * Runs an OpenGL ES 2.0 FBO circular buffer pipeline on a dedicated GL thread.
+ * Supports hardware stream delay (up to 10 frames in GPU VRAM) and live anchor evaluation
+ * directly on the GL thread — eliminating TextureView.getBitmap() CPU readbacks and Main UI stalls.
  */
 class GpuMotionSmoother(
     private val outputSurface: Surface,
     private val width: Int,
     private val height: Int,
     private var strength: Int,
+    private var streamDelayFrames: Int = 0,
 ) {
     private val glThread = HandlerThread("GpuMotionSmootherGL").apply { start() }
     private val glHandler = Handler(glThread.looper)
@@ -130,8 +135,9 @@ class GpuMotionSmoother(
     private var passthroughProgram = 0
 
     private var oesTextureId = 0
-    private val fboTextureIds = IntArray(2)
-    private val fboFramebuffers = IntArray(2)
+    private var fboCount = (streamDelayFrames + 1).coerceIn(2, MAX_LAYOUT_STREAM_DELAY_FRAMES + 2)
+    private var fboTextureIds = IntArray(fboCount)
+    private var fboFramebuffers = IntArray(fboCount)
 
     private var inputSurfaceTexture: SurfaceTexture? = null
     var inputSurface: Surface? = null
@@ -141,9 +147,17 @@ class GpuMotionSmoother(
     private val vertexBuffer: FloatBuffer
     private val texCoordBuffer: FloatBuffer
 
-    private var readIndex = 0
-    private var writeIndex = 1
+    private var writeIndex = 0
+    private var frameCount = 0L
     private var isFirstFrame = true
+
+    @Volatile
+    private var isFrozen = false
+
+    private var activeTrackingLayoutId = ""
+    private var activeAnchor: LayoutVisualAnchor? = null
+    private var onPresenceEvaluated: ((layoutId: String, matchRatio: Float) -> Unit)? = null
+    private var anchorByteBuffer: ByteBuffer? = null
 
     @Volatile
     private var released = false
@@ -183,6 +197,44 @@ class GpuMotionSmoother(
         glHandler.post {
             this.strength = newStrength
             isFirstFrame = true
+        }
+    }
+
+    fun updateStreamDelay(newDelay: Int) {
+        if (released) return
+        glHandler.post {
+            val clampedDelay = newDelay.coerceIn(0, MAX_LAYOUT_STREAM_DELAY_FRAMES)
+            if (this.streamDelayFrames != clampedDelay) {
+                AppLog.i(TAG, "Updating streamDelayFrames from $streamDelayFrames to $clampedDelay")
+                this.streamDelayFrames = clampedDelay
+                val targetCount = (clampedDelay + 1).coerceIn(2, MAX_LAYOUT_STREAM_DELAY_FRAMES + 2)
+                if (targetCount != fboCount) {
+                    setupTexturesAndFbos(targetCount)
+                }
+            }
+        }
+    }
+
+    fun setAnchorTracking(
+        layoutId: String,
+        anchor: LayoutVisualAnchor?,
+        listener: ((layoutId: String, matchRatio: Float) -> Unit)? = null,
+    ) {
+        if (released) return
+        glHandler.post {
+            this.activeTrackingLayoutId = layoutId
+            this.activeAnchor = anchor
+            this.onPresenceEvaluated = listener
+        }
+    }
+
+    fun setFrozen(frozen: Boolean) {
+        if (released) return
+        glHandler.post {
+            if (this.isFrozen != frozen) {
+                AppLog.d(TAG, "GpuMotionSmoother frozen state changed to $frozen")
+                this.isFrozen = frozen
+            }
         }
     }
 
@@ -275,20 +327,20 @@ class GpuMotionSmoother(
             }
     }
 
-    private fun setupTexturesAndFbos() {
-        val texs = IntArray(1)
-        GLES20.glGenTextures(1, texs, 0)
-        oesTextureId = texs[0]
-        GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, oesTextureId)
-        GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR)
-        GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR)
-        GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE)
-        GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE)
+    private fun setupTexturesAndFbos(targetCount: Int = fboCount) {
+        if (fboTextureIds.isNotEmpty() && fboTextureIds[0] != 0) {
+            GLES20.glDeleteTextures(fboTextureIds.size, fboTextureIds, 0)
+            GLES20.glDeleteFramebuffers(fboFramebuffers.size, fboFramebuffers, 0)
+        }
 
-        GLES20.glGenTextures(2, fboTextureIds, 0)
-        GLES20.glGenFramebuffers(2, fboFramebuffers, 0)
+        fboCount = targetCount
+        fboTextureIds = IntArray(targetCount)
+        fboFramebuffers = IntArray(targetCount)
 
-        for (i in 0..1) {
+        GLES20.glGenTextures(targetCount, fboTextureIds, 0)
+        GLES20.glGenFramebuffers(targetCount, fboFramebuffers, 0)
+
+        for (i in 0 until targetCount) {
             GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, fboTextureIds[i])
             GLES20.glTexImage2D(
                 GLES20.GL_TEXTURE_2D,
@@ -316,6 +368,9 @@ class GpuMotionSmoother(
             )
         }
         GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0)
+        writeIndex = 0
+        frameCount = 0L
+        isFirstFrame = true
     }
 
     private fun renderFrame() {
@@ -327,11 +382,44 @@ class GpuMotionSmoother(
 
             GLES20.glViewport(0, 0, width, height)
 
-            if (strength <= 0) {
-                GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0)
-                GLES20.glClearColor(0f, 0f, 0f, 1f)
-                GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
+            // Pass 1: Render incoming OES frame into current FBO at writeIndex
+            val targetFbo = fboFramebuffers[writeIndex]
+            GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, targetFbo)
+            GLES20.glClearColor(0f, 0f, 0f, 1f)
+            GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
 
+            if (strength > 0 && !isFirstFrame) {
+                GLES20.glUseProgram(blendProgram)
+
+                val aPos = GLES20.glGetAttribLocation(blendProgram, "aPosition")
+                val aTex = GLES20.glGetAttribLocation(blendProgram, "aTextureCoord")
+                val uMat = GLES20.glGetUniformLocation(blendProgram, "uSTMatrix")
+                val uAlpha = GLES20.glGetUniformLocation(blendProgram, "uAlpha")
+                val uFirst = GLES20.glGetUniformLocation(blendProgram, "uFirstFrame")
+                val uOes = GLES20.glGetUniformLocation(blendProgram, "uOesTexture")
+                val uPrev = GLES20.glGetUniformLocation(blendProgram, "uPreviousTexture")
+
+                GLES20.glEnableVertexAttribArray(aPos)
+                GLES20.glVertexAttribPointer(aPos, 2, GLES20.GL_FLOAT, false, 0, vertexBuffer)
+                GLES20.glEnableVertexAttribArray(aTex)
+                GLES20.glVertexAttribPointer(aTex, 2, GLES20.GL_FLOAT, false, 0, texCoordBuffer)
+
+                GLES20.glUniformMatrix4fv(uMat, 1, false, stMatrix, 0)
+                val alphaPercent = (100 - strength).coerceIn(1, 99) / 100.0f
+                GLES20.glUniform1f(uAlpha, alphaPercent)
+                GLES20.glUniform1i(uFirst, 0)
+
+                GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+                GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, oesTextureId)
+                GLES20.glUniform1i(uOes, 0)
+
+                val prevIndex = (writeIndex - 1 + fboCount) % fboCount
+                GLES20.glActiveTexture(GLES20.GL_TEXTURE1)
+                GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, fboTextureIds[prevIndex])
+                GLES20.glUniform1i(uPrev, 1)
+
+                GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
+            } else {
                 GLES20.glUseProgram(passthroughProgram)
 
                 val aPos = GLES20.glGetAttribLocation(passthroughProgram, "aPosition")
@@ -341,7 +429,6 @@ class GpuMotionSmoother(
 
                 GLES20.glEnableVertexAttribArray(aPos)
                 GLES20.glVertexAttribPointer(aPos, 2, GLES20.GL_FLOAT, false, 0, vertexBuffer)
-
                 GLES20.glEnableVertexAttribArray(aTex)
                 GLES20.glVertexAttribPointer(aTex, 2, GLES20.GL_FLOAT, false, 0, texCoordBuffer)
 
@@ -352,81 +439,95 @@ class GpuMotionSmoother(
                 GLES20.glUniform1i(uOes, 0)
 
                 GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
-
-                EGL14.eglSwapBuffers(eglDisplay, eglSurface)
-                isFirstFrame = true
-                return
             }
 
-            // Pass 1: Render OES input frame + Previous FBO frame into Target FBO
-            GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, fboFramebuffers[writeIndex])
-            GLES20.glClearColor(0f, 0f, 0f, 1f)
-            GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
+            // Pass 2: Evaluate Visual Anchor directly on live FBO (writeIndex) before delay
+            evaluateAnchorOnGlThread(writeIndex)
 
-            GLES20.glUseProgram(blendProgram)
+            // Pass 3: Draw delayed FBO texture onto Output Window Surface
+            if (!isFrozen) {
+                val delayedIndex =
+                    if (streamDelayFrames > 0 && frameCount >= streamDelayFrames) {
+                        (writeIndex - streamDelayFrames + fboCount) % fboCount
+                    } else {
+                        writeIndex
+                    }
 
-            val aPos = GLES20.glGetAttribLocation(blendProgram, "aPosition")
-            val aTex = GLES20.glGetAttribLocation(blendProgram, "aTextureCoord")
-            val uMat = GLES20.glGetUniformLocation(blendProgram, "uSTMatrix")
-            val uAlpha = GLES20.glGetUniformLocation(blendProgram, "uAlpha")
-            val uFirst = GLES20.glGetUniformLocation(blendProgram, "uFirstFrame")
-            val uOes = GLES20.glGetUniformLocation(blendProgram, "uOesTexture")
-            val uPrev = GLES20.glGetUniformLocation(blendProgram, "uPreviousTexture")
+                GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0)
+                GLES20.glClearColor(0f, 0f, 0f, 1f)
+                GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
 
-            GLES20.glEnableVertexAttribArray(aPos)
-            GLES20.glVertexAttribPointer(aPos, 2, GLES20.GL_FLOAT, false, 0, vertexBuffer)
+                GLES20.glUseProgram(drawProgram)
 
-            GLES20.glEnableVertexAttribArray(aTex)
-            GLES20.glVertexAttribPointer(aTex, 2, GLES20.GL_FLOAT, false, 0, texCoordBuffer)
+                val aPosDraw = GLES20.glGetAttribLocation(drawProgram, "aPosition")
+                val aTexDraw = GLES20.glGetAttribLocation(drawProgram, "aTextureCoord")
+                val uTexDraw = GLES20.glGetUniformLocation(drawProgram, "uTexture")
 
-            GLES20.glUniformMatrix4fv(uMat, 1, false, stMatrix, 0)
+                GLES20.glEnableVertexAttribArray(aPosDraw)
+                GLES20.glVertexAttribPointer(aPosDraw, 2, GLES20.GL_FLOAT, false, 0, vertexBuffer)
+                GLES20.glEnableVertexAttribArray(aTexDraw)
+                GLES20.glVertexAttribPointer(aTexDraw, 2, GLES20.GL_FLOAT, false, 0, texCoordBuffer)
 
-            val alphaPercent = (100 - strength).coerceIn(1, 99) / 100.0f
-            GLES20.glUniform1f(uAlpha, alphaPercent)
-            GLES20.glUniform1i(uFirst, if (isFirstFrame) 1 else 0)
+                GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+                GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, fboTextureIds[delayedIndex])
+                GLES20.glUniform1i(uTexDraw, 0)
 
-            GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
-            GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, oesTextureId)
-            GLES20.glUniform1i(uOes, 0)
+                GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
 
-            GLES20.glActiveTexture(GLES20.GL_TEXTURE1)
-            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, fboTextureIds[readIndex])
-            GLES20.glUniform1i(uPrev, 1)
+                EGL14.eglSwapBuffers(eglDisplay, eglSurface)
+            }
 
-            GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
-
-            // Pass 2: Draw smoothed FBO texture onto Output Window Surface
-            GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0)
-            GLES20.glClearColor(0f, 0f, 0f, 1f)
-            GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
-
-            GLES20.glUseProgram(drawProgram)
-
-            val aPosDraw = GLES20.glGetAttribLocation(drawProgram, "aPosition")
-            val aTexDraw = GLES20.glGetAttribLocation(drawProgram, "aTextureCoord")
-            val uTexDraw = GLES20.glGetUniformLocation(drawProgram, "uTexture")
-
-            GLES20.glEnableVertexAttribArray(aPosDraw)
-            GLES20.glVertexAttribPointer(aPosDraw, 2, GLES20.GL_FLOAT, false, 0, vertexBuffer)
-
-            GLES20.glEnableVertexAttribArray(aTexDraw)
-            GLES20.glVertexAttribPointer(aTexDraw, 2, GLES20.GL_FLOAT, false, 0, texCoordBuffer)
-
-            GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
-            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, fboTextureIds[writeIndex])
-            GLES20.glUniform1i(uTexDraw, 0)
-
-            GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
-
-            EGL14.eglSwapBuffers(eglDisplay, eglSurface)
-
-            // Swap FBO indices
-            readIndex = writeIndex
-            writeIndex = 1 - writeIndex
+            // Advance ring buffer index
+            writeIndex = (writeIndex + 1) % fboCount
+            frameCount++
             isFirstFrame = false
         } catch (e: Exception) {
             AppLog.e(TAG, "Error rendering frame in GpuMotionSmoother", e)
         }
+    }
+
+    private fun evaluateAnchorOnGlThread(targetIndex: Int) {
+        val anchor = activeAnchor ?: return
+        val listener = onPresenceEvaluated ?: return
+        if (!anchor.enabled || !anchor.isCalibrated) return
+        val signature = anchor.signature ?: return
+        if (signature.points.isEmpty()) return
+
+        val cropX = (anchor.srcX * width).roundToInt().coerceIn(0, width - 1)
+        val cropY = (anchor.srcY * height).roundToInt().coerceIn(0, height - 1)
+        val cropW = (anchor.srcWidth * width).roundToInt().coerceIn(1, width - cropX)
+        val cropH = (anchor.srcHeight * height).roundToInt().coerceIn(1, height - cropY)
+
+        val neededCapacity = cropW * cropH * 4
+        var buf = anchorByteBuffer
+        if (buf == null || buf.capacity() < neededCapacity) {
+            buf = ByteBuffer.allocateDirect(neededCapacity).apply { order(ByteOrder.nativeOrder()) }
+            anchorByteBuffer = buf
+        }
+        buf.rewind()
+
+        val glY = height - (cropY + cropH)
+        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, fboFramebuffers[targetIndex])
+        GLES20.glReadPixels(cropX, glY, cropW, cropH, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, buf)
+
+        var matchCount = 0
+        for (pt in signature.points) {
+            val px = (pt.u * (cropW - 1)).roundToInt().coerceIn(0, cropW - 1)
+            val py = ((1f - pt.v) * (cropH - 1)).roundToInt().coerceIn(0, cropH - 1)
+            val offset = (py * cropW + px) * 4
+            if (offset + 2 < neededCapacity) {
+                val r = buf.get(offset).toInt() and 0xFF
+                val g = buf.get(offset + 1).toInt() and 0xFF
+                val b = buf.get(offset + 2).toInt() and 0xFF
+                val diff = abs(r - pt.r) + abs(g - pt.g) + abs(b - pt.b)
+                if (diff <= AnchorPresenceEvaluator.ANCHOR_DIFF_TOLERANCE) {
+                    matchCount++
+                }
+            }
+        }
+
+        val matchRatio = matchCount.toFloat() / signature.points.size.toFloat()
+        listener.invoke(activeTrackingLayoutId, matchRatio)
     }
 
     private fun loadShader(
@@ -449,8 +550,10 @@ class GpuMotionSmoother(
                 if (drawProgram != 0) GLES20.glDeleteProgram(drawProgram)
                 if (passthroughProgram != 0) GLES20.glDeleteProgram(passthroughProgram)
                 if (oesTextureId != 0) GLES20.glDeleteTextures(1, intArrayOf(oesTextureId), 0)
-                GLES20.glDeleteTextures(2, fboTextureIds, 0)
-                GLES20.glDeleteFramebuffers(2, fboFramebuffers, 0)
+                if (fboTextureIds.isNotEmpty() && fboTextureIds[0] != 0) {
+                    GLES20.glDeleteTextures(fboTextureIds.size, fboTextureIds, 0)
+                    GLES20.glDeleteFramebuffers(fboFramebuffers.size, fboFramebuffers, 0)
+                }
 
                 if (eglDisplay != EGL14.EGL_NO_DISPLAY) {
                     EGL14.eglMakeCurrent(eglDisplay, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_CONTEXT)

@@ -129,15 +129,24 @@ fun EmbeddedMirrorView(
                     val smoothingCutout = if (!isMouseActive) activeCutouts.firstOrNull { it.motionSmoothing } else null
                     val effectiveStrength = smoothingCutout?.motionSmoothingStrength ?: 0
 
+                    val activeLayout = MacroPadState.activeLayout.value
+                    val streamDelay =
+                        if (activeLayout?.visualAnchor?.enabled == true) {
+                            activeLayout.visualAnchor.streamDelayFrames
+                        } else {
+                            0
+                        }
+
                     val wantsSmoother = surfaceOwner == MasterSurfaceRegistry.OWNER_MACROPAD
                     var smoother = gpuMotionSmoother
                     if (smoother == null && width > 0 && height > 0 && wantsSmoother) {
                         AppLog.i(
                             TAG,
-                            "[$surfaceOwner] Initializing GpuMotionSmoother unified pipeline for master Surface (strength=$effectiveStrength)",
+                            "[$surfaceOwner] Initializing GpuMotionSmoother unified pipeline for master Surface (strength=$effectiveStrength, delay=$streamDelay)",
                         )
-                        smoother = GpuMotionSmoother(master, width, height, effectiveStrength)
+                        smoother = GpuMotionSmoother(master, width, height, effectiveStrength, streamDelay)
                         gpuMotionSmoother = smoother
+                        AnchorPresenceManager.registerGpuMotionSmoother(smoother)
                         val inSurface = smoother.inputSurface
                         if (inSurface != null && inSurface.isValid) {
                             currentRoutedSurface = inSurface
@@ -152,6 +161,8 @@ fun EmbeddedMirrorView(
                         }
                     } else if (smoother != null) {
                         smoother.updateStrength(effectiveStrength)
+                        smoother.updateStreamDelay(streamDelay)
+                        AnchorPresenceManager.registerGpuMotionSmoother(smoother)
                         val inSurface = smoother.inputSurface
                         if (inSurface != null && inSurface.isValid && currentRoutedSurface != inSurface) {
                             currentRoutedSurface = inSurface
@@ -222,6 +233,7 @@ fun EmbeddedMirrorView(
         onDispose {
             InteractiveCutoutController.onCropUpdated = null
             val surfaceToClear = containerHolder.currentRoutedSurface ?: containerHolder.masterSurface
+            AnchorPresenceManager.unregisterGpuMotionSmoother(containerHolder.gpuMotionSmoother)
             containerHolder.gpuMotionSmoother?.release()
             containerHolder.gpuMotionSmoother = null
             containerHolder.currentRoutedSurface = null
@@ -313,6 +325,7 @@ fun EmbeddedMirrorView(
                         AppLog.d(TAG, "master TextureView surface destroyed for $surfaceOwner")
                         MirrorFrameSampler.unregisterTextureView(tv)
                         val surfaceToClear = containerHolder.currentRoutedSurface ?: containerHolder.masterSurface
+                        AnchorPresenceManager.unregisterGpuMotionSmoother(containerHolder.gpuMotionSmoother)
                         containerHolder.gpuMotionSmoother?.release()
                         containerHolder.gpuMotionSmoother = null
                         containerHolder.currentRoutedSurface = null

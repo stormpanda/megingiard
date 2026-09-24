@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.mirror
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Rect
 import android.os.SystemClock
 import androidx.annotation.VisibleForTesting
@@ -30,6 +31,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.lang.ref.WeakReference
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.roundToInt
 
@@ -76,6 +78,115 @@ object AnchorPresenceManager {
     private var lastAutoSwitchTimeMs = 0L
     private var lostStateStartMs = 0L
     private var sparseProbePhase = 0
+
+    @Volatile
+    private var activeSmoother: WeakReference<GpuMotionSmoother>? = null
+
+    fun registerGpuMotionSmoother(smoother: GpuMotionSmoother) {
+        AppLog.d(TAG, "Registering active GpuMotionSmoother for hardware presence tracking")
+        activeSmoother = WeakReference(smoother)
+        updateSmootherTracking()
+    }
+
+    fun unregisterGpuMotionSmoother(smoother: GpuMotionSmoother?) {
+        if (activeSmoother?.get() == smoother) {
+            AppLog.d(TAG, "Unregistering active GpuMotionSmoother")
+            activeSmoother = null
+        }
+    }
+
+    private fun updateSmootherTracking() {
+        val smoother = activeSmoother?.get() ?: return
+        val activeLayout = MacroPadState.activeLayout.value
+        val anchor = activeLayout?.visualAnchor
+        if (activeLayout != null && anchor != null && anchor.enabled && anchor.isCalibrated) {
+            smoother.updateStreamDelay(anchor.streamDelayFrames)
+            smoother.setAnchorTracking(activeLayout.id, anchor) { layoutId, matchRatio ->
+                onHardwareAnchorEvaluated(layoutId, matchRatio)
+            }
+        } else {
+            smoother.updateStreamDelay(0)
+            smoother.setAnchorTracking("", null, null)
+            smoother.setFrozen(false)
+        }
+    }
+
+    private fun onHardwareAnchorEvaluated(
+        layoutId: String,
+        matchRatio: Float,
+    ) {
+        val curState = layoutStates[layoutId] ?: AnchorPresenceState.PRESENT
+        val curCount = layoutConsecutiveCounts[layoutId] ?: 0
+        val (newState, newCount) =
+            AnchorPresenceEvaluator.transitionState(curState, curCount, matchRatio, layoutId)
+
+        if (newState != curState) {
+            if (newState == AnchorPresenceState.LOST) {
+                lostStateStartMs = SystemClock.uptimeMillis()
+                activeSmoother?.get()?.setFrozen(true)
+                captureOneShotFrozenFrame()
+            } else if (newState == AnchorPresenceState.PRESENT) {
+                lostStateStartMs = 0L
+                activeSmoother?.get()?.setFrozen(false)
+            }
+            _presenceRevision.value++
+        }
+        layoutStates[layoutId] = newState
+        layoutConsecutiveCounts[layoutId] = newCount
+    }
+
+    private fun captureOneShotFrozenFrame() {
+        scope.launch(Dispatchers.Main.immediate) {
+            val tv = MirrorFrameSampler.activeTextureViewRef?.get() ?: return@launch
+            if (tv.isAvailable && tv.width > 0 && tv.height > 0) {
+                try {
+                    val bmp = tv.bitmap ?: return@launch
+                    val activeLayout = MacroPadState.activeLayout.value
+                    val allCutouts = ScreenCaptureManager.cutouts.value.ifEmpty { activeLayout?.mirrorCutouts.orEmpty() }
+                    val frameW = bmp.width
+                    val frameH = bmp.height
+
+                    val srcRect = Rect()
+                    val dstRect = Rect()
+
+                    for (cutout in allCutouts) {
+                        val override = InteractiveCutoutController.getOverrideCrop(cutout.id)
+                        val cSrcX = override?.srcX?.coerceIn(0f, 1f) ?: cutout.srcX
+                        val cSrcY = override?.srcY?.coerceIn(0f, 1f) ?: cutout.srcY
+                        val cSrcW = override?.srcWidth?.coerceIn(0f, 1f) ?: cutout.srcWidth
+                        val cSrcH = override?.srcHeight?.coerceIn(0f, 1f) ?: cutout.srcHeight
+
+                        val cX = (cSrcX * frameW).roundToInt().coerceIn(0, frameW - 1)
+                        val cY = (cSrcY * frameH).roundToInt().coerceIn(0, frameH - 1)
+                        val cRight = ((cSrcX + cSrcW) * frameW).roundToInt().coerceIn(cX + 1, frameW)
+                        val cBottom = ((cSrcY + cSrcH) * frameH).roundToInt().coerceIn(cY + 1, frameH)
+                        val cW = (cRight - cX).coerceAtLeast(1)
+                        val cH = (cBottom - cY).coerceAtLeast(1)
+
+                        if (cW > 0 && cH > 0) {
+                            try {
+                                val cropped = Bitmap.createBitmap(cW, cH, Bitmap.Config.ARGB_8888)
+                                val cCanvas = Canvas(cropped)
+                                srcRect.set(cX, cY, cRight, cBottom)
+                                dstRect.set(0, 0, cW, cH)
+                                cCanvas.drawBitmap(bmp, srcRect, dstRect, null)
+                                val old = lastValidFrameBitmaps.put(cutout.id, cropped)
+                                if (old != null && !old.isRecycled) {
+                                    old.recycle()
+                                }
+                            } catch (e: Exception) {
+                                AppLog.w(TAG, "Error cropping frozen cutout bitmap: ${e.message}")
+                            }
+                        }
+                    }
+                    bmp.recycle()
+                    _presenceRevision.value++
+                } catch (e: Exception) {
+                    AppLog.e(TAG, "Error capturing one-shot frozen frame from TextureView", e)
+                }
+            }
+        }
+    }
 
     @VisibleForTesting
     internal val currentSparseProbePhase: Int
@@ -141,6 +252,8 @@ object AnchorPresenceManager {
         val hasAnyAnchoredLayout = profile?.layouts?.any { it.visualAnchor.enabled } == true
         val shouldMonitor = isCapturing && (hasLayoutAnchor || (isAutoLayoutSwitching && hasAnyAnchoredLayout))
 
+        updateSmootherTracking()
+
         if (shouldMonitor) {
             if (monitorJob?.isActive != true) {
                 AppLog.i(TAG, "Starting visual anchor presence monitoring loop (active 60 Hz / recover 30 Hz)")
@@ -162,6 +275,7 @@ object AnchorPresenceManager {
         AppLog.d(TAG, "Clearing and recycling all ring buffer and freeze frame bitmaps")
         lostStateStartMs = 0L
         sparseProbePhase = 0
+        activeSmoother?.get()?.setFrozen(false)
         cutoutRingBuffers.values.forEach { it.recycle() }
         cutoutRingBuffers.clear()
         lastValidFrameBitmaps.values.forEach { if (!it.isRecycled) it.recycle() }
@@ -237,6 +351,12 @@ object AnchorPresenceManager {
                     computeLostCheckInterval(elapsedSinceLost)
                 }
             delay(checkInterval)
+
+            val hasHardwareTracking = activeSmoother?.get() != null
+            if (hasHardwareTracking) {
+                // Presence is sampled in hardware at 60 Hz directly on the GL thread with 0 CPU readbacks
+                continue
+            }
 
             val anchorHasFreeze = activeLayout.visualAnchor.hasEffect(CutoutLostAnchorEffect.FREEZE)
             val layoutDelayFrames =
@@ -545,6 +665,7 @@ object AnchorPresenceManager {
     fun clearLayout(layoutId: String) {
         lostStateStartMs = 0L
         sparseProbePhase = 0
+        activeSmoother?.get()?.setFrozen(false)
         layoutStates.remove(layoutId)
         layoutConsecutiveCounts.remove(layoutId)
     }
