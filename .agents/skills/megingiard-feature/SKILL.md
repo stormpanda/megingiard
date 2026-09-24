@@ -1,6 +1,6 @@
 ---
 name: megingiard-feature
-description: "Plan and implement a new feature for the Megingiard Android app. Use when: adding new user-visible behavior, extending existing features (MacroPad, Mirror, Keyboard, Touchpad, Settings), or wiring up new Compose screens. Reads existing docs, presents an implementation plan for approval, implements code, and synchronizes FEATURE.md documentation."
+description: "Plan and implement a new feature for the Megingiard Android app. Use when: adding new user-visible behavior, extending existing features (MacroPad, Mirror, Keyboard, Touchpad, Settings), or wiring up new Compose screens. Conducts an interactive interview, reads existing docs, presents an implementation plan for approval, implements code, and synchronizes FEATURE.md documentation."
 argument-hint: 'Describe the feature (e.g. "add a dark-mode toggle to the settings screen")'
 ---
 
@@ -21,7 +21,7 @@ You are an experienced Android/Kotlin engineer with deep knowledge of the **Megi
 | Modules        | `:companion:ui` (UI) · `:companion:domain` (business logic) · `:shared:*` |
 | Coding rules   | **`AGENTS.md`** at workspace root — treat every rule as mandatory          |
 | Standalone Rule| Companion has ZERO dependencies on Game Focus. Never couple Companion to Game Focus! |
-| Build policy   | **Never run `./gradlew`** — static analysis only (imports, symbols, types) |
+| Build policy   | **Never run `./gradlew`** (except the mandatory unit test suite via sandbox bypass) |
 | Log tag prefix | All app logs are tagged `Mgnrd.*`                                          |
 | ADB path       | `~/Library/Android/sdk/platform-tools/adb`                                 |
 
@@ -77,23 +77,65 @@ Explore the affected code area:
 
 - Read the relevant files from the module tree (`AGENTS.md §6`)
 - Identify:
-  - Which **state singletons** (`object` in `:domain`) are involved?
+  - Which **state singletons** (`object` in `:companion:domain`) are involved?
   - Which **ViewModels** (`/viewmodel/`) coordinate this area?
-  - Which **Composables** (`/app/`) render it?
-  - Which **data models** (`:core`) may need extending?
+  - Which **Composables** (`:companion:ui`) render it?
+  - Which **data models** (`:shared:core`) may need extending?
 - Look for similar existing features as an implementation reference (e.g. how other buttons/actions were added)
 
 ---
 
-### 4. ✅ Create and present an implementation plan
+### 4. ✅ Conduct interactive design interview
+
+Before drafting the implementation plan, conduct an interactive interview with the user to resolve design decisions, UX behavior, technical trade-offs, and edge cases.
+
+> 💡 **Interview Rules (mirroring `/grill-me`):**
+> - **Always conduct an interview for every feature**, even simple ones, to validate assumptions and explore edge cases.
+> - **Strictly one question at a time**: Never batch multiple questions into a single message or overwhelm the user.
+> - **Use the `ask_question` tool**: Present the question through the interactive modal with selectable options and write-in support.
+> - **Always provide recommended answers**: The first option must be prefixed with `(Recommended)` and represent the best architectural/UX decision based on the codebase survey.
+> - **Ground questions in the codebase**: If a question can be answered by inspecting the code or documentation, inspect it yourself first. Only ask the user about trade-offs, behavioral preferences, UX choices, and ambiguities.
+> - **Walk down the decision tree dynamically**: Continue interviewing sequentially down each branch of the design tree until all requirements, edge cases, and architectural choices are completely unambiguous and agreed upon. Announce completion before transitioning to the plan.
+
+#### Systematic Exploration Domains:
+Explore each relevant domain sequentially:
+1. **UI/UX & Gamepad Navigation:**
+   - Visual placement, sizing, padding, and theme colors (`MaterialTheme.typography`, `LocalAppColors.current`, `ColorScheme`)
+   - Touch interactions, gestures, animations, and haptic feedback
+   - Gamepad 2D focus traversal, focus recovery, and button glyphs (`GamePadButton`)
+2. **State & Persistence:**
+   - Singleton ownership in `:companion:domain` (StateFlow vs MutableStateFlow)
+   - Persistence requirements (Proto DataStore vs SAF filesystem)
+   - Lifecycle scoping (Activity, Service, Presentation, class-level `SupervisorJob`)
+3. **Dual-Screen & Standalone Architecture:**
+   - Screen targeting (AYN Thor top display 0 vs bottom display 4)
+   - **Companion Autonomy:** Strict zero-dependency rule on Game Focus (`AGENTS.md §6.1`)
+   - Presentation lifecycle (`hide()`/`show()` instead of `dismiss()`)
+4. **Edge Cases & Failure Modes:**
+   - Backgrounding / app switching / screen sleep
+   - Display disconnects or reconnects
+   - Missing permissions or daemon unavailable (Privileged Mode)
+   - Null, empty, or error states in UI
+5. **Help & Localization:**
+   - Strings required for `strings.xml` and `values-de/strings.xml`
+   - In-app `HelpModal` and onboarding walkthrough entries (every visible setting must have a help entry)
+
+---
+
+### 5. ✅ Create and present an implementation plan
 
 **Write a structured plan** with the following sections and present it to the user **before writing any code**:
 
-```
+```markdown
 ## Implementation Plan: <Feature Name>
 
 ### Goal
 <One sentence describing what the feature achieves.>
+
+### Key Decisions & Interview Outcomes
+- <Decision 1 agreed upon during the interactive interview>
+- <Decision 2 agreed upon during the interactive interview>
+- ...
 
 ### Affected files
 - `path/to/File.kt` — what changes here
@@ -103,10 +145,10 @@ Explore the affected code area:
 - `path/to/NewFile.kt` — purpose
 
 ### Data model changes (if needed)
-- <Class> in `:core`: <what is added>
+- <Class> in `:shared:core`: <what is added>
 
 ### State changes (if needed)
-- <Manager> in `:domain`: <new StateFlows or methods>
+- <Manager> in `:companion:domain`: <new StateFlows or methods>
 
 ### Implementation order
 1. Step 1 (e.g. extend data model)
@@ -116,7 +158,7 @@ Explore the affected code area:
 5. Step 5 (e.g. strings, docs)
 
 ### Open questions / assumptions
-- <If anything is unclear, state it explicitly here>
+- <If anything is still open, state it explicitly here>
 ```
 
 > ⚠️ **Wait for the user's approval** before starting implementation.
@@ -124,7 +166,7 @@ Explore the affected code area:
 
 ---
 
-### 5. ✅ Implement the feature
+### 6. ✅ Implement the feature
 
 Implement according to plan. Follow `AGENTS.md` strictly:
 
@@ -156,13 +198,13 @@ Implement according to plan. Follow `AGENTS.md` strictly:
 
 **Module ownership:**
 
-- Business logic with no Android UI dependency → `:domain`
-- Pure data types / constants → `:core`
-- Composables / ViewModels / Activities → `:app`
+- Business logic with no Android UI dependency → `:companion:domain` (or `:shared:session` / `:shared:catalog` / `:shared:media`)
+- Pure data types / constants / math helpers → `:shared:core`
+- Composables / ViewModels / Activities → `:companion:ui`
 
 ---
 
-### 6. ✅ Update documentation & help tutorials (mandatory)
+### 7. ✅ Update documentation & help tutorials (mandatory)
 
 After implementation, always synchronize documentation and in-app help:
 
@@ -183,7 +225,7 @@ After implementation, always synchronize documentation and in-app help:
 
 ---
 
-### 7. ✅ Static analysis & checklist
+### 8. ✅ Static analysis & checklist
 
 Perform a static review — no build command:
 
@@ -205,18 +247,19 @@ Perform a static review — no build command:
 - [ ] `FEATURE.md` updated / created
 - [ ] In-app help, tutorials, and localized strings updated / created
 - [ ] No suspected compile errors
-- [ ] New or changed pure logic is covered by unit tests in `:core` or `:domain`
+- [ ] New or changed pure logic is covered by unit tests in `:shared:core` or `:companion:domain`
 - [ ] Existing tests updated if the change modifies previously-tested behaviour
-- [ ] `./gradlew :core:test :domain:test` executed and all tests pass
+- [ ] `./gradlew :shared:core:test :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:ui:testDebugUnitTest` executed and all tests pass
 
 ---
 
 ## Output Requirements
 
-1. **Implementation plan** (presented before coding — see Step 4)
-2. **Implemented code**: all changed and new files with an explanation per file
-3. **Documentation updates**: which `FEATURE.md` sections were changed and how
-4. **Conventional Commits message** as a copy-paste-ready code block (covering all changes):
+1. **Interactive design interview**: Conducted one-by-one via `ask_question` tool before drafting the plan
+2. **Implementation plan**: Presented before coding (including Key Decisions & Interview Outcomes)
+3. **Implemented code**: All changed and new files with an explanation per file
+4. **Documentation updates**: Which `FEATURE.md` sections were changed and how
+5. **Conventional Commits message** as a copy-paste-ready code block (covering all changes):
 
 ```
 feat: <short imperative summary>
@@ -233,6 +276,7 @@ feat: <short imperative summary>
 - Never run `./gradlew` or any other build command
 - **One exception:** `./gradlew :shared:core:test :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:ui:testDebugUnitTest` **must** be run after every implementation to verify all unit tests pass (run with sandbox bypass enabled). This is the only permitted Gradle invocation.
 - After implementation, always write or update unit tests for new or changed pure logic in `:shared:core` / `:companion:domain`. If logic is not testable without major refactoring, document it as a follow-up task instead of skipping silently.
+- **Always conduct an interactive interview via `ask_question` before drafting the plan** — walk down each branch of the design tree one question at a time with recommendations until all requirements are unambiguous.
 - **Always present the plan before implementing** — no silent coding
 - Never remove existing functionality without explicit user approval
 - Do not design features that cross module boundaries in ways that violate the architecture in `docs/ARCHITECTURE.md`
