@@ -418,10 +418,17 @@ fun adjustDestSizeToAspectRatio(
 /**
  * Calculates new destination bounds for a cutout when rotating to [targetRotation].
  *
- * If rotating between landscape and portrait (0°/180° <-> 90°/270°), destination width and height
- * are swapped while remaining centered around the cutout's current midpoint and clamped to screen bounds.
+ * If rotating between landscape and portrait (0°/180° <-> 90°/270°), destination physical pixel
+ * dimensions are swapped (converting normalized dimensions through [screenW] and [screenH])
+ * while remaining centered around the cutout's current midpoint and clamped to screen bounds.
  *
- * Returns the updated [ScreenCutout] if the rotated cutout fits without colliding with any
+ * @param cutout The cutout to rotate.
+ * @param targetRotation Target rotation angle in degrees (0, 90, 180, 270).
+ * @param allCutouts Sibling cutouts used for collision detection.
+ * @param maxDimension Maximum normalized dimension (defaults to 1.0f).
+ * @param screenW Secondary display surface width in physical pixels (used to preserve physical aspect ratio).
+ * @param screenH Secondary display surface height in physical pixels (used to preserve physical aspect ratio).
+ * @return The updated [ScreenCutout] if the rotated cutout fits without colliding with any
  * other cutout in [allCutouts], or `null` if the rotation is blocked by collision or boundaries.
  */
 fun calculateRotatedCutoutBounds(
@@ -429,13 +436,30 @@ fun calculateRotatedCutoutBounds(
     targetRotation: Int,
     allCutouts: List<ScreenCutout>,
     maxDimension: Float = 1.0f,
+    screenW: Float = 0f,
+    screenH: Float = 0f,
 ): ScreenCutout? {
     val currentIsQuarter = (cutout.rotation == 90 || cutout.rotation == 270)
     val targetIsQuarter = (targetRotation == 90 || targetRotation == 270)
     val isSwappingDimensions = currentIsQuarter != targetIsQuarter
 
-    val newW = if (isSwappingDimensions) cutout.destHeight else cutout.destWidth
-    val newH = if (isSwappingDimensions) cutout.destWidth else cutout.destHeight
+    val newW =
+        if (!isSwappingDimensions) {
+            cutout.destWidth
+        } else if (screenW > 0f && screenH > 0f) {
+            (cutout.destHeight * screenH) / screenW
+        } else {
+            cutout.destHeight
+        }
+
+    val newH =
+        if (!isSwappingDimensions) {
+            cutout.destHeight
+        } else if (screenW > 0f && screenH > 0f) {
+            (cutout.destWidth * screenW) / screenH
+        } else {
+            cutout.destWidth
+        }
 
     if (newW > maxDimension || newH > maxDimension) {
         return null

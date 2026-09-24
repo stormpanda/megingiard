@@ -318,7 +318,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
   - **Rotation Card (`RotationCard`):** Displays current rotation angle in degrees with `Icons.AutoMirrored.Rounded.RotateRight`. D-Pad Right / Click advances $+90^\circ$, D-Pad Left advances $-90^\circ$.
   - **Flip Card (`FlipCard`):** Compact cycle card with `Icons.Rounded.Flip`, stepping through `None` $\to$ `Horizontal` $\to$ `Vertical` $\to$ `Both`.
 - **Center-Anchored Bounding Box Swapping & Collision Prevention (`calculateRotatedCutoutBounds`):**
-  - When rotating between landscape and portrait (0°/180° $\leftrightarrow$ 90°/270°), the destination bounding box swaps `destWidth` and `destHeight` around the cutout's midpoint and clamps within screen edges.
+  - When rotating between landscape and portrait (0°/180° $\leftrightarrow$ 90°/270°), the destination bounding box swaps physical pixel dimensions (converting normalized height and width through screen aspect ratio) around the cutout's midpoint and clamps within screen edges.
   - If the rotated bounding box collides with another cutout or exceeds screen bounds, rotation is prevented and an informational toast notification (`"Cannot rotate: blocked by another cutout"`) is presented.
 - **Transformed Coordinate Pipeline:**
   - **Touch Projection (`projectCutoutCoordinates`):** Touch events on rotated/flipped cutouts are mapped through rotation and flip transforms back into primary screen coordinates, guaranteeing that tapping visual elements on the secondary screen hits the exact source location.
@@ -692,7 +692,7 @@ Mirrored cutouts support discrete 90° orientation changes (`rotation`: 0°, 90�
    - Screen-space boundary effects (ambient dimming veils and hybrid edge blending gradients) are rendered in unrotated screen bounds `(dw, dh)` outside the transformed canvas scope.
 
 2. **Bounding Box Geometry & Collision Prevention (`MirrorCoordinateTransform.calculateRotatedCutoutBounds`)**:
-   - Swapping between landscape and portrait orientations (0°/180° $\leftrightarrow$ 90°/270°) swaps `destWidth` and `destHeight`.
+   - Swapping between landscape and portrait orientations (0°/180° $\leftrightarrow$ 90°/270°) swaps destination physical pixel dimensions using `newW = (cutout.destHeight * screenH) / screenW` and `newH = (cutout.destWidth * screenW) / screenH`.
    - The cutout's destination origin `(destX, destY)` is adjusted so that the bounding box expands or contracts symmetrically around its center point: `newX = centerX - newW / 2f`, `newY = centerY - newH / 2f`.
    - The new bounds are clamped to screen dimensions `[0, screenWidth - newW]`, `[0, screenHeight - newH]`.
    - If the newly calculated bounds overlap any sibling cutouts (`rectsOverlap`) or if minimum screen dimensions cannot accommodate the rotated footprint, rotation is rejected and the editor notifies the user via toast (`R.string.mirror_editor_rotate_blocked`).

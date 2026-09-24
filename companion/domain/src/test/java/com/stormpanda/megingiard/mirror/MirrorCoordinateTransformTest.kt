@@ -421,6 +421,26 @@ class MirrorCoordinateTransformTest {
     }
 
     @Test
+    fun `adjustDestSizeToAspectRatio inverts aspect ratio for quarter-turn rotated cutouts`() {
+        val (w, h) =
+            adjustDestSizeToAspectRatio(
+                destX = 0f,
+                destY = 0f,
+                destWidth = 0.3f,
+                destHeight = 0.3f,
+                cropRatio = 16f / 9f,
+                screenW = 1240f,
+                screenH = 1080f,
+                rotation = 90,
+            )
+        assertEquals(0.3f, w, EPS)
+        // With rotation 90, effective crop ratio is 9/16 instead of 16/9.
+        // normRatio = (9/16) * (1080/1240) = 0.48991935f
+        // targetH = 0.3f / 0.48991935f = 0.612348f
+        assertEquals(0.612348f, h, 0.0001f)
+    }
+
+    @Test
     fun `clampCutoutResize maintains aspect ratio during collision`() {
         val allCutouts =
             listOf(
@@ -1938,6 +1958,55 @@ class MirrorCoordinateTransformTest {
         assertEquals(0.4f, rotated.destHeight, EPS)
         assertEquals(0.3f, rotated.destX, EPS)
         assertEquals(0.1f, rotated.destY, EPS)
+    }
+
+    @Test
+    fun `calculateRotatedCutoutBounds swaps physical pixel dimensions on non-square screens`() {
+        // Cutout sitting at 0.3 x 0.3 on a 1920 x 1080 screen (physical 576 x 324 px)
+        val cutout =
+            ScreenCutout(
+                id = "cutout_square_norm",
+                srcX = 0f,
+                srcY = 0f,
+                srcWidth = 1f,
+                srcHeight = 1f,
+                destX = 0.3f,
+                destY = 0.3f,
+                destWidth = 0.3f,
+                destHeight = 0.3f,
+                rotation = 0,
+            )
+        val screenW = 1920f
+        val screenH = 1080f
+
+        // 90 deg rotation should swap physical pixels to 324 x 576 px
+        // newW = 324 / 1920 = 0.16875f, newH = 576 / 1080 = 0.53333f
+        val rotated90 =
+            calculateRotatedCutoutBounds(
+                cutout = cutout,
+                targetRotation = 90,
+                allCutouts = listOf(cutout),
+                screenW = screenW,
+                screenH = screenH,
+            )
+        assertNotNull(rotated90)
+        assertEquals(90, rotated90!!.rotation)
+        assertEquals(0.16875f, rotated90.destWidth, EPS)
+        assertEquals(0.53333f, rotated90.destHeight, 0.001f)
+
+        // 180 deg rotation should return to horizontal orientation (0.3 x 0.3)
+        val rotated180 =
+            calculateRotatedCutoutBounds(
+                cutout = rotated90,
+                targetRotation = 180,
+                allCutouts = listOf(rotated90),
+                screenW = screenW,
+                screenH = screenH,
+            )
+        assertNotNull(rotated180)
+        assertEquals(180, rotated180!!.rotation)
+        assertEquals(0.3f, rotated180.destWidth, EPS)
+        assertEquals(0.3f, rotated180.destHeight, EPS)
     }
 
     @Test

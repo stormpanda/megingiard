@@ -384,6 +384,7 @@ fun MirrorEditorTopOverlay(
                     cropRatio = cropRatio,
                     screenW = secScreenW,
                     screenH = secScreenH,
+                    rotation = updated.rotation,
                 )
             if (!isCutoutGeometryValid(updated.destX, updated.destY, newDestW, newDestH, others)) {
                 return@updateCutout null
@@ -459,7 +460,13 @@ fun MirrorEditorTopOverlay(
                     0
                 }
             if (stepDelta == 0) return@updateCutout null
-            val cropRatio = (cur.srcWidth * srcWidth) / (cur.srcHeight * srcHeight)
+            val rawCropRatio = (cur.srcWidth * srcWidth) / (cur.srcHeight * srcHeight)
+            val cropRatio =
+                if (cur.rotation == 90 || cur.rotation == 270) {
+                    1f / rawCropRatio
+                } else {
+                    rawCropRatio
+                }
             val normRatio = cropRatio * (secScreenH / secScreenW)
             val geom =
                 calculateProportionalResizedBounds(
@@ -597,6 +604,8 @@ fun MirrorEditorTopOverlay(
                 RotationCard(
                     selectedCutout = selectedCutout,
                     allCutouts = cutouts,
+                    secScreenW = secScreenW,
+                    secScreenH = secScreenH,
                     onUpdate = { updatedCutout ->
                         val updatedList =
                             cutouts.map {
@@ -925,6 +934,7 @@ private fun AspectRatioCard(
                     cropRatio = cropRatio,
                     screenW = secScreenW,
                     screenH = secScreenH,
+                    rotation = updatedCutout.rotation,
                 )
             updatedCutout = updatedCutout.copy(destWidth = newDestW, destHeight = newDestH)
         } else if (nextMode == AspectRatioMode.BOTTOM) {
@@ -1003,6 +1013,8 @@ private fun ShapeToggleCard(
 private fun RotationCard(
     selectedCutout: ScreenCutout?,
     allCutouts: List<ScreenCutout>,
+    secScreenW: Float,
+    secScreenH: Float,
     onUpdate: (ScreenCutout) -> Unit,
     modifier: Modifier = Modifier,
     cardFocusRequester: FocusRequester = remember { FocusRequester() },
@@ -1015,7 +1027,14 @@ private fun RotationCard(
     fun applyRotation(stepDelta: Int) {
         val cutout = selectedCutout ?: return
         val targetRotation = (cutout.rotation + stepDelta * 90 + 360) % 360
-        val rotated = calculateRotatedCutoutBounds(cutout, targetRotation, allCutouts)
+        val rotated =
+            calculateRotatedCutoutBounds(
+                cutout = cutout,
+                targetRotation = targetRotation,
+                allCutouts = allCutouts,
+                screenW = secScreenW,
+                screenH = secScreenH,
+            )
         if (rotated != null) {
             onUpdate(rotated)
         } else {
