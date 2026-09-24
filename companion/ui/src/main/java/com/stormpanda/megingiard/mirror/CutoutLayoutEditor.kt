@@ -643,14 +643,9 @@ internal fun CutoutLayoutEditorHelpModal(
             description = stringResource(R.string.help_mirror_editor_aspect_desc),
         )
         HelpEntry(
-            icon = Icons.Rounded.CropSquare,
-            label = stringResource(R.string.help_mirror_editor_shape_label),
-            description = stringResource(R.string.help_mirror_editor_shape_desc),
-        )
-        HelpEntry(
-            icon = Icons.AutoMirrored.Rounded.RotateRight,
-            label = stringResource(R.string.help_mirror_editor_rotation_label),
-            description = stringResource(R.string.help_mirror_editor_rotation_desc),
+            icon = Icons.Rounded.Crop,
+            label = stringResource(R.string.help_mirror_editor_adjust_label),
+            description = stringResource(R.string.help_mirror_editor_adjust_desc),
         )
         HelpEntry(
             icon = Icons.Rounded.Flip,
@@ -658,19 +653,24 @@ internal fun CutoutLayoutEditorHelpModal(
             description = stringResource(R.string.help_mirror_editor_flip_desc),
         )
         HelpEntry(
-            icon = Icons.Rounded.CenterFocusStrong,
-            label = stringResource(R.string.mirror_editor_snap_alignment),
-            description = stringResource(R.string.mirror_editor_snap_alignment_desc),
+            icon = Icons.AutoMirrored.Rounded.RotateRight,
+            label = stringResource(R.string.help_mirror_editor_rotation_label),
+            description = stringResource(R.string.help_mirror_editor_rotation_desc),
         )
         HelpEntry(
-            icon = Icons.Rounded.Crop,
-            label = stringResource(R.string.help_mirror_editor_adjust_label),
-            description = stringResource(R.string.help_mirror_editor_adjust_desc),
+            icon = Icons.Rounded.CropSquare,
+            label = stringResource(R.string.help_mirror_editor_shape_label),
+            description = stringResource(R.string.help_mirror_editor_shape_desc),
         )
         HelpEntry(
             icon = Icons.Rounded.VisibilityOff,
             label = stringResource(R.string.mirror_editor_hide_background),
             description = stringResource(R.string.help_mirror_editor_hide_bg_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.CenterFocusStrong,
+            label = stringResource(R.string.mirror_editor_snap_alignment),
+            description = stringResource(R.string.mirror_editor_snap_alignment_desc),
         )
 
         HelpSection(stringResource(R.string.help_mirror_editor_section_finish))

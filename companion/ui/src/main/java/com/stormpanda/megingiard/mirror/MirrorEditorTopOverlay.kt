@@ -575,98 +575,7 @@ fun MirrorEditorTopOverlay(
                             },
                 )
 
-                // Item 1: Fixed Aspect Ratio Mode
-                AspectRatioCard(
-                    selectedCutout = selectedCutout,
-                    srcWidth = srcWidth,
-                    srcHeight = srcHeight,
-                    secScreenW = secScreenW,
-                    secScreenH = secScreenH,
-                    onUpdate = { updatedCutout ->
-                        val updatedList =
-                            cutouts.map {
-                                if (it.id == updatedCutout.id) updatedCutout else it
-                            }
-                        MacroPadState.updateLayout(layout.copy(mirrorCutouts = updatedList))
-                    },
-                )
-
-                // Item 2: Shape Mode
-                ShapeToggleCard(
-                    selectedCutout = selectedCutout,
-                    onUpdate = { updatedCutout ->
-                        val updatedList =
-                            cutouts.map {
-                                if (it.id == updatedCutout.id) updatedCutout else it
-                            }
-                        MacroPadState.updateLayout(layout.copy(mirrorCutouts = updatedList))
-                    },
-                )
-
-                // Item 3: Rotation Mode
-                RotationCard(
-                    selectedCutout = selectedCutout,
-                    allCutouts = cutouts,
-                    secScreenW = secScreenW,
-                    secScreenH = secScreenH,
-                    onUpdate = { updatedCutout ->
-                        val updatedList =
-                            cutouts.map {
-                                if (it.id == updatedCutout.id) updatedCutout else it
-                            }
-                        MacroPadState.updateLayout(layout.copy(mirrorCutouts = updatedList))
-                    },
-                )
-
-                // Item 4: Flip Mode
-                FlipCard(
-                    selectedCutout = selectedCutout,
-                    onUpdate = { updatedCutout ->
-                        val updatedList =
-                            cutouts.map {
-                                if (it.id == updatedCutout.id) updatedCutout else it
-                            }
-                        MacroPadState.updateLayout(layout.copy(mirrorCutouts = updatedList))
-                    },
-                )
-
-                // Item 5: Adjust Top Cutout Coordinates (Source Screen)
-                AdjustCoordinatesCard(
-                    title = stringResource(R.string.mirror_editor_adjust_top_cutout),
-                    icon = Icons.Rounded.Crop,
-                    enabled = selectedCutout != null,
-                    resetKey = selectedCutout?.id,
-                    onMove = { dx, dy ->
-                        selectedCutout?.id?.let { moveTopCutout(it, dx, dy) }
-                    },
-                    onResize = { dx, dy ->
-                        selectedCutout?.id?.let { resizeTopCutout(it, dx, dy) }
-                    },
-                )
-
-                // Item 4: Adjust Bottom Cutout Coordinates (Target Screen)
-                AdjustCoordinatesCard(
-                    title = stringResource(R.string.mirror_editor_adjust_bottom_cutout),
-                    icon = Icons.Rounded.OpenWith,
-                    enabled = selectedCutout != null,
-                    resetKey = selectedCutout?.id,
-                    onMove = { dx, dy ->
-                        selectedCutout?.id?.let { moveBottomCutout(it, dx, dy) }
-                    },
-                    onResize = { dx, dy ->
-                        selectedCutout?.id?.let { resizeBottomCutout(it, dx, dy) }
-                    },
-                )
-
-                // Item 5: Temporarily Hide Background
-                HideBackgroundCard(
-                    layout = layout,
-                )
-
-                // Item 6: Snap to Alignment
-                SnapAlignmentCard()
-
-                // Item 7: Add Cutout
+                // Item 1: Add Cutout
                 ToolboxActionCard(
                     title = stringResource(R.string.mirror_editor_add_cutout),
                     icon = Icons.Rounded.Add,
@@ -719,7 +628,98 @@ fun MirrorEditorTopOverlay(
                     },
                 )
 
-                // Item 7: Delete Cutout
+                // Item 2: Fixed Aspect Ratio Mode
+                AspectRatioCard(
+                    selectedCutout = selectedCutout,
+                    srcWidth = srcWidth,
+                    srcHeight = srcHeight,
+                    secScreenW = secScreenW,
+                    secScreenH = secScreenH,
+                    onUpdate = { updatedCutout ->
+                        val updatedList =
+                            cutouts.map {
+                                if (it.id == updatedCutout.id) updatedCutout else it
+                            }
+                        MacroPadState.updateLayout(layout.copy(mirrorCutouts = updatedList))
+                    },
+                )
+
+                // Item 3: Adjust Top Cutout Coordinates (Source Screen)
+                AdjustCoordinatesCard(
+                    title = stringResource(R.string.mirror_editor_adjust_top_cutout),
+                    icon = Icons.Rounded.Crop,
+                    enabled = selectedCutout != null,
+                    resetKey = selectedCutout?.id,
+                    onMove = { dx, dy ->
+                        selectedCutout?.id?.let { moveTopCutout(it, dx, dy) }
+                    },
+                    onResize = { dx, dy ->
+                        selectedCutout?.id?.let { resizeTopCutout(it, dx, dy) }
+                    },
+                )
+
+                // Item 4: Adjust Bottom Cutout Coordinates (Target Screen)
+                AdjustCoordinatesCard(
+                    title = stringResource(R.string.mirror_editor_adjust_bottom_cutout),
+                    icon = Icons.Rounded.OpenWith,
+                    enabled = selectedCutout != null,
+                    resetKey = selectedCutout?.id,
+                    onMove = { dx, dy ->
+                        selectedCutout?.id?.let { moveBottomCutout(it, dx, dy) }
+                    },
+                    onResize = { dx, dy ->
+                        selectedCutout?.id?.let { resizeBottomCutout(it, dx, dy) }
+                    },
+                )
+
+                // Item 5: Flip Mode
+                FlipCard(
+                    selectedCutout = selectedCutout,
+                    onUpdate = { updatedCutout ->
+                        val updatedList =
+                            cutouts.map {
+                                if (it.id == updatedCutout.id) updatedCutout else it
+                            }
+                        MacroPadState.updateLayout(layout.copy(mirrorCutouts = updatedList))
+                    },
+                )
+
+                // Item 6: Rotation Mode
+                RotationCard(
+                    selectedCutout = selectedCutout,
+                    allCutouts = cutouts,
+                    secScreenW = secScreenW,
+                    secScreenH = secScreenH,
+                    onUpdate = { updatedCutout ->
+                        val updatedList =
+                            cutouts.map {
+                                if (it.id == updatedCutout.id) updatedCutout else it
+                            }
+                        MacroPadState.updateLayout(layout.copy(mirrorCutouts = updatedList))
+                    },
+                )
+
+                // Item 7: Shape Mode
+                ShapeToggleCard(
+                    selectedCutout = selectedCutout,
+                    onUpdate = { updatedCutout ->
+                        val updatedList =
+                            cutouts.map {
+                                if (it.id == updatedCutout.id) updatedCutout else it
+                            }
+                        MacroPadState.updateLayout(layout.copy(mirrorCutouts = updatedList))
+                    },
+                )
+
+                // Item 8: Temporarily Hide Background
+                HideBackgroundCard(
+                    layout = layout,
+                )
+
+                // Item 9: Snap to Alignment
+                SnapAlignmentCard()
+
+                // Item 10: Delete Cutout
                 DeleteCutoutCard(
                     selectedCutout = selectedCutout,
                     onDelete = { cutoutId ->
@@ -729,7 +729,7 @@ fun MirrorEditorTopOverlay(
                     },
                 )
 
-                // Item 8: Save Changes / Save & Discard Exit Row
+                // Item 11: Save Changes / Save & Discard Exit Row
                 ToolboxSaveExitRow(
                     showExitPrompt = showExitPrompt,
                     hasChanges = hasChanges,
