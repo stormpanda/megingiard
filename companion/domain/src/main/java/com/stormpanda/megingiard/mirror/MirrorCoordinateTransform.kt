@@ -94,6 +94,9 @@ fun projectCutoutCoordinates(
     srcWidth: Float,
     srcHeight: Float,
     clampToEdge: Boolean = false,
+    rotation: Int = 0,
+    flipHorizontal: Boolean = false,
+    flipVertical: Boolean = false,
 ): Pair<Float, Float>? {
     if (destWidth <= 0f || destHeight <= 0f) return null
 
@@ -106,8 +109,31 @@ fun projectCutoutCoordinates(
     val rx = ((touchX - destLeft) / destWidth).coerceIn(0f, 1f)
     val ry = ((touchY - destTop) / destHeight).coerceIn(0f, 1f)
 
-    val px = srcX + rx * srcWidth
-    val py = srcY + ry * srcHeight
+    var normU =
+        when (rotation) {
+            90 -> ry
+            180 -> 1f - rx
+            270 -> 1f - ry
+            else -> rx
+        }
+
+    var normV =
+        when (rotation) {
+            90 -> 1f - rx
+            180 -> 1f - ry
+            270 -> rx
+            else -> ry
+        }
+
+    if (flipHorizontal) {
+        normU = 1f - normU
+    }
+    if (flipVertical) {
+        normV = 1f - normV
+    }
+
+    val px = srcX + normU * srcWidth
+    val py = srcY + normV * srcHeight
 
     return Pair(px.coerceIn(0f, 1f), py.coerceIn(0f, 1f))
 }
@@ -290,8 +316,10 @@ fun adjustSourceCropToAspectRatio(
         return cutout
     }
 
-    val targetRatio = (cutout.destWidth * screenW) / (cutout.destHeight * screenH)
-    if (targetRatio <= 0f) return cutout
+    val rawTargetRatio = (cutout.destWidth * screenW) / (cutout.destHeight * screenH)
+    if (rawTargetRatio <= 0f) return cutout
+    val isQuarter = (cutout.rotation == 90 || cutout.rotation == 270)
+    val targetRatio = if (isQuarter) (1f / rawTargetRatio) else rawTargetRatio
     val factor = targetRatio * (srcH / srcW)
     if (factor <= 0f) return cutout
 
@@ -348,10 +376,14 @@ fun adjustDestSizeToAspectRatio(
     screenW: Float,
     screenH: Float,
     minCutoutSize: Float = MIN_GAMEPAD_CUTOUT_SIZE,
+    rotation: Int = 0,
 ): Pair<Float, Float> {
     if (screenW <= 0f || screenH <= 0f || cropRatio <= 0f) return Pair(destWidth, destHeight)
 
-    val normRatio = cropRatio * (screenH / screenW)
+    val isQuarter = (rotation == 90 || rotation == 270)
+    val effectiveCropRatio = if (isQuarter) (1f / cropRatio) else cropRatio
+
+    val normRatio = effectiveCropRatio * (screenH / screenW)
     if (normRatio <= 0f) return Pair(destWidth, destHeight)
 
     val maxH = (1f - destY).coerceIn(minCutoutSize, 1f)
@@ -381,6 +413,57 @@ fun adjustDestSizeToAspectRatio(
     }
 
     return Pair(targetW, targetH)
+}
+
+/**
+ * Calculates new destination bounds for a cutout when rotating to [targetRotation].
+ *
+ * If rotating between landscape and portrait (0°/180° <-> 90°/270°), destination width and height
+ * are swapped while remaining centered around the cutout's current midpoint and clamped to screen bounds.
+ *
+ * Returns the updated [ScreenCutout] if the rotated cutout fits without colliding with any
+ * other cutout in [allCutouts], or `null` if the rotation is blocked by collision or boundaries.
+ */
+fun calculateRotatedCutoutBounds(
+    cutout: ScreenCutout,
+    targetRotation: Int,
+    allCutouts: List<ScreenCutout>,
+    maxDimension: Float = 1.0f,
+): ScreenCutout? {
+    val currentIsQuarter = (cutout.rotation == 90 || cutout.rotation == 270)
+    val targetIsQuarter = (targetRotation == 90 || targetRotation == 270)
+    val isSwappingDimensions = currentIsQuarter != targetIsQuarter
+
+    val newW = if (isSwappingDimensions) cutout.destHeight else cutout.destWidth
+    val newH = if (isSwappingDimensions) cutout.destWidth else cutout.destHeight
+
+    if (newW > maxDimension || newH > maxDimension) {
+        return null
+    }
+
+    val centerX = cutout.destX + cutout.destWidth / 2f
+    val centerY = cutout.destY + cutout.destHeight / 2f
+
+    val targetX = (centerX - newW / 2f).coerceIn(0f, (maxDimension - newW).coerceAtLeast(0f))
+    val targetY = (centerY - newH / 2f).coerceIn(0f, (maxDimension - newH).coerceAtLeast(0f))
+
+    val others = allCutouts.filter { it.id != cutout.id }
+    val hasOverlap =
+        others.any { other ->
+            rectsOverlap(targetX, targetY, newW, newH, other)
+        }
+
+    if (hasOverlap) {
+        return null
+    }
+
+    return cutout.copy(
+        rotation = targetRotation,
+        destX = targetX,
+        destY = targetY,
+        destWidth = newW,
+        destHeight = newH,
+    )
 }
 
 fun isCutoutGeometryValid(

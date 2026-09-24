@@ -311,6 +311,20 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
   - **Follow Touch Precedence:** If a cutout has both Follow Touch and Interactive Viewport enabled, manual pan/zoom operates freely. Any subsequent touch received on the top screen immediately takes over and re-centers the crop on the newly touched coordinates.
   - **Transient Viewport State:** On-the-fly gesture manipulation operates strictly on transient in-memory viewports (`InteractiveCutoutController.overrideCrops`). The saved layout profile configuration is never overwritten.
 
+### FR-M24: Mirrored Cutout Rotation and Flipping
+
+- The user MUST be able to rotate any mirrored cutout on the secondary display in 90° discrete increments (`0°`, `90°`, `180°`, `270°`) and flip it across axes (`None`, `Horizontal`, `Vertical`, `Both`).
+- Controls for rotation and flipping are hosted directly within the Screen Mirroring Editor toolbox on the primary display (`MirrorEditorTopOverlay`):
+  - **Rotation Card (`RotationCard`):** Displays current rotation angle in degrees with `Icons.AutoMirrored.Rounded.RotateRight`. D-Pad Right / Click advances $+90^\circ$, D-Pad Left advances $-90^\circ$.
+  - **Flip Card (`FlipCard`):** Compact cycle card with `Icons.Rounded.Flip`, stepping through `None` $\to$ `Horizontal` $\to$ `Vertical` $\to$ `Both`.
+- **Center-Anchored Bounding Box Swapping & Collision Prevention (`calculateRotatedCutoutBounds`):**
+  - When rotating between landscape and portrait (0°/180° $\leftrightarrow$ 90°/270°), the destination bounding box swaps `destWidth` and `destHeight` around the cutout's midpoint and clamps within screen edges.
+  - If the rotated bounding box collides with another cutout or exceeds screen bounds, rotation is prevented and an informational toast notification (`"Cannot rotate: blocked by another cutout"`) is presented.
+- **Transformed Coordinate Pipeline:**
+  - **Touch Projection (`projectCutoutCoordinates`):** Touch events on rotated/flipped cutouts are mapped through rotation and flip transforms back into primary screen coordinates, guaranteeing that tapping visual elements on the secondary screen hits the exact source location.
+  - **Interactive Gestures (`InteractiveCutoutController.transformPanDelta`):** One-finger pan vectors rotate according to cutout orientation so gesture viewport movement follows finger trajectory naturally.
+  - **Aspect Ratio Locking (`adjustSourceCropToAspectRatio`, `adjustDestSizeToAspectRatio`, corner resize):** Effective aspect ratios are inverted when rotated 90°/270° to prevent stretching and distortion.
+
 ---
 
 ## Technical Implementation
@@ -653,6 +667,49 @@ HUD / UI isolation is implemented via hardware-accelerated transparency mask ble
      - Bypasses the live video stream entirely during rendering, displaying a clean, pristine UI asset with zero background motion bleed-through or compression noise.
    - Stationary UI graphics remain 100% visible and render live at 60/120 FPS with zero copy overhead, while moving background pixels become 100% transparent.
 
+### Cutout Rotation and Flip Transformations (`MultiCutoutContainer.kt`, `MirrorCoordinateTransform.kt`)
+
+Mirrored cutouts support discrete 90° orientation changes (`rotation`: 0°, 90°, 180°, 270°) and axial reflections (`flipHorizontal`, `flipVertical`).
+
+1. **Rendering & Compositing (`MultiCutoutContainer.kt`)**:
+   - `MultiCutoutContainer.drawSingleCutout` applies local canvas transformations prior to rendering content:
+     ```kotlin
+     val isQuarterTurn = cutout.rotation == 90 || cutout.rotation == 270
+     val contentW = if (isQuarterTurn) dh else dw
+     val contentH = if (isQuarterTurn) dw else dh
+     canvas.save()
+     canvas.translate(dx + dw / 2f, dy + dh / 2f)
+     if (cutout.rotation != 0) canvas.rotate(cutout.rotation.toFloat())
+     if (cutout.flipHorizontal || cutout.flipVertical) {
+         canvas.scale(
+             if (cutout.flipHorizontal) -1f else 1f,
+             if (cutout.flipVertical) -1f else 1f
+         )
+     }
+     canvas.translate(-contentW / 2f, -contentH / 2f)
+     ```
+   - Content feeds (video stream, frozen frames, delayed frame buffers, static UI assets), frosted blur backgrounds, and `DST_IN` hardware transparency masks render in unrotated content bounds `(contentW, contentH)`. This ensures that transparency masks and blur layers rotate and flip synchronously with the source video.
+   - Screen-space boundary effects (ambient dimming veils and hybrid edge blending gradients) are rendered in unrotated screen bounds `(dw, dh)` outside the transformed canvas scope.
+
+2. **Bounding Box Geometry & Collision Prevention (`MirrorCoordinateTransform.calculateRotatedCutoutBounds`)**:
+   - Swapping between landscape and portrait orientations (0°/180° $\leftrightarrow$ 90°/270°) swaps `destWidth` and `destHeight`.
+   - The cutout's destination origin `(destX, destY)` is adjusted so that the bounding box expands or contracts symmetrically around its center point: `newX = centerX - newW / 2f`, `newY = centerY - newH / 2f`.
+   - The new bounds are clamped to screen dimensions `[0, screenWidth - newW]`, `[0, screenHeight - newH]`.
+   - If the newly calculated bounds overlap any sibling cutouts (`rectsOverlap`) or if minimum screen dimensions cannot accommodate the rotated footprint, rotation is rejected and the editor notifies the user via toast (`R.string.mirror_editor_rotate_blocked`).
+
+3. **Touch Projection Inversion (`MirrorCoordinateTransform.projectCutoutCoordinates`)**:
+   - Secondary screen touch coordinates `(touchX, touchY)` within `[destX, destX + destWidth]` and `[destY, destY + destHeight]` are normalized into `[0.0, 1.0]` relative to the rotated bounding box.
+   - The normalized coordinate `(nx, ny)` is inverted through the active rotation angle:
+     - 0°: `(nx, ny)`
+     - 90°: `(ny, 1.0 - nx)`
+     - 180°: `(1.0 - nx, 1.0 - ny)`
+     - 270°: `(1.0 - ny, nx)`
+   - Flipping inversions are applied subsequently (`if (flipHorizontal) nx = 1.0 - nx`, `if (flipVertical) ny = 1.0 - ny`).
+   - The resulting un-transformed normalized coordinate maps linearly onto the source crop rectangle `[cropX, cropX + cropWidth]` on the primary screen.
+
+4. **Interactive Gesture Inversion (`InteractiveCutoutController.transformPanDelta`)**:
+   - Touch drag deltas `(dx, dy)` from 1-finger viewport panning are inversely transformed by the cutout's rotation and flip flags before being applied to the crop offset, ensuring panning feels natural regardless of cutout orientation.
+
 ### Architectural Roadmap: Zero-Copy Hardware & IPC Pipeline
 
 For future iterations of the privileged mirroring backend (`:mirrorserver` / `DirectMirrorServer`), an IPC and hardware-level optimization roadmap is established:
@@ -669,7 +726,8 @@ For future iterations of the privileged mirroring backend (`:mirrorserver` / `Di
 | `ScreenCaptureService.kt`             | Foreground service; `MediaProjection` token; `VirtualDisplay` lifecycle                                    |
 | `EmbeddedMirrorView.kt`               | Main Compose embedded mirror view hosting `MultiCutoutContainer`                                           |
 | `MasterSurfaceRegistry.kt`            | Process-wide master surface holder bridging `ThrottledTextureView` to `ScreenCaptureService`               |
-| `MultiCutoutContainer.kt`             | Multi-cutout canvas rendering, clipping, hybrid edge blending, and PorterDuff DST_IN transparency masking   |
+| `MultiCutoutContainer.kt`             | Multi-cutout canvas rendering, clipping, hybrid edge blending, rotation/flip transforms, and PorterDuff DST_IN transparency masking |
+| `MirrorCoordinateTransform.kt`        | Pure coordinate transformations: touch projection inversion, rotated bounds calculation, aspect ratio adjustment |
 | `CutoutMaskManager.kt`                | Manages disk persistence and in-memory bitmap cache for cutout transparency masks                          |
 | `CutoutAutoTuner.kt`                  | Computer vision engine for pixel-level color change detection, despeckling, and Gaussian anti-aliasing      |
 | `VisualAutoTuneCoordinator.kt`        | Orchestrates interactive calibration lifecycle, live preview streaming, overlay suspension, and mask/anchor generation |

@@ -704,6 +704,13 @@ Open Settings to create a layout.</string>
     <string name="macropad_delete_cutout_desc">Permanently remove this cutout from the layout</string>
     <string name="mirror_editor_shape_mode">Cutout Shape</string>
     <string name="mirror_editor_shape_desc">Switch between rectangular and circular viewport rendering</string>
+    <string name="mirror_editor_rotation_title">Rotation</string>
+    <string name="mirror_editor_rotate_blocked">Cannot rotate: blocked by another cutout</string>
+    <string name="mirror_editor_flip_title">Flip</string>
+    <string name="mirror_editor_flip_none">None</string>
+    <string name="mirror_editor_flip_horizontal">Horizontal</string>
+    <string name="mirror_editor_flip_vertical">Vertical</string>
+    <string name="mirror_editor_flip_both">Both</string>
     <string name="settings_mirror_cutout_summary_fmt">Smoothing: %1$s • Projection: %2$s</string>
     <string name="settings_mirror_cutout_summary_with_filter_fmt">Smoothing: %1$s • %2$s • Projection: %3$s</string>
     <string name="settings_mirror_cutout_filter_transparency_mask">HUD / UI Isolation</string>
@@ -811,6 +818,10 @@ Open Settings to create a layout.</string>
     <string name="help_mirror_editor_aspect_desc">Cycles through three aspect ratio modes for the selected cutout. Free — no constraint, resize independently. Top — lock aspect ratio to match the crop on the Top screen. Bottom — lock aspect ratio to match the cutout on the Bottom screen.</string>
     <string name="help_mirror_editor_shape_label">Shape</string>
     <string name="help_mirror_editor_shape_desc">Toggles the selected cutout between rectangle and circle shapes. Useful for game mini-maps or round gauges that look better clipped to a circle.</string>
+    <string name="help_mirror_editor_rotation_label">Rotation</string>
+    <string name="help_mirror_editor_rotation_desc">Rotates the selected cutout in 90° increments (0°, 90°, 180°, 270°). When rotating between landscape and portrait, the bounding box automatically adjusts while preventing collisions.</string>
+    <string name="help_mirror_editor_flip_label">Flip</string>
+    <string name="help_mirror_editor_flip_desc">Cycles mirror flipping modes for the selected cutout: None, Horizontal, Vertical, or Both.</string>
     <string name="help_mirror_editor_adjust_label">Adjust Coordinates</string>
     <string name="help_mirror_editor_adjust_desc" formatted="false">Enters fine-tuning mode. Use D-Pad to move the cutout pixel-by-pixel. Hold R2 while pressing D-Pad to resize the cutout (expanding or shrinking symmetrically around its center, down to 1% of the screen). Below 5%, touch resize handles are hidden to keep the display clear.</string>
     <string name="help_mirror_editor_hide_bg_desc">Temporarily hides the layout background image on the secondary display while editing to make it easier to see and adjust cutout boundaries. Does not change your saved layout settings.</string>

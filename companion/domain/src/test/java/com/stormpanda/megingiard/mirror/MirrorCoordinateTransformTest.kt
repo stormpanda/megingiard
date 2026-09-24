@@ -1715,4 +1715,260 @@ class MirrorCoordinateTransformTest {
         // Must expand 5px to 10px (0.010f) rather than being blocked
         assertEquals(0.010f, expandedW.width, EPS)
     }
+
+    @Test
+    fun `projectCutoutCoordinates transforms coordinates correctly across all 90 degree rotation steps`() {
+        val destLeft = 0.2f
+        val destTop = 0.3f
+        val destW = 0.4f
+        val destH = 0.2f
+        val srcX = 0.1f
+        val srcY = 0.1f
+        val srcW = 0.8f
+        val srcH = 0.6f
+
+        // Center touch: (0.2 + 0.2, 0.3 + 0.1) -> rx=0.5, ry=0.5 -> center of source for any rotation
+        val center =
+            projectCutoutCoordinates(
+                touchX = 0.4f,
+                touchY = 0.4f,
+                destLeft = destLeft,
+                destTop = destTop,
+                destWidth = destW,
+                destHeight = destH,
+                srcX = srcX,
+                srcY = srcY,
+                srcWidth = srcW,
+                srcHeight = srcH,
+                rotation = 90,
+            )
+        assertNotNull(center)
+        assertEquals(srcX + 0.5f * srcW, center!!.first, EPS)
+        assertEquals(srcY + 0.5f * srcH, center.second, EPS)
+
+        // Top-left touch on screen: touchX = destLeft, touchY = destTop (rx=0, ry=0)
+        // 0 deg: (srcX, srcY)
+        val deg0 =
+            projectCutoutCoordinates(
+                touchX = destLeft,
+                touchY = destTop,
+                destLeft = destLeft,
+                destTop = destTop,
+                destWidth = destW,
+                destHeight = destH,
+                srcX = srcX,
+                srcY = srcY,
+                srcWidth = srcW,
+                srcHeight = srcH,
+                rotation = 0,
+            )
+        assertEquals(srcX, deg0!!.first, EPS)
+        assertEquals(srcY, deg0.second, EPS)
+
+        // 90 deg clockwise: rx=0, ry=0 -> normU=0, normV=1 -> (srcX, srcY + srcH) [bottom-left of source]
+        val deg90 =
+            projectCutoutCoordinates(
+                touchX = destLeft,
+                touchY = destTop,
+                destLeft = destLeft,
+                destTop = destTop,
+                destWidth = destW,
+                destHeight = destH,
+                srcX = srcX,
+                srcY = srcY,
+                srcWidth = srcW,
+                srcHeight = srcH,
+                rotation = 90,
+            )
+        assertEquals(srcX, deg90!!.first, EPS)
+        assertEquals(srcY + srcH, deg90.second, EPS)
+
+        // 180 deg: rx=0, ry=0 -> normU=1, normV=1 -> (srcX + srcW, srcY + srcH) [bottom-right of source]
+        val deg180 =
+            projectCutoutCoordinates(
+                touchX = destLeft,
+                touchY = destTop,
+                destLeft = destLeft,
+                destTop = destTop,
+                destWidth = destW,
+                destHeight = destH,
+                srcX = srcX,
+                srcY = srcY,
+                srcWidth = srcW,
+                srcHeight = srcH,
+                rotation = 180,
+            )
+        assertEquals(srcX + srcW, deg180!!.first, EPS)
+        assertEquals(srcY + srcH, deg180.second, EPS)
+
+        // 270 deg: rx=0, ry=0 -> normU=1, normV=0 -> (srcX + srcW, srcY) [top-right of source]
+        val deg270 =
+            projectCutoutCoordinates(
+                touchX = destLeft,
+                touchY = destTop,
+                destLeft = destLeft,
+                destTop = destTop,
+                destWidth = destW,
+                destHeight = destH,
+                srcX = srcX,
+                srcY = srcY,
+                srcWidth = srcW,
+                srcHeight = srcH,
+                rotation = 270,
+            )
+        assertEquals(srcX + srcW, deg270!!.first, EPS)
+        assertEquals(srcY, deg270.second, EPS)
+    }
+
+    @Test
+    fun `projectCutoutCoordinates applies horizontal and vertical flipping`() {
+        val destLeft = 0f
+        val destTop = 0f
+        val destW = 1f
+        val destH = 1f
+        val srcX = 0f
+        val srcY = 0f
+        val srcW = 1f
+        val srcH = 1f
+
+        // Touch at (0.2, 0.3)
+        // Normal: (0.2, 0.3)
+        val normal =
+            projectCutoutCoordinates(
+                0.2f,
+                0.3f,
+                destLeft,
+                destTop,
+                destW,
+                destH,
+                srcX,
+                srcY,
+                srcW,
+                srcH,
+                rotation = 0,
+                flipHorizontal = false,
+                flipVertical = false,
+            )
+        assertEquals(0.2f, normal!!.first, EPS)
+        assertEquals(0.3f, normal.second, EPS)
+
+        // Horizontal flip: normU = 1 - 0.2 = 0.8
+        val flipH =
+            projectCutoutCoordinates(
+                0.2f,
+                0.3f,
+                destLeft,
+                destTop,
+                destW,
+                destH,
+                srcX,
+                srcY,
+                srcW,
+                srcH,
+                rotation = 0,
+                flipHorizontal = true,
+                flipVertical = false,
+            )
+        assertEquals(0.8f, flipH!!.first, EPS)
+        assertEquals(0.3f, flipH.second, EPS)
+
+        // Vertical flip: normV = 1 - 0.3 = 0.7
+        val flipV =
+            projectCutoutCoordinates(
+                0.2f,
+                0.3f,
+                destLeft,
+                destTop,
+                destW,
+                destH,
+                srcX,
+                srcY,
+                srcW,
+                srcH,
+                rotation = 0,
+                flipHorizontal = false,
+                flipVertical = true,
+            )
+        assertEquals(0.2f, flipV!!.first, EPS)
+        assertEquals(0.7f, flipV.second, EPS)
+
+        // Both: (0.8, 0.7)
+        val flipBoth =
+            projectCutoutCoordinates(
+                0.2f,
+                0.3f,
+                destLeft,
+                destTop,
+                destW,
+                destH,
+                srcX,
+                srcY,
+                srcW,
+                srcH,
+                rotation = 0,
+                flipHorizontal = true,
+                flipVertical = true,
+            )
+        assertEquals(0.8f, flipBoth!!.first, EPS)
+        assertEquals(0.7f, flipBoth.second, EPS)
+    }
+
+    @Test
+    fun `calculateRotatedCutoutBounds swaps dimensions and centers without overlap`() {
+        val cutout =
+            ScreenCutout(
+                id = "cutout_1",
+                srcX = 0f,
+                srcY = 0f,
+                srcWidth = 1f,
+                srcHeight = 1f,
+                destX = 0.2f,
+                destY = 0.2f,
+                destWidth = 0.4f,
+                destHeight = 0.2f,
+                rotation = 0,
+            )
+        // Center is (0.2 + 0.2 = 0.4, 0.2 + 0.1 = 0.3)
+        // On 90 deg rotation: newW = 0.2, newH = 0.4
+        // targetX = 0.4 - 0.1 = 0.3, targetY = 0.3 - 0.2 = 0.1
+        val rotated = calculateRotatedCutoutBounds(cutout, targetRotation = 90, allCutouts = listOf(cutout))
+        assertNotNull(rotated)
+        assertEquals(90, rotated!!.rotation)
+        assertEquals(0.2f, rotated.destWidth, EPS)
+        assertEquals(0.4f, rotated.destHeight, EPS)
+        assertEquals(0.3f, rotated.destX, EPS)
+        assertEquals(0.1f, rotated.destY, EPS)
+    }
+
+    @Test
+    fun `calculateRotatedCutoutBounds blocks rotation on collision with neighbor`() {
+        val cutout1 =
+            ScreenCutout(
+                id = "cutout_1",
+                srcX = 0f,
+                srcY = 0f,
+                srcWidth = 1f,
+                srcHeight = 1f,
+                destX = 0.2f,
+                destY = 0.2f,
+                destWidth = 0.4f,
+                destHeight = 0.2f,
+                rotation = 0,
+            )
+        // Neighbor right above cutout1's target bounds (Y=0.1 to 0.5)
+        val neighbor =
+            ScreenCutout(
+                id = "neighbor",
+                srcX = 0f,
+                srcY = 0f,
+                srcWidth = 1f,
+                srcHeight = 1f,
+                destX = 0.25f,
+                destY = 0.05f,
+                destWidth = 0.2f,
+                destHeight = 0.15f,
+            )
+        val blocked = calculateRotatedCutoutBounds(cutout1, targetRotation = 90, allCutouts = listOf(cutout1, neighbor))
+        assertNull(blocked)
+    }
 }

@@ -41,6 +41,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.rounded.RotateRight
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AspectRatio
 import androidx.compose.material.icons.rounded.CenterFocusStrong
@@ -50,6 +51,7 @@ import androidx.compose.material.icons.rounded.Crop
 import androidx.compose.material.icons.rounded.CropSquare
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.FilterCenterFocus
+import androidx.compose.material.icons.rounded.Flip
 import androidx.compose.material.icons.rounded.OpenWith
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.UnfoldLess
@@ -591,7 +593,32 @@ fun MirrorEditorTopOverlay(
                     },
                 )
 
-                // Item 3: Adjust Top Cutout Coordinates (Source Screen)
+                // Item 3: Rotation Mode
+                RotationCard(
+                    selectedCutout = selectedCutout,
+                    allCutouts = cutouts,
+                    onUpdate = { updatedCutout ->
+                        val updatedList =
+                            cutouts.map {
+                                if (it.id == updatedCutout.id) updatedCutout else it
+                            }
+                        MacroPadState.updateLayout(layout.copy(mirrorCutouts = updatedList))
+                    },
+                )
+
+                // Item 4: Flip Mode
+                FlipCard(
+                    selectedCutout = selectedCutout,
+                    onUpdate = { updatedCutout ->
+                        val updatedList =
+                            cutouts.map {
+                                if (it.id == updatedCutout.id) updatedCutout else it
+                            }
+                        MacroPadState.updateLayout(layout.copy(mirrorCutouts = updatedList))
+                    },
+                )
+
+                // Item 5: Adjust Top Cutout Coordinates (Source Screen)
                 AdjustCoordinatesCard(
                     title = stringResource(R.string.mirror_editor_adjust_top_cutout),
                     icon = Icons.Rounded.Crop,
@@ -967,6 +994,106 @@ private fun ShapeToggleCard(
     ) { isFocused ->
         GamepadPill(
             text = shapeLabel,
+            isHighlighted = isFocused,
+        )
+    }
+}
+
+@Composable
+private fun RotationCard(
+    selectedCutout: ScreenCutout?,
+    allCutouts: List<ScreenCutout>,
+    onUpdate: (ScreenCutout) -> Unit,
+    modifier: Modifier = Modifier,
+    cardFocusRequester: FocusRequester = remember { FocusRequester() },
+    onFocusChanged: ((Boolean) -> Unit)? = null,
+) {
+    val context = LocalContext.current
+    val enabled = selectedCutout != null
+    val currentRotation = selectedCutout?.rotation ?: 0
+
+    fun applyRotation(stepDelta: Int) {
+        val cutout = selectedCutout ?: return
+        val targetRotation = (cutout.rotation + stepDelta * 90 + 360) % 360
+        val rotated = calculateRotatedCutoutBounds(cutout, targetRotation, allCutouts)
+        if (rotated != null) {
+            onUpdate(rotated)
+        } else {
+            DialogToastManager.show(context.getString(R.string.mirror_editor_rotate_blocked))
+        }
+    }
+
+    ToolboxCard(
+        onClick = { applyRotation(1) },
+        onLeftKey = { applyRotation(-1) },
+        onRightKey = { applyRotation(1) },
+        onFocusChanged = onFocusChanged,
+        cardFocusRequester = cardFocusRequester,
+        enabled = enabled,
+        icon = Icons.AutoMirrored.Rounded.RotateRight,
+        title = stringResource(R.string.mirror_editor_rotation_title),
+        modifier = modifier,
+    ) { isFocused ->
+        GamepadPill(
+            text = "$currentRotation°",
+            isHighlighted = isFocused,
+        )
+    }
+}
+
+@Composable
+private fun FlipCard(
+    selectedCutout: ScreenCutout?,
+    onUpdate: (ScreenCutout) -> Unit,
+    modifier: Modifier = Modifier,
+    cardFocusRequester: FocusRequester = remember { FocusRequester() },
+    onFocusChanged: ((Boolean) -> Unit)? = null,
+) {
+    val enabled = selectedCutout != null
+    val currentMode = selectedCutout?.flipMode ?: CutoutFlipMode.NONE
+
+    val flipLabel =
+        when (currentMode) {
+            CutoutFlipMode.NONE -> stringResource(R.string.mirror_editor_flip_none)
+            CutoutFlipMode.HORIZONTAL -> stringResource(R.string.mirror_editor_flip_horizontal)
+            CutoutFlipMode.VERTICAL -> stringResource(R.string.mirror_editor_flip_vertical)
+            CutoutFlipMode.BOTH -> stringResource(R.string.mirror_editor_flip_both)
+        }
+
+    fun cycleFlip(forward: Boolean) {
+        val cutout = selectedCutout ?: return
+        val modes = CutoutFlipMode.entries
+        val currentIdx = modes.indexOf(cutout.flipMode)
+        val nextIdx =
+            if (forward) {
+                (currentIdx + 1) % modes.size
+            } else {
+                (currentIdx - 1 + modes.size) % modes.size
+            }
+        val nextMode = modes[nextIdx]
+        val (h, v) =
+            when (nextMode) {
+                CutoutFlipMode.NONE -> Pair(false, false)
+                CutoutFlipMode.HORIZONTAL -> Pair(true, false)
+                CutoutFlipMode.VERTICAL -> Pair(false, true)
+                CutoutFlipMode.BOTH -> Pair(true, true)
+            }
+        onUpdate(cutout.copy(flipHorizontal = h, flipVertical = v))
+    }
+
+    ToolboxCard(
+        onClick = { cycleFlip(forward = true) },
+        onLeftKey = { cycleFlip(forward = false) },
+        onRightKey = { cycleFlip(forward = true) },
+        onFocusChanged = onFocusChanged,
+        cardFocusRequester = cardFocusRequester,
+        enabled = enabled,
+        icon = Icons.Rounded.Flip,
+        title = stringResource(R.string.mirror_editor_flip_title),
+        modifier = modifier,
+    ) { isFocused ->
+        GamepadPill(
+            text = flipLabel,
             isHighlighted = isFocused,
         )
     }

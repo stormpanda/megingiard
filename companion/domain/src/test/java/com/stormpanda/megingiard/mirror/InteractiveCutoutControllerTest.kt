@@ -224,4 +224,40 @@ class InteractiveCutoutControllerTest {
         // Crop width should have decreased from 0.4 due to magnification
         assertTrue(effective.srcWidth < 0.4f)
     }
+
+    @Test
+    fun `transformPanDelta rotates and flips pan deltas correctly`() {
+        val rawX = 0.2f
+        val rawY = 0.1f
+
+        // 0 deg, no flip
+        val deg0 = transformPanDelta(rawX, rawY, rotation = 0, flipHorizontal = false, flipVertical = false)
+        assertEquals(0.2f, deg0.first, 0.0001f)
+        assertEquals(0.1f, deg0.second, 0.0001f)
+
+        // 90 deg: dx = rawY = 0.1, dy = -rawX = -0.2
+        val deg90 = transformPanDelta(rawX, rawY, rotation = 90, flipHorizontal = false, flipVertical = false)
+        assertEquals(0.1f, deg90.first, 0.0001f)
+        assertEquals(-0.2f, deg90.second, 0.0001f)
+
+        // 180 deg: dx = -rawX = -0.2, dy = -rawY = -0.1
+        val deg180 = transformPanDelta(rawX, rawY, rotation = 180, flipHorizontal = false, flipVertical = false)
+        assertEquals(-0.2f, deg180.first, 0.0001f)
+        assertEquals(-0.1f, deg180.second, 0.0001f)
+
+        // 270 deg: dx = -rawY = -0.1, dy = rawX = 0.2
+        val deg270 = transformPanDelta(rawX, rawY, rotation = 270, flipHorizontal = false, flipVertical = false)
+        assertEquals(-0.1f, deg270.first, 0.0001f)
+        assertEquals(0.2f, deg270.second, 0.0001f)
+
+        // Horizontal flip on 0 deg: dx = -rawX = -0.2, dy = rawY = 0.1
+        val flipH = transformPanDelta(rawX, rawY, rotation = 0, flipHorizontal = true, flipVertical = false)
+        assertEquals(-0.2f, flipH.first, 0.0001f)
+        assertEquals(0.1f, flipH.second, 0.0001f)
+
+        // Vertical flip on 0 deg: dx = rawX = 0.2, dy = -rawY = -0.1
+        val flipV = transformPanDelta(rawX, rawY, rotation = 0, flipHorizontal = false, flipVertical = true)
+        assertEquals(0.2f, flipV.first, 0.0001f)
+        assertEquals(-0.1f, flipV.second, 0.0001f)
+    }
 }

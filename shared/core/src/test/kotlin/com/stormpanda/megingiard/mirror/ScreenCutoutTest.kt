@@ -1,7 +1,9 @@
 package com.stormpanda.megingiard.mirror
 
+import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ScreenCutoutTest {
@@ -24,6 +26,10 @@ class ScreenCutoutTest {
         assertFalse(fullscreen.followTouch)
         assertFalse(fullscreen.touchProjectionEnabled)
         assertFalse(fullscreen.renderAboveMask)
+        assertEquals(0, fullscreen.rotation)
+        assertFalse(fullscreen.flipHorizontal)
+        assertFalse(fullscreen.flipVertical)
+        assertEquals(CutoutFlipMode.NONE, fullscreen.flipMode)
     }
 
     @Test
@@ -45,5 +51,56 @@ class ScreenCutoutTest {
         assertEquals(0.5625f, cutout.destHeight, 0.0001f)
         assertEquals((1f - 0.5625f) / 2f, cutout.destY, 0.0001f)
         assertFalse(cutout.renderAboveMask)
+        assertEquals(0, cutout.rotation)
+        assertFalse(cutout.flipHorizontal)
+        assertFalse(cutout.flipVertical)
+        assertEquals(CutoutFlipMode.NONE, cutout.flipMode)
+    }
+
+    @Test
+    fun `verify CutoutFlipMode fromBooleans mapping`() {
+        assertEquals(CutoutFlipMode.NONE, CutoutFlipMode.fromBooleans(horizontal = false, vertical = false))
+        assertEquals(CutoutFlipMode.HORIZONTAL, CutoutFlipMode.fromBooleans(horizontal = true, vertical = false))
+        assertEquals(CutoutFlipMode.VERTICAL, CutoutFlipMode.fromBooleans(horizontal = false, vertical = true))
+        assertEquals(CutoutFlipMode.BOTH, CutoutFlipMode.fromBooleans(horizontal = true, vertical = true))
+    }
+
+    @Test
+    fun `verify json serialization round trip and backward compatibility`() {
+        val json = Json { ignoreUnknownKeys = true }
+        val custom =
+            ScreenCutout.FULLSCREEN.copy(
+                id = "rotated_cutout",
+                rotation = 90,
+                flipHorizontal = true,
+                flipVertical = false,
+            )
+        val serialized = json.encodeToString(ScreenCutout.serializer(), custom)
+        val deserialized = json.decodeFromString(ScreenCutout.serializer(), serialized)
+        assertEquals(90, deserialized.rotation)
+        assertTrue(deserialized.flipHorizontal)
+        assertFalse(deserialized.flipVertical)
+        assertEquals(CutoutFlipMode.HORIZONTAL, deserialized.flipMode)
+
+        // Legacy JSON without rotation or flip fields defaults to 0 and false
+        val legacyJson =
+            """
+            {
+                "id": "legacy_cutout",
+                "srcX": 0.0,
+                "srcY": 0.0,
+                "srcWidth": 1.0,
+                "srcHeight": 1.0,
+                "destX": 0.0,
+                "destY": 0.0,
+                "destWidth": 1.0,
+                "destHeight": 1.0
+            }
+            """.trimIndent()
+        val legacyParsed = json.decodeFromString(ScreenCutout.serializer(), legacyJson)
+        assertEquals(0, legacyParsed.rotation)
+        assertFalse(legacyParsed.flipHorizontal)
+        assertFalse(legacyParsed.flipVertical)
+        assertEquals(CutoutFlipMode.NONE, legacyParsed.flipMode)
     }
 }

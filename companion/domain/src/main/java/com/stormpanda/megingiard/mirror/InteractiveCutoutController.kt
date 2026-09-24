@@ -143,8 +143,16 @@ object InteractiveCutoutController {
             currentPointer.x = xPx
             currentPointer.y = yPx
 
-            val deltaNormX = deltaX / destW
-            val deltaNormY = deltaY / destH
+            val rawDeltaNormX = deltaX / destW
+            val rawDeltaNormY = deltaY / destH
+            val (deltaNormX, deltaNormY) =
+                transformPanDelta(
+                    rawDeltaNormX,
+                    rawDeltaNormY,
+                    cutout.rotation,
+                    cutout.flipHorizontal,
+                    cutout.flipVertical,
+                )
 
             val newCrop = CutoutGestureMath.applyPan(currentCrop, deltaNormX, deltaNormY)
             AppLog.d(TAG, "onMove 1-finger cutout=$cutoutId delta=($deltaNormX, $deltaNormY) crop=$newCrop")
@@ -168,8 +176,16 @@ object InteractiveCutoutController {
             currentPointer.y = yPx
 
             val scaleFactor = curDist / prevDist
-            val deltaNormX = midDeltaX / destW
-            val deltaNormY = midDeltaY / destH
+            val rawDeltaNormX = midDeltaX / destW
+            val rawDeltaNormY = midDeltaY / destH
+            val (deltaNormX, deltaNormY) =
+                transformPanDelta(
+                    rawDeltaNormX,
+                    rawDeltaNormY,
+                    cutout.rotation,
+                    cutout.flipHorizontal,
+                    cutout.flipVertical,
+                )
 
             val focalNormX = ((curMidX - destLeft) / destW).coerceIn(0f, 1f)
             val focalNormY = ((curMidY - destTop) / destH).coerceIn(0f, 1f)
@@ -381,4 +397,34 @@ object InteractiveCutoutController {
             }
         animationJobs[cutoutId] = job
     }
+}
+
+internal fun transformPanDelta(
+    deltaNormX: Float,
+    deltaNormY: Float,
+    rotation: Int,
+    flipHorizontal: Boolean,
+    flipVertical: Boolean,
+): Pair<Float, Float> {
+    var dx =
+        when (rotation) {
+            90 -> deltaNormY
+            180 -> -deltaNormX
+            270 -> -deltaNormY
+            else -> deltaNormX
+        }
+    var dy =
+        when (rotation) {
+            90 -> -deltaNormX
+            180 -> -deltaNormY
+            270 -> deltaNormX
+            else -> deltaNormY
+        }
+    if (flipHorizontal) {
+        dx = -dx
+    }
+    if (flipVertical) {
+        dy = -dy
+    }
+    return Pair(dx, dy)
 }
