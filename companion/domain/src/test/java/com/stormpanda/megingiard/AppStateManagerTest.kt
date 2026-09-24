@@ -11,6 +11,7 @@ import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.macropad.ProfileAssociation
+import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.navigation.NavDestination
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
@@ -67,6 +68,7 @@ class AppStateManagerTest {
         AppStateManager.consumeMirrorStopRequest()
         AppStateManager.consumeShutOffRequest()
         AppStateManager.setViewportEditActive(false)
+        AppStateManager.setShowEmptyCutoutsDialog(false)
     }
 
     @After
@@ -84,6 +86,7 @@ class AppStateManagerTest {
         AppStateManager.consumeMirrorStopRequest()
         AppStateManager.consumeShutOffRequest()
         AppStateManager.setViewportEditActive(false)
+        AppStateManager.setShowEmptyCutoutsDialog(false)
         Dispatchers.resetMain()
     }
 
@@ -1330,5 +1333,96 @@ class AppStateManagerTest {
 
                 cancelAndIgnoreRemainingEvents()
             }
+        }
+
+    @Test
+    fun `requestMirrorStart triggers showEmptyCutoutsDialog when layout has no cutouts and not in viewport edit`() =
+        runTest {
+            val lId = UUID.randomUUID().toString()
+            val pId = UUID.randomUUID().toString()
+            val p = testProfile(id = pId, layouts = listOf(testLayout(id = lId).copy(mirrorCutouts = emptyList())), activeLayoutId = lId)
+            MacroPadState.loadFrom(listOf(p), pId)
+
+            AppStateManager.setViewportEditActive(false)
+            AppStateManager.setShowEmptyCutoutsDialog(false)
+
+            AppStateManager.requestMirrorStart()
+
+            assertTrue(AppStateManager.showEmptyCutoutsDialog.value)
+            assertTrue(AppStateManager.mirrorStartRequested.value)
+        }
+
+    @Test
+    fun `requestMirrorStart does not trigger showEmptyCutoutsDialog when layout has cutouts`() =
+        runTest {
+            val lId = UUID.randomUUID().toString()
+            val pId = UUID.randomUUID().toString()
+            val p =
+                testProfile(
+                    id = pId,
+                    layouts = listOf(testLayout(id = lId).copy(mirrorCutouts = listOf(ScreenCutout.FULLSCREEN))),
+                    activeLayoutId = lId,
+                )
+            MacroPadState.loadFrom(listOf(p), pId)
+
+            AppStateManager.setViewportEditActive(false)
+            AppStateManager.setShowEmptyCutoutsDialog(false)
+
+            AppStateManager.requestMirrorStart()
+
+            assertFalse(AppStateManager.showEmptyCutoutsDialog.value)
+            assertTrue(AppStateManager.mirrorStartRequested.value)
+        }
+
+    @Test
+    fun `requestMirrorStart does not trigger showEmptyCutoutsDialog when viewport edit is active`() =
+        runTest {
+            val lId = UUID.randomUUID().toString()
+            val pId = UUID.randomUUID().toString()
+            val p = testProfile(id = pId, layouts = listOf(testLayout(id = lId).copy(mirrorCutouts = emptyList())), activeLayoutId = lId)
+            MacroPadState.loadFrom(listOf(p), pId)
+
+            AppStateManager.setViewportEditActive(true)
+            AppStateManager.setShowEmptyCutoutsDialog(false)
+
+            AppStateManager.requestMirrorStart()
+
+            assertFalse(AppStateManager.showEmptyCutoutsDialog.value)
+        }
+
+    @Test
+    fun `requestMirrorStop and setViewportEditActive reset showEmptyCutoutsDialog`() =
+        runTest {
+            AppStateManager.setShowEmptyCutoutsDialog(true)
+            assertTrue(AppStateManager.showEmptyCutoutsDialog.value)
+
+            AppStateManager.requestMirrorStop()
+            assertFalse(AppStateManager.showEmptyCutoutsDialog.value)
+
+            AppStateManager.setShowEmptyCutoutsDialog(true)
+            assertTrue(AppStateManager.showEmptyCutoutsDialog.value)
+
+            AppStateManager.setViewportEditActive(true)
+            assertFalse(AppStateManager.showEmptyCutoutsDialog.value)
+        }
+
+    @Test
+    fun `clicking edit now opens viewport editor and keeps showEmptyCutoutsDialog dismissed`() =
+        runTest {
+            val lId = UUID.randomUUID().toString()
+            val pId = UUID.randomUUID().toString()
+            val p = testProfile(id = pId, layouts = listOf(testLayout(id = lId).copy(mirrorCutouts = emptyList())), activeLayoutId = lId)
+            MacroPadState.loadFrom(listOf(p), pId)
+
+            AppStateManager.setViewportEditActive(false)
+            AppStateManager.requestMirrorStart()
+            assertTrue(AppStateManager.showEmptyCutoutsDialog.value)
+
+            // User clicks "Edit now"
+            AppStateManager.setShowEmptyCutoutsDialog(false)
+            AppStateManager.setViewportEditActive(true)
+
+            assertFalse(AppStateManager.showEmptyCutoutsDialog.value)
+            assertTrue(AppStateManager.isViewportEditActive.value)
         }
 }

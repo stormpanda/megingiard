@@ -229,6 +229,10 @@ Open Settings to create a layout.</string>
     <string name="settings_mirror_follow_smoothing_desc">使用指數衰減平滑視窗移動</string>
     <string name="settings_mirror_follow_touch_off">關閉</string>
     <string name="settings_mirror_no_cutouts">未定義區塊。請在視窗編輯器中新增。</string>
+    <string name="mirror_empty_cutouts_dialog_title">螢幕鏡像</string>
+    <string name="mirror_empty_cutouts_dialog_text">此配置尚未包含任何畫面裁剪區域。您想現在編輯螢幕鏡像配置嗎？</string>
+    <string name="mirror_empty_cutouts_dialog_confirm">立即編輯</string>
+    <string name="mirror_empty_cutouts_dialog_dismiss">稍後</string>
 
     <string name="settings_macropad_dim">調暗</string>
 

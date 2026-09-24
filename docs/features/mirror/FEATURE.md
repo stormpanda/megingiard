@@ -93,6 +93,11 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - Explicitly switching to a layout whose remembered state is `false` while currently capturing MUST stop the runtime mirror session without changing any layout's persisted remembered state.
 - Switching to a layout whose remembered state is `true` while not capturing MUST trigger the capture prompt.
 - The manual "Start mirroring" button MUST bypass the auto-start gate — pressing it always launches the capture prompt regardless of the layout's remembered state.
+- **Empty Cutouts Start Hint**: When the user manually starts screen mirroring (via MacroPad button, Quick Actions, or Quick Menu) on a layout that currently has zero cutouts (`mirrorCutouts.isEmpty()`) and Viewport Edit mode is not active, screen mirroring begins immediately while an `AppAlertDialog` is presented on the secondary display informing the user that no cutouts exist in this layout.
+  - Tapping **"Edit now"** dismisses the dialog and directly enters the Cutout Layout Editor (`AppStateManager.setViewportEditActive(true)`) with the clean canvas ready for adding cutouts.
+  - Tapping **"Later"** (or dismissing the dialog via Back/scrim) closes the dialog while allowing screen mirroring capture to continue running in the background.
+  - If screen mirroring was started from the Quick Menu, the Quick Menu is automatically dismissed so the dialog is clearly visible in the foreground.
+  - Automatic mirror start (e.g. on layout switch or app launch) proceeds silently without triggering this prompt.
 
 ### FR-M9: Privileged Mirror (No-Consent Path)
 

@@ -229,6 +229,10 @@ Open Settings to create a layout.</string>
     <string name="settings_mirror_follow_smoothing_desc">Sanftes Verschieben des Ausschnitts mit exponentieller Glättung</string>
     <string name="settings_mirror_follow_touch_off">Aus</string>
     <string name="settings_mirror_no_cutouts">Keine Ausschnitte definiert. Füge Ausschnitte im Viewport-Editor hinzu.</string>
+    <string name="mirror_empty_cutouts_dialog_title">Bildschirmspiegelung</string>
+    <string name="mirror_empty_cutouts_dialog_text">Dieses Layout enthält noch keine Bildschirmausschnitte. Möchtest du die Bildschirmspiegelung jetzt anpassen?</string>
+    <string name="mirror_empty_cutouts_dialog_confirm">Jetzt bearbeiten</string>
+    <string name="mirror_empty_cutouts_dialog_dismiss">Später</string>
 
     <string name="settings_macropad_dim">Abdunkelung</string>
 

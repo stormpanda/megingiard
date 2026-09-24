@@ -141,6 +141,7 @@ fun MainAppScreen() {
     val isGesturesEnabled = !isAnyMenuOpen && !isFullscreenKeyboardActive && !isFullscreenMouseActive && !isViewportEditActive
 
     val showPromptDialog by AppStateManager.isPrivdPromptActive.collectAsStateWithLifecycle()
+    val showEmptyCutoutsDialog by AppStateManager.showEmptyCutoutsDialog.collectAsStateWithLifecycle()
     val physicalRecordingState by PhysicalGamepadRecordingManager.state.collectAsStateWithLifecycle()
     val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsStateWithLifecycle()
     val welcomeTourCompletedVersion by SettingsManager.welcomeTourCompletedVersion.collectAsStateWithLifecycle()
@@ -613,6 +614,29 @@ fun MainAppScreen() {
                 dismissButton = {
                     TextButton(onClick = { showExitDialog = false }) {
                         Text(stringResource(R.string.exit_dialog_cancel), color = colors.accent)
+                    }
+                },
+            )
+        }
+
+        if (showEmptyCutoutsDialog && !isViewportEditActive) {
+            AppAlertDialog(
+                onDismissRequest = { AppStateManager.setShowEmptyCutoutsDialog(false) },
+                title = { Text(stringResource(R.string.mirror_empty_cutouts_dialog_title), color = colors.onSurface) },
+                text = { Text(stringResource(R.string.mirror_empty_cutouts_dialog_text), color = colors.onSurface) },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            AppStateManager.setShowEmptyCutoutsDialog(false)
+                            AppStateManager.setViewportEditActive(true)
+                        },
+                    ) {
+                        Text(stringResource(R.string.mirror_empty_cutouts_dialog_confirm), color = colors.accent)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { AppStateManager.setShowEmptyCutoutsDialog(false) }) {
+                        Text(stringResource(R.string.mirror_empty_cutouts_dialog_dismiss), color = colors.accent)
                     }
                 },
             )

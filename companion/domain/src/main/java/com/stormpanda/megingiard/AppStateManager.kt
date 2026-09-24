@@ -101,6 +101,13 @@ object AppStateManager {
     private val _shutOffRequested = MutableStateFlow(false)
     val shutOffRequested: StateFlow<Boolean> = _shutOffRequested.asStateFlow()
 
+    private val _showEmptyCutoutsDialog = MutableStateFlow(false)
+    val showEmptyCutoutsDialog: StateFlow<Boolean> = _showEmptyCutoutsDialog.asStateFlow()
+
+    fun setShowEmptyCutoutsDialog(show: Boolean) {
+        _showEmptyCutoutsDialog.value = show
+    }
+
     data class AppLaunchRequest(
         val packageName: String,
         val touchX: Float = -1f,
@@ -126,11 +133,23 @@ object AppStateManager {
 
     fun requestMirrorStart() {
         AppLog.i(TAG, "requestMirrorStart")
+        val isViewportEditing =
+            _companionSurfaceMode.value == CompanionSurfaceMode.VIEWPORT_EDIT ||
+                _activePrimaryModal.value?.type == PrimaryModalType.MIRROR_VIEWPORT_EDITOR
+        if (!isViewportEditing && (
+                MacroPadState.activeLayout.value
+                    ?.mirrorCutouts
+                    .isNullOrEmpty()
+            )
+        ) {
+            _showEmptyCutoutsDialog.value = true
+        }
         _mirrorStartRequested.value = true
     }
 
     fun requestMirrorStop() {
         AppLog.i(TAG, "requestMirrorStop")
+        _showEmptyCutoutsDialog.value = false
         _mirrorStopRequested.value = true
     }
 
@@ -514,6 +533,7 @@ object AppStateManager {
             else -> {}
         }
         if (config.type == PrimaryModalType.MIRROR_VIEWPORT_EDITOR) {
+            _showEmptyCutoutsDialog.value = false
             ScreenCaptureManager.setFollowActive(false, persist = true)
             _activeCropCutoutId.value = _selectedCutoutId.value
             _isMirrorEditorBackgroundHidden.value = false
@@ -711,6 +731,7 @@ object AppStateManager {
 
     fun setViewportEditActive(active: Boolean) {
         AppLog.i(TAG, "setViewportEditActive($active)")
+        _showEmptyCutoutsDialog.value = false
         if (active) {
             openPrimaryModal(PrimaryModalConfig(PrimaryModalType.MIRROR_VIEWPORT_EDITOR))
         } else {

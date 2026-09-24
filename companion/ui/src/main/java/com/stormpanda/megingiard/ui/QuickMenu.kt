@@ -148,7 +148,10 @@ fun QuickMenu(
                             enter = slideInVertically { -it },
                             exit = slideOutVertically { -it },
                         ),
-                onStart = AppStateManager::requestMirrorStart,
+                onStart = {
+                    AppStateManager.requestMirrorStart()
+                    onDismiss()
+                },
                 onStop = {
                     AppStateManager.requestMirrorStop()
                     onDismiss()
