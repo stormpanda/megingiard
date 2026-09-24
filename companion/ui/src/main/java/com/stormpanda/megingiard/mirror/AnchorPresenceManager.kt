@@ -11,6 +11,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.macropad.CutoutLostAnchorEffect
 import com.stormpanda.megingiard.macropad.LayoutTransitionManager
 import com.stormpanda.megingiard.macropad.MAX_LAYOUT_STREAM_DELAY_FRAMES
 import com.stormpanda.megingiard.macropad.MIN_LAYOUT_STREAM_DELAY_FRAMES
@@ -34,7 +35,7 @@ import kotlin.math.roundToInt
 
 private const val TAG = "AnchorPresenceManager"
 
-private const val PRESENCE_CHECK_INTERVAL_ACTIVE_MS = 16L // ~60 Hz (1-frame instant content absence detection)
+private const val PRESENCE_CHECK_INTERVAL_ACTIVE_MS = 33L // ~30 Hz active presence evaluation (cuts GPU readbacks & Main-Thread stalls by 50%)
 private const val PRESENCE_CHECK_INTERVAL_LOST_FAST_MS = 33L // ~30 Hz prompt recovery (0–2s)
 private const val PRESENCE_CHECK_INTERVAL_LOST_MEDIUM_MS = 100L // ~10 Hz candidate polling during cutscenes (2–5s)
 private const val PRESENCE_CHECK_INTERVAL_LOST_SLOW_MS = 500L // ~2 Hz idle polling during long loading screens (>5s)
@@ -142,7 +143,7 @@ object AnchorPresenceManager {
 
         if (shouldMonitor) {
             if (monitorJob?.isActive != true) {
-                AppLog.i(TAG, "Starting visual anchor presence monitoring loop (active 60 Hz / recover 30 Hz)")
+                AppLog.i(TAG, "Starting visual anchor presence monitoring loop (active 30 Hz / recover 30 Hz)")
                 monitorJob = scope.launch { runMonitoringLoop() }
             }
         } else {
@@ -237,6 +238,7 @@ object AnchorPresenceManager {
                 }
             delay(checkInterval)
 
+            val anchorHasFreeze = activeLayout.visualAnchor.hasEffect(CutoutLostAnchorEffect.FREEZE)
             val layoutDelayFrames =
                 layoutAnchor.streamDelayFrames.coerceIn(MIN_LAYOUT_STREAM_DELAY_FRAMES, MAX_LAYOUT_STREAM_DELAY_FRAMES)
 
@@ -249,29 +251,32 @@ object AnchorPresenceManager {
 
                 var anyStateChanged = false
 
-                // Push historical frames directly from master frame into per-cutout ring buffers
-                for (cutout in allCutouts) {
-                    val override = InteractiveCutoutController.getOverrideCrop(cutout.id)
-                    val cSrcX = override?.srcX?.coerceIn(0f, 1f) ?: cutout.srcX
-                    val cSrcY = override?.srcY?.coerceIn(0f, 1f) ?: cutout.srcY
-                    val cSrcW = override?.srcWidth?.coerceIn(0f, 1f) ?: cutout.srcWidth
-                    val cSrcH = override?.srcHeight?.coerceIn(0f, 1f) ?: cutout.srcHeight
+                // Push historical frames directly from master frame into per-cutout ring buffers only when freeze is enabled
+                if (anchorHasFreeze && layoutDelayFrames > 0) {
+                    val ringCapacity = layoutDelayFrames + 2
+                    for (cutout in allCutouts) {
+                        val override = InteractiveCutoutController.getOverrideCrop(cutout.id)
+                        val cSrcX = override?.srcX?.coerceIn(0f, 1f) ?: cutout.srcX
+                        val cSrcY = override?.srcY?.coerceIn(0f, 1f) ?: cutout.srcY
+                        val cSrcW = override?.srcWidth?.coerceIn(0f, 1f) ?: cutout.srcWidth
+                        val cSrcH = override?.srcHeight?.coerceIn(0f, 1f) ?: cutout.srcHeight
 
-                    val cX = (cSrcX * frameW).roundToInt().coerceIn(0, frameW - 1)
-                    val cY = (cSrcY * frameH).roundToInt().coerceIn(0, frameH - 1)
-                    val cRight = ((cSrcX + cSrcW) * frameW).roundToInt().coerceIn(cX + 1, frameW)
-                    val cBottom = ((cSrcY + cSrcH) * frameH).roundToInt().coerceIn(cY + 1, frameH)
-                    val cW = (cRight - cX).coerceAtLeast(1)
-                    val cH = (cBottom - cY).coerceAtLeast(1)
+                        val cX = (cSrcX * frameW).roundToInt().coerceIn(0, frameW - 1)
+                        val cY = (cSrcY * frameH).roundToInt().coerceIn(0, frameH - 1)
+                        val cRight = ((cSrcX + cSrcW) * frameW).roundToInt().coerceIn(cX + 1, frameW)
+                        val cBottom = ((cSrcY + cSrcH) * frameH).roundToInt().coerceIn(cY + 1, frameH)
+                        val cW = (cRight - cX).coerceAtLeast(1)
+                        val cH = (cBottom - cY).coerceAtLeast(1)
 
-                    if (layoutDelayFrames > 0 && cW > 0 && cH > 0) {
-                        var ring = cutoutRingBuffers[cutout.id]
-                        if (ring == null || ring.width != cW || ring.height != cH) {
-                            ring?.recycle()
-                            ring = CutoutFrameRingBuffer(cW, cH, MAX_LAYOUT_STREAM_DELAY_FRAMES + 2)
-                            cutoutRingBuffers[cutout.id] = ring
+                        if (cW > 0 && cH > 0) {
+                            var ring = cutoutRingBuffers[cutout.id]
+                            if (ring == null || ring.width != cW || ring.height != cH || ring.capacity != ringCapacity) {
+                                ring?.recycle()
+                                ring = CutoutFrameRingBuffer(cW, cH, ringCapacity)
+                                cutoutRingBuffers[cutout.id] = ring
+                            }
+                            ring.pushFrame(frame, cX, cY)
                         }
-                        ring.pushFrame(frame, cX, cY)
                     }
                 }
 
