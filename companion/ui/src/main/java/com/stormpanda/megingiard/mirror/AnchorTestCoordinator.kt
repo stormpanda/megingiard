@@ -20,6 +20,7 @@ import kotlin.math.roundToInt
 
 private const val TAG = "AnchorTestCoordinator"
 private const val TEST_SAMPLE_INTERVAL_MS = 33L
+private const val TEST_WARMUP_DELAY_MS = 400L
 private const val DEFAULT_SCREEN_WIDTH = 1920
 private const val DEFAULT_SCREEN_HEIGHT = 1080
 
@@ -94,7 +95,12 @@ object AnchorTestCoordinator {
     ) {
         stopTesting(resumeSuspended = false)
 
-        AppStateManager.suspendCurrentAndDismiss()
+        val existingSuspended = AppStateManager.suspendedPrimaryModal.value
+        if (existingSuspended != null) {
+            AppStateManager.closePrimaryModal()
+        } else {
+            AppStateManager.suspendCurrentAndDismiss()
+        }
         if (ScreenCaptureManager.isFrozen.value) {
             ScreenCaptureManager.setFrozen(false)
         }
@@ -125,6 +131,9 @@ object AnchorTestCoordinator {
         testJob =
             scope.launch(Dispatchers.Default) {
                 AppLog.i(TAG, "Starting anchor test session for layout ${layout.id}")
+                delay(TEST_WARMUP_DELAY_MS)
+                if (!isActive) return@launch
+
                 val anchor = layout.visualAnchor
                 val signature = anchor.signature
 

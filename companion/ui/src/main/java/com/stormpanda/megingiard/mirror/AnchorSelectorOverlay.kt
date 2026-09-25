@@ -465,7 +465,6 @@ fun AnchorSelectorOverlay(
                 onConfirm = {
                     showCalibratePrompt = false
                     val layoutToCalibrate = currentLayoutState.value
-                    onDismiss()
                     VisualAutoTuneCoordinator.startLayoutAnchorCalibration(context, layoutToCalibrate)
                 },
                 onDismissAction = {

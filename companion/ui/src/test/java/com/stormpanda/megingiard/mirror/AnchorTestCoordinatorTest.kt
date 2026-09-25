@@ -1,5 +1,11 @@
 package com.stormpanda.megingiard.mirror
 
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
+import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.macropad.PadLayout
+import com.stormpanda.megingiard.ui.PrimaryModalConfig
+import com.stormpanda.megingiard.ui.PrimaryModalType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -70,5 +76,27 @@ class AnchorTestCoordinatorTest {
         val consumed = AnchorPositioningCoordinator.consumeDoneRequest()
         assertTrue(consumed)
         assertFalse(AnchorPositioningCoordinator.isDoneRequested.value)
+    }
+
+    @Test
+    fun `startTesting preserves existing suspended primary modal`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val editorModal = PrimaryModalConfig(type = PrimaryModalType.MACROPAD_EDITOR)
+        val testModal = PrimaryModalConfig(type = PrimaryModalType.ANCHOR_SELECTOR)
+
+        AppStateManager.openPrimaryModal(editorModal)
+        AppStateManager.suspendCurrentAndOpen(testModal)
+        assertEquals(editorModal, AppStateManager.suspendedPrimaryModal.value)
+
+        val layout = PadLayout(id = "test_layout", name = "Test Layout")
+        AnchorTestCoordinator.startTesting(context, layout)
+
+        assertNull(AppStateManager.activePrimaryModal.value)
+        assertEquals(editorModal, AppStateManager.suspendedPrimaryModal.value)
+        assertTrue(AnchorTestCoordinator.isTesting.value)
+
+        AnchorTestCoordinator.stopTesting(resumeSuspended = true)
+        assertFalse(AnchorTestCoordinator.isTesting.value)
+        assertEquals(editorModal, AppStateManager.activePrimaryModal.value)
     }
 }

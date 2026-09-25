@@ -24,6 +24,7 @@ private const val TAG = "VisualAutoTuneCoordinator"
 
 private const val MAX_CALIBRATION_DURATION_MS = 180_000L
 private const val SAMPLE_INTERVAL_MS = 120L
+private const val CALIBRATION_WARMUP_DELAY_MS = 500L
 private const val SAMPLE_WIDTH = 1920
 private const val SAMPLE_HEIGHT = 1080
 
@@ -150,26 +151,37 @@ internal object VisualAutoTuneCoordinator {
     ) {
         cancelCalibration(resumeSuspended = false)
 
-        AppStateManager.suspendCurrentAndDismiss()
+        val existingSuspended = AppStateManager.suspendedPrimaryModal.value
+        if (existingSuspended != null) {
+            AppStateManager.closePrimaryModal()
+        } else {
+            AppStateManager.suspendCurrentAndDismiss()
+        }
         if (ScreenCaptureManager.isFrozen.value) {
             ScreenCaptureManager.setFrozen(false)
         }
 
         isFinishRequested = false
         isResetRequested = false
+        _isCalibrating.value = true
+        _calibrationType.value = CalibrationType.CUTOUT
+        _lastTunedPercent.value = null
+        _progress.value = 0f
+        _remainingSeconds.value = 0
+        _sampleCount.value = 0
+        _canFinish.value = false
+        _dynamicPercent.value = 0
+        _isPaused.value = false
+        setPreviewBitmap(null)
+
         calibrationJob =
             scope.launch {
                 AppLog.i(TAG, "Starting HUD/UI isolation calibration for cutout ${cutout.id}")
-                _isCalibrating.value = true
-                _calibrationType.value = CalibrationType.CUTOUT
-                _lastTunedPercent.value = null
-                _progress.value = 0f
-                _remainingSeconds.value = 0
-                _sampleCount.value = 0
-                _canFinish.value = false
-                _dynamicPercent.value = 0
-                _isPaused.value = false
-                setPreviewBitmap(null)
+
+                // Wait for any dismissed top-screen modals, scrims, and toolbars to finish exiting
+                // and for the video stream pipeline to flush obstructed frames.
+                delay(CALIBRATION_WARMUP_DELAY_MS)
+                if (!isActive || isFinishRequested) return@launch
 
                 val sampledFrames = ArrayList<IntArray>()
                 var cropW = 0
@@ -365,26 +377,37 @@ internal object VisualAutoTuneCoordinator {
     ) {
         cancelCalibration(resumeSuspended = false)
 
-        AppStateManager.suspendCurrentAndDismiss()
+        val existingSuspended = AppStateManager.suspendedPrimaryModal.value
+        if (existingSuspended != null) {
+            AppStateManager.closePrimaryModal()
+        } else {
+            AppStateManager.suspendCurrentAndDismiss()
+        }
         if (ScreenCaptureManager.isFrozen.value) {
             ScreenCaptureManager.setFrozen(false)
         }
 
         isFinishRequested = false
         isResetRequested = false
+        _isCalibrating.value = true
+        _calibrationType.value = CalibrationType.LAYOUT_ANCHOR
+        _lastTunedPercent.value = null
+        _progress.value = 0f
+        _remainingSeconds.value = 0
+        _sampleCount.value = 0
+        _canFinish.value = false
+        _dynamicPercent.value = 0
+        _isPaused.value = false
+        setPreviewBitmap(null)
+
         calibrationJob =
             scope.launch {
                 AppLog.i(TAG, "Starting layout anchor calibration for layout ${layout.id}")
-                _isCalibrating.value = true
-                _calibrationType.value = CalibrationType.LAYOUT_ANCHOR
-                _lastTunedPercent.value = null
-                _progress.value = 0f
-                _remainingSeconds.value = 0
-                _sampleCount.value = 0
-                _canFinish.value = false
-                _dynamicPercent.value = 0
-                _isPaused.value = false
-                setPreviewBitmap(null)
+
+                // Wait for any dismissed top-screen modals, scrims, and toolbars to finish exiting
+                // and for the video stream pipeline to flush obstructed frames.
+                delay(CALIBRATION_WARMUP_DELAY_MS)
+                if (!isActive || isFinishRequested) return@launch
 
                 val sampledFrames = ArrayList<IntArray>()
                 var cropW = 0
