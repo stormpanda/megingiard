@@ -25,6 +25,9 @@ internal object MirrorFrameSampler {
     @Volatile
     private var activeTextureView: WeakReference<TextureView>? = null
 
+    val activeTextureViewRef: WeakReference<TextureView>?
+        get() = activeTextureView
+
     @Volatile
     private var activeSurface: WeakReference<Surface>? = null
 

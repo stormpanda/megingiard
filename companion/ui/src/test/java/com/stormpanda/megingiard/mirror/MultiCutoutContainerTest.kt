@@ -3,6 +3,9 @@ package com.stormpanda.megingiard.mirror
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.view.View
+import com.stormpanda.megingiard.macropad.LayoutVisualAnchor
+import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.macropad.PadLayout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -186,5 +189,66 @@ class MultiCutoutContainerTest {
         assertFalse("Live child must not be drawn when frozen outside viewport edit", childDrawn)
         bitmap.recycle()
         frozenBmp.recycle()
+    }
+
+    @Test
+    fun testDispatchDrawWithActiveAnchoredLayoutDrawsHardwareLiveChildDuringLivePlayback() {
+        val context = RuntimeEnvironment.getApplication()
+        val container = MultiCutoutContainer(context, 1920, 1080)
+        var childDrawn = false
+        val child =
+            object : View(context) {
+                override fun draw(canvas: Canvas) {
+                    super.draw(canvas)
+                    childDrawn = true
+                }
+            }
+        container.addView(child)
+
+        container.measure(
+            View.MeasureSpec.makeMeasureSpec(1920, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(1080, View.MeasureSpec.EXACTLY),
+        )
+        container.layout(0, 0, 1920, 1080)
+
+        val anchor =
+            LayoutVisualAnchor(
+                enabled = true,
+                streamDelayFrames = 2,
+            )
+        val layout =
+            PadLayout(
+                id = "layout_anchored_live",
+                name = "Gameplay",
+                visualAnchor = anchor,
+            )
+        MacroPadState.setPreviewLayout(layout)
+
+        val cutout =
+            ScreenCutout(
+                id = "test_cutout_live",
+                srcX = 0f,
+                srcY = 0f,
+                srcWidth = 1f,
+                srcHeight = 1f,
+                destX = 0f,
+                destY = 0f,
+                destWidth = 1f,
+                destHeight = 1f,
+            )
+        container.cutouts = listOf(cutout)
+        container.isFrozen = false
+
+        val bitmap = Bitmap.createBitmap(1920, 1080, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+
+        container.draw(canvas)
+
+        assertTrue(
+            "Hardware-accelerated live child must always be drawn during live playback, even with active anchor",
+            childDrawn,
+        )
+        bitmap.recycle()
+        MacroPadState.setPreviewLayout(null)
     }
 }

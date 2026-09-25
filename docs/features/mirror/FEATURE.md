@@ -242,18 +242,20 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
       - **Probe Points Visibility Toggle:** A dedicated circular toggle button (`Icons.Rounded.Visibility` / `Icons.Rounded.VisibilityOff`) in the header allows the user to easily show or hide probe dots across both preview cards at any time.
     - Single **[Done]** button and Gamepad Back handler to cleanly exit testing and restore Layout Settings.
 - **Extensible Inactive Cutout Effects on Anchor Loss (`CutoutLostAnchorEffect`, `LayoutVisualAnchor.lostAnchorEffects`, `AnchorPresenceManager`, `MultiCutoutContainer`):**
-  - When visual anchoring is enabled and mirroring is active, `AnchorPresenceManager` evaluates the layout's anchor signature at ~60 Hz.
+  - When visual anchoring is enabled and mirroring is active, `AnchorPresenceManager` evaluates the layout's anchor signature at ~60 Hz (16 ms interval) for 1-frame instant content absence detection.
   - When the reference element disappears (match ratio $< 45\%$, matching `AnchorPresenceEvaluator.MATCH_THRESHOLD_LOST`), visual anchor loss is signaled layout-wide (`isLayoutAnchorLost(layoutId)`).
   - Lost-anchor cutout behavior is structured around an extensible set of effects (`CutoutLostAnchorEffect` with `FREEZE` and `BLUR`), persisted in `LayoutVisualAnchor.lostAnchorEffects: Set<CutoutLostAnchorEffect>` (defaulting to `DEFAULT_LOST_ANCHOR_EFFECTS` containing both `FREEZE` and `BLUR`). Legacy configurations with `blurCutoutsOnLoss` are dynamically migrated and backwards-compatible.
   - Configurable in the Layout Settings Editor via dedicated toggle cards under the Visual Reference Anchor section:
     - **Freeze Inactive Cutouts (`CutoutLostAnchorEffect.FREEZE`):** When enabled, all cutouts in the layout freeze unconditionally on their sharp last valid delayed frames from the ring buffer upon anchor loss (zero visual flicker or transition leakage). When disabled, cutouts continue rendering live frames even when the reference anchor is lost.
     - **Blur Inactive Cutouts (`CutoutLostAnchorEffect.BLUR`):** When enabled, each cutout renders an 8px frosted, desaturated (60% saturation), distinctly dimmed (65% brightness) inactive overlay via a hardware `RenderNode` and executes a smooth crossfade ($0.0 \to 1.0$ opacity over 300 ms via `AccelerateDecelerateInterpolator()`). When disabled, the frosted blur overlay is suppressed (`targetAlpha = 0f`), displaying the base frame crisp and unobstructed.
-  - When the anchor returns, the live/delayed video streams resume immediately and the frosted overlay dissolves smoothly ($1.0 \to 0.0$ opacity over 300 ms).
+  - When the anchor returns, the live video stream resumes immediately with zero-copy hardware acceleration (`TextureView`) and the frosted overlay dissolves smoothly ($1.0 \to 0.0$ opacity over 300 ms).
   - **Editor Effect Suppression:** Whenever Screen Mirroring edit mode is active (`isViewportEditActive == true`), all lost-anchor effects (freeze, blur, and future effects) as well as manual freeze are strictly suppressed, guaranteeing that cutouts render the live, unobstructed stream while being edited or repositioned.
-- **Configurable Layout Stream Delay & 2 Hz Cache Elimination (`LayoutVisualAnchor.streamDelayFrames`, `CutoutFrameRingBuffer`):**
-  - The user can configure stream delay (1 to 10 frames, ~16 to ~166 ms, default 2 frames) via **Automatic Layout Switching** ("Stream Delay" slider, stored in `LayoutVisualAnchor.streamDelayFrames`).
-  - When visual anchoring is enabled, `streamDelayFrames` is strictly enforced to $\ge 1$, ensuring that `CutoutFrameRingBuffer` instances for all cutouts are always continuously populated during active gameplay.
-  - Because pristine pre-transition frames are always guaranteed in the ring buffer, the legacy 2 Hz full-screen background live-frame capture is completely eliminated, avoiding periodic bitmap allocations and GPU readbacks during gameplay.
+- **Hardware GPU VRAM Stream Delay & Zero-Overhead Live Anchor Evaluation (`LayoutVisualAnchor.streamDelayFrames`, `GpuMotionSmoother`):**
+  - The user can configure stream delay (1 to 10 frames, ~16 to ~166 ms at 60 Hz, default 2 frames) via **Automatic Layout Switching** ("Stream Delay" slider, stored in `LayoutVisualAnchor.streamDelayFrames`).
+  - **GPU VRAM FBO Circular Queue:** `GpuMotionSmoother` manages a hardware circular FBO ring buffer (`fboCount = streamDelayFrames + 1`) allocated entirely in GPU VRAM on its dedicated OpenGL ES 2.0 background thread (`GpuMotionSmootherGL`). Incoming frames from the virtual display or mirror server are written into `fboFramebuffers[writeIndex]` with zero CPU involvement.
+  - **Live GL-Thread Anchor Sampling (Zero Main-Thread Stalls):** Before the frame is delayed or presented, `GpuMotionSmoother` samples the active visual anchor directly on the GL thread via `glReadPixels` on only the small crop bounding box ($< 0.05\text{ ms}$, ~40 KB for a $100\times100$ area). The signature points are evaluated against native memory without 1080p `TextureView.getBitmap()` readbacks or Main UI thread synchronization locks.
+  - **Hardware Delayed Presentation & Leak-Free Freeze:** The live video stream presented to `TextureView` is drawn from `fboTextureIds[delayedIndex]` (`(writeIndex - streamDelayFrames + fboCount) % fboCount`). When anchor loss is detected on the incoming frame, `GpuMotionSmoother` immediately sets `isFrozen = true`, halting buffer presentation to `TextureView`. `AnchorPresenceManager` performs a single one-shot snapshot of `TextureView` to populate `lastValidFrameBitmaps` for the frosted blur `RenderNode`. This completely eliminates transient menu flicker/leakage while maintaining pristine 60 FPS hardware playback with zero CPU software blitting during live gameplay.
+  - When visual anchoring is enabled, `streamDelayFrames` is strictly enforced to $\ge 1$, guaranteeing that delayed frames are always available in GPU VRAM when an anchor transition occurs.
 - **Profile-Level Automatic Layout Switching (`PadProfile.autoLayoutSwitching`, `AnchorPresenceManager`):**
   - Configurable per profile via **Edit Profile → Automation → Automatic Layout Switching** (`settings_profile_auto_layout_switching_title`, stored in `PadProfile.autoLayoutSwitching`, default `false`).
   - When enabled and autonomous mode is active (`CompanionViewMode.AUTO`), `AnchorPresenceManager` manages dynamic layout transitions across all calibrated anchored layouts within the active profile:
@@ -270,12 +272,13 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
     - **Anchor Conflict Detection & Warning Toast:** If two or more candidate layout anchors match at the same time ($\ge 65\%$ match ratio), a custom error/warning toast pill is displayed via `DialogToastManager` naming the conflicting layouts (e.g. `Anchor conflict: "Inventory" and "Map" both match`) with `Icons.Rounded.Warning`, alerting the user that the anchors overlap.
     - A 500 ms cooldown (`AUTO_SWITCH_COOLDOWN_MS`) prevents rapid thrashing between candidate layouts.
     - Once switched, candidate scanning stops completely until the newly active layout's anchor is lost again. If no candidate layout matches, the current layout remains active and frozen.
-  - **Hardware-Layer TextureView Sampling & Zero-Copy Pipeline (`MirrorFrameSampler`, `AnchorPresenceManager`):**
-    - High-frequency presence sampling (~60 Hz for active layout, ~30 Hz for candidate layouts) requires low-latency, battery-efficient frame extraction.
+  - **Hardware-Layer TextureView Sampling & Zero-Copy Pipeline (`MirrorFrameSampler`, `AnchorPresenceManager`, `MultiCutoutContainer`):**
+    - High-frequency presence sampling (~60 Hz for active layout, ~30 Hz for candidate recovery) requires low-latency, battery-efficient frame extraction.
     - Android's native `PixelCopy.request(Surface, ...)` relies on `Surface::getLastQueuedBuffer` in C++ (`libs/gui/Surface.cpp`), which returns `null` for cross-process producer surfaces (such as `masterSurface` fed across Binder by `DirectMirrorServer` / SurfaceFlinger), failing with code 3 (`ERROR_SOURCE_NO_DATA`).
     - **Single Master Readback per Tick:** To eliminate GPU pipeline stalls and bus bandwidth saturation, `AnchorPresenceManager` captures the master frame exactly once per tick via `MirrorFrameSampler.captureFullFrame()`.
     - **Direct Candidate Layout Probing:** In candidate scanning (`processCandidateScan`), all candidate layouts are evaluated against the single master frame by sampling normalized UV coordinates directly via `frame.getPixel(px, py)` with 0 additional GPU readbacks, 0 bitmap allocations, and 0 intermediate canvas blits.
-    - **Zero-Copy Stream Delay Ring Buffer:** Cutout delayed frames are populated by blitting directly from the master frame into `CutoutFrameRingBuffer.pushFrame(frame, cX, cY)`, completely eliminating intermediate crop bitmaps.
+    - **Zero-Copy Stream Delay Ring Buffer:** Cutout delayed frames are populated by blitting directly from the master frame into `CutoutFrameRingBuffer.pushFrame(frame, cX, cY)` only when `CutoutLostAnchorEffect.FREEZE` is active, with ring capacity sized strictly to `streamDelayFrames + 2`, completely eliminating intermediate crop bitmaps and saving up to 67% buffer memory.
+    - **Hardware-Accelerated Live Rendering:** In `MultiCutoutContainer`, live video streams strictly render via native zero-copy `TextureView` layer composition (`drawChild`), completely preventing software Bitmap blitting from hijacking live gameplay.
   - **Thread-Safe Presence Monitoring & Buffer Lifecycle (`AnchorPresenceManager`):**
     - Ring buffers and frozen frames are kept in thread-safe collections (`cutoutRingBuffers`, `lastValidFrameBitmaps`).
     - When mirroring stops (`isCapturing == false`), `clearAllBuffers()` is invoked, immediately recycling all historical ring buffer bitmaps and cached freeze frames to prevent background memory retention.
@@ -640,16 +643,19 @@ To reduce power consumption, CPU/GPU overhead, and memory bandwidth, we support 
 1. **App-Level Rendering Conservation (`ThrottledTextureView`)**:
    Since Android's compositor (SurfaceFlinger) often ignores the `Surface.setFrameRate` hint for virtual displays and pushes frames as fast as they update, we enforce the limit in the application layer. We use `ThrottledTextureView` which overrides `invalidate()` to drop invalidation requests if they arrive faster than the configured `maxFps` interval. This prevents the view hierarchy from redrawing and avoids enqueuing new GPU textures too frequently, directly reducing rendering resource usage.
 
-### Motion Smoothing / Temporal Blending
+### Motion Smoothing & Hardware Stream Delay (`GpuMotionSmoother`)
 
-To stabilize mirrored UI elements against fast-moving backgrounds, we support 100% GPU-accelerated motion smoothing:
+To stabilize mirrored UI elements against fast-moving backgrounds and provide leak-free visual anchor freeze transitions with zero CPU memory overhead, we support a 100% GPU-accelerated temporal blending and stream delay pipeline:
 
 1. **Unified GPU Pipeline (`GpuMotionSmoother`)**:
    Video frames from `DirectMirrorServer` or `MediaProjection` are received on `GpuMotionSmoother.inputSurface`, providing a constant target surface that never changes during profile, layout, or touchpad transitions.
 2. **0% Pass-Through Mode**:
-   When motion smoothing is disabled (0% strength or active Touchpad mode), `GpuMotionSmoother` executes a single-pass 2D quad texture copy (`drawProgram`) directly into `masterSurface`, bypassing FBO blending with ~0.05ms GPU overhead and 0 input latency.
-3. **Temporal FBO Blending (>0%)**:
-   When motion smoothing is active (e.g. 75%, 80%, 85%), `GpuMotionSmoother` blends incoming OES frames with previous frame textures inside GPU VRAM using an OpenGL ES 2.0 ping-pong FBO pipeline before outputting the smoothed result to `masterSurface`.
+   When motion smoothing is disabled (0% strength or active Touchpad mode) and stream delay is 0, `GpuMotionSmoother` executes a single-pass 2D quad texture copy (`drawProgram`) directly into `masterSurface`, bypassing FBO blending with ~0.05ms GPU overhead and 0 input latency.
+3. **Temporal FBO Blending & Circular Delay Queue**:
+   When motion smoothing is active (e.g. 75%, 80%, 85%) or stream delay is configured ($1 \le \text{delay} \le 10$), `GpuMotionSmoother` maintains an OpenGL ES 2.0 FBO circular ring buffer in GPU VRAM (`fboCount = streamDelayFrames + 1`).
+   - **Pass 1 (Input & Blend):** Incoming OES textures are either blended with the previous frame texture (`blendProgram`) or copied (`passthroughProgram`) into `fboFramebuffers[writeIndex]`.
+   - **Pass 2 (GL Live Anchor Evaluation):** Evaluates the active visual reference anchor signature directly from `fboFramebuffers[writeIndex]` on the GL thread using a localized `glReadPixels` crop ($< 0.05\text{ ms}$). If anchor loss is detected, output presentation is frozen immediately on the GPU without rendering the transitional frame to the screen.
+   - **Pass 3 (Delayed Presentation):** When not frozen, draws `fboTextureIds[delayedIndex]` (`(writeIndex - streamDelayFrames + fboCount) % fboCount`) onto `masterSurface` (`TextureView`). This guarantees smooth 60 FPS presentation without frame drops and with zero menu leakage upon anchor loss.
 
 ### Automated HUD / UI Isolation & Hardware Transparency Mask Pipeline
 

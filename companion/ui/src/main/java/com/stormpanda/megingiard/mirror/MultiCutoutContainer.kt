@@ -346,11 +346,6 @@ internal class MultiCutoutContainer(
             val combined = ColorMatrix(satMatrix).apply { postConcat(scaleMatrix) }
             ColorMatrixColorFilter(combined)
         }
-    private val delayedFramePaint =
-        Paint().apply {
-            isAntiAlias = true
-            isFilterBitmap = true
-        }
     private val cutoutBlurAlphas = mutableMapOf<String, Float>()
     private val cutoutTransitionAnimators = mutableMapOf<String, ValueAnimator>()
     private val cutoutWasFrozen = mutableMapOf<String, Boolean>()
@@ -573,8 +568,6 @@ internal class MultiCutoutContainer(
         isTargetFrozen: Boolean,
         effectiveManualFrozen: Boolean,
         shouldBlur: Boolean,
-        activeLayout: PadLayout?,
-        isLayoutAnchorActive: Boolean,
         drawTime: Long,
         masterView: View?,
     ): Boolean {
@@ -643,19 +636,6 @@ internal class MultiCutoutContainer(
             val frozenBitmapToDraw = cachedFrozenFrame ?: fullFrozenBitmap
             val isCropped = cachedFrozenFrame != null
 
-            val effectiveDelay =
-                if (activeLayout != null && isLayoutAnchorActive) {
-                    activeLayout.visualAnchor.streamDelayFrames
-                } else {
-                    0
-                }
-            val delayedFrame =
-                if (effectiveDelay > 0) {
-                    AnchorPresenceManager.getDelayedFrame(cutout.id, effectiveDelay)
-                } else {
-                    null
-                }
-
             val staticAssetBitmap =
                 if (cutout.renderAsStaticAsset && hasTransparencyMask) {
                     CutoutMaskManager.getStaticAsset(
@@ -712,58 +692,53 @@ internal class MultiCutoutContainer(
                         )
                     }
                 } else {
-                    // Live / Unfreezing: render live/delayed video stream base layer
+                    // Live / Unfreezing: render hardware-accelerated live video stream directly from TextureView
                     val isInteracting = InteractiveCutoutController.isCutoutActivelyInteracting(cutout.id)
-                    if (delayedFrame != null && !delayedFrame.isRecycled && !isInteracting) {
-                        cutoutDestRect.set(0f, 0f, contentW, contentH)
-                        canvas.drawBitmap(delayedFrame, null, cutoutDestRect, delayedFramePaint)
-                    } else {
-                        val isFollowActive = ScreenCaptureManager.isFollowActive.value
-                        val isUncropped =
-                            cutout.srcWidth >= MCC_UNCROPPED_THRESHOLD && cutout.srcHeight >= MCC_UNCROPPED_THRESHOLD
-                        val liveSaveCount = canvas.save()
-                        try {
-                            if (cutouts.size == 1 && isFollowActive && isUncropped && !cutout.interactivePanZoom && !isInteracting) {
-                                canvas.translate(viewportOffsetX, viewportOffsetY)
-                                canvas.scale(viewportScale, viewportScale, contentW / 2f, contentH / 2f)
+                    val isFollowActive = ScreenCaptureManager.isFollowActive.value
+                    val isUncropped =
+                        cutout.srcWidth >= MCC_UNCROPPED_THRESHOLD && cutout.srcHeight >= MCC_UNCROPPED_THRESHOLD
+                    val liveSaveCount = canvas.save()
+                    try {
+                        if (cutouts.size == 1 && isFollowActive && isUncropped && !cutout.interactivePanZoom && !isInteracting) {
+                            canvas.translate(viewportOffsetX, viewportOffsetY)
+                            canvas.scale(viewportScale, viewportScale, contentW / 2f, contentH / 2f)
 
-                                val srcRatio = srcWidth.toFloat() / srcHeight.toFloat()
-                                val destRatio = contentW / contentH
+                            val srcRatio = srcWidth.toFloat() / srcHeight.toFloat()
+                            val destRatio = contentW / contentH
 
-                                var fitW = contentW
-                                var fitH = contentH
-                                if (srcRatio > destRatio) {
-                                    fitH = contentW / srcRatio
-                                } else {
-                                    fitW = contentH * srcRatio
-                                }
-
-                                val fitX = (contentW - fitW) / 2f
-                                val fitY = (contentH - fitH) / 2f
-                                canvas.translate(fitX, fitY)
-
-                                val scaleX = fitW / srcWidth
-                                val scaleY = fitH / srcHeight
-                                canvas.scale(scaleX, scaleY)
+                            var fitW = contentW
+                            var fitH = contentH
+                            if (srcRatio > destRatio) {
+                                fitH = contentW / srcRatio
                             } else {
-                                val scaleX = contentW / sw
-                                val scaleY = contentH / sh
-                                canvas.translate(-sx * scaleX, -sy * scaleY)
-                                canvas.scale(scaleX, scaleY)
+                                fitW = contentH * srcRatio
                             }
 
-                            if (masterView != null) {
-                                drawChild(canvas, masterView, drawTime)
-                                masterViewDrawn = true
-                            }
-                        } finally {
-                            canvas.restoreToCount(liveSaveCount)
+                            val fitX = (contentW - fitW) / 2f
+                            val fitY = (contentH - fitH) / 2f
+                            canvas.translate(fitX, fitY)
+
+                            val scaleX = fitW / srcWidth
+                            val scaleY = fitH / srcHeight
+                            canvas.scale(scaleX, scaleY)
+                        } else {
+                            val scaleX = contentW / sw
+                            val scaleY = contentH / sh
+                            canvas.translate(-sx * scaleX, -sy * scaleY)
+                            canvas.scale(scaleX, scaleY)
                         }
+
+                        if (masterView != null) {
+                            drawChild(canvas, masterView, drawTime)
+                            masterViewDrawn = true
+                        }
+                    } finally {
+                        canvas.restoreToCount(liveSaveCount)
                     }
                 }
 
                 // 2. Top Frosted Blur Layer (8px blur, opacity = blurAlpha)
-                val bitmapToBlur = if (isTargetFrozen) frozenBitmapToDraw else (delayedFrame ?: frozenBitmapToDraw)
+                val bitmapToBlur = frozenBitmapToDraw
                 if (!isStaticAssetDrawn && blurAlpha > MIN_ALPHA_THRESHOLD && bitmapToBlur != null && !bitmapToBlur.isRecycled) {
                     val intContentW = contentW.roundToInt().coerceAtLeast(1)
                     val intContentH = contentH.roundToInt().coerceAtLeast(1)
@@ -1032,8 +1007,6 @@ internal class MultiCutoutContainer(
                             isTargetFrozen = isTargetFrozen,
                             effectiveManualFrozen = effectiveManualFrozen,
                             shouldBlur = shouldBlur,
-                            activeLayout = activeLayout,
-                            isLayoutAnchorActive = isLayoutAnchorActive,
                             drawTime = drawTime,
                             masterView = masterView,
                         )
@@ -1088,8 +1061,6 @@ internal class MultiCutoutContainer(
                                 isTargetFrozen = isTargetFrozen,
                                 effectiveManualFrozen = effectiveManualFrozen,
                                 shouldBlur = shouldBlur,
-                                activeLayout = activeLayout,
-                                isLayoutAnchorActive = isLayoutAnchorActive,
                                 drawTime = drawTime,
                                 masterView = masterView,
                             )
