@@ -17,7 +17,7 @@ android {
     defaultConfig {
         applicationId = "com.stormpanda.megingiard.gamefocus"
         versionCode = 12
-        versionName = "0.10.0-SNAPSHOT"
+        versionName = "0.10.0"
     }
 
     signingConfigs {
