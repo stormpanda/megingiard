@@ -111,10 +111,14 @@ object AnchorPresenceManager {
         }
     }
 
-    private fun onHardwareAnchorEvaluated(
+    @VisibleForTesting
+    internal fun onHardwareAnchorEvaluated(
         layoutId: String,
         matchRatio: Float,
     ) {
+        val activeLayout = MacroPadState.activeLayout.value ?: return
+        if (layoutId != activeLayout.id) return
+
         val curState = layoutStates[layoutId] ?: AnchorPresenceState.PRESENT
         val curCount = layoutConsecutiveCounts[layoutId] ?: 0
         val (newState, newCount) =
@@ -137,53 +141,61 @@ object AnchorPresenceManager {
 
     private fun captureOneShotFrozenFrame() {
         scope.launch(Dispatchers.Main.immediate) {
-            val tv = MirrorFrameSampler.activeTextureViewRef?.get() ?: return@launch
-            if (tv.isAvailable && tv.width > 0 && tv.height > 0) {
-                try {
-                    val bmp = tv.bitmap ?: return@launch
-                    val activeLayout = MacroPadState.activeLayout.value
-                    val allCutouts = ScreenCaptureManager.cutouts.value.ifEmpty { activeLayout?.mirrorCutouts.orEmpty() }
-                    val frameW = bmp.width
-                    val frameH = bmp.height
+            val tv = MirrorFrameSampler.activeTextureViewRef?.get()
+            if (tv == null || !tv.isAvailable || tv.width <= 0 || tv.height <= 0) {
+                activeSmoother?.get()?.setFrozen(false)
+                return@launch
+            }
+            try {
+                val bmp = tv.bitmap
+                if (bmp == null) {
+                    activeSmoother?.get()?.setFrozen(false)
+                    return@launch
+                }
+                val activeLayout = MacroPadState.activeLayout.value
+                val allCutouts = ScreenCaptureManager.cutouts.value.ifEmpty { activeLayout?.mirrorCutouts.orEmpty() }
+                val frameW = bmp.width
+                val frameH = bmp.height
 
-                    val srcRect = Rect()
-                    val dstRect = Rect()
+                val srcRect = Rect()
+                val dstRect = Rect()
 
-                    for (cutout in allCutouts) {
-                        val override = InteractiveCutoutController.getOverrideCrop(cutout.id)
-                        val cSrcX = override?.srcX?.coerceIn(0f, 1f) ?: cutout.srcX
-                        val cSrcY = override?.srcY?.coerceIn(0f, 1f) ?: cutout.srcY
-                        val cSrcW = override?.srcWidth?.coerceIn(0f, 1f) ?: cutout.srcWidth
-                        val cSrcH = override?.srcHeight?.coerceIn(0f, 1f) ?: cutout.srcHeight
+                for (cutout in allCutouts) {
+                    val override = InteractiveCutoutController.getOverrideCrop(cutout.id)
+                    val cSrcX = override?.srcX?.coerceIn(0f, 1f) ?: cutout.srcX
+                    val cSrcY = override?.srcY?.coerceIn(0f, 1f) ?: cutout.srcY
+                    val cSrcW = override?.srcWidth?.coerceIn(0f, 1f) ?: cutout.srcWidth
+                    val cSrcH = override?.srcHeight?.coerceIn(0f, 1f) ?: cutout.srcHeight
 
-                        val cX = (cSrcX * frameW).roundToInt().coerceIn(0, frameW - 1)
-                        val cY = (cSrcY * frameH).roundToInt().coerceIn(0, frameH - 1)
-                        val cRight = ((cSrcX + cSrcW) * frameW).roundToInt().coerceIn(cX + 1, frameW)
-                        val cBottom = ((cSrcY + cSrcH) * frameH).roundToInt().coerceIn(cY + 1, frameH)
-                        val cW = (cRight - cX).coerceAtLeast(1)
-                        val cH = (cBottom - cY).coerceAtLeast(1)
+                    val cX = (cSrcX * frameW).roundToInt().coerceIn(0, frameW - 1)
+                    val cY = (cSrcY * frameH).roundToInt().coerceIn(0, frameH - 1)
+                    val cRight = ((cSrcX + cSrcW) * frameW).roundToInt().coerceIn(cX + 1, frameW)
+                    val cBottom = ((cSrcY + cSrcH) * frameH).roundToInt().coerceIn(cY + 1, frameH)
+                    val cW = (cRight - cX).coerceAtLeast(1)
+                    val cH = (cBottom - cY).coerceAtLeast(1)
 
-                        if (cW > 0 && cH > 0) {
-                            try {
-                                val cropped = Bitmap.createBitmap(cW, cH, Bitmap.Config.ARGB_8888)
-                                val cCanvas = Canvas(cropped)
-                                srcRect.set(cX, cY, cRight, cBottom)
-                                dstRect.set(0, 0, cW, cH)
-                                cCanvas.drawBitmap(bmp, srcRect, dstRect, null)
-                                val old = lastValidFrameBitmaps.put(cutout.id, cropped)
-                                if (old != null && !old.isRecycled) {
-                                    old.recycle()
-                                }
-                            } catch (e: Exception) {
-                                AppLog.w(TAG, "Error cropping frozen cutout bitmap: ${e.message}")
+                    if (cW > 0 && cH > 0) {
+                        try {
+                            val cropped = Bitmap.createBitmap(cW, cH, Bitmap.Config.ARGB_8888)
+                            val cCanvas = Canvas(cropped)
+                            srcRect.set(cX, cY, cRight, cBottom)
+                            dstRect.set(0, 0, cW, cH)
+                            cCanvas.drawBitmap(bmp, srcRect, dstRect, null)
+                            val old = lastValidFrameBitmaps.put(cutout.id, cropped)
+                            if (old != null && !old.isRecycled) {
+                                old.recycle()
                             }
+                        } catch (e: Exception) {
+                            AppLog.w(TAG, "Error cropping frozen cutout bitmap: ${e.message}")
                         }
                     }
-                    bmp.recycle()
-                    _presenceRevision.value++
-                } catch (e: Exception) {
-                    AppLog.e(TAG, "Error capturing one-shot frozen frame from TextureView", e)
                 }
+                bmp.recycle()
+                _presenceRevision.value++
+            } catch (e: Exception) {
+                AppLog.e(TAG, "Error capturing one-shot frozen frame from TextureView", e)
+            } finally {
+                activeSmoother?.get()?.setFrozen(false)
             }
         }
     }
@@ -274,6 +286,7 @@ object AnchorPresenceManager {
     internal fun clearAllBuffers() {
         AppLog.d(TAG, "Clearing and recycling all ring buffer and freeze frame bitmaps")
         lostStateStartMs = 0L
+        lastAutoSwitchTimeMs = 0L
         sparseProbePhase = 0
         activeSmoother?.get()?.setFrozen(false)
         cutoutRingBuffers.values.forEach { it.recycle() }
@@ -354,7 +367,21 @@ object AnchorPresenceManager {
 
             val hasHardwareTracking = activeSmoother?.get() != null
             if (hasHardwareTracking) {
-                // Presence is sampled in hardware at 60 Hz directly on the GL thread with 0 CPU readbacks
+                // Presence is sampled in hardware at 60 Hz directly on the GL thread with 0 CPU readbacks.
+                // However, while the current layout anchor is LOST, candidate layouts must be polled to support auto layout switching.
+                if (isCurrentLost && isAutoSwitchEligible) {
+                    val frame = MirrorFrameSampler.captureFullFrame()
+                    if (frame != null && frame.width > 0 && frame.height > 0) {
+                        processCandidateScan(
+                            context = context,
+                            activeProfile = activeProfile,
+                            excludedLayoutId = activeLayout.id,
+                            srcW = srcW,
+                            srcH = srcH,
+                            frame = frame,
+                        )
+                    }
+                }
                 continue
             }
 
@@ -489,7 +516,8 @@ object AnchorPresenceManager {
         }
     }
 
-    private suspend fun processCandidateScan(
+    @VisibleForTesting
+    internal suspend fun processCandidateScan(
         context: Context,
         activeProfile: PadProfile?,
         excludedLayoutId: String?,
@@ -508,7 +536,7 @@ object AnchorPresenceManager {
         if (candidates.isEmpty()) return
 
         val now = SystemClock.uptimeMillis()
-        val cooldownPassed = (now - lastAutoSwitchTimeMs) >= AUTO_SWITCH_COOLDOWN_MS
+        val cooldownPassed = lastAutoSwitchTimeMs == 0L || (now - lastAutoSwitchTimeMs) >= AUTO_SWITCH_COOLDOWN_MS
         if (!cooldownPassed) return
 
         val matchedCandidates =

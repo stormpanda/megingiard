@@ -1,11 +1,14 @@
 package com.stormpanda.megingiard.mirror
 
 import android.graphics.Bitmap
+import android.graphics.Color
 import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.macropad.LayoutVisualAnchor
+import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -20,6 +23,15 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
 class AnchorPresenceManagerTest {
+    @After
+    fun tearDown() {
+        AnchorPresenceManager.updateMonitoringLoop(false, null, null, CompanionViewMode.MACROPAD)
+        AnchorPresenceManager.clearAllBuffers()
+        MacroPadState.loadFrom(emptyList(), "")
+        ScreenCaptureManager.setFrozen(false)
+        ScreenCaptureManager.setFrozenBitmap(null)
+    }
+
     @Test
     fun `isLayoutAnchorLost returns false for unknown layout`() {
         assertFalse(AnchorPresenceManager.isLayoutAnchorLost("unknown_layout_123"))
@@ -252,4 +264,84 @@ class AnchorPresenceManagerTest {
         assertEquals(500L, AnchorPresenceManager.computeLostCheckInterval(5_000L))
         assertEquals(500L, AnchorPresenceManager.computeLostCheckInterval(60_000L))
     }
+
+    @Test
+    fun `onHardwareAnchorEvaluated ignores callbacks for non-active layouts`() {
+        val layout1 = PadLayout(id = "layout_active", name = "Active")
+        val layout2 = PadLayout(id = "layout_stale", name = "Stale")
+        val profile = PadProfile(id = "p1", name = "Profile", layouts = listOf(layout1, layout2))
+        MacroPadState.loadFrom(listOf(profile), profile.id)
+        MacroPadState.setActiveLayoutId(layout1.id)
+
+        AnchorPresenceManager.onHardwareAnchorEvaluated("layout_stale", 0.0f)
+
+        assertNull(AnchorPresenceManager.getLayoutPresenceState("layout_stale"))
+        assertFalse(AnchorPresenceManager.isLayoutAnchorLost("layout_stale"))
+        assertFalse(AnchorPresenceManager.isLayoutAnchorLost("layout_active"))
+    }
+
+    @Test
+    fun `onHardwareAnchorEvaluated transitions active layout to LOST when match fails`() {
+        val layout = PadLayout(id = "layout_eval_test", name = "Eval Test")
+        val profile = PadProfile(id = "p1", name = "Profile", layouts = listOf(layout))
+        MacroPadState.loadFrom(listOf(profile), profile.id)
+        MacroPadState.setActiveLayoutId(layout.id)
+
+        AnchorPresenceManager.onHardwareAnchorEvaluated(layout.id, 0.0f)
+
+        assertTrue(AnchorPresenceManager.isLayoutAnchorLost(layout.id))
+        assertEquals(AnchorPresenceState.LOST, AnchorPresenceManager.getLayoutPresenceState(layout.id))
+
+        AnchorPresenceManager.clearLayout(layout.id)
+    }
+
+    @Test
+    fun `processCandidateScan automatically switches to matching candidate layout`() =
+        runTest {
+            val context = RuntimeEnvironment.getApplication()
+            val layout1 = PadLayout(id = "layout_gameplay", name = "Gameplay")
+            val points = listOf(AnchorPoint(u = 0.5f, v = 0.5f, r = 255, g = 0, b = 0))
+            val sig = VisualAnchorSignature(cutoutId = "layout_inventory", points = points)
+            val anchor2 =
+                LayoutVisualAnchor(
+                    enabled = true,
+                    signature = sig,
+                    srcX = 0f,
+                    srcY = 0f,
+                    srcWidth = 1f,
+                    srcHeight = 1f,
+                )
+            val layout2 =
+                PadLayout(
+                    id = "layout_inventory",
+                    name = "Inventory",
+                    visualAnchor = anchor2,
+                )
+
+            val profile =
+                PadProfile(
+                    id = "p_auto_switch",
+                    name = "Auto Switch Profile",
+                    autoLayoutSwitching = true,
+                    layouts = listOf(layout1, layout2),
+                )
+            MacroPadState.loadFrom(listOf(profile), profile.id)
+            MacroPadState.setActiveLayoutId(layout1.id)
+
+            val bmp = Bitmap.createBitmap(100, 100, Bitmap.Config.ARGB_8888)
+            bmp.eraseColor(Color.RED)
+
+            AnchorPresenceManager.processCandidateScan(
+                context = context,
+                activeProfile = profile,
+                excludedLayoutId = layout1.id,
+                srcW = 100,
+                srcH = 100,
+                frame = bmp,
+            )
+
+            assertEquals("layout_inventory", MacroPadState.activeLayout.value?.id)
+            assertEquals(AnchorPresenceState.PRESENT, AnchorPresenceManager.getLayoutPresenceState("layout_inventory"))
+            bmp.recycle()
+        }
 }
