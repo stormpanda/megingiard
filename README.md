@@ -15,7 +15,7 @@ Welcome to **Megingiard**, a bespoke companion application specifically designed
 
 ---
 
-[Device Compatibility](#device-compatibility) · [Documentation](#documentation) · [Core Features](#core-features) · [Screenshots](#screenshots) · [Installation](#installation) · [Quick Start](#first-launch--quick-start) · [Privileged Mode](#privileged-mode) · [Privacy](#privacy) · [Releases](#releases) · [FAQ & Troubleshooting](#faq--troubleshooting) · [Security](#security) · [License](#license) · [Support This App](#support-this-app) · [Links](#links)
+[Device Compatibility](#device-compatibility) · [Documentation](#documentation) · [Core Features](#core-features) · [Screenshots](#screenshots) · [Installation](#installation) · [Quick Start](#first-launch--quick-start) · [System Service](#megingiard-system-service) · [Privacy](#privacy) · [Releases](#releases) · [FAQ & Troubleshooting](#faq--troubleshooting) · [Security](#security) · [License](#license) · [Support This App](#support-this-app) · [Links](#links)
 
 ---
 
@@ -37,7 +37,7 @@ Given its hardware-specific approach and advanced features, this project is exte
 
 - **[Requirements](docs/REQUIREMENTS.md):** Functional capabilities and the design constraints under which the app was engineered.
 - **[Technical Architecture](docs/ARCHITECTURE.md):** A detailed deep dive into the implementation approaches, focusing specifically on bypassing DRM blocks, rendering Jetpack Compose over native system dialogs (Presentations), and hardware-backed frame freezing.
-- **[Security Concept](SECURITY_CONCEPT.md):** Threat model, hardening layers, Privileged Mode authentication, native binary integrity checks, and release configuration requirements.
+- **[Security Concept](SECURITY_CONCEPT.md):** Threat model, hardening layers, Megingiard System Service authentication, native binary integrity checks, and release configuration requirements.
 - **[Native Build Guide](docs/BUILD_NATIVE.md):** Build setup and protocol specifications for native C binaries (`megingiard_privd`, `keyinjector`, `mouseinjector`, `touchinjector`).
 - **[Gamepad Navigation Guide](docs/GAMEPAD_NAVIGATION.md):** Gamepad focus traversal, overlays, and 2D controller navigation architecture.
 - **[Agent Guidelines](AGENTS.md):** Coding conventions, patterns, and constraints for AI coding agents working on this project.
@@ -50,7 +50,7 @@ Given its hardware-specific approach and advanced features, this project is exte
 
 ### 1. Latency-Free Multi-Cutout Screen Mirroring
 
-- **Direct Hardware Pipe:** Utilizes Android's `MediaProjection` (or privileged `SurfaceControl` stream) coupled with native `VirtualDisplay` directly into a `SurfaceView` to bypass all software composition and copy steps with zero latency.
+- **Direct Hardware Pipe:** Utilizes Android's `MediaProjection` (or direct System Service `SurfaceControl` stream) coupled with native `VirtualDisplay` directly into a `SurfaceView` to bypass all software composition and copy steps with zero latency.
 - **Multi-Cutout Layout Editor:** Define up to 10 cropped regions ("cutouts") of the primary screen and arrange them freely on the secondary screen using a single-surface duplication architecture that prevents token conflicts and display freezes. Cutouts can shrink down to 1% of screen size with precision gamepad adjustment (1 px micro-stepping with L2).
 - **Interactive Viewport (Pan & Pinch-to-Zoom):** Pan with 1 finger or pinch-to-zoom with 2 fingers (up to 10× magnification) directly within any cutout during live gameplay or freeze frame. Features elastic overscroll resistance, double-tap to reset, and configurable snap-back behavior (Instant or Off).
 - **Cutout Rotation & Axis Flipping:** Rotate cutouts in 90° increments (0°, 90°, 180°, 270°) and flip horizontally or vertically with automatic aspect-ratio adjustments, boundary collision prevention, and transformed touch projection mapping.
@@ -74,7 +74,7 @@ Given its hardware-specific approach and advanced features, this project is exte
 - **Smart Alignment Guides & Snapping:** Dragging buttons magnetically snaps to rectangular or radial grids, or dynamically snaps to aligned X/Y centers of sibling buttons with PowerPoint-style dashed guidelines.
 - **App-Aware Profile Auto-Switching:** Bind profiles to specific Android applications. When a mapped app is launched on the primary screen, Megingiard instantly switches to its associated MacroPad profile on the secondary screen. This event-driven feature uses a dedicated, highly efficient **Accessibility Service** (with system UI exclusions to prevent focus loops).
 - **Visual Macro Editor & 4 Creation Workflows:** Hand-craft or record and edit timed sequences of key, mouse, and gamepad events. Choose from 4 streamlined creation workflows:
-  - **Record Controller Input:** Capture button, stick, and trigger inputs directly from your physical handheld controller in Privileged Mode.
+  - **Record Controller Input:** Capture button, stick, and trigger inputs directly from your physical handheld controller via Megingiard System Service.
   - **Record Screen Touch:** Record tap sequences or continuous touch paths over the screen mirror.
   - **Type Text Sequence:** Type any text string to automatically generate sequential keyboard keystrokes.
   - **Build Step-by-Step:** Manually assemble and fine-tune steps on a chronological timeline.
@@ -211,11 +211,11 @@ _The step-by-step interactive welcome tour that guides new users through Megingi
 
 ---
 
-### Privileged Mode & Wireless Debugging Setup
+### Megingiard System Service Setup
 
-![The Privileged Mode setup card showing Wireless Debugging configuration and status](./assets/screenshots/privd_setup.png)
+![The Megingiard System Service setup card showing configuration and status](./assets/screenshots/privd_setup.png)
 
-_The Privileged Mode setup & settings card. Easily pair on-device via 1-tap Auto Setup or manual Wireless Debugging, deploy the helper daemon, and automatically unlock advanced privileged capabilities (Gamepad Merge, Controller Recording, Privileged Mirror, and Screenshots)._
+_The Megingiard System Service setup & settings card. Easily pair on-device via 1-tap Auto Setup or manual Wireless Debugging, deploy the helper service, and automatically unlock advanced capabilities (Gamepad Merge, Controller Recording, Direct Mirror, and Screenshots)._
 
 ---
 
@@ -239,7 +239,7 @@ To automatically track releases and install updates directly on your device, you
 ## First Launch / Quick Start
 
 1. **Launch the App:** Open Megingiard from your launcher. It only works on the secondary display, so make sure to start it from there or configure your launcher to pin/run it on the bottom screen.
-2. **Configure Accessibility Service (Recommended):** To enable **App-Aware Automatic Profile Switching**, **Auto-Open Virtual Keyboard on Text Focus**, and **1-Tap Privileged Auto-Setup**, activate Megingiard's Accessibility Service:
+2. **Configure Accessibility Service (Recommended):** To enable **App-Aware Automatic Profile Switching**, **Auto-Open Virtual Keyboard on Text Focus**, and **1-Tap System Service Auto-Setup**, activate Megingiard's Accessibility Service:
    - Go to Android Settings → Accessibility → Installed Apps / Downloaded Services.
    - Select **Megingiard Accessibility Service** and enable it.
    - Ensure **Auto Switch (`AUTO`)** is active in Megingiard's Quick Menu (enabled by default).
@@ -253,23 +253,23 @@ To automatically track releases and install updates directly on your device, you
 
 ---
 
-## Privileged Mode
+## Megingiard System Service
 
-Privileged Mode is an **opt-in feature** that unlocks advanced features that the regular Android sandbox cannot deliver due to security constraints. It is **disabled by default** and can be toggled on or off at any time in Global Settings.
+Megingiard System Service is an **opt-in feature** that unlocks advanced features that the regular Android sandbox cannot deliver due to security constraints. It is **disabled by default** and can be toggled on or off at any time in Global Settings.
 
 ### What it is (Technical Details)
 
-Megingiard packages a lightweight, native on-device helper daemon (`megingiard_privd`) inside the APK. When you activate Privileged Mode on the AYN Thor, Megingiard utilizes the device's native hardware root bridge (`PServerBinder`) for instant, 1-tap daemon setup and seamless background execution. On other devices or as a fallback, it leverages Android's built-in **Wireless Debugging** facility (available since Android 11) to deploy the daemon to `/data/local/tmp` and run it under the **shell user** (UID 2000) — the same security domain used by an `adb shell` session. The app then establishes a secure local TCP loopback connection (`127.0.0.1:51234–51238`) to communicate with the daemon, bypassing restrictive SELinux domain policies.
+Megingiard packages a lightweight, native on-device helper daemon (`megingiard_privd`) inside the APK. When you activate Megingiard System Service on the AYN Thor, Megingiard utilizes the device's native hardware root bridge (`PServerBinder`) for instant, 1-tap setup and seamless background execution. On other devices or as a fallback, it leverages Android's built-in **Wireless Debugging** facility (available since Android 11) to deploy the service binary to `/data/local/tmp` and run it under the **shell user** (UID 2000) — the same security domain used by an `adb shell` session. The app then establishes a secure local TCP loopback connection (`127.0.0.1:51234–51238`) to communicate with the service, bypassing restrictive SELinux domain policies.
 
 This architecture requires **no USB cables, no PC, and no external servers**. The entire bootstrap runs completely on the device itself through the wizard or 1-tap activation in Global Settings.
 
 ### What it unlocks
 
-| Feature | What you gain with Privileged Mode | Fallback without it |
+| Feature | What you gain with Megingiard System Service | Fallback without it |
 | :--- | :--- | :--- |
 | **Gamepad Merge** | Games see only **one** controller, seamlessly blending MacroPad virtual inputs on top of your physical controller. | A second virtual controller appears alongside the physical one. Some games might ignore inputs from one of the devices. |
 | **Gamepad Recording** | Record macros from your **real, physical controller** in real-time while the target game continues to receive inputs. | Use the on-screen virtual-controller recording overlay. |
-| **Privileged Mirror** | The screen mirror starts instantly without asking for MediaProjection consent every time. | Standard Android screen-recording consent dialog appears on every mirror start. |
+| **Direct Mirror (No Consent)** | The screen mirror starts instantly without asking for MediaProjection consent every time. | Standard Android screen-recording consent dialog appears on every mirror start. |
 | **Quick Screenshots** | Save high-resolution screenshots of the primary screen directly from the Quick Menu overlay without screen mirroring being active. | Screenshots require an active screen mirroring session. |
 
 ### Why it is technically required
@@ -278,19 +278,19 @@ The standard Android application sandbox (running in the `untrusted_app` SELinux
 
 ### Convenience Benefits
 
-- **Auto-Connect:** Once configured, Megingiard silently reconnects to the local daemon on cold starts. On the AYN Thor, the native root bridge automatically respawns the daemon after a device reboot without any user interaction or manual re-pairing.
-- **Automatic Feature Promotion:** When Privileged Mode is running, all supported capabilities (Gamepad Merge, Controller Recording, Privileged Mirroring, Quick Screenshots) activate automatically without tedious per-feature configuration. If disconnected, features seamlessly fall back to sandbox equivalents.
+- **Auto-Connect:** Once configured, Megingiard silently reconnects to the local system service on cold starts. On the AYN Thor, the native root bridge automatically respawns the service after a device reboot without any user interaction or manual re-pairing.
+- **Automatic Feature Promotion:** When Megingiard System Service is running, all supported capabilities (Gamepad Merge, Controller Recording, Direct Mirroring, Quick Screenshots) activate automatically without tedious per-feature configuration. If disconnected, features seamlessly fall back to sandbox equivalents.
 - **1-Tap Auto-Setup:** Integrates with the native Thor root bridge for instantaneous activation, or with the Accessibility Service to automatically unlock Developer Mode, enable USB/Wireless Debugging, and extract/pair credentials in seconds without manual port typing.
-- **Reboot Behavior:** While background processes (including `megingiard_privd`) terminate when the device shuts down, files in `/data/local/tmp` remain permanently intact on flash storage across reboots. On the AYN Thor, Megingiard automatically restarts the daemon in the background via the native root bridge upon cold start. When using the ADB fallback, simply tap Auto Reconnect (or re-run Auto Setup in ~5–10 seconds) if Wireless Debugging was reset.
+- **Reboot Behavior:** While background processes (including `megingiard_privd`) terminate when the device shuts down, files in `/data/local/tmp` remain permanently intact on flash storage across reboots. On the AYN Thor, Megingiard automatically restarts the system service in the background via the native root bridge upon cold start. When using the ADB fallback, simply tap Auto Reconnect (or re-run Auto Setup in ~5–10 seconds) if Wireless Debugging was reset.
 
 ### Security and Trust
 
-Privileged Mode is powerful, and you should understand its security scope:
+Megingiard System Service is powerful, and you should understand its security scope:
 
-- **Shell-Level Scope (UID 2000):** The daemon runs with the same rights as `adb shell`. It can read/write input nodes to emulate controllers and keys, but **cannot** escalate to root, modify system/read-only partitions, or read private data belonging to other applications.
-- **Trusted Sources Only:** Only run Privileged Mode if you trust the source code and signed releases. **ONLY DOWNLOAD THE APK FROM THE OFFICIAL GITHUB RELEASES PAGE.**
-- **Completely Local & Offline:** The Wireless Debugging pairing is a local loopback handshake. The daemon only listens on a local loopback TCP port (`127.0.0.1`), strictly inaccessible from any external network. Megingiard makes no outbound network connections.
-- **Easy Opt-Out:** You can disable Privileged Mode at any time. All features gracefully degrade to their standard sandbox fallbacks.
+- **Shell-Level Scope (UID 2000):** The system service runs with the same rights as `adb shell`. It can read/write input nodes to emulate controllers and keys, but **cannot** escalate to root, modify system/read-only partitions, or read private data belonging to other applications.
+- **Trusted Sources Only:** Only run Megingiard System Service if you trust the source code and signed releases. **ONLY DOWNLOAD THE APK FROM THE OFFICIAL GITHUB RELEASES PAGE.**
+- **Completely Local & Offline:** The Wireless Debugging pairing is a local loopback handshake. The service only listens on a local loopback TCP port (`127.0.0.1`), strictly inaccessible from any external network. Megingiard makes no outbound network connections.
+- **Easy Opt-Out:** You can disable Megingiard System Service at any time. All features gracefully degrade to their standard sandbox fallbacks.
 
 ### Verifying the APK Download
 
@@ -318,12 +318,12 @@ Ensure the output matches the checksum in the `.txt` file exactly before sideloa
 
 ### Setup Workflows
 
-- **Automated Setup (Recommended):** Tap **"Auto Setup"** in the Privileged Mode card (or in Step 5 of the Welcome Tour). Megingiard utilizes its Accessibility Service to automatically open Developer Options, enable Wireless Debugging, extract the pairing port and 6-digit code, and bootstrap the daemon in seconds.
+- **Automated Setup (Recommended):** Tap **"Auto Setup"** in the Megingiard System Service card (or in Step 5 of the Welcome Tour). Megingiard utilizes its Accessibility Service to automatically open Developer Options, enable Wireless Debugging, extract the pairing port and 6-digit code, and bootstrap the system service in seconds.
 - **Manual Setup:**
   1. Go to Android Settings → System → Developer Options, and enable **Wireless Debugging**.
   2. Tap **"Pair device with pairing code"** — Android will show an IP address, pairing port, and a 6-digit pairing code.
   3. In Megingiard's manual wizard, enter the Wireless Debugging connect port (from the main Wireless Debugging screen) and the pairing port + code (from the popup dialog).
-  4. The wizard pairs with local ADB, deploys the daemon, launches it, and verifies the socket link.
+  4. The wizard pairs with local ADB, deploys the system service, launches it, and verifies the socket link.
   5. The Settings card displays the live status badge (**`ON (V<N>)`** or **`OFF`**) at all times.
 
 ---
@@ -355,19 +355,19 @@ Ensure the output matches the checksum in the `.txt` file exactly before sideloa
 
 **Android requests screen recording permission on every mirror start.**
 
-> This is default Android behavior. Enable Privileged Mode to automatically engage the **Privileged Mirror**, skipping this prompt permanently.
+> This is default Android behavior. Enable Megingiard System Service to automatically engage the **Direct Mirror**, skipping this prompt permanently.
 
-**Privileged Mode shows "OFF" after I rebooted my Thor.**
+**Megingiard System Service shows "OFF" after I rebooted my Thor.**
 
-> When the device shuts down, active background processes (including `megingiard_privd`) are terminated by Android (note that files in `/data/local/tmp` remain permanently intact on flash storage, but RAM processes terminate). On the AYN Thor, Megingiard automatically respawns the daemon in the background via the native root bridge upon cold start. If relying on the ADB fallback and Wireless Debugging was reset or assigned a new dynamic port during boot, simply tap **Auto Reconnect** or re-run Auto Setup (~5–10 seconds).
+> When the device shuts down, active background processes (including the system service) are terminated by Android (note that files in `/data/local/tmp` remain permanently intact on flash storage, but RAM processes terminate). On the AYN Thor, Megingiard automatically respawns the system service in the background via the native root bridge upon cold start. If relying on the ADB fallback and Wireless Debugging was reset or assigned a new dynamic port during boot, simply tap **Auto Reconnect** or re-run Auto Setup (~5–10 seconds).
 
 **My game sees two controllers when using the MacroPad.**
 
-> Enable Privileged Mode. It automatically engages **Gamepad Merge**, merging the MacroPad's virtual actions onto your physical controller's stream and hiding the double controller from the game.
+> Enable Megingiard System Service. It automatically engages **Gamepad Merge**, merging the MacroPad's virtual actions onto your physical controller's stream and hiding the double controller from the game.
 
 **Only MacroPad buttons or only physical gamepad inputs are registered, not both.**
 
-> Some Android games only accept a single active input source. Enabling Privileged Mode resolves this via automatic **Gamepad Merge**.
+> Some Android games only accept a single active input source. Enabling Megingiard System Service resolves this via automatic **Gamepad Merge**.
 
 **Wireless Debugging pairing fails.**
 
@@ -392,7 +392,7 @@ Ensure the output matches the checksum in the `.txt` file exactly before sideloa
 
 ## Security
 
-Megingiard combines APK signature pinning, release-build fail-closed checks, SHA-256 verification of native assets, and mutual HMAC-SHA256 authentication for the Privileged Mode daemon socket. The concise entry point is [SECURITY_CONCEPT.md](SECURITY_CONCEPT.md); detailed daemon and native-binary behavior is documented in [Privileged Mode](docs/features/privileged-mode/FEATURE.md#security-model) and [Build Native](docs/BUILD_NATIVE.md#native-asset-integrity).
+Megingiard combines APK signature pinning, release-build fail-closed checks, SHA-256 verification of native assets, and mutual HMAC-SHA256 authentication for the Megingiard System Service socket. The concise entry point is [SECURITY_CONCEPT.md](SECURITY_CONCEPT.md); detailed daemon and native-binary behavior is documented in [System Service](docs/features/privileged-mode/FEATURE.md#security-model) and [Build Native](docs/BUILD_NATIVE.md#native-asset-integrity).
 
 ---
 

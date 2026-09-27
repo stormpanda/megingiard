@@ -123,9 +123,9 @@ Open Settings to create a layout.</string>
     <!-- Keyboard trackpoint mouse button position setting -->
     <string name="macropad_device_disabled_mouse">此配置已停用滑鼠</string>
     <string name="macropad_device_disabled_touch">此配置已停用觸控</string>
-    <string name="macropad_device_disabled_macro_privd">巨集需要特權模式。請在設定中啟用特權模式。</string>
-    <string name="macropad_device_disabled_gamepad_privd">手把按鍵需要特權模式。請在設定中啟用特權模式。</string>
-    <string name="macropad_macro_privd_required_banner">建立、編輯、測試及執行巨集需要特權模式。請在設定中啟用特權模式。</string>
+    <string name="macropad_device_disabled_macro_privd">巨集需要 Megingiard 系統服務。請在設定中啟用系統服務。</string>
+    <string name="macropad_device_disabled_gamepad_privd">手把按鍵需要 Megingiard 系統服務。請在設定中啟用系統服務。</string>
+    <string name="macropad_macro_privd_required_banner">建立、編輯、測試及執行巨集需要 Megingiard 系統服務。請在設定中啟用系統服務。</string>
     <string name="macropad_editor_delete_profile">刪除設定檔</string>
     <string name="macropad_editor_delete_layout">刪除配置</string>
     <string name="macropad_editor_cancel">取消</string>
@@ -254,13 +254,13 @@ Open Settings to create a layout.</string>
     <string name="settings_gamepad_swap_face_buttons_desc">在手把選擇器中顯示任天堂風格標籤 (A↔B 且 X↔Y)。注入的鍵碼保持不變。</string>
 
     <!-- Privileged Mode -->
-    <string name="privd_title">特權模式</string>
+    <string name="privd_title">Megingiard 系統服務</string>
     <string name="privd_status_off">關閉</string>
     <string name="privd_status_running_version">開 (V%1$d)</string>
     <string name="accessibility_status_active">已啟用</string>
     <string name="privd_action_retry">重試自動設定</string>
     <string name="privd_toast_accessibility_required">自動切換需要無障礙服務，請先在系統設定中啟用。</string>
-    <string name="privd_toast_all_set">設定完成！Privd 特權模式已就緒。</string>
+    <string name="privd_toast_all_set">設定完成！Megingiard 系統服務已就緒。</string>
 
     <string name="privd_deadzone_title">配置死區</string>
     <string name="privd_deadzone_left">左搖桿</string>
@@ -310,22 +310,22 @@ Open Settings to create a layout.</string>
     <string name="privd_wizard_field_pair_port">配對連接埠（「配對裝置」下方的 5 位數）</string>
     <string name="privd_wizard_step2_pair">配對</string>
 
-    <string name="privd_wizard_step4_done">特權模式設定完成。未來應用程式啟動時將自動重新連接。</string>
+    <string name="privd_wizard_step4_done">Megingiard 系統服務設定完成。未來應用程式啟動時將自動重新連接。</string>
 
     <string name="privd_wizard_checklist_adb">ADB 連線</string>
-    <string name="privd_wizard_checklist_push">推送 daemon 執行檔</string>
-    <string name="privd_wizard_checklist_spawn">啟動 daemon</string>
+    <string name="privd_wizard_checklist_push">部署系統服務檔案</string>
+    <string name="privd_wizard_checklist_spawn">啟動系統服務</string>
     <string name="privd_wizard_checklist_verify">驗證連線</string>
 
-    <string name="privd_error_daemon_unreachable">無法連線至 Daemon。請執行設定精靈。</string>
+    <string name="privd_error_daemon_unreachable">無法連線至系統服務。請執行設定精靈。</string>
     <string name="privd_error_pairing_failed">配對失敗。請確認系統配對對話框中的 IP 位址、連接埠與 6 位數配對碼。</string>
     <string name="privd_error_adb_discovery_failed">無法透過 mDNS 發現 ADB 無線偵錯端點。請確保無線偵錯已啟用。</string>
     <string name="privd_error_adb_connect_failed">無法連線至 ADB。如果您之前取消了配對，請重新配對。</string>
     <string name="privd_error_adb_pairing_required">需要進行 ADB 配對。請在無線偵錯設定中移除「Megingiard」後重新配對。</string>
-    <string name="privd_error_bootstrap_push_failed">推送 daemon 檔案失敗。請檢查 /data/local/tmp 中的可用空間。</string>
-    <string name="privd_error_bootstrap_spawn_failed">啟動 daemon 進程失敗。</string>
+    <string name="privd_error_bootstrap_push_failed">部署系統服務檔案失敗。請檢查 /data/local/tmp 中的可用空間。</string>
+    <string name="privd_error_bootstrap_spawn_failed">啟動系統服務進程失敗。</string>
     <string name="privd_error_bootstrap_provision_failed">提供驗證金鑰失敗。請重新執行設定精靈。</string>
-    <string name="privd_error_version_mismatch">Daemon 版本不符。請點選「自動設定」或「連線」以更新 daemon。</string>
+    <string name="privd_error_version_mismatch">系統服務版本不符。請點選「自動設定」或「連線」以更新服務。</string>
     <string name="settings_jump_general">一般</string>
     <string name="settings_jump_appearance">外觀</string>
     <string name="settings_jump_config">分享與備份</string>
@@ -825,7 +825,7 @@ Open Settings to create a layout.</string>
     <string name="help_settings_export_profile_desc">將單個設定檔儲存到檔案中，以便與其他玩家分享配置與巨集，而無需洩露您的完整 App 配置。</string>
     <string name="help_settings_import_profile_desc">從 .mgrd 檔案匯入其他使用者分享的設定檔並新增至現有設定檔中，不會覆寫您的全域設定。</string>
     <string name="help_settings_add_to_obtainium_desc">開啟 Obtainium (如果已安裝) 並預填 Megingiard 儲存庫連結。如果未安裝 Obtainium，則會在瀏覽器中開啟 Obtainium 的 GitHub 版本發佈頁面。</string>
-    <string name="help_settings_privd_desc">透過無線偵錯建立背景助手連線，以寫入一般應用程式無法存取的系統輸入裝置。這將啟用：\n\n• 手把合併：結合虛擬與實體手把，使遊戲僅看到一個控制器 (提高相容性)。\n• 實體手把錄製：錄製來自實體控制器的巨集輸入。\n• 特權螢幕投影：無需在每次啟動時提示螢幕擷取權限即可開始投影。\n• 螢幕截圖：在未開啟螢幕投影的情況下，直接從快速選單覆蓋層儲存上螢幕截圖。</string>
+    <string name="help_settings_privd_desc">透過無線偵錯或原廠硬體橋接建立背景系統連線，以寫入一般應用程式無法存取的系統輸入裝置。這將啟用：\n\n• 手把合併：結合虛擬與實體手把，使遊戲僅看到一個控制器 (提高相容性)。\n• 實體手把錄製：錄製來自實體控制器的巨集輸入。\n• 直接螢幕投影：無需在每次啟動時提示螢幕擷取權限即可開始投影。\n• 螢幕截圖：在未開啟螢幕投影的情況下，直接從快速選單覆蓋層儲存上螢幕截圖。</string>
     <string name="help_settings_deadzone_desc">確保類比搖桿錄製不會捕捉到漂移或雜訊。將這些百分比與 Thor 系統設定中的死區設定匹配以獲得最佳準確性。</string>
     <string name="help_settings_log_level_desc">正常遊戲時請保持在 Warn 或 Info。僅在重現問題以收集詳細日誌以供錯誤報告時才設定為 Debug 或 Verbose。</string>
     <string name="help_settings_save_log_desc">匯出最新的系統日誌。在遇到錯誤或當機後立即產生此日誌，並將其附加到 GitHub 議題或開發者報告中。</string>
@@ -842,7 +842,7 @@ Open Settings to create a layout.</string>
     <string name="help_quickmenu_freeze_desc">凍結投影影像，使其顯示靜態畫面而非即時畫面。適合在您需要仔細閱讀遊戲畫面時暫停。</string>
     <string name="help_quickmenu_viewport_desc">在下螢幕開啟區塊配置編輯器，讓您在投影覆蓋層中調整大小、移動或新增透明區塊視窗。</string>
     <string name="help_quickmenu_screenshot_top_label">上螢幕截圖</string>
-    <string name="help_quickmenu_screenshot_top_desc">截取上螢幕畫面。若未在投影中，則需要特權模式已連接。</string>
+    <string name="help_quickmenu_screenshot_top_desc">截取上螢幕畫面。若未在投影中，則需要 Megingiard 系統服務已連線。</string>
     <string name="help_quickmenu_screenshot_bottom_label">下螢幕截圖</string>
     <string name="help_quickmenu_screenshot_bottom_desc">截取乾淨的下螢幕畫面。</string>
     <string name="help_quickmenu_screenshot_both_label">雙螢幕截圖</string>
@@ -855,7 +855,7 @@ Open Settings to create a layout.</string>
     <string name="help_quickmenu_view_switch_label">切換至 Hub / 遊戲設定檔</string>
     <string name="help_quickmenu_view_switch_desc">在 Companion Hub 儀表板與當前活動遊戲設定檔版面之間手動切換（會停用自動切換）。</string>
     <string name="help_quickmenu_edit_desc">開啟「編輯設定檔／配置」畫面，您可以在此新增、移動與設定按鈕，管理設定檔與配置，以及建立或編輯巨集。</string>
-    <string name="help_quickmenu_settings_desc">開啟全域設定視窗以進行 App 細部配置，例如主題、主題重點色、鏡像自動啟動與影音模式設定。</string>
+    <string name="help_quickmenu_settings_desc">開啟全域設定視窗以進行 App 細部配置，例如主題、主題重點色、鏡像自動啟動與 Megingiard 系統服務設定。</string>
     <string name="help_quickmenu_shut_off_label">關閉 App</string>
     <string name="help_quickmenu_shut_off_desc">正常關閉 Megingiard，並停止螢幕投影與背景服務。</string>
     <string name="help_quickmenu_help_label">說明 (此螢幕)</string>
@@ -870,7 +870,7 @@ Open Settings to create a layout.</string>
     <string name="help_companion_hub_hero_link_desc">將自訂 MacroPad 控制設定檔連結至目前執行或選取的遊戲，或為其建立專屬設定檔。</string>
     <string name="help_companion_hub_sec_tools">下螢幕工具</string>
     <string name="help_companion_hub_macropad_desc">快速捷徑，用於開啟目前使用中的 MacroPad 觸控控制介面。</string>
-    <string name="help_companion_hub_settings_desc">存取全域應用程式設定，包括主題色彩、特權 Daemon 狀態、輸入死區與設定檔備份。</string>
+    <string name="help_companion_hub_settings_desc">存取全域應用程式設定，包括主題色彩、系統服務狀態、輸入死區與設定檔備份。</string>
     <string name="help_companion_hub_keyboard_desc">切換全螢幕虛擬觸控鍵盤覆蓋層以輸入文字。</string>
     <string name="help_companion_hub_touchpad_desc">切換全螢幕虛擬觸控板，以進行精準的滑鼠與觸控游標控制。</string>
 
@@ -894,25 +894,32 @@ Open Settings to create a layout.</string>
     <string name="onboarding_theme_prev">上一個主題</string>
     <string name="onboarding_theme_next">下一個主題</string>
     <string name="onboarding_accessibility_title">無障礙服務授權</string>
-    <string name="onboarding_accessibility_desc">無障礙服務是 Megingiard 的必要基礎。啟動遊戲時自動切換巨集配置、設定 Privd 特權模式等核心功能皆需此服務。</string>
-    <string name="onboarding_privd_title">Privd 特權模式 (強烈推薦！)</string>
-    <string name="onboarding_privd_desc">解鎖超低延遲直接觸控注入、Trackpoint 高精度操控與實體搖桿錄製，無需 Root 或電腦。您可以使用一鍵自動設定快速開通。</string>
+    <string name="onboarding_accessibility_desc">無障礙服務是 Megingiard 的必要基礎。啟動遊戲時自動切換巨集配置、設定 Megingiard 系統服務等核心功能皆需此服務。</string>
+    <string name="onboarding_privd_title">Megingiard 系統服務 (強烈推薦！)</string>
+    <string name="onboarding_privd_desc">解鎖超低延遲直接觸控注入、Trackpoint 高精度操控與實體手把錄製，無需電腦。您可以使用一鍵自動設定快速開通。</string>
     <string name="onboarding_privd_auto_setup">開始自動設定</string>
-    <string name="privd_reconnect_title">重新連線 Privd 特權模式</string>
-    <string name="privd_reconnect_desc">Privd 特權模式已中斷（可能是裝置重新開機或無線除錯被關閉）。</string>
+    <string name="privd_reconnect_title">重新連線 Megingiard 系統服務</string>
+    <string name="privd_reconnect_desc">Megingiard 系統服務已中斷（可能是裝置重新開機或無線除錯被關閉）。</string>
     <string name="privd_reconnect_auto_button">自動重新連線</string>
     <string name="privd_reconnect_all_set">已全部設定完成！</string>
     <string name="privd_reconnect_btn_close">關閉</string>
     <string name="onboarding_privd_stage_dev">開發者選項</string>
     <string name="onboarding_privd_stage_wireless">無線除錯</string>
     <string name="onboarding_privd_stage_pairing">ADB 無線配對</string>
-    <string name="onboarding_privd_stage_daemon">Daemon 服務連線</string>
+    <string name="onboarding_privd_stage_daemon">系統服務連線</string>
     <string name="onboarding_privd_wifi_warning">Wi-Fi 已關閉。必須開啟 Wi-Fi 才能進行無線除錯配對。</string>
     <string name="onboarding_privd_unsupported_lang_warning">目前的系統語言 (%1$s) 暫不支援自動腳本導航，請改用手動配對。</string>
-    <string name="onboarding_privd_manual_title">手動設定 Privd 特權模式</string>
+    <string name="onboarding_privd_manual_title">手動設定系統服務</string>
     <string name="onboarding_privd_manual_step_1">1. 先暫時跳過此步驟並進行下一步。</string>
-    <string name="onboarding_privd_manual_step_2">2. 開啟全域設定 → Privd 特權模式進行配對。</string>
-    <string name="onboarding_privd_manual_step_3">3. 依照該處的手動配對說明啟用 Privd 特權模式。</string>
+    <string name="onboarding_privd_manual_step_2">2. 開啟全域設定 → Megingiard 系統服務進行配對。</string>
+    <string name="onboarding_privd_manual_step_3">3. 依照該處的手動配對說明啟用系統服務。</string>
+    <string name="onboarding_privd_root_bridge_title">Megingiard 系統服務 (偵測到硬體橋接)</string>
+    <string name="onboarding_privd_root_bridge_desc">AYN Thor 原廠硬體橋接已就緒。啟用系統服務以享受單手把整合與直接螢幕投影功能。</string>
+    <string name="onboarding_privd_activate_btn">啟用系統服務</string>
+    <string name="onboarding_privd_activating">正在連線至系統服務…</string>
+    <string name="onboarding_privd_daemon_row_label">Megingiard 系統服務</string>
+    <string name="onboarding_accessibility_activate_btn">啟用無障礙服務</string>
+    <string name="onboarding_accessibility_activating">正在啟用服務…</string>
     <string name="onboarding_finished_title">設定完成！準備好開始調校了嗎？</string>
     <string name="onboarding_finished_desc">您已完成歡迎導覽。隨時可從 全域設定 → 一般 重新執行此導覽。</string>
     <string name="onboarding_btn_next">下一步</string>

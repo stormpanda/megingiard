@@ -112,12 +112,12 @@ The universal navigation overlay accessed via swipe-to-reveal gestures.
 
 ---
 
-## 3. Privileged Mode (Wireless ADB Daemon)
+## 3. Megingiard System Service (Hardware Root Bridge & Wireless ADB)
 
-Privileged Mode runs `megingiard_privd` under the shell UID (2000) to emulate advanced input hardware.
+Megingiard System Service runs `megingiard_privd` under shell UID (2000) or native hardware bridge to emulate advanced input hardware.
 
 > [!WARNING]
-> Testing Privileged Mode requires a real AYN Thor or a developer phone with Wireless Debugging.
+> Testing Megingiard System Service requires a real AYN Thor (hardware root bridge) or a developer phone with Wireless Debugging.
 
 ```
        [Wizard Trigger]
@@ -130,7 +130,7 @@ OFF ──────────────────────▶ BOOTST
 
 | Action / Test Step | Expected Behavior / Visual Verification | Failure Recovery / Notes |
 | :--- | :--- | :--- |
-| **1. Reset Privileged Mode State** | • Clear `/data/local/tmp` using script or commands.<br>• Launch app -> Settings card status displays **OFF**. | Verify the wizard starts clean. |
+| **1. Reset System Service State** | • Clear `/data/local/tmp` using script or commands.<br>• Launch app -> Settings card status displays **OFF**. | Verify the wizard starts clean. |
 | **2. Launch Wizard (Step 1)** | • Tap **Set up...** in settings card.<br>• Wizard dialog opens.<br>• Tap **Open system settings** -> Settings app launches **on the Top screen** (Display 0). | Top screen launch is mandatory (`ActivityOptions.setLaunchDisplayId(0)`). |
 | **3. Pair Device (Step 2)** | • In Developer Options -> Wireless Debugging -> Pair with pairing code.<br>• Enter IP, pairing port, and 6-digit code into the wizard.<br>• Click **Pair** -> TLS handshake pairs key/cert. | Wizard RSA keys are stored in `noBackupFilesDir/privd_adb_key.bin`. |
 | **4. Deploy & Spawn (Step 3)** | • Entering Connect Port triggers bootstrap Stages.<br>• Stages progress in UI:<br>`CONNECTING_ADB` -> `PUSHING_BINARY` -> `SPAWNING_DAEMON` -> `VERIFYING` -> `DONE`. | If `VERIFYING` fails, check if port matches connect port (shown next to IP). |
@@ -150,13 +150,13 @@ Megingiard enforces a strict trust model to ensure no rogue local app can exploi
 
 ---
 
-### 3.3 Advanced Privileged Feature Toggles
+### 3.3 Advanced System Service Feature Toggles
 
 | Feature Toggle | Action / Verification Steps | Expected Behavior |
 | :--- | :--- | :--- |
 | **Gamepad Merge** | • Toggle Gamepad Merge **ON**.<br>• Open MacroPad with physical controller connected.<br>• Input physical buttons. | • Game sees only one consolidated gamepad.<br>• Virtual actions inject on top of the physical stream. |
 | **Gamepad Recording** | • Toggle Gamepad Recording **ON**.<br>• Open Macro editor -> Gamepad record.<br>• Click physical gamepad buttons. | • App passively captures buttons as macro timeline steps.<br>• Real game receives inputs concurrently. |
-| **Privileged Mirror** | • Toggle Privileged Mirror **ON**.<br>• Start Mirroring. | • The live mirror starts **without** the MediaProjection consent dialog.<br>• No performance/battery drops. |
+| **Direct Mirror** | • Toggle Direct Mirror **ON**.<br>• Start Mirroring. | • The live mirror starts **without** the MediaProjection consent dialog.<br>• No performance/battery drops. |
 
 ---
 

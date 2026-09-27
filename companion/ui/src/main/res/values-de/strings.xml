@@ -123,9 +123,9 @@ Open Settings to create a layout.</string>
     <!-- Keyboard trackpoint mouse button position setting -->
     <string name="macropad_device_disabled_mouse">Maus ist für dieses Layout deaktiviert</string>
     <string name="macropad_device_disabled_touch">Touch-Eingabe ist für dieses Layout deaktiviert</string>
-    <string name="macropad_device_disabled_macro_privd">Makros erfordern den Privilegierten Modus. Bitte aktiviere den Privilegierten Modus in den Einstellungen.</string>
-    <string name="macropad_device_disabled_gamepad_privd">Gamepad-Tasten erfordern den Privilegierten Modus. Bitte aktiviere den Privilegierten Modus in den Einstellungen.</string>
-    <string name="macropad_macro_privd_required_banner">Der Privilegierte Modus ist erforderlich, um Makros zu erstellen, zu bearbeiten, zu testen und auszuführen. Bitte aktiviere ihn in den Einstellungen.</string>
+    <string name="macropad_device_disabled_macro_privd">Makros erfordern den Megingiard Systemdienst. Bitte aktiviere den Systemdienst in den Einstellungen.</string>
+    <string name="macropad_device_disabled_gamepad_privd">Gamepad-Tasten erfordern den Megingiard Systemdienst. Bitte aktiviere den Systemdienst in den Einstellungen.</string>
+    <string name="macropad_macro_privd_required_banner">Der Megingiard Systemdienst ist erforderlich, um Makros zu erstellen, zu bearbeiten, zu testen und auszuführen. Bitte aktiviere ihn in den Einstellungen.</string>
     <string name="macropad_editor_delete_profile">Profil löschen</string>
     <string name="macropad_editor_delete_layout">Layout löschen</string>
     <string name="macropad_editor_cancel">Abbrechen</string>
@@ -253,15 +253,15 @@ Open Settings to create a layout.</string>
     <string name="settings_gamepad_swap_face_buttons">Face-Button-Beschriftung tauschen (A/B und X/Y)</string>
     <string name="settings_gamepad_swap_face_buttons_desc">Zeigt Nintendo-Layout-Beschriftungen im Gamepad-Picker (A↔B und X↔Y). Die gesendeten Keycodes bleiben unverändert.</string>
 
-    <!-- Privileged Mode -->
-    <string name="privd_title">Privilegierter Modus</string>
+    <!-- Megingiard Systemdienst -->
+    <string name="privd_title">Megingiard Systemdienst</string>
     <string name="privd_status_off">Aus</string>
     <string name="privd_status_running_version">AN (V%1$d)</string>
     <string name="privd_status_connecting">Verbinde…</string>
     <string name="accessibility_status_active">Aktiv</string>
     <string name="privd_action_retry">Auto-Einrichtung wiederholen</string>
     <string name="privd_toast_accessibility_required">Eingabehilfe-Dienst wird für den automatischen Toggle benötigt. Bitte in den Einstellungen aktivieren.</string>
-    <string name="privd_toast_all_set">Alles bereit! Privilegiierter Modus ist einsatzbereit.</string>
+    <string name="privd_toast_all_set">Alles bereit! Megingiard Systemdienst ist einsatzbereit.</string>
 
     <string name="privd_deadzone_title">Deadzones einstellen</string>
     <string name="privd_deadzone_left">Linker Stick</string>
@@ -278,7 +278,7 @@ Open Settings to create a layout.</string>
     <string name="privd_recording_physical_stop">Stopp &amp; Speichern</string>
     <string name="privd_recording_physical_cancel">Abbrechen</string>
 
-    <!-- Privileged Mode — setup wizard -->
+    <!-- Megingiard Systemdienst — setup wizard -->
     <string name="privd_wizard_next">Weiter</string>
     <string name="privd_wizard_back">Zurück</string>
     <string name="privd_wizard_close">Fertig</string>
@@ -311,22 +311,22 @@ Open Settings to create a layout.</string>
     <string name="privd_wizard_field_pair_port">Kopplungs-Port (5 Ziffern unter \"Gerät koppeln\")</string>
     <string name="privd_wizard_step2_pair">Koppeln</string>
 
-    <string name="privd_wizard_step4_done">Privilegierter Modus ist eingerichtet. Künftige App-Starts verbinden automatisch.</string>
+    <string name="privd_wizard_step4_done">Megingiard Systemdienst ist eingerichtet. Künftige App-Starts verbinden automatisch.</string>
 
     <string name="privd_wizard_checklist_adb">ADB-Verbindung</string>
-    <string name="privd_wizard_checklist_push">Daemon-Binary übertragen</string>
-    <string name="privd_wizard_checklist_spawn">Daemon starten</string>
+    <string name="privd_wizard_checklist_push">Systemdienst-Dateien übertragen</string>
+    <string name="privd_wizard_checklist_spawn">Systemdienst starten</string>
     <string name="privd_wizard_checklist_verify">Verbindung prüfen</string>
 
-    <string name="privd_error_daemon_unreachable">Daemon ist nicht erreichbar. Führe den Einrichtungs-Assistenten aus.</string>
+    <string name="privd_error_daemon_unreachable">Systemdienst ist nicht erreichbar. Führe den Einrichtungs-Assistenten aus.</string>
     <string name="privd_error_pairing_failed">Kopplung fehlgeschlagen. Prüfe Adresse, Port und 6-stelligen Code aus dem System-Dialog.</string>
     <string name="privd_error_adb_discovery_failed">Konnte den ADB-Drahtloses-Debugging-Endpunkt nicht via mDNS finden. Stelle sicher, dass Drahtloses Debugging aktiviert ist.</string>
     <string name="privd_error_adb_connect_failed">Verbindung zu ADB fehlgeschlagen. Falls du die Kopplung widerrufen hast, kopple erneut.</string>
     <string name="privd_error_adb_pairing_required">ADB-Kopplung erforderlich. Bitte lösche "Megingiard" aus den Einstellungen für drahtloses Debugging und kopple erneut.</string>
-    <string name="privd_error_bootstrap_push_failed">Daemon-Binary konnte nicht übertragen werden. Prüfe den verfügbaren Speicher unter /data/local/tmp.</string>
-    <string name="privd_error_bootstrap_spawn_failed">Daemon-Prozess konnte nicht gestartet werden.</string>
+    <string name="privd_error_bootstrap_push_failed">Systemdienst-Dateien konnten nicht übertragen werden. Prüfe den verfügbaren Speicher unter /data/local/tmp.</string>
+    <string name="privd_error_bootstrap_spawn_failed">Systemdienst-Prozess konnte nicht gestartet werden.</string>
     <string name="privd_error_bootstrap_provision_failed">Authentifizierungsschlüssel konnte nicht übertragen werden. Führe den Einrichtungsassistenten erneut aus.</string>
-    <string name="privd_error_version_mismatch">Daemon-Version stimmt nicht überein. Tippe auf Auto-Setup oder Verbinden, um den Daemon zu aktualisieren.</string>
+    <string name="privd_error_version_mismatch">Systemdienst-Version stimmt nicht überein. Tippe auf Auto-Setup oder Verbinden, um den Dienst zu aktualisieren.</string>
     <string name="settings_jump_general">Allgemein</string>
     <string name="settings_jump_appearance">Darstellung</string>
     <string name="settings_jump_config">Teilen &amp; Backup</string>
@@ -838,7 +838,7 @@ Open Settings to create a layout.</string>
     <string name="help_settings_export_profile_desc">Speichert ein einzelnes Profil in eine Datei, um Tasten-Layout und Makros mit anderen Spielern zu teilen, ohne deine gesamte Konfiguration freizugeben.</string>
     <string name="help_settings_import_profile_desc">Importiert ein von einem anderen Benutzer geteiltes Profil aus einer .mgrd-Datei und fügt es zu deinen Profilen hinzu, ohne deine globalen Einstellungen zu überschreiben.</string>
     <string name="help_settings_add_to_obtainium_desc">Öffnet Obtainium (falls installiert) mit dem vorausgefüllten Megingiard-Repository-Link. Falls Obtainium nicht installiert ist, wird die GitHub-Seite von Obtainium im Browser geöffnet.</string>
-    <string name="help_settings_privd_desc">Richtet eine Hintergrundverbindung per Wireless Debugging ein, um auf System-Eingabegeräte zuzugreifen, die für normale Apps gesperrt sind. Dies ermöglicht:\n\n• Gamepad-Zusammenführung: Kombiniert virtuelle und physische Controller, sodass Spiele nur einen Controller sehen (erhöht die Kompatibilität).\n• Physische Gamepad-Aufnahme: Nimmt Makros direkt von deinem physischen Controller auf.\n• Privilegiertes Screen Mirroring: Startet die Bildschirmübertragung ohne die ständige Android-Sicherheitsabfrage.\n• Screenshots: Erstellt Screenshots des Hauptbildschirms direkt aus dem Schnellmenü-Overlay, ohne dass die Bildschirmübertragung aktiv sein muss.</string>
+    <string name="help_settings_privd_desc">Richtet eine System-Hintergrundverbindung (über die Thor-Hardware-Bridge oder Wireless Debugging) ein, um auf System-Eingabegeräte zuzugreifen, die für normale Apps gesperrt sind. Dies ermöglicht:\n\n• Gamepad-Zusammenführung: Kombiniert virtuelle und physische Controller, sodass Spiele nur einen Controller sehen (erhöht die Kompatibilität).\n• Physische Gamepad-Aufnahme: Nimmt Makros direkt von deinem physischen Controller auf.\n• Direktes Screen Mirroring: Startet die Bildschirmübertragung ohne die ständige Android-Sicherheitsabfrage.\n• Screenshots: Erstellt Screenshots des Hauptbildschirms direkt aus dem Schnellmenü-Overlay, ohne dass die Bildschirmübertragung aktiv sein muss.</string>
     <string name="help_settings_deadzone_desc">Verhindert, dass Rauschen oder Drift der Analogsticks aufgenommen werden. Gleiche diese Werte für beste Genauigkeit mit den Totzonen-Einstellungen deines Thor ab.</string>
     <string name="help_settings_log_level_desc">Im Normalbetrieb auf Warn oder Info belassen. Nur bei der Fehlersuche auf Debug oder Verbose stellen, um detaillierte Logs aufzuzeichnen.</string>
     <string name="help_settings_save_log_desc">Exportiert das aktuelle System-Log. Generiere dieses direkt nach einem Fehler oder Absturz, um es an einen Entwicklerbericht anzuhängen.</string>
@@ -855,7 +855,7 @@ Open Settings to create a layout.</string>
     <string name="help_quickmenu_freeze_desc">Friert das gespiegelte Bild ein, sodass ein Standbild statt des Live-Feeds angezeigt wird. Nützlich, um eine Spielszene zum genauen Lesen anzuhalten.</string>
     <string name="help_quickmenu_viewport_desc">Öffnet den Ausschnitt-Layout-Editor auf dem Sekundärbildschirm, um transparente Ausschnittfenster im Spiegel-Overlay zu verschieben, zu skalieren oder hinzuzufügen.</string>
     <string name="help_quickmenu_screenshot_top_label">Screenshot oberer Bildschirm</string>
-    <string name="help_quickmenu_screenshot_top_desc">Nimmt einen Screenshot des oberen Bildschirms auf. Wenn kein Mirroring aktiv ist, muss der Privileged Mode verbunden sein.</string>
+    <string name="help_quickmenu_screenshot_top_desc">Nimmt einen Screenshot des oberen Bildschirms auf. Wenn kein Mirroring aktiv ist, muss der Megingiard Systemdienst verbunden sein.</string>
     <string name="help_quickmenu_screenshot_bottom_label">Screenshot unterer Bildschirm</string>
     <string name="help_quickmenu_screenshot_bottom_desc">Nimmt einen sauberen Screenshot des unteren Bildschirmlayouts auf.</string>
     <string name="help_quickmenu_screenshot_both_label">Dual-Screen-Screenshot</string>
@@ -868,7 +868,7 @@ Open Settings to create a layout.</string>
     <string name="help_quickmenu_view_switch_label">Zum Hub / Spiel-Profil wechseln</string>
     <string name="help_quickmenu_view_switch_desc">Wechselt manuell zwischen dem Companion Hub Dashboard und dem aktiven Spiel-Profil-Layout (deaktiviert den Auto-Wechsel).</string>
     <string name="help_quickmenu_edit_desc">Öffnet den Bereich „Profil/Layout bearbeiten“, in dem du Schaltflächen hinzufügen, verschieben und konfigurieren sowie Profile, Layouts und Makros verwalten kannst.</string>
-    <string name="help_quickmenu_settings_desc">Öffnet die globalen Einstellungen für App-weite Konfiguration wie Design, Akzentfarbe, automatischen Spiegelungsstart und Privilegierter-Modus-Einrichtung.</string>
+    <string name="help_quickmenu_settings_desc">Öffnet die globalen Einstellungen für App-weite Konfiguration wie Design, Akzentfarbe, automatischen Spiegelungsstart und Megingiard-Systemdienst-Einrichtung.</string>
     <string name="help_quickmenu_shut_off_label">App beenden</string>
     <string name="help_quickmenu_shut_off_desc">Beendet Megingiard ordnungsgemäß und stoppt Bildschirmspiegelung sowie Hintergrunddienste.</string>
     <string name="help_quickmenu_help_label">Hilfe (diese Ansicht)</string>
@@ -883,7 +883,7 @@ Open Settings to create a layout.</string>
     <string name="help_companion_hub_hero_link_desc">Verknüpft ein benutzerdefiniertes Steuerungsprofil oder erstellt ein neues Profil für das aktuell aktive oder ausgewählte Spiel.</string>
     <string name="help_companion_hub_sec_tools">Begleit-Tools</string>
     <string name="help_companion_hub_macropad_desc">Schnellzugriff zum Öffnen der aktiven MacroPad-Touch-Bedienoberfläche.</string>
-    <string name="help_companion_hub_settings_desc">Zugriff auf app-weite Einstellungen wie Theme-Farben, Daemon-Status, Totzonen und Konfigurations-Backups.</string>
+    <string name="help_companion_hub_settings_desc">Zugriff auf app-weite Einstellungen wie Theme-Farben, Systemdienst-Status, Totzonen und Konfigurations-Backups.</string>
     <string name="help_companion_hub_keyboard_desc">Schaltet die virtuelle Touch-Tastatur im Vollbildmodus für Texteingaben ein oder aus.</string>
     <string name="help_companion_hub_touchpad_desc">Schaltet das virtuelle Touchpad zur präzisen Maus- und Touch-Cursor-Steuerung ein oder aus.</string>
 
@@ -907,30 +907,30 @@ Open Settings to create a layout.</string>
     <string name="onboarding_theme_prev">Vorheriges Thema</string>
     <string name="onboarding_theme_next">Nächstes Thema</string>
     <string name="onboarding_accessibility_title">Barrierefreiheitsdienst</string>
-    <string name="onboarding_accessibility_desc">Der Barrierefreiheitsdienst ist für Megingiard erforderlich. Er wird für Kernfunktionen wie den automatischen Makro-Profilwechsel beim Starten von Spielen, die Einrichtung des Privilegierten Modus sowie kommende Funktionen benötigt.</string>
-    <string name="onboarding_privd_title">Privilegierter Modus (empfohlen!)</string>
-    <string name="onboarding_privd_desc">Ermöglicht direkte Eingabe-Injektion ohne Latenz, Trackpoint-Präzision und physikalische Gamepad-Aufzeichnung ohne Root oder PC-Verbindung. Nutze die Auto-Einrichtung für eine 1-Tap-Konfiguration.</string>
+    <string name="onboarding_accessibility_desc">Der Barrierefreiheitsdienst ist für Megingiard erforderlich. Er wird für Kernfunktionen wie den automatischen Makro-Profilwechsel beim Starten von Spielen, die Einrichtung des Megingiard Systemdienstes sowie kommende Funktionen benötigt.</string>
+    <string name="onboarding_privd_title">Megingiard Systemdienst (empfohlen!)</string>
+    <string name="onboarding_privd_desc">Ermöglicht direkte Eingabe-Injektion ohne Latenz, Trackpoint-Präzision und physikalische Gamepad-Aufzeichnung ohne PC-Verbindung. Nutze die Auto-Einrichtung für eine 1-Tap-Konfiguration.</string>
     <string name="onboarding_privd_auto_setup">Auto-Einrichtung starten</string>
-    <string name="privd_reconnect_title">Privilegierten Modus neu verbinden</string>
-    <string name="privd_reconnect_desc">Der privilegierte Modus wurde getrennt, zum Beispiel durch einen Geräteneustart oder weil Wireless Debugging deaktiviert wurde.</string>
+    <string name="privd_reconnect_title">Megingiard Systemdienst neu verbinden</string>
+    <string name="privd_reconnect_desc">Der Megingiard Systemdienst wurde getrennt, zum Beispiel durch einen Geräteneustart oder weil Wireless Debugging deaktiviert wurde.</string>
     <string name="privd_reconnect_auto_button">Automatisch verbinden</string>
     <string name="privd_reconnect_all_set">Alles erledigt!</string>
     <string name="privd_reconnect_btn_close">Schließen</string>
     <string name="onboarding_privd_stage_dev">Entwickleroptionen</string>
     <string name="onboarding_privd_stage_wireless">Drahtloses Debugging</string>
     <string name="onboarding_privd_stage_pairing">ADB Wireless-Kopplung</string>
-    <string name="onboarding_privd_stage_daemon">Daemon-Verbindung</string>
+    <string name="onboarding_privd_stage_daemon">Systemdienst-Verbindung</string>
     <string name="onboarding_privd_wifi_warning">WLAN ist ausgeschaltet. WLAN muss auf deinem Gerät aktiviert sein, um drahtloses Debugging zu ermöglichen.</string>
     <string name="onboarding_privd_unsupported_lang_warning">Die aktuelle System-Sprache (%1$s) wird für die automatische Einrichtung noch nicht unterstützt. Bitte beantrage Unterstützung für deine Sprache!</string>
-    <string name="onboarding_privd_manual_title">Privilegierten Modus manuell einrichten</string>
+    <string name="onboarding_privd_manual_title">Systemdienst manuell einrichten</string>
     <string name="onboarding_privd_manual_step_1">1. Überspringe diesen Schritt vorerst, indem du zum nächsten Schritt weitergehst.</string>
-    <string name="onboarding_privd_manual_step_2">2. Öffne Globale Einstellungen → Privilegierter Modus.</string>
-    <string name="onboarding_privd_manual_step_3">3. Folge dort den manuellen Kopplungsanweisungen, um den Privilegierten Modus zu aktivieren.</string>
-    <string name="onboarding_privd_root_bridge_title">Privilegierter Modus (Root-Bridge erkannt)</string>
-    <string name="onboarding_privd_root_bridge_desc">Die AYN Thor Hardware-Root-Bridge ist bereit. Aktiviere den Privilegierten Modus für Single-Controller Evdev-Merge und direktes Display-Mirroring.</string>
-    <string name="onboarding_privd_activate_btn">Privilegierten Modus aktivieren</string>
-    <string name="onboarding_privd_activating">Verbinde mit Daemon…</string>
-    <string name="onboarding_privd_daemon_row_label">Privilegierter Helper-Daemon</string>
+    <string name="onboarding_privd_manual_step_2">2. Öffne Globale Einstellungen → Megingiard Systemdienst.</string>
+    <string name="onboarding_privd_manual_step_3">3. Folge dort den manuellen Kopplungsanweisungen, um den Systemdienst zu aktivieren.</string>
+    <string name="onboarding_privd_root_bridge_title">Megingiard Systemdienst (Hardware-Bridge erkannt)</string>
+    <string name="onboarding_privd_root_bridge_desc">Die AYN Thor Hardware-Bridge ist bereit. Aktiviere den Systemdienst für Single-Controller Gamepad-Merge und direktes Display-Mirroring.</string>
+    <string name="onboarding_privd_activate_btn">Systemdienst aktivieren</string>
+    <string name="onboarding_privd_activating">Verbinde mit Systemdienst…</string>
+    <string name="onboarding_privd_daemon_row_label">Megingiard Systemdienst</string>
     <string name="onboarding_accessibility_activate_btn">Bedienungshilfe aktivieren</string>
     <string name="onboarding_accessibility_activating">Dienst wird aktiviert…</string>
     <string name="onboarding_finished_title">Alles erledigt! Bereit zum Basteln?</string>

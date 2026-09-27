@@ -123,9 +123,9 @@ Open Settings to create a layout.</string>
     <!-- Keyboard trackpoint mouse button position setting -->
     <string name="macropad_device_disabled_mouse">Mouse has been disabled for this layout</string>
     <string name="macropad_device_disabled_touch">Touch has been disabled for this layout</string>
-    <string name="macropad_device_disabled_macro_privd">Macros require Privileged Mode. Please activate Privileged Mode in Settings.</string>
-    <string name="macropad_device_disabled_gamepad_privd">Gamepad buttons require Privileged Mode. Please activate Privileged Mode in Settings.</string>
-    <string name="macropad_macro_privd_required_banner">Privileged Mode is required to create, edit, test, and execute macros. Please activate Privileged Mode in Settings.</string>
+    <string name="macropad_device_disabled_macro_privd">Macros require the Megingiard System Service. Please activate the System Service in Settings.</string>
+    <string name="macropad_device_disabled_gamepad_privd">Gamepad buttons require the Megingiard System Service. Please activate the System Service in Settings.</string>
+    <string name="macropad_macro_privd_required_banner">Megingiard System Service is required to create, edit, test, and execute macros. Please activate the System Service in Settings.</string>
     <string name="macropad_editor_delete_profile">Delete Profile</string>
     <string name="macropad_editor_delete_layout">Delete Layout</string>
     <string name="macropad_editor_cancel">Cancel</string>
@@ -253,15 +253,15 @@ Open Settings to create a layout.</string>
     <string name="settings_gamepad_swap_face_buttons">Swap face button labels (A/B and X/Y)</string>
     <string name="settings_gamepad_swap_face_buttons_desc">Display Nintendo-style labels in the gamepad picker (A↔B and X↔Y). Injected keycodes remain unchanged.</string>
 
-    <!-- Privileged Mode -->
-    <string name="privd_title">Privileged Mode</string>
+    <!-- Megingiard System Service -->
+    <string name="privd_title">Megingiard System Service</string>
     <string name="privd_status_off">Off</string>
     <string name="privd_status_running_version">ON (V%1$d)</string>
     <string name="privd_status_connecting">Connecting…</string>
     <string name="accessibility_status_active">Active</string>
     <string name="privd_action_retry">Retry Auto Setup</string>
     <string name="privd_toast_accessibility_required">Accessibility Service is required for auto-toggle. Please enable it in Settings.</string>
-    <string name="privd_toast_all_set">You’re all set! Privileged Mode is ready.</string>
+    <string name="privd_toast_all_set">You’re all set! Megingiard System Service is ready.</string>
 
     <string name="privd_deadzone_title">Configure dead zones</string>
     <string name="privd_deadzone_left">Left stick</string>
@@ -278,7 +278,7 @@ Open Settings to create a layout.</string>
     <string name="privd_recording_physical_stop">Stop &amp; Save</string>
     <string name="privd_recording_physical_cancel">Cancel</string>
 
-    <!-- Privileged Mode — setup wizard -->
+    <!-- Megingiard System Service — setup wizard -->
     <string name="privd_wizard_next">Next</string>
     <string name="privd_wizard_back">Back</string>
     <string name="privd_wizard_close">Done</string>
@@ -311,22 +311,22 @@ Open Settings to create a layout.</string>
     <string name="privd_wizard_field_pair_port">Pairing port (5 digits under \"Pair device\")</string>
     <string name="privd_wizard_step2_pair">Pair</string>
 
-    <string name="privd_wizard_step4_done">Privileged Mode is set up. Future app starts will reconnect automatically.</string>
+    <string name="privd_wizard_step4_done">Megingiard System Service is set up. Future app starts will reconnect automatically.</string>
 
     <string name="privd_wizard_checklist_adb">ADB connection</string>
-    <string name="privd_wizard_checklist_push">Pushing daemon binary</string>
-    <string name="privd_wizard_checklist_spawn">Starting daemon</string>
+    <string name="privd_wizard_checklist_push">Deploying system service</string>
+    <string name="privd_wizard_checklist_spawn">Starting system service</string>
     <string name="privd_wizard_checklist_verify">Verifying connection</string>
 
-    <string name="privd_error_daemon_unreachable">Daemon is not reachable. Run the setup wizard.</string>
+    <string name="privd_error_daemon_unreachable">System service is not reachable. Run the setup wizard.</string>
     <string name="privd_error_pairing_failed">Pairing failed. Verify the address, port, and 6-digit code from the system pairing dialog.</string>
     <string name="privd_error_adb_discovery_failed">Could not discover the ADB Wireless-Debugging endpoint via mDNS. Make sure Wireless Debugging is enabled.</string>
     <string name="privd_error_adb_connect_failed">Could not connect to ADB. Try re-pairing if you previously revoked the pairing.</string>
     <string name="privd_error_adb_pairing_required">ADB pairing is required. Please forget "Megingiard" in Wireless Debugging settings and re-pair.</string>
-    <string name="privd_error_bootstrap_push_failed">Failed to push the daemon binary. Check available storage in /data/local/tmp.</string>
-    <string name="privd_error_bootstrap_spawn_failed">Failed to start the daemon process.</string>
-    <string name="privd_error_bootstrap_provision_failed">Failed to provision the authentication key. Re-run the setup wizard.</string>
-    <string name="privd_error_version_mismatch">Daemon version mismatch. Tap Auto Setup or Connect to update the daemon.</string>
+    <string name="privd_error_bootstrap_push_failed">Failed to deploy system service files. Check available storage in /data/local/tmp.</string>
+    <string name="privd_error_bootstrap_spawn_failed">Failed to start the system service process.</string>
+    <string name="privd_error_bootstrap_provision_failed">Failed to provision service security key. Re-run the setup wizard.</string>
+    <string name="privd_error_version_mismatch">System service version mismatch. Tap Auto Setup or Connect to update the service.</string>
     <string name="settings_jump_general">General</string>
     <string name="settings_jump_appearance">Appearance</string>
     <string name="settings_jump_config">Share &amp; Backup</string>
@@ -838,7 +838,7 @@ Open Settings to create a layout.</string>
     <string name="help_settings_export_profile_desc">Saves a single profile to a file to share layout and macros with other players without exposing your entire app configuration.</string>
     <string name="help_settings_import_profile_desc">Imports a profile shared by another user from a .mgrd file and adds it alongside your existing profiles without overwriting your global settings.</string>
     <string name="help_settings_add_to_obtainium_desc">Opens Obtainium (if installed) with the pre-filled Megingiard repository link. If Obtainium is not installed, it opens the Obtainium GitHub releases page in the browser.</string>
-    <string name="help_settings_privd_desc">Establishes a background helper connection via Wireless Debugging to write to system input devices not accessible by regular apps. This enables:\n\n• Gamepad Merge: Combines virtual and physical gamepads so games see only one controller (improving compatibility).\n• Physical Gamepad Recording: Record macro inputs from your physical controller.\n• Privileged Screen Mirroring: Starts mirroring without prompting for screen capture permissions on every run.\n• Screenshots: Save screenshots of the primary screen directly from the Quick Menu overlay without screen mirroring being active.</string>
+    <string name="help_settings_privd_desc">Establishes a background system connection (via the native Thor hardware bridge or Wireless Debugging) to access system input devices not reachable by regular apps. This enables:\n\n• Gamepad Merge: Combines virtual and physical gamepads so games see only one controller (improving compatibility).\n• Physical Gamepad Recording: Record macro inputs from your physical controller.\n• Direct Screen Mirroring: Starts mirroring without prompting for screen capture permissions on every run.\n• Screenshots: Save screenshots of the primary screen directly from the Quick Menu overlay without screen mirroring being active.</string>
     <string name="help_settings_deadzone_desc">Ensures analog stick recordings don\'t capture drift or noise. Match these percentages with the dead zone settings in the Thor system settings for best accuracy.</string>
     <string name="help_settings_log_level_desc">Leave at Warn or Info for normal gameplay. Set to Debug or Verbose only when reproducing an issue to gather detailed logs for a bug report.</string>
     <string name="help_settings_save_log_desc">Exports the latest system logs. Generate this immediately after experiencing a bug or crash to attach it to a GitHub issue or developer report.</string>
@@ -855,7 +855,7 @@ Open Settings to create a layout.</string>
     <string name="help_quickmenu_freeze_desc">Freezes the mirrored image so it shows a still frame instead of the live feed. Useful for pausing a game scene while you read it carefully.</string>
     <string name="help_quickmenu_viewport_desc">Opens the Cutout Layout Editor on the secondary screen so you can resize, move, or add transparent cutout windows in the mirror overlay.</string>
     <string name="help_quickmenu_screenshot_top_label">Top Screen Screenshot</string>
-    <string name="help_quickmenu_screenshot_top_desc">Takes a screenshot of the top screen. If mirroring is not active, this requires Privileged Mode to be connected.</string>
+    <string name="help_quickmenu_screenshot_top_desc">Takes a screenshot of the top screen. If mirroring is not active, this requires Megingiard System Service to be connected.</string>
     <string name="help_quickmenu_screenshot_bottom_label">Bottom Screen Screenshot</string>
     <string name="help_quickmenu_screenshot_bottom_desc">Takes a clean screenshot of the bottom screen layout.</string>
     <string name="help_quickmenu_screenshot_both_label">Dual Screen Screenshot</string>
@@ -868,7 +868,7 @@ Open Settings to create a layout.</string>
     <string name="help_quickmenu_view_switch_label">Switch to Hub / Game Profile</string>
     <string name="help_quickmenu_view_switch_desc">Switches manually between the Companion Hub dashboard and the active Game Profile layout (deactivates Auto Switch).</string>
     <string name="help_quickmenu_edit_desc">Opens the Edit Profile/Layout screen where you can add, move, and configure buttons, manage profiles and layouts, and create or edit macros.</string>
-    <string name="help_quickmenu_settings_desc">Opens the Global Settings screen for app-wide configuration such as theme, accent color, mirror auto-start, and Privileged Mode setup.</string>
+    <string name="help_quickmenu_settings_desc">Opens the Global Settings screen for app-wide configuration such as theme, accent color, mirror auto-start, and Megingiard System Service setup.</string>
     <string name="help_quickmenu_shut_off_label">Shut Off App</string>
     <string name="help_quickmenu_shut_off_desc">Gracefully closes Megingiard, stopping screen mirroring and background services.</string>
     <string name="help_quickmenu_help_label">Help (this screen)</string>
@@ -883,7 +883,7 @@ Open Settings to create a layout.</string>
     <string name="help_companion_hub_hero_link_desc">Links a custom MacroPad control profile or creates a new dedicated profile for the currently active or selected game.</string>
     <string name="help_companion_hub_sec_tools">Companion Tools</string>
     <string name="help_companion_hub_macropad_desc">Quick shortcut to open the active MacroPad touch control surface.</string>
-    <string name="help_companion_hub_settings_desc">Access app-wide settings including theme colors, privileged daemon state, input deadzones, and configuration backups.</string>
+    <string name="help_companion_hub_settings_desc">Access app-wide settings including theme colors, system service status, input deadzones, and configuration backups.</string>
     <string name="help_companion_hub_keyboard_desc">Toggle the full-screen virtual touch keyboard overlay for text input.</string>
     <string name="help_companion_hub_touchpad_desc">Toggle the full-screen virtual touchpad for precision mouse and touch cursor control.</string>
 
@@ -907,30 +907,30 @@ Open Settings to create a layout.</string>
     <string name="onboarding_theme_prev">Previous Theme</string>
     <string name="onboarding_theme_next">Next Theme</string>
     <string name="onboarding_accessibility_title">Accessibility Service</string>
-    <string name="onboarding_accessibility_desc">Accessibility Service is mandatory for Megingiard. It is necessary for core features like automatic macro profile switching when launching games and setting up Privileged Mode, as well as upcoming features.</string>
-    <string name="onboarding_privd_title">Privileged Mode (recommended!)</string>
-    <string name="onboarding_privd_desc">Unlocks low-latency direct touch injection, trackpoint precision, and physical gamepad recording without root or PC connection. You can use Auto Setup for a one-tap automated configuration.</string>
+    <string name="onboarding_accessibility_desc">Accessibility Service is mandatory for Megingiard. It is necessary for core features like automatic macro profile switching when launching games and setting up the Megingiard System Service, as well as upcoming features.</string>
+    <string name="onboarding_privd_title">Megingiard System Service (recommended!)</string>
+    <string name="onboarding_privd_desc">Unlocks low-latency direct touch injection, trackpoint precision, and physical gamepad recording without PC connection. You can use Auto Setup for a one-tap automated configuration.</string>
     <string name="onboarding_privd_auto_setup">Start Auto Setup</string>
-    <string name="privd_reconnect_title">Reconnect Privileged Mode</string>
-    <string name="privd_reconnect_desc">Privileged Mode was disconnected, for example because of a device reboot or because Wireless Debugging was deactivated.</string>
+    <string name="privd_reconnect_title">Reconnect Megingiard System Service</string>
+    <string name="privd_reconnect_desc">Megingiard System Service was disconnected, for example because of a device reboot or because Wireless Debugging was deactivated.</string>
     <string name="privd_reconnect_auto_button">Auto Reconnect</string>
     <string name="privd_reconnect_all_set">You\'re All Set!</string>
     <string name="privd_reconnect_btn_close">Close</string>
     <string name="onboarding_privd_stage_dev">Developer Options</string>
     <string name="onboarding_privd_stage_wireless">Wireless Debugging</string>
     <string name="onboarding_privd_stage_pairing">ADB Wireless Pairing</string>
-    <string name="onboarding_privd_stage_daemon">Daemon Connection</string>
+    <string name="onboarding_privd_stage_daemon">System Service Connection</string>
     <string name="onboarding_privd_wifi_warning">Wi-Fi is turned off. Wi-Fi must be enabled on your device to make Wireless Debugging possible.</string>
     <string name="onboarding_privd_unsupported_lang_warning">The current system language (%1$s) is not supported for Auto Setup yet. Please request your language to be supported!</string>
-    <string name="onboarding_privd_manual_title">Set up privileged mode manually</string>
+    <string name="onboarding_privd_manual_title">Set up system service manually</string>
     <string name="onboarding_privd_manual_step_1">1. Skip this step for now by proceeding to the next step.</string>
-    <string name="onboarding_privd_manual_step_2">2. Open Global Settings → Privileged Mode.</string>
-    <string name="onboarding_privd_manual_step_3">3. Follow the manual pairing instructions there to activate Privileged Mode.</string>
-    <string name="onboarding_privd_root_bridge_title">Privileged Mode (Root Bridge Detected)</string>
-    <string name="onboarding_privd_root_bridge_desc">The AYN Thor hardware root bridge is ready. Activate Privileged Mode for single-controller evdev merge and direct display mirroring.</string>
-    <string name="onboarding_privd_activate_btn">Activate Privileged Mode</string>
-    <string name="onboarding_privd_activating">Connecting to daemon…</string>
-    <string name="onboarding_privd_daemon_row_label">Privileged Helper Daemon</string>
+    <string name="onboarding_privd_manual_step_2">2. Open Global Settings → Megingiard System Service.</string>
+    <string name="onboarding_privd_manual_step_3">3. Follow the manual pairing instructions there to activate the System Service.</string>
+    <string name="onboarding_privd_root_bridge_title">Megingiard System Service (Hardware Bridge Detected)</string>
+    <string name="onboarding_privd_root_bridge_desc">The AYN Thor hardware root bridge is ready. Activate the System Service for single-controller gamepad merge and direct display mirroring.</string>
+    <string name="onboarding_privd_activate_btn">Activate System Service</string>
+    <string name="onboarding_privd_activating">Connecting to system service…</string>
+    <string name="onboarding_privd_daemon_row_label">Megingiard System Service</string>
     <string name="onboarding_accessibility_activate_btn">Activate Accessibility</string>
     <string name="onboarding_accessibility_activating">Activating service…</string>
     <string name="onboarding_finished_title">You\'re All Set! Ready to Tinker?</string>

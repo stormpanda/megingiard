@@ -101,7 +101,7 @@ To onboard new users, the app runs a 5-step **Onboarding Welcome Tour Wizard** m
    - **Step 2 (Edge Gestures):** Explains edge swipe gestures with interactive trial drag pills, static edge labels, checkmark completion animations, and a live top/bottom position toggle switch.
    - **Step 3 (Theme):** Allows selecting a visual theme for the app with a live preview.
    - **Step 4 (Accessibility Service):** Offers launching Android Accessibility Settings on the bottom screen (`Display.DEFAULT_DISPLAY`) to activate the accessibility service with a 1s polling loop and live status indicator dot, plus a secondary **Skip** button.
-   - **Step 5 (Privileged Mode):** Provides a one-tap multi-stage automated setup process for Developer Options, Wireless Debugging, ADB Wireless Pairing, and Daemon Connection with live checklist status icons, plus a secondary **Skip** button.
+   - **Step 5 (Megingiard System Service):** Provides a one-tap automated setup process (via native hardware root bridge or multi-stage Wireless Debugging) for Developer Options, Wireless Debugging, ADB Wireless Pairing, and System Service Connection with live checklist status icons, plus a secondary **Skip** button.
    - **Step 6 (Finished):** Confirms tour completion with a completion icon, summary text, and an explicit **Finish Tour** button.
 
 2. **Tour Versioning & Completion Persistence:**
