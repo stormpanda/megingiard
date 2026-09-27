@@ -259,9 +259,9 @@ Privileged Mode is an **opt-in feature** that unlocks advanced features that the
 
 ### What it is (Technical Details)
 
-Megingiard packages a lightweight, native on-device helper daemon (`megingiard_privd`) inside the APK. When you activate Privileged Mode, the in-app setup wizard leverages Android's built-in **Wireless Debugging** facility (available since Android 11) to deploy the daemon to `/data/local/tmp` and run it under the **shell user** (UID 2000) — the same security domain used by an `adb shell` session. The app then establishes a secure local TCP loopback connection (`127.0.0.1:51234–51238`) to communicate with the daemon, bypassing restrictive SELinux domain policies.
+Megingiard packages a lightweight, native on-device helper daemon (`megingiard_privd`) inside the APK. When you activate Privileged Mode on the AYN Thor, Megingiard utilizes the device's native hardware root bridge (`PServerBinder`) for instant, 1-tap daemon setup and seamless background execution. On other devices or as a fallback, it leverages Android's built-in **Wireless Debugging** facility (available since Android 11) to deploy the daemon to `/data/local/tmp` and run it under the **shell user** (UID 2000) — the same security domain used by an `adb shell` session. The app then establishes a secure local TCP loopback connection (`127.0.0.1:51234–51238`) to communicate with the daemon, bypassing restrictive SELinux domain policies.
 
-This architecture requires **no root, no USB cables, no PC, and no external servers**. The entire bootstrap runs completely on the device itself through the wizard in Global Settings.
+This architecture requires **no USB cables, no PC, and no external servers**. The entire bootstrap runs completely on the device itself through the wizard or 1-tap activation in Global Settings.
 
 ### What it unlocks
 
@@ -278,10 +278,10 @@ The standard Android application sandbox (running in the `untrusted_app` SELinux
 
 ### Convenience Benefits
 
-- **Auto-Connect:** Once configured, Megingiard silently reconnects to the local daemon on cold starts. No manual pairing or re-pairing is needed.
+- **Auto-Connect:** Once configured, Megingiard silently reconnects to the local daemon on cold starts. On the AYN Thor, the native root bridge automatically respawns the daemon after a device reboot without any user interaction or manual re-pairing.
 - **Automatic Feature Promotion:** When Privileged Mode is running, all supported capabilities (Gamepad Merge, Controller Recording, Privileged Mirroring, Quick Screenshots) activate automatically without tedious per-feature configuration. If disconnected, features seamlessly fall back to sandbox equivalents.
-- **1-Tap Auto-Setup:** Integrates with the Accessibility Service to automatically unlock Developer Mode, enable USB/Wireless Debugging, and extract/pair credentials in seconds without manual port typing.
-- **⚠️ Daemon Lifespan:** The daemon will **not** survive a device reboot because Android clears `/data/local/tmp` on startup. Sideloaded daemons cannot autostart on boot without root. Simply re-run Auto Setup (takes ~5–10 seconds) after booting.
+- **1-Tap Auto-Setup:** Integrates with the native Thor root bridge for instantaneous activation, or with the Accessibility Service to automatically unlock Developer Mode, enable USB/Wireless Debugging, and extract/pair credentials in seconds without manual port typing.
+- **Reboot Behavior:** While background processes (including `megingiard_privd`) terminate when the device shuts down, files in `/data/local/tmp` remain permanently intact on flash storage across reboots. On the AYN Thor, Megingiard automatically restarts the daemon in the background via the native root bridge upon cold start. When using the ADB fallback, simply tap Auto Reconnect (or re-run Auto Setup in ~5–10 seconds) if Wireless Debugging was reset.
 
 ### Security and Trust
 
@@ -359,7 +359,7 @@ Ensure the output matches the checksum in the `.txt` file exactly before sideloa
 
 **Privileged Mode shows "OFF" after I rebooted my Thor.**
 
-> This is expected. Android wipes `/data/local/tmp` on reboots. Sideloaded daemons cannot autostart on boot without root. Simply re-run Auto Setup (takes ~5–10 seconds).
+> When the device shuts down, active background processes (including `megingiard_privd`) are terminated by Android (note that files in `/data/local/tmp` remain permanently intact on flash storage, but RAM processes terminate). On the AYN Thor, Megingiard automatically respawns the daemon in the background via the native root bridge upon cold start. If relying on the ADB fallback and Wireless Debugging was reset or assigned a new dynamic port during boot, simply tap **Auto Reconnect** or re-run Auto Setup (~5–10 seconds).
 
 **My game sees two controllers when using the MacroPad.**
 

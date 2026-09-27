@@ -214,7 +214,7 @@ Key pair generation uses `SecureRandom()` (not a named algorithm) for the
 RSA key-pair initializer, and `SecureRandom().nextInt() and Int.MAX_VALUE`
 for the X.509 serial number, ensuring a cryptographically-strong positive value.
 
-The daemon binary in `/data/local/tmp` survives until reboot; thereafter, the next start of the app (or auto-connect invocation) replays the push/spawn step in the background if the user previously completed the setup wizard.
+The daemon binary and associated key/DEX files deployed to `/data/local/tmp` remain permanently intact on flash storage across reboots; however, the running daemon process terminates upon system shutdown. On the next cold start of the app (or auto-connect invocation), Megingiard automatically restarts the daemon in the background (via the Tier-1 hardware root bridge if available, or Tier-2 ADB auto-connect using saved credentials).
 
 ### Auto-Connect Hook
 
