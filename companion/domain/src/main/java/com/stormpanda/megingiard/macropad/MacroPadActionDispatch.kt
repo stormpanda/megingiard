@@ -5,7 +5,6 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
-import com.stormpanda.megingiard.privd.PrivdClient
 
 // MacroPadState and MacroExecutor are in the same package — no import needed.
 
@@ -48,10 +47,8 @@ fun injectActionDown(action: PadAction) {
             if (macro != null) {
                 if (running) {
                     MacroExecutor.stop(action.macroId)
-                } else if (PrivdClient.isConnected) {
-                    MacroExecutor.execute(macro)
                 } else {
-                    AppLog.w(TAG, "Cannot execute macro '${macro.name}': Privileged Mode is not connected")
+                    MacroExecutor.execute(macro)
                 }
             }
         }

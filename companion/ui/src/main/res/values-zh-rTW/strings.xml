@@ -123,6 +123,7 @@ Open Settings to create a layout.</string>
     <!-- Keyboard trackpoint mouse button position setting -->
     <string name="macropad_device_disabled_mouse">此配置已停用滑鼠</string>
     <string name="macropad_device_disabled_touch">此配置已停用觸控</string>
+    <string name="macropad_device_disabled_gamepad">此配置已停用手把</string>
     <string name="macropad_device_disabled_macro_privd">巨集需要 Megingiard 系統服務。請在設定中啟用系統服務。</string>
     <string name="macropad_device_disabled_gamepad_privd">手把按鍵需要 Megingiard 系統服務。請在設定中啟用系統服務。</string>
     <string name="macropad_macro_privd_required_banner">建立、編輯、測試及執行巨集需要 Megingiard 系統服務。請在設定中啟用系統服務。</string>
@@ -255,8 +256,14 @@ Open Settings to create a layout.</string>
 
     <!-- Privileged Mode -->
     <string name="privd_title">Megingiard 系統服務</string>
-    <string name="privd_status_off">關閉</string>
-    <string name="privd_status_running_version">開 (V%1$d)</string>
+    <string name="privd_status_off">已斷線</string>
+    <string name="privd_status_running_version">已啟用 (v%1$d)</string>
+    <string name="privd_status_connecting">連線中…</string>
+    <string name="privd_restart_service">重新啟動系統服務</string>
+    <string name="privd_restart_service_desc">重新連線並驗證背景服務</string>
+    <string name="privd_rerun_wizard">重新執行設定精靈</string>
+    <string name="privd_rerun_wizard_desc">啟動無線除錯配對與引導精靈</string>
+    <string name="btn_exit_app">結束應用程式</string>
     <string name="accessibility_status_active">已啟用</string>
     <string name="privd_action_retry">重試自動設定</string>
     <string name="privd_toast_accessibility_required">自動切換需要無障礙服務，請先在系統設定中啟用。</string>

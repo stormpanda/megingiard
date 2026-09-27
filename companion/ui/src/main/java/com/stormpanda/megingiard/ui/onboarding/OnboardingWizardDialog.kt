@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.ui.onboarding
 
+import android.app.Activity
 import android.app.ActivityOptions
 import android.app.LocaleManager
 import android.content.Intent
@@ -296,6 +297,8 @@ fun OnboardingWizardDialog(
     BackHandler(enabled = true) {
         if (!isFirstStep) {
             OnboardingWizardManager.prevStep()
+        } else {
+            (context as? Activity)?.finishAndRemoveTask()
         }
     }
 
@@ -411,27 +414,20 @@ fun OnboardingWizardDialog(
                         )
                     }
                 } else {
-                    Spacer(modifier = Modifier.weight(1f))
+                    OutlinedButton(
+                        onClick = { (context as? Activity)?.finishAndRemoveTask() },
+                    ) {
+                        Text(
+                            text = stringResource(R.string.btn_exit_app),
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                    }
                 }
 
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (currentStepState.id == OnboardingStepId.PRIVILEGED) {
-                        OutlinedButton(
-                            onClick = {
-                                AppStateManager.setPrivdPromptDismissed(true)
-                                OnboardingWizardManager.nextStep()
-                            },
-                        ) {
-                            Text(
-                                text = stringResource(R.string.onboarding_btn_skip),
-                                style = MaterialTheme.typography.labelLarge,
-                            )
-                        }
-                    }
-
                     val isNextEnabled =
                         when (currentStepState.id) {
                             OnboardingStepId.ACCESSIBILITY -> {

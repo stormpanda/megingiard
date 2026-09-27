@@ -559,12 +559,8 @@ fun MainAppScreen() {
             )
         }
 
-        if (showPromptDialog && !isWizardActive) {
+        if (showPromptDialog && !isWizardActive && !isPrivdSetupWizardActive) {
             PrivdReconnectPromptDialog(
-                onSkip = {
-                    syncAccessibilityState(context)
-                    AppStateManager.setPrivdPromptDismissed(true)
-                },
                 onDone = {
                     syncAccessibilityState(context)
                     AppStateManager.setPrivdPromptDismissed(true)

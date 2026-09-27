@@ -38,7 +38,7 @@ Given its hardware-specific approach and advanced features, this project is exte
 - **[Requirements](docs/REQUIREMENTS.md):** Functional capabilities and the design constraints under which the app was engineered.
 - **[Technical Architecture](docs/ARCHITECTURE.md):** A detailed deep dive into the implementation approaches, focusing specifically on bypassing DRM blocks, rendering Jetpack Compose over native system dialogs (Presentations), and hardware-backed frame freezing.
 - **[Security Concept](SECURITY_CONCEPT.md):** Threat model, hardening layers, Megingiard System Service authentication, native binary integrity checks, and release configuration requirements.
-- **[Native Build Guide](docs/BUILD_NATIVE.md):** Build setup and protocol specifications for native C binaries (`megingiard_privd`, `keyinjector`, `mouseinjector`, `touchinjector`).
+- **[Native Build Guide](docs/BUILD_NATIVE.md):** Build setup and protocol specifications for native C binaries (`megingiard_privd`) and mirror server DEX.
 - **[Gamepad Navigation Guide](docs/GAMEPAD_NAVIGATION.md):** Gamepad focus traversal, overlays, and 2D controller navigation architecture.
 - **[Agent Guidelines](AGENTS.md):** Coding conventions, patterns, and constraints for AI coding agents working on this project.
 - **[Contributing Guidelines](CONTRIBUTING.md):** Architectural rules, styling conventions, and licensing compliance instructions for human contributors.

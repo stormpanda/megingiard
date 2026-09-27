@@ -4,8 +4,8 @@
 > - `:companion:ui` module: `companion/ui/src/main/java/com/stormpanda/megingiard/keyboard/` (UI Composables), `companion/ui/src/main/java/com/stormpanda/megingiard/viewmodel/KeyboardViewModel.kt` (ViewModel)
 > - `:companion:domain` module: `companion/domain/src/main/java/com/stormpanda/megingiard/keyboard/` (Key repeat + state logic + facades), `companion/domain/src/main/java/com/stormpanda/megingiard/settings/KeyboardSettings.kt` (Settings facade), `companion/domain/src/main/java/com/stormpanda/megingiard/input/` (Shared mouse injection infrastructure)
 > - `:shared:core` module: `shared/core/src/main/kotlin/com/stormpanda/megingiard/keyboard/` (Layout structures + keycode constants)
-> **Native source:** `companion/ui/src/main/cpp/keyinjector.c` (Virtual keyboard), `companion/ui/src/main/cpp/mouseinjector.c` (Virtual mouse/trackpoint)
-> **Binary assets:** `companion/ui/src/main/assets/keyinjector_arm64`, `companion/ui/src/main/assets/mouseinjector_arm64`
+> **Native source:** `companion/ui/src/main/cpp/megingiard_privd.c` (Megingiard System Service)
+> **Binary assets:** `companion/ui/src/main/assets/megingiard_privd_arm64`
 > **Build instructions:** [BUILD_NATIVE.md](../../BUILD_NATIVE.md)
 
 ---
@@ -146,32 +146,29 @@ Compose UI (KeyboardScreen)
       ▼
 KeyboardState         ← modifier state machine (one StateFlow<ModifierState> per modifier key)
       │  activeModifierKeycodes()
-      ▼
 KeyInjector           ← public facade: start(), stop(), keyDown(keycode), keyUp(keycode)
-      │  KD / KU commands via stdin
+      │
       ▼
-ShellKeyInjector      ← native binary lifecycle + LinkedBlockingQueue writer thread
-      │  stdin pipe
+PrivdClient           ← Megingiard System Service socket client
+      │  "KEY <action> <keycode>\n" / abstract Unix domain socket
       ▼
-keyinjector_arm64     ← native process
+megingiard_privd      ← background shell-UID daemon process
       │  ioctl / write()
       ▼
 /dev/uinput           ← Linux virtual input device
 ```
 
-Trackpoint movement is delegated to `MouseInjector` from the shared `input/` package, which drives `ShellMouseInjector` → `mouseinjector_arm64` for relative cursor movement. The virtual mouse button overlay (LMB / MMB / RMB / M4 / M5 / scroll wheel) also calls `MouseInjector` directly.
+Trackpoint movement is delegated to `MouseInjector` from the shared `input/` package, which routes mouse events directly to `PrivdClient` (`MOUSE BUTTON` and `MOUSE MOVE`), injecting into `/dev/uinput` via `megingiard_privd`. The virtual mouse button overlay (LMB / MMB / RMB / M4 / M5 / scroll wheel) also calls `MouseInjector` directly.
 
-### Native Binary: Deployment & Lifecycle
+### Megingiard System Service Integration
 
-The pre-built `keyinjector_arm64` binary is bundled in `companion/ui/src/main/assets/`. On `ShellKeyInjector.start()`:
+Virtual keyboard keystrokes and relative mouse cursor movements route through the privileged `megingiard_privd` daemon:
 
-1. Copy binary from `assets/` to `context.filesDir` (app-private directory).
-2. Call `setExecutable(true)` — the files directory has the execute bit disabled by default.
-3. Launch via `ProcessBuilder(binary.absolutePath)`.
+1. `KeyInjector` formats commands as `KEY <action> <keycode>` (where action is `DOWN` or `UP`).
+2. Commands are queued and transmitted over the daemon's abstract Unix domain socket connection via `PrivdClient`.
+3. The daemon writes the `EV_KEY` and `EV_SYN` events directly into the kernel's `/dev/uinput` virtual keyboard node under shell UID.
 
-The binary signals readiness by writing `"R\n"` to stdout. `start()` blocks waiting for this signal with a 5-second timeout; startup fails if the signal does not arrive or the process exits prematurely.
-
-The binary opens `/dev/uinput` using the standard `uinput` protocol (register a virtual keyboard device, then inject `EV_KEY` events). Injector start and stop lifecycle is centrally managed by `InjectorLifecycleManager`, which maintains active `KeyInjector`, `MouseInjector`, and `TouchInjector` instances whenever Megingiard is in the foreground (`AppStateManager.isActivityResumed`), stopping them when backgrounded (`onStop`) or during active software keyboard input in the Privileged Mode setup wizard (`AppStateManager.isPrivdSetupWizardActive`) so that Android's software IME can operate without hardware keyboard conflicts.
+Injector start and stop lifecycle is centrally managed by `InjectorLifecycleManager`, which maintains active `KeyInjector`, `MouseInjector`, and `TouchInjector` instances whenever Megingiard is in the foreground (`AppStateManager.isActivityResumed`), stopping them when backgrounded (`onStop`) or during active software keyboard input in the Privileged Mode setup wizard (`AppStateManager.isPrivdSetupWizardActive`) so that Android's software IME can operate without hardware keyboard conflicts.
 
 ```kotlin
 InjectorLifecycleManager.watch(context)
@@ -188,17 +185,17 @@ Commands are sent as newline-terminated ASCII strings to the binary's stdin:
 
 `<keycode>` is an integer from `LinuxKeycodes.kt`, which maps directly to the constants in Linux `input-event-codes.h` (e.g. `KEY_A = 30`, `KEY_LEFTSHIFT = 42`).
 
-### Writer Thread
+### Writer Thread & Socket Dispatch
 
-`ShellKeyInjector` maintains a `LinkedBlockingQueue<KeyCommand>` drained by a dedicated daemon thread:
+`KeyInjector` routes commands directly to `PrivdClient`, where an asynchronous queue is drained by a background worker thread:
 
 ```
 loop:
   command = queue.take()    // blocks until an event is available
-  write command to binary stdin
+  write command to abstract domain socket
 ```
 
-Unlike the touch injection writer thread, **no coalescing is applied** — every key-down and key-up must be delivered in order. Dropping intermediate events would result in stuck keys or missing characters.
+Unlike touch movement, **no coalescing is applied** — every key-down and key-up must be delivered in order. Dropping intermediate events would result in stuck keys or missing characters.
 
 ### Layout System
 
@@ -261,7 +258,7 @@ The trackpoint key renders as an accent-colored `●` in the home row. When the 
 
 1. Delta movement (in Compose pixels) is scaled by a sensitivity factor (`KB_TRACKPOINT_MOUSE_SENSITIVITY`).
 2. The relative pixel change is passed directly to `MouseInjector.moveMouse(dx, dy)`.
-3. `MouseInjector` forwards the relative move command (`MM <dx> <dy>`) to the native `mouseinjector_arm64` binary which controls the relative cursor on the primary screen.
+3. `MouseInjector` forwards the relative move command (`MM <dx> <dy>`) via `PrivdClient` to the Megingiard System Service which controls the relative cursor on the primary screen.
 
 ### Overlay Blocking
 
@@ -294,18 +291,14 @@ When a full-screen UI overlay is visible:
 | **`:companion:domain`** | [AutoKeyboardFocusCoordinator.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/keyboard/AutoKeyboardFocusCoordinator.kt) | Coordinates auto-open/close on text focus and manual dismiss hysteresis |
 | **`:companion:domain`** | [KeyboardState.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/keyboard/KeyboardState.kt) | Modifier key state machine (INACTIVE / STICKY / HELD) per modifier key |
 | **`:companion:domain`** | [KeyRepeatController.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/keyboard/KeyRepeatController.kt) | Coordinated timing: repeat triggers, modifier holds, pointer maps, and trackpoint relative movement |
-| **`:companion:domain`** | [KeyInjector.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/keyboard/KeyInjector.kt) | Public business logic facade for keyboard event injection |
-| **`:companion:domain`** | [ShellKeyInjector.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/keyboard/ShellKeyInjector.kt) | Native binary deployment and `LinkedBlockingQueue` writer thread sending `KD/KU` to stdin |
+| **`:companion:domain`** | [KeyInjector.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/keyboard/KeyInjector.kt) | Public business logic facade for keyboard event injection routing to `PrivdClient` |
 | **`:companion:domain`** | [KeyboardSettings.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/settings/KeyboardSettings.kt) | Persistence bridge: synchronizes key, trackpoint, repeat, and overlay position defaults to/from DataStore |
-| **`:companion:domain`** | [MouseInjector.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/input/MouseInjector.kt) | Public business logic facade for mouse clicks and relative pointer movements |
-| **`:companion:domain`** | [ShellMouseInjector.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/input/ShellMouseInjector.kt) | Native relative mouse binary deployment, move coalescing, and writer thread sending `MB/MM/MW` |
+| **`:companion:domain`** | [MouseInjector.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/input/MouseInjector.kt) | Public business logic facade for mouse clicks and relative pointer movements routing to `PrivdClient` |
 | **`:shared:core`** | [KeyboardLayout.kt](../../../shared/core/src/main/kotlin/com/stormpanda/megingiard/keyboard/KeyboardLayout.kt) | `KeyDef` data class, layouts configurations (QWERTZ/QWERTY/AZERTY), and layout lookup utility |
 | **`:shared:core`** | [KeyAction.kt](../../../shared/core/src/main/kotlin/com/stormpanda/megingiard/keyboard/KeyAction.kt) | Shared keyboard action `DOWN / UP` enum |
 | **`:shared:core`** | [LinuxKeycodes.kt](../../../shared/core/src/main/kotlin/com/stormpanda/megingiard/keyboard/LinuxKeycodes.kt) | Linux `input-event-codes.h` KEY_* code maps (all keys used are <= 125) |
-| Native Source | `companion/ui/src/main/cpp/keyinjector.c` | C source for native keyboard input emulator device setup |
-| Native Source | `companion/ui/src/main/cpp/mouseinjector.c` | C source for native relative mouse emulator device setup |
-| Binary Asset | `companion/ui/src/main/assets/keyinjector_arm64` | Pre-built virtual keyboard injection executable |
-| Binary Asset | `companion/ui/src/main/assets/mouseinjector_arm64` | Pre-built virtual relative-mouse injection executable |
+| Native Source | `companion/ui/src/main/cpp/megingiard_privd.c` | Megingiard System Service daemon handling `/dev/uinput` keyboard and mouse devices |
+| Binary Asset | `companion/ui/src/main/assets/megingiard_privd_arm64` | Pre-built Megingiard System Service daemon executable |
 
 ### Secondary Display Rendering
 

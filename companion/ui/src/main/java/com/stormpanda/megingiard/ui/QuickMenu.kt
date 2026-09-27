@@ -56,8 +56,6 @@ import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenshotTarget
-import com.stormpanda.megingiard.privd.PrivdClient
-import com.stormpanda.megingiard.privd.PrivdConnectionState
 
 private const val TAG = "QuickMenu"
 
@@ -108,8 +106,6 @@ fun QuickMenu(
     val isFrozen by ScreenCaptureManager.isFrozen.collectAsStateWithLifecycle()
     val companionViewMode by AppStateManager.companionViewMode.collectAsStateWithLifecycle()
     val showIntegrationHome by AppStateManager.showIntegrationHome.collectAsStateWithLifecycle()
-    val privdState by PrivdClient.state.collectAsStateWithLifecycle()
-    val isPrivdConnected = privdState == PrivdConnectionState.CONNECTED
     var showQuickMenuHelp by remember { mutableStateOf(false) }
     var showShutOffConfirm by remember { mutableStateOf(false) }
     var autoShimmerTrigger by remember { mutableIntStateOf(0) }
@@ -137,9 +133,9 @@ fun QuickMenu(
                 colors = colors,
                 isCapturing = isCapturing,
                 isFrozen = isFrozen,
-                isTopScreenshotEnabled = isCapturing || isPrivdConnected,
+                isTopScreenshotEnabled = true,
                 isBottomScreenshotEnabled = true,
-                isBothScreenshotEnabled = isCapturing || isPrivdConnected,
+                isBothScreenshotEnabled = true,
                 isCompanionHub = showIntegrationHome,
                 modifier =
                     Modifier

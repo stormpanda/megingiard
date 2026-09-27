@@ -123,6 +123,7 @@ Open Settings to create a layout.</string>
     <!-- Keyboard trackpoint mouse button position setting -->
     <string name="macropad_device_disabled_mouse">Mouse has been disabled for this layout</string>
     <string name="macropad_device_disabled_touch">Touch has been disabled for this layout</string>
+    <string name="macropad_device_disabled_gamepad">Gamepad has been disabled for this layout</string>
     <string name="macropad_device_disabled_macro_privd">Macros require the Megingiard System Service. Please activate the System Service in Settings.</string>
     <string name="macropad_device_disabled_gamepad_privd">Gamepad buttons require the Megingiard System Service. Please activate the System Service in Settings.</string>
     <string name="macropad_macro_privd_required_banner">Megingiard System Service is required to create, edit, test, and execute macros. Please activate the System Service in Settings.</string>
@@ -255,9 +256,14 @@ Open Settings to create a layout.</string>
 
     <!-- Megingiard System Service -->
     <string name="privd_title">Megingiard System Service</string>
-    <string name="privd_status_off">Off</string>
-    <string name="privd_status_running_version">ON (V%1$d)</string>
+    <string name="privd_status_off">Disconnected</string>
+    <string name="privd_status_running_version">Active (v%1$d)</string>
     <string name="privd_status_connecting">Connecting…</string>
+    <string name="privd_restart_service">Restart System Service</string>
+    <string name="privd_restart_service_desc">Reconnect and verify the background service</string>
+    <string name="privd_rerun_wizard">Re-run Setup Wizard</string>
+    <string name="privd_rerun_wizard_desc">Launch the Wireless Debugging pairing and bootstrap wizard</string>
+    <string name="btn_exit_app">Exit App</string>
     <string name="accessibility_status_active">Active</string>
     <string name="privd_action_retry">Retry Auto Setup</string>
     <string name="privd_toast_accessibility_required">Accessibility Service is required for auto-toggle. Please enable it in Settings.</string>

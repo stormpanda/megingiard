@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.ui
 
+import android.app.Activity
 import android.app.ActivityOptions
 import android.content.Intent
 import android.os.SystemClock
@@ -95,10 +96,7 @@ private val PRD_BUTTON_SPACING = 8.dp
  * Consists of Privileged Mode Auto-Setup + All Set finish step (and optional Accessibility step if disabled).
  */
 @Composable
-fun PrivdReconnectPromptDialog(
-    onSkip: () -> Unit,
-    onDone: () -> Unit,
-) {
+fun PrivdReconnectPromptDialog(onDone: () -> Unit) {
     val context = LocalContext.current
     val colors = LocalAppColors.current
 
@@ -269,7 +267,7 @@ fun PrivdReconnectPromptDialog(
             isNextAnimation = false
             activeStepIndex = (activeStepIndex - 1).coerceAtLeast(0)
         } else {
-            onSkip()
+            (context as? Activity)?.finishAndRemoveTask()
         }
     }
 
@@ -281,7 +279,7 @@ fun PrivdReconnectPromptDialog(
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
-                    onClick = onSkip,
+                    onClick = {}, // Modal gatekeeper: absorb clicks
                 ),
         contentAlignment = Alignment.Center,
     ) {
@@ -403,23 +401,19 @@ fun PrivdReconnectPromptDialog(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Spacer(modifier = Modifier.weight(1f))
+                OutlinedButton(
+                    onClick = { (context as? Activity)?.finishAndRemoveTask() },
+                ) {
+                    Text(
+                        text = stringResource(R.string.btn_exit_app),
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
 
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(PRD_BUTTON_SPACING),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (currentStepState.id == OnboardingStepId.PRIVILEGED) {
-                        OutlinedButton(
-                            onClick = onSkip,
-                        ) {
-                            Text(
-                                text = stringResource(R.string.onboarding_btn_skip),
-                                style = MaterialTheme.typography.labelLarge,
-                            )
-                        }
-                    }
-
                     val isNextEnabled =
                         when (currentStepState.id) {
                             OnboardingStepId.ACCESSIBILITY -> {

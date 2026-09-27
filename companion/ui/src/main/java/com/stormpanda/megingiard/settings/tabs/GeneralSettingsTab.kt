@@ -2,8 +2,10 @@ package com.stormpanda.megingiard.settings.tabs
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
+import androidx.compose.material.icons.rounded.AutoFixHigh
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.PlayCircle
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material.icons.rounded.VisibilityOff
@@ -85,7 +87,7 @@ fun GeneralSettingsTab(
                         }
 
                         else -> {
-                            stringResource(R.string.gamepad_toggle_off)
+                            stringResource(R.string.privd_status_off)
                         }
                     },
                 isAccent = isPrivdRunning,
@@ -100,6 +102,21 @@ fun GeneralSettingsTab(
                 onOpenPrivdSetup()
             }
         },
+    )
+
+    GamepadActionCard(
+        title = stringResource(R.string.privd_restart_service),
+        description = stringResource(R.string.privd_restart_service_desc),
+        icon = Icons.Rounded.Refresh,
+        enabled = !isPrivdConnecting,
+        onClick = onConnectPrivd,
+    )
+
+    GamepadActionCard(
+        title = stringResource(R.string.privd_rerun_wizard),
+        description = stringResource(R.string.privd_rerun_wizard_desc),
+        icon = Icons.Rounded.AutoFixHigh,
+        onClick = onOpenPrivdSetup,
     )
 
     GamepadChoiceCard(

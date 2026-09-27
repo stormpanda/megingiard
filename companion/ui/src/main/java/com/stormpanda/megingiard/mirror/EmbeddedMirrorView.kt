@@ -57,7 +57,6 @@ fun EmbeddedMirrorView(
     val isMirrorEditorBackgroundHidden by AppStateManager.isMirrorEditorBackgroundHidden.collectAsStateWithLifecycle()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsStateWithLifecycle()
     val layout by MacroPadState.activeLayout.collectAsStateWithLifecycle()
-    val screenshotRequested by ScreenCaptureManager.screenshotRequested.collectAsStateWithLifecycle()
 
     val effectiveCutouts = overrideCutouts ?: cutouts
     val effectiveShowLayoutBackground = showLayoutBackground && !(isViewportEditActive && isMirrorEditorBackgroundHidden)
@@ -175,27 +174,6 @@ fun EmbeddedMirrorView(
                 }
             }
         }
-
-    // React to screenshot requests
-    LaunchedEffect(screenshotRequested) {
-        if (screenshotRequested) {
-            val target = ScreenCaptureManager.pendingScreenshotTarget.value ?: ScreenshotTarget.TOP
-            if (target == ScreenshotTarget.TOP && !PrivdClient.isConnected) {
-                val tv = containerHolder.textureView
-                if (tv != null && tv.width > 0 && tv.height > 0) {
-                    try {
-                        val bitmap = tv.bitmap
-                        if (bitmap != null) {
-                            ScreenCaptureManager.showScreenshotPreview(bitmap)
-                        }
-                    } catch (e: Exception) {
-                        AppLog.e(TAG, "Failed to capture TextureView bitmap for screenshot", e)
-                    }
-                }
-                ScreenCaptureManager.consumeScreenshotRequest()
-            }
-        }
-    }
 
     // React to freeze state changes
     LaunchedEffect(isFrozen) {

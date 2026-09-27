@@ -100,9 +100,6 @@
 > | Source file                           | Build script                                                             |
 > | ------------------------------------- | ------------------------------------------------------------------------ |
 > | `companion/ui/src/main/cpp/megingiard_privd.c` | `./scripts/build_megingiard_privd.sh`                                   |
-> | `companion/ui/src/main/cpp/touchinjector.c`    | `./scripts/build_touchinjector.sh`                                      |
-> | `companion/ui/src/main/cpp/keyinjector.c`      | `./scripts/build_keyinjector.sh`                                        |
-> | `companion/ui/src/main/cpp/mouseinjector.c`    | `./scripts/build_mouseinjector.sh`                                      |
 >
 > Run the script **before** proposing the commit message. If the build fails, fix the
 > source error before proceeding. The scripts must be run from the workspace root.

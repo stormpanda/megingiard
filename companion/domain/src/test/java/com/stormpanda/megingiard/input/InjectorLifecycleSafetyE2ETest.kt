@@ -29,12 +29,11 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
 /**
- * End-to-End integration test suite verifying injector lifecycle safety and backend routing:
+ * End-to-End integration test suite verifying injector lifecycle safety:
  *
  * 1. Multi-client reference counting and non-interfering start/stop lifecycle in [TouchInjector].
- * 2. Dynamic Privd daemon connection state transitions and automatic backend failover in [InjectorBackendRouter].
- * 3. Multi-finger gesture processing and touch-cancellation safety in [TouchpadGestureProcessor].
- * 4. Key repeat dispatch and gesture state cancellation safety in [KeyboardGestureProcessor] & [KeyRepeatController].
+ * 2. Multi-finger gesture processing and touch-cancellation safety in [TouchpadGestureProcessor].
+ * 3. Key repeat dispatch and gesture state cancellation safety in [KeyboardGestureProcessor] & [KeyRepeatController].
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -87,47 +86,6 @@ class InjectorLifecycleSafetyE2ETest {
         TouchInjector.stop("mirror_client")
         assertFalse("Expected TouchInjector stopped when all clients have released", TouchInjector.isRunning)
     }
-
-    @Test
-    fun testInjectorBackendRouterLifecycleAndDynamicReconnect() =
-        runTest(testDispatcher) {
-            var privdConnectedCount = 0
-            var privdDisconnectedCount = 0
-
-            val router =
-                InjectorBackendRouter(
-                    tag = "E2ETestRouter",
-                    dispatcher = testDispatcher,
-                    onPrivdConnected = { privdConnectedCount++ },
-                    onPrivdDisconnected = { privdDisconnectedCount++ },
-                )
-
-            // 1. Resolve backend while disconnected -> returns false (fallback backend)
-            val isPrivdInitial = router.resolveBackend()
-            assertFalse("Expected fallback backend when Privd is disconnected", isPrivdInitial)
-            assertFalse(router.isPrivd)
-
-            // 2. Daemon connects -> router switches to PRIVD backend and invokes callback
-            PrivdClient.setStateForTesting(PrivdConnectionState.CONNECTED)
-            testScheduler.advanceUntilIdle()
-
-            assertTrue("Expected router.isPrivd == true after daemon connected", router.isPrivd)
-            assertEquals("Expected onPrivdConnected callback triggered once", 1, privdConnectedCount)
-
-            // 3. Daemon disconnects -> router switches to fallback backend and invokes callback
-            PrivdClient.setStateForTesting(PrivdConnectionState.DISCONNECTED)
-            testScheduler.advanceUntilIdle()
-
-            assertFalse("Expected router.isPrivd == false after daemon disconnected", router.isPrivd)
-            assertEquals("Expected onPrivdDisconnected callback triggered once", 1, privdDisconnectedCount)
-
-            // 4. Mark stopped -> subsequent connection changes should not trigger active callbacks
-            router.markStopped()
-            PrivdClient.setStateForTesting(PrivdConnectionState.CONNECTED)
-            testScheduler.advanceUntilIdle()
-
-            assertEquals("Expected no additional callback after markStopped", 1, privdConnectedCount)
-        }
 
     @Test
     fun testTouchpadGestureProcessorCancellationSafety() =

@@ -87,8 +87,8 @@ object AppStateManager {
     // ── Mirror control signals ────────────────────────────────────────────────
     // One-shot fire-and-forget flags: MainActivity resets them after handling.
 
-    /** Set to true by MirrorPlayStop when mirror is not yet capturing; MainActivity launches
-     * CaptureRequestActivity and resets. */
+    /** Set to true by MirrorPlayStop when mirror is not yet capturing; MainActivity starts
+     * ScreenCaptureService and resets. */
     private val _mirrorStartRequested = MutableStateFlow(false)
     val mirrorStartRequested: StateFlow<Boolean> = _mirrorStartRequested.asStateFlow()
 
