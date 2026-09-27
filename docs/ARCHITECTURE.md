@@ -132,9 +132,13 @@ The app ships native helpers (`touchinjector_arm64`, `keyinjector_arm64`, `mouse
 
 ### Privileged Mode Trust Boundary
 
-The normal app process remains in Android's untrusted app sandbox. Privileged Mode creates a narrow shell-UID bridge by starting `megingiard_privd` through ADB Wireless Debugging. To bypass SELinux restrictions on devices with "Force SELinux" enabled, the daemon listens on a local TCP socket loopback (`127.0.0.1`, scanning ports `51234–51238`) and performs only the privileged kernel I/O requested by feature-specific ASCII commands.
+The normal app process remains in Android's untrusted app sandbox. Privileged Mode creates a narrow shell-UID bridge by starting `megingiard_privd` through a two-tier bootstrap architecture:
+- **Tier 1 (Hardware Root Bridge):** Utilizes the AYN Thor vendor root service (`PServerBinder` via `/system/bin/pservice`) in permissive SELinux mode to deploy `megingiard_privd`, provision keys, and launch the daemon in 1 click without ADB setup or Wi-Fi requirements.
+- **Tier 2 (ADB Wireless Debugging):** Transparent fallback on non-vendor devices or when SELinux is Enforcing via local ADB TLS loopback.
 
-Every socket connection completes mutual HMAC-SHA256 authentication before normal commands are processed. The daemon first challenges the app (`CHAL/AUTH/OK`), then the app challenges the daemon (`VERIFY/PROOF`). The 32-byte key is generated per-install during bootstrap, encrypted under Android Keystore (AES-256-GCM, hardware-backed), and provisioned to the daemon over the ADB TLS channel — it is never embedded in the APK. Detailed protocol and key-lifecycle behavior is documented in [Privileged Mode](features/privileged-mode/FEATURE.md#security-model).
+To bypass SELinux restrictions on devices with "Force SELinux" enabled, the daemon listens on a local TCP socket loopback (`127.0.0.1`, scanning ports `51234–51238` for release or `51244–51248` for debug) and performs only the privileged kernel I/O requested by feature-specific ASCII commands.
+
+Every socket connection completes mutual HMAC-SHA256 authentication before normal commands are processed. The daemon first challenges the app (`CHAL/AUTH/OK`), then the app challenges the daemon (`VERIFY/PROOF`). The 32-byte key is generated per-install during bootstrap, encrypted under Android Keystore (AES-256-GCM, hardware-backed), and provisioned to the daemon — it is never embedded in the APK. Files deployed to `/data/local/tmp` are chowned to `2000:2000` (`shell:shell`) so both root and ADB channels maintain consistent access permissions. Detailed protocol and key-lifecycle behavior is documented in [Privileged Mode](features/privileged-mode/FEATURE.md#security-model).
 
 ### Release Obfuscation
 

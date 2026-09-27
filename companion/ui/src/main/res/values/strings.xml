@@ -257,6 +257,7 @@ Open Settings to create a layout.</string>
     <string name="privd_title">Privileged Mode</string>
     <string name="privd_status_off">Off</string>
     <string name="privd_status_running_version">ON (V%1$d)</string>
+    <string name="privd_status_connecting">Connecting…</string>
     <string name="accessibility_status_active">Active</string>
     <string name="privd_action_retry">Retry Auto Setup</string>
     <string name="privd_toast_accessibility_required">Accessibility Service is required for auto-toggle. Please enable it in Settings.</string>
@@ -925,6 +926,13 @@ Open Settings to create a layout.</string>
     <string name="onboarding_privd_manual_step_1">1. Skip this step for now by proceeding to the next step.</string>
     <string name="onboarding_privd_manual_step_2">2. Open Global Settings → Privileged Mode.</string>
     <string name="onboarding_privd_manual_step_3">3. Follow the manual pairing instructions there to activate Privileged Mode.</string>
+    <string name="onboarding_privd_root_bridge_title">Privileged Mode (Root Bridge Detected)</string>
+    <string name="onboarding_privd_root_bridge_desc">The AYN Thor hardware root bridge is ready. Activate Privileged Mode for single-controller evdev merge and direct display mirroring.</string>
+    <string name="onboarding_privd_activate_btn">Activate Privileged Mode</string>
+    <string name="onboarding_privd_activating">Connecting to daemon…</string>
+    <string name="onboarding_privd_daemon_row_label">Privileged Helper Daemon</string>
+    <string name="onboarding_accessibility_activate_btn">Activate Accessibility</string>
+    <string name="onboarding_accessibility_activating">Activating service…</string>
     <string name="onboarding_finished_title">You\'re All Set! Ready to Tinker?</string>
     <string name="onboarding_finished_desc">You have completed the welcome tour. You can re-run this tour at any time from Global Settings → General.</string>
     <string name="onboarding_btn_next">Next</string>

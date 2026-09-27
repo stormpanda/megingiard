@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.ui
 
 import android.app.ActivityOptions
 import android.content.Intent
+import android.os.SystemClock
 import android.provider.Settings
 import android.view.Display
 import androidx.activity.compose.BackHandler
@@ -39,6 +40,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -57,6 +59,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.onboarding.OnboardingStepId
 import com.stormpanda.megingiard.onboarding.OnboardingStepState
+import com.stormpanda.megingiard.privd.PServiceBridge
 import com.stormpanda.megingiard.privd.PrivdBootstrapper
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
@@ -65,8 +68,11 @@ import com.stormpanda.megingiard.ui.onboarding.AccessibilityStepContent
 import com.stormpanda.megingiard.ui.onboarding.FinishedStepContent
 import com.stormpanda.megingiard.ui.onboarding.OnboardingStepper
 import com.stormpanda.megingiard.ui.onboarding.PrivilegedStepContent
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private const val TAG = "PrivdPromptDialog"
 
@@ -143,6 +149,11 @@ fun PrivdReconnectPromptDialog(
     var isDevicePaired by remember { mutableStateOf(PrivdBootstrapper.hasCredentials(context)) }
     var isAutoSetupActive by remember { mutableStateOf(MegingiardAccessibilityService.isAutoSetupActive) }
 
+    val isRootBridgeAvailable = remember { PrivdManager.isRootBridgeAvailable }
+    var isActivatingAccessibility by remember { mutableStateOf(false) }
+    var isActivatingPrivd by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+
     val lifecycleOwner = LocalLifecycleOwner.current
 
     DisposableEffect(lifecycleOwner) {
@@ -197,6 +208,42 @@ fun PrivdReconnectPromptDialog(
     val startAutoSetup = {
         MegingiardAccessibilityService.startMultiStageAutoSetup(context)
         isAutoSetupActive = true
+    }
+
+    val activateAccessibilityViaRoot = {
+        if (!isActivatingAccessibility) {
+            isActivatingAccessibility = true
+            coroutineScope.launch(Dispatchers.IO) {
+                val startTime = SystemClock.uptimeMillis()
+                val success = PServiceBridge.enableAccessibility(context)
+                val elapsed = SystemClock.uptimeMillis() - startTime
+                if (elapsed < 1000L) {
+                    delay(1000L - elapsed)
+                }
+                val active = MegingiardAccessibilityService.isEnabled(context)
+                withContext(Dispatchers.Main) {
+                    isAccessibilityActive = active || success
+                    isActivatingAccessibility = false
+                }
+            }
+        }
+    }
+
+    val activatePrivdViaRoot = {
+        if (!isActivatingPrivd) {
+            isActivatingPrivd = true
+            coroutineScope.launch(Dispatchers.IO) {
+                val startTime = SystemClock.uptimeMillis()
+                PrivdManager.connect(context)
+                val elapsed = SystemClock.uptimeMillis() - startTime
+                if (elapsed < 1000L) {
+                    delay(1000L - elapsed)
+                }
+                withContext(Dispatchers.Main) {
+                    isActivatingPrivd = false
+                }
+            }
+        }
     }
 
     val launchAccessibilitySettings = {
@@ -291,6 +338,9 @@ fun PrivdReconnectPromptDialog(
                         AccessibilityStepContent(
                             isAccessibilityActive = isAccessibilityActive,
                             onLaunchAccessibilitySettings = launchAccessibilitySettings,
+                            isRootBridgeAvailable = isRootBridgeAvailable,
+                            onActivateViaRootBridge = activateAccessibilityViaRoot,
+                            isActivating = isActivatingAccessibility,
                         )
                     }
 
@@ -304,9 +354,33 @@ fun PrivdReconnectPromptDialog(
                             privdState = privdState,
                             onStartAutoSetup = startAutoSetup,
                             isAutoSetupActive = isAutoSetupActive,
-                            titleText = stringResource(R.string.privd_reconnect_title),
-                            descText = stringResource(R.string.privd_reconnect_desc),
-                            buttonText = stringResource(R.string.privd_reconnect_auto_button),
+                            isRootBridgeAvailable = isRootBridgeAvailable,
+                            onActivateViaRootBridge = activatePrivdViaRoot,
+                            isActivatingRootBridge = isActivatingPrivd,
+                            titleText =
+                                stringResource(
+                                    if (isRootBridgeAvailable) {
+                                        R.string.onboarding_privd_root_bridge_title
+                                    } else {
+                                        R.string.privd_reconnect_title
+                                    },
+                                ),
+                            descText =
+                                stringResource(
+                                    if (isRootBridgeAvailable) {
+                                        R.string.onboarding_privd_root_bridge_desc
+                                    } else {
+                                        R.string.privd_reconnect_desc
+                                    },
+                                ),
+                            buttonText =
+                                stringResource(
+                                    if (isRootBridgeAvailable) {
+                                        R.string.onboarding_privd_activate_btn
+                                    } else {
+                                        R.string.privd_reconnect_auto_button
+                                    },
+                                ),
                         )
                     }
 
@@ -353,8 +427,12 @@ fun PrivdReconnectPromptDialog(
                             }
 
                             OnboardingStepId.PRIVILEGED -> {
-                                isWifiActive && isDevModeActive && isWirelessActive && isDevicePaired &&
+                                if (isRootBridgeAvailable) {
                                     privdState == PrivdState.RUNNING
+                                } else {
+                                    isWifiActive && isDevModeActive && isWirelessActive && isDevicePaired &&
+                                        privdState == PrivdState.RUNNING
+                                }
                             }
 
                             else -> {

@@ -237,6 +237,7 @@ class ConfigBackupRoundTripE2ETest {
     @Test
     fun testSingleProfileExportAndImportE2E() =
         runTest(testDispatcher) {
+            testScheduler.advanceUntilIdle()
             // 1. Prepare single profile to share
             val macro =
                 Macro(
@@ -266,6 +267,7 @@ class ConfigBackupRoundTripE2ETest {
 
             // 4. Apply profile import
             ConfigManager.applyProfileImport(context, export)
+            testScheduler.advanceUntilIdle()
 
             // 5. Verify settings remained unchanged and profile is appended
             assertEquals(initialTheme, SettingsManager.themeMode.value)

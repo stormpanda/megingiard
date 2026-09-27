@@ -35,6 +35,8 @@ fun GeneralSettingsTab(
     onNavigateToSubPage: (SettingsSubPage) -> Unit,
     onStartWelcomeTour: () -> Unit,
     onOpenPrivdSetup: () -> Unit,
+    onConnectPrivd: () -> Unit = onOpenPrivdSetup,
+    isRootBridgeAvailable: Boolean = false,
     onLanguageChange: (AppLanguage) -> Unit,
     onExcludeFromRecentsChange: (Boolean) -> Unit,
     onResetTutorials: () -> Unit,
@@ -62,6 +64,7 @@ fun GeneralSettingsTab(
     )
 
     val isPrivdRunning = privdState == PrivdState.RUNNING
+    val isPrivdConnecting = privdState == PrivdState.CONNECTING
     GamepadActionCard(
         title = stringResource(R.string.privd_title),
         description = stringResource(R.string.help_settings_privd_desc),
@@ -69,18 +72,34 @@ fun GeneralSettingsTab(
         trailingContent = {
             GamepadPill(
                 text =
-                    if (isPrivdRunning) {
-                        stringResource(
-                            R.string.privd_status_running_version,
-                            PrivdConstants.PRIVD_VERSION,
-                        )
-                    } else {
-                        stringResource(R.string.gamepad_toggle_off)
+                    when {
+                        isPrivdRunning -> {
+                            stringResource(
+                                R.string.privd_status_running_version,
+                                PrivdConstants.PRIVD_VERSION,
+                            )
+                        }
+
+                        isPrivdConnecting -> {
+                            stringResource(R.string.privd_status_connecting)
+                        }
+
+                        else -> {
+                            stringResource(R.string.gamepad_toggle_off)
+                        }
                     },
                 isAccent = isPrivdRunning,
             )
         },
-        onClick = onOpenPrivdSetup,
+        onClick = {
+            if (isRootBridgeAvailable && !isPrivdRunning) {
+                if (!isPrivdConnecting) {
+                    onConnectPrivd()
+                }
+            } else {
+                onOpenPrivdSetup()
+            }
+        },
     )
 
     GamepadChoiceCard(

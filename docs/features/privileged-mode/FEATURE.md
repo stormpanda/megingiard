@@ -19,14 +19,16 @@ by running a tiny on-device helper daemon (`megingiard_privd`) under the
 daemon listens on a local TCP socket loopback (`127.0.0.1:51234–51238` for release variants or `127.0.0.1:51244–51248` for debug variants); the app connects, sends ASCII
 commands, and the daemon performs the privileged kernel I/O on its behalf.
 
-No root, no third-party app, no external server: the bootstrap uses
-Android's own ADB Wireless Debugging facility, which Google has shipped on
-every device since Android 11 (API 30).
+Megingiard uses a two-tier bootstrap architecture:
+- **Tier 1 (Fast-Track Hardware Root Bridge):** On the AYN Thor handheld, Android ships with an on-device root service (`PServerBinder` registered by `/system/bin/pservice`). In permissive SELinux mode, apps can execute root commands via Binder IPC without root prompts or ADB setup. Megingiard utilizes `PServiceBridge` and `PServerBootstrapper` to deploy `megingiard_privd`, provision HMAC authentication keys, and launch the daemon in 1 tap without Developer Options, Wireless Debugging, Wi-Fi pairing, or port inputs.
+- **Tier 2 (ADB Wireless Debugging Fallback):** On devices without `PServerBinder` or when SELinux is actively Enforcing, the app transparently falls back to Android's built-in ADB Wireless Debugging facility via `PrivdBootstrapper`.
 
-### FR-PV1: User Opt-In
+### FR-PV1: User Opt-In & Control
 
 - Privileged Mode MUST be **off by default**. The user must explicitly
-  start it from Global Settings.
+  activate it (via a single tap on the activation button in Onboarding Step 5 or Global Settings).
+- Both Accessibility Service and Privileged Mode activations MUST require explicit user interaction (pressing an activation button). Silent auto-activation without user consent is strictly prohibited.
+- When the user triggers activation for Accessibility or Privileged Mode, a visual progress indicator spinner MUST be displayed for **at least 1.0 second** to clearly visualize system activity before completing.
 - Disconnecting MUST be possible at any time without affecting any other
   Megingiard feature.
 
@@ -34,7 +36,9 @@ every device since Android 11 (API 30).
 
 - The Global Settings Privileged Mode action card MUST display a trailing status badge:
   - `"ON (V<N>)"` (e.g., `ON (V7)`) with illuminated accent badge styling when Privileged Mode is in the `RUNNING` state.
+  - `"Connecting…"` when Privileged Mode is in the `CONNECTING` state.
   - `"OFF"` with standard muted surface badge styling when Privileged Mode is offline or disconnected.
+- When the hardware root bridge is detected and Privileged Mode is offline, tapping the Global Settings card directly triggers daemon connection (with >= 1s visual spinner) without opening the 4-step manual port wizard.
 - The Reconnection Prompt and Onboarding step MUST show detailed status guidance and actionable controls when bootstrapping or connecting.
 
 ### FR-PV3: Automatic Feature Promotion
@@ -233,8 +237,8 @@ PrivdManager.state.collect { state ->
 
 When `PrivdManager.connect(context)` is invoked:
 1. It first attempts a direct local TCP socket connection (scanning port range `51234–51238` for release or `51244–51248` for debug) via `PrivdClient.connect()`.
-2. If this fails (e.g. after a reboot when the daemon process has terminated), it checks if saved ADB credentials (`privd_adb_key.bin` and `privd_adb_cert.bin`) exist in the `noBackupFilesDir` folder.
-3. If they exist, it automatically starts a background ADB bootstrap via `PrivdBootstrapper.bootstrapAndConnect(context, "127.0.0.1")` which reads the dynamic ADB Wireless Debugging port (using screen-scanned or NSD fallbacks if necessary), connects to the local ADB server trying multiple loopback addresses (`127.0.0.1`, `::1`, `localhost`) to handle system IP binding preferences, pushes and spawns the daemon, and connects the socket.
+2. If this fails (e.g. after a reboot when the daemon process has terminated), it checks whether the native hardware root bridge is available via `PServiceBridge.isAvailable()`. If available, it executes the **Tier-1 Fast-Track** bootstrap via `PServerBootstrapper.bootstrap(context)`, staging binaries, provisioning the HMAC key, and launching the daemon under `shell` ownership (`chown 2000:2000`).
+3. If the root bridge is unavailable, it checks if saved ADB credentials (`privd_adb_key.bin` and `privd_adb_cert.bin`) exist in the `noBackupFilesDir` folder. If they exist, it automatically starts the **Tier-2 ADB Fallback** bootstrap via `PrivdBootstrapper.bootstrapAndConnect(context, "127.0.0.1")` which reads the dynamic ADB Wireless Debugging port (using screen-scanned or NSD fallbacks if necessary), connects to the local ADB server trying multiple loopback addresses (`127.0.0.1`, `::1`, `localhost`) to handle system IP binding preferences, pushes and spawns the daemon, and connects the socket.
 
 The `triggered` guard ensures auto-connect runs at most once for a given
 OFF/FAILED transition and therefore cannot spin in a tight retry loop when the

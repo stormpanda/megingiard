@@ -96,6 +96,7 @@ fun GlobalSettingsScreen(
     val latestReleaseInfo by viewModel.latestReleaseInfo.collectAsStateWithLifecycle()
     val isCheckingUpdates by viewModel.isCheckingUpdates.collectAsStateWithLifecycle()
     val updateCheckError by viewModel.updateCheckError.collectAsStateWithLifecycle()
+    val isRootBridgeAvailable by viewModel.isRootBridgeAvailable.collectAsStateWithLifecycle()
 
     val colors = LocalAppColors.current
     val effectiveAccent = colors.accent
@@ -104,6 +105,9 @@ fun GlobalSettingsScreen(
     val logReportSaveResult by LogReportManager.saveResult.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
+    LaunchedEffect(Unit) {
+        viewModel.checkPrivilegedModeStatus(context)
+    }
     var subPageStack by rememberSaveable { mutableStateOf<List<SettingsSubPage>>(emptyList()) }
     val currentSubPage = subPageStack.lastOrNull()
     var showImportPreviewDialog by remember { mutableStateOf<MegingiardExport?>(null) }
@@ -237,6 +241,10 @@ fun GlobalSettingsScreen(
                                             AppStateManager.setPrivdSetupWizardOpen(true)
                                             onBack()
                                         },
+                                        onConnectPrivd = {
+                                            viewModel.privdConnect(context)
+                                        },
+                                        isRootBridgeAvailable = isRootBridgeAvailable == true,
                                         onLanguageChange = { viewModel.setAppLanguage(it) },
                                         onExcludeFromRecentsChange = { viewModel.setExcludeFromRecents(it) },
                                         onResetTutorials = {

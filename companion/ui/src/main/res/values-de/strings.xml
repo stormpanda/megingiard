@@ -257,6 +257,7 @@ Open Settings to create a layout.</string>
     <string name="privd_title">Privilegierter Modus</string>
     <string name="privd_status_off">Aus</string>
     <string name="privd_status_running_version">AN (V%1$d)</string>
+    <string name="privd_status_connecting">Verbinde…</string>
     <string name="accessibility_status_active">Aktiv</string>
     <string name="privd_action_retry">Auto-Einrichtung wiederholen</string>
     <string name="privd_toast_accessibility_required">Eingabehilfe-Dienst wird für den automatischen Toggle benötigt. Bitte in den Einstellungen aktivieren.</string>
@@ -925,6 +926,13 @@ Open Settings to create a layout.</string>
     <string name="onboarding_privd_manual_step_1">1. Überspringe diesen Schritt vorerst, indem du zum nächsten Schritt weitergehst.</string>
     <string name="onboarding_privd_manual_step_2">2. Öffne Globale Einstellungen → Privilegierter Modus.</string>
     <string name="onboarding_privd_manual_step_3">3. Folge dort den manuellen Kopplungsanweisungen, um den Privilegierten Modus zu aktivieren.</string>
+    <string name="onboarding_privd_root_bridge_title">Privilegierter Modus (Root-Bridge erkannt)</string>
+    <string name="onboarding_privd_root_bridge_desc">Die AYN Thor Hardware-Root-Bridge ist bereit. Aktiviere den Privilegierten Modus für Single-Controller Evdev-Merge und direktes Display-Mirroring.</string>
+    <string name="onboarding_privd_activate_btn">Privilegierten Modus aktivieren</string>
+    <string name="onboarding_privd_activating">Verbinde mit Daemon…</string>
+    <string name="onboarding_privd_daemon_row_label">Privilegierter Helper-Daemon</string>
+    <string name="onboarding_accessibility_activate_btn">Bedienungshilfe aktivieren</string>
+    <string name="onboarding_accessibility_activating">Dienst wird aktiviert…</string>
     <string name="onboarding_finished_title">Alles erledigt! Bereit zum Basteln?</string>
     <string name="onboarding_finished_desc">Du hast die Willkommenstour abgeschlossen. Du kannst diese Tour jederzeit unter Globale Einstellungen → Allgemein erneut starten.</string>
     <string name="onboarding_btn_next">Weiter</string>

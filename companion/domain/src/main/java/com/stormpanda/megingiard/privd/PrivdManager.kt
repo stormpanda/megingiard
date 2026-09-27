@@ -146,6 +146,8 @@ object PrivdManager {
     private var _isManuallyDisconnected = false
     val isManuallyDisconnected: Boolean get() = _isManuallyDisconnected
 
+    val isRootBridgeAvailable: Boolean get() = PServiceBridge.isAvailable()
+
     fun connect(context: Context): Boolean {
         AppLog.i(TAG, "connect() called (current state=${_state.value})")
         _isManuallyDisconnected = false
@@ -159,17 +161,31 @@ object PrivdManager {
             return true
         }
 
-        // Direct connect failed. Check if we have credentials to perform background bootstrap.
+        // Direct connect failed. Attempt Tier-1 fast-track via PServer root bridge
+        if (PServiceBridge.isAvailable()) {
+            AppLog.i(TAG, "Direct connect failed. PServer root bridge is available — attempting fast-track bootstrap.")
+            _state.value = PrivdState.BOOTSTRAPPING
+            val pOk = PServerBootstrapper.bootstrap(context)
+            if (pOk) {
+                _state.value = PrivdState.RUNNING
+                AppLog.i(TAG, "PServer fast-track bootstrap succeeded — Privileged Mode is RUNNING")
+                startClientObserver()
+                return true
+            }
+            AppLog.w(TAG, "PServer fast-track bootstrap failed — falling back to Tier-2 ADB route")
+        }
+
+        // Direct connect and PServer failed. Check if we have credentials to perform background ADB bootstrap.
         val keyFile = File(context.noBackupFilesDir, "privd_adb_key.bin")
         val certFile = File(context.noBackupFilesDir, "privd_adb_cert.bin")
         if (keyFile.exists() && certFile.exists()) {
-            AppLog.i(TAG, "Direct connect failed. Saved ADB credentials found, attempting background bootstrap.")
+            AppLog.i(TAG, "Attempting background bootstrap via saved ADB credentials.")
             return PrivdBootstrapper.bootstrapAndConnect(context, "127.0.0.1")
         }
 
         _state.value = PrivdState.FAILED
         _lastError.value = PrivdError.DAEMON_UNREACHABLE
-        AppLog.w(TAG, "Privileged Mode FAILED — daemon not reachable and no saved ADB credentials")
+        AppLog.w(TAG, "Privileged Mode FAILED — daemon not reachable and no bootstrap method succeeded")
         return false
     }
 
