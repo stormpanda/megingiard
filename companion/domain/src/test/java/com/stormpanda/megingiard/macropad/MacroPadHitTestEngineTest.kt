@@ -1,8 +1,6 @@
 package com.stormpanda.megingiard.macropad
 
-import com.stormpanda.megingiard.input.ShellInputInjector
 import com.stormpanda.megingiard.input.TouchAction
-import com.stormpanda.megingiard.input.TouchCommand
 import com.stormpanda.megingiard.privd.PrivdClient
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -12,15 +10,11 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import java.util.concurrent.LinkedBlockingQueue
 
 class MacroPadHitTestEngineTest {
     private val engine = MacroPadHitTestEngine(buttonUnitDpToPx = { it })
     private val canvasW = 1000f
     private val canvasH = 1000f
-
-    private lateinit var queue: LinkedBlockingQueue<TouchCommand>
-    private var originalRunning: Boolean = false
 
     private val enabledProfile =
         PadProfile(
@@ -53,34 +47,25 @@ class MacroPadHitTestEngineTest {
         x: Int,
         y: Int,
     ) {
-        val cmd = queue.poll()
+        val cmd = PrivdClient.pollCommandForTest()
         assertNotNull(cmd)
-        assertEquals(action, cmd!!.action)
-        assertEquals(x, cmd.x)
-        assertEquals(y, cmd.y)
+        if (action == TouchAction.UP) {
+            assertEquals("U 0\n", cmd)
+        } else {
+            val prefix = if (action == TouchAction.DOWN) "D" else "M"
+            assertEquals("$prefix 0 $x $y\n", cmd)
+        }
     }
 
     @Before
     fun setUp() {
-        val superclass = ShellInputInjector::class.java.superclass
-        val runningField = superclass.getDeclaredField("running").apply { isAccessible = true }
-        originalRunning = runningField.get(ShellInputInjector) as Boolean
-        runningField.set(ShellInputInjector, true)
-
-        val queueField = superclass.getDeclaredField("queue").apply { isAccessible = true }
-        @Suppress("UNCHECKED_CAST")
-        queue = queueField.get(ShellInputInjector) as LinkedBlockingQueue<TouchCommand>
-        queue.clear()
+        PrivdClient.isConnectedForTest = true
+        PrivdClient.clearQueueForTest()
     }
 
     @After
     fun tearDown() {
-        val superclass = ShellInputInjector::class.java.superclass
-        superclass.getDeclaredField("running").apply {
-            isAccessible = true
-            set(ShellInputInjector, originalRunning)
-        }
-        queue.clear()
+        PrivdClient.clearQueueForTest()
         PrivdClient.isConnectedForTest = null
     }
 
@@ -88,25 +73,25 @@ class MacroPadHitTestEngineTest {
     fun `virtual touch trackpoint injects DOWN event at center initially`() {
         val blocked = engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton), enabledProfile, false)
         assertNull(blocked)
-        assertEquals(1, queue.size)
+        assertEquals(1, PrivdClient.queueSizeForTest)
         assertTouch(TouchAction.DOWN, 540, 960)
     }
 
     @Test
     fun `virtual touch trackpoint accumulates moves and coerces bounds`() {
         engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton), enabledProfile, false)
-        queue.clear()
+        PrivdClient.clearQueueForTest()
 
         engine.onMove(0L, 550f, 480f, 50f, -20f, listOf(trackpointButton), enabledProfile)
-        assertEquals(1, queue.size)
+        assertEquals(1, PrivdClient.queueSizeForTest)
         assertTouch(TouchAction.MOVE, 600, 1110)
 
         engine.onMove(0L, 1550f, 1480f, 1000f, 1000f, listOf(trackpointButton), enabledProfile)
-        assertEquals(1, queue.size)
+        assertEquals(1, PrivdClient.queueSizeForTest)
         assertTouch(TouchAction.MOVE, -540, 2880)
 
         engine.onMove(0L, 1500f, 1430f, -50f, -50f, listOf(trackpointButton), enabledProfile)
-        assertEquals(1, queue.size)
+        assertEquals(1, PrivdClient.queueSizeForTest)
         assertTouch(TouchAction.MOVE, 150, 1770)
     }
 
@@ -115,10 +100,10 @@ class MacroPadHitTestEngineTest {
         val highSensButton =
             centeredButton(PadAction.TrackpointMove(TrackpointSize.MEDIUM, TrackpointMode.VIRTUAL_TOUCH, sensitivity = 2.0f))
         engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(highSensButton), enabledProfile, false)
-        queue.clear()
+        PrivdClient.clearQueueForTest()
 
         engine.onMove(0L, 550f, 480f, 50f, -20f, listOf(highSensButton), enabledProfile)
-        assertEquals(1, queue.size)
+        assertEquals(1, PrivdClient.queueSizeForTest)
         assertTouch(TouchAction.MOVE, 660, 1260)
     }
 
@@ -126,17 +111,17 @@ class MacroPadHitTestEngineTest {
     fun `virtual touch trackpoint release injects UP event at last position`() {
         engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton), enabledProfile, false)
         engine.onMove(0L, 550f, 480f, 50f, -20f, listOf(trackpointButton), enabledProfile)
-        queue.clear()
+        PrivdClient.clearQueueForTest()
 
         engine.onRelease(0L, listOf(trackpointButton), enabledProfile)
-        assertEquals(1, queue.size)
+        assertEquals(1, PrivdClient.queueSizeForTest)
         assertTouch(TouchAction.UP, 600, 1110)
     }
 
     @Test
     fun `virtual touch trackpoint keeps internally tracked position clamped on release`() {
         engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton), enabledProfile, false)
-        queue.clear()
+        PrivdClient.clearQueueForTest()
 
         engine.onMove(0L, 1500f, 1500f, 1000f, 1000f, listOf(trackpointButton), enabledProfile)
         assertTouch(TouchAction.MOVE, -540, 2880)
@@ -153,10 +138,10 @@ class MacroPadHitTestEngineTest {
         engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton), enabledProfile, false)
         engine.onMove(0L, 550f, 480f, 50f, -20f, listOf(trackpointButton), enabledProfile)
         engine.onRelease(0L, listOf(trackpointButton), enabledProfile)
-        queue.clear()
+        PrivdClient.clearQueueForTest()
 
         engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton), enabledProfile, false)
-        assertEquals(1, queue.size)
+        assertEquals(1, PrivdClient.queueSizeForTest)
         assertTouch(TouchAction.DOWN, 600, 1110)
     }
 
@@ -165,7 +150,13 @@ class MacroPadHitTestEngineTest {
         engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(mouseButton), enabledProfile, false)
         engine.onMove(0L, 550f, 480f, 50f, -20f, listOf(mouseButton), enabledProfile)
         engine.onRelease(0L, listOf(mouseButton), enabledProfile)
-        assertEquals(0, queue.size)
+        val commands = mutableListOf<String>()
+        while (true) {
+            val cmd = PrivdClient.pollCommandForTest() ?: break
+            commands.add(cmd)
+        }
+        assertTrue(commands.none { it.startsWith("D ") || it.startsWith("M ") || it.startsWith("U ") })
+        assertTrue(commands.any { it.startsWith("MM ") })
     }
 
     @Test
@@ -173,17 +164,17 @@ class MacroPadHitTestEngineTest {
         val blocked = engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton), disabledTouchProfile, false)
         assertNotNull(blocked)
         assertEquals("btn-test", blocked?.id)
-        assertEquals(0, queue.size)
+        assertEquals(0, PrivdClient.queueSizeForTest)
     }
 
     @Test
     fun `releaseAll with active virtual touch trackpoint injects UP event`() {
         engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton), enabledProfile, false)
         engine.onMove(0L, 550f, 480f, 50f, -20f, listOf(trackpointButton), enabledProfile)
-        queue.clear()
+        PrivdClient.clearQueueForTest()
 
         engine.releaseAll(listOf(trackpointButton))
-        assertEquals(1, queue.size)
+        assertEquals(1, PrivdClient.queueSizeForTest)
         assertTouch(TouchAction.UP, 600, 1110)
     }
 
@@ -209,27 +200,13 @@ class MacroPadHitTestEngineTest {
     }
 
     @Test
-    fun `macro button is disabled when Privileged Mode is disconnected`() {
-        val macroAction = PadAction.Macro("macro-1")
-
-        PrivdClient.isConnectedForTest = false
-        assertTrue(MacroPadHitTestEngine.isDeviceDisabled(macroAction, enabledProfile))
-        assertEquals(DisabledReason.MACRO_PRIVD, MacroPadHitTestEngine.deviceDisabledReason(macroAction, enabledProfile))
-
-        PrivdClient.isConnectedForTest = true
-        assertFalse(MacroPadHitTestEngine.isDeviceDisabled(macroAction, enabledProfile))
-        assertNull(MacroPadHitTestEngine.deviceDisabledReason(macroAction, enabledProfile))
-    }
-
-    @Test
-    fun `gamepad button is disabled when Privileged Mode is disconnected`() {
+    fun `gamepad button is disabled when gamepad is disabled in profile`() {
         val gpAction = PadAction.GamepadButton(btnCode = 304, label = "A")
+        val disabledGpProfile = enabledProfile.copy(enableGamepad = false)
 
-        PrivdClient.isConnectedForTest = false
-        assertTrue(MacroPadHitTestEngine.isDeviceDisabled(gpAction, enabledProfile))
-        assertEquals(DisabledReason.GAMEPAD_PRIVD, MacroPadHitTestEngine.deviceDisabledReason(gpAction, enabledProfile))
+        assertTrue(MacroPadHitTestEngine.isDeviceDisabled(gpAction, disabledGpProfile))
+        assertEquals(DisabledReason.GAMEPAD, MacroPadHitTestEngine.deviceDisabledReason(gpAction, disabledGpProfile))
 
-        PrivdClient.isConnectedForTest = true
         assertFalse(MacroPadHitTestEngine.isDeviceDisabled(gpAction, enabledProfile))
         assertNull(MacroPadHitTestEngine.deviceDisabledReason(gpAction, enabledProfile))
     }
@@ -241,11 +218,11 @@ class MacroPadHitTestEngineTest {
         val mouseAction = PadAction.MouseButton(button = MouseButton.LEFT)
 
         val disabledKbProfile = enabledProfile.copy(enableKeyboard = false)
+        val disabledGpProfile = enabledProfile.copy(enableGamepad = false)
         val disabledMouseProfile = enabledProfile.copy(enableMouse = false)
 
-        PrivdClient.isConnectedForTest = false
         assertEquals(DisabledReason.KEYBOARD, MacroPadHitTestEngine.deviceDisabledReason(kbAction, disabledKbProfile))
-        assertEquals(DisabledReason.GAMEPAD_PRIVD, MacroPadHitTestEngine.deviceDisabledReason(gpAction, enabledProfile))
+        assertEquals(DisabledReason.GAMEPAD, MacroPadHitTestEngine.deviceDisabledReason(gpAction, disabledGpProfile))
         assertEquals(DisabledReason.MOUSE, MacroPadHitTestEngine.deviceDisabledReason(mouseAction, disabledMouseProfile))
 
         // FullScreenKeyboard and FullScreenMouse are overlays and must never be blocked by missing key flags

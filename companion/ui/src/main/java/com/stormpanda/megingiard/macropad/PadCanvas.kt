@@ -71,8 +71,6 @@ import com.stormpanda.megingiard.math.calculateButtonAlignmentSnap
 import com.stormpanda.megingiard.math.findAlignedCenterGuides
 import com.stormpanda.megingiard.math.radialPointCount
 import com.stormpanda.megingiard.math.snapPosition
-import com.stormpanda.megingiard.privd.PrivdManager
-import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.MaterialSymbol
@@ -177,8 +175,6 @@ internal fun PadCanvas(
     val isMirrorEditorBackgroundHidden by AppStateManager.isMirrorEditorBackgroundHidden.collectAsStateWithLifecycle()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsStateWithLifecycle()
     val shouldHideBackground = isViewportEditActive && isMirrorEditorBackgroundHidden
-    val privdState by PrivdManager.state.collectAsStateWithLifecycle()
-    val isPrivdRunning = privdState == PrivdState.RUNNING
     val density = LocalDensity.current
     val context = LocalContext.current
     val gridStepPx = with(density) { PC_GRID_STEP_DP.toPx() }
@@ -381,7 +377,6 @@ internal fun PadCanvas(
                 gridStepPx = gridStepPx,
                 alignmentSnapping = buttonAlignmentSnapping,
                 isLocked = isLocked || isCropping,
-                isPrivdRunning = isPrivdRunning,
                 onTouch = {
                     MacroPadState.setSelectedButtonId(btn.id)
                 },
@@ -550,7 +545,6 @@ private fun DraggableButton(
     gridStepPx: Float,
     alignmentSnapping: Boolean,
     isLocked: Boolean,
-    isPrivdRunning: Boolean,
     onTouch: () -> Unit,
     onPositionChanged: (Float, Float) -> Unit,
 ) {
@@ -582,8 +576,7 @@ private fun DraggableButton(
 
     val density = LocalDensity.current
     val isTrackpoint = btn.action is PadAction.TrackpointMove
-    val isDeviceDisabled =
-        (btn.action is PadAction.GamepadButton || btn.action is PadAction.Macro) && !isPrivdRunning
+    val isDeviceDisabled = false
 
     val tpMultiplier = if (isTrackpoint) (btn.action as PadAction.TrackpointMove).size.multiplier else 1f
     val btnWidthDp = ED_BUTTON_UNIT_DP * (if (isTrackpoint) tpMultiplier else btn.buttonSize.cols.toFloat())

@@ -16,7 +16,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - The mirror MUST remain perfectly synchronised even while resource-intensive applications (games) are running on the primary screen.
 - The mirror MUST be DRM-free; it MUST NOT produce a black screen on hardware-secured content.
 - `ImageReader` and software bitmap-copy approaches are explicitly excluded due to latency and DRM interference.
-- **Reconnect Dialog Priority**: When the Privileged Mode reconnect prompt dialog (`AppStateManager.isPrivdPromptActive`) is active, `MainAppScreen` renders `PrivdReconnectPromptDialog` in its modal hierarchy to guarantee the reconnect dialog is clearly accessible.
+- **Reconnect Dialog Priority**: When the Megingiard System Service reconnect prompt dialog (`AppStateManager.isPrivdPromptActive`) is active, `MainAppScreen` renders `PrivdReconnectPromptDialog` in its modal hierarchy to guarantee the reconnect dialog is clearly accessible.
 
 ### FR-M2: Cutout Layout Editor & Top-Screen Controller-Navigable Toolbox
 
@@ -101,11 +101,11 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
   - If screen mirroring was started from the Quick Menu, the Quick Menu is automatically dismissed so the dialog is clearly visible in the foreground.
   - Automatic mirror start (e.g. on layout switch or app launch) proceeds silently without triggering this prompt.
 
-### FR-M9: Privileged Mirror (No-Consent Path)
+### FR-M9: Direct Mirror / System Service Mirror (No-Consent Path)
 
-- When **Global Settings → Privileged Mode → Privileged Mirror** is enabled **and** the privileged daemon is `RUNNING`, the mirror MUST start without showing the system MediaProjection consent dialog.
-- The privileged path MUST be transparent to all other mirror features (FR-M2 viewport, FR-M3 freeze, FR-M6 lock, FR-M7 touch projection, FR-M8 auto-start gating).
-- The privileged path MUST use direct SurfaceControl output by passing the app-owned `SurfaceView` `Surface` to the shell `app_process` mirror server. If direct setup fails, it MUST fall back to the normal MediaProjection consent flow.
+- When **Global Settings → Megingiard System Service → Direct Mirror** is enabled **and** the system service daemon is `RUNNING`, the mirror MUST start without showing the system MediaProjection consent dialog.
+- The privileged direct path MUST be transparent to all other mirror features (FR-M2 viewport, FR-M3 freeze, FR-M6 lock, FR-M7 touch projection, FR-M8 auto-start gating).
+- The privileged direct path MUST use direct SurfaceControl output by passing the app-owned `SurfaceView` `Surface` to the shell `app_process` mirror server. If direct setup fails, it MUST fall back to the normal MediaProjection consent flow.
 - DRM-protected video frames MUST be expected to render as black on the privileged path — the same limitation as `scrcpy`. The settings description MUST inform the user.
 - When the per-feature flag is off, or the daemon is not `RUNNING`, the standard MediaProjection path MUST remain in use unchanged.
 
@@ -123,7 +123,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 ### FR-M11: Multi-Cutout Screen Mirroring
 
 - Users MUST be able to define multiple cropped regions ("cutouts") of the primary screen and freely arrange them on the secondary screen.
-- Multi-cutout mode is supported in both standard MediaProjection and Privileged modes. Both modes utilize a single-surface duplication architecture where a single master capture stream is created, and individual cutouts are drawn via canvas transformations, avoiding device freezes and display token conflicts.
+- Multi-cutout mode is supported in both standard MediaProjection and Megingiard System Service modes. Both modes utilize a single-surface duplication architecture where a single master capture stream is created, and individual cutouts are drawn via canvas transformations, avoiding device freezes and display token conflicts.
 - The app always defaults to and operates in multi-cutout mode. Single viewport mode is deleted, as it is treated as a special case of multi-cutout mode containing only one cutout.
 - Defining source crop boundaries is done via the `CropSelectorOverlay` hosted on the primary display via `PrimaryOverlayManager`, which automatically appears when a cutout is selected in the layout editor.
 - Arranging cutout placements on the secondary display enforces boundary collisions (sliding collision clamping, no grid snapping) to prevent any Z-ordering overlaps.
@@ -339,26 +339,23 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 ### Architecture: Capture Pipeline
 
 ```
-Primary Display
+Primary Display (SurfaceControl)
       │
-      ▼ MediaProjection (API token, requires user consent)
+      ▼ Direct privileged mirror (mirrorserver via daemon app_process)
       │
- VirtualDisplay ─────── hardware DRM kernel buffer ──────► Secondary Display (MainActivity)
-                                                            └── MainAppScreen / MacroPadScreen
-                                                                 └── EmbeddedMirrorView
-                                                                      └── MultiCutoutContainer
-                                                                           └── ThrottledTextureView
+ hardware DRM kernel buffer ──────────────────────────────────────► Secondary Display (MainActivity)
+                                                                    └── MainAppScreen / MacroPadScreen
+                                                                         └── EmbeddedMirrorView
+                                                                              └── MultiCutoutContainer
+                                                                                   └── ThrottledTextureView
 ```
 
-- **`ScreenCaptureService`** (foreground service) holds the `MediaProjection` token, obtained via user consent in `CaptureRequestActivity`. It creates and manages the `VirtualDisplay`, which streams the primary display's graphics buffer directly to the target `Surface` registered in `MasterSurfaceRegistry` by `EmbeddedMirrorView`.
+- **`ScreenCaptureService`** (foreground service) operates in direct privileged mode (`ACTION_START_PRIVD`), coordinating with `DirectPrivdMirrorSession` and the background `mirrorserver` DEX. It configures a hidden `SurfaceControl` virtual display streaming the primary display's graphics buffer directly to the target `Surface` registered in `MasterSurfaceRegistry` by `EmbeddedMirrorView`.
 - **Embedded View Architecture & Prioritized Surface Registry:** Screen mirroring renders seamlessly inside `MainActivity` / `MainAppScreen` using `EmbeddedMirrorView` (`MultiCutoutContainer` wrapping `ThrottledTextureView`). `MasterSurfaceRegistry` manages active display surfaces using an owner-based priority hierarchy (`PRIORITY_TOUCHPAD = 20`, `PRIORITY_MACROPAD = 10`). When the Touchpad overlay opens with mirroring active, `MasterSurfaceRegistry` directs the video capture stream to the Touchpad's 16:9 view. When Touchpad is closed or in mouse mode, `MasterSurfaceRegistry` automatically reverts active streaming to MacroPad's surface without recreating or tearing down MacroPad's background mirror view. This avoids window type mismatch issues, removes secondary-display `Presentation` window Z-order conflicts, and allows modals, editors, and Quick Menu overlays to composite directly in the standard Jetpack Compose hierarchy.
 
 ### Architecture: Privileged Capture Pipeline (FR-M9)
 
-When the Privileged Mirror flag is enabled and the daemon is `RUNNING`, the
-capture pipeline bypasses `MediaProjection` entirely when direct-Surface setup
-succeeds. If direct setup fails, the app tears down the privileged attempt and
-launches the normal MediaProjection consent flow:
+Screen mirroring operates exclusively through the privileged direct-Surface pipeline. MediaProjection and consent prompt activities have been eliminated:
 
 ```
 App (UID 10xxx)                          megingiard_privd (UID 2000, u:r:shell:s0)
@@ -522,13 +519,12 @@ During MacroPad touch recording, touches are captured directly on the primary di
 
 **Shared injection infrastructure** (`input/` package):
 
-| File                    | Role                                                                   |
-| ----------------------- | ---------------------------------------------------------------------- |
-| `TouchAction.kt`        | Shared `DOWN / MOVE / UP` enum                                         |
-| `ShellInputInjector.kt` | Native binary lifecycle, writer thread, MOVE coalescing                |
-| `TouchInjector.kt`      | `start / stop / injectTouch` facade with hardware coordinate transform and client-aware lifecycle coordination |
+| File               | Role                                                                   |
+| ------------------ | ---------------------------------------------------------------------- |
+| `TouchAction.kt`   | Shared `DOWN / MOVE / UP` enum                                         |
+| `TouchInjector.kt` | `start / stop / injectTouch` facade with hardware coordinate transform routing directly to `PrivdClient` |
 
-Both the Virtual Touchpad and Mirror Touch Projection use `TouchInjector` from the `input/` package. The same native binary (`touchinjector_arm64`) and device node (`/dev/input/event6`) are used by both features. To coordinate the native process lifetime across multiple concurrent callers (Mirror Touch Projection, relative trackpoints in MacroPad, macro executors), `TouchInjector` implements a thread-safe, client-aware reference-counted lifecycle. The native binary is started when the first client registers itself, and is terminated only after the last active client has unregistered.
+Both the Virtual Touchpad and Mirror Touch Projection use `TouchInjector` from the `input/` package. All touch events are routed directly to the Megingiard System Service (`megingiard_privd`) via `PrivdClient` over an abstract UNIX domain socket, injecting into the primary touchscreen device node (`/dev/input/event6`). To coordinate touch slot releases across multiple concurrent callers (Mirror Touch Projection, relative trackpoints in MacroPad, macro executors), `TouchInjector` implements a thread-safe, client-aware reference-counted lifecycle. Active client tokens are registered on start, and when the last active client unregisters, any active touch slots are unconditionally released (`UP`) to prevent orphaned pointer contacts.
 
 **Lifecycle:**
 
@@ -597,9 +593,8 @@ The auto-start logic in `MainActivity` derives an "effective auto-start" signal 
 
 - On explicit user start via the MirrorPlayStop button: `MacroPadState.setLayoutMirrorAutoStart(activeLayoutId, true)`.
 - On explicit user stop via the MirrorPlayStop button: `MacroPadState.setLayoutMirrorAutoStart(activeLayoutId, false)`.
-- On MediaProjection consent cancellation: `CaptureRequestActivity` records `MacroPadState.setLayoutMirrorAutoStart(activeLayoutId, false)`.
 
-`ScreenCaptureService` does not write `mirrorAutoStart`; start and teardown only manage runtime capture resources. The persisted layout state is changed only by the user's start/stop/consent decisions.
+`ScreenCaptureService` does not write `mirrorAutoStart`; start and teardown only manage runtime capture resources. The persisted layout state is changed only by the user's start/stop decisions.
 
 **Runtime reconciliation.** `MainActivity` combines the prompt, capture, active-layout, profile, companion-view-mode, and privd-connection `StateFlow`s into a `MirrorRuntimePolicyState`. Individual layout mirror preference is governed by `PadLayout.mirrorAutoStart`, supplemented by input overlays and profile-level autonomous layout switching requirements (`autoSwitchWantsMirror`). When autonomous mode (`CompanionViewMode.AUTO`) and profile-level auto layout switching (`PadProfile.autoLayoutSwitching`) are active and the profile contains at least one layout with an enabled visual anchor, `autoSwitchWantsMirror` remains `true`. This prevents un-anchored or newly created layouts from stopping the capture stream, ensuring `AnchorPresenceManager` continuously evaluates candidate layout anchors.
 
@@ -611,11 +606,9 @@ isOnValidScreen && !promptInFlight && !isCapturing &&
   !privdMirrorConnecting && !tutorialsActive
 ```
 
-`privdMirrorConnecting` is `true` while privd mirror is enabled and the daemon is in a transient state (`CONNECTING`, `BOOTSTRAPPING`, or `OFF` with auto-connect pending). This prevents the policy from selecting the `MEDIA_PROJECTION` consent path on fresh app launch before the privd auto-connect coroutine has had a chance to establish the connection. Once the daemon settles (`RUNNING` → privd path; `FAILED`/`OFF` → consent fallback), the combine re-emits and the policy re-evaluates with the correct strategy.
+When the predicate becomes `true`, `startMirrorService()` starts the privileged mirror service (`ACTION_START_PRIVD`). The flow re-evaluates on every layout switch, so switching to a layout whose remembered state is `true` (with no active session) starts mirroring.
 
-When the predicate becomes `true`, `startMirrorByPolicy()` selects the mirror strategy and either starts the privileged service (`ACTION_START_PRIVD`) or opens `CaptureRequestActivity` on the primary display. The flow re-evaluates on every layout switch, so switching to a layout whose remembered state is `true` (with no active session) starts mirroring.
-
-**Manual start bypass.** The `mirrorStartRequested` LaunchedEffect (fired by the MacroPad MirrorPlayStop button) directly calls `launchCaptureRequest()` independent of the auto-start gate, so the user can always start mirroring even when the layout's remembered state is off.
+**Manual start bypass.** The `mirrorStartRequested` LaunchedEffect (fired by the MacroPad MirrorPlayStop button) directly calls `startMirrorService()` independent of the auto-start gate, so the user can always start mirroring even when the layout's remembered state is off.
 
 ### Multi-Cutout Edge Blending
 
@@ -759,4 +752,3 @@ For future iterations of the privileged mirroring backend (`:mirrorserver` / `Di
 | `CutoutLostAnchorEffect.kt`           | Serializable enum modeling extensible cutout behavior on visual anchor loss (Freeze, Blur)                 |
 | `../math/AlignmentMath.kt`            | Shared pure Kotlin math helper in `:shared:core`: generalized center snapping, button adapters, cutout adapters (`calculateCutoutAlignmentSnap`, `calculateGamepadCutoutMove`, `findAlignedCutoutCenterGuides`), and grid algorithms |
 | `../input/TouchInjector.kt`           | Shared injection facade (also used by Touchpad)                                                            |
-| `../input/ShellInputInjector.kt`      | Shared native binary lifecycle and command queue                                                           |

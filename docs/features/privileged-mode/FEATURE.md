@@ -1,5 +1,7 @@
-# Feature: Privileged Mode
+# Feature: Megingiard System Service (Privileged Mode)
 
+> **User-Facing Name:** Megingiard System Service (or System Service)
+> **Internal Code Names:** `privd`, `PrivdManager`, `PServerBootstrapper`, `PrivdBootstrapper`
 > **Related source:** `companion/domain/src/main/java/com/stormpanda/megingiard/privd/`, `companion/ui/src/main/java/com/stormpanda/megingiard/privd/`
 > **Native source:** `companion/ui/src/main/cpp/megingiard_privd.c`
 > **Binary asset:** `companion/ui/src/main/assets/megingiard_privd_arm64`
@@ -13,34 +15,39 @@
 
 Some advanced Megingiard features need to write to system input devices that
 the regular app sandbox cannot reach (UID `untrusted_app`, missing the
-`input` group, restrictive SELinux domain). Privileged Mode bridges that gap
+`input` group, restrictive SELinux domain). In user-facing UI and settings, this capability is presented as the **Megingiard System Service**. It bridges that gap
 by running a tiny on-device helper daemon (`megingiard_privd`) under the
 **shell** UID — the same privilege envelope that ADB itself runs in. The
 daemon listens on a local TCP socket loopback (`127.0.0.1:51234–51238` for release variants or `127.0.0.1:51244–51248` for debug variants); the app connects, sends ASCII
 commands, and the daemon performs the privileged kernel I/O on its behalf.
 
-No root, no third-party app, no external server: the bootstrap uses
-Android's own ADB Wireless Debugging facility, which Google has shipped on
-every device since Android 11 (API 30).
+Megingiard uses a two-tier bootstrap architecture:
+- **Tier 1 (Fast-Track Hardware Root Bridge):** On the AYN Thor handheld, Android ships with an on-device root service (`PServerBinder` registered by `/system/bin/pservice`). In permissive SELinux mode, apps can execute root commands via Binder IPC without root prompts or ADB setup. Megingiard utilizes `PServiceBridge` and `PServerBootstrapper` to deploy `megingiard_privd`, provision HMAC authentication keys, and launch the system service in 1 tap without Developer Options, Wireless Debugging, Wi-Fi pairing, or port inputs.
+- **Tier 2 (ADB Wireless Debugging Fallback):** On devices without `PServerBinder` or when SELinux is actively Enforcing, the app transparently falls back to Android's built-in ADB Wireless Debugging facility via `PrivdBootstrapper`.
 
-### FR-PV1: User Opt-In
+### FR-PV1: Mandatory Megingiard System Service Requirement
 
-- Privileged Mode MUST be **off by default**. The user must explicitly
-  start it from Global Settings.
-- Disconnecting MUST be possible at any time without affecting any other
-  Megingiard feature.
+- Megingiard System Service is **strictly mandatory** for app operation. The app does not permit unprivileged execution.
+- Activation is completed during the initial Onboarding Welcome Tour (Step 5) or via the Reconnection Prompt Dialog.
+- Both Accessibility Service and Megingiard System Service activations require explicit user interaction (pressing an activation button). Silent auto-activation without user consent is strictly prohibited.
+- When the user triggers activation for Accessibility or Megingiard System Service, a visual progress indicator spinner MUST be displayed for **at least 1.0 second** to clearly visualize system activity before completing.
 
-### FR-PV2: Status Visibility
+### FR-PV2: Status Visibility & Service Actions
 
-- The Global Settings Privileged Mode action card MUST display a trailing status badge:
-  - `"ON (V<N>)"` (e.g., `ON (V7)`) with illuminated accent badge styling when Privileged Mode is in the `RUNNING` state.
-  - `"OFF"` with standard muted surface badge styling when Privileged Mode is offline or disconnected.
+- The Global Settings Megingiard System Service action card MUST display a trailing status badge:
+  - `"Active (v<N>)"` (e.g., `Active (v7)`) with illuminated accent badge styling when the system service is in the `RUNNING` state.
+  - `"Connecting…"` when the system service is in the `CONNECTING` state.
+  - `"Disconnected"` with standard muted surface badge styling when the system service is offline or disconnected.
+- When the hardware root bridge is detected and Megingiard System Service is offline, tapping the Global Settings card directly triggers system service connection (with >= 1s visual spinner) without opening the 4-step manual port wizard.
+- Global Settings exposes dedicated action cards:
+  - **Restart System Service**: Re-runs the connection verification sequence and restarts background service IPC.
+  - **Re-run Setup Wizard**: Opens the Wireless Debugging pairing and bootstrap wizard (`PrivdSetupWizardDialog`).
 - The Reconnection Prompt and Onboarding step MUST show detailed status guidance and actionable controls when bootstrapping or connecting.
 
-### FR-PV3: Automatic Feature Promotion
+### FR-PV3: Elimination of Unprivileged Fallbacks
 
-- All consumer features supporting Privileged Mode (Gamepad merge, physical Gamepad recording, privileged mirroring, and screenshots) MUST be automatically activated when the daemon is in the `RUNNING` state.
-- When the daemon is not running (e.g., in `OFF`, `FAILED`, or disconnected states), the app MUST transparently fallback to non-privileged equivalent paths (such as virtual gamepad uinput and standard MediaProjection) without requiring manual configuration.
+- All consumer features (Touch injection, Mouse injection, Keyboard injection, Screen Mirroring, Top Screenshot, Gamepad merge, physical Gamepad recording, and Macro execution) route directly and deterministically through `PrivdClient`.
+- All legacy unprivileged fallback code paths (such as standalone subprocess binaries `touchinjector_arm64`, `mouseinjector_arm64`, `keyinjector_arm64`, and Android `MediaProjection` / `CaptureRequestActivity`) have been eliminated.
 
 ### FR-PV4: Setup Discoverability
 
@@ -55,59 +62,24 @@ every device since Android 11 (API 30).
   wizard after each reboot. Auto-connect is unconditionally active, and showing
   the reconnection prompt upon daemon failure or service deactivation is standard behavior.
 
-### FR-PV7: Mandatory Accessibility Service & Dynamic Reconnection Wizard
+### FR-PV5: Mandatory Gatekeeping & Modal Protection
 
-- Accessibility Service is **mandatory** for core Megingiard functionality (automatic game macro profile switching, system dialog dismissal, and auto-setup helper).
-- An event-driven `AccessibilityStateChangeListener` and `ON_RESUME` observer monitor the service status. If Accessibility Service is deactivated in System Settings while the app is active and the Welcome Tour is not running (`!isWizardActive`), the app automatically triggers the compact Reconnection Wizard dialog.
-- The Reconnection Wizard renders a multi-step dialog matching the Welcome Tour styling (`OnboardingStepper`, `AppMagicalButton`, dark backdrop scrim):
-  - **Accessibility Step**: Included whenever Accessibility Service is inactive. The description states that Accessibility is mandatory for core features, and the Skip button is removed.
-  - **Privileged Mode Step**: **Optional**. Excluded dynamically if Privileged Mode is already in the `RUNNING` state and only Accessibility Service is missing. Included if Privileged Mode is disconnected or in `FAILED` state.
-  - **Finished Step**: Displays "You're all set!" with a "Close" finish button.
-
-### FR-PV8: 4-Step Manual Setup Wizard & Connect Port Entry
-
-- The manual setup wizard (`PrivdSetupWizardDialog`) renders a 4-step modal dialog on the secondary display (bottom screen) using the Welcome Tour styling (`OnboardingStepper`, `FinishedStepContent`, dark backdrop scrim, bezel card container, and smooth horizontal step transitions). When triggered from Global Settings, the primary display (top screen) settings modal is automatically closed so that Android Developer Options and Wireless Debugging on Display 0 remain visible and unobstructed:
-  - **Step 1 (Menu Description)**: Displays instructions for navigating to Developer Options -> Wireless Debugging with an "Open system settings" button.
-  - **Step 2 (Connect Port)**: Provides an input field for the Wireless Debugging **Connect Port** (5 digits).
-  - **Step 3 (Pairing Code & Pairing Port)**: Provides input fields for **WiFi pairing code** (6 digits) and **Pairing port** (5 digits), triggering pairing and bootstrapping with live stage progress checklist.
-  - **Step 4 (You're All Set)**: Reuses `FinishedStepContent` to display completion confirmation ("You're all set! Privileged Mode is ready.").
-- Step 2 and Step 3 provide **Back** buttons to navigate to preceding steps, and the **Pair** button on Step 3 triggers `PrivdBootstrapper` pairing (`127.0.0.1:<PairPort>`) and bootstrap.
-- **IME Focus Lifecycle & Macro Silencing**: Because `MainActivity` maintains `FLAG_NOT_FOCUSABLE`, `PrivdSetupWizardDialog` temporarily clears this flag via a `DisposableEffect` while mounted so the Android software keyboard (IME) can appear for typing ports and pairing codes. Upon unmounting (dismissal, cancel, completion, or teardown), `FLAG_NOT_FOCUSABLE` is restored, the IME is dismissed, and `PrimaryFocusAnchorActivity.anchorPrimaryFocus(activity)` is invoked to cleanly return focus to Display 0. Simultaneously, `InjectorLifecycleManager` observes `AppStateManager.isPrivdSetupWizardActive` and stops all virtual macro key/mouse injectors while the wizard is active.
-
-### FR-PV9: Multi-Stage Privileged Mode Auto-Setup & Onboarding Tour Integration
-
-- The Privileged Mode card in Global Settings and Step 5 (`PRIVILEGED`) of the Welcome Tour MUST expose an "Auto Setup" button.
-- Clicking the button MUST evaluate device setup conditions and run the appropriate automated pipeline on Display 0 via `MegingiardAccessibilityService`:
-  - **Settings Task Stack Warm-Up**: To prevent transition crashes and focus collisions with the active system launcher (like Game Focus) during cold starts (e.g. immediately after a fresh device reboot), the setup pipeline MUST first launch the root Settings homepage (`Settings.ACTION_SETTINGS`) to warm up the Settings task stack. After a brief delay (e.g. 400ms), it then launches the target deep-linked sub-screen (About Phone or Developer Options).
-  - **Stage A (Dev Mode Activation)**: If Developer Options are disabled, launches About Phone settings and taps "Build number" 7 times to unlock Developer Mode.
-  - **Stage B (USB & Wireless Debugging Activation)**: If USB Debugging or Wireless Debugging is disabled, routes directly to Developer Options settings via `Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS`, locates the USB debugging switch by its standardized view Resource IDs (e.g., `com.android.settings:id/switch_widget`, `android:id/switch_widget`, etc.) and toggles it `ON` (confirming warning dialogs using resource ID `android:id/button1`). To toggle Wireless Debugging, it clicks the `"Wireless debugging"` preference row to enter its sub-screen, then toggles its main switch `ON`. Activating USB Debugging is mandatory whenever Wireless Debugging is activated to ensure Wireless ADB sessions persist.
-  - **Stage C (Auto-Pairing / Connection with Stored Credentials)**: If stored credentials exist, the service first attempts to connect and bootstrap the daemon using them once Wireless Debugging is activated. If that connection succeeds, the setup finishes successfully. If the connection fails (or if credentials are not present), the service clears the credentials and proceeds with the pairing dialog flow: routes directly to Developer Options settings via `Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS`, clicks the `"Wireless debugging"` preference row to enter its sub-screen, opens the pairing dialog ("Pair device with pairing code") by locating and clicking the row matching the pairing keywords via view Resource IDs (e.g. `android:id/title`), scans text for the 6-digit code and port via `PrivdPairScreenTextScanner`, and pairs via `PrivdBootstrapper.pair()`.
-  - **Full-Service Auto-Connect & App Restoration**: Upon completing pairing, the service waits for the pairing dialog to dismiss and for `adbd` keys database to stabilize (using a 1500ms delay), rescans the screen for the connect port, and automatically initiates `PrivdManager.connect()` to start the privileged daemon seamlessly. Once the daemon is connected successfully (either via stored credentials or after dynamic pairing), the service retrieves the package name of the application that was running on the top screen prior to auto setup starting (using `AutoSwitchCoordinator.foregroundApp`), and launches it back on the top screen (`Display.DEFAULT_DISPLAY`). If no app was running or it was a system Settings panel, the service automatically falls back to launching the Home launcher/screen on the default display.
-  - **All Set**: If Developer Mode, USB Debugging, Wireless Debugging, and ADB pairing are all active, automatically initiates `PrivdManager.connect()` if disconnected and displays a Toast notification: *"You're all set! Privileged Mode is ready."*
-  - **Language-Independent Navigation**: By utilizing standardized Android system view Resource IDs (such as `com.android.settings:id/main_switch`, `android:id/switch_widget`, `android:id/title`, and dialog buttons like `android:id/button1`), settings traversal and toggling logic is inherently language-independent. The locale configuration (`AutoSetupLanguageConfig`) is used for mapping target keyword text checks (e.g. pairing dialog title matches or system warning confirmations) across German, Spanish, French, English, and Traditional Chinese (`zh-TW`, `zh-HK`, `zh-MO`) system locales. If a targeted settings element is off-screen (such as the Build number row at the bottom of About Phone), the service MUST recursively find scrollable containers and execute scroll forward actions to bring them into view.
-  - **Network Trust Dialog Auto-Confirmation**: If the system displays a Wireless Debugging or USB Debugging network trust confirmation dialog ("Debugging über WLAN in diesem Netzwerk zulassen?" / "USB-Debugging zulassen?"), the service MUST automatically click the positive action button ("ZULASSEN" / "ALLOW" / "OK") by looking up the resource IDs (e.g. `android:id/button1` or `com.android.settings:id/button1`) while strictly ignoring checkable CheckBox nodes.
-- Step 5 of the Welcome Tour MUST render a live status checklist displaying stage progress icons (`PENDING`, `ACTIVE`, `DONE`) for Developer Options, Wireless Debugging, ADB Pairing, and Daemon Connection.
-- If the Accessibility Service is inactive, clicking the button MUST display a helpful Toast notification and launch system Accessibility settings.
-
-
-### FR-PV5: No Always-Connected Requirement
-
-- The app MUST function fully when Privileged Mode is OFF. Every feature
-  that integrates with Privileged Mode MUST have a working non-privileged
-  fallback.
+- Because Megingiard System Service is mandatory, the Onboarding Wizard (Step 5) and the Reconnect Prompt Dialog act as modal gatekeepers.
+- Neither dialog can be dismissed or skipped into an unprivileged app state. If the service is disconnected or failed, the user is presented with auto-setup / reconnect controls, or an **Exit App** button to terminate the application cleanly.
 
 ---
 
-## Features That Require Privileged Mode
+## Features Powered by Megingiard System Service
 
-| Feature                                      | What it gains                                                                                 | Without Privileged Mode                                                                                                                                        |
-| -------------------------------------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Gamepad buttons & merge** (MacroPad → physical pad) | Single-controller emulation: games see only one controller via physical evdev merge. | Blocked with proactive UI feedback: Gamepad buttons render disabled styling on the canvas; tapping them triggers a toast prompting the user to activate Privileged Mode. Standalone uinput virtual gamepad fallback is retired to prevent dual-controller conflicts on the AYN Thor. |
-| **Macro subsystem** (execution, recording, editing) | Low-latency physical controller & touch capture directly over running games; hardware evdev input injection. | Blocked with proactive UI feedback: use-mode buttons show disabled styling with floating warning banners; editor decks display warning banners and prevent recording / execution. |
-| **Privileged mirror** (FR-M9)                | No MediaProjection consent dialog when direct SurfaceControl output starts successfully.      | Falls back to `MediaProjection` + `VirtualDisplay` with the system consent dialog. DRM content keeps working.                                                  |
-| **Relative mouse** (Touchpad / Keyboard)     | Low-latency, scheduler-boosted mouse events. Shell UID execution prevents cursor lag under CPU contention. | Falls back to spawning a local virtual mouse binary (`mouseinjector_arm64`) as an app subprocess. |
-| **Virtual keyboard** (Keyboard)             | Low-latency, scheduler-boosted keystrokes. Shell UID execution prevents typing lag under CPU contention.   | Falls back to spawning a local virtual keyboard binary (`keyinjector_arm64`) as an app subprocess. |
-| **Touch injection** (Touchpad / Mirror)      | Low-latency, scheduler-boosted multi-touch events. Shell UID handles group permissions directly. | Falls back to spawning a local touch injector binary (`touchinjector_arm64`) as an app subprocess. |
+| Feature                                      | Implementation & Capabilities                                                                 |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| **Direct screen mirroring**                  | Direct `SurfaceControl` mirror via `mirrorserver` DEX spawned by the daemon directly onto app Surface. Zero consent prompts, zero MediaProjection overhead. |
+| **Top screen capture**                       | High-speed screen capture via daemon framebuffer read. Zero permission dialogs.             |
+| **Multi-touch injection**                    | Low-latency multi-touch injection via direct raw `input_event` writes to `/dev/input/event6` (AYN Thor touchscreen). |
+| **Relative mouse**                           | Low-latency virtual mouse injection via kernel `/dev/uinput`.                                |
+| **Virtual keyboard**                         | Low-latency virtual keyboard key injection via kernel `/dev/uinput`.                          |
+| **Gamepad merge & physical recording**       | Single-controller emulation merging MacroPad events into physical controller evdev stream, plus raw controller event recording. |
+| **Macro subsystem**                          | Real-time execution, recording, and editing of controller and touch sequences over active games. |
 
 > _New entries get added here whenever a feature opts in. Examples that
 > may join the list later: writing to `/dev/input/event*` for special
@@ -179,9 +151,7 @@ Flow:
      verifies the remote byte size matches the bundled asset before continuing.
      The same step also pushes `megingiard_mirror.dex` to
      `/data/local/tmp/megingiard_mirror.dex` (mode `0100644`) — required by
-     the privileged-mirror path (FR-M9). DEX push failure is logged as a
-     warning but does not abort bootstrap; the standard MediaProjection mirror
-     remains available as a fallback.
+     the privileged-mirror path (FR-M9).
    - `SPAWNING_DAEMON` opens a fresh stream and runs
      `/data/local/tmp/megingiard_privd </dev/null >/dev/null 2>&1 &` — the
      daemon detaches via `setsid()` + `signal(SIGHUP, SIG_IGN)` and
@@ -210,7 +180,7 @@ Key pair generation uses `SecureRandom()` (not a named algorithm) for the
 RSA key-pair initializer, and `SecureRandom().nextInt() and Int.MAX_VALUE`
 for the X.509 serial number, ensuring a cryptographically-strong positive value.
 
-The daemon binary in `/data/local/tmp` survives until reboot; thereafter, the next start of the app (or auto-connect invocation) replays the push/spawn step in the background if the user previously completed the setup wizard.
+The daemon binary and associated key/DEX files deployed to `/data/local/tmp` remain permanently intact on flash storage across reboots; however, the running daemon process terminates upon system shutdown. On the next cold start of the app (or auto-connect invocation), Megingiard automatically restarts the daemon in the background (via the Tier-1 hardware root bridge if available, or Tier-2 ADB auto-connect using saved credentials).
 
 ### Auto-Connect Hook
 
@@ -233,8 +203,8 @@ PrivdManager.state.collect { state ->
 
 When `PrivdManager.connect(context)` is invoked:
 1. It first attempts a direct local TCP socket connection (scanning port range `51234–51238` for release or `51244–51248` for debug) via `PrivdClient.connect()`.
-2. If this fails (e.g. after a reboot when the daemon process has terminated), it checks if saved ADB credentials (`privd_adb_key.bin` and `privd_adb_cert.bin`) exist in the `noBackupFilesDir` folder.
-3. If they exist, it automatically starts a background ADB bootstrap via `PrivdBootstrapper.bootstrapAndConnect(context, "127.0.0.1")` which reads the dynamic ADB Wireless Debugging port (using screen-scanned or NSD fallbacks if necessary), connects to the local ADB server trying multiple loopback addresses (`127.0.0.1`, `::1`, `localhost`) to handle system IP binding preferences, pushes and spawns the daemon, and connects the socket.
+2. If this fails (e.g. after a reboot when the daemon process has terminated), it checks whether the native hardware root bridge is available via `PServiceBridge.isAvailable()`. If available, it executes the **Tier-1 Fast-Track** bootstrap via `PServerBootstrapper.bootstrap(context)`, staging binaries, provisioning the HMAC key, and launching the daemon under `shell` ownership (`chown 2000:2000`).
+3. If the root bridge is unavailable, it checks if saved ADB credentials (`privd_adb_key.bin` and `privd_adb_cert.bin`) exist in the `noBackupFilesDir` folder. If they exist, it automatically starts the **Tier-2 ADB Fallback** bootstrap via `PrivdBootstrapper.bootstrapAndConnect(context, "127.0.0.1")` which reads the dynamic ADB Wireless Debugging port (using screen-scanned or NSD fallbacks if necessary), connects to the local ADB server trying multiple loopback addresses (`127.0.0.1`, `::1`, `localhost`) to handle system IP binding preferences, pushes and spawns the daemon, and connects the socket.
 
 The `triggered` guard ensures auto-connect runs at most once for a given
 OFF/FAILED transition and therefore cannot spin in a tight retry loop when the
@@ -245,18 +215,18 @@ deployed daemon binary can be picked up without a full app restart.
 
 ### Wireless Debugging & Credentials Status Check
 
-To guide users when Privileged Mode is offline, `GlobalSettingsViewModel` exposes a reactive background checker `checkPrivilegedModeStatus(context)`. The settings card triggers this check via a `LaunchedEffect(state)` on entering the Global Settings screen and whenever the connection state changes.
+To guide users when Megingiard System Service is offline, `GlobalSettingsViewModel` exposes a reactive background checker `checkPrivilegedModeStatus(context)`. The settings card triggers this check via a `LaunchedEffect(state)` on entering the Global Settings screen and whenever the connection state changes.
 
 `GlobalSettingsViewModel` delegates these checks to domain singletons:
 1. **Credentials Presence:** `PrivdBootstrapper.hasCredentials(context)` verifies if the local ADB pairing files (`privd_adb_key.bin` and `privd_adb_cert.bin`) exist in `noBackupFilesDir`.
 2. **Wireless Debugging Activity:** `PrivdBootstrapper.isWirelessDebuggingActive(context)` queries the system global setting `adb_wifi_enabled` first. If enabled, it returns `true`; otherwise, it falls back to reading the system property `service.adb.tls.port` via `readAdbTlsConnectPort(context)`, the screen-scanned cache, and local Network Service Discovery (mDNS) port lookup to check if Wireless Debugging is active (port > 0).
 
 The results are presented to the user as clear, localized guidance messages in the settings card:
-- **Running:** "Privileged Mode is active and running."
+- **Running:** "Megingiard System Service is active and running."
 - **No Credentials:** "No pairing credentials found. Please run the setup wizard to pair this device."
 - **Wireless Debugging Disabled:** "Wireless Debugging is inactive. Please enable Wireless Debugging in Developer Options."
-- **Wireless Debugging Active, Disconnected:** "Wireless Debugging is active. Tap Connect to start Privileged Mode."
-- **Connecting:** "Connecting to daemon..."
+- **Wireless Debugging Active, Disconnected:** "Wireless Debugging is active. Tap Connect to start Megingiard System Service."
+- **Connecting:** "Connecting to system service..."
 
 This dialog uses the same wording and colors as the settings status messages. It has three actions:
 1. **Connect:** Triggers a background retry connect sequence.
@@ -317,11 +287,11 @@ The daemon compares the app's `AUTH` proof with a constant-time XOR accumulator.
 
 #### Native Asset Verification & Pre-Push Cleanup During Bootstrap
 
-`PrivdBootstrapper` kills any running daemon process (`kill -9`) and deletes `/data/local/tmp/megingiard_privd` over ADB shell prior to pushing fresh binaries to clear `ETXTBSY` file locks from active daemon instances. It verifies the SHA-256 pin of `megingiard_privd_arm64` before pushing it over ADB `sync:`. It also verifies `megingiard_mirror.dex` before pushing the privileged mirror server asset. A daemon verification failure aborts bootstrap; a mirror DEX verification failure is logged and leaves the normal MediaProjection fallback path available.
+`PrivdBootstrapper` kills any running daemon process (`kill -9`) and deletes `/data/local/tmp/megingiard_privd` over ADB shell prior to pushing fresh binaries to clear `ETXTBSY` file locks from active daemon instances. It verifies the SHA-256 pin of `megingiard_privd_arm64` before pushing it over ADB `sync:`. It also verifies `megingiard_mirror.dex` before pushing the privileged mirror server asset. A verification failure aborts bootstrap.
 
 Upon daemon replacement and reconnection, active subsystems automatically recover:
 - **Screen Mirroring (`ScreenCaptureService`):** Observes `PrivdClient.state` and automatically starts a new `DirectPrivdMirrorSession` on the new daemon, restoring mirror output without user intervention.
-- **Input Injectors (`KeyInjector`, `TouchInjector`, `MouseInjector`):** `InjectorBackendRouter` automatically re-synchronizes backend routing and re-sends initialization commands (`KB_START` for keyboard) to establish input nodes on the new daemon. Gamepad injection automatically routes directly to `PrivdGamepadInjector` for hardware evdev merge when Privd is connected.
+- **Input Injectors (`KeyInjector`, `TouchInjector`, `MouseInjector`):** All injectors route directly to `PrivdClient`. `KeyInjector` automatically re-sends initialization commands (`KB_START`) to establish its `/dev/uinput` node on the new daemon. Gamepad injection routes directly to `PrivdGamepadInjector` for hardware evdev merge.
 
 Detailed native rebuild and generated hash behavior are documented in [BUILD_NATIVE.md](../../BUILD_NATIVE.md#native-asset-integrity).
 
@@ -450,9 +420,9 @@ VERIFYING / DONE) is exposed by `PrivdBootstrapper.stage` for the wizard UI.
 Key provisioning happens during the `PUSHING_BINARY` stage (after a successful binary push
 but before spawning the daemon) — no separate `PROVISIONING` stage is needed.
 
-### Privileged Mode Requirement in GamepadInjector
+### Megingiard System Service Requirement in GamepadInjector
 
-`GamepadInjector` routes directly to `PrivdGamepadInjector` for kernel evdev merge into the physical controller (`g_gamepad_fd`) when `PrivdClient.isConnected`. When Privileged Mode is offline, gamepad injection is suppressed and buttons render with disabled styling, avoiding dual-controller conflicts from `/dev/uinput` virtual devices on the AYN Thor. Standalone uinput virtual gamepad fallback is retired.
+`GamepadInjector` routes directly to `PrivdGamepadInjector` for kernel evdev merge into the physical controller (`g_gamepad_fd`) when `PrivdClient.isConnected`. When Megingiard System Service is offline, gamepad injection is suppressed and buttons render with disabled styling, avoiding dual-controller conflicts from `/dev/uinput` virtual devices on the AYN Thor. Standalone uinput virtual gamepad fallback is retired.
 
 ### Source Files
 

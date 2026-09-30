@@ -26,7 +26,7 @@ private const val LOGICAL_SCREEN_HEIGHT = 1080f
  * so the `:domain` module never references Android resources directly.
  * The UI layer maps this to a localised string.
  */
-enum class DisabledReason { KEYBOARD, MOUSE, TOUCH, MACRO_PRIVD, GAMEPAD_PRIVD }
+enum class DisabledReason { KEYBOARD, GAMEPAD, MOUSE, TOUCH }
 
 /**
  * Hit-test engine and multi-touch dispatch for MacroPad use-mode.
@@ -414,7 +414,7 @@ class MacroPadHitTestEngine(
                 }
 
                 is PadAction.GamepadButton -> {
-                    if (!PrivdClient.isConnected) DisabledReason.GAMEPAD_PRIVD else null
+                    if (!profile.enableGamepad) DisabledReason.GAMEPAD else null
                 }
 
                 is PadAction.MouseButton,
@@ -429,10 +429,6 @@ class MacroPadHitTestEngine(
                     } else {
                         if (!profile.enableMouse) DisabledReason.MOUSE else null
                     }
-                }
-
-                is PadAction.Macro -> {
-                    if (!PrivdClient.isConnected) DisabledReason.MACRO_PRIVD else null
                 }
 
                 else -> {

@@ -2,55 +2,52 @@ package com.stormpanda.megingiard.keyboard
 
 import android.content.Context
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.input.InjectorBackendRouter
 import com.stormpanda.megingiard.privd.PrivdClient
+import com.stormpanda.megingiard.privd.PrivdConnectionState
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 private const val TAG = "KeyInjector"
 
 /**
- * Public facade for keyboard event injection — strategy router.
+ * Public facade for keyboard event injection via Megingiard System Service (Privileged Mode).
  */
 object KeyInjector {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     @Volatile
-    private var appContext: Context? = null
+    private var active: Boolean = false
 
-    private val router =
-        InjectorBackendRouter(
-            tag = TAG,
-            onPrivdConnected = {
-                AppLog.i(TAG, "Privd reconnected -> re-sending KB_START to daemon")
-                PrivdClient.send("KB_START\n")
-                if (ShellKeyInjector.isRunning) {
-                    ShellKeyInjector.stop()
+    init {
+        scope.launch {
+            PrivdClient.state.collect { state ->
+                if (active && state == PrivdConnectionState.CONNECTED) {
+                    AppLog.i(TAG, "Privd reconnected while KeyInjector active -> re-sending KB_START to daemon")
+                    PrivdClient.send("KB_START\n")
                 }
-            },
-            onPrivdDisconnected = {
-                AppLog.i(TAG, "Privd disconnected while KeyInjector active -> launching fallback ShellKeyInjector")
-                appContext?.let { ShellKeyInjector.start(it) }
-            },
-        )
+            }
+        }
+    }
 
-    fun start(context: Context) {
-        appContext = context.applicationContext
-        if (router.resolveBackend()) {
+    fun start(context: Context? = null) {
+        active = true
+        AppLog.i(TAG, "start()")
+        if (PrivdClient.isConnected) {
             PrivdClient.send("KB_START\n")
-        } else {
-            ShellKeyInjector.start(context)
         }
     }
 
     fun stop() {
-        AppLog.i(TAG, "stop() — backend=${if (router.isPrivd) "PRIVD" else "VIRTUAL_UINPUT"}")
-        router.markStopped()
-        if (router.isPrivd) {
+        AppLog.i(TAG, "stop()")
+        active = false
+        if (PrivdClient.isConnected) {
             PrivdClient.send("KB_STOP\n")
-        } else {
-            ShellKeyInjector.stop()
         }
-        appContext = null
     }
 
-    val isRunning: Boolean get() = router.isRunning { ShellKeyInjector.isRunning }
+    val isRunning: Boolean get() = active && PrivdClient.isConnected
 
     fun isValidKeycode(linuxKeycode: Int): Boolean = linuxKeycode in 1..LinuxKeycodes.KEY_MAX
 
@@ -59,10 +56,7 @@ object KeyInjector {
             AppLog.w(TAG, "Ignoring out-of-range linuxKeycode: $linuxKeycode for keyDown")
             return
         }
-        router.dispatch(
-            privdAction = { PrivdClient.send("KD $linuxKeycode\n") },
-            shellAction = { ShellKeyInjector.injectKey(KeyAction.DOWN, linuxKeycode) },
-        )
+        PrivdClient.send("KD $linuxKeycode\n")
     }
 
     fun keyUp(linuxKeycode: Int) {
@@ -70,10 +64,7 @@ object KeyInjector {
             AppLog.w(TAG, "Ignoring out-of-range linuxKeycode: $linuxKeycode for keyUp")
             return
         }
-        router.dispatch(
-            privdAction = { PrivdClient.send("KU $linuxKeycode\n") },
-            shellAction = { ShellKeyInjector.injectKey(KeyAction.UP, linuxKeycode) },
-        )
+        PrivdClient.send("KU $linuxKeycode\n")
     }
 
     /** Convenience: sends key down immediately followed by key up. */

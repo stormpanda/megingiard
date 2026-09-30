@@ -28,8 +28,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.privd.PrivdManager
-import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.ui.DialogToastManager
 import com.stormpanda.megingiard.ui.GamepadActionCard
@@ -103,8 +101,6 @@ internal fun MacroTimelineSubPageContent(
 
     val touchRecordingState by TouchRecordingManager.state.collectAsStateWithLifecycle()
     val physicalRecordingState by PhysicalGamepadRecordingManager.state.collectAsStateWithLifecycle()
-    val privdState by PrivdManager.state.collectAsStateWithLifecycle()
-    val physicalRecordingAvailable = privdState == PrivdState.RUNNING
     val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsStateWithLifecycle()
 
     fun syncDraftToNavState(draft: Macro) {
@@ -126,10 +122,6 @@ internal fun MacroTimelineSubPageContent(
     }
 
     fun startGamepadRecording() {
-        if (!physicalRecordingAvailable) {
-            DialogToastManager.show(context.getString(R.string.privd_error_daemon_unreachable))
-            return
-        }
         AppLog.i(
             TAG,
             "startGamepadRecording() -> suspending editor and starting physical recording",
@@ -147,10 +139,6 @@ internal fun MacroTimelineSubPageContent(
     }
 
     fun requestTouchTapRecording() {
-        if (!physicalRecordingAvailable) {
-            DialogToastManager.show(context.getString(R.string.privd_error_daemon_unreachable))
-            return
-        }
         syncDraftToNavState(currentMacro)
         if (savedMacro != null) {
             MacroPadState.updateMacro(currentMacro)
@@ -160,10 +148,6 @@ internal fun MacroTimelineSubPageContent(
     }
 
     fun requestTouchGestureRecording() {
-        if (!physicalRecordingAvailable) {
-            DialogToastManager.show(context.getString(R.string.privd_error_daemon_unreachable))
-            return
-        }
         syncDraftToNavState(currentMacro)
         if (savedMacro != null) {
             MacroPadState.updateMacro(currentMacro)
@@ -227,12 +211,6 @@ internal fun MacroTimelineSubPageContent(
         }
     }
 
-    if (!physicalRecordingAvailable) {
-        GamepadInfoBox(
-            text = stringResource(R.string.macropad_macro_privd_required_banner),
-        )
-    }
-
     GamepadTextFieldCard(
         title = stringResource(R.string.help_timeline_name_label),
         description = stringResource(R.string.help_timeline_name_desc),
@@ -255,10 +233,6 @@ internal fun MacroTimelineSubPageContent(
         itemKey = "macro_test_run",
         enabled = steps.isNotEmpty(),
         onClick = {
-            if (!physicalRecordingAvailable) {
-                DialogToastManager.show(context.getString(R.string.privd_error_daemon_unreachable))
-                return@GamepadActionCard
-            }
             syncDraftToNavState(currentMacro)
             MacroExecutor.runTest(
                 macro = currentMacro,

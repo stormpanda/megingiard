@@ -23,7 +23,6 @@
 # Android components referenced by name in AndroidManifest.xml
 # ---------------------------------------------------------------------
 -keep class com.stormpanda.megingiard.MainActivity { *; }
--keep class com.stormpanda.megingiard.CaptureRequestActivity { *; }
 -keep class com.stormpanda.megingiard.mirror.ScreenCaptureService { *; }
 
 # ---------------------------------------------------------------------

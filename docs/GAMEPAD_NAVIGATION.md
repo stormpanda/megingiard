@@ -6,7 +6,7 @@
 
 ## 1. Executive Summary & Core Philosophy
 
-Megingiard is built for the **AYN Thor** dual-screen handheld. While the secondary bottom screen supports direct multi-touch manipulation, all primary display overlays (Global Settings, MacroPad Editor, Layout Inspector, Privileged Mode Wizard, Help Modals) are designed with a **Gamepad-First** philosophy:
+Megingiard is built for the **AYN Thor** dual-screen handheld. While the secondary bottom screen supports direct multi-touch manipulation, all primary display overlays (Global Settings, MacroPad Editor, Layout Inspector, Megingiard System Service Wizard, Help Modals) are designed with a **Gamepad-First** philosophy:
 
 * **Zero Touch Requirement:** Every interaction, setting, sub-menu, and adjustment can be operated entirely with the physical D-Pad, Left Analog Stick, Face Buttons (`A`, `B`, `X`, `Y`), and Shoulder Bumpers (`L1`, `R1`).
 * **Instant Visual Feedback:** Focus transitions use spring animations, high-contrast accent borders (`GC_FOCUS_BORDER_WIDTH = 2.5.dp`), and surface elevation tinting (`GC_CARD_FOCUSED_BG_ALPHA = 0.95f`).

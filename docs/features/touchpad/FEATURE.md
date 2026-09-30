@@ -1,8 +1,8 @@
 # Feature: Virtual Touchpad
 
 > **Related source:** `companion/ui/src/main/java/com/stormpanda/megingiard/touchpad/` (UI), `companion/domain/src/main/java/com/stormpanda/megingiard/touchpad/` (gesture processing), `companion/domain/src/main/java/com/stormpanda/megingiard/input/` (shared injection infrastructure)
-> **Native source:** `companion/ui/src/main/cpp/mouseinjector.c` (Mouse mode), `companion/ui/src/main/cpp/touchinjector.c` (Touch mode)
-> **Binary assets:** `companion/ui/src/main/assets/mouseinjector_arm64`, `companion/ui/src/main/assets/touchinjector_arm64`
+> **Native source:** `companion/ui/src/main/cpp/megingiard_privd.c` (Megingiard System Service)
+> **Binary assets:** `companion/ui/src/main/assets/megingiard_privd_arm64`
 > **Build instructions:** [BUILD_NATIVE.md](../../BUILD_NATIVE.md)
 
 ---
@@ -52,29 +52,26 @@ The Virtual Touchpad is instantiated via the **Fullscreen Mouse Overlay** (`Full
 
 ## Technical Implementation
 
-### Why Native Binaries
+### System Service Native Injection
 
 Android's `adb shell input` APIs perform synchronous Binder IPC to `InputManagerService` for each event — approximately **7 ms per call**, which is too slow for real-time mouse/touch injection.
 
-Megingiard uses two native binaries for low-latency (< 1 ms) injection:
+Megingiard uses the mandatory **Megingiard System Service** (`megingiard_privd`) running with shell privileges for low-latency (< 1 ms) direct Linux input injection over a local abstract domain socket (`megingiard_privd`):
 
-1. **`mouseinjector_arm64`**: Used in **Mouse Mode**. It creates a virtual input device via `/dev/uinput` (Linux User-Space Input Subsystem) and accepts commands via stdin to simulate relative mouse motion (`REL_X`/`REL_Y`), mouse button presses (`BTN_LEFT`/`BTN_RIGHT`), and scroll wheel events (`REL_WHEEL`).
-2. **`touchinjector_arm64`**: Used in **Touch Mode** (conceptual touchpad mode, active in Mirror Touch Projection). It opens the touchscreen device node `/dev/input/event6` directly and writes Linux `struct input_event` Multi-Touch Protocol Type B structures.
+1. **Mouse Mode**: The daemon initializes a virtual input device via `/dev/uinput` (`uinput_mouse`) and accepts socket commands to simulate relative mouse motion (`REL_X`/`REL_Y`), mouse button presses (`BTN_LEFT`/`BTN_RIGHT`/`BTN_MIDDLE`), and scroll wheel events (`REL_WHEEL`).
+2. **Touch Mode**: Used in Touch Mode and Mirror Touch Projection. The daemon opens the touchscreen device node `/dev/input/event6` directly and writes Linux `struct input_event` Multi-Touch Protocol Type B structures.
 
-On the AYN Thor, these nodes are accessible to the app/shell UID — root is not required.
+### System Service: Socket Protocol & Lifecycle
 
-### Native Binary: Deployment & Lifecycle
-
-The pre-built binaries are bundled in the app's `assets/`. Injector lifecycles are managed globally by `InjectorLifecycleManager`, which maintains active `MouseInjector`, `TouchInjector`, and `KeyInjector` processes continuously whenever Megingiard is in the foreground (`AppStateManager.isActivityResumed`), stopping them when backgrounded (`onStop`) or during the Privileged Mode setup wizard IME:
+Injector lifecycles are managed globally by `InjectorLifecycleManager`, which maintains active `MouseInjector`, `TouchInjector`, and `KeyInjector` registrations whenever Megingiard is in the foreground (`AppStateManager.isActivityResumed`), stopping them when backgrounded (`onStop`) or during the Privileged Mode setup wizard IME:
 
 1. `InjectorLifecycleManager.watch(context)` is initiated centrally in `MainActivity.onCreate()`.
-2. The `NativeBinaryInjector` helper copies `mouseinjector_arm64` and `touchinjector_arm64` from `assets/` to `context.filesDir` (app-private directory), calls `setExecutable(true)`, and launches them via `ProcessBuilder`.
-3. The binary signals readiness by writing `"R\n"` to stdout (checked with a 500 ms timeout).
-4. Individual screens (`FullscreenMouseOverlay`, `MacroPadScreen`) route events directly to `MouseInjector` or `TouchInjector` without starting or stopping background processes on local composition/disposal.
+2. Commands are routed from `MouseInjector` and `TouchInjector` directly into `PrivdClient`, which communicates with `megingiard_privd` over the local abstract UNIX domain socket.
+3. Individual screens (`FullscreenMouseOverlay`, `MacroPadScreen`) route events directly to `MouseInjector` or `TouchInjector` without starting or stopping background processes on local composition/disposal.
 
-### Stdin Protocol (Mouse Mode)
+### Socket Protocol (Mouse Mode)
 
-Commands are sent as newline-terminated ASCII strings to `mouseinjector_arm64`'s stdin:
+Commands are sent as newline-terminated ASCII strings across the `PrivdClient` socket connection to `megingiard_privd`:
 
 | Command | Format       | Description                                                           |
 | ------- | ------------ | --------------------------------------------------------------------- |
@@ -83,20 +80,17 @@ Commands are sent as newline-terminated ASCII strings to `mouseinjector_arm64`'s
 | RELEASE | `MB btn U\n` | Release mouse button `btn` up                                         |
 | SCROLL  | `MW delta\n` | Scroll relative wheel by `delta`                                      |
 
-### Writer Thread & Event Coalescing
+### Writer Thread & Event Transmission
 
-A dedicated background daemon thread (`MouseInjectorWriter`) drains a `LinkedBlockingQueue<MouseCommand>` to prevent queue backlog during fast movement:
+`PrivdClient` drains an asynchronous command queue on a dedicated background thread to prevent queue backlog during fast movement:
 
 ```
 loop:
   command = queue.take()               // blocks until an event is available
-  if isCoalescible(command):
-    while isCoalescible(queue.peek()):
-      command = queue.poll()           // drain, keeping only the latest command
-  write command to binary stdin
+  write command to abstract domain socket
 ```
 
-**Rationale:** Touch or mouse move events can arrive faster than the binary can process them. For coordinate tracking and relative motion, keeping only the latest position/delta is sufficient to keep up with the physical finger movement. Coalescing by keeping only the latest command eliminates queue buildup and input lag. Clicks, scrolls, and key presses are non-coalescible and are never dropped.
+**Rationale:** Touch or mouse move events can arrive rapidly. Transmitting commands over the non-blocking abstract domain socket to the daemon's event loop achieves sub-millisecond dispatch without IPC stalls. Clicks, scrolls, and key presses are preserved in order.
 
 ### Gesture & Movement Processing
 
@@ -137,8 +131,8 @@ In **Touch Mode** (shared absolute coordinate injection, e.g. for Mirror Touch P
   sensorX = (1.0f - normalizedY) * 1080
   sensorY = normalizedX * 1920
   ```
-- These coordinates are sent to slot-aware `TouchInjector.injectTouch(slot, action, normX, normY)` which maps concurrent pointer contacts to distinct Linux uinput input slots (`0..9`) and writes slot-aware commands to `touchinjector_arm64`, enabling slot-aware multi-touch on the absolute touchpad.
-- When `TouchInjector.stop(token)` is called, it removes the client registration. If the client registry becomes empty, the injector sends slot-specific `UP` commands for all supported touch slots and waits briefly for the writer queue to flush before terminating `touchinjector_arm64`. This prevents Android from retaining a visible touch indicator if a final release command was still queued during teardown.
+- These coordinates are sent to slot-aware `TouchInjector.injectTouch(slot, action, normX, normY)` which maps concurrent pointer contacts to distinct Linux input slots (`0..9`) and transmits commands directly to `PrivdClient`, enabling slot-aware multi-touch on the absolute touchpad.
+- When `TouchInjector.stop(token)` is called, it removes the client registration. If the client registry becomes empty, the injector sends slot-specific `UP` commands for all supported touch slots and flushes before releasing. This prevents Android from retaining a visible touch indicator.
 - **Mode Switching Safety:** When toggling dynamically between Mouse Mode and Touch Mode while fingers are down, `TouchpadGestureProcessor.onCancel()` and `LaunchedEffect(touchpadUseMouse)` unconditionally release all active touch slots (`TouchAction.UP`) and mouse drag/click states before switching background injectors. This prevents orphaned pointer slots or stuck mouse buttons.
 
 ### Secondary Display Rendering & Touchpad Mirroring
@@ -162,11 +156,7 @@ Dismissal on the secondary display reuses the edge-swipe gesture path: `SwipeGes
 | `FullscreenMouseOverlay.kt`   | `:app` UI       | Fullscreen relative-mouse Compose overlay, pointer event loop                         |
 | `TouchpadGestureProcessor.kt` | `:domain` Logic | Compose-free gesture tracking; mouse (relative + taps) and touch (absolute) processor |
 | `TouchpadSettings.kt`         | `:domain` Logic | Persistent settings for touchpad mode (tap-to-click, two-finger-tap, etc.)            |
-| `MouseInjector.kt`            | `:domain` Logic | Public relative mouse injection facade (LMB/RMB clicks, scroll, move deltas)          |
-| `ShellMouseInjector.kt`       | `:domain` Logic | Native mouse injector daemon process controller; stdin protocol; MOVE coalescing      |
-| `TouchInjector.kt`            | `:domain` Logic | Shared absolute touch injection facade with portrait rotation scaling                 |
-| `ShellInputInjector.kt`       | `:domain` Logic | Native touch injector daemon process controller; MOVE coalescing                      |
-| `mouseinjector.c`             | C Source        | Virtual uinput mouse creation and relative input injection logic                      |
-| `mouseinjector_arm64`         | Native Asset    | Pre-built relative mouse injector binary asset (`companion/ui/src/main/assets/`)               |
-| `touchinjector.c`             | C Source        | Direct `/dev/input/event6` raw event injection logic                                  |
-| `touchinjector_arm64`         | Native Asset    | Pre-built absolute touch injector binary asset (`companion/ui/src/main/assets/`)               |
+| `MouseInjector.kt`            | `:domain` Logic | Relative mouse injection facade routing directly to `PrivdClient`                     |
+| `TouchInjector.kt`            | `:domain` Logic | Absolute touch injection facade routing directly to `PrivdClient`                     |
+| `megingiard_privd.c`          | C Source        | Megingiard System Service daemon handling multi-touch and virtual mouse injection     |
+| `megingiard_privd_arm64`      | Native Asset    | Pre-built Megingiard System Service binary asset (`companion/ui/src/main/assets/`)    |

@@ -47,8 +47,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.privd.PrivdManager
-import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.BumperDirection
 import com.stormpanda.megingiard.ui.GamepadActionCard
@@ -94,14 +92,11 @@ internal fun describeButtonColorOption(
  */
 @Composable
 internal fun ChooseButtonTypeSubPageContent(onSelectType: (ActionGroup) -> Unit) {
-    val privdState by PrivdManager.state.collectAsStateWithLifecycle()
-    val isPrivdRunning = privdState == PrivdState.RUNNING
     val profile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
-    val hasMacros = isPrivdRunning && (profile?.macros?.isNotEmpty() == true)
+    val hasMacros = profile?.macros?.isNotEmpty() == true
     val availableGroups =
-        remember(hasMacros, isPrivdRunning) {
+        remember(hasMacros) {
             ActionGroup.entries.filter { group ->
-                if ((group == ActionGroup.MACRO || group == ActionGroup.GAMEPAD) && !isPrivdRunning) return@filter false
                 group.actions().any { category ->
                     category.isAvailable(hasMacros)
                 }

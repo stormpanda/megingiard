@@ -144,7 +144,7 @@ enum class HapticStrength { OFF, LIGHT, MEDIUM, STRONG, CUSTOM }
 
 @Serializable
 sealed class PadAction {
-    /** Injects a Linux keyboard keycode via keyinjector_arm64. */
+    /** Injects a Linux keyboard keycode via KeyInjector (Megingiard System Service). */
     @Serializable
     @SerialName("keyboard_key")
     data class KeyboardKey(
@@ -174,7 +174,7 @@ sealed class PadAction {
     ) : PadAction()
 
     /**
-     * Injects a mouse button event via mouseinjector_arm64.
+     * Injects a mouse button event via MouseInjector (Megingiard System Service).
      */
     @Serializable
     @SerialName("mouse_button")

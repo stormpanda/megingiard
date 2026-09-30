@@ -79,13 +79,11 @@ import com.stormpanda.megingiard.mirror.ACTION_START_PRIVD
 import com.stormpanda.megingiard.mirror.ACTION_STOP
 import com.stormpanda.megingiard.mirror.MirrorRuntimeAction
 import com.stormpanda.megingiard.mirror.MirrorRuntimePolicyState
-import com.stormpanda.megingiard.mirror.MirrorStrategy
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCaptureService
 import com.stormpanda.megingiard.mirror.ScreenshotTarget
 import com.stormpanda.megingiard.mirror.decideMirrorRuntimeAction
 import com.stormpanda.megingiard.mirror.isPrivdMirrorConnecting
-import com.stormpanda.megingiard.mirror.selectMirrorStrategy
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdManager
@@ -545,7 +543,7 @@ class MainActivity : ComponentActivity() {
                                     )
                                 } else {
                                     AppLog.i(TAG, "mirror policy: layout=${policy.layoutId} wants ON → start")
-                                    startMirrorByPolicy()
+                                    startMirrorService()
                                 }
                             }
 
@@ -581,7 +579,7 @@ class MainActivity : ComponentActivity() {
                         !ScreenCaptureManager.isCapturing.value &&
                         !alreadyPrompting
                     ) {
-                        startMirrorByPolicy()
+                        startMirrorService()
                     } else if (!alreadyPrompting) {
                         AppStateManager.setPromptInFlight(false)
                     }
@@ -646,21 +644,16 @@ class MainActivity : ComponentActivity() {
                         try {
                             when (target) {
                                 ScreenshotTarget.TOP -> {
-                                    if (PrivdClient.isConnected) {
-                                        val timestamp = System.currentTimeMillis()
-                                        val filepath = File(getScreenshotsDir(), "Megingiard_Screenshot_Top_$timestamp.png").absolutePath
-                                        val ok = PrivdClient.takeScreenshot(filepath)
-                                        if (ok) {
-                                            MediaScannerConnection.scanFile(this@MainActivity, arrayOf(filepath), null, null)
-                                            val bitmap = BitmapFactory.decodeFile(filepath)
-                                            if (bitmap == null) AppLog.e(TAG, "Failed to decode top screenshot file $filepath")
-                                            notifyScreenshotResult(bitmap != null, bitmap)
-                                        } else {
-                                            AppLog.e(TAG, "Privileged screenshot failed via privd client")
-                                            notifyScreenshotResult(false)
-                                        }
-                                    } else if (!ScreenCaptureManager.isCapturing.value) {
-                                        AppLog.w(TAG, "Top screenshot requested but mirroring is not active and privd is not connected.")
+                                    val timestamp = System.currentTimeMillis()
+                                    val filepath = File(getScreenshotsDir(), "Megingiard_Screenshot_Top_$timestamp.png").absolutePath
+                                    val ok = PrivdClient.takeScreenshot(filepath)
+                                    if (ok) {
+                                        MediaScannerConnection.scanFile(this@MainActivity, arrayOf(filepath), null, null)
+                                        val bitmap = BitmapFactory.decodeFile(filepath)
+                                        if (bitmap == null) AppLog.e(TAG, "Failed to decode top screenshot file $filepath")
+                                        notifyScreenshotResult(bitmap != null, bitmap)
+                                    } else {
+                                        AppLog.e(TAG, "Privileged screenshot failed via privd client")
                                         notifyScreenshotResult(false)
                                     }
                                 }
@@ -749,48 +742,14 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /**
-     * Decides whether to start the privileged mirror path (no consent dialog,
-     * direct SurfaceControl output) or the standard MediaProjection path. The
-     * privileged path requires the per-feature flag to be enabled and a RUNNING
-     * privd connection.
-     */
-    private fun startMirrorByPolicy() {
-        val privdRunning = PrivdManager.state.value == PrivdState.RUNNING
-        val strategy = selectMirrorStrategy(privdRunning)
-        when (strategy) {
-            MirrorStrategy.PRIVILEGED -> {
-                AppLog.i(TAG, "startMirrorByPolicy: privd path")
-                AppStateManager.setPromptInFlight(true)
-                val intent =
-                    Intent(this, ScreenCaptureService::class.java).apply {
-                        action = ACTION_START_PRIVD
-                    }
-                startForegroundService(intent)
-            }
-
-            MirrorStrategy.MEDIA_PROJECTION -> {
-                AppLog.i(TAG, "startMirrorByPolicy: MediaProjection path")
-                launchCaptureRequest()
-            }
-        }
-    }
-
-    /**
-     * Launches [CaptureRequestActivity] on the primary display so the system MediaProjection
-     * consent dialog appears on the correct screen. Used by both the auto-start path
-     * and the manual "Start mirroring" button. Sets `promptInFlight` to suppress
-     * concurrent launches.
-     */
-    private fun launchCaptureRequest() {
+    private fun startMirrorService() {
+        AppLog.i(TAG, "startMirrorService: starting ScreenCaptureService")
         AppStateManager.setPromptInFlight(true)
-        val options = ActivityOptions.makeBasic()
-        options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
         val intent =
-            Intent(this, CaptureRequestActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+            Intent(this, ScreenCaptureService::class.java).apply {
+                action = ACTION_START_PRIVD
             }
-        startActivity(intent, options.toBundle())
+        startForegroundService(intent)
     }
 
     private fun stopMirrorService() {

@@ -8,45 +8,30 @@ import com.stormpanda.megingiard.privd.PrivdClient
 private const val TAG = "MouseInjector"
 
 /**
- * Public facade for mouse injection (clicks + relative pointer movement).
- *
- * Strategy router:
- * - If PrivdClient.isConnected, routes events to the privileged daemon via [PrivdClient].
- * - Otherwise, falls back to [ShellMouseInjector] (bundled native process uinput helper).
+ * Public facade for mouse injection (clicks + relative pointer movement) via Megingiard System Service.
  */
 object MouseInjector {
-    private val router =
-        InjectorBackendRouter(
-            tag = TAG,
-            onPrivdConnected = {
-                if (ShellMouseInjector.isRunning) {
-                    ShellMouseInjector.stop()
-                }
-            },
-        )
+    @Volatile
+    private var active: Boolean = false
 
-    fun start(context: Context) {
-        if (!router.resolveBackend()) {
-            ShellMouseInjector.start(context)
-        }
+    fun start(context: Context? = null) {
+        active = true
+        AppLog.i(TAG, "start()")
     }
 
     fun stop() {
-        AppLog.i(TAG, "stop() — backend=${if (router.isPrivd) "PRIVD" else "VIRTUAL_UINPUT"}")
-        router.markStopped()
-        if (!router.isPrivd) {
-            ShellMouseInjector.stop()
-        }
+        AppLog.i(TAG, "stop()")
+        active = false
     }
 
-    val isRunning: Boolean get() = router.isRunning { ShellMouseInjector.isRunning }
+    val isRunning: Boolean get() = active && PrivdClient.isConnected
 
     fun buttonDown(code: Char) {
-        router.dispatch({ PrivdClient.send("MB $code D\n") }, { ShellMouseInjector.buttonDown(code) })
+        PrivdClient.send("MB $code D\n")
     }
 
     fun buttonUp(code: Char) {
-        router.dispatch({ PrivdClient.send("MB $code U\n") }, { ShellMouseInjector.buttonUp(code) })
+        PrivdClient.send("MB $code U\n")
     }
 
     fun buttonDown(button: MouseButton) = buttonDown(button.code)
@@ -78,11 +63,11 @@ object MouseInjector {
         dy: Int,
     ) {
         if (dx == 0 && dy == 0) return
-        router.dispatch({ PrivdClient.send("MM $dx $dy\n") }, { ShellMouseInjector.moveMouse(dx, dy) })
+        PrivdClient.send("MM $dx $dy\n")
     }
 
     fun scrollWheel(delta: Int) {
         if (delta == 0) return
-        router.dispatch({ PrivdClient.send("MW $delta\n") }, { ShellMouseInjector.scrollWheel(delta) })
+        PrivdClient.send("MW $delta\n")
     }
 }

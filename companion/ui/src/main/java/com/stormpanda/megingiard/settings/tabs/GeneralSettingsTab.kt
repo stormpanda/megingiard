@@ -2,8 +2,10 @@ package com.stormpanda.megingiard.settings.tabs
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
+import androidx.compose.material.icons.rounded.AutoFixHigh
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.PlayCircle
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material.icons.rounded.VisibilityOff
@@ -35,6 +37,8 @@ fun GeneralSettingsTab(
     onNavigateToSubPage: (SettingsSubPage) -> Unit,
     onStartWelcomeTour: () -> Unit,
     onOpenPrivdSetup: () -> Unit,
+    onConnectPrivd: () -> Unit = onOpenPrivdSetup,
+    isRootBridgeAvailable: Boolean = false,
     onLanguageChange: (AppLanguage) -> Unit,
     onExcludeFromRecentsChange: (Boolean) -> Unit,
     onResetTutorials: () -> Unit,
@@ -62,6 +66,7 @@ fun GeneralSettingsTab(
     )
 
     val isPrivdRunning = privdState == PrivdState.RUNNING
+    val isPrivdConnecting = privdState == PrivdState.CONNECTING
     GamepadActionCard(
         title = stringResource(R.string.privd_title),
         description = stringResource(R.string.help_settings_privd_desc),
@@ -69,17 +74,48 @@ fun GeneralSettingsTab(
         trailingContent = {
             GamepadPill(
                 text =
-                    if (isPrivdRunning) {
-                        stringResource(
-                            R.string.privd_status_running_version,
-                            PrivdConstants.PRIVD_VERSION,
-                        )
-                    } else {
-                        stringResource(R.string.gamepad_toggle_off)
+                    when {
+                        isPrivdRunning -> {
+                            stringResource(
+                                R.string.privd_status_running_version,
+                                PrivdConstants.PRIVD_VERSION,
+                            )
+                        }
+
+                        isPrivdConnecting -> {
+                            stringResource(R.string.privd_status_connecting)
+                        }
+
+                        else -> {
+                            stringResource(R.string.privd_status_off)
+                        }
                     },
                 isAccent = isPrivdRunning,
             )
         },
+        onClick = {
+            if (isRootBridgeAvailable && !isPrivdRunning) {
+                if (!isPrivdConnecting) {
+                    onConnectPrivd()
+                }
+            } else {
+                onOpenPrivdSetup()
+            }
+        },
+    )
+
+    GamepadActionCard(
+        title = stringResource(R.string.privd_restart_service),
+        description = stringResource(R.string.privd_restart_service_desc),
+        icon = Icons.Rounded.Refresh,
+        enabled = !isPrivdConnecting,
+        onClick = onConnectPrivd,
+    )
+
+    GamepadActionCard(
+        title = stringResource(R.string.privd_rerun_wizard),
+        description = stringResource(R.string.privd_rerun_wizard_desc),
+        icon = Icons.Rounded.AutoFixHigh,
         onClick = onOpenPrivdSetup,
     )
 

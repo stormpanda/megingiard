@@ -281,9 +281,15 @@ object PrivdClient {
      * Intended for high-frequency feature traffic (e.g. gamepad events).
      */
     fun send(line: String) {
-        if (!running) return
+        if (!isConnected) return
         queue.offer(line)
     }
+
+    internal fun pollCommandForTest(): String? = queue.poll()
+
+    internal fun clearQueueForTest() = queue.clear()
+
+    internal val queueSizeForTest: Int get() = queue.size
 
     /**
      * Round-trips a `PING` and waits for `PONG`. Returns `true` on success,

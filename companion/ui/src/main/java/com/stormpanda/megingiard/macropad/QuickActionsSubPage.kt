@@ -15,8 +15,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.privd.PrivdManager
-import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadTwoColumnGrid
 
@@ -40,10 +38,8 @@ internal fun QuickActionsDeckContent(
 ) {
     AppLog.d(TAG, "Rendering QuickActionsDeckContent")
 
-    val privdState by PrivdManager.state.collectAsStateWithLifecycle()
-    val isPrivdRunning = privdState == PrivdState.RUNNING
     val items =
-        remember(onNewButton, onNewMacro, onNewLayout, onNewProfile, onArrangeButtons, onEditMirrorLayout, isPrivdRunning) {
+        remember(onNewButton, onNewMacro, onNewLayout, onNewProfile, onArrangeButtons, onEditMirrorLayout) {
             buildList {
                 add(
                     QuickActionItem(
@@ -53,16 +49,14 @@ internal fun QuickActionsDeckContent(
                         onClick = onNewButton,
                     ),
                 )
-                if (isPrivdRunning) {
-                    add(
-                        QuickActionItem(
-                            titleRes = R.string.macropad_editor_open_timeline_title,
-                            descRes = R.string.macropad_editor_open_timeline_desc,
-                            icon = Icons.AutoMirrored.Rounded.PlaylistPlay,
-                            onClick = onNewMacro,
-                        ),
-                    )
-                }
+                add(
+                    QuickActionItem(
+                        titleRes = R.string.macropad_editor_open_timeline_title,
+                        descRes = R.string.macropad_editor_open_timeline_desc,
+                        icon = Icons.AutoMirrored.Rounded.PlaylistPlay,
+                        onClick = onNewMacro,
+                    ),
+                )
                 add(
                     QuickActionItem(
                         titleRes = R.string.settings_macropad_new_layout,

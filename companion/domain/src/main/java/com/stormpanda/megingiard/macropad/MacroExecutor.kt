@@ -56,10 +56,7 @@ object MacroExecutor {
      * is cancelled before starting a new one (use [stop] directly for toggle-off semantics).
      */
     fun execute(macro: Macro) {
-        if (macro.steps.isEmpty() || !PrivdClient.isConnected) {
-            if (!PrivdClient.isConnected) {
-                AppLog.w(TAG, "Cannot execute macro '${macro.name}': Privileged Mode is not connected")
-            }
+        if (macro.steps.isEmpty()) {
             return
         }
         synchronized(runningJobs) {

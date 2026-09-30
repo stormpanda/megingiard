@@ -1,8 +1,10 @@
 package com.stormpanda.megingiard.ui.onboarding
 
+import android.app.Activity
 import android.app.ActivityOptions
 import android.app.LocaleManager
 import android.content.Intent
+import android.os.SystemClock
 import android.provider.Settings
 import android.view.Display
 import androidx.activity.compose.BackHandler
@@ -61,6 +63,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -92,6 +95,7 @@ import com.stormpanda.megingiard.onboarding.OnboardingStepState
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.AutoSetupLanguageConfig
 import com.stormpanda.megingiard.privd.ChecklistStatus
+import com.stormpanda.megingiard.privd.PServiceBridge
 import com.stormpanda.megingiard.privd.PrivdBootstrapper
 import com.stormpanda.megingiard.privd.PrivdChecklistRow
 import com.stormpanda.megingiard.privd.PrivdError
@@ -108,8 +112,11 @@ import com.stormpanda.megingiard.ui.QuickMenuGestureTrialOverlay
 import com.stormpanda.megingiard.ui.QuickMenuStepContent
 import com.stormpanda.megingiard.ui.WelcomeStepContent
 import com.stormpanda.megingiard.ui.rememberBezelBrush
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Locale
 
 private const val TAG = "OnboardingWizardDialog"
@@ -172,6 +179,11 @@ fun OnboardingWizardDialog(
     var isWirelessActive by remember { mutableStateOf(MegingiardAccessibilityService.isWirelessDebuggingActive(context)) }
     var isDevicePaired by remember { mutableStateOf(PrivdBootstrapper.hasCredentials(context)) }
     var isAutoSetupActive by remember { mutableStateOf(MegingiardAccessibilityService.isAutoSetupActive) }
+
+    val isRootBridgeAvailable = remember { PrivdManager.isRootBridgeAvailable }
+    var isActivatingAccessibility by remember { mutableStateOf(false) }
+    var isActivatingPrivd by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
 
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -246,9 +258,47 @@ fun OnboardingWizardDialog(
         }
     }
 
+    val activateAccessibilityViaRoot = {
+        if (!isActivatingAccessibility) {
+            isActivatingAccessibility = true
+            coroutineScope.launch(Dispatchers.IO) {
+                val startTime = SystemClock.uptimeMillis()
+                val success = PServiceBridge.enableAccessibility(context)
+                val elapsed = SystemClock.uptimeMillis() - startTime
+                if (elapsed < 1000L) {
+                    delay(1000L - elapsed)
+                }
+                val active = MegingiardAccessibilityService.isEnabled(context)
+                withContext(Dispatchers.Main) {
+                    isAccessibilityActive = active || success
+                    isActivatingAccessibility = false
+                }
+            }
+        }
+    }
+
+    val activatePrivdViaRoot = {
+        if (!isActivatingPrivd) {
+            isActivatingPrivd = true
+            coroutineScope.launch(Dispatchers.IO) {
+                val startTime = SystemClock.uptimeMillis()
+                PrivdManager.connect(context)
+                val elapsed = SystemClock.uptimeMillis() - startTime
+                if (elapsed < 1000L) {
+                    delay(1000L - elapsed)
+                }
+                withContext(Dispatchers.Main) {
+                    isActivatingPrivd = false
+                }
+            }
+        }
+    }
+
     BackHandler(enabled = true) {
         if (!isFirstStep) {
             OnboardingWizardManager.prevStep()
+        } else {
+            (context as? Activity)?.finishAndRemoveTask()
         }
     }
 
@@ -316,6 +366,9 @@ fun OnboardingWizardDialog(
                             AccessibilityStepContent(
                                 isAccessibilityActive = isAccessibilityActive,
                                 onLaunchAccessibilitySettings = launchAccessibilitySettings,
+                                isRootBridgeAvailable = isRootBridgeAvailable,
+                                onActivateViaRootBridge = activateAccessibilityViaRoot,
+                                isActivating = isActivatingAccessibility,
                             )
                         }
 
@@ -330,6 +383,9 @@ fun OnboardingWizardDialog(
                                 privdState = privdState,
                                 onStartAutoSetup = startAutoSetup,
                                 isAutoSetupActive = isAutoSetupActive,
+                                isRootBridgeAvailable = isRootBridgeAvailable,
+                                onActivateViaRootBridge = activatePrivdViaRoot,
+                                isActivatingRootBridge = isActivatingPrivd,
                             )
                         }
 
@@ -358,27 +414,20 @@ fun OnboardingWizardDialog(
                         )
                     }
                 } else {
-                    Spacer(modifier = Modifier.weight(1f))
+                    OutlinedButton(
+                        onClick = { (context as? Activity)?.finishAndRemoveTask() },
+                    ) {
+                        Text(
+                            text = stringResource(R.string.btn_exit_app),
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                    }
                 }
 
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (currentStepState.id == OnboardingStepId.PRIVILEGED) {
-                        OutlinedButton(
-                            onClick = {
-                                AppStateManager.setPrivdPromptDismissed(true)
-                                OnboardingWizardManager.nextStep()
-                            },
-                        ) {
-                            Text(
-                                text = stringResource(R.string.onboarding_btn_skip),
-                                style = MaterialTheme.typography.labelLarge,
-                            )
-                        }
-                    }
-
                     val isNextEnabled =
                         when (currentStepState.id) {
                             OnboardingStepId.ACCESSIBILITY -> {
@@ -386,8 +435,12 @@ fun OnboardingWizardDialog(
                             }
 
                             OnboardingStepId.PRIVILEGED -> {
-                                isWifiActive && isDevModeActive && isWirelessActive && isDevicePaired &&
+                                if (isRootBridgeAvailable) {
                                     privdState == PrivdState.RUNNING
+                                } else {
+                                    isWifiActive && isDevModeActive && isWirelessActive && isDevicePaired &&
+                                        privdState == PrivdState.RUNNING
+                                }
                             }
 
                             else -> {
@@ -619,13 +672,166 @@ fun PrivilegedStepContent(
     privdState: PrivdState,
     onStartAutoSetup: () -> Unit,
     isAutoSetupActive: Boolean = false,
-    titleText: String = stringResource(R.string.onboarding_privd_title),
-    descText: String = stringResource(R.string.onboarding_privd_desc),
-    buttonText: String = stringResource(R.string.onboarding_privd_auto_setup),
+    isRootBridgeAvailable: Boolean = false,
+    onActivateViaRootBridge: () -> Unit = {},
+    isActivatingRootBridge: Boolean = false,
+    titleText: String =
+        if (isRootBridgeAvailable) {
+            stringResource(R.string.onboarding_privd_root_bridge_title)
+        } else {
+            stringResource(R.string.onboarding_privd_title)
+        },
+    descText: String =
+        if (isRootBridgeAvailable) {
+            stringResource(R.string.onboarding_privd_root_bridge_desc)
+        } else {
+            stringResource(R.string.onboarding_privd_desc)
+        },
+    buttonText: String =
+        if (isRootBridgeAvailable) {
+            stringResource(R.string.onboarding_privd_activate_btn)
+        } else {
+            stringResource(R.string.onboarding_privd_auto_setup)
+        },
 ) {
     val context = LocalContext.current
     val colors = LocalAppColors.current
     val lastError by PrivdManager.lastError.collectAsStateWithLifecycle()
+
+    if (isRootBridgeAvailable) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = titleText,
+                color = colors.onSurface,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = descText,
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            val isRunning = privdState == PrivdState.RUNNING
+            val isConnecting = isActivatingRootBridge || privdState == PrivdState.CONNECTING
+            val isFailed = privdState == PrivdState.FAILED && !isConnecting
+
+            val daemonStatus =
+                when {
+                    isRunning -> ChecklistStatus.DONE
+                    isConnecting -> ChecklistStatus.ACTIVE
+                    isFailed -> ChecklistStatus.FAILED
+                    else -> ChecklistStatus.PENDING
+                }
+
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .background(colors.surfaceVariant, OW_CARD_SHAPE_12)
+                        .border(1.dp, colors.controlOverlayBorder, OW_CARD_SHAPE_12)
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+            ) {
+                PrivdChecklistRow(
+                    label = stringResource(R.string.onboarding_privd_daemon_row_label),
+                    status = daemonStatus,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (isRunning) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.padding(vertical = 4.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.CheckCircle,
+                        contentDescription = null,
+                        tint = colors.actionColorSystem,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(R.string.privd_toast_all_set),
+                        color = colors.actionColorSystem,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            } else if (isFailed) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(OW_WARNING_SPACED_BY_MEDIUM),
+                ) {
+                    val errorRes = lastError.descriptionResId()
+                    OnboardingWarningBanner(
+                        text = if (errorRes != null) stringResource(errorRes) else "Daemon connection failed.",
+                    )
+                    AppMagicalButton(
+                        onClick = onActivateViaRootBridge,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.AutoFixHigh,
+                            contentDescription = null,
+                            tint = colors.actionColorSystem,
+                            modifier = Modifier.size(OW_BUTTON_ICON_SIZE),
+                        )
+                        Spacer(modifier = Modifier.width(OW_BUTTON_SPACED_BY))
+                        Text(
+                            text = stringResource(R.string.privd_action_retry),
+                            color = colors.actionColorSystem,
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                    }
+                }
+            } else {
+                AppMagicalButton(
+                    onClick = onActivateViaRootBridge,
+                    enabled = !isConnecting,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    if (isConnecting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = colors.actionColorSystem,
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.onboarding_privd_activating),
+                            color = colors.actionColorSystem,
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Rounded.AutoFixHigh,
+                            contentDescription = null,
+                            tint = colors.actionColorSystem,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = buttonText,
+                            color = colors.actionColorSystem,
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                    }
+                }
+            }
+        }
+        return
+    }
     val systemLocale =
         remember {
             val lm = context.getSystemService(LocaleManager::class.java)
@@ -1004,6 +1210,9 @@ fun OnboardingStepper(
 fun AccessibilityStepContent(
     isAccessibilityActive: Boolean,
     onLaunchAccessibilitySettings: () -> Unit,
+    isRootBridgeAvailable: Boolean = false,
+    onActivateViaRootBridge: () -> Unit = {},
+    isActivating: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
@@ -1061,23 +1270,40 @@ fun AccessibilityStepContent(
                     Spacer(Modifier.height(4.dp))
                     Text(
                         text =
-                            stringResource(
-                                if (isAccessibilityActive) {
-                                    R.string.accessibility_status_active
-                                } else {
-                                    R.string.privd_status_off
-                                },
-                            ),
+                            when {
+                                isAccessibilityActive -> stringResource(R.string.accessibility_status_active)
+                                isActivating -> stringResource(R.string.onboarding_accessibility_activating)
+                                else -> stringResource(R.string.privd_status_off)
+                            },
                         color = colors.onSurfaceSecondary,
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
 
                 if (!isAccessibilityActive) {
-                    Button(
-                        onClick = { onLaunchAccessibilitySettings() },
-                    ) {
-                        Text(stringResource(R.string.settings_accessibility_setup))
+                    if (isRootBridgeAvailable) {
+                        Button(
+                            onClick = onActivateViaRootBridge,
+                            enabled = !isActivating,
+                        ) {
+                            if (isActivating) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringResource(R.string.onboarding_accessibility_activating))
+                            } else {
+                                Text(stringResource(R.string.onboarding_accessibility_activate_btn))
+                            }
+                        }
+                    } else {
+                        Button(
+                            onClick = { onLaunchAccessibilitySettings() },
+                        ) {
+                            Text(stringResource(R.string.settings_accessibility_setup))
+                        }
                     }
                 } else {
                     Icon(

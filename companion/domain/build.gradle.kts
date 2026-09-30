@@ -6,9 +6,9 @@ plugins {
 }
 
 // ---------------------------------------------------------------------------
-// Generate NativeBinaryHashes.kt by SHA-256-hashing the native injector
-// binaries bundled in :app's assets. The generated map is consulted at
-// runtime (NativeBinaryInjector.deployBinary) to refuse executing a binary
+// Generate NativeBinaryHashes.kt by SHA-256-hashing the native daemon and
+// mirror DEX assets bundled in :app's assets. The generated map is consulted at
+// runtime (BinaryIntegrity.verify) to refuse pushing or executing an asset
 // that does not match the hash that was committed to the repository.
 // ---------------------------------------------------------------------------
 abstract class GenerateNativeBinaryHashesTask : DefaultTask() {
@@ -42,10 +42,10 @@ abstract class GenerateNativeBinaryHashesTask : DefaultTask() {
 package com.stormpanda.megingiard.security
 
 /**
- * Expected SHA-256 (uppercase hex) of each native injector binary shipped in
+ * Expected SHA-256 (uppercase hex) of each native asset shipped in
  * `companion/ui/src/main/assets/`. Computed at build time from the committed bytes and
- * checked at runtime in [com.stormpanda.megingiard.input.NativeBinaryInjector]
- * before the binary is made executable.
+ * checked at runtime via [com.stormpanda.megingiard.security.BinaryIntegrity]
+ * before the asset is pushed or used.
  */
 internal object NativeBinaryHashes {
     val EXPECTED: Map<String, String> = mapOf(
@@ -58,9 +58,6 @@ $entries
 }
 
 val nativeBinaries = listOf(
-    "touchinjector_arm64",
-    "mouseinjector_arm64",
-    "keyinjector_arm64",
     "megingiard_privd_arm64",
     "megingiard_mirror.dex",
 )

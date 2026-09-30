@@ -88,8 +88,6 @@ import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.math.MPE_FINE_STEP_PX
 import com.stormpanda.megingiard.math.MPE_NORMAL_STEP_PX
 import com.stormpanda.megingiard.math.calculateGamepadButtonMove
-import com.stormpanda.megingiard.privd.PrivdManager
-import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbScrapeSubPageContent
 import com.stormpanda.megingiard.ui.AppDivider
@@ -682,11 +680,7 @@ fun MacroPadEditor(
                                                 profile = profile,
                                                 accentColor = colors.accent,
                                                 onNewMacro = {
-                                                    if (PrivdManager.state.value != PrivdState.RUNNING) {
-                                                        DialogToastManager.show(context.getString(R.string.privd_error_daemon_unreachable))
-                                                    } else {
-                                                        MacroPadNavState.push(MacroPadSubPage.ChooseMacroMode)
-                                                    }
+                                                    MacroPadNavState.push(MacroPadSubPage.ChooseMacroMode)
                                                 },
                                                 onEditMacro = { macro ->
                                                     MacroPadNavState.push(MacroPadSubPage.MacroTimeline(macro = macro))
@@ -1322,12 +1316,6 @@ fun MacroPadEditor(
                                         ) {
                                             ChooseButtonTypeSubPageContent(
                                                 onSelectType = { group ->
-                                                    if ((group == ActionGroup.MACRO || group == ActionGroup.GAMEPAD) &&
-                                                        PrivdManager.state.value != PrivdState.RUNNING
-                                                    ) {
-                                                        DialogToastManager.show(context.getString(R.string.privd_error_daemon_unreachable))
-                                                        return@ChooseButtonTypeSubPageContent
-                                                    }
                                                     val hasMacros = profile.macros.isNotEmpty()
                                                     val defaultCategory =
                                                         group.actions().firstOrNull { it.isAvailable(hasMacros) }
@@ -1967,15 +1955,10 @@ fun MacroPadEditor(
                                     }
 
                                     is MacroPadSubPage.ChooseMacroMode -> {
-                                        val privdState by PrivdManager.state.collectAsStateWithLifecycle()
                                         val defaultMacroName = stringResource(R.string.macropad_macro_default_name)
                                         val existingMacroNames = profile.macros.map { it.name }
 
                                         fun handleCreateMacro(action: (Macro) -> Unit = {}) {
-                                            if (privdState != PrivdState.RUNNING) {
-                                                DialogToastManager.show(context.getString(R.string.privd_error_daemon_unreachable))
-                                                return
-                                            }
                                             val newMacro =
                                                 Macro(
                                                     id = UUID.randomUUID().toString(),
@@ -3069,17 +3052,6 @@ private fun MacrosDeck(
     onEditMacro: (Macro) -> Unit,
     onDeleteMacro: (Macro) -> Unit,
 ) {
-    val privdState by PrivdManager.state.collectAsStateWithLifecycle()
-    val isPrivdRunning = privdState == PrivdState.RUNNING
-
-    if (!isPrivdRunning) {
-        GamepadInfoBox(
-            text = stringResource(R.string.macropad_macro_privd_required_banner),
-            modifier = Modifier.firstDeckItem(),
-        )
-        return
-    }
-
     GamepadActionCard(
         title = stringResource(R.string.macropad_editor_open_timeline_title),
         description = stringResource(R.string.macropad_editor_open_timeline_desc),
