@@ -19,6 +19,7 @@ import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -75,6 +76,7 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -93,7 +95,6 @@ import com.stormpanda.megingiard.catalog.RomManager
 import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.ExpandableActionItem
 import com.stormpanda.megingiard.ui.ExpandableActionsMenu
-import com.stormpanda.megingiard.ui.ExpandableMenuOrientation
 import com.stormpanda.megingiard.ui.GamePadButton
 import com.stormpanda.megingiard.ui.GamePadButtonAction
 import com.stormpanda.megingiard.ui.GamePadButtonIcon
@@ -179,6 +180,7 @@ fun FocusLibraryScreen(
     hiddenSet: Set<String> = emptySet(),
     isOptionsMenuExpanded: Boolean = false,
     onOptionsMenuExpandedChange: (Boolean) -> Unit = {},
+    selectedIndex: Int = 0,
     onToggleFavorite: (InstalledAppInfo) -> Unit = {},
     onToggleHidden: (InstalledAppInfo) -> Unit = {},
     onEditArtwork: (InstalledAppInfo) -> Unit = {},
@@ -488,6 +490,19 @@ fun FocusLibraryScreen(
                     ),
         )
 
+        if (isOptionsMenuExpanded) {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .pointerInput(Unit) {
+                            detectTapGestures {
+                                onOptionsMenuExpandedChange(false)
+                            }
+                        },
+            )
+        }
+
         // Bottom Bar containing Action Menu (lower left) and Launch indicators (lower right) hovering over the grid
         Box(
             modifier =
@@ -515,7 +530,7 @@ fun FocusLibraryScreen(
                                             } else {
                                                 context.getString(R.string.gamefocus_option_hide)
                                             },
-                                        iconSymbol = "gamepad_left",
+                                        iconSymbol = if (isCurrentHidden) "visibility" else "visibility_off",
                                         onClick = {
                                             onToggleHidden(focusedApp)
                                             onOptionsMenuExpandedChange(false)
@@ -526,7 +541,7 @@ fun FocusLibraryScreen(
                             add(
                                 ExpandableActionItem(
                                     label = context.getString(R.string.gamefocus_option_add_rom_folder),
-                                    iconSymbol = "gamepad_up",
+                                    iconSymbol = "create_new_folder",
                                     onClick = {
                                         onAddRomFolder()
                                         onOptionsMenuExpandedChange(false)
@@ -537,7 +552,7 @@ fun FocusLibraryScreen(
                                 add(
                                     ExpandableActionItem(
                                         label = context.getString(R.string.gamefocus_option_manage_rom_folders),
-                                        iconSymbol = "gamepad_down",
+                                        iconSymbol = "folder",
                                         onClick = {
                                             onRemoveRomFolderDialogOpenChange(true)
                                             onOptionsMenuExpandedChange(false)
@@ -550,9 +565,9 @@ fun FocusLibraryScreen(
                 ExpandableActionsMenu(
                     isExpanded = isOptionsMenuExpanded,
                     onExpandedChange = onOptionsMenuExpandedChange,
-                    orientation = ExpandableMenuOrientation.VERTICAL,
-                    enabled = enabled,
                     actions = actions,
+                    selectedIndex = selectedIndex,
+                    enabled = enabled,
                 )
             }
 

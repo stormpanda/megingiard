@@ -58,6 +58,9 @@ import kotlinx.coroutines.launch
 private const val TAG = "FocusTopLauncherActivity"
 private const val INITIAL_REPEAT_DELAY_MS = 300L
 private const val REPEAT_INTERVAL_MS = 100L
+private const val ARTWORK_MENU_ITEMS_COUNT = 2
+private const val MAIN_MENU_ROM_ITEMS_COUNT = 3
+private const val MAIN_MENU_APP_ITEMS_COUNT = 4
 
 class FocusTopLauncherActivity : ComponentActivity() {
     private val viewModel: FocusTopLauncherViewModel by viewModels()
@@ -131,8 +134,11 @@ class FocusTopLauncherActivity : ComponentActivity() {
             val librarySelectedTab by viewModel.librarySelectedTab.collectAsStateWithLifecycle()
             val libraryFocusedIndex by viewModel.libraryFocusedIndex.collectAsStateWithLifecycle()
             val isMainOptionsMenuExpanded by viewModel.isMainOptionsMenuExpanded.collectAsStateWithLifecycle()
+            val mainMenuSelectedIndex by viewModel.mainMenuSelectedIndex.collectAsStateWithLifecycle()
             val isOptionsMenuExpanded by viewModel.isOptionsMenuExpanded.collectAsStateWithLifecycle()
+            val artworkMenuSelectedIndex by viewModel.artworkMenuSelectedIndex.collectAsStateWithLifecycle()
             val isLibraryOptionsMenuExpanded by viewModel.isLibraryOptionsMenuExpanded.collectAsStateWithLifecycle()
+            val libraryMenuSelectedIndex by viewModel.libraryMenuSelectedIndex.collectAsStateWithLifecycle()
             val newlyAddedFolder by viewModel.newlyAddedFolder.collectAsStateWithLifecycle()
             val isRemoveRomFolderDialogOpen by viewModel.isRemoveRomFolderDialogOpen.collectAsStateWithLifecycle()
             val removeRomFolderDialogSelectedIndex by viewModel.removeRomFolderDialogSelectedIndex.collectAsStateWithLifecycle()
@@ -304,6 +310,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             hiddenSet = hidden,
                             isMainOptionsMenuExpanded = isMainOptionsMenuExpanded,
                             onMainOptionsMenuExpandedChange = { viewModel.setMainOptionsMenuExpanded(it) },
+                            mainMenuSelectedIndex = mainMenuSelectedIndex,
                             onToggleFavorite = { appInfo ->
                                 InstalledAppsManager.toggleFavorite(this, appInfo.packageName)
                             },
@@ -326,6 +333,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             nextLetterTrigger = nextLetterTrigger,
                             isOptionsMenuExpanded = isOptionsMenuExpanded,
                             onOptionsMenuExpandedChange = { viewModel.setOptionsMenuExpanded(it) },
+                            artworkMenuSelectedIndex = artworkMenuSelectedIndex,
                             dpadUpTrigger = dpadUpOptionsTrigger,
                             dpadRightTrigger = dpadRightOptionsTrigger,
                             dpadLeftTrigger = dpadLeftTrigger,
@@ -356,6 +364,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             onLibraryFocusedIndexChange = { viewModel.setLibraryFocusedIndex(it) },
                             isLibraryOptionsMenuExpanded = isLibraryOptionsMenuExpanded,
                             onLibraryOptionsMenuExpandedChange = { viewModel.setLibraryOptionsMenuExpanded(it) },
+                            libraryMenuSelectedIndex = libraryMenuSelectedIndex,
                             onOpenLibrary = { viewModel.setLibraryOpen(true) },
                             onCloseLibrary = { viewModel.setLibraryOpen(false) },
                         )
@@ -437,6 +446,41 @@ class FocusTopLauncherActivity : ComponentActivity() {
     }
 
     private fun stepDirectionalAction(direction: LauncherScrollDirection) {
+        if (viewModel.editingAppInfo.value != null && viewModel.isOptionsMenuExpanded.value) {
+            when (direction) {
+                LauncherScrollDirection.UP -> viewModel.navigateArtworkMenuUp(ARTWORK_MENU_ITEMS_COUNT)
+                LauncherScrollDirection.DOWN -> viewModel.navigateArtworkMenuDown(ARTWORK_MENU_ITEMS_COUNT)
+                else -> Unit
+            }
+            return
+        }
+
+        if (viewModel.isLibraryOptionsMenuExpanded.value) {
+            val allApps = InstalledAppsManager.installedApps.value
+            val currentTab = viewModel.librarySelectedTab.value
+            val filteredApps = currentTab.filterApps(allApps)
+            val focusedLibraryApp = filteredApps.getOrNull(viewModel.libraryFocusedIndex.value.coerceAtLeast(0))
+            val romFolders = RomManager.romFolders.value
+            val count = (if (focusedLibraryApp != null) 1 else 0) + 1 + (if (romFolders.isNotEmpty()) 1 else 0)
+            when (direction) {
+                LauncherScrollDirection.UP -> viewModel.navigateLibraryMenuUp(count)
+                LauncherScrollDirection.DOWN -> viewModel.navigateLibraryMenuDown(count)
+                else -> Unit
+            }
+            return
+        }
+
+        if (viewModel.isMainOptionsMenuExpanded.value) {
+            val targetApp = viewModel.focusedApp.value
+            val count = if (targetApp?.isRom == true) MAIN_MENU_ROM_ITEMS_COUNT else MAIN_MENU_APP_ITEMS_COUNT
+            when (direction) {
+                LauncherScrollDirection.UP -> viewModel.navigateMainMenuUp(count)
+                LauncherScrollDirection.DOWN -> viewModel.navigateMainMenuDown(count)
+                else -> Unit
+            }
+            return
+        }
+
         if (viewModel.newlyAddedFolder.value != null) {
             stepCoreChooserFocus(direction)
             return
@@ -612,16 +656,23 @@ class FocusTopLauncherActivity : ComponentActivity() {
             // Strict Input Isolation: Traps all inputs while modal artwork dialog is open
             if (viewModel.isOptionsMenuExpanded.value) {
                 return when {
-                    keyCode == KeyEvent.KEYCODE_DPAD_UP -> {
-                        AppLog.i(TAG, "Dpad UP pressed while options menu expanded -> Change Search Term")
-                        viewModel.triggerDpadUpOptions()
-                        viewModel.setOptionsMenuExpanded(false)
+                    isUpKey(keyCode) -> {
+                        startRepeat(LauncherScrollDirection.UP)
                         true
                     }
 
-                    keyCode == KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                        AppLog.i(TAG, "Dpad RIGHT pressed while options menu expanded -> Use App Icon")
-                        viewModel.triggerDpadRightOptions()
+                    isDownKey(keyCode) -> {
+                        startRepeat(LauncherScrollDirection.DOWN)
+                        true
+                    }
+
+                    isConfirmKey(keyCode) -> {
+                        val selectedIndex = viewModel.artworkMenuSelectedIndex.value
+                        AppLog.i(TAG, "Artwork options menu confirmed at index $selectedIndex via gamepad A")
+                        when (selectedIndex) {
+                            0 -> viewModel.triggerDpadUpOptions()
+                            1 -> viewModel.triggerDpadRightOptions()
+                        }
                         viewModel.setOptionsMenuExpanded(false)
                         true
                     }
@@ -694,33 +745,34 @@ class FocusTopLauncherActivity : ComponentActivity() {
             val focusedLibraryApp = filteredApps.getOrNull(viewModel.libraryFocusedIndex.value.coerceAtLeast(0))
 
             if (viewModel.isLibraryOptionsMenuExpanded.value) {
-                stopRepeat()
                 return when {
-                    isLeftKey(keyCode) -> {
-                        if (focusedLibraryApp != null) {
-                            AppLog.i(
-                                TAG,
-                                "D-pad LEFT pressed while Library options menu expanded -> Toggling hidden state for ${focusedLibraryApp.label}",
-                            )
-                            InstalledAppsManager.toggleHidden(this, focusedLibraryApp.packageName)
-                        }
-                        viewModel.setLibraryOptionsMenuExpanded(false)
-                        true
-                    }
-
                     isUpKey(keyCode) -> {
-                        AppLog.i(TAG, "D-pad UP pressed while Library options menu expanded -> Adding ROM folder")
-                        openDocumentTreeLauncher.launch(null)
-                        viewModel.setLibraryOptionsMenuExpanded(false)
+                        startRepeat(LauncherScrollDirection.UP)
                         true
                     }
 
                     isDownKey(keyCode) -> {
-                        val folders = RomManager.romFolders.value
-                        if (folders.isNotEmpty()) {
-                            AppLog.i(TAG, "D-pad DOWN pressed while Library options menu expanded -> Manage ROM folders")
-                            viewModel.setRemoveRomFolderDialogSelectedIndex(0)
-                            viewModel.setRemoveRomFolderDialogOpen(true)
+                        startRepeat(LauncherScrollDirection.DOWN)
+                        true
+                    }
+
+                    isConfirmKey(keyCode) -> {
+                        val selectedIndex = viewModel.libraryMenuSelectedIndex.value
+                        AppLog.i(TAG, "Library options menu confirmed at index $selectedIndex via gamepad A")
+                        val hasApp = focusedLibraryApp != null
+                        if (hasApp && selectedIndex == 0) {
+                            AppLog.i(TAG, "Toggling hidden state for ${focusedLibraryApp.label}")
+                            InstalledAppsManager.toggleHidden(this, focusedLibraryApp.packageName)
+                        } else if ((hasApp && selectedIndex == 1) || (!hasApp && selectedIndex == 0)) {
+                            AppLog.i(TAG, "Adding ROM folder via DocumentTreeLauncher")
+                            openDocumentTreeLauncher.launch(null)
+                        } else {
+                            val folders = RomManager.romFolders.value
+                            if (folders.isNotEmpty()) {
+                                AppLog.i(TAG, "Managing ROM folders")
+                                viewModel.setRemoveRomFolderDialogSelectedIndex(0)
+                                viewModel.setRemoveRomFolderDialogOpen(true)
+                            }
                         }
                         viewModel.setLibraryOptionsMenuExpanded(false)
                         true
@@ -830,45 +882,43 @@ class FocusTopLauncherActivity : ComponentActivity() {
         val apps = selectedCategory.filterApps(allApps, favorites, hidden, lastUsed)
 
         if (viewModel.isMainOptionsMenuExpanded.value) {
-            stopRepeat()
             val targetApp = viewModel.focusedApp.value
             return when {
                 isUpKey(keyCode) -> {
-                    if (targetApp != null) {
-                        InstalledAppsManager.toggleFavorite(this, targetApp.packageName)
-                    }
-                    viewModel.setMainOptionsMenuExpanded(false)
-                    true
-                }
-
-                isRightKey(keyCode) -> {
-                    if (targetApp != null) {
-                        AppLog.i(TAG, "D-pad RIGHT pressed while options menu expanded -> Editing artwork for ${targetApp.label}")
-                        viewModel.openArtworkDialog(targetApp)
-                    }
-                    viewModel.setMainOptionsMenuExpanded(false)
+                    startRepeat(LauncherScrollDirection.UP)
                     true
                 }
 
                 isDownKey(keyCode) -> {
-                    if (targetApp != null) {
-                        AppLog.i(TAG, "D-pad DOWN pressed while options menu expanded -> Opening native app info for ${targetApp.label}")
-                        InstalledAppsManager.openAppInfo(this, targetApp.packageName)
-                    }
-                    viewModel.setMainOptionsMenuExpanded(false)
+                    startRepeat(LauncherScrollDirection.DOWN)
                     true
                 }
 
-                isLeftKey(keyCode) -> {
+                isConfirmKey(keyCode) -> {
+                    val selectedIndex = viewModel.mainMenuSelectedIndex.value
+                    AppLog.i(TAG, "Main options menu confirmed at index $selectedIndex via gamepad A for ${targetApp?.label}")
                     if (targetApp != null) {
-                        AppLog.i(TAG, "D-pad LEFT pressed while options menu expanded -> Toggling hidden state for ${targetApp.label}")
-                        InstalledAppsManager.toggleHidden(this, targetApp.packageName)
+                        if (targetApp.isRom) {
+                            when (selectedIndex) {
+                                0 -> InstalledAppsManager.toggleFavorite(this, targetApp.packageName)
+                                1 -> viewModel.openArtworkDialog(targetApp)
+                                2 -> InstalledAppsManager.toggleHidden(this, targetApp.packageName)
+                            }
+                        } else {
+                            when (selectedIndex) {
+                                0 -> InstalledAppsManager.toggleFavorite(this, targetApp.packageName)
+                                1 -> viewModel.openArtworkDialog(targetApp)
+                                2 -> InstalledAppsManager.openAppInfo(this, targetApp.packageName)
+                                3 -> InstalledAppsManager.toggleHidden(this, targetApp.packageName)
+                            }
+                        }
                     }
                     viewModel.setMainOptionsMenuExpanded(false)
                     true
                 }
 
                 isMenuKey(keyCode) || isDismissKey(keyCode) -> {
+                    AppLog.i(TAG, "Closing Main options menu")
                     viewModel.setMainOptionsMenuExpanded(false)
                     true
                 }
@@ -1017,15 +1067,15 @@ class FocusTopLauncherActivity : ComponentActivity() {
             ) {
                 if (viewModel.editingAppInfo.value != null && viewModel.isOptionsMenuExpanded.value) {
                     if (y < -0.5f) {
-                        AppLog.i(TAG, "Joystick Hat/Stick UP pressed while options expanded -> Change Search Term")
-                        viewModel.triggerDpadUpOptions()
-                        viewModel.setOptionsMenuExpanded(false)
+                        startRepeat(LauncherScrollDirection.UP)
                         return true
-                    } else if (x > 0.5f) {
-                        AppLog.i(TAG, "Joystick Hat/Stick RIGHT pressed while options expanded -> Use App Icon")
-                        viewModel.triggerDpadRightOptions()
-                        viewModel.setOptionsMenuExpanded(false)
+                    } else if (y > 0.5f) {
+                        startRepeat(LauncherScrollDirection.DOWN)
                         return true
+                    } else {
+                        if (currentDirection == LauncherScrollDirection.UP || currentDirection == LauncherScrollDirection.DOWN) {
+                            stopRepeat()
+                        }
                     }
                     return true
                 }
@@ -1045,73 +1095,31 @@ class FocusTopLauncherActivity : ComponentActivity() {
             }
 
             if (viewModel.isMainOptionsMenuExpanded.value) {
-                stopRepeat()
-
                 if (y < -0.5f) {
-                    val targetApp = viewModel.focusedApp.value
-                    if (targetApp != null) {
-                        InstalledAppsManager.toggleFavorite(this, targetApp.packageName)
-                    }
-                    viewModel.setMainOptionsMenuExpanded(false)
-                    return true
-                } else if (x > 0.5f) {
-                    val targetApp = viewModel.focusedApp.value
-                    if (targetApp != null) {
-                        AppLog.i(TAG, "Joystick RIGHT pressed while options menu expanded -> Edit artwork for ${targetApp.label}")
-                        viewModel.openArtworkDialog(targetApp)
-                    }
-                    viewModel.setMainOptionsMenuExpanded(false)
+                    startRepeat(LauncherScrollDirection.UP)
                     return true
                 } else if (y > 0.5f) {
-                    val targetApp = viewModel.focusedApp.value
-                    if (targetApp != null) {
-                        AppLog.i(TAG, "Joystick DOWN pressed while options menu expanded -> Opening native app info for ${targetApp.label}")
-                        InstalledAppsManager.openAppInfo(this, targetApp.packageName)
-                    }
-                    viewModel.setMainOptionsMenuExpanded(false)
+                    startRepeat(LauncherScrollDirection.DOWN)
                     return true
-                } else if (x < -0.5f) {
-                    val targetApp = viewModel.focusedApp.value
-                    if (targetApp != null) {
-                        AppLog.i(TAG, "Joystick LEFT pressed while options menu expanded -> Toggling hidden for ${targetApp.label}")
-                        InstalledAppsManager.toggleHidden(this, targetApp.packageName)
+                } else {
+                    if (currentDirection == LauncherScrollDirection.UP || currentDirection == LauncherScrollDirection.DOWN) {
+                        stopRepeat()
                     }
-                    viewModel.setMainOptionsMenuExpanded(false)
-                    return true
                 }
                 return true
             }
 
             if (viewModel.isLibraryOptionsMenuExpanded.value) {
-                stopRepeat()
-                if (x < -0.5f) {
-                    val allApps = InstalledAppsManager.installedApps.value
-                    val currentTab = viewModel.librarySelectedTab.value
-                    val filteredApps = currentTab.filterApps(allApps)
-                    val focusedLibraryApp = filteredApps.getOrNull(viewModel.libraryFocusedIndex.value.coerceAtLeast(0))
-                    if (focusedLibraryApp != null) {
-                        AppLog.i(
-                            TAG,
-                            "Joystick LEFT pressed while Library options menu expanded -> Toggling hidden for ${focusedLibraryApp.label}",
-                        )
-                        InstalledAppsManager.toggleHidden(this, focusedLibraryApp.packageName)
-                    }
-                    viewModel.setLibraryOptionsMenuExpanded(false)
-                    return true
-                } else if (y < -0.5f) {
-                    AppLog.i(TAG, "Joystick UP pressed while Library options menu expanded -> Adding ROM folder")
-                    openDocumentTreeLauncher.launch(null)
-                    viewModel.setLibraryOptionsMenuExpanded(false)
+                if (y < -0.5f) {
+                    startRepeat(LauncherScrollDirection.UP)
                     return true
                 } else if (y > 0.5f) {
-                    val folders = RomManager.romFolders.value
-                    if (folders.isNotEmpty()) {
-                        AppLog.i(TAG, "Joystick DOWN pressed while Library options menu expanded -> Manage ROM folders")
-                        viewModel.setRemoveRomFolderDialogSelectedIndex(0)
-                        viewModel.setRemoveRomFolderDialogOpen(true)
-                    }
-                    viewModel.setLibraryOptionsMenuExpanded(false)
+                    startRepeat(LauncherScrollDirection.DOWN)
                     return true
+                } else {
+                    if (currentDirection == LauncherScrollDirection.UP || currentDirection == LauncherScrollDirection.DOWN) {
+                        stopRepeat()
+                    }
                 }
                 return true
             }
