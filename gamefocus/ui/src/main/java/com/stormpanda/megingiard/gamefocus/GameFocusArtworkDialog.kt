@@ -71,7 +71,7 @@ import com.stormpanda.megingiard.media.SteamGridDbGame
 import com.stormpanda.megingiard.media.SteamGridDbImage
 import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.ExpandableActionItem
-import com.stormpanda.megingiard.ui.ExpandableActionsMenu
+import com.stormpanda.megingiard.ui.FloatingActionsMenuOverlay
 import com.stormpanda.megingiard.ui.GamePadButton
 import com.stormpanda.megingiard.ui.GamePadButtonAction
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -88,6 +88,7 @@ private const val TAG = "GameFocusArtworkDialog"
 private val GAD_CHIP_SHAPE = RoundedCornerShape(20.dp)
 private val GAD_BADGE_SHAPE = RoundedCornerShape(6.dp)
 private val GAD_BUTTON_SHAPE = RoundedCornerShape(8.dp)
+private val GAD_OPTIONS_MENU_OVERLAY_BOTTOM_PADDING = 44.dp
 
 @Composable
 fun GameFocusArtworkDialog(
@@ -301,18 +302,6 @@ fun GameFocusArtworkDialog(
         modifier = modifier,
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
-            if (isOptionsMenuExpanded) {
-                Box(
-                    modifier =
-                        Modifier
-                            .matchParentSize()
-                            .pointerInput(Unit) {
-                                detectTapGestures {
-                                    onOptionsMenuExpandedChange(false)
-                                }
-                            },
-                )
-            }
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -499,34 +488,18 @@ fun GameFocusArtworkDialog(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Bottom Navigation Row with Lower Left Reusable Expandable Options Menu
+                // Bottom Navigation Row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    ExpandableActionsMenu(
-                        isExpanded = isOptionsMenuExpanded,
-                        onExpandedChange = onOptionsMenuExpandedChange,
-                        actions =
-                            listOf(
-                                ExpandableActionItem(
-                                    label = stringResource(R.string.gamefocus_option_change_search_term),
-                                    iconSymbol = "search",
-                                    onClick = { isEditingQuery = true },
-                                ),
-                                ExpandableActionItem(
-                                    label =
-                                        if (appInfo.isRom) {
-                                            stringResource(R.string.gamefocus_option_use_default_icon)
-                                        } else {
-                                            stringResource(R.string.gamefocus_option_use_app_icon)
-                                        },
-                                    iconSymbol = "apps",
-                                    onClick = { useAppIcon() },
-                                ),
-                            ),
-                        selectedIndex = selectedIndex,
+                    GamePadButtonAction(
+                        button = GamePadButton.BUTTON_Y,
+                        text = stringResource(R.string.gamefocus_option_actions),
+                        onClick = {
+                            onOptionsMenuExpandedChange(!isOptionsMenuExpanded)
+                        },
                     )
 
                     GamePadButtonAction(
@@ -536,6 +509,50 @@ fun GameFocusArtworkDialog(
                     )
                 }
             }
+
+            if (isOptionsMenuExpanded) {
+                Box(
+                    modifier =
+                        Modifier
+                            .matchParentSize()
+                            .pointerInput(Unit) {
+                                detectTapGestures {
+                                    onOptionsMenuExpandedChange(false)
+                                }
+                            },
+                )
+            }
+
+            FloatingActionsMenuOverlay(
+                isExpanded = isOptionsMenuExpanded,
+                actions =
+                    listOf(
+                        ExpandableActionItem(
+                            label = stringResource(R.string.gamefocus_option_change_search_term),
+                            iconSymbol = "search",
+                            onClick = { isEditingQuery = true },
+                        ),
+                        ExpandableActionItem(
+                            label =
+                                if (appInfo.isRom) {
+                                    stringResource(R.string.gamefocus_option_use_default_icon)
+                                } else {
+                                    stringResource(R.string.gamefocus_option_use_app_icon)
+                                },
+                            iconSymbol = "apps",
+                            onClick = { useAppIcon() },
+                        ),
+                    ),
+                selectedIndex = selectedIndex,
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(bottom = GAD_OPTIONS_MENU_OVERLAY_BOTTOM_PADDING),
+                onItemClick = { item, _ ->
+                    onOptionsMenuExpandedChange(false)
+                    item.onClick()
+                },
+            )
         }
     }
 }

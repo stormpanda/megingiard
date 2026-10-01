@@ -82,6 +82,45 @@ data class ExpandableActionItem(
 )
 
 @Composable
+fun FloatingActionsMenuOverlay(
+    isExpanded: Boolean,
+    actions: List<ExpandableActionItem>,
+    selectedIndex: Int = 0,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    onItemClick: (ExpandableActionItem, Int) -> Unit,
+) {
+    AnimatedVisibility(
+        visible = isExpanded,
+        enter =
+            fadeIn(tween(MENU_ANIMATION_DURATION_ENTER_MS)) +
+                slideInVertically(tween(MENU_ANIMATION_DURATION_ENTER_MS)) { it / 4 },
+        exit =
+            fadeOut(tween(MENU_ANIMATION_DURATION_EXIT_MS)) +
+                slideOutVertically(tween(MENU_ANIMATION_DURATION_EXIT_MS)) { it / 4 },
+        modifier = modifier,
+    ) {
+        Column(
+            modifier = Modifier.defaultMinSize(minWidth = MENU_MIN_WIDTH),
+            verticalArrangement = Arrangement.spacedBy(MENU_ITEMS_SPACING),
+        ) {
+            actions.forEachIndexed { index, item ->
+                val isFocused = (index == selectedIndex)
+                FocusActionCard(
+                    item = item,
+                    isFocused = isFocused,
+                    enabled = enabled,
+                    onClick = {
+                        AppLog.i(TAG, "Menu item clicked via touch: ${item.label} (index=$index)")
+                        onItemClick(item, index)
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun ExpandableActionsMenu(
     isExpanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
@@ -95,34 +134,16 @@ fun ExpandableActionsMenu(
         horizontalAlignment = Alignment.Start,
         verticalArrangement = Arrangement.Bottom,
     ) {
-        AnimatedVisibility(
-            visible = isExpanded,
-            enter =
-                fadeIn(tween(MENU_ANIMATION_DURATION_ENTER_MS)) +
-                    slideInVertically(tween(MENU_ANIMATION_DURATION_ENTER_MS)) { it / 4 },
-            exit =
-                fadeOut(tween(MENU_ANIMATION_DURATION_EXIT_MS)) +
-                    slideOutVertically(tween(MENU_ANIMATION_DURATION_EXIT_MS)) { it / 4 },
-        ) {
-            Column(
-                modifier = Modifier.defaultMinSize(minWidth = MENU_MIN_WIDTH),
-                verticalArrangement = Arrangement.spacedBy(MENU_ITEMS_SPACING),
-            ) {
-                actions.forEachIndexed { index, item ->
-                    val isFocused = (index == selectedIndex)
-                    FocusActionCard(
-                        item = item,
-                        isFocused = isFocused,
-                        enabled = enabled,
-                        onClick = {
-                            AppLog.i(TAG, "Menu item clicked via touch: ${item.label} (index=$index)")
-                            onExpandedChange(false)
-                            item.onClick()
-                        },
-                    )
-                }
-            }
-        }
+        FloatingActionsMenuOverlay(
+            isExpanded = isExpanded,
+            actions = actions,
+            selectedIndex = selectedIndex,
+            enabled = enabled,
+            onItemClick = { item, _ ->
+                onExpandedChange(false)
+                item.onClick()
+            },
+        )
 
         Spacer(modifier = Modifier.height(MENU_SPACER_BOTTOM))
 
