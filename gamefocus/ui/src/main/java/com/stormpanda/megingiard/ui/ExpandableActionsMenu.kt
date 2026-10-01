@@ -54,8 +54,7 @@ private val MENU_CARD_SHAPE = RoundedCornerShape(MENU_CARD_CORNER)
 private val MENU_CARD_MIN_HEIGHT = 38.dp
 private val MENU_CARD_PADDING_H = 10.dp
 private val MENU_CARD_PADDING_V = 6.dp
-private const val MENU_CARD_FOCUSED_BG_ALPHA = 0.90f
-private const val MENU_CARD_UNFOCUSED_BG_ALPHA = 0.35f
+private const val MENU_CARD_BG_ALPHA = 0.90f
 private val MENU_CARD_FOCUSED_ELEVATION = 4.dp
 private val MENU_CARD_UNFOCUSED_ELEVATION = 0.dp
 
@@ -98,10 +97,13 @@ fun FloatingActionsMenuOverlay(
         exit =
             fadeOut(tween(MENU_ANIMATION_DURATION_EXIT_MS)) +
                 slideOutVertically(tween(MENU_ANIMATION_DURATION_EXIT_MS)) { it / 4 },
-        modifier = modifier,
+        modifier = modifier.width(IntrinsicSize.Max),
     ) {
         Column(
-            modifier = Modifier.defaultMinSize(minWidth = MENU_MIN_WIDTH),
+            modifier =
+                Modifier
+                    .width(IntrinsicSize.Max)
+                    .defaultMinSize(minWidth = MENU_MIN_WIDTH),
             verticalArrangement = Arrangement.spacedBy(MENU_ITEMS_SPACING),
         ) {
             actions.forEachIndexed { index, item ->
@@ -186,16 +188,7 @@ private fun FocusActionCard(
         animationSpec = tween(MENU_ANIMATION_SPEC_MS),
         label = "cardBorderColor",
     )
-    val animatedBgColor by animateColorAsState(
-        targetValue =
-            if (isFocused) {
-                colors.surface.copy(alpha = MENU_CARD_FOCUSED_BG_ALPHA)
-            } else {
-                colors.surface.copy(alpha = MENU_CARD_UNFOCUSED_BG_ALPHA)
-            },
-        animationSpec = tween(MENU_ANIMATION_SPEC_MS),
-        label = "cardBgColor",
-    )
+    val cardBgColor = colors.surface.copy(alpha = MENU_CARD_BG_ALPHA)
     val animatedElevation by animateDpAsState(
         targetValue = if (isFocused) MENU_CARD_FOCUSED_ELEVATION else MENU_CARD_UNFOCUSED_ELEVATION,
         animationSpec = tween(MENU_ANIMATION_SPEC_MS),
@@ -222,7 +215,7 @@ private fun FocusActionCard(
                 .defaultMinSize(minHeight = MENU_CARD_MIN_HEIGHT)
                 .shadow(animatedElevation, MENU_CARD_SHAPE)
                 .clip(MENU_CARD_SHAPE)
-                .background(animatedBgColor)
+                .background(cardBgColor)
                 .border(animatedBorderWidth, animatedBorderColor, MENU_CARD_SHAPE)
                 .clickable(
                     enabled = enabled,
