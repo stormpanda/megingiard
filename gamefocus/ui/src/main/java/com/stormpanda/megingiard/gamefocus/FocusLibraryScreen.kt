@@ -185,6 +185,7 @@ fun FocusLibraryScreen(
     onToggleHidden: (InstalledAppInfo) -> Unit = {},
     onEditArtwork: (InstalledAppInfo) -> Unit = {},
     onOpenAppInfo: (InstalledAppInfo) -> Unit = {},
+    onUninstallApp: (InstalledAppInfo) -> Unit = {},
     onAddRomFolder: () -> Unit = {},
     onRemoveRomFolder: (CustomRomFolder) -> Unit = {},
     enabled: Boolean = true,
@@ -537,6 +538,29 @@ fun FocusLibraryScreen(
                                         },
                                     ),
                                 )
+                                if (!focusedApp.isRom) {
+                                    add(
+                                        ExpandableActionItem(
+                                            label = context.getString(R.string.gamefocus_option_app_info),
+                                            iconSymbol = "info",
+                                            onClick = {
+                                                onOpenAppInfo(focusedApp)
+                                                onOptionsMenuExpandedChange(false)
+                                            },
+                                        ),
+                                    )
+                                    add(
+                                        ExpandableActionItem(
+                                            label = context.getString(R.string.gamefocus_option_uninstall),
+                                            iconSymbol = "delete",
+                                            isDestructive = true,
+                                            onClick = {
+                                                onUninstallApp(focusedApp)
+                                                onOptionsMenuExpandedChange(false)
+                                            },
+                                        ),
+                                    )
+                                }
                             }
                             add(
                                 ExpandableActionItem(

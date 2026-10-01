@@ -59,8 +59,25 @@ private const val TAG = "FocusTopLauncherActivity"
 private const val INITIAL_REPEAT_DELAY_MS = 300L
 private const val REPEAT_INTERVAL_MS = 100L
 private const val ARTWORK_MENU_ITEMS_COUNT = 2
-private const val MAIN_MENU_ROM_ITEMS_COUNT = 3
-private const val MAIN_MENU_APP_ITEMS_COUNT = 4
+private const val MAIN_MENU_ITEMS_COUNT = 3
+private const val LIBRARY_APP_ACTIONS_COUNT = 3
+private const val LIBRARY_ROM_ACTIONS_COUNT = 1
+private const val LIBRARY_BASE_ACTIONS_COUNT = 1
+
+internal fun getLibraryMenuCount(
+    hasApp: Boolean,
+    isRom: Boolean,
+    hasRomFolders: Boolean,
+): Int {
+    val appActionCount =
+        when {
+            !hasApp -> 0
+            isRom -> LIBRARY_ROM_ACTIONS_COUNT
+            else -> LIBRARY_APP_ACTIONS_COUNT
+        }
+    val romFolderActionCount = LIBRARY_BASE_ACTIONS_COUNT + if (hasRomFolders) 1 else 0
+    return appActionCount + romFolderActionCount
+}
 
 class FocusTopLauncherActivity : ComponentActivity() {
     private val viewModel: FocusTopLauncherViewModel by viewModels()
@@ -321,6 +338,9 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             onOpenAppInfo = { appInfo ->
                                 InstalledAppsManager.openAppInfo(this, appInfo.packageName)
                             },
+                            onUninstallApp = { appInfo ->
+                                InstalledAppsManager.uninstallApp(this, appInfo.packageName)
+                            },
                             onAddRomFolder = { openDocumentTreeLauncher.launch(null) },
                             onRemoveRomFolder = { folder -> RomManager.removeRomFolder(this, folder) },
                             editingAppInfo = editingAppInfo,
@@ -461,7 +481,12 @@ class FocusTopLauncherActivity : ComponentActivity() {
             val filteredApps = currentTab.filterApps(allApps)
             val focusedLibraryApp = filteredApps.getOrNull(viewModel.libraryFocusedIndex.value.coerceAtLeast(0))
             val romFolders = RomManager.romFolders.value
-            val count = (if (focusedLibraryApp != null) 1 else 0) + 1 + (if (romFolders.isNotEmpty()) 1 else 0)
+            val count =
+                getLibraryMenuCount(
+                    hasApp = focusedLibraryApp != null,
+                    isRom = focusedLibraryApp?.isRom == true,
+                    hasRomFolders = romFolders.isNotEmpty(),
+                )
             when (direction) {
                 LauncherScrollDirection.UP -> viewModel.navigateLibraryMenuUp(count)
                 LauncherScrollDirection.DOWN -> viewModel.navigateLibraryMenuDown(count)
@@ -471,11 +496,9 @@ class FocusTopLauncherActivity : ComponentActivity() {
         }
 
         if (viewModel.isMainOptionsMenuExpanded.value) {
-            val targetApp = viewModel.focusedApp.value
-            val count = if (targetApp?.isRom == true) MAIN_MENU_ROM_ITEMS_COUNT else MAIN_MENU_APP_ITEMS_COUNT
             when (direction) {
-                LauncherScrollDirection.UP -> viewModel.navigateMainMenuUp(count)
-                LauncherScrollDirection.DOWN -> viewModel.navigateMainMenuDown(count)
+                LauncherScrollDirection.UP -> viewModel.navigateMainMenuUp(MAIN_MENU_ITEMS_COUNT)
+                LauncherScrollDirection.DOWN -> viewModel.navigateMainMenuDown(MAIN_MENU_ITEMS_COUNT)
                 else -> Unit
             }
             return
@@ -760,18 +783,74 @@ class FocusTopLauncherActivity : ComponentActivity() {
                         val selectedIndex = viewModel.libraryMenuSelectedIndex.value
                         AppLog.i(TAG, "Library options menu confirmed at index $selectedIndex via gamepad A")
                         val hasApp = focusedLibraryApp != null
-                        if (hasApp && selectedIndex == 0) {
-                            AppLog.i(TAG, "Toggling hidden state for ${focusedLibraryApp.label}")
-                            InstalledAppsManager.toggleHidden(this, focusedLibraryApp.packageName)
-                        } else if ((hasApp && selectedIndex == 1) || (!hasApp && selectedIndex == 0)) {
-                            AppLog.i(TAG, "Adding ROM folder via DocumentTreeLauncher")
-                            openDocumentTreeLauncher.launch(null)
+                        val isRom = focusedLibraryApp?.isRom == true
+                        if (hasApp && !isRom) {
+                            when (selectedIndex) {
+                                0 -> {
+                                    AppLog.i(TAG, "Toggling hidden state for ${focusedLibraryApp.label}")
+                                    InstalledAppsManager.toggleHidden(this, focusedLibraryApp.packageName)
+                                }
+
+                                1 -> {
+                                    AppLog.i(TAG, "Opening App Info for ${focusedLibraryApp.label}")
+                                    InstalledAppsManager.openAppInfo(this, focusedLibraryApp.packageName)
+                                }
+
+                                2 -> {
+                                    AppLog.i(TAG, "Uninstalling app ${focusedLibraryApp.label}")
+                                    InstalledAppsManager.uninstallApp(this, focusedLibraryApp.packageName)
+                                }
+
+                                3 -> {
+                                    AppLog.i(TAG, "Adding ROM folder via DocumentTreeLauncher")
+                                    openDocumentTreeLauncher.launch(null)
+                                }
+
+                                4 -> {
+                                    val folders = RomManager.romFolders.value
+                                    if (folders.isNotEmpty()) {
+                                        AppLog.i(TAG, "Managing ROM folders")
+                                        viewModel.setRemoveRomFolderDialogSelectedIndex(0)
+                                        viewModel.setRemoveRomFolderDialogOpen(true)
+                                    }
+                                }
+                            }
+                        } else if (hasApp && isRom) {
+                            when (selectedIndex) {
+                                0 -> {
+                                    AppLog.i(TAG, "Toggling hidden state for ${focusedLibraryApp.label}")
+                                    InstalledAppsManager.toggleHidden(this, focusedLibraryApp.packageName)
+                                }
+
+                                1 -> {
+                                    AppLog.i(TAG, "Adding ROM folder via DocumentTreeLauncher")
+                                    openDocumentTreeLauncher.launch(null)
+                                }
+
+                                2 -> {
+                                    val folders = RomManager.romFolders.value
+                                    if (folders.isNotEmpty()) {
+                                        AppLog.i(TAG, "Managing ROM folders")
+                                        viewModel.setRemoveRomFolderDialogSelectedIndex(0)
+                                        viewModel.setRemoveRomFolderDialogOpen(true)
+                                    }
+                                }
+                            }
                         } else {
-                            val folders = RomManager.romFolders.value
-                            if (folders.isNotEmpty()) {
-                                AppLog.i(TAG, "Managing ROM folders")
-                                viewModel.setRemoveRomFolderDialogSelectedIndex(0)
-                                viewModel.setRemoveRomFolderDialogOpen(true)
+                            when (selectedIndex) {
+                                0 -> {
+                                    AppLog.i(TAG, "Adding ROM folder via DocumentTreeLauncher")
+                                    openDocumentTreeLauncher.launch(null)
+                                }
+
+                                1 -> {
+                                    val folders = RomManager.romFolders.value
+                                    if (folders.isNotEmpty()) {
+                                        AppLog.i(TAG, "Managing ROM folders")
+                                        viewModel.setRemoveRomFolderDialogSelectedIndex(0)
+                                        viewModel.setRemoveRomFolderDialogOpen(true)
+                                    }
+                                }
                             }
                         }
                         viewModel.setLibraryOptionsMenuExpanded(false)
@@ -898,19 +977,10 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     val selectedIndex = viewModel.mainMenuSelectedIndex.value
                     AppLog.i(TAG, "Main options menu confirmed at index $selectedIndex via gamepad A for ${targetApp?.label}")
                     if (targetApp != null) {
-                        if (targetApp.isRom) {
-                            when (selectedIndex) {
-                                0 -> InstalledAppsManager.toggleFavorite(this, targetApp.packageName)
-                                1 -> viewModel.openArtworkDialog(targetApp)
-                                2 -> InstalledAppsManager.toggleHidden(this, targetApp.packageName)
-                            }
-                        } else {
-                            when (selectedIndex) {
-                                0 -> InstalledAppsManager.toggleFavorite(this, targetApp.packageName)
-                                1 -> viewModel.openArtworkDialog(targetApp)
-                                2 -> InstalledAppsManager.openAppInfo(this, targetApp.packageName)
-                                3 -> InstalledAppsManager.toggleHidden(this, targetApp.packageName)
-                            }
+                        when (selectedIndex) {
+                            0 -> InstalledAppsManager.toggleFavorite(this, targetApp.packageName)
+                            1 -> viewModel.openArtworkDialog(targetApp)
+                            2 -> InstalledAppsManager.toggleHidden(this, targetApp.packageName)
                         }
                     }
                     viewModel.setMainOptionsMenuExpanded(false)

@@ -17,6 +17,7 @@
     <string name="gamefocus_option_unhide">取消隱藏</string>
     <string name="gamefocus_option_edit">編輯</string>
     <string name="gamefocus_option_app_info">應用程式資訊</string>
+    <string name="gamefocus_option_uninstall">解除安裝</string>
     <string name="gamefocus_option_close">關閉</string>
     <string name="gamefocus_option_actions">動作</string>
     <string name="gamefocus_no_favorites">尚未加入任何最愛應用程式</string>

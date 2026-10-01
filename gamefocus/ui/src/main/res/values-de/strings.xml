@@ -17,6 +17,7 @@
     <string name="gamefocus_option_unhide">Einblenden</string>
     <string name="gamefocus_option_edit">Bearbeiten</string>
     <string name="gamefocus_option_app_info">App-Info</string>
+    <string name="gamefocus_option_uninstall">Deinstallieren</string>
     <string name="gamefocus_option_close">Schließen</string>
     <string name="gamefocus_option_actions">Aktionen</string>
     <string name="gamefocus_no_favorites">Keine Favoriten vorhanden</string>

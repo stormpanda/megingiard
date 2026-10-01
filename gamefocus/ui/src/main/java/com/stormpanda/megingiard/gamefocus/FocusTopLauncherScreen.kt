@@ -161,6 +161,7 @@ fun FocusTopLauncherScreen(
     onToggleHidden: (InstalledAppInfo) -> Unit = {},
     onEditArtwork: (InstalledAppInfo) -> Unit = {},
     onOpenAppInfo: (InstalledAppInfo) -> Unit = {},
+    onUninstallApp: (InstalledAppInfo) -> Unit = {},
     onAddRomFolder: () -> Unit = {},
     onRemoveRomFolder: (CustomRomFolder) -> Unit = {},
     editingAppInfo: InstalledAppInfo? = null,
@@ -507,6 +508,7 @@ fun FocusTopLauncherScreen(
                         onToggleHidden = onToggleHidden,
                         onEditArtwork = onEditArtwork,
                         onOpenAppInfo = onOpenAppInfo,
+                        onUninstallApp = onUninstallApp,
                         onAddRomFolder = onAddRomFolder,
                         onRemoveRomFolder = onRemoveRomFolder,
                         onAppClickTop = onAppClickTop,
@@ -756,18 +758,6 @@ fun FocusTopLauncherScreen(
                                                     },
                                                 ),
                                             )
-                                            if (!currentApp.isRom) {
-                                                add(
-                                                    ExpandableActionItem(
-                                                        label = context.getString(R.string.gamefocus_option_app_info),
-                                                        iconSymbol = "info",
-                                                        onClick = {
-                                                            onOpenAppInfo(currentApp)
-                                                            onMainOptionsMenuExpandedChange(false)
-                                                        },
-                                                    ),
-                                                )
-                                            }
                                             add(
                                                 ExpandableActionItem(
                                                     label =

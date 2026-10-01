@@ -499,4 +499,21 @@ object InstalledAppsManager {
             AppLog.e(TAG, "Failed to open native app info for package $packageName: ${e.message}", e)
         }
     }
+
+    fun uninstallApp(
+        context: Context,
+        packageName: String,
+    ) {
+        try {
+            val intent =
+                Intent(Intent.ACTION_DELETE).apply {
+                    data = Uri.fromParts("package", packageName, null)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+            context.startActivity(intent)
+            AppLog.i(TAG, "Launched uninstall intent for package: $packageName")
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Failed to launch uninstall intent for package $packageName: ${e.message}", e)
+        }
+    }
 }
