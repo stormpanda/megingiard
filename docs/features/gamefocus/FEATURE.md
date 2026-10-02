@@ -122,10 +122,32 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 - Each RetroArch-compatible system definition MUST configure a primary core (`retroArchCore`) and a set of popular alternative cores (`retroArchCoreAlternatives`) to prepare for future user-configurable core adjustments.
 - Starting a dynamic ROM game MUST invoke the appropriate launcher:
   - **RetroArchLauncher**: Resolves physical file paths and fires a targeted Android Intent (`com.retroarch` / `com.retroarch.aarch64` activity `RetroActivityFuture`) passing the target `ROM` path and the matching core `LIBRETRO` name.
-  - **GameNativeLauncher**: Invokes PC games via launcher intent `[packageName].MainActivity` (dynamically checking `app.gamenative` and `com.utkarshdalal.gamenative`) passing the parsed Steam App ID from `.steam` or `.steamappid` files.
   - **SwitchLauncher**: Invokes Nintendo Switch games via Intent `android.nfc.action.TECH_DISCOVERED` with the SAF `content://` URI (`romUri`) and `FLAG_GRANT_READ_URI_PERMISSION` (falling back to `Uri.fromFile(romPath)` with relaxed `StrictMode.VmPolicy`) and `ComponentName(targetPackage, "org.yuzu.yuzu_emu.activities.EmulationActivity")`, supporting installed Switch emulators (Eden variants, Citron, Sudachi, Suyu, Yuzu).
 - Selecting "Remove ROM Folder" in the Library Action Menu MUST display an `AppModalDialog` detailing added systems, followed by an `AppAlertDialog` confirmation overlay. Removing a folder immediately unregisters its scanned ROMs and dynamic category.
 - When cover artwork is absent for ROMs, the UI MUST render the scraped game logo if available, falling back to the `"sports_esports"` symbol ligature from the Material Symbols Rounded font if no logo was scraped.
+
+### FR-GF11: Dual-Screen App Pairing
+
+- Game Focus MUST allow users to pair an application or ROM displayed on the top screen with a companion Android application to be launched simultaneously on the bottom screen (Display 4).
+- The action menu on the main gallery poster carousel (`ExpandableActionsMenu`, triggered via Button `Y` / `KEYCODE_BUTTON_Y`) MUST display:
+  - `"Pair Bottom App"` (`splitscreen` icon) when the highlighted item is unpaired (totaling 4 menu items: Favorite, Artwork, Hide, Pair Bottom App).
+  - `"Change Paired App"` (`splitscreen` icon) and `"Remove Paired App"` (`delete` icon with destructive styling) when the highlighted item is currently paired (totaling 5 menu items: Favorite, Artwork, Hide, Change Paired App, Remove Paired App).
+- Selecting `"Remove Paired App"` MUST immediately unpair the bottom companion app and persist the change without an additional confirmation dialog.
+- Selecting `"Pair Bottom App"` or `"Change Paired App"` MUST open a 5-column 2D grid modal dialog (`GameFocusPairAppDialog`) inside an `AppModalDialog` container:
+  - The dialog MUST present all installed Android apps sorted alphabetically (excluding ROMs and excluding Game Focus itself).
+  - Cards MUST follow the Library card aesthetic (`16.dp` rounded corners, app icon, animated accent border on focus, marquee text on focus for labels exceeding available width).
+  - Focus MUST initially settle on the currently paired app if present, or index 0 otherwise.
+  - Directional gamepad navigation (D-pad and joystick) MUST navigate the 2D grid with bounds clamping across rows and columns.
+  - Pressing Gamepad Button **A** MUST confirm the pairing, persist the mapping, and dismiss the dialog.
+  - Pressing Gamepad Button **B** or tapping the backdrop/Cancel button MUST dismiss the dialog without changes.
+  - While the pairing dialog is open, all launcher inputs MUST be trapped and consumed.
+- When an app or ROM has a paired bottom companion:
+  - The gallery layout MUST render a secondary subtitle line below the main title featuring a `splitscreen` Material Symbol icon (`14.dp`) in `onSurfaceSecondary` color alongside the paired app's label.
+  - The primary launch button in `DualScreenLaunchButtons` MUST update its label to `[A] Dual Launch`.
+  - Pressing Gamepad Button **A** (`KEYCODE_BUTTON_A` / `KEYCODE_DPAD_CENTER`) or tapping the top launch button from the main gallery carousel MUST launch both the top application on Display 0 and the paired companion app on Display 4 simultaneously without artificial delay.
+  - Button **X** (`KEYCODE_BUTTON_X`) in the gallery MUST continue launching only the highlighted app on Display 4.
+  - Library launches (`FocusLibraryScreen`) remain single-screen launches on either Display 0 (Button A) or Display 4 (Button X), unaffected by pairings.
+- Pairings MUST be persisted to disk (`filesDir/gamefocus_app_pairs.json`) via `GameFocusPairManager` using atomic file writes (`AtomicFile`).
 
 ---
 
@@ -138,16 +160,17 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
                │    Top Display (0): FocusTopLauncherActivity  │
                │   • FocusTopLauncherScreen (2:3 Poster Pager) │
                │   • FocusLibraryScreen (Condensed Grid & Tabs)│
+               │   • GameFocusPairAppDialog (5-Column Modal)   │
                │   • FocusImageCache (LruCache + Icon Disk PNG)│
                │   • AppPaletteExtractor (Palette + Disk Cache)│
                │   • ExpandableOptionsMenu (Subdued D-Pad UI)  │
                │   • SteamGridDbScrapeDialog (Y Button Editor) │
                └──────────────────────┬────────────────────────┘
-                                      │ launches apps via setLaunchDisplayId(0)
+                                      │ launches apps via setLaunchDisplayId(0) & setLaunchDisplayId(4)
                                       ▼
                ┌───────────────────────────────────────────────┐
                │         Primary App / Game Execution          │
-               └──────────────────────┴────────────────────────┘
+               └──────────────────────┬────────────────────────┘
 
                ┌───────────────────────────────────────────────┐
                │     Bottom Display (4): MainActivity          │
@@ -156,6 +179,7 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 ```
 
 - **Standalone App Module:** Configured in `gamefocus/build.gradle.kts` as a standalone Android application (`com.stormpanda.megingiard.gamefocus`).
+- **GameFocusPairManager:** Singleton in `:gamefocus:domain` (`GameFocusPairManager.kt`) managing package pairing mappings (`Map<String, String>` where key = top screen package/ROM ID and value = bottom screen companion package) with atomic JSON persistence to `filesDir/gamefocus_app_pairs.json` via AndroidX `AtomicFile`. Exposes read-only `StateFlow<Map<String, String>>`.
 - **ContentProvider Inter-Process Theme Syncing:** Megingiard (`:app`) hosts `MegingiardThemeProvider` (`content://com.stormpanda.megingiard.provider/theme`). Game Focus queries this URI on launch via `MegingiardThemeClient` and attaches a `ContentObserver` for real-time theme and accent color synchronization across process boundaries. If Megingiard is absent, Game Focus safely defaults to `ThemeMode.DARK`.
 - **InstalledAppsManager:** Singleton in `:domain` querying `PackageManager` for native apps, combined with ROM items loaded via `RomManager`. Intercepts launch requests in `launchAppOnDisplay` to delegate ROM launches to the registry instead of launching package intents directly.
 - **EmulatorDetectionFunnel & Detectors:** Central router singleton (`EmulatorDetectionFunnel.kt`) routing foreground process changes to active detectors (`RetroArchDetector`, `GameNativeDetector`, `Pcsx2AndroidDetector`, `YuzuDetector` for Switch emulators including Citron, Eden, Sudachi, Suyu, and Yuzu, and `PpssppDetector` for standalone PPSSPP emulators), parsing configuration and log files to track running ROM sessions (`ActiveGameSession`) and trigger automatic companion profile switching.

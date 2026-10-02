@@ -39,8 +39,10 @@ import com.stormpanda.megingiard.catalog.RomManager
 import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
 import com.stormpanda.megingiard.catalog.SYSTEM_ID_SWITCH
 import com.stormpanda.megingiard.catalog.SwitchEmulators
+import com.stormpanda.megingiard.gamefocus.domain.GameFocusPairManager
 import com.stormpanda.megingiard.gamefocus.domain.initGameFocusLaunchers
 import com.stormpanda.megingiard.gamefocus.viewmodel.DEFAULT_LIBRARY_GRID_COLUMNS
+import com.stormpanda.megingiard.gamefocus.viewmodel.DEFAULT_PAIRING_GRID_COLUMNS
 import com.stormpanda.megingiard.gamefocus.viewmodel.FocusTopLauncherViewModel
 import com.stormpanda.megingiard.gamefocus.viewmodel.INITIAL_LOOP_OFFSET
 import com.stormpanda.megingiard.gamefocus.viewmodel.LauncherScrollDirection
@@ -62,7 +64,11 @@ private const val TAG = "FocusTopLauncherActivity"
 private const val INITIAL_REPEAT_DELAY_MS = 300L
 private const val REPEAT_INTERVAL_MS = 100L
 private const val ARTWORK_MENU_ITEMS_COUNT = 2
-private const val MAIN_MENU_ITEMS_COUNT = 3
+private const val MAIN_MENU_UNPAIRED_ITEMS_COUNT = 4
+private const val MAIN_MENU_PAIRED_ITEMS_COUNT = 5
+
+internal fun getMainMenuCount(isPaired: Boolean): Int = if (isPaired) MAIN_MENU_PAIRED_ITEMS_COUNT else MAIN_MENU_UNPAIRED_ITEMS_COUNT
+
 private const val LIBRARY_APP_ACTIONS_COUNT = 3
 private const val LIBRARY_ROM_ACTIONS_COUNT = 1
 private const val LIBRARY_BASE_ACTIONS_COUNT = 1
@@ -163,6 +169,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
         initGameFocusLaunchers()
         InstalledAppsManager.loadInstalledApps(this)
+        GameFocusPairManager.loadPairs(this)
 
         setContent {
             val remoteThemeState by MegingiardThemeClient
@@ -181,6 +188,15 @@ class FocusTopLauncherActivity : ComponentActivity() {
             val hidden by InstalledAppsManager.hiddenApps.collectAsStateWithLifecycle()
             val lastUsed by InstalledAppsManager.lastUsed.collectAsStateWithLifecycle()
             val customRomFolders by RomManager.romFolders.collectAsStateWithLifecycle()
+            val pairedApps by GameFocusPairManager.pairedApps.collectAsStateWithLifecycle()
+            val pairingTargetApp by viewModel.pairingTargetApp.collectAsStateWithLifecycle()
+            val pairingFocusedIndex by viewModel.pairingFocusedIndex.collectAsStateWithLifecycle()
+            val confirmPairingTrigger by viewModel.confirmPairingTrigger.collectAsStateWithLifecycle()
+
+            val availableAndroidApps =
+                remember(allApps) {
+                    allApps.filter { !it.isRom && it.packageName != packageName }.sortedBy { it.label.lowercase() }
+                }
 
             val selectedCategory by viewModel.selectedCategory.collectAsStateWithLifecycle()
             val isLibraryOpen by viewModel.isLibraryOpen.collectAsStateWithLifecycle()
@@ -331,16 +347,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                         FocusTopLauncherScreen(
                             apps = displayedApps,
                             onAppClickTop = { appInfo ->
-                                AppLog.i(TAG, "Launching app from top launcher on top display: ${appInfo.label}")
-                                launchedTopScreenPackage = appInfo.packageName
-                                MegingiardSettingsClient.updateClientState(
-                                    this@FocusTopLauncherActivity,
-                                    isActive = true,
-                                    focusedPackage = appInfo.packageName,
-                                )
-                                lifecycleScope.launch {
-                                    InstalledAppsManager.launchAppOnPrimaryDisplay(this@FocusTopLauncherActivity, appInfo)
-                                }
+                                launchGalleryTopApp(appInfo)
                             },
                             onAppClickBottom = { appInfo ->
                                 AppLog.i(TAG, "Launching app from top launcher on bottom display: ${appInfo.label}")
@@ -430,6 +437,22 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             libraryMenuSelectedIndex = libraryMenuSelectedIndex,
                             onOpenLibrary = { viewModel.setLibraryOpen(true) },
                             onCloseLibrary = { viewModel.setLibraryOpen(false) },
+                            pairedApps = pairedApps,
+                            availableAndroidApps = availableAndroidApps,
+                            onOpenPairingDialog = { appInfo -> openPairingDialogForApp(appInfo) },
+                            onRemovePair = { appInfo ->
+                                GameFocusPairManager.removePair(this@FocusTopLauncherActivity, appInfo.packageName)
+                            },
+                            pairingTargetApp = pairingTargetApp,
+                            pairingFocusedIndex = pairingFocusedIndex,
+                            onPairingFocusedIndexChange = { viewModel.setPairingFocusedIndex(it) },
+                            confirmPairingTrigger = confirmPairingTrigger,
+                            onDismissPairing = { viewModel.dismissPairingDialog() },
+                            onConfirmPairApp = { topApp, bottomApp ->
+                                AppLog.i(TAG, "Pairing app ${topApp.label} with ${bottomApp.label}")
+                                GameFocusPairManager.setPair(this@FocusTopLauncherActivity, topApp.packageName, bottomApp.packageName)
+                                viewModel.dismissPairingDialog()
+                            },
                         )
                     }
                 }
@@ -473,6 +496,43 @@ class FocusTopLauncherActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         MegingiardSettingsClient.updateClientState(this, isActive = false, focusedPackage = null)
+    }
+
+    private fun launchGalleryTopApp(appInfo: InstalledAppInfo) {
+        AppLog.i(TAG, "Launching app from top launcher on top display: ${appInfo.label}")
+        launchedTopScreenPackage = appInfo.packageName
+        MegingiardSettingsClient.updateClientState(
+            this,
+            isActive = true,
+            focusedPackage = appInfo.packageName,
+        )
+        lifecycleScope.launch {
+            InstalledAppsManager.launchAppOnPrimaryDisplay(this@FocusTopLauncherActivity, appInfo)
+            val pairedPackage = GameFocusPairManager.getPairedPackage(appInfo.packageName)
+            if (pairedPackage != null) {
+                val allApps = InstalledAppsManager.installedApps.value
+                val pairedApp = allApps.find { it.packageName == pairedPackage && !it.isRom }
+                if (pairedApp != null) {
+                    AppLog.i(TAG, "Simultaneously launching paired companion app on bottom display: ${pairedApp.label}")
+                    InstalledAppsManager.launchAppOnSecondaryDisplay(this@FocusTopLauncherActivity, pairedApp)
+                } else {
+                    AppLog.w(TAG, "Paired package '$pairedPackage' not found among installed apps; skipped secondary launch")
+                }
+            }
+        }
+    }
+
+    private fun openPairingDialogForApp(targetApp: InstalledAppInfo) {
+        val allApps = InstalledAppsManager.installedApps.value
+        val availableApps = allApps.filter { !it.isRom && it.packageName != packageName }.sortedBy { it.label.lowercase() }
+        val currentPaired = GameFocusPairManager.getPairedPackage(targetApp.packageName)
+        val initialIndex =
+            if (currentPaired != null) {
+                availableApps.indexOfFirst { it.packageName == currentPaired }.coerceAtLeast(0)
+            } else {
+                0
+            }
+        viewModel.openPairingDialog(targetApp, initialIndex)
     }
 
     private fun isCompanionApp(packageName: String): Boolean =
@@ -566,11 +626,21 @@ class FocusTopLauncherActivity : ComponentActivity() {
         }
 
         if (viewModel.isMainOptionsMenuExpanded.value) {
+            val targetApp = viewModel.focusedApp.value
+            val isPaired = targetApp != null && GameFocusPairManager.pairedApps.value.containsKey(targetApp.packageName)
+            val count = getMainMenuCount(isPaired)
             when (direction) {
-                LauncherScrollDirection.UP -> viewModel.navigateMainMenuUp(MAIN_MENU_ITEMS_COUNT)
-                LauncherScrollDirection.DOWN -> viewModel.navigateMainMenuDown(MAIN_MENU_ITEMS_COUNT)
+                LauncherScrollDirection.UP -> viewModel.navigateMainMenuUp(count)
+                LauncherScrollDirection.DOWN -> viewModel.navigateMainMenuDown(count)
                 else -> Unit
             }
+            return
+        }
+
+        if (viewModel.pairingTargetApp.value != null) {
+            val allApps = InstalledAppsManager.installedApps.value
+            val availableApps = allApps.filter { !it.isRom && it.packageName != packageName }
+            viewModel.stepPairingFocus(direction, availableApps.size, DEFAULT_PAIRING_GRID_COLUMNS)
             return
         }
 
@@ -736,6 +806,55 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 isDismissKey(keyCode) -> {
                     AppLog.i(TAG, "Closing Remove ROM Folder dialog via gamepad B")
                     viewModel.setRemoveRomFolderDialogOpen(false)
+                    true
+                }
+
+                else -> {
+                    true
+                }
+            }
+        }
+
+        if (viewModel.pairingTargetApp.value != null) {
+            val targetApp = viewModel.pairingTargetApp.value!!
+            val allApps = InstalledAppsManager.installedApps.value
+            val availableApps = allApps.filter { !it.isRom && it.packageName != packageName }.sortedBy { it.label.lowercase() }
+
+            return when {
+                isUpKey(keyCode) -> {
+                    startRepeat(LauncherScrollDirection.UP)
+                    true
+                }
+
+                isDownKey(keyCode) -> {
+                    startRepeat(LauncherScrollDirection.DOWN)
+                    true
+                }
+
+                isLeftKey(keyCode) -> {
+                    startRepeat(LauncherScrollDirection.LEFT)
+                    true
+                }
+
+                isRightKey(keyCode) -> {
+                    startRepeat(LauncherScrollDirection.RIGHT)
+                    true
+                }
+
+                isConfirmKey(keyCode) -> {
+                    val focusedIdx = viewModel.pairingFocusedIndex.value
+                    val chosenApp = availableApps.getOrNull(focusedIdx)
+                    if (chosenApp != null) {
+                        AppLog.i(TAG, "Confirming app pairing via Gamepad A: ${targetApp.label} -> ${chosenApp.label}")
+                        GameFocusPairManager.setPair(this, targetApp.packageName, chosenApp.packageName)
+                    }
+                    viewModel.dismissPairingDialog()
+                    true
+                }
+
+                isDismissKey(keyCode) -> {
+                    AppLog.i(TAG, "Closing pairing dialog via Gamepad B")
+                    viewModel.dismissPairingDialog()
                     true
                 }
 
@@ -1046,6 +1165,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             0 -> InstalledAppsManager.toggleFavorite(this, targetApp.packageName)
                             1 -> viewModel.openArtworkDialog(targetApp)
                             2 -> InstalledAppsManager.toggleHidden(this, targetApp.packageName)
+                            3 -> openPairingDialogForApp(targetApp)
+                            4 -> GameFocusPairManager.removePair(this, targetApp.packageName)
                         }
                     }
                     viewModel.setMainOptionsMenuExpanded(false)
@@ -1096,12 +1217,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
             isConfirmKey(keyCode) -> {
                 val targetApp = viewModel.focusedApp.value
                 if (targetApp != null) {
-                    AppLog.i(TAG, "Gamepad A button / launch key pressed for: ${targetApp.label} -> Launching on Top Display")
-                    launchedTopScreenPackage = targetApp.packageName
-                    MegingiardSettingsClient.updateClientState(this, isActive = true, focusedPackage = targetApp.packageName)
-                    lifecycleScope.launch {
-                        InstalledAppsManager.launchAppOnPrimaryDisplay(this@FocusTopLauncherActivity, targetApp)
-                    }
+                    launchGalleryTopApp(targetApp)
                     return true
                 }
             }
@@ -1162,7 +1278,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
         if (viewModel.editingAppInfo.value != null ||
             viewModel.newlyAddedFolder.value != null ||
             viewModel.folderToRemove.value != null ||
-            viewModel.isRemoveRomFolderDialogOpen.value
+            viewModel.isRemoveRomFolderDialogOpen.value ||
+            viewModel.pairingTargetApp.value != null
         ) {
             return true
         }
@@ -1179,6 +1296,27 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
             val x = if (axisHatX != 0f) axisHatX else axisX
             val y = if (axisHatY != 0f) axisHatY else axisY
+
+            if (viewModel.pairingTargetApp.value != null) {
+                if (x < -0.5f) {
+                    startRepeat(LauncherScrollDirection.LEFT)
+                    return true
+                } else if (x > 0.5f) {
+                    startRepeat(LauncherScrollDirection.RIGHT)
+                    return true
+                } else if (y < -0.5f) {
+                    startRepeat(LauncherScrollDirection.UP)
+                    return true
+                } else if (y > 0.5f) {
+                    startRepeat(LauncherScrollDirection.DOWN)
+                    return true
+                } else {
+                    if (currentDirection != LauncherScrollDirection.NONE) {
+                        stopRepeat()
+                    }
+                }
+                return true
+            }
 
             if (viewModel.newlyAddedFolder.value != null ||
                 viewModel.isRemoveRomFolderDialogOpen.value
@@ -1292,7 +1430,13 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 }
             }
         }
-        return if (viewModel.editingAppInfo.value != null) true else super.onGenericMotionEvent(event)
+        return if (viewModel.editingAppInfo.value != null ||
+            viewModel.pairingTargetApp.value != null
+        ) {
+            true
+        } else {
+            super.onGenericMotionEvent(event)
+        }
     }
 }
 

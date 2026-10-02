@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
 private const val TAG = "FocusTopLauncherViewModel"
 const val INITIAL_LOOP_OFFSET = 10_000
 const val DEFAULT_LIBRARY_GRID_COLUMNS = 6
+const val DEFAULT_PAIRING_GRID_COLUMNS = 5
 
 enum class LauncherScrollDirection { NONE, LEFT, RIGHT, UP, DOWN }
 
@@ -105,11 +106,80 @@ class FocusTopLauncherViewModel : ViewModel() {
     private val _focusedApp = MutableStateFlow<InstalledAppInfo?>(null)
     val focusedApp: StateFlow<InstalledAppInfo?> = _focusedApp.asStateFlow()
 
+    private val _pairingTargetApp = MutableStateFlow<InstalledAppInfo?>(null)
+    val pairingTargetApp: StateFlow<InstalledAppInfo?> = _pairingTargetApp.asStateFlow()
+
+    private val _pairingFocusedIndex = MutableStateFlow(0)
+    val pairingFocusedIndex: StateFlow<Int> = _pairingFocusedIndex.asStateFlow()
+
+    private val _confirmPairingTrigger = MutableStateFlow(0)
+    val confirmPairingTrigger: StateFlow<Int> = _confirmPairingTrigger.asStateFlow()
+
     private val _isResumed = MutableStateFlow(false)
     val isResumed: StateFlow<Boolean> = _isResumed.asStateFlow()
 
     private val _isStarted = MutableStateFlow(false)
     val isStarted: StateFlow<Boolean> = _isStarted.asStateFlow()
+
+    fun openPairingDialog(
+        appInfo: InstalledAppInfo,
+        initialIndex: Int = 0,
+    ) {
+        AppLog.i(TAG, "Opening pairing dialog for ${appInfo.label} at index $initialIndex")
+        _pairingTargetApp.value = appInfo
+        _pairingFocusedIndex.value = initialIndex
+        _confirmPairingTrigger.value = 0
+    }
+
+    fun dismissPairingDialog() {
+        AppLog.i(TAG, "Dismissing pairing dialog")
+        _pairingTargetApp.value = null
+        _pairingFocusedIndex.value = 0
+        _confirmPairingTrigger.value = 0
+    }
+
+    fun setPairingFocusedIndex(index: Int) {
+        _pairingFocusedIndex.value = index
+    }
+
+    fun triggerConfirmPairing() {
+        _confirmPairingTrigger.value += 1
+    }
+
+    fun stepPairingFocus(
+        direction: LauncherScrollDirection,
+        total: Int,
+        columns: Int = DEFAULT_PAIRING_GRID_COLUMNS,
+    ) {
+        val current = _pairingFocusedIndex.value.coerceAtLeast(0)
+        when (direction) {
+            LauncherScrollDirection.LEFT -> {
+                if (current > 0) {
+                    _pairingFocusedIndex.value = current - 1
+                }
+            }
+
+            LauncherScrollDirection.RIGHT -> {
+                if (total > 0 && current < total - 1) {
+                    _pairingFocusedIndex.value = current + 1
+                }
+            }
+
+            LauncherScrollDirection.UP -> {
+                if (current >= columns) {
+                    _pairingFocusedIndex.value = current - columns
+                }
+            }
+
+            LauncherScrollDirection.DOWN -> {
+                if (total > 0) {
+                    _pairingFocusedIndex.value = minOf(current + columns, total - 1)
+                }
+            }
+
+            LauncherScrollDirection.NONE -> {}
+        }
+    }
 
     fun setSelectedCategory(category: GameFocusCategory) {
         AppLog.d(TAG, "setSelectedCategory: ${category.id}")
@@ -443,7 +513,8 @@ class FocusTopLauncherViewModel : ViewModel() {
                 _isLibraryOptionsMenuExpanded.value ||
                 _isRemoveRomFolderDialogOpen.value ||
                 _folderToRemove.value != null ||
-                _newlyAddedFolder.value != null
+                _newlyAddedFolder.value != null ||
+                _pairingTargetApp.value != null
 
         if (wasNotInGallery) {
             AppLog.i(TAG, "Resetting view state to main gallery")
@@ -458,6 +529,9 @@ class FocusTopLauncherViewModel : ViewModel() {
             _isRemoveRomFolderDialogOpen.value = false
             _folderToRemove.value = null
             _newlyAddedFolder.value = null
+            _pairingTargetApp.value = null
+            _pairingFocusedIndex.value = 0
+            _confirmPairingTrigger.value = 0
             return true
         }
         return false

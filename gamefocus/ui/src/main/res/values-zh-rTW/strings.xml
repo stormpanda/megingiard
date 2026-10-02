@@ -68,5 +68,12 @@
     <string name="gamefocus_error_folder_inaccessible">資料夾不存在或無法存取。</string>
     <string name="gamefocus_error_unknown_system">無法在此資料夾中自動識別任何遊戲系統。</string>
     <string name="gamefocus_error_duplicate_folder">此資料夾已新增過。</string>
+
+    <string name="gamefocus_option_pair_bottom">配對下螢幕應用程式</string>
+    <string name="gamefocus_option_change_pair">變更配對應用程式</string>
+    <string name="gamefocus_option_remove_pair">解除配對應用程式</string>
+    <string name="gamefocus_dialog_pair_title">配對下螢幕應用程式</string>
+    <string name="gamefocus_dialog_pair_subtitle">選擇與 %1$s 同時在下螢幕啟動的應用程式</string>
+    <string name="gamefocus_launch_dual">雙螢幕啟動</string>
 </resources>
 
