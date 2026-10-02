@@ -94,6 +94,7 @@ import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.catalog.LibraryTab
 import com.stormpanda.megingiard.catalog.RomManager
 import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
+import com.stormpanda.megingiard.catalog.SYSTEM_ID_SWITCH
 import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.ExpandableActionItem
 import com.stormpanda.megingiard.ui.ExpandableActionsMenu
@@ -534,7 +535,7 @@ fun FocusLibraryScreen(
                     }
                 val isSwitchSystem =
                     remember(currentRomFolder) {
-                        currentRomFolder?.systemId == "switch"
+                        currentRomFolder?.systemId == SYSTEM_ID_SWITCH
                     }
                 val actions =
                     remember(focusedApp, isCurrentHidden, romFolders, isRetroArchSystem, isSwitchSystem, currentRomFolder) {

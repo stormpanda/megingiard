@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.session
 
+import com.stormpanda.megingiard.catalog.SYSTEM_ID_SWITCH
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -34,7 +35,7 @@ class YuzuDetectorTest {
 
     @Test
     fun systemId_isSwitch() {
-        assertEquals("switch", YuzuDetector.systemId)
+        assertEquals(SYSTEM_ID_SWITCH, YuzuDetector.systemId)
     }
 
     @Test

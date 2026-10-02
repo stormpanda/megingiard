@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.catalog
 
 import android.content.Context
+import android.content.pm.PackageInfo
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import kotlinx.coroutines.runBlocking
@@ -308,6 +309,35 @@ class RomManagerTest {
                 assertTrue(result is AddRomFolderResult.Error)
                 val errorResult = result as AddRomFolderResult.Error
                 assertEquals(AddRomFolderResult.ErrorCode.NO_SWITCH_EMULATOR, errorResult.errorCode)
+            } finally {
+                tempDir.deleteRecursively()
+            }
+        }
+    }
+
+    @Test
+    fun testAddRomFolder_switchWithNewlyInstalledEmulator_forceRefreshesCacheAndSucceeds() {
+        runBlocking {
+            SwitchEmulators.invalidateCache()
+            // Populate cache with empty list
+            assertTrue(SwitchEmulators.getInstalledEmulators(context).isEmpty())
+
+            // Install Eden emulator afterwards
+            val pkgEden = "dev.eden.eden_emulator"
+            shadowOf(context.packageManager).installPackage(PackageInfo().apply { packageName = pkgEden })
+
+            val tempDir =
+                File.createTempFile("switch_test_dir_refresh", "").apply {
+                    delete()
+                    mkdirs()
+                }
+            try {
+                File(tempDir, "Mario Kart 8 Deluxe [0100152000022000].nsp").createNewFile()
+                // Force refresh ensures that the newly installed emulator is recognized despite previously cached empty list
+                val result = RomManager.addRomFolder(context, Uri.fromFile(tempDir))
+                assertTrue(result is AddRomFolderResult.Success)
+                val successResult = result as AddRomFolderResult.Success
+                assertEquals(pkgEden, successResult.folder.emulatorPackage)
             } finally {
                 tempDir.deleteRecursively()
             }

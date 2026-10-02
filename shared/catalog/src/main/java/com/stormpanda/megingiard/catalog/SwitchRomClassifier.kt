@@ -33,15 +33,11 @@ object SwitchRomClassifier {
      * Returns true if the given filename represents a standalone playable Switch Base Game.
      */
     fun isSwitchBaseGame(fileName: String): Boolean {
-        if (isSwitchDlc(fileName) || isSwitchUpdate(fileName)) {
-            // Explicit base tag takes precedence if present
-            if (BASE_TAG_REGEX.containsMatchIn(fileName)) {
-                AppLog.d(TAG, "'$fileName' has explicit [Base] tag, classifying as Base Game")
-                return true
-            }
-            return false
+        if (BASE_TAG_REGEX.containsMatchIn(fileName)) {
+            AppLog.d(TAG, "'$fileName' has explicit [Base] tag, classifying as Base Game")
+            return true
         }
-        return true
+        return !isSwitchDlc(fileName) && !isSwitchUpdate(fileName)
     }
 
     /**

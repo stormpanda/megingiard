@@ -37,6 +37,7 @@ import com.stormpanda.megingiard.catalog.InstalledAppsManager
 import com.stormpanda.megingiard.catalog.LibraryTab
 import com.stormpanda.megingiard.catalog.RomManager
 import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
+import com.stormpanda.megingiard.catalog.SYSTEM_ID_SWITCH
 import com.stormpanda.megingiard.catalog.SwitchEmulators
 import com.stormpanda.megingiard.gamefocus.domain.initGameFocusLaunchers
 import com.stormpanda.megingiard.gamefocus.viewmodel.DEFAULT_LIBRARY_GRID_COLUMNS
@@ -103,7 +104,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 lifecycleScope.launch {
                     when (val result = RomManager.addRomFolder(this@FocusTopLauncherActivity, uri)) {
                         is AddRomFolderResult.Success -> {
-                            if (result.folder.systemId == "switch") {
+                            if (result.folder.systemId == SYSTEM_ID_SWITCH) {
                                 val emulators = SwitchEmulators.getInstalledEmulators(this@FocusTopLauncherActivity, forceRefresh = true)
                                 if (emulators.size > 1) {
                                     openCoreChooserForFolder(result.folder)
@@ -385,7 +386,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             newlyAddedFolder = newlyAddedFolder,
                             onDismissNewlyAddedFolder = { viewModel.setNewlyAddedFolder(null) },
                             onConfirmNewlyAddedFolderCore = { folder, coreOrPackage ->
-                                if (folder.systemId == "switch") {
+                                if (folder.systemId == SYSTEM_ID_SWITCH) {
                                     RomManager.updateRomFolderEmulatorPackage(this, folder.uriString, coreOrPackage)
                                 } else {
                                     RomManager.updateRomFolderCore(this, folder.uriString, coreOrPackage)
@@ -474,7 +475,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
     }
 
     private fun openCoreChooserForFolder(folder: CustomRomFolder) {
-        if (folder.systemId == "switch") {
+        if (folder.systemId == SYSTEM_ID_SWITCH) {
             val emulators = SwitchEmulators.getInstalledEmulators(this, forceRefresh = true)
             val selectedIdx = emulators.indexOfFirst { it.packageName == folder.emulatorPackage }.coerceAtLeast(0)
             viewModel.setCoreChooserDialogSelectedIndex(selectedIdx)
@@ -491,7 +492,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
     private fun stepCoreChooserFocus(direction: LauncherScrollDirection) {
         val folder = viewModel.newlyAddedFolder.value ?: return
         val count =
-            if (folder.systemId == "switch") {
+            if (folder.systemId == SYSTEM_ID_SWITCH) {
                 SwitchEmulators.getInstalledEmulators(this).size
             } else {
                 val systemDef = SUPPORTED_SYSTEMS.find { it.id == folder.systemId }
@@ -531,7 +532,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
             val isRetroArchRomSystem =
                 currentRomFolder != null &&
                     SUPPORTED_SYSTEMS.find { it.id == currentRomFolder.systemId }?.emulatorId == EMULATOR_ID_RETROARCH
-            val isSwitchRomSystem = currentRomFolder?.systemId == "switch"
+            val isSwitchRomSystem = currentRomFolder?.systemId == SYSTEM_ID_SWITCH
             val isConfigurableRomSystem = isRetroArchRomSystem || isSwitchRomSystem
             val count =
                 getLibraryMenuCount(
@@ -844,7 +845,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                         val isRetroArchRomSystem =
                             currentRomFolder != null &&
                                 SUPPORTED_SYSTEMS.find { it.id == currentRomFolder.systemId }?.emulatorId == EMULATOR_ID_RETROARCH
-                        val isSwitchRomSystem = currentRomFolder?.systemId == "switch"
+                        val isSwitchRomSystem = currentRomFolder?.systemId == SYSTEM_ID_SWITCH
                         val isConfigurableRomSystem = isRetroArchRomSystem || isSwitchRomSystem
 
                         val baseIndex = if (hasApp) (if (!isRom) 3 else 1) else 0

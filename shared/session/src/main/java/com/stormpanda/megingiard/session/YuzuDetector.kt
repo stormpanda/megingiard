@@ -2,7 +2,9 @@ package com.stormpanda.megingiard.session
 
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.RomManager
+import com.stormpanda.megingiard.catalog.SYSTEM_ID_SWITCH
 import com.stormpanda.megingiard.catalog.SafPathResolver
+import com.stormpanda.megingiard.catalog.SwitchEmulators
 import java.util.Locale
 
 private const val TAG = "YuzuDetector"
@@ -22,28 +24,9 @@ object YuzuDetector : EmulatorDetector {
     private val titleCache = mutableMapOf<String, String>()
 
     override val supportedPackages: Set<String> =
-        setOf(
-            "org.citron.citron_emu",
-            "org.citron.citron_emu.debug",
-            "org.yuzu.yuzu_emu",
-            "org.yuzu.yuzu_emu.ea",
-            "org.sudachi.sudachi_emu",
-            "com.suyu.suyu",
-            "dev.eden.eden_emulator",
-            "dev.eden.eden_emulator.debug",
-            "dev.eden.eden_emulator.nightly",
-            "dev.eden.eden_emulator.nightly.debug",
-            "dev.eden.eden_emulator.dualscreen",
-            "dev.eden.eden_emulator.dualscreen.debug",
-            "dev.eden.eden_emulator.dualscreen.nightly",
-            "dev.eden.eden_emulator.dualscreen.nightly.debug",
-            "dev.legacy.eden_emulator",
-            "dev.legacy.eden_emulator.debug",
-            "dev.legacy.eden_emulator.nightly",
-            "dev.legacy.eden_emulator.nightly.debug",
-        )
+        SwitchEmulators.SUPPORTED_EMULATOR_OPTIONS.map { it.packageName }.toSet()
 
-    override val systemId: String = "switch"
+    override val systemId: String = SYSTEM_ID_SWITCH
 
     private val logFileNames =
         mapOf(
@@ -139,9 +122,8 @@ object YuzuDetector : EmulatorDetector {
                 if (name.isNotBlank()) {
                     lastGameTitle = name
                 }
-                val currentIsBase = lastTitleId?.endsWith(BASE_TITLE_ID_SUFFIX) == true
                 val matchedIsBase = id.endsWith(BASE_TITLE_ID_SUFFIX)
-                if (lastTitleId == null || (!currentIsBase && matchedIsBase) || (currentIsBase && matchedIsBase)) {
+                if (lastTitleId == null || matchedIsBase) {
                     lastTitleId = id
                 }
                 continue
@@ -170,9 +152,8 @@ object YuzuDetector : EmulatorDetector {
                 val matchedId = titleIdMatch.groupValues[1].uppercase(Locale.US)
                 // Switch base game title IDs always end with "000". Updates end with "800", DLC with "001"-"FFE".
                 // Never overwrite an existing base game title ID with a non-base (DLC/update) title ID.
-                val currentIsBase = lastTitleId?.endsWith(BASE_TITLE_ID_SUFFIX) == true
                 val matchedIsBase = matchedId.endsWith(BASE_TITLE_ID_SUFFIX)
-                if (lastTitleId == null || (!currentIsBase && matchedIsBase) || (currentIsBase && matchedIsBase)) {
+                if (lastTitleId == null || matchedIsBase) {
                     lastTitleId = matchedId
                 }
             }

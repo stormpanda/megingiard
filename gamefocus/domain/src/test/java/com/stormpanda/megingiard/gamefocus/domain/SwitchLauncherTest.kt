@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageInfo
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.EMULATOR_ID_YUZU
+import com.stormpanda.megingiard.catalog.SYSTEM_ID_SWITCH
 import com.stormpanda.megingiard.catalog.SwitchEmulators
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -55,7 +56,7 @@ class SwitchLauncherTest {
                 launcher.launchGame(
                     context = context,
                     romPath = "/storage/emulated/0/Switch/Zelda.nsp",
-                    systemId = "switch",
+                    systemId = SYSTEM_ID_SWITCH,
                     displayId = 0,
                 )
             assertFalse(launched)
@@ -75,7 +76,7 @@ class SwitchLauncherTest {
                 launcher.launchGame(
                     context = context,
                     romPath = romPath,
-                    systemId = "switch",
+                    systemId = SYSTEM_ID_SWITCH,
                     displayId = 0,
                     retroArchCore = null,
                 )
@@ -103,7 +104,7 @@ class SwitchLauncherTest {
                 launcher.launchGame(
                     context = context,
                     romPath = romPath,
-                    systemId = "switch",
+                    systemId = SYSTEM_ID_SWITCH,
                     displayId = 0,
                     retroArchCore = suyuPackage,
                 )
@@ -127,7 +128,7 @@ class SwitchLauncherTest {
                 launcher.launchGame(
                     context = context,
                     romPath = romPath,
-                    systemId = "switch",
+                    systemId = SYSTEM_ID_SWITCH,
                     displayId = 0,
                     retroArchCore = "com.suyu.suyu",
                 )
@@ -151,7 +152,7 @@ class SwitchLauncherTest {
                 launcher.launchGame(
                     context = context,
                     romPath = romPath,
-                    systemId = "switch",
+                    systemId = SYSTEM_ID_SWITCH,
                     displayId = 0,
                     retroArchCore = null,
                     romUri = romUri,

@@ -7,6 +7,7 @@ private const val TAG = "RomSystemDef"
 const val EMULATOR_ID_RETROARCH = "retroarch"
 const val EMULATOR_ID_GAMENATIVE = "gamenative"
 const val EMULATOR_ID_YUZU = "yuzu"
+const val SYSTEM_ID_SWITCH = "switch"
 
 /**
  * Definition of a gaming system supported for ROM browsing.
@@ -395,7 +396,7 @@ val SUPPORTED_SYSTEMS =
                 emulatorId = EMULATOR_ID_GAMENATIVE,
             ),
             RomSystemDef(
-                id = "switch",
+                id = SYSTEM_ID_SWITCH,
                 displayName = "Nintendo Switch",
                 extensions = setOf("nsp", "xci", "nca", "xcz", "nsz"),
                 emulatorId = EMULATOR_ID_YUZU,

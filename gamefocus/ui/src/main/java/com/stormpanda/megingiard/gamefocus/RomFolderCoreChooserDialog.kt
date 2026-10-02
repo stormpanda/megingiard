@@ -21,6 +21,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.CustomRomFolder
 import com.stormpanda.megingiard.catalog.EMULATOR_ID_RETROARCH
 import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
+import com.stormpanda.megingiard.catalog.SYSTEM_ID_SWITCH
 import com.stormpanda.megingiard.catalog.SwitchEmulators
 import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.GamePadButton
@@ -48,7 +49,7 @@ fun RomFolderCoreChooserDialog(
 ) {
     val context = LocalContext.current
     val appColors = LocalAppColors.current
-    val isSwitchSystem = remember(folder.systemId) { folder.systemId == "switch" }
+    val isSwitchSystem = remember(folder.systemId) { folder.systemId == SYSTEM_ID_SWITCH }
     val switchEmulators =
         remember(isSwitchSystem) {
             if (isSwitchSystem) SwitchEmulators.getInstalledEmulators(context) else emptyList()

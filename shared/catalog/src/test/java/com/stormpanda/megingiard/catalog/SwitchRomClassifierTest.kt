@@ -38,6 +38,7 @@ class SwitchRomClassifierTest {
                 "Picross S2 [0100C9600A88E000][v0][Base].nsp",
                 "The Legend of Zelda Breath of the Wild.nsp",
                 "Super Mario Odyssey.xci",
+                "Game Update Bundle [0100152000022800][Base].nsp",
             )
 
         for (game in baseGames) {

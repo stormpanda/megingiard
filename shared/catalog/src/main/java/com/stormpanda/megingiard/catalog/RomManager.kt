@@ -208,8 +208,8 @@ object RomManager {
             }
 
             val defaultEmulatorPackage =
-                if (systemId == "switch") {
-                    val installed = SwitchEmulators.getInstalledEmulators(context)
+                if (systemId == SYSTEM_ID_SWITCH) {
+                    val installed = SwitchEmulators.getInstalledEmulators(context, forceRefresh = true)
                     if (installed.isEmpty()) {
                         AppLog.w(TAG, "No supported Switch emulator is installed")
                         return@withContext AddRomFolderResult.Error(
@@ -317,7 +317,7 @@ object RomManager {
 
                         val files = collectRomFilesRecursively(documentFile)
                         val isConsoleSystem = folder.systemId != "pc"
-                        val isSwitchSystem = folder.systemId == "switch"
+                        val isSwitchSystem = folder.systemId == SYSTEM_ID_SWITCH
                         for (file in files) {
                             if (file.isDirectory) continue
                             val name = file.name ?: continue

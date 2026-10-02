@@ -45,8 +45,9 @@ object SwitchEmulators {
         context: Context,
         forceRefresh: Boolean = false,
     ): List<SwitchEmulatorOption> {
-        if (!forceRefresh && cachedInstalled != null) {
-            return cachedInstalled!!
+        val cached = cachedInstalled
+        if (!forceRefresh && cached != null) {
+            return cached
         }
         val pm = context.packageManager
         val installed =
