@@ -57,11 +57,16 @@ class SwitchLauncher : RomLauncher {
 
         AppLog.i(TAG, "Launching Switch ROM '$romPath' (URI: '$targetUri') with package '$targetPackage' on display $displayId")
 
-        return try {
+        val oldVmPolicy =
             if (targetUri.scheme == "file") {
+                val previous = StrictMode.getVmPolicy()
                 StrictMode.setVmPolicy(StrictMode.VmPolicy.Builder().build())
+                previous
+            } else {
+                null
             }
 
+        return try {
             val intent =
                 Intent(SWITCH_ACTION).apply {
                     component = ComponentName(targetPackage, EMULATION_ACTIVITY_NAME)
@@ -77,6 +82,8 @@ class SwitchLauncher : RomLauncher {
         } catch (e: Exception) {
             AppLog.e(TAG, "Failed to launch Switch game in $targetPackage: ${e.message}", e)
             false
+        } finally {
+            oldVmPolicy?.let { StrictMode.setVmPolicy(it) }
         }
     }
 

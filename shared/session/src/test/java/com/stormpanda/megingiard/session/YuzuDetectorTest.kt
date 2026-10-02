@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.session
 
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.SYSTEM_ID_SWITCH
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -9,9 +10,12 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+private const val TAG = "YuzuDetectorTest"
+
 class YuzuDetectorTest {
     @Test
     fun supportedPackages_containsExpectedYuzuFamilyVariants() {
+        AppLog.d(TAG, "Testing supportedPackages contains expected Yuzu family variants")
         assertTrue(YuzuDetector.supportedPackages.contains("org.citron.citron_emu"))
         assertTrue(YuzuDetector.supportedPackages.contains("org.citron.citron_emu.debug"))
         assertTrue(YuzuDetector.supportedPackages.contains("org.yuzu.yuzu_emu"))
@@ -35,18 +39,21 @@ class YuzuDetectorTest {
 
     @Test
     fun systemId_isSwitch() {
+        AppLog.d(TAG, "Testing systemId is switch")
         assertEquals(SYSTEM_ID_SWITCH, YuzuDetector.systemId)
     }
 
     @Test
     fun detectActiveSession_unsupportedPackage_returnsNull() =
         runTest {
+            AppLog.d(TAG, "Testing detectActiveSession returns null for unsupported package")
             val result = YuzuDetector.detectActiveSession("com.unsupported.emulator")
             assertNull(result)
         }
 
     @Test
     fun parseSessionFromLog_validCoreLoadingLine_parsesTitleAndTitleId() {
+        AppLog.d(TAG, "Testing parseSessionFromLog parses title and titleId from core loading line")
         val logSample =
             """
             [   3.920139] Frontend <Info> main/jni/emu_window/emu_window.cpp:EmuWindow_Android:53: initializing
@@ -68,6 +75,7 @@ class YuzuDetectorTest {
 
     @Test
     fun parseSessionFromLog_edenPackage_parsesTitleAndSetsEdenBackend() {
+        AppLog.d(TAG, "Testing parseSessionFromLog maps Eden package to eden backend")
         val logSample =
             """
             [   1.123456] Loader <Info> core/file_sys/patch_manager.cpp:PatchExeFS:169: Patching ExeFS for title_id=01007EF00011E000
@@ -88,6 +96,7 @@ class YuzuDetectorTest {
 
     @Test
     fun parseSessionFromLog_allYuzuFamilyBackends_mappedCorrectly() {
+        AppLog.d(TAG, "Testing parseSessionFromLog maps all Yuzu family backends correctly")
         val logSample =
             """
             [   1.000000] Core <Info> core/core.cpp:Load:402: Loading Mario Kart 8 Deluxe (0100152000022000) ...
@@ -117,6 +126,7 @@ class YuzuDetectorTest {
 
     @Test
     fun parseSessionFromLog_patchExeFSOnly_parsesTitleIdFallback() {
+        AppLog.d(TAG, "Testing parseSessionFromLog with patchExeFS only falls back to Title ID title")
         val logSample =
             """
             [   4.212041] Loader <Info> core/file_sys/patch_manager.cpp:PatchExeFS:169: Patching ExeFS for title_id=0100152000022800
@@ -136,6 +146,7 @@ class YuzuDetectorTest {
 
     @Test
     fun parseSessionFromLog_emptyOrIrrelevantLog_returnsNull() {
+        AppLog.d(TAG, "Testing parseSessionFromLog returns null for irrelevant log")
         val logSample = "Random log output without any game loading lines"
         val session = YuzuDetector.parseSessionFromLog("org.citron.citron_emu", logSample)
         assertNull(session)
@@ -144,6 +155,7 @@ class YuzuDetectorTest {
     @Test
     fun detectActiveSession_supportedPackage_resolvesFromLog() =
         runTest {
+            AppLog.d(TAG, "Testing detectActiveSession resolves session from log file")
             val logSample =
                 """
                 [   4.649822] Core <Info> core/core.cpp:Load:402: Loading Super Mario Odyssey (0100000000010000) ...
@@ -160,6 +172,7 @@ class YuzuDetectorTest {
     @Test
     fun detectActiveSession_edenDualscreenPackage_resolvesFromLog() =
         runTest {
+            AppLog.d(TAG, "Testing detectActiveSession resolves session for Eden dualscreen")
             val logSample =
                 """
                 [   4.649822] Core <Info> core/core.cpp:Load:402: Loading Super Mario Odyssey (0100000000010000) ...
@@ -175,6 +188,7 @@ class YuzuDetectorTest {
 
     @Test
     fun parseSessionFromLog_edenNightlyWithDlcAndCustomSettings_preservesBaseTitleAndBaseTitleId() {
+        AppLog.d(TAG, "Testing parseSessionFromLog preserves base title and base Title ID across DLCs")
         val logSample =
             """
             [EmulationFragment] Loading custom settings for Diablo III: Eternal Collection
@@ -198,6 +212,7 @@ class YuzuDetectorTest {
 
     @Test
     fun parseSessionFromLog_viewSetupAndExeFsPatchOnly_resolvesBaseTitleAndBaseTitleId() {
+        AppLog.d(TAG, "Testing parseSessionFromLog resolves base title with viewSetup and ExeFS patch only")
         val logSample =
             """
             [EmulationFragment] Starting view setup for game: Super Smash Bros. Ultimate
@@ -217,6 +232,7 @@ class YuzuDetectorTest {
 
     @Test
     fun parseSessionFromLog_controlDataLine_parsesTitleAndTitleId() {
+        AppLog.d(TAG, "Testing parseSessionFromLog parses title and Title ID from Control data line")
         val logSample =
             """
             [   3.000000] Loader <Info> core/loader/loader.cpp:Control data for 0100000000010000: name="Super Mario Odyssey"
@@ -232,6 +248,7 @@ class YuzuDetectorTest {
     @Test
     fun detectActiveSession_edenNightlyPackage_resolvesFromLog() =
         runTest {
+            AppLog.d(TAG, "Testing detectActiveSession resolves active session for Eden Nightly")
             val logSample =
                 """
                 [EmulationFragment] Starting view setup for game: Diablo III: Eternal Collection
