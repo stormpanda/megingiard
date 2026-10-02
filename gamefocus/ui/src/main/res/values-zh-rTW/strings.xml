@@ -61,5 +61,9 @@
     <string name="gamefocus_dialog_cancel">取消</string>
     <string name="gamefocus_dialog_select">選擇</string>
     <string name="gamefocus_dialog_unknown_system">未知系統</string>
+    <string name="gamefocus_option_change_emulator">變更模擬器</string>
+    <string name="gamefocus_dialog_select_emulator_title">選擇模擬器</string>
+    <string name="gamefocus_dialog_select_emulator_label">選擇 Switch 模擬器：</string>
+    <string name="gamefocus_error_no_switch_emulator">未安裝支援的 Nintendo Switch 模擬器（例如 Eden）。請在新增此資料夾前先安裝模擬器。</string>
 </resources>
 

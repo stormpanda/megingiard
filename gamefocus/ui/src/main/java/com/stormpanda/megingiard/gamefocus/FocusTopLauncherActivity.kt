@@ -104,7 +104,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     when (val result = RomManager.addRomFolder(this@FocusTopLauncherActivity, uri)) {
                         is AddRomFolderResult.Success -> {
                             if (result.folder.systemId == "switch") {
-                                val emulators = SwitchEmulators.getInstalledEmulators(this@FocusTopLauncherActivity)
+                                val emulators = SwitchEmulators.getInstalledEmulators(this@FocusTopLauncherActivity, forceRefresh = true)
                                 if (emulators.size > 1) {
                                     openCoreChooserForFolder(result.folder)
                                 }
@@ -115,8 +115,14 @@ class FocusTopLauncherActivity : ComponentActivity() {
                         }
 
                         is AddRomFolderResult.Error -> {
+                            val displayMessage =
+                                if (result.errorCode == AddRomFolderResult.ErrorCode.NO_SWITCH_EMULATOR) {
+                                    getString(R.string.gamefocus_error_no_switch_emulator)
+                                } else {
+                                    result.message
+                                }
                             Toast
-                                .makeText(this@FocusTopLauncherActivity, result.message, Toast.LENGTH_LONG)
+                                .makeText(this@FocusTopLauncherActivity, displayMessage, Toast.LENGTH_LONG)
                                 .show()
                         }
                     }
@@ -469,7 +475,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
     private fun openCoreChooserForFolder(folder: CustomRomFolder) {
         if (folder.systemId == "switch") {
-            val emulators = SwitchEmulators.getInstalledEmulators(this)
+            val emulators = SwitchEmulators.getInstalledEmulators(this, forceRefresh = true)
             val selectedIdx = emulators.indexOfFirst { it.packageName == folder.emulatorPackage }.coerceAtLeast(0)
             viewModel.setCoreChooserDialogSelectedIndex(selectedIdx)
             viewModel.setNewlyAddedFolder(folder)

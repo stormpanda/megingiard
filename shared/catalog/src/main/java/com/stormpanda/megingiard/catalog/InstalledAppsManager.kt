@@ -223,6 +223,7 @@ object InstalledAppsManager {
 
     @Suppress("DEPRECATION")
     fun loadInstalledApps(context: Context) {
+        SwitchEmulators.invalidateCache()
         scope.launch {
             RomManager.loadRomFolders(context)
             RomManager.reloadRomApps(context)

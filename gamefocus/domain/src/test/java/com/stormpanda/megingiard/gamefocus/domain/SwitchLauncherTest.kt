@@ -5,7 +5,9 @@ import android.content.Intent
 import android.content.pm.PackageInfo
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.EMULATOR_ID_YUZU
+import com.stormpanda.megingiard.catalog.SwitchEmulators
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -29,7 +31,13 @@ class SwitchLauncherTest {
     @Before
     fun setUp() {
         context = RuntimeEnvironment.getApplication()
+        SwitchEmulators.invalidateCache()
         launcher = SwitchLauncher()
+    }
+
+    @After
+    fun tearDown() {
+        SwitchEmulators.invalidateCache()
     }
 
     @Test

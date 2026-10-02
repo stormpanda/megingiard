@@ -40,7 +40,15 @@ sealed class AddRomFolderResult {
 
     data class Error(
         val message: String,
+        val errorCode: ErrorCode? = null,
     ) : AddRomFolderResult()
+
+    enum class ErrorCode {
+        FOLDER_INACCESSIBLE,
+        UNKNOWN_SYSTEM,
+        DUPLICATE_FOLDER,
+        NO_SWITCH_EMULATOR,
+    }
 }
 
 object RomManager {
@@ -171,14 +179,20 @@ object RomManager {
             val documentFile = resolveDocumentFile(context, uri)
             if (documentFile == null || !documentFile.exists()) {
                 AppLog.w(TAG, "Selected document tree does not exist")
-                return@withContext AddRomFolderResult.Error("Folder does not exist or is inaccessible.")
+                return@withContext AddRomFolderResult.Error(
+                    "Folder does not exist or is inaccessible.",
+                    AddRomFolderResult.ErrorCode.FOLDER_INACCESSIBLE,
+                )
             }
 
             val files = collectRomFilesRecursively(documentFile)
             val systemId = detectSystem(context, files)
             if (systemId == null) {
                 AppLog.w(TAG, "Could not automatically recognize any gaming system in folder")
-                return@withContext AddRomFolderResult.Error("Could not automatically recognize any gaming system in this folder.")
+                return@withContext AddRomFolderResult.Error(
+                    "Could not automatically recognize any gaming system in this folder.",
+                    AddRomFolderResult.ErrorCode.UNKNOWN_SYSTEM,
+                )
             }
 
             val systemDef = SUPPORTED_SYSTEMS.find { it.id == systemId }!!
@@ -187,7 +201,10 @@ object RomManager {
             // 3. Prevent duplicate folders
             val current = _romFolders.value.toMutableList()
             if (current.any { it.uriString == uri.toString() }) {
-                return@withContext AddRomFolderResult.Error("This folder has already been added.")
+                return@withContext AddRomFolderResult.Error(
+                    "This folder has already been added.",
+                    AddRomFolderResult.ErrorCode.DUPLICATE_FOLDER,
+                )
             }
 
             val defaultEmulatorPackage =
@@ -195,7 +212,10 @@ object RomManager {
                     val installed = SwitchEmulators.getInstalledEmulators(context)
                     if (installed.isEmpty()) {
                         AppLog.w(TAG, "No supported Switch emulator is installed")
-                        return@withContext AddRomFolderResult.Error("No supported Nintendo Switch emulator (e.g. Eden) is installed.")
+                        return@withContext AddRomFolderResult.Error(
+                            "No supported Nintendo Switch emulator (e.g. Eden) is installed.",
+                            AddRomFolderResult.ErrorCode.NO_SWITCH_EMULATOR,
+                        )
                     }
                     if (installed.size == 1) installed.first().packageName else null
                 } else {

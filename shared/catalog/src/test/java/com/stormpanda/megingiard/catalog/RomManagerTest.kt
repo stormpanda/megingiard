@@ -292,4 +292,36 @@ class RomManagerTest {
             }
         }
     }
+
+    @Test
+    fun testAddRomFolder_switchWithoutEmulator_returnsNoSwitchEmulatorErrorCode() {
+        runBlocking {
+            SwitchEmulators.invalidateCache()
+            val tempDir =
+                File.createTempFile("switch_test_dir", "").apply {
+                    delete()
+                    mkdirs()
+                }
+            try {
+                File(tempDir, "Mario Kart 8 Deluxe [0100152000022000].nsp").createNewFile()
+                val result = RomManager.addRomFolder(context, Uri.fromFile(tempDir))
+                assertTrue(result is AddRomFolderResult.Error)
+                val errorResult = result as AddRomFolderResult.Error
+                assertEquals(AddRomFolderResult.ErrorCode.NO_SWITCH_EMULATOR, errorResult.errorCode)
+            } finally {
+                tempDir.deleteRecursively()
+            }
+        }
+    }
+
+    @Test
+    fun testAddRomFolder_nonExistentFolder_returnsFolderInaccessibleErrorCode() {
+        runBlocking {
+            val nonExistentUri = Uri.parse("file:///non/existent/path/for/rom/test")
+            val result = RomManager.addRomFolder(context, nonExistentUri)
+            assertTrue(result is AddRomFolderResult.Error)
+            val errorResult = result as AddRomFolderResult.Error
+            assertEquals(AddRomFolderResult.ErrorCode.FOLDER_INACCESSIBLE, errorResult.errorCode)
+        }
+    }
 }

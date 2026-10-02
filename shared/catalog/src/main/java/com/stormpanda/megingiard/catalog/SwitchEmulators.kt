@@ -34,18 +34,32 @@ object SwitchEmulators {
             SwitchEmulatorOption("org.yuzu.yuzu_emu.ea", "Yuzu Early Access"),
         )
 
-    fun getInstalledEmulators(context: Context): List<SwitchEmulatorOption> {
+    @Volatile
+    private var cachedInstalled: List<SwitchEmulatorOption>? = null
+
+    fun invalidateCache() {
+        cachedInstalled = null
+    }
+
+    fun getInstalledEmulators(
+        context: Context,
+        forceRefresh: Boolean = false,
+    ): List<SwitchEmulatorOption> {
+        if (!forceRefresh && cachedInstalled != null) {
+            return cachedInstalled!!
+        }
         val pm = context.packageManager
         val installed =
             SUPPORTED_EMULATOR_OPTIONS.filter { option ->
                 try {
-                    pm.getPackageInfo(option.packageName, 0)
+                    pm.getPackageInfo(option.packageName, PackageManager.PackageInfoFlags.of(0))
                     true
                 } catch (e: PackageManager.NameNotFoundException) {
                     false
                 }
             }
         AppLog.d(TAG, "Discovered ${installed.size} installed Switch emulators: ${installed.map { it.packageName }}")
+        cachedInstalled = installed
         return installed
     }
 }

@@ -84,7 +84,7 @@ class SwitchLauncher : RomLauncher {
         context: Context,
         preferredPackage: String?,
     ): String? {
-        val installed = SwitchEmulators.getInstalledEmulators(context)
+        val installed = SwitchEmulators.getInstalledEmulators(context, forceRefresh = true)
         if (installed.isEmpty()) return null
 
         if (preferredPackage != null && installed.any { it.packageName == preferredPackage }) {

@@ -23,6 +23,7 @@ class SwitchEmulatorsTest {
     @Before
     fun setUp() {
         context = RuntimeEnvironment.getApplication()
+        SwitchEmulators.invalidateCache()
     }
 
     @Test
@@ -47,5 +48,29 @@ class SwitchEmulatorsTest {
         assertEquals(2, installed.size)
         assertEquals(pkgEden, installed[0].packageName)
         assertEquals(pkgSuyu, installed[1].packageName)
+    }
+
+    @Test
+    fun testCachingAndInvalidation() {
+        AppLog.d(TAG, "Testing caching and invalidateCache")
+        val pkgEden = "dev.eden.eden_emulator"
+
+        val initial = SwitchEmulators.getInstalledEmulators(context)
+        assertTrue(initial.isEmpty())
+
+        // Install package without invalidating cache
+        shadowOf(context.packageManager).installPackage(PackageInfo().apply { packageName = pkgEden })
+        val cached = SwitchEmulators.getInstalledEmulators(context)
+        assertTrue("Expected cached result to still be empty", cached.isEmpty())
+
+        // Force refresh
+        val refreshed = SwitchEmulators.getInstalledEmulators(context, forceRefresh = true)
+        assertEquals(1, refreshed.size)
+        assertEquals(pkgEden, refreshed[0].packageName)
+
+        // Invalidate cache
+        SwitchEmulators.invalidateCache()
+        val afterInvalidation = SwitchEmulators.getInstalledEmulators(context)
+        assertEquals(1, afterInvalidation.size)
     }
 }
