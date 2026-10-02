@@ -117,10 +117,26 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
                         is AddRomFolderResult.Error -> {
                             val displayMessage =
-                                if (result.errorCode == AddRomFolderResult.ErrorCode.NO_SWITCH_EMULATOR) {
-                                    getString(R.string.gamefocus_error_no_switch_emulator)
-                                } else {
-                                    result.message
+                                when (result.errorCode) {
+                                    AddRomFolderResult.ErrorCode.NO_SWITCH_EMULATOR -> {
+                                        getString(R.string.gamefocus_error_no_switch_emulator)
+                                    }
+
+                                    AddRomFolderResult.ErrorCode.FOLDER_INACCESSIBLE -> {
+                                        getString(R.string.gamefocus_error_folder_inaccessible)
+                                    }
+
+                                    AddRomFolderResult.ErrorCode.UNKNOWN_SYSTEM -> {
+                                        getString(R.string.gamefocus_error_unknown_system)
+                                    }
+
+                                    AddRomFolderResult.ErrorCode.DUPLICATE_FOLDER -> {
+                                        getString(R.string.gamefocus_error_duplicate_folder)
+                                    }
+
+                                    null -> {
+                                        result.message
+                                    }
                                 }
                             Toast
                                 .makeText(this@FocusTopLauncherActivity, displayMessage, Toast.LENGTH_LONG)

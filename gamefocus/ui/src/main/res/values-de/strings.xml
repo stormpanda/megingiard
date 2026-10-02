@@ -65,5 +65,8 @@
     <string name="gamefocus_dialog_select_emulator_title">Emulator auswählen</string>
     <string name="gamefocus_dialog_select_emulator_label">Switch-Emulator auswählen:</string>
     <string name="gamefocus_error_no_switch_emulator">Kein Nintendo-Switch-Emulator (z. B. Eden) ist installiert. Bitte installiere einen Emulator, bevor du diesen Ordner hinzufügst.</string>
+    <string name="gamefocus_error_folder_inaccessible">Ordner existiert nicht oder ist nicht zugänglich.</string>
+    <string name="gamefocus_error_unknown_system">In diesem Ordner konnte kein Spielsystem automatisch erkannt werden.</string>
+    <string name="gamefocus_error_duplicate_folder">Dieser Ordner wurde bereits hinzugefügt.</string>
 </resources>
 

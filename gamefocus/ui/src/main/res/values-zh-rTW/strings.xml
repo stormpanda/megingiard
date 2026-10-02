@@ -65,5 +65,8 @@
     <string name="gamefocus_dialog_select_emulator_title">選擇模擬器</string>
     <string name="gamefocus_dialog_select_emulator_label">選擇 Switch 模擬器：</string>
     <string name="gamefocus_error_no_switch_emulator">未安裝支援的 Nintendo Switch 模擬器（例如 Eden）。請在新增此資料夾前先安裝模擬器。</string>
+    <string name="gamefocus_error_folder_inaccessible">資料夾不存在或無法存取。</string>
+    <string name="gamefocus_error_unknown_system">無法在此資料夾中自動識別任何遊戲系統。</string>
+    <string name="gamefocus_error_duplicate_folder">此資料夾已新增過。</string>
 </resources>
 

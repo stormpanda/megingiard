@@ -31,6 +31,7 @@ import com.stormpanda.megingiard.ui.VerticalRollingCarousel
 
 private const val TAG = "RomFolderCoreChooser"
 private const val CAROUSEL_VISIBLE_ITEMS_COUNT = 5
+private const val DIALOG_WIDTH_FRACTION = 0.45f
 
 // File scope dimensions as per AGENTS.md §8.3
 private val DIALOG_SPACING = 16.dp
@@ -92,7 +93,7 @@ fun RomFolderCoreChooserDialog(
             AppLog.d(TAG, "Dialog dismissed by scrim tap")
             onDismiss()
         },
-        widthFraction = 0.45f,
+        widthFraction = DIALOG_WIDTH_FRACTION,
         modifier = modifier,
     ) {
         if (systemDef == null) {
