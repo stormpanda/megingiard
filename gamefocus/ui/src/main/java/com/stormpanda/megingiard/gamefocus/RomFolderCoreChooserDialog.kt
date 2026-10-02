@@ -29,6 +29,7 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.VerticalRollingCarousel
 
 private const val TAG = "RomFolderCoreChooser"
+private const val CAROUSEL_VISIBLE_ITEMS_COUNT = 5
 
 // File scope dimensions as per AGENTS.md §8.3
 private val DIALOG_SPACING = 16.dp
@@ -150,7 +151,7 @@ fun RomFolderCoreChooserDialog(
                 items = switchEmulators,
                 onSelectedIndexChange = onSelectedIndexChange,
                 labelProvider = { it.displayName },
-                visibleItemsCount = 5,
+                visibleItemsCount = CAROUSEL_VISIBLE_ITEMS_COUNT,
                 modifier =
                     Modifier
                         .fillMaxWidth()
@@ -227,7 +228,7 @@ fun RomFolderCoreChooserDialog(
                         core
                     }
                 },
-                visibleItemsCount = 5,
+                visibleItemsCount = CAROUSEL_VISIBLE_ITEMS_COUNT,
                 modifier =
                     Modifier
                         .fillMaxWidth()

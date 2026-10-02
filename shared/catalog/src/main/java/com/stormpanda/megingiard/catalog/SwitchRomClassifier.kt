@@ -10,7 +10,7 @@ private const val TITLE_ID_SUFFIX_LENGTH = 3
 private const val BASE_TITLE_ID_SUFFIX = "000"
 private const val UPDATE_TITLE_ID_SUFFIX = "800"
 
-private val TITLE_ID_REGEX = Regex("""(?:\[|-|\b)([A-Fa-f0-9]{16})(?:\]|-|\b)""")
+private val TITLE_ID_REGEX = Regex("""(?:\[|-|\b)([A-Fa-f0-9]{$TITLE_ID_LENGTH})(?:\]|-|\b)""")
 private val UPDATE_TAG_REGEX = Regex("""(?i)(?:\[|\(|\b)(?:update|upd|patch)(?:\]|\)|\b)""")
 private val DLC_TAG_REGEX = Regex("""(?i)(?:\[|\(|\b)(?:dlc(?:\s*\d+)?|add-?on)(?:\]|\)|\b)""")
 private val BASE_TAG_REGEX = Regex("""(?i)(?:\[|\(|\b)base(?:\]|\)|\b)""")
