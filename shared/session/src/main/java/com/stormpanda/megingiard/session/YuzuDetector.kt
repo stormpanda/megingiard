@@ -7,7 +7,11 @@ import java.util.Locale
 
 private const val TAG = "YuzuDetector"
 private val LOADING_REGEX = Regex("""Loading\s+(.+)\s+\(([A-Fa-f0-9]{16})\)""")
+private val VIEW_SETUP_REGEX = Regex("""\[EmulationFragment\]\s+Starting view setup for game:\s+(.+)""")
+private val CUSTOM_SETTINGS_REGEX = Regex("""\[EmulationFragment\]\s+Loading custom settings for\s+(.+)""")
+private val CONTROL_DATA_REGEX = Regex("""Control data for\s+([A-Fa-f0-9]{16}):\s+name="(.+?)"""")
 private val TITLE_ID_REGEX = Regex("""title_id=([A-Fa-f0-9]{16})""", RegexOption.IGNORE_CASE)
+private const val BASE_TITLE_ID_SUFFIX = "000"
 
 /**
  * Detector implementation for Yuzu-derived Nintendo Switch emulators
@@ -26,10 +30,17 @@ object YuzuDetector : EmulatorDetector {
             "org.sudachi.sudachi_emu",
             "com.suyu.suyu",
             "dev.eden.eden_emulator",
+            "dev.eden.eden_emulator.debug",
+            "dev.eden.eden_emulator.nightly",
+            "dev.eden.eden_emulator.nightly.debug",
             "dev.eden.eden_emulator.dualscreen",
             "dev.eden.eden_emulator.dualscreen.debug",
-            "dev.eden.eden_emulator.debug",
+            "dev.eden.eden_emulator.dualscreen.nightly",
+            "dev.eden.eden_emulator.dualscreen.nightly.debug",
             "dev.legacy.eden_emulator",
+            "dev.legacy.eden_emulator.debug",
+            "dev.legacy.eden_emulator.nightly",
+            "dev.legacy.eden_emulator.nightly.debug",
         )
 
     override val systemId: String = "switch"
@@ -43,19 +54,33 @@ object YuzuDetector : EmulatorDetector {
             "org.yuzu.yuzu_emu" to "yuzu_log.txt",
             "org.yuzu.yuzu_emu.ea" to "yuzu_log.txt",
             "dev.eden.eden_emulator" to "eden_log.txt",
+            "dev.eden.eden_emulator.debug" to "eden_log.txt",
+            "dev.eden.eden_emulator.nightly" to "eden_log.txt",
+            "dev.eden.eden_emulator.nightly.debug" to "eden_log.txt",
             "dev.eden.eden_emulator.dualscreen" to "eden_log.txt",
             "dev.eden.eden_emulator.dualscreen.debug" to "eden_log.txt",
-            "dev.eden.eden_emulator.debug" to "eden_log.txt",
+            "dev.eden.eden_emulator.dualscreen.nightly" to "eden_log.txt",
+            "dev.eden.eden_emulator.dualscreen.nightly.debug" to "eden_log.txt",
             "dev.legacy.eden_emulator" to "eden_log.txt",
+            "dev.legacy.eden_emulator.debug" to "eden_log.txt",
+            "dev.legacy.eden_emulator.nightly" to "eden_log.txt",
+            "dev.legacy.eden_emulator.nightly.debug" to "eden_log.txt",
         )
 
     private val backendBrandByPackage =
         mapOf(
             "dev.eden.eden_emulator" to "eden",
+            "dev.eden.eden_emulator.debug" to "eden",
+            "dev.eden.eden_emulator.nightly" to "eden",
+            "dev.eden.eden_emulator.nightly.debug" to "eden",
             "dev.eden.eden_emulator.dualscreen" to "eden",
             "dev.eden.eden_emulator.dualscreen.debug" to "eden",
-            "dev.eden.eden_emulator.debug" to "eden",
+            "dev.eden.eden_emulator.dualscreen.nightly" to "eden",
+            "dev.eden.eden_emulator.dualscreen.nightly.debug" to "eden",
             "dev.legacy.eden_emulator" to "eden",
+            "dev.legacy.eden_emulator.debug" to "eden",
+            "dev.legacy.eden_emulator.nightly" to "eden",
+            "dev.legacy.eden_emulator.nightly.debug" to "eden",
             "org.citron.citron_emu" to "citron",
             "org.citron.citron_emu.debug" to "citron",
             "org.sudachi.sudachi_emu" to "sudachi",
@@ -104,10 +129,51 @@ object YuzuDetector : EmulatorDetector {
             if (loadingMatch != null) {
                 lastGameTitle = loadingMatch.groupValues[1].trim()
                 lastTitleId = loadingMatch.groupValues[2].uppercase(Locale.US)
-            } else {
-                val titleIdMatch = TITLE_ID_REGEX.find(line)
-                if (titleIdMatch != null) {
-                    lastTitleId = titleIdMatch.groupValues[1].uppercase(Locale.US)
+                continue
+            }
+
+            val controlMatch = CONTROL_DATA_REGEX.find(line)
+            if (controlMatch != null) {
+                val id = controlMatch.groupValues[1].uppercase(Locale.US)
+                val name = controlMatch.groupValues[2].trim()
+                if (name.isNotBlank()) {
+                    lastGameTitle = name
+                }
+                val currentIsBase = lastTitleId?.endsWith(BASE_TITLE_ID_SUFFIX) == true
+                val matchedIsBase = id.endsWith(BASE_TITLE_ID_SUFFIX)
+                if (lastTitleId == null || (!currentIsBase && matchedIsBase) || (currentIsBase && matchedIsBase)) {
+                    lastTitleId = id
+                }
+                continue
+            }
+
+            val viewSetupMatch = VIEW_SETUP_REGEX.find(line)
+            if (viewSetupMatch != null) {
+                val name = viewSetupMatch.groupValues[1].trim()
+                if (name.isNotBlank()) {
+                    lastGameTitle = name
+                }
+                continue
+            }
+
+            val customSettingsMatch = CUSTOM_SETTINGS_REGEX.find(line)
+            if (customSettingsMatch != null) {
+                val name = customSettingsMatch.groupValues[1].trim()
+                if (name.isNotBlank() && lastGameTitle == null) {
+                    lastGameTitle = name
+                }
+                continue
+            }
+
+            val titleIdMatch = TITLE_ID_REGEX.find(line)
+            if (titleIdMatch != null) {
+                val matchedId = titleIdMatch.groupValues[1].uppercase(Locale.US)
+                // Switch base game title IDs always end with "000". Updates end with "800", DLC with "001"-"FFE".
+                // Never overwrite an existing base game title ID with a non-base (DLC/update) title ID.
+                val currentIsBase = lastTitleId?.endsWith(BASE_TITLE_ID_SUFFIX) == true
+                val matchedIsBase = matchedId.endsWith(BASE_TITLE_ID_SUFFIX)
+                if (lastTitleId == null || (!currentIsBase && matchedIsBase) || (currentIsBase && matchedIsBase)) {
+                    lastTitleId = matchedId
                 }
             }
         }

@@ -76,6 +76,7 @@ class EmulatorDetectionFunnelTest {
         org.junit.Assert.assertTrue(EmulatorDetectionFunnel.isRegisteredEmulator("xyz.aethersx2.android"))
         org.junit.Assert.assertTrue(EmulatorDetectionFunnel.isRegisteredEmulator("org.yuzu.yuzu_emu"))
         org.junit.Assert.assertTrue(EmulatorDetectionFunnel.isRegisteredEmulator("dev.eden.eden_emulator"))
+        org.junit.Assert.assertTrue(EmulatorDetectionFunnel.isRegisteredEmulator("dev.eden.eden_emulator.nightly"))
         org.junit.Assert.assertTrue(EmulatorDetectionFunnel.isRegisteredEmulator("dev.eden.eden_emulator.dualscreen.debug"))
         org.junit.Assert.assertTrue(EmulatorDetectionFunnel.isRegisteredEmulator("app.gamenative"))
     }

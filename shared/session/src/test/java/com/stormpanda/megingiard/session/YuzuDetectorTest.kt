@@ -18,10 +18,17 @@ class YuzuDetectorTest {
         assertTrue(YuzuDetector.supportedPackages.contains("org.sudachi.sudachi_emu"))
         assertTrue(YuzuDetector.supportedPackages.contains("com.suyu.suyu"))
         assertTrue(YuzuDetector.supportedPackages.contains("dev.eden.eden_emulator"))
+        assertTrue(YuzuDetector.supportedPackages.contains("dev.eden.eden_emulator.debug"))
+        assertTrue(YuzuDetector.supportedPackages.contains("dev.eden.eden_emulator.nightly"))
+        assertTrue(YuzuDetector.supportedPackages.contains("dev.eden.eden_emulator.nightly.debug"))
         assertTrue(YuzuDetector.supportedPackages.contains("dev.eden.eden_emulator.dualscreen"))
         assertTrue(YuzuDetector.supportedPackages.contains("dev.eden.eden_emulator.dualscreen.debug"))
-        assertTrue(YuzuDetector.supportedPackages.contains("dev.eden.eden_emulator.debug"))
+        assertTrue(YuzuDetector.supportedPackages.contains("dev.eden.eden_emulator.dualscreen.nightly"))
+        assertTrue(YuzuDetector.supportedPackages.contains("dev.eden.eden_emulator.dualscreen.nightly.debug"))
         assertTrue(YuzuDetector.supportedPackages.contains("dev.legacy.eden_emulator"))
+        assertTrue(YuzuDetector.supportedPackages.contains("dev.legacy.eden_emulator.debug"))
+        assertTrue(YuzuDetector.supportedPackages.contains("dev.legacy.eden_emulator.nightly"))
+        assertTrue(YuzuDetector.supportedPackages.contains("dev.legacy.eden_emulator.nightly.debug"))
         assertFalse(YuzuDetector.supportedPackages.contains("com.unsupported.emulator"))
     }
 
@@ -162,6 +169,79 @@ class YuzuDetectorTest {
             assertEquals("Super Mario Odyssey", session?.gameTitle)
             assertEquals("switch", session?.systemId)
             assertEquals("0100000000010000", session?.titleId)
+            assertEquals("eden", session?.coreOrBackend)
+        }
+
+    @Test
+    fun parseSessionFromLog_edenNightlyWithDlcAndCustomSettings_preservesBaseTitleAndBaseTitleId() {
+        val logSample =
+            """
+            [EmulationFragment] Loading custom settings for Diablo III: Eternal Collection
+            [EmulationFragment] Starting view setup for game: Diablo III: Eternal Collection
+            [   4.212041] Loader <Info> core/loader/nso.cpp:ApplyPatch:318: Patching ExeFS for title_id=01001B300B9BE000, build_id=D7091B
+            [   4.649822] Core <Info> core/core.cpp:Load:227: Loading Diablo III: Eternal Collection (01001B300B9BE000) ...
+            [   5.123456] Loader <Info> core/loader/nso.cpp:ApplyRomFSPatch:342: Patching RomFS for title_id=01001B300B9BF007, type=02
+            """.trimIndent()
+
+        val session = YuzuDetector.parseSessionFromLog("dev.eden.eden_emulator.nightly", logSample)
+
+        assertNotNull(session)
+        assertEquals("dev.eden.eden_emulator.nightly", session?.packageName)
+        assertEquals("Diablo III: Eternal Collection", session?.gameTitle)
+        assertEquals("switch", session?.systemId)
+        assertNull(session?.romPath)
+        assertEquals("01001B300B9BE000", session?.romIdentifier)
+        assertEquals("eden", session?.coreOrBackend)
+        assertEquals("01001B300B9BE000", session?.titleId)
+    }
+
+    @Test
+    fun parseSessionFromLog_viewSetupAndExeFsPatchOnly_resolvesBaseTitleAndBaseTitleId() {
+        val logSample =
+            """
+            [EmulationFragment] Starting view setup for game: Super Smash Bros. Ultimate
+            [   4.212041] Loader <Info> core/file_sys/patch_manager.cpp:PatchExeFS:169: Patching ExeFS for title_id=01006A800016E000
+            [   5.123456] Loader <Info> core/loader/nso.cpp:ApplyRomFSPatch:342: Patching RomFS for title_id=01006A800016F001, type=02
+            """.trimIndent()
+
+        val session = YuzuDetector.parseSessionFromLog("dev.eden.eden_emulator.dualscreen.nightly", logSample)
+
+        assertNotNull(session)
+        assertEquals("dev.eden.eden_emulator.dualscreen.nightly", session?.packageName)
+        assertEquals("Super Smash Bros. Ultimate", session?.gameTitle)
+        assertEquals("switch", session?.systemId)
+        assertEquals("01006A800016E000", session?.titleId)
+        assertEquals("eden", session?.coreOrBackend)
+    }
+
+    @Test
+    fun parseSessionFromLog_controlDataLine_parsesTitleAndTitleId() {
+        val logSample =
+            """
+            [   3.000000] Loader <Info> core/loader/loader.cpp:Control data for 0100000000010000: name="Super Mario Odyssey"
+            """.trimIndent()
+
+        val session = YuzuDetector.parseSessionFromLog("org.citron.citron_emu", logSample)
+
+        assertNotNull(session)
+        assertEquals("Super Mario Odyssey", session?.gameTitle)
+        assertEquals("0100000000010000", session?.titleId)
+    }
+
+    @Test
+    fun detectActiveSession_edenNightlyPackage_resolvesFromLog() =
+        runTest {
+            val logSample =
+                """
+                [EmulationFragment] Starting view setup for game: Diablo III: Eternal Collection
+                [   4.649822] Core <Info> core/core.cpp:Load:227: Loading Diablo III: Eternal Collection (01001B300B9BE000) ...
+                """.trimIndent()
+            ProcessCmdlineProvider.textFileReader = { logSample }
+            val session = YuzuDetector.detectActiveSession("dev.eden.eden_emulator.nightly")
+            assertNotNull(session)
+            assertEquals("Diablo III: Eternal Collection", session?.gameTitle)
+            assertEquals("switch", session?.systemId)
+            assertEquals("01001B300B9BE000", session?.titleId)
             assertEquals("eden", session?.coreOrBackend)
         }
 }
