@@ -11,7 +11,7 @@ private val TITLE_ID_REGEX = Regex("""title_id=([A-Fa-f0-9]{16})""", RegexOption
 
 /**
  * Detector implementation for Yuzu-derived Nintendo Switch emulators
- * (Citron, Yuzu, Sudachi, Suyu).
+ * (Citron, Eden, Sudachi, Suyu, Yuzu).
  * Reads active emulator log files over privileged socket.
  */
 object YuzuDetector : EmulatorDetector {
@@ -25,6 +25,11 @@ object YuzuDetector : EmulatorDetector {
             "org.yuzu.yuzu_emu.ea",
             "org.sudachi.sudachi_emu",
             "com.suyu.suyu",
+            "dev.eden.eden_emulator",
+            "dev.eden.eden_emulator.dualscreen",
+            "dev.eden.eden_emulator.dualscreen.debug",
+            "dev.eden.eden_emulator.debug",
+            "dev.legacy.eden_emulator",
         )
 
     override val systemId: String = "switch"
@@ -37,6 +42,26 @@ object YuzuDetector : EmulatorDetector {
             "com.suyu.suyu" to "suyu_log.txt",
             "org.yuzu.yuzu_emu" to "yuzu_log.txt",
             "org.yuzu.yuzu_emu.ea" to "yuzu_log.txt",
+            "dev.eden.eden_emulator" to "eden_log.txt",
+            "dev.eden.eden_emulator.dualscreen" to "eden_log.txt",
+            "dev.eden.eden_emulator.dualscreen.debug" to "eden_log.txt",
+            "dev.eden.eden_emulator.debug" to "eden_log.txt",
+            "dev.legacy.eden_emulator" to "eden_log.txt",
+        )
+
+    private val backendBrandByPackage =
+        mapOf(
+            "dev.eden.eden_emulator" to "eden",
+            "dev.eden.eden_emulator.dualscreen" to "eden",
+            "dev.eden.eden_emulator.dualscreen.debug" to "eden",
+            "dev.eden.eden_emulator.debug" to "eden",
+            "dev.legacy.eden_emulator" to "eden",
+            "org.citron.citron_emu" to "citron",
+            "org.citron.citron_emu.debug" to "citron",
+            "org.sudachi.sudachi_emu" to "sudachi",
+            "com.suyu.suyu" to "suyu",
+            "org.yuzu.yuzu_emu" to "yuzu",
+            "org.yuzu.yuzu_emu.ea" to "yuzu",
         )
 
     private fun getCandidateLogPaths(packageName: String): List<String> {
@@ -115,7 +140,7 @@ object YuzuDetector : EmulatorDetector {
             gameTitle = resolvedTitle,
             systemId = systemId,
             romIdentifier = resolvedRomIdentifier,
-            coreOrBackend = "yuzu",
+            coreOrBackend = backendBrandByPackage[packageName] ?: "yuzu",
             titleId = lastTitleId,
         )
     }
