@@ -1,59 +1,154 @@
 package com.stormpanda.megingiard.ui
 
-import android.graphics.BlurMaskFilter
-import android.graphics.LinearGradient
-import android.graphics.Shader
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.gamefocus.R
-import kotlinx.coroutines.delay
-import android.graphics.Paint as NativePaint
 
 private const val TAG = "ExpandableActionsMenu"
 
-private val EAM_HORIZONTAL_SPREAD_DP = 24.dp
-private val EAM_VERTICAL_SPREAD_DP = 10.dp
-private val EAM_ITEM_PADDING_DP = 2.dp
-private const val EAM_ANIMATION_DURATION_MS = 280
-private const val EAM_DEFAULT_AUTO_DISMISS_MS = 5000L
+private val MENU_DEFAULT_BORDER_WIDTH = 1.dp
+private val MENU_FOCUS_BORDER_WIDTH = 2.dp
+private val MENU_ITEMS_SPACING = 6.dp
+
+private val MENU_CARD_CORNER = 8.dp
+private val MENU_CARD_SHAPE = RoundedCornerShape(MENU_CARD_CORNER)
+private val MENU_CARD_MIN_HEIGHT = 38.dp
+private val MENU_CARD_PADDING_H = 10.dp
+private val MENU_CARD_PADDING_V = 6.dp
+private const val MENU_CARD_BG_ALPHA = 0.90f
+private val MENU_CARD_FOCUSED_ELEVATION = 4.dp
+private val MENU_CARD_UNFOCUSED_ELEVATION = 0.dp
+
+private val MENU_ICON_BOX_SIZE = 26.dp
+private val MENU_ICON_SIZE = 16.dp
+private val MENU_ICON_BOX_CORNER = 6.dp
+private val MENU_ICON_BOX_SHAPE = RoundedCornerShape(MENU_ICON_BOX_CORNER)
+private const val MENU_ICON_BG_ALPHA = 0.15f
+private val MENU_ROW_SPACING = 8.dp
+private val MENU_LABEL_FONT_SIZE = 13.sp
+private val MENU_MIN_WIDTH = 160.dp
+private val MENU_SPACER_BOTTOM = 8.dp
+
+private const val MENU_ANIMATION_DURATION_ENTER_MS = 180
+private const val MENU_ANIMATION_DURATION_EXIT_MS = 150
+private const val MENU_ANIMATION_SPEC_MS = 150
+
+private val MENU_DIVIDER_HEIGHT = 1.dp
+private val MENU_DIVIDER_VERTICAL_PADDING = 6.dp
+private const val MENU_DIVIDER_ALPHA = 0.25f
+private const val MENU_DIVIDER_GLOW_ALPHA = 0.65f
 
 data class ExpandableActionItem(
     val label: String,
-    val iconSymbol: String = "menu",
-    val button: GamePadButton? = null,
+    val iconSymbol: String,
+    val isDestructive: Boolean = false,
     val onClick: () -> Unit,
 )
 
-enum class ExpandableMenuOrientation {
-    HORIZONTAL,
-    VERTICAL,
+@Composable
+fun FloatingActionsMenuOverlay(
+    isExpanded: Boolean,
+    actions: List<ExpandableActionItem>,
+    selectedIndex: Int = 0,
+    dividerAfterIndex: Int? = null,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    onItemClick: (ExpandableActionItem, Int) -> Unit,
+) {
+    val colors = LocalAppColors.current
+    AnimatedVisibility(
+        visible = isExpanded,
+        enter =
+            fadeIn(tween(MENU_ANIMATION_DURATION_ENTER_MS)) +
+                slideInVertically(tween(MENU_ANIMATION_DURATION_ENTER_MS)) { it / 4 },
+        exit =
+            fadeOut(tween(MENU_ANIMATION_DURATION_EXIT_MS)) +
+                slideOutVertically(tween(MENU_ANIMATION_DURATION_EXIT_MS)) { it / 4 },
+        modifier = modifier.width(IntrinsicSize.Max),
+    ) {
+        Column(
+            modifier =
+                Modifier
+                    .width(IntrinsicSize.Max)
+                    .defaultMinSize(minWidth = MENU_MIN_WIDTH),
+            verticalArrangement = Arrangement.spacedBy(MENU_ITEMS_SPACING),
+        ) {
+            actions.forEachIndexed { index, item ->
+                val isFocused = (index == selectedIndex)
+                FocusActionCard(
+                    item = item,
+                    isFocused = isFocused,
+                    enabled = enabled,
+                    onClick = {
+                        AppLog.i(TAG, "Menu item clicked via touch: ${item.label} (index=$index)")
+                        onItemClick(item, index)
+                    },
+                )
+                if (dividerAfterIndex != null && index == dividerAfterIndex && index < actions.lastIndex) {
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = MENU_DIVIDER_VERTICAL_PADDING)
+                                .height(MENU_DIVIDER_HEIGHT)
+                                .background(
+                                    Brush.horizontalGradient(
+                                        colors =
+                                            listOf(
+                                                Color.Transparent,
+                                                colors.accent.copy(alpha = MENU_DIVIDER_ALPHA),
+                                                colors.accent.copy(alpha = MENU_DIVIDER_GLOW_ALPHA),
+                                                colors.accent.copy(alpha = MENU_DIVIDER_ALPHA),
+                                                Color.Transparent,
+                                            ),
+                                    ),
+                                ),
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -61,218 +156,130 @@ fun ExpandableActionsMenu(
     isExpanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
     actions: List<ExpandableActionItem>,
+    selectedIndex: Int = 0,
+    dividerAfterIndex: Int? = null,
     modifier: Modifier = Modifier,
-    orientation: ExpandableMenuOrientation = ExpandableMenuOrientation.HORIZONTAL,
-    autoDismissMs: Long = EAM_DEFAULT_AUTO_DISMISS_MS,
     enabled: Boolean = true,
 ) {
-    val appColors = LocalAppColors.current
-    val density = LocalDensity.current
+    Column(
+        modifier = modifier.width(IntrinsicSize.Max),
+        horizontalAlignment = Alignment.Start,
+        verticalArrangement = Arrangement.Bottom,
+    ) {
+        FloatingActionsMenuOverlay(
+            isExpanded = isExpanded,
+            actions = actions,
+            selectedIndex = selectedIndex,
+            dividerAfterIndex = dividerAfterIndex,
+            enabled = enabled,
+            onItemClick = { item, _ ->
+                onExpandedChange(false)
+                item.onClick()
+            },
+        )
 
-    val closeLabel = stringResource(R.string.gamefocus_option_close)
-    val effectiveActions =
-        remember(actions, closeLabel, orientation) {
-            val closeItem =
-                ExpandableActionItem(
-                    label = closeLabel,
-                    button = GamePadButton.BUTTON_Y,
-                    onClick = { onExpandedChange(false) },
-                )
+        Spacer(modifier = Modifier.height(MENU_SPACER_BOTTOM))
 
-            fun isCloseItem(item: ExpandableActionItem): Boolean =
-                item.button == GamePadButton.BUTTON_Y ||
-                    item.button == GamePadButton.SELECT ||
-                    item.label.equals(closeLabel, ignoreCase = true) ||
-                    item.label.equals("Close", ignoreCase = true)
-
-            val hasClose = actions.any(::isCloseItem)
-            if (orientation == ExpandableMenuOrientation.HORIZONTAL) {
-                if (!hasClose) listOf(closeItem) + actions else actions
-            } else {
-                // VERTICAL (to the top)
-                // The close action must be the lowest one (last item in vertical stack)
-                if (!hasClose) {
-                    actions + listOf(closeItem)
-                } else {
-                    val otherActions = actions.filterNot(::isCloseItem)
-                    val existingClose = actions.firstOrNull(::isCloseItem) ?: closeItem
-                    otherActions + listOf(existingClose)
-                }
-            }
-        }
-
-    // Auto dismiss timer after autoDismissMs when expanded
-    LaunchedEffect(isExpanded) {
-        AppLog.d(TAG, "ExpandableActionsMenu isExpanded=$isExpanded (orientation=$orientation, actions=${effectiveActions.size})")
-        if (isExpanded && autoDismissMs > 0) {
-            delay(autoDismissMs)
-            AppLog.d(TAG, "ExpandableActionsMenu auto-dismiss timer fired after ${autoDismissMs}ms")
-            onExpandedChange(false)
-        }
+        // Bottom Actions Trigger Button
+        GamePadButtonAction(
+            button = GamePadButton.BUTTON_Y,
+            text = stringResource(R.string.gamefocus_option_actions),
+            onClick = {
+                AppLog.i(TAG, "Toggling actions menu via touch (wasExpanded=$isExpanded)")
+                onExpandedChange(!isExpanded)
+            },
+            contentPadding = ButtonDefaults.TextButtonContentPadding,
+            enabled = enabled,
+        )
     }
+}
 
-    val expansionFraction by animateFloatAsState(
-        targetValue = if (isExpanded) 1f else 0f,
-        animationSpec = tween(durationMillis = EAM_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing),
-        label = "expansionFraction",
+@Composable
+private fun FocusActionCard(
+    item: ExpandableActionItem,
+    isFocused: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    val colors = LocalAppColors.current
+    val interactionSource = remember { MutableInteractionSource() }
+
+    val animatedBorderWidth by animateDpAsState(
+        targetValue = if (isFocused) MENU_FOCUS_BORDER_WIDTH else MENU_DEFAULT_BORDER_WIDTH,
+        animationSpec = tween(MENU_ANIMATION_SPEC_MS),
+        label = "cardBorderWidth",
+    )
+    val animatedBorderColor by animateColorAsState(
+        targetValue =
+            if (isFocused) {
+                if (item.isDestructive) colors.error else colors.accent
+            } else {
+                colors.subduedBorder
+            },
+        animationSpec = tween(MENU_ANIMATION_SPEC_MS),
+        label = "cardBorderColor",
+    )
+    val cardBgColor = colors.surface.copy(alpha = MENU_CARD_BG_ALPHA)
+    val animatedElevation by animateDpAsState(
+        targetValue = if (isFocused) MENU_CARD_FOCUSED_ELEVATION else MENU_CARD_UNFOCUSED_ELEVATION,
+        animationSpec = tween(MENU_ANIMATION_SPEC_MS),
+        label = "cardElevation",
     )
 
-    val contentPadding = ButtonDefaults.TextButtonContentPadding
-
-    val menuContent = @Composable {
-        Box(
-            modifier = modifier,
-            contentAlignment = Alignment.BottomStart,
-        ) {
-            // Collapsed Single Actions Button (Subdued look matching Cancel button, no fading)
-            if (expansionFraction < 0.5f) {
-                GamePadButtonAction(
-                    button = GamePadButton.BUTTON_Y,
-                    text = stringResource(R.string.gamefocus_option_actions),
-                    onClick = { onExpandedChange(true) },
-                    contentPadding = contentPadding,
-                    enabled = enabled,
-                )
-            }
-
-            // Expanded Actions Container
-            if (expansionFraction >= 0.5f) {
-                if (orientation == ExpandableMenuOrientation.HORIZONTAL) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        effectiveActions.forEachIndexed { index, item ->
-                            val spreadOffsetPx = with(density) { (index * EAM_HORIZONTAL_SPREAD_DP.toPx()) * (1f - expansionFraction) }
-                            val itemAlpha = if (index == 0) 1f else (expansionFraction * 2f - 1f).coerceIn(0f, 1f)
-
-                            if (item.button != null) {
-                                GamePadButtonAction(
-                                    button = item.button,
-                                    text = item.label,
-                                    onClick = {
-                                        onExpandedChange(false)
-                                        item.onClick()
-                                    },
-                                    contentPadding = contentPadding,
-                                    enabled = enabled,
-                                    modifier =
-                                        Modifier
-                                            .graphicsLayer {
-                                                translationX = -spreadOffsetPx
-                                                alpha = itemAlpha
-                                            }.padding(end = EAM_ITEM_PADDING_DP),
-                                )
-                            } else {
-                                CutoutSymbolButton(
-                                    symbolName = item.iconSymbol,
-                                    text = item.label,
-                                    onClick = {
-                                        onExpandedChange(false)
-                                        item.onClick()
-                                    },
-                                    contentPadding = contentPadding,
-                                    modifier =
-                                        Modifier
-                                            .graphicsLayer {
-                                                translationX = -spreadOffsetPx
-                                                alpha = itemAlpha
-                                            }.padding(end = EAM_ITEM_PADDING_DP),
-                                )
-                            }
-                        }
-                    }
-                } else {
-                    Column(
-                        horizontalAlignment = Alignment.Start,
-                        modifier =
-                            Modifier
-                                .drawBehind {
-                                    val fade = ((expansionFraction - 0.5f) * 2f).coerceIn(0f, 1f)
-                                    if (fade > 0f) {
-                                        val outsetPx = 24.dp.toPx()
-                                        val blurRadiusPx = 36.dp.toPx()
-                                        val cornerRadiusPx = 16.dp.toPx()
-
-                                        val paint =
-                                            NativePaint().apply {
-                                                isAntiAlias = true
-                                                shader =
-                                                    LinearGradient(
-                                                        0f,
-                                                        -outsetPx,
-                                                        0f,
-                                                        size.height + outsetPx,
-                                                        Color.Transparent.toArgb(),
-                                                        appColors.appBackground.copy(alpha = 0.85f * fade).toArgb(),
-                                                        Shader.TileMode.CLAMP,
-                                                    )
-                                                maskFilter = BlurMaskFilter(blurRadiusPx, BlurMaskFilter.Blur.NORMAL)
-                                            }
-
-                                        drawIntoCanvas { canvas ->
-                                            canvas.nativeCanvas.drawRoundRect(
-                                                -outsetPx,
-                                                -outsetPx,
-                                                size.width + outsetPx,
-                                                size.height + outsetPx,
-                                                cornerRadiusPx + outsetPx,
-                                                cornerRadiusPx + outsetPx,
-                                                paint,
-                                            )
-                                        }
-                                    }
-                                }.padding(horizontal = 8.dp, vertical = 8.dp),
-                    ) {
-                        effectiveActions.forEachIndexed { index, item ->
-                            val distanceFromClose = effectiveActions.lastIndex - index
-                            val spreadOffsetPx =
-                                with(density) {
-                                    (distanceFromClose * EAM_VERTICAL_SPREAD_DP.toPx()) *
-                                        (1f - expansionFraction)
-                                }
-                            val itemAlpha = if (index == effectiveActions.lastIndex) 1f else (expansionFraction * 2f - 1f).coerceIn(0f, 1f)
-                            val paddingBottom = if (index < effectiveActions.lastIndex) EAM_ITEM_PADDING_DP else 0.dp
-
-                            if (item.button != null) {
-                                GamePadButtonAction(
-                                    button = item.button,
-                                    text = item.label,
-                                    onClick = {
-                                        onExpandedChange(false)
-                                        item.onClick()
-                                    },
-                                    contentPadding = contentPadding,
-                                    enabled = enabled,
-                                    modifier =
-                                        Modifier
-                                            .graphicsLayer {
-                                                translationY = spreadOffsetPx
-                                                alpha = itemAlpha
-                                            }.padding(bottom = paddingBottom),
-                                )
-                            } else {
-                                CutoutSymbolButton(
-                                    symbolName = item.iconSymbol,
-                                    text = item.label,
-                                    onClick = {
-                                        onExpandedChange(false)
-                                        item.onClick()
-                                    },
-                                    contentPadding = contentPadding,
-                                    modifier =
-                                        Modifier
-                                            .graphicsLayer {
-                                                translationY = spreadOffsetPx
-                                                alpha = itemAlpha
-                                            }.padding(bottom = paddingBottom),
-                                )
-                            }
-                        }
-                    }
-                }
-            }
+    val iconBg =
+        when {
+            item.isDestructive -> colors.error.copy(alpha = MENU_ICON_BG_ALPHA)
+            isFocused -> colors.accent.copy(alpha = MENU_ICON_BG_ALPHA)
+            else -> colors.surfaceVariant
         }
-    }
+    val iconTint =
+        when {
+            item.isDestructive -> colors.error
+            isFocused -> colors.accent
+            else -> colors.onSurfaceSecondary
+        }
 
-    menuContent()
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .defaultMinSize(minHeight = MENU_CARD_MIN_HEIGHT)
+                .shadow(animatedElevation, MENU_CARD_SHAPE)
+                .clip(MENU_CARD_SHAPE)
+                .background(cardBgColor)
+                .border(animatedBorderWidth, animatedBorderColor, MENU_CARD_SHAPE)
+                .clickable(
+                    enabled = enabled,
+                    interactionSource = interactionSource,
+                    indication = null,
+                    onClick = onClick,
+                ).focusProperties { canFocus = false }
+                .padding(horizontal = MENU_CARD_PADDING_H, vertical = MENU_CARD_PADDING_V),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .size(MENU_ICON_BOX_SIZE)
+                    .background(iconBg, MENU_ICON_BOX_SHAPE),
+            contentAlignment = Alignment.Center,
+        ) {
+            MaterialSymbol(
+                name = item.iconSymbol,
+                size = MENU_ICON_SIZE,
+                tint = iconTint,
+            )
+        }
+        Spacer(modifier = Modifier.width(MENU_ROW_SPACING))
+        Text(
+            text = item.label,
+            style =
+                MaterialTheme.typography.bodyMedium.copy(
+                    fontSize = MENU_LABEL_FONT_SIZE,
+                    fontWeight = if (isFocused) FontWeight.SemiBold else FontWeight.Normal,
+                ),
+            color = if (isFocused) colors.onSurface else colors.onSurfaceSecondary,
+            maxLines = 1,
+        )
+    }
 }

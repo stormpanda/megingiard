@@ -4,6 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -51,6 +52,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -69,7 +71,7 @@ import com.stormpanda.megingiard.media.SteamGridDbGame
 import com.stormpanda.megingiard.media.SteamGridDbImage
 import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.ExpandableActionItem
-import com.stormpanda.megingiard.ui.ExpandableActionsMenu
+import com.stormpanda.megingiard.ui.FloatingActionsMenuOverlay
 import com.stormpanda.megingiard.ui.GamePadButton
 import com.stormpanda.megingiard.ui.GamePadButtonAction
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -86,6 +88,7 @@ private const val TAG = "GameFocusArtworkDialog"
 private val GAD_CHIP_SHAPE = RoundedCornerShape(20.dp)
 private val GAD_BADGE_SHAPE = RoundedCornerShape(6.dp)
 private val GAD_BUTTON_SHAPE = RoundedCornerShape(8.dp)
+private val GAD_OPTIONS_MENU_OVERLAY_BOTTOM_PADDING = 44.dp
 
 @Composable
 fun GameFocusArtworkDialog(
@@ -98,6 +101,7 @@ fun GameFocusArtworkDialog(
     r1Trigger: Int = 0,
     isOptionsMenuExpanded: Boolean = false,
     onOptionsMenuExpandedChange: (Boolean) -> Unit = {},
+    selectedIndex: Int = 0,
     dpadUpTrigger: Int = 0,
     dpadRightTrigger: Int = 0,
     onDismiss: () -> Unit,
@@ -297,227 +301,258 @@ fun GameFocusArtworkDialog(
         contentPadding = 20.dp,
         modifier = modifier,
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            // Main Dialog Headline
-            Text(
-                text = stringResource(R.string.focus_change_artwork_title),
-                style =
-                    MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = appColors.onSurface,
-                    ),
-                textAlign = TextAlign.Center,
-            )
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                // Main Dialog Headline
+                Text(
+                    text = stringResource(R.string.focus_change_artwork_title),
+                    style =
+                        MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = appColors.onSurface,
+                        ),
+                    textAlign = TextAlign.Center,
+                )
 
-            Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
-            // Conditional Edit Search Term Input Field
-            if (isEditingQuery) {
-                val commitSearch = {
-                    if (searchInputText.isNotBlank()) {
-                        searchQuery = searchInputText.trim()
-                        isEditingQuery = false
+                // Conditional Edit Search Term Input Field
+                if (isEditingQuery) {
+                    val commitSearch = {
+                        if (searchInputText.isNotBlank()) {
+                            searchQuery = searchInputText.trim()
+                            isEditingQuery = false
+                        }
+                    }
+                    Row(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        OutlinedTextField(
+                            value = searchInputText,
+                            onValueChange = { searchInputText = it },
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(color = appColors.onSurface),
+                            placeholder = {
+                                Text(
+                                    text = stringResource(R.string.steamgriddb_search_placeholder),
+                                    style = MaterialTheme.typography.bodyMedium.copy(color = appColors.onSurfaceSecondary),
+                                )
+                            },
+                            modifier =
+                                Modifier
+                                    .weight(1f)
+                                    .focusRequester(focusRequester),
+                            colors =
+                                OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = appColors.accent,
+                                    unfocusedBorderColor = appColors.divider,
+                                    cursorColor = appColors.accent,
+                                ),
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                            keyboardActions = KeyboardActions(onSearch = { commitSearch() }),
+                        )
+
+                        IconButton(
+                            onClick = commitSearch,
+                            modifier =
+                                Modifier
+                                    .size(40.dp)
+                                    .clip(GAD_BUTTON_SHAPE)
+                                    .background(appColors.accent),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = stringResource(R.string.steamgriddb_cd_search),
+                                tint = appColors.onAccent,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+
+                        IconButton(
+                            onClick = { isEditingQuery = false },
+                            modifier = Modifier.size(40.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = stringResource(R.string.steamgriddb_cd_cancel_edit),
+                                tint = appColors.onSurfaceSecondary,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
                     }
                 }
-                Row(
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                // Selectable Games Row (Touch or L1/R1 navigable with auto-scroll)
+                if (games.isNotEmpty()) {
+                    GameSelectionRow(
+                        games = games,
+                        selectedIndex = selectedGameIndex,
+                        onGameSelect = { selectedGameIndex = it },
+                    )
+                } else {
+                    Text(
+                        text = searchQuery,
+                        style =
+                            MaterialTheme.typography.bodyMedium.copy(
+                                color = appColors.onSurfaceSecondary,
+                            ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Poster Carousel Container
+                Box(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            .height(230.dp),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    OutlinedTextField(
-                        value = searchInputText,
-                        onValueChange = { searchInputText = it },
-                        singleLine = true,
-                        textStyle = MaterialTheme.typography.bodyMedium.copy(color = appColors.onSurface),
-                        placeholder = {
-                            Text(
-                                text = stringResource(R.string.steamgriddb_search_placeholder),
-                                style = MaterialTheme.typography.bodyMedium.copy(color = appColors.onSurfaceSecondary),
+                    if (isSearchLoading || isImagesLoading || selectingImage != null) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                        ) {
+                            CircularProgressIndicator(
+                                color = appColors.accent,
+                                modifier = Modifier.size(36.dp),
                             )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            val loadingStatusText =
+                                when {
+                                    selectingImage != null -> stringResource(R.string.steamgriddb_status_downloading)
+                                    isSearchLoading -> stringResource(R.string.steamgriddb_status_searching)
+                                    else -> stringResource(R.string.steamgriddb_status_fetching)
+                                }
+                            Text(
+                                text = loadingStatusText,
+                                style = MaterialTheme.typography.bodySmall.copy(color = appColors.onSurfaceSecondary),
+                            )
+                        }
+                    } else if (errorMessage != null) {
+                        Text(
+                            text = errorMessage ?: "",
+                            style = MaterialTheme.typography.bodyMedium.copy(color = appColors.onSurfaceSecondary),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+                    } else {
+                        val dialogPagerState = rememberPagerState(initialPage = virtualIndex) { Int.MAX_VALUE }
+                        LaunchedEffect(virtualIndex) {
+                            if (dialogPagerState.currentPage != virtualIndex) {
+                                dialogPagerState.animateScrollToPage(virtualIndex)
+                            }
+                        }
+                        LaunchedEffect(Unit) {
+                            snapshotFlow { dialogPagerState.currentPage }
+                                .collectLatest { page ->
+                                    if (page != virtualIndex) {
+                                        onVirtualIndexChange(page)
+                                    }
+                                }
+                        }
+                        HorizontalPosterCarousel(
+                            itemCount = images.size,
+                            pagerState = dialogPagerState,
+                            onItemClick = { actualIndex ->
+                                images.getOrNull(actualIndex)?.let { imageItem ->
+                                    onConfirmSelection(imageItem)
+                                }
+                            },
+                            posterWidth = 120.dp,
+                            posterHeight = 180.dp,
+                            posterSpacing = 12.dp,
+                            carouselHeight = 220.dp,
+                            posterCornerRadius = 12.dp,
+                        ) { actualIndex, _ ->
+                            images.getOrNull(actualIndex)?.let { imageItem ->
+                                ArtworkOptionItem(imageItem = imageItem)
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Bottom Navigation Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    GamePadButtonAction(
+                        button = GamePadButton.BUTTON_Y,
+                        text = stringResource(R.string.gamefocus_option_actions),
+                        onClick = {
+                            onOptionsMenuExpandedChange(!isOptionsMenuExpanded)
                         },
-                        modifier =
-                            Modifier
-                                .weight(1f)
-                                .focusRequester(focusRequester),
-                        colors =
-                            OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = appColors.accent,
-                                unfocusedBorderColor = appColors.divider,
-                                cursorColor = appColors.accent,
-                            ),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                        keyboardActions = KeyboardActions(onSearch = { commitSearch() }),
                     )
 
-                    IconButton(
-                        onClick = commitSearch,
-                        modifier =
-                            Modifier
-                                .size(40.dp)
-                                .clip(GAD_BUTTON_SHAPE)
-                                .background(appColors.accent),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = stringResource(R.string.steamgriddb_cd_search),
-                            tint = appColors.onAccent,
-                            modifier = Modifier.size(20.dp),
-                        )
-                    }
-
-                    IconButton(
-                        onClick = { isEditingQuery = false },
-                        modifier = Modifier.size(40.dp),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = stringResource(R.string.steamgriddb_cd_cancel_edit),
-                            tint = appColors.onSurfaceSecondary,
-                            modifier = Modifier.size(20.dp),
-                        )
-                    }
+                    GamePadButtonAction(
+                        button = GamePadButton.BUTTON_B,
+                        text = stringResource(R.string.settings_cancel),
+                        onClick = onDismiss,
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(6.dp))
-
-            // Selectable Games Row (Touch or L1/R1 navigable with auto-scroll)
-            if (games.isNotEmpty()) {
-                GameSelectionRow(
-                    games = games,
-                    selectedIndex = selectedGameIndex,
-                    onGameSelect = { selectedGameIndex = it },
-                )
-            } else {
-                Text(
-                    text = searchQuery,
-                    style =
-                        MaterialTheme.typography.bodyMedium.copy(
-                            color = appColors.onSurfaceSecondary,
-                        ),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center,
+            if (isOptionsMenuExpanded) {
+                Box(
+                    modifier =
+                        Modifier
+                            .matchParentSize()
+                            .pointerInput(Unit) {
+                                detectTapGestures {
+                                    onOptionsMenuExpandedChange(false)
+                                }
+                            },
                 )
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Poster Carousel Container
-            Box(
+            FloatingActionsMenuOverlay(
+                isExpanded = isOptionsMenuExpanded,
+                actions =
+                    listOf(
+                        ExpandableActionItem(
+                            label = stringResource(R.string.gamefocus_option_change_search_term),
+                            iconSymbol = "search",
+                            onClick = { isEditingQuery = true },
+                        ),
+                        ExpandableActionItem(
+                            label =
+                                if (appInfo.isRom) {
+                                    stringResource(R.string.gamefocus_option_use_default_icon)
+                                } else {
+                                    stringResource(R.string.gamefocus_option_use_app_icon)
+                                },
+                            iconSymbol = "apps",
+                            onClick = { useAppIcon() },
+                        ),
+                    ),
+                selectedIndex = selectedIndex,
                 modifier =
                     Modifier
-                        .fillMaxWidth()
-                        .height(230.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (isSearchLoading || isImagesLoading || selectingImage != null) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
-                    ) {
-                        CircularProgressIndicator(
-                            color = appColors.accent,
-                            modifier = Modifier.size(36.dp),
-                        )
-                        Spacer(modifier = Modifier.height(10.dp))
-                        val loadingStatusText =
-                            when {
-                                selectingImage != null -> stringResource(R.string.steamgriddb_status_downloading)
-                                isSearchLoading -> stringResource(R.string.steamgriddb_status_searching)
-                                else -> stringResource(R.string.steamgriddb_status_fetching)
-                            }
-                        Text(
-                            text = loadingStatusText,
-                            style = MaterialTheme.typography.bodySmall.copy(color = appColors.onSurfaceSecondary),
-                        )
-                    }
-                } else if (errorMessage != null) {
-                    Text(
-                        text = errorMessage ?: "",
-                        style = MaterialTheme.typography.bodyMedium.copy(color = appColors.onSurfaceSecondary),
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                    )
-                } else {
-                    val dialogPagerState = rememberPagerState(initialPage = virtualIndex) { Int.MAX_VALUE }
-                    LaunchedEffect(virtualIndex) {
-                        if (dialogPagerState.currentPage != virtualIndex) {
-                            dialogPagerState.animateScrollToPage(virtualIndex)
-                        }
-                    }
-                    LaunchedEffect(Unit) {
-                        snapshotFlow { dialogPagerState.currentPage }
-                            .collectLatest { page ->
-                                if (page != virtualIndex) {
-                                    onVirtualIndexChange(page)
-                                }
-                            }
-                    }
-                    HorizontalPosterCarousel(
-                        itemCount = images.size,
-                        pagerState = dialogPagerState,
-                        onItemClick = { actualIndex ->
-                            images.getOrNull(actualIndex)?.let { imageItem ->
-                                onConfirmSelection(imageItem)
-                            }
-                        },
-                        posterWidth = 120.dp,
-                        posterHeight = 180.dp,
-                        posterSpacing = 12.dp,
-                        carouselHeight = 220.dp,
-                        posterCornerRadius = 12.dp,
-                    ) { actualIndex, _ ->
-                        images.getOrNull(actualIndex)?.let { imageItem ->
-                            ArtworkOptionItem(imageItem = imageItem)
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Bottom Navigation Row with Lower Left Reusable Expandable Options Menu
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                ExpandableActionsMenu(
-                    isExpanded = isOptionsMenuExpanded,
-                    onExpandedChange = onOptionsMenuExpandedChange,
-                    actions =
-                        listOf(
-                            ExpandableActionItem(
-                                label = stringResource(R.string.gamefocus_option_change_search_term),
-                                iconSymbol = "gamepad_up",
-                                onClick = { isEditingQuery = true },
-                            ),
-                            ExpandableActionItem(
-                                label =
-                                    if (appInfo.isRom) {
-                                        stringResource(R.string.gamefocus_option_use_default_icon)
-                                    } else {
-                                        stringResource(R.string.gamefocus_option_use_app_icon)
-                                    },
-                                iconSymbol = "gamepad_right",
-                                onClick = { useAppIcon() },
-                            ),
-                        ),
-                )
-
-                GamePadButtonAction(
-                    button = GamePadButton.BUTTON_B,
-                    text = stringResource(R.string.settings_cancel),
-                    onClick = onDismiss,
-                )
-            }
+                        .align(Alignment.BottomStart)
+                        .padding(bottom = GAD_OPTIONS_MENU_OVERLAY_BOTTOM_PADDING),
+                onItemClick = { item, _ ->
+                    onOptionsMenuExpandedChange(false)
+                    item.onClick()
+                },
+            )
         }
     }
 }

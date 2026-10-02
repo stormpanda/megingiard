@@ -45,6 +45,9 @@ class FocusTopLauncherViewModel : ViewModel() {
     private val _isMainOptionsMenuExpanded = MutableStateFlow(false)
     val isMainOptionsMenuExpanded: StateFlow<Boolean> = _isMainOptionsMenuExpanded.asStateFlow()
 
+    private val _mainMenuSelectedIndex = MutableStateFlow(0)
+    val mainMenuSelectedIndex: StateFlow<Int> = _mainMenuSelectedIndex.asStateFlow()
+
     private val _newlyAddedFolder = MutableStateFlow<CustomRomFolder?>(null)
     val newlyAddedFolder: StateFlow<CustomRomFolder?> = _newlyAddedFolder.asStateFlow()
 
@@ -66,6 +69,9 @@ class FocusTopLauncherViewModel : ViewModel() {
     private val _isOptionsMenuExpanded = MutableStateFlow(false)
     val isOptionsMenuExpanded: StateFlow<Boolean> = _isOptionsMenuExpanded.asStateFlow()
 
+    private val _artworkMenuSelectedIndex = MutableStateFlow(0)
+    val artworkMenuSelectedIndex: StateFlow<Int> = _artworkMenuSelectedIndex.asStateFlow()
+
     private val _dpadUpOptionsTrigger = MutableStateFlow(0)
     val dpadUpOptionsTrigger: StateFlow<Int> = _dpadUpOptionsTrigger.asStateFlow()
 
@@ -86,6 +92,9 @@ class FocusTopLauncherViewModel : ViewModel() {
 
     private val _isLibraryOptionsMenuExpanded = MutableStateFlow(false)
     val isLibraryOptionsMenuExpanded: StateFlow<Boolean> = _isLibraryOptionsMenuExpanded.asStateFlow()
+
+    private val _libraryMenuSelectedIndex = MutableStateFlow(0)
+    val libraryMenuSelectedIndex: StateFlow<Int> = _libraryMenuSelectedIndex.asStateFlow()
 
     private val _dpadLeftTrigger = MutableStateFlow(0)
     val dpadLeftTrigger: StateFlow<Int> = _dpadLeftTrigger.asStateFlow()
@@ -119,12 +128,39 @@ class FocusTopLauncherViewModel : ViewModel() {
         _selectedCategory.value = nextCategory
     }
 
+    fun setMainMenuSelectedIndex(index: Int) {
+        _mainMenuSelectedIndex.value = index
+    }
+
+    fun navigateMainMenuUp(itemCount: Int) {
+        if (itemCount <= 0) return
+        _mainMenuSelectedIndex.value =
+            if (_mainMenuSelectedIndex.value > 0) {
+                _mainMenuSelectedIndex.value - 1
+            } else {
+                itemCount - 1
+            }
+    }
+
+    fun navigateMainMenuDown(itemCount: Int) {
+        if (itemCount <= 0) return
+        _mainMenuSelectedIndex.value =
+            if (_mainMenuSelectedIndex.value < itemCount - 1) {
+                _mainMenuSelectedIndex.value + 1
+            } else {
+                0
+            }
+    }
+
     fun setMainOptionsMenuExpanded(expanded: Boolean) {
+        if (expanded) {
+            _mainMenuSelectedIndex.value = 0
+        }
         _isMainOptionsMenuExpanded.value = expanded
     }
 
     fun toggleMainOptionsMenu() {
-        _isMainOptionsMenuExpanded.value = !_isMainOptionsMenuExpanded.value
+        setMainOptionsMenuExpanded(!_isMainOptionsMenuExpanded.value)
     }
 
     fun setNewlyAddedFolder(folder: CustomRomFolder?) {
@@ -151,12 +187,39 @@ class FocusTopLauncherViewModel : ViewModel() {
         _confirmCoreChooserTrigger.value += 1
     }
 
+    fun setArtworkMenuSelectedIndex(index: Int) {
+        _artworkMenuSelectedIndex.value = index
+    }
+
+    fun navigateArtworkMenuUp(itemCount: Int = 2) {
+        if (itemCount <= 0) return
+        _artworkMenuSelectedIndex.value =
+            if (_artworkMenuSelectedIndex.value > 0) {
+                _artworkMenuSelectedIndex.value - 1
+            } else {
+                itemCount - 1
+            }
+    }
+
+    fun navigateArtworkMenuDown(itemCount: Int = 2) {
+        if (itemCount <= 0) return
+        _artworkMenuSelectedIndex.value =
+            if (_artworkMenuSelectedIndex.value < itemCount - 1) {
+                _artworkMenuSelectedIndex.value + 1
+            } else {
+                0
+            }
+    }
+
     fun setOptionsMenuExpanded(expanded: Boolean) {
+        if (expanded) {
+            _artworkMenuSelectedIndex.value = 0
+        }
         _isOptionsMenuExpanded.value = expanded
     }
 
     fun toggleOptionsMenu() {
-        _isOptionsMenuExpanded.value = !_isOptionsMenuExpanded.value
+        setOptionsMenuExpanded(!_isOptionsMenuExpanded.value)
     }
 
     fun triggerDpadUpOptions() {
@@ -177,6 +240,7 @@ class FocusTopLauncherViewModel : ViewModel() {
         _confirmDialogTrigger.value = 0
         _dialogL1Trigger.value = 0
         _dialogR1Trigger.value = 0
+        _artworkMenuSelectedIndex.value = 0
         _isOptionsMenuExpanded.value = false
         _dpadUpOptionsTrigger.value = 0
         _dpadRightOptionsTrigger.value = 0
@@ -240,12 +304,39 @@ class FocusTopLauncherViewModel : ViewModel() {
         _libraryFocusedIndex.value = index
     }
 
+    fun setLibraryMenuSelectedIndex(index: Int) {
+        _libraryMenuSelectedIndex.value = index
+    }
+
+    fun navigateLibraryMenuUp(itemCount: Int) {
+        if (itemCount <= 0) return
+        _libraryMenuSelectedIndex.value =
+            if (_libraryMenuSelectedIndex.value > 0) {
+                _libraryMenuSelectedIndex.value - 1
+            } else {
+                itemCount - 1
+            }
+    }
+
+    fun navigateLibraryMenuDown(itemCount: Int) {
+        if (itemCount <= 0) return
+        _libraryMenuSelectedIndex.value =
+            if (_libraryMenuSelectedIndex.value < itemCount - 1) {
+                _libraryMenuSelectedIndex.value + 1
+            } else {
+                0
+            }
+    }
+
     fun setLibraryOptionsMenuExpanded(expanded: Boolean) {
+        if (expanded) {
+            _libraryMenuSelectedIndex.value = 0
+        }
         _isLibraryOptionsMenuExpanded.value = expanded
     }
 
     fun toggleLibraryOptionsMenu() {
-        _isLibraryOptionsMenuExpanded.value = !_isLibraryOptionsMenuExpanded.value
+        setLibraryOptionsMenuExpanded(!_isLibraryOptionsMenuExpanded.value)
     }
 
     fun setFocusedApp(appInfo: InstalledAppInfo?) {
@@ -359,8 +450,11 @@ class FocusTopLauncherViewModel : ViewModel() {
             _isLibraryOpen.value = false
             _editingAppInfo.value = null
             _isMainOptionsMenuExpanded.value = false
+            _mainMenuSelectedIndex.value = 0
             _isOptionsMenuExpanded.value = false
+            _artworkMenuSelectedIndex.value = 0
             _isLibraryOptionsMenuExpanded.value = false
+            _libraryMenuSelectedIndex.value = 0
             _isRemoveRomFolderDialogOpen.value = false
             _folderToRemove.value = null
             _newlyAddedFolder.value = null

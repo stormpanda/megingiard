@@ -19,6 +19,7 @@ import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -75,6 +76,7 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -87,13 +89,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.CustomRomFolder
+import com.stormpanda.megingiard.catalog.EMULATOR_ID_RETROARCH
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.catalog.LibraryTab
 import com.stormpanda.megingiard.catalog.RomManager
+import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
 import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.ExpandableActionItem
 import com.stormpanda.megingiard.ui.ExpandableActionsMenu
-import com.stormpanda.megingiard.ui.ExpandableMenuOrientation
 import com.stormpanda.megingiard.ui.GamePadButton
 import com.stormpanda.megingiard.ui.GamePadButtonAction
 import com.stormpanda.megingiard.ui.GamePadButtonIcon
@@ -175,14 +178,14 @@ fun FocusLibraryScreen(
     onAppClickBottom: (InstalledAppInfo) -> Unit,
     onCloseRequested: () -> Unit,
     modifier: Modifier = Modifier,
-    favoritesSet: Set<String> = emptySet(),
     hiddenSet: Set<String> = emptySet(),
     isOptionsMenuExpanded: Boolean = false,
     onOptionsMenuExpandedChange: (Boolean) -> Unit = {},
-    onToggleFavorite: (InstalledAppInfo) -> Unit = {},
+    selectedIndex: Int = 0,
     onToggleHidden: (InstalledAppInfo) -> Unit = {},
-    onEditArtwork: (InstalledAppInfo) -> Unit = {},
     onOpenAppInfo: (InstalledAppInfo) -> Unit = {},
+    onUninstallApp: (InstalledAppInfo) -> Unit = {},
+    onChangeCore: (CustomRomFolder) -> Unit = {},
     onAddRomFolder: () -> Unit = {},
     onRemoveRomFolder: (CustomRomFolder) -> Unit = {},
     enabled: Boolean = true,
@@ -467,7 +470,6 @@ fun FocusLibraryScreen(
 
         val activeApps = selectedTab.filterApps(allApps)
         val focusedApp = activeApps.getOrNull(focusedIndex.coerceAtLeast(0))
-        val isCurrentFavorite = focusedApp != null && favoritesSet.contains(focusedApp.packageName)
         val isCurrentHidden = focusedApp != null && hiddenSet.contains(focusedApp.packageName)
 
         // Bottom edge shadow overlay to improve button readability
@@ -488,6 +490,19 @@ fun FocusLibraryScreen(
                     ),
         )
 
+        if (isOptionsMenuExpanded) {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .pointerInput(Unit) {
+                            detectTapGestures {
+                                onOptionsMenuExpandedChange(false)
+                            }
+                        },
+            )
+        }
+
         // Bottom Bar containing Action Menu (lower left) and Launch indicators (lower right) hovering over the grid
         Box(
             modifier =
@@ -503,8 +518,22 @@ fun FocusLibraryScreen(
         ) {
             // Lower Left: Library Action Menu
             Box(modifier = Modifier.align(Alignment.BottomStart)) {
+                val currentSystemId = (selectedTab as? LibraryTab.RomSystem)?.systemId ?: focusedApp?.systemId
+                val currentRomFolder =
+                    remember(currentSystemId, romFolders) {
+                        if (currentSystemId != null) romFolders.find { it.systemId == currentSystemId } else null
+                    }
+                val isRetroArchSystem =
+                    remember(currentRomFolder) {
+                        if (currentRomFolder != null) {
+                            val systemDef = SUPPORTED_SYSTEMS.find { it.id == currentRomFolder.systemId }
+                            systemDef?.emulatorId == EMULATOR_ID_RETROARCH
+                        } else {
+                            false
+                        }
+                    }
                 val actions =
-                    remember(focusedApp, isCurrentHidden, romFolders) {
+                    remember(focusedApp, isCurrentHidden, romFolders, isRetroArchSystem, currentRomFolder) {
                         buildList {
                             if (focusedApp != null) {
                                 add(
@@ -515,18 +544,41 @@ fun FocusLibraryScreen(
                                             } else {
                                                 context.getString(R.string.gamefocus_option_hide)
                                             },
-                                        iconSymbol = "gamepad_left",
+                                        iconSymbol = if (isCurrentHidden) "visibility" else "visibility_off",
                                         onClick = {
                                             onToggleHidden(focusedApp)
                                             onOptionsMenuExpandedChange(false)
                                         },
                                     ),
                                 )
+                                if (!focusedApp.isRom) {
+                                    add(
+                                        ExpandableActionItem(
+                                            label = context.getString(R.string.gamefocus_option_app_info),
+                                            iconSymbol = "info",
+                                            onClick = {
+                                                onOpenAppInfo(focusedApp)
+                                                onOptionsMenuExpandedChange(false)
+                                            },
+                                        ),
+                                    )
+                                    add(
+                                        ExpandableActionItem(
+                                            label = context.getString(R.string.gamefocus_option_uninstall),
+                                            iconSymbol = "delete",
+                                            isDestructive = true,
+                                            onClick = {
+                                                onUninstallApp(focusedApp)
+                                                onOptionsMenuExpandedChange(false)
+                                            },
+                                        ),
+                                    )
+                                }
                             }
                             add(
                                 ExpandableActionItem(
                                     label = context.getString(R.string.gamefocus_option_add_rom_folder),
-                                    iconSymbol = "gamepad_up",
+                                    iconSymbol = "create_new_folder",
                                     onClick = {
                                         onAddRomFolder()
                                         onOptionsMenuExpandedChange(false)
@@ -537,7 +589,7 @@ fun FocusLibraryScreen(
                                 add(
                                     ExpandableActionItem(
                                         label = context.getString(R.string.gamefocus_option_manage_rom_folders),
-                                        iconSymbol = "gamepad_down",
+                                        iconSymbol = "folder",
                                         onClick = {
                                             onRemoveRomFolderDialogOpenChange(true)
                                             onOptionsMenuExpandedChange(false)
@@ -545,14 +597,39 @@ fun FocusLibraryScreen(
                                     ),
                                 )
                             }
+                            if (isRetroArchSystem && currentRomFolder != null) {
+                                add(
+                                    ExpandableActionItem(
+                                        label = context.getString(R.string.gamefocus_option_change_core),
+                                        iconSymbol = "tune",
+                                        onClick = {
+                                            onChangeCore(currentRomFolder)
+                                            onOptionsMenuExpandedChange(false)
+                                        },
+                                    ),
+                                )
+                            }
                         }
+                    }
+                val itemActionsCount =
+                    if (focusedApp != null) {
+                        if (!focusedApp.isRom) 3 else 1
+                    } else {
+                        0
+                    }
+                val dividerAfterIndex =
+                    if (itemActionsCount > 0 && itemActionsCount < actions.size) {
+                        itemActionsCount - 1
+                    } else {
+                        null
                     }
                 ExpandableActionsMenu(
                     isExpanded = isOptionsMenuExpanded,
                     onExpandedChange = onOptionsMenuExpandedChange,
-                    orientation = ExpandableMenuOrientation.VERTICAL,
-                    enabled = enabled,
                     actions = actions,
+                    selectedIndex = selectedIndex,
+                    dividerAfterIndex = dividerAfterIndex,
+                    enabled = enabled,
                 )
             }
 

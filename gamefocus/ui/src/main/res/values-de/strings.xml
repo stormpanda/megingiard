@@ -17,7 +17,7 @@
     <string name="gamefocus_option_unhide">Einblenden</string>
     <string name="gamefocus_option_edit">Bearbeiten</string>
     <string name="gamefocus_option_app_info">App-Info</string>
-    <string name="gamefocus_option_close">Schließen</string>
+    <string name="gamefocus_option_uninstall">Deinstallieren</string>
     <string name="gamefocus_option_actions">Aktionen</string>
     <string name="gamefocus_no_favorites">Keine Favoriten vorhanden</string>
     <string name="gamefocus_no_last_used">Keine kürzlich genutzten Apps</string>
@@ -45,6 +45,7 @@
     <string name="gamefocus_nav_library">Bibliothek</string>
     <string name="gamefocus_option_add_rom_folder">ROM-Ordner hinzufügen</string>
     <string name="gamefocus_option_manage_rom_folders">ROM-Ordner entfernen</string>
+    <string name="gamefocus_option_change_core">Core ändern</string>
     <string name="gamefocus_dialog_remove_rom_folder_title">ROM-Ordner entfernen</string>
     <string name="gamefocus_dialog_remove_rom_folder_msg">Wähle einen ROM-Ordner aus, den du entfernen möchtest:</string>
     <string name="gamefocus_dialog_remove_confirm_title">Entfernen bestätigen</string>

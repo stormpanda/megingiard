@@ -258,4 +258,102 @@ class FocusTopLauncherViewModelTest {
         assertTrue(viewModel.resetToGallery())
         assertFalse(viewModel.isMainOptionsMenuExpanded.value)
     }
+
+    @Test
+    fun testMainMenuNavigation() {
+        assertEquals(0, viewModel.mainMenuSelectedIndex.value)
+
+        viewModel.navigateMainMenuDown(4)
+        assertEquals(1, viewModel.mainMenuSelectedIndex.value)
+
+        viewModel.navigateMainMenuDown(4)
+        assertEquals(2, viewModel.mainMenuSelectedIndex.value)
+
+        viewModel.navigateMainMenuDown(4)
+        assertEquals(3, viewModel.mainMenuSelectedIndex.value)
+
+        // Wrap around to 0
+        viewModel.navigateMainMenuDown(4)
+        assertEquals(0, viewModel.mainMenuSelectedIndex.value)
+
+        // Wrap around to 3
+        viewModel.navigateMainMenuUp(4)
+        assertEquals(3, viewModel.mainMenuSelectedIndex.value)
+
+        viewModel.navigateMainMenuUp(4)
+        assertEquals(2, viewModel.mainMenuSelectedIndex.value)
+
+        // Opening menu resets index to 0
+        viewModel.setMainOptionsMenuExpanded(true)
+        assertEquals(0, viewModel.mainMenuSelectedIndex.value)
+    }
+
+    @Test
+    fun testLibraryMenuNavigation() {
+        assertEquals(0, viewModel.libraryMenuSelectedIndex.value)
+
+        viewModel.navigateLibraryMenuDown(3)
+        assertEquals(1, viewModel.libraryMenuSelectedIndex.value)
+
+        viewModel.navigateLibraryMenuDown(3)
+        assertEquals(2, viewModel.libraryMenuSelectedIndex.value)
+
+        // Wrap around to 0
+        viewModel.navigateLibraryMenuDown(3)
+        assertEquals(0, viewModel.libraryMenuSelectedIndex.value)
+
+        // Wrap around to 2
+        viewModel.navigateLibraryMenuUp(3)
+        assertEquals(2, viewModel.libraryMenuSelectedIndex.value)
+
+        // Opening menu resets index to 0
+        viewModel.setLibraryOptionsMenuExpanded(true)
+        assertEquals(0, viewModel.libraryMenuSelectedIndex.value)
+    }
+
+    @Test
+    fun testArtworkMenuNavigation() {
+        assertEquals(0, viewModel.artworkMenuSelectedIndex.value)
+
+        viewModel.navigateArtworkMenuDown(2)
+        assertEquals(1, viewModel.artworkMenuSelectedIndex.value)
+
+        // Wrap around to 0
+        viewModel.navigateArtworkMenuDown(2)
+        assertEquals(0, viewModel.artworkMenuSelectedIndex.value)
+
+        // Wrap around to 1
+        viewModel.navigateArtworkMenuUp(2)
+        assertEquals(1, viewModel.artworkMenuSelectedIndex.value)
+
+        // Opening menu resets index to 0
+        viewModel.setOptionsMenuExpanded(true)
+        assertEquals(0, viewModel.artworkMenuSelectedIndex.value)
+
+        val app =
+            InstalledAppInfo(
+                packageName = "com.test.app2",
+                activityName = "MainActivity",
+                label = "Test App 2",
+                isGame = true,
+                isRom = false,
+            )
+        viewModel.setArtworkMenuSelectedIndex(1)
+        viewModel.openArtworkDialog(app)
+        assertEquals(0, viewModel.artworkMenuSelectedIndex.value)
+    }
+
+    @Test
+    fun testResetToGalleryResetsMenuIndices() {
+        viewModel.setMainMenuSelectedIndex(2)
+        viewModel.setLibraryMenuSelectedIndex(1)
+        viewModel.setArtworkMenuSelectedIndex(1)
+        viewModel.setMainOptionsMenuExpanded(true)
+
+        assertTrue(viewModel.resetToGallery())
+        assertFalse(viewModel.isMainOptionsMenuExpanded.value)
+        assertEquals(0, viewModel.mainMenuSelectedIndex.value)
+        assertEquals(0, viewModel.libraryMenuSelectedIndex.value)
+        assertEquals(0, viewModel.artworkMenuSelectedIndex.value)
+    }
 }

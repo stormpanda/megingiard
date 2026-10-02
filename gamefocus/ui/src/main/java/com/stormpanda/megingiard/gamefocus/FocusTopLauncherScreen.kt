@@ -21,6 +21,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -69,6 +70,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -89,7 +91,6 @@ import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
 import com.stormpanda.megingiard.math.floorMod
 import com.stormpanda.megingiard.ui.ExpandableActionItem
 import com.stormpanda.megingiard.ui.ExpandableActionsMenu
-import com.stormpanda.megingiard.ui.ExpandableMenuOrientation
 import com.stormpanda.megingiard.ui.GamePadButton
 import com.stormpanda.megingiard.ui.GamePadButtonAction
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -155,10 +156,13 @@ fun FocusTopLauncherScreen(
     hiddenSet: Set<String> = emptySet(),
     isMainOptionsMenuExpanded: Boolean = false,
     onMainOptionsMenuExpandedChange: (Boolean) -> Unit = {},
+    mainMenuSelectedIndex: Int = 0,
     onToggleFavorite: (InstalledAppInfo) -> Unit = {},
     onToggleHidden: (InstalledAppInfo) -> Unit = {},
     onEditArtwork: (InstalledAppInfo) -> Unit = {},
     onOpenAppInfo: (InstalledAppInfo) -> Unit = {},
+    onUninstallApp: (InstalledAppInfo) -> Unit = {},
+    onChangeCore: (CustomRomFolder) -> Unit = {},
     onAddRomFolder: () -> Unit = {},
     onRemoveRomFolder: (CustomRomFolder) -> Unit = {},
     editingAppInfo: InstalledAppInfo? = null,
@@ -171,6 +175,7 @@ fun FocusTopLauncherScreen(
     nextLetterTrigger: Int = 0,
     isOptionsMenuExpanded: Boolean = false,
     onOptionsMenuExpandedChange: (Boolean) -> Unit = {},
+    artworkMenuSelectedIndex: Int = 0,
     dpadUpTrigger: Int = 0,
     dpadRightTrigger: Int = 0,
     dpadLeftTrigger: Int = 0,
@@ -198,6 +203,7 @@ fun FocusTopLauncherScreen(
     onLibraryFocusedIndexChange: (Int) -> Unit = {},
     isLibraryOptionsMenuExpanded: Boolean = false,
     onLibraryOptionsMenuExpandedChange: (Boolean) -> Unit = {},
+    libraryMenuSelectedIndex: Int = 0,
     onOpenLibrary: () -> Unit = {},
     onCloseLibrary: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -494,14 +500,14 @@ fun FocusTopLauncherScreen(
                         onTabSelected = onLibraryTabSelected,
                         focusedIndex = libraryFocusedIndex,
                         onFocusedIndexChange = onLibraryFocusedIndexChange,
-                        favoritesSet = favoritesSet,
                         hiddenSet = hiddenSet,
                         isOptionsMenuExpanded = isLibraryOptionsMenuExpanded,
                         onOptionsMenuExpandedChange = onLibraryOptionsMenuExpandedChange,
-                        onToggleFavorite = onToggleFavorite,
+                        selectedIndex = libraryMenuSelectedIndex,
                         onToggleHidden = onToggleHidden,
-                        onEditArtwork = onEditArtwork,
                         onOpenAppInfo = onOpenAppInfo,
+                        onUninstallApp = onUninstallApp,
+                        onChangeCore = onChangeCore,
                         onAddRomFolder = onAddRomFolder,
                         onRemoveRomFolder = onRemoveRomFolder,
                         onAppClickTop = onAppClickTop,
@@ -535,6 +541,19 @@ fun FocusTopLauncherScreen(
                                     )
                                 },
                     ) {
+                        if (isMainOptionsMenuExpanded) {
+                            Box(
+                                modifier =
+                                    Modifier
+                                        .fillMaxSize()
+                                        .pointerInput(Unit) {
+                                            detectTapGestures {
+                                                onMainOptionsMenuExpandedChange(false)
+                                            }
+                                        },
+                            )
+                        }
+
                         // Plane 1: Full-Screen Gallery & App Title Plane
                         Box(
                             modifier = Modifier.fillMaxSize(),
@@ -721,7 +740,7 @@ fun FocusTopLauncherScreen(
                                                         } else {
                                                             context.getString(R.string.gamefocus_option_add_favorite)
                                                         },
-                                                    iconSymbol = "gamepad_up",
+                                                    iconSymbol = "star",
                                                     onClick = {
                                                         onToggleFavorite(currentApp)
                                                         onMainOptionsMenuExpandedChange(false)
@@ -731,25 +750,13 @@ fun FocusTopLauncherScreen(
                                             add(
                                                 ExpandableActionItem(
                                                     label = context.getString(R.string.gamefocus_option_edit),
-                                                    iconSymbol = "gamepad_right",
+                                                    iconSymbol = "palette",
                                                     onClick = {
                                                         onEditArtwork(currentApp)
                                                         onMainOptionsMenuExpandedChange(false)
                                                     },
                                                 ),
                                             )
-                                            if (!currentApp.isRom) {
-                                                add(
-                                                    ExpandableActionItem(
-                                                        label = context.getString(R.string.gamefocus_option_app_info),
-                                                        iconSymbol = "gamepad_down",
-                                                        onClick = {
-                                                            onOpenAppInfo(currentApp)
-                                                            onMainOptionsMenuExpandedChange(false)
-                                                        },
-                                                    ),
-                                                )
-                                            }
                                             add(
                                                 ExpandableActionItem(
                                                     label =
@@ -758,7 +765,7 @@ fun FocusTopLauncherScreen(
                                                         } else {
                                                             context.getString(R.string.gamefocus_option_hide)
                                                         },
-                                                    iconSymbol = "gamepad_left",
+                                                    iconSymbol = if (isCurrentHidden) "visibility" else "visibility_off",
                                                     onClick = {
                                                         onToggleHidden(currentApp)
                                                         onMainOptionsMenuExpandedChange(false)
@@ -771,9 +778,9 @@ fun FocusTopLauncherScreen(
                             ExpandableActionsMenu(
                                 isExpanded = isMainOptionsMenuExpanded,
                                 onExpandedChange = onMainOptionsMenuExpandedChange,
-                                orientation = ExpandableMenuOrientation.VERTICAL,
-                                enabled = isControlsEnabled,
                                 actions = actions,
+                                selectedIndex = mainMenuSelectedIndex,
+                                enabled = isControlsEnabled,
                             )
                         }
 
@@ -802,6 +809,7 @@ fun FocusTopLauncherScreen(
                             r1Trigger = dialogR1Trigger,
                             isOptionsMenuExpanded = isOptionsMenuExpanded,
                             onOptionsMenuExpandedChange = onOptionsMenuExpandedChange,
+                            selectedIndex = artworkMenuSelectedIndex,
                             dpadUpTrigger = dpadUpTrigger,
                             dpadRightTrigger = dpadRightTrigger,
                             onDismiss = onDismissEditingApp,
