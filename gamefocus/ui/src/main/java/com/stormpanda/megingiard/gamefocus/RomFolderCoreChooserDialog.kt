@@ -14,12 +14,15 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.CustomRomFolder
 import com.stormpanda.megingiard.catalog.EMULATOR_ID_RETROARCH
 import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
+import com.stormpanda.megingiard.catalog.SYSTEM_ID_SWITCH
+import com.stormpanda.megingiard.catalog.SwitchEmulators
 import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.GamePadButton
 import com.stormpanda.megingiard.ui.GamePadButtonAction
@@ -27,6 +30,8 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.VerticalRollingCarousel
 
 private const val TAG = "RomFolderCoreChooser"
+private const val CAROUSEL_VISIBLE_ITEMS_COUNT = 5
+private const val DIALOG_WIDTH_FRACTION = 0.45f
 
 // File scope dimensions as per AGENTS.md §8.3
 private val DIALOG_SPACING = 16.dp
@@ -43,7 +48,13 @@ fun RomFolderCoreChooserDialog(
     onConfirm: (String?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
     val appColors = LocalAppColors.current
+    val isSwitchSystem = remember(folder.systemId) { folder.systemId == SYSTEM_ID_SWITCH }
+    val switchEmulators =
+        remember(isSwitchSystem) {
+            if (isSwitchSystem) SwitchEmulators.getInstalledEmulators(context) else emptyList()
+        }
     val systemDef =
         remember(folder.systemId) {
             SUPPORTED_SYSTEMS.find { it.id == folder.systemId }
@@ -54,20 +65,26 @@ fun RomFolderCoreChooserDialog(
         }
 
     LaunchedEffect(folder) {
-        AppLog.d(TAG, "Showing core chooser dialog for folder: ${folder.folderPath}, recognized system: ${folder.systemId}")
+        AppLog.d(TAG, "Showing core/emulator chooser dialog for folder: ${folder.folderPath}, recognized system: ${folder.systemId}")
     }
 
     LaunchedEffect(confirmTrigger) {
         if (confirmTrigger > 0) {
             if (systemDef == null) {
                 onDismiss()
+            } else if (isSwitchSystem) {
+                val safeIdx = selectedIndex.coerceIn(0, switchEmulators.lastIndex.coerceAtLeast(0))
+                val chosen = switchEmulators.getOrNull(safeIdx)?.packageName
+                AppLog.i(TAG, "Confirming Switch emulator selection via trigger: index=$safeIdx, package='$chosen'")
+                onConfirm(chosen)
             } else if (systemDef.emulatorId != EMULATOR_ID_RETROARCH) {
                 AppLog.i(TAG, "Confirming native emulation dialog via trigger")
                 onConfirm(null)
             } else {
-                val safeIdx = selectedIndex.coerceIn(0, cores.lastIndex)
-                AppLog.i(TAG, "Confirming RetroArch core selection via trigger: index=$safeIdx, core='${cores[safeIdx]}'")
-                onConfirm(cores[safeIdx])
+                val safeIdx = selectedIndex.coerceIn(0, cores.lastIndex.coerceAtLeast(0))
+                val chosen = cores.getOrNull(safeIdx)
+                AppLog.i(TAG, "Confirming RetroArch core selection via trigger: index=$safeIdx, core='$chosen'")
+                onConfirm(chosen)
             }
         }
     }
@@ -77,7 +94,7 @@ fun RomFolderCoreChooserDialog(
             AppLog.d(TAG, "Dialog dismissed by scrim tap")
             onDismiss()
         },
-        widthFraction = 0.45f,
+        widthFraction = DIALOG_WIDTH_FRACTION,
         modifier = modifier,
     ) {
         if (systemDef == null) {
@@ -104,7 +121,14 @@ fun RomFolderCoreChooserDialog(
         }
 
         Text(
-            text = stringResource(R.string.gamefocus_dialog_system_recognized_title),
+            text =
+                stringResource(
+                    if (isSwitchSystem) {
+                        R.string.gamefocus_dialog_select_emulator_title
+                    } else {
+                        R.string.gamefocus_dialog_system_recognized_title
+                    },
+                ),
             style = MaterialTheme.typography.titleMedium,
             color = appColors.onSurface,
             modifier = Modifier.padding(bottom = DIALOG_TITLE_PADDING_BOTTOM),
@@ -117,7 +141,57 @@ fun RomFolderCoreChooserDialog(
             modifier = Modifier.padding(bottom = DIALOG_SPACING),
         )
 
-        if (systemDef.emulatorId != EMULATOR_ID_RETROARCH) {
+        if (isSwitchSystem) {
+            Text(
+                text = stringResource(R.string.gamefocus_dialog_select_emulator_label),
+                style = MaterialTheme.typography.bodyMedium,
+                color = appColors.onSurface,
+                modifier = Modifier.padding(bottom = DIALOG_TITLE_PADDING_BOTTOM),
+            )
+
+            VerticalRollingCarousel(
+                selectedIndex = selectedIndex,
+                items = switchEmulators,
+                onSelectedIndexChange = onSelectedIndexChange,
+                labelProvider = { it.displayName },
+                visibleItemsCount = CAROUSEL_VISIBLE_ITEMS_COUNT,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = DIALOG_INNER_SPACING),
+            )
+
+            Spacer(modifier = Modifier.height(DIALOG_SPACING))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                GamePadButtonAction(
+                    button = GamePadButton.BUTTON_A,
+                    text = stringResource(R.string.gamefocus_dialog_core_save),
+                    onClick = {
+                        val selectedEmulator =
+                            switchEmulators.getOrNull(selectedIndex.coerceIn(0, switchEmulators.lastIndex.coerceAtLeast(0)))
+                        AppLog.i(
+                            TAG,
+                            "User confirmed Switch emulator assignment: '${selectedEmulator?.packageName}' for folder ${folder.folderPath}",
+                        )
+                        onConfirm(selectedEmulator?.packageName)
+                    },
+                )
+                Spacer(modifier = Modifier.width(DIALOG_INNER_SPACING))
+                GamePadButtonAction(
+                    button = GamePadButton.BUTTON_B,
+                    text = stringResource(R.string.gamefocus_dialog_cancel),
+                    onClick = {
+                        AppLog.d(TAG, "User cancelled Switch emulator assignment dialog")
+                        onDismiss()
+                    },
+                )
+            }
+        } else if (systemDef.emulatorId != EMULATOR_ID_RETROARCH) {
             Text(
                 text = stringResource(R.string.gamefocus_dialog_core_native_msg),
                 style = MaterialTheme.typography.bodyMedium,
@@ -157,7 +231,7 @@ fun RomFolderCoreChooserDialog(
                         core
                     }
                 },
-                visibleItemsCount = 5,
+                visibleItemsCount = CAROUSEL_VISIBLE_ITEMS_COUNT,
                 modifier =
                     Modifier
                         .fillMaxWidth()
@@ -175,7 +249,8 @@ fun RomFolderCoreChooserDialog(
                     button = GamePadButton.BUTTON_A,
                     text = stringResource(R.string.gamefocus_dialog_core_save),
                     onClick = {
-                        val selectedCore = cores.getOrNull(selectedIndex.coerceIn(0, cores.lastIndex))
+                        val safeIdx = selectedIndex.coerceIn(0, cores.lastIndex.coerceAtLeast(0))
+                        val selectedCore = cores.getOrNull(safeIdx)
                         AppLog.i(TAG, "User confirmed RetroArch core assignment: '$selectedCore' for recognized system ${folder.systemId}")
                         onConfirm(selectedCore)
                     },

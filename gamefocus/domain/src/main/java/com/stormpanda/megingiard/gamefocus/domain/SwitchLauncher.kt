@@ -1,0 +1,102 @@
+package com.stormpanda.megingiard.gamefocus.domain
+
+import android.app.ActivityOptions
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.os.StrictMode
+import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.catalog.EMULATOR_ID_YUZU
+import com.stormpanda.megingiard.catalog.RomLauncher
+import com.stormpanda.megingiard.catalog.RomManager
+import com.stormpanda.megingiard.catalog.SwitchEmulators
+import java.io.File
+
+private const val TAG = "SwitchLauncher"
+private const val EMULATION_ACTIVITY_NAME = "org.yuzu.yuzu_emu.activities.EmulationActivity"
+private const val SWITCH_ACTION = "android.nfc.action.TECH_DISCOVERED"
+
+class SwitchLauncher : RomLauncher {
+    override val id: String = EMULATOR_ID_YUZU
+    override val displayName: String = "Nintendo Switch"
+
+    override suspend fun launchGame(
+        context: Context,
+        romPath: String,
+        systemId: String,
+        displayId: Int,
+        retroArchCore: String?,
+        romUri: String?,
+    ): Boolean {
+        val targetPackage = resolveTargetPackage(context, retroArchCore)
+        if (targetPackage == null) {
+            AppLog.e(TAG, "No supported Nintendo Switch emulator is installed on the device")
+            return false
+        }
+
+        val targetUri: Uri =
+            when {
+                !romUri.isNullOrBlank() -> {
+                    Uri.parse(romUri)
+                }
+
+                romPath.startsWith("content://") -> {
+                    Uri.parse(romPath)
+                }
+
+                else -> {
+                    val matchedApp = RomManager.romApps.value.firstOrNull { it.romPath == romPath }
+                    if (!matchedApp?.romUri.isNullOrBlank()) {
+                        Uri.parse(matchedApp.romUri)
+                    } else {
+                        Uri.fromFile(File(romPath))
+                    }
+                }
+            }
+
+        AppLog.i(TAG, "Launching Switch ROM '$romPath' (URI: '$targetUri') with package '$targetPackage' on display $displayId")
+
+        val oldVmPolicy =
+            if (targetUri.scheme == "file") {
+                val previous = StrictMode.getVmPolicy()
+                StrictMode.setVmPolicy(StrictMode.VmPolicy.Builder().build())
+                previous
+            } else {
+                null
+            }
+
+        return try {
+            val intent =
+                Intent(SWITCH_ACTION).apply {
+                    component = ComponentName(targetPackage, EMULATION_ACTIVITY_NAME)
+                    data = targetUri
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+            val options =
+                ActivityOptions.makeBasic().apply {
+                    setLaunchDisplayId(displayId)
+                }
+            context.startActivity(intent, options.toBundle())
+            true
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Failed to launch Switch game in $targetPackage: ${e.message}", e)
+            false
+        } finally {
+            oldVmPolicy?.let { StrictMode.setVmPolicy(it) }
+        }
+    }
+
+    private fun resolveTargetPackage(
+        context: Context,
+        preferredPackage: String?,
+    ): String? {
+        val installed = SwitchEmulators.getInstalledEmulators(context, forceRefresh = true)
+        if (installed.isEmpty()) return null
+
+        if (preferredPackage != null && installed.any { it.packageName == preferredPackage }) {
+            return preferredPackage
+        }
+        return installed.first().packageName
+    }
+}

@@ -61,5 +61,12 @@
     <string name="gamefocus_dialog_cancel">Cancel</string>
     <string name="gamefocus_dialog_select">Select</string>
     <string name="gamefocus_dialog_unknown_system">Unknown System</string>
+    <string name="gamefocus_option_change_emulator">Change Emulator</string>
+    <string name="gamefocus_dialog_select_emulator_title">Select Emulator</string>
+    <string name="gamefocus_dialog_select_emulator_label">Select Switch Emulator:</string>
+    <string name="gamefocus_error_no_switch_emulator">No Nintendo Switch emulator (e.g. Eden) is installed. Please install one before adding this folder.</string>
+    <string name="gamefocus_error_folder_inaccessible">Folder does not exist or is inaccessible.</string>
+    <string name="gamefocus_error_unknown_system">Could not automatically recognize any gaming system in this folder.</string>
+    <string name="gamefocus_error_duplicate_folder">This folder has already been added.</string>
 </resources>
 

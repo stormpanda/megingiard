@@ -8,8 +8,10 @@ data class InstalledAppInfo(
     val isGame: Boolean = false,
     val isRom: Boolean = false,
     val romPath: String? = null,
+    val romUri: String? = null,
     val systemId: String? = null,
     val retroArchCore: String? = null,
+    val emulatorPackage: String? = null,
     val coverLastModified: Long = 0L,
 ) {
     fun withCover(

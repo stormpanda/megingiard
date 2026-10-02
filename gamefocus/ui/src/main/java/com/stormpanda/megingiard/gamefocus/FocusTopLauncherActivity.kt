@@ -37,6 +37,8 @@ import com.stormpanda.megingiard.catalog.InstalledAppsManager
 import com.stormpanda.megingiard.catalog.LibraryTab
 import com.stormpanda.megingiard.catalog.RomManager
 import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
+import com.stormpanda.megingiard.catalog.SYSTEM_ID_SWITCH
+import com.stormpanda.megingiard.catalog.SwitchEmulators
 import com.stormpanda.megingiard.gamefocus.domain.initGameFocusLaunchers
 import com.stormpanda.megingiard.gamefocus.viewmodel.DEFAULT_LIBRARY_GRID_COLUMNS
 import com.stormpanda.megingiard.gamefocus.viewmodel.FocusTopLauncherViewModel
@@ -69,7 +71,7 @@ internal fun getLibraryMenuCount(
     hasApp: Boolean,
     isRom: Boolean,
     hasRomFolders: Boolean,
-    isRetroArchRomSystem: Boolean,
+    isConfigurableRomSystem: Boolean,
 ): Int {
     val appActionCount =
         when {
@@ -80,7 +82,7 @@ internal fun getLibraryMenuCount(
     val romFolderActionCount =
         LIBRARY_BASE_ACTIONS_COUNT +
             (if (hasRomFolders) 1 else 0) +
-            (if (isRetroArchRomSystem) 1 else 0)
+            (if (isConfigurableRomSystem) 1 else 0)
     return appActionCount + romFolderActionCount
 }
 
@@ -102,13 +104,42 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 lifecycleScope.launch {
                     when (val result = RomManager.addRomFolder(this@FocusTopLauncherActivity, uri)) {
                         is AddRomFolderResult.Success -> {
-                            viewModel.setCoreChooserDialogSelectedIndex(0)
-                            viewModel.setNewlyAddedFolder(result.folder)
+                            if (result.folder.systemId == SYSTEM_ID_SWITCH) {
+                                val emulators = SwitchEmulators.getInstalledEmulators(this@FocusTopLauncherActivity, forceRefresh = true)
+                                if (emulators.size > 1) {
+                                    openCoreChooserForFolder(result.folder)
+                                }
+                            } else {
+                                viewModel.setCoreChooserDialogSelectedIndex(0)
+                                viewModel.setNewlyAddedFolder(result.folder)
+                            }
                         }
 
                         is AddRomFolderResult.Error -> {
+                            val displayMessage =
+                                when (result.errorCode) {
+                                    AddRomFolderResult.ErrorCode.NO_SWITCH_EMULATOR -> {
+                                        getString(R.string.gamefocus_error_no_switch_emulator)
+                                    }
+
+                                    AddRomFolderResult.ErrorCode.FOLDER_INACCESSIBLE -> {
+                                        getString(R.string.gamefocus_error_folder_inaccessible)
+                                    }
+
+                                    AddRomFolderResult.ErrorCode.UNKNOWN_SYSTEM -> {
+                                        getString(R.string.gamefocus_error_unknown_system)
+                                    }
+
+                                    AddRomFolderResult.ErrorCode.DUPLICATE_FOLDER -> {
+                                        getString(R.string.gamefocus_error_duplicate_folder)
+                                    }
+
+                                    null -> {
+                                        result.message
+                                    }
+                                }
                             Toast
-                                .makeText(this@FocusTopLauncherActivity, result.message, Toast.LENGTH_LONG)
+                                .makeText(this@FocusTopLauncherActivity, displayMessage, Toast.LENGTH_LONG)
                                 .show()
                         }
                     }
@@ -370,8 +401,12 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             onDismissEditingApp = { viewModel.setEditingAppInfo(null) },
                             newlyAddedFolder = newlyAddedFolder,
                             onDismissNewlyAddedFolder = { viewModel.setNewlyAddedFolder(null) },
-                            onConfirmNewlyAddedFolderCore = { folder, core ->
-                                RomManager.updateRomFolderCore(this, folder.uriString, core)
+                            onConfirmNewlyAddedFolderCore = { folder, coreOrPackage ->
+                                if (folder.systemId == SYSTEM_ID_SWITCH) {
+                                    RomManager.updateRomFolderEmulatorPackage(this, folder.uriString, coreOrPackage)
+                                } else {
+                                    RomManager.updateRomFolderCore(this, folder.uriString, coreOrPackage)
+                                }
                                 viewModel.setNewlyAddedFolder(null)
                             },
                             coreChooserDialogSelectedIndex = coreChooserDialogSelectedIndex,
@@ -456,24 +491,35 @@ class FocusTopLauncherActivity : ComponentActivity() {
     }
 
     private fun openCoreChooserForFolder(folder: CustomRomFolder) {
-        val systemDef = SUPPORTED_SYSTEMS.find { it.id == folder.systemId }
-        val cores = listOf(null) + (systemDef?.retroArchCoreAlternatives ?: emptyList())
-        val selectedIdx = cores.indexOf(folder.retroArchCore).coerceAtLeast(0)
-        viewModel.setCoreChooserDialogSelectedIndex(selectedIdx)
-        viewModel.setNewlyAddedFolder(folder)
+        if (folder.systemId == SYSTEM_ID_SWITCH) {
+            val emulators = SwitchEmulators.getInstalledEmulators(this, forceRefresh = true)
+            val selectedIdx = emulators.indexOfFirst { it.packageName == folder.emulatorPackage }.coerceAtLeast(0)
+            viewModel.setCoreChooserDialogSelectedIndex(selectedIdx)
+            viewModel.setNewlyAddedFolder(folder)
+        } else {
+            val systemDef = SUPPORTED_SYSTEMS.find { it.id == folder.systemId }
+            val cores = listOf(null) + (systemDef?.retroArchCoreAlternatives ?: emptyList())
+            val selectedIdx = cores.indexOf(folder.retroArchCore).coerceAtLeast(0)
+            viewModel.setCoreChooserDialogSelectedIndex(selectedIdx)
+            viewModel.setNewlyAddedFolder(folder)
+        }
     }
 
     private fun stepCoreChooserFocus(direction: LauncherScrollDirection) {
         val folder = viewModel.newlyAddedFolder.value ?: return
-        val systemDef = SUPPORTED_SYSTEMS.find { it.id == folder.systemId }
-        val hasCores = systemDef != null && systemDef.emulatorId == "retroarch"
-        val coreCount =
-            if (hasCores) {
-                1 + (systemDef?.retroArchCoreAlternatives?.size ?: 0)
+        val count =
+            if (folder.systemId == SYSTEM_ID_SWITCH) {
+                SwitchEmulators.getInstalledEmulators(this).size
             } else {
-                0
+                val systemDef = SUPPORTED_SYSTEMS.find { it.id == folder.systemId }
+                val hasCores = systemDef != null && systemDef.emulatorId == EMULATOR_ID_RETROARCH
+                if (hasCores) {
+                    1 + (systemDef?.retroArchCoreAlternatives?.size ?: 0)
+                } else {
+                    0
+                }
             }
-        viewModel.stepCoreChooserFocus(direction, coreCount)
+        viewModel.stepCoreChooserFocus(direction, count)
     }
 
     private fun stepRemoveRomFolderFocus(direction: LauncherScrollDirection) {
@@ -502,12 +548,14 @@ class FocusTopLauncherActivity : ComponentActivity() {
             val isRetroArchRomSystem =
                 currentRomFolder != null &&
                     SUPPORTED_SYSTEMS.find { it.id == currentRomFolder.systemId }?.emulatorId == EMULATOR_ID_RETROARCH
+            val isSwitchRomSystem = currentRomFolder?.systemId == SYSTEM_ID_SWITCH
+            val isConfigurableRomSystem = isRetroArchRomSystem || isSwitchRomSystem
             val count =
                 getLibraryMenuCount(
                     hasApp = focusedLibraryApp != null,
                     isRom = focusedLibraryApp?.isRom == true,
                     hasRomFolders = romFolders.isNotEmpty(),
-                    isRetroArchRomSystem = isRetroArchRomSystem,
+                    isConfigurableRomSystem = isConfigurableRomSystem,
                 )
             when (direction) {
                 LauncherScrollDirection.UP -> viewModel.navigateLibraryMenuUp(count)
@@ -813,6 +861,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
                         val isRetroArchRomSystem =
                             currentRomFolder != null &&
                                 SUPPORTED_SYSTEMS.find { it.id == currentRomFolder.systemId }?.emulatorId == EMULATOR_ID_RETROARCH
+                        val isSwitchRomSystem = currentRomFolder?.systemId == SYSTEM_ID_SWITCH
+                        val isConfigurableRomSystem = isRetroArchRomSystem || isSwitchRomSystem
 
                         val baseIndex = if (hasApp) (if (!isRom) 3 else 1) else 0
                         if (hasApp && selectedIndex < baseIndex) {
@@ -850,18 +900,18 @@ class FocusTopLauncherActivity : ComponentActivity() {
                                         AppLog.i(TAG, "Managing ROM folders")
                                         viewModel.setRemoveRomFolderDialogSelectedIndex(0)
                                         viewModel.setRemoveRomFolderDialogOpen(true)
-                                    } else if (isRetroArchRomSystem) {
+                                    } else if (isConfigurableRomSystem) {
                                         currentRomFolder?.let { folder ->
-                                            AppLog.i(TAG, "Changing core for folder ${folder.folderPath}")
+                                            AppLog.i(TAG, "Changing core/emulator for folder ${folder.folderPath}")
                                             openCoreChooserForFolder(folder)
                                         }
                                     }
                                 }
 
                                 2 -> {
-                                    if (hasRomFolders && isRetroArchRomSystem) {
+                                    if (hasRomFolders && isConfigurableRomSystem) {
                                         currentRomFolder?.let { folder ->
-                                            AppLog.i(TAG, "Changing core for folder ${folder.folderPath}")
+                                            AppLog.i(TAG, "Changing core/emulator for folder ${folder.folderPath}")
                                             openCoreChooserForFolder(folder)
                                         }
                                     }

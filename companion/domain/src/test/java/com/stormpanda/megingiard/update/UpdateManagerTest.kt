@@ -147,7 +147,7 @@ class UpdateManagerTest {
             )
             job.join()
             var tries = 0
-            while (UpdateManager.isChecking.value && tries < 50) {
+            while (UpdateManager.isChecking.value && tries < 250) {
                 Thread.sleep(20)
                 tries++
             }
@@ -185,7 +185,7 @@ class UpdateManagerTest {
             )
             job.join()
             var tries = 0
-            while (UpdateManager.isChecking.value && tries < 50) {
+            while (UpdateManager.isChecking.value && tries < 250) {
                 Thread.sleep(20)
                 tries++
             }

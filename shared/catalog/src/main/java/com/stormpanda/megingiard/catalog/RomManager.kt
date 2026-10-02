@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.catalog
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.annotation.VisibleForTesting
 import androidx.core.util.AtomicFile
 import androidx.documentfile.provider.DocumentFile
 import com.stormpanda.megingiard.AppLog
@@ -29,6 +30,7 @@ data class CustomRomFolder(
     val systemId: String,
     val systemName: String,
     val retroArchCore: String? = null,
+    val emulatorPackage: String? = null,
 )
 
 sealed class AddRomFolderResult {
@@ -38,7 +40,15 @@ sealed class AddRomFolderResult {
 
     data class Error(
         val message: String,
+        val errorCode: ErrorCode? = null,
     ) : AddRomFolderResult()
+
+    enum class ErrorCode {
+        FOLDER_INACCESSIBLE,
+        UNKNOWN_SYSTEM,
+        DUPLICATE_FOLDER,
+        NO_SWITCH_EMULATOR,
+    }
 }
 
 object RomManager {
@@ -46,6 +56,7 @@ object RomManager {
     private const val FILE_ROM_FOLDERS = "gamefocus_rom_folders.json"
     private const val FILE_ROM_CLEANED_NAMES = "gamefocus_rom_names.json"
     private const val MAX_ZIP_PEEKS = 10
+    private const val MAX_SCAN_DEPTH = 3
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -55,7 +66,7 @@ object RomManager {
     private val _romApps = MutableStateFlow<List<InstalledAppInfo>>(emptyList())
     val romApps: StateFlow<List<InstalledAppInfo>> = _romApps.asStateFlow()
 
-    @androidx.annotation.VisibleForTesting
+    @VisibleForTesting
     fun setRomAppsForTesting(apps: List<InstalledAppInfo>) {
         _romApps.value = apps
     }
@@ -168,14 +179,20 @@ object RomManager {
             val documentFile = resolveDocumentFile(context, uri)
             if (documentFile == null || !documentFile.exists()) {
                 AppLog.w(TAG, "Selected document tree does not exist")
-                return@withContext AddRomFolderResult.Error("Folder does not exist or is inaccessible.")
+                return@withContext AddRomFolderResult.Error(
+                    "Folder does not exist or is inaccessible.",
+                    AddRomFolderResult.ErrorCode.FOLDER_INACCESSIBLE,
+                )
             }
 
-            val files = documentFile.listFiles()
+            val files = collectRomFilesRecursively(documentFile)
             val systemId = detectSystem(context, files)
             if (systemId == null) {
                 AppLog.w(TAG, "Could not automatically recognize any gaming system in folder")
-                return@withContext AddRomFolderResult.Error("Could not automatically recognize any gaming system in this folder.")
+                return@withContext AddRomFolderResult.Error(
+                    "Could not automatically recognize any gaming system in this folder.",
+                    AddRomFolderResult.ErrorCode.UNKNOWN_SYSTEM,
+                )
             }
 
             val systemDef = SUPPORTED_SYSTEMS.find { it.id == systemId }!!
@@ -184,8 +201,26 @@ object RomManager {
             // 3. Prevent duplicate folders
             val current = _romFolders.value.toMutableList()
             if (current.any { it.uriString == uri.toString() }) {
-                return@withContext AddRomFolderResult.Error("This folder has already been added.")
+                return@withContext AddRomFolderResult.Error(
+                    "This folder has already been added.",
+                    AddRomFolderResult.ErrorCode.DUPLICATE_FOLDER,
+                )
             }
+
+            val defaultEmulatorPackage =
+                if (systemId == SYSTEM_ID_SWITCH) {
+                    val installed = SwitchEmulators.getInstalledEmulators(context, forceRefresh = true)
+                    if (installed.isEmpty()) {
+                        AppLog.w(TAG, "No supported Switch emulator is installed")
+                        return@withContext AddRomFolderResult.Error(
+                            "No supported Nintendo Switch emulator (e.g. Eden) is installed.",
+                            AddRomFolderResult.ErrorCode.NO_SWITCH_EMULATOR,
+                        )
+                    }
+                    if (installed.size == 1) installed.first().packageName else null
+                } else {
+                    null
+                }
 
             val newFolder =
                 CustomRomFolder(
@@ -193,6 +228,7 @@ object RomManager {
                     folderPath = folderPath,
                     systemId = systemId,
                     systemName = systemDef.displayName,
+                    emulatorPackage = defaultEmulatorPackage,
                 )
             current.add(newFolder)
             saveRomFolders(context, current)
@@ -208,6 +244,16 @@ object RomManager {
         coreName: String?,
     ) {
         val current = _romFolders.value.map { if (it.uriString == folderUri) it.copy(retroArchCore = coreName) else it }
+        saveRomFolders(context, current)
+        reloadRomApps(context)
+    }
+
+    fun updateRomFolderEmulatorPackage(
+        context: Context,
+        folderUri: String,
+        packageName: String?,
+    ) {
+        val current = _romFolders.value.map { if (it.uriString == folderUri) it.copy(emulatorPackage = packageName) else it }
         saveRomFolders(context, current)
         reloadRomApps(context)
     }
@@ -269,51 +315,60 @@ object RomManager {
 
                         val systemDef = SUPPORTED_SYSTEMS.find { it.id == folder.systemId } ?: continue
 
-                        val files = documentFile.listFiles()
+                        val files = collectRomFilesRecursively(documentFile)
                         val isConsoleSystem = folder.systemId != "pc"
+                        val isSwitchSystem = folder.systemId == SYSTEM_ID_SWITCH
                         for (file in files) {
                             if (file.isDirectory) continue
                             val name = file.name ?: continue
                             val ext = name.substringAfterLast('.', "").lowercase()
                             val isMatch = systemDef.extensions.contains(ext) || (isConsoleSystem && ext == "zip")
-                            if (isMatch) {
-                                val rawLabel = name.substringBeforeLast('.')
-                                val romUriStr = file.uri.toString()
-                                val romPath = SafPathResolver.resolveFilePath(romUriStr) ?: romUriStr
+                            if (!isMatch) continue
 
-                                val label =
-                                    synchronized(romCleanedNames) {
-                                        romCleanedNames.getOrPut(romUriStr) {
-                                            namesChanged = true
-                                            cleanRomName(rawLabel)
-                                        }
-                                    }
-
-                                val pseudoPackageName =
-                                    "rom.${folder.systemId}." +
-                                        rawLabel.replace(Regex("[^a-zA-Z0-9_]"), "_") +
-                                        "_" + romUriStr.hashCode().absoluteValue
-
-                                val cachedCoverFile = File(coversDir, "$pseudoPackageName.png")
-                                val hasCover = cachedCoverFile.exists() && cachedCoverFile.length() > 0
-                                val coverPath = if (hasCover) cachedCoverFile.absolutePath else null
-                                val coverLastModified = if (hasCover) cachedCoverFile.lastModified() else 0L
-
-                                add(
-                                    InstalledAppInfo(
-                                        packageName = pseudoPackageName,
-                                        activityName = "",
-                                        label = label,
-                                        coverPath = coverPath,
-                                        isGame = true,
-                                        isRom = true,
-                                        romPath = romPath,
-                                        systemId = folder.systemId,
-                                        retroArchCore = folder.retroArchCore,
-                                        coverLastModified = coverLastModified,
-                                    ),
-                                )
+                            // For Switch ROM folders, exclude update and DLC packages
+                            if (isSwitchSystem && !SwitchRomClassifier.isSwitchBaseGame(name)) {
+                                AppLog.d(TAG, "Filtering out non-base Switch ROM: '$name'")
+                                continue
                             }
+
+                            val rawLabel = name.substringBeforeLast('.')
+                            val romUriStr = file.uri.toString()
+                            val romPath = SafPathResolver.resolveFilePath(romUriStr) ?: romUriStr
+
+                            val label =
+                                synchronized(romCleanedNames) {
+                                    romCleanedNames.getOrPut(romUriStr) {
+                                        namesChanged = true
+                                        cleanRomName(rawLabel)
+                                    }
+                                }
+
+                            val pseudoPackageName =
+                                "rom.${folder.systemId}." +
+                                    rawLabel.replace(Regex("[^a-zA-Z0-9_]"), "_") +
+                                    "_" + romUriStr.hashCode().absoluteValue
+
+                            val cachedCoverFile = File(coversDir, "$pseudoPackageName.png")
+                            val hasCover = cachedCoverFile.exists() && cachedCoverFile.length() > 0
+                            val coverPath = if (hasCover) cachedCoverFile.absolutePath else null
+                            val coverLastModified = if (hasCover) cachedCoverFile.lastModified() else 0L
+
+                            add(
+                                InstalledAppInfo(
+                                    packageName = pseudoPackageName,
+                                    activityName = "",
+                                    label = label,
+                                    coverPath = coverPath,
+                                    isGame = true,
+                                    isRom = true,
+                                    romPath = romPath,
+                                    romUri = romUriStr,
+                                    systemId = folder.systemId,
+                                    retroArchCore = folder.retroArchCore,
+                                    emulatorPackage = folder.emulatorPackage,
+                                    coverLastModified = coverLastModified,
+                                ),
+                            )
                         }
                     }
                 }
@@ -333,9 +388,33 @@ object RomManager {
         AppLog.i(TAG, "Updated in-memory ROM cover path for $packageName to $coverPath")
     }
 
+    internal fun collectRomFilesRecursively(
+        directory: DocumentFile,
+        maxDepth: Int = MAX_SCAN_DEPTH,
+        currentDepth: Int = 0,
+    ): List<DocumentFile> {
+        val files = directory.listFiles()
+        val result = mutableListOf<DocumentFile>()
+        for (file in files) {
+            if (file.isDirectory) {
+                if (currentDepth < maxDepth) {
+                    result.addAll(collectRomFilesRecursively(file, maxDepth, currentDepth + 1))
+                }
+            } else {
+                result.add(file)
+            }
+        }
+        return result
+    }
+
     internal fun detectSystem(
         context: Context,
         files: Array<DocumentFile>,
+    ): String? = detectSystem(context, files.toList())
+
+    internal fun detectSystem(
+        context: Context,
+        files: List<DocumentFile>,
     ): String? {
         val extensionCounts = mutableMapOf<String, Int>()
         var zipPeeks = 0

@@ -25,6 +25,7 @@ import java.io.InputStreamReader
 import java.io.OutputStreamWriter
 import java.net.ServerSocket
 import java.net.Socket
+import java.net.SocketException
 import java.security.SecureRandom
 
 /**
@@ -44,6 +45,7 @@ class PrivdProtocolHandshakePipelineE2ETest {
 
     @Before
     fun setUp() {
+        testScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         PrivdClient.disconnect()
         PrivdClient.setKey(testKey)
     }
@@ -63,86 +65,90 @@ class PrivdProtocolHandshakePipelineE2ETest {
 
             val serverJob =
                 testScope.launch {
-                    val clientSocket = serverSocket.accept()
-                    val reader = BufferedReader(InputStreamReader(clientSocket.inputStream))
-                    val writer = BufferedWriter(OutputStreamWriter(clientSocket.outputStream))
+                    try {
+                        val clientSocket = serverSocket.accept()
+                        val reader = BufferedReader(InputStreamReader(clientSocket.inputStream))
+                        val writer = BufferedWriter(OutputStreamWriter(clientSocket.outputStream))
 
-                    // 1. Daemon sends CHAL
-                    val serverNonce = ByteArray(16).apply { SecureRandom().nextBytes(this) }
-                    val serverNonceHex = HmacUtil.bytesToHex(serverNonce)
-                    writer.write("CHAL $serverNonceHex\n")
-                    writer.flush()
+                        // 1. Daemon sends CHAL
+                        val serverNonce = ByteArray(16).apply { SecureRandom().nextBytes(this) }
+                        val serverNonceHex = HmacUtil.bytesToHex(serverNonce)
+                        writer.write("CHAL $serverNonceHex\n")
+                        writer.flush()
 
-                    // 2. Client responds with AUTH
-                    val authLine = reader.readLine()
-                    assertNotNull(authLine)
-                    assertTrue(authLine!!.startsWith("AUTH "))
-                    val clientAuthHmac = authLine.substring(5)
-                    val expectedAuthHmac = HmacUtil.computeHmacHex(testKey, serverNonce)
-                    assertTrue(HmacUtil.constantTimeEqualsHex(clientAuthHmac, expectedAuthHmac))
+                        // 2. Client responds with AUTH
+                        val authLine = reader.readLine()
+                        assertNotNull(authLine)
+                        assertTrue(authLine!!.startsWith("AUTH "))
+                        val clientAuthHmac = authLine.substring(5)
+                        val expectedAuthHmac = HmacUtil.computeHmacHex(testKey, serverNonce)
+                        assertTrue(HmacUtil.constantTimeEqualsHex(clientAuthHmac, expectedAuthHmac))
 
-                    // 3. Daemon accepts with OK
-                    writer.write("OK\n")
-                    writer.flush()
+                        // 3. Daemon accepts with OK
+                        writer.write("OK\n")
+                        writer.flush()
 
-                    // 4. Client challenges Daemon with VERIFY
-                    val verifyLine = reader.readLine()
-                    assertNotNull(verifyLine)
-                    assertTrue(verifyLine!!.startsWith("VERIFY "))
-                    val clientNonceHex = verifyLine.substring(7)
-                    val clientNonce = HmacUtil.hexToBytes(clientNonceHex)
+                        // 4. Client challenges Daemon with VERIFY
+                        val verifyLine = reader.readLine()
+                        assertNotNull(verifyLine)
+                        assertTrue(verifyLine!!.startsWith("VERIFY "))
+                        val clientNonceHex = verifyLine.substring(7)
+                        val clientNonce = HmacUtil.hexToBytes(clientNonceHex)
 
-                    // 5. Daemon proves identity with PROOF
-                    val daemonProofHmac = HmacUtil.computeHmacHex(testKey, clientNonce)
-                    writer.write("PROOF $daemonProofHmac\n")
-                    writer.flush()
+                        // 5. Daemon proves identity with PROOF
+                        val daemonProofHmac = HmacUtil.computeHmacHex(testKey, clientNonce)
+                        writer.write("PROOF $daemonProofHmac\n")
+                        writer.flush()
 
-                    // 6. Client sends VERSION check
-                    val versionLine = reader.readLine()
-                    assertNotNull(versionLine)
-                    assertEquals("VERSION ${PrivdConstants.PRIVD_VERSION}", versionLine)
+                        // 6. Client sends VERSION check
+                        val versionLine = reader.readLine()
+                        assertNotNull(versionLine)
+                        assertEquals("VERSION ${PrivdConstants.PRIVD_VERSION}", versionLine)
 
-                    // 7. Daemon confirms version
-                    writer.write("VERSION_OK ${PrivdConstants.PRIVD_VERSION}\n")
-                    writer.flush()
+                        // 7. Daemon confirms version
+                        writer.write("VERSION_OK ${PrivdConstants.PRIVD_VERSION}\n")
+                        writer.flush()
 
-                    // Daemon command handling loop
-                    while (!clientSocket.isClosed) {
-                        val cmd = reader.readLine() ?: break
-                        when {
-                            cmd == "PING" -> {
-                                writer.write("PONG\n")
-                                writer.flush()
-                            }
+                        // Daemon command handling loop
+                        while (!clientSocket.isClosed) {
+                            val cmd = reader.readLine() ?: break
+                            when {
+                                cmd == "PING" -> {
+                                    writer.write("PONG\n")
+                                    writer.flush()
+                                }
 
-                            cmd.startsWith("READ_FILE ") -> {
-                                writer.write("READ_BEGIN\n")
-                                writer.write("root:x:0:0:root:/root:/bin/sh\n")
-                                writer.write("daemon:x:1:1:daemon:/usr/sbin:/bin/sh\n")
-                                writer.write("READ_END\n")
-                                writer.flush()
-                            }
+                                cmd.startsWith("READ_FILE ") -> {
+                                    writer.write("READ_BEGIN\n")
+                                    writer.write("root:x:0:0:root:/root:/bin/sh\n")
+                                    writer.write("daemon:x:1:1:daemon:/usr/sbin:/bin/sh\n")
+                                    writer.write("READ_END\n")
+                                    writer.flush()
+                                }
 
-                            cmd == "LIST_PROCESSES" -> {
-                                writer.write("PROC_BEGIN\n")
-                                writer.write("1 /system/bin/init\n")
-                                writer.write("100 /system/bin/surfaceflinger\n")
-                                writer.write("PROC_END\n")
-                                writer.flush()
-                            }
+                                cmd == "LIST_PROCESSES" -> {
+                                    writer.write("PROC_BEGIN\n")
+                                    writer.write("1 /system/bin/init\n")
+                                    writer.write("100 /system/bin/surfaceflinger\n")
+                                    writer.write("PROC_END\n")
+                                    writer.flush()
+                                }
 
-                            cmd == "SUB GAMEPAD" -> {
-                                // Stream an evdev event
-                                writer.write("EVT 3 0 1024\n")
-                                writer.flush()
-                            }
+                                cmd == "SUB GAMEPAD" -> {
+                                    // Stream an evdev event
+                                    writer.write("EVT 3 0 1024\n")
+                                    writer.flush()
+                                }
 
-                            cmd == "SUB TOUCH" -> {
-                                // Stream a touch evdev event
-                                writer.write("EVT_TOUCH 3 53 2048\n")
-                                writer.flush()
+                                cmd == "SUB TOUCH" -> {
+                                    // Stream a touch evdev event
+                                    writer.write("EVT_TOUCH 3 53 2048\n")
+                                    writer.flush()
+                                }
                             }
                         }
+                    } catch (e: SocketException) {
+                        // Socket closed on test teardown
                     }
                 }
 
@@ -198,33 +204,37 @@ class PrivdProtocolHandshakePipelineE2ETest {
 
             val serverJob =
                 testScope.launch {
-                    val clientSocket = serverSocket.accept()
-                    val reader = BufferedReader(InputStreamReader(clientSocket.inputStream))
-                    val writer = BufferedWriter(OutputStreamWriter(clientSocket.outputStream))
+                    try {
+                        val clientSocket = serverSocket.accept()
+                        val reader = BufferedReader(InputStreamReader(clientSocket.inputStream))
+                        val writer = BufferedWriter(OutputStreamWriter(clientSocket.outputStream))
 
-                    // 1. Daemon sends CHAL
-                    val serverNonce = ByteArray(16).apply { SecureRandom().nextBytes(this) }
-                    writer.write("CHAL ${HmacUtil.bytesToHex(serverNonce)}\n")
-                    writer.flush()
+                        // 1. Daemon sends CHAL
+                        val serverNonce = ByteArray(16).apply { SecureRandom().nextBytes(this) }
+                        writer.write("CHAL ${HmacUtil.bytesToHex(serverNonce)}\n")
+                        writer.flush()
 
-                    // 2. Client AUTH
-                    reader.readLine()
-                    writer.write("OK\n")
-                    writer.flush()
+                        // 2. Client AUTH
+                        reader.readLine()
+                        writer.write("OK\n")
+                        writer.flush()
 
-                    // 3. Client VERIFY
-                    val verifyLine = reader.readLine()!!
-                    val clientNonce = HmacUtil.hexToBytes(verifyLine.substring(7))
-                    writer.write("PROOF ${HmacUtil.computeHmacHex(testKey, clientNonce)}\n")
-                    writer.flush()
+                        // 3. Client VERIFY
+                        val verifyLine = reader.readLine()!!
+                        val clientNonce = HmacUtil.hexToBytes(verifyLine.substring(7))
+                        writer.write("PROOF ${HmacUtil.computeHmacHex(testKey, clientNonce)}\n")
+                        writer.flush()
 
-                    // 4. Client VERSION check
-                    reader.readLine()
+                        // 4. Client VERSION check
+                        reader.readLine()
 
-                    // Daemon responds with an OLD incompatible version
-                    writer.write("VERSION_MISMATCH 1\n")
-                    writer.flush()
-                    clientSocket.close()
+                        // Daemon responds with an OLD incompatible version
+                        writer.write("VERSION_MISMATCH 1\n")
+                        writer.flush()
+                        clientSocket.close()
+                    } catch (e: SocketException) {
+                        // Socket closed on test teardown
+                    }
                 }
 
             val connectResult = PrivdClient.connect()
@@ -244,27 +254,31 @@ class PrivdProtocolHandshakePipelineE2ETest {
 
             val serverJob =
                 testScope.launch {
-                    val clientSocket = serverSocket.accept()
-                    val reader = BufferedReader(InputStreamReader(clientSocket.inputStream))
-                    val writer = BufferedWriter(OutputStreamWriter(clientSocket.outputStream))
+                    try {
+                        val clientSocket = serverSocket.accept()
+                        val reader = BufferedReader(InputStreamReader(clientSocket.inputStream))
+                        val writer = BufferedWriter(OutputStreamWriter(clientSocket.outputStream))
 
-                    // 1. Daemon sends CHAL
-                    val serverNonce = ByteArray(16).apply { SecureRandom().nextBytes(this) }
-                    writer.write("CHAL ${HmacUtil.bytesToHex(serverNonce)}\n")
-                    writer.flush()
+                        // 1. Daemon sends CHAL
+                        val serverNonce = ByteArray(16).apply { SecureRandom().nextBytes(this) }
+                        writer.write("CHAL ${HmacUtil.bytesToHex(serverNonce)}\n")
+                        writer.flush()
 
-                    // 2. Client AUTH
-                    reader.readLine()
-                    writer.write("OK\n")
-                    writer.flush()
+                        // 2. Client AUTH
+                        reader.readLine()
+                        writer.write("OK\n")
+                        writer.flush()
 
-                    // 3. Client VERIFY
-                    reader.readLine()
+                        // 3. Client VERIFY
+                        reader.readLine()
 
-                    // Daemon sends FORGED fake proof (does not know HMAC key)
-                    writer.write("PROOF 0000000000000000000000000000000000000000000000000000000000000000\n")
-                    writer.flush()
-                    clientSocket.close()
+                        // Daemon sends FORGED fake proof (does not know HMAC key)
+                        writer.write("PROOF 0000000000000000000000000000000000000000000000000000000000000000\n")
+                        writer.flush()
+                        clientSocket.close()
+                    } catch (e: SocketException) {
+                        // Socket closed when test cancels server
+                    }
                 }
 
             val connectResult = PrivdClient.connect()

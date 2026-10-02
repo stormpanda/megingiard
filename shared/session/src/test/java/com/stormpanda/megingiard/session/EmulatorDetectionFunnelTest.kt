@@ -8,7 +8,9 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -71,16 +73,19 @@ class EmulatorDetectionFunnelTest {
 
     @Test
     fun isRegisteredEmulator_knownEmulators_returnsTrue() {
-        org.junit.Assert.assertTrue(EmulatorDetectionFunnel.isRegisteredEmulator("com.retroarch"))
-        org.junit.Assert.assertTrue(EmulatorDetectionFunnel.isRegisteredEmulator("org.ppsspp.ppsspp"))
-        org.junit.Assert.assertTrue(EmulatorDetectionFunnel.isRegisteredEmulator("xyz.aethersx2.android"))
-        org.junit.Assert.assertTrue(EmulatorDetectionFunnel.isRegisteredEmulator("org.yuzu.yuzu_emu"))
-        org.junit.Assert.assertTrue(EmulatorDetectionFunnel.isRegisteredEmulator("app.gamenative"))
+        assertTrue(EmulatorDetectionFunnel.isRegisteredEmulator("com.retroarch"))
+        assertTrue(EmulatorDetectionFunnel.isRegisteredEmulator("org.ppsspp.ppsspp"))
+        assertTrue(EmulatorDetectionFunnel.isRegisteredEmulator("xyz.aethersx2.android"))
+        assertTrue(EmulatorDetectionFunnel.isRegisteredEmulator("org.yuzu.yuzu_emu"))
+        assertTrue(EmulatorDetectionFunnel.isRegisteredEmulator("dev.eden.eden_emulator"))
+        assertTrue(EmulatorDetectionFunnel.isRegisteredEmulator("dev.eden.eden_emulator.nightly"))
+        assertTrue(EmulatorDetectionFunnel.isRegisteredEmulator("dev.eden.eden_emulator.dualscreen.debug"))
+        assertTrue(EmulatorDetectionFunnel.isRegisteredEmulator("app.gamenative"))
     }
 
     @Test
     fun isRegisteredEmulator_unknownApp_returnsFalse() {
-        org.junit.Assert.assertFalse(EmulatorDetectionFunnel.isRegisteredEmulator("com.android.chrome"))
-        org.junit.Assert.assertFalse(EmulatorDetectionFunnel.isRegisteredEmulator("com.stormpanda.megingiard"))
+        assertFalse(EmulatorDetectionFunnel.isRegisteredEmulator("com.android.chrome"))
+        assertFalse(EmulatorDetectionFunnel.isRegisteredEmulator("com.stormpanda.megingiard"))
     }
 }

@@ -94,6 +94,7 @@ import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.catalog.LibraryTab
 import com.stormpanda.megingiard.catalog.RomManager
 import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
+import com.stormpanda.megingiard.catalog.SYSTEM_ID_SWITCH
 import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.ExpandableActionItem
 import com.stormpanda.megingiard.ui.ExpandableActionsMenu
@@ -532,8 +533,12 @@ fun FocusLibraryScreen(
                             false
                         }
                     }
+                val isSwitchSystem =
+                    remember(currentRomFolder) {
+                        currentRomFolder?.systemId == SYSTEM_ID_SWITCH
+                    }
                 val actions =
-                    remember(focusedApp, isCurrentHidden, romFolders, isRetroArchSystem, currentRomFolder) {
+                    remember(focusedApp, isCurrentHidden, romFolders, isRetroArchSystem, isSwitchSystem, currentRomFolder) {
                         buildList {
                             if (focusedApp != null) {
                                 add(
@@ -601,6 +606,17 @@ fun FocusLibraryScreen(
                                 add(
                                     ExpandableActionItem(
                                         label = context.getString(R.string.gamefocus_option_change_core),
+                                        iconSymbol = "tune",
+                                        onClick = {
+                                            onChangeCore(currentRomFolder)
+                                            onOptionsMenuExpandedChange(false)
+                                        },
+                                    ),
+                                )
+                            } else if (isSwitchSystem && currentRomFolder != null) {
+                                add(
+                                    ExpandableActionItem(
+                                        label = context.getString(R.string.gamefocus_option_change_emulator),
                                         iconSymbol = "tune",
                                         onClick = {
                                             onChangeCore(currentRomFolder)
