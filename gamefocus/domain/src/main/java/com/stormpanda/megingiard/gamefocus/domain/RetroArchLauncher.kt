@@ -30,6 +30,7 @@ class RetroArchLauncher : RomLauncher {
         systemId: String,
         displayId: Int,
         retroArchCore: String?,
+        romUri: String?,
     ): Boolean {
         val packageName = getRetroArchPackageName(context)
         if (packageName == null) {

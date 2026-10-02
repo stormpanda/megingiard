@@ -451,12 +451,28 @@ object InstalledAppsManager {
         displayId: Int,
     ): Boolean {
         if (appInfo.isRom) {
-            val systemId = appInfo.systemId ?: return false
-            val romPath = appInfo.romPath ?: return false
-            val systemDef = SUPPORTED_SYSTEMS.find { it.id == systemId } ?: return false
-            val launcher = RomLauncherRegistry.getLauncher(systemDef.emulatorId) ?: return false
+            val systemId = appInfo.systemId
+            if (systemId == null) {
+                AppLog.e(TAG, "Cannot launch ROM '${appInfo.label}': systemId is null")
+                return false
+            }
+            val romPath = appInfo.romPath
+            if (romPath == null) {
+                AppLog.e(TAG, "Cannot launch ROM '${appInfo.label}': romPath is null")
+                return false
+            }
+            val systemDef = SUPPORTED_SYSTEMS.find { it.id == systemId }
+            if (systemDef == null) {
+                AppLog.e(TAG, "Cannot launch ROM '${appInfo.label}': unsupported systemId '$systemId'")
+                return false
+            }
+            val launcher = RomLauncherRegistry.getLauncher(systemDef.emulatorId)
+            if (launcher == null) {
+                AppLog.e(TAG, "Cannot launch ROM '${appInfo.label}': no launcher registered for '${systemDef.emulatorId}'")
+                return false
+            }
             val targetCoreOrPackage = appInfo.emulatorPackage ?: appInfo.retroArchCore
-            val success = launcher.launchGame(context, romPath, systemId, displayId, targetCoreOrPackage)
+            val success = launcher.launchGame(context, romPath, systemId, displayId, targetCoreOrPackage, appInfo.romUri)
             if (success) {
                 recordAppLaunch(context, appInfo.packageName)
             }

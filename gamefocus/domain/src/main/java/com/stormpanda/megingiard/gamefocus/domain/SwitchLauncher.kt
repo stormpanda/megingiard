@@ -5,9 +5,11 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.StrictMode
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.EMULATOR_ID_YUZU
 import com.stormpanda.megingiard.catalog.RomLauncher
+import com.stormpanda.megingiard.catalog.RomManager
 import com.stormpanda.megingiard.catalog.SwitchEmulators
 import java.io.File
 
@@ -25,6 +27,7 @@ class SwitchLauncher : RomLauncher {
         systemId: String,
         displayId: Int,
         retroArchCore: String?,
+        romUri: String?,
     ): Boolean {
         val targetPackage = resolveTargetPackage(context, retroArchCore)
         if (targetPackage == null) {
@@ -32,15 +35,37 @@ class SwitchLauncher : RomLauncher {
             return false
         }
 
-        val romFile = File(romPath)
-        val romUri = Uri.fromFile(romFile)
-        AppLog.i(TAG, "Launching Switch ROM '$romPath' with package '$targetPackage' on display $displayId")
+        val targetUri: Uri =
+            when {
+                !romUri.isNullOrBlank() -> {
+                    Uri.parse(romUri)
+                }
+
+                romPath.startsWith("content://") -> {
+                    Uri.parse(romPath)
+                }
+
+                else -> {
+                    val matchedApp = RomManager.romApps.value.firstOrNull { it.romPath == romPath }
+                    if (!matchedApp?.romUri.isNullOrBlank()) {
+                        Uri.parse(matchedApp.romUri)
+                    } else {
+                        Uri.fromFile(File(romPath))
+                    }
+                }
+            }
+
+        AppLog.i(TAG, "Launching Switch ROM '$romPath' (URI: '$targetUri') with package '$targetPackage' on display $displayId")
 
         return try {
+            if (targetUri.scheme == "file") {
+                StrictMode.setVmPolicy(StrictMode.VmPolicy.Builder().build())
+            }
+
             val intent =
                 Intent(SWITCH_ACTION).apply {
                     component = ComponentName(targetPackage, EMULATION_ACTIVITY_NAME)
-                    data = romUri
+                    data = targetUri
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
             val options =

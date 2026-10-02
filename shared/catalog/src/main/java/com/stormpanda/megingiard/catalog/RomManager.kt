@@ -341,6 +341,7 @@ object RomManager {
                                     isGame = true,
                                     isRom = true,
                                     romPath = romPath,
+                                    romUri = romUriStr,
                                     systemId = folder.systemId,
                                     retroArchCore = folder.retroArchCore,
                                     emulatorPackage = folder.emulatorPackage,

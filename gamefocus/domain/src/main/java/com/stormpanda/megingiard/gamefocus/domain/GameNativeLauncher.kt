@@ -25,6 +25,7 @@ class GameNativeLauncher : RomLauncher {
         systemId: String,
         displayId: Int,
         retroArchCore: String?,
+        romUri: String?,
     ): Boolean {
         val packageName = getGameNativePackageName(context)
         if (packageName == null) {
