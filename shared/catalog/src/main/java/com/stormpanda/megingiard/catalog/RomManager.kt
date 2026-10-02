@@ -29,6 +29,7 @@ data class CustomRomFolder(
     val systemId: String,
     val systemName: String,
     val retroArchCore: String? = null,
+    val emulatorPackage: String? = null,
 )
 
 sealed class AddRomFolderResult {
@@ -187,12 +188,25 @@ object RomManager {
                 return@withContext AddRomFolderResult.Error("This folder has already been added.")
             }
 
+            val defaultEmulatorPackage =
+                if (systemId == "switch") {
+                    val installed = SwitchEmulators.getInstalledEmulators(context)
+                    if (installed.isEmpty()) {
+                        AppLog.w(TAG, "No supported Switch emulator is installed")
+                        return@withContext AddRomFolderResult.Error("No supported Nintendo Switch emulator (e.g. Eden) is installed.")
+                    }
+                    if (installed.size == 1) installed.first().packageName else null
+                } else {
+                    null
+                }
+
             val newFolder =
                 CustomRomFolder(
                     uriString = uri.toString(),
                     folderPath = folderPath,
                     systemId = systemId,
                     systemName = systemDef.displayName,
+                    emulatorPackage = defaultEmulatorPackage,
                 )
             current.add(newFolder)
             saveRomFolders(context, current)
@@ -208,6 +222,16 @@ object RomManager {
         coreName: String?,
     ) {
         val current = _romFolders.value.map { if (it.uriString == folderUri) it.copy(retroArchCore = coreName) else it }
+        saveRomFolders(context, current)
+        reloadRomApps(context)
+    }
+
+    fun updateRomFolderEmulatorPackage(
+        context: Context,
+        folderUri: String,
+        packageName: String?,
+    ) {
+        val current = _romFolders.value.map { if (it.uriString == folderUri) it.copy(emulatorPackage = packageName) else it }
         saveRomFolders(context, current)
         reloadRomApps(context)
     }
@@ -310,6 +334,7 @@ object RomManager {
                                         romPath = romPath,
                                         systemId = folder.systemId,
                                         retroArchCore = folder.retroArchCore,
+                                        emulatorPackage = folder.emulatorPackage,
                                         coverLastModified = coverLastModified,
                                     ),
                                 )

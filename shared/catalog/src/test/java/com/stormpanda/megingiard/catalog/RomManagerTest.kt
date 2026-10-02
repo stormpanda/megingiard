@@ -108,6 +108,36 @@ class RomManagerTest {
     }
 
     @Test
+    fun testUpdateRomFolderEmulatorPackage() {
+        val file = File(context.filesDir, "gamefocus_rom_folders.json")
+        file.writeText(
+            """
+            [
+                {"uriString":"content://com.android.providers.media.documents/tree/primary%3AEmulation%2FROMS%2Fswitch","folderPath":"switch","systemId":"switch","systemName":"Nintendo Switch","retroArchCore":null,"emulatorPackage":null}
+            ]
+            """.trimIndent(),
+        )
+        RomManager.loadRomFolders(context)
+
+        var folder = RomManager.romFolders.value.first()
+        assertEquals("switch", folder.systemId)
+        assertNull(folder.emulatorPackage)
+
+        // Update emulator package
+        RomManager.updateRomFolderEmulatorPackage(context, folder.uriString, "dev.eden.eden_emulator")
+
+        // Verify it was updated in state
+        folder = RomManager.romFolders.value.first()
+        assertEquals("dev.eden.eden_emulator", folder.emulatorPackage)
+
+        // Verify persistence
+        val diskContent = file.readText()
+        assertTrue(diskContent.contains("dev.eden.eden_emulator"))
+
+        file.delete()
+    }
+
+    @Test
     fun testRemoveRomFolder() {
         val folder =
             CustomRomFolder(

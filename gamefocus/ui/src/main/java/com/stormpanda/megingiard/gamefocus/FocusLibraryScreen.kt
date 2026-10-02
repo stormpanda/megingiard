@@ -532,8 +532,12 @@ fun FocusLibraryScreen(
                             false
                         }
                     }
+                val isSwitchSystem =
+                    remember(currentRomFolder) {
+                        currentRomFolder?.systemId == "switch"
+                    }
                 val actions =
-                    remember(focusedApp, isCurrentHidden, romFolders, isRetroArchSystem, currentRomFolder) {
+                    remember(focusedApp, isCurrentHidden, romFolders, isRetroArchSystem, isSwitchSystem, currentRomFolder) {
                         buildList {
                             if (focusedApp != null) {
                                 add(
@@ -601,6 +605,17 @@ fun FocusLibraryScreen(
                                 add(
                                     ExpandableActionItem(
                                         label = context.getString(R.string.gamefocus_option_change_core),
+                                        iconSymbol = "tune",
+                                        onClick = {
+                                            onChangeCore(currentRomFolder)
+                                            onOptionsMenuExpandedChange(false)
+                                        },
+                                    ),
+                                )
+                            } else if (isSwitchSystem && currentRomFolder != null) {
+                                add(
+                                    ExpandableActionItem(
+                                        label = context.getString(R.string.gamefocus_option_change_emulator),
                                         iconSymbol = "tune",
                                         onClick = {
                                             onChangeCore(currentRomFolder)

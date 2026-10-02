@@ -10,6 +10,7 @@ data class InstalledAppInfo(
     val romPath: String? = null,
     val systemId: String? = null,
     val retroArchCore: String? = null,
+    val emulatorPackage: String? = null,
     val coverLastModified: Long = 0L,
 ) {
     fun withCover(

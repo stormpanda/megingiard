@@ -61,5 +61,9 @@
     <string name="gamefocus_dialog_cancel">Abbrechen</string>
     <string name="gamefocus_dialog_select">Auswählen</string>
     <string name="gamefocus_dialog_unknown_system">Unbekanntes System</string>
+    <string name="gamefocus_option_change_emulator">Emulator ändern</string>
+    <string name="gamefocus_dialog_select_emulator_title">Emulator auswählen</string>
+    <string name="gamefocus_dialog_select_emulator_label">Switch-Emulator auswählen:</string>
+    <string name="gamefocus_error_no_switch_emulator">Kein Nintendo-Switch-Emulator (z. B. Eden) ist installiert. Bitte installiere einen Emulator, bevor du diesen Ordner hinzufügst.</string>
 </resources>
 
