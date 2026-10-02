@@ -81,9 +81,10 @@ fun RomFolderCoreChooserDialog(
                 AppLog.i(TAG, "Confirming native emulation dialog via trigger")
                 onConfirm(null)
             } else {
-                val safeIdx = selectedIndex.coerceIn(0, cores.lastIndex)
-                AppLog.i(TAG, "Confirming RetroArch core selection via trigger: index=$safeIdx, core='${cores[safeIdx]}'")
-                onConfirm(cores[safeIdx])
+                val safeIdx = selectedIndex.coerceIn(0, cores.lastIndex.coerceAtLeast(0))
+                val chosen = cores.getOrNull(safeIdx)
+                AppLog.i(TAG, "Confirming RetroArch core selection via trigger: index=$safeIdx, core='$chosen'")
+                onConfirm(chosen)
             }
         }
     }
@@ -248,7 +249,8 @@ fun RomFolderCoreChooserDialog(
                     button = GamePadButton.BUTTON_A,
                     text = stringResource(R.string.gamefocus_dialog_core_save),
                     onClick = {
-                        val selectedCore = cores.getOrNull(selectedIndex.coerceIn(0, cores.lastIndex))
+                        val safeIdx = selectedIndex.coerceIn(0, cores.lastIndex.coerceAtLeast(0))
+                        val selectedCore = cores.getOrNull(safeIdx)
                         AppLog.i(TAG, "User confirmed RetroArch core assignment: '$selectedCore' for recognized system ${folder.systemId}")
                         onConfirm(selectedCore)
                     },
