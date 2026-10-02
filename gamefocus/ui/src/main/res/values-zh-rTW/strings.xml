@@ -46,6 +46,7 @@
     <string name="gamefocus_nav_library">遊戲庫</string>
     <string name="gamefocus_option_add_rom_folder">新增 ROM 資料夾</string>
     <string name="gamefocus_option_manage_rom_folders">移除 ROM 資料夾</string>
+    <string name="gamefocus_option_change_core">更改核心</string>
     <string name="gamefocus_dialog_remove_rom_folder_title">移除 ROM 資料夾</string>
     <string name="gamefocus_dialog_remove_rom_folder_msg">選擇要移除的 ROM 資料夾／系統：</string>
     <string name="gamefocus_dialog_remove_confirm_title">確認移除</string>

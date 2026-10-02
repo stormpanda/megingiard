@@ -36,6 +36,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -72,6 +74,11 @@ private const val MENU_ANIMATION_DURATION_ENTER_MS = 180
 private const val MENU_ANIMATION_DURATION_EXIT_MS = 150
 private const val MENU_ANIMATION_SPEC_MS = 150
 
+private val MENU_DIVIDER_HEIGHT = 1.dp
+private val MENU_DIVIDER_VERTICAL_PADDING = 6.dp
+private const val MENU_DIVIDER_ALPHA = 0.25f
+private const val MENU_DIVIDER_GLOW_ALPHA = 0.65f
+
 data class ExpandableActionItem(
     val label: String,
     val iconSymbol: String,
@@ -85,10 +92,12 @@ fun FloatingActionsMenuOverlay(
     isExpanded: Boolean,
     actions: List<ExpandableActionItem>,
     selectedIndex: Int = 0,
+    dividerAfterIndex: Int? = null,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     onItemClick: (ExpandableActionItem, Int) -> Unit,
 ) {
+    val colors = LocalAppColors.current
     AnimatedVisibility(
         visible = isExpanded,
         enter =
@@ -117,6 +126,27 @@ fun FloatingActionsMenuOverlay(
                         onItemClick(item, index)
                     },
                 )
+                if (dividerAfterIndex != null && index == dividerAfterIndex && index < actions.lastIndex) {
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = MENU_DIVIDER_VERTICAL_PADDING)
+                                .height(MENU_DIVIDER_HEIGHT)
+                                .background(
+                                    Brush.horizontalGradient(
+                                        colors =
+                                            listOf(
+                                                Color.Transparent,
+                                                colors.accent.copy(alpha = MENU_DIVIDER_ALPHA),
+                                                colors.accent.copy(alpha = MENU_DIVIDER_GLOW_ALPHA),
+                                                colors.accent.copy(alpha = MENU_DIVIDER_ALPHA),
+                                                Color.Transparent,
+                                            ),
+                                    ),
+                                ),
+                    )
+                }
             }
         }
     }
@@ -128,6 +158,7 @@ fun ExpandableActionsMenu(
     onExpandedChange: (Boolean) -> Unit,
     actions: List<ExpandableActionItem>,
     selectedIndex: Int = 0,
+    dividerAfterIndex: Int? = null,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
@@ -140,6 +171,7 @@ fun ExpandableActionsMenu(
             isExpanded = isExpanded,
             actions = actions,
             selectedIndex = selectedIndex,
+            dividerAfterIndex = dividerAfterIndex,
             enabled = enabled,
             onItemClick = { item, _ ->
                 onExpandedChange(false)

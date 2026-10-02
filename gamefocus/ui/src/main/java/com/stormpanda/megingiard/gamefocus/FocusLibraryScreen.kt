@@ -89,9 +89,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.CustomRomFolder
+import com.stormpanda.megingiard.catalog.EMULATOR_ID_RETROARCH
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.catalog.LibraryTab
 import com.stormpanda.megingiard.catalog.RomManager
+import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
 import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.ExpandableActionItem
 import com.stormpanda.megingiard.ui.ExpandableActionsMenu
@@ -186,6 +188,7 @@ fun FocusLibraryScreen(
     onEditArtwork: (InstalledAppInfo) -> Unit = {},
     onOpenAppInfo: (InstalledAppInfo) -> Unit = {},
     onUninstallApp: (InstalledAppInfo) -> Unit = {},
+    onChangeCore: (CustomRomFolder) -> Unit = {},
     onAddRomFolder: () -> Unit = {},
     onRemoveRomFolder: (CustomRomFolder) -> Unit = {},
     enabled: Boolean = true,
@@ -519,8 +522,22 @@ fun FocusLibraryScreen(
         ) {
             // Lower Left: Library Action Menu
             Box(modifier = Modifier.align(Alignment.BottomStart)) {
+                val currentSystemId = (selectedTab as? LibraryTab.RomSystem)?.systemId ?: focusedApp?.systemId
+                val currentRomFolder =
+                    remember(currentSystemId, romFolders) {
+                        if (currentSystemId != null) romFolders.find { it.systemId == currentSystemId } else null
+                    }
+                val isRetroArchSystem =
+                    remember(currentRomFolder) {
+                        if (currentRomFolder != null) {
+                            val systemDef = SUPPORTED_SYSTEMS.find { it.id == currentRomFolder.systemId }
+                            systemDef?.emulatorId == EMULATOR_ID_RETROARCH
+                        } else {
+                            false
+                        }
+                    }
                 val actions =
-                    remember(focusedApp, isCurrentHidden, romFolders) {
+                    remember(focusedApp, isCurrentHidden, romFolders, isRetroArchSystem, currentRomFolder) {
                         buildList {
                             if (focusedApp != null) {
                                 add(
@@ -584,13 +601,38 @@ fun FocusLibraryScreen(
                                     ),
                                 )
                             }
+                            if (isRetroArchSystem && currentRomFolder != null) {
+                                add(
+                                    ExpandableActionItem(
+                                        label = context.getString(R.string.gamefocus_option_change_core),
+                                        iconSymbol = "tune",
+                                        onClick = {
+                                            onChangeCore(currentRomFolder)
+                                            onOptionsMenuExpandedChange(false)
+                                        },
+                                    ),
+                                )
+                            }
                         }
+                    }
+                val itemActionsCount =
+                    if (focusedApp != null) {
+                        if (!focusedApp.isRom) 3 else 1
+                    } else {
+                        0
+                    }
+                val dividerAfterIndex =
+                    if (itemActionsCount > 0 && itemActionsCount < actions.size) {
+                        itemActionsCount - 1
+                    } else {
+                        null
                     }
                 ExpandableActionsMenu(
                     isExpanded = isOptionsMenuExpanded,
                     onExpandedChange = onOptionsMenuExpandedChange,
                     actions = actions,
                     selectedIndex = selectedIndex,
+                    dividerAfterIndex = dividerAfterIndex,
                     enabled = enabled,
                 )
             }

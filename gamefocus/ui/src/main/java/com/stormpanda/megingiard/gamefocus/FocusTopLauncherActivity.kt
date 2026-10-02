@@ -31,6 +31,7 @@ import androidx.lifecycle.lifecycleScope
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.AddRomFolderResult
 import com.stormpanda.megingiard.catalog.CustomRomFolder
+import com.stormpanda.megingiard.catalog.EMULATOR_ID_RETROARCH
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.catalog.InstalledAppsManager
 import com.stormpanda.megingiard.catalog.LibraryTab
@@ -68,6 +69,7 @@ internal fun getLibraryMenuCount(
     hasApp: Boolean,
     isRom: Boolean,
     hasRomFolders: Boolean,
+    isRetroArchRomSystem: Boolean,
 ): Int {
     val appActionCount =
         when {
@@ -75,7 +77,10 @@ internal fun getLibraryMenuCount(
             isRom -> LIBRARY_ROM_ACTIONS_COUNT
             else -> LIBRARY_APP_ACTIONS_COUNT
         }
-    val romFolderActionCount = LIBRARY_BASE_ACTIONS_COUNT + if (hasRomFolders) 1 else 0
+    val romFolderActionCount =
+        LIBRARY_BASE_ACTIONS_COUNT +
+            (if (hasRomFolders) 1 else 0) +
+            (if (isRetroArchRomSystem) 1 else 0)
     return appActionCount + romFolderActionCount
 }
 
@@ -341,6 +346,9 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             onUninstallApp = { appInfo ->
                                 InstalledAppsManager.uninstallApp(this, appInfo.packageName)
                             },
+                            onChangeCore = { folder ->
+                                openCoreChooserForFolder(folder)
+                            },
                             onAddRomFolder = { openDocumentTreeLauncher.launch(null) },
                             onRemoveRomFolder = { folder -> RomManager.removeRomFolder(this, folder) },
                             editingAppInfo = editingAppInfo,
@@ -447,6 +455,14 @@ class FocusTopLauncherActivity : ComponentActivity() {
         viewModel.stepLibraryFocus(direction, filteredApps.size, DEFAULT_LIBRARY_GRID_COLUMNS)
     }
 
+    private fun openCoreChooserForFolder(folder: CustomRomFolder) {
+        val systemDef = SUPPORTED_SYSTEMS.find { it.id == folder.systemId }
+        val cores = listOf(null) + (systemDef?.retroArchCoreAlternatives ?: emptyList())
+        val selectedIdx = cores.indexOf(folder.retroArchCore).coerceAtLeast(0)
+        viewModel.setCoreChooserDialogSelectedIndex(selectedIdx)
+        viewModel.setNewlyAddedFolder(folder)
+    }
+
     private fun stepCoreChooserFocus(direction: LauncherScrollDirection) {
         val folder = viewModel.newlyAddedFolder.value ?: return
         val systemDef = SUPPORTED_SYSTEMS.find { it.id == folder.systemId }
@@ -481,11 +497,17 @@ class FocusTopLauncherActivity : ComponentActivity() {
             val filteredApps = currentTab.filterApps(allApps)
             val focusedLibraryApp = filteredApps.getOrNull(viewModel.libraryFocusedIndex.value.coerceAtLeast(0))
             val romFolders = RomManager.romFolders.value
+            val currentSystemId = (currentTab as? LibraryTab.RomSystem)?.systemId ?: focusedLibraryApp?.systemId
+            val currentRomFolder = if (currentSystemId != null) romFolders.find { it.systemId == currentSystemId } else null
+            val isRetroArchRomSystem =
+                currentRomFolder != null &&
+                    SUPPORTED_SYSTEMS.find { it.id == currentRomFolder.systemId }?.emulatorId == EMULATOR_ID_RETROARCH
             val count =
                 getLibraryMenuCount(
                     hasApp = focusedLibraryApp != null,
                     isRom = focusedLibraryApp?.isRom == true,
                     hasRomFolders = romFolders.isNotEmpty(),
+                    isRetroArchRomSystem = isRetroArchRomSystem,
                 )
             when (direction) {
                 LauncherScrollDirection.UP -> viewModel.navigateLibraryMenuUp(count)
@@ -784,71 +806,64 @@ class FocusTopLauncherActivity : ComponentActivity() {
                         AppLog.i(TAG, "Library options menu confirmed at index $selectedIndex via gamepad A")
                         val hasApp = focusedLibraryApp != null
                         val isRom = focusedLibraryApp?.isRom == true
-                        if (hasApp && !isRom) {
-                            when (selectedIndex) {
-                                0 -> {
-                                    AppLog.i(TAG, "Toggling hidden state for ${focusedLibraryApp.label}")
-                                    InstalledAppsManager.toggleHidden(this, focusedLibraryApp.packageName)
-                                }
+                        val romFolders = RomManager.romFolders.value
+                        val hasRomFolders = romFolders.isNotEmpty()
+                        val currentSystemId = (currentTab as? LibraryTab.RomSystem)?.systemId ?: focusedLibraryApp?.systemId
+                        val currentRomFolder = if (currentSystemId != null) romFolders.find { it.systemId == currentSystemId } else null
+                        val isRetroArchRomSystem =
+                            currentRomFolder != null &&
+                                SUPPORTED_SYSTEMS.find { it.id == currentRomFolder.systemId }?.emulatorId == EMULATOR_ID_RETROARCH
 
-                                1 -> {
-                                    AppLog.i(TAG, "Opening App Info for ${focusedLibraryApp.label}")
-                                    InstalledAppsManager.openAppInfo(this, focusedLibraryApp.packageName)
-                                }
+                        val baseIndex = if (hasApp) (if (!isRom) 3 else 1) else 0
+                        if (hasApp && selectedIndex < baseIndex) {
+                            if (!isRom) {
+                                when (selectedIndex) {
+                                    0 -> {
+                                        AppLog.i(TAG, "Toggling hidden state for ${focusedLibraryApp.label}")
+                                        InstalledAppsManager.toggleHidden(this, focusedLibraryApp.packageName)
+                                    }
 
-                                2 -> {
-                                    AppLog.i(TAG, "Uninstalling app ${focusedLibraryApp.label}")
-                                    InstalledAppsManager.uninstallApp(this, focusedLibraryApp.packageName)
-                                }
+                                    1 -> {
+                                        AppLog.i(TAG, "Opening App Info for ${focusedLibraryApp.label}")
+                                        InstalledAppsManager.openAppInfo(this, focusedLibraryApp.packageName)
+                                    }
 
-                                3 -> {
-                                    AppLog.i(TAG, "Adding ROM folder via DocumentTreeLauncher")
-                                    openDocumentTreeLauncher.launch(null)
-                                }
-
-                                4 -> {
-                                    val folders = RomManager.romFolders.value
-                                    if (folders.isNotEmpty()) {
-                                        AppLog.i(TAG, "Managing ROM folders")
-                                        viewModel.setRemoveRomFolderDialogSelectedIndex(0)
-                                        viewModel.setRemoveRomFolderDialogOpen(true)
+                                    2 -> {
+                                        AppLog.i(TAG, "Uninstalling app ${focusedLibraryApp.label}")
+                                        InstalledAppsManager.uninstallApp(this, focusedLibraryApp.packageName)
                                     }
                                 }
-                            }
-                        } else if (hasApp && isRom) {
-                            when (selectedIndex) {
-                                0 -> {
-                                    AppLog.i(TAG, "Toggling hidden state for ${focusedLibraryApp.label}")
-                                    InstalledAppsManager.toggleHidden(this, focusedLibraryApp.packageName)
-                                }
-
-                                1 -> {
-                                    AppLog.i(TAG, "Adding ROM folder via DocumentTreeLauncher")
-                                    openDocumentTreeLauncher.launch(null)
-                                }
-
-                                2 -> {
-                                    val folders = RomManager.romFolders.value
-                                    if (folders.isNotEmpty()) {
-                                        AppLog.i(TAG, "Managing ROM folders")
-                                        viewModel.setRemoveRomFolderDialogSelectedIndex(0)
-                                        viewModel.setRemoveRomFolderDialogOpen(true)
-                                    }
-                                }
+                            } else {
+                                AppLog.i(TAG, "Toggling hidden state for ${focusedLibraryApp.label}")
+                                InstalledAppsManager.toggleHidden(this, focusedLibraryApp.packageName)
                             }
                         } else {
-                            when (selectedIndex) {
+                            val systemIndex = selectedIndex - baseIndex
+                            when (systemIndex) {
                                 0 -> {
                                     AppLog.i(TAG, "Adding ROM folder via DocumentTreeLauncher")
                                     openDocumentTreeLauncher.launch(null)
                                 }
 
                                 1 -> {
-                                    val folders = RomManager.romFolders.value
-                                    if (folders.isNotEmpty()) {
+                                    if (hasRomFolders) {
                                         AppLog.i(TAG, "Managing ROM folders")
                                         viewModel.setRemoveRomFolderDialogSelectedIndex(0)
                                         viewModel.setRemoveRomFolderDialogOpen(true)
+                                    } else if (isRetroArchRomSystem) {
+                                        currentRomFolder?.let { folder ->
+                                            AppLog.i(TAG, "Changing core for folder ${folder.folderPath}")
+                                            openCoreChooserForFolder(folder)
+                                        }
+                                    }
+                                }
+
+                                2 -> {
+                                    if (hasRomFolders && isRetroArchRomSystem) {
+                                        currentRomFolder?.let { folder ->
+                                            AppLog.i(TAG, "Changing core for folder ${folder.folderPath}")
+                                            openCoreChooserForFolder(folder)
+                                        }
                                     }
                                 }
                             }
