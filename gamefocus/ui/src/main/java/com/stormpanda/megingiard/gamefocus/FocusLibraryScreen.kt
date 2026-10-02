@@ -178,14 +178,11 @@ fun FocusLibraryScreen(
     onAppClickBottom: (InstalledAppInfo) -> Unit,
     onCloseRequested: () -> Unit,
     modifier: Modifier = Modifier,
-    favoritesSet: Set<String> = emptySet(),
     hiddenSet: Set<String> = emptySet(),
     isOptionsMenuExpanded: Boolean = false,
     onOptionsMenuExpandedChange: (Boolean) -> Unit = {},
     selectedIndex: Int = 0,
-    onToggleFavorite: (InstalledAppInfo) -> Unit = {},
     onToggleHidden: (InstalledAppInfo) -> Unit = {},
-    onEditArtwork: (InstalledAppInfo) -> Unit = {},
     onOpenAppInfo: (InstalledAppInfo) -> Unit = {},
     onUninstallApp: (InstalledAppInfo) -> Unit = {},
     onChangeCore: (CustomRomFolder) -> Unit = {},
@@ -473,7 +470,6 @@ fun FocusLibraryScreen(
 
         val activeApps = selectedTab.filterApps(allApps)
         val focusedApp = activeApps.getOrNull(focusedIndex.coerceAtLeast(0))
-        val isCurrentFavorite = focusedApp != null && favoritesSet.contains(focusedApp.packageName)
         val isCurrentHidden = focusedApp != null && hiddenSet.contains(focusedApp.packageName)
 
         // Bottom edge shadow overlay to improve button readability

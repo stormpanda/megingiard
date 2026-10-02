@@ -18,7 +18,6 @@
     <string name="gamefocus_option_edit">Edit</string>
     <string name="gamefocus_option_app_info">App Info</string>
     <string name="gamefocus_option_uninstall">Uninstall</string>
-    <string name="gamefocus_option_close">Close</string>
     <string name="gamefocus_option_actions">Actions</string>
     <string name="gamefocus_no_favorites">No Favorite Apps Added</string>
     <string name="gamefocus_no_last_used">No Recently Used Apps</string>

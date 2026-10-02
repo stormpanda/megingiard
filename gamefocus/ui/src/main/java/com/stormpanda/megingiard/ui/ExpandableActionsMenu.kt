@@ -83,7 +83,6 @@ data class ExpandableActionItem(
     val label: String,
     val iconSymbol: String,
     val isDestructive: Boolean = false,
-    val button: GamePadButton? = null,
     val onClick: () -> Unit,
 )
 
