@@ -849,7 +849,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
         }
 
         if (viewModel.pairingTargetApp.value != null) {
-            val targetApp = viewModel.pairingTargetApp.value!!
+            val targetApp = viewModel.pairingTargetApp.value ?: return true
             val allApps = InstalledAppsManager.installedApps.value
             val availableApps = allApps.filter { !it.isRom && it.packageName != packageName }.sortedBy { it.label.lowercase() }
 

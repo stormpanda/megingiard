@@ -21,6 +21,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowPackageManager
 
 private const val TAG = "GameFocusSessionTrackerTest"
 private const val PRIMARY_DISPLAY_ID = 0
@@ -203,7 +204,7 @@ class GameFocusSessionTrackerTest {
         }
 
     private fun installMockPackage(
-        shadowPm: org.robolectric.shadows.ShadowPackageManager,
+        shadowPm: ShadowPackageManager,
         pkgName: String,
     ) {
         val packageInfo =

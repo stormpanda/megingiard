@@ -232,6 +232,8 @@ fun FocusTopLauncherScreen(
 
     val frozenHiddenSet = remember(allApps, selectedCategory, isLibraryOpen) { hiddenSet.toSet() }
 
+    val availableAppsByPackage = remember(availableAndroidApps) { availableAndroidApps.associateBy { it.packageName } }
+
     val romFolders by RomManager.romFolders.collectAsState()
 
     val libraryTabs =
@@ -700,7 +702,7 @@ fun FocusTopLauncherScreen(
                                                             val currentPairedPackage = pairedApps[currentApp.packageName]
                                                             val pairedApp =
                                                                 if (currentPairedPackage != null) {
-                                                                    availableAndroidApps.find { it.packageName == currentPairedPackage }
+                                                                    availableAppsByPackage[currentPairedPackage]
                                                                 } else {
                                                                     null
                                                                 }

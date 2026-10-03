@@ -18,6 +18,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowPackageManager
 
 private const val TAG = "GameFocusAccessibilityServiceTest"
 private const val VALID_GAME_PACKAGE = "com.miHoYo.GenshinImpact"
@@ -82,7 +83,7 @@ class GameFocusAccessibilityServiceTest {
     }
 
     private fun installMockApp(
-        shadowPm: org.robolectric.shadows.ShadowPackageManager,
+        shadowPm: ShadowPackageManager,
         pkgName: String,
     ) {
         val packageInfo =

@@ -20,10 +20,16 @@ private const val RETROARCH_PACKAGE_PREFIX = "com.retroarch"
  * and restores them when the user presses Back on the home gallery.
  */
 object GameFocusSessionTracker {
+    @Volatile
     private var _lastTopApp: InstalledAppInfo? = null
+
+    @Volatile
     private var _lastTopPackage: String? = null
 
+    @Volatile
     private var _lastBottomApp: InstalledAppInfo? = null
+
+    @Volatile
     private var _lastBottomPackage: String? = null
 
     internal var overrideSecondaryDisplayIdForTesting: Int? = null

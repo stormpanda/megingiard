@@ -2,7 +2,6 @@ package com.stormpanda.megingiard.gamefocus.domain
 
 import android.content.Context
 import com.stormpanda.megingiard.AppLog
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -80,7 +79,7 @@ class GameFocusPairManagerTest {
 
     @Test
     fun testCorruptedFileLoadsEmptyMap() {
-        val file = File(context.filesDir, "gamefocus_app_pairs.json")
+        val file = File(context.filesDir, TEST_APP_PAIRS_FILE)
         file.writeText("invalid json content {{{")
 
         GameFocusPairManager.loadPairs(context)
