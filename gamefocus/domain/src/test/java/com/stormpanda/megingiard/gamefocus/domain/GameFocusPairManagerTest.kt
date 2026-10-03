@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.gamefocus.domain
 
 import android.content.Context
+import com.stormpanda.megingiard.AppLog
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -14,6 +15,9 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import java.io.File
 
+private const val TAG = "GameFocusPairManagerTest"
+private const val TEST_APP_PAIRS_FILE = "gamefocus_app_pairs.json"
+
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
 class GameFocusPairManagerTest {
@@ -21,9 +25,10 @@ class GameFocusPairManagerTest {
 
     @Before
     fun setUp() {
+        AppLog.d(TAG, "Setting up GameFocusPairManagerTest")
         context = RuntimeEnvironment.getApplication()
         GameFocusPairManager.resetForTesting()
-        val file = File(context.filesDir, "gamefocus_app_pairs.json")
+        val file = File(context.filesDir, TEST_APP_PAIRS_FILE)
         if (file.exists()) {
             file.delete()
         }

@@ -69,6 +69,8 @@ private const val REPEAT_INTERVAL_MS = 100L
 private const val ARTWORK_MENU_ITEMS_COUNT = 2
 private const val MAIN_MENU_UNPAIRED_ITEMS_COUNT = 4
 private const val MAIN_MENU_PAIRED_ITEMS_COUNT = 5
+private const val JOYSTICK_THRESHOLD = 0.5f
+private const val JOYSTICK_NEGATIVE_THRESHOLD = -0.5f
 
 internal fun getMainMenuCount(isPaired: Boolean): Int = if (isPaired) MAIN_MENU_PAIRED_ITEMS_COUNT else MAIN_MENU_UNPAIRED_ITEMS_COUNT
 
@@ -1349,16 +1351,16 @@ class FocusTopLauncherActivity : ComponentActivity() {
             val y = if (axisHatY != 0f) axisHatY else axisY
 
             if (viewModel.pairingTargetApp.value != null) {
-                if (x < -0.5f) {
+                if (x < JOYSTICK_NEGATIVE_THRESHOLD) {
                     startRepeat(LauncherScrollDirection.LEFT)
                     return true
-                } else if (x > 0.5f) {
+                } else if (x > JOYSTICK_THRESHOLD) {
                     startRepeat(LauncherScrollDirection.RIGHT)
                     return true
-                } else if (y < -0.5f) {
+                } else if (y < JOYSTICK_NEGATIVE_THRESHOLD) {
                     startRepeat(LauncherScrollDirection.UP)
                     return true
-                } else if (y > 0.5f) {
+                } else if (y > JOYSTICK_THRESHOLD) {
                     startRepeat(LauncherScrollDirection.DOWN)
                     return true
                 } else {
@@ -1372,10 +1374,10 @@ class FocusTopLauncherActivity : ComponentActivity() {
             if (viewModel.newlyAddedFolder.value != null ||
                 viewModel.isRemoveRomFolderDialogOpen.value
             ) {
-                if (y < -0.5f) {
+                if (y < JOYSTICK_NEGATIVE_THRESHOLD) {
                     startRepeat(LauncherScrollDirection.UP)
                     return true
-                } else if (y > 0.5f) {
+                } else if (y > JOYSTICK_THRESHOLD) {
                     startRepeat(LauncherScrollDirection.DOWN)
                     return true
                 } else {
@@ -1390,10 +1392,10 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 viewModel.folderToRemove.value != null
             ) {
                 if (viewModel.editingAppInfo.value != null && viewModel.isOptionsMenuExpanded.value) {
-                    if (y < -0.5f) {
+                    if (y < JOYSTICK_NEGATIVE_THRESHOLD) {
                         startRepeat(LauncherScrollDirection.UP)
                         return true
-                    } else if (y > 0.5f) {
+                    } else if (y > JOYSTICK_THRESHOLD) {
                         startRepeat(LauncherScrollDirection.DOWN)
                         return true
                     } else {
@@ -1404,10 +1406,10 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     return true
                 }
 
-                if (x < -0.5f) {
+                if (x < JOYSTICK_NEGATIVE_THRESHOLD) {
                     startRepeat(LauncherScrollDirection.LEFT)
                     return true
-                } else if (x > 0.5f) {
+                } else if (x > JOYSTICK_THRESHOLD) {
                     startRepeat(LauncherScrollDirection.RIGHT)
                     return true
                 } else {
@@ -1419,10 +1421,10 @@ class FocusTopLauncherActivity : ComponentActivity() {
             }
 
             if (viewModel.isMainOptionsMenuExpanded.value) {
-                if (y < -0.5f) {
+                if (y < JOYSTICK_NEGATIVE_THRESHOLD) {
                     startRepeat(LauncherScrollDirection.UP)
                     return true
-                } else if (y > 0.5f) {
+                } else if (y > JOYSTICK_THRESHOLD) {
                     startRepeat(LauncherScrollDirection.DOWN)
                     return true
                 } else {
@@ -1434,10 +1436,10 @@ class FocusTopLauncherActivity : ComponentActivity() {
             }
 
             if (viewModel.isLibraryOptionsMenuExpanded.value) {
-                if (y < -0.5f) {
+                if (y < JOYSTICK_NEGATIVE_THRESHOLD) {
                     startRepeat(LauncherScrollDirection.UP)
                     return true
-                } else if (y > 0.5f) {
+                } else if (y > JOYSTICK_THRESHOLD) {
                     startRepeat(LauncherScrollDirection.DOWN)
                     return true
                 } else {
@@ -1449,16 +1451,16 @@ class FocusTopLauncherActivity : ComponentActivity() {
             }
 
             if (viewModel.isLibraryOpen.value) {
-                if (x < -0.5f) {
+                if (x < JOYSTICK_NEGATIVE_THRESHOLD) {
                     startRepeat(LauncherScrollDirection.LEFT)
                     return true
-                } else if (x > 0.5f) {
+                } else if (x > JOYSTICK_THRESHOLD) {
                     startRepeat(LauncherScrollDirection.RIGHT)
                     return true
-                } else if (y < -0.5f) {
+                } else if (y < JOYSTICK_NEGATIVE_THRESHOLD) {
                     startRepeat(LauncherScrollDirection.UP)
                     return true
-                } else if (y > 0.5f) {
+                } else if (y > JOYSTICK_THRESHOLD) {
                     startRepeat(LauncherScrollDirection.DOWN)
                     return true
                 } else {
@@ -1469,10 +1471,10 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 return true
             }
 
-            if (x < -0.5f) {
+            if (x < JOYSTICK_NEGATIVE_THRESHOLD) {
                 startRepeat(LauncherScrollDirection.LEFT)
                 return true
-            } else if (x > 0.5f) {
+            } else if (x > JOYSTICK_THRESHOLD) {
                 startRepeat(LauncherScrollDirection.RIGHT)
                 return true
             } else {
