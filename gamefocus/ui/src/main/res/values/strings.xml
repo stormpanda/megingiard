@@ -75,5 +75,6 @@
     <string name="gamefocus_dialog_pair_title">Pair Bottom Screen App</string>
     <string name="gamefocus_dialog_pair_subtitle">Choose an app to launch on the bottom screen alongside %1$s</string>
     <string name="gamefocus_launch_dual">Dual Launch</string>
+    <string name="gamefocus_accessibility_service_description">Enables Game Focus to track active apps across both screens and restore them when pressing the Back button.</string>
 </resources>
 

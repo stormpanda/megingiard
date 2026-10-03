@@ -75,5 +75,6 @@
     <string name="gamefocus_dialog_pair_title">Untere Bildschirm-App koppeln</string>
     <string name="gamefocus_dialog_pair_subtitle">Wähle eine App, die zusammen mit %1$s auf dem unteren Bildschirm gestartet wird</string>
     <string name="gamefocus_launch_dual">Dual-Start</string>
+    <string name="gamefocus_accessibility_service_description">Ermöglicht Game Focus die Erkennung aktiver Apps auf beiden Bildschirmen zur Wiederherstellung beim Drücken der Zurück-Taste.</string>
 </resources>
 

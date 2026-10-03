@@ -7,6 +7,7 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -41,6 +42,7 @@ import com.stormpanda.megingiard.catalog.SYSTEM_ID_SWITCH
 import com.stormpanda.megingiard.catalog.SwitchEmulators
 import com.stormpanda.megingiard.gamefocus.domain.GameFocusDefaultLauncherManager
 import com.stormpanda.megingiard.gamefocus.domain.GameFocusPairManager
+import com.stormpanda.megingiard.gamefocus.domain.GameFocusSessionTracker
 import com.stormpanda.megingiard.gamefocus.domain.initGameFocusLaunchers
 import com.stormpanda.megingiard.gamefocus.viewmodel.DEFAULT_LIBRARY_GRID_COLUMNS
 import com.stormpanda.megingiard.gamefocus.viewmodel.DEFAULT_PAIRING_GRID_COLUMNS
@@ -174,6 +176,26 @@ class FocusTopLauncherActivity : ComponentActivity() {
         if (savedInstanceState == null && intent?.hasCategory(Intent.CATEGORY_HOME) == true) {
             GameFocusDefaultLauncherManager.handleHomeNavigation(this)
         }
+
+        onBackPressedDispatcher.addCallback(
+            this,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    if (resetToGallery()) {
+                        AppLog.i(TAG, "Back pressed -> closed sub-view, returned to main gallery")
+                        return
+                    }
+                    if (GameFocusSessionTracker.hasActiveSession()) {
+                        AppLog.i(TAG, "Back pressed on gallery -> restoring previous session")
+                        lifecycleScope.launch {
+                            GameFocusSessionTracker.restorePreviousSession(this@FocusTopLauncherActivity)
+                        }
+                    } else {
+                        AppLog.d(TAG, "Back pressed on gallery with no session tracked -> staying in gallery")
+                    }
+                }
+            },
+        )
 
         setContent {
             val remoteThemeState by MegingiardThemeClient
@@ -362,6 +384,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                                         focusedPackage = appInfo.packageName,
                                     )
                                 }
+                                GameFocusSessionTracker.recordBottomLaunch(appInfo)
                                 lifecycleScope.launch {
                                     InstalledAppsManager.launchAppOnSecondaryDisplay(this@FocusTopLauncherActivity, appInfo)
                                 }
@@ -506,6 +529,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
     private fun launchGalleryTopApp(appInfo: InstalledAppInfo) {
         AppLog.i(TAG, "Launching app from top launcher on top display: ${appInfo.label}")
         launchedTopScreenPackage = appInfo.packageName
+        GameFocusSessionTracker.recordTopLaunch(appInfo)
         MegingiardSettingsClient.updateClientState(
             this,
             isActive = true,
@@ -519,6 +543,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 val pairedApp = allApps.find { it.packageName == pairedPackage && !it.isRom }
                 if (pairedApp != null) {
                     AppLog.i(TAG, "Simultaneously launching paired companion app on bottom display: ${pairedApp.label}")
+                    GameFocusSessionTracker.recordBottomLaunch(pairedApp)
                     InstalledAppsManager.launchAppOnSecondaryDisplay(this@FocusTopLauncherActivity, pairedApp)
                 } else {
                     AppLog.w(TAG, "Paired package '$pairedPackage' not found among installed apps; skipped secondary launch")
@@ -1112,6 +1137,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     if (targetApp != null) {
                         AppLog.i(TAG, "Library launch on top display: ${targetApp.label}")
                         launchedTopScreenPackage = targetApp.packageName
+                        GameFocusSessionTracker.recordTopLaunch(targetApp)
                         MegingiardSettingsClient.updateClientState(this, isActive = true, focusedPackage = targetApp.packageName)
                         lifecycleScope.launch {
                             InstalledAppsManager.launchAppOnPrimaryDisplay(this@FocusTopLauncherActivity, targetApp)
@@ -1128,6 +1154,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             if (!isCompanionApp(targetApp.packageName)) {
                                 MegingiardSettingsClient.updateClientState(this, isActive = true, focusedPackage = targetApp.packageName)
                             }
+                            GameFocusSessionTracker.recordBottomLaunch(targetApp)
                             lifecycleScope.launch {
                                 InstalledAppsManager.launchAppOnSecondaryDisplay(this@FocusTopLauncherActivity, targetApp)
                             }
@@ -1235,6 +1262,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     if (!isCompanionApp(targetApp.packageName)) {
                         MegingiardSettingsClient.updateClientState(this, isActive = true, focusedPackage = targetApp.packageName)
                     }
+                    GameFocusSessionTracker.recordBottomLaunch(targetApp)
                     lifecycleScope.launch {
                         InstalledAppsManager.launchAppOnSecondaryDisplay(this@FocusTopLauncherActivity, targetApp)
                     }
@@ -1264,6 +1292,19 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 viewModel.setLibraryFocusedIndex(0)
                 return true
             }
+
+            isDismissKey(keyCode) -> {
+                AppLog.i(TAG, "Dismiss/Back key pressed on main gallery (keyCode=$keyCode)")
+                if (GameFocusSessionTracker.hasActiveSession()) {
+                    AppLog.i(TAG, "Active session found -> restoring previous session on Back")
+                    lifecycleScope.launch {
+                        GameFocusSessionTracker.restorePreviousSession(this@FocusTopLauncherActivity)
+                    }
+                } else {
+                    AppLog.d(TAG, "No previous session tracked -> consuming Back key to stay in gallery")
+                }
+                return true
+            }
         }
         return super.onKeyDown(keyCode, event)
     }
@@ -1278,6 +1319,10 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
         if (isDirectionalKey(keyCode)) {
             stopRepeat()
+            return true
+        }
+
+        if (isDismissKey(keyCode)) {
             return true
         }
 

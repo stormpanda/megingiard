@@ -75,5 +75,6 @@
     <string name="gamefocus_dialog_pair_title">配對下螢幕應用程式</string>
     <string name="gamefocus_dialog_pair_subtitle">選擇與 %1$s 同時在下螢幕啟動的應用程式</string>
     <string name="gamefocus_launch_dual">雙螢幕啟動</string>
+    <string name="gamefocus_accessibility_service_description">允許 Game Focus 追蹤雙螢幕上正在執行的應用程式，並在按返回鍵時恢復它們。</string>
 </resources>
 
