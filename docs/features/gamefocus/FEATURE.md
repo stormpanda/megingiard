@@ -149,6 +149,16 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
   - Library launches (`FocusLibraryScreen`) remain single-screen launches on either Display 0 (Button A) or Display 4 (Button X), unaffected by pairings.
 - Pairings MUST be persisted to disk (`filesDir/gamefocus_app_pairs.json`) via `GameFocusPairManager` using atomic file writes (`AtomicFile`).
 
+### FR-GF12: Default Launcher Companion Restoration
+
+- When Game Focus is configured as the Android system's default home launcher (`PackageManager.resolveActivity` with `MATCH_DEFAULT_ONLY` matches Game Focus), returning to the home screen MUST automatically restore / bring Megingiard Companion to the foreground on the secondary bottom display (`DisplayDetector.findSecondaryDisplay(context)`, Display 4).
+- **Home Navigation Triggers:**
+  - Launching or returning to Game Focus from an external game or app via system home navigation (`savedInstanceState == null && intent.hasCategory(Intent.CATEGORY_HOME)` in `onCreate`, or incoming `CATEGORY_HOME` intent in `onNewIntent`).
+  - Pressing the hardware Home key or controller Home button (`KEYCODE_HOME` / `KEYCODE_BUTTON_MODE`) while inside Game Focus.
+- **Strict Default Launcher Guard:** If Game Focus is NOT the system's default launcher (e.g. launched manually while stock Android or another launcher is active), automatic companion restoration MUST be skipped to avoid unexpectedly stealing focus or changing apps on the secondary display.
+- **State Preservation:** Megingiard Companion MUST be brought to front using `Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED` and `ActivityOptions.setLaunchDisplayId(secondaryDisplayId)`, preserving its existing view/screen state (MacroPad, Touchpad, Keyboard, Mirror) on Display 4 rather than resetting to a default tool.
+- **Standalone Autonomy:** The restoration logic resides strictly within `:gamefocus:domain` and `:gamefocus:ui`. Megingiard Companion has zero knowledge of or dependency on Game Focus.
+
 ---
 
 ## Technical Implementation
@@ -175,10 +185,12 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
                ┌───────────────────────────────────────────────┐
                │     Bottom Display (4): MainActivity          │
                │   • Standard Megingiard Controls & Managers   │
+               │   • Brought to front on Home by GameFocus     │
                └──────────────────────┴────────────────────────┘
 ```
 
 - **Standalone App Module:** Configured in `gamefocus/build.gradle.kts` as a standalone Android application (`com.stormpanda.megingiard.gamefocus`).
+- **GameFocusDefaultLauncherManager:** Singleton in `:gamefocus:domain` (`GameFocusDefaultLauncherManager.kt`) verifying default home launcher status via `PackageManager.resolveActivity` with `MATCH_DEFAULT_ONLY`. Resolves target companion packages (`com.stormpanda.megingiard` or `.debug`) and dispatches launch intents targeting the secondary bottom display (`DisplayDetector.findSecondaryDisplay(context)`) with `FLAG_ACTIVITY_NEW_TASK or FLAG_ACTIVITY_RESET_TASK_IF_NEEDED` to preserve companion state.
 - **GameFocusPairManager:** Singleton in `:gamefocus:domain` (`GameFocusPairManager.kt`) managing package pairing mappings (`Map<String, String>` where key = top screen package/ROM ID and value = bottom screen companion package) with atomic JSON persistence to `filesDir/gamefocus_app_pairs.json` via AndroidX `AtomicFile`. Exposes read-only `StateFlow<Map<String, String>>`.
 - **ContentProvider Inter-Process Theme Syncing:** Megingiard (`:app`) hosts `MegingiardThemeProvider` (`content://com.stormpanda.megingiard.provider/theme`). Game Focus queries this URI on launch via `MegingiardThemeClient` and attaches a `ContentObserver` for real-time theme and accent color synchronization across process boundaries. If Megingiard is absent, Game Focus safely defaults to `ThemeMode.DARK`.
 - **InstalledAppsManager:** Singleton in `:domain` querying `PackageManager` for native apps, combined with ROM items loaded via `RomManager`. Intercepts launch requests in `launchAppOnDisplay` to delegate ROM launches to the registry instead of launching package intents directly.
@@ -190,4 +202,4 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 - **LetterNavigationHelper:** Platform-free helper in `:domain` (`LetterNavigationHelper.kt`) providing starting letter extraction (`getStartingLetter`) and index calculation for forward (R1) and backward (L1) letter skipping across installed app lists with wrap-around support.
 - **AppPaletteExtractor:** Utility object in `gamefocus/ui/src/main/java/com/stormpanda/megingiard/gamefocus/AppPaletteExtractor.kt` extracting the most vibrant primary and distinct secondary colors via AndroidX `Palette` (ranking swatches by saturation & lightness score, enforcing distinct HSV separation, and generating hue-shifted vibrant fallbacks) with `LruCache` and `SharedPreferences` persistence (`gamefocus_palettes_v2`).
 - **FocusImageCache:** In-memory `LruCache` in `FocusTopLauncherScreen.kt` for poster cover bitmaps and converted icon PNGs stored under `cacheDir/gamefocus_icons/`.
-- **Manifest Integration & Home Handling:** `gamefocus/ui/src/main/AndroidManifest.xml` declares `FocusTopLauncherActivity` as a `singleTask` system launcher with `android.intent.category.HOME` and `android.intent.category.DEFAULT` intent filters. Overrides `onNewIntent` and intercepts `KEYCODE_HOME` / `KEYCODE_BUTTON_MODE` in `onKeyDown` to reset view state (`isLibraryOpenState`, `editingAppInfoState`, `isMainOptionsMenuExpandedState`, `isLibraryOptionsMenuExpandedState`) back to the main gallery when pressed anywhere outside the gallery.
+- **Manifest Integration & Home Handling:** `gamefocus/ui/src/main/AndroidManifest.xml` declares `FocusTopLauncherActivity` as a `singleTask` system launcher with `android.intent.category.HOME` and `android.intent.category.DEFAULT` intent filters. Overrides `onNewIntent` and intercepts `KEYCODE_HOME` / `KEYCODE_BUTTON_MODE` in `onKeyDown` to reset view state (`isLibraryOpenState`, `editingAppInfoState`, `isMainOptionsMenuExpandedState`, `isLibraryOptionsMenuExpandedState`) back to the main gallery when pressed anywhere outside the gallery, and triggers `GameFocusDefaultLauncherManager.handleHomeNavigation(this)` to restore Megingiard Companion on Display 4.

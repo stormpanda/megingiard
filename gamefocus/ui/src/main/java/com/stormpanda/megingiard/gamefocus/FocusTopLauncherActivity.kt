@@ -39,6 +39,7 @@ import com.stormpanda.megingiard.catalog.RomManager
 import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
 import com.stormpanda.megingiard.catalog.SYSTEM_ID_SWITCH
 import com.stormpanda.megingiard.catalog.SwitchEmulators
+import com.stormpanda.megingiard.gamefocus.domain.GameFocusDefaultLauncherManager
 import com.stormpanda.megingiard.gamefocus.domain.GameFocusPairManager
 import com.stormpanda.megingiard.gamefocus.domain.initGameFocusLaunchers
 import com.stormpanda.megingiard.gamefocus.viewmodel.DEFAULT_LIBRARY_GRID_COLUMNS
@@ -170,6 +171,9 @@ class FocusTopLauncherActivity : ComponentActivity() {
         initGameFocusLaunchers()
         InstalledAppsManager.loadInstalledApps(this)
         GameFocusPairManager.loadPairs(this)
+        if (savedInstanceState == null && intent?.hasCategory(Intent.CATEGORY_HOME) == true) {
+            GameFocusDefaultLauncherManager.handleHomeNavigation(this)
+        }
 
         setContent {
             val remoteThemeState by MegingiardThemeClient
@@ -464,6 +468,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
         super.onNewIntent(intent)
         AppLog.i(TAG, "onNewIntent received -> resetting view to main gallery")
         resetToGallery()
+        GameFocusDefaultLauncherManager.handleHomeNavigation(this)
     }
 
     override fun onStart() {
@@ -723,6 +728,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
         if (keyCode == KeyEvent.KEYCODE_HOME || keyCode == KeyEvent.KEYCODE_BUTTON_MODE) {
             AppLog.i(TAG, "Home key pressed (keyCode=$keyCode) -> returning to main gallery")
             resetToGallery()
+            GameFocusDefaultLauncherManager.handleHomeNavigation(this)
             return true
         }
 
