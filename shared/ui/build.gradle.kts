@@ -23,6 +23,9 @@ dependencies {
     api(libs.androidx.ui.tooling.preview)
     api(libs.androidx.material3)
     api(libs.androidx.compose.material.icons.extended)
+    api(libs.androidx.activity.compose)
+    api(libs.reorderable)
+    api("androidx.compose.foundation:foundation")
 
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)

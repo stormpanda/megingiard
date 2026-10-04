@@ -47,7 +47,7 @@ Megingiard is structured as a **Feature-First Modular Architecture** split acros
    - **`:gamefocus:domain`** — Standalone launcher domain logic and ROM launcher implementations (`RetroArchLauncher`, `GameNativeLauncher`).
 
 3. **Shared UI, Domain & Core Modules**
-   - **`:shared:ui`** — App-wide design system tokens, themes (`AppColors`, `AppTheme`), modal dialogs (`AppModalDialog`), overlay modifiers, button glyphs (`GamePadButton`), and Material Symbol font resources.
+   - **`:shared:ui`** — App-wide design system tokens, themes (`AppColors`, `AppTheme`), Gamepad Design System suite (`GamepadCards`, `GamepadFormInputs`, `GamepadDialogControls`, `GamepadLayoutContainers`, `GamepadScaffold`, `GamepadColorPickers`, `GamepadDialogs`, `GamepadTokens`), modal dialogs (`AppModalDialog`), overlay modifiers, button glyphs (`GamePadButton`), and Material Symbol font resources.
    - **`:shared:catalog`** — Installed app index, ROM file scanning, system definitions (`InstalledAppsManager`, `RomManager`, `DisplayDetector`, `RomLauncherRegistry`).
    - **`:shared:media`** — External artwork fetchers, HTTP clients, and caching layers (`SteamGridDbClient`).
    - **`:shared:session`** — Active game detection engines (`EmulatorDetectionFunnel`, `GameNativeDetector`, `RetroArchDetector`, `Pcsx2AndroidDetector`, `YuzuDetector`, `PpssppDetector`).

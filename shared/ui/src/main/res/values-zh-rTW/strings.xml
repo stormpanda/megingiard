@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Common Gamepad and Dialog Strings -->
+    <string name="settings_close">關閉</string>
+    <string name="cd_drag_reorder">拖曳以重新排序</string>
+    <string name="gamepad_action_save">儲存</string>
+    <string name="gamepad_action_save_and_exit">儲存並結束</string>
+    <string name="gamepad_action_save_and_exit_desc">套用並儲存變更</string>
+    <string name="gamepad_action_discard_and_exit">捨棄並結束</string>
+    <string name="gamepad_action_discard_and_exit_desc">還原變更並結束</string>
+    <string name="gamepad_action_discard">捨棄</string>
+    <string name="gamepad_action_confirm">確認</string>
+    <string name="gamepad_action_delete">刪除</string>
+    <string name="gamepad_action_move">移動</string>
+    <string name="gamepad_action_moving">正在移動</string>
+    <string name="gamepad_previous">上一個</string>
+    <string name="gamepad_next">下一個</string>
+    <string name="gamepad_toggle_on">開啟</string>
+    <string name="gamepad_toggle_off">關閉</string>
+    <string name="gamepad_color_option">顏色選項 %1$d</string>
+    <string name="gamepad_color_selected">已選取</string>
+    <string name="gamepad_search_placeholder">搜尋</string>
+    <string name="gamepad_search_clear">清除搜尋</string>
+    <string name="gamepad_category_all">全部</string>
+    <string name="gamepad_slider_fine_adjustment_toast">按住 L2 進行微調</string>
+</resources>

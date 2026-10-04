@@ -97,6 +97,7 @@ import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.AppDimens
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.LocalAppDimens
+import com.stormpanda.megingiard.ui.LocalFullscreenKeyboardRequester
 import com.stormpanda.megingiard.ui.PrimaryOverlayManager
 import com.stormpanda.megingiard.ui.ScreenshotPreviewOverlay
 import com.stormpanda.megingiard.ui.colorSchemeFor
@@ -728,6 +729,7 @@ class MainActivity : ComponentActivity() {
                 CompositionLocalProvider(
                     LocalAppColors provides appColors,
                     LocalAppDimens provides AppDimens(),
+                    LocalFullscreenKeyboardRequester provides { active -> AppStateManager.setFullscreenKeyboardActive(active) },
                 ) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),

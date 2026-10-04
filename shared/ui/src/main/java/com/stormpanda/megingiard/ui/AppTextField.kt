@@ -27,7 +27,7 @@ private fun appTextFieldColors(): TextFieldColors {
 }
 
 @Composable
-internal fun AppTextField(
+fun AppTextField(
     value: String,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -66,7 +66,7 @@ internal fun AppTextField(
 }
 
 @Composable
-internal fun AppTextField(
+fun AppTextField(
     value: TextFieldValue,
     onValueChange: (TextFieldValue) -> Unit,
     modifier: Modifier = Modifier,
