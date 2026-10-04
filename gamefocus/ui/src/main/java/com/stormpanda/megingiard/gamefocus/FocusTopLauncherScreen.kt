@@ -137,6 +137,9 @@ private val FTL_BOTTOM_BAR_PADDING_START = 12.dp
 private val FTL_BOTTOM_BAR_PADDING_END = 12.dp
 private val FTL_BOTTOM_BAR_PADDING_BOTTOM = 4.dp
 private val FTL_BUTTON_GAP = 2.dp
+private val FTL_SPLITSCREEN_BADGE_SIZE = 14.dp
+private val FTL_SUBTITLE_GAP = 2.dp
+private val FTL_BADGE_TEXT_GAP = 4.dp
 
 private class JobRefHolder(
     var job: Job? = null,
@@ -206,6 +209,16 @@ fun FocusTopLauncherScreen(
     libraryMenuSelectedIndex: Int = 0,
     onOpenLibrary: () -> Unit = {},
     onCloseLibrary: () -> Unit = {},
+    pairedApps: Map<String, String> = emptyMap(),
+    availableAndroidApps: List<InstalledAppInfo> = emptyList(),
+    onOpenPairingDialog: (InstalledAppInfo) -> Unit = {},
+    onRemovePair: (InstalledAppInfo) -> Unit = {},
+    pairingTargetApp: InstalledAppInfo? = null,
+    pairingFocusedIndex: Int = 0,
+    onPairingFocusedIndexChange: (Int) -> Unit = {},
+    confirmPairingTrigger: Int = 0,
+    onDismissPairing: () -> Unit = {},
+    onConfirmPairApp: (InstalledAppInfo, InstalledAppInfo) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
@@ -218,6 +231,8 @@ fun FocusTopLauncherScreen(
     }
 
     val frozenHiddenSet = remember(allApps, selectedCategory, isLibraryOpen) { hiddenSet.toSet() }
+
+    val availableAppsByPackage = remember(availableAndroidApps) { availableAndroidApps.associateBy { it.packageName } }
 
     val romFolders by RomManager.romFolders.collectAsState()
 
@@ -670,17 +685,52 @@ fun FocusTopLauncherScreen(
                                                     )
                                                 } else {
                                                     if (currentApp != null) {
-                                                        Text(
-                                                            text = currentApp.label,
-                                                            style =
-                                                                MaterialTheme.typography.headlineLarge.copy(
-                                                                    fontWeight = FontWeight.ExtraBold,
-                                                                    color = appColors.onSurface,
-                                                                ),
-                                                            maxLines = 1,
-                                                            overflow = TextOverflow.Ellipsis,
-                                                            textAlign = TextAlign.Center,
-                                                        )
+                                                        Column(
+                                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                                        ) {
+                                                            Text(
+                                                                text = currentApp.label,
+                                                                style =
+                                                                    MaterialTheme.typography.headlineLarge.copy(
+                                                                        fontWeight = FontWeight.ExtraBold,
+                                                                        color = appColors.onSurface,
+                                                                    ),
+                                                                maxLines = 1,
+                                                                overflow = TextOverflow.Ellipsis,
+                                                                textAlign = TextAlign.Center,
+                                                            )
+                                                            val currentPairedPackage = pairedApps[currentApp.packageName]
+                                                            val pairedApp =
+                                                                if (currentPairedPackage != null) {
+                                                                    availableAppsByPackage[currentPairedPackage]
+                                                                } else {
+                                                                    null
+                                                                }
+                                                            if (pairedApp != null) {
+                                                                Spacer(modifier = Modifier.height(FTL_SUBTITLE_GAP))
+                                                                Row(
+                                                                    verticalAlignment = Alignment.CenterVertically,
+                                                                    horizontalArrangement = Arrangement.Center,
+                                                                ) {
+                                                                    MaterialSymbol(
+                                                                        name = "splitscreen",
+                                                                        size = FTL_SPLITSCREEN_BADGE_SIZE,
+                                                                        tint = appColors.onSurfaceSecondary,
+                                                                    )
+                                                                    Spacer(modifier = Modifier.width(FTL_BADGE_TEXT_GAP))
+                                                                    Text(
+                                                                        text = pairedApp.label,
+                                                                        style =
+                                                                            MaterialTheme.typography.labelMedium.copy(
+                                                                                fontWeight = FontWeight.Medium,
+                                                                                color = appColors.onSurfaceSecondary,
+                                                                            ),
+                                                                        maxLines = 1,
+                                                                        overflow = TextOverflow.Ellipsis,
+                                                                    )
+                                                                }
+                                                            }
+                                                        }
                                                     }
                                                 }
                                             }
@@ -693,7 +743,7 @@ fun FocusTopLauncherScreen(
                         // Plane 2: Hovering Controls Layer (Categories, Actions, Touch Launch Buttons)
 
                         // Top-Right Library navigation button hovering over the gallery plane
-                        val isControlsEnabled = editingAppInfo == null && !isLibraryOpen
+                        val isControlsEnabled = editingAppInfo == null && pairingTargetApp == null && !isLibraryOpen
 
                         // Top-Left Category Header hovering over the gallery plane
                         InteractiveCategoryHeader(
@@ -719,6 +769,9 @@ fun FocusTopLauncherScreen(
                                     .padding(end = FTL_NAV_PADDING_END, top = FTL_NAV_PADDING_TOP),
                         )
 
+                        val currentPairedPackage = if (currentApp != null) pairedApps[currentApp.packageName] else null
+                        val isCurrentPaired = currentPairedPackage != null
+
                         // Bottom-Left Main Actions Menu hovering over the gallery plane
                         Box(
                             modifier =
@@ -729,7 +782,7 @@ fun FocusTopLauncherScreen(
                             val isCurrentFavorite = currentApp != null && favoritesSet.contains(currentApp.packageName)
                             val isCurrentHidden = currentApp != null && hiddenSet.contains(currentApp.packageName)
                             val actions =
-                                remember(currentApp, isCurrentFavorite, isCurrentHidden) {
+                                remember(currentApp, isCurrentFavorite, isCurrentHidden, isCurrentPaired) {
                                     buildList {
                                         if (currentApp != null) {
                                             add(
@@ -772,6 +825,34 @@ fun FocusTopLauncherScreen(
                                                     },
                                                 ),
                                             )
+                                            add(
+                                                ExpandableActionItem(
+                                                    label =
+                                                        if (isCurrentPaired) {
+                                                            context.getString(R.string.gamefocus_option_change_pair)
+                                                        } else {
+                                                            context.getString(R.string.gamefocus_option_pair_bottom)
+                                                        },
+                                                    iconSymbol = "splitscreen",
+                                                    onClick = {
+                                                        onOpenPairingDialog(currentApp)
+                                                        onMainOptionsMenuExpandedChange(false)
+                                                    },
+                                                ),
+                                            )
+                                            if (isCurrentPaired) {
+                                                add(
+                                                    ExpandableActionItem(
+                                                        label = context.getString(R.string.gamefocus_option_remove_pair),
+                                                        iconSymbol = "delete",
+                                                        isDestructive = true,
+                                                        onClick = {
+                                                            onRemovePair(currentApp)
+                                                            onMainOptionsMenuExpandedChange(false)
+                                                        },
+                                                    ),
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -787,6 +868,7 @@ fun FocusTopLauncherScreen(
                         // Bottom-Right subdued touch buttons hovering over the gallery plane
                         DualScreenLaunchButtons(
                             appInfo = currentApp,
+                            isPaired = isCurrentPaired,
                             enabled = isControlsEnabled && !isMainOptionsMenuExpanded,
                             onLaunchTop = onAppClickTop,
                             onLaunchBottom = onAppClickBottom,
@@ -827,6 +909,20 @@ fun FocusTopLauncherScreen(
                 confirmTrigger = confirmCoreChooserTrigger,
                 onDismiss = onDismissNewlyAddedFolder,
                 onConfirm = { core -> onConfirmNewlyAddedFolderCore(newlyAddedFolder, core) },
+            )
+        }
+
+        if (pairingTargetApp != null) {
+            GameFocusPairAppDialog(
+                targetApp = pairingTargetApp,
+                availableApps = availableAndroidApps,
+                focusedIndex = pairingFocusedIndex,
+                onFocusedIndexChange = onPairingFocusedIndexChange,
+                confirmTrigger = confirmPairingTrigger,
+                onDismiss = onDismissPairing,
+                onSelectApp = { selectedApp ->
+                    onConfirmPairApp(pairingTargetApp, selectedApp)
+                },
             )
         }
     }
@@ -1013,6 +1109,7 @@ internal fun GameFocusFallbackIcon(
 @Composable
 internal fun DualScreenLaunchButtons(
     appInfo: InstalledAppInfo?,
+    isPaired: Boolean = false,
     enabled: Boolean,
     onLaunchTop: (InstalledAppInfo) -> Unit,
     onLaunchBottom: (InstalledAppInfo) -> Unit,
@@ -1024,7 +1121,7 @@ internal fun DualScreenLaunchButtons(
     ) {
         GamePadButtonAction(
             button = GamePadButton.BUTTON_A,
-            text = stringResource(R.string.gamefocus_launch_top),
+            text = stringResource(if (isPaired) R.string.gamefocus_launch_dual else R.string.gamefocus_launch_top),
             enabled = enabled,
             onClick = {
                 if (appInfo != null) onLaunchTop(appInfo)

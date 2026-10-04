@@ -122,10 +122,52 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 - Each RetroArch-compatible system definition MUST configure a primary core (`retroArchCore`) and a set of popular alternative cores (`retroArchCoreAlternatives`) to prepare for future user-configurable core adjustments.
 - Starting a dynamic ROM game MUST invoke the appropriate launcher:
   - **RetroArchLauncher**: Resolves physical file paths and fires a targeted Android Intent (`com.retroarch` / `com.retroarch.aarch64` activity `RetroActivityFuture`) passing the target `ROM` path and the matching core `LIBRETRO` name.
-  - **GameNativeLauncher**: Invokes PC games via launcher intent `[packageName].MainActivity` (dynamically checking `app.gamenative` and `com.utkarshdalal.gamenative`) passing the parsed Steam App ID from `.steam` or `.steamappid` files.
   - **SwitchLauncher**: Invokes Nintendo Switch games via Intent `android.nfc.action.TECH_DISCOVERED` with the SAF `content://` URI (`romUri`) and `FLAG_GRANT_READ_URI_PERMISSION` (falling back to `Uri.fromFile(romPath)` with relaxed `StrictMode.VmPolicy`) and `ComponentName(targetPackage, "org.yuzu.yuzu_emu.activities.EmulationActivity")`, supporting installed Switch emulators (Eden variants, Citron, Sudachi, Suyu, Yuzu).
 - Selecting "Remove ROM Folder" in the Library Action Menu MUST display an `AppModalDialog` detailing added systems, followed by an `AppAlertDialog` confirmation overlay. Removing a folder immediately unregisters its scanned ROMs and dynamic category.
 - When cover artwork is absent for ROMs, the UI MUST render the scraped game logo if available, falling back to the `"sports_esports"` symbol ligature from the Material Symbols Rounded font if no logo was scraped.
+
+### FR-GF11: Dual-Screen App Pairing
+
+- Game Focus MUST allow users to pair an application or ROM displayed on the top screen with a companion Android application to be launched simultaneously on the bottom screen (Display 4).
+- The action menu on the main gallery poster carousel (`ExpandableActionsMenu`, triggered via Button `Y` / `KEYCODE_BUTTON_Y`) MUST display:
+  - `"Pair Bottom App"` (`splitscreen` icon) when the highlighted item is unpaired (totaling 4 menu items: Favorite, Artwork, Hide, Pair Bottom App).
+  - `"Change Paired App"` (`splitscreen` icon) and `"Remove Paired App"` (`delete` icon with destructive styling) when the highlighted item is currently paired (totaling 5 menu items: Favorite, Artwork, Hide, Change Paired App, Remove Paired App).
+- Selecting `"Remove Paired App"` MUST immediately unpair the bottom companion app and persist the change without an additional confirmation dialog.
+- Selecting `"Pair Bottom App"` or `"Change Paired App"` MUST open a 5-column 2D grid modal dialog (`GameFocusPairAppDialog`) inside an `AppModalDialog` container:
+  - The dialog MUST present all installed Android apps sorted alphabetically (excluding ROMs and excluding Game Focus itself).
+  - Cards MUST follow the Library card aesthetic (`16.dp` rounded corners, app icon, animated accent border on focus, marquee text on focus for labels exceeding available width).
+  - Focus MUST initially settle on the currently paired app if present, or index 0 otherwise.
+  - Directional gamepad navigation (D-pad and joystick) MUST navigate the 2D grid with bounds clamping across rows and columns.
+  - Pressing Gamepad Button **A** MUST confirm the pairing, persist the mapping, and dismiss the dialog.
+  - Pressing Gamepad Button **B** or tapping the backdrop/Cancel button MUST dismiss the dialog without changes.
+  - While the pairing dialog is open, all launcher inputs MUST be trapped and consumed.
+- When an app or ROM has a paired bottom companion:
+  - The gallery layout MUST render a secondary subtitle line below the main title featuring a `splitscreen` Material Symbol icon (`14.dp`) in `onSurfaceSecondary` color alongside the paired app's label.
+  - The primary launch button in `DualScreenLaunchButtons` MUST update its label to `[A] Dual Launch`.
+  - Pressing Gamepad Button **A** (`KEYCODE_BUTTON_A` / `KEYCODE_DPAD_CENTER`) or tapping the top launch button from the main gallery carousel MUST launch both the top application on Display 0 and the paired companion app on Display 4 simultaneously without artificial delay.
+  - Button **X** (`KEYCODE_BUTTON_X`) in the gallery MUST continue launching only the highlighted app on Display 4.
+  - Library launches (`FocusLibraryScreen`) remain single-screen launches on either Display 0 (Button A) or Display 4 (Button X), unaffected by pairings.
+- Pairings MUST be persisted to disk (`filesDir/gamefocus_app_pairs.json`) via `GameFocusPairManager` using atomic file writes (`AtomicFile`).
+
+### FR-GF12: Default Launcher Companion Restoration
+
+- When Game Focus is configured as the Android system's default home launcher (`PackageManager.resolveActivity` with `MATCH_DEFAULT_ONLY` matches Game Focus), returning to the home screen MUST automatically restore / bring Megingiard Companion to the foreground on the secondary bottom display (`DisplayDetector.findSecondaryDisplay(context)`, Display 4).
+- **Home Navigation Triggers:**
+  - Launching or returning to Game Focus from an external game or app via system home navigation (`savedInstanceState == null && intent.hasCategory(Intent.CATEGORY_HOME)` in `onCreate`, or incoming `CATEGORY_HOME` intent in `onNewIntent`).
+  - Pressing the hardware Home key or controller Home button (`KEYCODE_HOME` / `KEYCODE_BUTTON_MODE`) while inside Game Focus.
+- **Strict Default Launcher Guard:** If Game Focus is NOT the system's default launcher (e.g. launched manually while stock Android or another launcher is active), automatic companion restoration MUST be skipped to avoid unexpectedly stealing focus or changing apps on the secondary display.
+- **State Preservation:** Megingiard Companion MUST be brought to front using `Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED` and `ActivityOptions.setLaunchDisplayId(secondaryDisplayId)`, preserving its existing view/screen state (MacroPad, Touchpad, Keyboard, Mirror) on Display 4 rather than resetting to a default tool.
+- **Standalone Autonomy:** The restoration logic resides strictly within `:gamefocus:domain` and `:gamefocus:ui`. Megingiard Companion has zero knowledge of or dependency on Game Focus.
+
+### FR-GF13: Back Button Session Restoration
+
+- When the user presses the Back button (hardware `KEYCODE_BACK` / `KEYCODE_ESCAPE`), Gamepad Button B (`BUTTON_B`), or triggers the system predictive back gesture while Game Focus is in the foreground:
+  - **Sub-View Dismissal:** If a sub-view, modal, or dialog is open (Library grid, actions menu, artwork dialog, core chooser, or pairing modal), the Back action MUST dismiss that sub-view/dialog first and return the user to the main gallery.
+  - **Root Gallery Restoration:** When already on the root gallery, the Back action MUST bring back up the applications that were active before navigating Home:
+    - **Top Screen (Display 0):** Brings the previous top game or application back to the foreground using `FLAG_ACTIVITY_NEW_TASK or FLAG_ACTIVITY_RESET_TASK_IF_NEEDED` and `ActivityOptions.setLaunchDisplayId(0)`.
+    - **Bottom Screen (Display 4):** If a non-companion bottom app was active (such as a paired app or an app launched to the bottom screen via Button X), brings that application back to the foreground on Display 4 using `FLAG_ACTIVITY_NEW_TASK or FLAG_ACTIVITY_RESET_TASK_IF_NEEDED` and `ActivityOptions.setLaunchDisplayId(secondaryDisplayId)`. If no bottom app was running (or only Megingiard Companion was on Display 4), Display 4 is left untouched.
+  - **Empty Session Guard:** If Back is pressed on the root gallery but no previous session is tracked (e.g. freshly booted), Game Focus MUST consume the Back event and do nothing, preventing the launcher from closing or exiting.
+  - **Always Active:** Back button session restoration operates whenever Game Focus is running, regardless of whether it is configured as the default system launcher or opened manually.
 
 ---
 
@@ -138,24 +180,31 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
                │    Top Display (0): FocusTopLauncherActivity  │
                │   • FocusTopLauncherScreen (2:3 Poster Pager) │
                │   • FocusLibraryScreen (Condensed Grid & Tabs)│
+               │   • GameFocusPairAppDialog (5-Column Modal)   │
                │   • FocusImageCache (LruCache + Icon Disk PNG)│
                │   • AppPaletteExtractor (Palette + Disk Cache)│
                │   • ExpandableOptionsMenu (Subdued D-Pad UI)  │
                │   • SteamGridDbScrapeDialog (Y Button Editor) │
+               │   • GameFocusAccessibilityService (A11y Event)│
                └──────────────────────┬────────────────────────┘
-                                      │ launches apps via setLaunchDisplayId(0)
+                                      │ launches apps via setLaunchDisplayId(0) & setLaunchDisplayId(4)
                                       ▼
                ┌───────────────────────────────────────────────┐
                │         Primary App / Game Execution          │
-               └──────────────────────┴────────────────────────┘
+               └──────────────────────┬────────────────────────┘
 
                ┌───────────────────────────────────────────────┐
                │     Bottom Display (4): MainActivity          │
                │   • Standard Megingiard Controls & Managers   │
+               │   • Brought to front on Home by GameFocus     │
                └──────────────────────┴────────────────────────┘
 ```
 
 - **Standalone App Module:** Configured in `gamefocus/build.gradle.kts` as a standalone Android application (`com.stormpanda.megingiard.gamefocus`).
+- **GameFocusDefaultLauncherManager:** Singleton in `:gamefocus:domain` (`GameFocusDefaultLauncherManager.kt`) verifying default home launcher status via `PackageManager.resolveActivity` with `MATCH_DEFAULT_ONLY`. Resolves target companion packages (`com.stormpanda.megingiard` or `.debug`) and dispatches launch intents targeting the secondary bottom display (`DisplayDetector.findSecondaryDisplay(context)`) with `FLAG_ACTIVITY_NEW_TASK or FLAG_ACTIVITY_RESET_TASK_IF_NEEDED` to preserve companion state.
+- **GameFocusSessionTracker:** Singleton in `:gamefocus:domain` (`GameFocusSessionTracker.kt`) tracking active top and bottom applications (`lastTopApp`, `lastTopPackage`, `lastBottomApp`, `lastBottomPackage`). Records launches initiated from Game Focus (`recordTopLaunch`, `recordBottomLaunch`) and window changes reported by the accessibility service (`recordWindowChanged`), restoring previous sessions via `restorePreviousSession(context)` targeting Display 0 and Display 4 with `FLAG_ACTIVITY_NEW_TASK or FLAG_ACTIVITY_RESET_TASK_IF_NEEDED`.
+- **GameFocusAccessibilityService:** Optional `AccessibilityService` in `:gamefocus:ui` (`GameFocusAccessibilityService.kt`) listening to `TYPE_WINDOW_STATE_CHANGED` events to passively track foreground apps per display (`displayId == 0` for top screen, `displayId == secondaryDisplayId` for bottom screen) while filtering out system UI, Thor/Odin system overlays (`com.odin.*`), Google Play services, canonical launchers via `SystemRoleClassifier`, Game Focus, Megingiard Companion, and packages lacking launch intents. Preserves active ROM session state in `GameFocusSessionTracker` across emulator window updates.
+- **GameFocusPairManager:** Singleton in `:gamefocus:domain` (`GameFocusPairManager.kt`) managing package pairing mappings (`Map<String, String>` where key = top screen package/ROM ID and value = bottom screen companion package) with atomic JSON persistence to `filesDir/gamefocus_app_pairs.json` via AndroidX `AtomicFile`. Exposes read-only `StateFlow<Map<String, String>>`.
 - **ContentProvider Inter-Process Theme Syncing:** Megingiard (`:app`) hosts `MegingiardThemeProvider` (`content://com.stormpanda.megingiard.provider/theme`). Game Focus queries this URI on launch via `MegingiardThemeClient` and attaches a `ContentObserver` for real-time theme and accent color synchronization across process boundaries. If Megingiard is absent, Game Focus safely defaults to `ThemeMode.DARK`.
 - **InstalledAppsManager:** Singleton in `:domain` querying `PackageManager` for native apps, combined with ROM items loaded via `RomManager`. Intercepts launch requests in `launchAppOnDisplay` to delegate ROM launches to the registry instead of launching package intents directly.
 - **EmulatorDetectionFunnel & Detectors:** Central router singleton (`EmulatorDetectionFunnel.kt`) routing foreground process changes to active detectors (`RetroArchDetector`, `GameNativeDetector`, `Pcsx2AndroidDetector`, `YuzuDetector` for Switch emulators including Citron, Eden, Sudachi, Suyu, and Yuzu, and `PpssppDetector` for standalone PPSSPP emulators), parsing configuration and log files to track running ROM sessions (`ActiveGameSession`) and trigger automatic companion profile switching.
@@ -166,4 +215,4 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 - **LetterNavigationHelper:** Platform-free helper in `:domain` (`LetterNavigationHelper.kt`) providing starting letter extraction (`getStartingLetter`) and index calculation for forward (R1) and backward (L1) letter skipping across installed app lists with wrap-around support.
 - **AppPaletteExtractor:** Utility object in `gamefocus/ui/src/main/java/com/stormpanda/megingiard/gamefocus/AppPaletteExtractor.kt` extracting the most vibrant primary and distinct secondary colors via AndroidX `Palette` (ranking swatches by saturation & lightness score, enforcing distinct HSV separation, and generating hue-shifted vibrant fallbacks) with `LruCache` and `SharedPreferences` persistence (`gamefocus_palettes_v2`).
 - **FocusImageCache:** In-memory `LruCache` in `FocusTopLauncherScreen.kt` for poster cover bitmaps and converted icon PNGs stored under `cacheDir/gamefocus_icons/`.
-- **Manifest Integration & Home Handling:** `gamefocus/ui/src/main/AndroidManifest.xml` declares `FocusTopLauncherActivity` as a `singleTask` system launcher with `android.intent.category.HOME` and `android.intent.category.DEFAULT` intent filters. Overrides `onNewIntent` and intercepts `KEYCODE_HOME` / `KEYCODE_BUTTON_MODE` in `onKeyDown` to reset view state (`isLibraryOpenState`, `editingAppInfoState`, `isMainOptionsMenuExpandedState`, `isLibraryOptionsMenuExpandedState`) back to the main gallery when pressed anywhere outside the gallery.
+- **Manifest Integration & Home/Back Handling:** `gamefocus/ui/src/main/AndroidManifest.xml` declares `FocusTopLauncherActivity` as a `singleTask` system launcher with `android.intent.category.HOME` and `android.intent.category.DEFAULT` intent filters. Overrides `onNewIntent` and intercepts `KEYCODE_HOME` / `KEYCODE_BUTTON_MODE` in `onKeyDown` to reset view state (`resetToGallery()`) and trigger `GameFocusDefaultLauncherManager.handleHomeNavigation(this)`. Intercepts `isDismissKey` (`KEYCODE_BACK`, `BUTTON_B`, `KEYCODE_ESCAPE`) and registers `OnBackPressedCallback` to dismiss sub-views first and restore previous dual-screen app sessions when at the root gallery via `GameFocusSessionTracker.restorePreviousSession(this)`. Consumes `isDismissKey` in `onKeyUp` to prevent unconsumed Back key releases from being intercepted by the system WindowManager (`persistBackUp`) and moving restored activities to the background.

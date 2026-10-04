@@ -68,5 +68,13 @@
     <string name="gamefocus_error_folder_inaccessible">Folder does not exist or is inaccessible.</string>
     <string name="gamefocus_error_unknown_system">Could not automatically recognize any gaming system in this folder.</string>
     <string name="gamefocus_error_duplicate_folder">This folder has already been added.</string>
+
+    <string name="gamefocus_option_pair_bottom">Pair Bottom App</string>
+    <string name="gamefocus_option_change_pair">Change Paired App</string>
+    <string name="gamefocus_option_remove_pair">Remove Paired App</string>
+    <string name="gamefocus_dialog_pair_title">Pair Bottom Screen App</string>
+    <string name="gamefocus_dialog_pair_subtitle">Choose an app to launch on the bottom screen alongside %1$s</string>
+    <string name="gamefocus_launch_dual">Dual Launch</string>
+    <string name="gamefocus_accessibility_service_description">Enables Game Focus to track active apps across both screens and restore them when pressing the Back button.</string>
 </resources>
 
