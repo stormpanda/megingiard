@@ -27,7 +27,6 @@ class FocusTopLauncherViewModelTest {
     fun testInitialState() {
         assertEquals(GameFocusCategory.LAST_USED, viewModel.selectedCategory.value)
         assertFalse(viewModel.isMainOptionsMenuExpanded.value)
-        assertFalse(viewModel.isOptionsMenuExpanded.value)
         assertFalse(viewModel.isLibraryOpen.value)
         assertEquals(LibraryTab.GAMES, viewModel.librarySelectedTab.value)
         assertEquals(0, viewModel.libraryFocusedIndex.value)
@@ -35,7 +34,6 @@ class FocusTopLauncherViewModelTest {
         assertNull(viewModel.focusedApp.value)
         assertNull(viewModel.newlyAddedFolder.value)
         assertFalse(viewModel.isRemoveRomFolderDialogOpen.value)
-        assertEquals(INITIAL_LOOP_OFFSET, viewModel.dialogVirtualIndex.value)
     }
 
     @Test
@@ -78,18 +76,7 @@ class FocusTopLauncherViewModelTest {
     }
 
     @Test
-    fun testOptionsMenuToggle() {
-        assertFalse(viewModel.isOptionsMenuExpanded.value)
-
-        viewModel.toggleOptionsMenu()
-        assertTrue(viewModel.isOptionsMenuExpanded.value)
-
-        viewModel.setOptionsMenuExpanded(false)
-        assertFalse(viewModel.isOptionsMenuExpanded.value)
-    }
-
-    @Test
-    fun testArtworkDialogOpen() {
+    fun testEditGameOverlayOpenAndDismiss() {
         val app =
             InstalledAppInfo(
                 packageName = "com.test.app",
@@ -99,31 +86,15 @@ class FocusTopLauncherViewModelTest {
                 isRom = false,
             )
 
-        viewModel.setOptionsMenuExpanded(true)
-        viewModel.openArtworkDialog(app)
-
+        viewModel.openEditGameOverlay(app)
         assertEquals(app, viewModel.editingAppInfo.value)
-        assertFalse(viewModel.isOptionsMenuExpanded.value)
-        assertEquals(INITIAL_LOOP_OFFSET, viewModel.dialogVirtualIndex.value)
-        assertEquals(0, viewModel.confirmDialogTrigger.value)
-        assertEquals(0, viewModel.dialogL1Trigger.value)
-        assertEquals(0, viewModel.dialogR1Trigger.value)
+
+        viewModel.setEditingAppInfo(null)
+        assertNull(viewModel.editingAppInfo.value)
     }
 
     @Test
     fun testTriggersIncrement() {
-        assertEquals(0, viewModel.confirmDialogTrigger.value)
-        viewModel.triggerConfirmDialog()
-        assertEquals(1, viewModel.confirmDialogTrigger.value)
-
-        assertEquals(0, viewModel.dialogL1Trigger.value)
-        viewModel.triggerDialogL1()
-        assertEquals(1, viewModel.dialogL1Trigger.value)
-
-        assertEquals(0, viewModel.dialogR1Trigger.value)
-        viewModel.triggerDialogR1()
-        assertEquals(1, viewModel.dialogR1Trigger.value)
-
         assertEquals(0, viewModel.prevLetterTrigger.value)
         viewModel.triggerPrevLetter()
         assertEquals(1, viewModel.prevLetterTrigger.value)
@@ -236,17 +207,6 @@ class FocusTopLauncherViewModelTest {
     }
 
     @Test
-    fun testStepArtworkDialogVirtualIndex() {
-        viewModel.setDialogVirtualIndex(INITIAL_LOOP_OFFSET)
-
-        viewModel.stepArtworkDialogVirtualIndex(1)
-        assertEquals(INITIAL_LOOP_OFFSET + 1, viewModel.dialogVirtualIndex.value)
-
-        viewModel.stepArtworkDialogVirtualIndex(-2)
-        assertEquals(INITIAL_LOOP_OFFSET - 1, viewModel.dialogVirtualIndex.value)
-    }
-
-    @Test
     fun testResetToGallery() {
         assertFalse(viewModel.resetToGallery())
 
@@ -312,24 +272,7 @@ class FocusTopLauncherViewModelTest {
     }
 
     @Test
-    fun testArtworkMenuNavigation() {
-        assertEquals(0, viewModel.artworkMenuSelectedIndex.value)
-
-        viewModel.navigateArtworkMenuDown(2)
-        assertEquals(1, viewModel.artworkMenuSelectedIndex.value)
-
-        // Wrap around to 0
-        viewModel.navigateArtworkMenuDown(2)
-        assertEquals(0, viewModel.artworkMenuSelectedIndex.value)
-
-        // Wrap around to 1
-        viewModel.navigateArtworkMenuUp(2)
-        assertEquals(1, viewModel.artworkMenuSelectedIndex.value)
-
-        // Opening menu resets index to 0
-        viewModel.setOptionsMenuExpanded(true)
-        assertEquals(0, viewModel.artworkMenuSelectedIndex.value)
-
+    fun testResetToGalleryClosesEditOverlay() {
         val app =
             InstalledAppInfo(
                 packageName = "com.test.app2",
@@ -338,22 +281,21 @@ class FocusTopLauncherViewModelTest {
                 isGame = true,
                 isRom = false,
             )
-        viewModel.setArtworkMenuSelectedIndex(1)
-        viewModel.openArtworkDialog(app)
-        assertEquals(0, viewModel.artworkMenuSelectedIndex.value)
+        viewModel.openEditGameOverlay(app)
+
+        assertTrue(viewModel.resetToGallery())
+        assertNull(viewModel.editingAppInfo.value)
     }
 
     @Test
     fun testResetToGalleryResetsMenuIndices() {
         viewModel.setMainMenuSelectedIndex(2)
         viewModel.setLibraryMenuSelectedIndex(1)
-        viewModel.setArtworkMenuSelectedIndex(1)
         viewModel.setMainOptionsMenuExpanded(true)
 
         assertTrue(viewModel.resetToGallery())
         assertFalse(viewModel.isMainOptionsMenuExpanded.value)
         assertEquals(0, viewModel.mainMenuSelectedIndex.value)
         assertEquals(0, viewModel.libraryMenuSelectedIndex.value)
-        assertEquals(0, viewModel.artworkMenuSelectedIndex.value)
     }
 }

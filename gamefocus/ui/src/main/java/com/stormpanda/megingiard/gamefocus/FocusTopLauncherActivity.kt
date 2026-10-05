@@ -47,7 +47,6 @@ import com.stormpanda.megingiard.gamefocus.domain.initGameFocusLaunchers
 import com.stormpanda.megingiard.gamefocus.viewmodel.DEFAULT_LIBRARY_GRID_COLUMNS
 import com.stormpanda.megingiard.gamefocus.viewmodel.DEFAULT_PAIRING_GRID_COLUMNS
 import com.stormpanda.megingiard.gamefocus.viewmodel.FocusTopLauncherViewModel
-import com.stormpanda.megingiard.gamefocus.viewmodel.INITIAL_LOOP_OFFSET
 import com.stormpanda.megingiard.gamefocus.viewmodel.LauncherScrollDirection
 import com.stormpanda.megingiard.math.floorMod
 import com.stormpanda.megingiard.settings.ThemeMode
@@ -232,8 +231,6 @@ class FocusTopLauncherActivity : ComponentActivity() {
             val libraryFocusedIndex by viewModel.libraryFocusedIndex.collectAsStateWithLifecycle()
             val isMainOptionsMenuExpanded by viewModel.isMainOptionsMenuExpanded.collectAsStateWithLifecycle()
             val mainMenuSelectedIndex by viewModel.mainMenuSelectedIndex.collectAsStateWithLifecycle()
-            val isOptionsMenuExpanded by viewModel.isOptionsMenuExpanded.collectAsStateWithLifecycle()
-            val artworkMenuSelectedIndex by viewModel.artworkMenuSelectedIndex.collectAsStateWithLifecycle()
             val isLibraryOptionsMenuExpanded by viewModel.isLibraryOptionsMenuExpanded.collectAsStateWithLifecycle()
             val libraryMenuSelectedIndex by viewModel.libraryMenuSelectedIndex.collectAsStateWithLifecycle()
             val newlyAddedFolder by viewModel.newlyAddedFolder.collectAsStateWithLifecycle()
@@ -243,14 +240,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
             val coreChooserDialogSelectedIndex by viewModel.coreChooserDialogSelectedIndex.collectAsStateWithLifecycle()
             val confirmCoreChooserTrigger by viewModel.confirmCoreChooserTrigger.collectAsStateWithLifecycle()
             val editingAppInfo by viewModel.editingAppInfo.collectAsStateWithLifecycle()
-            val dialogVirtualIndex by viewModel.dialogVirtualIndex.collectAsStateWithLifecycle()
-            val confirmDialogTrigger by viewModel.confirmDialogTrigger.collectAsStateWithLifecycle()
-            val dialogL1Trigger by viewModel.dialogL1Trigger.collectAsStateWithLifecycle()
-            val dialogR1Trigger by viewModel.dialogR1Trigger.collectAsStateWithLifecycle()
             val prevLetterTrigger by viewModel.prevLetterTrigger.collectAsStateWithLifecycle()
             val nextLetterTrigger by viewModel.nextLetterTrigger.collectAsStateWithLifecycle()
-            val dpadUpOptionsTrigger by viewModel.dpadUpOptionsTrigger.collectAsStateWithLifecycle()
-            val dpadRightOptionsTrigger by viewModel.dpadRightOptionsTrigger.collectAsStateWithLifecycle()
             val dpadLeftTrigger by viewModel.dpadLeftTrigger.collectAsStateWithLifecycle()
             val dpadStepRightTrigger by viewModel.dpadStepRightTrigger.collectAsStateWithLifecycle()
             val focusedApp by viewModel.focusedApp.collectAsStateWithLifecycle()
@@ -406,7 +397,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             onToggleHidden = { appInfo ->
                                 InstalledAppsManager.toggleHidden(this, appInfo.packageName)
                             },
-                            onEditArtwork = { appInfo -> viewModel.openArtworkDialog(appInfo) },
+                            onEditArtwork = { appInfo -> viewModel.openEditGameOverlay(appInfo) },
                             onOpenAppInfo = { appInfo ->
                                 InstalledAppsManager.openAppInfo(this, appInfo.packageName)
                             },
@@ -419,18 +410,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             onAddRomFolder = { openDocumentTreeLauncher.launch(null) },
                             onRemoveRomFolder = { folder -> RomManager.removeRomFolder(this, folder) },
                             editingAppInfo = editingAppInfo,
-                            dialogVirtualIndex = dialogVirtualIndex,
-                            onDialogVirtualIndexChange = { viewModel.setDialogVirtualIndex(it) },
-                            confirmDialogTrigger = confirmDialogTrigger,
-                            dialogL1Trigger = dialogL1Trigger,
-                            dialogR1Trigger = dialogR1Trigger,
                             prevLetterTrigger = prevLetterTrigger,
                             nextLetterTrigger = nextLetterTrigger,
-                            isOptionsMenuExpanded = isOptionsMenuExpanded,
-                            onOptionsMenuExpandedChange = { viewModel.setOptionsMenuExpanded(it) },
-                            artworkMenuSelectedIndex = artworkMenuSelectedIndex,
-                            dpadUpTrigger = dpadUpOptionsTrigger,
-                            dpadRightTrigger = dpadRightOptionsTrigger,
                             dpadLeftTrigger = dpadLeftTrigger,
                             dpadStepRightTrigger = dpadStepRightTrigger,
                             onFocusedAppChanged = { viewModel.setFocusedApp(it) },
@@ -890,12 +871,11 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 }
                 return true
             }
-            when (keyCode) {
-                KeyEvent.KEYCODE_BUTTON_A -> {
-                    val dpadCenterDown = KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER)
-                    dispatchKeyEvent(dpadCenterDown)
-                    return true
-                }
+            if (keyCode == GamePadButton.BUTTON_A.keyCode) {
+                // Translate gamepad A into DPAD_CENTER so Compose clickables inside the overlay activate.
+                val dpadCenterDown = KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER)
+                dispatchKeyEvent(dpadCenterDown)
+                return true
             }
             return super.onKeyDown(keyCode, event)
         }
@@ -1116,7 +1096,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     if (targetApp != null) {
                         when (selectedIndex) {
                             0 -> InstalledAppsManager.toggleFavorite(this, targetApp.packageName)
-                            1 -> viewModel.openArtworkDialog(targetApp)
+                            1 -> viewModel.openEditGameOverlay(targetApp)
                             2 -> InstalledAppsManager.toggleHidden(this, targetApp.packageName)
                             3 -> openPairingDialogForApp(targetApp)
                             4 -> GameFocusPairManager.removePair(this, targetApp.packageName)
@@ -1247,11 +1227,11 @@ class FocusTopLauncherActivity : ComponentActivity() {
         }
 
         if (viewModel.editingAppInfo.value != null) {
-            if (keyCode == KeyEvent.KEYCODE_BUTTON_A) {
+            if (keyCode == GamePadButton.BUTTON_A.keyCode) {
                 val dpadCenterUp = KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER)
                 val handled = dispatchKeyEvent(dpadCenterUp)
                 if (!handled) {
-                    PrimaryOverlayInputBridge.sendFocusRecovery(KeyEvent.KEYCODE_BUTTON_A)
+                    PrimaryOverlayInputBridge.sendFocusRecovery(GamePadButton.BUTTON_A.keyCode)
                 }
                 return true
             }
@@ -1280,15 +1260,13 @@ class FocusTopLauncherActivity : ComponentActivity() {
             val y = if (axisHatY != 0f) axisHatY else axisY
 
             if (viewModel.editingAppInfo.value != null) {
-                if (PrimaryOverlayInputBridge.processGenericMotionEvent(event) { action, dpadKeyCode ->
-                        val keyEvent = KeyEvent(action, dpadKeyCode)
-                        val handled = dispatchKeyEvent(keyEvent)
-                        if (!handled && action == KeyEvent.ACTION_DOWN) {
-                            PrimaryOverlayInputBridge.sendFocusRecovery(dpadKeyCode)
-                        }
+                // The edit overlay owns all joystick input; translate axes into D-pad key events for Compose focus.
+                PrimaryOverlayInputBridge.processGenericMotionEvent(event) { action, dpadKeyCode ->
+                    val keyEvent = KeyEvent(action, dpadKeyCode)
+                    val handled = dispatchKeyEvent(keyEvent)
+                    if (!handled && action == KeyEvent.ACTION_DOWN) {
+                        PrimaryOverlayInputBridge.sendFocusRecovery(dpadKeyCode)
                     }
-                ) {
-                    return true
                 }
                 return true
             }

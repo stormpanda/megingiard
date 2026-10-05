@@ -23,9 +23,11 @@ dependencies {
     api(libs.androidx.ui.tooling.preview)
     api(libs.androidx.material3)
     api(libs.androidx.compose.material.icons.extended)
-    api(libs.androidx.activity.compose)
-    api(libs.reorderable)
-    api("androidx.compose.foundation:foundation")
+    api(libs.androidx.compose.foundation)
+    implementation(libs.androidx.activity.compose)
+    // Not referenced in code: reorderable transitively upgrades Compose Foundation beyond the BOM (1.6.x)
+    // to 1.7+, which GamepadScaffold needs for LocalBringIntoViewSpec. Remove once the Compose BOM is raised.
+    implementation(libs.reorderable)
 
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)

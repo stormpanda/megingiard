@@ -37,6 +37,12 @@
     <string name="steamgriddb_status_fetching">Cover-Motive werden geladen</string>
     <string name="steamgriddb_no_games_found">Kein SteamGridDB-Spiel für \'%1$s\' gefunden</string>
     <string name="steamgriddb_no_covers_found">Keine Cover-Motive für \'%1$s\' gefunden</string>
+    <string name="steamgriddb_error_offline">Keine Internetverbindung. Verbinde dich mit dem Internet, um nach Covern zu suchen.</string>
+    <string name="steamgriddb_error_rate_limited">SteamGridDB-Anfragelimit erreicht. Bitte versuche es gleich noch einmal.</string>
+    <string name="steamgriddb_error_unavailable">SteamGridDB ist derzeit nicht erreichbar.</string>
+    <string name="steamgriddb_error_unauthorized">Dein SteamGridDB-API-Token ist ungültig oder nicht autorisiert.</string>
+    <string name="steamgriddb_error_generic">Cover konnten nicht von SteamGridDB geladen werden.</string>
+    <string name="steamgriddb_error_save_failed">Das Cover konnte nicht gespeichert werden.</string>
     <string name="gamefocus_option_change_search_term">Suchbegriff ändern</string>
     <string name="gamefocus_option_use_app_icon">App-Icon verwenden</string>
     <string name="gamefocus_option_use_default_icon">Standard-Icon verwenden</string>
@@ -99,5 +105,7 @@
     <string name="gamefocus_scraping_using_app_icon_notice">Natives App-Symbol ist aktiv. Schalte die Option oben aus, um Cover zu suchen und anzuwenden.</string>
     <string name="gamefocus_scraping_using_rom_icon_notice">System-Emulator-Symbol ist aktiv. Schalte die Option oben aus, um Cover zu suchen und anzuwenden.</string>
     <string name="gamefocus_scraping_applied_badge_cd">Ausgewähltes Cover</string>
+    <string name="gamefocus_action_reset_display_name_title">Auf Standardnamen zurücksetzen</string>
+    <string name="gamefocus_action_reset_display_name_desc">Ursprünglichen Titel wiederherstellen: %1$s</string>
 </resources>
 

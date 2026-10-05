@@ -13,6 +13,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -304,7 +305,7 @@ object RomManager {
 
     suspend fun reloadRomAppsSuspend(context: Context) =
         withContext(Dispatchers.IO) {
-            val coversDir = File(context.cacheDir, "gamefocus_covers").apply { mkdirs() }
+            val coversDir = File(context.cacheDir, DIR_COVERS).apply { mkdirs() }
             var namesChanged = false
             val allRomApps =
                 buildList {
@@ -335,7 +336,7 @@ object RomManager {
                             val romUriStr = file.uri.toString()
                             val romPath = SafPathResolver.resolveFilePath(romUriStr) ?: romUriStr
 
-                            val label =
+                            val cleanedLabel =
                                 synchronized(romCleanedNames) {
                                     romCleanedNames.getOrPut(romUriStr) {
                                         namesChanged = true
@@ -347,6 +348,7 @@ object RomManager {
                                 "rom.${folder.systemId}." +
                                     rawLabel.replace(Regex("[^a-zA-Z0-9_]"), "_") +
                                     "_" + romUriStr.hashCode().absoluteValue
+                            val label = InstalledAppsManager.getCustomLabel(pseudoPackageName) ?: cleanedLabel
 
                             val cachedCoverFile = File(coversDir, "$pseudoPackageName.png")
                             val hasCover = cachedCoverFile.exists() && cachedCoverFile.length() > 0
@@ -369,6 +371,7 @@ object RomManager {
                                     emulatorPackage = folder.emulatorPackage,
                                     coverLastModified = coverLastModified,
                                     coverImageId = coverImageId,
+                                    defaultLabel = cleanedLabel,
                                 ),
                             )
                         }
@@ -387,25 +390,20 @@ object RomManager {
         coverPath: String?,
         coverImageId: Int? = null,
     ) {
-        _romApps.value = _romApps.value.withUpdatedCover(packageName, coverPath, coverImageId)
+        _romApps.update { it.withUpdatedCover(packageName, coverPath, coverImageId) }
         AppLog.i(TAG, "Updated in-memory ROM cover path for $packageName to $coverPath (imageId: $coverImageId)")
     }
 
-    fun updateRomLabel(
-        context: Context,
+    /**
+     * Updates the displayed label of a ROM in memory only. Persistence of custom names is owned by
+     * [InstalledAppsManager.updateAppLabel] / [InstalledAppsManager.resetAppLabel].
+     */
+    internal fun updateRomLabelInMemory(
         packageName: String,
         newLabel: String,
     ) {
-        val app = _romApps.value.find { it.packageName == packageName }
-        val romUri = app?.romUri
-        if (romUri != null) {
-            synchronized(romCleanedNames) {
-                romCleanedNames[romUri] = newLabel
-            }
-            saveRomCleanedNames(context)
-        }
-        _romApps.value = _romApps.value.withUpdatedLabel(packageName, newLabel)
-        AppLog.i(TAG, "Updated ROM label for $packageName to '$newLabel'")
+        _romApps.update { it.withUpdatedLabel(packageName, newLabel) }
+        AppLog.i(TAG, "Updated in-memory ROM label for $packageName to '$newLabel'")
     }
 
     internal fun collectRomFilesRecursively(

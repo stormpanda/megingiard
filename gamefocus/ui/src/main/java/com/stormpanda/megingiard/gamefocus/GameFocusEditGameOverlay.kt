@@ -1,6 +1,6 @@
 package com.stormpanda.megingiard.gamefocus
 
-import android.graphics.BitmapFactory
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
@@ -32,6 +32,8 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Key
+import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SportsEsports
@@ -56,15 +58,16 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.catalog.InstalledAppsManager
 import com.stormpanda.megingiard.media.SteamGridDbClient
-import com.stormpanda.megingiard.media.SteamGridDbException
 import com.stormpanda.megingiard.media.SteamGridDbGame
 import com.stormpanda.megingiard.media.SteamGridDbImage
+import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadCategoryTile
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
 import com.stormpanda.megingiard.ui.GamepadDeck
@@ -82,14 +85,14 @@ import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.FileOutputStream
+import kotlin.math.roundToInt
 import com.stormpanda.megingiard.shared.ui.R as SharedUiR
 
 private const val TAG = "GameFocusEditGameOverlay"
 private const val GF_TRANSITION_DURATION_MS = 150
 private const val GF_POSTER_ASPECT_RATIO = 2f / 3f
 private const val GF_CARD_SELECTED_BG_ALPHA = 0.25f
+private const val GF_GRIDS_IMAGE_TYPE = "grids"
 
 private val GF_POSTER_HEIGHT = 200.dp
 private val GF_POSTER_CORNER_RADIUS = 16.dp
@@ -112,7 +115,6 @@ internal enum class EditGameCategory(
     SCRAPING(R.string.gamefocus_cat_scraping, Icons.Rounded.Image),
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun GameFocusEditGameOverlay(
     appInfo: InstalledAppInfo,
@@ -190,17 +192,24 @@ private fun GameInfoDeckContent(
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
-    var editedTitle by remember(appInfo.packageName, appInfo.label) { mutableStateOf(appInfo.label) }
+    val defaultTitle = appInfo.defaultLabel
+    // Label currently persisted in the catalog; tracked locally because [appInfo] is a snapshot.
+    var savedTitle by remember(appInfo.packageName) { mutableStateOf(appInfo.label) }
+    var editedTitle by remember(appInfo.packageName) { mutableStateOf(appInfo.label) }
     val normalizedTitle = editedTitle.trim()
-    val isChanged = normalizedTitle != appInfo.label && normalizedTitle.isNotEmpty()
-    val isConfirmEnabled = isChanged && normalizedTitle.isNotBlank()
+    val isChanged = normalizedTitle.isNotEmpty() && normalizedTitle != savedTitle
+    val canResetToDefault = defaultTitle != null && (savedTitle != defaultTitle || editedTitle != defaultTitle)
 
     val promptState =
         rememberSaveExitPromptState(
             hasChanges = isChanged,
             onSave = {
-                if (isConfirmEnabled) {
-                    InstalledAppsManager.updateAppLabel(context, appInfo.packageName, normalizedTitle)
+                if (isChanged) {
+                    if (normalizedTitle == defaultTitle) {
+                        InstalledAppsManager.resetAppLabel(context, appInfo.packageName)
+                    } else {
+                        InstalledAppsManager.updateAppLabel(context, appInfo.packageName, normalizedTitle)
+                    }
                     onDismiss()
                 }
             },
@@ -221,13 +230,28 @@ private fun GameInfoDeckContent(
             modifier = Modifier.firstDeckItem(),
         )
 
+        if (defaultTitle != null) {
+            GamepadActionCard(
+                title = stringResource(R.string.gamefocus_action_reset_display_name_title),
+                description = stringResource(R.string.gamefocus_action_reset_display_name_desc, defaultTitle),
+                icon = Icons.Rounded.RestartAlt,
+                enabled = canResetToDefault,
+                onClick = {
+                    val restored = InstalledAppsManager.resetAppLabel(context, appInfo.packageName) ?: defaultTitle
+                    savedTitle = restored
+                    editedTitle = restored
+                    AppLog.i(TAG, "Display name reset to default for ${appInfo.packageName}")
+                },
+            )
+        }
+
         GamepadSaveExitActionRow(
             title = stringResource(R.string.gamefocus_action_save_game_info_title),
             description = stringResource(R.string.gamefocus_action_save_game_info_desc),
             pulseOnChanges = isChanged,
             saveActionText = stringResource(SharedUiR.string.gamepad_action_save),
             saveIcon = Icons.Rounded.Save,
-            enabled = isConfirmEnabled,
+            enabled = isChanged,
             showExitPrompt = promptState.showExitPrompt,
             onDismissPrompt = promptState.dismissPrompt,
             saveFocusRequester = promptState.focusRequester,
@@ -243,22 +267,18 @@ private fun ScrapingDeckContent(
     appInfo: InstalledAppInfo,
     apiKey: String,
     accentColor: Color,
-    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val appColors = LocalAppColors.current
     val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val thumbHeightPx = with(density) { GF_POSTER_HEIGHT.roundToPx() }
+    val thumbWidthPx = (thumbHeightPx * GF_POSTER_ASPECT_RATIO).roundToInt()
 
     val initialUseAppIcon = appInfo.coverPath == null
     var useAppIcon by remember(appInfo.packageName, initialUseAppIcon) { mutableStateOf(initialUseAppIcon) }
-    val initialAppliedImageId =
-        remember(appInfo.packageName) {
-            if (appInfo.coverPath != null) {
-                appInfo.coverImageId ?: InstalledAppsManager.getCoverImageId(appInfo.packageName)
-            } else {
-                null
-            }
-        }
+    // Only a persisted SteamGridDB image ID identifies the applied artwork; untracked covers stay unbadged.
+    val initialAppliedImageId = if (appInfo.coverPath != null) appInfo.coverImageId else null
     var appliedImageId by remember(appInfo.packageName, initialAppliedImageId) {
         mutableStateOf(initialAppliedImageId)
     }
@@ -272,73 +292,55 @@ private fun ScrapingDeckContent(
     var isSearchLoading by remember { mutableStateOf(false) }
     var isImagesLoading by remember { mutableStateOf(false) }
     var images by remember { mutableStateOf<List<SteamGridDbImage>>(emptyList()) }
-    var scrapeError by remember { mutableStateOf<Throwable?>(null) }
+    var scrapeErrorRes by remember { mutableStateOf<Int?>(null) }
     var isDownloading by remember { mutableStateOf(false) }
 
+    val isTokenMissing = apiKey.isBlank()
     val currentGame = games.getOrNull(selectedGameIndex)
     val rowState = rememberLazyListState()
 
-    val onRevertToAppIcon = {
+    val onRevertToAppIcon: () -> Unit = {
         scope.launch {
-            withContext(Dispatchers.IO) {
-                val coversDir = File(context.cacheDir, "gamefocus_covers")
-                val targetFile = File(coversDir, "${appInfo.packageName}.png")
-                if (targetFile.exists()) targetFile.delete()
+            InstalledAppsManager.revertToDefaultCover(context, appInfo.packageName) {
+                AppPaletteExtractor.invalidatePalette(appInfo.packageName)
             }
-            InstalledAppsManager.setCoverImageId(context, appInfo.packageName, null)
-            AppPaletteExtractor.invalidatePalette(appInfo.packageName)
-            InstalledAppsManager.updateAppCover(appInfo.packageName, null, null)
-            InstalledAppsManager.markAppAsScraped(context, appInfo.packageName)
             appliedImageId = null
-            AppLog.i(TAG, "Reverted to app icon for ${appInfo.packageName}")
         }
     }
 
     val onApplyArtwork: (SteamGridDbImage) -> Unit = { image ->
         if (!isDownloading) {
             isDownloading = true
-            scope.launch(Dispatchers.IO) {
-                AppLog.i(TAG, "Downloading SteamGridDB artwork for ${appInfo.label} from: ${image.url}")
-                val bytesResult = SteamGridDbClient.downloadImageBytes(image.url)
-                val bytes = bytesResult.getOrNull()
-                if (bytes != null) {
-                    val coversDir = File(context.cacheDir, "gamefocus_covers").apply { mkdirs() }
-                    val targetFile = File(coversDir, "${appInfo.packageName}.png")
-                    FileOutputStream(targetFile).use { it.write(bytes) }
-
-                    InstalledAppsManager.setCoverImageId(context, appInfo.packageName, image.id)
-                    AppPaletteExtractor.invalidatePalette(appInfo.packageName)
-                    InstalledAppsManager.updateAppCover(appInfo.packageName, targetFile.absolutePath, image.id)
-                    InstalledAppsManager.markAppAsScraped(context, appInfo.packageName)
-                    AppLog.i(TAG, "Saved artwork cover for ${appInfo.packageName} -> ${targetFile.absolutePath} (imageId=${image.id})")
-                    withContext(Dispatchers.Main) {
-                        isDownloading = false
-                        appliedImageId = image.id
-                        useAppIcon = false
+            scrapeErrorRes = null
+            scope.launch {
+                try {
+                    AppLog.i(TAG, "Downloading SteamGridDB artwork for ${appInfo.label} from: ${image.url}")
+                    val bytesResult = SteamGridDbClient.downloadImageBytes(image.url)
+                    val bytes = bytesResult.getOrNull()
+                    if (bytes == null) {
+                        AppLog.w(TAG, "Artwork download failed for ${appInfo.packageName}: ${bytesResult.exceptionOrNull()?.message}")
+                        scrapeErrorRes = steamGridDbErrorMessageRes(bytesResult.exceptionOrNull())
+                    } else {
+                        val savedPath =
+                            InstalledAppsManager.applyCustomCover(context, appInfo.packageName, bytes, image.id) {
+                                AppPaletteExtractor.invalidatePalette(appInfo.packageName)
+                            }
+                        if (savedPath != null) {
+                            appliedImageId = image.id
+                            useAppIcon = false
+                        } else {
+                            scrapeErrorRes = R.string.steamgriddb_error_save_failed
+                        }
                     }
-                } else {
-                    withContext(Dispatchers.Main) {
-                        isDownloading = false
-                        scrapeError = bytesResult.exceptionOrNull()
-                    }
+                } finally {
+                    isDownloading = false
                 }
             }
         }
     }
 
     LaunchedEffect(searchQuery, apiKey, useAppIcon) {
-        if (useAppIcon) {
-            isSearchLoading = false
-            return@LaunchedEffect
-        }
-        if (apiKey.isBlank()) {
-            isSearchLoading = false
-            scrapeError = SteamGridDbException.Unauthorized("Token missing")
-            games = emptyList()
-            selectedGameIndex = 0
-            return@LaunchedEffect
-        }
-        if (searchQuery.isBlank()) {
+        if (useAppIcon || isTokenMissing || searchQuery.isBlank()) {
             isSearchLoading = false
             games = emptyList()
             selectedGameIndex = 0
@@ -347,91 +349,41 @@ private fun ScrapingDeckContent(
 
         AppLog.i(TAG, "Searching SteamGridDB games for '$searchQuery'")
         isSearchLoading = true
-        scrapeError = null
-
-        withContext(Dispatchers.IO) {
-            val searchRes = SteamGridDbClient.searchGames(searchQuery, apiKey)
-            withContext(Dispatchers.Main) {
-                isSearchLoading = false
-                searchRes
-                    .onSuccess { fetchedGames ->
-                        games = fetchedGames
-                        selectedGameIndex = 0
-                    }.onFailure { err ->
-                        scrapeError = err
-                        games = emptyList()
-                        selectedGameIndex = 0
-                    }
+        scrapeErrorRes = null
+        val searchRes = SteamGridDbClient.searchGames(searchQuery, apiKey)
+        isSearchLoading = false
+        searchRes
+            .onSuccess { fetchedGames ->
+                games = fetchedGames
+                selectedGameIndex = 0
+            }.onFailure { err ->
+                AppLog.w(TAG, "SteamGridDB search failed for '$searchQuery': ${err.message}")
+                scrapeErrorRes = steamGridDbErrorMessageRes(err)
+                games = emptyList()
+                selectedGameIndex = 0
             }
-        }
     }
 
     LaunchedEffect(currentGame?.id, useAppIcon) {
-        if (useAppIcon) {
+        val gameId = currentGame?.id
+        if (useAppIcon || gameId == null || isTokenMissing) {
+            images = emptyList()
             isImagesLoading = false
             return@LaunchedEffect
         }
-        val gameId = currentGame?.id
-        if (gameId != null && apiKey.isNotBlank()) {
-            isImagesLoading = true
-            scrapeError = null
-            images = emptyList()
-
-            withContext(Dispatchers.IO) {
-                val imagesRes = SteamGridDbClient.fetchImages(gameId, "grids", apiKey)
-                withContext(Dispatchers.Main) {
-                    isImagesLoading = false
-                    imagesRes
-                        .onSuccess { fetchedImages ->
-                            images = fetchedImages
-                        }.onFailure { err ->
-                            scrapeError = err
-                            images = emptyList()
-                        }
-                }
+        isImagesLoading = true
+        scrapeErrorRes = null
+        images = emptyList()
+        val imagesRes = SteamGridDbClient.fetchImages(gameId, GF_GRIDS_IMAGE_TYPE, apiKey)
+        isImagesLoading = false
+        imagesRes
+            .onSuccess { fetchedImages ->
+                images = fetchedImages
+            }.onFailure { err ->
+                AppLog.w(TAG, "SteamGridDB image fetch failed for gameId=$gameId: ${err.message}")
+                scrapeErrorRes = steamGridDbErrorMessageRes(err)
+                images = emptyList()
             }
-        } else {
-            images = emptyList()
-            isImagesLoading = false
-        }
-    }
-
-    LaunchedEffect(images, appInfo.coverPath, useAppIcon) {
-        val path = appInfo.coverPath
-        if (appliedImageId == null && !useAppIcon && path != null && images.isNotEmpty()) {
-            withContext(Dispatchers.IO) {
-                val coverFile = File(path)
-                if (coverFile.exists() && coverFile.length() > 0L) {
-                    if (images.size == 1) {
-                        val matchedId = images.first().id
-                        InstalledAppsManager.setCoverImageId(context, appInfo.packageName, matchedId)
-                        withContext(Dispatchers.Main) {
-                            appliedImageId = matchedId
-                        }
-                    } else {
-                        val firstImage = images.first()
-                        val firstBytes = SteamGridDbClient.downloadImageBytes(firstImage.url).getOrNull()
-                        if (firstBytes != null && firstBytes.size.toLong() == coverFile.length()) {
-                            InstalledAppsManager.setCoverImageId(context, appInfo.packageName, firstImage.id)
-                            withContext(Dispatchers.Main) {
-                                appliedImageId = firstImage.id
-                            }
-                        } else {
-                            for (image in images.drop(1)) {
-                                val bytes = SteamGridDbClient.downloadImageBytes(image.url).getOrNull()
-                                if (bytes != null && bytes.size.toLong() == coverFile.length()) {
-                                    InstalledAppsManager.setCoverImageId(context, appInfo.packageName, image.id)
-                                    withContext(Dispatchers.Main) {
-                                        appliedImageId = image.id
-                                    }
-                                    break
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 
     GamepadDeck(
@@ -502,6 +454,7 @@ private fun ScrapingDeckContent(
         )
 
         // ── 5. Status states or horizontal artwork gallery ───────────
+        val errorRes = scrapeErrorRes
         if (useAppIcon) {
             GamepadInfoBox(
                 text =
@@ -513,53 +466,22 @@ private fun ScrapingDeckContent(
                 icon = Icons.Rounded.Apps,
                 iconTint = appColors.onSurfaceSecondary,
             )
-        } else if (isDownloading) {
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(GF_STATUS_BOX_HEIGHT),
-                contentAlignment = Alignment.Center,
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator(color = accentColor)
-                    Spacer(Modifier.height(GF_SPACING_12))
-                    Text(
-                        text = stringResource(R.string.steamgriddb_status_downloading),
-                        color = appColors.onSurfaceSecondary,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-            }
-        } else if (isSearchLoading || isImagesLoading) {
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(GF_STATUS_BOX_HEIGHT),
-                contentAlignment = Alignment.Center,
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator(color = accentColor)
-                    Spacer(Modifier.height(GF_SPACING_12))
-                    Text(
-                        text =
-                            if (isSearchLoading) {
-                                stringResource(R.string.steamgriddb_status_searching)
-                            } else {
-                                stringResource(R.string.steamgriddb_status_fetching)
-                            },
-                        color = appColors.onSurfaceSecondary,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-            }
-        } else if (scrapeError != null) {
-            val errorText =
-                scrapeError?.message?.takeIf { it.isNotBlank() }
-                    ?: stringResource(R.string.steamgriddb_preview_unavailable)
+        } else if (isTokenMissing) {
             GamepadInfoBox(
-                text = errorText,
+                text = stringResource(R.string.steamgriddb_token_missing_message),
+                icon = Icons.Rounded.Key,
+                iconTint = appColors.onSurfaceSecondary,
+            )
+        } else if (isDownloading) {
+            ScrapingStatusBox(textRes = R.string.steamgriddb_status_downloading, accentColor = accentColor)
+        } else if (isSearchLoading || isImagesLoading) {
+            ScrapingStatusBox(
+                textRes = if (isSearchLoading) R.string.steamgriddb_status_searching else R.string.steamgriddb_status_fetching,
+                accentColor = accentColor,
+            )
+        } else if (errorRes != null) {
+            GamepadInfoBox(
+                text = stringResource(errorRes),
                 icon = Icons.Rounded.Warning,
                 iconTint = appColors.error,
             )
@@ -618,6 +540,8 @@ private fun ScrapingDeckContent(
                             Box(modifier = Modifier.fillMaxSize()) {
                                 SteamGridDbImageThumbnail(
                                     url = image.thumb.ifBlank { image.url },
+                                    reqWidthPx = thumbWidthPx,
+                                    reqHeightPx = thumbHeightPx,
                                     contentDescription = stringResource(R.string.steamgriddb_cd_artwork_option),
                                     modifier = Modifier.fillMaxSize(),
                                 )
@@ -649,26 +573,53 @@ private fun ScrapingDeckContent(
 }
 
 @Composable
+private fun ScrapingStatusBox(
+    @StringRes textRes: Int,
+    accentColor: Color,
+) {
+    val appColors = LocalAppColors.current
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(GF_STATUS_BOX_HEIGHT),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            CircularProgressIndicator(color = accentColor)
+            Spacer(Modifier.height(GF_SPACING_12))
+            Text(
+                text = stringResource(textRes),
+                color = appColors.onSurfaceSecondary,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+    }
+}
+
+@Composable
 private fun SteamGridDbImageThumbnail(
     url: String,
+    reqWidthPx: Int,
+    reqHeightPx: Int,
     contentDescription: String?,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
     var bitmap by remember(url) { mutableStateOf<ImageBitmap?>(null) }
     var isLoading by remember(url) { mutableStateOf(true) }
-    var isError by remember(url) { mutableStateOf(false) }
 
-    LaunchedEffect(url) {
+    LaunchedEffect(url, reqWidthPx, reqHeightPx) {
         isLoading = true
-        isError = false
         val bytes = SteamGridDbClient.downloadImageBytes(url).getOrNull()
-        val decoded = bytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
-        if (decoded != null) {
-            bitmap = decoded.asImageBitmap()
-        } else {
-            isError = true
+        val decoded =
+            bytes?.let {
+                withContext(Dispatchers.Default) { decodeSampledBitmap(it, reqWidthPx, reqHeightPx) }
+            }
+        if (decoded == null) {
+            AppLog.w(TAG, "Thumbnail unavailable for $url")
         }
+        bitmap = decoded?.asImageBitmap()
         isLoading = false
     }
 
@@ -676,13 +627,14 @@ private fun SteamGridDbImageThumbnail(
         modifier = modifier.background(colors.surfaceVariant),
         contentAlignment = Alignment.Center,
     ) {
+        val loadedBitmap = bitmap
         if (isLoading) {
             CircularProgressIndicator(
                 modifier = Modifier.size(GF_PROGRESS_SIZE_SMALL),
                 color = colors.accent,
                 strokeWidth = GF_PROGRESS_STROKE,
             )
-        } else if (isError || bitmap == null) {
+        } else if (loadedBitmap == null) {
             Icon(
                 imageVector = Icons.Rounded.Warning,
                 contentDescription = null,
@@ -690,7 +642,7 @@ private fun SteamGridDbImageThumbnail(
             )
         } else {
             Image(
-                bitmap = bitmap!!,
+                bitmap = loadedBitmap,
                 contentDescription = contentDescription,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,

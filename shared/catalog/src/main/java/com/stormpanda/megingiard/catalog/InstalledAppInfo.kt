@@ -14,7 +14,13 @@ data class InstalledAppInfo(
     val emulatorPackage: String? = null,
     val coverLastModified: Long = 0L,
     val coverImageId: Int? = null,
+    /** Title shown when no custom display name is set (alias-mapped app label or cleaned ROM name). */
+    val defaultLabel: String? = null,
 ) {
+    /** True when the user has overridden [defaultLabel] with a custom display name. */
+    val hasCustomLabel: Boolean
+        get() = defaultLabel != null && label != defaultLabel
+
     fun withCover(
         coverPath: String?,
         coverImageId: Int? = this.coverImageId,
@@ -36,7 +42,7 @@ fun List<InstalledAppInfo>.withUpdatedCover(
 ): List<InstalledAppInfo> =
     map {
         if (it.packageName == packageName) {
-            it.withCover(coverPath, coverImageId = if (coverPath == null) null else (coverImageId ?: it.coverImageId))
+            it.withCover(coverPath, coverImageId = coverImageId)
         } else {
             it
         }
