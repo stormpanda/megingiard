@@ -305,7 +305,6 @@ object RomManager {
 
     suspend fun reloadRomAppsSuspend(context: Context) =
         withContext(Dispatchers.IO) {
-            val coversDir = File(context.cacheDir, DIR_COVERS).apply { mkdirs() }
             var namesChanged = false
             val allRomApps =
                 buildList {
@@ -350,7 +349,7 @@ object RomManager {
                                     "_" + romUriStr.hashCode().absoluteValue
                             val label = InstalledAppsManager.getCustomLabel(pseudoPackageName) ?: cleanedLabel
 
-                            val cachedCoverFile = File(coversDir, "$pseudoPackageName.png")
+                            val cachedCoverFile = InstalledAppsManager.coverFileFor(context, pseudoPackageName)
                             val hasCover = cachedCoverFile.exists() && cachedCoverFile.length() > 0
                             val coverPath = if (hasCover) cachedCoverFile.absolutePath else null
                             val coverLastModified = if (hasCover) cachedCoverFile.lastModified() else 0L
