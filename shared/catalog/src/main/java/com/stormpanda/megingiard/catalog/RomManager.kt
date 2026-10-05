@@ -352,6 +352,7 @@ object RomManager {
                             val hasCover = cachedCoverFile.exists() && cachedCoverFile.length() > 0
                             val coverPath = if (hasCover) cachedCoverFile.absolutePath else null
                             val coverLastModified = if (hasCover) cachedCoverFile.lastModified() else 0L
+                            val coverImageId = if (hasCover) InstalledAppsManager.getCoverImageId(pseudoPackageName) else null
 
                             add(
                                 InstalledAppInfo(
@@ -367,6 +368,7 @@ object RomManager {
                                     retroArchCore = folder.retroArchCore,
                                     emulatorPackage = folder.emulatorPackage,
                                     coverLastModified = coverLastModified,
+                                    coverImageId = coverImageId,
                                 ),
                             )
                         }
@@ -383,9 +385,10 @@ object RomManager {
     fun updateRomCover(
         packageName: String,
         coverPath: String?,
+        coverImageId: Int? = null,
     ) {
-        _romApps.value = _romApps.value.withUpdatedCover(packageName, coverPath)
-        AppLog.i(TAG, "Updated in-memory ROM cover path for $packageName to $coverPath")
+        _romApps.value = _romApps.value.withUpdatedCover(packageName, coverPath, coverImageId)
+        AppLog.i(TAG, "Updated in-memory ROM cover path for $packageName to $coverPath (imageId: $coverImageId)")
     }
 
     fun updateRomLabel(

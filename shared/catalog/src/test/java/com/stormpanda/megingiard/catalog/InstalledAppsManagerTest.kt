@@ -48,14 +48,17 @@ class InstalledAppsManagerTest {
         val gameApp = app.copy(isGame = true)
         assertEquals(true, gameApp.isGame)
 
-        val updated = app.withCover("/tmp/new_cover.png", 12345L)
+        val updated = app.withCover("/tmp/new_cover.png", 42, 12345L)
         assertEquals("/tmp/new_cover.png", updated.coverPath)
+        assertEquals(42, updated.coverImageId)
         assertEquals(12345L, updated.coverLastModified)
 
         val list = listOf(app, InstalledAppInfo(packageName = "com.other.app", activityName = "", label = "Other"))
-        val updatedList = list.withUpdatedCover("com.example.game", "/tmp/updated.png")
+        val updatedList = list.withUpdatedCover("com.example.game", "/tmp/updated.png", 99)
         assertEquals("/tmp/updated.png", updatedList[0].coverPath)
+        assertEquals(99, updatedList[0].coverImageId)
         assertNull(updatedList[1].coverPath)
+        assertNull(updatedList[1].coverImageId)
     }
 
     @Test
@@ -143,8 +146,26 @@ class InstalledAppsManagerTest {
 
     @Test
     fun testUpdateAppCover() {
-        InstalledAppsManager.updateAppCover("com.test.game", "/path/to/cover.png")
+        InstalledAppsManager.updateAppCover("com.test.game", "/path/to/cover.png", 101)
         // Verified function execution
+    }
+
+    @Test
+    fun testCoverImageIdPersistence() {
+        val context: Context = RuntimeEnvironment.getApplication()
+        val pkg = "com.test.artworkgame"
+
+        assertNull(InstalledAppsManager.getCoverImageId(pkg))
+
+        InstalledAppsManager.setCoverImageId(context, pkg, 4242)
+        assertEquals(4242, InstalledAppsManager.getCoverImageId(pkg))
+
+        // Reset memory to simulate app restart, then reload
+        InstalledAppsManager.resetForTesting()
+        assertNull(InstalledAppsManager.getCoverImageId(pkg))
+
+        InstalledAppsManager.loadInstalledApps(context)
+        // Verified reload from disk
     }
 
     @Test

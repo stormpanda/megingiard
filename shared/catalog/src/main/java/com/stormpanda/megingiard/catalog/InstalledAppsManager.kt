@@ -37,6 +37,7 @@ private const val FILE_HIDDEN = "gamefocus_hidden.txt"
 private const val FILE_LAST_USED = "gamefocus_last_used.txt"
 private const val FILE_SCRAPED_APPS = "gamefocus_scraped_apps.txt"
 private const val FILE_APP_NAMES = "gamefocus_app_names.json"
+private const val FILE_COVER_IMAGE_IDS = "gamefocus_cover_image_ids.json"
 private const val DIR_COVERS = "gamefocus_covers"
 private const val MAX_RECENT_APPS = 10
 private const val INTENT_CATEGORY_GAME = "android.intent.category.GAME"
@@ -47,6 +48,7 @@ object InstalledAppsManager {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     private val customAppNames = mutableMapOf<String, String>()
+    private val coverImageIds = mutableMapOf<String, Int>()
 
     private val installedAndroidAppsFlow = MutableStateFlow<List<InstalledAppInfo>>(emptyList())
     val installedApps: StateFlow<List<InstalledAppInfo>> =
@@ -78,6 +80,7 @@ object InstalledAppsManager {
         _lastUsed.value = emptyList()
         synchronized(scrapedPackages) { scrapedPackages.clear() }
         synchronized(customAppNames) { customAppNames.clear() }
+        synchronized(coverImageIds) { coverImageIds.clear() }
         isScrapedPackagesLoaded = false
         isSettingsObserverRegistered = false
     }
@@ -97,6 +100,57 @@ object InstalledAppsManager {
         } catch (e: Exception) {
             AppLog.w(TAG, "Failed to load $FILE_APP_NAMES: ${e.message}")
         }
+    }
+
+    private fun loadCoverImageIds(context: Context) {
+        val file = File(context.filesDir, FILE_COVER_IMAGE_IDS)
+        if (!file.exists()) return
+        val atomicFile = AtomicFile(file)
+        try {
+            val text = atomicFile.readFully().toString(Charsets.UTF_8)
+            val map = Json.decodeFromString<Map<String, Int>>(text)
+            synchronized(coverImageIds) {
+                coverImageIds.clear()
+                coverImageIds.putAll(map)
+            }
+            AppLog.d(TAG, "Loaded ${map.size} cover image IDs from disk")
+        } catch (e: Exception) {
+            AppLog.w(TAG, "Failed to load $FILE_COVER_IMAGE_IDS: ${e.message}")
+        }
+    }
+
+    private fun saveCoverImageIds(context: Context) {
+        val content = synchronized(coverImageIds) { coverImageIds.toMap() }
+        val file = File(context.filesDir, FILE_COVER_IMAGE_IDS)
+        val atomicFile = AtomicFile(file)
+        var fos: FileOutputStream? = null
+        try {
+            val text = Json.encodeToString(content)
+            fos = atomicFile.startWrite()
+            fos.write(text.toByteArray(Charsets.UTF_8))
+            atomicFile.finishWrite(fos)
+            AppLog.d(TAG, "Saved cover image IDs to disk")
+        } catch (e: Exception) {
+            AppLog.w(TAG, "Failed to save $FILE_COVER_IMAGE_IDS: ${e.message}")
+            if (fos != null) atomicFile.failWrite(fos)
+        }
+    }
+
+    fun getCoverImageId(packageName: String): Int? = synchronized(coverImageIds) { coverImageIds[packageName] }
+
+    fun setCoverImageId(
+        context: Context,
+        packageName: String,
+        imageId: Int?,
+    ) {
+        synchronized(coverImageIds) {
+            if (imageId != null) {
+                coverImageIds[packageName] = imageId
+            } else {
+                coverImageIds.remove(packageName)
+            }
+        }
+        saveCoverImageIds(context)
     }
 
     private fun saveCustomAppNames(context: Context) {
@@ -274,6 +328,7 @@ object InstalledAppsManager {
             loadHidden(context)
             loadLastUsed(context)
             loadCustomAppNames(context)
+            loadCoverImageIds(context)
 
             val packageManager = context.packageManager
             val mainIntent =
@@ -329,6 +384,7 @@ object InstalledAppsManager {
                         val hasCover = cachedCoverFile.exists() && cachedCoverFile.length() > 0
                         val coverPath = if (hasCover) cachedCoverFile.absolutePath else null
                         val coverLastModified = if (hasCover) cachedCoverFile.lastModified() else 0L
+                        val coverImageId = synchronized(coverImageIds) { coverImageIds[packageName] }
 
                         InstalledAppInfo(
                             packageName = packageName,
@@ -337,6 +393,7 @@ object InstalledAppsManager {
                             coverPath = coverPath,
                             isGame = isGame,
                             coverLastModified = coverLastModified,
+                            coverImageId = coverImageId,
                         )
                     }.sortedBy { it.label.lowercase() }
 
@@ -352,13 +409,15 @@ object InstalledAppsManager {
     fun updateAppCover(
         packageName: String,
         coverPath: String?,
+        coverImageId: Int? = null,
     ) {
         if (packageName.startsWith("rom.")) {
-            RomManager.updateRomCover(packageName, coverPath)
+            RomManager.updateRomCover(packageName, coverPath, coverImageId)
             return
         }
-        installedAndroidAppsFlow.value = installedAndroidAppsFlow.value.withUpdatedCover(packageName, coverPath)
-        AppLog.i(TAG, "Updated in-memory cover path for $packageName to $coverPath")
+        installedAndroidAppsFlow.value =
+            installedAndroidAppsFlow.value.withUpdatedCover(packageName, coverPath, coverImageId)
+        AppLog.i(TAG, "Updated in-memory cover path for $packageName to $coverPath (imageId: $coverImageId)")
     }
 
     fun updateAppLabel(
@@ -451,13 +510,15 @@ object InstalledAppsManager {
                     if (!hasCover) {
                         val imagesResult = SteamGridDbClient.fetchImages(gameId, "grids", apiKey)
                         val images = imagesResult.getOrNull()
-                        val imageUrl = images?.firstOrNull()?.url
+                        val firstImage = images?.firstOrNull()
+                        val imageUrl = firstImage?.url
                         if (imageUrl != null) {
                             val bytes = SteamGridDbClient.downloadImageBytes(imageUrl).getOrNull()
                             if (bytes != null) {
                                 coverFile.writeBytes(bytes)
-                                updateAppCover(app.packageName, coverFile.absolutePath)
-                                AppLog.i(TAG, "Successfully scraped SteamGridDB cover for ${app.label}")
+                                setCoverImageId(context, app.packageName, firstImage.id)
+                                updateAppCover(app.packageName, coverFile.absolutePath, firstImage.id)
+                                AppLog.i(TAG, "Successfully scraped SteamGridDB cover for ${app.label} (imageId=${firstImage.id})")
                             }
                         }
                     }

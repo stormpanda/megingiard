@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Check
@@ -87,10 +88,12 @@ import com.stormpanda.megingiard.shared.ui.R as SharedUiR
 
 private const val TAG = "GameFocusEditGameOverlay"
 private const val GF_TRANSITION_DURATION_MS = 150
-private const val GF_POSTER_ASPECT_RATIO = 0.66f
+private const val GF_POSTER_ASPECT_RATIO = 2f / 3f
 private const val GF_CARD_SELECTED_BG_ALPHA = 0.25f
 
 private val GF_POSTER_HEIGHT = 200.dp
+private val GF_POSTER_CORNER_RADIUS = 16.dp
+private val GF_POSTER_SHAPE = RoundedCornerShape(GF_POSTER_CORNER_RADIUS)
 private val GF_STATUS_BOX_HEIGHT = 160.dp
 private val GF_ROW_SPACING = 12.dp
 private val GF_ROW_V_PADDING = 4.dp
@@ -248,7 +251,17 @@ private fun ScrapingDeckContent(
 
     val initialUseAppIcon = appInfo.coverPath == null
     var useAppIcon by remember(appInfo.packageName, initialUseAppIcon) { mutableStateOf(initialUseAppIcon) }
-    var appliedImageId by remember(appInfo.packageName) { mutableStateOf<Int?>(null) }
+    val initialAppliedImageId =
+        remember(appInfo.packageName) {
+            if (appInfo.coverPath != null) {
+                appInfo.coverImageId ?: InstalledAppsManager.getCoverImageId(appInfo.packageName)
+            } else {
+                null
+            }
+        }
+    var appliedImageId by remember(appInfo.packageName, initialAppliedImageId) {
+        mutableStateOf(initialAppliedImageId)
+    }
 
     var searchQuery by remember(appInfo.packageName) {
         mutableStateOf(SteamGridDbClient.cleanSearchQuery(appInfo.label))
@@ -272,8 +285,9 @@ private fun ScrapingDeckContent(
                 val targetFile = File(coversDir, "${appInfo.packageName}.png")
                 if (targetFile.exists()) targetFile.delete()
             }
+            InstalledAppsManager.setCoverImageId(context, appInfo.packageName, null)
             AppPaletteExtractor.invalidatePalette(appInfo.packageName)
-            InstalledAppsManager.updateAppCover(appInfo.packageName, null)
+            InstalledAppsManager.updateAppCover(appInfo.packageName, null, null)
             InstalledAppsManager.markAppAsScraped(context, appInfo.packageName)
             appliedImageId = null
             AppLog.i(TAG, "Reverted to app icon for ${appInfo.packageName}")
@@ -292,10 +306,11 @@ private fun ScrapingDeckContent(
                     val targetFile = File(coversDir, "${appInfo.packageName}.png")
                     FileOutputStream(targetFile).use { it.write(bytes) }
 
+                    InstalledAppsManager.setCoverImageId(context, appInfo.packageName, image.id)
                     AppPaletteExtractor.invalidatePalette(appInfo.packageName)
-                    InstalledAppsManager.updateAppCover(appInfo.packageName, targetFile.absolutePath)
+                    InstalledAppsManager.updateAppCover(appInfo.packageName, targetFile.absolutePath, image.id)
                     InstalledAppsManager.markAppAsScraped(context, appInfo.packageName)
-                    AppLog.i(TAG, "Saved artwork cover for ${appInfo.packageName} -> ${targetFile.absolutePath}")
+                    AppLog.i(TAG, "Saved artwork cover for ${appInfo.packageName} -> ${targetFile.absolutePath} (imageId=${image.id})")
                     withContext(Dispatchers.Main) {
                         isDownloading = false
                         appliedImageId = image.id
@@ -378,6 +393,44 @@ private fun ScrapingDeckContent(
         } else {
             images = emptyList()
             isImagesLoading = false
+        }
+    }
+
+    LaunchedEffect(images, appInfo.coverPath, useAppIcon) {
+        val path = appInfo.coverPath
+        if (appliedImageId == null && !useAppIcon && path != null && images.isNotEmpty()) {
+            withContext(Dispatchers.IO) {
+                val coverFile = File(path)
+                if (coverFile.exists() && coverFile.length() > 0L) {
+                    if (images.size == 1) {
+                        val matchedId = images.first().id
+                        InstalledAppsManager.setCoverImageId(context, appInfo.packageName, matchedId)
+                        withContext(Dispatchers.Main) {
+                            appliedImageId = matchedId
+                        }
+                    } else {
+                        val firstImage = images.first()
+                        val firstBytes = SteamGridDbClient.downloadImageBytes(firstImage.url).getOrNull()
+                        if (firstBytes != null && firstBytes.size.toLong() == coverFile.length()) {
+                            InstalledAppsManager.setCoverImageId(context, appInfo.packageName, firstImage.id)
+                            withContext(Dispatchers.Main) {
+                                appliedImageId = firstImage.id
+                            }
+                        } else {
+                            for (image in images.drop(1)) {
+                                val bytes = SteamGridDbClient.downloadImageBytes(image.url).getOrNull()
+                                if (bytes != null && bytes.size.toLong() == coverFile.length()) {
+                                    InstalledAppsManager.setCoverImageId(context, appInfo.packageName, image.id)
+                                    withContext(Dispatchers.Main) {
+                                        appliedImageId = image.id
+                                    }
+                                    break
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -547,6 +600,10 @@ private fun ScrapingDeckContent(
                                     }
                                 }
                             },
+                            shape = GF_POSTER_SHAPE,
+                            contentPadding = PaddingValues(0.dp),
+                            clipToShape = true,
+                            unfocusedBorderColor = if (isApplied) accentColor else appColors.subduedBorder,
                             modifier =
                                 Modifier
                                     .height(GF_POSTER_HEIGHT)
