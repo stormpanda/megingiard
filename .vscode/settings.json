@@ -2,5 +2,17 @@
   "chat.tools.terminal.autoApprove": {
     "gh": true
   },
-  "java.configuration.updateBuildConfiguration": "automatic"
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "java.compile.nullAnalysis.mode": "automatic",
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+  "python.locator": "js",
+  "python.experiments.enabled": false,
+  "python.useEnvironmentsExtension": false,
+  "python-envs.workspaceSearchPaths": [
+    "./.venv"
+  ],
+  "python.terminal.activateEnvironment": false,
+  "python.experiments.optOutFrom": [
+    "pythonTerminalEnvVarActivation"
+  ]
 }

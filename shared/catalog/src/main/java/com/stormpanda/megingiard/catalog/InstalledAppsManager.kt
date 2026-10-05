@@ -244,24 +244,27 @@ object InstalledAppsManager {
         filename: String,
         lines: Iterable<String>,
     ) {
-        scope.launch {
-            val file = File(context.filesDir, filename)
-            val atomicFile = AtomicFile(file)
-            var fos: FileOutputStream? = null
-            try {
-                fos = atomicFile.startWrite()
-                fos.bufferedWriter(Charsets.UTF_8).use { writer ->
-                    for (line in lines) {
-                        writer.write(line)
-                        writer.newLine()
+        val snapshot = lines.toList()
+        persistScope.launch {
+            synchronized(persistLock) {
+                val file = File(context.filesDir, filename)
+                val atomicFile = AtomicFile(file)
+                var fos: FileOutputStream? = null
+                try {
+                    fos = atomicFile.startWrite()
+                    fos.bufferedWriter(Charsets.UTF_8).use { writer ->
+                        for (line in snapshot) {
+                            writer.write(line)
+                            writer.newLine()
+                        }
                     }
+                    atomicFile.finishWrite(fos)
+                } catch (e: Exception) {
+                    if (fos != null) {
+                        atomicFile.failWrite(fos)
+                    }
+                    AppLog.e(TAG, "Failed to persist $filename: ${e.message}", e)
                 }
-                atomicFile.finishWrite(fos)
-            } catch (e: Exception) {
-                if (fos != null) {
-                    atomicFile.failWrite(fos)
-                }
-                AppLog.e(TAG, "Failed to persist $filename: ${e.message}", e)
             }
         }
     }

@@ -5,11 +5,11 @@ import androidx.core.util.AtomicFile
 import com.stormpanda.megingiard.AppLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -20,8 +20,9 @@ private const val TAG = "GameFocusPairManager"
 private const val FILE_APP_PAIRS = "gamefocus_app_pairs.json"
 
 object GameFocusPairManager {
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private var lastPersistJob: Job? = null
+    private val persistSupervisor = SupervisorJob()
+    private val persistScope = CoroutineScope(Dispatchers.IO + persistSupervisor)
+    private val persistLock = Any()
 
     private val _pairedApps = MutableStateFlow<Map<String, String>>(emptyMap())
     val pairedApps: StateFlow<Map<String, String>> = _pairedApps.asStateFlow()
@@ -31,7 +32,7 @@ object GameFocusPairManager {
     }
 
     internal suspend fun awaitPersistenceForTesting() {
-        lastPersistJob?.join()
+        persistSupervisor.children.toList().joinAll()
     }
 
     fun loadPairs(context: Context) {
@@ -74,7 +75,7 @@ object GameFocusPairManager {
             AppLog.i(TAG, "Set pairing: $topPackageName -> $bottomPackageName")
         }
         _pairedApps.value = current
-        lastPersistJob = persistPairs(context, current)
+        persistPairs(context, current)
     }
 
     fun removePair(
@@ -89,22 +90,25 @@ object GameFocusPairManager {
     private fun persistPairs(
         context: Context,
         pairs: Map<String, String>,
-    ): Job =
-        scope.launch {
-            val file = File(context.filesDir, FILE_APP_PAIRS)
-            val atomicFile = AtomicFile(file)
-            var fos: FileOutputStream? = null
-            try {
-                val jsonStr = Json.encodeToString(pairs)
-                fos = atomicFile.startWrite()
-                fos.write(jsonStr.toByteArray(Charsets.UTF_8))
-                atomicFile.finishWrite(fos)
-                AppLog.d(TAG, "Persisted ${pairs.size} app pair(s) to $FILE_APP_PAIRS")
-            } catch (e: Exception) {
-                if (fos != null) {
-                    atomicFile.failWrite(fos)
+    ) {
+        persistScope.launch {
+            synchronized(persistLock) {
+                val file = File(context.filesDir, FILE_APP_PAIRS)
+                val atomicFile = AtomicFile(file)
+                var fos: FileOutputStream? = null
+                try {
+                    val jsonStr = Json.encodeToString(pairs)
+                    fos = atomicFile.startWrite()
+                    fos.write(jsonStr.toByteArray(Charsets.UTF_8))
+                    atomicFile.finishWrite(fos)
+                    AppLog.d(TAG, "Persisted ${pairs.size} app pair(s) to $FILE_APP_PAIRS")
+                } catch (e: Exception) {
+                    if (fos != null) {
+                        atomicFile.failWrite(fos)
+                    }
+                    AppLog.e(TAG, "Failed to persist app pairs: ${e.message}", e)
                 }
-                AppLog.e(TAG, "Failed to persist app pairs: ${e.message}", e)
             }
         }
+    }
 }

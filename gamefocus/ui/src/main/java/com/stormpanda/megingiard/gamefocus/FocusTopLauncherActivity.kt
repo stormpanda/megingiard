@@ -48,6 +48,7 @@ import com.stormpanda.megingiard.gamefocus.viewmodel.DEFAULT_LIBRARY_GRID_COLUMN
 import com.stormpanda.megingiard.gamefocus.viewmodel.DEFAULT_PAIRING_GRID_COLUMNS
 import com.stormpanda.megingiard.gamefocus.viewmodel.FocusTopLauncherViewModel
 import com.stormpanda.megingiard.gamefocus.viewmodel.LauncherScrollDirection
+import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import com.stormpanda.megingiard.math.floorMod
 import com.stormpanda.megingiard.settings.ThemeMode
 import com.stormpanda.megingiard.ui.AppDimens
@@ -549,7 +550,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
     }
 
     private fun isCompanionApp(packageName: String): Boolean =
-        packageName.startsWith("com.stormpanda.megingiard") && !packageName.contains("gamefocus")
+        packageName == MegingiardIpcContract.COMPANION_PACKAGE ||
+            packageName == MegingiardIpcContract.COMPANION_DEBUG_PACKAGE
 
     private fun resetToGallery(): Boolean {
         stopRepeat()
