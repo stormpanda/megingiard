@@ -91,8 +91,13 @@
     <string name="gamefocus_scraping_search_term_desc">SteamGridDB query used to find matching artwork.</string>
     <string name="gamefocus_scraping_matched_game_title">Matched Game</string>
     <string name="gamefocus_scraping_matched_game_desc">SteamGridDB game title match.</string>
-    <string name="gamefocus_scraping_revert_icon_title">Revert to App Icon</string>
-    <string name="gamefocus_scraping_revert_icon_rom_title">Revert to Default Icon</string>
-    <string name="gamefocus_scraping_revert_icon_desc">Remove downloaded cover artwork and restore the original icon.</string>
+    <string name="gamefocus_toggle_use_app_icon_title">Use App Icon</string>
+    <string name="gamefocus_toggle_use_rom_icon_title">Use System Icon</string>
+    <string name="gamefocus_toggle_use_app_icon_desc">Display the native Android app icon instead of scraped artwork.</string>
+    <string name="gamefocus_toggle_use_rom_icon_desc">Display the system emulator logo instead of scraped artwork.</string>
+    <string name="gamefocus_scraping_images_section">Available Artwork</string>
+    <string name="gamefocus_scraping_using_app_icon_notice">Native application icon is active. Toggle off above to browse and apply custom artwork.</string>
+    <string name="gamefocus_scraping_using_rom_icon_notice">System emulator icon is active. Toggle off above to browse and apply custom artwork.</string>
+    <string name="gamefocus_scraping_applied_badge_cd">Selected artwork</string>
 </resources>
 

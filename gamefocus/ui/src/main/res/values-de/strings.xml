@@ -91,8 +91,13 @@
     <string name="gamefocus_scraping_search_term_desc">SteamGridDB-Suchanfrage für passende Cover-Motive.</string>
     <string name="gamefocus_scraping_matched_game_title">Erkanntes Spiel</string>
     <string name="gamefocus_scraping_matched_game_desc">SteamGridDB-Spieltitel-Treffer.</string>
-    <string name="gamefocus_scraping_revert_icon_title">Auf App-Icon zurücksetzen</string>
-    <string name="gamefocus_scraping_revert_icon_rom_title">Auf Standard-Icon zurücksetzen</string>
-    <string name="gamefocus_scraping_revert_icon_desc">Heruntergeladenes Cover-Motiv entfernen und das Original-Icon wiederherstellen.</string>
+    <string name="gamefocus_toggle_use_app_icon_title">App-Symbol verwenden</string>
+    <string name="gamefocus_toggle_use_rom_icon_title">System-Symbol verwenden</string>
+    <string name="gamefocus_toggle_use_app_icon_desc">Das native Android-App-Symbol anstelle von heruntergeladenen Covern anzeigen.</string>
+    <string name="gamefocus_toggle_use_rom_icon_desc">Das System-Emulator-Logo anstelle von heruntergeladenen Covern anzeigen.</string>
+    <string name="gamefocus_scraping_images_section">Verfügbare Cover</string>
+    <string name="gamefocus_scraping_using_app_icon_notice">Natives App-Symbol ist aktiv. Schalte die Option oben aus, um Cover zu suchen und anzuwenden.</string>
+    <string name="gamefocus_scraping_using_rom_icon_notice">System-Emulator-Symbol ist aktiv. Schalte die Option oben aus, um Cover zu suchen und anzuwenden.</string>
+    <string name="gamefocus_scraping_applied_badge_cd">Ausgewähltes Cover</string>
 </resources>
 
