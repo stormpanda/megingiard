@@ -2,11 +2,14 @@ package com.stormpanda.megingiard.catalog
 
 import android.content.Context
 import android.content.pm.ApplicationInfo
+import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -16,12 +19,12 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
 class InstalledAppsManagerTest {
-    @org.junit.Before
+    @Before
     fun setUp() {
         InstalledAppsManager.resetForTesting()
     }
 
-    @org.junit.After
+    @After
     fun tearDown() {
         InstalledAppsManager.resetForTesting()
     }
@@ -159,7 +162,7 @@ class InstalledAppsManagerTest {
 
     @Test
     fun testLaunchAppOnPrimaryAndSecondaryDisplay() =
-        kotlinx.coroutines.test.runTest {
+        runTest {
             val context: Context = RuntimeEnvironment.getApplication()
             val appInfo =
                 InstalledAppInfo(
@@ -181,5 +184,12 @@ class InstalledAppsManagerTest {
         InstalledAppsManager.openAppInfo(context, "com.test.app")
         InstalledAppsManager.uninstallApp(context, "com.test.app")
         InstalledAppsManager.updateAppCover("rom.snes.smw", "/storage/cover.png")
+    }
+
+    @Test
+    fun testUpdateAppLabel_androidAndRom() {
+        val context: Context = RuntimeEnvironment.getApplication()
+        InstalledAppsManager.updateAppLabel(context, "com.test.game", "Custom Game Name")
+        InstalledAppsManager.updateAppLabel(context, "rom.snes.smw", "Super Mario World (Custom)")
     }
 }

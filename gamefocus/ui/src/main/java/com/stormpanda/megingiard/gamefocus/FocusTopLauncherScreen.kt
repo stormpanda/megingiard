@@ -879,21 +879,11 @@ fun FocusTopLauncherScreen(
                         )
                     }
 
-                    // Custom Megingiard Artwork Selection Modal Dialog
+                    // Game Edit Primary Overlay (Game Info & Scraping)
                     if (editingAppInfo != null) {
-                        GameFocusArtworkDialog(
+                        GameFocusEditGameOverlay(
                             appInfo = editingAppInfo,
                             apiKey = apiKey,
-                            virtualIndex = dialogVirtualIndex,
-                            onVirtualIndexChange = onDialogVirtualIndexChange,
-                            confirmTrigger = confirmDialogTrigger,
-                            l1Trigger = dialogL1Trigger,
-                            r1Trigger = dialogR1Trigger,
-                            isOptionsMenuExpanded = isOptionsMenuExpanded,
-                            onOptionsMenuExpandedChange = onOptionsMenuExpandedChange,
-                            selectedIndex = artworkMenuSelectedIndex,
-                            dpadUpTrigger = dpadUpTrigger,
-                            dpadRightTrigger = dpadRightTrigger,
                             onDismiss = onDismissEditingApp,
                         )
                     }

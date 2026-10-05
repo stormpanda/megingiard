@@ -388,6 +388,23 @@ object RomManager {
         AppLog.i(TAG, "Updated in-memory ROM cover path for $packageName to $coverPath")
     }
 
+    fun updateRomLabel(
+        context: Context,
+        packageName: String,
+        newLabel: String,
+    ) {
+        val app = _romApps.value.find { it.packageName == packageName }
+        val romUri = app?.romUri
+        if (romUri != null) {
+            synchronized(romCleanedNames) {
+                romCleanedNames[romUri] = newLabel
+            }
+            saveRomCleanedNames(context)
+        }
+        _romApps.value = _romApps.value.withUpdatedLabel(packageName, newLabel)
+        AppLog.i(TAG, "Updated ROM label for $packageName to '$newLabel'")
+    }
+
     internal fun collectRomFilesRecursively(
         directory: DocumentFile,
         maxDepth: Int = MAX_SCAN_DEPTH,

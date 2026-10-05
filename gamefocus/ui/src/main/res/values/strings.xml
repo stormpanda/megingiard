@@ -35,6 +35,8 @@
     <string name="steamgriddb_status_downloading">Downloading artwork</string>
     <string name="steamgriddb_status_searching">Searching SteamGridDB</string>
     <string name="steamgriddb_status_fetching">Fetching game covers</string>
+    <string name="steamgriddb_no_games_found">No SteamGridDB game found for \'%1$s\'</string>
+    <string name="steamgriddb_no_covers_found">No vertical covers found for \'%1$s\'</string>
     <string name="gamefocus_option_change_search_term">Change Search Term</string>
     <string name="gamefocus_option_use_app_icon">Use App Icon</string>
     <string name="gamefocus_option_use_default_icon">Use Default Icon</string>
@@ -76,5 +78,21 @@
     <string name="gamefocus_dialog_pair_subtitle">Choose an app to launch on the bottom screen alongside %1$s</string>
     <string name="gamefocus_launch_dual">Dual Launch</string>
     <string name="gamefocus_accessibility_service_description">Enables Game Focus to track active apps across both screens and restore them when pressing the Back button.</string>
+
+    <string name="gamefocus_edit_overlay_title">Edit Game</string>
+    <string name="gamefocus_cat_game_info">Game Info</string>
+    <string name="gamefocus_cat_scraping">Scraping</string>
+    <string name="gamefocus_field_display_name_title">Display Name</string>
+    <string name="gamefocus_field_display_name_desc">Customize how the title appears in the launcher gallery and library.</string>
+    <string name="gamefocus_field_display_name_placeholder">Enter display name</string>
+    <string name="gamefocus_action_save_game_info_title">Save Game Info</string>
+    <string name="gamefocus_action_save_game_info_desc">Apply changes to the game\'s title in the launcher.</string>
+    <string name="gamefocus_scraping_search_term_title">Search Term</string>
+    <string name="gamefocus_scraping_search_term_desc">SteamGridDB query used to find matching artwork.</string>
+    <string name="gamefocus_scraping_matched_game_title">Matched Game</string>
+    <string name="gamefocus_scraping_matched_game_desc">SteamGridDB game title match.</string>
+    <string name="gamefocus_scraping_revert_icon_title">Revert to App Icon</string>
+    <string name="gamefocus_scraping_revert_icon_rom_title">Revert to Default Icon</string>
+    <string name="gamefocus_scraping_revert_icon_desc">Remove downloaded cover artwork and restore the original icon.</string>
 </resources>
 

@@ -18,9 +18,16 @@ data class InstalledAppInfo(
         coverPath: String?,
         lastModified: Long = System.currentTimeMillis(),
     ): InstalledAppInfo = copy(coverPath = coverPath, coverLastModified = lastModified)
+
+    fun withLabel(newLabel: String): InstalledAppInfo = copy(label = newLabel)
 }
 
 fun List<InstalledAppInfo>.withUpdatedCover(
     packageName: String,
     coverPath: String?,
 ): List<InstalledAppInfo> = map { if (it.packageName == packageName) it.withCover(coverPath) else it }
+
+fun List<InstalledAppInfo>.withUpdatedLabel(
+    packageName: String,
+    newLabel: String,
+): List<InstalledAppInfo> = map { if (it.packageName == packageName) it.withLabel(newLabel) else it }

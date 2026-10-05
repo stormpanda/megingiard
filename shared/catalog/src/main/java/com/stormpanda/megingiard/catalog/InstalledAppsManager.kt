@@ -26,6 +26,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.FileOutputStream
 
@@ -34,6 +36,7 @@ private const val FILE_FAVORITES = "gamefocus_favorites.txt"
 private const val FILE_HIDDEN = "gamefocus_hidden.txt"
 private const val FILE_LAST_USED = "gamefocus_last_used.txt"
 private const val FILE_SCRAPED_APPS = "gamefocus_scraped_apps.txt"
+private const val FILE_APP_NAMES = "gamefocus_app_names.json"
 private const val DIR_COVERS = "gamefocus_covers"
 private const val MAX_RECENT_APPS = 10
 private const val INTENT_CATEGORY_GAME = "android.intent.category.GAME"
@@ -42,6 +45,8 @@ private const val THOR_SECONDARY_DISPLAY_FALLBACK_ID = 4
 
 object InstalledAppsManager {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    private val customAppNames = mutableMapOf<String, String>()
 
     private val installedAndroidAppsFlow = MutableStateFlow<List<InstalledAppInfo>>(emptyList())
     val installedApps: StateFlow<List<InstalledAppInfo>> =
@@ -72,8 +77,43 @@ object InstalledAppsManager {
         _hiddenApps.value = emptySet()
         _lastUsed.value = emptyList()
         synchronized(scrapedPackages) { scrapedPackages.clear() }
+        synchronized(customAppNames) { customAppNames.clear() }
         isScrapedPackagesLoaded = false
         isSettingsObserverRegistered = false
+    }
+
+    private fun loadCustomAppNames(context: Context) {
+        val file = File(context.filesDir, FILE_APP_NAMES)
+        if (!file.exists()) return
+        val atomicFile = AtomicFile(file)
+        try {
+            val text = atomicFile.readFully().toString(Charsets.UTF_8)
+            val map = Json.decodeFromString<Map<String, String>>(text)
+            synchronized(customAppNames) {
+                customAppNames.clear()
+                customAppNames.putAll(map)
+            }
+            AppLog.d(TAG, "Loaded ${map.size} custom app names from disk")
+        } catch (e: Exception) {
+            AppLog.w(TAG, "Failed to load $FILE_APP_NAMES: ${e.message}")
+        }
+    }
+
+    private fun saveCustomAppNames(context: Context) {
+        val content = synchronized(customAppNames) { customAppNames.toMap() }
+        val file = File(context.filesDir, FILE_APP_NAMES)
+        val atomicFile = AtomicFile(file)
+        var fos: FileOutputStream? = null
+        try {
+            val text = Json.encodeToString(content)
+            fos = atomicFile.startWrite()
+            fos.write(text.toByteArray(Charsets.UTF_8))
+            atomicFile.finishWrite(fos)
+            AppLog.d(TAG, "Saved custom app names to disk")
+        } catch (e: Exception) {
+            AppLog.w(TAG, "Failed to save $FILE_APP_NAMES: ${e.message}")
+            if (fos != null) atomicFile.failWrite(fos)
+        }
     }
 
     private fun loadStringList(
@@ -233,6 +273,7 @@ object InstalledAppsManager {
             loadFavorites(context)
             loadHidden(context)
             loadLastUsed(context)
+            loadCustomAppNames(context)
 
             val packageManager = context.packageManager
             val mainIntent =
@@ -279,7 +320,8 @@ object InstalledAppsManager {
                             appInfo
                                 .loadLabel(packageManager)
                                 .toString()
-                        val label = PackageAliasMapper.getTitleForPackage(packageName, rawLabel)
+                        val defaultLabel = PackageAliasMapper.getTitleForPackage(packageName, rawLabel)
+                        val label = synchronized(customAppNames) { customAppNames[packageName] } ?: defaultLabel
                         val activityName = resolveInfo.activityInfo.name
                         val isGame = isPackageAGame(appInfo, gamePackagesFromIntent)
 
@@ -317,6 +359,23 @@ object InstalledAppsManager {
         }
         installedAndroidAppsFlow.value = installedAndroidAppsFlow.value.withUpdatedCover(packageName, coverPath)
         AppLog.i(TAG, "Updated in-memory cover path for $packageName to $coverPath")
+    }
+
+    fun updateAppLabel(
+        context: Context,
+        packageName: String,
+        newLabel: String,
+    ) {
+        if (packageName.startsWith("rom.")) {
+            RomManager.updateRomLabel(context, packageName, newLabel)
+            return
+        }
+        synchronized(customAppNames) {
+            customAppNames[packageName] = newLabel
+        }
+        saveCustomAppNames(context)
+        installedAndroidAppsFlow.value = installedAndroidAppsFlow.value.withUpdatedLabel(packageName, newLabel)
+        AppLog.i(TAG, "Updated Android app label for $packageName to '$newLabel'")
     }
 
     private var isSettingsObserverRegistered = false
