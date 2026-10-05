@@ -34,7 +34,6 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.FileOutputStream
-import java.io.IOException
 
 private const val TAG = "InstalledAppsManager"
 private const val FILE_FAVORITES = "gamefocus_favorites.txt"
@@ -44,7 +43,10 @@ private const val FILE_SCRAPED_APPS = "gamefocus_scraped_apps.txt"
 private const val FILE_APP_NAMES = "gamefocus_app_names.json"
 private const val FILE_COVER_IMAGE_IDS = "gamefocus_cover_image_ids.json"
 internal const val DIR_COVERS = "gamefocus_covers"
+internal const val DIR_LOGOS = "gamefocus_logos"
 private const val COVER_FILE_EXTENSION = ".png"
+private const val IMAGE_TYPE_GRIDS = "grids"
+private const val IMAGE_TYPE_LOGOS = "logos"
 private const val ROM_PACKAGE_PREFIX = "rom."
 private const val MAX_RECENT_APPS = 10
 private const val INTENT_CATEGORY_GAME = "android.intent.category.GAME"
@@ -146,7 +148,7 @@ object InstalledAppsManager {
                 fos.write(text.toByteArray(Charsets.UTF_8))
                 atomicFile.finishWrite(fos)
                 AppLog.d(TAG, "Saved cover image IDs to disk")
-            } catch (e: IOException) {
+            } catch (e: Exception) {
                 AppLog.w(TAG, "Failed to save $FILE_COVER_IMAGE_IDS: ${e.message}")
                 if (fos != null) atomicFile.failWrite(fos)
             }
@@ -186,7 +188,7 @@ object InstalledAppsManager {
                 fos.write(text.toByteArray(Charsets.UTF_8))
                 atomicFile.finishWrite(fos)
                 AppLog.d(TAG, "Saved custom app names to disk")
-            } catch (e: IOException) {
+            } catch (e: Exception) {
                 AppLog.w(TAG, "Failed to save $FILE_APP_NAMES: ${e.message}")
                 if (fos != null) atomicFile.failWrite(fos)
             }
@@ -252,12 +254,12 @@ object InstalledAppsManager {
                 var fos: FileOutputStream? = null
                 try {
                     fos = atomicFile.startWrite()
-                    fos.bufferedWriter(Charsets.UTF_8).use { writer ->
-                        for (line in snapshot) {
-                            writer.write(line)
-                            writer.newLine()
-                        }
+                    val writer = fos.bufferedWriter(Charsets.UTF_8)
+                    for (line in snapshot) {
+                        writer.write(line)
+                        writer.newLine()
                     }
+                    writer.flush()
                     atomicFile.finishWrite(fos)
                 } catch (e: Exception) {
                     if (fos != null) {
@@ -538,7 +540,7 @@ object InstalledAppsManager {
             fos.write(bytes)
             atomicFile.finishWrite(fos)
             true
-        } catch (e: IOException) {
+        } catch (e: Exception) {
             if (fos != null) atomicFile.failWrite(fos)
             AppLog.e(TAG, "Failed to write cover ${file.absolutePath}: ${e.message}", e)
             false
@@ -661,10 +663,10 @@ object InstalledAppsManager {
                     val gameId = games?.firstOrNull()?.id ?: return@forEach
 
                     // 1. Scrape cover if missing
-                    val coverFile = File(coversDir, "${app.packageName}.png")
+                    val coverFile = File(coversDir, "${app.packageName}$COVER_FILE_EXTENSION")
                     val hasCover = coverFile.exists() && coverFile.length() > 0L
                     if (!hasCover) {
-                        val imagesResult = SteamGridDbClient.fetchImages(gameId, "grids", apiKey)
+                        val imagesResult = SteamGridDbClient.fetchImages(gameId, IMAGE_TYPE_GRIDS, apiKey)
                         val images = imagesResult.getOrNull()
                         val firstImage = images?.firstOrNull()
                         val imageUrl = firstImage?.url
@@ -680,12 +682,12 @@ object InstalledAppsManager {
 
                     // 2. Scrape logo if ROM and logo is missing
                     if (app.isRom) {
-                        val logosDir = File(context.cacheDir, "gamefocus_logos").apply { mkdirs() }
-                        val logoFile = File(logosDir, "${app.packageName}.png")
+                        val logosDir = File(context.cacheDir, DIR_LOGOS).apply { mkdirs() }
+                        val logoFile = File(logosDir, "${app.packageName}$COVER_FILE_EXTENSION")
                         val hasLogo = logoFile.exists() && logoFile.length() > 0L
                         if (!hasLogo) {
                             try {
-                                val logosResult = SteamGridDbClient.fetchImages(gameId, "logos", apiKey)
+                                val logosResult = SteamGridDbClient.fetchImages(gameId, IMAGE_TYPE_LOGOS, apiKey)
                                 val logos = logosResult.getOrNull()
                                 val logoUrl = logos?.firstOrNull()?.url
                                 if (logoUrl != null) {
