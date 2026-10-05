@@ -19,9 +19,11 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -41,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -61,7 +64,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.shared.ui.R
 import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 
 private const val TAG = "GamepadCards"
@@ -78,11 +81,15 @@ fun GamepadFocusCard(
     enabled: Boolean = true,
     shape: Shape = GC_CARD_SHAPE,
     cardBgColor: Color? = null,
+    focusedBorderColor: Color = LocalAppColors.current.accent,
+    unfocusedBorderColor: Color = LocalAppColors.current.subduedBorder,
     onCustomKeyEvent: ((ComposeKeyEvent) -> Boolean)? = null,
     onLeftKey: (() -> Unit)? = null,
     onRightKey: (() -> Unit)? = null,
     onFocusChanged: ((Boolean) -> Unit)? = null,
     isAdjusting: Boolean = false,
+    contentPadding: PaddingValues = PaddingValues(horizontal = GC_CARD_H_PADDING, vertical = GC_CARD_V_PADDING),
+    clipToShape: Boolean = false,
     content: @Composable (isFocused: Boolean) -> Unit,
 ) {
     val colors = LocalAppColors.current
@@ -115,7 +122,7 @@ fun GamepadFocusCard(
         label = "cardBorderWidth",
     )
     val animatedBorderColor by animateColorAsState(
-        targetValue = if (isEffectivelyFocused) colors.accent else colors.subduedBorder,
+        targetValue = if (isEffectivelyFocused) focusedBorderColor else unfocusedBorderColor,
         animationSpec = tween(GC_ANIM_DURATION_MS),
         label = "cardBorderColor",
     )
@@ -241,8 +248,21 @@ fun GamepadFocusCard(
             Modifier.focusable(interactionSource = interactionSource)
         }
 
-    Box(
-        modifier =
+    val baseCardModifier =
+        if (clipToShape) {
+            modifier
+                .graphicsLayer {
+                    this.shadowElevation = animatedElevation.toPx()
+                    this.shape = shape
+                    this.clip = false
+                }.background(animatedBgColor, shape)
+                .clip(shape)
+                .border(
+                    width = animatedBorderWidth,
+                    color = animatedBorderColor,
+                    shape = shape,
+                )
+        } else {
             modifier
                 .fillMaxWidth()
                 .defaultMinSize(minHeight = GC_CARD_MIN_HEIGHT)
@@ -262,7 +282,13 @@ fun GamepadFocusCard(
                         brush = SolidColor(animatedBorderColor),
                         style = Stroke(width = animatedBorderWidth.toPx()),
                     )
-                }.focusRequester(cardFocusRequester)
+                }
+        }
+
+    Box(
+        modifier =
+            baseCardModifier
+                .focusRequester(cardFocusRequester)
                 .then(keyModifier)
                 .then(focusableOrClickModifier),
         contentAlignment = Alignment.TopStart,
@@ -270,9 +296,9 @@ fun GamepadFocusCard(
         Box(
             modifier =
                 Modifier
-                    .fillMaxWidth()
+                    .then(if (clipToShape) Modifier.fillMaxSize() else Modifier.fillMaxWidth())
                     .alpha(if (enabled) 1f else GC_DISABLED_CARD_ALPHA)
-                    .padding(horizontal = GC_CARD_H_PADDING, vertical = GC_CARD_V_PADDING),
+                    .padding(contentPadding),
             contentAlignment = Alignment.TopStart,
         ) {
             content(isEffectivelyFocused)

@@ -51,7 +51,7 @@ import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.times
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.shared.ui.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent

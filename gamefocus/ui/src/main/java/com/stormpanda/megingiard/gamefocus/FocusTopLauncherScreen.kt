@@ -169,18 +169,8 @@ fun FocusTopLauncherScreen(
     onAddRomFolder: () -> Unit = {},
     onRemoveRomFolder: (CustomRomFolder) -> Unit = {},
     editingAppInfo: InstalledAppInfo? = null,
-    dialogVirtualIndex: Int = 10_000,
-    onDialogVirtualIndexChange: (Int) -> Unit = {},
-    confirmDialogTrigger: Int = 0,
-    dialogL1Trigger: Int = 0,
-    dialogR1Trigger: Int = 0,
     prevLetterTrigger: Int = 0,
     nextLetterTrigger: Int = 0,
-    isOptionsMenuExpanded: Boolean = false,
-    onOptionsMenuExpandedChange: (Boolean) -> Unit = {},
-    artworkMenuSelectedIndex: Int = 0,
-    dpadUpTrigger: Int = 0,
-    dpadRightTrigger: Int = 0,
     dpadLeftTrigger: Int = 0,
     dpadStepRightTrigger: Int = 0,
     onFocusedAppChanged: (InstalledAppInfo?) -> Unit = {},
@@ -879,21 +869,11 @@ fun FocusTopLauncherScreen(
                         )
                     }
 
-                    // Custom Megingiard Artwork Selection Modal Dialog
+                    // Game Edit Primary Overlay (Game Info & Scraping)
                     if (editingAppInfo != null) {
-                        GameFocusArtworkDialog(
+                        GameFocusEditGameOverlay(
                             appInfo = editingAppInfo,
                             apiKey = apiKey,
-                            virtualIndex = dialogVirtualIndex,
-                            onVirtualIndexChange = onDialogVirtualIndexChange,
-                            confirmTrigger = confirmDialogTrigger,
-                            l1Trigger = dialogL1Trigger,
-                            r1Trigger = dialogR1Trigger,
-                            isOptionsMenuExpanded = isOptionsMenuExpanded,
-                            onOptionsMenuExpandedChange = onOptionsMenuExpandedChange,
-                            selectedIndex = artworkMenuSelectedIndex,
-                            dpadUpTrigger = dpadUpTrigger,
-                            dpadRightTrigger = dpadRightTrigger,
                             onDismiss = onDismissEditingApp,
                         )
                     }

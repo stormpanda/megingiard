@@ -12,6 +12,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -19,6 +20,7 @@ import androidx.compose.ui.test.performScrollTo
 import com.stormpanda.megingiard.settings.ThemeMode
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.paletteFor
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
@@ -40,6 +42,14 @@ class BackgroundMaskSettingsEditorTest {
 
     @Before
     fun setUp() {
+        BackgroundPickerManager.clearPickedUri()
+        MacroPadState.setPreviewLayout(null)
+        MacroPadState.setCroppingBackground(false)
+        MacroPadState.setCroppingMask(false)
+    }
+
+    @After
+    fun tearDown() {
         BackgroundPickerManager.clearPickedUri()
         MacroPadState.setPreviewLayout(null)
         MacroPadState.setCroppingBackground(false)
@@ -118,8 +128,16 @@ class BackgroundMaskSettingsEditorTest {
             BackgroundPickerManager.setPickedUri(testUri)
             composeTestRule.waitForIdle()
 
-            // Perform Save click
-            composeTestRule.onNodeWithText("Save").performScrollTo().performClick()
+            // Wait for image pick to propagate and Save button to become enabled
+            composeTestRule.waitUntil(10_000) {
+                try {
+                    composeTestRule.onNodeWithText("Save").performScrollTo().assertIsEnabled()
+                    true
+                } catch (_: AssertionError) {
+                    false
+                }
+            }
+            composeTestRule.onNodeWithText("Save").performClick()
             composeTestRule.waitUntil(30_000) { confirmCallCount == 1 }
             composeTestRule.waitForIdle()
 
@@ -169,8 +187,16 @@ class BackgroundMaskSettingsEditorTest {
             BackgroundPickerManager.setPickedUri(testUri)
             composeTestRule.waitForIdle()
 
-            // Perform Save click
-            composeTestRule.onNodeWithText("Save").performScrollTo().performClick()
+            // Wait for mask pick to propagate and Save button to become enabled
+            composeTestRule.waitUntil(10_000) {
+                try {
+                    composeTestRule.onNodeWithText("Save").performScrollTo().assertIsEnabled()
+                    true
+                } catch (_: AssertionError) {
+                    false
+                }
+            }
+            composeTestRule.onNodeWithText("Save").performClick()
             composeTestRule.waitUntil(30_000) { confirmCallCount == 1 }
             composeTestRule.waitForIdle()
 

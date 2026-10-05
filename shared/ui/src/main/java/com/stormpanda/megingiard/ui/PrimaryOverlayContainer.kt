@@ -61,7 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.shared.ui.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 

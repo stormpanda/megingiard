@@ -47,14 +47,15 @@ import com.stormpanda.megingiard.gamefocus.domain.initGameFocusLaunchers
 import com.stormpanda.megingiard.gamefocus.viewmodel.DEFAULT_LIBRARY_GRID_COLUMNS
 import com.stormpanda.megingiard.gamefocus.viewmodel.DEFAULT_PAIRING_GRID_COLUMNS
 import com.stormpanda.megingiard.gamefocus.viewmodel.FocusTopLauncherViewModel
-import com.stormpanda.megingiard.gamefocus.viewmodel.INITIAL_LOOP_OFFSET
 import com.stormpanda.megingiard.gamefocus.viewmodel.LauncherScrollDirection
+import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import com.stormpanda.megingiard.math.floorMod
 import com.stormpanda.megingiard.settings.ThemeMode
 import com.stormpanda.megingiard.ui.AppDimens
 import com.stormpanda.megingiard.ui.GamePadButton
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.LocalAppDimens
+import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
 import com.stormpanda.megingiard.ui.colorSchemeFor
 import com.stormpanda.megingiard.ui.megingiardTypography
 import com.stormpanda.megingiard.ui.paletteFor
@@ -66,7 +67,6 @@ import kotlinx.coroutines.launch
 private const val TAG = "FocusTopLauncherActivity"
 private const val INITIAL_REPEAT_DELAY_MS = 300L
 private const val REPEAT_INTERVAL_MS = 100L
-private const val ARTWORK_MENU_ITEMS_COUNT = 2
 private const val MAIN_MENU_UNPAIRED_ITEMS_COUNT = 4
 private const val MAIN_MENU_PAIRED_ITEMS_COUNT = 5
 private const val JOYSTICK_THRESHOLD = 0.5f
@@ -232,8 +232,6 @@ class FocusTopLauncherActivity : ComponentActivity() {
             val libraryFocusedIndex by viewModel.libraryFocusedIndex.collectAsStateWithLifecycle()
             val isMainOptionsMenuExpanded by viewModel.isMainOptionsMenuExpanded.collectAsStateWithLifecycle()
             val mainMenuSelectedIndex by viewModel.mainMenuSelectedIndex.collectAsStateWithLifecycle()
-            val isOptionsMenuExpanded by viewModel.isOptionsMenuExpanded.collectAsStateWithLifecycle()
-            val artworkMenuSelectedIndex by viewModel.artworkMenuSelectedIndex.collectAsStateWithLifecycle()
             val isLibraryOptionsMenuExpanded by viewModel.isLibraryOptionsMenuExpanded.collectAsStateWithLifecycle()
             val libraryMenuSelectedIndex by viewModel.libraryMenuSelectedIndex.collectAsStateWithLifecycle()
             val newlyAddedFolder by viewModel.newlyAddedFolder.collectAsStateWithLifecycle()
@@ -243,14 +241,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
             val coreChooserDialogSelectedIndex by viewModel.coreChooserDialogSelectedIndex.collectAsStateWithLifecycle()
             val confirmCoreChooserTrigger by viewModel.confirmCoreChooserTrigger.collectAsStateWithLifecycle()
             val editingAppInfo by viewModel.editingAppInfo.collectAsStateWithLifecycle()
-            val dialogVirtualIndex by viewModel.dialogVirtualIndex.collectAsStateWithLifecycle()
-            val confirmDialogTrigger by viewModel.confirmDialogTrigger.collectAsStateWithLifecycle()
-            val dialogL1Trigger by viewModel.dialogL1Trigger.collectAsStateWithLifecycle()
-            val dialogR1Trigger by viewModel.dialogR1Trigger.collectAsStateWithLifecycle()
             val prevLetterTrigger by viewModel.prevLetterTrigger.collectAsStateWithLifecycle()
             val nextLetterTrigger by viewModel.nextLetterTrigger.collectAsStateWithLifecycle()
-            val dpadUpOptionsTrigger by viewModel.dpadUpOptionsTrigger.collectAsStateWithLifecycle()
-            val dpadRightOptionsTrigger by viewModel.dpadRightOptionsTrigger.collectAsStateWithLifecycle()
             val dpadLeftTrigger by viewModel.dpadLeftTrigger.collectAsStateWithLifecycle()
             val dpadStepRightTrigger by viewModel.dpadStepRightTrigger.collectAsStateWithLifecycle()
             val focusedApp by viewModel.focusedApp.collectAsStateWithLifecycle()
@@ -406,7 +398,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             onToggleHidden = { appInfo ->
                                 InstalledAppsManager.toggleHidden(this, appInfo.packageName)
                             },
-                            onEditArtwork = { appInfo -> viewModel.openArtworkDialog(appInfo) },
+                            onEditArtwork = { appInfo -> viewModel.openEditGameOverlay(appInfo) },
                             onOpenAppInfo = { appInfo ->
                                 InstalledAppsManager.openAppInfo(this, appInfo.packageName)
                             },
@@ -419,18 +411,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             onAddRomFolder = { openDocumentTreeLauncher.launch(null) },
                             onRemoveRomFolder = { folder -> RomManager.removeRomFolder(this, folder) },
                             editingAppInfo = editingAppInfo,
-                            dialogVirtualIndex = dialogVirtualIndex,
-                            onDialogVirtualIndexChange = { viewModel.setDialogVirtualIndex(it) },
-                            confirmDialogTrigger = confirmDialogTrigger,
-                            dialogL1Trigger = dialogL1Trigger,
-                            dialogR1Trigger = dialogR1Trigger,
                             prevLetterTrigger = prevLetterTrigger,
                             nextLetterTrigger = nextLetterTrigger,
-                            isOptionsMenuExpanded = isOptionsMenuExpanded,
-                            onOptionsMenuExpandedChange = { viewModel.setOptionsMenuExpanded(it) },
-                            artworkMenuSelectedIndex = artworkMenuSelectedIndex,
-                            dpadUpTrigger = dpadUpOptionsTrigger,
-                            dpadRightTrigger = dpadRightOptionsTrigger,
                             dpadLeftTrigger = dpadLeftTrigger,
                             dpadStepRightTrigger = dpadStepRightTrigger,
                             onFocusedAppChanged = { viewModel.setFocusedApp(it) },
@@ -568,7 +550,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
     }
 
     private fun isCompanionApp(packageName: String): Boolean =
-        packageName.startsWith("com.stormpanda.megingiard") && !packageName.contains("gamefocus")
+        packageName == MegingiardIpcContract.COMPANION_PACKAGE ||
+            packageName == MegingiardIpcContract.COMPANION_DEBUG_PACKAGE
 
     private fun resetToGallery(): Boolean {
         stopRepeat()
@@ -620,15 +603,6 @@ class FocusTopLauncherActivity : ComponentActivity() {
     }
 
     private fun stepDirectionalAction(direction: LauncherScrollDirection) {
-        if (viewModel.editingAppInfo.value != null && viewModel.isOptionsMenuExpanded.value) {
-            when (direction) {
-                LauncherScrollDirection.UP -> viewModel.navigateArtworkMenuUp(ARTWORK_MENU_ITEMS_COUNT)
-                LauncherScrollDirection.DOWN -> viewModel.navigateArtworkMenuDown(ARTWORK_MENU_ITEMS_COUNT)
-                else -> Unit
-            }
-            return
-        }
-
         if (viewModel.isLibraryOptionsMenuExpanded.value) {
             val allApps = InstalledAppsManager.installedApps.value
             val currentTab = viewModel.librarySelectedTab.value
@@ -686,14 +660,6 @@ class FocusTopLauncherActivity : ComponentActivity() {
         }
         if (viewModel.isLibraryOpen.value) {
             stepLibraryFocus(direction)
-            return
-        }
-        if (viewModel.editingAppInfo.value != null) {
-            when (direction) {
-                LauncherScrollDirection.LEFT -> viewModel.stepArtworkDialogVirtualIndex(-1)
-                LauncherScrollDirection.RIGHT -> viewModel.stepArtworkDialogVirtualIndex(1)
-                else -> Unit
-            }
             return
         }
 
@@ -898,88 +864,22 @@ class FocusTopLauncherActivity : ComponentActivity() {
         }
 
         if (viewModel.editingAppInfo.value != null) {
-            // Strict Input Isolation: Traps all inputs while modal artwork dialog is open
-            if (viewModel.isOptionsMenuExpanded.value) {
-                return when {
-                    isUpKey(keyCode) -> {
-                        startRepeat(LauncherScrollDirection.UP)
-                        true
-                    }
-
-                    isDownKey(keyCode) -> {
-                        startRepeat(LauncherScrollDirection.DOWN)
-                        true
-                    }
-
-                    isConfirmKey(keyCode) -> {
-                        val selectedIndex = viewModel.artworkMenuSelectedIndex.value
-                        AppLog.i(TAG, "Artwork options menu confirmed at index $selectedIndex via gamepad A")
-                        when (selectedIndex) {
-                            0 -> viewModel.triggerDpadUpOptions()
-                            1 -> viewModel.triggerDpadRightOptions()
-                        }
-                        viewModel.setOptionsMenuExpanded(false)
-                        true
-                    }
-
-                    isMenuKey(keyCode) || isDismissKey(keyCode) -> {
-                        AppLog.i(TAG, "Closing options menu")
-                        viewModel.setOptionsMenuExpanded(false)
-                        true
-                    }
-
-                    else -> {
-                        true
-                    }
-                }
-            }
-
-            // Options menu is collapsed - handle artwork chooser dialog controls
-            return when {
-                isMenuKey(keyCode) -> {
-                    AppLog.i(TAG, "Gamepad Y/Menu pressed -> Opening options menu")
-                    viewModel.setOptionsMenuExpanded(true)
-                    true
-                }
-
-                isLeftKey(keyCode) -> {
-                    startRepeat(LauncherScrollDirection.LEFT)
-                    true
-                }
-
-                isRightKey(keyCode) -> {
-                    startRepeat(LauncherScrollDirection.RIGHT)
-                    true
-                }
-
-                keyCode == GamePadButton.BUTTON_L1.keyCode -> {
-                    AppLog.i(TAG, "Gamepad L1 pressed inside artwork dialog")
-                    viewModel.triggerDialogL1()
-                    true
-                }
-
-                keyCode == GamePadButton.BUTTON_R1.keyCode -> {
-                    AppLog.i(TAG, "Gamepad R1 pressed inside artwork dialog")
-                    viewModel.triggerDialogR1()
-                    true
-                }
-
-                isConfirmKey(keyCode) -> {
-                    AppLog.i(TAG, "Gamepad select key pressed inside artwork dialog")
-                    viewModel.triggerConfirmDialog()
-                    true
-                }
-
-                isDismissKey(keyCode) -> {
-                    AppLog.i(TAG, "Gamepad back key pressed, closing artwork dialog")
+            if (isDismissKey(keyCode)) {
+                AppLog.i(TAG, "onKeyDown: Back/B-Button pressed while editing app")
+                if (onBackPressedDispatcher.hasEnabledCallbacks()) {
+                    onBackPressedDispatcher.onBackPressed()
+                } else {
                     viewModel.setEditingAppInfo(null)
-                    true
                 }
-
-                else -> {
-                    true
-                }
+                return true
             }
+            if (keyCode == GamePadButton.BUTTON_A.keyCode) {
+                // Translate gamepad A into DPAD_CENTER so Compose clickables inside the overlay activate.
+                val dpadCenterDown = KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER)
+                dispatchKeyEvent(dpadCenterDown)
+                return true
+            }
+            return super.onKeyDown(keyCode, event)
         }
 
         // Library Navigation Mode
@@ -1198,7 +1098,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     if (targetApp != null) {
                         when (selectedIndex) {
                             0 -> InstalledAppsManager.toggleFavorite(this, targetApp.packageName)
-                            1 -> viewModel.openArtworkDialog(targetApp)
+                            1 -> viewModel.openEditGameOverlay(targetApp)
                             2 -> InstalledAppsManager.toggleHidden(this, targetApp.packageName)
                             3 -> openPairingDialogForApp(targetApp)
                             4 -> GameFocusPairManager.removePair(this, targetApp.packageName)
@@ -1328,8 +1228,19 @@ class FocusTopLauncherActivity : ComponentActivity() {
             return true
         }
 
-        if (viewModel.editingAppInfo.value != null ||
-            viewModel.newlyAddedFolder.value != null ||
+        if (viewModel.editingAppInfo.value != null) {
+            if (keyCode == GamePadButton.BUTTON_A.keyCode) {
+                val dpadCenterUp = KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER)
+                val handled = dispatchKeyEvent(dpadCenterUp)
+                if (!handled) {
+                    PrimaryOverlayInputBridge.sendFocusRecovery(GamePadButton.BUTTON_A.keyCode)
+                }
+                return true
+            }
+            return super.onKeyUp(keyCode, event)
+        }
+
+        if (viewModel.newlyAddedFolder.value != null ||
             viewModel.folderToRemove.value != null ||
             viewModel.isRemoveRomFolderDialogOpen.value ||
             viewModel.pairingTargetApp.value != null
@@ -1349,6 +1260,18 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
             val x = if (axisHatX != 0f) axisHatX else axisX
             val y = if (axisHatY != 0f) axisHatY else axisY
+
+            if (viewModel.editingAppInfo.value != null) {
+                // The edit overlay owns all joystick input; translate axes into D-pad key events for Compose focus.
+                PrimaryOverlayInputBridge.processGenericMotionEvent(event) { action, dpadKeyCode ->
+                    val keyEvent = KeyEvent(action, dpadKeyCode)
+                    val handled = dispatchKeyEvent(keyEvent)
+                    if (!handled && action == KeyEvent.ACTION_DOWN) {
+                        PrimaryOverlayInputBridge.sendFocusRecovery(dpadKeyCode)
+                    }
+                }
+                return true
+            }
 
             if (viewModel.pairingTargetApp.value != null) {
                 if (x < JOYSTICK_NEGATIVE_THRESHOLD) {
@@ -1388,24 +1311,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 return true
             }
 
-            if (viewModel.editingAppInfo.value != null ||
-                viewModel.folderToRemove.value != null
-            ) {
-                if (viewModel.editingAppInfo.value != null && viewModel.isOptionsMenuExpanded.value) {
-                    if (y < JOYSTICK_NEGATIVE_THRESHOLD) {
-                        startRepeat(LauncherScrollDirection.UP)
-                        return true
-                    } else if (y > JOYSTICK_THRESHOLD) {
-                        startRepeat(LauncherScrollDirection.DOWN)
-                        return true
-                    } else {
-                        if (currentDirection == LauncherScrollDirection.UP || currentDirection == LauncherScrollDirection.DOWN) {
-                            stopRepeat()
-                        }
-                    }
-                    return true
-                }
-
+            if (viewModel.folderToRemove.value != null) {
                 if (x < JOYSTICK_NEGATIVE_THRESHOLD) {
                     startRepeat(LauncherScrollDirection.LEFT)
                     return true

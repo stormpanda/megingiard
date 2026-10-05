@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Common Gamepad and Dialog Strings -->
+    <string name="settings_close">Schließen</string>
+    <string name="cd_drag_reorder">Zum Sortieren ziehen</string>
+    <string name="gamepad_action_save">Speichern</string>
+    <string name="gamepad_action_save_and_exit">Speichern &amp; Beenden</string>
+    <string name="gamepad_action_save_and_exit_desc">Änderungen anwenden und speichern</string>
+    <string name="gamepad_action_discard_and_exit">Verwerfen &amp; Beenden</string>
+    <string name="gamepad_action_discard_and_exit_desc">Änderungen verwerfen und beenden</string>
+    <string name="gamepad_action_discard">Verwerfen</string>
+    <string name="gamepad_action_confirm">Bestätigen</string>
+    <string name="gamepad_action_delete">Löschen</string>
+    <string name="gamepad_action_move">Verschieben</string>
+    <string name="gamepad_action_moving">Verschieben</string>
+    <string name="gamepad_previous">Vorheriges</string>
+    <string name="gamepad_next">Nächstes</string>
+    <string name="gamepad_toggle_on">AN</string>
+    <string name="gamepad_toggle_off">AUS</string>
+    <string name="gamepad_color_option">Farboption %1$d</string>
+    <string name="gamepad_color_selected">Ausgewählt</string>
+    <string name="gamepad_search_placeholder">Suchen</string>
+    <string name="gamepad_search_clear">Suche löschen</string>
+    <string name="gamepad_category_all">Alle</string>
+    <string name="gamepad_slider_fine_adjustment_toast">L2/R2 für Feinjustierung nutzen</string>
+</resources>

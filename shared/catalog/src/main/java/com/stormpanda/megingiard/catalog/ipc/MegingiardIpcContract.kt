@@ -49,14 +49,14 @@ object MegingiardIpcContract {
         val isDebug = context.packageName.contains(".debug")
 
         val isHostCompanionApp =
-            context.packageName == "com.stormpanda.megingiard" || context.packageName == "com.stormpanda.megingiard.debug"
+            context.packageName == COMPANION_PACKAGE || context.packageName == COMPANION_DEBUG_PACKAGE
 
         AUTHORITY =
             if (isHostCompanionApp) {
                 if (isDebug) "com.stormpanda.megingiard.debug.provider" else "com.stormpanda.megingiard.provider"
             } else {
-                val releaseInstalled = isPackageInstalled(pm, "com.stormpanda.megingiard")
-                val debugInstalled = isPackageInstalled(pm, "com.stormpanda.megingiard.debug")
+                val releaseInstalled = isPackageInstalled(pm, COMPANION_PACKAGE)
+                val debugInstalled = isPackageInstalled(pm, COMPANION_DEBUG_PACKAGE)
                 when {
                     isDebug && debugInstalled -> "com.stormpanda.megingiard.debug.provider"
                     !isDebug && releaseInstalled -> "com.stormpanda.megingiard.provider"
@@ -102,7 +102,10 @@ object MegingiardIpcContract {
     const val COLUMN_HOVERED_PRIMARY_COLOR = "hovered_primary_color"
     const val COLUMN_HOVERED_SECONDARY_COLOR = "hovered_secondary_color"
 
+    const val COMPANION_PACKAGE = "com.stormpanda.megingiard"
+    const val COMPANION_DEBUG_PACKAGE = "com.stormpanda.megingiard.debug"
     const val GAMEFOCUS_PACKAGE = "com.stormpanda.megingiard.gamefocus"
+    const val GAMEFOCUS_DEBUG_PACKAGE = "com.stormpanda.megingiard.gamefocus.debug"
 
     // Profiles columns
     const val COLUMN_PROFILE_ID = "profile_id"

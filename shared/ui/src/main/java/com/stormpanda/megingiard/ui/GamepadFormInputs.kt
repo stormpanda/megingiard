@@ -56,12 +56,11 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.stormpanda.megingiard.AppStateManager
-import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.shared.ui.R
 import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 
 @Composable
-internal fun CapsuleArrowButton(
+fun CapsuleArrowButton(
     icon: ImageVector,
     tint: Color,
     onClick: () -> Unit,
@@ -165,9 +164,11 @@ fun GamepadTextFieldCard(
     enabled: Boolean = true,
     onLeftKey: (() -> Unit)? = null,
     itemKey: Any? = title,
+    onFullscreenKeyboardActive: ((Boolean) -> Unit)? = null,
 ) {
     val colors = LocalAppColors.current
     val keyboardController = LocalSoftwareKeyboardController.current
+    val keyboardRequester = onFullscreenKeyboardActive ?: LocalFullscreenKeyboardRequester.current
     var isEditing by remember { mutableStateOf(false) }
     var hasBeenEditing by remember { mutableStateOf(false) }
     var draftValue by remember {
@@ -184,11 +185,11 @@ fun GamepadTextFieldCard(
 
     DisposableEffect(isEditing) {
         if (isEditing) {
-            AppStateManager.setFullscreenKeyboardActive(true)
+            keyboardRequester?.invoke(true)
         }
         onDispose {
             if (isEditing) {
-                AppStateManager.setFullscreenKeyboardActive(false)
+                keyboardRequester?.invoke(false)
             }
         }
     }
@@ -205,7 +206,7 @@ fun GamepadTextFieldCard(
             }
         } else if (hasBeenEditing) {
             keyboardController?.hide()
-            AppStateManager.setFullscreenKeyboardActive(false)
+            keyboardRequester?.invoke(false)
             try {
                 cardFocusRequester.requestFocus()
             } catch (_: IllegalStateException) {

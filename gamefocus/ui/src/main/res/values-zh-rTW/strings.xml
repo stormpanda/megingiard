@@ -35,6 +35,14 @@
     <string name="steamgriddb_status_downloading">正在下載封面圖</string>
     <string name="steamgriddb_status_searching">正在搜尋 SteamGridDB</string>
     <string name="steamgriddb_status_fetching">正在取得遊戲封面</string>
+    <string name="steamgriddb_no_games_found">找不到符合「%1$s」的 SteamGridDB 遊戲</string>
+    <string name="steamgriddb_no_covers_found">找不到「%1$s」的直式封面</string>
+    <string name="steamgriddb_error_offline">目前處於離線狀態。請連線至網際網路以搜尋封面。</string>
+    <string name="steamgriddb_error_rate_limited">已達到 SteamGridDB 請求速率上限。請稍後再試。</string>
+    <string name="steamgriddb_error_unavailable">目前無法連線至 SteamGridDB。</string>
+    <string name="steamgriddb_error_unauthorized">您的 SteamGridDB API 金鑰無效或未授權。</string>
+    <string name="steamgriddb_error_generic">無法從 SteamGridDB 載入封面圖。</string>
+    <string name="steamgriddb_error_save_failed">無法儲存封面圖。</string>
     <string name="gamefocus_option_change_search_term">更改搜尋關鍵字</string>
     <string name="gamefocus_option_use_app_icon">使用應用程式圖示</string>
     <string name="gamefocus_option_use_default_icon">使用預設圖示</string>
@@ -76,5 +84,28 @@
     <string name="gamefocus_dialog_pair_subtitle">選擇與 %1$s 同時在下螢幕啟動的應用程式</string>
     <string name="gamefocus_launch_dual">雙螢幕啟動</string>
     <string name="gamefocus_accessibility_service_description">允許 Game Focus 追蹤雙螢幕上正在執行的應用程式，並在按返回鍵時恢復它們。</string>
+
+    <string name="gamefocus_edit_overlay_title">編輯遊戲</string>
+    <string name="gamefocus_cat_game_info">遊戲資訊</string>
+    <string name="gamefocus_cat_scraping">封面擷取</string>
+    <string name="gamefocus_field_display_name_title">顯示名稱</string>
+    <string name="gamefocus_field_display_name_desc">自訂遊戲名稱在啟動器圖庫與遊戲庫中的顯示方式。</string>
+    <string name="gamefocus_field_display_name_placeholder">輸入顯示名稱</string>
+    <string name="gamefocus_action_save_game_info_title">儲存遊戲資訊</string>
+    <string name="gamefocus_action_save_game_info_desc">在啟動器中套用遊戲標題變更。</string>
+    <string name="gamefocus_scraping_search_term_title">搜尋關鍵字</string>
+    <string name="gamefocus_scraping_search_term_desc">用於尋找相符封面圖的 SteamGridDB 搜尋關鍵字。</string>
+    <string name="gamefocus_scraping_matched_game_title">符合的遊戲</string>
+    <string name="gamefocus_scraping_matched_game_desc">SteamGridDB 遊戲標題相符項目。</string>
+    <string name="gamefocus_toggle_use_app_icon_title">使用應用程式圖示</string>
+    <string name="gamefocus_toggle_use_rom_icon_title">使用系統圖示</string>
+    <string name="gamefocus_toggle_use_app_icon_desc">顯示原生 Android 應用程式圖示，而非已擷取的封面圖。</string>
+    <string name="gamefocus_toggle_use_rom_icon_desc">顯示系統模擬器標誌，而非已擷取的封面圖。</string>
+    <string name="gamefocus_scraping_images_section">可用的封面圖</string>
+    <string name="gamefocus_scraping_using_app_icon_notice">目前使用原生應用程式圖示。關閉上方開關即可瀏覽並套用自訂封面圖。</string>
+    <string name="gamefocus_scraping_using_rom_icon_notice">目前使用系統模擬器圖示。關閉上方開關即可瀏覽並套用自訂封面圖。</string>
+    <string name="gamefocus_scraping_applied_badge_cd">已選取的封面圖</string>
+    <string name="gamefocus_action_reset_display_name_title">重設為預設名稱</string>
+    <string name="gamefocus_action_reset_display_name_desc">還原原始名稱：%1$s</string>
 </resources>
 

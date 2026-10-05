@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 private const val TAG = "FocusTopLauncherViewModel"
-const val INITIAL_LOOP_OFFSET = 10_000
 const val DEFAULT_LIBRARY_GRID_COLUMNS = 6
 const val DEFAULT_PAIRING_GRID_COLUMNS = 5
 
@@ -22,18 +21,6 @@ enum class LauncherScrollDirection { NONE, LEFT, RIGHT, UP, DOWN }
  * ViewModel managing UI state, navigation triggers, and dialog states for [com.stormpanda.megingiard.gamefocus.FocusTopLauncherActivity].
  */
 class FocusTopLauncherViewModel : ViewModel() {
-    private val _dialogVirtualIndex = MutableStateFlow(INITIAL_LOOP_OFFSET)
-    val dialogVirtualIndex: StateFlow<Int> = _dialogVirtualIndex.asStateFlow()
-
-    private val _confirmDialogTrigger = MutableStateFlow(0)
-    val confirmDialogTrigger: StateFlow<Int> = _confirmDialogTrigger.asStateFlow()
-
-    private val _dialogL1Trigger = MutableStateFlow(0)
-    val dialogL1Trigger: StateFlow<Int> = _dialogL1Trigger.asStateFlow()
-
-    private val _dialogR1Trigger = MutableStateFlow(0)
-    val dialogR1Trigger: StateFlow<Int> = _dialogR1Trigger.asStateFlow()
-
     private val _prevLetterTrigger = MutableStateFlow(0)
     val prevLetterTrigger: StateFlow<Int> = _prevLetterTrigger.asStateFlow()
 
@@ -66,18 +53,6 @@ class FocusTopLauncherViewModel : ViewModel() {
 
     private val _confirmCoreChooserTrigger = MutableStateFlow(0)
     val confirmCoreChooserTrigger: StateFlow<Int> = _confirmCoreChooserTrigger.asStateFlow()
-
-    private val _isOptionsMenuExpanded = MutableStateFlow(false)
-    val isOptionsMenuExpanded: StateFlow<Boolean> = _isOptionsMenuExpanded.asStateFlow()
-
-    private val _artworkMenuSelectedIndex = MutableStateFlow(0)
-    val artworkMenuSelectedIndex: StateFlow<Int> = _artworkMenuSelectedIndex.asStateFlow()
-
-    private val _dpadUpOptionsTrigger = MutableStateFlow(0)
-    val dpadUpOptionsTrigger: StateFlow<Int> = _dpadUpOptionsTrigger.asStateFlow()
-
-    private val _dpadRightOptionsTrigger = MutableStateFlow(0)
-    val dpadRightOptionsTrigger: StateFlow<Int> = _dpadRightOptionsTrigger.asStateFlow()
 
     private val _editingAppInfo = MutableStateFlow<InstalledAppInfo?>(null)
     val editingAppInfo: StateFlow<InstalledAppInfo?> = _editingAppInfo.asStateFlow()
@@ -257,80 +232,13 @@ class FocusTopLauncherViewModel : ViewModel() {
         _confirmCoreChooserTrigger.value += 1
     }
 
-    fun setArtworkMenuSelectedIndex(index: Int) {
-        _artworkMenuSelectedIndex.value = index
-    }
-
-    fun navigateArtworkMenuUp(itemCount: Int = 2) {
-        if (itemCount <= 0) return
-        _artworkMenuSelectedIndex.value =
-            if (_artworkMenuSelectedIndex.value > 0) {
-                _artworkMenuSelectedIndex.value - 1
-            } else {
-                itemCount - 1
-            }
-    }
-
-    fun navigateArtworkMenuDown(itemCount: Int = 2) {
-        if (itemCount <= 0) return
-        _artworkMenuSelectedIndex.value =
-            if (_artworkMenuSelectedIndex.value < itemCount - 1) {
-                _artworkMenuSelectedIndex.value + 1
-            } else {
-                0
-            }
-    }
-
-    fun setOptionsMenuExpanded(expanded: Boolean) {
-        if (expanded) {
-            _artworkMenuSelectedIndex.value = 0
-        }
-        _isOptionsMenuExpanded.value = expanded
-    }
-
-    fun toggleOptionsMenu() {
-        setOptionsMenuExpanded(!_isOptionsMenuExpanded.value)
-    }
-
-    fun triggerDpadUpOptions() {
-        _dpadUpOptionsTrigger.value += 1
-    }
-
-    fun triggerDpadRightOptions() {
-        _dpadRightOptionsTrigger.value += 1
-    }
-
     fun setEditingAppInfo(appInfo: InstalledAppInfo?) {
         _editingAppInfo.value = appInfo
     }
 
-    fun openArtworkDialog(appInfo: InstalledAppInfo) {
-        AppLog.i(TAG, "Opening artwork edit dialog for ${appInfo.label}")
-        _dialogVirtualIndex.value = INITIAL_LOOP_OFFSET
-        _confirmDialogTrigger.value = 0
-        _dialogL1Trigger.value = 0
-        _dialogR1Trigger.value = 0
-        _artworkMenuSelectedIndex.value = 0
-        _isOptionsMenuExpanded.value = false
-        _dpadUpOptionsTrigger.value = 0
-        _dpadRightOptionsTrigger.value = 0
+    fun openEditGameOverlay(appInfo: InstalledAppInfo) {
+        AppLog.i(TAG, "Opening edit game overlay for ${appInfo.label}")
         _editingAppInfo.value = appInfo
-    }
-
-    fun setDialogVirtualIndex(index: Int) {
-        _dialogVirtualIndex.value = index
-    }
-
-    fun triggerConfirmDialog() {
-        _confirmDialogTrigger.value += 1
-    }
-
-    fun triggerDialogL1() {
-        _dialogL1Trigger.value += 1
-    }
-
-    fun triggerDialogR1() {
-        _dialogR1Trigger.value += 1
     }
 
     fun triggerPrevLetter() {
@@ -500,16 +408,11 @@ class FocusTopLauncherViewModel : ViewModel() {
         }
     }
 
-    fun stepArtworkDialogVirtualIndex(delta: Int) {
-        _dialogVirtualIndex.value += delta
-    }
-
     fun resetToGallery(): Boolean {
         val wasNotInGallery =
             _isLibraryOpen.value ||
                 _editingAppInfo.value != null ||
                 _isMainOptionsMenuExpanded.value ||
-                _isOptionsMenuExpanded.value ||
                 _isLibraryOptionsMenuExpanded.value ||
                 _isRemoveRomFolderDialogOpen.value ||
                 _folderToRemove.value != null ||
@@ -522,8 +425,6 @@ class FocusTopLauncherViewModel : ViewModel() {
             _editingAppInfo.value = null
             _isMainOptionsMenuExpanded.value = false
             _mainMenuSelectedIndex.value = 0
-            _isOptionsMenuExpanded.value = false
-            _artworkMenuSelectedIndex.value = 0
             _isLibraryOptionsMenuExpanded.value = false
             _libraryMenuSelectedIndex.value = 0
             _isRemoveRomFolderDialogOpen.value = false

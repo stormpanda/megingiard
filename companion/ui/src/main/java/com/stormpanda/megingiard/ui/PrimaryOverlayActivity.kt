@@ -45,7 +45,9 @@ class PrimaryOverlayActivity : ComponentActivity() {
         wasFrozenForModal = savedInstanceState?.getBoolean("wasFrozenForModal") ?: false
         val initialModal = AppStateManager.activePrimaryModal.value
         val shouldFreezeInitially = initialModal != null && initialModal.type != PrimaryModalType.MIRROR_VIEWPORT_EDITOR
-        if (savedInstanceState == null && shouldFreezeInitially && ScreenCaptureManager.isCapturing.value && !ScreenCaptureManager.isFrozen.value) {
+        if (savedInstanceState == null && shouldFreezeInitially && ScreenCaptureManager.isCapturing.value &&
+            !ScreenCaptureManager.isFrozen.value
+        ) {
             AppLog.i(TAG, "Freezing mirror capture for primary modal activity")
             wasFrozenForModal = true
             ScreenCaptureManager.setFrozen(true)
@@ -98,6 +100,7 @@ class PrimaryOverlayActivity : ComponentActivity() {
                 CompositionLocalProvider(
                     LocalAppColors provides appColors,
                     LocalAppDimens provides AppDimens(),
+                    LocalFullscreenKeyboardRequester provides { active -> AppStateManager.setFullscreenKeyboardActive(active) },
                 ) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),

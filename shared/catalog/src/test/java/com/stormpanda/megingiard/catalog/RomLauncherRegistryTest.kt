@@ -18,6 +18,7 @@ class RomLauncherRegistryTest {
                 systemId: String,
                 displayId: Int,
                 retroArchCore: String?,
+                romUri: String?,
             ): Boolean = true
         }
 

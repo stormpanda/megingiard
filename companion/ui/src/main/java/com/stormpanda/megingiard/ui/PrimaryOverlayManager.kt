@@ -311,6 +311,7 @@ object PrimaryOverlayManager {
                             LocalOnBackPressedDispatcherOwner provides owner,
                             LocalAppColors provides appColors,
                             LocalAppDimens provides AppDimens(),
+                            LocalFullscreenKeyboardRequester provides { active -> AppStateManager.setFullscreenKeyboardActive(active) },
                         ) {
                             MaterialTheme(
                                 colorScheme = colorSchemeFor(appColors, themeMode),

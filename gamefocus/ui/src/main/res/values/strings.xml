@@ -35,6 +35,14 @@
     <string name="steamgriddb_status_downloading">Downloading artwork</string>
     <string name="steamgriddb_status_searching">Searching SteamGridDB</string>
     <string name="steamgriddb_status_fetching">Fetching game covers</string>
+    <string name="steamgriddb_no_games_found">No SteamGridDB game found for \'%1$s\'</string>
+    <string name="steamgriddb_no_covers_found">No vertical covers found for \'%1$s\'</string>
+    <string name="steamgriddb_error_offline">You are offline. Connect to the internet to search for artwork.</string>
+    <string name="steamgriddb_error_rate_limited">SteamGridDB rate limit reached. Please try again in a moment.</string>
+    <string name="steamgriddb_error_unavailable">SteamGridDB is currently unreachable.</string>
+    <string name="steamgriddb_error_unauthorized">Your SteamGridDB API token is invalid or unauthorized.</string>
+    <string name="steamgriddb_error_generic">Artwork could not be loaded from SteamGridDB.</string>
+    <string name="steamgriddb_error_save_failed">The artwork could not be saved.</string>
     <string name="gamefocus_option_change_search_term">Change Search Term</string>
     <string name="gamefocus_option_use_app_icon">Use App Icon</string>
     <string name="gamefocus_option_use_default_icon">Use Default Icon</string>
@@ -76,5 +84,28 @@
     <string name="gamefocus_dialog_pair_subtitle">Choose an app to launch on the bottom screen alongside %1$s</string>
     <string name="gamefocus_launch_dual">Dual Launch</string>
     <string name="gamefocus_accessibility_service_description">Enables Game Focus to track active apps across both screens and restore them when pressing the Back button.</string>
+
+    <string name="gamefocus_edit_overlay_title">Edit Game</string>
+    <string name="gamefocus_cat_game_info">Game Info</string>
+    <string name="gamefocus_cat_scraping">Scraping</string>
+    <string name="gamefocus_field_display_name_title">Display Name</string>
+    <string name="gamefocus_field_display_name_desc">Customize how the title appears in the launcher gallery and library.</string>
+    <string name="gamefocus_field_display_name_placeholder">Enter display name</string>
+    <string name="gamefocus_action_save_game_info_title">Save Game Info</string>
+    <string name="gamefocus_action_save_game_info_desc">Apply changes to the game\'s title in the launcher.</string>
+    <string name="gamefocus_scraping_search_term_title">Search Term</string>
+    <string name="gamefocus_scraping_search_term_desc">SteamGridDB query used to find matching artwork.</string>
+    <string name="gamefocus_scraping_matched_game_title">Matched Game</string>
+    <string name="gamefocus_scraping_matched_game_desc">SteamGridDB game title match.</string>
+    <string name="gamefocus_toggle_use_app_icon_title">Use App Icon</string>
+    <string name="gamefocus_toggle_use_rom_icon_title">Use System Icon</string>
+    <string name="gamefocus_toggle_use_app_icon_desc">Display the native Android app icon instead of scraped artwork.</string>
+    <string name="gamefocus_toggle_use_rom_icon_desc">Display the system emulator logo instead of scraped artwork.</string>
+    <string name="gamefocus_scraping_images_section">Available Artwork</string>
+    <string name="gamefocus_scraping_using_app_icon_notice">Native application icon is active. Toggle off above to browse and apply custom artwork.</string>
+    <string name="gamefocus_scraping_using_rom_icon_notice">System emulator icon is active. Toggle off above to browse and apply custom artwork.</string>
+    <string name="gamefocus_scraping_applied_badge_cd">Selected artwork</string>
+    <string name="gamefocus_action_reset_display_name_title">Reset to Default Name</string>
+    <string name="gamefocus_action_reset_display_name_desc">Restore the original title: %1$s</string>
 </resources>
 

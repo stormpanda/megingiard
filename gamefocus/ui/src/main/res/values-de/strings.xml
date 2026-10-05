@@ -35,6 +35,14 @@
     <string name="steamgriddb_status_downloading">Cover-Motiv wird heruntergeladen</string>
     <string name="steamgriddb_status_searching">SteamGridDB wird durchsucht</string>
     <string name="steamgriddb_status_fetching">Cover-Motive werden geladen</string>
+    <string name="steamgriddb_no_games_found">Kein SteamGridDB-Spiel für \'%1$s\' gefunden</string>
+    <string name="steamgriddb_no_covers_found">Keine Cover-Motive für \'%1$s\' gefunden</string>
+    <string name="steamgriddb_error_offline">Keine Internetverbindung. Verbinde dich mit dem Internet, um nach Covern zu suchen.</string>
+    <string name="steamgriddb_error_rate_limited">SteamGridDB-Anfragelimit erreicht. Bitte versuche es gleich noch einmal.</string>
+    <string name="steamgriddb_error_unavailable">SteamGridDB ist derzeit nicht erreichbar.</string>
+    <string name="steamgriddb_error_unauthorized">Dein SteamGridDB-API-Token ist ungültig oder nicht autorisiert.</string>
+    <string name="steamgriddb_error_generic">Cover konnten nicht von SteamGridDB geladen werden.</string>
+    <string name="steamgriddb_error_save_failed">Das Cover konnte nicht gespeichert werden.</string>
     <string name="gamefocus_option_change_search_term">Suchbegriff ändern</string>
     <string name="gamefocus_option_use_app_icon">App-Icon verwenden</string>
     <string name="gamefocus_option_use_default_icon">Standard-Icon verwenden</string>
@@ -76,5 +84,28 @@
     <string name="gamefocus_dialog_pair_subtitle">Wähle eine App, die zusammen mit %1$s auf dem unteren Bildschirm gestartet wird</string>
     <string name="gamefocus_launch_dual">Dual-Start</string>
     <string name="gamefocus_accessibility_service_description">Ermöglicht Game Focus die Erkennung aktiver Apps auf beiden Bildschirmen zur Wiederherstellung beim Drücken der Zurück-Taste.</string>
+
+    <string name="gamefocus_edit_overlay_title">Spiel bearbeiten</string>
+    <string name="gamefocus_cat_game_info">Spiel-Info</string>
+    <string name="gamefocus_cat_scraping">Cover-Suche</string>
+    <string name="gamefocus_field_display_name_title">Anzeigename</string>
+    <string name="gamefocus_field_display_name_desc">Passe an, wie der Titel in der Launcher-Galerie und -Bibliothek dargestellt wird.</string>
+    <string name="gamefocus_field_display_name_placeholder">Anzeigenamen eingeben</string>
+    <string name="gamefocus_action_save_game_info_title">Spiel-Info speichern</string>
+    <string name="gamefocus_action_save_game_info_desc">Änderungen am Spieltitel im Launcher übernehmen.</string>
+    <string name="gamefocus_scraping_search_term_title">Suchbegriff</string>
+    <string name="gamefocus_scraping_search_term_desc">SteamGridDB-Suchanfrage für passende Cover-Motive.</string>
+    <string name="gamefocus_scraping_matched_game_title">Erkanntes Spiel</string>
+    <string name="gamefocus_scraping_matched_game_desc">SteamGridDB-Spieltitel-Treffer.</string>
+    <string name="gamefocus_toggle_use_app_icon_title">App-Symbol verwenden</string>
+    <string name="gamefocus_toggle_use_rom_icon_title">System-Symbol verwenden</string>
+    <string name="gamefocus_toggle_use_app_icon_desc">Das native Android-App-Symbol anstelle von heruntergeladenen Covern anzeigen.</string>
+    <string name="gamefocus_toggle_use_rom_icon_desc">Das System-Emulator-Logo anstelle von heruntergeladenen Covern anzeigen.</string>
+    <string name="gamefocus_scraping_images_section">Verfügbare Cover</string>
+    <string name="gamefocus_scraping_using_app_icon_notice">Natives App-Symbol ist aktiv. Schalte die Option oben aus, um Cover zu suchen und anzuwenden.</string>
+    <string name="gamefocus_scraping_using_rom_icon_notice">System-Emulator-Symbol ist aktiv. Schalte die Option oben aus, um Cover zu suchen und anzuwenden.</string>
+    <string name="gamefocus_scraping_applied_badge_cd">Ausgewähltes Cover</string>
+    <string name="gamefocus_action_reset_display_name_title">Auf Standardnamen zurücksetzen</string>
+    <string name="gamefocus_action_reset_display_name_desc">Ursprünglichen Titel wiederherstellen: %1$s</string>
 </resources>
 

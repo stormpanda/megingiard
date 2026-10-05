@@ -23,6 +23,11 @@ dependencies {
     api(libs.androidx.ui.tooling.preview)
     api(libs.androidx.material3)
     api(libs.androidx.compose.material.icons.extended)
+    api(libs.androidx.compose.foundation)
+    // Temporary workaround: reorderable transitively pulls Foundation 1.7.0 required
+    // by LocalBringIntoViewSpec while preserving Compose BOM 2024.06.00 (M3 1.2 touch targets).
+    implementation(libs.reorderable)
+    implementation(libs.androidx.activity.compose)
 
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)

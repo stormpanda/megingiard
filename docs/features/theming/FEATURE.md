@@ -338,9 +338,9 @@ Use these tokens instead of hardcoding `Color(0xFFCF6679)` / `Color(0xFFFF9800)`
 
 ---
 
-## Gamepad Design System Components (`ui/GamepadComponents.kt`)
+## Gamepad Design System Components (`:shared:ui`)
 
-Megingiard provides a centralized, reusable suite of handheld gamepad-first composables for primary screen menus and dialogs:
+Megingiard provides a centralized, reusable suite of handheld gamepad-first composables in `:shared:ui` (`ui/Gamepad*.kt`) shared across both Megingiard Companion and Megingiard Game Focus for primary screen menus, forms, and dialogs:
 
 | Component | Description | Primary Usage |
 | --------- | ----------- | ------------- |
