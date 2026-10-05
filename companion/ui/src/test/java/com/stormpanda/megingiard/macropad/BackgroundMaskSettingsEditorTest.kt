@@ -20,6 +20,7 @@ import androidx.compose.ui.test.performScrollTo
 import com.stormpanda.megingiard.settings.ThemeMode
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.paletteFor
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
@@ -41,6 +42,14 @@ class BackgroundMaskSettingsEditorTest {
 
     @Before
     fun setUp() {
+        BackgroundPickerManager.clearPickedUri()
+        MacroPadState.setPreviewLayout(null)
+        MacroPadState.setCroppingBackground(false)
+        MacroPadState.setCroppingMask(false)
+    }
+
+    @After
+    fun tearDown() {
         BackgroundPickerManager.clearPickedUri()
         MacroPadState.setPreviewLayout(null)
         MacroPadState.setCroppingBackground(false)
