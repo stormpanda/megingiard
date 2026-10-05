@@ -233,7 +233,7 @@ private fun GameInfoDeckContent(
         GamepadSaveExitActionRow(
             title = stringResource(R.string.gamefocus_action_save_game_info_title),
             description = stringResource(R.string.gamefocus_action_save_game_info_desc),
-            pulseOnChanges = true,
+            pulseOnChanges = isChanged,
             saveActionText = stringResource(com.stormpanda.megingiard.shared.ui.R.string.gamepad_action_save),
             saveIcon = Icons.Rounded.Save,
             enabled = isConfirmEnabled,
