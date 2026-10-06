@@ -840,21 +840,7 @@ private fun LibraryGridItem(
     val appColors = LocalAppColors.current
     val iconBitmap = rememberIconBitmap(appInfo)
 
-    val palette by produceState<ExtractedAppPalette?>(
-        initialValue = AppPaletteExtractor.getCachedColorsOrNull(appInfo),
-        key1 = appInfo.packageName,
-        key2 = appInfo.coverPath,
-        key3 = appInfo.coverLastModified,
-    ) {
-        val cached = AppPaletteExtractor.getCachedColorsOrNull(appInfo)
-        if (cached != null) {
-            value = cached
-        } else {
-            value = AppPaletteExtractor.extractColorsAsync(appInfo, appColors.accent, appColors.appBackground)
-        }
-    }
-
-    val currentPalette = palette
+    val currentPalette = rememberAppPalette(appInfo)
     val targetCardBg =
         if (isFocused) {
             if (currentPalette != null && currentPalette.isExtracted) {

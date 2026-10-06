@@ -630,20 +630,17 @@ fun FocusTopLauncherScreen(
                                                 posterCornerRadius = FTL_POSTER_CORNER_RADIUS,
                                                 cardBackgroundColor = { actualIndex, isSelected ->
                                                     val appInfo = currentCategoryApps.getOrNull(actualIndex)
-                                                    val palette =
-                                                        if (isSelected && appInfo?.packageName == backgroundApp?.packageName &&
-                                                            activePalette.isExtracted
-                                                        ) {
-                                                            activePalette
-                                                        } else {
-                                                            appInfo?.let { AppPaletteExtractor.getCachedColorsOrNull(it) }
-                                                        }
-                                                    if (palette != null && palette.isExtracted) {
-                                                        palette.darkenedPrimaryColor
-                                                    } else if (isSelected) {
-                                                        appColors.surfaceVariant
+                                                    if (appInfo == null) {
+                                                        if (isSelected) appColors.surfaceVariant else appColors.surface
                                                     } else {
-                                                        appColors.surface
+                                                        val palette = rememberAppPalette(appInfo)
+                                                        if (palette != null && palette.isExtracted) {
+                                                            palette.darkenedPrimaryColor
+                                                        } else if (isSelected) {
+                                                            appColors.surfaceVariant
+                                                        } else {
+                                                            appColors.surface
+                                                        }
                                                     }
                                                 },
                                                 isHidden = { actualIndex ->
@@ -1164,6 +1161,26 @@ internal fun rememberIconBitmap(
             value = FocusImageCache.getCachedIconBitmap(appInfo.packageName)
             if (value == null) {
                 value = FocusImageCache.getIconBitmapAsync(context, appInfo)
+            }
+        }
+    return state.value
+}
+
+@Composable
+internal fun rememberAppPalette(appInfo: InstalledAppInfo): ExtractedAppPalette? {
+    val appColors = LocalAppColors.current
+    val state =
+        produceState<ExtractedAppPalette?>(
+            initialValue = AppPaletteExtractor.getCachedColorsOrNull(appInfo),
+            key1 = appInfo.packageName,
+            key2 = appInfo.coverPath,
+            key3 = appInfo.coverLastModified,
+        ) {
+            val cached = AppPaletteExtractor.getCachedColorsOrNull(appInfo)
+            if (cached != null) {
+                value = cached
+            } else {
+                value = AppPaletteExtractor.extractColorsAsync(appInfo, appColors.accent, appColors.appBackground)
             }
         }
     return state.value

@@ -173,6 +173,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
         AppLog.i(TAG, "FocusTopLauncherActivity created on primary display (fullscreen)")
 
         initGameFocusLaunchers()
+        AppPaletteExtractor.init(applicationContext)
         InstalledAppsManager.loadInstalledApps(this)
         GameFocusPairManager.loadPairs(this)
         if (savedInstanceState == null && intent?.hasCategory(Intent.CATEGORY_HOME) == true) {

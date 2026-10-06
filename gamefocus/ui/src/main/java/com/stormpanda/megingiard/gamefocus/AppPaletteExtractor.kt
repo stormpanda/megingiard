@@ -181,23 +181,14 @@ object AppPaletteExtractor {
     private fun getCacheKey(appInfo: InstalledAppInfo): String {
         val coverPath = appInfo.coverPath
         if (coverPath != null) {
-            val file = File(coverPath)
-            val modTime = if (file.exists()) file.lastModified() else 0L
-            return "${appInfo.packageName}:$coverPath:$modTime"
-        }
-        val context = appContext
-        if (context != null) {
-            val file =
-                if (appInfo.isRom) {
-                    val logosDir = File(context.cacheDir, "gamefocus_logos")
-                    File(logosDir, "${appInfo.packageName}.png")
+            val modTime =
+                if (appInfo.coverLastModified > 0L) {
+                    appInfo.coverLastModified
                 } else {
-                    val iconsDir = File(context.cacheDir, "gamefocus_icons")
-                    File(iconsDir, "${appInfo.packageName}.png")
+                    val file = File(coverPath)
+                    if (file.exists()) file.lastModified() else 0L
                 }
-            if (file.exists()) {
-                return "${appInfo.packageName}:${if (appInfo.isRom) "logo" else "icon"}:${file.lastModified()}"
-            }
+            return "${appInfo.packageName}:$coverPath:$modTime"
         }
         return "${appInfo.packageName}:${if (appInfo.isRom) "logo" else "icon"}"
     }
@@ -222,8 +213,10 @@ object AppPaletteExtractor {
         }
 
         val palette = extractColorsInternal(appInfo, defaultPrimary, defaultSecondary)
-        paletteCache.put(cacheKey, palette)
-        persistPalette(cacheKey, palette)
+        if (palette.isExtracted) {
+            paletteCache.put(cacheKey, palette)
+            persistPalette(cacheKey, palette)
+        }
         val elapsed = System.currentTimeMillis() - startTime
         AppLog.d(TAG, "Palette extracted (sync) for ${appInfo.label} in ${elapsed}ms")
         return palette
@@ -343,11 +336,11 @@ object AppPaletteExtractor {
 
     private fun Drawable.toAndroidBitmap(): Bitmap? =
         try {
-            val w = intrinsicWidth.coerceAtLeast(1)
-            val h = intrinsicHeight.coerceAtLeast(1)
+            val w = if (intrinsicWidth > 0) intrinsicWidth.coerceAtMost(128) else 128
+            val h = if (intrinsicHeight > 0) intrinsicHeight.coerceAtMost(128) else 128
             val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
-            setBounds(0, 0, canvas.width, canvas.height)
+            setBounds(0, 0, w, h)
             draw(canvas)
             bitmap
         } catch (e: Exception) {

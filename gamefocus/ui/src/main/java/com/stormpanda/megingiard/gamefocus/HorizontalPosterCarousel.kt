@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.gamefocus
 
 import android.graphics.BlurMaskFilter
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -58,6 +59,7 @@ private const val HPC_SHADOW_FADE_DURATION_MS = 300
 private const val HPC_HIDDEN_ALPHA = 0.4f
 private const val HPC_VISIBLE_ALPHA = 1.0f
 private const val HPC_HIDE_ANIMATION_DURATION_MS = 300
+private const val HPC_CARD_BG_ANIMATION_DURATION_MS = 200
 
 @Composable
 fun HorizontalPosterCarousel(
@@ -72,7 +74,7 @@ fun HorizontalPosterCarousel(
     posterSpacing: Dp = HPC_DEFAULT_POSTER_SPACING,
     carouselHeight: Dp = HPC_DEFAULT_CAROUSEL_HEIGHT,
     posterCornerRadius: Dp = HPC_DEFAULT_CORNER_RADIUS,
-    cardBackgroundColor: ((actualIndex: Int, isSelected: Boolean) -> Color)? = null,
+    cardBackgroundColor: (@Composable (actualIndex: Int, isSelected: Boolean) -> Color)? = null,
     isHidden: ((actualIndex: Int) -> Boolean)? = null,
     itemContent: @Composable (actualIndex: Int, isSelected: Boolean) -> Unit,
 ) {
@@ -123,6 +125,12 @@ fun HorizontalPosterCarousel(
             val resolvedCardBg =
                 cardBackgroundColor?.invoke(actualIndex, isSelected)
                     ?: if (isSelected) appColors.surfaceVariant else appColors.surface
+
+            val animatedCardBg by animateColorAsState(
+                targetValue = resolvedCardBg,
+                animationSpec = tween(durationMillis = HPC_CARD_BG_ANIMATION_DURATION_MS),
+                label = "CarouselCardBgAnim",
+            )
 
             Box(
                 modifier =
@@ -179,7 +187,7 @@ fun HorizontalPosterCarousel(
                             // Draw background here to avoid recomposing on cardHiddenAlpha changes
                             val cornerRadiusPx = posterCornerRadius.toPx()
                             drawRoundRect(
-                                color = resolvedCardBg.copy(alpha = cardHiddenAlpha),
+                                color = animatedCardBg.copy(alpha = cardHiddenAlpha),
                                 cornerRadius = CornerRadius(cornerRadiusPx, cornerRadiusPx),
                             )
                         }.clip(posterShape)

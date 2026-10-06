@@ -87,7 +87,51 @@ class AppPaletteExtractorTest {
         assertEquals(defaultPrimary, result.primaryColor)
         assertEquals(defaultSecondary, result.secondaryColor)
         assertFalse(result.isExtracted)
+
+        // Fallback unextracted palettes are not cached to prevent stale flashes
+        assertNull(AppPaletteExtractor.getCachedColorsOrNull(app))
     }
+
+    @Test
+    fun testExtractColorsWithAppIcon() =
+        runTest {
+            val context = RuntimeEnvironment.getApplication()
+            AppPaletteExtractor.init(context)
+
+            // Create a fake icon PNG in gamefocus_icons cache
+            val iconsDir = File(context.cacheDir, "gamefocus_icons").apply { mkdirs() }
+            val iconFile = File(iconsDir, "com.test.appicon.png")
+            val bitmap = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888)
+            bitmap.eraseColor(android.graphics.Color.BLUE)
+            FileOutputStream(iconFile).use { out ->
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+            }
+
+            val app =
+                InstalledAppInfo(
+                    packageName = "com.test.appicon",
+                    activityName = "MainActivity",
+                    label = "App Icon Test",
+                    coverPath = null,
+                )
+
+            assertNull(AppPaletteExtractor.getCachedColorsOrNull(app))
+
+            val result = AppPaletteExtractor.extractColors(app, defaultPrimary, defaultSecondary)
+            assertTrue(result.isExtracted)
+            assertNotNull(result.primaryColor)
+            assertNotNull(result.secondaryColor)
+
+            // Cache hit via deterministic packageName:icon key
+            val cached = AppPaletteExtractor.getCachedColorsOrNull(app)
+            assertNotNull(cached)
+            assertEquals(result.primaryColor, cached!!.primaryColor)
+            assertTrue(cached.isExtracted)
+
+            // Invalidation
+            AppPaletteExtractor.invalidatePalette("com.test.appicon")
+            assertNull(AppPaletteExtractor.getCachedColorsOrNull(app))
+        }
 
     @Test
     fun testExtractColorsWithBitmapCover() =
