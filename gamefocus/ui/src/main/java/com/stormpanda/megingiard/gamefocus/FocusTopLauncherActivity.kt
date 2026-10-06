@@ -42,6 +42,7 @@ import com.stormpanda.megingiard.catalog.SYSTEM_ID_SWITCH
 import com.stormpanda.megingiard.catalog.SwitchEmulators
 import com.stormpanda.megingiard.gamefocus.domain.GameFocusDefaultLauncherManager
 import com.stormpanda.megingiard.gamefocus.domain.GameFocusPairManager
+import com.stormpanda.megingiard.gamefocus.domain.GameFocusPreferences
 import com.stormpanda.megingiard.gamefocus.domain.GameFocusSessionTracker
 import com.stormpanda.megingiard.gamefocus.domain.initGameFocusLaunchers
 import com.stormpanda.megingiard.gamefocus.viewmodel.DEFAULT_LIBRARY_GRID_COLUMNS
@@ -176,6 +177,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
         AppPaletteExtractor.init(applicationContext)
         InstalledAppsManager.loadInstalledApps(this)
         GameFocusPairManager.loadPairs(this)
+        viewModel.setButtonPromptsVisible(GameFocusPreferences.areButtonPromptsVisible(this))
         if (savedInstanceState == null && intent?.hasCategory(Intent.CATEGORY_HOME) == true) {
             GameFocusDefaultLauncherManager.handleHomeNavigation(this)
         }
@@ -221,6 +223,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
             val pairingTargetApp by viewModel.pairingTargetApp.collectAsStateWithLifecycle()
             val pairingFocusedIndex by viewModel.pairingFocusedIndex.collectAsStateWithLifecycle()
             val confirmPairingTrigger by viewModel.confirmPairingTrigger.collectAsStateWithLifecycle()
+            val areButtonPromptsVisible by viewModel.areButtonPromptsVisible.collectAsStateWithLifecycle()
 
             val availableAndroidApps =
                 remember(allApps) {
@@ -367,6 +370,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     ) {
                         FocusTopLauncherScreen(
                             apps = displayedApps,
+                            areButtonPromptsVisible = areButtonPromptsVisible,
                             onAppClickTop = { appInfo ->
                                 launchGalleryTopApp(appInfo)
                             },
@@ -865,6 +869,9 @@ class FocusTopLauncherActivity : ComponentActivity() {
         }
 
         if (viewModel.editingAppInfo.value != null) {
+            if (keyCode == KeyEvent.KEYCODE_BUTTON_THUMBL || keyCode == KeyEvent.KEYCODE_BUTTON_THUMBR) {
+                return true
+            }
             if (isDismissKey(keyCode)) {
                 AppLog.i(TAG, "onKeyDown: Back/B-Button pressed while editing app")
                 if (onBackPressedDispatcher.hasEnabledCallbacks()) {
@@ -1208,6 +1215,18 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 }
                 return true
             }
+
+            keyCode == KeyEvent.KEYCODE_BUTTON_THUMBR -> {
+                val newVisible = viewModel.toggleButtonPromptsVisible()
+                GameFocusPreferences.setButtonPromptsVisible(this, newVisible)
+                AppLog.i(TAG, "Gamepad R3 pressed -> toggled button prompts visibility (now visible=$newVisible)")
+                return true
+            }
+
+            keyCode == KeyEvent.KEYCODE_BUTTON_THUMBL -> {
+                AppLog.d(TAG, "Gamepad L3 pressed -> consumed to prevent synthetic DPAD_CENTER launch")
+                return true
+            }
         }
         return super.onKeyDown(keyCode, event)
     }
@@ -1217,6 +1236,10 @@ class FocusTopLauncherActivity : ComponentActivity() {
         event: KeyEvent?,
     ): Boolean {
         if (keyCode == KeyEvent.KEYCODE_HOME || keyCode == KeyEvent.KEYCODE_BUTTON_MODE) {
+            return true
+        }
+
+        if (keyCode == KeyEvent.KEYCODE_BUTTON_THUMBL || keyCode == KeyEvent.KEYCODE_BUTTON_THUMBR) {
             return true
         }
 

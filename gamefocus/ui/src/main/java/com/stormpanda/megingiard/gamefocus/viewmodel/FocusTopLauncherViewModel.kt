@@ -96,6 +96,21 @@ class FocusTopLauncherViewModel : ViewModel() {
     private val _isStarted = MutableStateFlow(false)
     val isStarted: StateFlow<Boolean> = _isStarted.asStateFlow()
 
+    private val _areButtonPromptsVisible = MutableStateFlow(true)
+    val areButtonPromptsVisible: StateFlow<Boolean> = _areButtonPromptsVisible.asStateFlow()
+
+    fun setButtonPromptsVisible(visible: Boolean) {
+        AppLog.d(TAG, "setButtonPromptsVisible: $visible")
+        _areButtonPromptsVisible.value = visible
+    }
+
+    fun toggleButtonPromptsVisible(): Boolean {
+        val newState = !_areButtonPromptsVisible.value
+        AppLog.d(TAG, "toggleButtonPromptsVisible: now $newState")
+        _areButtonPromptsVisible.value = newState
+        return newState
+    }
+
     fun openPairingDialog(
         appInfo: InstalledAppInfo,
         initialIndex: Int = 0,
