@@ -59,6 +59,14 @@ class AppPaletteExtractorTest {
         assertEquals(Color(0xFF0000FF), palette.secondaryColor)
         assertTrue(palette.isExtracted)
         assertNotNull(palette.darkenedPrimaryColor)
+
+        val unextractedPalette =
+            ExtractedAppPalette(
+                primaryColor = Color(0xFFFF0000),
+                secondaryColor = Color(0xFF0000FF),
+                isExtracted = false,
+            )
+        assertFalse(unextractedPalette.isExtracted)
     }
 
     @Test

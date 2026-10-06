@@ -445,20 +445,27 @@ fun FocusTopLauncherScreen(
     // Extract dynamic 2 main colors asynchronously off the UI thread using AndroidX Palette API
     val defaultPalette =
         remember(appColors.accent, appColors.appBackground) {
-            ExtractedAppPalette(appColors.accent, appColors.appBackground)
+            ExtractedAppPalette(
+                primaryColor = appColors.accent,
+                secondaryColor = appColors.appBackground,
+                isExtracted = false,
+            )
         }
 
     val activePalette by produceState(
-        initialValue = defaultPalette,
+        initialValue = backgroundApp?.let { AppPaletteExtractor.getCachedColorsOrNull(it) } ?: defaultPalette,
         key1 = backgroundApp?.packageName,
         key2 = backgroundApp?.coverPath,
+        key3 = backgroundApp?.coverLastModified,
     ) {
-        value =
-            if (backgroundApp != null) {
-                AppPaletteExtractor.extractColorsAsync(backgroundApp!!, appColors.accent, appColors.appBackground)
-            } else {
-                defaultPalette
-            }
+        val cached = backgroundApp?.let { AppPaletteExtractor.getCachedColorsOrNull(it) }
+        if (cached != null) {
+            value = cached
+        } else if (backgroundApp != null) {
+            value = AppPaletteExtractor.extractColorsAsync(backgroundApp!!, appColors.accent, appColors.appBackground)
+        } else {
+            value = defaultPalette
+        }
     }
 
     val animatedPrimaryColor by animateColorAsState(
