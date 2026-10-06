@@ -298,4 +298,20 @@ class FocusTopLauncherViewModelTest {
         assertEquals(0, viewModel.mainMenuSelectedIndex.value)
         assertEquals(0, viewModel.libraryMenuSelectedIndex.value)
     }
+
+    @Test
+    fun testButtonPromptsVisibilityToggle() {
+        assertTrue(viewModel.areButtonPromptsVisible.value)
+
+        val toggledFalse = viewModel.toggleButtonPromptsVisible()
+        assertFalse(toggledFalse)
+        assertFalse(viewModel.areButtonPromptsVisible.value)
+
+        val toggledTrue = viewModel.toggleButtonPromptsVisible()
+        assertTrue(toggledTrue)
+        assertTrue(viewModel.areButtonPromptsVisible.value)
+
+        viewModel.setButtonPromptsVisible(false)
+        assertFalse(viewModel.areButtonPromptsVisible.value)
+    }
 }

@@ -37,6 +37,18 @@ import kotlin.math.abs
 
 private const val TAG = "VerticalRollingCarousel"
 private const val CAROUSEL_ROLL_ANGLE_DEG = 35f
+private const val CAROUSEL_ROLL_ANGLE_COMPACT_DEG = 22.5f
+private const val CAROUSEL_SCALE_DECAY = 0.05f
+private const val CAROUSEL_SCALE_DECAY_COMPACT = 0.075f
+private const val CAROUSEL_ALPHA_DECAY = 0.65f
+private const val CAROUSEL_ALPHA_DECAY_COMPACT = 0.375f
+private const val CAROUSEL_ANIM_DURATION_MS = 200
+private const val BUTTON_SLIDE_OFFSET_DP = 10f
+private const val CAROUSEL_CAMERA_DISTANCE_FACTOR = 16
+private val CAROUSEL_ITEM_HEIGHT = 26.dp
+private val CAROUSEL_BUTTON_COL_PADDING_END = 6.dp
+private val CAROUSEL_BUTTON_SPACER_HEIGHT = 2.dp
+private val CAROUSEL_BUTTON_PADDING = 2.dp
 
 @Composable
 fun <T> VerticalRollingCarousel(
@@ -47,6 +59,8 @@ fun <T> VerticalRollingCarousel(
     modifier: Modifier = Modifier,
     visibleItemsCount: Int = 3,
     enabled: Boolean = true,
+    showButtonIcons: Boolean = true,
+    showNeighboringItems: Boolean = true,
 ) {
     if (items.isEmpty()) return
 
@@ -79,12 +93,28 @@ fun <T> VerticalRollingCarousel(
 
     val animatedOffset by animateFloatAsState(
         targetValue = targetOffsetState.value,
-        animationSpec = tween(durationMillis = 200),
+        animationSpec = tween(durationMillis = CAROUSEL_ANIM_DURATION_MS),
         label = "CarouselOffsetAnimation",
     )
 
-    val itemHeight = 26.dp
-    val totalHeight = itemHeight * visibleItemsCount
+    val buttonIconsAlpha by animateFloatAsState(
+        targetValue = if (showButtonIcons) 1f else 0f,
+        animationSpec = tween(durationMillis = CAROUSEL_ANIM_DURATION_MS),
+        label = "CarouselButtonIconsAlpha",
+    )
+    val buttonIconsTranslationX by animateFloatAsState(
+        targetValue = if (showButtonIcons) 0f else -with(density) { BUTTON_SLIDE_OFFSET_DP.dp.toPx() },
+        animationSpec = tween(durationMillis = CAROUSEL_ANIM_DURATION_MS),
+        label = "CarouselButtonIconsTranslationX",
+    )
+
+    val neighborAlphaProgress by animateFloatAsState(
+        targetValue = if (showNeighboringItems) 1f else 0f,
+        animationSpec = tween(durationMillis = CAROUSEL_ANIM_DURATION_MS),
+        label = "CarouselNeighborAlphaProgress",
+    )
+
+    val totalHeight = CAROUSEL_ITEM_HEIGHT * visibleItemsCount
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -94,22 +124,28 @@ fun <T> VerticalRollingCarousel(
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(end = 6.dp),
+            modifier =
+                Modifier
+                    .padding(end = CAROUSEL_BUTTON_COL_PADDING_END)
+                    .graphicsLayer {
+                        alpha = buttonIconsAlpha
+                        translationX = buttonIconsTranslationX
+                    },
         ) {
             GamePadButtonAction(
                 button = GamePadButton.DPAD_UP,
                 text = "",
-                enabled = enabled,
+                enabled = enabled && showButtonIcons,
                 onClick = onStepUp,
-                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 2.dp),
+                contentPadding = PaddingValues(horizontal = CAROUSEL_BUTTON_PADDING, vertical = CAROUSEL_BUTTON_PADDING),
             )
-            Spacer(modifier = Modifier.height(2.dp))
+            Spacer(modifier = Modifier.height(CAROUSEL_BUTTON_SPACER_HEIGHT))
             GamePadButtonAction(
                 button = GamePadButton.DPAD_DOWN,
                 text = "",
-                enabled = enabled,
+                enabled = enabled && showButtonIcons,
                 onClick = onStepDown,
-                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 2.dp),
+                contentPadding = PaddingValues(horizontal = CAROUSEL_BUTTON_PADDING, vertical = CAROUSEL_BUTTON_PADDING),
             )
         }
 
@@ -120,12 +156,12 @@ fun <T> VerticalRollingCarousel(
                     .weight(1f),
             contentAlignment = Alignment.TopStart,
         ) {
-            val itemHeightPx = with(density) { itemHeight.toPx() }
+            val itemHeightPx = with(density) { CAROUSEL_ITEM_HEIGHT.toPx() }
             val centerY = itemHeightPx * (visibleItemsCount / 2)
 
-            val scaleDecay = if (visibleItemsCount == 3) 0.05f else 0.075f
-            val rotationMax = if (visibleItemsCount == 3) 35f else 22.5f
-            val alphaDecay = if (visibleItemsCount == 3) 0.65f else 0.375f
+            val scaleDecay = if (visibleItemsCount == 3) CAROUSEL_SCALE_DECAY else CAROUSEL_SCALE_DECAY_COMPACT
+            val rotationMax = if (visibleItemsCount == 3) CAROUSEL_ROLL_ANGLE_DEG else CAROUSEL_ROLL_ANGLE_COMPACT_DEG
+            val alphaDecay = if (visibleItemsCount == 3) CAROUSEL_ALPHA_DECAY else CAROUSEL_ALPHA_DECAY_COMPACT
 
             val halfVisible = visibleItemsCount / 2
             val integerOffsetState =
@@ -148,13 +184,14 @@ fun <T> VerticalRollingCarousel(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .height(itemHeight)
+                                .height(CAROUSEL_ITEM_HEIGHT)
                                 .graphicsLayer {
                                     val currentFraction = fractionalOffsetState.value
                                     val diff = s.toFloat() - currentFraction
                                     val scaleVal = 1f - abs(diff) * scaleDecay
                                     val rotationXVal = diff * rotationMax
-                                    val alphaVal = (1f - abs(diff) * alphaDecay).coerceIn(0f, 1f)
+                                    val effectiveAlphaDecay = 1.0f - (1.0f - alphaDecay) * neighborAlphaProgress
+                                    val alphaVal = (1f - abs(diff) * effectiveAlphaDecay).coerceIn(0f, 1f)
                                     val pivotY = (0.5f - diff * 0.5f).coerceIn(0f, 1f)
 
                                     translationY = centerY + (diff * itemHeightPx)
@@ -163,12 +200,12 @@ fun <T> VerticalRollingCarousel(
                                     rotationX = rotationXVal
                                     alpha = alphaVal
                                     transformOrigin = TransformOrigin(0f, pivotY)
-                                    cameraDistance = 16 * density.density
+                                    cameraDistance = CAROUSEL_CAMERA_DISTANCE_FACTOR * density.density
                                 }.focusProperties { canFocus = false }
                                 .clickable(
                                     interactionSource = remember { MutableInteractionSource() },
                                     indication = null,
-                                    enabled = enabled,
+                                    enabled = enabled && (showNeighboringItems || s == 0),
                                     onClick = {
                                         onSelectedIndexChange(itemIndex)
                                     },

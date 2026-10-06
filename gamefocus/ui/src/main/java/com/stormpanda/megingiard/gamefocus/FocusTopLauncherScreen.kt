@@ -8,6 +8,7 @@ import android.graphics.Canvas
 import android.graphics.drawable.Drawable
 import android.util.LruCache
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -140,6 +141,8 @@ private val FTL_BUTTON_GAP = 2.dp
 private val FTL_SPLITSCREEN_BADGE_SIZE = 14.dp
 private val FTL_SUBTITLE_GAP = 2.dp
 private val FTL_BADGE_TEXT_GAP = 4.dp
+private const val FTL_PROMPT_ANIM_DURATION_MS = 200
+private const val FTL_PROMPT_SLIDE_DIVISOR = 2
 
 private class JobRefHolder(
     var job: Job? = null,
@@ -209,6 +212,7 @@ fun FocusTopLauncherScreen(
     confirmPairingTrigger: Int = 0,
     onDismissPairing: () -> Unit = {},
     onConfirmPairApp: (InstalledAppInfo, InstalledAppInfo) -> Unit = { _, _ -> },
+    areButtonPromptsVisible: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
@@ -746,28 +750,58 @@ fun FocusTopLauncherScreen(
                             onCategoryUp = onCategoryUp,
                             onCategoryDown = onCategoryDown,
                             enabled = isControlsEnabled,
+                            areButtonPromptsVisible = areButtonPromptsVisible,
                             modifier =
                                 Modifier
                                     .align(Alignment.TopStart)
                                     .padding(start = FTL_CATEGORY_HEADER_PADDING_START, top = FTL_CATEGORY_HEADER_PADDING_TOP),
                         )
 
-                        GamePadButtonAction(
-                            button = GamePadButton.BUTTON_R2,
-                            text = stringResource(R.string.gamefocus_nav_library),
-                            enabled = isControlsEnabled,
-                            onClick = onOpenLibrary,
+                        AnimatedVisibility(
+                            visible = areButtonPromptsVisible,
+                            enter =
+                                fadeIn(animationSpec = tween(FTL_PROMPT_ANIM_DURATION_MS)) +
+                                    slideInVertically(
+                                        animationSpec = tween(FTL_PROMPT_ANIM_DURATION_MS),
+                                    ) { -it / FTL_PROMPT_SLIDE_DIVISOR } +
+                                    slideInHorizontally(
+                                        animationSpec = tween(FTL_PROMPT_ANIM_DURATION_MS),
+                                    ) { it / FTL_PROMPT_SLIDE_DIVISOR },
+                            exit =
+                                fadeOut(animationSpec = tween(FTL_PROMPT_ANIM_DURATION_MS)) +
+                                    slideOutVertically(
+                                        animationSpec = tween(FTL_PROMPT_ANIM_DURATION_MS),
+                                    ) { -it / FTL_PROMPT_SLIDE_DIVISOR } +
+                                    slideOutHorizontally(
+                                        animationSpec = tween(FTL_PROMPT_ANIM_DURATION_MS),
+                                    ) { it / FTL_PROMPT_SLIDE_DIVISOR },
                             modifier =
                                 Modifier
                                     .align(Alignment.TopEnd)
                                     .padding(end = FTL_NAV_PADDING_END, top = FTL_NAV_PADDING_TOP),
-                        )
+                        ) {
+                            GamePadButtonAction(
+                                button = GamePadButton.BUTTON_R2,
+                                text = stringResource(R.string.gamefocus_nav_library),
+                                enabled = isControlsEnabled,
+                                onClick = onOpenLibrary,
+                            )
+                        }
 
                         val currentPairedPackage = if (currentApp != null) pairedApps[currentApp.packageName] else null
                         val isCurrentPaired = currentPairedPackage != null
 
                         // Bottom-Left Main Actions Menu hovering over the gallery plane
-                        Box(
+                        AnimatedVisibility(
+                            visible = areButtonPromptsVisible || isMainOptionsMenuExpanded,
+                            enter =
+                                fadeIn(animationSpec = tween(FTL_PROMPT_ANIM_DURATION_MS)) +
+                                    slideInVertically(animationSpec = tween(FTL_PROMPT_ANIM_DURATION_MS)) { it / FTL_PROMPT_SLIDE_DIVISOR },
+                            exit =
+                                fadeOut(animationSpec = tween(FTL_PROMPT_ANIM_DURATION_MS)) +
+                                    slideOutVertically(
+                                        animationSpec = tween(FTL_PROMPT_ANIM_DURATION_MS),
+                                    ) { it / FTL_PROMPT_SLIDE_DIVISOR },
                             modifier =
                                 Modifier
                                     .align(Alignment.BottomStart)
@@ -860,17 +894,29 @@ fun FocusTopLauncherScreen(
                         }
 
                         // Bottom-Right subdued touch buttons hovering over the gallery plane
-                        DualScreenLaunchButtons(
-                            appInfo = currentApp,
-                            isPaired = isCurrentPaired,
-                            enabled = isControlsEnabled && !isMainOptionsMenuExpanded,
-                            onLaunchTop = onAppClickTop,
-                            onLaunchBottom = onAppClickBottom,
+                        AnimatedVisibility(
+                            visible = areButtonPromptsVisible,
+                            enter =
+                                fadeIn(animationSpec = tween(FTL_PROMPT_ANIM_DURATION_MS)) +
+                                    slideInVertically(animationSpec = tween(FTL_PROMPT_ANIM_DURATION_MS)) { it / FTL_PROMPT_SLIDE_DIVISOR },
+                            exit =
+                                fadeOut(animationSpec = tween(FTL_PROMPT_ANIM_DURATION_MS)) +
+                                    slideOutVertically(
+                                        animationSpec = tween(FTL_PROMPT_ANIM_DURATION_MS),
+                                    ) { it / FTL_PROMPT_SLIDE_DIVISOR },
                             modifier =
                                 Modifier
                                     .align(Alignment.BottomEnd)
                                     .padding(end = FTL_BOTTOM_BAR_PADDING_END, bottom = FTL_BOTTOM_BAR_PADDING_BOTTOM),
-                        )
+                        ) {
+                            DualScreenLaunchButtons(
+                                appInfo = currentApp,
+                                isPaired = isCurrentPaired,
+                                enabled = isControlsEnabled && !isMainOptionsMenuExpanded,
+                                onLaunchTop = onAppClickTop,
+                                onLaunchBottom = onAppClickBottom,
+                            )
+                        }
                     }
 
                     // Game Edit Primary Overlay (Game Info & Scraping)
@@ -1200,6 +1246,7 @@ private fun InteractiveCategoryHeader(
     onCategoryUp: () -> Unit = {},
     onCategoryDown: () -> Unit = {},
     enabled: Boolean = true,
+    areButtonPromptsVisible: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val selectedIndex =
@@ -1224,6 +1271,8 @@ private fun InteractiveCategoryHeader(
             getCategoryName(category)
         },
         enabled = enabled,
+        showButtonIcons = areButtonPromptsVisible,
+        showNeighboringItems = areButtonPromptsVisible,
         modifier = modifier,
     )
 }
