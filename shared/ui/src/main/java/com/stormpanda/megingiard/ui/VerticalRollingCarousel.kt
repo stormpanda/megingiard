@@ -37,6 +37,8 @@ import kotlin.math.abs
 
 private const val TAG = "VerticalRollingCarousel"
 private const val CAROUSEL_ROLL_ANGLE_DEG = 35f
+private const val CAROUSEL_ANIM_DURATION_MS = 200
+private const val BUTTON_SLIDE_OFFSET_DP = 10f
 
 @Composable
 fun <T> VerticalRollingCarousel(
@@ -47,6 +49,8 @@ fun <T> VerticalRollingCarousel(
     modifier: Modifier = Modifier,
     visibleItemsCount: Int = 3,
     enabled: Boolean = true,
+    showButtonIcons: Boolean = true,
+    showNeighboringItems: Boolean = true,
 ) {
     if (items.isEmpty()) return
 
@@ -79,8 +83,25 @@ fun <T> VerticalRollingCarousel(
 
     val animatedOffset by animateFloatAsState(
         targetValue = targetOffsetState.value,
-        animationSpec = tween(durationMillis = 200),
+        animationSpec = tween(durationMillis = CAROUSEL_ANIM_DURATION_MS),
         label = "CarouselOffsetAnimation",
+    )
+
+    val buttonIconsAlpha by animateFloatAsState(
+        targetValue = if (showButtonIcons) 1f else 0f,
+        animationSpec = tween(durationMillis = CAROUSEL_ANIM_DURATION_MS),
+        label = "CarouselButtonIconsAlpha",
+    )
+    val buttonIconsTranslationX by animateFloatAsState(
+        targetValue = if (showButtonIcons) 0f else -with(density) { BUTTON_SLIDE_OFFSET_DP.dp.toPx() },
+        animationSpec = tween(durationMillis = CAROUSEL_ANIM_DURATION_MS),
+        label = "CarouselButtonIconsTranslationX",
+    )
+
+    val neighborAlphaProgress by animateFloatAsState(
+        targetValue = if (showNeighboringItems) 1f else 0f,
+        animationSpec = tween(durationMillis = CAROUSEL_ANIM_DURATION_MS),
+        label = "CarouselNeighborAlphaProgress",
     )
 
     val itemHeight = 26.dp
@@ -94,12 +115,18 @@ fun <T> VerticalRollingCarousel(
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(end = 6.dp),
+            modifier =
+                Modifier
+                    .padding(end = 6.dp)
+                    .graphicsLayer {
+                        alpha = buttonIconsAlpha
+                        translationX = buttonIconsTranslationX
+                    },
         ) {
             GamePadButtonAction(
                 button = GamePadButton.DPAD_UP,
                 text = "",
-                enabled = enabled,
+                enabled = enabled && showButtonIcons,
                 onClick = onStepUp,
                 contentPadding = PaddingValues(horizontal = 2.dp, vertical = 2.dp),
             )
@@ -107,7 +134,7 @@ fun <T> VerticalRollingCarousel(
             GamePadButtonAction(
                 button = GamePadButton.DPAD_DOWN,
                 text = "",
-                enabled = enabled,
+                enabled = enabled && showButtonIcons,
                 onClick = onStepDown,
                 contentPadding = PaddingValues(horizontal = 2.dp, vertical = 2.dp),
             )
@@ -154,7 +181,8 @@ fun <T> VerticalRollingCarousel(
                                     val diff = s.toFloat() - currentFraction
                                     val scaleVal = 1f - abs(diff) * scaleDecay
                                     val rotationXVal = diff * rotationMax
-                                    val alphaVal = (1f - abs(diff) * alphaDecay).coerceIn(0f, 1f)
+                                    val effectiveAlphaDecay = 1.0f - (1.0f - alphaDecay) * neighborAlphaProgress
+                                    val alphaVal = (1f - abs(diff) * effectiveAlphaDecay).coerceIn(0f, 1f)
                                     val pivotY = (0.5f - diff * 0.5f).coerceIn(0f, 1f)
 
                                     translationY = centerY + (diff * itemHeightPx)
@@ -168,7 +196,7 @@ fun <T> VerticalRollingCarousel(
                                 .clickable(
                                     interactionSource = remember { MutableInteractionSource() },
                                     indication = null,
-                                    enabled = enabled,
+                                    enabled = enabled && (showNeighboringItems || s == 0),
                                     onClick = {
                                         onSelectedIndexChange(itemIndex)
                                     },

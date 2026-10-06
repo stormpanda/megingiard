@@ -750,6 +750,7 @@ fun FocusTopLauncherScreen(
                             onCategoryUp = onCategoryUp,
                             onCategoryDown = onCategoryDown,
                             enabled = isControlsEnabled,
+                            areButtonPromptsVisible = areButtonPromptsVisible,
                             modifier =
                                 Modifier
                                     .align(Alignment.TopStart)
@@ -1245,6 +1246,7 @@ private fun InteractiveCategoryHeader(
     onCategoryUp: () -> Unit = {},
     onCategoryDown: () -> Unit = {},
     enabled: Boolean = true,
+    areButtonPromptsVisible: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val selectedIndex =
@@ -1269,6 +1271,8 @@ private fun InteractiveCategoryHeader(
             getCategoryName(category)
         },
         enabled = enabled,
+        showButtonIcons = areButtonPromptsVisible,
+        showNeighboringItems = areButtonPromptsVisible,
         modifier = modifier,
     )
 }
