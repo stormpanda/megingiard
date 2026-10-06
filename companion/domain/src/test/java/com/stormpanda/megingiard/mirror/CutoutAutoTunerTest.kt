@@ -834,4 +834,48 @@ class CutoutAutoTunerTest {
             matchRatioShift >= AnchorPresenceEvaluator.MATCH_THRESHOLD_PRESENT,
         )
     }
+
+    @Test
+    fun `extractAnchorSignature stationary variance tier favors flat plateau with slight noise over zero-variance edge`() {
+        val testW = 16
+        val testH = 16
+        val testCount = testW * testH
+
+        val darkColor = colorArgb(0, 0, 0)
+        val plateauColorFrame0 = colorArgb(200, 200, 200)
+        val plateauColorFrame1 = colorArgb(201, 201, 201) // 1 unit variance across frames
+
+        // Cell (0,0) covers x in 0..1, y in 0..1
+        // (0,0) is an edge pixel with variance 0 but huge spatial gradient
+        // (1,1) and surrounding pixels are a plateau with variance 1 and zero spatial gradient
+        val varianceMap =
+            ByteArray(testCount) { idx ->
+                val x = idx % testW
+                val y = idx / testW
+                if (x == 0 && y == 0) 0.toByte() else 1.toByte()
+            }
+
+        val frames =
+            listOf(
+                IntArray(testCount) { idx ->
+                    val x = idx % testW
+                    val y = idx / testW
+                    if (x == 0 && y == 0) darkColor else plateauColorFrame0
+                },
+                IntArray(testCount) { idx ->
+                    val x = idx % testW
+                    val y = idx / testW
+                    if (x == 0 && y == 0) darkColor else plateauColorFrame1
+                },
+            )
+
+        val signature = CutoutAutoTuner.extractAnchorSignature(varianceMap, frames, testW, testH, "plateau_tier_test")
+        val cell0Point = signature.points.first { it.u < 0.125f && it.v < 0.125f }
+
+        // Plateau pixel (1,1) has u = (1 + 0.5) / 16 = 0.09375, and color ~200
+        // Edge pixel (0,0) has u = (0 + 0.5) / 16 = 0.03125, and color 0
+        assertEquals("Should select plateau pixel (1,1) with u=0.09375 instead of edge pixel (0,0)", 0.09375f, cell0Point.u, 0.001f)
+        assertEquals("Should select plateau pixel (1,1) with v=0.09375 instead of edge pixel (0,0)", 0.09375f, cell0Point.v, 0.001f)
+        assertEquals("Selected point must be plateau color ~200, not edge color 0", 200, cell0Point.r)
+    }
 }

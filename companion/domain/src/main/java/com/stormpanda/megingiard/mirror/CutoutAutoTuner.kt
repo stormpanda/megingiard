@@ -40,6 +40,7 @@ private const val MIN_TRANSLUCENT_ALPHA = 60
 private const val SIGNATURE_GRID_COLS = 8
 private const val SIGNATURE_GRID_ROWS = 8
 private const val MAX_ANCHOR_VARIANCE = 10
+private const val STATIONARY_VARIANCE_THRESHOLD = 3
 private const val HALF_PIXEL_OFFSET = 0.5f
 private const val MAX_MANHATTAN_COLOR_DISTANCE = 765
 private const val GRADIENT_PENALTY_DIVISOR = 2
@@ -246,9 +247,9 @@ object CutoutAutoTuner {
      * across an 8x8 grid over the cutout.
      *
      * In each grid cell, pixels with the lowest temporal variance (most stationary) are prioritized.
-     * When multiple candidate pixels tie for minimum variance (e.g. static UI background vs. static text/icons),
-     * candidates are scored balancing color diversity against local spatial edge gradients so solid interior
-     * plateaus are favored over fragile anti-aliased edge contours.
+     * Pixels within [STATIONARY_VARIANCE_THRESHOLD] (e.g. video codec quantization noise) are grouped
+     * into a primary stationary tier (tier 0), where candidates are scored balancing color diversity
+     * against local spatial edge gradients so solid interior plateaus are favored over fragile anti-aliased edge contours.
      */
     fun extractAnchorSignature(
         varianceMap: ByteArray,
@@ -277,7 +278,7 @@ object CutoutAutoTuner {
 
                 var bestX = -1
                 var bestY = -1
-                var minVar = Int.MAX_VALUE
+                var bestTier = Int.MAX_VALUE
                 var bestScore = Int.MIN_VALUE
 
                 for (y in yStart until yEnd) {
@@ -288,13 +289,14 @@ object CutoutAutoTuner {
                             val candidateDiversity = computeColorDiversity(frames, rowOffset + x, frameCount, points)
                             val gradient = computeSpatialGradient(referenceFrame, x, y, width, height)
                             val score = candidateDiversity - (gradient / GRADIENT_PENALTY_DIVISOR)
+                            val tier = if (v <= STATIONARY_VARIANCE_THRESHOLD) 0 else v
 
-                            if (v < minVar) {
-                                minVar = v
+                            if (tier < bestTier) {
+                                bestTier = tier
                                 bestScore = score
                                 bestX = x
                                 bestY = y
-                            } else if (v == minVar) {
+                            } else if (tier == bestTier) {
                                 if (score > bestScore) {
                                     bestScore = score
                                     bestX = x
