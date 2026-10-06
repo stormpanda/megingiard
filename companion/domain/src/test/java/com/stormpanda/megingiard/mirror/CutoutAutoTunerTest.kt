@@ -878,4 +878,68 @@ class CutoutAutoTunerTest {
         assertEquals("Should select plateau pixel (1,1) with v=0.09375 instead of edge pixel (0,0)", 0.09375f, cell0Point.v, 0.001f)
         assertEquals("Selected point must be plateau color ~200, not edge color 0", 200, cell0Point.r)
     }
+
+    @Test
+    fun `computeMaxNeighborDelta evaluates flat plateaus, edges, and boundary clamping`() {
+        val width = 5
+        val height = 5
+        val frame = IntArray(width * height) { colorArgb(100, 100, 100) }
+
+        // Flat interior at (2,2) with identical neighbors
+        val flatDelta = CutoutAutoTuner.computeMaxNeighborDelta(frame, 2, 2, width, height)
+        assertEquals("Flat area must have zero max neighbor delta", 0, flatDelta)
+
+        // Add a contrasting neighbor at (3,2) with diff (50, 0, 0)
+        frame[2 * width + 3] = colorArgb(150, 100, 100)
+        val edgeDelta = CutoutAutoTuner.computeMaxNeighborDelta(frame, 2, 2, width, height)
+        assertEquals("Edge delta must reflect maximum Manhattan color difference", 50, edgeDelta)
+
+        // Corner boundary pixel at (0,0) safely clamped
+        val cornerDelta = CutoutAutoTuner.computeMaxNeighborDelta(frame, 0, 0, width, height)
+        assertEquals("Corner pixel must evaluate in-bounds neighbors safely", 0, cornerDelta)
+    }
+
+    @Test
+    fun `extractAnchorSignature plateau tier prioritizes 3x3 flat plateau over high-diversity edge pixel`() {
+        val testW = 32
+        val testH = 32
+        val testCount = testW * testH
+        val varianceMap = ByteArray(testCount) { 0 } // All stationary (v = 0)
+
+        val whiteColor = colorArgb(255, 255, 255)
+        val edgeBlackColor = colorArgb(0, 0, 0)
+        val plateauTanColor = colorArgb(200, 180, 140)
+
+        // 32x32 frame with 8x8 grid -> each cell is 4x4 pixels.
+        // Cell (0,0) covers x in 0..3, y in 0..3:
+        // - (0,1) is an isolated black edge pixel surrounded by white (high contrast/diversity, delta 765)
+        // - (2,2) is the center of a 3x3 tan plateau (all 8 neighbors in x:1..3, y:1..3 are tan)
+        // - The rest of the image is white
+        val frames =
+            listOf(
+                IntArray(testCount) { idx ->
+                    val x = idx % testW
+                    val y = idx / testW
+                    when {
+                        x in 1..3 && y in 1..3 -> plateauTanColor
+
+                        // 3x3 tan plateau centered at (2,2)
+                        x == 0 && y == 1 -> edgeBlackColor
+
+                        // High contrast edge pixel
+                        else -> whiteColor
+                    }
+                },
+            )
+
+        val signature = CutoutAutoTuner.extractAnchorSignature(varianceMap, frames, testW, testH, "plateau_priority_test")
+        val cell0Point = signature.points.first { it.u < 0.125f && it.v < 0.125f }
+
+        // Expected coordinate for center of plateau (2,2): u = (2 + 0.5) / 32 = 0.078125f
+        assertEquals("Must select 3x3 plateau pixel at x=2 instead of edge pixel at x=0", 0.078125f, cell0Point.u, 0.001f)
+        assertEquals("Must select 3x3 plateau pixel at y=2 instead of edge pixel at y=1", 0.078125f, cell0Point.v, 0.001f)
+        assertEquals("Selected point must be plateau color R=200", 200, cell0Point.r)
+        assertEquals("Selected point must be plateau color G=180", 180, cell0Point.g)
+        assertEquals("Selected point must be plateau color B=140", 140, cell0Point.b)
+    }
 }
