@@ -1,6 +1,8 @@
 package com.stormpanda.megingiard.macropad
 
+import com.stormpanda.megingiard.mirror.AnchorPoint
 import com.stormpanda.megingiard.mirror.ScreenCutout
+import com.stormpanda.megingiard.mirror.VisualAnchorSignature
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -11,6 +13,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -1142,5 +1145,40 @@ class MacroPadStateTest {
         // Verify untouched cutout2 is preserved
         val untouched = cutouts?.first { it.id == "c2" }
         assertEquals(false, untouched?.hasTransparencyMask)
+    }
+
+    @Test
+    fun `loadFrom migrates legacy calibrated visual anchor to 65 percent and preserves uncalibrated anchor`() {
+        val legacyCalibratedAnchor =
+            LayoutVisualAnchor(
+                enabled = true,
+                signature = VisualAnchorSignature("layout-1", listOf(AnchorPoint(0.5f, 0.5f, 255, 255, 255))),
+                matchThreshold = null,
+            )
+        val calibratedLayout = testLayout(id = "l1", name = "Calibrated", visualAnchor = legacyCalibratedAnchor, mirrorConfigured = true)
+
+        val uncalibratedAnchor = LayoutVisualAnchor(enabled = false, signature = null, matchThreshold = null)
+        val uncalibratedLayout = testLayout(id = "l2", name = "Uncalibrated", visualAnchor = uncalibratedAnchor, mirrorConfigured = true)
+
+        val customThresholdAnchor = LayoutVisualAnchor(enabled = true, matchThreshold = 0.90f)
+        val customLayout = testLayout(id = "l3", name = "Custom", visualAnchor = customThresholdAnchor, mirrorConfigured = true)
+
+        val profile = testProfile(id = "p1", layouts = listOf(calibratedLayout, uncalibratedLayout, customLayout), activeLayoutId = "l1")
+        loadProfiles(profile)
+
+        val layouts =
+            MacroPadState.profiles.value
+                .first()
+                .layouts
+        // Calibrated layout migrated to LEGACY_HARDCODED_MATCH_THRESHOLD (0.65f)
+        assertEquals(LEGACY_HARDCODED_MATCH_THRESHOLD, layouts[0].visualAnchor.matchThreshold)
+        assertEquals(LEGACY_HARDCODED_MATCH_THRESHOLD, layouts[0].visualAnchor.effectiveMatchThreshold)
+
+        // Uncalibrated layout preserved with null matchThreshold and defaults to DEFAULT_LAYOUT_ANCHOR_MATCH_THRESHOLD (0.80f)
+        assertNull(layouts[1].visualAnchor.matchThreshold)
+        assertEquals(DEFAULT_LAYOUT_ANCHOR_MATCH_THRESHOLD, layouts[1].visualAnchor.effectiveMatchThreshold)
+
+        // Custom threshold preserved
+        assertEquals(0.90f, layouts[2].visualAnchor.matchThreshold)
     }
 }

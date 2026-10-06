@@ -435,6 +435,8 @@ Open Settings to create a layout.</string>
     <string name="layout_settings_visual_anchor_recalibrate_title">Recalibrate Reference Anchor</string>
     <string name="layout_settings_visual_anchor_recalibrate_desc">Update anchor points from live game screen</string>
     <string name="layout_settings_visual_anchor_status_calibrated">Calibrated (%1$d reference points)</string>
+    <string name="layout_settings_visual_anchor_match_threshold_title">Required Match Rate</string>
+    <string name="layout_settings_visual_anchor_match_threshold_desc">Minimum percentage of reference points that must match to consider the anchor present</string>
     <string name="layout_settings_visual_anchor_stream_delay_desc">Buffer frames to eliminate visual tearing when UI disappears</string>
     <string name="layout_settings_visual_anchor_freeze_title">Freeze Inactive Cutouts</string>
     <string name="layout_settings_visual_anchor_freeze_desc">Hold the last valid frame when the reference anchor is lost. If disabled, cutouts continue live playback.</string>

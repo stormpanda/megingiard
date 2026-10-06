@@ -448,6 +448,8 @@ Open Settings to create a layout.</string>
     <string name="layout_settings_visual_anchor_recalibrate_title">重新校準參考錨點</string>
     <string name="layout_settings_visual_anchor_recalibrate_desc">從即時遊戲畫面更新錨點</string>
     <string name="layout_settings_visual_anchor_status_calibrated">已校準（%1$d 個參考點）</string>
+    <string name="layout_settings_visual_anchor_match_threshold_title">所需匹配率</string>
+    <string name="layout_settings_visual_anchor_match_threshold_desc">判定錨點有效時必須符合的參考點最低百分比</string>
     <string name="layout_settings_visual_anchor_stream_delay_desc">緩衝畫面以消除內容消失時的畫面撕裂</string>
     <string name="layout_settings_visual_anchor_freeze_title">凍結未啟用的畫面區域</string>
     <string name="layout_settings_visual_anchor_freeze_desc">當參考錨點遺失時保持最後有效影格。若停用，畫面區域將持續即時播放。</string>

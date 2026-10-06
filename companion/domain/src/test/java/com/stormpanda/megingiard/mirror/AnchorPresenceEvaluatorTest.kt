@@ -87,19 +87,47 @@ class AnchorPresenceEvaluatorTest {
     }
 
     @Test
-    fun `transitionState respects MATCH_THRESHOLD_LOST of 0_45f`() {
+    fun `transitionState respects default dynamic hysteresis of 0_60f for 0_80f present threshold`() {
         var state = AnchorPresenceState.PRESENT
         var count = 0
 
-        // Ratio just above 0.45 (0.46) remains PRESENT
-        val (state1, count1) = AnchorPresenceEvaluator.transitionState(state, count, 0.46f, "test")
+        // Ratio just above 0.60 (0.61) remains PRESENT
+        val (state1, count1) = AnchorPresenceEvaluator.transitionState(state, count, 0.61f, "test")
         assertEquals(AnchorPresenceState.PRESENT, state1)
         assertEquals(0, count1)
 
-        // Ratio below 0.45 (0.44) transitions immediately to LOST
-        val (state2, count2) = AnchorPresenceEvaluator.transitionState(state1, count1, 0.44f, "test")
+        // Ratio below 0.60 (0.59) transitions immediately to LOST
+        val (state2, count2) = AnchorPresenceEvaluator.transitionState(state1, count1, 0.59f, "test")
         assertEquals(AnchorPresenceState.LOST, state2)
         assertEquals(0, count2)
+    }
+
+    @Test
+    fun `transitionState respects custom present threshold and dynamic hysteresis gap`() {
+        var state = AnchorPresenceState.PRESENT
+        var count = 0
+
+        // Legacy 0.65f threshold -> lostThreshold = 0.65 - 0.20 = 0.45f
+        val (state1, count1) =
+            AnchorPresenceEvaluator.transitionState(state, count, 0.46f, "test", presentThreshold = 0.65f)
+        assertEquals(AnchorPresenceState.PRESENT, state1)
+        assertEquals(0, count1)
+
+        val (state2, count2) =
+            AnchorPresenceEvaluator.transitionState(state1, count1, 0.44f, "test", presentThreshold = 0.65f)
+        assertEquals(AnchorPresenceState.LOST, state2)
+        assertEquals(0, count2)
+
+        // Clamped minimum threshold: present 0.55f -> lostThreshold = 0.35f
+        val (state3, count3) =
+            AnchorPresenceEvaluator.transitionState(state, count, 0.36f, "test", presentThreshold = 0.55f)
+        assertEquals(AnchorPresenceState.PRESENT, state3)
+        assertEquals(0, count3)
+
+        val (state4, count4) =
+            AnchorPresenceEvaluator.transitionState(state3, count3, 0.34f, "test", presentThreshold = 0.55f)
+        assertEquals(AnchorPresenceState.LOST, state4)
+        assertEquals(0, count4)
     }
 
     @Test
@@ -130,8 +158,8 @@ class AnchorPresenceEvaluatorTest {
         var state = AnchorPresenceState.PRESENT
         var count = 0
 
-        // In gameplay with real-world rendering variances (e.g. 68% match ratio), state remains PRESENT
-        val (state1, count1) = AnchorPresenceEvaluator.transitionState(state, count, 0.68f, "minimap")
+        // In gameplay with real-world rendering variances (e.g. 82% match ratio), state remains PRESENT
+        val (state1, count1) = AnchorPresenceEvaluator.transitionState(state, count, 0.82f, "minimap")
         assertEquals(AnchorPresenceState.PRESENT, state1)
         assertEquals(0, count1)
 
@@ -140,14 +168,14 @@ class AnchorPresenceEvaluatorTest {
         assertEquals(AnchorPresenceState.LOST, state2)
         assertEquals(0, count2)
 
-        // Content returns: anchor returns at 67% (>= MATCH_THRESHOLD_PRESENT 0.65)
+        // Content returns: anchor returns at 81% (>= MATCH_THRESHOLD_PRESENT 0.80)
         // 1st recovery frame -> count = 1, state still LOST
-        val (state3, count3) = AnchorPresenceEvaluator.transitionState(state2, count2, 0.67f, "minimap")
+        val (state3, count3) = AnchorPresenceEvaluator.transitionState(state2, count2, 0.81f, "minimap")
         assertEquals(AnchorPresenceState.LOST, state3)
         assertEquals(1, count3)
 
-        // 2nd recovery frame at 68% -> recovers to PRESENT
-        val (state4, count4) = AnchorPresenceEvaluator.transitionState(state3, count3, 0.68f, "minimap")
+        // 2nd recovery frame at 82% -> recovers to PRESENT
+        val (state4, count4) = AnchorPresenceEvaluator.transitionState(state3, count3, 0.82f, "minimap")
         assertEquals(AnchorPresenceState.PRESENT, state4)
         assertEquals(0, count4)
     }
@@ -257,8 +285,8 @@ class AnchorPresenceEvaluatorTest {
             }
 
         assertTrue(matched)
-        // Required matches = 64 * 0.65 = 41. It terminates at sample 41, saving 23 pixel reads!
-        assertEquals(41, sampleCount)
+        // Default threshold 0.80: required matches = (64 * 0.80).toInt() = 51. Terminates at sample 51, saving 13 pixel reads!
+        assertEquals(51, sampleCount)
     }
 
     @Test
@@ -274,9 +302,35 @@ class AnchorPresenceEvaluatorTest {
             }
 
         assertFalse(matched)
-        // Required matches = 41. Max mismatches = 64 - 41 = 23.
-        // On 24th mismatch, it aborts early! Saves 40 pixel reads!
-        assertEquals(24, sampleCount)
+        // Default threshold 0.80: required matches = 51. Max mismatches = 64 - 51 = 13.
+        // On 14th mismatch, it aborts early! Saves 50 pixel reads!
+        assertEquals(14, sampleCount)
+    }
+
+    @Test
+    fun `matchesWithEarlyBailout respects custom threshold`() {
+        val points = (0 until 64).map { AnchorPoint(it * 0.01f, it * 0.01f, 200, 200, 200) }
+        val signature = VisualAnchorSignature("grid", points)
+
+        var matchSampleCount = 0
+        val matched =
+            AnchorPresenceEvaluator.matchesWithEarlyBailout(signature, threshold = 0.65f) { _, _ ->
+                matchSampleCount++
+                colorArgb(200, 200, 200)
+            }
+        assertTrue(matched)
+        // (64 * 0.65).toInt() = 41
+        assertEquals(41, matchSampleCount)
+
+        var mismatchSampleCount = 0
+        val mismatched =
+            AnchorPresenceEvaluator.matchesWithEarlyBailout(signature, threshold = 0.65f) { _, _ ->
+                mismatchSampleCount++
+                colorArgb(0, 0, 0)
+            }
+        assertFalse(mismatched)
+        // 64 - 41 = 23 max mismatches -> aborts on 24th
+        assertEquals(24, mismatchSampleCount)
     }
 
     @Test

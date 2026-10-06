@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Anchor
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.SportsEsports
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.Button
@@ -60,6 +61,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.macropad.MAX_LAYOUT_ANCHOR_MATCH_THRESHOLD
+import com.stormpanda.megingiard.macropad.MIN_LAYOUT_ANCHOR_MATCH_THRESHOLD
+import com.stormpanda.megingiard.ui.GamepadSliderCard
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.blockPointerEvents
 import com.stormpanda.megingiard.ui.rememberBezelBrush
@@ -274,6 +278,9 @@ internal fun AnchorTestingSheet(onDone: () -> Unit) {
                     )
                 }
 
+                // ── Real-time Match Threshold Adjustment Slider ──
+                TestingThresholdSlider()
+
                 // ── Action Button: Done ──
                 Button(
                     onClick = onDone,
@@ -300,6 +307,34 @@ internal fun AnchorTestingSheet(onDone: () -> Unit) {
             }
         }
     }
+}
+
+@Composable
+private fun TestingThresholdSlider() {
+    val matchThreshold by AnchorTestCoordinator.matchThreshold.collectAsStateWithLifecycle()
+    val matchPct =
+        (matchThreshold * 100f).roundToInt().coerceIn(
+            (MIN_LAYOUT_ANCHOR_MATCH_THRESHOLD * 100f).toInt(),
+            (MAX_LAYOUT_ANCHOR_MATCH_THRESHOLD * 100f).toInt(),
+        )
+
+    GamepadSliderCard(
+        title = stringResource(R.string.layout_settings_visual_anchor_match_threshold_title),
+        value = matchPct.toFloat(),
+        valueRange = (MIN_LAYOUT_ANCHOR_MATCH_THRESHOLD * 100f)..(MAX_LAYOUT_ANCHOR_MATCH_THRESHOLD * 100f),
+        step = 1f,
+        fineStep = 1f,
+        icon = Icons.Rounded.Tune,
+        valueLabel = "$matchPct%",
+        onValueChange = { newVal ->
+            val newPct =
+                newVal.roundToInt().coerceIn(
+                    (MIN_LAYOUT_ANCHOR_MATCH_THRESHOLD * 100f).toInt(),
+                    (MAX_LAYOUT_ANCHOR_MATCH_THRESHOLD * 100f).toInt(),
+                )
+            AnchorTestCoordinator.updateMatchThreshold(newPct / 100f)
+        },
+    )
 }
 
 @Composable

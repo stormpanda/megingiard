@@ -36,12 +36,25 @@ class LayoutVisualAnchorTest {
         assertEquals(DEFAULT_LAYOUT_ANCHOR_SIZE, anchor.srcHeight, EPSILON)
         assertEquals(DEFAULT_LAYOUT_STREAM_DELAY_FRAMES, anchor.streamDelayFrames)
         assertEquals(DEFAULT_LOST_ANCHOR_EFFECTS, anchor.lostAnchorEffects)
+        assertNull(anchor.matchThreshold)
+        assertEquals(DEFAULT_LAYOUT_ANCHOR_MATCH_THRESHOLD, anchor.effectiveMatchThreshold, EPSILON)
         assertNull(anchor.signature)
         assertFalse(anchor.isCalibrated)
         assertTrue(anchor.hasEffect(CutoutLostAnchorEffect.FREEZE))
         assertTrue(anchor.hasEffect(CutoutLostAnchorEffect.BLUR))
         assertTrue(anchor.freezeCutoutsOnLoss)
         assertTrue(anchor.blurCutoutsOnLoss)
+    }
+
+    @Test
+    fun `verify matchThreshold and effectiveMatchThreshold behavior`() {
+        val anchorDefault = LayoutVisualAnchor()
+        assertNull(anchorDefault.matchThreshold)
+        assertEquals(DEFAULT_LAYOUT_ANCHOR_MATCH_THRESHOLD, anchorDefault.effectiveMatchThreshold, EPSILON)
+
+        val anchorCustom = LayoutVisualAnchor(matchThreshold = 0.65f)
+        assertEquals(0.65f, anchorCustom.matchThreshold!!, EPSILON)
+        assertEquals(0.65f, anchorCustom.effectiveMatchThreshold, EPSILON)
     }
 
     @Test
@@ -155,10 +168,27 @@ class LayoutVisualAnchorTest {
 
         val parsed = json.decodeFromString<LayoutVisualAnchor>(legacyJson)
         assertTrue(parsed.enabled)
+        assertNull(parsed.matchThreshold)
+        assertEquals(DEFAULT_LAYOUT_ANCHOR_MATCH_THRESHOLD, parsed.effectiveMatchThreshold, EPSILON)
         assertFalse(parsed.hasEffect(CutoutLostAnchorEffect.BLUR))
         assertTrue(parsed.hasEffect(CutoutLostAnchorEffect.FREEZE))
         assertTrue(parsed.freezeCutoutsOnLoss)
         assertFalse(parsed.blurCutoutsOnLoss)
+    }
+
+    @Test
+    fun `verify serialization round-trip of LayoutVisualAnchor with custom matchThreshold`() {
+        val anchor =
+            LayoutVisualAnchor(
+                enabled = true,
+                matchThreshold = 0.72f,
+            )
+        val serialized = json.encodeToString(anchor)
+        assertTrue(serialized.contains("\"matchThreshold\":0.72"))
+
+        val deserialized = json.decodeFromString<LayoutVisualAnchor>(serialized)
+        assertEquals(0.72f, deserialized.matchThreshold!!, EPSILON)
+        assertEquals(0.72f, deserialized.effectiveMatchThreshold, EPSILON)
     }
 
     @Test

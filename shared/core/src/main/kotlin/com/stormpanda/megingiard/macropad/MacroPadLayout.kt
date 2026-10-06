@@ -404,6 +404,11 @@ const val DEFAULT_LAYOUT_STREAM_DELAY_FRAMES = 2
 const val MIN_LAYOUT_STREAM_DELAY_FRAMES = 1
 const val MAX_LAYOUT_STREAM_DELAY_FRAMES = 10
 const val DEFAULT_LAYOUT_ANCHOR_SIZE = 0.15f
+const val DEFAULT_LAYOUT_ANCHOR_MATCH_THRESHOLD = 0.80f
+const val LEGACY_HARDCODED_MATCH_THRESHOLD = 0.65f
+const val MIN_LAYOUT_ANCHOR_MATCH_THRESHOLD = 0.55f
+const val MAX_LAYOUT_ANCHOR_MATCH_THRESHOLD = 1.00f
+const val ANCHOR_HYSTERESIS_GAP = 0.20f
 
 /**
  * Visual reference anchor configuration for a [PadLayout].
@@ -424,11 +429,19 @@ data class LayoutVisualAnchor(
     val srcWidth: Float = DEFAULT_LAYOUT_ANCHOR_SIZE,
     val srcHeight: Float = DEFAULT_LAYOUT_ANCHOR_SIZE,
     val streamDelayFrames: Int = DEFAULT_LAYOUT_STREAM_DELAY_FRAMES,
+    val matchThreshold: Float? = null,
     val lostAnchorEffects: Set<CutoutLostAnchorEffect> = DEFAULT_LOST_ANCHOR_EFFECTS,
     val signature: VisualAnchorSignature? = null,
     @Deprecated("Migrated to lostAnchorEffects")
     val blurCutoutsOnLoss: Boolean = true,
 ) {
+    /**
+     * Effective fraction of matching points required to consider the anchor present (55%–100%).
+     * Defaults to [DEFAULT_LAYOUT_ANCHOR_MATCH_THRESHOLD] (80%) when unspecified.
+     */
+    val effectiveMatchThreshold: Float
+        get() = matchThreshold ?: DEFAULT_LAYOUT_ANCHOR_MATCH_THRESHOLD
+
     /**
      * Indicates whether this visual reference anchor has a valid calibrated signature with sample points.
      */

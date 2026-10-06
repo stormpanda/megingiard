@@ -122,7 +122,13 @@ object AnchorPresenceManager {
         val curState = layoutStates[layoutId] ?: AnchorPresenceState.PRESENT
         val curCount = layoutConsecutiveCounts[layoutId] ?: 0
         val (newState, newCount) =
-            AnchorPresenceEvaluator.transitionState(curState, curCount, matchRatio, layoutId)
+            AnchorPresenceEvaluator.transitionState(
+                currentState = curState,
+                consecutiveCount = curCount,
+                matchRatio = matchRatio,
+                cutoutId = layoutId,
+                presentThreshold = activeLayout.visualAnchor.effectiveMatchThreshold,
+            )
 
         if (newState != curState) {
             if (newState == AnchorPresenceState.LOST) {
@@ -465,7 +471,13 @@ object AnchorPresenceManager {
                                     val py = (aY + (v * cropH).toInt()).coerceIn(0, frameH - 1)
                                     frame.getPixel(px, py)
                                 }
-                            AnchorPresenceEvaluator.transitionState(curState, curCount, matchRatio, activeLayout.id)
+                            AnchorPresenceEvaluator.transitionState(
+                                currentState = curState,
+                                consecutiveCount = curCount,
+                                matchRatio = matchRatio,
+                                cutoutId = activeLayout.id,
+                                presentThreshold = activeLayout.visualAnchor.effectiveMatchThreshold,
+                            )
                         }
 
                     if (newState != curState) {
@@ -632,7 +644,10 @@ object AnchorPresenceManager {
         val cropH = aBottom - aY
 
         val isMatch =
-            AnchorPresenceEvaluator.matchesWithEarlyBailout(signature) { u, v ->
+            AnchorPresenceEvaluator.matchesWithEarlyBailout(
+                signature = signature,
+                threshold = candidate.visualAnchor.effectiveMatchThreshold,
+            ) { u, v ->
                 val px = (aX + (u * cropW).toInt()).coerceIn(0, frameW - 1)
                 val py = (aY + (v * cropH).toInt()).coerceIn(0, frameH - 1)
                 frame.getPixel(px, py)

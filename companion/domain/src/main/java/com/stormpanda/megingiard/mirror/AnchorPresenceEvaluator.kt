@@ -1,6 +1,8 @@
 package com.stormpanda.megingiard.mirror
 
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.macropad.ANCHOR_HYSTERESIS_GAP
+import com.stormpanda.megingiard.macropad.DEFAULT_LAYOUT_ANCHOR_MATCH_THRESHOLD
 import kotlin.math.abs
 
 private const val TAG = "AnchorPresenceEvaluator"
@@ -23,11 +25,14 @@ object AnchorPresenceEvaluator {
     /** Maximum allowed sum of absolute RGB differences (|ΔR| + |ΔG| + |ΔB|) for an anchor to match. */
     const val ANCHOR_DIFF_TOLERANCE = 45
 
-    /** Minimum fraction of matching anchors required to confirm anchor is present (65%). */
-    const val MATCH_THRESHOLD_PRESENT = 0.65f
+    /** Minimum fraction of matching anchors required to confirm anchor is present by default (80%). */
+    const val MATCH_THRESHOLD_PRESENT = DEFAULT_LAYOUT_ANCHOR_MATCH_THRESHOLD
 
-    /** Fraction of matching anchors below which anchor is considered absent (45%). */
-    const val MATCH_THRESHOLD_LOST = 0.45f
+    /** Default fraction of matching anchors below which anchor is considered absent (60%). */
+    const val MATCH_THRESHOLD_LOST = 0.60f
+
+    /** Minimum floor for the dynamic lost anchor threshold (35%). */
+    const val MIN_MATCH_THRESHOLD_LOST = 0.35f
 
     /** Number of consecutive checks required to confirm anchor absence (1 check = immediate freeze, preventing content transition leak). */
     const val HYSTERESIS_CONSECUTIVE_LOST = 1
@@ -194,7 +199,10 @@ object AnchorPresenceEvaluator {
     }
 
     /**
-     * Evaluates a state transition based on [currentState], [consecutiveCount], and [matchRatio].
+     * Evaluates a state transition based on [currentState], [consecutiveCount], [matchRatio],
+     * and the configured [presentThreshold].
+     *
+     * Maintains a dynamic hysteresis gap ([ANCHOR_HYSTERESIS_GAP] = 20%) between present and lost states.
      *
      * @return A [Pair] containing the updated [AnchorPresenceState] and the updated consecutive counter.
      */
@@ -203,13 +211,18 @@ object AnchorPresenceEvaluator {
         consecutiveCount: Int,
         matchRatio: Float,
         cutoutId: String = "",
-    ): Pair<AnchorPresenceState, Int> =
-        when (currentState) {
+        presentThreshold: Float = MATCH_THRESHOLD_PRESENT,
+    ): Pair<AnchorPresenceState, Int> {
+        val lostThreshold = (presentThreshold - ANCHOR_HYSTERESIS_GAP).coerceAtLeast(MIN_MATCH_THRESHOLD_LOST)
+        return when (currentState) {
             AnchorPresenceState.PRESENT -> {
-                if (matchRatio < MATCH_THRESHOLD_LOST) {
+                if (matchRatio < lostThreshold) {
                     val nextCount = consecutiveCount + 1
                     if (nextCount >= HYSTERESIS_CONSECUTIVE_LOST) {
-                        AppLog.i(TAG, "Layout $cutoutId anchor lost (matchRatio=${(matchRatio * 100).toInt()}%) -> State: LOST")
+                        AppLog.i(
+                            TAG,
+                            "Layout $cutoutId anchor lost (matchRatio=${(matchRatio * 100).toInt()}%, threshold=${(lostThreshold * 100).toInt()}%) -> State: LOST",
+                        )
                         AnchorPresenceState.LOST to 0
                     } else {
                         AnchorPresenceState.PRESENT to nextCount
@@ -220,10 +233,13 @@ object AnchorPresenceEvaluator {
             }
 
             AnchorPresenceState.LOST -> {
-                if (matchRatio >= MATCH_THRESHOLD_PRESENT) {
+                if (matchRatio >= presentThreshold) {
                     val nextCount = consecutiveCount + 1
                     if (nextCount >= HYSTERESIS_CONSECUTIVE_RECOVER) {
-                        AppLog.i(TAG, "Layout $cutoutId anchor recovered (matchRatio=${(matchRatio * 100).toInt()}%) -> State: PRESENT")
+                        AppLog.i(
+                            TAG,
+                            "Layout $cutoutId anchor recovered (matchRatio=${(matchRatio * 100).toInt()}%, threshold=${(presentThreshold * 100).toInt()}%) -> State: PRESENT",
+                        )
                         AnchorPresenceState.PRESENT to 0
                     } else {
                         AnchorPresenceState.LOST to nextCount
@@ -233,4 +249,5 @@ object AnchorPresenceEvaluator {
                 }
             }
         }
+    }
 }
