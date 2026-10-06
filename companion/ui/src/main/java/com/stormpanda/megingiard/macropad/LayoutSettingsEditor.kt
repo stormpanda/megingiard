@@ -359,6 +359,17 @@ internal fun AutomaticLayoutSwitchingSubPageContent(
         )
 
         if (layout.visualAnchor.enabled) {
+            val isCalibrated = layout.visualAnchor.isCalibrated
+            val signature = layout.visualAnchor.signature
+
+            if (isCalibrated && signature != null && signature.points.isNotEmpty()) {
+                GamepadInfoBox(
+                    text = stringResource(R.string.layout_settings_visual_anchor_status_calibrated, signature.points.size),
+                    icon = Icons.Rounded.Anchor,
+                    iconTint = accentColor,
+                )
+            }
+
             GamepadActionCard(
                 title = stringResource(R.string.layout_settings_visual_anchor_position_title),
                 description = stringResource(R.string.layout_settings_visual_anchor_position_desc),
@@ -373,9 +384,6 @@ internal fun AutomaticLayoutSwitchingSubPageContent(
                     )
                 },
             )
-
-            val isCalibrated = layout.visualAnchor.isCalibrated
-            val signature = layout.visualAnchor.signature
 
             val calibTitle =
                 if (isCalibrated) {
@@ -410,14 +418,41 @@ internal fun AutomaticLayoutSwitchingSubPageContent(
                     icon = Icons.Rounded.Visibility,
                     itemKey = "layout_${layout.id}_test_anchor",
                     onClick = {
-                        AnchorTestCoordinator.startTesting(context, layout)
+                        AnchorTestCoordinator.startTesting(context, layout) { updatedLayout ->
+                            onUpdateLayout(updatedLayout)
+                        }
                     },
                 )
 
-                GamepadInfoBox(
-                    text = stringResource(R.string.layout_settings_visual_anchor_status_calibrated, signature.points.size),
-                    icon = Icons.Rounded.Anchor,
-                    iconTint = accentColor,
+                val matchThresholdPercent =
+                    (layout.visualAnchor.effectiveMatchThreshold * PERCENT_DIVISOR).roundToInt().coerceIn(
+                        (MIN_LAYOUT_ANCHOR_MATCH_THRESHOLD * PERCENT_DIVISOR).toInt(),
+                        (MAX_LAYOUT_ANCHOR_MATCH_THRESHOLD * PERCENT_DIVISOR).toInt(),
+                    )
+                GamepadSliderCard(
+                    title = stringResource(R.string.layout_settings_visual_anchor_match_threshold_title),
+                    description = stringResource(R.string.layout_settings_visual_anchor_match_threshold_desc),
+                    value = matchThresholdPercent.toFloat(),
+                    valueRange =
+                        (MIN_LAYOUT_ANCHOR_MATCH_THRESHOLD * PERCENT_DIVISOR)..(MAX_LAYOUT_ANCHOR_MATCH_THRESHOLD * PERCENT_DIVISOR),
+                    step = 1f,
+                    fineStep = 1f,
+                    icon = Icons.Rounded.Tune,
+                    valueLabel = "$matchThresholdPercent%",
+                    onValueChange = { newVal ->
+                        val newPct =
+                            newVal.roundToInt().coerceIn(
+                                (MIN_LAYOUT_ANCHOR_MATCH_THRESHOLD * PERCENT_DIVISOR).toInt(),
+                                (MAX_LAYOUT_ANCHOR_MATCH_THRESHOLD * PERCENT_DIVISOR).toInt(),
+                            )
+                        val newThreshold = newPct / PERCENT_DIVISOR
+                        AppLog.d(TAG, "Updating layout ${layout.id} matchThreshold: $newThreshold ($newPct%)")
+                        onUpdateLayout(
+                            layout.copy(
+                                visualAnchor = layout.visualAnchor.copy(matchThreshold = newThreshold),
+                            ),
+                        )
+                    },
                 )
             }
 

@@ -5,6 +5,9 @@ import android.graphics.Bitmap
 import android.graphics.Rect
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.macropad.DEFAULT_LAYOUT_ANCHOR_MATCH_THRESHOLD
+import com.stormpanda.megingiard.macropad.MAX_LAYOUT_ANCHOR_MATCH_THRESHOLD
+import com.stormpanda.megingiard.macropad.MIN_LAYOUT_ANCHOR_MATCH_THRESHOLD
 import com.stormpanda.megingiard.macropad.PadLayout
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -61,6 +64,12 @@ object AnchorTestCoordinator {
     private val _targetPoints = MutableStateFlow<List<AnchorPoint>>(emptyList())
     val targetPoints: StateFlow<List<AnchorPoint>> = _targetPoints.asStateFlow()
 
+    private val _matchThreshold = MutableStateFlow(DEFAULT_LAYOUT_ANCHOR_MATCH_THRESHOLD)
+    val matchThreshold: StateFlow<Float> = _matchThreshold.asStateFlow()
+
+    private var onUpdateLayoutCallback: ((PadLayout) -> Unit)? = null
+    private var activeTestLayout: PadLayout? = null
+
     private fun setReferenceBitmap(bitmap: Bitmap?) {
         val old = _referenceBitmap.value
         _referenceBitmap.value = bitmap
@@ -92,8 +101,12 @@ object AnchorTestCoordinator {
     fun startTesting(
         context: Context,
         layout: PadLayout,
+        onUpdateLayout: ((PadLayout) -> Unit)? = null,
     ) {
         stopTesting(resumeSuspended = false)
+        activeTestLayout = layout
+        onUpdateLayoutCallback = onUpdateLayout
+        _matchThreshold.value = layout.visualAnchor.effectiveMatchThreshold
 
         val existingSuspended = AppStateManager.suspendedPrimaryModal.value
         if (existingSuspended != null) {
@@ -165,8 +178,8 @@ object AnchorTestCoordinator {
                                 if (signature != null && signature.points.isNotEmpty()) {
                                     val pointResults =
                                         AnchorPresenceEvaluator.evaluatePointMatches(signature) { u, v ->
-                                            val px = (u * crop.width).roundToInt().coerceIn(0, crop.width - 1)
-                                            val py = (v * crop.height).roundToInt().coerceIn(0, crop.height - 1)
+                                            val px = (u * crop.width).toInt().coerceIn(0, crop.width - 1)
+                                            val py = (v * crop.height).toInt().coerceIn(0, crop.height - 1)
                                             crop.getPixel(px, py)
                                         }
                                     _pointMatches.value = pointResults
@@ -182,8 +195,15 @@ object AnchorTestCoordinator {
                                         }
                                     _currentMatchRatio.value = matchRatio
 
+                                    val presentThreshold = _matchThreshold.value
                                     val (nextState, nextCount) =
-                                        AnchorPresenceEvaluator.transitionState(curState, curCount, matchRatio, layout.id)
+                                        AnchorPresenceEvaluator.transitionState(
+                                            currentState = curState,
+                                            consecutiveCount = curCount,
+                                            matchRatio = matchRatio,
+                                            cutoutId = layout.id,
+                                            presentThreshold = presentThreshold,
+                                        )
                                     curState = nextState
                                     curCount = nextCount
                                     _isAnchorActive.value = (curState == AnchorPresenceState.PRESENT)
@@ -223,6 +243,30 @@ object AnchorTestCoordinator {
             if (resumeSuspended) {
                 AppStateManager.resumeSuspended()
             }
+            onUpdateLayoutCallback = null
+            activeTestLayout = null
+        }
+    }
+
+    /**
+     * Updates the required match threshold on the fly during active testing.
+     * Persists the adjustment back to the layout via [onUpdateLayoutCallback].
+     */
+    fun updateMatchThreshold(newThreshold: Float) {
+        val clamped =
+            newThreshold.coerceIn(
+                MIN_LAYOUT_ANCHOR_MATCH_THRESHOLD,
+                MAX_LAYOUT_ANCHOR_MATCH_THRESHOLD,
+            )
+        AppLog.d(TAG, "Anchor test match threshold updated: $clamped (layout=${activeTestLayout?.id})")
+        _matchThreshold.value = clamped
+        activeTestLayout?.let { curLayout ->
+            val updated =
+                curLayout.copy(
+                    visualAnchor = curLayout.visualAnchor.copy(matchThreshold = clamped),
+                )
+            activeTestLayout = updated
+            onUpdateLayoutCallback?.invoke(updated)
         }
     }
 }

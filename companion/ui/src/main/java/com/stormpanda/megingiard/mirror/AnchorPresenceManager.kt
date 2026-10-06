@@ -122,7 +122,13 @@ object AnchorPresenceManager {
         val curState = layoutStates[layoutId] ?: AnchorPresenceState.PRESENT
         val curCount = layoutConsecutiveCounts[layoutId] ?: 0
         val (newState, newCount) =
-            AnchorPresenceEvaluator.transitionState(curState, curCount, matchRatio, layoutId)
+            AnchorPresenceEvaluator.transitionState(
+                currentState = curState,
+                consecutiveCount = curCount,
+                matchRatio = matchRatio,
+                cutoutId = layoutId,
+                presentThreshold = activeLayout.visualAnchor.effectiveMatchThreshold,
+            )
 
         if (newState != curState) {
             if (newState == AnchorPresenceState.LOST) {
@@ -433,16 +439,21 @@ object AnchorPresenceManager {
                     val curState = layoutStates[activeLayout.id] ?: AnchorPresenceState.PRESENT
                     val curCount = layoutConsecutiveCounts[activeLayout.id] ?: 0
 
+                    val aX = (layoutAnchor.srcX * frameW).roundToInt().coerceIn(0, frameW - 1)
+                    val aY = (layoutAnchor.srcY * frameH).roundToInt().coerceIn(0, frameH - 1)
+                    val aRight = ((layoutAnchor.srcX + layoutAnchor.srcWidth) * frameW).roundToInt().coerceIn(aX + 1, frameW)
+                    val aBottom = ((layoutAnchor.srcY + layoutAnchor.srcHeight) * frameH).roundToInt().coerceIn(aY + 1, frameH)
+                    val cropW = aRight - aX
+                    val cropH = aBottom - aY
+
                     // 16-point stratified rotating sparse probe during steady PRESENT state (0 mismatches): skips remaining 48 pixels
                     val matchesSparse =
                         if (curState == AnchorPresenceState.PRESENT && curCount == 0) {
                             val phase = sparseProbePhase
                             sparseProbePhase = (sparseProbePhase + 1) and (AnchorPresenceEvaluator.SPARSE_PROBE_PHASE_COUNT - 1)
                             AnchorPresenceEvaluator.matchesSparseProbe(signature, phase) { u, v ->
-                                val globalU = layoutAnchor.srcX + u * layoutAnchor.srcWidth
-                                val globalV = layoutAnchor.srcY + v * layoutAnchor.srcHeight
-                                val px = (globalU * frameW).roundToInt().coerceIn(0, frameW - 1)
-                                val py = (globalV * frameH).roundToInt().coerceIn(0, frameH - 1)
+                                val px = (aX + (u * cropW).toInt()).coerceIn(0, frameW - 1)
+                                val py = (aY + (v * cropH).toInt()).coerceIn(0, frameH - 1)
                                 frame.getPixel(px, py)
                             }
                         } else {
@@ -456,13 +467,17 @@ object AnchorPresenceManager {
                         } else {
                             val matchRatio =
                                 AnchorPresenceEvaluator.evaluateMatchRatio(signature) { u, v ->
-                                    val globalU = layoutAnchor.srcX + u * layoutAnchor.srcWidth
-                                    val globalV = layoutAnchor.srcY + v * layoutAnchor.srcHeight
-                                    val px = (globalU * frameW).roundToInt().coerceIn(0, frameW - 1)
-                                    val py = (globalV * frameH).roundToInt().coerceIn(0, frameH - 1)
+                                    val px = (aX + (u * cropW).toInt()).coerceIn(0, frameW - 1)
+                                    val py = (aY + (v * cropH).toInt()).coerceIn(0, frameH - 1)
                                     frame.getPixel(px, py)
                                 }
-                            AnchorPresenceEvaluator.transitionState(curState, curCount, matchRatio, activeLayout.id)
+                            AnchorPresenceEvaluator.transitionState(
+                                currentState = curState,
+                                consecutiveCount = curCount,
+                                matchRatio = matchRatio,
+                                cutoutId = activeLayout.id,
+                                presentThreshold = activeLayout.visualAnchor.effectiveMatchThreshold,
+                            )
                         }
 
                     if (newState != curState) {
@@ -621,12 +636,20 @@ object AnchorPresenceManager {
         val frameH = frame.height
         if (frameW <= 0 || frameH <= 0) return false
 
+        val aX = (anchor.srcX * frameW).roundToInt().coerceIn(0, frameW - 1)
+        val aY = (anchor.srcY * frameH).roundToInt().coerceIn(0, frameH - 1)
+        val aRight = ((anchor.srcX + anchor.srcWidth) * frameW).roundToInt().coerceIn(aX + 1, frameW)
+        val aBottom = ((anchor.srcY + anchor.srcHeight) * frameH).roundToInt().coerceIn(aY + 1, frameH)
+        val cropW = aRight - aX
+        val cropH = aBottom - aY
+
         val isMatch =
-            AnchorPresenceEvaluator.matchesWithEarlyBailout(signature) { u, v ->
-                val globalU = anchor.srcX + u * anchor.srcWidth
-                val globalV = anchor.srcY + v * anchor.srcHeight
-                val px = (globalU * frameW).roundToInt().coerceIn(0, frameW - 1)
-                val py = (globalV * frameH).roundToInt().coerceIn(0, frameH - 1)
+            AnchorPresenceEvaluator.matchesWithEarlyBailout(
+                signature = signature,
+                threshold = candidate.visualAnchor.effectiveMatchThreshold,
+            ) { u, v ->
+                val px = (aX + (u * cropW).toInt()).coerceIn(0, frameW - 1)
+                val py = (aY + (v * cropH).toInt()).coerceIn(0, frameH - 1)
                 frame.getPixel(px, py)
             }
 

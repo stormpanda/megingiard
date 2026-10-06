@@ -2,6 +2,8 @@ package com.stormpanda.megingiard.mirror
 
 import com.stormpanda.megingiard.AppLog
 import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
@@ -40,9 +42,14 @@ private const val MIN_TRANSLUCENT_ALPHA = 60
 private const val SIGNATURE_GRID_COLS = 8
 private const val SIGNATURE_GRID_ROWS = 8
 private const val MAX_ANCHOR_VARIANCE = 10
+private const val STATIONARY_VARIANCE_THRESHOLD = 3
 private const val HALF_PIXEL_OFFSET = 0.5f
 private const val MAX_MANHATTAN_COLOR_DISTANCE = 765
 private const val GRADIENT_PENALTY_DIVISOR = 2
+private const val LOCAL_EDGE_LIMIT = AnchorPresenceEvaluator.ANCHOR_DIFF_TOLERANCE
+private const val TIER_STATIONARY_PLATEAU = 0
+private const val TIER_STATIONARY_EDGE = 1
+private const val TIER_DYNAMIC_BASE = 2
 
 /**
  * Result returned by [CutoutAutoTuner.analyze].
@@ -246,9 +253,11 @@ object CutoutAutoTuner {
      * across an 8x8 grid over the cutout.
      *
      * In each grid cell, pixels with the lowest temporal variance (most stationary) are prioritized.
-     * When multiple candidate pixels tie for minimum variance (e.g. static UI background vs. static text/icons),
-     * candidates are scored balancing color diversity against local spatial edge gradients so solid interior
-     * plateaus are favored over fragile anti-aliased edge contours.
+     * Pixels within [STATIONARY_VARIANCE_THRESHOLD] (e.g. video codec quantization noise) that also satisfy
+     * the 3x3 neighborhood plateau flatness requirement ([computeMaxNeighborDelta] <= [LOCAL_EDGE_LIMIT])
+     * are grouped into the primary stationary plateau tier (tier 0). In this tier, candidates are scored
+     * balancing color diversity against local spatial gradients so solid interior plateaus are favored over
+     * fragile anti-aliased edge contours.
      */
     fun extractAnchorSignature(
         varianceMap: ByteArray,
@@ -277,7 +286,7 @@ object CutoutAutoTuner {
 
                 var bestX = -1
                 var bestY = -1
-                var minVar = Int.MAX_VALUE
+                var bestTier = Int.MAX_VALUE
                 var bestScore = Int.MIN_VALUE
 
                 for (y in yStart until yEnd) {
@@ -288,13 +297,23 @@ object CutoutAutoTuner {
                             val candidateDiversity = computeColorDiversity(frames, rowOffset + x, frameCount, points)
                             val gradient = computeSpatialGradient(referenceFrame, x, y, width, height)
                             val score = candidateDiversity - (gradient / GRADIENT_PENALTY_DIVISOR)
+                            val maxNeighborDelta = computeMaxNeighborDelta(referenceFrame, x, y, width, height)
+                            val isPlateau = maxNeighborDelta <= LOCAL_EDGE_LIMIT
 
-                            if (v < minVar) {
-                                minVar = v
+                            val tier =
+                                when {
+                                    v <= STATIONARY_VARIANCE_THRESHOLD && isPlateau -> TIER_STATIONARY_PLATEAU
+                                    v <= STATIONARY_VARIANCE_THRESHOLD -> TIER_STATIONARY_EDGE
+                                    isPlateau -> TIER_DYNAMIC_BASE + (v - STATIONARY_VARIANCE_THRESHOLD)
+                                    else -> TIER_DYNAMIC_BASE + MAX_ANCHOR_VARIANCE + (v - STATIONARY_VARIANCE_THRESHOLD)
+                                }
+
+                            if (tier < bestTier) {
+                                bestTier = tier
                                 bestScore = score
                                 bestX = x
                                 bestY = y
-                            } else if (v == minVar) {
+                            } else if (tier == bestTier) {
                                 if (score > bestScore) {
                                     bestScore = score
                                     bestX = x
@@ -374,6 +393,49 @@ object CutoutAutoTuner {
         val horizDiff = abs(lrR - rrR) + abs(lrG - rrG) + abs(lrB - rrB)
         val vertDiff = abs(trR - brR) + abs(trG - brG) + abs(trB - brB)
         return horizDiff + vertDiff
+    }
+
+    /**
+     * Computes the maximum Manhattan color distance between the pixel at ([x], [y])
+     * and any of its 8 adjacent neighbors in [frame].
+     *
+     * Points in solid interior plateaus yield a maximum delta near 0, while points on
+     * or adjacent to high-contrast edges yield deltas exceeding [LOCAL_EDGE_LIMIT].
+     */
+    internal fun computeMaxNeighborDelta(
+        frame: IntArray,
+        x: Int,
+        y: Int,
+        width: Int,
+        height: Int,
+    ): Int {
+        val centerRgb = frame[y * width + x]
+        val cR = (centerRgb shr SHIFT_RED) and COLOR_BYTE_MASK
+        val cG = (centerRgb shr SHIFT_GREEN) and COLOR_BYTE_MASK
+        val cB = centerRgb and COLOR_BYTE_MASK
+
+        var maxDelta = 0
+        val xMin = max(0, x - 1)
+        val xMax = min(width - 1, x + 1)
+        val yMin = max(0, y - 1)
+        val yMax = min(height - 1, y + 1)
+
+        for (ny in yMin..yMax) {
+            val rowOffset = ny * width
+            for (nx in xMin..xMax) {
+                if (nx == x && ny == y) continue
+                val neighborRgb = frame[rowOffset + nx]
+                val nR = (neighborRgb shr SHIFT_RED) and COLOR_BYTE_MASK
+                val nG = (neighborRgb shr SHIFT_GREEN) and COLOR_BYTE_MASK
+                val nB = neighborRgb and COLOR_BYTE_MASK
+
+                val delta = abs(cR - nR) + abs(cG - nG) + abs(cB - nB)
+                if (delta > maxDelta) {
+                    maxDelta = delta
+                }
+            }
+        }
+        return maxDelta
     }
 
     /**

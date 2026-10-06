@@ -416,6 +416,14 @@ object MacroPadState {
                                 changed = true
                                 current = current.copy(buttons = migratedButtons)
                             }
+                            if (current.visualAnchor.isCalibrated && current.visualAnchor.matchThreshold == null) {
+                                needsSave = true
+                                changed = true
+                                current =
+                                    current.copy(
+                                        visualAnchor = current.visualAnchor.copy(matchThreshold = LEGACY_HARDCODED_MATCH_THRESHOLD),
+                                    )
+                            }
                             if (!current.mirrorConfigured) {
                                 needsSave = true
                                 current.copy(mirrorConfigured = true)

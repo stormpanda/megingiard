@@ -435,6 +435,8 @@ Open Settings to create a layout.</string>
     <string name="layout_settings_visual_anchor_recalibrate_title">Referenzanker neu kalibrieren</string>
     <string name="layout_settings_visual_anchor_recalibrate_desc">Ankerpunkte vom laufenden Spiel aktualisieren</string>
     <string name="layout_settings_visual_anchor_status_calibrated">Kalibriert (%1$d Referenzpunkte)</string>
+    <string name="layout_settings_visual_anchor_match_threshold_title">Erforderliche Übereinstimmung</string>
+    <string name="layout_settings_visual_anchor_match_threshold_desc">Mindestanteil der Referenzpunkte, der übereinstimmen muss, damit der Anker als aktiv gilt</string>
     <string name="layout_settings_visual_anchor_stream_delay_desc">Bilder zwischenspeichern, um Übergänge bei fehlendem Inhalt zu glätten</string>
     <string name="layout_settings_visual_anchor_freeze_title">Inaktive Cutouts einfrieren</string>
     <string name="layout_settings_visual_anchor_freeze_desc">Hält das letzte gültige Bild an, wenn der Referenzanker verschwindet. Wenn deaktiviert, laufen Cutouts live weiter.</string>
