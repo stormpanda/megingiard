@@ -512,8 +512,8 @@ class GpuMotionSmoother(
 
         var matchCount = 0
         for (pt in signature.points) {
-            val px = (pt.u * (cropW - 1)).roundToInt().coerceIn(0, cropW - 1)
-            val py = ((1f - pt.v) * (cropH - 1)).roundToInt().coerceIn(0, cropH - 1)
+            val px = (pt.u * cropW).toInt().coerceIn(0, cropW - 1)
+            val py = ((1f - pt.v) * cropH).toInt().coerceIn(0, cropH - 1)
             val offset = (py * cropW + px) * 4
             if (offset + 2 < neededCapacity) {
                 val r = buf.get(offset).toInt() and 0xFF

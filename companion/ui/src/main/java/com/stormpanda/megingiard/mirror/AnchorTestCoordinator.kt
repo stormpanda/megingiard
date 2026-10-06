@@ -165,8 +165,8 @@ object AnchorTestCoordinator {
                                 if (signature != null && signature.points.isNotEmpty()) {
                                     val pointResults =
                                         AnchorPresenceEvaluator.evaluatePointMatches(signature) { u, v ->
-                                            val px = (u * crop.width).roundToInt().coerceIn(0, crop.width - 1)
-                                            val py = (v * crop.height).roundToInt().coerceIn(0, crop.height - 1)
+                                            val px = (u * crop.width).toInt().coerceIn(0, crop.width - 1)
+                                            val py = (v * crop.height).toInt().coerceIn(0, crop.height - 1)
                                             crop.getPixel(px, py)
                                         }
                                     _pointMatches.value = pointResults

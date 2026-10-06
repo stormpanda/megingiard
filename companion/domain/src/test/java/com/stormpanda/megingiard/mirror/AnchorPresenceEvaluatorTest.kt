@@ -309,4 +309,33 @@ class AnchorPresenceEvaluatorTest {
         assertFalse(results[1].isMatch)
         assertEquals(300, results[1].diff)
     }
+
+    @Test
+    fun `coordinate reconstruction via integer truncation recovers exact pixel index across resolutions`() {
+        val widths = intArrayOf(64, 100, 160, 200, 1920)
+        val heights = intArrayOf(64, 100, 90, 150, 1080)
+        val halfPixelOffset = 0.5f
+
+        for (wIdx in widths.indices) {
+            val width = widths[wIdx]
+            val height = heights[wIdx]
+
+            for (bestX in 0 until width step 7) {
+                for (bestY in 0 until height step 7) {
+                    val u = (bestX + halfPixelOffset) / width.toFloat()
+                    val v = (bestY + halfPixelOffset) / height.toFloat()
+
+                    val reconstructedX = (u * width).toInt()
+                    val reconstructedY = (v * height).toInt()
+
+                    assertEquals("Reconstructed X must equal original bestX ($bestX vs $reconstructedX at w=$width)", bestX, reconstructedX)
+                    assertEquals(
+                        "Reconstructed Y must equal original bestY ($bestY vs $reconstructedY at h=$height)",
+                        bestY,
+                        reconstructedY,
+                    )
+                }
+            }
+        }
+    }
 }
