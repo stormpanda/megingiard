@@ -47,6 +47,9 @@ private const val HALF_PIXEL_OFFSET = 0.5f
 private const val MAX_MANHATTAN_COLOR_DISTANCE = 765
 private const val GRADIENT_PENALTY_DIVISOR = 2
 private const val LOCAL_EDGE_LIMIT = AnchorPresenceEvaluator.ANCHOR_DIFF_TOLERANCE
+private const val TIER_STATIONARY_PLATEAU = 0
+private const val TIER_STATIONARY_EDGE = 1
+private const val TIER_DYNAMIC_BASE = 2
 
 /**
  * Result returned by [CutoutAutoTuner.analyze].
@@ -299,10 +302,10 @@ object CutoutAutoTuner {
 
                             val tier =
                                 when {
-                                    v <= STATIONARY_VARIANCE_THRESHOLD && isPlateau -> 0
-                                    v <= STATIONARY_VARIANCE_THRESHOLD -> 1
-                                    isPlateau -> 2 + (v - STATIONARY_VARIANCE_THRESHOLD)
-                                    else -> 2 + MAX_ANCHOR_VARIANCE + (v - STATIONARY_VARIANCE_THRESHOLD)
+                                    v <= STATIONARY_VARIANCE_THRESHOLD && isPlateau -> TIER_STATIONARY_PLATEAU
+                                    v <= STATIONARY_VARIANCE_THRESHOLD -> TIER_STATIONARY_EDGE
+                                    isPlateau -> TIER_DYNAMIC_BASE + (v - STATIONARY_VARIANCE_THRESHOLD)
+                                    else -> TIER_DYNAMIC_BASE + MAX_ANCHOR_VARIANCE + (v - STATIONARY_VARIANCE_THRESHOLD)
                                 }
 
                             if (tier < bestTier) {

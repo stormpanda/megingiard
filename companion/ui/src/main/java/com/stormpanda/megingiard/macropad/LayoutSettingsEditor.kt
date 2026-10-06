@@ -425,15 +425,16 @@ internal fun AutomaticLayoutSwitchingSubPageContent(
                 )
 
                 val matchThresholdPercent =
-                    (layout.visualAnchor.effectiveMatchThreshold * 100f).roundToInt().coerceIn(
-                        (MIN_LAYOUT_ANCHOR_MATCH_THRESHOLD * 100f).toInt(),
-                        (MAX_LAYOUT_ANCHOR_MATCH_THRESHOLD * 100f).toInt(),
+                    (layout.visualAnchor.effectiveMatchThreshold * PERCENT_DIVISOR).roundToInt().coerceIn(
+                        (MIN_LAYOUT_ANCHOR_MATCH_THRESHOLD * PERCENT_DIVISOR).toInt(),
+                        (MAX_LAYOUT_ANCHOR_MATCH_THRESHOLD * PERCENT_DIVISOR).toInt(),
                     )
                 GamepadSliderCard(
                     title = stringResource(R.string.layout_settings_visual_anchor_match_threshold_title),
                     description = stringResource(R.string.layout_settings_visual_anchor_match_threshold_desc),
                     value = matchThresholdPercent.toFloat(),
-                    valueRange = (MIN_LAYOUT_ANCHOR_MATCH_THRESHOLD * 100f)..(MAX_LAYOUT_ANCHOR_MATCH_THRESHOLD * 100f),
+                    valueRange =
+                        (MIN_LAYOUT_ANCHOR_MATCH_THRESHOLD * PERCENT_DIVISOR)..(MAX_LAYOUT_ANCHOR_MATCH_THRESHOLD * PERCENT_DIVISOR),
                     step = 1f,
                     fineStep = 1f,
                     icon = Icons.Rounded.Tune,
@@ -441,10 +442,10 @@ internal fun AutomaticLayoutSwitchingSubPageContent(
                     onValueChange = { newVal ->
                         val newPct =
                             newVal.roundToInt().coerceIn(
-                                (MIN_LAYOUT_ANCHOR_MATCH_THRESHOLD * 100f).toInt(),
-                                (MAX_LAYOUT_ANCHOR_MATCH_THRESHOLD * 100f).toInt(),
+                                (MIN_LAYOUT_ANCHOR_MATCH_THRESHOLD * PERCENT_DIVISOR).toInt(),
+                                (MAX_LAYOUT_ANCHOR_MATCH_THRESHOLD * PERCENT_DIVISOR).toInt(),
                             )
-                        val newThreshold = newPct / 100f
+                        val newThreshold = newPct / PERCENT_DIVISOR
                         AppLog.d(TAG, "Updating layout ${layout.id} matchThreshold: $newThreshold ($newPct%)")
                         onUpdateLayout(
                             layout.copy(

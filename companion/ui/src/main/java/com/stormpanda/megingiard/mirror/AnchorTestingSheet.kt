@@ -100,6 +100,8 @@ private const val INSTRUCTION_BG_ALPHA = 0.5f
 private const val LABEL_BG_ALPHA = 0.80f
 private const val TOGGLE_ACTIVE_BG_ALPHA = 0.20f
 private const val STATUS_ACTIVE_BG_ALPHA = 0.20f
+private const val PERCENT_DIVISOR = 100f
+private const val SLIDER_STEP = 1f
 private val BORDER_WIDTH = 1.dp
 private val ACTIVE_BORDER_WIDTH = 2.dp
 private val TOGGLE_BUTTON_SIZE = 28.dp
@@ -313,26 +315,26 @@ internal fun AnchorTestingSheet(onDone: () -> Unit) {
 private fun TestingThresholdSlider() {
     val matchThreshold by AnchorTestCoordinator.matchThreshold.collectAsStateWithLifecycle()
     val matchPct =
-        (matchThreshold * 100f).roundToInt().coerceIn(
-            (MIN_LAYOUT_ANCHOR_MATCH_THRESHOLD * 100f).toInt(),
-            (MAX_LAYOUT_ANCHOR_MATCH_THRESHOLD * 100f).toInt(),
+        (matchThreshold * PERCENT_DIVISOR).roundToInt().coerceIn(
+            (MIN_LAYOUT_ANCHOR_MATCH_THRESHOLD * PERCENT_DIVISOR).toInt(),
+            (MAX_LAYOUT_ANCHOR_MATCH_THRESHOLD * PERCENT_DIVISOR).toInt(),
         )
 
     GamepadSliderCard(
         title = stringResource(R.string.layout_settings_visual_anchor_match_threshold_title),
         value = matchPct.toFloat(),
-        valueRange = (MIN_LAYOUT_ANCHOR_MATCH_THRESHOLD * 100f)..(MAX_LAYOUT_ANCHOR_MATCH_THRESHOLD * 100f),
-        step = 1f,
-        fineStep = 1f,
+        valueRange = (MIN_LAYOUT_ANCHOR_MATCH_THRESHOLD * PERCENT_DIVISOR)..(MAX_LAYOUT_ANCHOR_MATCH_THRESHOLD * PERCENT_DIVISOR),
+        step = SLIDER_STEP,
+        fineStep = SLIDER_STEP,
         icon = Icons.Rounded.Tune,
         valueLabel = "$matchPct%",
         onValueChange = { newVal ->
             val newPct =
                 newVal.roundToInt().coerceIn(
-                    (MIN_LAYOUT_ANCHOR_MATCH_THRESHOLD * 100f).toInt(),
-                    (MAX_LAYOUT_ANCHOR_MATCH_THRESHOLD * 100f).toInt(),
+                    (MIN_LAYOUT_ANCHOR_MATCH_THRESHOLD * PERCENT_DIVISOR).toInt(),
+                    (MAX_LAYOUT_ANCHOR_MATCH_THRESHOLD * PERCENT_DIVISOR).toInt(),
                 )
-            AnchorTestCoordinator.updateMatchThreshold(newPct / 100f)
+            AnchorTestCoordinator.updateMatchThreshold(newPct / PERCENT_DIVISOR)
         },
     )
 }

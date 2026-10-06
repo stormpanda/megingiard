@@ -258,6 +258,7 @@ object AnchorTestCoordinator {
                 MIN_LAYOUT_ANCHOR_MATCH_THRESHOLD,
                 MAX_LAYOUT_ANCHOR_MATCH_THRESHOLD,
             )
+        AppLog.d(TAG, "Anchor test match threshold updated: $clamped (layout=${activeTestLayout?.id})")
         _matchThreshold.value = clamped
         activeTestLayout?.let { curLayout ->
             val updated =
