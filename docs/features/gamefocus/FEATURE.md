@@ -153,7 +153,7 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
   - Pressing Gamepad Button **B** or tapping the backdrop/Cancel button MUST dismiss the dialog without changes.
   - While the pairing dialog is open, all launcher inputs MUST be trapped and consumed.
 - When an app or ROM has a paired bottom companion:
-  - The gallery layout MUST render a secondary subtitle line below the main title featuring a `splitscreen` Material Symbol icon (`14.dp`) in `onSurfaceSecondary` color alongside the paired app's label.
+  - The gallery layout MUST render a secondary subtitle line below the main title featuring a `splitscreen` Material Symbol icon (`14.dp`) in `onSurfaceSecondary` color alongside the paired app's label, anchored such that the title and poster carousel maintain an identical, stationary baseline without upward layout shift.
   - The primary launch button in `DualScreenLaunchButtons` MUST update its label to `[A] Dual Launch`.
   - Pressing Gamepad Button **A** (`KEYCODE_BUTTON_A` / `KEYCODE_DPAD_CENTER`) or tapping the top launch button from the main gallery carousel MUST launch both the top application on Display 0 and the paired companion app on Display 4 simultaneously without artificial delay.
   - Button **X** (`KEYCODE_BUTTON_X`) in the gallery MUST continue launching only the highlighted app on Display 4.

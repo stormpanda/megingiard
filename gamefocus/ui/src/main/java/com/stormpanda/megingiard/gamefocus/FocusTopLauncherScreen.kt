@@ -73,6 +73,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -705,27 +706,43 @@ fun FocusTopLauncherScreen(
                                                                     null
                                                                 }
                                                             if (pairedApp != null) {
-                                                                Spacer(modifier = Modifier.height(FTL_SUBTITLE_GAP))
-                                                                Row(
-                                                                    verticalAlignment = Alignment.CenterVertically,
-                                                                    horizontalArrangement = Arrangement.Center,
+                                                                Box(
+                                                                    modifier =
+                                                                        Modifier.layout { measurable, constraints ->
+                                                                            val placeable = measurable.measure(constraints)
+                                                                            layout(placeable.width, 0) {
+                                                                                placeable.placeRelative(0, 0)
+                                                                            }
+                                                                        },
+                                                                    contentAlignment = Alignment.Center,
                                                                 ) {
-                                                                    MaterialSymbol(
-                                                                        name = "splitscreen",
-                                                                        size = FTL_SPLITSCREEN_BADGE_SIZE,
-                                                                        tint = appColors.onSurfaceSecondary,
-                                                                    )
-                                                                    Spacer(modifier = Modifier.width(FTL_BADGE_TEXT_GAP))
-                                                                    Text(
-                                                                        text = pairedApp.label,
-                                                                        style =
-                                                                            MaterialTheme.typography.labelMedium.copy(
-                                                                                fontWeight = FontWeight.Medium,
-                                                                                color = appColors.onSurfaceSecondary,
-                                                                            ),
-                                                                        maxLines = 1,
-                                                                        overflow = TextOverflow.Ellipsis,
-                                                                    )
+                                                                    Column(
+                                                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                                                    ) {
+                                                                        Spacer(modifier = Modifier.height(FTL_SUBTITLE_GAP))
+                                                                        Row(
+                                                                            verticalAlignment = Alignment.CenterVertically,
+                                                                            horizontalArrangement = Arrangement.Center,
+                                                                        ) {
+                                                                            MaterialSymbol(
+                                                                                name = "splitscreen",
+                                                                                size = FTL_SPLITSCREEN_BADGE_SIZE,
+                                                                                tint = appColors.onSurfaceSecondary,
+                                                                            )
+                                                                            Spacer(modifier = Modifier.width(FTL_BADGE_TEXT_GAP))
+                                                                            Text(
+                                                                                text = pairedApp.label,
+                                                                                style =
+                                                                                    MaterialTheme.typography.labelMedium.copy(
+                                                                                        fontWeight = FontWeight.Medium,
+                                                                                        color = appColors.onSurfaceSecondary,
+                                                                                    ),
+                                                                                maxLines = 1,
+                                                                                overflow = TextOverflow.Ellipsis,
+                                                                                modifier = Modifier.weight(1f, fill = false),
+                                                                            )
+                                                                        }
+                                                                    }
                                                                 }
                                                             }
                                                         }
