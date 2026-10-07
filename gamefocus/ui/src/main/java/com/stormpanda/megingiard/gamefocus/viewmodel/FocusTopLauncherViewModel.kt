@@ -348,39 +348,45 @@ class FocusTopLauncherViewModel : ViewModel() {
         direction: LauncherScrollDirection,
         total: Int,
         columns: Int = DEFAULT_LIBRARY_GRID_COLUMNS,
-    ) {
+    ): Boolean {
         val current = _libraryFocusedIndex.value.coerceAtLeast(0)
+        var target = current
         when (direction) {
             LauncherScrollDirection.LEFT -> {
                 if (current > 0) {
-                    _libraryFocusedIndex.value = current - 1
+                    target = current - 1
                 }
             }
 
             LauncherScrollDirection.RIGHT -> {
                 if (total > 0 && current < total - 1) {
-                    _libraryFocusedIndex.value = current + 1
+                    target = current + 1
                 }
             }
 
             LauncherScrollDirection.UP -> {
                 if (current >= columns) {
-                    _libraryFocusedIndex.value = current - columns
+                    target = current - columns
                 }
             }
 
             LauncherScrollDirection.DOWN -> {
                 if (total > 0) {
                     if (current + columns < total) {
-                        _libraryFocusedIndex.value = current + columns
+                        target = current + columns
                     } else if (current < total - 1) {
-                        _libraryFocusedIndex.value = total - 1
+                        target = total - 1
                     }
                 }
             }
 
             LauncherScrollDirection.NONE -> {}
         }
+        if (target != current) {
+            _libraryFocusedIndex.value = target
+            return true
+        }
+        return false
     }
 
     fun stepCoreChooserFocus(

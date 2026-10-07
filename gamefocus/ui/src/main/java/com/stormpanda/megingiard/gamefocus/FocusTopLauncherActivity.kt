@@ -66,8 +66,8 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 private const val TAG = "FocusTopLauncherActivity"
-private const val INITIAL_REPEAT_DELAY_MS = 300L
-private const val REPEAT_INTERVAL_MS = 100L
+private const val INITIAL_REPEAT_DELAY_MS = 220L
+private const val REPEAT_INTERVAL_MS = 70L
 private const val MAIN_MENU_UNPAIRED_ITEMS_COUNT = 4
 private const val MAIN_MENU_PAIRED_ITEMS_COUNT = 5
 private const val JOYSTICK_THRESHOLD = 0.5f
@@ -563,11 +563,11 @@ class FocusTopLauncherActivity : ComponentActivity() {
         return viewModel.resetToGallery()
     }
 
-    private fun stepLibraryFocus(direction: LauncherScrollDirection) {
+    private fun stepLibraryFocus(direction: LauncherScrollDirection): Boolean {
         val allApps = InstalledAppsManager.installedApps.value
         val currentTab = viewModel.librarySelectedTab.value
         val filteredApps = currentTab.filterApps(allApps)
-        viewModel.stepLibraryFocus(direction, filteredApps.size, DEFAULT_LIBRARY_GRID_COLUMNS)
+        return viewModel.stepLibraryFocus(direction, filteredApps.size, DEFAULT_LIBRARY_GRID_COLUMNS)
     }
 
     private fun openCoreChooserForFolder(folder: CustomRomFolder) {
@@ -664,27 +664,34 @@ class FocusTopLauncherActivity : ComponentActivity() {
             return
         }
         if (viewModel.isLibraryOpen.value) {
-            stepLibraryFocus(direction)
+            val moved = stepLibraryFocus(direction)
+            if (moved) {
+                GameFocusHaptics.tick(this)
+            }
             return
         }
 
         when (direction) {
             LauncherScrollDirection.LEFT -> {
                 viewModel.triggerDpadLeft()
+                GameFocusHaptics.tick(this)
                 AppLog.d(TAG, "dpadLeftTrigger = ${viewModel.dpadLeftTrigger.value}")
             }
 
             LauncherScrollDirection.RIGHT -> {
                 viewModel.triggerDpadStepRight()
+                GameFocusHaptics.tick(this)
                 AppLog.d(TAG, "dpadStepRightTrigger = ${viewModel.dpadStepRightTrigger.value}")
             }
 
             LauncherScrollDirection.UP -> {
                 viewModel.cycleCategoryUp(activeCategories)
+                GameFocusHaptics.click(this)
             }
 
             LauncherScrollDirection.DOWN -> {
                 viewModel.cycleCategoryDown(activeCategories)
+                GameFocusHaptics.click(this)
             }
 
             LauncherScrollDirection.NONE -> {
@@ -1007,18 +1014,21 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     AppLog.i(TAG, "Closing Library section")
                     stopRepeat()
                     viewModel.setLibraryOpen(false)
+                    GameFocusHaptics.click(this)
                     true
                 }
 
                 keyCode == GamePadButton.BUTTON_L1.keyCode -> {
                     viewModel.cycleLibraryTabUp(activeLibraryTabs)
                     viewModel.setLibraryFocusedIndex(0)
+                    GameFocusHaptics.click(this)
                     true
                 }
 
                 keyCode == GamePadButton.BUTTON_R1.keyCode -> {
                     viewModel.cycleLibraryTabDown(activeLibraryTabs)
                     viewModel.setLibraryFocusedIndex(0)
+                    GameFocusHaptics.click(this)
                     true
                 }
 
@@ -1184,6 +1194,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 if (apps.isNotEmpty()) {
                     AppLog.i(TAG, "Gamepad L1 pressed -> skipping to previous starting letter")
                     viewModel.triggerPrevLetter()
+                    GameFocusHaptics.click(this)
                 }
                 return true
             }
@@ -1192,6 +1203,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 if (apps.isNotEmpty()) {
                     AppLog.i(TAG, "Gamepad R1 pressed -> skipping to next starting letter")
                     viewModel.triggerNextLetter()
+                    GameFocusHaptics.click(this)
                 }
                 return true
             }
@@ -1200,6 +1212,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 AppLog.i(TAG, "Gamepad R2 pressed -> Opening Library section")
                 viewModel.setLibraryOpen(true)
                 viewModel.setLibraryFocusedIndex(0)
+                GameFocusHaptics.click(this)
                 return true
             }
 
@@ -1406,6 +1419,12 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 return true
             } else if (x > JOYSTICK_THRESHOLD) {
                 startRepeat(LauncherScrollDirection.RIGHT)
+                return true
+            } else if (y < JOYSTICK_NEGATIVE_THRESHOLD) {
+                startRepeat(LauncherScrollDirection.UP)
+                return true
+            } else if (y > JOYSTICK_THRESHOLD) {
+                startRepeat(LauncherScrollDirection.DOWN)
                 return true
             } else {
                 if (currentDirection != LauncherScrollDirection.NONE) {
