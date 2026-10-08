@@ -556,6 +556,7 @@ fun FocusTopLauncherScreen(
                         onRemoveRomFolderDialogSelectedIndexChange = onRemoveRomFolderDialogSelectedIndexChange,
                         folderToRemove = folderToRemove,
                         onFolderToRemoveChange = onFolderToRemoveChange,
+                        areButtonPromptsVisible = areButtonPromptsVisible,
                     )
                 } else {
                     Box(
@@ -1307,7 +1308,7 @@ private fun InteractiveCategoryHeader(
         },
         enabled = enabled,
         showButtonIcons = areButtonPromptsVisible,
-        showNeighboringItems = areButtonPromptsVisible,
+        showNeighboringItems = true,
         modifier = modifier,
     )
 }

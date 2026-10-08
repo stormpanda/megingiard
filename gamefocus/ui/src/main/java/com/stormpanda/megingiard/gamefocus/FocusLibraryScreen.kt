@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.gamefocus
 
 import android.graphics.BlurMaskFilter
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
@@ -11,7 +12,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -132,6 +135,7 @@ private val FLS_BOTTOM_BAR_PADDING_VERTICAL = 4.dp
 private val FLS_BUTTON_GAP_SMALL = 2.dp
 private val FLS_HEADER_PADDING_HORIZONTAL = 24.dp
 private val FLS_HEADER_PADDING_VERTICAL = 12.dp
+private val FLS_HEADER_BAR_HEIGHT = 40.dp
 private val FLS_HEADER_SPACING_SMALL = 8.dp
 private val FLS_L1R1_ICON_SIZE = 20.dp
 private val FLS_HEADER_SPACING_MEDIUM = 16.dp
@@ -147,6 +151,9 @@ private const val FLS_HIDDEN_BADGE_ALPHA = 1.0f
 private const val FLS_VISIBLE_BADGE_ALPHA = 0.0f
 private const val FLS_HIDE_ANIMATION_DURATION_MS = 300
 private const val FLS_MARQUEE_INITIAL_DELAY_MS = 500
+private const val FLS_PROMPT_ANIM_DURATION_MS = 200
+private const val FLS_PROMPT_SLIDE_DIVISOR = 2
+private const val FLS_BUTTON_SLIDE_OFFSET_DP = 10f
 
 private val LibraryTab.stringResId: Int
     get() =
@@ -197,6 +204,7 @@ fun FocusLibraryScreen(
     onRemoveRomFolderDialogSelectedIndexChange: (Int) -> Unit = {},
     folderToRemove: CustomRomFolder? = null,
     onFolderToRemoveChange: (CustomRomFolder?) -> Unit = {},
+    areButtonPromptsVisible: Boolean = true,
 ) {
     val appColors = LocalAppColors.current
     val density = LocalDensity.current
@@ -466,6 +474,7 @@ fun FocusLibraryScreen(
             onCloseRequested = onCloseRequested,
             enabled = enabled,
             tabs = tabs,
+            areButtonPromptsVisible = areButtonPromptsVisible,
             modifier = Modifier.align(Alignment.TopCenter),
         )
 
@@ -518,145 +527,170 @@ fun FocusLibraryScreen(
                     ),
         ) {
             // Lower Left: Library Action Menu
-            Box(modifier = Modifier.align(Alignment.BottomStart)) {
-                val currentSystemId = (selectedTab as? LibraryTab.RomSystem)?.systemId ?: focusedApp?.systemId
-                val currentRomFolder =
-                    remember(currentSystemId, romFolders) {
-                        if (currentSystemId != null) romFolders.find { it.systemId == currentSystemId } else null
-                    }
-                val isRetroArchSystem =
-                    remember(currentRomFolder) {
-                        if (currentRomFolder != null) {
-                            val systemDef = SUPPORTED_SYSTEMS.find { it.id == currentRomFolder.systemId }
-                            systemDef?.emulatorId == EMULATOR_ID_RETROARCH
-                        } else {
-                            false
+            AnimatedVisibility(
+                visible = areButtonPromptsVisible || isOptionsMenuExpanded,
+                enter =
+                    fadeIn(animationSpec = tween(FLS_PROMPT_ANIM_DURATION_MS)) +
+                        slideInVertically(animationSpec = tween(FLS_PROMPT_ANIM_DURATION_MS)) { it / FLS_PROMPT_SLIDE_DIVISOR },
+                exit =
+                    fadeOut(animationSpec = tween(FLS_PROMPT_ANIM_DURATION_MS)) +
+                        slideOutVertically(
+                            animationSpec = tween(FLS_PROMPT_ANIM_DURATION_MS),
+                        ) { it / FLS_PROMPT_SLIDE_DIVISOR },
+                modifier = Modifier.align(Alignment.BottomStart),
+            ) {
+                Box {
+                    val currentSystemId = (selectedTab as? LibraryTab.RomSystem)?.systemId ?: focusedApp?.systemId
+                    val currentRomFolder =
+                        remember(currentSystemId, romFolders) {
+                            if (currentSystemId != null) romFolders.find { it.systemId == currentSystemId } else null
                         }
-                    }
-                val isSwitchSystem =
-                    remember(currentRomFolder) {
-                        currentRomFolder?.systemId == SYSTEM_ID_SWITCH
-                    }
-                val actions =
-                    remember(focusedApp, isCurrentHidden, romFolders, isRetroArchSystem, isSwitchSystem, currentRomFolder) {
-                        buildList {
-                            if (focusedApp != null) {
-                                add(
-                                    ExpandableActionItem(
-                                        label =
-                                            if (isCurrentHidden) {
-                                                context.getString(R.string.gamefocus_option_unhide)
-                                            } else {
-                                                context.getString(R.string.gamefocus_option_hide)
-                                            },
-                                        iconSymbol = if (isCurrentHidden) "visibility" else "visibility_off",
-                                        onClick = {
-                                            onToggleHidden(focusedApp)
-                                            onOptionsMenuExpandedChange(false)
-                                        },
-                                    ),
-                                )
-                                if (!focusedApp.isRom) {
+                    val isRetroArchSystem =
+                        remember(currentRomFolder) {
+                            if (currentRomFolder != null) {
+                                val systemDef = SUPPORTED_SYSTEMS.find { it.id == currentRomFolder.systemId }
+                                systemDef?.emulatorId == EMULATOR_ID_RETROARCH
+                            } else {
+                                false
+                            }
+                        }
+                    val isSwitchSystem =
+                        remember(currentRomFolder) {
+                            currentRomFolder?.systemId == SYSTEM_ID_SWITCH
+                        }
+                    val actions =
+                        remember(focusedApp, isCurrentHidden, romFolders, isRetroArchSystem, isSwitchSystem, currentRomFolder) {
+                            buildList {
+                                if (focusedApp != null) {
                                     add(
                                         ExpandableActionItem(
-                                            label = context.getString(R.string.gamefocus_option_app_info),
-                                            iconSymbol = "info",
+                                            label =
+                                                if (isCurrentHidden) {
+                                                    context.getString(R.string.gamefocus_option_unhide)
+                                                } else {
+                                                    context.getString(R.string.gamefocus_option_hide)
+                                                },
+                                            iconSymbol = if (isCurrentHidden) "visibility" else "visibility_off",
                                             onClick = {
-                                                onOpenAppInfo(focusedApp)
+                                                onToggleHidden(focusedApp)
                                                 onOptionsMenuExpandedChange(false)
                                             },
                                         ),
                                     )
+                                    if (!focusedApp.isRom) {
+                                        add(
+                                            ExpandableActionItem(
+                                                label = context.getString(R.string.gamefocus_option_app_info),
+                                                iconSymbol = "info",
+                                                onClick = {
+                                                    onOpenAppInfo(focusedApp)
+                                                    onOptionsMenuExpandedChange(false)
+                                                },
+                                            ),
+                                        )
+                                        add(
+                                            ExpandableActionItem(
+                                                label = context.getString(R.string.gamefocus_option_uninstall),
+                                                iconSymbol = "delete",
+                                                isDestructive = true,
+                                                onClick = {
+                                                    onUninstallApp(focusedApp)
+                                                    onOptionsMenuExpandedChange(false)
+                                                },
+                                            ),
+                                        )
+                                    }
+                                }
+                                add(
+                                    ExpandableActionItem(
+                                        label = context.getString(R.string.gamefocus_option_add_rom_folder),
+                                        iconSymbol = "create_new_folder",
+                                        onClick = {
+                                            onAddRomFolder()
+                                            onOptionsMenuExpandedChange(false)
+                                        },
+                                    ),
+                                )
+                                if (romFolders.isNotEmpty()) {
                                     add(
                                         ExpandableActionItem(
-                                            label = context.getString(R.string.gamefocus_option_uninstall),
-                                            iconSymbol = "delete",
-                                            isDestructive = true,
+                                            label = context.getString(R.string.gamefocus_option_manage_rom_folders),
+                                            iconSymbol = "folder",
                                             onClick = {
-                                                onUninstallApp(focusedApp)
+                                                onRemoveRomFolderDialogOpenChange(true)
+                                                onOptionsMenuExpandedChange(false)
+                                            },
+                                        ),
+                                    )
+                                }
+                                if (isRetroArchSystem && currentRomFolder != null) {
+                                    add(
+                                        ExpandableActionItem(
+                                            label = context.getString(R.string.gamefocus_option_change_core),
+                                            iconSymbol = "tune",
+                                            onClick = {
+                                                onChangeCore(currentRomFolder)
+                                                onOptionsMenuExpandedChange(false)
+                                            },
+                                        ),
+                                    )
+                                } else if (isSwitchSystem && currentRomFolder != null) {
+                                    add(
+                                        ExpandableActionItem(
+                                            label = context.getString(R.string.gamefocus_option_change_emulator),
+                                            iconSymbol = "tune",
+                                            onClick = {
+                                                onChangeCore(currentRomFolder)
                                                 onOptionsMenuExpandedChange(false)
                                             },
                                         ),
                                     )
                                 }
                             }
-                            add(
-                                ExpandableActionItem(
-                                    label = context.getString(R.string.gamefocus_option_add_rom_folder),
-                                    iconSymbol = "create_new_folder",
-                                    onClick = {
-                                        onAddRomFolder()
-                                        onOptionsMenuExpandedChange(false)
-                                    },
-                                ),
-                            )
-                            if (romFolders.isNotEmpty()) {
-                                add(
-                                    ExpandableActionItem(
-                                        label = context.getString(R.string.gamefocus_option_manage_rom_folders),
-                                        iconSymbol = "folder",
-                                        onClick = {
-                                            onRemoveRomFolderDialogOpenChange(true)
-                                            onOptionsMenuExpandedChange(false)
-                                        },
-                                    ),
-                                )
-                            }
-                            if (isRetroArchSystem && currentRomFolder != null) {
-                                add(
-                                    ExpandableActionItem(
-                                        label = context.getString(R.string.gamefocus_option_change_core),
-                                        iconSymbol = "tune",
-                                        onClick = {
-                                            onChangeCore(currentRomFolder)
-                                            onOptionsMenuExpandedChange(false)
-                                        },
-                                    ),
-                                )
-                            } else if (isSwitchSystem && currentRomFolder != null) {
-                                add(
-                                    ExpandableActionItem(
-                                        label = context.getString(R.string.gamefocus_option_change_emulator),
-                                        iconSymbol = "tune",
-                                        onClick = {
-                                            onChangeCore(currentRomFolder)
-                                            onOptionsMenuExpandedChange(false)
-                                        },
-                                    ),
-                                )
-                            }
                         }
-                    }
-                val itemActionsCount =
-                    if (focusedApp != null) {
-                        if (!focusedApp.isRom) 3 else 1
-                    } else {
-                        0
-                    }
-                val dividerAfterIndex =
-                    if (itemActionsCount > 0 && itemActionsCount < actions.size) {
-                        itemActionsCount - 1
-                    } else {
-                        null
-                    }
-                ExpandableActionsMenu(
-                    isExpanded = isOptionsMenuExpanded,
-                    onExpandedChange = onOptionsMenuExpandedChange,
-                    actions = actions,
-                    selectedIndex = selectedIndex,
-                    dividerAfterIndex = dividerAfterIndex,
-                    enabled = enabled,
-                )
+                    val itemActionsCount =
+                        if (focusedApp != null) {
+                            if (!focusedApp.isRom) 3 else 1
+                        } else {
+                            0
+                        }
+                    val dividerAfterIndex =
+                        if (itemActionsCount > 0 && itemActionsCount < actions.size) {
+                            itemActionsCount - 1
+                        } else {
+                            null
+                        }
+                    ExpandableActionsMenu(
+                        isExpanded = isOptionsMenuExpanded,
+                        onExpandedChange = onOptionsMenuExpandedChange,
+                        actions = actions,
+                        selectedIndex = selectedIndex,
+                        dividerAfterIndex = dividerAfterIndex,
+                        enabled = enabled,
+                    )
+                }
             }
 
             // Lower Right: Subdued touch launch buttons
-            DualScreenLaunchButtons(
-                appInfo = focusedApp,
-                enabled = enabled && !isOptionsMenuExpanded,
-                onLaunchTop = onAppClickTop,
-                onLaunchBottom = onAppClickBottom,
+            AnimatedVisibility(
+                visible = areButtonPromptsVisible,
+                enter =
+                    fadeIn(animationSpec = tween(FLS_PROMPT_ANIM_DURATION_MS)) +
+                        slideInVertically(animationSpec = tween(FLS_PROMPT_ANIM_DURATION_MS)) { it / FLS_PROMPT_SLIDE_DIVISOR },
+                exit =
+                    fadeOut(animationSpec = tween(FLS_PROMPT_ANIM_DURATION_MS)) +
+                        slideOutVertically(
+                            animationSpec = tween(FLS_PROMPT_ANIM_DURATION_MS),
+                        ) { it / FLS_PROMPT_SLIDE_DIVISOR },
                 modifier = Modifier.align(Alignment.BottomEnd),
-            )
+            ) {
+                DualScreenLaunchButtons(
+                    appInfo = focusedApp,
+                    enabled = enabled && !isOptionsMenuExpanded,
+                    onLaunchTop = onAppClickTop,
+                    onLaunchBottom = onAppClickBottom,
+                )
+            }
         }
 
         if (isRemoveRomFolderDialogOpen) {
@@ -707,31 +741,54 @@ private fun LibraryHeaderBar(
     tabs: List<LibraryTab>,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    areButtonPromptsVisible: Boolean = true,
 ) {
     val appColors = LocalAppColors.current
 
-    Row(
+    Box(
         modifier =
             modifier
                 .fillMaxWidth()
-                .padding(horizontal = FLS_HEADER_PADDING_HORIZONTAL, vertical = FLS_HEADER_PADDING_VERTICAL),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
+                .padding(horizontal = FLS_HEADER_PADDING_HORIZONTAL, vertical = FLS_HEADER_PADDING_VERTICAL)
+                .height(FLS_HEADER_BAR_HEIGHT),
     ) {
         // Horizontal 3D Category Reel with L1/R1 Badges
         InteractiveLibraryCategoryHeader(
             selectedTab = selectedTab,
             onTabSelected = onTabSelected,
             tabs = tabs,
+            areButtonPromptsVisible = areButtonPromptsVisible,
+            modifier = Modifier.align(Alignment.CenterStart),
         )
 
         // Navigation affordance to return to Gallery via R2 button
-        GamePadButtonAction(
-            button = GamePadButton.BUTTON_R2,
-            text = stringResource(R.string.gamefocus_nav_gallery),
-            onClick = onCloseRequested,
-            enabled = enabled,
-        )
+        AnimatedVisibility(
+            visible = areButtonPromptsVisible,
+            enter =
+                fadeIn(animationSpec = tween(FLS_PROMPT_ANIM_DURATION_MS)) +
+                    slideInVertically(
+                        animationSpec = tween(FLS_PROMPT_ANIM_DURATION_MS),
+                    ) { -it / FLS_PROMPT_SLIDE_DIVISOR } +
+                    slideInHorizontally(
+                        animationSpec = tween(FLS_PROMPT_ANIM_DURATION_MS),
+                    ) { it / FLS_PROMPT_SLIDE_DIVISOR },
+            exit =
+                fadeOut(animationSpec = tween(FLS_PROMPT_ANIM_DURATION_MS)) +
+                    slideOutVertically(
+                        animationSpec = tween(FLS_PROMPT_ANIM_DURATION_MS),
+                    ) { -it / FLS_PROMPT_SLIDE_DIVISOR } +
+                    slideOutHorizontally(
+                        animationSpec = tween(FLS_PROMPT_ANIM_DURATION_MS),
+                    ) { it / FLS_PROMPT_SLIDE_DIVISOR },
+            modifier = Modifier.align(Alignment.CenterEnd),
+        ) {
+            GamePadButtonAction(
+                button = GamePadButton.BUTTON_R2,
+                text = stringResource(R.string.gamefocus_nav_gallery),
+                onClick = onCloseRequested,
+                enabled = enabled,
+            )
+        }
     }
 }
 
@@ -748,9 +805,31 @@ private fun InteractiveLibraryCategoryHeader(
     onTabSelected: (LibraryTab) -> Unit,
     tabs: List<LibraryTab>,
     modifier: Modifier = Modifier,
+    areButtonPromptsVisible: Boolean = true,
 ) {
     val appColors = LocalAppColors.current
     val density = LocalDensity.current
+
+    val l1Alpha by animateFloatAsState(
+        targetValue = if (areButtonPromptsVisible) 1f else 0f,
+        animationSpec = tween(durationMillis = FLS_PROMPT_ANIM_DURATION_MS),
+        label = "LibraryL1Alpha",
+    )
+    val l1TranslationX by animateFloatAsState(
+        targetValue = if (areButtonPromptsVisible) 0f else -with(density) { FLS_BUTTON_SLIDE_OFFSET_DP.dp.toPx() },
+        animationSpec = tween(durationMillis = FLS_PROMPT_ANIM_DURATION_MS),
+        label = "LibraryL1TranslationX",
+    )
+    val r1Alpha by animateFloatAsState(
+        targetValue = if (areButtonPromptsVisible) 1f else 0f,
+        animationSpec = tween(durationMillis = FLS_PROMPT_ANIM_DURATION_MS),
+        label = "LibraryR1Alpha",
+    )
+    val r1TranslationX by animateFloatAsState(
+        targetValue = if (areButtonPromptsVisible) 0f else with(density) { FLS_BUTTON_SLIDE_OFFSET_DP.dp.toPx() },
+        animationSpec = tween(durationMillis = FLS_PROMPT_ANIM_DURATION_MS),
+        label = "LibraryR1TranslationX",
+    )
 
     Row(
         modifier = modifier,
@@ -763,7 +842,14 @@ private fun InteractiveLibraryCategoryHeader(
             size = FLS_L1R1_ICON_SIZE,
             tint = appColors.onSurfaceSecondary,
             cutoutColor = appColors.appBackground,
-            modifier = Modifier.noFocusClickable { onTabSelected(selectedTab.previous(tabs)) },
+            modifier =
+                Modifier
+                    .graphicsLayer {
+                        alpha = l1Alpha
+                        translationX = l1TranslationX
+                    }.noFocusClickable(enabled = areButtonPromptsVisible) {
+                        onTabSelected(selectedTab.previous(tabs))
+                    },
         )
 
         // Animated Horizontal 3D Reel
@@ -823,7 +909,14 @@ private fun InteractiveLibraryCategoryHeader(
             size = FLS_L1R1_ICON_SIZE,
             tint = appColors.onSurfaceSecondary,
             cutoutColor = appColors.appBackground,
-            modifier = Modifier.noFocusClickable { onTabSelected(selectedTab.next(tabs)) },
+            modifier =
+                Modifier
+                    .graphicsLayer {
+                        alpha = r1Alpha
+                        translationX = r1TranslationX
+                    }.noFocusClickable(enabled = areButtonPromptsVisible) {
+                        onTabSelected(selectedTab.next(tabs))
+                    },
         )
     }
 }

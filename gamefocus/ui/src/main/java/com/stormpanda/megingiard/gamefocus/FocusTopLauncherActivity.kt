@@ -1096,6 +1096,18 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     true
                 }
 
+                keyCode == KeyEvent.KEYCODE_BUTTON_THUMBR -> {
+                    val newVisible = viewModel.toggleButtonPromptsVisible()
+                    GameFocusPreferences.setButtonPromptsVisible(this, newVisible)
+                    AppLog.i(TAG, "Gamepad R3 pressed in Library -> toggled button prompts visibility (now visible=$newVisible)")
+                    true
+                }
+
+                keyCode == KeyEvent.KEYCODE_BUTTON_THUMBL -> {
+                    AppLog.d(TAG, "Gamepad L3 pressed in Library -> consumed to prevent synthetic DPAD_CENTER launch")
+                    true
+                }
+
                 else -> {
                     true
                 }
