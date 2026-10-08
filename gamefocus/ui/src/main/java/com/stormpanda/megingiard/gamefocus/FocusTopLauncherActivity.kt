@@ -558,6 +558,15 @@ class FocusTopLauncherActivity : ComponentActivity() {
         packageName == MegingiardIpcContract.COMPANION_PACKAGE ||
             packageName == MegingiardIpcContract.COMPANION_DEBUG_PACKAGE
 
+    private fun currentGalleryApps(): List<InstalledAppInfo> {
+        val allApps = InstalledAppsManager.installedApps.value
+        val favorites = InstalledAppsManager.favorites.value
+        val hidden = frozenHiddenSetForInput
+        val lastUsed = InstalledAppsManager.lastUsed.value
+        val selectedCategory = viewModel.selectedCategory.value
+        return selectedCategory.filterApps(allApps, favorites, hidden, lastUsed)
+    }
+
     private fun resetToGallery(): Boolean {
         stopRepeat()
         return viewModel.resetToGallery()
@@ -685,13 +694,15 @@ class FocusTopLauncherActivity : ComponentActivity() {
             }
 
             LauncherScrollDirection.UP -> {
-                viewModel.cycleCategoryUp(activeCategories)
-                GameFocusHaptics.click(this)
+                if (viewModel.cycleCategoryUp(activeCategories)) {
+                    GameFocusHaptics.click(this)
+                }
             }
 
             LauncherScrollDirection.DOWN -> {
-                viewModel.cycleCategoryDown(activeCategories)
-                GameFocusHaptics.click(this)
+                if (viewModel.cycleCategoryDown(activeCategories)) {
+                    GameFocusHaptics.click(this)
+                }
             }
 
             LauncherScrollDirection.NONE -> {
@@ -1019,16 +1030,18 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 }
 
                 keyCode == GamePadButton.BUTTON_L1.keyCode -> {
-                    viewModel.cycleLibraryTabUp(activeLibraryTabs)
-                    viewModel.setLibraryFocusedIndex(0)
-                    GameFocusHaptics.click(this)
+                    if (viewModel.cycleLibraryTabUp(activeLibraryTabs)) {
+                        viewModel.setLibraryFocusedIndex(0)
+                        GameFocusHaptics.click(this)
+                    }
                     true
                 }
 
                 keyCode == GamePadButton.BUTTON_R1.keyCode -> {
-                    viewModel.cycleLibraryTabDown(activeLibraryTabs)
-                    viewModel.setLibraryFocusedIndex(0)
-                    GameFocusHaptics.click(this)
+                    if (viewModel.cycleLibraryTabDown(activeLibraryTabs)) {
+                        viewModel.setLibraryFocusedIndex(0)
+                        GameFocusHaptics.click(this)
+                    }
                     true
                 }
 
@@ -1090,12 +1103,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
         }
 
         // Navigation when Main Launcher is active
-        val allApps = InstalledAppsManager.installedApps.value
-        val favorites = InstalledAppsManager.favorites.value
-        val hidden = frozenHiddenSetForInput
-        val lastUsed = InstalledAppsManager.lastUsed.value
-        val selectedCategory = viewModel.selectedCategory.value
-        val apps = selectedCategory.filterApps(allApps, favorites, hidden, lastUsed)
+        val apps = currentGalleryApps()
 
         if (viewModel.isMainOptionsMenuExpanded.value) {
             val targetApp = viewModel.focusedApp.value
@@ -1158,12 +1166,20 @@ class FocusTopLauncherActivity : ComponentActivity() {
             }
 
             isLeftKey(keyCode) -> {
-                if (apps.size > 1) startRepeat(LauncherScrollDirection.LEFT)
+                if (apps.size > 1) {
+                    startRepeat(LauncherScrollDirection.LEFT)
+                } else {
+                    stopRepeat()
+                }
                 return true
             }
 
             isRightKey(keyCode) -> {
-                if (apps.size > 1) startRepeat(LauncherScrollDirection.RIGHT)
+                if (apps.size > 1) {
+                    startRepeat(LauncherScrollDirection.RIGHT)
+                } else {
+                    stopRepeat()
+                }
                 return true
             }
 
@@ -1414,18 +1430,19 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 return true
             }
 
-            val allApps = InstalledAppsManager.installedApps.value
-            val favorites = InstalledAppsManager.favorites.value
-            val hidden = frozenHiddenSetForInput
-            val lastUsed = InstalledAppsManager.lastUsed.value
-            val selectedCategory = viewModel.selectedCategory.value
-            val apps = selectedCategory.filterApps(allApps, favorites, hidden, lastUsed)
-
             if (x < JOYSTICK_NEGATIVE_THRESHOLD) {
-                if (apps.size > 1) startRepeat(LauncherScrollDirection.LEFT)
+                if (currentGalleryApps().size > 1) {
+                    startRepeat(LauncherScrollDirection.LEFT)
+                } else {
+                    stopRepeat()
+                }
                 return true
             } else if (x > JOYSTICK_THRESHOLD) {
-                if (apps.size > 1) startRepeat(LauncherScrollDirection.RIGHT)
+                if (currentGalleryApps().size > 1) {
+                    startRepeat(LauncherScrollDirection.RIGHT)
+                } else {
+                    stopRepeat()
+                }
                 return true
             } else if (y < JOYSTICK_NEGATIVE_THRESHOLD) {
                 startRepeat(LauncherScrollDirection.UP)

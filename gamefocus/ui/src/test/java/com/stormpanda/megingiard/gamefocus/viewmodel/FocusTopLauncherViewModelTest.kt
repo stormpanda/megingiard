@@ -43,10 +43,17 @@ class FocusTopLauncherViewModelTest {
         viewModel.setSelectedCategory(GameFocusCategory.GAMES)
         assertEquals(GameFocusCategory.GAMES, viewModel.selectedCategory.value)
 
-        viewModel.cycleCategoryDown(categories)
+        assertTrue(viewModel.cycleCategoryDown(categories))
         assertEquals(GameFocusCategory.APPS, viewModel.selectedCategory.value)
 
-        viewModel.cycleCategoryUp(categories)
+        assertTrue(viewModel.cycleCategoryUp(categories))
+        assertEquals(GameFocusCategory.GAMES, viewModel.selectedCategory.value)
+
+        // Single-item list boundary test: cycling does not change category and returns false
+        val singleCategoryList = listOf(GameFocusCategory.GAMES)
+        assertFalse(viewModel.cycleCategoryDown(singleCategoryList))
+        assertEquals(GameFocusCategory.GAMES, viewModel.selectedCategory.value)
+        assertFalse(viewModel.cycleCategoryUp(singleCategoryList))
         assertEquals(GameFocusCategory.GAMES, viewModel.selectedCategory.value)
     }
 
@@ -57,10 +64,17 @@ class FocusTopLauncherViewModelTest {
         viewModel.setLibrarySelectedTab(LibraryTab.GAMES)
         assertEquals(LibraryTab.GAMES, viewModel.librarySelectedTab.value)
 
-        viewModel.cycleLibraryTabDown(tabs)
+        assertTrue(viewModel.cycleLibraryTabDown(tabs))
         assertEquals(LibraryTab.APPS, viewModel.librarySelectedTab.value)
 
-        viewModel.cycleLibraryTabUp(tabs)
+        assertTrue(viewModel.cycleLibraryTabUp(tabs))
+        assertEquals(LibraryTab.GAMES, viewModel.librarySelectedTab.value)
+
+        // Single-tab list boundary test: cycling does not change tab and returns false
+        val singleTabList = listOf(LibraryTab.GAMES)
+        assertFalse(viewModel.cycleLibraryTabDown(singleTabList))
+        assertEquals(LibraryTab.GAMES, viewModel.librarySelectedTab.value)
+        assertFalse(viewModel.cycleLibraryTabUp(singleTabList))
         assertEquals(LibraryTab.GAMES, viewModel.librarySelectedTab.value)
     }
 

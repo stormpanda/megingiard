@@ -176,16 +176,24 @@ class FocusTopLauncherViewModel : ViewModel() {
         _selectedCategory.value = category
     }
 
-    fun cycleCategoryUp(categories: List<GameFocusCategory>) {
+    fun cycleCategoryUp(categories: List<GameFocusCategory>): Boolean {
         val prevCategory = _selectedCategory.value.previous(categories)
-        AppLog.i(TAG, "Category UP -> switching launcher category to ${prevCategory.id}")
-        _selectedCategory.value = prevCategory
+        if (prevCategory != _selectedCategory.value) {
+            AppLog.i(TAG, "Category UP -> switching launcher category to ${prevCategory.id}")
+            _selectedCategory.value = prevCategory
+            return true
+        }
+        return false
     }
 
-    fun cycleCategoryDown(categories: List<GameFocusCategory>) {
+    fun cycleCategoryDown(categories: List<GameFocusCategory>): Boolean {
         val nextCategory = _selectedCategory.value.next(categories)
-        AppLog.i(TAG, "Category DOWN -> switching launcher category to ${nextCategory.id}")
-        _selectedCategory.value = nextCategory
+        if (nextCategory != _selectedCategory.value) {
+            AppLog.i(TAG, "Category DOWN -> switching launcher category to ${nextCategory.id}")
+            _selectedCategory.value = nextCategory
+            return true
+        }
+        return false
     }
 
     fun setMainMenuSelectedIndex(index: Int) {
@@ -281,16 +289,24 @@ class FocusTopLauncherViewModel : ViewModel() {
         _librarySelectedTab.value = tab
     }
 
-    fun cycleLibraryTabUp(tabs: List<LibraryTab>) {
+    fun cycleLibraryTabUp(tabs: List<LibraryTab>): Boolean {
         val prevTab = _librarySelectedTab.value.previous(tabs)
-        AppLog.i(TAG, "Library tab UP -> switching tab to ${prevTab.id}")
-        _librarySelectedTab.value = prevTab
+        if (prevTab != _librarySelectedTab.value) {
+            AppLog.i(TAG, "Library tab UP -> switching tab to ${prevTab.id}")
+            _librarySelectedTab.value = prevTab
+            return true
+        }
+        return false
     }
 
-    fun cycleLibraryTabDown(tabs: List<LibraryTab>) {
+    fun cycleLibraryTabDown(tabs: List<LibraryTab>): Boolean {
         val nextTab = _librarySelectedTab.value.next(tabs)
-        AppLog.i(TAG, "Library tab DOWN -> switching tab to ${nextTab.id}")
-        _librarySelectedTab.value = nextTab
+        if (nextTab != _librarySelectedTab.value) {
+            AppLog.i(TAG, "Library tab DOWN -> switching tab to ${nextTab.id}")
+            _librarySelectedTab.value = nextTab
+            return true
+        }
+        return false
     }
 
     fun setLibraryFocusedIndex(index: Int) {

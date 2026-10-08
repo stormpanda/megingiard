@@ -1,9 +1,11 @@
 package com.stormpanda.megingiard.gamefocus
 
 import android.content.Context
+import android.os.VibrationAttributes
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import androidx.annotation.MainThread
 import com.stormpanda.megingiard.AppLog
 
 private const val TAG = "GameFocusHaptics"
@@ -29,11 +31,16 @@ private const val FALLBACK_CLICK_AMPLITUDE = 75 // ~30% power for a distinct mec
  * clicks without buzzing. Note: PRIMITIVE_LOW_TICK and PRIMITIVE_TICK are intentionally avoided because
  * Qualcomm's HAL reports support but evaluates to a 0ms dummy wave on Snapdragon G3x Gen 2 hardware.
  * Provides graceful micro-pulse fallbacks when hardware primitives are unsupported.
+ * Dispatches haptic effects with [VibrationAttributes.USAGE_TOUCH] to respect system touch-feedback settings.
  */
 object GameFocusHaptics {
     private var cachedVibrator: Vibrator? = null
     private var supportsClick: Boolean = false
     private var isInitialized: Boolean = false
+
+    private val touchVibrationAttributes: VibrationAttributes by lazy {
+        VibrationAttributes.createForUsage(VibrationAttributes.USAGE_TOUCH)
+    }
 
     private val tickPrimitiveEffect: VibrationEffect by lazy {
         VibrationEffect
@@ -59,8 +66,9 @@ object GameFocusHaptics {
 
     private fun getVibrator(context: Context): Vibrator? {
         if (isInitialized) return cachedVibrator
-        val vibratorManager = context.getSystemService(VibratorManager::class.java)
-        val vibrator = vibratorManager?.defaultVibrator ?: context.getSystemService(Vibrator::class.java)
+        val appContext = context.applicationContext
+        val vibratorManager = appContext.getSystemService(VibratorManager::class.java)
+        val vibrator = vibratorManager?.defaultVibrator ?: appContext.getSystemService(Vibrator::class.java)
         if (vibrator != null && vibrator.hasVibrator()) {
             cachedVibrator = vibrator
             supportsClick = vibrator.areAllPrimitivesSupported(VibrationEffect.Composition.PRIMITIVE_CLICK)
@@ -75,11 +83,12 @@ object GameFocusHaptics {
     /**
      * Triggers a subtle micro-tick for browsing individual items (gallery posters, library grid cards).
      */
+    @MainThread
     fun tick(context: Context) {
         val vibrator = getVibrator(context) ?: return
         try {
             val effect = if (supportsClick) tickPrimitiveEffect else fallbackTickEffect
-            vibrator.vibrate(effect)
+            vibrator.vibrate(effect, touchVibrationAttributes)
         } catch (e: Exception) {
             AppLog.e(TAG, "Failed to perform haptic tick", e)
         }
@@ -89,11 +98,12 @@ object GameFocusHaptics {
      * Triggers a firmer, distinct click for category rolls (Up/Down), library tab switches (L1/R1),
      * gallery letter jumps (L1/R1), and Library view toggling (R2).
      */
+    @MainThread
     fun click(context: Context) {
         val vibrator = getVibrator(context) ?: return
         try {
             val effect = if (supportsClick) clickPrimitiveEffect else fallbackClickEffect
-            vibrator.vibrate(effect)
+            vibrator.vibrate(effect, touchVibrationAttributes)
         } catch (e: Exception) {
             AppLog.e(TAG, "Failed to perform haptic click", e)
         }
