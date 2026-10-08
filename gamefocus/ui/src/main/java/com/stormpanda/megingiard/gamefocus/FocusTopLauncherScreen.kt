@@ -10,6 +10,7 @@ import android.util.LruCache
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -128,6 +129,7 @@ private const val FTL_LETTER_NAV_DEBOUNCE_MS = 500L
 private const val FTL_HIDDEN_BADGE_ALPHA = 1.0f
 private const val FTL_VISIBLE_BADGE_ALPHA = 0.0f
 private const val FTL_HIDE_ANIMATION_DURATION_MS = 300
+private const val FTL_CAROUSEL_ANIMATION_DURATION_MS = 120
 
 private val FTL_CAROUSEL_HEIGHT = 310.dp
 private val FTL_LETTER_NAV_PADDING = 40.dp
@@ -331,9 +333,17 @@ fun FocusTopLauncherScreen(
                 letterCommitJobRef.job?.cancel()
                 isLetterOverlayActive = false
             } else {
-                val prevIndex = if (activePagerState.currentPage > 0) activePagerState.currentPage - 1 else categoryApps.size - 1
-                AppLog.d(TAG, "D-pad LEFT step for ${selectedCategory.id}: current=${activePagerState.currentPage} -> target=$prevIndex")
-                activePagerState.animateScrollToPage(prevIndex)
+                val baseIndex = if (activePagerState.isScrollInProgress) activePagerState.targetPage else activePagerState.currentPage
+                val safeBase = baseIndex.coerceIn(0, categoryApps.size - 1)
+                val prevIndex = if (safeBase > 0) safeBase - 1 else categoryApps.size - 1
+                AppLog.d(
+                    TAG,
+                    "D-pad LEFT step for ${selectedCategory.id}: current=${activePagerState.currentPage}, targetPage=${activePagerState.targetPage} -> target=$prevIndex",
+                )
+                activePagerState.animateScrollToPage(
+                    page = prevIndex,
+                    animationSpec = tween(durationMillis = FTL_CAROUSEL_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing),
+                )
             }
         }
     }
@@ -346,9 +356,17 @@ fun FocusTopLauncherScreen(
                 letterCommitJobRef.job?.cancel()
                 isLetterOverlayActive = false
             } else {
-                val nextIndex = if (activePagerState.currentPage < categoryApps.size - 1) activePagerState.currentPage + 1 else 0
-                AppLog.d(TAG, "D-pad RIGHT step for ${selectedCategory.id}: current=${activePagerState.currentPage} -> target=$nextIndex")
-                activePagerState.animateScrollToPage(nextIndex)
+                val baseIndex = if (activePagerState.isScrollInProgress) activePagerState.targetPage else activePagerState.currentPage
+                val safeBase = baseIndex.coerceIn(0, categoryApps.size - 1)
+                val nextIndex = if (safeBase < categoryApps.size - 1) safeBase + 1 else 0
+                AppLog.d(
+                    TAG,
+                    "D-pad RIGHT step for ${selectedCategory.id}: current=${activePagerState.currentPage}, targetPage=${activePagerState.targetPage} -> target=$nextIndex",
+                )
+                activePagerState.animateScrollToPage(
+                    page = nextIndex,
+                    animationSpec = tween(durationMillis = FTL_CAROUSEL_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing),
+                )
             }
         }
     }

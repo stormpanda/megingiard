@@ -66,8 +66,8 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 private const val TAG = "FocusTopLauncherActivity"
-private const val INITIAL_REPEAT_DELAY_MS = 300L
-private const val REPEAT_INTERVAL_MS = 100L
+private const val INITIAL_REPEAT_DELAY_MS = 220L
+private const val REPEAT_INTERVAL_MS = 70L
 private const val MAIN_MENU_UNPAIRED_ITEMS_COUNT = 4
 private const val MAIN_MENU_PAIRED_ITEMS_COUNT = 5
 private const val JOYSTICK_THRESHOLD = 0.5f
@@ -558,16 +558,25 @@ class FocusTopLauncherActivity : ComponentActivity() {
         packageName == MegingiardIpcContract.COMPANION_PACKAGE ||
             packageName == MegingiardIpcContract.COMPANION_DEBUG_PACKAGE
 
+    private fun currentGalleryApps(): List<InstalledAppInfo> {
+        val allApps = InstalledAppsManager.installedApps.value
+        val favorites = InstalledAppsManager.favorites.value
+        val hidden = frozenHiddenSetForInput
+        val lastUsed = InstalledAppsManager.lastUsed.value
+        val selectedCategory = viewModel.selectedCategory.value
+        return selectedCategory.filterApps(allApps, favorites, hidden, lastUsed)
+    }
+
     private fun resetToGallery(): Boolean {
         stopRepeat()
         return viewModel.resetToGallery()
     }
 
-    private fun stepLibraryFocus(direction: LauncherScrollDirection) {
+    private fun stepLibraryFocus(direction: LauncherScrollDirection): Boolean {
         val allApps = InstalledAppsManager.installedApps.value
         val currentTab = viewModel.librarySelectedTab.value
         val filteredApps = currentTab.filterApps(allApps)
-        viewModel.stepLibraryFocus(direction, filteredApps.size, DEFAULT_LIBRARY_GRID_COLUMNS)
+        return viewModel.stepLibraryFocus(direction, filteredApps.size, DEFAULT_LIBRARY_GRID_COLUMNS)
     }
 
     private fun openCoreChooserForFolder(folder: CustomRomFolder) {
@@ -664,27 +673,36 @@ class FocusTopLauncherActivity : ComponentActivity() {
             return
         }
         if (viewModel.isLibraryOpen.value) {
-            stepLibraryFocus(direction)
+            val moved = stepLibraryFocus(direction)
+            if (moved) {
+                GameFocusHaptics.tick(this)
+            }
             return
         }
 
         when (direction) {
             LauncherScrollDirection.LEFT -> {
                 viewModel.triggerDpadLeft()
+                GameFocusHaptics.tick(this)
                 AppLog.d(TAG, "dpadLeftTrigger = ${viewModel.dpadLeftTrigger.value}")
             }
 
             LauncherScrollDirection.RIGHT -> {
                 viewModel.triggerDpadStepRight()
+                GameFocusHaptics.tick(this)
                 AppLog.d(TAG, "dpadStepRightTrigger = ${viewModel.dpadStepRightTrigger.value}")
             }
 
             LauncherScrollDirection.UP -> {
-                viewModel.cycleCategoryUp(activeCategories)
+                if (viewModel.cycleCategoryUp(activeCategories)) {
+                    GameFocusHaptics.click(this)
+                }
             }
 
             LauncherScrollDirection.DOWN -> {
-                viewModel.cycleCategoryDown(activeCategories)
+                if (viewModel.cycleCategoryDown(activeCategories)) {
+                    GameFocusHaptics.click(this)
+                }
             }
 
             LauncherScrollDirection.NONE -> {
@@ -1007,18 +1025,23 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     AppLog.i(TAG, "Closing Library section")
                     stopRepeat()
                     viewModel.setLibraryOpen(false)
+                    GameFocusHaptics.click(this)
                     true
                 }
 
                 keyCode == GamePadButton.BUTTON_L1.keyCode -> {
-                    viewModel.cycleLibraryTabUp(activeLibraryTabs)
-                    viewModel.setLibraryFocusedIndex(0)
+                    if (viewModel.cycleLibraryTabUp(activeLibraryTabs)) {
+                        viewModel.setLibraryFocusedIndex(0)
+                        GameFocusHaptics.click(this)
+                    }
                     true
                 }
 
                 keyCode == GamePadButton.BUTTON_R1.keyCode -> {
-                    viewModel.cycleLibraryTabDown(activeLibraryTabs)
-                    viewModel.setLibraryFocusedIndex(0)
+                    if (viewModel.cycleLibraryTabDown(activeLibraryTabs)) {
+                        viewModel.setLibraryFocusedIndex(0)
+                        GameFocusHaptics.click(this)
+                    }
                     true
                 }
 
@@ -1080,12 +1103,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
         }
 
         // Navigation when Main Launcher is active
-        val allApps = InstalledAppsManager.installedApps.value
-        val favorites = InstalledAppsManager.favorites.value
-        val hidden = frozenHiddenSetForInput
-        val lastUsed = InstalledAppsManager.lastUsed.value
-        val selectedCategory = viewModel.selectedCategory.value
-        val apps = selectedCategory.filterApps(allApps, favorites, hidden, lastUsed)
+        val apps = currentGalleryApps()
 
         if (viewModel.isMainOptionsMenuExpanded.value) {
             val targetApp = viewModel.focusedApp.value
@@ -1148,12 +1166,20 @@ class FocusTopLauncherActivity : ComponentActivity() {
             }
 
             isLeftKey(keyCode) -> {
-                if (apps.isNotEmpty()) startRepeat(LauncherScrollDirection.LEFT)
+                if (apps.size > 1) {
+                    startRepeat(LauncherScrollDirection.LEFT)
+                } else {
+                    stopRepeat()
+                }
                 return true
             }
 
             isRightKey(keyCode) -> {
-                if (apps.isNotEmpty()) startRepeat(LauncherScrollDirection.RIGHT)
+                if (apps.size > 1) {
+                    startRepeat(LauncherScrollDirection.RIGHT)
+                } else {
+                    stopRepeat()
+                }
                 return true
             }
 
@@ -1184,6 +1210,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 if (apps.isNotEmpty()) {
                     AppLog.i(TAG, "Gamepad L1 pressed -> skipping to previous starting letter")
                     viewModel.triggerPrevLetter()
+                    GameFocusHaptics.click(this)
                 }
                 return true
             }
@@ -1192,6 +1219,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 if (apps.isNotEmpty()) {
                     AppLog.i(TAG, "Gamepad R1 pressed -> skipping to next starting letter")
                     viewModel.triggerNextLetter()
+                    GameFocusHaptics.click(this)
                 }
                 return true
             }
@@ -1200,6 +1228,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 AppLog.i(TAG, "Gamepad R2 pressed -> Opening Library section")
                 viewModel.setLibraryOpen(true)
                 viewModel.setLibraryFocusedIndex(0)
+                GameFocusHaptics.click(this)
                 return true
             }
 
@@ -1402,10 +1431,24 @@ class FocusTopLauncherActivity : ComponentActivity() {
             }
 
             if (x < JOYSTICK_NEGATIVE_THRESHOLD) {
-                startRepeat(LauncherScrollDirection.LEFT)
+                if (currentGalleryApps().size > 1) {
+                    startRepeat(LauncherScrollDirection.LEFT)
+                } else {
+                    stopRepeat()
+                }
                 return true
             } else if (x > JOYSTICK_THRESHOLD) {
-                startRepeat(LauncherScrollDirection.RIGHT)
+                if (currentGalleryApps().size > 1) {
+                    startRepeat(LauncherScrollDirection.RIGHT)
+                } else {
+                    stopRepeat()
+                }
+                return true
+            } else if (y < JOYSTICK_NEGATIVE_THRESHOLD) {
+                startRepeat(LauncherScrollDirection.UP)
+                return true
+            } else if (y > JOYSTICK_THRESHOLD) {
+                startRepeat(LauncherScrollDirection.DOWN)
                 return true
             } else {
                 if (currentDirection != LauncherScrollDirection.NONE) {

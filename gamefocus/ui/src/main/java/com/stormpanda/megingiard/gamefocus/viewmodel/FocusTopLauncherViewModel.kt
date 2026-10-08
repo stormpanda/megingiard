@@ -176,16 +176,24 @@ class FocusTopLauncherViewModel : ViewModel() {
         _selectedCategory.value = category
     }
 
-    fun cycleCategoryUp(categories: List<GameFocusCategory>) {
+    fun cycleCategoryUp(categories: List<GameFocusCategory>): Boolean {
         val prevCategory = _selectedCategory.value.previous(categories)
-        AppLog.i(TAG, "Category UP -> switching launcher category to ${prevCategory.id}")
-        _selectedCategory.value = prevCategory
+        if (prevCategory != _selectedCategory.value) {
+            AppLog.i(TAG, "Category UP -> switching launcher category to ${prevCategory.id}")
+            _selectedCategory.value = prevCategory
+            return true
+        }
+        return false
     }
 
-    fun cycleCategoryDown(categories: List<GameFocusCategory>) {
+    fun cycleCategoryDown(categories: List<GameFocusCategory>): Boolean {
         val nextCategory = _selectedCategory.value.next(categories)
-        AppLog.i(TAG, "Category DOWN -> switching launcher category to ${nextCategory.id}")
-        _selectedCategory.value = nextCategory
+        if (nextCategory != _selectedCategory.value) {
+            AppLog.i(TAG, "Category DOWN -> switching launcher category to ${nextCategory.id}")
+            _selectedCategory.value = nextCategory
+            return true
+        }
+        return false
     }
 
     fun setMainMenuSelectedIndex(index: Int) {
@@ -281,16 +289,24 @@ class FocusTopLauncherViewModel : ViewModel() {
         _librarySelectedTab.value = tab
     }
 
-    fun cycleLibraryTabUp(tabs: List<LibraryTab>) {
+    fun cycleLibraryTabUp(tabs: List<LibraryTab>): Boolean {
         val prevTab = _librarySelectedTab.value.previous(tabs)
-        AppLog.i(TAG, "Library tab UP -> switching tab to ${prevTab.id}")
-        _librarySelectedTab.value = prevTab
+        if (prevTab != _librarySelectedTab.value) {
+            AppLog.i(TAG, "Library tab UP -> switching tab to ${prevTab.id}")
+            _librarySelectedTab.value = prevTab
+            return true
+        }
+        return false
     }
 
-    fun cycleLibraryTabDown(tabs: List<LibraryTab>) {
+    fun cycleLibraryTabDown(tabs: List<LibraryTab>): Boolean {
         val nextTab = _librarySelectedTab.value.next(tabs)
-        AppLog.i(TAG, "Library tab DOWN -> switching tab to ${nextTab.id}")
-        _librarySelectedTab.value = nextTab
+        if (nextTab != _librarySelectedTab.value) {
+            AppLog.i(TAG, "Library tab DOWN -> switching tab to ${nextTab.id}")
+            _librarySelectedTab.value = nextTab
+            return true
+        }
+        return false
     }
 
     fun setLibraryFocusedIndex(index: Int) {
@@ -348,39 +364,45 @@ class FocusTopLauncherViewModel : ViewModel() {
         direction: LauncherScrollDirection,
         total: Int,
         columns: Int = DEFAULT_LIBRARY_GRID_COLUMNS,
-    ) {
+    ): Boolean {
         val current = _libraryFocusedIndex.value.coerceAtLeast(0)
+        var target = current
         when (direction) {
             LauncherScrollDirection.LEFT -> {
                 if (current > 0) {
-                    _libraryFocusedIndex.value = current - 1
+                    target = current - 1
                 }
             }
 
             LauncherScrollDirection.RIGHT -> {
                 if (total > 0 && current < total - 1) {
-                    _libraryFocusedIndex.value = current + 1
+                    target = current + 1
                 }
             }
 
             LauncherScrollDirection.UP -> {
                 if (current >= columns) {
-                    _libraryFocusedIndex.value = current - columns
+                    target = current - columns
                 }
             }
 
             LauncherScrollDirection.DOWN -> {
                 if (total > 0) {
                     if (current + columns < total) {
-                        _libraryFocusedIndex.value = current + columns
+                        target = current + columns
                     } else if (current < total - 1) {
-                        _libraryFocusedIndex.value = total - 1
+                        target = total - 1
                     }
                 }
             }
 
             LauncherScrollDirection.NONE -> {}
         }
+        if (target != current) {
+            _libraryFocusedIndex.value = target
+            return true
+        }
+        return false
     }
 
     fun stepCoreChooserFocus(

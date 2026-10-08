@@ -43,10 +43,17 @@ class FocusTopLauncherViewModelTest {
         viewModel.setSelectedCategory(GameFocusCategory.GAMES)
         assertEquals(GameFocusCategory.GAMES, viewModel.selectedCategory.value)
 
-        viewModel.cycleCategoryDown(categories)
+        assertTrue(viewModel.cycleCategoryDown(categories))
         assertEquals(GameFocusCategory.APPS, viewModel.selectedCategory.value)
 
-        viewModel.cycleCategoryUp(categories)
+        assertTrue(viewModel.cycleCategoryUp(categories))
+        assertEquals(GameFocusCategory.GAMES, viewModel.selectedCategory.value)
+
+        // Single-item list boundary test: cycling does not change category and returns false
+        val singleCategoryList = listOf(GameFocusCategory.GAMES)
+        assertFalse(viewModel.cycleCategoryDown(singleCategoryList))
+        assertEquals(GameFocusCategory.GAMES, viewModel.selectedCategory.value)
+        assertFalse(viewModel.cycleCategoryUp(singleCategoryList))
         assertEquals(GameFocusCategory.GAMES, viewModel.selectedCategory.value)
     }
 
@@ -57,10 +64,17 @@ class FocusTopLauncherViewModelTest {
         viewModel.setLibrarySelectedTab(LibraryTab.GAMES)
         assertEquals(LibraryTab.GAMES, viewModel.librarySelectedTab.value)
 
-        viewModel.cycleLibraryTabDown(tabs)
+        assertTrue(viewModel.cycleLibraryTabDown(tabs))
         assertEquals(LibraryTab.APPS, viewModel.librarySelectedTab.value)
 
-        viewModel.cycleLibraryTabUp(tabs)
+        assertTrue(viewModel.cycleLibraryTabUp(tabs))
+        assertEquals(LibraryTab.GAMES, viewModel.librarySelectedTab.value)
+
+        // Single-tab list boundary test: cycling does not change tab and returns false
+        val singleTabList = listOf(LibraryTab.GAMES)
+        assertFalse(viewModel.cycleLibraryTabDown(singleTabList))
+        assertEquals(LibraryTab.GAMES, viewModel.librarySelectedTab.value)
+        assertFalse(viewModel.cycleLibraryTabUp(singleTabList))
         assertEquals(LibraryTab.GAMES, viewModel.librarySelectedTab.value)
     }
 
@@ -151,21 +165,34 @@ class FocusTopLauncherViewModelTest {
     fun testStepLibraryFocus() {
         viewModel.setLibraryFocusedIndex(0)
 
-        // Step right
-        viewModel.stepLibraryFocus(LauncherScrollDirection.RIGHT, total = 10, columns = 6)
+        // Boundary test: stepping left or up at index 0 should return false (no movement)
+        assertFalse(viewModel.stepLibraryFocus(LauncherScrollDirection.LEFT, total = 10, columns = 6))
+        assertEquals(0, viewModel.libraryFocusedIndex.value)
+        assertFalse(viewModel.stepLibraryFocus(LauncherScrollDirection.UP, total = 10, columns = 6))
+        assertEquals(0, viewModel.libraryFocusedIndex.value)
+
+        // Step right -> true
+        assertTrue(viewModel.stepLibraryFocus(LauncherScrollDirection.RIGHT, total = 10, columns = 6))
         assertEquals(1, viewModel.libraryFocusedIndex.value)
 
-        // Step down
-        viewModel.stepLibraryFocus(LauncherScrollDirection.DOWN, total = 10, columns = 6)
+        // Step down -> true
+        assertTrue(viewModel.stepLibraryFocus(LauncherScrollDirection.DOWN, total = 10, columns = 6))
         assertEquals(7, viewModel.libraryFocusedIndex.value)
 
-        // Step left
-        viewModel.stepLibraryFocus(LauncherScrollDirection.LEFT, total = 10, columns = 6)
+        // Step left -> true
+        assertTrue(viewModel.stepLibraryFocus(LauncherScrollDirection.LEFT, total = 10, columns = 6))
         assertEquals(6, viewModel.libraryFocusedIndex.value)
 
-        // Step up
-        viewModel.stepLibraryFocus(LauncherScrollDirection.UP, total = 10, columns = 6)
+        // Step up -> true
+        assertTrue(viewModel.stepLibraryFocus(LauncherScrollDirection.UP, total = 10, columns = 6))
         assertEquals(0, viewModel.libraryFocusedIndex.value)
+
+        // Boundary test at end of grid (total = 10, last index is 9)
+        viewModel.setLibraryFocusedIndex(9)
+        assertFalse(viewModel.stepLibraryFocus(LauncherScrollDirection.RIGHT, total = 10, columns = 6))
+        assertEquals(9, viewModel.libraryFocusedIndex.value)
+        assertFalse(viewModel.stepLibraryFocus(LauncherScrollDirection.DOWN, total = 10, columns = 6))
+        assertEquals(9, viewModel.libraryFocusedIndex.value)
     }
 
     @Test
