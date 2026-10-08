@@ -186,6 +186,10 @@ class FocusTopLauncherActivity : ComponentActivity() {
             this,
             object : OnBackPressedCallback(true) {
                 override fun handleOnBackPressed() {
+                    if (viewModel.folderToRemove.value != null) {
+                        viewModel.setFolderToRemove(null)
+                        return
+                    }
                     if (resetToGallery()) {
                         AppLog.i(TAG, "Back pressed -> closed sub-view, returned to main gallery")
                         return
@@ -405,10 +409,10 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             },
                             onEditArtwork = { appInfo -> viewModel.openEditGameOverlay(appInfo) },
                             onOpenAppInfo = { appInfo ->
-                                InstalledAppsManager.openAppInfo(this, appInfo.packageName)
+                                InstalledAppsManager.openAppInfo(this, appInfo.packageName, display.displayId)
                             },
                             onUninstallApp = { appInfo ->
-                                InstalledAppsManager.uninstallApp(this, appInfo.packageName)
+                                InstalledAppsManager.uninstallApp(this, appInfo.packageName, display.displayId)
                             },
                             onChangeCore = { folder ->
                                 openCoreChooserForFolder(folder)
@@ -953,12 +957,13 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
                                     1 -> {
                                         AppLog.i(TAG, "Opening App Info for ${focusedLibraryApp.label}")
-                                        InstalledAppsManager.openAppInfo(this, focusedLibraryApp.packageName)
+                                        InstalledAppsManager.openAppInfo(this, focusedLibraryApp.packageName, display.displayId)
                                     }
 
                                     2 -> {
                                         AppLog.i(TAG, "Uninstalling app ${focusedLibraryApp.label}")
-                                        InstalledAppsManager.uninstallApp(this, focusedLibraryApp.packageName)
+                                        InstalledAppsManager.uninstallApp(this, focusedLibraryApp.packageName, display.displayId)
+                                        viewModel.setLibraryOptionsMenuExpanded(false)
                                     }
                                 }
                             } else {

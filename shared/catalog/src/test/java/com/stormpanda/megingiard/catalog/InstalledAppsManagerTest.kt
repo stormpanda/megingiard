@@ -264,7 +264,9 @@ class InstalledAppsManagerTest {
     fun testOpenAppInfoAndUninstallApp() {
         val context: Context = RuntimeEnvironment.getApplication()
         InstalledAppsManager.openAppInfo(context, "com.test.app")
+        InstalledAppsManager.openAppInfo(context, "com.test.app", displayId = 0)
         InstalledAppsManager.uninstallApp(context, "com.test.app")
+        InstalledAppsManager.uninstallApp(context, "com.test.app", displayId = 4)
         InstalledAppsManager.updateAppCover("rom.snes.smw", "/storage/cover.png")
     }
 

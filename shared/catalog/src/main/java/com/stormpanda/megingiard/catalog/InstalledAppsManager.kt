@@ -781,6 +781,7 @@ object InstalledAppsManager {
     fun openAppInfo(
         context: Context,
         packageName: String,
+        displayId: Int = Display.DEFAULT_DISPLAY,
     ) {
         try {
             val intent =
@@ -788,16 +789,21 @@ object InstalledAppsManager {
                     data = Uri.fromParts("package", packageName, null)
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
-            context.startActivity(intent)
-            AppLog.i(TAG, "Opened native app info for package: $packageName")
+            val options =
+                ActivityOptions.makeBasic().apply {
+                    setLaunchDisplayId(displayId)
+                }
+            context.startActivity(intent, options.toBundle())
+            AppLog.i(TAG, "Opened native app info for package: $packageName on display $displayId")
         } catch (e: Exception) {
-            AppLog.e(TAG, "Failed to open native app info for package $packageName: ${e.message}", e)
+            AppLog.e(TAG, "Failed to open native app info for package $packageName on display $displayId: ${e.message}", e)
         }
     }
 
     fun uninstallApp(
         context: Context,
         packageName: String,
+        displayId: Int = Display.DEFAULT_DISPLAY,
     ) {
         try {
             val intent =
@@ -805,10 +811,14 @@ object InstalledAppsManager {
                     data = Uri.fromParts("package", packageName, null)
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
-            context.startActivity(intent)
-            AppLog.i(TAG, "Launched uninstall intent for package: $packageName")
+            val options =
+                ActivityOptions.makeBasic().apply {
+                    setLaunchDisplayId(displayId)
+                }
+            context.startActivity(intent, options.toBundle())
+            AppLog.i(TAG, "Launched uninstall intent for package: $packageName on display $displayId")
         } catch (e: Exception) {
-            AppLog.e(TAG, "Failed to launch uninstall intent for package $packageName: ${e.message}", e)
+            AppLog.e(TAG, "Failed to launch uninstall intent for package $packageName on display $displayId: ${e.message}", e)
         }
     }
 }
