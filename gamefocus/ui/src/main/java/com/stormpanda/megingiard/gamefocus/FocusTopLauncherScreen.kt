@@ -334,7 +334,8 @@ fun FocusTopLauncherScreen(
                 isLetterOverlayActive = false
             } else {
                 val baseIndex = if (activePagerState.isScrollInProgress) activePagerState.targetPage else activePagerState.currentPage
-                val prevIndex = if (baseIndex > 0) baseIndex - 1 else categoryApps.size - 1
+                val safeBase = baseIndex.coerceIn(0, categoryApps.size - 1)
+                val prevIndex = if (safeBase > 0) safeBase - 1 else categoryApps.size - 1
                 AppLog.d(
                     TAG,
                     "D-pad LEFT step for ${selectedCategory.id}: current=${activePagerState.currentPage}, targetPage=${activePagerState.targetPage} -> target=$prevIndex",
@@ -356,7 +357,8 @@ fun FocusTopLauncherScreen(
                 isLetterOverlayActive = false
             } else {
                 val baseIndex = if (activePagerState.isScrollInProgress) activePagerState.targetPage else activePagerState.currentPage
-                val nextIndex = if (baseIndex < categoryApps.size - 1) baseIndex + 1 else 0
+                val safeBase = baseIndex.coerceIn(0, categoryApps.size - 1)
+                val nextIndex = if (safeBase < categoryApps.size - 1) safeBase + 1 else 0
                 AppLog.d(
                     TAG,
                     "D-pad RIGHT step for ${selectedCategory.id}: current=${activePagerState.currentPage}, targetPage=${activePagerState.targetPage} -> target=$nextIndex",

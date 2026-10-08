@@ -1158,12 +1158,12 @@ class FocusTopLauncherActivity : ComponentActivity() {
             }
 
             isLeftKey(keyCode) -> {
-                if (apps.isNotEmpty()) startRepeat(LauncherScrollDirection.LEFT)
+                if (apps.size > 1) startRepeat(LauncherScrollDirection.LEFT)
                 return true
             }
 
             isRightKey(keyCode) -> {
-                if (apps.isNotEmpty()) startRepeat(LauncherScrollDirection.RIGHT)
+                if (apps.size > 1) startRepeat(LauncherScrollDirection.RIGHT)
                 return true
             }
 
@@ -1414,11 +1414,18 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 return true
             }
 
+            val allApps = InstalledAppsManager.installedApps.value
+            val favorites = InstalledAppsManager.favorites.value
+            val hidden = frozenHiddenSetForInput
+            val lastUsed = InstalledAppsManager.lastUsed.value
+            val selectedCategory = viewModel.selectedCategory.value
+            val apps = selectedCategory.filterApps(allApps, favorites, hidden, lastUsed)
+
             if (x < JOYSTICK_NEGATIVE_THRESHOLD) {
-                startRepeat(LauncherScrollDirection.LEFT)
+                if (apps.size > 1) startRepeat(LauncherScrollDirection.LEFT)
                 return true
             } else if (x > JOYSTICK_THRESHOLD) {
-                startRepeat(LauncherScrollDirection.RIGHT)
+                if (apps.size > 1) startRepeat(LauncherScrollDirection.RIGHT)
                 return true
             } else if (y < JOYSTICK_NEGATIVE_THRESHOLD) {
                 startRepeat(LauncherScrollDirection.UP)

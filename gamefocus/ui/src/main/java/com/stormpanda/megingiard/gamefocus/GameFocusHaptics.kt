@@ -58,15 +58,17 @@ object GameFocusHaptics {
     }
 
     private fun getVibrator(context: Context): Vibrator? {
-        if (cachedVibrator != null) return cachedVibrator
+        if (isInitialized) return cachedVibrator
         val vibratorManager = context.getSystemService(VibratorManager::class.java)
         val vibrator = vibratorManager?.defaultVibrator ?: context.getSystemService(Vibrator::class.java)
         if (vibrator != null && vibrator.hasVibrator()) {
             cachedVibrator = vibrator
             supportsClick = vibrator.areAllPrimitivesSupported(VibrationEffect.Composition.PRIMITIVE_CLICK)
-            isInitialized = true
             AppLog.i(TAG, "Initialized GameFocusHaptics (supportsClick=$supportsClick)")
+        } else {
+            AppLog.w(TAG, "No functional hardware vibrator found on device")
         }
+        isInitialized = true
         return cachedVibrator
     }
 
