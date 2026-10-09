@@ -371,17 +371,6 @@ internal fun GridMode.labelResId(): Int =
         GridMode.RADIAL -> R.string.macropad_editor_grid_radial_label
     }
 
-internal fun ButtonSize.labelResId(): Int =
-    when (this) {
-        ButtonSize.SIZE_1X1 -> R.string.macropad_button_size_1x1
-        ButtonSize.SIZE_2X1 -> R.string.macropad_button_size_2x1
-        ButtonSize.SIZE_1X2 -> R.string.macropad_button_size_1x2
-        ButtonSize.SIZE_2X2 -> R.string.macropad_button_size_2x2
-    }
-
-@Composable
-internal fun ButtonSize.displayLabel(): String = stringResource(labelResId())
-
 internal fun ButtonShape.labelResId(): Int =
     when (this) {
         ButtonShape.SQUARE -> R.string.macropad_editor_shape_square

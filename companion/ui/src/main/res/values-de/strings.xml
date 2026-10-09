@@ -1235,8 +1235,8 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_delete_layout_desc">Löscht \'%1$s\' aus diesem Profil</string>
     <string name="macropad_editor_delete_button_desc">Löscht \'%1$s\' aus diesem Layout</string>
     <string name="macropad_editor_edit_button_positions">Tastenpositionen bearbeiten</string>
-    <string name="macropad_editor_edit_button_positions_card_desc">Tasten per Touch oder D-Pad präzise bewegen</string>
-    <string name="macropad_editor_move_buttons_info">Bewege Tasten direkt durch Ziehen auf dem unteren Bildschirm oder wähle unten eine Taste, um sie mit dem Steuerkreuz zu verschieben (halte L2 oder R2 für feine 1-Pixel-Schritte).</string>
+    <string name="macropad_editor_edit_button_positions_card_desc">Tasten per Touch oder D-Pad präzise bewegen und skalieren</string>
+    <string name="macropad_editor_move_buttons_info">Verschiebe oder skaliere Tasten direkt auf dem unteren Bildschirm oder wähle unten eine Taste, um sie mit dem Steuerkreuz zu verschieben (halte R2 zum Skalieren, halte L2 für feine 1-Pixel-Schritte).</string>
     <string name="macropad_editor_manage_buttons">Tasten verwalten</string>
     <string name="macropad_editor_reorder_buttons">Tasten neu anordnen</string>
     <string name="macropad_editor_reorder_buttons_enabled_desc">Tastenreihenfolge anpassen</string>

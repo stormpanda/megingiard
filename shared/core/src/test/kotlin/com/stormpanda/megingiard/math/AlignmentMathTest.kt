@@ -331,4 +331,158 @@ class AlignmentMathTest {
         // Snaps to nearest 100px grid on Y (centered on 0.5f: 0.23 * 1000 = 230px -> snapped to 200px = 0.2f)
         assertEquals(0.2f, result.snappedNormY, 0.0001f)
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Stepless Button Resize Tests
+    // ─────────────────────────────────────────────────────────────────────────
+
+    @Test
+    fun `calculateButtonEdgeResize RIGHT expands width rightward keeping left edge fixed`() {
+        // Center: 500px, Width: 60dp * 2f = 120px -> Left: 440px, Right: 560px
+        val result =
+            calculateButtonEdgeResize(
+                handle = ButtonResizeHandle.RIGHT,
+                dragDeltaPx = 40f,
+                originalNormX = 0.5f,
+                originalNormY = 0.5f,
+                originalWidthDp = 60f,
+                originalHeightDp = 60f,
+                canvasW = 1000f,
+                canvasH = 1000f,
+                density = 2f,
+            )
+
+        // New right: 560 + 40 = 600px. Width: 160px = 80dp. Center: 440 + 80 = 520px = 0.52f
+        assertEquals(80f, result.newWidthDp, 0.01f)
+        assertEquals(60f, result.newHeightDp, 0.01f)
+        assertEquals(0.52f, result.newNormX, 0.0001f)
+        assertEquals(0.5f, result.newNormY, 0.0001f)
+    }
+
+    @Test
+    fun `calculateButtonEdgeResize LEFT expands width leftward keeping right edge fixed`() {
+        val result =
+            calculateButtonEdgeResize(
+                handle = ButtonResizeHandle.LEFT,
+                dragDeltaPx = -40f,
+                originalNormX = 0.5f,
+                originalNormY = 0.5f,
+                originalWidthDp = 60f,
+                originalHeightDp = 60f,
+                canvasW = 1000f,
+                canvasH = 1000f,
+                density = 2f,
+            )
+
+        // New left: 440 - 40 = 400px. Width: 560 - 400 = 160px = 80dp. Center: 560 - 80 = 480px = 0.48f
+        assertEquals(80f, result.newWidthDp, 0.01f)
+        assertEquals(60f, result.newHeightDp, 0.01f)
+        assertEquals(0.48f, result.newNormX, 0.0001f)
+        assertEquals(0.5f, result.newNormY, 0.0001f)
+    }
+
+    @Test
+    fun `calculateButtonEdgeResize BOTTOM expands height downward keeping top edge fixed`() {
+        val result =
+            calculateButtonEdgeResize(
+                handle = ButtonResizeHandle.BOTTOM,
+                dragDeltaPx = 40f,
+                originalNormX = 0.5f,
+                originalNormY = 0.5f,
+                originalWidthDp = 60f,
+                originalHeightDp = 60f,
+                canvasW = 1000f,
+                canvasH = 1000f,
+                density = 2f,
+            )
+
+        assertEquals(60f, result.newWidthDp, 0.01f)
+        assertEquals(80f, result.newHeightDp, 0.01f)
+        assertEquals(0.5f, result.newNormX, 0.0001f)
+        assertEquals(0.52f, result.newNormY, 0.0001f)
+    }
+
+    @Test
+    fun `calculateButtonEdgeResize TOP expands height upward keeping bottom edge fixed`() {
+        val result =
+            calculateButtonEdgeResize(
+                handle = ButtonResizeHandle.TOP,
+                dragDeltaPx = -40f,
+                originalNormX = 0.5f,
+                originalNormY = 0.5f,
+                originalWidthDp = 60f,
+                originalHeightDp = 60f,
+                canvasW = 1000f,
+                canvasH = 1000f,
+                density = 2f,
+            )
+
+        assertEquals(60f, result.newWidthDp, 0.01f)
+        assertEquals(80f, result.newHeightDp, 0.01f)
+        assertEquals(0.5f, result.newNormX, 0.0001f)
+        assertEquals(0.48f, result.newNormY, 0.0001f)
+    }
+
+    @Test
+    fun `calculateButtonEdgeResize clamps shrinking to minimum 30 dp`() {
+        val result =
+            calculateButtonEdgeResize(
+                handle = ButtonResizeHandle.RIGHT,
+                dragDeltaPx = -200f,
+                originalNormX = 0.5f,
+                originalNormY = 0.5f,
+                originalWidthDp = 60f,
+                originalHeightDp = 60f,
+                canvasW = 1000f,
+                canvasH = 1000f,
+                density = 2f,
+            )
+
+        assertEquals(30f, result.newWidthDp, 0.01f)
+    }
+
+    @Test
+    fun `calculateGamepadButtonResize updates dimensions correctly and clamps to limits`() {
+        // Expand width with dx = 10 (density = 1f)
+        val (w1, h1) =
+            calculateGamepadButtonResize(
+                currentWidthDp = 60f,
+                currentHeightDp = 60f,
+                dx = 10,
+                dy = 0,
+                density = 1f,
+                maxScreenWDp = 500f,
+                maxScreenHDp = 500f,
+            )
+        assertEquals(70f, w1, 0.01f)
+        assertEquals(60f, h1, 0.01f)
+
+        // Expand height with D-pad UP (dy = -10)
+        val (w2, h2) =
+            calculateGamepadButtonResize(
+                currentWidthDp = 60f,
+                currentHeightDp = 60f,
+                dx = 0,
+                dy = -10,
+                density = 1f,
+                maxScreenWDp = 500f,
+                maxScreenHDp = 500f,
+            )
+        assertEquals(60f, w2, 0.01f)
+        assertEquals(70f, h2, 0.01f)
+
+        // Shrink beyond minimum: clamped to 30dp
+        val (w3, h3) =
+            calculateGamepadButtonResize(
+                currentWidthDp = 60f,
+                currentHeightDp = 60f,
+                dx = -100,
+                dy = 100,
+                density = 1f,
+                maxScreenWDp = 500f,
+                maxScreenHDp = 500f,
+            )
+        assertEquals(30f, w3, 0.01f)
+        assertEquals(30f, h3, 0.01f)
+    }
 }

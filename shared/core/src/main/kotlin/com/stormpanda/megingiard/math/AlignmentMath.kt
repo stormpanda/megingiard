@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.math
 
 import com.stormpanda.megingiard.macropad.GridMode
+import com.stormpanda.megingiard.macropad.MP_BUTTON_MIN_SIZE_DP
 import com.stormpanda.megingiard.macropad.PadButton
 import com.stormpanda.megingiard.mirror.ScreenCutout
 import kotlin.math.PI
@@ -599,4 +600,132 @@ fun radialPointCount(
     val raw = round(circumference / buttonUnitPx).toInt().coerceAtLeast(1)
     val rounded4 = ((raw + 2) / 4) * 4
     return maxOf(PC_RADIAL_MIN_POINTS, rounded4)
+}
+
+/**
+ * Handle positions for stepless button edge resizing.
+ */
+enum class ButtonResizeHandle {
+    TOP,
+    BOTTOM,
+    LEFT,
+    RIGHT,
+}
+
+data class ButtonResizeResult(
+    val newNormX: Float,
+    val newNormY: Float,
+    val newWidthDp: Float,
+    val newHeightDp: Float,
+)
+
+/**
+ * Calculates updated button bounds when dragging an edge resize handle.
+ * Anchors the opposite edge (e.g. dragging the right edge keeps the left edge fixed).
+ * Clamps width and height between [minSizeDp] (default 30 dp) and screen/canvas bounds.
+ */
+fun calculateButtonEdgeResize(
+    handle: ButtonResizeHandle,
+    originalNormX: Float,
+    originalNormY: Float,
+    originalWidthDp: Float,
+    originalHeightDp: Float,
+    dragDeltaPx: Float,
+    canvasW: Float,
+    canvasH: Float,
+    density: Float,
+    minSizeDp: Float = MP_BUTTON_MIN_SIZE_DP,
+): ButtonResizeResult {
+    val safeDensity = density.coerceAtLeast(0.001f)
+    val safeCanvasW = canvasW.coerceAtLeast(1f)
+    val safeCanvasH = canvasH.coerceAtLeast(1f)
+    val minPx = minSizeDp * safeDensity
+
+    return when (handle) {
+        ButtonResizeHandle.RIGHT -> {
+            val leftPx = (originalNormX * safeCanvasW) - (originalWidthDp * safeDensity) / 2f
+            val originalRightPx = leftPx + (originalWidthDp * safeDensity)
+            val candRightPx = originalRightPx + dragDeltaPx
+            val maxAllowedWidthPx = safeCanvasW
+            val newWidthPx = (candRightPx - leftPx).coerceIn(minPx, maxAllowedWidthPx)
+            val newCenterXPx = leftPx + newWidthPx / 2f
+            ButtonResizeResult(
+                newNormX = (newCenterXPx / safeCanvasW).coerceIn(0f, 1f),
+                newNormY = originalNormY,
+                newWidthDp = newWidthPx / safeDensity,
+                newHeightDp = originalHeightDp,
+            )
+        }
+
+        ButtonResizeHandle.LEFT -> {
+            val rightPx = (originalNormX * safeCanvasW) + (originalWidthDp * safeDensity) / 2f
+            val originalLeftPx = rightPx - (originalWidthDp * safeDensity)
+            val candLeftPx = originalLeftPx + dragDeltaPx
+            val maxAllowedWidthPx = safeCanvasW
+            val newWidthPx = (rightPx - candLeftPx).coerceIn(minPx, maxAllowedWidthPx)
+            val newCenterXPx = rightPx - newWidthPx / 2f
+            ButtonResizeResult(
+                newNormX = (newCenterXPx / safeCanvasW).coerceIn(0f, 1f),
+                newNormY = originalNormY,
+                newWidthDp = newWidthPx / safeDensity,
+                newHeightDp = originalHeightDp,
+            )
+        }
+
+        ButtonResizeHandle.BOTTOM -> {
+            val topPx = (originalNormY * safeCanvasH) - (originalHeightDp * safeDensity) / 2f
+            val originalBottomPx = topPx + (originalHeightDp * safeDensity)
+            val candBottomPx = originalBottomPx + dragDeltaPx
+            val maxAllowedHeightPx = safeCanvasH
+            val newHeightPx = (candBottomPx - topPx).coerceIn(minPx, maxAllowedHeightPx)
+            val newCenterYPx = topPx + newHeightPx / 2f
+            ButtonResizeResult(
+                newNormX = originalNormX,
+                newNormY = (newCenterYPx / safeCanvasH).coerceIn(0f, 1f),
+                newWidthDp = originalWidthDp,
+                newHeightDp = newHeightPx / safeDensity,
+            )
+        }
+
+        ButtonResizeHandle.TOP -> {
+            val bottomPx = (originalNormY * safeCanvasH) + (originalHeightDp * safeDensity) / 2f
+            val originalTopPx = bottomPx - (originalHeightDp * safeDensity)
+            val candTopPx = originalTopPx + dragDeltaPx
+            val maxAllowedHeightPx = safeCanvasH
+            val newHeightPx = (bottomPx - candTopPx).coerceIn(minPx, maxAllowedHeightPx)
+            val newCenterYPx = bottomPx - newHeightPx / 2f
+            ButtonResizeResult(
+                newNormX = originalNormX,
+                newNormY = (newCenterYPx / safeCanvasH).coerceIn(0f, 1f),
+                newWidthDp = originalWidthDp,
+                newHeightDp = newHeightPx / safeDensity,
+            )
+        }
+    }
+}
+
+/**
+ * Calculates button dimension updates when resizing via gamepad (R2 + D-pad).
+ * Resizes symmetrically around the button's center.
+ * [dx] > 0 expands width, [dx] < 0 shrinks width.
+ * [dy] < 0 (D-pad UP) expands height, [dy] > 0 (D-pad DOWN) shrinks height.
+ */
+fun calculateGamepadButtonResize(
+    currentWidthDp: Float,
+    currentHeightDp: Float,
+    dx: Int,
+    dy: Int,
+    density: Float,
+    maxScreenWDp: Float,
+    maxScreenHDp: Float,
+    minSizeDp: Float = MP_BUTTON_MIN_SIZE_DP,
+): Pair<Float, Float> {
+    val safeDensity = density.coerceAtLeast(0.001f)
+    val widthDeltaDp = dx.toFloat() / safeDensity
+    val heightDeltaDp = -dy.toFloat() / safeDensity
+
+    val newWidthDp = (currentWidthDp + widthDeltaDp).coerceIn(minSizeDp, maxScreenWDp.coerceAtLeast(minSizeDp))
+    val newHeightDp = (currentHeightDp + heightDeltaDp).coerceIn(minSizeDp, maxScreenHDp.coerceAtLeast(minSizeDp))
+
+    return newWidthDp to newHeightDp
 }

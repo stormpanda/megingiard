@@ -82,10 +82,8 @@ class MacroPadHitTestEngine(
         canvasW: Float,
         canvasH: Float,
     ): Boolean {
-        val isTrackpoint = btn.action is PadAction.TrackpointMove
-        val mult = if (isTrackpoint) (btn.action as PadAction.TrackpointMove).size.multiplier else null
-        val chipWidthPx = buttonUnitDpToPx(MP_BUTTON_UNIT_DP_VALUE * (mult ?: btn.buttonSize.cols.toFloat()))
-        val chipHeightPx = buttonUnitDpToPx(MP_BUTTON_UNIT_DP_VALUE * (mult ?: btn.buttonSize.rows.toFloat()))
+        val chipWidthPx = buttonUnitDpToPx(btn.widthDp)
+        val chipHeightPx = buttonUnitDpToPx(btn.heightDp)
         val bx = btn.posX * canvasW
         val by = btn.posY * canvasH
         return px >= bx - chipWidthPx / 2f && px <= bx + chipWidthPx / 2f &&

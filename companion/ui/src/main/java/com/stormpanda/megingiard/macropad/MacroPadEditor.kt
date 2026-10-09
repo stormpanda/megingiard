@@ -88,6 +88,7 @@ import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.math.MPE_FINE_STEP_PX
 import com.stormpanda.megingiard.math.MPE_NORMAL_STEP_PX
 import com.stormpanda.megingiard.math.calculateGamepadButtonMove
+import com.stormpanda.megingiard.math.calculateGamepadButtonResize
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbScrapeSubPageContent
 import com.stormpanda.megingiard.ui.AppDivider
@@ -126,6 +127,7 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 import java.util.Collections
 import java.util.UUID
 import kotlin.math.max
+import kotlin.math.roundToInt
 
 private const val TAG = "MacroPadEditor"
 private val MPE_DECK_SPACING = 10.dp
@@ -167,7 +169,8 @@ private fun applyActionToDraftButton(
 ): PadButton =
     draftButton.copy(
         action = newAction,
-        buttonSize = if (newAction is PadAction.ScrollWheel) ButtonSize.SIZE_1X2 else draftButton.buttonSize,
+        widthDp = if (newAction is PadAction.ScrollWheel && draftButton.widthDp == MP_BUTTON_BASE_UNIT_DP) 60f else draftButton.widthDp,
+        heightDp = if (newAction is PadAction.ScrollWheel && draftButton.heightDp < 120f) 120f else draftButton.heightDp,
         buttonShape = if (newAction is PadAction.TrackpointMove) ButtonShape.CIRCLE else draftButton.buttonShape,
     )
 
@@ -2605,19 +2608,9 @@ private fun describePadButton(
     includeHaptic: Boolean = true,
 ): String {
     val hapticLabel = if (includeHaptic) stringResource(btn.hapticStrength.labelResId()) else null
-    return if (btn.action is PadAction.TrackpointMove) {
-        val sizeLabel = stringResource((btn.action as PadAction.TrackpointMove).size.labelResId())
-        listOfNotNull(sizeLabel, hapticLabel).joinToString(" • ")
-    } else {
-        val actionLabel = btn.action.displayLabel()
-        val sizeLabel =
-            if (btn.action !is PadAction.ScrollWheel) {
-                "${btn.buttonSize.cols}×${btn.buttonSize.rows}"
-            } else {
-                null
-            }
-        listOfNotNull(actionLabel, sizeLabel, hapticLabel).joinToString(" • ")
-    }
+    val actionLabel = btn.action.displayLabel()
+    val sizeLabel = "${btn.widthDp.roundToInt()}×${btn.heightDp.roundToInt()}"
+    return listOfNotNull(actionLabel, sizeLabel, hapticLabel).joinToString(" • ")
 }
 
 @Composable
@@ -2821,8 +2814,10 @@ private fun EditButtonPositionsSubPageContent(
     val buttonAlignmentSnapping by MacroPadSettings.buttonAlignmentSnapping.collectAsStateWithLifecycle()
     val cardRequesters = remember { mutableMapOf<String, FocusRequester>() }
     var movingButtonId by remember { mutableStateOf<String?>(null) }
-    var isTriggerHeld by remember { mutableStateOf(false) }
-    val isTriggerHeldState = rememberUpdatedState(isTriggerHeld)
+    var isL2Held by remember { mutableStateOf(false) }
+    var isR2Held by remember { mutableStateOf(false) }
+    val isL2HeldState = rememberUpdatedState(isL2Held)
+    val isR2HeldState = rememberUpdatedState(isR2Held)
     var activeRepeatJob by remember { mutableStateOf<Job?>(null) }
     var activeDirectionKey by remember { mutableIntStateOf(0) }
 
@@ -2830,7 +2825,8 @@ private fun EditButtonPositionsSubPageContent(
         activeRepeatJob?.cancel()
         activeRepeatJob = null
         activeDirectionKey = 0
-        isTriggerHeld = false
+        isL2Held = false
+        isR2Held = false
     }
 
     // Intercept system back gesture/button when precision moving
@@ -2872,7 +2868,7 @@ private fun EditButtonPositionsSubPageContent(
     ) {
         val currentLayout = MacroPadState.activeLayout.value ?: return
         val targetBtn = currentLayout.buttons.firstOrNull { it.id == btnId } ?: return
-        val stepMultiplier = if (isTriggerHeldState.value) MPE_FINE_STEP_PX else MPE_NORMAL_STEP_PX
+        val stepMultiplier = if (isL2HeldState.value) MPE_FINE_STEP_PX else MPE_NORMAL_STEP_PX
         val (newX, newY) =
             calculateGamepadButtonMove(
                 currentNormX = targetBtn.posX,
@@ -2895,6 +2891,47 @@ private fun EditButtonPositionsSubPageContent(
         }
     }
 
+    fun resizeButton(
+        btnId: String,
+        dx: Int,
+        dy: Int,
+    ) {
+        val currentLayout = MacroPadState.activeLayout.value ?: return
+        val targetBtn = currentLayout.buttons.firstOrNull { it.id == btnId } ?: return
+        val stepMultiplier = if (isL2HeldState.value) MPE_FINE_STEP_PX else MPE_NORMAL_STEP_PX
+        val deltaX = (dx * stepMultiplier).roundToInt()
+        val deltaY = (dy * stepMultiplier).roundToInt()
+        val (newW, newH) =
+            calculateGamepadButtonResize(
+                currentWidthDp = targetBtn.widthDp,
+                currentHeightDp = targetBtn.heightDp,
+                dx = deltaX,
+                dy = deltaY,
+                density = 1f,
+                maxScreenWDp = MPE_CANVAS_WIDTH_PX,
+                maxScreenHDp = MPE_CANVAS_HEIGHT_PX,
+            )
+        if (newW != targetBtn.widthDp || newH != targetBtn.heightDp) {
+            val updated =
+                currentLayout.buttons.map {
+                    if (it.id == btnId) it.copy(widthDp = newW, heightDp = newH) else it
+                }
+            MacroPadState.updateLayout(currentLayout.copy(buttons = updated))
+        }
+    }
+
+    fun dispatchAdjust(
+        btnId: String,
+        dx: Int,
+        dy: Int,
+    ) {
+        if (isR2HeldState.value) {
+            resizeButton(btnId, dx, dy)
+        } else {
+            moveButton(btnId, dx, dy)
+        }
+    }
+
     fun startMoving(
         btnId: String,
         keyCode: Int,
@@ -2904,13 +2941,13 @@ private fun EditButtonPositionsSubPageContent(
         if (activeDirectionKey == keyCode && activeRepeatJob?.isActive == true) return
         activeRepeatJob?.cancel()
         activeDirectionKey = keyCode
-        moveButton(btnId, dx, dy)
+        dispatchAdjust(btnId, dx, dy)
         activeRepeatJob =
             coroutineScope.launchDirectionalRepeat(
                 keyCode = keyCode,
                 isActiveCheck = { activeDirectionKey == keyCode },
             ) {
-                moveButton(btnId, dx, dy)
+                dispatchAdjust(btnId, dx, dy)
             }
     }
 
@@ -2996,8 +3033,13 @@ private fun EditButtonPositionsSubPageContent(
                         },
                         onModifierKeyDown = { keyCode ->
                             when (keyCode) {
-                                KeyEvent.KEYCODE_BUTTON_L2, KeyEvent.KEYCODE_BUTTON_R2 -> {
-                                    isTriggerHeld = true
+                                KeyEvent.KEYCODE_BUTTON_L2 -> {
+                                    isL2Held = true
+                                    true
+                                }
+
+                                KeyEvent.KEYCODE_BUTTON_R2 -> {
+                                    isR2Held = true
                                     true
                                 }
 
@@ -3008,8 +3050,13 @@ private fun EditButtonPositionsSubPageContent(
                         },
                         onModifierKeyUp = { keyCode ->
                             when (keyCode) {
-                                KeyEvent.KEYCODE_BUTTON_L2, KeyEvent.KEYCODE_BUTTON_R2 -> {
-                                    isTriggerHeld = false
+                                KeyEvent.KEYCODE_BUTTON_L2 -> {
+                                    isL2Held = false
+                                    true
+                                }
+
+                                KeyEvent.KEYCODE_BUTTON_R2 -> {
+                                    isR2Held = false
                                     true
                                 }
 

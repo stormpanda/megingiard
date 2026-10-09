@@ -33,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -165,7 +166,32 @@ internal fun EditButtonSubPageContent(
     var label by remember(button) { mutableStateOf(initLabel) }
     var iconName by remember(button, selectedIcon) { mutableStateOf(selectedIcon ?: initIconName) }
     var buttonShape by remember(button) { mutableStateOf(button?.buttonShape ?: ButtonShape.CIRCLE) }
-    var buttonSize by remember(button) { mutableStateOf(button?.buttonSize ?: ButtonSize.SIZE_1X1) }
+    var widthDp by remember(button) {
+        mutableFloatStateOf(
+            button?.widthDp ?: (
+                if (initAction is PadAction.ScrollWheel) {
+                    60f
+                } else if (initAction is PadAction.TrackpointMove) {
+                    120f
+                } else {
+                    MP_BUTTON_BASE_UNIT_DP
+                }
+            ),
+        )
+    }
+    var heightDp by remember(button) {
+        mutableFloatStateOf(
+            button?.heightDp ?: (
+                if (initAction is PadAction.ScrollWheel) {
+                    120f
+                } else if (initAction is PadAction.TrackpointMove) {
+                    120f
+                } else {
+                    MP_BUTTON_BASE_UNIT_DP
+                }
+            ),
+        )
+    }
     var action by remember(button) { mutableStateOf(initAction) }
     var iconFilled by remember(button) { mutableStateOf(button?.iconFilled ?: true) }
     var hapticStrength by remember(button) { mutableStateOf(button?.hapticStrength ?: HapticStrength.OFF) }
@@ -206,8 +232,8 @@ internal fun EditButtonSubPageContent(
     fun onActionChanged(newAction: PadAction) {
         AppLog.d(TAG, "onActionChanged: $newAction")
         action = newAction
-        if (newAction is PadAction.ScrollWheel) {
-            buttonSize = ButtonSize.SIZE_1X2
+        if (newAction is PadAction.ScrollWheel && heightDp < 120f) {
+            heightDp = 120f
             return
         }
         if (newAction is PadAction.TrackpointMove) {
@@ -225,7 +251,8 @@ internal fun EditButtonSubPageContent(
             iconName,
             iconFilled,
             buttonShape,
-            buttonSize,
+            widthDp,
+            heightDp,
             action,
             hapticStrength,
             hapticCustomDurationMs,
@@ -242,8 +269,9 @@ internal fun EditButtonSubPageContent(
                 iconFilled = iconFilled,
                 posX = button?.posX ?: 0.5f,
                 posY = button?.posY ?: 0.5f,
+                widthDp = widthDp,
+                heightDp = heightDp,
                 buttonShape = buttonShape,
-                buttonSize = buttonSize,
                 action = action,
                 hapticStrength = hapticStrength,
                 hapticCustomDurationMs = hapticCustomDurationMs,
@@ -374,15 +402,6 @@ internal fun EditButtonSubPageContent(
             icon = Icons.Rounded.CropFree,
             onPrevious = { buttonShape = ButtonShape.entries.cycle(buttonShape, BumperDirection.PREV) },
             onNext = { buttonShape = ButtonShape.entries.cycle(buttonShape, BumperDirection.NEXT) },
-        )
-
-        GamepadChoiceCard(
-            title = stringResource(R.string.macropad_editor_button_size),
-            description = stringResource(R.string.macropad_btn_size_desc),
-            selectedText = buttonSize.displayLabel(),
-            icon = Icons.Rounded.CropFree,
-            onPrevious = { buttonSize = ButtonSize.entries.cycle(buttonSize, BumperDirection.PREV) },
-            onNext = { buttonSize = ButtonSize.entries.cycle(buttonSize, BumperDirection.NEXT) },
         )
 
         GamepadSectionHeader(

@@ -79,6 +79,7 @@ internal val MP_BTN_SQUARE_RADIUS = 4.dp
 internal val MP_BTN_SQUARE_SHAPE = RoundedCornerShape(MP_BTN_SQUARE_RADIUS)
 internal val MP_PILL_SHAPE = RoundedCornerShape(percent = 50)
 internal val MP_BTN_ICON_UNIT = 44.dp // icon size per grid unit (≈ 73 % of MP_BUTTON_UNIT_DP)
+internal const val MP_BTN_ICON_RATIO = 44f / 60f
 
 private const val MP_PRESS_ANIM_MS = 80
 private const val MP_RELEASE_ANIM_MS = 160
@@ -183,7 +184,6 @@ internal fun PadButton(
         }
 
     val isTrackpoint = btn.action is PadAction.TrackpointMove
-    val tpMultiplier = if (isTrackpoint) (btn.action as PadAction.TrackpointMove).size.multiplier else 1f
 
     val chipShape =
         if (isTrackpoint) {
@@ -195,32 +195,18 @@ internal fun PadButton(
                 }
 
                 ButtonShape.CIRCLE -> {
-                    when (btn.buttonSize) {
-                        ButtonSize.SIZE_2X2, ButtonSize.SIZE_1X1 -> CircleShape
-                        ButtonSize.SIZE_2X1, ButtonSize.SIZE_1X2 -> MP_PILL_SHAPE
-                    }
+                    if (btn.widthDp == btn.heightDp) CircleShape else MP_PILL_SHAPE
                 }
             }
         }
 
     val isIconOnly = btn.buttonShape == ButtonShape.ICON_ONLY
 
-    val chipWidthPx =
-        with(density) {
-            if (isTrackpoint) {
-                (MP_BUTTON_UNIT_DP * tpMultiplier).toPx()
-            } else {
-                (MP_BUTTON_UNIT_DP * btn.buttonSize.cols).toPx()
-            }
-        }
-    val chipHeightPx =
-        with(density) {
-            if (isTrackpoint) {
-                (MP_BUTTON_UNIT_DP * tpMultiplier).toPx()
-            } else {
-                (MP_BUTTON_UNIT_DP * btn.buttonSize.rows).toPx()
-            }
-        }
+    val btnWidthDp = btn.widthDp.dp
+    val btnHeightDp = btn.heightDp.dp
+
+    val chipWidthPx = with(density) { btnWidthDp.toPx() }
+    val chipHeightPx = with(density) { btnHeightDp.toPx() }
     val w = canvasSize.width.toFloat().coerceAtLeast(1f)
     val h = canvasSize.height.toFloat().coerceAtLeast(1f)
     val left = btn.posX * w - chipWidthPx / 2f
@@ -230,9 +216,6 @@ internal fun PadButton(
         remember(density) {
             Stroke(width = with(density) { 2.dp.toPx() })
         }
-
-    val btnWidthDp = if (isTrackpoint) MP_BUTTON_UNIT_DP * tpMultiplier else MP_BUTTON_UNIT_DP * btn.buttonSize.cols
-    val btnHeightDp = if (isTrackpoint) MP_BUTTON_UNIT_DP * tpMultiplier else MP_BUTTON_UNIT_DP * btn.buttonSize.rows
 
     Box(
         contentAlignment = Alignment.Center,
@@ -276,7 +259,7 @@ internal fun PadButton(
                 PadButtonContent(
                     btn = btn,
                     effectiveTextTint = effectiveTextTint,
-                    iconSize = MP_BTN_ICON_UNIT * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
+                    iconSize = minOf(btnWidthDp, btnHeightDp) * MP_BTN_ICON_RATIO,
                     isTrackpoint = isTrackpoint,
                     effectiveContentAccent = effectiveContentAccent,
                 )
@@ -320,10 +303,11 @@ internal fun PadButtonContent(
                 filled = btn.iconFilled,
             )
         } else {
+            val fontSp = (11f * (btn.widthDp / MP_BUTTON_BASE_UNIT_DP)).coerceIn(8f, 32f).sp
             Text(
                 text = btn.label,
                 color = effectiveTextTint,
-                fontSize = (11 * btn.buttonSize.cols).sp,
+                fontSize = fontSp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -363,7 +347,7 @@ internal fun AppLauncherFace(
         }
     }
 
-    val targetSize = iconSize ?: (MP_BTN_ICON_UNIT * minOf(btn.buttonSize.cols, btn.buttonSize.rows))
+    val targetSize = iconSize ?: (minOf(btn.widthDp, btn.heightDp).dp * MP_BTN_ICON_RATIO)
     val bitmap = appIconBitmap
     if (bitmap != null) {
         val colorFilter =

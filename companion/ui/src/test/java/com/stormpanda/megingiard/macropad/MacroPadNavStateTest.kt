@@ -297,15 +297,20 @@ class MacroPadNavStateTest {
         val updatedDraft =
             initialDraft.copy(
                 action = PadAction.ScrollWheel,
-                buttonSize = ButtonSize.SIZE_1X2,
+                widthDp = 60f,
+                heightDp = 120f,
             )
         MacroPadNavState.setStack(listOf(MacroPadSubPage.EditButton(button = null, draftButton = updatedDraft)))
 
         assertNav(EditorSection.BUTTONS, listOf(MacroPadSubPage.EditButton(button = null, draftButton = updatedDraft)))
         assertEquals(PadAction.ScrollWheel, (MacroPadNavState.subPageStack.value.first() as MacroPadSubPage.EditButton).draftButton?.action)
         assertEquals(
-            ButtonSize.SIZE_1X2,
-            (MacroPadNavState.subPageStack.value.first() as MacroPadSubPage.EditButton).draftButton?.buttonSize,
+            60f,
+            (MacroPadNavState.subPageStack.value.first() as MacroPadSubPage.EditButton).draftButton?.widthDp,
+        )
+        assertEquals(
+            120f,
+            (MacroPadNavState.subPageStack.value.first() as MacroPadSubPage.EditButton).draftButton?.heightDp,
         )
     }
 
