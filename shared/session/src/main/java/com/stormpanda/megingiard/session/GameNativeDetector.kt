@@ -84,12 +84,18 @@ object GameNativeDetector : EmulatorDetector {
 
     override val systemId: String = "pc"
 
-    override suspend fun detectActiveSession(packageName: String): ActiveGameSession? {
+    override suspend fun detectActiveSession(packageName: String): ActiveGameSession? = detectActiveSession(packageName, null, null)
+
+    override suspend fun detectActiveSession(
+        packageName: String,
+        focusedRomPath: String?,
+        focusedRomIdentifier: String?,
+    ): ActiveGameSession? {
         if (packageName !in supportedPackages) return null
 
         val procList = ProcessCmdlineProvider.getRunningProcesses()
         if (!procList.isNullOrBlank()) {
-            val session = parseSessionFromProcesses(packageName, procList)
+            val session = parseSessionFromProcesses(packageName, procList, focusedRomPath, focusedRomIdentifier)
             if (session != null) {
                 AppLog.i(TAG, "Resolved session via process list: ${session.gameTitle} (${session.systemId})")
                 return session
@@ -103,6 +109,8 @@ object GameNativeDetector : EmulatorDetector {
     internal fun parseSessionFromProcesses(
         packageName: String,
         procList: String,
+        focusedRomPath: String? = null,
+        focusedRomIdentifier: String? = null,
     ): ActiveGameSession? {
         val lines = procList.split('\n')
 
@@ -173,18 +181,53 @@ object GameNativeDetector : EmulatorDetector {
                                     file?.nameWithoutExtension?.contains(folderName, ignoreCase = true) == true ||
                                     app.label.equals(rawExeBaseName, ignoreCase = true) ||
                                     app.label.equals(cleanedExeBaseName, ignoreCase = true)
+                            } ?: run {
+                                // If direct name matching fails (e.g. dev folder typo), check if a focused ROM was launched
+                                if (focusedRomPath != null || focusedRomIdentifier != null) {
+                                    romApps.firstOrNull { app ->
+                                        app.romPath?.equals(focusedRomPath, ignoreCase = true) == true ||
+                                            (
+                                                focusedRomIdentifier != null &&
+                                                    (
+                                                        app.romPath?.endsWith("/$focusedRomIdentifier", ignoreCase = true) == true ||
+                                                            app.romPath.equals(focusedRomIdentifier, ignoreCase = true) ||
+                                                            app.label.equals(
+                                                                focusedRomIdentifier.substringBeforeLast('.'),
+                                                                ignoreCase = true,
+                                                            )
+                                                    )
+                                            )
+                                    }
+                                } else {
+                                    null
+                                }
                             }
 
                         val session =
                             if (matchedApp != null) {
                                 val matchPath = matchedApp.romPath?.takeIf { it.startsWith("/") }
-                                val matchIdentifier = matchedApp.romPath?.let { File(it).name } ?: "$folderName$STEAM_SUFFIX"
+                                val matchIdentifier =
+                                    matchedApp.romPath?.let { File(it).name } ?: (focusedRomIdentifier ?: "$folderName$STEAM_SUFFIX")
                                 ActiveGameSession(
                                     packageName = packageName,
                                     systemId = "pc",
                                     romPath = matchPath,
                                     romIdentifier = matchIdentifier,
                                     gameTitle = matchedApp.label,
+                                )
+                            } else if (focusedRomPath != null || focusedRomIdentifier != null) {
+                                val matchPath = focusedRomPath?.takeIf { it.startsWith("/") }
+                                val matchIdentifier =
+                                    focusedRomIdentifier ?: focusedRomPath?.let { File(it).name } ?: "$folderName$STEAM_SUFFIX"
+                                val matchTitle =
+                                    focusedRomIdentifier?.substringBeforeLast('.') ?: focusedRomPath?.let { File(it).nameWithoutExtension }
+                                        ?: folderName
+                                ActiveGameSession(
+                                    packageName = packageName,
+                                    systemId = "pc",
+                                    romPath = matchPath,
+                                    romIdentifier = matchIdentifier,
+                                    gameTitle = matchTitle,
                                 )
                             } else {
                                 ActiveGameSession(

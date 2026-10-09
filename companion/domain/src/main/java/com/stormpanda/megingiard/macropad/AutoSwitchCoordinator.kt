@@ -158,7 +158,11 @@ object AutoSwitchCoordinator {
         // 1. Process emulator package changes for ROM detection
         if (isRegisteredEmulator) {
             coordinatorScope.launch {
-                EmulatorDetectionFunnel.onPackageForeground(normalized)
+                EmulatorDetectionFunnel.onPackageForeground(
+                    normalized,
+                    AppStateManager.focusedRomPath.value,
+                    AppStateManager.focusedRomIdentifier.value,
+                )
             }
         } else if (!isLauncherOrSwitcher) {
             EmulatorDetectionFunnel.clearSession()

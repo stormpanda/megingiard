@@ -31,6 +31,20 @@ object EmulatorDetectionFunnel {
     private val _lastDetectedSession = MutableStateFlow<ActiveGameSession?>(null)
     val lastDetectedSession: StateFlow<ActiveGameSession?> = _lastDetectedSession.asStateFlow()
 
+    @Volatile
+    private var currentFocusedRomPath: String? = null
+
+    @Volatile
+    private var currentFocusedRomIdentifier: String? = null
+
+    fun setFocusedRomContext(
+        path: String?,
+        identifier: String? = null,
+    ) {
+        currentFocusedRomPath = path
+        currentFocusedRomIdentifier = identifier
+    }
+
     private val registeredDetectors: List<EmulatorDetector> =
         listOf(
             RetroArchDetector,
@@ -53,8 +67,16 @@ object EmulatorDetectionFunnel {
      * Called whenever a new application package enters the foreground.
      * Evaluates whether the package belongs to a registered emulator detector.
      */
-    suspend fun onPackageForeground(packageName: String): ActiveGameSession? =
+    suspend fun onPackageForeground(
+        packageName: String,
+        focusedRomPath: String? = null,
+        focusedRomIdentifier: String? = null,
+    ): ActiveGameSession? =
         funnelMutex.withLock {
+            if (focusedRomPath != null || focusedRomIdentifier != null) {
+                currentFocusedRomPath = focusedRomPath
+                currentFocusedRomIdentifier = focusedRomIdentifier
+            }
             val detector = packageMap[packageName]
             if (detector == null) {
                 pollingJob?.cancel()
@@ -65,7 +87,9 @@ object EmulatorDetectionFunnel {
             AppLog.i(TAG, "onPackageForeground: routing '$packageName' to ${detector::class.simpleName}")
             pollingJob?.cancel()
 
-            val initialSession = detector.detectActiveSession(packageName)
+            val effectiveRomPath = focusedRomPath ?: currentFocusedRomPath
+            val effectiveRomId = focusedRomIdentifier ?: currentFocusedRomIdentifier
+            val initialSession = detector.detectActiveSession(packageName, effectiveRomPath, effectiveRomId)
             val effectiveSession =
                 initialSession ?: run {
                     val last = _lastDetectedSession.value
@@ -87,7 +111,7 @@ object EmulatorDetectionFunnel {
                     var lastSession = effectiveSession
                     while (true) {
                         delay(POLLING_DELAY_MS)
-                        val currentSession = detector.detectActiveSession(packageName)
+                        val currentSession = detector.detectActiveSession(packageName, currentFocusedRomPath, currentFocusedRomIdentifier)
                         if (currentSession != null) {
                             if (currentSession != lastSession) {
                                 AppLog.i(
@@ -119,6 +143,8 @@ object EmulatorDetectionFunnel {
     fun clearSession() {
         pollingJob?.cancel()
         _activeSession.value = null
+        currentFocusedRomPath = null
+        currentFocusedRomIdentifier = null
     }
 
     fun setActiveSessionForTesting(session: ActiveGameSession?) {

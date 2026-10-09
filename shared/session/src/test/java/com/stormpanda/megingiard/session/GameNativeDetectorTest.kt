@@ -1,5 +1,7 @@
 package com.stormpanda.megingiard.session
 
+import com.stormpanda.megingiard.catalog.InstalledAppInfo
+import com.stormpanda.megingiard.catalog.RomManager
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -174,5 +176,60 @@ class GameNativeDetectorTest {
         assertNull(session?.romPath)
         assertEquals("Witcher 3.steam", session?.romIdentifier)
         assertEquals("Witcher 3", session?.gameTitle)
+    }
+
+    @Test
+    fun parseSessionFromProcesses_folderMismatch_correlatesWithFocusedRomContext() {
+        val app =
+            InstalledAppInfo(
+                packageName = "rom:steam:20 Minutes Till Dawn",
+                activityName = "",
+                label = "20 Minutes Till Dawn",
+                isRom = true,
+                romPath = "/storage/emulated/0/ROMs/steam/20 Minutes Till Dawn.steam",
+                systemId = "pc",
+            )
+        RomManager.setRomAppsForTesting(listOf(app))
+        try {
+            val procList =
+                """
+                PROC 29091 10142 app.gamenative
+                PROC 30101 10142 C:\Program Files (x86)\Steam\steamapps\common\20MinuteTillDawn\MinutesTillDawn.exe
+                """.trimIndent()
+
+            // When no focused ROM is provided and direct match fails, falls back to folderName
+            val standaloneSession = GameNativeDetector.parseSessionFromProcesses("app.gamenative", procList)
+            assertNotNull(standaloneSession)
+            assertEquals("20MinuteTillDawn.steam", standaloneSession?.romIdentifier)
+
+            // When focused ROM context is provided, correlates cleanly to the focused ROM in RomManager
+            val correlatedSession =
+                GameNativeDetector.parseSessionFromProcesses(
+                    packageName = "app.gamenative",
+                    procList = procList,
+                    focusedRomPath = "/storage/emulated/0/ROMs/steam/20 Minutes Till Dawn.steam",
+                    focusedRomIdentifier = "20 Minutes Till Dawn.steam",
+                )
+            assertNotNull(correlatedSession)
+            assertEquals("app.gamenative", correlatedSession?.packageName)
+            assertEquals("pc", correlatedSession?.systemId)
+            assertEquals("/storage/emulated/0/ROMs/steam/20 Minutes Till Dawn.steam", correlatedSession?.romPath)
+            assertEquals("20 Minutes Till Dawn.steam", correlatedSession?.romIdentifier)
+            assertEquals("20 Minutes Till Dawn", correlatedSession?.gameTitle)
+
+            // Case-insensitive identifier matching also correlates successfully
+            val caseInsensitiveSession =
+                GameNativeDetector.parseSessionFromProcesses(
+                    packageName = "app.gamenative",
+                    procList = procList,
+                    focusedRomPath = null,
+                    focusedRomIdentifier = "20 minutes till dawn.steam",
+                )
+            assertNotNull(caseInsensitiveSession)
+            assertEquals("/storage/emulated/0/ROMs/steam/20 Minutes Till Dawn.steam", caseInsensitiveSession?.romPath)
+            assertEquals("20 Minutes Till Dawn.steam", caseInsensitiveSession?.romIdentifier)
+        } finally {
+            RomManager.setRomAppsForTesting(emptyList())
+        }
     }
 }

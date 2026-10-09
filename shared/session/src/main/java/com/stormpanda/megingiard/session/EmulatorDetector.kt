@@ -19,5 +19,16 @@ interface EmulatorDetector {
      * Detects and returns the active game session for the given foreground package.
      * Returns `null` if no active game or playlist history could be resolved.
      */
-    suspend fun detectActiveSession(packageName: String): ActiveGameSession?
+    suspend fun detectActiveSession(packageName: String): ActiveGameSession? = detectActiveSession(packageName, null, null)
+
+    /**
+     * Detects and returns the active game session for the given foreground package, optionally
+     * using the focused ROM path and identifier from external launcher context to resolve
+     * container process mismatches.
+     */
+    suspend fun detectActiveSession(
+        packageName: String,
+        focusedRomPath: String?,
+        focusedRomIdentifier: String?,
+    ): ActiveGameSession? = detectActiveSession(packageName)
 }

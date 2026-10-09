@@ -199,6 +199,57 @@ class IntegrationHomeScreenTargetInfoTest {
     }
 
     @Test
+    fun resolveTargetAppInfo_activeSessionWithoutRomPath_fallsBackToFocusedRomPathAndId() {
+        val session =
+            ActiveGameSession(
+                packageName = "app.gamenative",
+                gameTitle = "20 Minutes Till Dawn",
+                romPath = null,
+                romIdentifier = "20MinuteTillDawn.steam",
+                systemId = "pc",
+            )
+        val target =
+            resolve(
+                activeSession = session,
+                focusedAppPackageName = "app.gamenative",
+                focusedRomPath = "/storage/emulated/0/ROMs/steam/20 Minutes Till Dawn.steam",
+                focusedRomIdentifier = "20 Minutes Till Dawn.steam",
+            )
+
+        assertEquals("app.gamenative", target.pkg)
+        assertEquals("20 Minutes Till Dawn", target.label)
+        assertEquals("/storage/emulated/0/ROMs/steam/20 Minutes Till Dawn.steam", target.romPath)
+        assertEquals("20MinuteTillDawn.steam", target.romIdentifier)
+        assertEquals("pc", target.systemId)
+    }
+
+    @Test
+    fun resolveTargetAppInfo_activeSessionWithoutRomIdAndNoFocusedRom_fallsBackToTitleId() {
+        val session =
+            ActiveGameSession(
+                packageName = "org.citra.emu",
+                gameTitle = "Pokemon X",
+                romPath = null,
+                romIdentifier = null,
+                systemId = "3ds",
+                titleId = "0004000000055D00",
+            )
+        val target =
+            resolve(
+                activeSession = session,
+                focusedAppPackageName = "org.citra.emu",
+                focusedRomPath = null,
+                focusedRomIdentifier = null,
+            )
+
+        assertEquals("org.citra.emu", target.pkg)
+        assertEquals("Pokemon X", target.label)
+        assertNull(target.romPath)
+        assertEquals("0004000000055D00", target.romIdentifier)
+        assertEquals("3ds", target.systemId)
+    }
+
+    @Test
     fun resolveAssociationTargetLabel_nullAssociationReturnsNull() {
         val label = resolveAssociationTargetLabel(null)
         assertNull(label)

@@ -1184,11 +1184,17 @@ internal fun resolveTargetAppInfo(
             systemId = hoveredSystemId,
         )
     } else if (active != null) {
+        val resolvedRomPath = active.romPath ?: if (focused == active.packageName) focusedRomPath else null
+        val resolvedRomId =
+            active.romIdentifier
+                ?: active.romPath?.let { File(it).name }
+                ?: (if (focused == active.packageName) focusedRomIdentifier ?: focusedRomPath?.substringAfterLast('/') else null)
+                ?: active.titleId
         TargetAppInfo(
             pkg = active.packageName,
             label = active.gameTitle,
-            romPath = active.romPath,
-            romIdentifier = active.romIdentifier ?: active.romPath?.let { File(it).name } ?: active.titleId,
+            romPath = resolvedRomPath,
+            romIdentifier = resolvedRomId,
             systemId = active.systemId,
         )
     } else if (focused != null) {

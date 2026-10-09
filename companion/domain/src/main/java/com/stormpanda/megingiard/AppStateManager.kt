@@ -12,6 +12,7 @@ import com.stormpanda.megingiard.navigation.toPrimaryModalConfig
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
+import com.stormpanda.megingiard.session.ActiveGameSession
 import com.stormpanda.megingiard.session.EmulatorDetectionFunnel
 import com.stormpanda.megingiard.settings.KeyboardSettings
 import com.stormpanda.megingiard.settings.MacroPadSettings
@@ -22,6 +23,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -47,6 +49,8 @@ fun CompanionViewMode.shouldShowIntegrationHome(
     focusedRomPath: String?,
     activeProfile: PadProfile?,
     foregroundApp: String? = AutoSwitchCoordinator.foregroundApp.value,
+    focusedRomIdentifier: String? = null,
+    activeSession: ActiveGameSession? = null,
 ): Boolean =
     when (this) {
         CompanionViewMode.MACROPAD -> {
@@ -60,10 +64,31 @@ fun CompanionViewMode.shouldShowIntegrationHome(
         CompanionViewMode.AUTO -> {
             val isForegroundLauncher = SystemRoleClassifier.isLauncherOrSystemUi(foregroundApp)
 
-            if (focusedAppPackageName == null || isForegroundLauncher) {
+            if ((focusedAppPackageName == null && activeSession == null) || isForegroundLauncher) {
                 true
             } else {
-                activeProfile?.matches(focusedAppPackageName, focusedRomPath, isActiveProfile = true) != true
+                val matchesPath = activeProfile?.matches(focusedAppPackageName, focusedRomPath, isActiveProfile = true) == true
+                val matchesIdentifier =
+                    focusedRomIdentifier != null &&
+                        activeProfile?.matches(focusedAppPackageName, focusedRomIdentifier, isActiveProfile = true) == true
+                val matchesActiveSession =
+                    activeSession != null && (
+                        activeProfile?.matches(
+                            activeSession.packageName,
+                            activeSession.romIdentifier,
+                            activeSession.systemId,
+                            isActiveProfile = true,
+                        ) ==
+                            true ||
+                            activeProfile?.matches(
+                                activeSession.packageName,
+                                activeSession.romPath,
+                                activeSession.systemId,
+                                isActiveProfile = true,
+                            ) ==
+                            true
+                    )
+                !(matchesPath || matchesIdentifier || matchesActiveSession)
             }
         }
     }
@@ -247,6 +272,7 @@ object AppStateManager {
             _focusedAppPackageName.value = focusedApp
             _focusedRomPath.value = focusedRomPath
             _focusedRomIdentifier.value = focusedRomIdentifier
+            EmulatorDetectionFunnel.setFocusedRomContext(focusedRomPath, focusedRomIdentifier)
         } else {
             val foreground = AutoSwitchCoordinator.foregroundApp.value
             val session = EmulatorDetectionFunnel.activeSession.value ?: EmulatorDetectionFunnel.lastDetectedSession.value
@@ -254,14 +280,17 @@ object AppStateManager {
                 _focusedAppPackageName.value = session.packageName
                 _focusedRomPath.value = session.romPath ?: session.romIdentifier
                 _focusedRomIdentifier.value = session.romIdentifier ?: session.romPath
+                EmulatorDetectionFunnel.setFocusedRomContext(_focusedRomPath.value, _focusedRomIdentifier.value)
             } else if (foreground != null && !SystemRoleClassifier.isLauncherOrSystemUi(foreground)) {
                 _focusedAppPackageName.value = foreground
                 _focusedRomPath.value = null
                 _focusedRomIdentifier.value = null
+                EmulatorDetectionFunnel.setFocusedRomContext(null, null)
             } else {
                 _focusedAppPackageName.value = null
                 _focusedRomPath.value = null
                 _focusedRomIdentifier.value = null
+                EmulatorDetectionFunnel.setFocusedRomContext(null, null)
             }
         }
 
@@ -299,6 +328,7 @@ object AppStateManager {
         _focusedAppPackageName.value = focusedApp
         _focusedRomPath.value = focusedRomPath
         _focusedRomIdentifier.value = focusedRomIdentifier
+        EmulatorDetectionFunnel.setFocusedRomContext(focusedRomPath, focusedRomIdentifier)
     }
 
     fun setActivityResumed(resumed: Boolean) {
@@ -428,15 +458,38 @@ object AppStateManager {
         )
     val autoSwitchOffToastEvent: SharedFlow<Unit> = _autoSwitchOffToastEvent.asSharedFlow()
 
-    val showIntegrationHome: StateFlow<Boolean> =
+    private data class FocusContext(
+        val packageName: String?,
+        val romPath: String?,
+        val romIdentifier: String?,
+        val activeSession: ActiveGameSession?,
+    )
+
+    private val focusContextFlow: Flow<FocusContext> =
         combine(
             _focusedAppPackageName,
             _focusedRomPath,
+            _focusedRomIdentifier,
+            EmulatorDetectionFunnel.activeSession,
+        ) { pkg, path, id, session ->
+            FocusContext(pkg, path, id, session)
+        }
+
+    val showIntegrationHome: StateFlow<Boolean> =
+        combine(
+            focusContextFlow,
             MacroPadState.activeProfile,
             _companionViewMode,
             AutoSwitchCoordinator.foregroundApp,
-        ) { focusedPackage, focusedRom, profile, viewMode, foreground ->
-            viewMode.shouldShowIntegrationHome(focusedPackage, focusedRom, profile, foreground)
+        ) { focus, profile, viewMode, foreground ->
+            viewMode.shouldShowIntegrationHome(
+                focusedAppPackageName = focus.packageName,
+                focusedRomPath = focus.romPath,
+                focusedRomIdentifier = focus.romIdentifier,
+                activeSession = focus.activeSession,
+                activeProfile = profile,
+                foregroundApp = foreground,
+            )
         }.stateIn(scope, SharingStarted.Eagerly, false)
 
     fun setCompanionViewMode(

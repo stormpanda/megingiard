@@ -15,6 +15,7 @@ import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.navigation.NavDestination
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
+import com.stormpanda.megingiard.session.ActiveGameSession
 import com.stormpanda.megingiard.settings.KeyboardSettings
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.settings.SettingsCategory
@@ -661,6 +662,72 @@ class AppStateManagerTest {
         // When focused package changes to home launcher (e.g. com.android.launcher3):
         // Returns true (shows Companion Hub) while gameNativeProfile remains activeProfile
         assertTrue(CompanionViewMode.AUTO.shouldShowIntegrationHome("com.android.launcher3", null, gameNativeProfile))
+    }
+
+    @Test
+    fun `shouldShowIntegrationHome in AUTO matches activeSession and focusedRomIdentifier`() {
+        val profile =
+            testProfile(
+                id = "p-20min",
+                name = "20 Minutes Till Dawn",
+                association =
+                    ProfileAssociation(
+                        packageName = "app.gamenative",
+                        romFileName = "20 Minutes Till Dawn.steam",
+                        systemId = "pc",
+                    ),
+            )
+
+        val activeSession =
+            ActiveGameSession(
+                packageName = "app.gamenative",
+                gameTitle = "20 Minutes Till Dawn",
+                romPath = "/storage/emulated/0/ROMs/steam/20 Minutes Till Dawn.steam",
+                romIdentifier = "20 Minutes Till Dawn.steam",
+                systemId = "pc",
+            )
+
+        // Matches activeSession and focusedRomPath -> Hub hidden (returns false)
+        assertFalse(
+            CompanionViewMode.AUTO.shouldShowIntegrationHome(
+                focusedAppPackageName = "app.gamenative",
+                focusedRomPath = "/storage/emulated/0/ROMs/steam/20 Minutes Till Dawn.steam",
+                focusedRomIdentifier = "20 Minutes Till Dawn.steam",
+                activeSession = activeSession,
+                activeProfile = profile,
+            ),
+        )
+
+        // When profile was associated with activeSession identifier, matches activeSession even if focusedRomPath is null
+        val standaloneSession =
+            ActiveGameSession(
+                packageName = "app.gamenative",
+                gameTitle = "Standalone Game",
+                romPath = null,
+                romIdentifier = "Standalone.steam",
+                systemId = "pc",
+            )
+        val standaloneProfile =
+            testProfile(
+                id = "p-standalone",
+                name = "Standalone Game",
+                association =
+                    ProfileAssociation(
+                        packageName = "app.gamenative",
+                        romFileName = "Standalone.steam",
+                        systemId = "pc",
+                    ),
+            )
+
+        assertFalse(
+            CompanionViewMode.AUTO.shouldShowIntegrationHome(
+                focusedAppPackageName = "app.gamenative",
+                focusedRomPath = null,
+                focusedRomIdentifier = null,
+                activeSession = standaloneSession,
+                activeProfile = standaloneProfile,
+            ),
+        )
     }
 
     @Test
