@@ -652,18 +652,19 @@ fun calculateButtonEdgeResize(
             val originalRightPx = leftPx + (originalWidthDp * safeDensity)
             val candRightPx = originalRightPx + dragDeltaPx
             val maxAllowedWidthPx = (safeCanvasW - leftPx).coerceAtLeast(minPx)
-            var newWidthPx = (candRightPx - leftPx).coerceIn(minPx, maxAllowedWidthPx)
-            val candWidthDp = newWidthPx / safeDensity
+            val rawWidthPx = (candRightPx - leftPx).coerceIn(minPx, maxAllowedWidthPx)
+            var candWidthDp = (rawWidthPx / safeDensity).roundToInt().toFloat().coerceIn(minSizeDp, safeCanvasW / safeDensity)
             var isSnapped = false
             if (abs(candWidthDp - originalHeightDp) <= aspectSnapThresholdDp) {
-                newWidthPx = (originalHeightDp * safeDensity).coerceIn(minPx, maxAllowedWidthPx)
+                candWidthDp = originalHeightDp
                 isSnapped = true
             }
+            val newWidthPx = (candWidthDp * safeDensity).coerceIn(minPx, maxAllowedWidthPx)
             val newCenterXPx = leftPx + newWidthPx / 2f
             ButtonResizeResult(
                 newNormX = (newCenterXPx / safeCanvasW).coerceIn(0f, 1f),
                 newNormY = originalNormY,
-                newWidthDp = newWidthPx / safeDensity,
+                newWidthDp = candWidthDp,
                 newHeightDp = originalHeightDp,
                 isAspectSnapped = isSnapped,
             )
@@ -674,18 +675,19 @@ fun calculateButtonEdgeResize(
             val originalLeftPx = rightPx - (originalWidthDp * safeDensity)
             val candLeftPx = originalLeftPx + dragDeltaPx
             val maxAllowedWidthPx = rightPx.coerceAtLeast(minPx)
-            var newWidthPx = (rightPx - candLeftPx).coerceIn(minPx, maxAllowedWidthPx)
-            val candWidthDp = newWidthPx / safeDensity
+            val rawWidthPx = (rightPx - candLeftPx).coerceIn(minPx, maxAllowedWidthPx)
+            var candWidthDp = (rawWidthPx / safeDensity).roundToInt().toFloat().coerceIn(minSizeDp, safeCanvasW / safeDensity)
             var isSnapped = false
             if (abs(candWidthDp - originalHeightDp) <= aspectSnapThresholdDp) {
-                newWidthPx = (originalHeightDp * safeDensity).coerceIn(minPx, maxAllowedWidthPx)
+                candWidthDp = originalHeightDp
                 isSnapped = true
             }
+            val newWidthPx = (candWidthDp * safeDensity).coerceIn(minPx, maxAllowedWidthPx)
             val newCenterXPx = rightPx - newWidthPx / 2f
             ButtonResizeResult(
                 newNormX = (newCenterXPx / safeCanvasW).coerceIn(0f, 1f),
                 newNormY = originalNormY,
-                newWidthDp = newWidthPx / safeDensity,
+                newWidthDp = candWidthDp,
                 newHeightDp = originalHeightDp,
                 isAspectSnapped = isSnapped,
             )
@@ -696,19 +698,20 @@ fun calculateButtonEdgeResize(
             val originalBottomPx = topPx + (originalHeightDp * safeDensity)
             val candBottomPx = originalBottomPx + dragDeltaPx
             val maxAllowedHeightPx = (safeCanvasH - topPx).coerceAtLeast(minPx)
-            var newHeightPx = (candBottomPx - topPx).coerceIn(minPx, maxAllowedHeightPx)
-            val candHeightDp = newHeightPx / safeDensity
+            val rawHeightPx = (candBottomPx - topPx).coerceIn(minPx, maxAllowedHeightPx)
+            var candHeightDp = (rawHeightPx / safeDensity).roundToInt().toFloat().coerceIn(minSizeDp, safeCanvasH / safeDensity)
             var isSnapped = false
             if (abs(candHeightDp - originalWidthDp) <= aspectSnapThresholdDp) {
-                newHeightPx = (originalWidthDp * safeDensity).coerceIn(minPx, maxAllowedHeightPx)
+                candHeightDp = originalWidthDp
                 isSnapped = true
             }
+            val newHeightPx = (candHeightDp * safeDensity).coerceIn(minPx, maxAllowedHeightPx)
             val newCenterYPx = topPx + newHeightPx / 2f
             ButtonResizeResult(
                 newNormX = originalNormX,
                 newNormY = (newCenterYPx / safeCanvasH).coerceIn(0f, 1f),
                 newWidthDp = originalWidthDp,
-                newHeightDp = newHeightPx / safeDensity,
+                newHeightDp = candHeightDp,
                 isAspectSnapped = isSnapped,
             )
         }
@@ -718,19 +721,20 @@ fun calculateButtonEdgeResize(
             val originalTopPx = bottomPx - (originalHeightDp * safeDensity)
             val candTopPx = originalTopPx + dragDeltaPx
             val maxAllowedHeightPx = bottomPx.coerceAtLeast(minPx)
-            var newHeightPx = (bottomPx - candTopPx).coerceIn(minPx, maxAllowedHeightPx)
-            val candHeightDp = newHeightPx / safeDensity
+            val rawHeightPx = (bottomPx - candTopPx).coerceIn(minPx, maxAllowedHeightPx)
+            var candHeightDp = (rawHeightPx / safeDensity).roundToInt().toFloat().coerceIn(minSizeDp, safeCanvasH / safeDensity)
             var isSnapped = false
             if (abs(candHeightDp - originalWidthDp) <= aspectSnapThresholdDp) {
-                newHeightPx = (originalWidthDp * safeDensity).coerceIn(minPx, maxAllowedHeightPx)
+                candHeightDp = originalWidthDp
                 isSnapped = true
             }
+            val newHeightPx = (candHeightDp * safeDensity).coerceIn(minPx, maxAllowedHeightPx)
             val newCenterYPx = bottomPx - newHeightPx / 2f
             ButtonResizeResult(
                 newNormX = originalNormX,
                 newNormY = (newCenterYPx / safeCanvasH).coerceIn(0f, 1f),
                 newWidthDp = originalWidthDp,
-                newHeightDp = newHeightPx / safeDensity,
+                newHeightDp = candHeightDp,
                 isAspectSnapped = isSnapped,
             )
         }
@@ -739,42 +743,34 @@ fun calculateButtonEdgeResize(
 
 /**
  * Calculates button dimension updates when resizing via gamepad (R2 + D-pad).
- * Resizes symmetrically around the button's center.
- * [dx] > 0 expands width, [dx] < 0 shrinks width.
- * [dy] < 0 (D-pad UP) expands height, [dy] > 0 (D-pad DOWN) shrinks height.
+ * Resizes symmetrically around the button's center in clean [stepDp] (default 1 dp) increments.
+ * [dirX] > 0 expands width, [dirX] < 0 shrinks width.
+ * [dirY] < 0 (D-pad UP) expands height, [dirY] > 0 (D-pad DOWN) shrinks height.
  */
 fun calculateGamepadButtonResize(
     currentWidthDp: Float,
     currentHeightDp: Float,
-    dx: Int,
-    dy: Int,
-    density: Float,
+    dirX: Int,
+    dirY: Int,
+    stepDp: Float = 1f,
     maxScreenWDp: Float,
     maxScreenHDp: Float,
     minSizeDp: Float = MP_BUTTON_MIN_SIZE_DP,
 ): Pair<Float, Float> {
-    val safeDensity = density.coerceAtLeast(0.001f)
-    val widthDeltaDp = dx.toFloat() / safeDensity
-    val heightDeltaDp = -dy.toFloat() / safeDensity
+    val widthDeltaDp = dirX * stepDp
+    val heightDeltaDp = -dirY * stepDp
 
-    val newWidthDp = (currentWidthDp + widthDeltaDp).coerceIn(minSizeDp, maxScreenWDp.coerceAtLeast(minSizeDp))
-    val newHeightDp = (currentHeightDp + heightDeltaDp).coerceIn(minSizeDp, maxScreenHDp.coerceAtLeast(minSizeDp))
+    val targetW = (currentWidthDp + widthDeltaDp).roundToInt().toFloat()
+    val targetH = (currentHeightDp + heightDeltaDp).roundToInt().toFloat()
+
+    val newWidthDp = targetW.coerceIn(minSizeDp, maxScreenWDp.coerceAtLeast(minSizeDp))
+    val newHeightDp = targetH.coerceIn(minSizeDp, maxScreenHDp.coerceAtLeast(minSizeDp))
 
     return newWidthDp to newHeightDp
 }
 
 /**
  * Formats a button dimension in dp for display in the editor, HUD, and labels.
- * If the value has no fractional part, formats as an integer (e.g. "60").
- * If the value has a fractional step (e.g. 0.5 dp), formats with one decimal place (e.g. "60.5").
+ * Formats as an integer dp value (e.g. "60", "61").
  */
-fun formatButtonDimensionDp(dp: Float): String {
-    val rounded10 = (dp * 10f).roundToInt()
-    return if (rounded10 % 10 == 0) {
-        "${rounded10 / 10}"
-    } else {
-        val whole = rounded10 / 10
-        val frac = kotlin.math.abs(rounded10 % 10)
-        "$whole.$frac"
-    }
-}
+fun formatButtonDimensionDp(dp: Float): String = dp.roundToInt().toString()

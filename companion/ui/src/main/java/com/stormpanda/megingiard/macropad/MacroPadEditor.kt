@@ -138,6 +138,8 @@ private const val MPE_BUTTON_HEADER_COUNT = 5
 private const val MPE_CANVAS_WIDTH_PX = 1240f
 private const val MPE_CANVAS_HEIGHT_PX = 1080f
 private const val MPE_EDGE_MARGIN = 0.05f
+private const val MPE_RESIZE_NORMAL_STEP_DP = 5f
+private const val MPE_RESIZE_FINE_STEP_DP = 1f
 
 private fun EditorSection.titleResId(): Int =
     when (this) {
@@ -2901,16 +2903,14 @@ private fun EditButtonPositionsSubPageContent(
     ) {
         val currentLayout = MacroPadState.activeLayout.value ?: return
         val targetBtn = currentLayout.buttons.firstOrNull { it.id == btnId } ?: return
-        val stepMultiplier = if (isL2HeldState.value) MPE_FINE_STEP_PX else MPE_NORMAL_STEP_PX
-        val deltaX = (dx * stepMultiplier).roundToInt()
-        val deltaY = (dy * stepMultiplier).roundToInt()
+        val stepDp = if (isL2HeldState.value) MPE_RESIZE_FINE_STEP_DP else MPE_RESIZE_NORMAL_STEP_DP
         val (newW, newH) =
             calculateGamepadButtonResize(
                 currentWidthDp = targetBtn.widthDp,
                 currentHeightDp = targetBtn.heightDp,
-                dx = deltaX,
-                dy = deltaY,
-                density = density,
+                dirX = dx,
+                dirY = dy,
+                stepDp = stepDp,
                 maxScreenWDp = MPE_CANVAS_WIDTH_PX / density,
                 maxScreenHDp = MPE_CANVAS_HEIGHT_PX / density,
             )

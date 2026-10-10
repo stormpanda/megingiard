@@ -91,6 +91,8 @@ private const val PBD_NORMAL_STEP_PX = 10f
 private const val PBD_FINE_STEP_PX = 1f
 private const val PBD_CANVAS_WIDTH_PX = 1240f
 private const val PBD_CANVAS_HEIGHT_PX = 1080f
+private const val PBD_RESIZE_NORMAL_STEP_DP = 5f
+private const val PBD_RESIZE_FINE_STEP_DP = 1f
 
 private val PBD_COLOR_PREVIEW_SIZE = 36.dp
 private val PBD_CORNER_RADIUS_DP = 6.dp
@@ -318,16 +320,14 @@ internal fun EditButtonSubPageContent(
         dx: Int,
         dy: Int,
     ) {
-        val stepMultiplier = if (isL2HeldState.value) PBD_FINE_STEP_PX else PBD_NORMAL_STEP_PX
-        val deltaX = (dx * stepMultiplier).roundToInt()
-        val deltaY = (dy * stepMultiplier).roundToInt()
+        val stepDp = if (isL2HeldState.value) PBD_RESIZE_FINE_STEP_DP else PBD_RESIZE_NORMAL_STEP_DP
         val (newW, newH) =
             calculateGamepadButtonResize(
                 currentWidthDp = widthDp,
                 currentHeightDp = heightDp,
-                dx = deltaX,
-                dy = deltaY,
-                density = density,
+                dirX = dx,
+                dirY = dy,
+                stepDp = stepDp,
                 maxScreenWDp = PBD_CANVAS_WIDTH_PX / density,
                 maxScreenHDp = PBD_CANVAS_HEIGHT_PX / density,
             )

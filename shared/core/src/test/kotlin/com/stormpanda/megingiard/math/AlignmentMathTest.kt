@@ -506,42 +506,42 @@ class AlignmentMathTest {
 
     @Test
     fun `calculateGamepadButtonResize updates dimensions correctly and clamps to limits`() {
-        // Expand width with dx = 10 (density = 1f)
+        // Expand width with dirX = 1, normal step 5dp
         val (w1, h1) =
             calculateGamepadButtonResize(
                 currentWidthDp = 60f,
                 currentHeightDp = 60f,
-                dx = 10,
-                dy = 0,
-                density = 1f,
+                dirX = 1,
+                dirY = 0,
+                stepDp = 5f,
                 maxScreenWDp = 500f,
                 maxScreenHDp = 500f,
             )
-        assertEquals(70f, w1, 0.01f)
+        assertEquals(65f, w1, 0.01f)
         assertEquals(60f, h1, 0.01f)
 
-        // Expand height with D-pad UP (dy = -10)
+        // Expand height with D-pad UP (dirY = -1), fine step 1dp
         val (w2, h2) =
             calculateGamepadButtonResize(
                 currentWidthDp = 60f,
                 currentHeightDp = 60f,
-                dx = 0,
-                dy = -10,
-                density = 1f,
+                dirX = 0,
+                dirY = -1,
+                stepDp = 1f,
                 maxScreenWDp = 500f,
                 maxScreenHDp = 500f,
             )
         assertEquals(60f, w2, 0.01f)
-        assertEquals(70f, h2, 0.01f)
+        assertEquals(61f, h2, 0.01f)
 
         // Shrink beyond minimum: clamped to 30dp
         val (w3, h3) =
             calculateGamepadButtonResize(
                 currentWidthDp = 60f,
                 currentHeightDp = 60f,
-                dx = -100,
-                dy = 100,
-                density = 1f,
+                dirX = -10,
+                dirY = 10,
+                stepDp = 5f,
                 maxScreenWDp = 500f,
                 maxScreenHDp = 500f,
             )
@@ -595,14 +595,12 @@ class AlignmentMathTest {
     }
 
     @Test
-    fun `formatButtonDimensionDp formats integers without decimal and half-steps with decimal`() {
+    fun `formatButtonDimensionDp formats as integer string`() {
         assertEquals("60", formatButtonDimensionDp(60.0f))
-        assertEquals("60.5", formatButtonDimensionDp(60.5f))
-        assertEquals("59.5", formatButtonDimensionDp(59.5f))
+        assertEquals("61", formatButtonDimensionDp(60.6f))
+        assertEquals("60", formatButtonDimensionDp(60.4f))
         assertEquals("61", formatButtonDimensionDp(61.0f))
         assertEquals("30", formatButtonDimensionDp(30.0f))
-        assertEquals("30.5", formatButtonDimensionDp(30.5f))
         assertEquals("120", formatButtonDimensionDp(120.0f))
-        assertEquals("120.5", formatButtonDimensionDp(120.5f))
     }
 }
