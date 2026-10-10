@@ -225,7 +225,7 @@ Each button supports one of the following actions:
 - **Sub-Menu Navigation:** Accessible from the **Position & Size Buttons** menu item in the Buttons category deck (`MacroPadSubPage.EditButtonPositions`).
 - **Live Canvas Unlocking:** Entering the sub-menu automatically activates `MacroPadState.isEditingButtonPositions = true`, rendering the active 5dp-rounded highlight border around the bottom-screen `PadCanvas` and unlocking touch dragging and resizing. Leaving the sub-menu or closing the editor restores locked mode (`false`).
 - **Instructional Info Banner:** A non-highlightable info box at the top of the sub-menu informs the user that buttons can be dragged or resized directly on the bottom display via touch or nudged with pixel precision via D-pad or Left Stick (holding R2 to resize, holding L2 for fine 1px steps).
-- **Button Selection & Dual-Screen Sync:** The sub-menu lists all buttons with their live dimensions as integer dp values (e.g. `60×60`, `75×120`). Focusing or moving a button sets `MacroPadState.selectedButtonId`, which immediately renders 4 directional edge resize handles (TOP, BOTTOM, LEFT, RIGHT) on the corresponding button on the bottom display. Touching any button or edge handle directly on the bottom canvas sets `MacroPadState.selectedButtonId`, which automatically focuses and brings that button into view in the top screen's list.
+- **Button Selection & Dual-Screen Sync:** The sub-menu lists all buttons with their live dimensions as dp values (e.g. `60×60`, `60.5×60`, `75×120`, formatting fractional `.5` steps without truncation). Focusing or moving a button sets `MacroPadState.selectedButtonId`, which immediately renders 4 directional edge resize handles (TOP, BOTTOM, LEFT, RIGHT) on the corresponding button on the bottom display. Touching any button or edge handle directly on the bottom canvas sets `MacroPadState.selectedButtonId`, which automatically focuses and brings that button into view in the top screen's list.
 - **Stepless Touch Resizing & 1:1 Aspect Ratio Magnetic Snapping:**
   - Dragging the button's interior surface moves the button freely across the canvas.
   - Dragging any of the 4 edge resize handles adjusts that dimension while anchoring the opposite edge (e.g. dragging the RIGHT handle extends width rightward while keeping the left edge fixed; dragging the TOP handle extends height upward while keeping the bottom edge fixed).
@@ -233,7 +233,7 @@ Each button supports one of the following actions:
   - **1:1 Aspect Ratio Snap:** While dragging an edge handle, when the dimension comes within 4 dp (`BUTTON_ASPECT_SNAP_THRESHOLD_DP = 4f`) of the opposing dimension (width == height), it magnetically locks to a perfect 1:1 aspect ratio. When first locking into the 1:1 snap, the system fires a subtle haptic tick via `LocalHapticFeedback`.
   - Buttons with `ButtonShape.CIRCLE` render as a circle when width equals height, and automatically morph into a smooth pill shape (`MP_PILL_SHAPE`) when width differs from height.
 - **Floating Dimension HUD (`ButtonDimensionHud`):**
-  - While any button is actively being moved, resized via touch edge handles, or adjusted via gamepad, a semi-transparent floating HUD badge displaying live dimensions (`[ 80 × 60 ]`) renders centered above the active button chip on the bottom canvas (`PadCanvas`).
+  - While any button is actively being moved, resized via touch edge handles, or adjusted via gamepad, a semi-transparent floating HUD badge displaying live dimensions (`[ 80 × 60 ]` or `[ 80.5 × 60 ]`) renders centered above the active button chip on the bottom canvas (`PadCanvas`).
   - If the button is positioned close to the top boundary of the canvas, the HUD automatically flips below the button to prevent edge clipping.
 - **Gamepad Movement, Resizing & Dynamic Pill:**
   - Pressing `(A)` or clicking on any button in the list activates **Movement Mode** (`isMoving = true`).
@@ -247,7 +247,7 @@ Each button supports one of the following actions:
 - **Direct Repositioning & Sizing in Button Config (`PadButtonEditDialog`):**
   - Inside the button edit dialog, the "Shape & Size" section features an **Adjust Position & Size** card (`GamepadFocusCard`).
   - Tapping `(A)` activates live adjustment mode, unlocking bottom canvas touch dragging and setting `MacroPadState.isAdjustingButtonViaGamepad`.
-  - The card displays live dimensions and normalized coordinates (`e.g. 60×60 • X: 50% Y: 50%`) with live D-pad move/resize (and L2/R2 modifiers) fully functional, in two-way real-time synchronization with bottom-screen touch interactions.
+  - The card displays live dimensions and normalized coordinates (`e.g. 60×60 • X: 50% Y: 50%` or `60.5×60 • X: 50% Y: 50%`) with live D-pad move/resize (and L2/R2 modifiers) fully functional, in two-way real-time synchronization with bottom-screen touch interactions.
 
 ### FR-P9a: Custom Background Image
 

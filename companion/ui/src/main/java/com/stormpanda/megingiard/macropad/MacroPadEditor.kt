@@ -90,6 +90,7 @@ import com.stormpanda.megingiard.math.MPE_FINE_STEP_PX
 import com.stormpanda.megingiard.math.MPE_NORMAL_STEP_PX
 import com.stormpanda.megingiard.math.calculateGamepadButtonMove
 import com.stormpanda.megingiard.math.calculateGamepadButtonResize
+import com.stormpanda.megingiard.math.formatButtonDimensionDp
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbScrapeSubPageContent
 import com.stormpanda.megingiard.ui.AppDivider
@@ -2610,7 +2611,7 @@ private fun describePadButton(
 ): String {
     val hapticLabel = if (includeHaptic) stringResource(btn.hapticStrength.labelResId()) else null
     val actionLabel = btn.action.displayLabel()
-    val sizeLabel = "${btn.widthDp.roundToInt()}×${btn.heightDp.roundToInt()}"
+    val sizeLabel = "${formatButtonDimensionDp(btn.widthDp)}×${formatButtonDimensionDp(btn.heightDp)}"
     return listOfNotNull(actionLabel, sizeLabel, hapticLabel).joinToString(" • ")
 }
 

@@ -762,3 +762,19 @@ fun calculateGamepadButtonResize(
 
     return newWidthDp to newHeightDp
 }
+
+/**
+ * Formats a button dimension in dp for display in the editor, HUD, and labels.
+ * If the value has no fractional part, formats as an integer (e.g. "60").
+ * If the value has a fractional step (e.g. 0.5 dp), formats with one decimal place (e.g. "60.5").
+ */
+fun formatButtonDimensionDp(dp: Float): String {
+    val rounded10 = (dp * 10f).roundToInt()
+    return if (rounded10 % 10 == 0) {
+        "${rounded10 / 10}"
+    } else {
+        val whole = rounded10 / 10
+        val frac = kotlin.math.abs(rounded10 % 10)
+        "$whole.$frac"
+    }
+}

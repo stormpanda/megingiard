@@ -56,6 +56,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.math.calculateGamepadButtonMove
 import com.stormpanda.megingiard.math.calculateGamepadButtonResize
+import com.stormpanda.megingiard.math.formatButtonDimensionDp
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.BumperDirection
@@ -614,7 +615,9 @@ internal fun EditButtonSubPageContent(
     ) { isFocused ->
         GamepadCardRow(
             title = stringResource(R.string.macropad_editor_adjust_position_size),
-            description = "${widthDp.roundToInt()}×${heightDp.roundToInt()} • X: ${(posX * 100).roundToInt()}% Y: ${(posY * 100).roundToInt()}%",
+            description = "${formatButtonDimensionDp(
+                widthDp,
+            )}×${formatButtonDimensionDp(heightDp)} • X: ${(posX * 100).roundToInt()}% Y: ${(posY * 100).roundToInt()}%",
             icon = Icons.Rounded.OpenWith,
             trailingContent = {
                 if (isAdjusting) {

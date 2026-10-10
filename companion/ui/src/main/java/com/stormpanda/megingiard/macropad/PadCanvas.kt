@@ -76,6 +76,7 @@ import com.stormpanda.megingiard.math.ViewportMath
 import com.stormpanda.megingiard.math.calculateButtonAlignmentSnap
 import com.stormpanda.megingiard.math.calculateButtonEdgeResize
 import com.stormpanda.megingiard.math.findAlignedCenterGuides
+import com.stormpanda.megingiard.math.formatButtonDimensionDp
 import com.stormpanda.megingiard.math.radialPointCount
 import com.stormpanda.megingiard.math.snapPosition
 import com.stormpanda.megingiard.settings.MacroPadSettings
@@ -1146,7 +1147,7 @@ private fun ButtonDimensionHud(
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                text = "${widthDp.roundToInt()} × ${heightDp.roundToInt()}",
+                text = "${formatButtonDimensionDp(widthDp)} × ${formatButtonDimensionDp(heightDp)}",
                 color = Color.White,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,

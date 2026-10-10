@@ -593,4 +593,16 @@ class AlignmentMathTest {
         assertEquals(60f, result.newHeightDp, 0.01f)
         assertFalse(result.isAspectSnapped)
     }
+
+    @Test
+    fun `formatButtonDimensionDp formats integers without decimal and half-steps with decimal`() {
+        assertEquals("60", formatButtonDimensionDp(60.0f))
+        assertEquals("60.5", formatButtonDimensionDp(60.5f))
+        assertEquals("59.5", formatButtonDimensionDp(59.5f))
+        assertEquals("61", formatButtonDimensionDp(61.0f))
+        assertEquals("30", formatButtonDimensionDp(30.0f))
+        assertEquals("30.5", formatButtonDimensionDp(30.5f))
+        assertEquals("120", formatButtonDimensionDp(120.0f))
+        assertEquals("120.5", formatButtonDimensionDp(120.5f))
+    }
 }
