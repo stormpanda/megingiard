@@ -40,6 +40,8 @@ class PrimaryOverlayInputBridgeTest {
         hatY: Float = 0f,
         axisBrake: Float = 0f,
         axisLTrigger: Float = 0f,
+        axisGas: Float = 0f,
+        axisRTrigger: Float = 0f,
         source: Int = InputDevice.SOURCE_JOYSTICK,
     ): MotionEvent {
         val pointerProperties = arrayOf(MotionEvent.PointerProperties().apply { id = 0 })
@@ -52,6 +54,8 @@ class PrimaryOverlayInputBridgeTest {
                     setAxisValue(MotionEvent.AXIS_HAT_Y, hatY)
                     setAxisValue(MotionEvent.AXIS_BRAKE, axisBrake)
                     setAxisValue(MotionEvent.AXIS_LTRIGGER, axisLTrigger)
+                    setAxisValue(MotionEvent.AXIS_GAS, axisGas)
+                    setAxisValue(MotionEvent.AXIS_RTRIGGER, axisRTrigger)
                 },
             )
         return MotionEvent.obtain(0L, 0L, MotionEvent.ACTION_MOVE, 1, pointerProperties, pointerCoords, 0, 0, 1f, 1f, 0, 0, source, 0)
@@ -165,6 +169,18 @@ class PrimaryOverlayInputBridgeTest {
             val (handledRelease, eventsRelease) = processEvent(createJoystickMotionEvent(axisBrake = 0.0f))
             assertFalse(handledRelease)
             assertEquals(listOf(KeyEvent.ACTION_UP to KeyEvent.KEYCODE_BUTTON_L2), eventsRelease)
+        }
+
+    @Test
+    fun testProcessGenericMotionEvent_analogR2Trigger() =
+        runTest {
+            val (handledPress, eventsPress) = processEvent(createJoystickMotionEvent(axisGas = 0.8f))
+            assertTrue(handledPress)
+            assertEquals(listOf(KeyEvent.ACTION_DOWN to KeyEvent.KEYCODE_BUTTON_R2), eventsPress)
+
+            val (handledRelease, eventsRelease) = processEvent(createJoystickMotionEvent(axisGas = 0.0f))
+            assertFalse(handledRelease)
+            assertEquals(listOf(KeyEvent.ACTION_UP to KeyEvent.KEYCODE_BUTTON_R2), eventsRelease)
         }
 
     @Test

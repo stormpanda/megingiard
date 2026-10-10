@@ -47,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -87,8 +88,8 @@ private const val TAG = "PadButtonEditDialog"
 
 private const val PBD_NORMAL_STEP_PX = 10f
 private const val PBD_FINE_STEP_PX = 1f
-private const val PBD_CANVAS_WIDTH_PX = 1000f
-private const val PBD_CANVAS_HEIGHT_PX = 1000f
+private const val PBD_CANVAS_WIDTH_PX = 1240f
+private const val PBD_CANVAS_HEIGHT_PX = 1080f
 
 private val PBD_COLOR_PREVIEW_SIZE = 36.dp
 private val PBD_CORNER_RADIUS_DP = 6.dp
@@ -270,12 +271,12 @@ internal fun EditButtonSubPageContent(
     val isR2HeldState = rememberUpdatedState(isR2Held)
     val buttonAlignmentSnapping by MacroPadSettings.buttonAlignmentSnapping.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
+    val density = LocalDensity.current.density
     var activeDirectionKey by remember { mutableStateOf<Int?>(null) }
     var activeRepeatJob by remember { mutableStateOf<Job?>(null) }
 
     LaunchedEffect(isAdjusting) {
         MacroPadState.setAdjustingButtonViaGamepad(isAdjusting)
-        MacroPadState.setEditingButtonPositions(isAdjusting)
         if (isAdjusting) {
             MacroPadState.setSelectedButtonId(stableButtonId)
         }
@@ -285,19 +286,7 @@ internal fun EditButtonSubPageContent(
         onDispose {
             activeRepeatJob?.cancel()
             MacroPadState.setAdjustingButtonViaGamepad(false)
-            MacroPadState.setEditingButtonPositions(false)
             MacroPadState.clearPreviewLayout()
-        }
-    }
-
-    val activePreviewLayout by MacroPadState.previewLayout.collectAsStateWithLifecycle()
-    LaunchedEffect(activePreviewLayout) {
-        val b = activePreviewLayout?.buttons?.firstOrNull { it.id == stableButtonId }
-        if (b != null) {
-            if (b.posX != posX) posX = b.posX
-            if (b.posY != posY) posY = b.posY
-            if (b.widthDp != widthDp) widthDp = b.widthDp
-            if (b.heightDp != heightDp) heightDp = b.heightDp
         }
     }
 
@@ -337,9 +326,9 @@ internal fun EditButtonSubPageContent(
                 currentHeightDp = heightDp,
                 dx = deltaX,
                 dy = deltaY,
-                density = 1f,
-                maxScreenWDp = PBD_CANVAS_WIDTH_PX,
-                maxScreenHDp = PBD_CANVAS_HEIGHT_PX,
+                density = density,
+                maxScreenWDp = PBD_CANVAS_WIDTH_PX / density,
+                maxScreenHDp = PBD_CANVAS_HEIGHT_PX / density,
             )
         widthDp = newW
         heightDp = newH
@@ -582,6 +571,8 @@ internal fun EditButtonSubPageContent(
                 },
                 onDismissAdjustment = {
                     stopMovingImmediate()
+                    isL2Held = false
+                    isR2Held = false
                     isAdjusting = false
                 },
                 onModifierKeyDown = { keyCode ->
@@ -605,12 +596,12 @@ internal fun EditButtonSubPageContent(
                     when (keyCode) {
                         KeyEvent.KEYCODE_BUTTON_L2 -> {
                             isL2Held = false
-                            false
+                            true
                         }
 
                         KeyEvent.KEYCODE_BUTTON_R2 -> {
                             isR2Held = false
-                            false
+                            true
                         }
 
                         else -> {

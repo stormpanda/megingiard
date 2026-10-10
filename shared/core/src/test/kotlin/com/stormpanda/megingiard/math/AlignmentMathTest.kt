@@ -442,6 +442,69 @@ class AlignmentMathTest {
     }
 
     @Test
+    fun `calculateButtonEdgeResize clamps expanding past canvas boundaries`() {
+        // Left is at 440px on 1000px canvas -> max width is 1000 - 440 = 560px = 280dp
+        val rightResult =
+            calculateButtonEdgeResize(
+                handle = ButtonResizeHandle.RIGHT,
+                dragDeltaPx = 2000f,
+                originalNormX = 0.5f,
+                originalNormY = 0.5f,
+                originalWidthDp = 60f,
+                originalHeightDp = 60f,
+                canvasW = 1000f,
+                canvasH = 1000f,
+                density = 2f,
+            )
+        assertEquals(280f, rightResult.newWidthDp, 0.01f)
+
+        // Right is at 560px on 1000px canvas -> max width expanding left is 560px = 280dp
+        val leftResult =
+            calculateButtonEdgeResize(
+                handle = ButtonResizeHandle.LEFT,
+                dragDeltaPx = -2000f,
+                originalNormX = 0.5f,
+                originalNormY = 0.5f,
+                originalWidthDp = 60f,
+                originalHeightDp = 60f,
+                canvasW = 1000f,
+                canvasH = 1000f,
+                density = 2f,
+            )
+        assertEquals(280f, leftResult.newWidthDp, 0.01f)
+
+        // Top is at 440px on 1000px canvas -> max height expanding down is 1000 - 440 = 560px = 280dp
+        val bottomResult =
+            calculateButtonEdgeResize(
+                handle = ButtonResizeHandle.BOTTOM,
+                dragDeltaPx = 2000f,
+                originalNormX = 0.5f,
+                originalNormY = 0.5f,
+                originalWidthDp = 60f,
+                originalHeightDp = 60f,
+                canvasW = 1000f,
+                canvasH = 1000f,
+                density = 2f,
+            )
+        assertEquals(280f, bottomResult.newHeightDp, 0.01f)
+
+        // Bottom is at 560px on 1000px canvas -> max height expanding up is 560px = 280dp
+        val topResult =
+            calculateButtonEdgeResize(
+                handle = ButtonResizeHandle.TOP,
+                dragDeltaPx = -2000f,
+                originalNormX = 0.5f,
+                originalNormY = 0.5f,
+                originalWidthDp = 60f,
+                originalHeightDp = 60f,
+                canvasW = 1000f,
+                canvasH = 1000f,
+                density = 2f,
+            )
+        assertEquals(280f, topResult.newHeightDp, 0.01f)
+    }
+
+    @Test
     fun `calculateGamepadButtonResize updates dimensions correctly and clamps to limits`() {
         // Expand width with dx = 10 (density = 1f)
         val (w1, h1) =

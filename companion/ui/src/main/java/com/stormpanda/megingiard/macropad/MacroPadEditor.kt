@@ -76,6 +76,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -2812,6 +2813,7 @@ private fun EditButtonPositionsSubPageContent(
     val coroutineScope = rememberCoroutineScope()
     val selectedButtonId by MacroPadState.selectedButtonId.collectAsStateWithLifecycle()
     val buttonAlignmentSnapping by MacroPadSettings.buttonAlignmentSnapping.collectAsStateWithLifecycle()
+    val density = LocalDensity.current.density
     val cardRequesters = remember { mutableMapOf<String, FocusRequester>() }
     var movingButtonId by remember { mutableStateOf<String?>(null) }
     var isL2Held by remember { mutableStateOf(false) }
@@ -2907,9 +2909,9 @@ private fun EditButtonPositionsSubPageContent(
                 currentHeightDp = targetBtn.heightDp,
                 dx = deltaX,
                 dy = deltaY,
-                density = 1f,
-                maxScreenWDp = MPE_CANVAS_WIDTH_PX,
-                maxScreenHDp = MPE_CANVAS_HEIGHT_PX,
+                density = density,
+                maxScreenWDp = MPE_CANVAS_WIDTH_PX / density,
+                maxScreenHDp = MPE_CANVAS_HEIGHT_PX / density,
             )
         if (newW != targetBtn.widthDp || newH != targetBtn.heightDp) {
             val updated =
@@ -2953,7 +2955,9 @@ private fun EditButtonPositionsSubPageContent(
 
     fun stopMoving(keyCode: Int) {
         if (activeDirectionKey == keyCode) {
-            stopMovingImmediate()
+            activeRepeatJob?.cancel()
+            activeRepeatJob = null
+            activeDirectionKey = 0
         }
     }
 

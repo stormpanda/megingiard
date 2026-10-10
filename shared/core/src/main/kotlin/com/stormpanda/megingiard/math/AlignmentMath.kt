@@ -651,7 +651,7 @@ fun calculateButtonEdgeResize(
             val leftPx = (originalNormX * safeCanvasW) - (originalWidthDp * safeDensity) / 2f
             val originalRightPx = leftPx + (originalWidthDp * safeDensity)
             val candRightPx = originalRightPx + dragDeltaPx
-            val maxAllowedWidthPx = safeCanvasW
+            val maxAllowedWidthPx = (safeCanvasW - leftPx).coerceAtLeast(minPx)
             var newWidthPx = (candRightPx - leftPx).coerceIn(minPx, maxAllowedWidthPx)
             val candWidthDp = newWidthPx / safeDensity
             var isSnapped = false
@@ -673,7 +673,7 @@ fun calculateButtonEdgeResize(
             val rightPx = (originalNormX * safeCanvasW) + (originalWidthDp * safeDensity) / 2f
             val originalLeftPx = rightPx - (originalWidthDp * safeDensity)
             val candLeftPx = originalLeftPx + dragDeltaPx
-            val maxAllowedWidthPx = safeCanvasW
+            val maxAllowedWidthPx = rightPx.coerceAtLeast(minPx)
             var newWidthPx = (rightPx - candLeftPx).coerceIn(minPx, maxAllowedWidthPx)
             val candWidthDp = newWidthPx / safeDensity
             var isSnapped = false
@@ -695,7 +695,7 @@ fun calculateButtonEdgeResize(
             val topPx = (originalNormY * safeCanvasH) - (originalHeightDp * safeDensity) / 2f
             val originalBottomPx = topPx + (originalHeightDp * safeDensity)
             val candBottomPx = originalBottomPx + dragDeltaPx
-            val maxAllowedHeightPx = safeCanvasH
+            val maxAllowedHeightPx = (safeCanvasH - topPx).coerceAtLeast(minPx)
             var newHeightPx = (candBottomPx - topPx).coerceIn(minPx, maxAllowedHeightPx)
             val candHeightDp = newHeightPx / safeDensity
             var isSnapped = false
@@ -717,7 +717,7 @@ fun calculateButtonEdgeResize(
             val bottomPx = (originalNormY * safeCanvasH) + (originalHeightDp * safeDensity) / 2f
             val originalTopPx = bottomPx - (originalHeightDp * safeDensity)
             val candTopPx = originalTopPx + dragDeltaPx
-            val maxAllowedHeightPx = safeCanvasH
+            val maxAllowedHeightPx = bottomPx.coerceAtLeast(minPx)
             var newHeightPx = (bottomPx - candTopPx).coerceIn(minPx, maxAllowedHeightPx)
             val candHeightDp = newHeightPx / safeDensity
             var isSnapped = false

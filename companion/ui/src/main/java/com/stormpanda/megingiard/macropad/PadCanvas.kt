@@ -33,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -583,28 +584,30 @@ internal fun PadCanvas(
                 }
 
                 edgeDefs.forEach { def ->
-                    ButtonResizeHandleView(
-                        offset = IntOffset(def.touchLeftPx.roundToInt(), def.touchTopPx.roundToInt()),
-                        touchWidth = def.touchWidth,
-                        touchHeight = def.touchHeight,
-                        handleWidth = def.handleWidth,
-                        handleHeight = def.handleHeight,
-                        color = accentColor,
-                        onDragStart = {
-                            isEdgeDragging = true
-                            wasAspectSnapped = false
-                            captureDragStart()
-                        },
-                        onDragEnd = {
-                            isEdgeDragging = false
-                            wasAspectSnapped = false
-                        },
-                        onDragCancel = {
-                            isEdgeDragging = false
-                            wasAspectSnapped = false
-                        },
-                        onDrag = { totalDx, totalDy -> handleEdgeDrag(def.handle, totalDx, totalDy) },
-                    )
+                    key(def.handle) {
+                        ButtonResizeHandleView(
+                            offset = IntOffset(def.touchLeftPx.roundToInt(), def.touchTopPx.roundToInt()),
+                            touchWidth = def.touchWidth,
+                            touchHeight = def.touchHeight,
+                            handleWidth = def.handleWidth,
+                            handleHeight = def.handleHeight,
+                            color = accentColor,
+                            onDragStart = {
+                                isEdgeDragging = true
+                                wasAspectSnapped = false
+                                captureDragStart()
+                            },
+                            onDragEnd = {
+                                isEdgeDragging = false
+                                wasAspectSnapped = false
+                            },
+                            onDragCancel = {
+                                isEdgeDragging = false
+                                wasAspectSnapped = false
+                            },
+                            onDrag = { totalDx, totalDy -> handleEdgeDrag(def.handle, totalDx, totalDy) },
+                        )
+                    }
                 }
 
                 val isHudVisible = isEdgeDragging || (draggingBodyButtonId == activeBtn.id) || isAdjustingViaGamepad
@@ -1065,7 +1068,7 @@ private fun ButtonResizeHandleView(
             Modifier
                 .absoluteOffset { offset }
                 .size(width = touchWidth, height = touchHeight)
-                .pointerInput(Unit) {
+                .pointerInput(handleWidth, handleHeight) {
                     var accumulatedX = 0f
                     var accumulatedY = 0f
                     detectDragGestures(
