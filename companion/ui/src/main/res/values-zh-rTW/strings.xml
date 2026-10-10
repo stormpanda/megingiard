@@ -1116,6 +1116,7 @@ Open Settings to create a layout.</string>
     <string name="gamepad_action_checking">正在檢查</string>
     <string name="gamepad_action_move">移動</string>
     <string name="gamepad_action_moving">正在移動</string>
+    <string name="gamepad_action_resizing">縮放中</string>
     <string name="gamepad_action_delete">刪除</string>
     <string name="macropad_reorder_empty">沒有可重新排序的項目</string>
     <string name="gamepad_action_copy">複製</string>
@@ -1218,8 +1219,10 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_reorder_layouts_desc">變更此設定檔中配置的順序</string>
     <string name="macropad_editor_delete_layout_desc">從此設定檔中刪除「%1$s」</string>
     <string name="macropad_editor_delete_button_desc">從此配置中刪除「%1$s」</string>
-    <string name="macropad_editor_edit_button_positions">編輯按鈕位置</string>
+    <string name="macropad_editor_edit_button_positions">調整按鈕位置與大小</string>
     <string name="macropad_editor_edit_button_positions_card_desc">透過觸控或十字鍵精確移動與調整按鈕大小</string>
+    <string name="macropad_editor_adjust_position_size">調整位置與大小</string>
+    <string name="macropad_editor_adjust_position_size_desc">在畫布上或透過十字鍵移動與縮放此按鈕</string>
     <string name="macropad_editor_move_buttons_info">直接在下螢幕拖曳或調整按鈕大小，或在下方選取按鈕以透過十字鍵移動（按住 R2 可調整大小，按住 L2 可進行 1 像素微調）。</string>
     <string name="macropad_editor_manage_buttons">管理按鈕</string>
     <string name="macropad_editor_reorder_buttons">重新排列按鈕</string>

@@ -1132,6 +1132,7 @@ Open Settings to create a layout.</string>
     <string name="gamepad_action_checking">Checking</string>
     <string name="gamepad_action_move">Move</string>
     <string name="gamepad_action_moving">Moving</string>
+    <string name="gamepad_action_resizing">Resizing</string>
     <string name="gamepad_action_delete">Delete</string>
     <string name="macropad_reorder_empty">No items to reorder</string>
     <string name="gamepad_action_copy">Copy</string>
@@ -1234,8 +1235,10 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_reorder_layouts_desc">Change the order of layouts in this profile</string>
     <string name="macropad_editor_delete_layout_desc">Delete \'%1$s\' from this profile</string>
     <string name="macropad_editor_delete_button_desc">Delete \'%1$s\' from this layout</string>
-    <string name="macropad_editor_edit_button_positions">Edit Button Positions</string>
+    <string name="macropad_editor_edit_button_positions">Position &amp; Size Buttons</string>
     <string name="macropad_editor_edit_button_positions_card_desc">Move and resize buttons via touch or D-pad precision</string>
+    <string name="macropad_editor_adjust_position_size">Adjust Position &amp; Size</string>
+    <string name="macropad_editor_adjust_position_size_desc">Move and resize this button on canvas or with D-pad</string>
     <string name="macropad_editor_move_buttons_info">Drag or resize buttons directly on the bottom screen, or select a button below to move it with the D-pad (hold R2 to resize, hold L2 for fine 1px steps).</string>
     <string name="macropad_editor_manage_buttons">Manage Buttons</string>
     <string name="macropad_editor_reorder_buttons">Reorder Buttons</string>

@@ -52,15 +52,19 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
@@ -147,6 +151,14 @@ private val PC_EDGE_TOUCH_LENGTH = 48.dp
 private val PC_EDGE_TOUCH_THICKNESS = 32.dp
 private val PC_EDGE_HANDLE_CORNER = 3.dp
 private val PC_EDGE_HANDLE_SHAPE = RoundedCornerShape(PC_EDGE_HANDLE_CORNER)
+
+// Floating dimension HUD
+private val PC_HUD_MARGIN_DP = 8.dp
+private val PC_HUD_ESTIMATED_HEIGHT_DP = 26.dp
+private val PC_HUD_PADDING_H = 8.dp
+private val PC_HUD_PADDING_V = 3.dp
+private val PC_HUD_SHAPE = RoundedCornerShape(12.dp)
+private const val PC_HUD_ANIM_MS = 150
 
 // Smart alignment guide line styling (PowerPoint-style)
 private const val PC_ALIGNMENT_GUIDE_LINE_ALPHA = 0.85f
@@ -377,6 +389,9 @@ internal fun PadCanvas(
         }
 
         // Render each button as a draggable chip
+        val isAdjustingViaGamepad by MacroPadState.isAdjustingButtonViaGamepad.collectAsStateWithLifecycle()
+        var draggingBodyButtonId by remember { mutableStateOf<String?>(null) }
+
         (layout?.buttons ?: emptyList()).forEach { btn ->
             val targetLayoutId = layout?.id
             DraggableButton(
@@ -390,6 +405,9 @@ internal fun PadCanvas(
                 isLocked = isLocked || isCropping,
                 onTouch = {
                     MacroPadState.setSelectedButtonId(btn.id)
+                },
+                onDragActiveChanged = { active ->
+                    draggingBodyButtonId = if (active) btn.id else null
                 },
                 onPositionChanged = { nx, ny ->
                     val layoutId = targetLayoutId
@@ -504,6 +522,10 @@ internal fun PadCanvas(
                         ),
                     )
 
+                val haptic = LocalHapticFeedback.current
+                var isEdgeDragging by remember(activeBtn.id) { mutableStateOf(false) }
+                var wasAspectSnapped by remember(activeBtn.id) { mutableStateOf(false) }
+
                 var dragStartNormX by remember(activeBtn.id) { mutableFloatStateOf(activeBtn.posX) }
                 var dragStartNormY by remember(activeBtn.id) { mutableFloatStateOf(activeBtn.posY) }
                 var dragStartWidthDp by remember(activeBtn.id) { mutableFloatStateOf(activeBtn.widthDp) }
@@ -539,6 +561,11 @@ internal fun PadCanvas(
                             canvasH = h,
                             density = density.density,
                         )
+                    if (res.isAspectSnapped && !wasAspectSnapped) {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    }
+                    wasAspectSnapped = res.isAspectSnapped
+
                     val updated =
                         curLayout.buttons.map { b ->
                             if (b.id == activeBtn.id) {
@@ -563,10 +590,34 @@ internal fun PadCanvas(
                         handleWidth = def.handleWidth,
                         handleHeight = def.handleHeight,
                         color = accentColor,
-                        onDragStart = { captureDragStart() },
+                        onDragStart = {
+                            isEdgeDragging = true
+                            wasAspectSnapped = false
+                            captureDragStart()
+                        },
+                        onDragEnd = {
+                            isEdgeDragging = false
+                            wasAspectSnapped = false
+                        },
+                        onDragCancel = {
+                            isEdgeDragging = false
+                            wasAspectSnapped = false
+                        },
                         onDrag = { totalDx, totalDy -> handleEdgeDrag(def.handle, totalDx, totalDy) },
                     )
                 }
+
+                val isHudVisible = isEdgeDragging || (draggingBodyButtonId == activeBtn.id) || isAdjustingViaGamepad
+                ButtonDimensionHud(
+                    widthDp = activeBtn.widthDp,
+                    heightDp = activeBtn.heightDp,
+                    centerX = activeBtn.posX * w,
+                    buttonTopPx = destTop,
+                    buttonBottomPx = destTop + chipHeightPx,
+                    canvasW = w,
+                    accentColor = accentColor,
+                    visible = isHudVisible,
+                )
             } else {
                 val handleSizePx = with(density) { PC_HANDLE_SIZE.toPx() }
                 val paddingPx = with(density) { PC_HANDLE_PADDING.toPx() }
@@ -639,6 +690,7 @@ private fun DraggableButton(
     alignmentSnapping: Boolean,
     isLocked: Boolean,
     onTouch: () -> Unit,
+    onDragActiveChanged: (Boolean) -> Unit = {},
     onPositionChanged: (Float, Float) -> Unit,
 ) {
     val colors = LocalAppColors.current
@@ -658,6 +710,7 @@ private fun DraggableButton(
     // Always call the latest onPositionChanged so PadCanvas's stale-profile
     // closure (captured by pointerInput) doesn't revert sibling button positions.
     val currentOnPositionChanged = rememberUpdatedState(onPositionChanged)
+    val currentOnDragActiveChanged = rememberUpdatedState(onDragActiveChanged)
     val currentGridMode = rememberUpdatedState(gridMode)
     val currentGridStepPx = rememberUpdatedState(gridStepPx)
     val currentAlignmentSnapping = rememberUpdatedState(alignmentSnapping)
@@ -725,6 +778,13 @@ private fun DraggableButton(
                                     dragOffsetX = 0f
                                     dragOffsetY = 0f
                                     onTouch()
+                                    currentOnDragActiveChanged.value(true)
+                                },
+                                onDragEnd = {
+                                    currentOnDragActiveChanged.value(false)
+                                },
+                                onDragCancel = {
+                                    currentOnDragActiveChanged.value(false)
                                 },
                                 onDrag = { change, drag ->
                                     change.consume()
@@ -991,9 +1051,13 @@ private fun ButtonResizeHandleView(
     handleHeight: Dp,
     color: Color,
     onDragStart: () -> Unit,
+    onDragEnd: () -> Unit = {},
+    onDragCancel: () -> Unit = {},
     onDrag: (dx: Float, dy: Float) -> Unit,
 ) {
     val currentOnDragStart by rememberUpdatedState(onDragStart)
+    val currentOnDragEnd by rememberUpdatedState(onDragEnd)
+    val currentOnDragCancel by rememberUpdatedState(onDragCancel)
     val currentOnDrag by rememberUpdatedState(onDrag)
 
     Box(
@@ -1009,6 +1073,12 @@ private fun ButtonResizeHandleView(
                             accumulatedX = 0f
                             accumulatedY = 0f
                             currentOnDragStart()
+                        },
+                        onDragEnd = {
+                            currentOnDragEnd()
+                        },
+                        onDragCancel = {
+                            currentOnDragCancel()
                         },
                         onDrag = { change, dragAmount ->
                             change.consume()
@@ -1026,6 +1096,59 @@ private fun ButtonResizeHandleView(
                     .size(width = handleWidth, height = handleHeight)
                     .background(color.copy(alpha = 0.85f), PC_EDGE_HANDLE_SHAPE),
         )
+    }
+}
+
+@Composable
+private fun ButtonDimensionHud(
+    widthDp: Float,
+    heightDp: Float,
+    centerX: Float,
+    buttonTopPx: Float,
+    buttonBottomPx: Float,
+    canvasW: Float,
+    accentColor: Color,
+    visible: Boolean,
+) {
+    val density = LocalDensity.current
+    val hudMarginPx = with(density) { PC_HUD_MARGIN_DP.toPx() }
+    val hudEstimatedHeightPx = with(density) { PC_HUD_ESTIMATED_HEIGHT_DP.toPx() }
+    val isNearTop = (buttonTopPx - hudEstimatedHeightPx - hudMarginPx) < hudMarginPx
+    val hudTopPx =
+        if (isNearTop) {
+            buttonBottomPx + hudMarginPx
+        } else {
+            buttonTopPx - hudEstimatedHeightPx - hudMarginPx
+        }
+    var hudWidthPx by remember { mutableFloatStateOf(0f) }
+
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(tween(PC_HUD_ANIM_MS)) + scaleIn(initialScale = 0.85f, animationSpec = tween(PC_HUD_ANIM_MS)),
+        exit = fadeOut(tween(PC_HUD_ANIM_MS)) + scaleOut(targetScale = 0.85f, animationSpec = tween(PC_HUD_ANIM_MS)),
+        modifier =
+            Modifier.absoluteOffset {
+                val safeWidth = if (hudWidthPx > 0f) hudWidthPx else 60.dp.toPx()
+                val leftPx = (centerX - safeWidth / 2f).coerceIn(hudMarginPx, canvasW - safeWidth - hudMarginPx)
+                IntOffset(leftPx.roundToInt(), hudTopPx.roundToInt())
+            },
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .onSizeChanged { hudWidthPx = it.width.toFloat() }
+                    .background(Color.Black.copy(alpha = 0.85f), PC_HUD_SHAPE)
+                    .border(1.dp, accentColor.copy(alpha = 0.7f), PC_HUD_SHAPE)
+                    .padding(horizontal = PC_HUD_PADDING_H, vertical = PC_HUD_PADDING_V),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = "${widthDp.roundToInt()} × ${heightDp.roundToInt()}",
+                color = Color.White,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
     }
 }
 

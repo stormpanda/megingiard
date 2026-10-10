@@ -2976,6 +2976,10 @@ private fun EditButtonPositionsSubPageContent(
         },
     )
 
+    LaunchedEffect(movingButtonId) {
+        MacroPadState.setAdjustingButtonViaGamepad(movingButtonId != null)
+    }
+
     if (buttons.isEmpty()) {
         Text(
             text = stringResource(R.string.macropad_editor_no_buttons_in_layout),
@@ -3075,7 +3079,12 @@ private fun EditButtonPositionsSubPageContent(
                     trailingContent = {
                         if (isMoving) {
                             GamepadPill(
-                                text = stringResource(R.string.gamepad_action_moving),
+                                text =
+                                    if (isR2Held) {
+                                        stringResource(R.string.gamepad_action_resizing)
+                                    } else {
+                                        stringResource(R.string.gamepad_action_moving)
+                                    },
                                 isAccent = true,
                             )
                         } else {

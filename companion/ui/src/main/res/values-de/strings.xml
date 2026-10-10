@@ -1132,6 +1132,7 @@ Open Settings to create a layout.</string>
     <string name="gamepad_action_checking">Prüfen</string>
     <string name="gamepad_action_move">Verschieben</string>
     <string name="gamepad_action_moving">Verschieben</string>
+    <string name="gamepad_action_resizing">Skalieren</string>
     <string name="gamepad_action_delete">Löschen</string>
     <string name="macropad_reorder_empty">Keine Einträge zum Neuanordnen</string>
     <string name="gamepad_action_copy">Kopieren</string>
@@ -1234,8 +1235,10 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_reorder_layouts_desc">Reihenfolge der Layouts in diesem Profil ändern</string>
     <string name="macropad_editor_delete_layout_desc">Löscht \'%1$s\' aus diesem Profil</string>
     <string name="macropad_editor_delete_button_desc">Löscht \'%1$s\' aus diesem Layout</string>
-    <string name="macropad_editor_edit_button_positions">Tastenpositionen bearbeiten</string>
+    <string name="macropad_editor_edit_button_positions">Tasten positionieren &amp; skalieren</string>
     <string name="macropad_editor_edit_button_positions_card_desc">Tasten per Touch oder D-Pad präzise bewegen und skalieren</string>
+    <string name="macropad_editor_adjust_position_size">Position &amp; Größe anpassen</string>
+    <string name="macropad_editor_adjust_position_size_desc">Diese Taste auf der Arbeitsfläche oder mit dem Steuerkreuz bewegen und skalieren</string>
     <string name="macropad_editor_move_buttons_info">Verschiebe oder skaliere Tasten direkt auf dem unteren Bildschirm oder wähle unten eine Taste, um sie mit dem Steuerkreuz zu verschieben (halte R2 zum Skalieren, halte L2 für feine 1-Pixel-Schritte).</string>
     <string name="macropad_editor_manage_buttons">Tasten verwalten</string>
     <string name="macropad_editor_reorder_buttons">Tasten neu anordnen</string>

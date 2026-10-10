@@ -485,4 +485,49 @@ class AlignmentMathTest {
         assertEquals(30f, w3, 0.01f)
         assertEquals(30f, h3, 0.01f)
     }
+
+    @Test
+    fun `calculateButtonEdgeResize snaps to 1 to 1 aspect ratio when within threshold`() {
+        // Start: width 75dp, height 60dp. density = 1f. Left = 500 - 37.5 = 462.5px. Right = 537.5px.
+        // Drag RIGHT by -13px -> candidate right = 524.5px -> candidate width = 62dp.
+        // Within 4dp of height (60dp) -> snaps to exactly 60dp!
+        val result =
+            calculateButtonEdgeResize(
+                handle = ButtonResizeHandle.RIGHT,
+                dragDeltaPx = -13f,
+                originalNormX = 0.5f,
+                originalNormY = 0.5f,
+                originalWidthDp = 75f,
+                originalHeightDp = 60f,
+                canvasW = 1000f,
+                canvasH = 1000f,
+                density = 1f,
+            )
+
+        assertEquals(60f, result.newWidthDp, 0.01f)
+        assertEquals(60f, result.newHeightDp, 0.01f)
+        assertTrue(result.isAspectSnapped)
+    }
+
+    @Test
+    fun `calculateButtonEdgeResize does not snap when outside threshold`() {
+        // Start: width 75dp, height 60dp. Drag RIGHT by -8px -> candidate width = 67dp.
+        // 67dp - 60dp = 7dp > 4dp threshold -> does not snap.
+        val result =
+            calculateButtonEdgeResize(
+                handle = ButtonResizeHandle.RIGHT,
+                dragDeltaPx = -8f,
+                originalNormX = 0.5f,
+                originalNormY = 0.5f,
+                originalWidthDp = 75f,
+                originalHeightDp = 60f,
+                canvasW = 1000f,
+                canvasH = 1000f,
+                density = 1f,
+            )
+
+        assertEquals(67f, result.newWidthDp, 0.01f)
+        assertEquals(60f, result.newHeightDp, 0.01f)
+        assertFalse(result.isAspectSnapped)
+    }
 }

@@ -237,7 +237,16 @@ object MacroPadState {
         _isEditingButtonPositions.value = editing
         if (!editing) {
             _selectedButtonId.value = null
+            _isAdjustingButtonViaGamepad.value = false
         }
+    }
+
+    private val _isAdjustingButtonViaGamepad = MutableStateFlow(false)
+    val isAdjustingButtonViaGamepad: StateFlow<Boolean> = _isAdjustingButtonViaGamepad.asStateFlow()
+
+    fun setAdjustingButtonViaGamepad(adjusting: Boolean) {
+        AppLog.d(TAG, "setAdjustingButtonViaGamepad($adjusting)")
+        _isAdjustingButtonViaGamepad.value = adjusting
     }
 
     private val _isCroppingBackground = MutableStateFlow(false)

@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.macropad
 
+import android.view.KeyEvent
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -21,6 +22,7 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.FormatColorFill
 import androidx.compose.material.icons.rounded.FormatColorText
 import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.rounded.OpenWith
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Share
@@ -37,9 +39,12 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -48,11 +53,17 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.math.calculateGamepadButtonMove
+import com.stormpanda.megingiard.math.calculateGamepadButtonResize
+import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.BumperDirection
 import com.stormpanda.megingiard.ui.GamepadActionCard
+import com.stormpanda.megingiard.ui.GamepadCardRow
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
 import com.stormpanda.megingiard.ui.GamepadColorSwatch
+import com.stormpanda.megingiard.ui.GamepadFocusCard
+import com.stormpanda.megingiard.ui.GamepadPill
 import com.stormpanda.megingiard.ui.GamepadSaveExitActionRow
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadStepperCard
@@ -64,12 +75,20 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.MaterialSymbol
 import com.stormpanda.megingiard.ui.cycle
 import com.stormpanda.megingiard.ui.firstDeckItem
+import com.stormpanda.megingiard.ui.handle2DAdjustmentKeyEvent
+import com.stormpanda.megingiard.ui.launchDirectionalRepeat
 import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
 import com.stormpanda.megingiard.ui.toHexLabel
+import kotlinx.coroutines.Job
 import java.util.UUID
 import kotlin.math.roundToInt
 
 private const val TAG = "PadButtonEditDialog"
+
+private const val PBD_NORMAL_STEP_PX = 10f
+private const val PBD_FINE_STEP_PX = 1f
+private const val PBD_CANVAS_WIDTH_PX = 1000f
+private const val PBD_CANVAS_HEIGHT_PX = 1000f
 
 private val PBD_COLOR_PREVIEW_SIZE = 36.dp
 private val PBD_CORNER_RADIUS_DP = 6.dp
@@ -242,11 +261,136 @@ internal fun EditButtonSubPageContent(
         }
     }
 
+    var posX by remember(button) { mutableFloatStateOf(button?.posX ?: 0.5f) }
+    var posY by remember(button) { mutableFloatStateOf(button?.posY ?: 0.5f) }
+    var isAdjusting by remember { mutableStateOf(false) }
+    var isR2Held by remember { mutableStateOf(false) }
+    var isL2Held by remember { mutableStateOf(false) }
+    val isL2HeldState = rememberUpdatedState(isL2Held)
+    val isR2HeldState = rememberUpdatedState(isR2Held)
+    val buttonAlignmentSnapping by MacroPadSettings.buttonAlignmentSnapping.collectAsStateWithLifecycle()
+    val coroutineScope = rememberCoroutineScope()
+    var activeDirectionKey by remember { mutableStateOf<Int?>(null) }
+    var activeRepeatJob by remember { mutableStateOf<Job?>(null) }
+
+    LaunchedEffect(isAdjusting) {
+        MacroPadState.setAdjustingButtonViaGamepad(isAdjusting)
+        MacroPadState.setEditingButtonPositions(isAdjusting)
+        if (isAdjusting) {
+            MacroPadState.setSelectedButtonId(stableButtonId)
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            activeRepeatJob?.cancel()
+            MacroPadState.setAdjustingButtonViaGamepad(false)
+            MacroPadState.setEditingButtonPositions(false)
+            MacroPadState.clearPreviewLayout()
+        }
+    }
+
+    val activePreviewLayout by MacroPadState.previewLayout.collectAsStateWithLifecycle()
+    LaunchedEffect(activePreviewLayout) {
+        val b = activePreviewLayout?.buttons?.firstOrNull { it.id == stableButtonId }
+        if (b != null) {
+            if (b.posX != posX) posX = b.posX
+            if (b.posY != posY) posY = b.posY
+            if (b.widthDp != widthDp) widthDp = b.widthDp
+            if (b.heightDp != heightDp) heightDp = b.heightDp
+        }
+    }
+
+    fun moveButton(
+        dx: Int,
+        dy: Int,
+    ) {
+        val currentLayout = MacroPadState.activeLayout.value ?: return
+        val stepMultiplier = if (isL2HeldState.value) PBD_FINE_STEP_PX else PBD_NORMAL_STEP_PX
+        val (newX, newY) =
+            calculateGamepadButtonMove(
+                currentNormX = posX,
+                currentNormY = posY,
+                dirX = dx,
+                dirY = dy,
+                stepMultiplierPx = stepMultiplier,
+                movingButtonId = stableButtonId,
+                otherButtons = currentLayout.buttons,
+                canvasW = PBD_CANVAS_WIDTH_PX,
+                canvasH = PBD_CANVAS_HEIGHT_PX,
+                alignmentSnappingEnabled = buttonAlignmentSnapping,
+            )
+        posX = newX
+        posY = newY
+    }
+
+    fun resizeButton(
+        dx: Int,
+        dy: Int,
+    ) {
+        val stepMultiplier = if (isL2HeldState.value) PBD_FINE_STEP_PX else PBD_NORMAL_STEP_PX
+        val deltaX = (dx * stepMultiplier).roundToInt()
+        val deltaY = (dy * stepMultiplier).roundToInt()
+        val (newW, newH) =
+            calculateGamepadButtonResize(
+                currentWidthDp = widthDp,
+                currentHeightDp = heightDp,
+                dx = deltaX,
+                dy = deltaY,
+                density = 1f,
+                maxScreenWDp = PBD_CANVAS_WIDTH_PX,
+                maxScreenHDp = PBD_CANVAS_HEIGHT_PX,
+            )
+        widthDp = newW
+        heightDp = newH
+    }
+
+    fun dispatchAdjust(
+        dx: Int,
+        dy: Int,
+    ) {
+        if (isR2HeldState.value) {
+            resizeButton(dx, dy)
+        } else {
+            moveButton(dx, dy)
+        }
+    }
+
+    fun stopMovingImmediate() {
+        activeRepeatJob?.cancel()
+        activeRepeatJob = null
+        activeDirectionKey = null
+    }
+
+    fun startMoving(
+        keyCode: Int,
+        dx: Int,
+        dy: Int,
+    ) {
+        if (activeDirectionKey == keyCode && activeRepeatJob?.isActive == true) return
+        activeRepeatJob?.cancel()
+        activeDirectionKey = keyCode
+        dispatchAdjust(dx, dy)
+        activeRepeatJob =
+            coroutineScope.launchDirectionalRepeat(
+                keyCode = keyCode,
+                isActiveCheck = { activeDirectionKey == keyCode },
+            ) {
+                dispatchAdjust(dx, dy)
+            }
+    }
+
+    fun stopMoving(keyCode: Int) {
+        if (activeDirectionKey == keyCode) {
+            stopMovingImmediate()
+        }
+    }
+
     val currentButton =
         remember(
             stableButtonId,
-            button?.posX,
-            button?.posY,
+            posX,
+            posY,
             label,
             iconName,
             iconFilled,
@@ -267,8 +411,8 @@ internal fun EditButtonSubPageContent(
                 label = label,
                 iconName = iconName,
                 iconFilled = iconFilled,
-                posX = button?.posX ?: 0.5f,
-                posY = button?.posY ?: 0.5f,
+                posX = posX,
+                posY = posY,
                 widthDp = widthDp,
                 heightDp = heightDp,
                 buttonShape = buttonShape,
@@ -298,7 +442,7 @@ internal fun EditButtonSubPageContent(
     }
 
     val hasChanges =
-        isNew || currentButton.copy(posX = savedButton.posX, posY = savedButton.posY) != savedButton
+        isNew || currentButton != savedButton
 
     val layoutTextOpt = activeLayout?.buttonTextColor ?: ColorOption.Neutral
     val layoutBorderOpt = activeLayout?.buttonBorderColor ?: ColorOption.Neutral
@@ -389,12 +533,12 @@ internal fun EditButtonSubPageContent(
         onChange = ::onActionChanged,
     )
 
-    if (action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove) {
-        GamepadSectionHeader(
-            text = stringResource(R.string.macropad_editor_section_shape_size),
-            color = accentColor,
-        )
+    GamepadSectionHeader(
+        text = stringResource(R.string.macropad_editor_section_shape_size),
+        color = accentColor,
+    )
 
+    if (action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove) {
         GamepadChoiceCard(
             title = stringResource(R.string.macropad_editor_button_shape),
             description = stringResource(R.string.macropad_btn_shape_desc),
@@ -403,7 +547,106 @@ internal fun EditButtonSubPageContent(
             onPrevious = { buttonShape = ButtonShape.entries.cycle(buttonShape, BumperDirection.PREV) },
             onNext = { buttonShape = ButtonShape.entries.cycle(buttonShape, BumperDirection.NEXT) },
         )
+    }
 
+    val adjustFocusRequester = remember { FocusRequester() }
+    GamepadFocusCard(
+        cardFocusRequester = adjustFocusRequester,
+        onClick = {
+            if (isAdjusting) {
+                stopMovingImmediate()
+                isAdjusting = false
+            } else {
+                isAdjusting = true
+            }
+        },
+        itemKey = "adjust_position_size",
+        isAdjusting = isAdjusting,
+        onFocusChanged = { isFocused ->
+            if (!isFocused && isAdjusting) {
+                stopMovingImmediate()
+                isAdjusting = false
+            }
+        },
+        onCustomKeyEvent = { keyEvent ->
+            handle2DAdjustmentKeyEvent(
+                keyEvent = keyEvent,
+                isAdjusting = isAdjusting,
+                onStartAdjusting = { keyCode, dirX, dirY ->
+                    startMoving(keyCode, dirX, dirY)
+                    true
+                },
+                onStopAdjusting = { keyCode ->
+                    stopMoving(keyCode)
+                    true
+                },
+                onDismissAdjustment = {
+                    stopMovingImmediate()
+                    isAdjusting = false
+                },
+                onModifierKeyDown = { keyCode ->
+                    when (keyCode) {
+                        KeyEvent.KEYCODE_BUTTON_L2 -> {
+                            isL2Held = true
+                            true
+                        }
+
+                        KeyEvent.KEYCODE_BUTTON_R2 -> {
+                            isR2Held = true
+                            true
+                        }
+
+                        else -> {
+                            false
+                        }
+                    }
+                },
+                onModifierKeyUp = { keyCode ->
+                    when (keyCode) {
+                        KeyEvent.KEYCODE_BUTTON_L2 -> {
+                            isL2Held = false
+                            false
+                        }
+
+                        KeyEvent.KEYCODE_BUTTON_R2 -> {
+                            isR2Held = false
+                            false
+                        }
+
+                        else -> {
+                            false
+                        }
+                    }
+                },
+            )
+        },
+    ) { isFocused ->
+        GamepadCardRow(
+            title = stringResource(R.string.macropad_editor_adjust_position_size),
+            description = "${widthDp.roundToInt()}×${heightDp.roundToInt()} • X: ${(posX * 100).roundToInt()}% Y: ${(posY * 100).roundToInt()}%",
+            icon = Icons.Rounded.OpenWith,
+            trailingContent = {
+                if (isAdjusting) {
+                    GamepadPill(
+                        text =
+                            if (isR2Held) {
+                                stringResource(R.string.gamepad_action_resizing)
+                            } else {
+                                stringResource(R.string.gamepad_action_moving)
+                            },
+                        isAccent = true,
+                    )
+                } else {
+                    GamepadPill(
+                        text = stringResource(R.string.gamepad_action_move),
+                        isHighlighted = isFocused,
+                    )
+                }
+            },
+        )
+    }
+
+    if (action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove) {
         GamepadSectionHeader(
             text = stringResource(R.string.macropad_editor_section_haptic),
             color = accentColor,

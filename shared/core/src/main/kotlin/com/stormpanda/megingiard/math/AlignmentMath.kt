@@ -612,17 +612,21 @@ enum class ButtonResizeHandle {
     RIGHT,
 }
 
+const val BUTTON_ASPECT_SNAP_THRESHOLD_DP = 4f
+
 data class ButtonResizeResult(
     val newNormX: Float,
     val newNormY: Float,
     val newWidthDp: Float,
     val newHeightDp: Float,
+    val isAspectSnapped: Boolean = false,
 )
 
 /**
  * Calculates updated button bounds when dragging an edge resize handle.
  * Anchors the opposite edge (e.g. dragging the right edge keeps the left edge fixed).
  * Clamps width and height between [minSizeDp] (default 30 dp) and screen/canvas bounds.
+ * Magnetically snaps dimension to [aspectSnapThresholdDp] (default 4 dp) for 1:1 aspect ratio.
  */
 fun calculateButtonEdgeResize(
     handle: ButtonResizeHandle,
@@ -635,6 +639,7 @@ fun calculateButtonEdgeResize(
     canvasH: Float,
     density: Float,
     minSizeDp: Float = MP_BUTTON_MIN_SIZE_DP,
+    aspectSnapThresholdDp: Float = BUTTON_ASPECT_SNAP_THRESHOLD_DP,
 ): ButtonResizeResult {
     val safeDensity = density.coerceAtLeast(0.001f)
     val safeCanvasW = canvasW.coerceAtLeast(1f)
@@ -647,13 +652,20 @@ fun calculateButtonEdgeResize(
             val originalRightPx = leftPx + (originalWidthDp * safeDensity)
             val candRightPx = originalRightPx + dragDeltaPx
             val maxAllowedWidthPx = safeCanvasW
-            val newWidthPx = (candRightPx - leftPx).coerceIn(minPx, maxAllowedWidthPx)
+            var newWidthPx = (candRightPx - leftPx).coerceIn(minPx, maxAllowedWidthPx)
+            val candWidthDp = newWidthPx / safeDensity
+            var isSnapped = false
+            if (abs(candWidthDp - originalHeightDp) <= aspectSnapThresholdDp) {
+                newWidthPx = (originalHeightDp * safeDensity).coerceIn(minPx, maxAllowedWidthPx)
+                isSnapped = true
+            }
             val newCenterXPx = leftPx + newWidthPx / 2f
             ButtonResizeResult(
                 newNormX = (newCenterXPx / safeCanvasW).coerceIn(0f, 1f),
                 newNormY = originalNormY,
                 newWidthDp = newWidthPx / safeDensity,
                 newHeightDp = originalHeightDp,
+                isAspectSnapped = isSnapped,
             )
         }
 
@@ -662,13 +674,20 @@ fun calculateButtonEdgeResize(
             val originalLeftPx = rightPx - (originalWidthDp * safeDensity)
             val candLeftPx = originalLeftPx + dragDeltaPx
             val maxAllowedWidthPx = safeCanvasW
-            val newWidthPx = (rightPx - candLeftPx).coerceIn(minPx, maxAllowedWidthPx)
+            var newWidthPx = (rightPx - candLeftPx).coerceIn(minPx, maxAllowedWidthPx)
+            val candWidthDp = newWidthPx / safeDensity
+            var isSnapped = false
+            if (abs(candWidthDp - originalHeightDp) <= aspectSnapThresholdDp) {
+                newWidthPx = (originalHeightDp * safeDensity).coerceIn(minPx, maxAllowedWidthPx)
+                isSnapped = true
+            }
             val newCenterXPx = rightPx - newWidthPx / 2f
             ButtonResizeResult(
                 newNormX = (newCenterXPx / safeCanvasW).coerceIn(0f, 1f),
                 newNormY = originalNormY,
                 newWidthDp = newWidthPx / safeDensity,
                 newHeightDp = originalHeightDp,
+                isAspectSnapped = isSnapped,
             )
         }
 
@@ -677,13 +696,20 @@ fun calculateButtonEdgeResize(
             val originalBottomPx = topPx + (originalHeightDp * safeDensity)
             val candBottomPx = originalBottomPx + dragDeltaPx
             val maxAllowedHeightPx = safeCanvasH
-            val newHeightPx = (candBottomPx - topPx).coerceIn(minPx, maxAllowedHeightPx)
+            var newHeightPx = (candBottomPx - topPx).coerceIn(minPx, maxAllowedHeightPx)
+            val candHeightDp = newHeightPx / safeDensity
+            var isSnapped = false
+            if (abs(candHeightDp - originalWidthDp) <= aspectSnapThresholdDp) {
+                newHeightPx = (originalWidthDp * safeDensity).coerceIn(minPx, maxAllowedHeightPx)
+                isSnapped = true
+            }
             val newCenterYPx = topPx + newHeightPx / 2f
             ButtonResizeResult(
                 newNormX = originalNormX,
                 newNormY = (newCenterYPx / safeCanvasH).coerceIn(0f, 1f),
                 newWidthDp = originalWidthDp,
                 newHeightDp = newHeightPx / safeDensity,
+                isAspectSnapped = isSnapped,
             )
         }
 
@@ -692,13 +718,20 @@ fun calculateButtonEdgeResize(
             val originalTopPx = bottomPx - (originalHeightDp * safeDensity)
             val candTopPx = originalTopPx + dragDeltaPx
             val maxAllowedHeightPx = safeCanvasH
-            val newHeightPx = (bottomPx - candTopPx).coerceIn(minPx, maxAllowedHeightPx)
+            var newHeightPx = (bottomPx - candTopPx).coerceIn(minPx, maxAllowedHeightPx)
+            val candHeightDp = newHeightPx / safeDensity
+            var isSnapped = false
+            if (abs(candHeightDp - originalWidthDp) <= aspectSnapThresholdDp) {
+                newHeightPx = (originalWidthDp * safeDensity).coerceIn(minPx, maxAllowedHeightPx)
+                isSnapped = true
+            }
             val newCenterYPx = bottomPx - newHeightPx / 2f
             ButtonResizeResult(
                 newNormX = originalNormX,
                 newNormY = (newCenterYPx / safeCanvasH).coerceIn(0f, 1f),
                 newWidthDp = originalWidthDp,
                 newHeightDp = newHeightPx / safeDensity,
+                isAspectSnapped = isSnapped,
             )
         }
     }
