@@ -678,7 +678,7 @@ fun FocusLibraryScreen(
                         }
                     val itemActionsCount =
                         if (focusedApp != null) {
-                            if (!focusedApp.isRom) 4 else 2
+                            if (!focusedApp.isRom) LIBRARY_APP_ACTIONS_COUNT else LIBRARY_ROM_ACTIONS_COUNT
                         } else {
                             0
                         }

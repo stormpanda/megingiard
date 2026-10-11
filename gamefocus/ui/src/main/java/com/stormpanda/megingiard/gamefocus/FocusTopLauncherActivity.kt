@@ -75,9 +75,9 @@ private const val JOYSTICK_NEGATIVE_THRESHOLD = -0.5f
 
 internal fun getMainMenuCount(isPaired: Boolean): Int = if (isPaired) MAIN_MENU_PAIRED_ITEMS_COUNT else MAIN_MENU_UNPAIRED_ITEMS_COUNT
 
-private const val LIBRARY_APP_ACTIONS_COUNT = 4
-private const val LIBRARY_ROM_ACTIONS_COUNT = 2
-private const val LIBRARY_BASE_ACTIONS_COUNT = 1
+internal const val LIBRARY_APP_ACTIONS_COUNT = 4
+internal const val LIBRARY_ROM_ACTIONS_COUNT = 2
+internal const val LIBRARY_BASE_ACTIONS_COUNT = 1
 
 internal fun getLibraryMenuCount(
     hasApp: Boolean,
@@ -946,7 +946,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                         val isSwitchRomSystem = currentRomFolder?.systemId == SYSTEM_ID_SWITCH
                         val isConfigurableRomSystem = isRetroArchRomSystem || isSwitchRomSystem
 
-                        val baseIndex = if (hasApp) (if (!isRom) 4 else 2) else 0
+                        val baseIndex = if (hasApp) (if (!isRom) LIBRARY_APP_ACTIONS_COUNT else LIBRARY_ROM_ACTIONS_COUNT) else 0
                         if (hasApp && selectedIndex < baseIndex) {
                             if (!isRom) {
                                 when (selectedIndex) {

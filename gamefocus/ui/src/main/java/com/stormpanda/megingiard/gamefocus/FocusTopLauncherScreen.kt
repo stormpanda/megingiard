@@ -1377,6 +1377,16 @@ internal fun rememberIconBitmap(
     return state.value
 }
 
+private sealed interface LibraryIconLoadResult {
+    data class Success(
+        val bitmap: ImageBitmap,
+    ) : LibraryIconLoadResult
+
+    data object Loading : LibraryIconLoadResult
+
+    data object Failed : LibraryIconLoadResult
+}
+
 @Composable
 internal fun rememberLibraryIconBitmap(
     appInfo: InstalledAppInfo,
@@ -1385,23 +1395,31 @@ internal fun rememberLibraryIconBitmap(
     if (appInfo.libraryIconPath == null) {
         return rememberIconBitmap(appInfo, enabled = enabled)
     }
+    val cachedBitmap = FocusImageCache.getCachedLibraryIconBitmap(appInfo.packageName, appInfo.libraryIconLastModified)
     val state =
-        produceState<ImageBitmap?>(
-            initialValue = FocusImageCache.getCachedLibraryIconBitmap(appInfo.packageName, appInfo.libraryIconLastModified),
+        produceState<LibraryIconLoadResult>(
+            initialValue = if (cachedBitmap != null) LibraryIconLoadResult.Success(cachedBitmap) else LibraryIconLoadResult.Loading,
             key1 = appInfo.packageName,
             key2 = appInfo.libraryIconLastModified,
             key3 = enabled,
         ) {
             if (!enabled) {
-                value = null
+                value = LibraryIconLoadResult.Failed
                 return@produceState
             }
-            value = FocusImageCache.getCachedLibraryIconBitmap(appInfo.packageName, appInfo.libraryIconLastModified)
-            if (value == null) {
-                value = FocusImageCache.getLibraryIconBitmapAsync(appInfo)
+            val memoryCached = FocusImageCache.getCachedLibraryIconBitmap(appInfo.packageName, appInfo.libraryIconLastModified)
+            if (memoryCached != null) {
+                value = LibraryIconLoadResult.Success(memoryCached)
+                return@produceState
             }
+            val diskBitmap = FocusImageCache.getLibraryIconBitmapAsync(appInfo)
+            value = if (diskBitmap != null) LibraryIconLoadResult.Success(diskBitmap) else LibraryIconLoadResult.Failed
         }
-    return state.value ?: rememberIconBitmap(appInfo, enabled = enabled)
+    return when (val result = state.value) {
+        is LibraryIconLoadResult.Success -> result.bitmap
+        LibraryIconLoadResult.Loading -> null
+        LibraryIconLoadResult.Failed -> rememberIconBitmap(appInfo, enabled = enabled)
+    }
 }
 
 @Composable

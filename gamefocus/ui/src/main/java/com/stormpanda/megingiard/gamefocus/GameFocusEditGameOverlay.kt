@@ -62,10 +62,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.catalog.InstalledAppsManager
 import com.stormpanda.megingiard.catalog.LibraryIconRef
+import com.stormpanda.megingiard.catalog.RomManager
 import com.stormpanda.megingiard.media.SteamGridDbClient
 import com.stormpanda.megingiard.media.SteamGridDbGame
 import com.stormpanda.megingiard.media.SteamGridDbImage
@@ -85,6 +87,7 @@ import com.stormpanda.megingiard.ui.PrimaryOverlayContainer
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
@@ -131,6 +134,18 @@ fun GameFocusEditGameOverlay(
     val categories = remember { EditGameCategory.entries.toList() }
     var selectedCategory by remember { mutableStateOf(EditGameCategory.GAME_INFO) }
 
+    val installedApps by InstalledAppsManager.installedApps.collectAsStateWithLifecycle()
+    val romApps by RomManager.romApps.collectAsStateWithLifecycle()
+
+    val liveAppInfo =
+        remember(appInfo.packageName, appInfo.isRom, installedApps, romApps) {
+            if (appInfo.isRom) {
+                romApps.find { it.packageName == appInfo.packageName } ?: appInfo
+            } else {
+                installedApps.find { it.packageName == appInfo.packageName } ?: appInfo
+            }
+        }
+
     PrimaryOverlayContainer(
         title = stringResource(R.string.gamefocus_edit_overlay_title),
         icon = Icons.Rounded.Edit,
@@ -169,7 +184,7 @@ fun GameFocusEditGameOverlay(
                     when (category) {
                         EditGameCategory.GAME_INFO -> {
                             GameInfoDeckContent(
-                                appInfo = appInfo,
+                                appInfo = liveAppInfo,
                                 accentColor = appColors.accent,
                                 onDismiss = onDismiss,
                             )
@@ -177,7 +192,7 @@ fun GameFocusEditGameOverlay(
 
                         EditGameCategory.SCRAPING -> {
                             ScrapingDeckContent(
-                                appInfo = appInfo,
+                                appInfo = liveAppInfo,
                                 apiKey = apiKey,
                                 accentColor = appColors.accent,
                             )
@@ -185,7 +200,7 @@ fun GameFocusEditGameOverlay(
 
                         EditGameCategory.LIBRARY_ICON -> {
                             LibraryIconDeckContent(
-                                appInfo = appInfo,
+                                appInfo = liveAppInfo,
                                 apiKey = apiKey,
                                 accentColor = appColors.accent,
                             )
@@ -307,12 +322,16 @@ private fun ScrapingDeckContent(
     var images by remember { mutableStateOf<List<SteamGridDbImage>>(emptyList()) }
     var scrapeErrorRes by remember { mutableStateOf<Int?>(null) }
     var isDownloading by remember { mutableStateOf(false) }
+    var downloadJob by remember { mutableStateOf<Job?>(null) }
 
     val isTokenMissing = apiKey.isBlank()
     val currentGame = games.getOrNull(selectedGameIndex)
     val rowState = rememberLazyListState()
 
     val onRevertToAppIcon: () -> Unit = {
+        downloadJob?.cancel()
+        downloadJob = null
+        isDownloading = false
         scope.launch {
             InstalledAppsManager.revertToDefaultCover(context, appInfo.packageName) {
                 AppPaletteExtractor.invalidatePalette(appInfo.packageName)
@@ -325,30 +344,32 @@ private fun ScrapingDeckContent(
         if (!isDownloading) {
             isDownloading = true
             scrapeErrorRes = null
-            scope.launch {
-                try {
-                    AppLog.i(TAG, "Downloading SteamGridDB artwork for ${appInfo.label} from: ${image.url}")
-                    val bytesResult = SteamGridDbClient.downloadImageBytes(image.url)
-                    val bytes = bytesResult.getOrNull()
-                    if (bytes == null) {
-                        AppLog.w(TAG, "Artwork download failed for ${appInfo.packageName}: ${bytesResult.exceptionOrNull()?.message}")
-                        scrapeErrorRes = steamGridDbErrorMessageRes(bytesResult.exceptionOrNull())
-                    } else {
-                        val savedPath =
-                            InstalledAppsManager.applyCustomCover(context, appInfo.packageName, bytes, image.id) {
-                                AppPaletteExtractor.invalidatePalette(appInfo.packageName)
-                            }
-                        if (savedPath != null) {
-                            appliedImageId = image.id
-                            useAppIcon = false
+            downloadJob?.cancel()
+            downloadJob =
+                scope.launch {
+                    try {
+                        AppLog.i(TAG, "Downloading SteamGridDB artwork for ${appInfo.label} from: ${image.url}")
+                        val bytesResult = SteamGridDbClient.downloadImageBytes(image.url)
+                        val bytes = bytesResult.getOrNull()
+                        if (bytes == null) {
+                            AppLog.w(TAG, "Artwork download failed for ${appInfo.packageName}: ${bytesResult.exceptionOrNull()?.message}")
+                            scrapeErrorRes = steamGridDbErrorMessageRes(bytesResult.exceptionOrNull())
                         } else {
-                            scrapeErrorRes = R.string.steamgriddb_error_save_failed
+                            val savedPath =
+                                InstalledAppsManager.applyCustomCover(context, appInfo.packageName, bytes, image.id) {
+                                    AppPaletteExtractor.invalidatePalette(appInfo.packageName)
+                                }
+                            if (savedPath != null) {
+                                appliedImageId = image.id
+                                useAppIcon = false
+                            } else {
+                                scrapeErrorRes = R.string.steamgriddb_error_save_failed
+                            }
                         }
+                    } finally {
+                        isDownloading = false
                     }
-                } finally {
-                    isDownloading = false
                 }
-            }
         }
     }
 
@@ -423,6 +444,7 @@ private fun ScrapingDeckContent(
                     onRevertToAppIcon()
                 }
             },
+            enabled = !isDownloading,
             modifier = Modifier.firstDeckItem(),
         )
 
@@ -625,12 +647,16 @@ private fun LibraryIconDeckContent(
     var images by remember { mutableStateOf<List<SteamGridDbImage>>(emptyList()) }
     var scrapeErrorRes by remember { mutableStateOf<Int?>(null) }
     var isDownloading by remember { mutableStateOf(false) }
+    var downloadJob by remember { mutableStateOf<Job?>(null) }
 
     val isTokenMissing = apiKey.isBlank()
     val currentGame = games.getOrNull(selectedGameIndex)
     val rowState = rememberLazyListState()
 
     val onRevertToDefaultIcon: () -> Unit = {
+        downloadJob?.cancel()
+        downloadJob = null
+        isDownloading = false
         scope.launch {
             InstalledAppsManager.revertToDefaultLibraryIcon(context, appInfo.packageName)
             appliedImageId = null
@@ -642,35 +668,40 @@ private fun LibraryIconDeckContent(
         if (!isDownloading) {
             isDownloading = true
             scrapeErrorRes = null
-            scope.launch {
-                try {
-                    AppLog.i(TAG, "Downloading SteamGridDB library icon for ${appInfo.label} from: ${image.url}")
-                    val bytesResult = SteamGridDbClient.downloadImageBytes(image.url)
-                    val bytes = bytesResult.getOrNull()
-                    if (bytes == null) {
-                        AppLog.w(TAG, "Library icon download failed for ${appInfo.packageName}: ${bytesResult.exceptionOrNull()?.message}")
-                        scrapeErrorRes = steamGridDbErrorMessageRes(bytesResult.exceptionOrNull())
-                    } else {
-                        val savedPath =
-                            InstalledAppsManager.applyCustomLibraryIcon(
-                                context = context,
-                                packageName = appInfo.packageName,
-                                bytes = bytes,
-                                imageId = image.id,
-                                type = selectedArtworkType,
+            downloadJob?.cancel()
+            downloadJob =
+                scope.launch {
+                    try {
+                        AppLog.i(TAG, "Downloading SteamGridDB library icon for ${appInfo.label} from: ${image.url}")
+                        val bytesResult = SteamGridDbClient.downloadImageBytes(image.url)
+                        val bytes = bytesResult.getOrNull()
+                        if (bytes == null) {
+                            AppLog.w(
+                                TAG,
+                                "Library icon download failed for ${appInfo.packageName}: ${bytesResult.exceptionOrNull()?.message}",
                             )
-                        if (savedPath != null) {
-                            appliedImageId = image.id
-                            appliedImageType = selectedArtworkType
-                            useDefaultIcon = false
+                            scrapeErrorRes = steamGridDbErrorMessageRes(bytesResult.exceptionOrNull())
                         } else {
-                            scrapeErrorRes = R.string.steamgriddb_error_save_failed
+                            val savedPath =
+                                InstalledAppsManager.applyCustomLibraryIcon(
+                                    context = context,
+                                    packageName = appInfo.packageName,
+                                    bytes = bytes,
+                                    imageId = image.id,
+                                    type = selectedArtworkType,
+                                )
+                            if (savedPath != null) {
+                                appliedImageId = image.id
+                                appliedImageType = selectedArtworkType
+                                useDefaultIcon = false
+                            } else {
+                                scrapeErrorRes = R.string.steamgriddb_error_save_failed
+                            }
                         }
+                    } finally {
+                        isDownloading = false
                     }
-                } finally {
-                    isDownloading = false
                 }
-            }
         }
     }
 
@@ -735,6 +766,7 @@ private fun LibraryIconDeckContent(
                     onRevertToDefaultIcon()
                 }
             },
+            enabled = !isDownloading,
             modifier = Modifier.firstDeckItem(),
         )
 
