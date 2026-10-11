@@ -332,6 +332,70 @@ class AlignmentMathTest {
         assertEquals(0.2f, result.snappedNormY, 0.0001f)
     }
 
+    @Test
+    fun `calculateButtonAlignmentSnap allows button center to reach canvas boundary edges at 0f and 1f`() {
+        val resultLeftTop =
+            calculateButtonAlignmentSnap(
+                rawNormX = -0.1f,
+                rawNormY = -0.2f,
+                movingButtonId = "btn-moving",
+                otherButtons = emptyList(),
+                canvasW = canvasW,
+                canvasH = canvasH,
+                alignmentSnappingEnabled = false,
+            )
+        assertEquals(0f, resultLeftTop.snappedNormX, 0.0001f)
+        assertEquals(0f, resultLeftTop.snappedNormY, 0.0001f)
+
+        val resultRightBottom =
+            calculateButtonAlignmentSnap(
+                rawNormX = 1.2f,
+                rawNormY = 1.3f,
+                movingButtonId = "btn-moving",
+                otherButtons = emptyList(),
+                canvasW = canvasW,
+                canvasH = canvasH,
+                alignmentSnappingEnabled = false,
+            )
+        assertEquals(1f, resultRightBottom.snappedNormX, 0.0001f)
+        assertEquals(1f, resultRightBottom.snappedNormY, 0.0001f)
+    }
+
+    @Test
+    fun `calculateGamepadButtonMove allows button center to reach canvas boundary edges at 0f and 1f`() {
+        val (leftX, topY) =
+            calculateGamepadButtonMove(
+                currentNormX = 0.01f,
+                currentNormY = 0.01f,
+                dirX = -1,
+                dirY = -1,
+                stepMultiplierPx = 100f,
+                movingButtonId = "btn-moving",
+                otherButtons = emptyList(),
+                canvasW = 1000f,
+                canvasH = 1000f,
+                alignmentSnappingEnabled = false,
+            )
+        assertEquals(0f, leftX, 0.0001f)
+        assertEquals(0f, topY, 0.0001f)
+
+        val (rightX, bottomY) =
+            calculateGamepadButtonMove(
+                currentNormX = 0.99f,
+                currentNormY = 0.99f,
+                dirX = 1,
+                dirY = 1,
+                stepMultiplierPx = 100f,
+                movingButtonId = "btn-moving",
+                otherButtons = emptyList(),
+                canvasW = 1000f,
+                canvasH = 1000f,
+                alignmentSnappingEnabled = false,
+            )
+        assertEquals(1f, rightX, 0.0001f)
+        assertEquals(1f, bottomY, 0.0001f)
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // Stepless Button Resize Tests
     // ─────────────────────────────────────────────────────────────────────────

@@ -138,7 +138,6 @@ private const val TAG = "MacroPadEditor"
 private val MPE_DECK_SPACING = 10.dp
 private val MPE_EMPTY_PADDING_V = 12.dp
 private const val MPE_BUTTON_HEADER_COUNT = 5
-private const val MPE_EDGE_MARGIN = 0.05f
 
 private fun EditorSection.titleResId(): Int =
     when (this) {

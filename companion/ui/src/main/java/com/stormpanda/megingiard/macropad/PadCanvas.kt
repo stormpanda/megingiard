@@ -74,6 +74,7 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.BitmapUtils
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.math.BUTTON_ALIGNMENT_VISUAL_TOLERANCE_PX
+import com.stormpanda.megingiard.math.BUTTON_CANVAS_EDGE_MARGIN
 import com.stormpanda.megingiard.math.ButtonResizeHandle
 import com.stormpanda.megingiard.math.ViewportMath
 import com.stormpanda.megingiard.math.calculateButtonAlignmentSnap
@@ -103,8 +104,6 @@ private const val TAG = "PadCanvas"
 
 private val ED_BTN_SQUARE_RADIUS = 4.dp
 private val ED_BTN_SQUARE_SHAPE = RoundedCornerShape(ED_BTN_SQUARE_RADIUS)
-
-private const val ED_EDGE_MARGIN = 0.05f
 
 // Highlight border when button positioning is unlocked or cropping background
 private val PC_HIGHLIGHT_BORDER_WIDTH = 2.dp
@@ -841,8 +840,16 @@ private fun DraggableButton(
                                     change.consume()
                                     dragOffsetX += drag.x
                                     dragOffsetY += drag.y
-                                    val rawX = (startPosX + dragOffsetX / w).coerceIn(ED_EDGE_MARGIN, 1f - ED_EDGE_MARGIN)
-                                    val rawY = (startPosY + dragOffsetY / h).coerceIn(ED_EDGE_MARGIN, 1f - ED_EDGE_MARGIN)
+                                    val rawX =
+                                        (startPosX + dragOffsetX / w).coerceIn(
+                                            BUTTON_CANVAS_EDGE_MARGIN,
+                                            1f - BUTTON_CANVAS_EDGE_MARGIN,
+                                        )
+                                    val rawY =
+                                        (startPosY + dragOffsetY / h).coerceIn(
+                                            BUTTON_CANVAS_EDGE_MARGIN,
+                                            1f - BUTTON_CANVAS_EDGE_MARGIN,
+                                        )
                                     val result =
                                         calculateButtonAlignmentSnap(
                                             rawNormX = rawX,
