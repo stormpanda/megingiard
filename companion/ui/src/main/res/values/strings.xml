@@ -1229,6 +1229,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_edit_button_positions_card_desc">Move and resize buttons via touch or D-pad precision</string>
     <string name="macropad_editor_adjust_position_size">Adjust Position &amp; Size</string>
     <string name="macropad_editor_adjust_position_size_value">%1$s×%2$s • X: %3$d%% Y: %4$d%%</string>
+    <string name="macropad_button_dimension_format">%1$s×%2$s</string>
     <string name="macropad_editor_move_buttons_info">Drag or resize buttons directly on the bottom screen, or select a button below to move it with the D-pad (hold R2 to resize, hold L2 for fine 1px steps).</string>
     <string name="macropad_editor_manage_buttons">Manage Buttons</string>
     <string name="macropad_editor_reorder_buttons">Reorder Buttons</string>

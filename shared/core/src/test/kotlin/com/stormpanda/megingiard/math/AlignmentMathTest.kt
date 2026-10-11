@@ -702,4 +702,77 @@ class AlignmentMathTest {
         assertEquals("30", formatButtonDimensionDp(30.0f))
         assertEquals("120", formatButtonDimensionDp(120.0f))
     }
+
+    @Test
+    fun `calculateButtonEdgeResize with lockAspect does not throw when other axis clamp has fractional dp`() {
+        // Canvas 1000x500, density 3 -> other axis max = 166.67 dp. Rounding up to 167 dp (501 px)
+        // previously produced an empty coerceIn range and threw IllegalArgumentException.
+        val result =
+            calculateButtonEdgeResize(
+                handle = ButtonResizeHandle.RIGHT,
+                dragDeltaPx = 2000f,
+                originalNormX = 0.18f,
+                originalNormY = 0.5f,
+                originalWidthDp = 120f,
+                originalHeightDp = 120f,
+                canvasW = 1000f,
+                canvasH = 500f,
+                density = 3f,
+                lockAspect = true,
+            )
+
+        assertEquals(166f, result.newWidthDp, 0.01f)
+        assertEquals(166f, result.newHeightDp, 0.01f)
+        assertTrue(result.newHeightDp * 3f <= 500f)
+        assertTrue(result.newNormY in 0f..1f)
+    }
+
+    @Test
+    fun `calculateButtonEdgeResize keeps anchored edge fixed when clamped at canvas boundary with fractional dp`() {
+        // density 3, left edge anchored at 100 px, canvas 902.5 px -> max width = 802.5 px = 267.5 dp.
+        // Rounding yields 268 dp (exceeds bounds) -> floored to 267 dp; the left edge must remain at 100 px.
+        val originalWidthDp = 60f
+        val density = 3f
+        val canvasW = 902.5f
+        val leftEdgePx = 100f
+        val originalNormX = (leftEdgePx + originalWidthDp * density / 2f) / canvasW
+
+        val result =
+            calculateButtonEdgeResize(
+                handle = ButtonResizeHandle.RIGHT,
+                dragDeltaPx = 5000f,
+                originalNormX = originalNormX,
+                originalNormY = 0.5f,
+                originalWidthDp = originalWidthDp,
+                originalHeightDp = 60f,
+                canvasW = canvasW,
+                canvasH = 1000f,
+                density = density,
+            )
+
+        assertEquals(267f, result.newWidthDp, 0.01f)
+        val newLeftPx = result.newNormX * canvasW - result.newWidthDp * density / 2f
+        assertEquals(leftEdgePx, newLeftPx, 0.01f)
+    }
+
+    @Test
+    fun `calculateGamepadButtonResize does not throw when canvas is smaller than minimum button size`() {
+        val result =
+            calculateGamepadButtonResize(
+                currentNormX = 0.5f,
+                currentNormY = 0.5f,
+                currentWidthDp = 30f,
+                currentHeightDp = 30f,
+                dirX = 1,
+                dirY = -1,
+                stepDp = 5f,
+                canvasW = 20f,
+                canvasH = 20f,
+                density = 1f,
+            )
+
+        assertEquals(30f, result.newWidthDp, 0.01f)
+        assertEquals(0.5f, result.newNormX, 0.001f)
+        assertEquals(0.5f, result.newNormY, 0.001f)
+    }
 }

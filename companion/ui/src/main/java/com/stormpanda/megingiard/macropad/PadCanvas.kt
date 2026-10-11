@@ -31,6 +31,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -59,6 +60,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -70,6 +72,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.BitmapUtils
+import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.math.BUTTON_ALIGNMENT_VISUAL_TOLERANCE_PX
 import com.stormpanda.megingiard.math.ButtonResizeHandle
 import com.stormpanda.megingiard.math.ViewportMath
@@ -211,6 +214,10 @@ internal fun PadCanvas(
     val density = LocalDensity.current
     val context = LocalContext.current
     val gridStepPx = with(density) { PC_GRID_STEP_DP.toPx() }
+
+    DisposableEffect(Unit) {
+        onDispose { MacroPadState.setCanvasMetrics(null) }
+    }
 
     LaunchedEffect(canvasSize, density) {
         if (canvasSize.width > 0 && canvasSize.height > 0) {
@@ -672,6 +679,20 @@ internal fun PadCanvas(
                         accentColor = accentColor,
                     )
                 }
+
+                // Locked canvas (e.g. PadButtonEditDialog): show the HUD only during gamepad adjustment,
+                // pushed past the highlight pointers so it never overlaps them.
+                ButtonDimensionHud(
+                    widthDp = activeBtn.widthDp,
+                    heightDp = activeBtn.heightDp,
+                    centerX = centerX,
+                    buttonTopPx = destTop,
+                    buttonBottomPx = destTop + chipHeightPx,
+                    canvasW = w,
+                    accentColor = accentColor,
+                    visible = isAdjustingViaGamepad && !isCropping,
+                    extraClearancePx = handleSizePx + paddingPx,
+                )
             }
         }
 
@@ -1140,18 +1161,26 @@ private fun ButtonDimensionHud(
     canvasW: Float,
     accentColor: Color,
     visible: Boolean,
+    extraClearancePx: Float = 0f,
 ) {
     val density = LocalDensity.current
     val colors = LocalAppColors.current
     val hudMarginPx = with(density) { PC_HUD_MARGIN_DP.toPx() }
+    val hudGapPx = hudMarginPx + extraClearancePx
     val hudEstimatedHeightPx = with(density) { PC_HUD_ESTIMATED_HEIGHT_DP.toPx() }
-    val isNearTop = (buttonTopPx - hudEstimatedHeightPx - hudMarginPx) < hudMarginPx
+    val isNearTop = (buttonTopPx - hudEstimatedHeightPx - hudGapPx) < hudMarginPx
     val hudTopPx =
         if (isNearTop) {
-            buttonBottomPx + hudMarginPx
+            buttonBottomPx + hudGapPx
         } else {
-            buttonTopPx - hudEstimatedHeightPx - hudMarginPx
+            buttonTopPx - hudEstimatedHeightPx - hudGapPx
         }
+    val hudText =
+        stringResource(
+            R.string.macropad_button_dimension_format,
+            formatButtonDimensionDp(widthDp),
+            formatButtonDimensionDp(heightDp),
+        )
     var hudWidthPx by remember { mutableFloatStateOf(0f) }
 
     AnimatedVisibility(
@@ -1161,7 +1190,8 @@ private fun ButtonDimensionHud(
         modifier =
             Modifier.absoluteOffset {
                 val safeWidth = if (hudWidthPx > 0f) hudWidthPx else with(density) { PC_HUD_FALLBACK_WIDTH.toPx() }
-                val leftPx = (centerX - safeWidth / 2f).coerceIn(hudMarginPx, canvasW - safeWidth - hudMarginPx)
+                val maxLeftPx = (canvasW - safeWidth - hudMarginPx).coerceAtLeast(hudMarginPx)
+                val leftPx = (centerX - safeWidth / 2f).coerceIn(hudMarginPx, maxLeftPx)
                 IntOffset(leftPx.roundToInt(), hudTopPx.roundToInt())
             },
     ) {
@@ -1175,7 +1205,7 @@ private fun ButtonDimensionHud(
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                text = "${formatButtonDimensionDp(widthDp)} × ${formatButtonDimensionDp(heightDp)}",
+                text = hudText,
                 color = colors.onSurface,
                 fontSize = PC_HUD_FONT_SIZE,
                 fontWeight = FontWeight.SemiBold,

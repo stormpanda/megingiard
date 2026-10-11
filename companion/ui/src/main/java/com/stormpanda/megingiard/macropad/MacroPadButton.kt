@@ -83,6 +83,9 @@ private const val MP_BTN_LABEL_BASE_FONT_SP = 11f
 private const val MP_BTN_LABEL_MIN_FONT_SP = 8f
 private const val MP_BTN_LABEL_MAX_FONT_SP = 32f
 
+/** Maximum label font size in sp per dp of button height (60 dp height → 24 sp cap). */
+private const val MP_BTN_LABEL_MAX_HEIGHT_RATIO = 0.4f
+
 private const val MP_PRESS_ANIM_MS = 80
 private const val MP_RELEASE_ANIM_MS = 160
 
@@ -305,8 +308,10 @@ internal fun PadButtonContent(
                 filled = btn.iconFilled,
             )
         } else {
+            val widthScaledSp = MP_BTN_LABEL_BASE_FONT_SP * (btn.widthDp / MP_BUTTON_BASE_UNIT_DP)
+            val heightCapSp = btn.heightDp * MP_BTN_LABEL_MAX_HEIGHT_RATIO
             val fontSp =
-                (MP_BTN_LABEL_BASE_FONT_SP * (btn.widthDp / MP_BUTTON_BASE_UNIT_DP))
+                minOf(widthScaledSp, heightCapSp)
                     .coerceIn(MP_BTN_LABEL_MIN_FONT_SP, MP_BTN_LABEL_MAX_FONT_SP)
                     .sp
             Text(

@@ -703,7 +703,8 @@ fun calculateButtonEdgeResize(
         val maxAllowedOtherPx = otherCanvasSize
         val targetOtherPx = candDimDp * safeDensity
         if (targetOtherPx > maxAllowedOtherPx) {
-            candDimDp = (maxAllowedOtherPx / safeDensity).roundToInt().toFloat()
+            // floor (never round up) so the locked dimension can never exceed the other canvas axis
+            candDimDp = floor(maxAllowedOtherPx / safeDensity).coerceAtLeast(minSizeDp)
         }
     } else if (abs(candDimDp - otherDimDp) <= aspectSnapThresholdDp) {
         val snapDimPx = otherDimDp * safeDensity
@@ -713,11 +714,13 @@ fun calculateButtonEdgeResize(
         }
     }
 
-    val newDimPx = (candDimDp * safeDensity).coerceIn(minPx, maxAllowedDimPx)
-    candDimDp = (newDimPx / safeDensity).roundToInt().toFloat()
+    val clampedDimPx = (candDimDp * safeDensity).coerceIn(minPx, maxAllowedDimPx)
+    candDimDp = (clampedDimPx / safeDensity).roundToInt().toFloat()
     if (candDimDp * safeDensity > maxAllowedDimPx) {
         candDimDp = floor(maxAllowedDimPx / safeDensity)
     }
+    // Derive the center from the final rounded dimension so the anchored edge stays exactly fixed.
+    val newDimPx = candDimDp * safeDensity
 
     val newCenterPx = if (isPositiveEdge) anchorPx + newDimPx / 2f else anchorPx - newDimPx / 2f
     val newNorm = (newCenterPx / canvasSize).coerceIn(0f, 1f)
@@ -726,7 +729,7 @@ fun calculateButtonEdgeResize(
     val newOtherDimPx = newOtherDimDp * safeDensity
     val newOtherNorm =
         if (lockAspect) {
-            val otherCenterPx = (otherNormPos * otherCanvasSize).coerceIn(newOtherDimPx / 2f, otherCanvasSize - newOtherDimPx / 2f)
+            val otherCenterPx = clampCenterWithinCanvas(otherNormPos * otherCanvasSize, newOtherDimPx, otherCanvasSize)
             (otherCenterPx / otherCanvasSize).coerceIn(0f, 1f)
         } else {
             otherNormPos
@@ -806,11 +809,11 @@ fun calculateGamepadButtonResize(
     val clampedWDp = targetW.coerceIn(minSizeDp, maxWDp.coerceAtLeast(minSizeDp))
     val clampedHDp = targetH.coerceIn(minSizeDp, maxHDp.coerceAtLeast(minSizeDp))
 
-    val halfWPx = (clampedWDp * safeDensity) / 2f
-    val halfHPx = (clampedHDp * safeDensity) / 2f
+    val widthPx = clampedWDp * safeDensity
+    val heightPx = clampedHDp * safeDensity
 
-    val centerXPx = (currentNormX * safeCanvasW).coerceIn(halfWPx, safeCanvasW - halfWPx)
-    val centerYPx = (currentNormY * safeCanvasH).coerceIn(halfHPx, safeCanvasH - halfHPx)
+    val centerXPx = clampCenterWithinCanvas(currentNormX * safeCanvasW, widthPx, safeCanvasW)
+    val centerYPx = clampCenterWithinCanvas(currentNormY * safeCanvasH, heightPx, safeCanvasH)
 
     val newNormX = (centerXPx / safeCanvasW).coerceIn(0f, 1f)
     val newNormY = (centerYPx / safeCanvasH).coerceIn(0f, 1f)
@@ -821,6 +824,19 @@ fun calculateGamepadButtonResize(
         newWidthDp = clampedWDp,
         newHeightDp = clampedHDp,
     )
+}
+
+/**
+ * Clamps a center coordinate so an element of [sizePx] stays inside [0, canvasSizePx].
+ * If the element is larger than the canvas, it is centered instead of throwing on an empty range.
+ */
+private fun clampCenterWithinCanvas(
+    centerPx: Float,
+    sizePx: Float,
+    canvasSizePx: Float,
+): Float {
+    val half = (sizePx / 2f).coerceAtMost(canvasSizePx / 2f)
+    return centerPx.coerceIn(half, canvasSizePx - half)
 }
 
 /**

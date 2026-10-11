@@ -1229,6 +1229,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_edit_button_positions_card_desc">Tasten per Touch oder D-Pad präzise bewegen und skalieren</string>
     <string name="macropad_editor_adjust_position_size">Position &amp; Größe anpassen</string>
     <string name="macropad_editor_adjust_position_size_value">%1$s×%2$s • X: %3$d%% Y: %4$d%%</string>
+    <string name="macropad_button_dimension_format">%1$s×%2$s</string>
     <string name="macropad_editor_move_buttons_info">Verschiebe oder skaliere Tasten direkt auf dem unteren Bildschirm oder wähle unten eine Taste, um sie mit dem Steuerkreuz zu verschieben (halte R2 zum Skalieren, halte L2 für feine 1-Pixel-Schritte).</string>
     <string name="macropad_editor_manage_buttons">Tasten verwalten</string>
     <string name="macropad_editor_reorder_buttons">Tasten neu anordnen</string>

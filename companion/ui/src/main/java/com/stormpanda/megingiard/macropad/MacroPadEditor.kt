@@ -2607,7 +2607,12 @@ private fun describePadButton(
 ): String {
     val hapticLabel = if (includeHaptic) stringResource(btn.hapticStrength.labelResId()) else null
     val actionLabel = btn.action.displayLabel()
-    val sizeLabel = "${formatButtonDimensionDp(btn.widthDp)}×${formatButtonDimensionDp(btn.heightDp)}"
+    val sizeLabel =
+        stringResource(
+            R.string.macropad_button_dimension_format,
+            formatButtonDimensionDp(btn.widthDp),
+            formatButtonDimensionDp(btn.heightDp),
+        )
     return listOfNotNull(actionLabel, sizeLabel, hapticLabel).joinToString(" • ")
 }
 
