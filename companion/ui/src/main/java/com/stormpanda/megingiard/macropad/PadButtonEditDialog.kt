@@ -187,33 +187,21 @@ internal fun EditButtonSubPageContent(
     val initIconName = button?.iconName ?: selectedIcon
     var label by remember(button) { mutableStateOf(initLabel) }
     var iconName by remember(button, selectedIcon) { mutableStateOf(selectedIcon ?: initIconName) }
-    var buttonShape by remember(button) { mutableStateOf(button?.buttonShape ?: ButtonShape.CIRCLE) }
-    var widthDp by remember(button) {
-        mutableFloatStateOf(
-            button?.widthDp ?: (
-                if (initAction is PadAction.ScrollWheel) {
-                    60f
-                } else if (initAction is PadAction.TrackpointMove) {
-                    120f
-                } else {
-                    MP_BUTTON_BASE_UNIT_DP
-                }
-            ),
-        )
-    }
-    var heightDp by remember(button) {
-        mutableFloatStateOf(
-            button?.heightDp ?: (
-                if (initAction is PadAction.ScrollWheel) {
-                    120f
-                } else if (initAction is PadAction.TrackpointMove) {
-                    120f
-                } else {
-                    MP_BUTTON_BASE_UNIT_DP
-                }
-            ),
-        )
-    }
+    val initialSized =
+        remember(button, initAction) {
+            val base =
+                button ?: PadButton(
+                    id = stableButtonId,
+                    posX = 0.5f,
+                    posY = 0.5f,
+                    label = initLabel,
+                    action = initAction,
+                )
+            base.withActionSizing(initAction)
+        }
+    var buttonShape by remember(button) { mutableStateOf(initialSized.buttonShape) }
+    var widthDp by remember(button) { mutableFloatStateOf(initialSized.widthDp) }
+    var heightDp by remember(button) { mutableFloatStateOf(initialSized.heightDp) }
     var action by remember(button) { mutableStateOf(initAction) }
     var iconFilled by remember(button) { mutableStateOf(button?.iconFilled ?: true) }
     var hapticStrength by remember(button) { mutableStateOf(button?.hapticStrength ?: HapticStrength.OFF) }
@@ -251,22 +239,6 @@ internal fun EditButtonSubPageContent(
         }
     }
 
-    fun onActionChanged(newAction: PadAction) {
-        AppLog.d(TAG, "onActionChanged: $newAction")
-        action = newAction
-        if (newAction is PadAction.ScrollWheel && heightDp < 120f) {
-            heightDp = 120f
-            return
-        }
-        if (newAction is PadAction.TrackpointMove) {
-            buttonShape = ButtonShape.CIRCLE
-            val tpSize = maxOf(widthDp, heightDp, 120f)
-            widthDp = tpSize
-            heightDp = tpSize
-            return
-        }
-    }
-
     var posX by remember(button) { mutableFloatStateOf(button?.posX ?: 0.5f) }
     var posY by remember(button) { mutableFloatStateOf(button?.posY ?: 0.5f) }
     var isAdjusting by remember { mutableStateOf(false) }
@@ -277,6 +249,10 @@ internal fun EditButtonSubPageContent(
     val buttonAlignmentSnapping by MacroPadSettings.buttonAlignmentSnapping.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current.density
+    val canvasMetrics by MacroPadState.canvasMetrics.collectAsStateWithLifecycle()
+    val effectiveCanvasW = canvasMetrics?.widthPx ?: MPE_CANVAS_WIDTH_PX
+    val effectiveCanvasH = canvasMetrics?.heightPx ?: MPE_CANVAS_HEIGHT_PX
+    val effectiveDensity = canvasMetrics?.density ?: density
     var activeDirectionKey by remember { mutableStateOf<Int?>(null) }
     var activeRepeatJob by remember { mutableStateOf<Job?>(null) }
 
@@ -309,8 +285,8 @@ internal fun EditButtonSubPageContent(
                 stepMultiplierPx = stepMultiplier,
                 movingButtonId = stableButtonId,
                 otherButtons = currentLayout.buttons,
-                canvasW = MPE_CANVAS_WIDTH_PX,
-                canvasH = MPE_CANVAS_HEIGHT_PX,
+                canvasW = effectiveCanvasW,
+                canvasH = effectiveCanvasH,
                 alignmentSnappingEnabled = buttonAlignmentSnapping,
             )
         posX = newX
@@ -332,9 +308,9 @@ internal fun EditButtonSubPageContent(
                 dirX = dx,
                 dirY = dy,
                 stepDp = stepDp,
-                canvasW = MPE_CANVAS_WIDTH_PX,
-                canvasH = MPE_CANVAS_HEIGHT_PX,
-                density = density,
+                canvasW = effectiveCanvasW,
+                canvasH = effectiveCanvasH,
+                density = effectiveDensity,
                 lockAspect = isTrackpoint,
             )
         posX = res.newNormX
@@ -424,6 +400,15 @@ internal fun EditButtonSubPageContent(
                 invisible = invisible,
             )
         }
+
+    fun onActionChanged(newAction: PadAction) {
+        AppLog.d(TAG, "onActionChanged: $newAction")
+        action = newAction
+        val updated = currentButton.withActionSizing(newAction)
+        widthDp = updated.widthDp
+        heightDp = updated.heightDp
+        buttonShape = updated.buttonShape
+    }
 
     val isConfirmEnabled =
         when {
@@ -592,6 +577,7 @@ internal fun EditButtonSubPageContent(
                         }
 
                         KeyEvent.KEYCODE_BUTTON_R2 -> {
+                            if (!isR2Held) AppLog.d(TAG, "gamepad resize modifier active (R2)")
                             isR2Held = true
                             true
                         }
@@ -609,6 +595,7 @@ internal fun EditButtonSubPageContent(
                         }
 
                         KeyEvent.KEYCODE_BUTTON_R2 -> {
+                            if (isR2Held) AppLog.d(TAG, "gamepad resize modifier released (R2)")
                             isR2Held = false
                             true
                         }

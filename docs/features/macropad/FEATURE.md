@@ -232,7 +232,7 @@ Each button supports one of the following actions:
   - **1:1 Aspect Ratio Snap:** While dragging an edge handle, when the dimension comes within 4 dp (`BUTTON_ASPECT_SNAP_THRESHOLD_DP = 4f`) of the opposing dimension (width == height), it magnetically locks to a perfect 1:1 aspect ratio. When first locking into the 1:1 snap, the system fires a subtle haptic tick via `LocalHapticFeedback`.
   - Buttons with `ButtonShape.CIRCLE` render as a circle when width equals height, and automatically morph into a smooth pill shape (`MP_PILL_SHAPE`) when width differs from height.
 - **Floating Dimension HUD (`ButtonDimensionHud`):**
-  - While any button is actively being moved, resized via touch edge handles, or adjusted via gamepad, a semi-transparent floating HUD badge displaying live dimensions (`[ 80 × 60 ]` or `[ 81 × 60 ]`) renders centered above the active button chip on the bottom canvas (`PadCanvas`).
+  - While any button is actively being moved, resized via touch edge handles, or adjusted via gamepad, a semi-transparent floating HUD badge displaying live dimensions (`80 × 60` or `81 × 60`) renders centered above the active button chip on the bottom canvas (`PadCanvas`).
   - If the button is positioned close to the top boundary of the canvas, the HUD automatically flips below the button to prevent edge clipping.
 - **Gamepad Movement, Resizing & Dynamic Pill:**
   - Pressing `(A)` or clicking on any button in the list activates **Movement Mode** (`isMoving = true`).
@@ -245,8 +245,8 @@ Each button supports one of the following actions:
   - Pressing `(B)`, `(A)`, `Enter`, or back navigation deactivates movement mode, returning control to standard card navigation without bubbling back to the parent screen.
 - **Direct Repositioning & Sizing in Button Config (`PadButtonEditDialog`):**
   - Inside the button edit dialog, the "Shape & Size" section features an **Adjust Position & Size** card (`GamepadFocusCard`).
-  - Tapping `(A)` activates live adjustment mode, unlocking bottom canvas touch dragging and setting `MacroPadState.isAdjustingButtonViaGamepad`.
-  - The card displays live dimensions and normalized coordinates (`e.g. 60×60 • X: 50% Y: 50%` or `61×60 • X: 50% Y: 50%`) with live D-pad move/resize (and L2/R2 modifiers) fully functional, in two-way real-time synchronization with bottom-screen touch interactions.
+  - Tapping `(A)` activates live adjustment mode, highlighting the card and setting `MacroPadState.isAdjustingButtonViaGamepad`.
+  - The card displays live dimensions and normalized coordinates (`e.g. 60×60 • X: 50% Y: 50%` or `61×60 • X: 50% Y: 50%`) with live D-pad move/resize (and L2/R2 modifiers) updating the bottom-screen preview in real time.
 
 ### FR-P9a: Custom Background Image
 

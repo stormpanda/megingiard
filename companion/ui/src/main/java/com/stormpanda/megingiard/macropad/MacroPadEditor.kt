@@ -170,23 +170,7 @@ private fun EditorSection.icon(): ImageVector =
 private fun applyActionToDraftButton(
     draftButton: PadButton,
     newAction: PadAction,
-): PadButton {
-    val isTrackpoint = newAction is PadAction.TrackpointMove
-    val tpSize = if (isTrackpoint) maxOf(draftButton.widthDp, draftButton.heightDp, 120f) else draftButton.widthDp
-    return draftButton.copy(
-        action = newAction,
-        widthDp = if (isTrackpoint) tpSize else draftButton.widthDp,
-        heightDp =
-            if (newAction is PadAction.ScrollWheel && draftButton.heightDp < 120f) {
-                120f
-            } else if (isTrackpoint) {
-                tpSize
-            } else {
-                draftButton.heightDp
-            },
-        buttonShape = if (isTrackpoint) ButtonShape.CIRCLE else draftButton.buttonShape,
-    )
-}
+): PadButton = draftButton.withActionSizing(newAction)
 
 private fun swapButtons(
     layout: PadLayout?,
@@ -2827,6 +2811,10 @@ private fun EditButtonPositionsSubPageContent(
     val selectedButtonId by MacroPadState.selectedButtonId.collectAsStateWithLifecycle()
     val buttonAlignmentSnapping by MacroPadSettings.buttonAlignmentSnapping.collectAsStateWithLifecycle()
     val density = LocalDensity.current.density
+    val canvasMetrics by MacroPadState.canvasMetrics.collectAsStateWithLifecycle()
+    val effectiveCanvasW = canvasMetrics?.widthPx ?: MPE_CANVAS_WIDTH_PX
+    val effectiveCanvasH = canvasMetrics?.heightPx ?: MPE_CANVAS_HEIGHT_PX
+    val effectiveDensity = canvasMetrics?.density ?: density
     val cardRequesters = remember { mutableMapOf<String, FocusRequester>() }
     var movingButtonId by remember { mutableStateOf<String?>(null) }
     var isL2Held by remember { mutableStateOf(false) }
@@ -2893,8 +2881,8 @@ private fun EditButtonPositionsSubPageContent(
                 stepMultiplierPx = stepMultiplier,
                 movingButtonId = btnId,
                 otherButtons = currentLayout.buttons,
-                canvasW = MPE_CANVAS_WIDTH_PX,
-                canvasH = MPE_CANVAS_HEIGHT_PX,
+                canvasW = effectiveCanvasW,
+                canvasH = effectiveCanvasH,
                 alignmentSnappingEnabled = buttonAlignmentSnapping,
             )
         if (newX != targetBtn.posX || newY != targetBtn.posY) {
@@ -2924,9 +2912,9 @@ private fun EditButtonPositionsSubPageContent(
                 dirX = dx,
                 dirY = dy,
                 stepDp = stepDp,
-                canvasW = MPE_CANVAS_WIDTH_PX,
-                canvasH = MPE_CANVAS_HEIGHT_PX,
-                density = density,
+                canvasW = effectiveCanvasW,
+                canvasH = effectiveCanvasH,
+                density = effectiveDensity,
                 lockAspect = isTrackpoint,
             )
         if (res.newWidthDp != targetBtn.widthDp || res.newHeightDp != targetBtn.heightDp ||
@@ -3074,6 +3062,7 @@ private fun EditButtonPositionsSubPageContent(
                                 }
 
                                 KeyEvent.KEYCODE_BUTTON_R2 -> {
+                                    if (!isR2Held) AppLog.d(TAG, "gamepad resize modifier active (R2)")
                                     isR2Held = true
                                     true
                                 }
@@ -3091,6 +3080,7 @@ private fun EditButtonPositionsSubPageContent(
                                 }
 
                                 KeyEvent.KEYCODE_BUTTON_R2 -> {
+                                    if (isR2Held) AppLog.d(TAG, "gamepad resize modifier released (R2)")
                                     isR2Held = false
                                     true
                                 }

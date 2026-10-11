@@ -8,6 +8,7 @@ import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
+import kotlin.math.floor
 import kotlin.math.round
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -17,6 +18,14 @@ const val ALIGNMENT_SNAP_THRESHOLD_PX = 10f
 const val ALIGNMENT_VISUAL_TOLERANCE_PX = 2f
 const val ALIGNMENT_NORMAL_STEP_PX = 10f
 const val ALIGNMENT_FINE_STEP_PX = 1f
+private const val MIN_DENSITY_EPSILON = 0.001f
+
+/**
+ * Reference dimensions for bottom MacroPad canvas.
+ * Note: [ALIGNMENT_CANVAS_WIDTH_PX] / [ALIGNMENT_CANVAS_HEIGHT_PX] (1080x1240) represent the portrait display coordinate space
+ * used for system alignment calculations, whereas [MPE_CANVAS_WIDTH_PX] / [MPE_CANVAS_HEIGHT_PX] (1240x1080) represent the
+ * physical landscape canvas of the bottom screen used as default fallback when runtime metrics are unavailable.
+ */
 const val ALIGNMENT_CANVAS_WIDTH_PX = 1080f
 const val ALIGNMENT_CANVAS_HEIGHT_PX = 1240f
 const val ALIGNMENT_CANVAS_EDGE_MARGIN = 0.05f
@@ -644,7 +653,7 @@ fun calculateButtonEdgeResize(
     aspectSnapThresholdDp: Float = BUTTON_ASPECT_SNAP_THRESHOLD_DP,
     lockAspect: Boolean = false,
 ): ButtonResizeResult {
-    val safeDensity = density.coerceAtLeast(0.001f)
+    val safeDensity = density.coerceAtLeast(MIN_DENSITY_EPSILON)
     val safeCanvasW = canvasW.coerceAtLeast(1f)
     val safeCanvasH = canvasH.coerceAtLeast(1f)
     val minPx = minSizeDp * safeDensity
@@ -706,6 +715,9 @@ fun calculateButtonEdgeResize(
 
     val newDimPx = (candDimDp * safeDensity).coerceIn(minPx, maxAllowedDimPx)
     candDimDp = (newDimPx / safeDensity).roundToInt().toFloat()
+    if (candDimDp * safeDensity > maxAllowedDimPx) {
+        candDimDp = floor(maxAllowedDimPx / safeDensity)
+    }
 
     val newCenterPx = if (isPositiveEdge) anchorPx + newDimPx / 2f else anchorPx - newDimPx / 2f
     val newNorm = (newCenterPx / canvasSize).coerceIn(0f, 1f)
@@ -760,14 +772,14 @@ fun calculateGamepadButtonResize(
     currentHeightDp: Float,
     dirX: Int,
     dirY: Int,
-    stepDp: Float = 1f,
+    stepDp: Float = MPE_RESIZE_FINE_STEP_DP,
     canvasW: Float = MPE_CANVAS_WIDTH_PX,
     canvasH: Float = MPE_CANVAS_HEIGHT_PX,
     density: Float,
     minSizeDp: Float = MP_BUTTON_MIN_SIZE_DP,
     lockAspect: Boolean = false,
 ): GamepadButtonResizeResult {
-    val safeDensity = density.coerceAtLeast(0.001f)
+    val safeDensity = density.coerceAtLeast(MIN_DENSITY_EPSILON)
     val safeCanvasW = canvasW.coerceAtLeast(1f)
     val safeCanvasH = canvasH.coerceAtLeast(1f)
 

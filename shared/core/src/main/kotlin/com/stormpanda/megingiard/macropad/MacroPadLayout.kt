@@ -20,8 +20,19 @@ enum class ButtonShape { SQUARE, CIRCLE, ICON_ONLY }
 
 const val MP_BUTTON_BASE_UNIT_DP = 60f
 const val MP_BUTTON_MIN_SIZE_DP = 30f
+const val MP_TRACKPOINT_DEFAULT_SIZE_DP = 120f
+const val MP_SCROLL_WHEEL_MIN_HEIGHT_DP = 120f
 const val MP_BUTTON_DEFAULT_HAPTIC_DURATION_MS = 10
 const val MP_BUTTON_DEFAULT_HAPTIC_AMPLITUDE = 25
+
+/**
+ * Screen metrics for bottom PadCanvas reported dynamically to guide gamepad adjustment clamps.
+ */
+data class PadCanvasMetrics(
+    val widthPx: Float,
+    val heightPx: Float,
+    val density: Float,
+)
 
 /**
  * Grid multiplier for a button: cols × rows relative to the base button unit.
@@ -361,6 +372,29 @@ data class PadButton(
     val buttonBgColor: ColorOption? = null,
     val invisible: Boolean = false,
 )
+
+/**
+ * Returns a copy of this [PadButton] with dimensions and shape adjusted appropriately for [newAction].
+ * - [PadAction.TrackpointMove]: Enforces 1:1 aspect ratio, minimum size of [MP_TRACKPOINT_DEFAULT_SIZE_DP], and [ButtonShape.CIRCLE].
+ * - [PadAction.ScrollWheel]: Enforces a minimum vertical height of [MP_SCROLL_WHEEL_MIN_HEIGHT_DP].
+ */
+fun PadButton.withActionSizing(newAction: PadAction): PadButton {
+    val isTrackpoint = newAction is PadAction.TrackpointMove
+    val tpSize = if (isTrackpoint) maxOf(widthDp, heightDp, MP_TRACKPOINT_DEFAULT_SIZE_DP) else widthDp
+    return copy(
+        action = newAction,
+        widthDp = if (isTrackpoint) tpSize else widthDp,
+        heightDp =
+            if (newAction is PadAction.ScrollWheel && heightDp < MP_SCROLL_WHEEL_MIN_HEIGHT_DP) {
+                MP_SCROLL_WHEEL_MIN_HEIGHT_DP
+            } else if (isTrackpoint) {
+                tpSize
+            } else {
+                heightDp
+            },
+        buttonShape = if (isTrackpoint) ButtonShape.CIRCLE else buttonShape,
+    )
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Background Touchpad configuration — per-layout relative mouse touchpad settings
@@ -786,14 +820,14 @@ object PadButtonSerializer : KSerializer<PadButton> {
         }
 
         val safeRawWidth =
-            if (finalWidth.isNaN() || finalWidth < MP_BUTTON_MIN_SIZE_DP) {
-                if (finalWidth.isNaN()) MP_BUTTON_BASE_UNIT_DP else MP_BUTTON_MIN_SIZE_DP
+            if (!finalWidth.isFinite() || finalWidth < MP_BUTTON_MIN_SIZE_DP) {
+                if (!finalWidth.isFinite()) MP_BUTTON_BASE_UNIT_DP else MP_BUTTON_MIN_SIZE_DP
             } else {
                 finalWidth
             }
         val safeRawHeight =
-            if (finalHeight.isNaN() || finalHeight < MP_BUTTON_MIN_SIZE_DP) {
-                if (finalHeight.isNaN()) MP_BUTTON_BASE_UNIT_DP else MP_BUTTON_MIN_SIZE_DP
+            if (!finalHeight.isFinite() || finalHeight < MP_BUTTON_MIN_SIZE_DP) {
+                if (!finalHeight.isFinite()) MP_BUTTON_BASE_UNIT_DP else MP_BUTTON_MIN_SIZE_DP
             } else {
                 finalHeight
             }

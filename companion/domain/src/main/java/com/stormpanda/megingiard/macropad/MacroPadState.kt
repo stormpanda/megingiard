@@ -249,6 +249,16 @@ object MacroPadState {
         _isAdjustingButtonViaGamepad.value = adjusting
     }
 
+    private val _canvasMetrics = MutableStateFlow<PadCanvasMetrics?>(null)
+    val canvasMetrics: StateFlow<PadCanvasMetrics?> = _canvasMetrics.asStateFlow()
+
+    fun setCanvasMetrics(metrics: PadCanvasMetrics?) {
+        if (_canvasMetrics.value != metrics) {
+            AppLog.d(TAG, "setCanvasMetrics($metrics)")
+            _canvasMetrics.value = metrics
+        }
+    }
+
     private val _isCroppingBackground = MutableStateFlow(false)
     val isCroppingBackground: StateFlow<Boolean> = _isCroppingBackground.asStateFlow()
 

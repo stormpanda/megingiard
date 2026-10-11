@@ -160,10 +160,10 @@ private val PC_HUD_MARGIN_DP = 8.dp
 private val PC_HUD_ESTIMATED_HEIGHT_DP = 26.dp
 private val PC_HUD_PADDING_H = 8.dp
 private val PC_HUD_PADDING_V = 3.dp
-private val PC_HUD_SHAPE = RoundedCornerShape(12.dp)
+private val PC_HUD_CORNER = 12.dp
+private val PC_HUD_SHAPE = RoundedCornerShape(PC_HUD_CORNER)
 private const val PC_HUD_ANIM_MS = 150
-private const val PC_HUD_INITIAL_SCALE = 0.85f
-private const val PC_HUD_TARGET_SCALE = 0.85f
+private const val PC_HUD_SCALE = 0.85f
 private val PC_HUD_FALLBACK_WIDTH = 60.dp
 private val PC_HUD_BORDER_WIDTH = 1.dp
 private const val PC_HUD_BORDER_ALPHA = 0.7f
@@ -211,6 +211,18 @@ internal fun PadCanvas(
     val density = LocalDensity.current
     val context = LocalContext.current
     val gridStepPx = with(density) { PC_GRID_STEP_DP.toPx() }
+
+    LaunchedEffect(canvasSize, density) {
+        if (canvasSize.width > 0 && canvasSize.height > 0) {
+            MacroPadState.setCanvasMetrics(
+                PadCanvasMetrics(
+                    widthPx = canvasSize.width.toFloat(),
+                    heightPx = canvasSize.height.toFloat(),
+                    density = density.density,
+                ),
+            )
+        }
+    }
 
     var bgBitmap by remember(layout?.backgroundImagePath, layout?.backgroundImageVersion) { mutableStateOf<ImageBitmap?>(null) }
     LaunchedEffect(layout?.backgroundImagePath, layout?.backgroundImageVersion) {
@@ -553,7 +565,9 @@ internal fun PadCanvas(
                     totalDx: Float,
                     totalDy: Float,
                 ) {
-                    val curLayout = layout ?: return
+                    val targetLayoutId = layout?.id ?: return
+                    val activeProfile = MacroPadState.activeProfile.value ?: return
+                    val curLayout = activeProfile.layouts.firstOrNull { it.id == targetLayoutId } ?: return
                     val dragDeltaPx =
                         when (handle) {
                             ButtonResizeHandle.LEFT, ButtonResizeHandle.RIGHT -> totalDx
@@ -604,15 +618,18 @@ internal fun PadCanvas(
                             handleHeight = def.handleHeight,
                             color = accentColor,
                             onDragStart = {
+                                AppLog.d(TAG, "onEdgeDragStart: btnId=${activeBtn.id} handle=${def.handle}")
                                 isEdgeDragging = true
                                 wasAspectSnapped = false
                                 captureDragStart()
                             },
                             onDragEnd = {
+                                AppLog.d(TAG, "onEdgeDragEnd: btnId=${activeBtn.id} handle=${def.handle}")
                                 isEdgeDragging = false
                                 wasAspectSnapped = false
                             },
                             onDragCancel = {
+                                AppLog.d(TAG, "onEdgeDragCancel: btnId=${activeBtn.id} handle=${def.handle}")
                                 isEdgeDragging = false
                                 wasAspectSnapped = false
                             },
@@ -1139,8 +1156,8 @@ private fun ButtonDimensionHud(
 
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(tween(PC_HUD_ANIM_MS)) + scaleIn(initialScale = PC_HUD_INITIAL_SCALE, animationSpec = tween(PC_HUD_ANIM_MS)),
-        exit = fadeOut(tween(PC_HUD_ANIM_MS)) + scaleOut(targetScale = PC_HUD_TARGET_SCALE, animationSpec = tween(PC_HUD_ANIM_MS)),
+        enter = fadeIn(tween(PC_HUD_ANIM_MS)) + scaleIn(initialScale = PC_HUD_SCALE, animationSpec = tween(PC_HUD_ANIM_MS)),
+        exit = fadeOut(tween(PC_HUD_ANIM_MS)) + scaleOut(targetScale = PC_HUD_SCALE, animationSpec = tween(PC_HUD_ANIM_MS)),
         modifier =
             Modifier.absoluteOffset {
                 val safeWidth = if (hudWidthPx > 0f) hudWidthPx else with(density) { PC_HUD_FALLBACK_WIDTH.toPx() }

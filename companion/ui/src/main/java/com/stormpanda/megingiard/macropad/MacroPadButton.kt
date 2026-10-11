@@ -77,8 +77,7 @@ internal val MP_BTN_SQUARE_RADIUS = 4.dp
 internal val MP_BTN_SQUARE_SHAPE = RoundedCornerShape(MP_BTN_SQUARE_RADIUS)
 internal val MP_PILL_SHAPE = RoundedCornerShape(percent = 50)
 private const val MP_BTN_BASE_ICON_SIZE_DP = 44f
-private const val MP_BTN_BASE_UNIT_DP = 60f
-internal const val MP_BTN_ICON_RATIO = MP_BTN_BASE_ICON_SIZE_DP / MP_BTN_BASE_UNIT_DP
+internal const val MP_BTN_ICON_RATIO = MP_BTN_BASE_ICON_SIZE_DP / MP_BUTTON_BASE_UNIT_DP
 
 private const val MP_BTN_LABEL_BASE_FONT_SP = 11f
 private const val MP_BTN_LABEL_MIN_FONT_SP = 8f

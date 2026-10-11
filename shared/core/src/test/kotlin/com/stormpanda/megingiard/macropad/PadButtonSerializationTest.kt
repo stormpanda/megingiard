@@ -231,4 +231,109 @@ class PadButtonSerializationTest {
         assertEquals(150f, decoded.widthDp, 0.001f)
         assertEquals(150f, decoded.heightDp, 0.001f)
     }
+
+    @Test
+    fun `dimensions with Infinity or NaN deserialize clamped to base unit`() {
+        val specialJson =
+            Json {
+                ignoreUnknownKeys = true
+                encodeDefaults = true
+                allowSpecialFloatingPointValues = true
+            }
+        val button =
+            PadButton(
+                id = "btn-inf",
+                label = "Inf",
+                posX = 0.5f,
+                posY = 0.5f,
+                widthDp = Float.POSITIVE_INFINITY,
+                heightDp = Float.NEGATIVE_INFINITY,
+                action = PadAction.KeyboardKey(30, "A"),
+            )
+        val encoded = specialJson.encodeToString(button)
+        val decoded = specialJson.decodeFromString<PadButton>(encoded)
+        assertEquals(MP_BUTTON_BASE_UNIT_DP, decoded.widthDp, 0.001f)
+        assertEquals(MP_BUTTON_BASE_UNIT_DP, decoded.heightDp, 0.001f)
+
+        val nanButton =
+            PadButton(
+                id = "btn-nan",
+                label = "NaN",
+                posX = 0.5f,
+                posY = 0.5f,
+                widthDp = Float.NaN,
+                heightDp = Float.NaN,
+                action = PadAction.KeyboardKey(30, "A"),
+            )
+        val nanEncoded = specialJson.encodeToString(nanButton)
+        val nanDecoded = specialJson.decodeFromString<PadButton>(nanEncoded)
+        assertEquals(MP_BUTTON_BASE_UNIT_DP, nanDecoded.widthDp, 0.001f)
+        assertEquals(MP_BUTTON_BASE_UNIT_DP, nanDecoded.heightDp, 0.001f)
+    }
+
+    @Test
+    fun `withActionSizing for ScrollWheel enforces minimum height of 120 dp`() {
+        val button =
+            PadButton(
+                id = "btn-sw",
+                label = "SW",
+                posX = 0.5f,
+                posY = 0.5f,
+                widthDp = 60f,
+                heightDp = 60f,
+                action = PadAction.KeyboardKey(30, "A"),
+            )
+        val updated = button.withActionSizing(PadAction.ScrollWheel)
+        assertEquals(60f, updated.widthDp, 0.001f)
+        assertEquals(MP_SCROLL_WHEEL_MIN_HEIGHT_DP, updated.heightDp, 0.001f)
+
+        // Preserves taller height if already >= 120 dp
+        val tallButton = button.copy(heightDp = 180f)
+        val updatedTall = tallButton.withActionSizing(PadAction.ScrollWheel)
+        assertEquals(180f, updatedTall.heightDp, 0.001f)
+    }
+
+    @Test
+    fun `withActionSizing for TrackpointMove enforces 1 to 1 aspect ratio, CIRCLE shape, and minimum 120 dp`() {
+        val button =
+            PadButton(
+                id = "btn-tp",
+                label = "TP",
+                posX = 0.5f,
+                posY = 0.5f,
+                widthDp = 60f,
+                heightDp = 80f,
+                buttonShape = ButtonShape.SQUARE,
+                action = PadAction.KeyboardKey(30, "A"),
+            )
+        val updated = button.withActionSizing(PadAction.TrackpointMove())
+        assertEquals(MP_TRACKPOINT_DEFAULT_SIZE_DP, updated.widthDp, 0.001f)
+        assertEquals(MP_TRACKPOINT_DEFAULT_SIZE_DP, updated.heightDp, 0.001f)
+        assertEquals(ButtonShape.CIRCLE, updated.buttonShape)
+
+        // Expands both dimensions to the larger one if > 120 dp
+        val largeButton = button.copy(widthDp = 160f, heightDp = 100f)
+        val updatedLarge = largeButton.withActionSizing(PadAction.TrackpointMove())
+        assertEquals(160f, updatedLarge.widthDp, 0.001f)
+        assertEquals(160f, updatedLarge.heightDp, 0.001f)
+    }
+
+    @Test
+    fun `withActionSizing for KeyboardKey leaves existing dimensions and shape unchanged`() {
+        val button =
+            PadButton(
+                id = "btn-norm",
+                label = "K",
+                posX = 0.5f,
+                posY = 0.5f,
+                widthDp = 75f,
+                heightDp = 95f,
+                buttonShape = ButtonShape.ICON_ONLY,
+                action = PadAction.ScrollWheel,
+            )
+        val updated = button.withActionSizing(PadAction.KeyboardKey(30, "A"))
+        assertEquals(75f, updated.widthDp, 0.001f)
+        assertEquals(95f, updated.heightDp, 0.001f)
+        assertEquals(ButtonShape.ICON_ONLY, updated.buttonShape)
+    }
 }
