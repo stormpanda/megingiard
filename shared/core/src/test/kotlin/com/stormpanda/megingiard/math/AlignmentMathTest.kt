@@ -645,9 +645,9 @@ class AlignmentMathTest {
     }
 
     @Test
-    fun `calculateGamepadButtonResize shifts center coordinate inward when expanding near canvas boundary`() {
+    fun `calculateGamepadButtonResize preserves center coordinate when button is partially offscreen`() {
         // Button at normX = 0.03f on 1000px canvas -> centerX = 30px
-        // Expand width to 100dp (halfW = 50px). Center must shift inward to 50px (normX = 0.05f).
+        // Expand width to 100dp (halfW = 50px). Center remains at 0.03f (partially off-screen).
         val result =
             calculateGamepadButtonResize(
                 currentNormX = 0.03f,
@@ -662,7 +662,44 @@ class AlignmentMathTest {
                 density = 1f,
             )
         assertEquals(100f, result.newWidthDp, 0.01f)
-        assertEquals(0.05f, result.newNormX, 0.001f)
+        assertEquals(0.03f, result.newNormX, 0.001f)
+    }
+
+    @Test
+    fun `calculateGamepadButtonResize preserves center coordinates at screen edges`() {
+        // Button at normX = 0.0f (50% offscreen left)
+        val resLeft =
+            calculateGamepadButtonResize(
+                currentNormX = 0.0f,
+                currentNormY = 0.5f,
+                currentWidthDp = 60f,
+                currentHeightDp = 60f,
+                dirX = 1,
+                dirY = 0,
+                stepDp = 20f,
+                canvasW = 1000f,
+                canvasH = 1000f,
+                density = 1f,
+            )
+        assertEquals(80f, resLeft.newWidthDp, 0.01f)
+        assertEquals(0.0f, resLeft.newNormX, 0.001f)
+
+        // Button at normX = 1.0f (50% offscreen right)
+        val resRight =
+            calculateGamepadButtonResize(
+                currentNormX = 1.0f,
+                currentNormY = 0.5f,
+                currentWidthDp = 60f,
+                currentHeightDp = 60f,
+                dirX = 1,
+                dirY = 0,
+                stepDp = 20f,
+                canvasW = 1000f,
+                canvasH = 1000f,
+                density = 1f,
+            )
+        assertEquals(80f, resRight.newWidthDp, 0.01f)
+        assertEquals(1.0f, resRight.newNormX, 0.001f)
     }
 
     @Test
@@ -848,7 +885,7 @@ class AlignmentMathTest {
         val density = 2.1f
         val canvasW = 500f
         // Anchor left edge at 490 px on a 500 px canvas (only 10 px remaining, which is < minPx = 63 px)
-        val originalWidthDp = 60f
+        val originalWidthDp = 30f
         val leftEdgePx = 490f
         val originalNormX = (leftEdgePx + originalWidthDp * density / 2f) / canvasW
 
@@ -866,5 +903,97 @@ class AlignmentMathTest {
             )
 
         assertEquals(30f, result.newWidthDp, 0.01f)
+    }
+
+    @Test
+    fun `calculateButtonEdgeResize preserves partially offscreen button width without jumping on screen`() {
+        // Button at normX = 1.0f (50% offscreen right), width = 60dp on 1000px canvas
+        val resultRightZeroDrag =
+            calculateButtonEdgeResize(
+                handle = ButtonResizeHandle.RIGHT,
+                dragDeltaPx = 0f,
+                originalNormX = 1.0f,
+                originalNormY = 0.5f,
+                originalWidthDp = 60f,
+                originalHeightDp = 60f,
+                canvasW = 1000f,
+                canvasH = 500f,
+                density = 1f,
+            )
+        // Must stay 60dp and normX = 1.0f, not jump or shrink to 30dp
+        assertEquals(60f, resultRightZeroDrag.newWidthDp, 0.01f)
+        assertEquals(1.0f, resultRightZeroDrag.newNormX, 0.001f)
+
+        // Dragging left handle expands leftward into the canvas
+        val resultLeftExpand =
+            calculateButtonEdgeResize(
+                handle = ButtonResizeHandle.LEFT,
+                dragDeltaPx = -40f,
+                originalNormX = 1.0f,
+                originalNormY = 0.5f,
+                originalWidthDp = 60f,
+                originalHeightDp = 60f,
+                canvasW = 1000f,
+                canvasH = 500f,
+                density = 1f,
+            )
+        assertEquals(100f, resultLeftExpand.newWidthDp, 0.01f)
+        // Original right edge anchored at 1000 + 30 = 1030. New left edge at 930. New center = 980 -> normX = 0.98f
+        assertEquals(0.98f, resultLeftExpand.newNormX, 0.001f)
+
+        // Button at normX = 0.0f (50% offscreen left), width = 60dp on 1000px canvas
+        val resultLeftZeroDrag =
+            calculateButtonEdgeResize(
+                handle = ButtonResizeHandle.LEFT,
+                dragDeltaPx = 0f,
+                originalNormX = 0.0f,
+                originalNormY = 0.5f,
+                originalWidthDp = 60f,
+                originalHeightDp = 60f,
+                canvasW = 1000f,
+                canvasH = 500f,
+                density = 1f,
+            )
+        assertEquals(60f, resultLeftZeroDrag.newWidthDp, 0.01f)
+        assertEquals(0.0f, resultLeftZeroDrag.newNormX, 0.001f)
+
+        // Dragging right handle expands rightward into the canvas
+        val resultRightExpand =
+            calculateButtonEdgeResize(
+                handle = ButtonResizeHandle.RIGHT,
+                dragDeltaPx = 40f,
+                originalNormX = 0.0f,
+                originalNormY = 0.5f,
+                originalWidthDp = 60f,
+                originalHeightDp = 60f,
+                canvasW = 1000f,
+                canvasH = 500f,
+                density = 1f,
+            )
+        assertEquals(100f, resultRightExpand.newWidthDp, 0.01f)
+        // Original left edge anchored at 0 - 30 = -30. New right edge at 70. New center = 20 -> normX = 0.02f
+        assertEquals(0.02f, resultRightExpand.newNormX, 0.001f)
+    }
+
+    @Test
+    fun `calculateButtonEdgeResize with lockAspect preserves partially offscreen other axis`() {
+        // Button at normY = 1.0f (50% offscreen bottom), width = 60dp, height = 60dp
+        val result =
+            calculateButtonEdgeResize(
+                handle = ButtonResizeHandle.RIGHT,
+                dragDeltaPx = 20f,
+                originalNormX = 0.5f,
+                originalNormY = 1.0f,
+                originalWidthDp = 60f,
+                originalHeightDp = 60f,
+                canvasW = 1000f,
+                canvasH = 500f,
+                density = 1f,
+                lockAspect = true,
+            )
+        assertEquals(80f, result.newWidthDp, 0.01f)
+        assertEquals(80f, result.newHeightDp, 0.01f)
+        // Other axis (Y) must stay at 1.0f rather than jumping inward
+        assertEquals(1.0f, result.newNormY, 0.001f)
     }
 }
