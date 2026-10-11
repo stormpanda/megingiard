@@ -1131,9 +1131,26 @@ internal object FocusImageCache {
         }
     }
 
-    fun invalidateIcon(packageName: String) {
+    fun invalidateLibraryIcon(
+        packageName: String,
+        lastModified: Long? = null,
+    ) {
+        if (lastModified != null) {
+            iconCache.remove("libicon:$packageName:$lastModified")
+        } else {
+            val prefix = "libicon:$packageName:"
+            iconCache
+                .snapshot()
+                .keys
+                .filter { it.startsWith(prefix) }
+                .forEach { iconCache.remove(it) }
+        }
         iconCache.remove(packageName)
         missingIconKeys.remove(packageName)
+    }
+
+    fun invalidateIcon(packageName: String) {
+        invalidateLibraryIcon(packageName)
     }
 
     @androidx.annotation.VisibleForTesting
@@ -1417,18 +1434,26 @@ internal fun rememberLibraryIconBitmap(
     appInfo: InstalledAppInfo,
     enabled: Boolean = true,
 ): ImageBitmap? {
-    if (appInfo.libraryIconPath == null) {
-        return rememberIconBitmap(appInfo, enabled = enabled)
-    }
-    val cachedBitmap = FocusImageCache.getCachedLibraryIconBitmap(appInfo.packageName, appInfo.libraryIconLastModified)
+    val cachedBitmap =
+        if (appInfo.libraryIconPath != null) {
+            FocusImageCache.getCachedLibraryIconBitmap(appInfo.packageName, appInfo.libraryIconLastModified)
+        } else {
+            null
+        }
+
     val state =
         produceState<LibraryIconLoadResult>(
-            initialValue = if (cachedBitmap != null) LibraryIconLoadResult.Success(cachedBitmap) else LibraryIconLoadResult.Loading,
+            initialValue =
+                when {
+                    appInfo.libraryIconPath == null -> LibraryIconLoadResult.Failed
+                    cachedBitmap != null -> LibraryIconLoadResult.Success(cachedBitmap)
+                    else -> LibraryIconLoadResult.Loading
+                },
             key1 = appInfo.packageName,
             key2 = appInfo.libraryIconLastModified,
             key3 = enabled,
         ) {
-            if (!enabled) {
+            if (!enabled || appInfo.libraryIconPath == null) {
                 value = LibraryIconLoadResult.Failed
                 return@produceState
             }
@@ -1440,10 +1465,14 @@ internal fun rememberLibraryIconBitmap(
             val diskBitmap = FocusImageCache.getLibraryIconBitmapAsync(appInfo)
             value = if (diskBitmap != null) LibraryIconLoadResult.Success(diskBitmap) else LibraryIconLoadResult.Failed
         }
+
+    val needDefaultIcon = appInfo.libraryIconPath == null || state.value is LibraryIconLoadResult.Failed
+    val defaultIcon = rememberIconBitmap(appInfo, enabled = enabled && needDefaultIcon)
+
     return when (val result = state.value) {
         is LibraryIconLoadResult.Success -> result.bitmap
         LibraryIconLoadResult.Loading -> null
-        LibraryIconLoadResult.Failed -> rememberIconBitmap(appInfo, enabled = enabled)
+        LibraryIconLoadResult.Failed -> defaultIcon
     }
 }
 

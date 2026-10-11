@@ -430,11 +430,20 @@ private fun LibraryIconDeckContent(
                     bytes = bytes,
                     imageId = image.id,
                     type = type,
+                    onIconWritten = {
+                        FocusImageCache.invalidateLibraryIcon(appInfo.packageName)
+                    },
                 )
             savedPath != null
         },
         onRevertToDefault = {
-            InstalledAppsManager.revertToDefaultLibraryIcon(context, appInfo.packageName)
+            InstalledAppsManager.revertToDefaultLibraryIcon(
+                context = context,
+                packageName = appInfo.packageName,
+                onIconRemoved = {
+                    FocusImageCache.invalidateLibraryIcon(appInfo.packageName)
+                },
+            )
         },
     )
 }

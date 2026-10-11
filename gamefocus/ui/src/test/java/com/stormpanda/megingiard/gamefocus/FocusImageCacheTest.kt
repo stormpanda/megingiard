@@ -167,4 +167,54 @@ class FocusImageCacheTest {
             logoFile.delete()
         }
     }
+
+    @Test
+    fun testLibraryIconCachingAndInvalidation() {
+        kotlinx.coroutines.runBlocking {
+            val context =
+                androidx.test.core.app.ApplicationProvider
+                    .getApplicationContext<android.content.Context>()
+            FocusImageCache.clearForTesting()
+
+            val iconsDir = File(context.cacheDir, "gamefocus_library_icons").apply { mkdirs() }
+            val iconFile = File(iconsDir, "com.test.customicon.png")
+
+            val bmp = Bitmap.createBitmap(128, 128, Bitmap.Config.ARGB_8888)
+            FileOutputStream(iconFile).use { out ->
+                bmp.compress(Bitmap.CompressFormat.PNG, 100, out)
+            }
+            bmp.recycle()
+
+            try {
+                val appInfo =
+                    InstalledAppInfo(
+                        packageName = "com.test.customicon",
+                        activityName = "MainActivity",
+                        label = "Custom Icon App",
+                        libraryIconPath = iconFile.absolutePath,
+                        libraryIconLastModified = iconFile.lastModified(),
+                    )
+
+                val loaded = FocusImageCache.getLibraryIconBitmapAsync(appInfo)
+                assertNotNull(loaded)
+
+                val cached = FocusImageCache.getCachedLibraryIconBitmap(appInfo.packageName, appInfo.libraryIconLastModified)
+                assertNotNull(cached)
+
+                // Invalidate by exact timestamp
+                FocusImageCache.invalidateLibraryIcon(appInfo.packageName, appInfo.libraryIconLastModified)
+                assertNull(FocusImageCache.getCachedLibraryIconBitmap(appInfo.packageName, appInfo.libraryIconLastModified))
+
+                // Re-cache and invalidate by prefix
+                val reloaded = FocusImageCache.getLibraryIconBitmapAsync(appInfo)
+                assertNotNull(reloaded)
+                assertNotNull(FocusImageCache.getCachedLibraryIconBitmap(appInfo.packageName, appInfo.libraryIconLastModified))
+
+                FocusImageCache.invalidateLibraryIcon(appInfo.packageName)
+                assertNull(FocusImageCache.getCachedLibraryIconBitmap(appInfo.packageName, appInfo.libraryIconLastModified))
+            } finally {
+                iconFile.delete()
+            }
+        }
+    }
 }
