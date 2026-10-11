@@ -18,6 +18,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 import java.io.ByteArrayOutputStream
 import java.io.File
 
@@ -250,7 +251,10 @@ class InstalledAppsManagerTest {
         runTest {
             val context: Context = RuntimeEnvironment.getApplication()
             InstalledAppsManager.setInstalledAndroidAppsForTesting(listOf(seedApp()))
-            val bytes = byteArrayOf(9, 8, 7)
+            val testBmp = Bitmap.createBitmap(32, 32, Bitmap.Config.ARGB_8888)
+            val stream = ByteArrayOutputStream()
+            testBmp.compress(Bitmap.CompressFormat.PNG, 100, stream)
+            val bytes = stream.toByteArray()
             var writtenCallbacks = 0
 
             val path = InstalledAppsManager.applyCustomLibraryIcon(context, PKG_GAME, bytes, 777, "icons") { writtenCallbacks++ }
@@ -281,6 +285,20 @@ class InstalledAppsManagerTest {
             assertNull(reverted.libraryIconImageId)
             assertNull(reverted.libraryIconType)
             assertEquals(0L, reverted.libraryIconLastModified)
+        }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun testApplyCustomLibraryIconWithUndecodableBytesReturnsNull() =
+        runTest {
+            val context: Context = RuntimeEnvironment.getApplication()
+            InstalledAppsManager.setInstalledAndroidAppsForTesting(listOf(seedApp()))
+            val corruptBytes = byteArrayOf(1, 2, 3, 4, 5)
+
+            val path = InstalledAppsManager.applyCustomLibraryIcon(context, PKG_GAME, corruptBytes, 999, "icons")
+            assertNull(path)
+            val file = InstalledAppsManager.libraryIconFileFor(context, PKG_GAME)
+            assertFalse(file.exists())
         }
 
     @Test

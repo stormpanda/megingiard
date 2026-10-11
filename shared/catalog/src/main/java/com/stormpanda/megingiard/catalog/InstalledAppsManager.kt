@@ -686,19 +686,36 @@ object InstalledAppsManager {
         AppLog.i(TAG, "Reverted $packageName to default icon")
     }
 
+    /**
+     * Normalizes downloaded icon [bytes] for disk storage: unpacks Windows ICO containers via
+     * [IcoImageExtractor] and downsamples images larger than [maxDimensionPx] to PNG.
+     *
+     * @return bytes safe to persist, or `null` if the payload cannot be decoded as an image
+     *   (callers must not write anything to disk in that case).
+     */
     internal fun downsampleIconBytes(
         bytes: ByteArray,
         maxDimensionPx: Int = MAX_LIBRARY_ICON_DIMENSION_PX,
-    ): ByteArray {
+    ): ByteArray? {
+        val inputBytes =
+            if (IcoImageExtractor.isIco(bytes)) {
+                IcoImageExtractor.extractBestImage(bytes) ?: bytes
+            } else {
+                bytes
+            }
+
         return try {
             val boundsOptions = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, boundsOptions)
+            BitmapFactory.decodeByteArray(inputBytes, 0, inputBytes.size, boundsOptions)
             val rawW = boundsOptions.outWidth
             val rawH = boundsOptions.outHeight
-            if (rawW <= 0 || rawH <= 0) return bytes
+            if (rawW <= 0 || rawH <= 0) {
+                AppLog.w(TAG, "downsampleIconBytes: undecodable image bytes (${bytes.size} bytes)")
+                return null
+            }
 
             if (rawW <= maxDimensionPx && rawH <= maxDimensionPx) {
-                return bytes
+                return inputBytes
             }
 
             var inSampleSize = 1
@@ -713,7 +730,7 @@ object InstalledAppsManager {
                     this.inSampleSize = inSampleSize
                     inPreferredConfig = Bitmap.Config.ARGB_8888
                 }
-            val decoded = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, decodeOptions) ?: return bytes
+            val decoded = BitmapFactory.decodeByteArray(inputBytes, 0, inputBytes.size, decodeOptions) ?: return null
 
             val finalBitmap =
                 if (decoded.width > maxDimensionPx || decoded.height > maxDimensionPx) {
@@ -734,8 +751,8 @@ object InstalledAppsManager {
             finalBitmap.recycle()
             out.toByteArray()
         } catch (e: Exception) {
-            AppLog.w(TAG, "Failed to downsample icon bytes, writing original: ${e.message}")
-            bytes
+            AppLog.w(TAG, "Failed to downsample icon bytes: ${e.message}")
+            null
         }
     }
 
@@ -761,6 +778,10 @@ object InstalledAppsManager {
         withContext(Dispatchers.IO) {
             val file = libraryIconFileFor(context, packageName)
             val downsampledBytes = downsampleIconBytes(bytes)
+            if (downsampledBytes == null) {
+                AppLog.w(TAG, "Cannot apply custom library icon for $packageName: image data could not be decoded")
+                return@withContext null
+            }
             if (!writeCoverAtomically(file, downsampledBytes)) return@withContext null
             val lastModified = file.lastModified()
             onIconWritten()

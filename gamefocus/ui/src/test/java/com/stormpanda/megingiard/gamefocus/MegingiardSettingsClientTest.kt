@@ -64,4 +64,25 @@ class MegingiardSettingsClientTest {
             hoveredPackage = "rom.snes.smw",
         )
     }
+
+    @Test
+    fun testDispatchClientState_runsIpcBodySynchronouslyWithoutThrowing() {
+        val context: Context = RuntimeEnvironment.getApplication()
+        MegingiardSettingsClient.dispatchClientState(
+            ClientStateRequest(
+                appContext = context,
+                isActive = true,
+                focusedPackage = null,
+                focusedRomPath = null,
+                focusedRomIdentifier = null,
+                hoveredPackage = "com.retroarch.aarch64",
+                hoveredLabel = "Super Mario World",
+                hoveredRomPath = "/storage/roms/snes/game.smc",
+                hoveredRomIdentifier = null,
+                hoveredSystemId = "snes",
+                hoveredPrimaryColor = 0xFF00FF00.toInt(),
+                hoveredSecondaryColor = null,
+            ),
+        )
+    }
 }
