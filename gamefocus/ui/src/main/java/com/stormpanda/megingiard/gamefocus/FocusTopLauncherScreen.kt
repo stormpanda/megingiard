@@ -640,8 +640,17 @@ fun FocusTopLauncherScreen(
                                             HorizontalPosterCarousel(
                                                 itemCount = currentCategoryApps.size,
                                                 pagerState = categoryPagerState,
-                                                modifier = Modifier.focusRequester(focusRequester),
-                                                key = { page -> currentCategoryApps.getOrNull(page)?.packageName ?: page },
+                                                modifier =
+                                                    if (category ==
+                                                        selectedCategory
+                                                    ) {
+                                                        Modifier.focusRequester(focusRequester)
+                                                    } else {
+                                                        Modifier
+                                                    },
+                                                key = { page ->
+                                                    "${category.id}_${currentCategoryApps.getOrNull(page)?.packageName ?: page}"
+                                                },
                                                 targetPage = categoryPagerState.targetPage,
                                                 onItemClick = { actualIndex ->
                                                     val appInfo = currentCategoryApps.getOrNull(actualIndex)
