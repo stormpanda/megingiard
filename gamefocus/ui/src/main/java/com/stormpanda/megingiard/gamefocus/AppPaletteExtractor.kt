@@ -253,7 +253,11 @@ object AppPaletteExtractor {
                         }
                     if (file.exists() && file.length() > 0) {
                         try {
-                            bitmap = BitmapFactory.decodeFile(file.absolutePath)
+                            val options =
+                                BitmapFactory.Options().apply {
+                                    inSampleSize = 4 // Downsample 4x for fast decoding & memory efficiency
+                                }
+                            bitmap = BitmapFactory.decodeFile(file.absolutePath, options)
                         } catch (_: Exception) {
                             // Ignore
                         }

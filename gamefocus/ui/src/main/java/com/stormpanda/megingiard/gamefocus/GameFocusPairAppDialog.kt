@@ -32,7 +32,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -80,7 +83,7 @@ private suspend fun scrollToFocusedItem(
 ) {
     val targetRow = targetIndex / columns
     val firstItemOfRow = targetRow * columns
-    val scrollOffset = if (targetRow == 0) 0 else -peekOffsetPx
+    val scrollOffset = if (targetRow == 0) 0 else peekOffsetPx.coerceAtLeast(0)
     gridState.animateScrollToItem(index = firstItemOfRow, scrollOffset = scrollOffset)
 }
 
@@ -104,10 +107,16 @@ fun GameFocusPairAppDialog(
         AppLog.d(TAG, "Showing pairing dialog for ${targetApp.label}, available apps count: ${availableApps.size}")
     }
 
+    var lastScrolledRow by remember { mutableStateOf(-1) }
+
     LaunchedEffect(focusedIndex, availableApps.size) {
         if (availableApps.isNotEmpty() && focusedIndex >= 0) {
             val safeIndex = focusedIndex.coerceIn(0, availableApps.size - 1)
-            scrollToFocusedItem(gridState, safeIndex, PFD_GRID_COLUMNS, peekOffsetPx)
+            val targetRow = safeIndex / PFD_GRID_COLUMNS
+            if (targetRow != lastScrolledRow) {
+                lastScrolledRow = targetRow
+                scrollToFocusedItem(gridState, safeIndex, PFD_GRID_COLUMNS, peekOffsetPx)
+            }
         }
     }
 
@@ -228,7 +237,7 @@ private fun PairAppGridItem(
     val appColors = LocalAppColors.current
     val iconBitmap = rememberIconBitmap(appInfo)
 
-    val currentPalette = rememberAppPalette(appInfo)
+    val currentPalette = rememberAppPalette(appInfo, enabled = isFocused)
     val targetCardBg =
         if (isFocused) {
             if (currentPalette != null && currentPalette.isExtracted) {

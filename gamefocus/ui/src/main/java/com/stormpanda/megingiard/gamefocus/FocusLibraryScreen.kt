@@ -171,7 +171,7 @@ private suspend fun scrollToFocusedItem(
 ) {
     val targetRow = targetIndex / columns
     val firstItemOfRow = targetRow * columns
-    val scrollOffset = if (targetRow == 0) 0 else -peekOffsetPx
+    val scrollOffset = if (targetRow == 0) 0 else peekOffsetPx.coerceAtLeast(0)
     gridState.animateScrollToItem(index = firstItemOfRow, scrollOffset = scrollOffset)
 }
 
@@ -232,11 +232,19 @@ fun FocusLibraryScreen(
             val displayedApps = remember(allApps, activeTab) { activeTab.filterApps(allApps) }
             val gridState: LazyGridState = rememberLazyGridState()
 
+            var lastScrolledRow by remember(activeTab) { mutableStateOf(-1) }
+
             LaunchedEffect(focusedIndex, displayedApps.size) {
                 if (displayedApps.isNotEmpty() && focusedIndex >= 0) {
                     val safeIndex = focusedIndex.coerceIn(0, displayedApps.size - 1)
-                    AppLog.d(TAG, "Library focused index changed to $safeIndex (total ${displayedApps.size})")
-                    scrollToFocusedItem(gridState, safeIndex, FLS_GRID_COLUMNS, peekOffsetPx)
+                    val targetRow = safeIndex / FLS_GRID_COLUMNS
+                    if (targetRow != lastScrolledRow) {
+                        lastScrolledRow = targetRow
+                        AppLog.d(TAG, "Library focused index changed to $safeIndex (row $targetRow, total ${displayedApps.size})")
+                        scrollToFocusedItem(gridState, safeIndex, FLS_GRID_COLUMNS, peekOffsetPx)
+                    } else {
+                        AppLog.d(TAG, "Library focused index changed to $safeIndex in same row $targetRow (total ${displayedApps.size})")
+                    }
                 }
             }
 
@@ -262,6 +270,7 @@ fun FocusLibraryScreen(
                     targetRect = null
                     isFirstPositioned = false
                     visibleItemCoords.clear()
+                    lastScrolledRow = -1
                     gridState.scrollToItem(0)
                 }
 
@@ -933,7 +942,7 @@ private fun LibraryGridItem(
     val appColors = LocalAppColors.current
     val iconBitmap = rememberIconBitmap(appInfo)
 
-    val currentPalette = rememberAppPalette(appInfo)
+    val currentPalette = rememberAppPalette(appInfo, enabled = isFocused)
     val targetCardBg =
         if (isFocused) {
             if (currentPalette != null && currentPalette.isExtracted) {

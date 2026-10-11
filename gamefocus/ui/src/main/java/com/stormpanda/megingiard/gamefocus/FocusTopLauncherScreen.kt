@@ -1004,6 +1004,7 @@ fun FocusTopLauncherScreen(
 }
 
 internal object FocusImageCache {
+    private const val MAX_ICON_DIMENSION_PX = 256
     private val coverCache = LruCache<String, ImageBitmap>(80)
     private val iconCache = LruCache<String, ImageBitmap>(80)
 
@@ -1072,6 +1073,52 @@ internal object FocusImageCache {
 
     fun getCachedIconBitmap(packageName: String): ImageBitmap? = iconCache.get(packageName)
 
+    internal fun decodeSampledIconBitmap(
+        file: File,
+        maxDimensionPx: Int = MAX_ICON_DIMENSION_PX,
+    ): Bitmap? {
+        if (!file.exists() || file.length() == 0L) return null
+        return try {
+            val boundsOptions = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(file.absolutePath, boundsOptions)
+            val rawW = boundsOptions.outWidth
+            val rawH = boundsOptions.outHeight
+            if (rawW <= 0 || rawH <= 0) return null
+
+            var inSampleSize = 1
+            if (rawH > maxDimensionPx || rawW > maxDimensionPx) {
+                val halfH = rawH / 2
+                val halfW = rawW / 2
+                while ((halfH / inSampleSize) >= maxDimensionPx && (halfW / inSampleSize) >= maxDimensionPx) {
+                    inSampleSize *= 2
+                }
+            }
+
+            val decodeOptions =
+                BitmapFactory.Options().apply {
+                    this.inSampleSize = inSampleSize
+                    inPreferredConfig = Bitmap.Config.ARGB_8888
+                }
+            val decoded = BitmapFactory.decodeFile(file.absolutePath, decodeOptions) ?: return null
+
+            if (decoded.width > maxDimensionPx || decoded.height > maxDimensionPx) {
+                val scale = minOf(maxDimensionPx.toFloat() / decoded.width, maxDimensionPx.toFloat() / decoded.height)
+                val scaledW = (decoded.width * scale).toInt().coerceAtLeast(1)
+                val scaledH = (decoded.height * scale).toInt().coerceAtLeast(1)
+                val scaled = Bitmap.createScaledBitmap(decoded, scaledW, scaledH, true)
+                if (scaled != decoded) {
+                    decoded.recycle()
+                }
+                scaled
+            } else {
+                decoded
+            }
+        } catch (e: Exception) {
+            AppLog.w(TAG, "Failed to decode sampled icon from ${file.name}: ${e.message}")
+            null
+        }
+    }
+
     suspend fun getIconBitmapAsync(
         context: Context,
         appInfo: InstalledAppInfo,
@@ -1088,12 +1135,7 @@ internal object FocusImageCache {
             val iconFile = File(fileDir, "${appInfo.packageName}.png")
             if (iconFile.exists() && iconFile.length() > 0) {
                 val startTime = System.currentTimeMillis()
-                val diskBitmap =
-                    try {
-                        BitmapFactory.decodeFile(iconFile.absolutePath)?.asImageBitmap()
-                    } catch (e: Exception) {
-                        null
-                    }
+                val diskBitmap = decodeSampledIconBitmap(iconFile)?.asImageBitmap()
 
                 if (diskBitmap != null) {
                     val elapsed = System.currentTimeMillis() - startTime
@@ -1258,15 +1300,23 @@ internal fun rememberIconBitmap(
 }
 
 @Composable
-internal fun rememberAppPalette(appInfo: InstalledAppInfo): ExtractedAppPalette? {
+internal fun rememberAppPalette(
+    appInfo: InstalledAppInfo,
+    enabled: Boolean = true,
+): ExtractedAppPalette? {
     val appColors = LocalAppColors.current
     val state =
         produceState<ExtractedAppPalette?>(
-            initialValue = AppPaletteExtractor.getCachedColorsOrNull(appInfo),
-            key1 = appInfo.packageName,
-            key2 = appInfo.coverPath,
-            key3 = appInfo.coverLastModified,
+            initialValue = if (enabled) AppPaletteExtractor.getCachedColorsOrNull(appInfo) else null,
+            appInfo.packageName,
+            appInfo.coverPath,
+            appInfo.coverLastModified,
+            enabled,
         ) {
+            if (!enabled) {
+                value = null
+                return@produceState
+            }
             val cached = AppPaletteExtractor.getCachedColorsOrNull(appInfo)
             if (cached != null) {
                 value = cached
