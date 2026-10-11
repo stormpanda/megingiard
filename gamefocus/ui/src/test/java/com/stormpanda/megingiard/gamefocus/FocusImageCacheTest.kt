@@ -94,4 +94,77 @@ class FocusImageCacheTest {
         val nonExistent = File("/tmp/does_not_exist_${System.currentTimeMillis()}.png")
         assertNull(FocusImageCache.decodeSampledIconBitmap(nonExistent))
     }
+
+    @Test
+    fun testNegativeCaching_cachesMissingIconsAndInvalidates() {
+        kotlinx.coroutines.runBlocking {
+            val context =
+                androidx.test.core.app.ApplicationProvider
+                    .getApplicationContext<android.content.Context>()
+            FocusImageCache.clearForTesting()
+
+            val missingRom =
+                InstalledAppInfo(
+                    packageName = "rom:switch:NonExistentGame.nsp",
+                    activityName = "",
+                    label = "Non-existent",
+                    isRom = true,
+                    systemId = "switch",
+                )
+
+            val result1 = FocusImageCache.getIconBitmapAsync(context, missingRom)
+            assertNull(result1)
+
+            // Second check should be caught by missingIconKeys
+            assertNull(FocusImageCache.getCachedIconBitmap(missingRom.packageName))
+
+            // Invalidation should remove from missingIconKeys
+            FocusImageCache.invalidateIcon(missingRom.packageName)
+            assertNull(FocusImageCache.getCachedIconBitmap(missingRom.packageName))
+        }
+    }
+
+    @Test
+    fun testOversizedLogoRewrite_rewritesDiskFileAsThumbnail() {
+        kotlinx.coroutines.runBlocking {
+            val context =
+                androidx.test.core.app.ApplicationProvider
+                    .getApplicationContext<android.content.Context>()
+            FocusImageCache.clearForTesting()
+
+            val logosDir = File(context.cacheDir, "gamefocus_logos").apply { mkdirs() }
+            val logoFile = File(logosDir, "rom:switch:HugeGame.nsp.png")
+
+            val hugeBmp = Bitmap.createBitmap(800, 800, Bitmap.Config.ARGB_8888)
+            // Fill with varied pixels to ensure uncompressed PNG exceeds 256KB
+            for (x in 0 until 800 step 10) {
+                for (y in 0 until 800 step 10) {
+                    hugeBmp.setPixel(x, y, android.graphics.Color.rgb(x % 255, y % 255, (x + y) % 255))
+                }
+            }
+            FileOutputStream(logoFile).use { out ->
+                hugeBmp.compress(Bitmap.CompressFormat.PNG, 100, out)
+            }
+            hugeBmp.recycle()
+
+            val originalLength = logoFile.length()
+            assertTrue("Original file should exceed 256KB for this test, was $originalLength", originalLength > 256 * 1024L)
+
+            val romApp =
+                InstalledAppInfo(
+                    packageName = "rom:switch:HugeGame.nsp",
+                    activityName = "",
+                    label = "Huge Game",
+                    isRom = true,
+                    systemId = "switch",
+                )
+
+            val bitmap = FocusImageCache.getIconBitmapAsync(context, romApp)
+            assertNotNull(bitmap)
+
+            val newLength = logoFile.length()
+            assertTrue("Rewritten file should be smaller than original ($originalLength -> $newLength)", newLength < originalLength)
+            logoFile.delete()
+        }
+    }
 }

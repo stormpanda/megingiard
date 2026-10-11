@@ -487,7 +487,7 @@ fun FocusLibraryScreen(
             modifier = Modifier.align(Alignment.TopCenter),
         )
 
-        val activeApps = selectedTab.filterApps(allApps)
+        val activeApps = remember(allApps, selectedTab) { selectedTab.filterApps(allApps) }
         val focusedApp = activeApps.getOrNull(focusedIndex.coerceAtLeast(0))
         val isCurrentHidden = focusedApp != null && hiddenSet.contains(focusedApp.packageName)
 

@@ -107,6 +107,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import java.util.concurrent.ConcurrentHashMap
 
 private const val TAG = "FocusTopLauncherScreen"
 
@@ -1005,8 +1006,10 @@ fun FocusTopLauncherScreen(
 
 internal object FocusImageCache {
     private const val MAX_ICON_DIMENSION_PX = 256
+    private const val MAX_ICON_DISK_BYTES = 256 * 1024L
     private val coverCache = LruCache<String, ImageBitmap>(80)
     private val iconCache = LruCache<String, ImageBitmap>(80)
+    private val missingIconKeys = ConcurrentHashMap.newKeySet<String>()
 
     fun getAppIcon(
         context: Context,
@@ -1071,7 +1074,22 @@ internal object FocusImageCache {
         }
     }
 
-    fun getCachedIconBitmap(packageName: String): ImageBitmap? = iconCache.get(packageName)
+    fun getCachedIconBitmap(packageName: String): ImageBitmap? {
+        if (missingIconKeys.contains(packageName)) return null
+        return iconCache.get(packageName)
+    }
+
+    fun invalidateIcon(packageName: String) {
+        iconCache.remove(packageName)
+        missingIconKeys.remove(packageName)
+    }
+
+    @androidx.annotation.VisibleForTesting
+    internal fun clearForTesting() {
+        coverCache.evictAll()
+        iconCache.evictAll()
+        missingIconKeys.clear()
+    }
 
     internal fun decodeSampledIconBitmap(
         file: File,
@@ -1124,6 +1142,9 @@ internal object FocusImageCache {
         appInfo: InstalledAppInfo,
     ): ImageBitmap? {
         val cacheKey = appInfo.packageName
+        if (missingIconKeys.contains(cacheKey)) {
+            return null
+        }
         val cached = iconCache.get(cacheKey)
         if (cached != null) {
             return cached
@@ -1135,19 +1156,49 @@ internal object FocusImageCache {
             val iconFile = File(fileDir, "${appInfo.packageName}.png")
             if (iconFile.exists() && iconFile.length() > 0) {
                 val startTime = System.currentTimeMillis()
-                val diskBitmap = decodeSampledIconBitmap(iconFile)?.asImageBitmap()
+                val sampledBitmap = decodeSampledIconBitmap(iconFile)
+                val diskBitmap = sampledBitmap?.asImageBitmap()
 
                 if (diskBitmap != null) {
                     val elapsed = System.currentTimeMillis() - startTime
                     AppLog.d(TAG, "Loaded disk-cached ${if (appInfo.isRom) "logo" else "icon"} PNG for ${appInfo.label} in ${elapsed}ms")
                     iconCache.put(cacheKey, diskBitmap)
+
+                    // If disk file was oversized (>256KB), rewrite as downsampled thumbnail to accelerate future loads and free storage
+                    if (appInfo.isRom && iconFile.length() > MAX_ICON_DISK_BYTES) {
+                        try {
+                            val tempFile = File(fileDir, "${appInfo.packageName}.tmp")
+                            FileOutputStream(tempFile).use { out ->
+                                sampledBitmap.compress(Bitmap.CompressFormat.PNG, 95, out)
+                            }
+                            if (tempFile.exists() && tempFile.length() > 0L) {
+                                tempFile.renameTo(iconFile)
+                                AppLog.i(
+                                    TAG,
+                                    "Rewrote oversized logo on disk with downsampled thumbnail for ${appInfo.label} (${iconFile.length() / 1024} KB)",
+                                )
+                            }
+                        } catch (e: Exception) {
+                            AppLog.w(TAG, "Failed to rewrite downsampled logo thumbnail for ${appInfo.label}: ${e.message}")
+                        }
+                    }
+
                     return@withContext diskBitmap
                 }
             }
 
-            val iconDrawable = getAppIcon(context, appInfo.packageName, appInfo.activityName) ?: return@withContext null
+            val iconDrawable = getAppIcon(context, appInfo.packageName, appInfo.activityName)
+            if (iconDrawable == null) {
+                missingIconKeys.add(cacheKey)
+                return@withContext null
+            }
+
             val startTime = System.currentTimeMillis()
-            val androidBmp = iconDrawable.toAndroidBitmap() ?: return@withContext null
+            val androidBmp = iconDrawable.toAndroidBitmap()
+            if (androidBmp == null) {
+                missingIconKeys.add(cacheKey)
+                return@withContext null
+            }
 
             val elapsed = System.currentTimeMillis() - startTime
             AppLog.d(TAG, "Converted app icon for ${appInfo.label} in ${elapsed}ms")

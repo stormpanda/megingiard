@@ -689,7 +689,8 @@ object InstalledAppsManager {
                             try {
                                 val logosResult = SteamGridDbClient.fetchImages(gameId, IMAGE_TYPE_LOGOS, apiKey)
                                 val logos = logosResult.getOrNull()
-                                val logoUrl = logos?.firstOrNull()?.url
+                                val firstLogo = logos?.firstOrNull()
+                                val logoUrl = firstLogo?.let { it.thumb.ifBlank { it.url } }
                                 if (logoUrl != null) {
                                     val logoBytes = SteamGridDbClient.downloadImageBytes(logoUrl).getOrNull()
                                     if (logoBytes != null) {
