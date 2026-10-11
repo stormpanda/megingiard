@@ -696,7 +696,8 @@ fun calculateButtonEdgeResize(
             (anchorPx - rawCandPx).coerceIn(minPx, maxAllowedDimPx)
         }
 
-    var candDimDp = (rawDimPx / safeDensity).roundToInt().toFloat().coerceIn(minSizeDp, maxAllowedDimPx / safeDensity)
+    val maxAllowedDimDp = maxOf(minSizeDp, maxAllowedDimPx / safeDensity)
+    var candDimDp = (rawDimPx / safeDensity).roundToInt().toFloat().coerceIn(minSizeDp, maxAllowedDimDp)
     var isSnapped = false
 
     if (lockAspect) {
@@ -717,7 +718,7 @@ fun calculateButtonEdgeResize(
     val clampedDimPx = (candDimDp * safeDensity).coerceIn(minPx, maxAllowedDimPx)
     candDimDp = (clampedDimPx / safeDensity).roundToInt().toFloat()
     if (candDimDp * safeDensity > maxAllowedDimPx) {
-        candDimDp = floor(maxAllowedDimPx / safeDensity)
+        candDimDp = floor(maxAllowedDimPx / safeDensity).coerceAtLeast(minSizeDp)
     }
     // Derive the center from the final rounded dimension so the anchored edge stays exactly fixed.
     val newDimPx = candDimDp * safeDensity

@@ -101,7 +101,6 @@ private const val TAG = "PadCanvas"
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
 
-private val ED_BUTTON_UNIT_DP = 60.dp
 private val ED_BTN_SQUARE_RADIUS = 4.dp
 private val ED_BTN_SQUARE_SHAPE = RoundedCornerShape(ED_BTN_SQUARE_RADIUS)
 
@@ -939,7 +938,7 @@ private fun GridOverlay(
     val density = LocalDensity.current
     val dotRadiusPx = with(density) { PC_RADIAL_DOT_RADIUS.toPx() }
     val centerDotPx = with(density) { PC_RADIAL_CENTER_DOT.toPx() }
-    val buttonUnitPx = with(density) { ED_BUTTON_UNIT_DP.toPx() }
+    val buttonUnitPx = with(density) { MP_BUTTON_BASE_UNIT_DP.dp.toPx() }
     Canvas(modifier = Modifier.fillMaxSize()) {
         val w = size.width
         val h = size.height

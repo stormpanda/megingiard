@@ -133,7 +133,6 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 import java.util.Collections
 import java.util.UUID
 import kotlin.math.max
-import kotlin.math.roundToInt
 
 private const val TAG = "MacroPadEditor"
 private val MPE_DECK_SPACING = 10.dp
@@ -2866,6 +2865,7 @@ private fun EditButtonPositionsSubPageContent(
         onDispose {
             stopMovingImmediate()
             MacroPadState.setSelectedButtonId(null)
+            MacroPadState.setAdjustingButtonViaGamepad(false)
         }
     }
 

@@ -775,4 +775,32 @@ class AlignmentMathTest {
         assertEquals(0.5f, result.newNormX, 0.001f)
         assertEquals(0.5f, result.newNormY, 0.001f)
     }
+
+    @Test
+    fun `calculateButtonEdgeResize does not throw with non-dyadic density and undersized anchor span`() {
+        // When anchorPx is very close to canvas boundary such that maxAllowedDimPx is coerced to minPx,
+        // floating-point division (e.g. minPx / safeDensity) with non-dyadic densities (e.g. 2.1f) must not
+        // produce a value strictly less than minSizeDp that would cause coerceIn to throw IllegalArgumentException.
+        val density = 2.1f
+        val canvasW = 500f
+        // Anchor left edge at 490 px on a 500 px canvas (only 10 px remaining, which is < minPx = 63 px)
+        val originalWidthDp = 60f
+        val leftEdgePx = 490f
+        val originalNormX = (leftEdgePx + originalWidthDp * density / 2f) / canvasW
+
+        val result =
+            calculateButtonEdgeResize(
+                handle = ButtonResizeHandle.RIGHT,
+                dragDeltaPx = 100f,
+                originalNormX = originalNormX,
+                originalNormY = 0.5f,
+                originalWidthDp = originalWidthDp,
+                originalHeightDp = 60f,
+                canvasW = canvasW,
+                canvasH = 500f,
+                density = density,
+            )
+
+        assertEquals(30f, result.newWidthDp, 0.01f)
+    }
 }
