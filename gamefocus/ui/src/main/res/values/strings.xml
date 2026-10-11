@@ -87,7 +87,8 @@
 
     <string name="gamefocus_edit_overlay_title">Edit Game</string>
     <string name="gamefocus_cat_game_info">Game Info</string>
-    <string name="gamefocus_cat_scraping">Scraping</string>
+    <string name="gamefocus_cat_scraping">Gallery Artwork</string>
+    <string name="gamefocus_cat_library_icon">Library Icon</string>
     <string name="gamefocus_field_display_name_title">Display Name</string>
     <string name="gamefocus_field_display_name_desc">Customize how the title appears in the launcher gallery and library.</string>
     <string name="gamefocus_field_display_name_placeholder">Enter display name</string>
@@ -101,10 +102,18 @@
     <string name="gamefocus_toggle_use_rom_icon_title">Use System Icon</string>
     <string name="gamefocus_toggle_use_app_icon_desc">Display the native Android app icon instead of scraped artwork.</string>
     <string name="gamefocus_toggle_use_rom_icon_desc">Display the system emulator logo instead of scraped artwork.</string>
+    <string name="gamefocus_toggle_use_default_icon_title">Use Default Icon</string>
+    <string name="gamefocus_toggle_use_default_icon_desc">Display the default application icon or system logo in the library.</string>
+    <string name="gamefocus_scraping_using_default_icon_notice">Default library icon is active. Toggle off above to browse and apply custom icons.</string>
+    <string name="gamefocus_scraping_type_choice_title">Artwork Type</string>
+    <string name="gamefocus_scraping_type_choice_desc">Choose between square icons or transparent logos from SteamGridDB.</string>
+    <string name="gamefocus_scraping_type_icons">Icons</string>
+    <string name="gamefocus_scraping_type_logos">Logos</string>
     <string name="gamefocus_scraping_images_section">Available Artwork</string>
     <string name="gamefocus_scraping_using_app_icon_notice">Native application icon is active. Toggle off above to browse and apply custom artwork.</string>
     <string name="gamefocus_scraping_using_rom_icon_notice">System emulator icon is active. Toggle off above to browse and apply custom artwork.</string>
     <string name="gamefocus_scraping_applied_badge_cd">Selected artwork</string>
+    <string name="gamefocus_scraping_no_icons_found">No icons or logos found for \"%1$s\" on SteamGridDB.</string>
     <string name="gamefocus_action_reset_display_name_title">Reset to Default Name</string>
     <string name="gamefocus_action_reset_display_name_desc">Restore the original title: %1$s</string>
 </resources>

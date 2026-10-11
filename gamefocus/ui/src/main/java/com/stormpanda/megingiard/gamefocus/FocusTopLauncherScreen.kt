@@ -541,6 +541,7 @@ fun FocusTopLauncherScreen(
                         onOptionsMenuExpandedChange = onLibraryOptionsMenuExpandedChange,
                         selectedIndex = libraryMenuSelectedIndex,
                         onToggleHidden = onToggleHidden,
+                        onEditArtwork = onEditArtwork,
                         onOpenAppInfo = onOpenAppInfo,
                         onUninstallApp = onUninstallApp,
                         onChangeCore = onChangeCore,
@@ -549,7 +550,7 @@ fun FocusTopLauncherScreen(
                         onAppClickTop = onAppClickTop,
                         onAppClickBottom = onAppClickBottom,
                         onCloseRequested = onCloseLibrary,
-                        enabled = isLibraryOpen,
+                        enabled = isLibraryOpen && editingAppInfo == null && pairingTargetApp == null,
                         tabs = libraryTabs,
                         isRemoveRomFolderDialogOpen = isRemoveRomFolderDialogOpen,
                         onRemoveRomFolderDialogOpenChange = onRemoveRomFolderDialogOpenChange,
@@ -964,15 +965,6 @@ fun FocusTopLauncherScreen(
                             )
                         }
                     }
-
-                    // Game Edit Primary Overlay (Game Info & Scraping)
-                    if (editingAppInfo != null) {
-                        GameFocusEditGameOverlay(
-                            appInfo = editingAppInfo,
-                            apiKey = apiKey,
-                            onDismiss = onDismissEditingApp,
-                        )
-                    }
                 }
             }
         }
@@ -999,6 +991,15 @@ fun FocusTopLauncherScreen(
                 onSelectApp = { selectedApp ->
                     onConfirmPairApp(pairingTargetApp, selectedApp)
                 },
+            )
+        }
+
+        // Game Edit Primary Overlay (Game Info, Gallery Artwork, Library Icon)
+        if (editingAppInfo != null) {
+            GameFocusEditGameOverlay(
+                appInfo = editingAppInfo,
+                apiKey = apiKey,
+                onDismiss = onDismissEditingApp,
             )
         }
     }
@@ -1077,6 +1078,32 @@ internal object FocusImageCache {
     fun getCachedIconBitmap(packageName: String): ImageBitmap? {
         if (missingIconKeys.contains(packageName)) return null
         return iconCache.get(packageName)
+    }
+
+    fun getCachedLibraryIconBitmap(
+        packageName: String,
+        lastModified: Long,
+    ): ImageBitmap? {
+        val cacheKey = "libicon:$packageName:$lastModified"
+        return iconCache.get(cacheKey)
+    }
+
+    suspend fun getLibraryIconBitmapAsync(appInfo: InstalledAppInfo): ImageBitmap? {
+        val path = appInfo.libraryIconPath ?: return null
+        val cacheKey = "libicon:${appInfo.packageName}:${appInfo.libraryIconLastModified}"
+        val cached = iconCache.get(cacheKey)
+        if (cached != null) return cached
+
+        return withContext(Dispatchers.IO) {
+            val file = File(path)
+            if (!file.exists() || file.length() == 0L) return@withContext null
+            val sampledBitmap = decodeSampledIconBitmap(file)
+            val diskBitmap = sampledBitmap?.asImageBitmap()
+            if (diskBitmap != null) {
+                iconCache.put(cacheKey, diskBitmap)
+            }
+            diskBitmap
+        }
     }
 
     fun invalidateIcon(packageName: String) {
@@ -1348,6 +1375,33 @@ internal fun rememberIconBitmap(
             }
         }
     return state.value
+}
+
+@Composable
+internal fun rememberLibraryIconBitmap(
+    appInfo: InstalledAppInfo,
+    enabled: Boolean = true,
+): ImageBitmap? {
+    if (appInfo.libraryIconPath == null) {
+        return rememberIconBitmap(appInfo, enabled = enabled)
+    }
+    val state =
+        produceState<ImageBitmap?>(
+            initialValue = FocusImageCache.getCachedLibraryIconBitmap(appInfo.packageName, appInfo.libraryIconLastModified),
+            key1 = appInfo.packageName,
+            key2 = appInfo.libraryIconLastModified,
+            key3 = enabled,
+        ) {
+            if (!enabled) {
+                value = null
+                return@produceState
+            }
+            value = FocusImageCache.getCachedLibraryIconBitmap(appInfo.packageName, appInfo.libraryIconLastModified)
+            if (value == null) {
+                value = FocusImageCache.getLibraryIconBitmapAsync(appInfo)
+            }
+        }
+    return state.value ?: rememberIconBitmap(appInfo, enabled = enabled)
 }
 
 @Composable

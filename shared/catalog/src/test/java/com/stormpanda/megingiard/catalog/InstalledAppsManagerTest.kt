@@ -60,6 +60,18 @@ class InstalledAppsManagerTest {
         assertEquals(99, updatedList[0].coverImageId)
         assertNull(updatedList[1].coverPath)
         assertNull(updatedList[1].coverImageId)
+
+        val withIcon = app.withLibraryIcon("/tmp/icon.png", 777, "icons", 54321L)
+        assertEquals("/tmp/icon.png", withIcon.libraryIconPath)
+        assertEquals(777, withIcon.libraryIconImageId)
+        assertEquals("icons", withIcon.libraryIconType)
+        assertEquals(54321L, withIcon.libraryIconLastModified)
+
+        val updatedIconList = list.withUpdatedLibraryIcon("com.example.game", "/tmp/new_icon.png", 888, "logos")
+        assertEquals("/tmp/new_icon.png", updatedIconList[0].libraryIconPath)
+        assertEquals(888, updatedIconList[0].libraryIconImageId)
+        assertEquals("logos", updatedIconList[0].libraryIconType)
+        assertNull(updatedIconList[1].libraryIconPath)
     }
 
     @Test
@@ -227,6 +239,42 @@ class InstalledAppsManagerTest {
             val reverted = InstalledAppsManager.installedAndroidAppsForTesting().single()
             assertNull(reverted.coverPath)
             assertNull(reverted.coverImageId)
+        }
+
+    @Test
+    fun testApplyAndRevertCustomLibraryIcon() =
+        runTest {
+            val context: Context = RuntimeEnvironment.getApplication()
+            InstalledAppsManager.setInstalledAndroidAppsForTesting(listOf(seedApp()))
+            val bytes = byteArrayOf(9, 8, 7)
+            var writtenCallbacks = 0
+
+            val path = InstalledAppsManager.applyCustomLibraryIcon(context, PKG_GAME, bytes, 777, "icons") { writtenCallbacks++ }
+
+            val file = InstalledAppsManager.libraryIconFileFor(context, PKG_GAME)
+            assertEquals(file.absolutePath, path)
+            assertTrue(file.exists())
+            assertTrue(bytes.contentEquals(file.readBytes()))
+            assertEquals(1, writtenCallbacks)
+            val iconRef = InstalledAppsManager.getLibraryIconRef(PKG_GAME)
+            assertNotNull(iconRef)
+            assertEquals(777, iconRef?.id)
+            assertEquals("icons", iconRef?.type)
+            val applied = InstalledAppsManager.installedAndroidAppsForTesting().single()
+            assertEquals(file.absolutePath, applied.libraryIconPath)
+            assertEquals(777, applied.libraryIconImageId)
+            assertEquals("icons", applied.libraryIconType)
+
+            var removedCallbacks = 0
+            InstalledAppsManager.revertToDefaultLibraryIcon(context, PKG_GAME) { removedCallbacks++ }
+
+            assertFalse(file.exists())
+            assertEquals(1, removedCallbacks)
+            assertNull(InstalledAppsManager.getLibraryIconRef(PKG_GAME))
+            val reverted = InstalledAppsManager.installedAndroidAppsForTesting().single()
+            assertNull(reverted.libraryIconPath)
+            assertNull(reverted.libraryIconImageId)
+            assertNull(reverted.libraryIconType)
         }
 
     @Test

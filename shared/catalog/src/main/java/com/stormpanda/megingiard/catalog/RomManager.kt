@@ -355,6 +355,12 @@ object RomManager {
                             val coverLastModified = if (hasCover) cachedCoverFile.lastModified() else 0L
                             val coverImageId = if (hasCover) InstalledAppsManager.getCoverImageId(pseudoPackageName) else null
 
+                            val cachedLibraryIconFile = InstalledAppsManager.libraryIconFileFor(context, pseudoPackageName)
+                            val hasLibraryIcon = cachedLibraryIconFile.exists() && cachedLibraryIconFile.length() > 0
+                            val libraryIconPath = if (hasLibraryIcon) cachedLibraryIconFile.absolutePath else null
+                            val libraryIconLastModified = if (hasLibraryIcon) cachedLibraryIconFile.lastModified() else 0L
+                            val libraryIconRef = if (hasLibraryIcon) InstalledAppsManager.getLibraryIconRef(pseudoPackageName) else null
+
                             add(
                                 InstalledAppInfo(
                                     packageName = pseudoPackageName,
@@ -371,6 +377,10 @@ object RomManager {
                                     coverLastModified = coverLastModified,
                                     coverImageId = coverImageId,
                                     defaultLabel = cleanedLabel,
+                                    libraryIconPath = libraryIconPath,
+                                    libraryIconImageId = libraryIconRef?.id,
+                                    libraryIconType = libraryIconRef?.type,
+                                    libraryIconLastModified = libraryIconLastModified,
                                 ),
                             )
                         }
@@ -391,6 +401,16 @@ object RomManager {
     ) {
         _romApps.update { it.withUpdatedCover(packageName, coverPath, coverImageId) }
         AppLog.i(TAG, "Updated in-memory ROM cover path for $packageName to $coverPath (imageId: $coverImageId)")
+    }
+
+    fun updateRomLibraryIcon(
+        packageName: String,
+        iconPath: String?,
+        imageId: Int? = null,
+        type: String? = null,
+    ) {
+        _romApps.update { it.withUpdatedLibraryIcon(packageName, iconPath, imageId, type) }
+        AppLog.i(TAG, "Updated in-memory ROM library icon path for $packageName to $iconPath (imageId: $imageId, type: $type)")
     }
 
     /**

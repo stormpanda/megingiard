@@ -191,6 +191,7 @@ fun FocusLibraryScreen(
     onOptionsMenuExpandedChange: (Boolean) -> Unit = {},
     selectedIndex: Int = 0,
     onToggleHidden: (InstalledAppInfo) -> Unit = {},
+    onEditArtwork: (InstalledAppInfo) -> Unit = {},
     onOpenAppInfo: (InstalledAppInfo) -> Unit = {},
     onUninstallApp: (InstalledAppInfo) -> Unit = {},
     onChangeCore: (CustomRomFolder) -> Unit = {},
@@ -568,9 +569,27 @@ fun FocusLibraryScreen(
                             currentRomFolder?.systemId == SYSTEM_ID_SWITCH
                         }
                     val actions =
-                        remember(focusedApp, isCurrentHidden, romFolders, isRetroArchSystem, isSwitchSystem, currentRomFolder) {
+                        remember(
+                            focusedApp,
+                            isCurrentHidden,
+                            romFolders,
+                            isRetroArchSystem,
+                            isSwitchSystem,
+                            currentRomFolder,
+                            onEditArtwork,
+                        ) {
                             buildList {
                                 if (focusedApp != null) {
+                                    add(
+                                        ExpandableActionItem(
+                                            label = context.getString(R.string.gamefocus_option_edit),
+                                            iconSymbol = "palette",
+                                            onClick = {
+                                                onEditArtwork(focusedApp)
+                                                onOptionsMenuExpandedChange(false)
+                                            },
+                                        ),
+                                    )
                                     add(
                                         ExpandableActionItem(
                                             label =
@@ -659,7 +678,7 @@ fun FocusLibraryScreen(
                         }
                     val itemActionsCount =
                         if (focusedApp != null) {
-                            if (!focusedApp.isRom) 3 else 1
+                            if (!focusedApp.isRom) 4 else 2
                         } else {
                             0
                         }
@@ -940,7 +959,7 @@ private fun LibraryGridItem(
     modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
-    val iconBitmap = rememberIconBitmap(appInfo)
+    val iconBitmap = rememberLibraryIconBitmap(appInfo)
 
     val currentPalette = rememberAppPalette(appInfo, enabled = isFocused)
     val targetCardBg =
