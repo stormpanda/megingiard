@@ -16,9 +16,13 @@ data class InstalledAppInfo(
     val coverImageId: Int? = null,
     /** Title shown when no custom display name is set (alias-mapped app label or cleaned ROM name). */
     val defaultLabel: String? = null,
+    /** Absolute path to the cached custom library icon image (from SteamGridDB icons or logos), or null if using default. */
     val libraryIconPath: String? = null,
+    /** SteamGridDB image ID of the custom library icon for selection badges, or null if unassigned. */
     val libraryIconImageId: Int? = null,
+    /** SteamGridDB image type of the custom library icon ("icons" or "logos"), or null if unassigned. */
     val libraryIconType: String? = null,
+    /** Last modified timestamp of the cached library icon file for cache-busting. */
     val libraryIconLastModified: Long = 0L,
 ) {
     /** True when the user has overridden [defaultLabel] with a custom display name. */
@@ -70,10 +74,11 @@ fun List<InstalledAppInfo>.withUpdatedLibraryIcon(
     iconPath: String?,
     imageId: Int? = null,
     type: String? = null,
+    lastModified: Long = System.currentTimeMillis(),
 ): List<InstalledAppInfo> =
     map {
         if (it.packageName == packageName) {
-            it.withLibraryIcon(iconPath, imageId = imageId, type = type)
+            it.withLibraryIcon(iconPath, imageId = imageId, type = type, lastModified = lastModified)
         } else {
             it
         }

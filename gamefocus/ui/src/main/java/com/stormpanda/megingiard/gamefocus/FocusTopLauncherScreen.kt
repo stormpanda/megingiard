@@ -1096,12 +1096,37 @@ internal object FocusImageCache {
 
         return withContext(Dispatchers.IO) {
             val file = File(path)
-            if (!file.exists() || file.length() == 0L) return@withContext null
-            val sampledBitmap = decodeSampledIconBitmap(file)
-            val diskBitmap = sampledBitmap?.asImageBitmap()
-            if (diskBitmap != null) {
-                iconCache.put(cacheKey, diskBitmap)
+            if (!file.exists() || file.length() == 0L) {
+                AppLog.w(TAG, "Library icon file does not exist or is empty: $path")
+                return@withContext null
             }
+            val sampledBitmap = decodeSampledIconBitmap(file)
+            if (sampledBitmap == null) {
+                AppLog.w(TAG, "Failed to decode library icon bitmap from $path")
+                return@withContext null
+            }
+            val diskBitmap = sampledBitmap.asImageBitmap()
+            iconCache.put(cacheKey, diskBitmap)
+
+            // If disk file was oversized (>256KB), rewrite as downsampled thumbnail to accelerate future loads and free storage
+            if (file.length() > MAX_ICON_DISK_BYTES) {
+                try {
+                    val tempFile = File(file.parentFile, "${file.name}.tmp")
+                    FileOutputStream(tempFile).use { out ->
+                        sampledBitmap.compress(Bitmap.CompressFormat.PNG, 95, out)
+                    }
+                    if (tempFile.exists() && tempFile.length() > 0L) {
+                        tempFile.renameTo(file)
+                        AppLog.i(
+                            TAG,
+                            "Rewrote oversized library icon on disk with downsampled thumbnail for ${appInfo.label} (${file.length() / 1024} KB)",
+                        )
+                    }
+                } catch (e: Exception) {
+                    AppLog.w(TAG, "Failed to rewrite downsampled library icon thumbnail for ${appInfo.label}: ${e.message}")
+                }
+            }
+
             diskBitmap
         }
     }

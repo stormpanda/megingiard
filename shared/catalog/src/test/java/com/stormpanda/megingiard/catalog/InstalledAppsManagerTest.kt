@@ -2,6 +2,8 @@ package com.stormpanda.megingiard.catalog
 
 import android.content.Context
 import android.content.pm.ApplicationInfo
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -16,6 +18,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
+import java.io.ByteArrayOutputStream
+import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
@@ -264,6 +268,7 @@ class InstalledAppsManagerTest {
             assertEquals(file.absolutePath, applied.libraryIconPath)
             assertEquals(777, applied.libraryIconImageId)
             assertEquals("icons", applied.libraryIconType)
+            assertEquals(file.lastModified(), applied.libraryIconLastModified)
 
             var removedCallbacks = 0
             InstalledAppsManager.revertToDefaultLibraryIcon(context, PKG_GAME) { removedCallbacks++ }
@@ -275,6 +280,28 @@ class InstalledAppsManagerTest {
             assertNull(reverted.libraryIconPath)
             assertNull(reverted.libraryIconImageId)
             assertNull(reverted.libraryIconType)
+            assertEquals(0L, reverted.libraryIconLastModified)
+        }
+
+    @Test
+    fun testApplyCustomLibraryIconDownsamplesOversizedImage() =
+        runTest {
+            val context: Context = RuntimeEnvironment.getApplication()
+            InstalledAppsManager.setInstalledAndroidAppsForTesting(listOf(seedApp()))
+            val largeBitmap = Bitmap.createBitmap(512, 512, Bitmap.Config.ARGB_8888)
+            val stream = ByteArrayOutputStream()
+            largeBitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+            val largeBytes = stream.toByteArray()
+
+            val path = InstalledAppsManager.applyCustomLibraryIcon(context, PKG_GAME, largeBytes, 888, "logos")
+            assertNotNull(path)
+            val file = File(path!!)
+            assertTrue(file.exists())
+
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(file.absolutePath, bounds)
+            assertTrue(bounds.outWidth <= 256)
+            assertTrue(bounds.outHeight <= 256)
         }
 
     @Test

@@ -57,6 +57,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -568,6 +569,7 @@ fun FocusLibraryScreen(
                         remember(currentRomFolder) {
                             currentRomFolder?.systemId == SYSTEM_ID_SWITCH
                         }
+                    val currentOnEditArtwork by rememberUpdatedState(onEditArtwork)
                     val actions =
                         remember(
                             focusedApp,
@@ -576,7 +578,6 @@ fun FocusLibraryScreen(
                             isRetroArchSystem,
                             isSwitchSystem,
                             currentRomFolder,
-                            onEditArtwork,
                         ) {
                             buildList {
                                 if (focusedApp != null) {
@@ -585,7 +586,7 @@ fun FocusLibraryScreen(
                                             label = context.getString(R.string.gamefocus_option_edit),
                                             iconSymbol = "palette",
                                             onClick = {
-                                                onEditArtwork(focusedApp)
+                                                currentOnEditArtwork(focusedApp)
                                                 onOptionsMenuExpandedChange(false)
                                             },
                                         ),

@@ -7,6 +7,8 @@ import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.provider.Settings
 import android.view.Display
@@ -32,6 +34,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 
@@ -46,6 +49,7 @@ private const val FILE_LIBRARY_ICON_IDS = "gamefocus_library_icon_ids.json"
 internal const val DIR_COVERS = "gamefocus_covers"
 internal const val DIR_LOGOS = "gamefocus_logos"
 internal const val DIR_LIBRARY_ICONS = "gamefocus_library_icons"
+internal const val MAX_LIBRARY_ICON_DIMENSION_PX = 256
 private const val COVER_FILE_EXTENSION = ".png"
 private const val IMAGE_TYPE_GRIDS = "grids"
 private const val IMAGE_TYPE_LOGOS = "logos"
@@ -543,13 +547,17 @@ object InstalledAppsManager {
         iconPath: String?,
         imageId: Int? = null,
         type: String? = null,
+        lastModified: Long = System.currentTimeMillis(),
     ) {
         if (packageName.startsWith(ROM_PACKAGE_PREFIX)) {
-            RomManager.updateRomLibraryIcon(packageName, iconPath, imageId, type)
+            RomManager.updateRomLibraryIcon(packageName, iconPath, imageId, type, lastModified)
             return
         }
-        installedAndroidAppsFlow.update { it.withUpdatedLibraryIcon(packageName, iconPath, imageId, type) }
-        AppLog.i(TAG, "Updated in-memory library icon path for $packageName to $iconPath (imageId: $imageId, type: $type)")
+        installedAndroidAppsFlow.update { it.withUpdatedLibraryIcon(packageName, iconPath, imageId, type, lastModified) }
+        AppLog.i(
+            TAG,
+            "Updated in-memory library icon path for $packageName to $iconPath (imageId: $imageId, type: $type, lastModified: $lastModified)",
+        )
     }
 
     /**
@@ -678,6 +686,59 @@ object InstalledAppsManager {
         AppLog.i(TAG, "Reverted $packageName to default icon")
     }
 
+    internal fun downsampleIconBytes(
+        bytes: ByteArray,
+        maxDimensionPx: Int = MAX_LIBRARY_ICON_DIMENSION_PX,
+    ): ByteArray {
+        return try {
+            val boundsOptions = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, boundsOptions)
+            val rawW = boundsOptions.outWidth
+            val rawH = boundsOptions.outHeight
+            if (rawW <= 0 || rawH <= 0) return bytes
+
+            if (rawW <= maxDimensionPx && rawH <= maxDimensionPx) {
+                return bytes
+            }
+
+            var inSampleSize = 1
+            val halfH = rawH / 2
+            val halfW = rawW / 2
+            while ((halfH / inSampleSize) >= maxDimensionPx && (halfW / inSampleSize) >= maxDimensionPx) {
+                inSampleSize *= 2
+            }
+
+            val decodeOptions =
+                BitmapFactory.Options().apply {
+                    this.inSampleSize = inSampleSize
+                    inPreferredConfig = Bitmap.Config.ARGB_8888
+                }
+            val decoded = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, decodeOptions) ?: return bytes
+
+            val finalBitmap =
+                if (decoded.width > maxDimensionPx || decoded.height > maxDimensionPx) {
+                    val scale = minOf(maxDimensionPx.toFloat() / decoded.width, maxDimensionPx.toFloat() / decoded.height)
+                    val scaledW = (decoded.width * scale).toInt().coerceAtLeast(1)
+                    val scaledH = (decoded.height * scale).toInt().coerceAtLeast(1)
+                    val scaled = Bitmap.createScaledBitmap(decoded, scaledW, scaledH, true)
+                    if (scaled != decoded) {
+                        decoded.recycle()
+                    }
+                    scaled
+                } else {
+                    decoded
+                }
+
+            val out = ByteArrayOutputStream()
+            finalBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+            finalBitmap.recycle()
+            out.toByteArray()
+        } catch (e: Exception) {
+            AppLog.w(TAG, "Failed to downsample icon bytes, writing original: ${e.message}")
+            bytes
+        }
+    }
+
     /** Location of the cached library icon image for [packageName]. */
     fun libraryIconFileFor(
         context: Context,
@@ -686,7 +747,8 @@ object InstalledAppsManager {
 
     /**
      * Stores user-selected library icon artwork for [packageName], records its SteamGridDB [imageId] and [type],
-     * and publishes the new icon path to the catalog.
+     * and publishes the new icon path to the catalog. Downsamples oversized icons (greater than [MAX_LIBRARY_ICON_DIMENSION_PX])
+     * before saving to disk.
      */
     suspend fun applyCustomLibraryIcon(
         context: Context,
@@ -698,10 +760,12 @@ object InstalledAppsManager {
     ): String? =
         withContext(Dispatchers.IO) {
             val file = libraryIconFileFor(context, packageName)
-            if (!writeCoverAtomically(file, bytes)) return@withContext null
+            val downsampledBytes = downsampleIconBytes(bytes)
+            if (!writeCoverAtomically(file, downsampledBytes)) return@withContext null
+            val lastModified = file.lastModified()
             onIconWritten()
             setLibraryIconRef(context, packageName, LibraryIconRef(id = imageId, type = type))
-            updateAppLibraryIcon(packageName, file.absolutePath, imageId, type)
+            updateAppLibraryIcon(packageName, file.absolutePath, imageId, type, lastModified)
             AppLog.i(TAG, "Applied custom library icon for $packageName (imageId=$imageId, type=$type)")
             file.absolutePath
         }
@@ -721,7 +785,7 @@ object InstalledAppsManager {
         }
         onIconRemoved()
         setLibraryIconRef(context, packageName, null)
-        updateAppLibraryIcon(packageName, null, null, null)
+        updateAppLibraryIcon(packageName, null, null, null, 0L)
         AppLog.i(TAG, "Reverted $packageName to default library icon")
     }
 

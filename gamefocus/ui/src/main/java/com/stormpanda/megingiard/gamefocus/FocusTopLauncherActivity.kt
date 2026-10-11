@@ -951,7 +951,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             if (!isRom) {
                                 when (selectedIndex) {
                                     0 -> {
-                                        AppLog.i(TAG, "Opening Edit Game Overlay for ${focusedLibraryApp.label}")
+                                        viewModel.setLibraryOptionsMenuExpanded(false)
                                         viewModel.openEditGameOverlay(focusedLibraryApp)
                                     }
 
@@ -974,7 +974,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             } else {
                                 when (selectedIndex) {
                                     0 -> {
-                                        AppLog.i(TAG, "Opening Edit Game Overlay for ${focusedLibraryApp.label}")
+                                        viewModel.setLibraryOptionsMenuExpanded(false)
                                         viewModel.openEditGameOverlay(focusedLibraryApp)
                                     }
 

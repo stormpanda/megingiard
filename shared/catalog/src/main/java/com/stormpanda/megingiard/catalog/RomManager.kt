@@ -408,9 +408,13 @@ object RomManager {
         iconPath: String?,
         imageId: Int? = null,
         type: String? = null,
+        lastModified: Long = System.currentTimeMillis(),
     ) {
-        _romApps.update { it.withUpdatedLibraryIcon(packageName, iconPath, imageId, type) }
-        AppLog.i(TAG, "Updated in-memory ROM library icon path for $packageName to $iconPath (imageId: $imageId, type: $type)")
+        _romApps.update { it.withUpdatedLibraryIcon(packageName, iconPath, imageId, type, lastModified) }
+        AppLog.i(
+            TAG,
+            "Updated in-memory ROM library icon path for $packageName to $iconPath (imageId: $imageId, type: $type, lastModified: $lastModified)",
+        )
     }
 
     /**
