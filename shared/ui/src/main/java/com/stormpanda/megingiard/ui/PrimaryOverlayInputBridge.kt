@@ -81,6 +81,7 @@ object PrimaryOverlayInputBridge {
     private var repeatJob: Job? = null
     private var lastJoystickKeyCode = 0
     private var lastL2Pressed = false
+    private var lastR2Pressed = false
 
     fun sendBumper(direction: BumperDirection) {
         AppLog.d(TAG, "sendBumper: direction=$direction")
@@ -124,6 +125,15 @@ object PrimaryOverlayInputBridge {
             onDpadKey(if (isL2Pressed) KeyEvent.ACTION_DOWN else KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BUTTON_L2)
         }
 
+        val gas = event.getAxisValue(MotionEvent.AXIS_GAS)
+        val rtrigger = event.getAxisValue(MotionEvent.AXIS_RTRIGGER)
+        val isR2Pressed = gas > STICK_DEADZONE || rtrigger > STICK_DEADZONE
+
+        if (isR2Pressed != lastR2Pressed) {
+            lastR2Pressed = isR2Pressed
+            onDpadKey(if (isR2Pressed) KeyEvent.ACTION_DOWN else KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BUTTON_R2)
+        }
+
         val axisX = event.getAxisValue(MotionEvent.AXIS_X).let { if (abs(it) > STICK_DEADZONE) it else 0f }
         val axisY = event.getAxisValue(MotionEvent.AXIS_Y).let { if (abs(it) > STICK_DEADZONE) it else 0f }
         val hatX = event.getAxisValue(MotionEvent.AXIS_HAT_X).let { if (abs(it) > STICK_DEADZONE) it else 0f }
@@ -142,7 +152,7 @@ object PrimaryOverlayInputBridge {
             }
 
         if (targetKeyCode == lastJoystickKeyCode) {
-            return targetKeyCode != 0 || isL2Pressed
+            return targetKeyCode != 0 || isL2Pressed || isR2Pressed
         }
 
         repeatJob?.cancel()
@@ -181,6 +191,7 @@ object PrimaryOverlayInputBridge {
         repeatJob = null
         lastJoystickKeyCode = 0
         lastL2Pressed = false
+        lastR2Pressed = false
     }
 }
 

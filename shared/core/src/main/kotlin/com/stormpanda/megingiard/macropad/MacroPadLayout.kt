@@ -18,10 +18,27 @@ import com.stormpanda.megingiard.macropad.MouseButton as MouseBtnEnum
 
 enum class ButtonShape { SQUARE, CIRCLE, ICON_ONLY }
 
+const val MP_BUTTON_BASE_UNIT_DP = 60f
+const val MP_BUTTON_MIN_SIZE_DP = 30f
+const val MP_TRACKPOINT_DEFAULT_SIZE_DP = 120f
+const val MP_SCROLL_WHEEL_MIN_HEIGHT_DP = 120f
+const val MP_BUTTON_DEFAULT_HAPTIC_DURATION_MS = 10
+const val MP_BUTTON_DEFAULT_HAPTIC_AMPLITUDE = 25
+
+/**
+ * Screen metrics for bottom PadCanvas reported dynamically to guide gamepad adjustment clamps.
+ */
+data class PadCanvasMetrics(
+    val widthPx: Float,
+    val heightPx: Float,
+    val density: Float,
+)
+
 /**
  * Grid multiplier for a button: cols × rows relative to the base button unit.
- * Non-square buttons always render as rounded-rectangle regardless of ButtonShape.
+ * Deprecated: Used only for surrogate deserialization of legacy profiles.
  */
+@Deprecated("Used only for surrogate deserialization of legacy profiles")
 enum class ButtonSize(
     val cols: Int,
     val rows: Int,
@@ -33,10 +50,11 @@ enum class ButtonSize(
 }
 
 /**
- * Visual size of a trackpoint button.
- * The [multiplier] is applied to the base button unit (MP_BUTTON_UNIT_DP / ED_BUTTON_UNIT_DP)
- * to derive the rendered circle diameter.
+ * Visual size of a legacy trackpoint button.
+ * Deprecated: Used only for surrogate deserialization of legacy profiles.
+ * Buttons now use stepless [PadButton.widthDp] and [PadButton.heightDp].
  */
+@Deprecated("Used only for surrogate deserialization of legacy profiles")
 enum class TrackpointSize(
     val multiplier: Float,
 ) {
@@ -327,12 +345,12 @@ fun PadAction.defaultIconName(): String? =
  *                  The [label] remains visible in the editor list. Null means no icon — show label.
  * @param iconFilled Whether the icon is rendered filled (`true`, default) or outline (`false`).
  * @param posX      Horizontal centre position, normalised [0.0, 1.0] relative to pad width.
- * @param posY      Vertical centre position, normalised [0.0, 1.0] relative to pad height.
- * @param buttonSize Grid multiplier (cols × rows). Non-square sizes always render as rounded rectangle.
- * @param buttonShape Visual shape — only honoured for SIZE_1X1; larger sizes always use rounded rectangle.
+ * @param widthDp   Stepless width in dp (minimum [MP_BUTTON_MIN_SIZE_DP]).
+ * @param heightDp  Stepless height in dp (minimum [MP_BUTTON_MIN_SIZE_DP]).
+ * @param buttonShape Visual shape — CIRCLE (renders as CircleShape if width == height, else pill) or SQUARE/ICON_ONLY.
  * @param action    What this button injects when pressed / held.
  */
-@Serializable
+@Serializable(with = PadButtonSerializer::class)
 data class PadButton(
     val id: String,
     val label: String,
@@ -340,19 +358,43 @@ data class PadButton(
     val iconFilled: Boolean = true,
     val posX: Float,
     val posY: Float,
-    val buttonSize: ButtonSize = ButtonSize.SIZE_1X1,
+    val widthDp: Float = MP_BUTTON_BASE_UNIT_DP,
+    val heightDp: Float = MP_BUTTON_BASE_UNIT_DP,
     val buttonShape: ButtonShape = ButtonShape.CIRCLE,
     val action: PadAction,
     val hapticStrength: HapticStrength = HapticStrength.OFF,
     /** Duration in milliseconds for [HapticStrength.CUSTOM] pulses. Range: 1–200. */
-    val hapticCustomDurationMs: Int = 10,
+    val hapticCustomDurationMs: Int = MP_BUTTON_DEFAULT_HAPTIC_DURATION_MS,
     /** Amplitude for [HapticStrength.CUSTOM] pulses. Range: 5–100 in steps of 5. */
-    val hapticCustomAmplitude: Int = 25,
+    val hapticCustomAmplitude: Int = MP_BUTTON_DEFAULT_HAPTIC_AMPLITUDE,
     val buttonTextColor: ColorOption? = null,
     val buttonBorderColor: ColorOption? = null,
     val buttonBgColor: ColorOption? = null,
     val invisible: Boolean = false,
 )
+
+/**
+ * Returns a copy of this [PadButton] with dimensions and shape adjusted appropriately for [newAction].
+ * - [PadAction.TrackpointMove]: Enforces 1:1 aspect ratio, minimum size of [MP_TRACKPOINT_DEFAULT_SIZE_DP], and [ButtonShape.CIRCLE].
+ * - [PadAction.ScrollWheel]: Enforces a minimum vertical height of [MP_SCROLL_WHEEL_MIN_HEIGHT_DP].
+ */
+fun PadButton.withActionSizing(newAction: PadAction): PadButton {
+    val isTrackpoint = newAction is PadAction.TrackpointMove
+    val tpSize = if (isTrackpoint) maxOf(widthDp, heightDp, MP_TRACKPOINT_DEFAULT_SIZE_DP) else widthDp
+    return copy(
+        action = newAction,
+        widthDp = if (isTrackpoint) tpSize else widthDp,
+        heightDp =
+            if (newAction is PadAction.ScrollWheel && heightDp < MP_SCROLL_WHEEL_MIN_HEIGHT_DP) {
+                MP_SCROLL_WHEEL_MIN_HEIGHT_DP
+            } else if (isTrackpoint) {
+                tpSize
+            } else {
+                heightDp
+            },
+        buttonShape = if (isTrackpoint) ButtonShape.CIRCLE else buttonShape,
+    )
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Background Touchpad configuration — per-layout relative mouse touchpad settings
@@ -678,6 +720,140 @@ object PadProfileSerializer : KSerializer<PadProfile> {
             isDefault = surrogate.isDefault,
             association = finalAssoc,
             autoLayoutSwitching = surrogate.autoLayoutSwitching,
+        )
+    }
+}
+
+@Serializable
+private class PadButtonEncodeSurrogate(
+    val id: String,
+    val label: String,
+    val iconName: String? = null,
+    val iconFilled: Boolean = true,
+    val posX: Float,
+    val posY: Float,
+    val widthDp: Float,
+    val heightDp: Float,
+    val buttonShape: ButtonShape = ButtonShape.CIRCLE,
+    val action: PadAction,
+    val hapticStrength: HapticStrength = HapticStrength.OFF,
+    val hapticCustomDurationMs: Int = MP_BUTTON_DEFAULT_HAPTIC_DURATION_MS,
+    val hapticCustomAmplitude: Int = MP_BUTTON_DEFAULT_HAPTIC_AMPLITUDE,
+    val buttonTextColor: ColorOption? = null,
+    val buttonBorderColor: ColorOption? = null,
+    val buttonBgColor: ColorOption? = null,
+    val invisible: Boolean = false,
+)
+
+@Serializable
+private class PadButtonDecodeSurrogate(
+    val id: String,
+    val label: String,
+    val iconName: String? = null,
+    val iconFilled: Boolean = true,
+    val posX: Float,
+    val posY: Float,
+    val widthDp: Float? = null,
+    val heightDp: Float? = null,
+    @Suppress("DEPRECATION")
+    val buttonSize: ButtonSize? = null,
+    val buttonShape: ButtonShape = ButtonShape.CIRCLE,
+    val action: PadAction,
+    val hapticStrength: HapticStrength = HapticStrength.OFF,
+    val hapticCustomDurationMs: Int = MP_BUTTON_DEFAULT_HAPTIC_DURATION_MS,
+    val hapticCustomAmplitude: Int = MP_BUTTON_DEFAULT_HAPTIC_AMPLITUDE,
+    val buttonTextColor: ColorOption? = null,
+    val buttonBorderColor: ColorOption? = null,
+    val buttonBgColor: ColorOption? = null,
+    val invisible: Boolean = false,
+)
+
+object PadButtonSerializer : KSerializer<PadButton> {
+    override val descriptor: SerialDescriptor = PadButtonEncodeSurrogate.serializer().descriptor
+
+    override fun serialize(
+        encoder: Encoder,
+        value: PadButton,
+    ) {
+        val surrogate =
+            PadButtonEncodeSurrogate(
+                id = value.id,
+                label = value.label,
+                iconName = value.iconName,
+                iconFilled = value.iconFilled,
+                posX = value.posX,
+                posY = value.posY,
+                widthDp = value.widthDp,
+                heightDp = value.heightDp,
+                buttonShape = value.buttonShape,
+                action = value.action,
+                hapticStrength = value.hapticStrength,
+                hapticCustomDurationMs = value.hapticCustomDurationMs,
+                hapticCustomAmplitude = value.hapticCustomAmplitude,
+                buttonTextColor = value.buttonTextColor,
+                buttonBorderColor = value.buttonBorderColor,
+                buttonBgColor = value.buttonBgColor,
+                invisible = value.invisible,
+            )
+        encoder.encodeSerializableValue(PadButtonEncodeSurrogate.serializer(), surrogate)
+    }
+
+    override fun deserialize(decoder: Decoder): PadButton {
+        val surrogate = decoder.decodeSerializableValue(PadButtonDecodeSurrogate.serializer())
+        val finalWidth: Float
+        val finalHeight: Float
+
+        if (surrogate.widthDp != null && surrogate.heightDp != null) {
+            finalWidth = surrogate.widthDp
+            finalHeight = surrogate.heightDp
+        } else if (surrogate.action is PadAction.TrackpointMove) {
+            @Suppress("DEPRECATION")
+            val mult = surrogate.action.size.multiplier
+            finalWidth = mult * MP_BUTTON_BASE_UNIT_DP
+            finalHeight = mult * MP_BUTTON_BASE_UNIT_DP
+        } else if (surrogate.buttonSize != null) {
+            finalWidth = surrogate.buttonSize.cols * MP_BUTTON_BASE_UNIT_DP
+            finalHeight = surrogate.buttonSize.rows * MP_BUTTON_BASE_UNIT_DP
+        } else {
+            finalWidth = surrogate.widthDp ?: MP_BUTTON_BASE_UNIT_DP
+            finalHeight = surrogate.heightDp ?: MP_BUTTON_BASE_UNIT_DP
+        }
+
+        val safeRawWidth =
+            if (!finalWidth.isFinite() || finalWidth < MP_BUTTON_MIN_SIZE_DP) {
+                if (!finalWidth.isFinite()) MP_BUTTON_BASE_UNIT_DP else MP_BUTTON_MIN_SIZE_DP
+            } else {
+                finalWidth
+            }
+        val safeRawHeight =
+            if (!finalHeight.isFinite() || finalHeight < MP_BUTTON_MIN_SIZE_DP) {
+                if (!finalHeight.isFinite()) MP_BUTTON_BASE_UNIT_DP else MP_BUTTON_MIN_SIZE_DP
+            } else {
+                finalHeight
+            }
+
+        val isTrackpoint = surrogate.action is PadAction.TrackpointMove
+        val safeWidth = if (isTrackpoint) maxOf(safeRawWidth, safeRawHeight) else safeRawWidth
+        val safeHeight = if (isTrackpoint) maxOf(safeRawWidth, safeRawHeight) else safeRawHeight
+
+        return PadButton(
+            id = surrogate.id,
+            label = surrogate.label,
+            iconName = surrogate.iconName,
+            iconFilled = surrogate.iconFilled,
+            posX = surrogate.posX,
+            posY = surrogate.posY,
+            widthDp = safeWidth,
+            heightDp = safeHeight,
+            buttonShape = surrogate.buttonShape,
+            action = surrogate.action,
+            hapticStrength = surrogate.hapticStrength,
+            hapticCustomDurationMs = surrogate.hapticCustomDurationMs,
+            hapticCustomAmplitude = surrogate.hapticCustomAmplitude,
+            buttonTextColor = surrogate.buttonTextColor,
+            buttonBorderColor = surrogate.buttonBorderColor,
+            buttonBgColor = surrogate.buttonBgColor,
+            invisible = surrogate.invisible,
         )
     }
 }

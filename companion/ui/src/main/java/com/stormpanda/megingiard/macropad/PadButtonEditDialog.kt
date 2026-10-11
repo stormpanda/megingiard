@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.macropad
 
+import android.view.KeyEvent
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -21,6 +22,7 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.FormatColorFill
 import androidx.compose.material.icons.rounded.FormatColorText
 import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.rounded.OpenWith
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Share
@@ -33,25 +35,43 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.math.MPE_CANVAS_HEIGHT_PX
+import com.stormpanda.megingiard.math.MPE_CANVAS_WIDTH_PX
+import com.stormpanda.megingiard.math.MPE_FINE_STEP_PX
+import com.stormpanda.megingiard.math.MPE_NORMAL_STEP_PX
+import com.stormpanda.megingiard.math.MPE_RESIZE_FINE_STEP_DP
+import com.stormpanda.megingiard.math.MPE_RESIZE_NORMAL_STEP_DP
+import com.stormpanda.megingiard.math.calculateGamepadButtonMove
+import com.stormpanda.megingiard.math.calculateGamepadButtonResize
+import com.stormpanda.megingiard.math.formatButtonDimensionDp
+import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.BumperDirection
 import com.stormpanda.megingiard.ui.GamepadActionCard
+import com.stormpanda.megingiard.ui.GamepadCardRow
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
 import com.stormpanda.megingiard.ui.GamepadColorSwatch
+import com.stormpanda.megingiard.ui.GamepadFocusCard
+import com.stormpanda.megingiard.ui.GamepadPill
 import com.stormpanda.megingiard.ui.GamepadSaveExitActionRow
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadStepperCard
@@ -63,8 +83,11 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.MaterialSymbol
 import com.stormpanda.megingiard.ui.cycle
 import com.stormpanda.megingiard.ui.firstDeckItem
+import com.stormpanda.megingiard.ui.handle2DAdjustmentKeyEvent
+import com.stormpanda.megingiard.ui.launchDirectionalRepeat
 import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
 import com.stormpanda.megingiard.ui.toHexLabel
+import kotlinx.coroutines.Job
 import java.util.UUID
 import kotlin.math.roundToInt
 
@@ -164,8 +187,21 @@ internal fun EditButtonSubPageContent(
     val initIconName = button?.iconName ?: selectedIcon
     var label by remember(button) { mutableStateOf(initLabel) }
     var iconName by remember(button, selectedIcon) { mutableStateOf(selectedIcon ?: initIconName) }
-    var buttonShape by remember(button) { mutableStateOf(button?.buttonShape ?: ButtonShape.CIRCLE) }
-    var buttonSize by remember(button) { mutableStateOf(button?.buttonSize ?: ButtonSize.SIZE_1X1) }
+    val initialSized =
+        remember(button, initAction) {
+            val base =
+                button ?: PadButton(
+                    id = stableButtonId,
+                    posX = 0.5f,
+                    posY = 0.5f,
+                    label = initLabel,
+                    action = initAction,
+                )
+            base.withActionSizing(initAction)
+        }
+    var buttonShape by remember(button) { mutableStateOf(initialSized.buttonShape) }
+    var widthDp by remember(button) { mutableFloatStateOf(initialSized.widthDp) }
+    var heightDp by remember(button) { mutableFloatStateOf(initialSized.heightDp) }
     var action by remember(button) { mutableStateOf(initAction) }
     var iconFilled by remember(button) { mutableStateOf(button?.iconFilled ?: true) }
     var hapticStrength by remember(button) { mutableStateOf(button?.hapticStrength ?: HapticStrength.OFF) }
@@ -203,29 +239,138 @@ internal fun EditButtonSubPageContent(
         }
     }
 
-    fun onActionChanged(newAction: PadAction) {
-        AppLog.d(TAG, "onActionChanged: $newAction")
-        action = newAction
-        if (newAction is PadAction.ScrollWheel) {
-            buttonSize = ButtonSize.SIZE_1X2
-            return
+    var posX by remember(button) { mutableFloatStateOf(button?.posX ?: 0.5f) }
+    var posY by remember(button) { mutableFloatStateOf(button?.posY ?: 0.5f) }
+    var isAdjusting by remember { mutableStateOf(false) }
+    var isR2Held by remember { mutableStateOf(false) }
+    var isL2Held by remember { mutableStateOf(false) }
+    val isL2HeldState = rememberUpdatedState(isL2Held)
+    val isR2HeldState = rememberUpdatedState(isR2Held)
+    val buttonAlignmentSnapping by MacroPadSettings.buttonAlignmentSnapping.collectAsStateWithLifecycle()
+    val coroutineScope = rememberCoroutineScope()
+    val density = LocalDensity.current.density
+    val canvasMetrics by MacroPadState.canvasMetrics.collectAsStateWithLifecycle()
+    val effectiveCanvasW = canvasMetrics?.widthPx ?: MPE_CANVAS_WIDTH_PX
+    val effectiveCanvasH = canvasMetrics?.heightPx ?: MPE_CANVAS_HEIGHT_PX
+    val effectiveDensity = canvasMetrics?.density ?: density
+    var activeDirectionKey by remember { mutableStateOf<Int?>(null) }
+    var activeRepeatJob by remember { mutableStateOf<Job?>(null) }
+
+    LaunchedEffect(isAdjusting) {
+        MacroPadState.setAdjustingButtonViaGamepad(isAdjusting)
+        if (isAdjusting) {
+            MacroPadState.setSelectedButtonId(stableButtonId)
         }
-        if (newAction is PadAction.TrackpointMove) {
-            buttonShape = ButtonShape.CIRCLE
-            return
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            activeRepeatJob?.cancel()
+            MacroPadState.setAdjustingButtonViaGamepad(false)
+        }
+    }
+
+    fun moveButton(
+        dx: Int,
+        dy: Int,
+    ) {
+        val currentLayout = MacroPadState.activeLayout.value ?: return
+        val stepMultiplier = if (isL2HeldState.value) MPE_FINE_STEP_PX else MPE_NORMAL_STEP_PX
+        val (newX, newY) =
+            calculateGamepadButtonMove(
+                currentNormX = posX,
+                currentNormY = posY,
+                dirX = dx,
+                dirY = dy,
+                stepMultiplierPx = stepMultiplier,
+                movingButtonId = stableButtonId,
+                otherButtons = currentLayout.buttons,
+                canvasW = effectiveCanvasW,
+                canvasH = effectiveCanvasH,
+                alignmentSnappingEnabled = buttonAlignmentSnapping,
+            )
+        posX = newX
+        posY = newY
+    }
+
+    fun resizeButton(
+        dx: Int,
+        dy: Int,
+    ) {
+        val stepDp = if (isL2HeldState.value) MPE_RESIZE_FINE_STEP_DP else MPE_RESIZE_NORMAL_STEP_DP
+        val isTrackpoint = action is PadAction.TrackpointMove
+        val res =
+            calculateGamepadButtonResize(
+                currentNormX = posX,
+                currentNormY = posY,
+                currentWidthDp = widthDp,
+                currentHeightDp = heightDp,
+                dirX = dx,
+                dirY = dy,
+                stepDp = stepDp,
+                canvasW = effectiveCanvasW,
+                canvasH = effectiveCanvasH,
+                density = effectiveDensity,
+                lockAspect = isTrackpoint,
+            )
+        posX = res.newNormX
+        posY = res.newNormY
+        widthDp = res.newWidthDp
+        heightDp = res.newHeightDp
+    }
+
+    fun dispatchAdjust(
+        dx: Int,
+        dy: Int,
+    ) {
+        if (isR2HeldState.value) {
+            resizeButton(dx, dy)
+        } else {
+            moveButton(dx, dy)
+        }
+    }
+
+    fun stopMovingImmediate() {
+        activeRepeatJob?.cancel()
+        activeRepeatJob = null
+        activeDirectionKey = null
+    }
+
+    fun startMoving(
+        keyCode: Int,
+        dx: Int,
+        dy: Int,
+    ) {
+        if (activeDirectionKey == keyCode && activeRepeatJob?.isActive == true) return
+        activeRepeatJob?.cancel()
+        activeDirectionKey = keyCode
+        dispatchAdjust(dx, dy)
+        activeRepeatJob =
+            coroutineScope.launchDirectionalRepeat(
+                keyCode = keyCode,
+                isActiveCheck = { activeDirectionKey == keyCode },
+            ) {
+                dispatchAdjust(dx, dy)
+            }
+    }
+
+    fun stopMoving(keyCode: Int) {
+        if (activeDirectionKey == keyCode) {
+            stopMovingImmediate()
         }
     }
 
     val currentButton =
         remember(
             stableButtonId,
-            button?.posX,
-            button?.posY,
+            posX,
+            posY,
             label,
             iconName,
             iconFilled,
             buttonShape,
-            buttonSize,
+            widthDp,
+            heightDp,
             action,
             hapticStrength,
             hapticCustomDurationMs,
@@ -240,10 +385,11 @@ internal fun EditButtonSubPageContent(
                 label = label,
                 iconName = iconName,
                 iconFilled = iconFilled,
-                posX = button?.posX ?: 0.5f,
-                posY = button?.posY ?: 0.5f,
+                posX = posX,
+                posY = posY,
+                widthDp = widthDp,
+                heightDp = heightDp,
                 buttonShape = buttonShape,
-                buttonSize = buttonSize,
                 action = action,
                 hapticStrength = hapticStrength,
                 hapticCustomDurationMs = hapticCustomDurationMs,
@@ -254,6 +400,15 @@ internal fun EditButtonSubPageContent(
                 invisible = invisible,
             )
         }
+
+    fun onActionChanged(newAction: PadAction) {
+        AppLog.d(TAG, "onActionChanged: $newAction")
+        action = newAction
+        val updated = currentButton.withActionSizing(newAction)
+        widthDp = updated.widthDp
+        heightDp = updated.heightDp
+        buttonShape = updated.buttonShape
+    }
 
     val isConfirmEnabled =
         when {
@@ -270,7 +425,7 @@ internal fun EditButtonSubPageContent(
     }
 
     val hasChanges =
-        isNew || currentButton.copy(posX = savedButton.posX, posY = savedButton.posY) != savedButton
+        isNew || currentButton != savedButton
 
     val layoutTextOpt = activeLayout?.buttonTextColor ?: ColorOption.Neutral
     val layoutBorderOpt = activeLayout?.buttonBorderColor ?: ColorOption.Neutral
@@ -361,12 +516,12 @@ internal fun EditButtonSubPageContent(
         onChange = ::onActionChanged,
     )
 
-    if (action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove) {
-        GamepadSectionHeader(
-            text = stringResource(R.string.macropad_editor_section_shape_size),
-            color = accentColor,
-        )
+    GamepadSectionHeader(
+        text = stringResource(R.string.macropad_editor_section_shape_size),
+        color = accentColor,
+    )
 
+    if (action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove) {
         GamepadChoiceCard(
             title = stringResource(R.string.macropad_editor_button_shape),
             description = stringResource(R.string.macropad_btn_shape_desc),
@@ -375,16 +530,117 @@ internal fun EditButtonSubPageContent(
             onPrevious = { buttonShape = ButtonShape.entries.cycle(buttonShape, BumperDirection.PREV) },
             onNext = { buttonShape = ButtonShape.entries.cycle(buttonShape, BumperDirection.NEXT) },
         )
+    }
 
-        GamepadChoiceCard(
-            title = stringResource(R.string.macropad_editor_button_size),
-            description = stringResource(R.string.macropad_btn_size_desc),
-            selectedText = buttonSize.displayLabel(),
-            icon = Icons.Rounded.CropFree,
-            onPrevious = { buttonSize = ButtonSize.entries.cycle(buttonSize, BumperDirection.PREV) },
-            onNext = { buttonSize = ButtonSize.entries.cycle(buttonSize, BumperDirection.NEXT) },
+    val adjustFocusRequester = remember { FocusRequester() }
+    GamepadFocusCard(
+        cardFocusRequester = adjustFocusRequester,
+        onClick = {
+            if (isAdjusting) {
+                stopMovingImmediate()
+                isAdjusting = false
+            } else {
+                isAdjusting = true
+            }
+        },
+        itemKey = "adjust_position_size",
+        isAdjusting = isAdjusting,
+        onFocusChanged = { isFocused ->
+            if (!isFocused && isAdjusting) {
+                stopMovingImmediate()
+                isAdjusting = false
+            }
+        },
+        onCustomKeyEvent = { keyEvent ->
+            handle2DAdjustmentKeyEvent(
+                keyEvent = keyEvent,
+                isAdjusting = isAdjusting,
+                onStartAdjusting = { keyCode, dirX, dirY ->
+                    startMoving(keyCode, dirX, dirY)
+                    true
+                },
+                onStopAdjusting = { keyCode ->
+                    stopMoving(keyCode)
+                    true
+                },
+                onDismissAdjustment = {
+                    stopMovingImmediate()
+                    isL2Held = false
+                    isR2Held = false
+                    isAdjusting = false
+                },
+                onModifierKeyDown = { keyCode ->
+                    when (keyCode) {
+                        KeyEvent.KEYCODE_BUTTON_L2 -> {
+                            isL2Held = true
+                            true
+                        }
+
+                        KeyEvent.KEYCODE_BUTTON_R2 -> {
+                            if (!isR2Held) AppLog.d(TAG, "gamepad resize modifier active (R2)")
+                            isR2Held = true
+                            true
+                        }
+
+                        else -> {
+                            false
+                        }
+                    }
+                },
+                onModifierKeyUp = { keyCode ->
+                    when (keyCode) {
+                        KeyEvent.KEYCODE_BUTTON_L2 -> {
+                            isL2Held = false
+                            true
+                        }
+
+                        KeyEvent.KEYCODE_BUTTON_R2 -> {
+                            if (isR2Held) AppLog.d(TAG, "gamepad resize modifier released (R2)")
+                            isR2Held = false
+                            true
+                        }
+
+                        else -> {
+                            false
+                        }
+                    }
+                },
+            )
+        },
+    ) { isFocused ->
+        GamepadCardRow(
+            title = stringResource(R.string.macropad_editor_adjust_position_size),
+            description =
+                stringResource(
+                    R.string.macropad_editor_adjust_position_size_value,
+                    formatButtonDimensionDp(widthDp),
+                    formatButtonDimensionDp(heightDp),
+                    (posX * 100).roundToInt(),
+                    (posY * 100).roundToInt(),
+                ),
+            icon = Icons.Rounded.OpenWith,
+            trailingContent = {
+                if (isAdjusting) {
+                    GamepadPill(
+                        text =
+                            if (isR2Held) {
+                                stringResource(R.string.gamepad_action_resizing)
+                            } else {
+                                stringResource(R.string.gamepad_action_moving)
+                            },
+                        isAccent = true,
+                    )
+                } else {
+                    GamepadPill(
+                        text = stringResource(R.string.gamepad_action_move),
+                        isHighlighted = isFocused,
+                    )
+                }
+            },
         )
+    }
 
+    if (action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove) {
         GamepadSectionHeader(
             text = stringResource(R.string.macropad_editor_section_haptic),
             color = accentColor,

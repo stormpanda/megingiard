@@ -3,7 +3,6 @@ package com.stormpanda.megingiard.macropad
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ControlCamera
-import androidx.compose.material.icons.rounded.CropFree
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.Layers
@@ -197,7 +196,7 @@ internal fun TrackpointPicker(
     onChange: (PadAction) -> Unit,
     isFirstItem: Boolean = false,
 ) {
-    AppLog.d(TAG, "TrackpointPicker: mode=${current.mode} size=${current.size} sens=${current.sensitivity}")
+    AppLog.d(TAG, "TrackpointPicker: mode=${current.mode} sens=${current.sensitivity}")
 
     GamepadActionCard(
         title = stringResource(R.string.macropad_action_group_mouse),
@@ -235,21 +234,6 @@ internal fun TrackpointPicker(
         onNext = {
             val nextMode = if (isMouseMode) TrackpointMode.VIRTUAL_TOUCH else TrackpointMode.PHYSICAL_MOUSE
             onChange(current.copy(mode = nextMode))
-        },
-    )
-
-    GamepadChoiceCard(
-        title = stringResource(R.string.macropad_trackpoint_size_title),
-        description = stringResource(R.string.macropad_trackpoint_size_desc),
-        selectedText = stringResource(current.size.labelResId()),
-        icon = Icons.Rounded.CropFree,
-        onPrevious = {
-            val nextSize = TrackpointSize.entries.cycle(current.size, BumperDirection.PREV)
-            onChange(current.copy(size = nextSize))
-        },
-        onNext = {
-            val nextSize = TrackpointSize.entries.cycle(current.size, BumperDirection.NEXT)
-            onChange(current.copy(size = nextSize))
         },
     )
 

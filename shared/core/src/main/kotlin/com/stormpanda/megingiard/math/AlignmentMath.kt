@@ -1,12 +1,14 @@
 package com.stormpanda.megingiard.math
 
 import com.stormpanda.megingiard.macropad.GridMode
+import com.stormpanda.megingiard.macropad.MP_BUTTON_MIN_SIZE_DP
 import com.stormpanda.megingiard.macropad.PadButton
 import com.stormpanda.megingiard.mirror.ScreenCutout
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
+import kotlin.math.floor
 import kotlin.math.round
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -16,17 +18,26 @@ const val ALIGNMENT_SNAP_THRESHOLD_PX = 10f
 const val ALIGNMENT_VISUAL_TOLERANCE_PX = 2f
 const val ALIGNMENT_NORMAL_STEP_PX = 10f
 const val ALIGNMENT_FINE_STEP_PX = 1f
+private const val MIN_DENSITY_EPSILON = 0.001f
+
+/**
+ * Reference dimensions for bottom MacroPad canvas.
+ * Note: [ALIGNMENT_CANVAS_WIDTH_PX] / [ALIGNMENT_CANVAS_HEIGHT_PX] (1080x1240) represent the portrait display coordinate space
+ * used for system alignment calculations, whereas [MPE_CANVAS_WIDTH_PX] / [MPE_CANVAS_HEIGHT_PX] (1240x1080) represent the
+ * physical landscape canvas of the bottom screen used as default fallback when runtime metrics are unavailable.
+ */
 const val ALIGNMENT_CANVAS_WIDTH_PX = 1080f
 const val ALIGNMENT_CANVAS_HEIGHT_PX = 1240f
-const val ALIGNMENT_CANVAS_EDGE_MARGIN = 0.05f
+const val ALIGNMENT_CANVAS_EDGE_MARGIN = 0f
 
-// Backward-compatibility aliases for button-specific constants
 const val BUTTON_ALIGNMENT_SNAP_THRESHOLD_PX = ALIGNMENT_SNAP_THRESHOLD_PX
 const val BUTTON_ALIGNMENT_VISUAL_TOLERANCE_PX = ALIGNMENT_VISUAL_TOLERANCE_PX
 const val MPE_NORMAL_STEP_PX = ALIGNMENT_NORMAL_STEP_PX
 const val MPE_FINE_STEP_PX = ALIGNMENT_FINE_STEP_PX
-const val MPE_CANVAS_WIDTH_PX = ALIGNMENT_CANVAS_WIDTH_PX
-const val MPE_CANVAS_HEIGHT_PX = ALIGNMENT_CANVAS_HEIGHT_PX
+const val MPE_RESIZE_NORMAL_STEP_DP = 5f
+const val MPE_RESIZE_FINE_STEP_DP = 1f
+const val MPE_CANVAS_WIDTH_PX = 1240f
+const val MPE_CANVAS_HEIGHT_PX = 1080f
 const val BUTTON_CANVAS_EDGE_MARGIN = ALIGNMENT_CANVAS_EDGE_MARGIN
 
 const val PC_RADIAL_CENTER_X = 0.5f
@@ -600,3 +611,230 @@ fun radialPointCount(
     val rounded4 = ((raw + 2) / 4) * 4
     return maxOf(PC_RADIAL_MIN_POINTS, rounded4)
 }
+
+/**
+ * Handle positions for stepless button edge resizing.
+ */
+enum class ButtonResizeHandle {
+    TOP,
+    BOTTOM,
+    LEFT,
+    RIGHT,
+}
+
+const val BUTTON_ASPECT_SNAP_THRESHOLD_DP = 4f
+
+data class ButtonResizeResult(
+    val newNormX: Float,
+    val newNormY: Float,
+    val newWidthDp: Float,
+    val newHeightDp: Float,
+    val isAspectSnapped: Boolean = false,
+)
+
+/**
+ * Calculates updated button bounds when dragging an edge resize handle.
+ * Anchors the opposite edge (e.g. dragging the right edge keeps the left edge fixed).
+ * Clamps width and height between [minSizeDp] (default 30 dp) and screen/canvas bounds.
+ * Magnetically snaps dimension to [aspectSnapThresholdDp] (default 4 dp) for 1:1 aspect ratio when [lockAspect] is false.
+ * When [lockAspect] is true (e.g. for circular trackpoints), both dimensions are strictly locked equal.
+ */
+fun calculateButtonEdgeResize(
+    handle: ButtonResizeHandle,
+    originalNormX: Float,
+    originalNormY: Float,
+    originalWidthDp: Float,
+    originalHeightDp: Float,
+    dragDeltaPx: Float,
+    canvasW: Float,
+    canvasH: Float,
+    density: Float,
+    minSizeDp: Float = MP_BUTTON_MIN_SIZE_DP,
+    aspectSnapThresholdDp: Float = BUTTON_ASPECT_SNAP_THRESHOLD_DP,
+    lockAspect: Boolean = false,
+): ButtonResizeResult {
+    val safeDensity = density.coerceAtLeast(MIN_DENSITY_EPSILON)
+    val safeCanvasW = canvasW.coerceAtLeast(1f)
+    val safeCanvasH = canvasH.coerceAtLeast(1f)
+    val minPx = minSizeDp * safeDensity
+
+    val isXAxis = handle == ButtonResizeHandle.LEFT || handle == ButtonResizeHandle.RIGHT
+    val isPositiveEdge = handle == ButtonResizeHandle.RIGHT || handle == ButtonResizeHandle.BOTTOM
+
+    val canvasSize = if (isXAxis) safeCanvasW else safeCanvasH
+    val otherCanvasSize = if (isXAxis) safeCanvasH else safeCanvasW
+    val normPos = if (isXAxis) originalNormX else originalNormY
+    val otherNormPos = if (isXAxis) originalNormY else originalNormX
+    val currentDimDp = if (isXAxis) originalWidthDp else originalHeightDp
+    val otherDimDp = if (isXAxis) originalHeightDp else originalWidthDp
+
+    val anchorPx =
+        if (isPositiveEdge) {
+            (normPos * canvasSize) - (currentDimDp * safeDensity) / 2f
+        } else {
+            (normPos * canvasSize) + (currentDimDp * safeDensity) / 2f
+        }
+
+    val edgeLimitPx =
+        if (isPositiveEdge) {
+            (canvasSize - anchorPx).coerceIn(minPx, canvasSize)
+        } else {
+            anchorPx.coerceIn(minPx, canvasSize)
+        }
+    val maxAllowedDimPx = maxOf(currentDimDp * safeDensity, edgeLimitPx).coerceAtMost(canvasSize)
+
+    val rawCandPx =
+        if (isPositiveEdge) {
+            anchorPx + (currentDimDp * safeDensity) + dragDeltaPx
+        } else {
+            anchorPx - (currentDimDp * safeDensity) + dragDeltaPx
+        }
+
+    val rawDimPx =
+        if (isPositiveEdge) {
+            (rawCandPx - anchorPx).coerceIn(minPx, maxAllowedDimPx)
+        } else {
+            (anchorPx - rawCandPx).coerceIn(minPx, maxAllowedDimPx)
+        }
+
+    val maxAllowedDimDp = maxOf(minSizeDp, maxAllowedDimPx / safeDensity)
+    var candDimDp = (rawDimPx / safeDensity).roundToInt().toFloat().coerceIn(minSizeDp, maxAllowedDimDp)
+    var isSnapped = false
+
+    if (lockAspect) {
+        val maxAllowedOtherPx = otherCanvasSize
+        val targetOtherPx = candDimDp * safeDensity
+        if (targetOtherPx > maxAllowedOtherPx) {
+            // floor (never round up) so the locked dimension can never exceed the other canvas axis
+            candDimDp = floor(maxAllowedOtherPx / safeDensity).coerceAtLeast(minSizeDp)
+        }
+    } else if (abs(candDimDp - otherDimDp) <= aspectSnapThresholdDp) {
+        val snapDimPx = otherDimDp * safeDensity
+        if (snapDimPx <= maxAllowedDimPx) {
+            candDimDp = otherDimDp
+            isSnapped = true
+        }
+    }
+
+    val clampedDimPx = (candDimDp * safeDensity).coerceIn(minPx, maxAllowedDimPx)
+    candDimDp = (clampedDimPx / safeDensity).roundToInt().toFloat()
+    if (candDimDp * safeDensity > maxAllowedDimPx) {
+        candDimDp = floor(maxAllowedDimPx / safeDensity).coerceAtLeast(minSizeDp)
+    }
+    // Derive the center from the final rounded dimension so the anchored edge stays exactly fixed.
+    val newDimPx = candDimDp * safeDensity
+
+    val newCenterPx = if (isPositiveEdge) anchorPx + newDimPx / 2f else anchorPx - newDimPx / 2f
+    val newNorm = (newCenterPx / canvasSize).coerceIn(0f, 1f)
+
+    val newOtherDimDp = if (lockAspect) candDimDp else otherDimDp
+    val newOtherDimPx = newOtherDimDp * safeDensity
+    val newOtherNorm =
+        if (lockAspect) {
+            val otherCenterPx = clampCenterWithinCanvas(otherNormPos * otherCanvasSize, otherCanvasSize)
+            (otherCenterPx / otherCanvasSize).coerceIn(0f, 1f)
+        } else {
+            otherNormPos
+        }
+
+    return if (isXAxis) {
+        ButtonResizeResult(
+            newNormX = newNorm,
+            newNormY = newOtherNorm,
+            newWidthDp = candDimDp,
+            newHeightDp = newOtherDimDp,
+            isAspectSnapped = isSnapped,
+        )
+    } else {
+        ButtonResizeResult(
+            newNormX = newOtherNorm,
+            newNormY = newNorm,
+            newWidthDp = newOtherDimDp,
+            newHeightDp = candDimDp,
+            isAspectSnapped = isSnapped,
+        )
+    }
+}
+
+data class GamepadButtonResizeResult(
+    val newNormX: Float,
+    val newNormY: Float,
+    val newWidthDp: Float,
+    val newHeightDp: Float,
+)
+
+/**
+ * Calculates button dimension updates when resizing via gamepad (R2 + D-pad).
+ * Resizes symmetrically around the button's center in clean [stepDp] (default 1 dp) increments.
+ * Automatically clamps within screen/canvas boundaries and shifts center inward if expanding at edges.
+ * [dirX] > 0 expands width, [dirX] < 0 shrinks width.
+ * [dirY] < 0 (D-pad UP) expands height, [dirY] > 0 (D-pad DOWN) shrinks height.
+ */
+fun calculateGamepadButtonResize(
+    currentNormX: Float,
+    currentNormY: Float,
+    currentWidthDp: Float,
+    currentHeightDp: Float,
+    dirX: Int,
+    dirY: Int,
+    stepDp: Float = MPE_RESIZE_FINE_STEP_DP,
+    canvasW: Float = MPE_CANVAS_WIDTH_PX,
+    canvasH: Float = MPE_CANVAS_HEIGHT_PX,
+    density: Float,
+    minSizeDp: Float = MP_BUTTON_MIN_SIZE_DP,
+    lockAspect: Boolean = false,
+): GamepadButtonResizeResult {
+    val safeDensity = density.coerceAtLeast(MIN_DENSITY_EPSILON)
+    val safeCanvasW = canvasW.coerceAtLeast(1f)
+    val safeCanvasH = canvasH.coerceAtLeast(1f)
+
+    val widthDeltaDp = dirX * stepDp
+    val heightDeltaDp = -dirY * stepDp
+
+    val targetW: Float
+    val targetH: Float
+    if (lockAspect) {
+        val aspectDelta = if (dirX != 0) widthDeltaDp else heightDeltaDp
+        val aspectTarget = (currentWidthDp + aspectDelta).roundToInt().toFloat()
+        targetW = aspectTarget
+        targetH = aspectTarget
+    } else {
+        targetW = (currentWidthDp + widthDeltaDp).roundToInt().toFloat()
+        targetH = (currentHeightDp + heightDeltaDp).roundToInt().toFloat()
+    }
+
+    val maxCanvasWDp = safeCanvasW / safeDensity
+    val maxCanvasHDp = safeCanvasH / safeDensity
+    val maxWDp = if (lockAspect) minOf(maxCanvasWDp, maxCanvasHDp) else maxCanvasWDp
+    val maxHDp = if (lockAspect) minOf(maxCanvasWDp, maxCanvasHDp) else maxCanvasHDp
+
+    val clampedWDp = targetW.coerceIn(minSizeDp, maxWDp.coerceAtLeast(minSizeDp))
+    val clampedHDp = targetH.coerceIn(minSizeDp, maxHDp.coerceAtLeast(minSizeDp))
+
+    val centerXPx = clampCenterWithinCanvas(currentNormX * safeCanvasW, safeCanvasW)
+    val centerYPx = clampCenterWithinCanvas(currentNormY * safeCanvasH, safeCanvasH)
+
+    val newNormX = (centerXPx / safeCanvasW).coerceIn(0f, 1f)
+    val newNormY = (centerYPx / safeCanvasH).coerceIn(0f, 1f)
+
+    return GamepadButtonResizeResult(
+        newNormX = newNormX,
+        newNormY = newNormY,
+        newWidthDp = clampedWDp,
+        newHeightDp = clampedHDp,
+    )
+}
+
+/**
+ * Clamps a center coordinate so it stays within [0, canvasSizePx].
+ */
+private fun clampCenterWithinCanvas(
+    centerPx: Float,
+    canvasSizePx: Float,
+): Float = centerPx.coerceIn(0f, canvasSizePx)
+
+/**
+ * Formats a button dimension in dp for display in the editor, HUD, and labels.
+ * Formats as an integer dp value (e.g. "60", "61").
+ */
+fun formatButtonDimensionDp(dp: Float): String = dp.roundToInt().toString()

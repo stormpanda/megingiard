@@ -118,10 +118,3 @@ fun HapticStrength.labelResId(): Int =
         HapticStrength.STRONG -> R.string.macropad_haptic_strong
         HapticStrength.CUSTOM -> R.string.macropad_haptic_custom
     }
-
-fun TrackpointSize.labelResId(): Int =
-    when (this) {
-        TrackpointSize.SMALL -> R.string.macropad_trackpoint_size_small
-        TrackpointSize.MEDIUM -> R.string.macropad_trackpoint_size_medium
-        TrackpointSize.LARGE -> R.string.macropad_trackpoint_size_large
-    }

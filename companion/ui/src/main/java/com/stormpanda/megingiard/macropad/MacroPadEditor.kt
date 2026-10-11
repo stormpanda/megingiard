@@ -76,6 +76,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -85,9 +86,15 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
+import com.stormpanda.megingiard.math.MPE_CANVAS_HEIGHT_PX
+import com.stormpanda.megingiard.math.MPE_CANVAS_WIDTH_PX
 import com.stormpanda.megingiard.math.MPE_FINE_STEP_PX
 import com.stormpanda.megingiard.math.MPE_NORMAL_STEP_PX
+import com.stormpanda.megingiard.math.MPE_RESIZE_FINE_STEP_DP
+import com.stormpanda.megingiard.math.MPE_RESIZE_NORMAL_STEP_DP
 import com.stormpanda.megingiard.math.calculateGamepadButtonMove
+import com.stormpanda.megingiard.math.calculateGamepadButtonResize
+import com.stormpanda.megingiard.math.formatButtonDimensionDp
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbScrapeSubPageContent
 import com.stormpanda.megingiard.ui.AppDivider
@@ -131,9 +138,6 @@ private const val TAG = "MacroPadEditor"
 private val MPE_DECK_SPACING = 10.dp
 private val MPE_EMPTY_PADDING_V = 12.dp
 private const val MPE_BUTTON_HEADER_COUNT = 5
-private const val MPE_CANVAS_WIDTH_PX = 1240f
-private const val MPE_CANVAS_HEIGHT_PX = 1080f
-private const val MPE_EDGE_MARGIN = 0.05f
 
 private fun EditorSection.titleResId(): Int =
     when (this) {
@@ -164,12 +168,7 @@ private fun EditorSection.icon(): ImageVector =
 private fun applyActionToDraftButton(
     draftButton: PadButton,
     newAction: PadAction,
-): PadButton =
-    draftButton.copy(
-        action = newAction,
-        buttonSize = if (newAction is PadAction.ScrollWheel) ButtonSize.SIZE_1X2 else draftButton.buttonSize,
-        buttonShape = if (newAction is PadAction.TrackpointMove) ButtonShape.CIRCLE else draftButton.buttonShape,
-    )
+): PadButton = draftButton.withActionSizing(newAction)
 
 private fun swapButtons(
     layout: PadLayout?,
@@ -2605,19 +2604,14 @@ private fun describePadButton(
     includeHaptic: Boolean = true,
 ): String {
     val hapticLabel = if (includeHaptic) stringResource(btn.hapticStrength.labelResId()) else null
-    return if (btn.action is PadAction.TrackpointMove) {
-        val sizeLabel = stringResource((btn.action as PadAction.TrackpointMove).size.labelResId())
-        listOfNotNull(sizeLabel, hapticLabel).joinToString(" • ")
-    } else {
-        val actionLabel = btn.action.displayLabel()
-        val sizeLabel =
-            if (btn.action !is PadAction.ScrollWheel) {
-                "${btn.buttonSize.cols}×${btn.buttonSize.rows}"
-            } else {
-                null
-            }
-        listOfNotNull(actionLabel, sizeLabel, hapticLabel).joinToString(" • ")
-    }
+    val actionLabel = btn.action.displayLabel()
+    val sizeLabel =
+        stringResource(
+            R.string.macropad_button_dimension_format,
+            formatButtonDimensionDp(btn.widthDp),
+            formatButtonDimensionDp(btn.heightDp),
+        )
+    return listOfNotNull(actionLabel, sizeLabel, hapticLabel).joinToString(" • ")
 }
 
 @Composable
@@ -2819,10 +2813,17 @@ private fun EditButtonPositionsSubPageContent(
     val coroutineScope = rememberCoroutineScope()
     val selectedButtonId by MacroPadState.selectedButtonId.collectAsStateWithLifecycle()
     val buttonAlignmentSnapping by MacroPadSettings.buttonAlignmentSnapping.collectAsStateWithLifecycle()
+    val density = LocalDensity.current.density
+    val canvasMetrics by MacroPadState.canvasMetrics.collectAsStateWithLifecycle()
+    val effectiveCanvasW = canvasMetrics?.widthPx ?: MPE_CANVAS_WIDTH_PX
+    val effectiveCanvasH = canvasMetrics?.heightPx ?: MPE_CANVAS_HEIGHT_PX
+    val effectiveDensity = canvasMetrics?.density ?: density
     val cardRequesters = remember { mutableMapOf<String, FocusRequester>() }
     var movingButtonId by remember { mutableStateOf<String?>(null) }
-    var isTriggerHeld by remember { mutableStateOf(false) }
-    val isTriggerHeldState = rememberUpdatedState(isTriggerHeld)
+    var isL2Held by remember { mutableStateOf(false) }
+    var isR2Held by remember { mutableStateOf(false) }
+    val isL2HeldState = rememberUpdatedState(isL2Held)
+    val isR2HeldState = rememberUpdatedState(isR2Held)
     var activeRepeatJob by remember { mutableStateOf<Job?>(null) }
     var activeDirectionKey by remember { mutableIntStateOf(0) }
 
@@ -2830,7 +2831,8 @@ private fun EditButtonPositionsSubPageContent(
         activeRepeatJob?.cancel()
         activeRepeatJob = null
         activeDirectionKey = 0
-        isTriggerHeld = false
+        isL2Held = false
+        isR2Held = false
     }
 
     // Intercept system back gesture/button when precision moving
@@ -2862,6 +2864,7 @@ private fun EditButtonPositionsSubPageContent(
         onDispose {
             stopMovingImmediate()
             MacroPadState.setSelectedButtonId(null)
+            MacroPadState.setAdjustingButtonViaGamepad(false)
         }
     }
 
@@ -2872,7 +2875,7 @@ private fun EditButtonPositionsSubPageContent(
     ) {
         val currentLayout = MacroPadState.activeLayout.value ?: return
         val targetBtn = currentLayout.buttons.firstOrNull { it.id == btnId } ?: return
-        val stepMultiplier = if (isTriggerHeldState.value) MPE_FINE_STEP_PX else MPE_NORMAL_STEP_PX
+        val stepMultiplier = if (isL2HeldState.value) MPE_FINE_STEP_PX else MPE_NORMAL_STEP_PX
         val (newX, newY) =
             calculateGamepadButtonMove(
                 currentNormX = targetBtn.posX,
@@ -2882,8 +2885,8 @@ private fun EditButtonPositionsSubPageContent(
                 stepMultiplierPx = stepMultiplier,
                 movingButtonId = btnId,
                 otherButtons = currentLayout.buttons,
-                canvasW = MPE_CANVAS_WIDTH_PX,
-                canvasH = MPE_CANVAS_HEIGHT_PX,
+                canvasW = effectiveCanvasW,
+                canvasH = effectiveCanvasH,
                 alignmentSnappingEnabled = buttonAlignmentSnapping,
             )
         if (newX != targetBtn.posX || newY != targetBtn.posY) {
@@ -2892,6 +2895,61 @@ private fun EditButtonPositionsSubPageContent(
                     if (it.id == btnId) it.copy(posX = newX, posY = newY) else it
                 }
             MacroPadState.updateLayout(currentLayout.copy(buttons = updated))
+        }
+    }
+
+    fun resizeButton(
+        btnId: String,
+        dx: Int,
+        dy: Int,
+    ) {
+        val currentLayout = MacroPadState.activeLayout.value ?: return
+        val targetBtn = currentLayout.buttons.firstOrNull { it.id == btnId } ?: return
+        val stepDp = if (isL2HeldState.value) MPE_RESIZE_FINE_STEP_DP else MPE_RESIZE_NORMAL_STEP_DP
+        val isTrackpoint = targetBtn.action is PadAction.TrackpointMove
+        val res =
+            calculateGamepadButtonResize(
+                currentNormX = targetBtn.posX,
+                currentNormY = targetBtn.posY,
+                currentWidthDp = targetBtn.widthDp,
+                currentHeightDp = targetBtn.heightDp,
+                dirX = dx,
+                dirY = dy,
+                stepDp = stepDp,
+                canvasW = effectiveCanvasW,
+                canvasH = effectiveCanvasH,
+                density = effectiveDensity,
+                lockAspect = isTrackpoint,
+            )
+        if (res.newWidthDp != targetBtn.widthDp || res.newHeightDp != targetBtn.heightDp ||
+            res.newNormX != targetBtn.posX || res.newNormY != targetBtn.posY
+        ) {
+            val updated =
+                currentLayout.buttons.map {
+                    if (it.id == btnId) {
+                        it.copy(
+                            posX = res.newNormX,
+                            posY = res.newNormY,
+                            widthDp = res.newWidthDp,
+                            heightDp = res.newHeightDp,
+                        )
+                    } else {
+                        it
+                    }
+                }
+            MacroPadState.updateLayout(currentLayout.copy(buttons = updated))
+        }
+    }
+
+    fun dispatchAdjust(
+        btnId: String,
+        dx: Int,
+        dy: Int,
+    ) {
+        if (isR2HeldState.value) {
+            resizeButton(btnId, dx, dy)
+        } else {
+            moveButton(btnId, dx, dy)
         }
     }
 
@@ -2904,19 +2962,21 @@ private fun EditButtonPositionsSubPageContent(
         if (activeDirectionKey == keyCode && activeRepeatJob?.isActive == true) return
         activeRepeatJob?.cancel()
         activeDirectionKey = keyCode
-        moveButton(btnId, dx, dy)
+        dispatchAdjust(btnId, dx, dy)
         activeRepeatJob =
             coroutineScope.launchDirectionalRepeat(
                 keyCode = keyCode,
                 isActiveCheck = { activeDirectionKey == keyCode },
             ) {
-                moveButton(btnId, dx, dy)
+                dispatchAdjust(btnId, dx, dy)
             }
     }
 
     fun stopMoving(keyCode: Int) {
         if (activeDirectionKey == keyCode) {
-            stopMovingImmediate()
+            activeRepeatJob?.cancel()
+            activeRepeatJob = null
+            activeDirectionKey = 0
         }
     }
 
@@ -2938,6 +2998,10 @@ private fun EditButtonPositionsSubPageContent(
             }
         },
     )
+
+    LaunchedEffect(movingButtonId) {
+        MacroPadState.setAdjustingButtonViaGamepad(movingButtonId != null)
+    }
 
     if (buttons.isEmpty()) {
         Text(
@@ -2996,8 +3060,14 @@ private fun EditButtonPositionsSubPageContent(
                         },
                         onModifierKeyDown = { keyCode ->
                             when (keyCode) {
-                                KeyEvent.KEYCODE_BUTTON_L2, KeyEvent.KEYCODE_BUTTON_R2 -> {
-                                    isTriggerHeld = true
+                                KeyEvent.KEYCODE_BUTTON_L2 -> {
+                                    isL2Held = true
+                                    true
+                                }
+
+                                KeyEvent.KEYCODE_BUTTON_R2 -> {
+                                    if (!isR2Held) AppLog.d(TAG, "gamepad resize modifier active (R2)")
+                                    isR2Held = true
                                     true
                                 }
 
@@ -3008,8 +3078,14 @@ private fun EditButtonPositionsSubPageContent(
                         },
                         onModifierKeyUp = { keyCode ->
                             when (keyCode) {
-                                KeyEvent.KEYCODE_BUTTON_L2, KeyEvent.KEYCODE_BUTTON_R2 -> {
-                                    isTriggerHeld = false
+                                KeyEvent.KEYCODE_BUTTON_L2 -> {
+                                    isL2Held = false
+                                    true
+                                }
+
+                                KeyEvent.KEYCODE_BUTTON_R2 -> {
+                                    if (isR2Held) AppLog.d(TAG, "gamepad resize modifier released (R2)")
+                                    isR2Held = false
                                     true
                                 }
 
@@ -3028,7 +3104,12 @@ private fun EditButtonPositionsSubPageContent(
                     trailingContent = {
                         if (isMoving) {
                             GamepadPill(
-                                text = stringResource(R.string.gamepad_action_moving),
+                                text =
+                                    if (isR2Held) {
+                                        stringResource(R.string.gamepad_action_resizing)
+                                    } else {
+                                        stringResource(R.string.gamepad_action_moving)
+                                    },
                                 isAccent = true,
                             )
                         } else {

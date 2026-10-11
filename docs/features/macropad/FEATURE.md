@@ -86,14 +86,13 @@ Each button supports one of the following actions:
 
 ### FR-P5: Trackpoint Button
 
-- A trackpoint is a **regular `PadButton`** with a `TrackpointMove` action, not a separate profile-level toggle.
-- Trackpoint buttons are **always circular**, have no visible label, and are sized by a `TrackpointSize` enum: `SMALL` (1.5×), `MEDIUM` (2.0×), `LARGE` (3.0×), where the multiplier scales `MP_BUTTON_UNIT_DP` (60 dp).
+- Trackpoint buttons are **always circular**, have no visible label, maintain a 1:1 aspect ratio (`widthDp == heightDp`), and support stepless sizing directly via canvas edge dragging or D-pad resize (default 120 dp; minimum 120 dp when created or assigned in editor, clamped to `MP_BUTTON_MIN_SIZE_DP = 30 dp` in data model). Legacy `TrackpointSize` is deprecated and used solely for backward-compatible migration of older profiles.
 - In use mode, dragging a finger on a trackpoint button translates relative motion depending on the configured **Tracking Mode**, scaled by the configurable **Sensitivity Multiplier** (`0.1×` to `5.0×`, default `1.0×`, baseline `MP_TRACKPOINT_SENSITIVITY = 3f`):
   - **Virtual Physical Mouse**: relative motion is translated into **REL_X / REL_Y mouse events** via `MouseInjector.moveMouse()`.
   - **Virtual Touch**: relative motion is translated into absolute touches on the primary landscape display (`1920x1080`) via `TouchInjector.injectTouch()`. A virtual cursor position is tracked internally (initially at center `(0.5f, 0.5f)`) and persists across finger lifts, allowing subsequent swipes from the same position. The internally tracked position (`virtualCursorX` / `virtualCursorY`) is clamped to screen boundaries `[0.0f, 1.0f]` at all times. Touch events injected to the system are clamped to the safe overrun range of `[-0.5f, 1.5f]` to prevent coordinate wrapping or jumps while allowing the system cursor to catch up. Relative movements are tracked unclamped during dragging, but snap immediately to the internally tracked position as soon as the user changes drag direction (sign change in delta) to eliminate lag or dead zones when moving back from edges. There is no snap-back logic on release, and relative movements during dragging are only constrained by the touch injector's safety overrun clamp of `[-0.5f, 1.5f]`.
 - **ScrollWheel buttons** render two up-chevron icons (full opacity) and two down-chevron icons (half opacity), vertically centred. Scroll sensitivity is 12 px per wheel unit (`MP_SCROLL_SENSITIVITY_PX = 12f`).
 - **BackgroundPeek buttons** render a visibility icon: `Icons.Rounded.Visibility` when peek is inactive, `Icons.Rounded.VisibilityOff` when active.
-- In the editor, action-specific parameters are encapsulated into dedicated sub-pickers (e.g. `TrackpointPicker`, `KeyboardKeyPicker`, `GamepadButtonPicker`, `FullScreenMousePicker`). For `TrackpointMove`, `TrackpointPicker` provides dedicated cards for **Tracking Mode** (`PHYSICAL_MOUSE` vs `VIRTUAL_TOUCH`), **Trackpoint Size** (`SMALL` / `MEDIUM` / `LARGE`), and **Pointer Sensitivity** (`0.1×` to `5.0×` stepper in `0.1×` increments).
+- In the editor, action-specific parameters are encapsulated into dedicated sub-pickers (e.g. `TrackpointPicker`, `KeyboardKeyPicker`, `GamepadButtonPicker`, `FullScreenMousePicker`). For `TrackpointMove`, `TrackpointPicker` provides dedicated cards for **Tracking Mode** (`PHYSICAL_MOUSE` vs `VIRTUAL_TOUCH`) and **Pointer Sensitivity** (`0.1×` to `5.0×` stepper in `0.1×` increments). Button sizing is handled via stepless positioning & sizing.
 
 ### FR-P6: Multi-Touch Button Support
 
@@ -220,19 +219,36 @@ Each button supports one of the following actions:
   - Color options survive profile imports/exports and migrate legacy button color formats (`buttonColorNoMirror` / `buttonColorMirror`) automatically.
 
 
-### FR-P8b: Edit Button Positions & Precision Movement
+### FR-P8b: Position & Size Buttons & Precision Movement & Resizing
 
-- **Sub-Menu Navigation:** Accessible from the **Edit button positions** menu item in the Buttons category deck (`MacroPadSubPage.EditButtonPositions`).
-- **Live Canvas Unlocking:** Entering the sub-menu automatically activates `MacroPadState.isEditingButtonPositions = true`, rendering the active 5dp-rounded highlight border around the bottom-screen `PadCanvas` and unlocking touch dragging. Leaving the sub-menu or closing the editor restores locked mode (`false`).
-- **Instructional Info Banner:** A non-highlightable info box at the top of the sub-menu informs the user that buttons can be dragged directly on the bottom display via touch or nudged with pixel precision via D-pad or Left Stick.
-- **Button Selection & Dual-Screen Sync:** The sub-menu lists all buttons with a "Move" badge. Focusing or moving a button sets `MacroPadState.selectedButtonId`, which immediately renders directional drag handles on the corresponding button on the bottom display. Touching any button or drag handle directly on the bottom canvas sets `MacroPadState.selectedButtonId`, which automatically focuses and brings that button into view in the top screen's list.
-- **Gamepad Movement & Trigger Fine Tuning (Matching Cutout Movement):**
+- **Sub-Menu Navigation:** Accessible from the **Position & Size Buttons** menu item in the Buttons category deck (`MacroPadSubPage.EditButtonPositions`).
+- **Live Canvas Unlocking:** Entering the sub-menu automatically activates `MacroPadState.isEditingButtonPositions = true`, rendering the active 5dp-rounded highlight border around the bottom-screen `PadCanvas` and unlocking touch dragging and resizing. Leaving the sub-menu or closing the editor restores locked mode (`false`).
+- **Instructional Info Banner:** A non-highlightable info box at the top of the sub-menu informs the user that buttons can be dragged or resized directly on the bottom display via touch or nudged with pixel precision via D-pad or Left Stick (holding R2 to resize, holding L2 for fine 1px / 1dp steps).
+- **Button Selection & Dual-Screen Sync:** The sub-menu lists all buttons with their live dimensions as integer dp values (e.g. `60×60`, `61×60`, `75×120`). Focusing or moving a button sets `MacroPadState.selectedButtonId`, which immediately renders 4 directional edge resize handles (TOP, BOTTOM, LEFT, RIGHT) on the corresponding button on the bottom display. Touching any button or edge handle directly on the bottom canvas sets `MacroPadState.selectedButtonId`, which automatically focuses and brings that button into view in the top screen's list.
+- **Stepless Touch Resizing & 1:1 Aspect Ratio Magnetic Snapping:**
+  - Dragging the button's interior surface moves the button freely across the canvas; its center coordinate is clamped to the full canvas range `[0.0, 1.0]` (`BUTTON_CANVAS_EDGE_MARGIN = 0f`), allowing buttons to hang up to 50% off-screen on any edge.
+  - Dragging any of the 4 edge resize handles adjusts that dimension while anchoring the opposite edge (e.g. dragging the RIGHT handle extends width rightward while keeping the left edge fixed; dragging the TOP handle extends height upward while keeping the bottom edge fixed).
+  - Both dimensions are clamped to a minimum size of 30 dp (`MP_BUTTON_MIN_SIZE_DP = 30f`) and maximum canvas bounds, snapping to integer dp increments. When a canvas bound is hit, the dimension is floored (never rounded up) so the button can never exceed the canvas, and the button center is derived from the final integer dp value so the anchored edge stays exactly fixed. For buttons positioned partially off-screen, resizing handles and aspect-locked adjustments preserve the off-screen overhang without forcibly snapping or shrinking the button back on screen. Center clamping is range-safe (`[0, canvasSize]`).
+  - **1:1 Aspect Ratio Snap:** While dragging an edge handle, when the dimension comes within 4 dp (`BUTTON_ASPECT_SNAP_THRESHOLD_DP = 4f`) of the opposing dimension (width == height), it magnetically locks to a perfect 1:1 aspect ratio. When first locking into the 1:1 snap, the system fires a subtle haptic tick via `LocalHapticFeedback`.
+  - Buttons with `ButtonShape.CIRCLE` render as a circle when width equals height, and automatically morph into a smooth pill shape (`MP_PILL_SHAPE`) when width differs from height.
+  - Text labels scale with button width (11 sp per 60 dp) but are capped by button height (`MP_BTN_LABEL_MAX_HEIGHT_RATIO = 0.4` sp per dp) and clamped to 8–32 sp, so wide/flat buttons never clip their label. Legacy sizes render unchanged (1×1 → 11 sp, 2×1 → 22 sp).
+- **Floating Dimension HUD (`ButtonDimensionHud`):**
+  - While any button is actively being moved, resized via touch edge handles, or adjusted via gamepad, a semi-transparent floating HUD badge displaying live dimensions (`80×60` or `81×60`, localized via `macropad_button_dimension_format`) renders centered above the active button chip on the bottom canvas (`PadCanvas`).
+  - The HUD is also shown on the locked canvas while a button is adjusted via the **Adjust Position & Size** card in `PadButtonEditDialog` (`MacroPadState.isAdjustingButtonViaGamepad`); in that mode it is offset past the highlight pointers so they never overlap.
+  - If the button is positioned close to the top boundary of the canvas, the HUD automatically flips below the button to prevent edge clipping.
+- **Gamepad Movement, Resizing & Dynamic Pill:**
   - Pressing `(A)` or clicking on any button in the list activates **Movement Mode** (`isMoving = true`).
+  - While active, the item trailing pill dynamically displays **Resizing** when holding **R2** (`KEYCODE_BUTTON_R2`) versus **Moving** when holding D-pad directions.
   - Directional inputs (`D-Pad Up/Down/Left/Right` or `Left Stick`) move the button in default **10 px steps** (`MPE_NORMAL_STEP_PX = 10f`) for rapid positioning.
-  - Holding either trigger (`L2` or `R2` / `KEYCODE_BUTTON_L2`, `KEYCODE_BUTTON_R2`) switches to fine-tuned **1 px precision steps** (`MPE_FINE_STEP_PX = 1f`).
-  - Holding a direction down continuously accelerates the tick frequency (starting at 250 ms initial delay, ramping down to 16 ms intervals / ~60 Hz) for smooth, high-precision positioning.
+  - Holding **R2** (`KEYCODE_BUTTON_R2`) switches to **Resizing Mode**: D-pad directions scale width and height symmetrically around the button's center in default **5 dp steps** (`MPE_RESIZE_NORMAL_STEP_DP = 5f`) for rapid sizing; center coordinates are preserved when resizing partially off-screen buttons without jumping back onto the canvas.
+  - Holding **L2** (`KEYCODE_BUTTON_L2`) switches to fine-tuned precision steps: **1 px steps** (`MPE_FINE_STEP_PX = 1f`) for movement and **1 dp steps** (`MPE_RESIZE_FINE_STEP_DP = 1f`) for resizing.
+  - Holding a direction down continuously accelerates the tick frequency (starting at 250 ms initial delay, ramping down to 16 ms intervals / ~60 Hz) for smooth, high-precision positioning and sizing.
   - **Crossing Alignment Snap**: When "Snap to Alignment" is enabled and stepping at 10 px, if moving would jump past another button's center coordinate on the active axis, it snaps precisely to that alignment coordinate first. A subsequent press in the same direction steps off the snapped position.
   - Pressing `(B)`, `(A)`, `Enter`, or back navigation deactivates movement mode, returning control to standard card navigation without bubbling back to the parent screen.
+- **Direct Repositioning & Sizing in Button Config (`PadButtonEditDialog`):**
+  - Inside the button edit dialog, the "Shape & Size" section features an **Adjust Position & Size** card (`GamepadFocusCard`).
+  - Tapping `(A)` activates live adjustment mode, highlighting the card and setting `MacroPadState.isAdjustingButtonViaGamepad`.
+  - The card displays live dimensions and normalized coordinates (`e.g. 60×60 • X: 50% Y: 50%` or `61×60 • X: 50% Y: 50%`) with live D-pad move/resize (and L2/R2 modifiers) updating the bottom-screen preview in real time.
 
 ### FR-P9a: Custom Background Image
 
@@ -423,7 +439,7 @@ Each button supports one of the following actions:
 
 - Each `PadButton` carries a `hapticStrength: HapticStrength` field (serialised; default `OFF` — existing profiles load without migration).
 - Five strength levels are available: `OFF`, `LIGHT`, `MEDIUM`, `STRONG`, `CUSTOM`.
-- The strength selector is displayed in `ButtonEditDialog` as a choice card (`GamepadChoiceCard`). It is grouped with the button shape and size settings in a single row for normal buttons (or alongside trackpoint size/scrollwheel size settings). It is shown for all action types, including `BackgroundPeek`, `TrackpointMove`, and `ScrollWheel`.
+- The strength selector is displayed in `PadButtonEditDialog` as a choice card (`GamepadChoiceCard`). It is shown for all action types, including `BackgroundPeek`, `TrackpointMove`, and `ScrollWheel`.
 - When haptics are enabled (`LIGHT`, `MEDIUM`, `STRONG`, or `CUSTOM`), two sliders appear beneath the chip row:
   - **Duration** — 1 to 200 ms (integer steps)
   - **Amplitude** — 5 to 100 in steps of 5 (20 discrete user-facing values; the value is mapped proportionally to Android's 1–255 amplitude range, so 100 maps to 255)
@@ -595,8 +611,9 @@ PadProfile
         ├── label: String       (empty for TrackpointMove / ScrollWheel)
         ├── iconName: String?   (optional Material Symbols snake_case ligature name, e.g. "arrow_back"; shown instead of label in use mode + editor canvas; null = label)
         ├── posX / posY: Float  (normalised 0.0–1.0)
-        ├── buttonSize: ButtonSize (SIZE_1X1 | SIZE_2X1 | SIZE_1X2 | SIZE_2X2)
-        ├── buttonShape: ButtonShape (SQUARE | CIRCLE | ICON_ONLY)
+        ├── widthDp: Float      (stepless width, default 60.0 dp, min 30.0 dp)
+        ├── heightDp: Float     (stepless height, default 60.0 dp, min 30.0 dp)
+        ├── buttonShape: ButtonShape (SQUARE | CIRCLE | ICON_ONLY; CIRCLE renders as pill when width != height)
         ├── buttonTextColor: ColorOption?  (override, null = layout default)
         ├── buttonBorderColor: ColorOption? (override, null = layout default)
         ├── buttonBgColor: ColorOption?    (override, null = layout default)
@@ -606,9 +623,11 @@ PadProfile
         │     GamepadButton(btnCode, label)
         │     MouseButton(button: MouseButton enum)
         │     ScrollWheel
-        │     TrackpointMove(size: TrackpointSize, mode: TrackpointMode) — SMALL/MEDIUM/LARGE, PHYSICAL_MOUSE/VIRTUAL_TOUCH
+        │     TrackpointMove(size: TrackpointSize = MEDIUM, mode: TrackpointMode) — legacy size deprecated; sized via PadButton.widthDp/heightDp
         └── hapticStrength: HapticStrength (OFF | LIGHT | MEDIUM | STRONG | CUSTOM, default OFF)
 ```
+
+> **Schema Migration:** `PadButton` uses `PadButtonSerializer` to automatically translate legacy serialized configurations containing `buttonSize` (`SIZE_1X1`, `SIZE_2X1`, `SIZE_1X2`, `SIZE_2X2`) or `TrackpointMove.size` into exact `widthDp` and `heightDp` values upon decode. When serialized or exported, only modern stepless `widthDp` and `heightDp` fields are written.
 
 ### MacroPadNavState (`:companion:ui`)
 
