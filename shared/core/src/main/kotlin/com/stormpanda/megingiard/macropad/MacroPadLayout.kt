@@ -20,6 +20,8 @@ enum class ButtonShape { SQUARE, CIRCLE, ICON_ONLY }
 
 const val MP_BUTTON_BASE_UNIT_DP = 60f
 const val MP_BUTTON_MIN_SIZE_DP = 30f
+const val MP_BUTTON_DEFAULT_HAPTIC_DURATION_MS = 10
+const val MP_BUTTON_DEFAULT_HAPTIC_AMPLITUDE = 25
 
 /**
  * Grid multiplier for a button: cols × rows relative to the base button unit.
@@ -37,10 +39,11 @@ enum class ButtonSize(
 }
 
 /**
- * Visual size of a trackpoint button.
- * The [multiplier] is applied to the base button unit (MP_BUTTON_UNIT_DP / ED_BUTTON_UNIT_DP)
- * to derive the rendered circle diameter.
+ * Visual size of a legacy trackpoint button.
+ * Deprecated: Used only for surrogate deserialization of legacy profiles.
+ * Buttons now use stepless [PadButton.widthDp] and [PadButton.heightDp].
  */
+@Deprecated("Used only for surrogate deserialization of legacy profiles")
 enum class TrackpointSize(
     val multiplier: Float,
 ) {
@@ -350,9 +353,9 @@ data class PadButton(
     val action: PadAction,
     val hapticStrength: HapticStrength = HapticStrength.OFF,
     /** Duration in milliseconds for [HapticStrength.CUSTOM] pulses. Range: 1–200. */
-    val hapticCustomDurationMs: Int = 10,
+    val hapticCustomDurationMs: Int = MP_BUTTON_DEFAULT_HAPTIC_DURATION_MS,
     /** Amplitude for [HapticStrength.CUSTOM] pulses. Range: 5–100 in steps of 5. */
-    val hapticCustomAmplitude: Int = 25,
+    val hapticCustomAmplitude: Int = MP_BUTTON_DEFAULT_HAPTIC_AMPLITUDE,
     val buttonTextColor: ColorOption? = null,
     val buttonBorderColor: ColorOption? = null,
     val buttonBgColor: ColorOption? = null,
@@ -700,8 +703,8 @@ private class PadButtonEncodeSurrogate(
     val buttonShape: ButtonShape = ButtonShape.CIRCLE,
     val action: PadAction,
     val hapticStrength: HapticStrength = HapticStrength.OFF,
-    val hapticCustomDurationMs: Int = 10,
-    val hapticCustomAmplitude: Int = 25,
+    val hapticCustomDurationMs: Int = MP_BUTTON_DEFAULT_HAPTIC_DURATION_MS,
+    val hapticCustomAmplitude: Int = MP_BUTTON_DEFAULT_HAPTIC_AMPLITUDE,
     val buttonTextColor: ColorOption? = null,
     val buttonBorderColor: ColorOption? = null,
     val buttonBgColor: ColorOption? = null,
@@ -723,8 +726,8 @@ private class PadButtonDecodeSurrogate(
     val buttonShape: ButtonShape = ButtonShape.CIRCLE,
     val action: PadAction,
     val hapticStrength: HapticStrength = HapticStrength.OFF,
-    val hapticCustomDurationMs: Int = 10,
-    val hapticCustomAmplitude: Int = 25,
+    val hapticCustomDurationMs: Int = MP_BUTTON_DEFAULT_HAPTIC_DURATION_MS,
+    val hapticCustomAmplitude: Int = MP_BUTTON_DEFAULT_HAPTIC_AMPLITUDE,
     val buttonTextColor: ColorOption? = null,
     val buttonBorderColor: ColorOption? = null,
     val buttonBgColor: ColorOption? = null,
@@ -770,6 +773,7 @@ object PadButtonSerializer : KSerializer<PadButton> {
             finalWidth = surrogate.widthDp
             finalHeight = surrogate.heightDp
         } else if (surrogate.action is PadAction.TrackpointMove) {
+            @Suppress("DEPRECATION")
             val mult = surrogate.action.size.multiplier
             finalWidth = mult * MP_BUTTON_BASE_UNIT_DP
             finalHeight = mult * MP_BUTTON_BASE_UNIT_DP
@@ -781,6 +785,23 @@ object PadButtonSerializer : KSerializer<PadButton> {
             finalHeight = surrogate.heightDp ?: MP_BUTTON_BASE_UNIT_DP
         }
 
+        val safeRawWidth =
+            if (finalWidth.isNaN() || finalWidth < MP_BUTTON_MIN_SIZE_DP) {
+                if (finalWidth.isNaN()) MP_BUTTON_BASE_UNIT_DP else MP_BUTTON_MIN_SIZE_DP
+            } else {
+                finalWidth
+            }
+        val safeRawHeight =
+            if (finalHeight.isNaN() || finalHeight < MP_BUTTON_MIN_SIZE_DP) {
+                if (finalHeight.isNaN()) MP_BUTTON_BASE_UNIT_DP else MP_BUTTON_MIN_SIZE_DP
+            } else {
+                finalHeight
+            }
+
+        val isTrackpoint = surrogate.action is PadAction.TrackpointMove
+        val safeWidth = if (isTrackpoint) maxOf(safeRawWidth, safeRawHeight) else safeRawWidth
+        val safeHeight = if (isTrackpoint) maxOf(safeRawWidth, safeRawHeight) else safeRawHeight
+
         return PadButton(
             id = surrogate.id,
             label = surrogate.label,
@@ -788,8 +809,8 @@ object PadButtonSerializer : KSerializer<PadButton> {
             iconFilled = surrogate.iconFilled,
             posX = surrogate.posX,
             posY = surrogate.posY,
-            widthDp = finalWidth,
-            heightDp = finalHeight,
+            widthDp = safeWidth,
+            heightDp = safeHeight,
             buttonShape = surrogate.buttonShape,
             action = surrogate.action,
             hapticStrength = surrogate.hapticStrength,

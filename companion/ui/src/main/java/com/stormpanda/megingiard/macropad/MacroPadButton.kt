@@ -65,8 +65,6 @@ private const val TAG = "MacroPadButton"
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
 
-internal val MP_BUTTON_UNIT_DP = 60.dp // 1×1 = this size on-screen; matches editor
-
 internal const val MP_BTN_PRESSED_ALPHA = 0.80f
 internal const val MP_BTN_NORMAL_ALPHA = 0.25f
 
@@ -78,8 +76,13 @@ private const val MP_PULSE_HALF_PERIOD_MS = 600
 internal val MP_BTN_SQUARE_RADIUS = 4.dp
 internal val MP_BTN_SQUARE_SHAPE = RoundedCornerShape(MP_BTN_SQUARE_RADIUS)
 internal val MP_PILL_SHAPE = RoundedCornerShape(percent = 50)
-internal val MP_BTN_ICON_UNIT = 44.dp // icon size per grid unit (≈ 73 % of MP_BUTTON_UNIT_DP)
-internal const val MP_BTN_ICON_RATIO = 44f / 60f
+private const val MP_BTN_BASE_ICON_SIZE_DP = 44f
+private const val MP_BTN_BASE_UNIT_DP = 60f
+internal const val MP_BTN_ICON_RATIO = MP_BTN_BASE_ICON_SIZE_DP / MP_BTN_BASE_UNIT_DP
+
+private const val MP_BTN_LABEL_BASE_FONT_SP = 11f
+private const val MP_BTN_LABEL_MIN_FONT_SP = 8f
+private const val MP_BTN_LABEL_MAX_FONT_SP = 32f
 
 private const val MP_PRESS_ANIM_MS = 80
 private const val MP_RELEASE_ANIM_MS = 160
@@ -303,7 +306,10 @@ internal fun PadButtonContent(
                 filled = btn.iconFilled,
             )
         } else {
-            val fontSp = (11f * (btn.widthDp / MP_BUTTON_BASE_UNIT_DP)).coerceIn(8f, 32f).sp
+            val fontSp =
+                (MP_BTN_LABEL_BASE_FONT_SP * (btn.widthDp / MP_BUTTON_BASE_UNIT_DP))
+                    .coerceIn(MP_BTN_LABEL_MIN_FONT_SP, MP_BTN_LABEL_MAX_FONT_SP)
+                    .sp
             Text(
                 text = btn.label,
                 color = effectiveTextTint,

@@ -153,6 +153,7 @@ private val PC_EDGE_TOUCH_LENGTH = 48.dp
 private val PC_EDGE_TOUCH_THICKNESS = 32.dp
 private val PC_EDGE_HANDLE_CORNER = 3.dp
 private val PC_EDGE_HANDLE_SHAPE = RoundedCornerShape(PC_EDGE_HANDLE_CORNER)
+private const val PC_EDGE_HANDLE_ALPHA = 0.85f
 
 // Floating dimension HUD
 private val PC_HUD_MARGIN_DP = 8.dp
@@ -161,6 +162,13 @@ private val PC_HUD_PADDING_H = 8.dp
 private val PC_HUD_PADDING_V = 3.dp
 private val PC_HUD_SHAPE = RoundedCornerShape(12.dp)
 private const val PC_HUD_ANIM_MS = 150
+private const val PC_HUD_INITIAL_SCALE = 0.85f
+private const val PC_HUD_TARGET_SCALE = 0.85f
+private val PC_HUD_FALLBACK_WIDTH = 60.dp
+private val PC_HUD_BORDER_WIDTH = 1.dp
+private const val PC_HUD_BORDER_ALPHA = 0.7f
+private const val PC_HUD_BG_ALPHA = 0.85f
+private val PC_HUD_FONT_SIZE = 12.sp
 
 // Smart alignment guide line styling (PowerPoint-style)
 private const val PC_ALIGNMENT_GUIDE_LINE_ALPHA = 0.85f
@@ -551,6 +559,7 @@ internal fun PadCanvas(
                             ButtonResizeHandle.LEFT, ButtonResizeHandle.RIGHT -> totalDx
                             ButtonResizeHandle.TOP, ButtonResizeHandle.BOTTOM -> totalDy
                         }
+                    val isTrackpoint = activeBtn.action is PadAction.TrackpointMove
                     val res =
                         calculateButtonEdgeResize(
                             handle = handle,
@@ -562,6 +571,7 @@ internal fun PadCanvas(
                             canvasW = w,
                             canvasH = h,
                             density = density.density,
+                            lockAspect = isTrackpoint,
                         )
                     if (res.isAspectSnapped && !wasAspectSnapped) {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -1098,7 +1108,7 @@ private fun ButtonResizeHandleView(
             modifier =
                 Modifier
                     .size(width = handleWidth, height = handleHeight)
-                    .background(color.copy(alpha = 0.85f), PC_EDGE_HANDLE_SHAPE),
+                    .background(color.copy(alpha = PC_EDGE_HANDLE_ALPHA), PC_EDGE_HANDLE_SHAPE),
         )
     }
 }
@@ -1115,6 +1125,7 @@ private fun ButtonDimensionHud(
     visible: Boolean,
 ) {
     val density = LocalDensity.current
+    val colors = LocalAppColors.current
     val hudMarginPx = with(density) { PC_HUD_MARGIN_DP.toPx() }
     val hudEstimatedHeightPx = with(density) { PC_HUD_ESTIMATED_HEIGHT_DP.toPx() }
     val isNearTop = (buttonTopPx - hudEstimatedHeightPx - hudMarginPx) < hudMarginPx
@@ -1128,11 +1139,11 @@ private fun ButtonDimensionHud(
 
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(tween(PC_HUD_ANIM_MS)) + scaleIn(initialScale = 0.85f, animationSpec = tween(PC_HUD_ANIM_MS)),
-        exit = fadeOut(tween(PC_HUD_ANIM_MS)) + scaleOut(targetScale = 0.85f, animationSpec = tween(PC_HUD_ANIM_MS)),
+        enter = fadeIn(tween(PC_HUD_ANIM_MS)) + scaleIn(initialScale = PC_HUD_INITIAL_SCALE, animationSpec = tween(PC_HUD_ANIM_MS)),
+        exit = fadeOut(tween(PC_HUD_ANIM_MS)) + scaleOut(targetScale = PC_HUD_TARGET_SCALE, animationSpec = tween(PC_HUD_ANIM_MS)),
         modifier =
             Modifier.absoluteOffset {
-                val safeWidth = if (hudWidthPx > 0f) hudWidthPx else 60.dp.toPx()
+                val safeWidth = if (hudWidthPx > 0f) hudWidthPx else with(density) { PC_HUD_FALLBACK_WIDTH.toPx() }
                 val leftPx = (centerX - safeWidth / 2f).coerceIn(hudMarginPx, canvasW - safeWidth - hudMarginPx)
                 IntOffset(leftPx.roundToInt(), hudTopPx.roundToInt())
             },
@@ -1141,15 +1152,15 @@ private fun ButtonDimensionHud(
             modifier =
                 Modifier
                     .onSizeChanged { hudWidthPx = it.width.toFloat() }
-                    .background(Color.Black.copy(alpha = 0.85f), PC_HUD_SHAPE)
-                    .border(1.dp, accentColor.copy(alpha = 0.7f), PC_HUD_SHAPE)
+                    .background(colors.surfaceVariant.copy(alpha = PC_HUD_BG_ALPHA), PC_HUD_SHAPE)
+                    .border(PC_HUD_BORDER_WIDTH, accentColor.copy(alpha = PC_HUD_BORDER_ALPHA), PC_HUD_SHAPE)
                     .padding(horizontal = PC_HUD_PADDING_H, vertical = PC_HUD_PADDING_V),
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 text = "${formatButtonDimensionDp(widthDp)} × ${formatButtonDimensionDp(heightDp)}",
-                color = Color.White,
-                fontSize = 12.sp,
+                color = colors.onSurface,
+                fontSize = PC_HUD_FONT_SIZE,
                 fontWeight = FontWeight.SemiBold,
             )
         }

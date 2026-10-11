@@ -86,14 +86,13 @@ Each button supports one of the following actions:
 
 ### FR-P5: Trackpoint Button
 
-- A trackpoint is a **regular `PadButton`** with a `TrackpointMove` action, not a separate profile-level toggle.
-- Trackpoint buttons are **always circular**, have no visible label, and are sized by a `TrackpointSize` enum: `SMALL` (1.5×), `MEDIUM` (2.0×), `LARGE` (3.0×), where the multiplier scales `MP_BUTTON_UNIT_DP` (60 dp).
+- Trackpoint buttons are **always circular**, have no visible label, maintain a 1:1 aspect ratio (`widthDp == heightDp`), and support stepless sizing directly via canvas edge dragging or D-pad resize (default 120 dp; minimum 120 dp when created or assigned in editor, clamped to `MP_BUTTON_MIN_SIZE_DP = 30 dp` in data model). Legacy `TrackpointSize` is deprecated and used solely for backward-compatible migration of older profiles.
 - In use mode, dragging a finger on a trackpoint button translates relative motion depending on the configured **Tracking Mode**, scaled by the configurable **Sensitivity Multiplier** (`0.1×` to `5.0×`, default `1.0×`, baseline `MP_TRACKPOINT_SENSITIVITY = 3f`):
   - **Virtual Physical Mouse**: relative motion is translated into **REL_X / REL_Y mouse events** via `MouseInjector.moveMouse()`.
   - **Virtual Touch**: relative motion is translated into absolute touches on the primary landscape display (`1920x1080`) via `TouchInjector.injectTouch()`. A virtual cursor position is tracked internally (initially at center `(0.5f, 0.5f)`) and persists across finger lifts, allowing subsequent swipes from the same position. The internally tracked position (`virtualCursorX` / `virtualCursorY`) is clamped to screen boundaries `[0.0f, 1.0f]` at all times. Touch events injected to the system are clamped to the safe overrun range of `[-0.5f, 1.5f]` to prevent coordinate wrapping or jumps while allowing the system cursor to catch up. Relative movements are tracked unclamped during dragging, but snap immediately to the internally tracked position as soon as the user changes drag direction (sign change in delta) to eliminate lag or dead zones when moving back from edges. There is no snap-back logic on release, and relative movements during dragging are only constrained by the touch injector's safety overrun clamp of `[-0.5f, 1.5f]`.
 - **ScrollWheel buttons** render two up-chevron icons (full opacity) and two down-chevron icons (half opacity), vertically centred. Scroll sensitivity is 12 px per wheel unit (`MP_SCROLL_SENSITIVITY_PX = 12f`).
 - **BackgroundPeek buttons** render a visibility icon: `Icons.Rounded.Visibility` when peek is inactive, `Icons.Rounded.VisibilityOff` when active.
-- In the editor, action-specific parameters are encapsulated into dedicated sub-pickers (e.g. `TrackpointPicker`, `KeyboardKeyPicker`, `GamepadButtonPicker`, `FullScreenMousePicker`). For `TrackpointMove`, `TrackpointPicker` provides dedicated cards for **Tracking Mode** (`PHYSICAL_MOUSE` vs `VIRTUAL_TOUCH`), **Trackpoint Size** (`SMALL` / `MEDIUM` / `LARGE`), and **Pointer Sensitivity** (`0.1×` to `5.0×` stepper in `0.1×` increments).
+- In the editor, action-specific parameters are encapsulated into dedicated sub-pickers (e.g. `TrackpointPicker`, `KeyboardKeyPicker`, `GamepadButtonPicker`, `FullScreenMousePicker`). For `TrackpointMove`, `TrackpointPicker` provides dedicated cards for **Tracking Mode** (`PHYSICAL_MOUSE` vs `VIRTUAL_TOUCH`) and **Pointer Sensitivity** (`0.1×` to `5.0×` stepper in `0.1×` increments). Button sizing is handled via stepless positioning & sizing.
 
 ### FR-P6: Multi-Touch Button Support
 
@@ -438,7 +437,7 @@ Each button supports one of the following actions:
 
 - Each `PadButton` carries a `hapticStrength: HapticStrength` field (serialised; default `OFF` — existing profiles load without migration).
 - Five strength levels are available: `OFF`, `LIGHT`, `MEDIUM`, `STRONG`, `CUSTOM`.
-- The strength selector is displayed in `ButtonEditDialog` as a choice card (`GamepadChoiceCard`). It is grouped with the button shape and size settings in a single row for normal buttons (or alongside trackpoint size/scrollwheel size settings). It is shown for all action types, including `BackgroundPeek`, `TrackpointMove`, and `ScrollWheel`.
+- The strength selector is displayed in `PadButtonEditDialog` as a choice card (`GamepadChoiceCard`). It is shown for all action types, including `BackgroundPeek`, `TrackpointMove`, and `ScrollWheel`.
 - When haptics are enabled (`LIGHT`, `MEDIUM`, `STRONG`, or `CUSTOM`), two sliders appear beneath the chip row:
   - **Duration** — 1 to 200 ms (integer steps)
   - **Amplitude** — 5 to 100 in steps of 5 (20 discrete user-facing values; the value is mapped proportionally to Android's 1–255 amplitude range, so 100 maps to 255)
@@ -622,7 +621,7 @@ PadProfile
         │     GamepadButton(btnCode, label)
         │     MouseButton(button: MouseButton enum)
         │     ScrollWheel
-        │     TrackpointMove(size: TrackpointSize, mode: TrackpointMode) — SMALL/MEDIUM/LARGE, PHYSICAL_MOUSE/VIRTUAL_TOUCH
+        │     TrackpointMove(size: TrackpointSize = MEDIUM, mode: TrackpointMode) — legacy size deprecated; sized via PadButton.widthDp/heightDp
         └── hapticStrength: HapticStrength (OFF | LIGHT | MEDIUM | STRONG | CUSTOM, default OFF)
 ```
 

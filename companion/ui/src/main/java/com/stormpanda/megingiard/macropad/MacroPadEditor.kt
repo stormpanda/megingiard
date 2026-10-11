@@ -86,8 +86,12 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
+import com.stormpanda.megingiard.math.MPE_CANVAS_HEIGHT_PX
+import com.stormpanda.megingiard.math.MPE_CANVAS_WIDTH_PX
 import com.stormpanda.megingiard.math.MPE_FINE_STEP_PX
 import com.stormpanda.megingiard.math.MPE_NORMAL_STEP_PX
+import com.stormpanda.megingiard.math.MPE_RESIZE_FINE_STEP_DP
+import com.stormpanda.megingiard.math.MPE_RESIZE_NORMAL_STEP_DP
 import com.stormpanda.megingiard.math.calculateGamepadButtonMove
 import com.stormpanda.megingiard.math.calculateGamepadButtonResize
 import com.stormpanda.megingiard.math.formatButtonDimensionDp
@@ -135,11 +139,7 @@ private const val TAG = "MacroPadEditor"
 private val MPE_DECK_SPACING = 10.dp
 private val MPE_EMPTY_PADDING_V = 12.dp
 private const val MPE_BUTTON_HEADER_COUNT = 5
-private const val MPE_CANVAS_WIDTH_PX = 1240f
-private const val MPE_CANVAS_HEIGHT_PX = 1080f
 private const val MPE_EDGE_MARGIN = 0.05f
-private const val MPE_RESIZE_NORMAL_STEP_DP = 5f
-private const val MPE_RESIZE_FINE_STEP_DP = 1f
 
 private fun EditorSection.titleResId(): Int =
     when (this) {
@@ -170,13 +170,23 @@ private fun EditorSection.icon(): ImageVector =
 private fun applyActionToDraftButton(
     draftButton: PadButton,
     newAction: PadAction,
-): PadButton =
-    draftButton.copy(
+): PadButton {
+    val isTrackpoint = newAction is PadAction.TrackpointMove
+    val tpSize = if (isTrackpoint) maxOf(draftButton.widthDp, draftButton.heightDp, 120f) else draftButton.widthDp
+    return draftButton.copy(
         action = newAction,
-        widthDp = if (newAction is PadAction.ScrollWheel && draftButton.widthDp == MP_BUTTON_BASE_UNIT_DP) 60f else draftButton.widthDp,
-        heightDp = if (newAction is PadAction.ScrollWheel && draftButton.heightDp < 120f) 120f else draftButton.heightDp,
-        buttonShape = if (newAction is PadAction.TrackpointMove) ButtonShape.CIRCLE else draftButton.buttonShape,
+        widthDp = if (isTrackpoint) tpSize else draftButton.widthDp,
+        heightDp =
+            if (newAction is PadAction.ScrollWheel && draftButton.heightDp < 120f) {
+                120f
+            } else if (isTrackpoint) {
+                tpSize
+            } else {
+                draftButton.heightDp
+            },
+        buttonShape = if (isTrackpoint) ButtonShape.CIRCLE else draftButton.buttonShape,
     )
+}
 
 private fun swapButtons(
     layout: PadLayout?,
@@ -2904,20 +2914,36 @@ private fun EditButtonPositionsSubPageContent(
         val currentLayout = MacroPadState.activeLayout.value ?: return
         val targetBtn = currentLayout.buttons.firstOrNull { it.id == btnId } ?: return
         val stepDp = if (isL2HeldState.value) MPE_RESIZE_FINE_STEP_DP else MPE_RESIZE_NORMAL_STEP_DP
-        val (newW, newH) =
+        val isTrackpoint = targetBtn.action is PadAction.TrackpointMove
+        val res =
             calculateGamepadButtonResize(
+                currentNormX = targetBtn.posX,
+                currentNormY = targetBtn.posY,
                 currentWidthDp = targetBtn.widthDp,
                 currentHeightDp = targetBtn.heightDp,
                 dirX = dx,
                 dirY = dy,
                 stepDp = stepDp,
-                maxScreenWDp = MPE_CANVAS_WIDTH_PX / density,
-                maxScreenHDp = MPE_CANVAS_HEIGHT_PX / density,
+                canvasW = MPE_CANVAS_WIDTH_PX,
+                canvasH = MPE_CANVAS_HEIGHT_PX,
+                density = density,
+                lockAspect = isTrackpoint,
             )
-        if (newW != targetBtn.widthDp || newH != targetBtn.heightDp) {
+        if (res.newWidthDp != targetBtn.widthDp || res.newHeightDp != targetBtn.heightDp ||
+            res.newNormX != targetBtn.posX || res.newNormY != targetBtn.posY
+        ) {
             val updated =
                 currentLayout.buttons.map {
-                    if (it.id == btnId) it.copy(widthDp = newW, heightDp = newH) else it
+                    if (it.id == btnId) {
+                        it.copy(
+                            posX = res.newNormX,
+                            posY = res.newNormY,
+                            widthDp = res.newWidthDp,
+                            heightDp = res.newHeightDp,
+                        )
+                    } else {
+                        it
+                    }
                 }
             MacroPadState.updateLayout(currentLayout.copy(buttons = updated))
         }

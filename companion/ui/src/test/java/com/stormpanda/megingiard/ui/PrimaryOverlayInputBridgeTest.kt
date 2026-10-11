@@ -184,6 +184,18 @@ class PrimaryOverlayInputBridgeTest {
         }
 
     @Test
+    fun testProcessGenericMotionEvent_analogR2Trigger_axisRTrigger() =
+        runTest {
+            val (handledPress, eventsPress) = processEvent(createJoystickMotionEvent(axisRTrigger = 0.8f))
+            assertTrue(handledPress)
+            assertEquals(listOf(KeyEvent.ACTION_DOWN to KeyEvent.KEYCODE_BUTTON_R2), eventsPress)
+
+            val (handledRelease, eventsRelease) = processEvent(createJoystickMotionEvent(axisRTrigger = 0.0f))
+            assertFalse(handledRelease)
+            assertEquals(listOf(KeyEvent.ACTION_UP to KeyEvent.KEYCODE_BUTTON_R2), eventsRelease)
+        }
+
+    @Test
     fun testListCycleWithBumperDirection() {
         val items = listOf("A", "B", "C")
         assertEquals("B", items.cycle("A", BumperDirection.NEXT))

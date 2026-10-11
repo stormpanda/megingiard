@@ -169,4 +169,66 @@ class PadButtonSerializationTest {
         assertEquals(MP_BUTTON_BASE_UNIT_DP, decoded.widthDp, 0.01f)
         assertEquals(MP_BUTTON_BASE_UNIT_DP, decoded.heightDp, 0.01f)
     }
+
+    @Test
+    fun `dimensions below minimum or negative are clamped to MP_BUTTON_MIN_SIZE_DP`() {
+        val jsonStr =
+            """
+            {
+                "id": "btn-too-small",
+                "label": "Small",
+                "posX": 0.5,
+                "posY": 0.5,
+                "action": { "type": "keyboard_key", "keycode": 30, "label": "A" },
+                "widthDp": 10.0,
+                "heightDp": -50.0
+            }
+            """.trimIndent()
+
+        val decoded = json.decodeFromString<PadButton>(jsonStr)
+        assertEquals(MP_BUTTON_MIN_SIZE_DP, decoded.widthDp, 0.001f)
+        assertEquals(MP_BUTTON_MIN_SIZE_DP, decoded.heightDp, 0.001f)
+    }
+
+    @Test
+    fun `partial dimensions deserialize with missing dimension falling back to base unit`() {
+        val jsonStr =
+            """
+            {
+                "id": "btn-partial",
+                "label": "Partial",
+                "posX": 0.5,
+                "posY": 0.5,
+                "action": { "type": "keyboard_key", "keycode": 30, "label": "A" },
+                "widthDp": 90.0
+            }
+            """.trimIndent()
+
+        val decoded = json.decodeFromString<PadButton>(jsonStr)
+        assertEquals(90f, decoded.widthDp, 0.001f)
+        assertEquals(MP_BUTTON_BASE_UNIT_DP, decoded.heightDp, 0.001f)
+    }
+
+    @Test
+    fun `trackpoint button normalizes non-square dimensions to equal max size`() {
+        val jsonStr =
+            """
+            {
+                "id": "btn-trackpoint-nonsquare",
+                "label": "TP",
+                "posX": 0.5,
+                "posY": 0.5,
+                "action": {
+                    "type": "trackpoint",
+                    "mode": "virtual_touch"
+                },
+                "widthDp": 100.0,
+                "heightDp": 150.0
+            }
+            """.trimIndent()
+
+        val decoded = json.decodeFromString<PadButton>(jsonStr)
+        assertEquals(150f, decoded.widthDp, 0.001f)
+        assertEquals(150f, decoded.heightDp, 0.001f)
+    }
 }

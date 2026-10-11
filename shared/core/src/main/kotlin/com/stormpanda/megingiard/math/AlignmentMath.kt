@@ -21,13 +21,14 @@ const val ALIGNMENT_CANVAS_WIDTH_PX = 1080f
 const val ALIGNMENT_CANVAS_HEIGHT_PX = 1240f
 const val ALIGNMENT_CANVAS_EDGE_MARGIN = 0.05f
 
-// Backward-compatibility aliases for button-specific constants
 const val BUTTON_ALIGNMENT_SNAP_THRESHOLD_PX = ALIGNMENT_SNAP_THRESHOLD_PX
 const val BUTTON_ALIGNMENT_VISUAL_TOLERANCE_PX = ALIGNMENT_VISUAL_TOLERANCE_PX
 const val MPE_NORMAL_STEP_PX = ALIGNMENT_NORMAL_STEP_PX
 const val MPE_FINE_STEP_PX = ALIGNMENT_FINE_STEP_PX
-const val MPE_CANVAS_WIDTH_PX = ALIGNMENT_CANVAS_WIDTH_PX
-const val MPE_CANVAS_HEIGHT_PX = ALIGNMENT_CANVAS_HEIGHT_PX
+const val MPE_RESIZE_NORMAL_STEP_DP = 5f
+const val MPE_RESIZE_FINE_STEP_DP = 1f
+const val MPE_CANVAS_WIDTH_PX = 1240f
+const val MPE_CANVAS_HEIGHT_PX = 1080f
 const val BUTTON_CANVAS_EDGE_MARGIN = ALIGNMENT_CANVAS_EDGE_MARGIN
 
 const val PC_RADIAL_CENTER_X = 0.5f
@@ -626,7 +627,8 @@ data class ButtonResizeResult(
  * Calculates updated button bounds when dragging an edge resize handle.
  * Anchors the opposite edge (e.g. dragging the right edge keeps the left edge fixed).
  * Clamps width and height between [minSizeDp] (default 30 dp) and screen/canvas bounds.
- * Magnetically snaps dimension to [aspectSnapThresholdDp] (default 4 dp) for 1:1 aspect ratio.
+ * Magnetically snaps dimension to [aspectSnapThresholdDp] (default 4 dp) for 1:1 aspect ratio when [lockAspect] is false.
+ * When [lockAspect] is true (e.g. for circular trackpoints), both dimensions are strictly locked equal.
  */
 fun calculateButtonEdgeResize(
     handle: ButtonResizeHandle,
@@ -640,133 +642,173 @@ fun calculateButtonEdgeResize(
     density: Float,
     minSizeDp: Float = MP_BUTTON_MIN_SIZE_DP,
     aspectSnapThresholdDp: Float = BUTTON_ASPECT_SNAP_THRESHOLD_DP,
+    lockAspect: Boolean = false,
 ): ButtonResizeResult {
     val safeDensity = density.coerceAtLeast(0.001f)
     val safeCanvasW = canvasW.coerceAtLeast(1f)
     val safeCanvasH = canvasH.coerceAtLeast(1f)
     val minPx = minSizeDp * safeDensity
 
-    return when (handle) {
-        ButtonResizeHandle.RIGHT -> {
-            val leftPx = (originalNormX * safeCanvasW) - (originalWidthDp * safeDensity) / 2f
-            val originalRightPx = leftPx + (originalWidthDp * safeDensity)
-            val candRightPx = originalRightPx + dragDeltaPx
-            val maxAllowedWidthPx = (safeCanvasW - leftPx).coerceAtLeast(minPx)
-            val rawWidthPx = (candRightPx - leftPx).coerceIn(minPx, maxAllowedWidthPx)
-            var candWidthDp = (rawWidthPx / safeDensity).roundToInt().toFloat().coerceIn(minSizeDp, safeCanvasW / safeDensity)
-            var isSnapped = false
-            if (abs(candWidthDp - originalHeightDp) <= aspectSnapThresholdDp) {
-                candWidthDp = originalHeightDp
-                isSnapped = true
-            }
-            val newWidthPx = (candWidthDp * safeDensity).coerceIn(minPx, maxAllowedWidthPx)
-            val newCenterXPx = leftPx + newWidthPx / 2f
-            ButtonResizeResult(
-                newNormX = (newCenterXPx / safeCanvasW).coerceIn(0f, 1f),
-                newNormY = originalNormY,
-                newWidthDp = candWidthDp,
-                newHeightDp = originalHeightDp,
-                isAspectSnapped = isSnapped,
-            )
+    val isXAxis = handle == ButtonResizeHandle.LEFT || handle == ButtonResizeHandle.RIGHT
+    val isPositiveEdge = handle == ButtonResizeHandle.RIGHT || handle == ButtonResizeHandle.BOTTOM
+
+    val canvasSize = if (isXAxis) safeCanvasW else safeCanvasH
+    val otherCanvasSize = if (isXAxis) safeCanvasH else safeCanvasW
+    val normPos = if (isXAxis) originalNormX else originalNormY
+    val otherNormPos = if (isXAxis) originalNormY else originalNormX
+    val currentDimDp = if (isXAxis) originalWidthDp else originalHeightDp
+    val otherDimDp = if (isXAxis) originalHeightDp else originalWidthDp
+
+    val anchorPx =
+        if (isPositiveEdge) {
+            (normPos * canvasSize) - (currentDimDp * safeDensity) / 2f
+        } else {
+            (normPos * canvasSize) + (currentDimDp * safeDensity) / 2f
         }
 
-        ButtonResizeHandle.LEFT -> {
-            val rightPx = (originalNormX * safeCanvasW) + (originalWidthDp * safeDensity) / 2f
-            val originalLeftPx = rightPx - (originalWidthDp * safeDensity)
-            val candLeftPx = originalLeftPx + dragDeltaPx
-            val maxAllowedWidthPx = rightPx.coerceAtLeast(minPx)
-            val rawWidthPx = (rightPx - candLeftPx).coerceIn(minPx, maxAllowedWidthPx)
-            var candWidthDp = (rawWidthPx / safeDensity).roundToInt().toFloat().coerceIn(minSizeDp, safeCanvasW / safeDensity)
-            var isSnapped = false
-            if (abs(candWidthDp - originalHeightDp) <= aspectSnapThresholdDp) {
-                candWidthDp = originalHeightDp
-                isSnapped = true
-            }
-            val newWidthPx = (candWidthDp * safeDensity).coerceIn(minPx, maxAllowedWidthPx)
-            val newCenterXPx = rightPx - newWidthPx / 2f
-            ButtonResizeResult(
-                newNormX = (newCenterXPx / safeCanvasW).coerceIn(0f, 1f),
-                newNormY = originalNormY,
-                newWidthDp = candWidthDp,
-                newHeightDp = originalHeightDp,
-                isAspectSnapped = isSnapped,
-            )
+    val maxAllowedDimPx =
+        if (isPositiveEdge) {
+            (canvasSize - anchorPx).coerceAtLeast(minPx)
+        } else {
+            anchorPx.coerceAtLeast(minPx)
         }
 
-        ButtonResizeHandle.BOTTOM -> {
-            val topPx = (originalNormY * safeCanvasH) - (originalHeightDp * safeDensity) / 2f
-            val originalBottomPx = topPx + (originalHeightDp * safeDensity)
-            val candBottomPx = originalBottomPx + dragDeltaPx
-            val maxAllowedHeightPx = (safeCanvasH - topPx).coerceAtLeast(minPx)
-            val rawHeightPx = (candBottomPx - topPx).coerceIn(minPx, maxAllowedHeightPx)
-            var candHeightDp = (rawHeightPx / safeDensity).roundToInt().toFloat().coerceIn(minSizeDp, safeCanvasH / safeDensity)
-            var isSnapped = false
-            if (abs(candHeightDp - originalWidthDp) <= aspectSnapThresholdDp) {
-                candHeightDp = originalWidthDp
-                isSnapped = true
-            }
-            val newHeightPx = (candHeightDp * safeDensity).coerceIn(minPx, maxAllowedHeightPx)
-            val newCenterYPx = topPx + newHeightPx / 2f
-            ButtonResizeResult(
-                newNormX = originalNormX,
-                newNormY = (newCenterYPx / safeCanvasH).coerceIn(0f, 1f),
-                newWidthDp = originalWidthDp,
-                newHeightDp = candHeightDp,
-                isAspectSnapped = isSnapped,
-            )
+    val rawCandPx =
+        if (isPositiveEdge) {
+            anchorPx + (currentDimDp * safeDensity) + dragDeltaPx
+        } else {
+            anchorPx - (currentDimDp * safeDensity) + dragDeltaPx
         }
 
-        ButtonResizeHandle.TOP -> {
-            val bottomPx = (originalNormY * safeCanvasH) + (originalHeightDp * safeDensity) / 2f
-            val originalTopPx = bottomPx - (originalHeightDp * safeDensity)
-            val candTopPx = originalTopPx + dragDeltaPx
-            val maxAllowedHeightPx = bottomPx.coerceAtLeast(minPx)
-            val rawHeightPx = (bottomPx - candTopPx).coerceIn(minPx, maxAllowedHeightPx)
-            var candHeightDp = (rawHeightPx / safeDensity).roundToInt().toFloat().coerceIn(minSizeDp, safeCanvasH / safeDensity)
-            var isSnapped = false
-            if (abs(candHeightDp - originalWidthDp) <= aspectSnapThresholdDp) {
-                candHeightDp = originalWidthDp
-                isSnapped = true
-            }
-            val newHeightPx = (candHeightDp * safeDensity).coerceIn(minPx, maxAllowedHeightPx)
-            val newCenterYPx = bottomPx - newHeightPx / 2f
-            ButtonResizeResult(
-                newNormX = originalNormX,
-                newNormY = (newCenterYPx / safeCanvasH).coerceIn(0f, 1f),
-                newWidthDp = originalWidthDp,
-                newHeightDp = candHeightDp,
-                isAspectSnapped = isSnapped,
-            )
+    val rawDimPx =
+        if (isPositiveEdge) {
+            (rawCandPx - anchorPx).coerceIn(minPx, maxAllowedDimPx)
+        } else {
+            (anchorPx - rawCandPx).coerceIn(minPx, maxAllowedDimPx)
+        }
+
+    var candDimDp = (rawDimPx / safeDensity).roundToInt().toFloat().coerceIn(minSizeDp, maxAllowedDimPx / safeDensity)
+    var isSnapped = false
+
+    if (lockAspect) {
+        val maxAllowedOtherPx = otherCanvasSize
+        val targetOtherPx = candDimDp * safeDensity
+        if (targetOtherPx > maxAllowedOtherPx) {
+            candDimDp = (maxAllowedOtherPx / safeDensity).roundToInt().toFloat()
+        }
+    } else if (abs(candDimDp - otherDimDp) <= aspectSnapThresholdDp) {
+        val snapDimPx = otherDimDp * safeDensity
+        if (snapDimPx <= maxAllowedDimPx) {
+            candDimDp = otherDimDp
+            isSnapped = true
         }
     }
+
+    val newDimPx = (candDimDp * safeDensity).coerceIn(minPx, maxAllowedDimPx)
+    candDimDp = (newDimPx / safeDensity).roundToInt().toFloat()
+
+    val newCenterPx = if (isPositiveEdge) anchorPx + newDimPx / 2f else anchorPx - newDimPx / 2f
+    val newNorm = (newCenterPx / canvasSize).coerceIn(0f, 1f)
+
+    val newOtherDimDp = if (lockAspect) candDimDp else otherDimDp
+    val newOtherDimPx = newOtherDimDp * safeDensity
+    val newOtherNorm =
+        if (lockAspect) {
+            val otherCenterPx = (otherNormPos * otherCanvasSize).coerceIn(newOtherDimPx / 2f, otherCanvasSize - newOtherDimPx / 2f)
+            (otherCenterPx / otherCanvasSize).coerceIn(0f, 1f)
+        } else {
+            otherNormPos
+        }
+
+    return if (isXAxis) {
+        ButtonResizeResult(
+            newNormX = newNorm,
+            newNormY = newOtherNorm,
+            newWidthDp = candDimDp,
+            newHeightDp = newOtherDimDp,
+            isAspectSnapped = isSnapped,
+        )
+    } else {
+        ButtonResizeResult(
+            newNormX = newOtherNorm,
+            newNormY = newNorm,
+            newWidthDp = newOtherDimDp,
+            newHeightDp = candDimDp,
+            isAspectSnapped = isSnapped,
+        )
+    }
 }
+
+data class GamepadButtonResizeResult(
+    val newNormX: Float,
+    val newNormY: Float,
+    val newWidthDp: Float,
+    val newHeightDp: Float,
+)
 
 /**
  * Calculates button dimension updates when resizing via gamepad (R2 + D-pad).
  * Resizes symmetrically around the button's center in clean [stepDp] (default 1 dp) increments.
+ * Automatically clamps within screen/canvas boundaries and shifts center inward if expanding at edges.
  * [dirX] > 0 expands width, [dirX] < 0 shrinks width.
  * [dirY] < 0 (D-pad UP) expands height, [dirY] > 0 (D-pad DOWN) shrinks height.
  */
 fun calculateGamepadButtonResize(
+    currentNormX: Float,
+    currentNormY: Float,
     currentWidthDp: Float,
     currentHeightDp: Float,
     dirX: Int,
     dirY: Int,
     stepDp: Float = 1f,
-    maxScreenWDp: Float,
-    maxScreenHDp: Float,
+    canvasW: Float = MPE_CANVAS_WIDTH_PX,
+    canvasH: Float = MPE_CANVAS_HEIGHT_PX,
+    density: Float,
     minSizeDp: Float = MP_BUTTON_MIN_SIZE_DP,
-): Pair<Float, Float> {
+    lockAspect: Boolean = false,
+): GamepadButtonResizeResult {
+    val safeDensity = density.coerceAtLeast(0.001f)
+    val safeCanvasW = canvasW.coerceAtLeast(1f)
+    val safeCanvasH = canvasH.coerceAtLeast(1f)
+
     val widthDeltaDp = dirX * stepDp
     val heightDeltaDp = -dirY * stepDp
 
-    val targetW = (currentWidthDp + widthDeltaDp).roundToInt().toFloat()
-    val targetH = (currentHeightDp + heightDeltaDp).roundToInt().toFloat()
+    val targetW: Float
+    val targetH: Float
+    if (lockAspect) {
+        val aspectDelta = if (dirX != 0) widthDeltaDp else heightDeltaDp
+        val aspectTarget = (currentWidthDp + aspectDelta).roundToInt().toFloat()
+        targetW = aspectTarget
+        targetH = aspectTarget
+    } else {
+        targetW = (currentWidthDp + widthDeltaDp).roundToInt().toFloat()
+        targetH = (currentHeightDp + heightDeltaDp).roundToInt().toFloat()
+    }
 
-    val newWidthDp = targetW.coerceIn(minSizeDp, maxScreenWDp.coerceAtLeast(minSizeDp))
-    val newHeightDp = targetH.coerceIn(minSizeDp, maxScreenHDp.coerceAtLeast(minSizeDp))
+    val maxCanvasWDp = safeCanvasW / safeDensity
+    val maxCanvasHDp = safeCanvasH / safeDensity
+    val maxWDp = if (lockAspect) minOf(maxCanvasWDp, maxCanvasHDp) else maxCanvasWDp
+    val maxHDp = if (lockAspect) minOf(maxCanvasWDp, maxCanvasHDp) else maxCanvasHDp
 
-    return newWidthDp to newHeightDp
+    val clampedWDp = targetW.coerceIn(minSizeDp, maxWDp.coerceAtLeast(minSizeDp))
+    val clampedHDp = targetH.coerceIn(minSizeDp, maxHDp.coerceAtLeast(minSizeDp))
+
+    val halfWPx = (clampedWDp * safeDensity) / 2f
+    val halfHPx = (clampedHDp * safeDensity) / 2f
+
+    val centerXPx = (currentNormX * safeCanvasW).coerceIn(halfWPx, safeCanvasW - halfWPx)
+    val centerYPx = (currentNormY * safeCanvasH).coerceIn(halfHPx, safeCanvasH - halfHPx)
+
+    val newNormX = (centerXPx / safeCanvasW).coerceIn(0f, 1f)
+    val newNormY = (centerYPx / safeCanvasH).coerceIn(0f, 1f)
+
+    return GamepadButtonResizeResult(
+        newNormX = newNormX,
+        newNormY = newNormY,
+        newWidthDp = clampedWDp,
+        newHeightDp = clampedHDp,
+    )
 }
 
 /**

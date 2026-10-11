@@ -54,6 +54,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.math.MPE_CANVAS_HEIGHT_PX
+import com.stormpanda.megingiard.math.MPE_CANVAS_WIDTH_PX
+import com.stormpanda.megingiard.math.MPE_FINE_STEP_PX
+import com.stormpanda.megingiard.math.MPE_NORMAL_STEP_PX
+import com.stormpanda.megingiard.math.MPE_RESIZE_FINE_STEP_DP
+import com.stormpanda.megingiard.math.MPE_RESIZE_NORMAL_STEP_DP
 import com.stormpanda.megingiard.math.calculateGamepadButtonMove
 import com.stormpanda.megingiard.math.calculateGamepadButtonResize
 import com.stormpanda.megingiard.math.formatButtonDimensionDp
@@ -86,13 +92,6 @@ import java.util.UUID
 import kotlin.math.roundToInt
 
 private const val TAG = "PadButtonEditDialog"
-
-private const val PBD_NORMAL_STEP_PX = 10f
-private const val PBD_FINE_STEP_PX = 1f
-private const val PBD_CANVAS_WIDTH_PX = 1240f
-private const val PBD_CANVAS_HEIGHT_PX = 1080f
-private const val PBD_RESIZE_NORMAL_STEP_DP = 5f
-private const val PBD_RESIZE_FINE_STEP_DP = 1f
 
 private val PBD_COLOR_PREVIEW_SIZE = 36.dp
 private val PBD_CORNER_RADIUS_DP = 6.dp
@@ -261,6 +260,9 @@ internal fun EditButtonSubPageContent(
         }
         if (newAction is PadAction.TrackpointMove) {
             buttonShape = ButtonShape.CIRCLE
+            val tpSize = maxOf(widthDp, heightDp, 120f)
+            widthDp = tpSize
+            heightDp = tpSize
             return
         }
     }
@@ -289,7 +291,6 @@ internal fun EditButtonSubPageContent(
         onDispose {
             activeRepeatJob?.cancel()
             MacroPadState.setAdjustingButtonViaGamepad(false)
-            MacroPadState.clearPreviewLayout()
         }
     }
 
@@ -298,7 +299,7 @@ internal fun EditButtonSubPageContent(
         dy: Int,
     ) {
         val currentLayout = MacroPadState.activeLayout.value ?: return
-        val stepMultiplier = if (isL2HeldState.value) PBD_FINE_STEP_PX else PBD_NORMAL_STEP_PX
+        val stepMultiplier = if (isL2HeldState.value) MPE_FINE_STEP_PX else MPE_NORMAL_STEP_PX
         val (newX, newY) =
             calculateGamepadButtonMove(
                 currentNormX = posX,
@@ -308,8 +309,8 @@ internal fun EditButtonSubPageContent(
                 stepMultiplierPx = stepMultiplier,
                 movingButtonId = stableButtonId,
                 otherButtons = currentLayout.buttons,
-                canvasW = PBD_CANVAS_WIDTH_PX,
-                canvasH = PBD_CANVAS_HEIGHT_PX,
+                canvasW = MPE_CANVAS_WIDTH_PX,
+                canvasH = MPE_CANVAS_HEIGHT_PX,
                 alignmentSnappingEnabled = buttonAlignmentSnapping,
             )
         posX = newX
@@ -320,19 +321,26 @@ internal fun EditButtonSubPageContent(
         dx: Int,
         dy: Int,
     ) {
-        val stepDp = if (isL2HeldState.value) PBD_RESIZE_FINE_STEP_DP else PBD_RESIZE_NORMAL_STEP_DP
-        val (newW, newH) =
+        val stepDp = if (isL2HeldState.value) MPE_RESIZE_FINE_STEP_DP else MPE_RESIZE_NORMAL_STEP_DP
+        val isTrackpoint = action is PadAction.TrackpointMove
+        val res =
             calculateGamepadButtonResize(
+                currentNormX = posX,
+                currentNormY = posY,
                 currentWidthDp = widthDp,
                 currentHeightDp = heightDp,
                 dirX = dx,
                 dirY = dy,
                 stepDp = stepDp,
-                maxScreenWDp = PBD_CANVAS_WIDTH_PX / density,
-                maxScreenHDp = PBD_CANVAS_HEIGHT_PX / density,
+                canvasW = MPE_CANVAS_WIDTH_PX,
+                canvasH = MPE_CANVAS_HEIGHT_PX,
+                density = density,
+                lockAspect = isTrackpoint,
             )
-        widthDp = newW
-        heightDp = newH
+        posX = res.newNormX
+        posY = res.newNormY
+        widthDp = res.newWidthDp
+        heightDp = res.newHeightDp
     }
 
     fun dispatchAdjust(
@@ -615,9 +623,14 @@ internal fun EditButtonSubPageContent(
     ) { isFocused ->
         GamepadCardRow(
             title = stringResource(R.string.macropad_editor_adjust_position_size),
-            description = "${formatButtonDimensionDp(
-                widthDp,
-            )}×${formatButtonDimensionDp(heightDp)} • X: ${(posX * 100).roundToInt()}% Y: ${(posY * 100).roundToInt()}%",
+            description =
+                stringResource(
+                    R.string.macropad_editor_adjust_position_size_value,
+                    formatButtonDimensionDp(widthDp),
+                    formatButtonDimensionDp(heightDp),
+                    (posX * 100).roundToInt(),
+                    (posY * 100).roundToInt(),
+                ),
             icon = Icons.Rounded.OpenWith,
             trailingContent = {
                 if (isAdjusting) {

@@ -390,9 +390,6 @@ class MacroPadHitTestEngine(
     }
 
     companion object {
-        /** Raw dp value of MP_BUTTON_UNIT_DP (keep in sync with MacroPadButton). */
-        const val MP_BUTTON_UNIT_DP_VALUE = 60f
-
         fun isDeviceDisabled(
             action: PadAction,
             profile: PadProfile,

@@ -77,8 +77,6 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_shape_circle">Circle</string>
     <string name="macropad_editor_shape_square">Square</string>
     <string name="macropad_editor_shape_icon_only">Icon Only</string>
-    <string name="macropad_editor_button_size">Button size</string>
-    <string name="macropad_button_size_1x1">1×1</string>
     <string name="macropad_modifier_none">—</string>
     <string name="macropad_picker_label_key">Key</string>
     <string name="macropad_picker_label_mod_1">Modifier 1</string>
@@ -87,19 +85,11 @@ Open Settings to create a layout.</string>
     <string name="macropad_picker_label_extra_1">Extra 1</string>
     <string name="macropad_picker_label_extra_2">Extra 2</string>
     <string name="macropad_picker_label_extra_3">Extra 3</string>
-    <string name="macropad_button_size_2x1">2×1</string>
-    <string name="macropad_button_size_1x2">1×2</string>
-    <string name="macropad_button_size_2x2">2×2</string>
-    <string name="macropad_trackpoint_size_small">Small</string>
-    <string name="macropad_trackpoint_size_medium">Medium</string>
-    <string name="macropad_trackpoint_size_large">Large</string>
     <string name="macropad_trackpoint_mode_title">Tracking Mode</string>
     <string name="macropad_trackpoint_mode_mouse">Relative Mouse</string>
     <string name="macropad_trackpoint_mode_mouse_desc">Moves the cursor via relative mouse motion events</string>
     <string name="macropad_trackpoint_mode_touch">Virtual Touch</string>
     <string name="macropad_trackpoint_mode_touch_desc">Translates swipes into absolute screen touches</string>
-    <string name="macropad_trackpoint_size_title">Trackpoint Size</string>
-    <string name="macropad_trackpoint_size_desc">Controls the interactive circle diameter</string>
     <string name="macropad_trackpoint_sensitivity_title">Pointer Sensitivity</string>
     <string name="macropad_trackpoint_sensitivity_desc">Multiplier for cursor and swipe movement speed</string>
     <string name="macropad_fullscreen_mouse_sensitivity_title">Mouse Sensitivity</string>
@@ -1238,7 +1228,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_edit_button_positions">Position &amp; Size Buttons</string>
     <string name="macropad_editor_edit_button_positions_card_desc">Move and resize buttons via touch or D-pad precision</string>
     <string name="macropad_editor_adjust_position_size">Adjust Position &amp; Size</string>
-    <string name="macropad_editor_adjust_position_size_desc">Move and resize this button on canvas or with D-pad</string>
+    <string name="macropad_editor_adjust_position_size_value">%1$s×%2$s • X: %3$d%% Y: %4$d%%</string>
     <string name="macropad_editor_move_buttons_info">Drag or resize buttons directly on the bottom screen, or select a button below to move it with the D-pad (hold R2 to resize, hold L2 for fine 1px steps).</string>
     <string name="macropad_editor_manage_buttons">Manage Buttons</string>
     <string name="macropad_editor_reorder_buttons">Reorder Buttons</string>
@@ -1275,7 +1265,6 @@ Open Settings to create a layout.</string>
 
     <!-- Pad Button Edit Dialog -->
     <string name="macropad_btn_shape_desc">Geometry of the interactive button cap</string>
-    <string name="macropad_btn_size_desc">Grid width and height footprint</string>
     <string name="macropad_btn_haptic_desc">Vibration feedback triggered on tap</string>
     <string name="macropad_btn_haptic_duration_desc">Duration in milliseconds</string>
     <string name="macropad_btn_haptic_amplitude_desc">Vibration motor power percentage</string>
