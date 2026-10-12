@@ -57,6 +57,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,17 +65,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
@@ -191,6 +187,7 @@ fun FocusLibraryScreen(
     onOptionsMenuExpandedChange: (Boolean) -> Unit = {},
     selectedIndex: Int = 0,
     onToggleHidden: (InstalledAppInfo) -> Unit = {},
+    onEditArtwork: (InstalledAppInfo) -> Unit = {},
     onOpenAppInfo: (InstalledAppInfo) -> Unit = {},
     onUninstallApp: (InstalledAppInfo) -> Unit = {},
     onChangeCore: (CustomRomFolder) -> Unit = {},
@@ -408,38 +405,46 @@ fun FocusLibraryScreen(
                                         val spreadPx = FLS_SHADOW_SPREAD.toPx()
                                         val shadowColorArgb = appColors.accent.copy(alpha = FLS_SHADOW_ALPHA).toArgb()
 
-                                        val innerPath =
-                                            Path().apply {
-                                                addRoundRect(
-                                                    RoundRect(
-                                                        rect = Rect(0f, 0f, size.width, size.height),
-                                                        cornerRadius = CornerRadius(cornerRadiusPx, cornerRadiusPx),
-                                                    ),
-                                                )
-                                            }
-
-                                        val nativePaint =
+                                        // The overlay is drawn ABOVE the grid, so the glow must never paint
+                                        // inside the card bounds. OUTER blur renders only the halo outside the
+                                        // shape, and a solid stroke band covers the spread ring — no stencil clip.
+                                        val glowPaint =
                                             NativePaint().apply {
                                                 isAntiAlias = true
                                                 color = shadowColorArgb
                                                 style = NativePaint.Style.FILL
-                                                maskFilter = BlurMaskFilter(blurRadiusPx, BlurMaskFilter.Blur.NORMAL)
+                                                maskFilter = BlurMaskFilter(blurRadiusPx, BlurMaskFilter.Blur.OUTER)
                                             }
+                                        val spreadBandPaint =
+                                            NativePaint().apply {
+                                                isAntiAlias = true
+                                                color = shadowColorArgb
+                                                style = NativePaint.Style.STROKE
+                                                strokeWidth = spreadPx
+                                            }
+                                        val halfSpreadPx = spreadPx / 2f
 
                                         onDrawBehind {
                                             if (borderAlpha > 0f) {
-                                                clipPath(innerPath, clipOp = ClipOp.Difference) {
-                                                    drawIntoCanvas { canvas ->
-                                                        canvas.nativeCanvas.drawRoundRect(
-                                                            -spreadPx,
-                                                            -spreadPx,
-                                                            size.width + spreadPx,
-                                                            size.height + spreadPx,
-                                                            cornerRadiusPx + spreadPx,
-                                                            cornerRadiusPx + spreadPx,
-                                                            nativePaint,
-                                                        )
-                                                    }
+                                                drawIntoCanvas { canvas ->
+                                                    canvas.nativeCanvas.drawRoundRect(
+                                                        -spreadPx,
+                                                        -spreadPx,
+                                                        size.width + spreadPx,
+                                                        size.height + spreadPx,
+                                                        cornerRadiusPx + spreadPx,
+                                                        cornerRadiusPx + spreadPx,
+                                                        glowPaint,
+                                                    )
+                                                    canvas.nativeCanvas.drawRoundRect(
+                                                        -halfSpreadPx,
+                                                        -halfSpreadPx,
+                                                        size.width + halfSpreadPx,
+                                                        size.height + halfSpreadPx,
+                                                        cornerRadiusPx + halfSpreadPx,
+                                                        cornerRadiusPx + halfSpreadPx,
+                                                        spreadBandPaint,
+                                                    )
                                                 }
                                             }
                                         }
@@ -567,10 +572,28 @@ fun FocusLibraryScreen(
                         remember(currentRomFolder) {
                             currentRomFolder?.systemId == SYSTEM_ID_SWITCH
                         }
+                    val currentOnEditArtwork by rememberUpdatedState(onEditArtwork)
                     val actions =
-                        remember(focusedApp, isCurrentHidden, romFolders, isRetroArchSystem, isSwitchSystem, currentRomFolder) {
+                        remember(
+                            focusedApp,
+                            isCurrentHidden,
+                            romFolders,
+                            isRetroArchSystem,
+                            isSwitchSystem,
+                            currentRomFolder,
+                        ) {
                             buildList {
                                 if (focusedApp != null) {
+                                    add(
+                                        ExpandableActionItem(
+                                            label = context.getString(R.string.gamefocus_option_edit),
+                                            iconSymbol = "palette",
+                                            onClick = {
+                                                currentOnEditArtwork(focusedApp)
+                                                onOptionsMenuExpandedChange(false)
+                                            },
+                                        ),
+                                    )
                                     add(
                                         ExpandableActionItem(
                                             label =
@@ -659,7 +682,7 @@ fun FocusLibraryScreen(
                         }
                     val itemActionsCount =
                         if (focusedApp != null) {
-                            if (!focusedApp.isRom) 3 else 1
+                            if (!focusedApp.isRom) LIBRARY_APP_ACTIONS_COUNT else LIBRARY_ROM_ACTIONS_COUNT
                         } else {
                             0
                         }
@@ -940,7 +963,7 @@ private fun LibraryGridItem(
     modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
-    val iconBitmap = rememberIconBitmap(appInfo)
+    val iconBitmap = rememberLibraryIconBitmap(appInfo)
 
     val currentPalette = rememberAppPalette(appInfo, enabled = isFocused)
     val targetCardBg =

@@ -7,6 +7,8 @@ import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.provider.Settings
 import android.view.Display
@@ -32,6 +34,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 
@@ -42,8 +45,11 @@ private const val FILE_LAST_USED = "gamefocus_last_used.txt"
 private const val FILE_SCRAPED_APPS = "gamefocus_scraped_apps.txt"
 private const val FILE_APP_NAMES = "gamefocus_app_names.json"
 private const val FILE_COVER_IMAGE_IDS = "gamefocus_cover_image_ids.json"
+private const val FILE_LIBRARY_ICON_IDS = "gamefocus_library_icon_ids.json"
 internal const val DIR_COVERS = "gamefocus_covers"
 internal const val DIR_LOGOS = "gamefocus_logos"
+internal const val DIR_LIBRARY_ICONS = "gamefocus_library_icons"
+internal const val MAX_LIBRARY_ICON_DIMENSION_PX = 256
 private const val COVER_FILE_EXTENSION = ".png"
 private const val IMAGE_TYPE_GRIDS = "grids"
 private const val IMAGE_TYPE_LOGOS = "logos"
@@ -66,6 +72,7 @@ object InstalledAppsManager {
     /** Custom display names keyed by package name (Android apps and `rom.*` pseudo packages). */
     private val customAppNames = mutableMapOf<String, String>()
     private val coverImageIds = mutableMapOf<String, Int>()
+    private val libraryIconRefs = mutableMapOf<String, LibraryIconRef>()
 
     private val installedAndroidAppsFlow = MutableStateFlow<List<InstalledAppInfo>>(emptyList())
     val installedApps: StateFlow<List<InstalledAppInfo>> =
@@ -98,6 +105,7 @@ object InstalledAppsManager {
         synchronized(scrapedPackages) { scrapedPackages.clear() }
         synchronized(customAppNames) { customAppNames.clear() }
         synchronized(coverImageIds) { coverImageIds.clear() }
+        synchronized(libraryIconRefs) { libraryIconRefs.clear() }
         isScrapedPackagesLoaded = false
         isSettingsObserverRegistered = false
     }
@@ -173,6 +181,59 @@ object InstalledAppsManager {
         persistScope.launch { saveCoverImageIds(context) }
     }
 
+    private fun loadLibraryIconIds(context: Context) {
+        val file = File(context.filesDir, FILE_LIBRARY_ICON_IDS)
+        if (!file.exists()) return
+        val atomicFile = AtomicFile(file)
+        try {
+            val text = atomicFile.readFully().toString(Charsets.UTF_8)
+            val map = LibraryIconRef.parseMap(text)
+            synchronized(libraryIconRefs) {
+                libraryIconRefs.clear()
+                libraryIconRefs.putAll(map)
+            }
+            AppLog.d(TAG, "Loaded ${map.size} library icon refs from disk")
+        } catch (e: Exception) {
+            AppLog.w(TAG, "Failed to load $FILE_LIBRARY_ICON_IDS: ${e.message}")
+        }
+    }
+
+    private fun saveLibraryIconIds(context: Context) {
+        synchronized(persistLock) {
+            val content = synchronized(libraryIconRefs) { libraryIconRefs.toMap() }
+            val file = File(context.filesDir, FILE_LIBRARY_ICON_IDS)
+            val atomicFile = AtomicFile(file)
+            var fos: FileOutputStream? = null
+            try {
+                val text = LibraryIconRef.serializeMap(content)
+                fos = atomicFile.startWrite()
+                fos.write(text.toByteArray(Charsets.UTF_8))
+                atomicFile.finishWrite(fos)
+                AppLog.d(TAG, "Saved library icon refs to disk")
+            } catch (e: Exception) {
+                AppLog.w(TAG, "Failed to save $FILE_LIBRARY_ICON_IDS: ${e.message}")
+                if (fos != null) atomicFile.failWrite(fos)
+            }
+        }
+    }
+
+    fun getLibraryIconRef(packageName: String): LibraryIconRef? = synchronized(libraryIconRefs) { libraryIconRefs[packageName] }
+
+    fun setLibraryIconRef(
+        context: Context,
+        packageName: String,
+        ref: LibraryIconRef?,
+    ) {
+        synchronized(libraryIconRefs) {
+            if (ref != null) {
+                libraryIconRefs[packageName] = ref
+            } else {
+                libraryIconRefs.remove(packageName)
+            }
+        }
+        persistScope.launch { saveLibraryIconIds(context) }
+    }
+
     /** Returns the user-defined display name for [packageName], or null if none is set. */
     internal fun getCustomLabel(packageName: String): String? = synchronized(customAppNames) { customAppNames[packageName] }
 
@@ -204,6 +265,7 @@ object InstalledAppsManager {
     internal fun reloadPersistedMetadataForTesting(context: Context) {
         loadCustomAppNames(context)
         loadCoverImageIds(context)
+        loadLibraryIconIds(context)
     }
 
     @VisibleForTesting
@@ -366,9 +428,10 @@ object InstalledAppsManager {
     fun loadInstalledApps(context: Context) {
         SwitchEmulators.invalidateCache()
         scope.launch {
-            // Custom names and cover image IDs must be loaded before the ROM scan, which reads both.
+            // Custom names, cover IDs, and library icon IDs must be loaded before the ROM scan, which reads them.
             loadCustomAppNames(context)
             loadCoverImageIds(context)
+            loadLibraryIconIds(context)
 
             RomManager.loadRomFolders(context)
             RomManager.reloadRomApps(context)
@@ -435,6 +498,12 @@ object InstalledAppsManager {
                         val coverLastModified = if (hasCover) cachedCoverFile.lastModified() else 0L
                         val coverImageId = if (hasCover) getCoverImageId(packageName) else null
 
+                        val cachedLibraryIconFile = libraryIconFileFor(context, packageName)
+                        val hasLibraryIcon = cachedLibraryIconFile.exists() && cachedLibraryIconFile.length() > 0
+                        val libraryIconPath = if (hasLibraryIcon) cachedLibraryIconFile.absolutePath else null
+                        val libraryIconLastModified = if (hasLibraryIcon) cachedLibraryIconFile.lastModified() else 0L
+                        val libraryIconRef = if (hasLibraryIcon) getLibraryIconRef(packageName) else null
+
                         InstalledAppInfo(
                             packageName = packageName,
                             activityName = activityName,
@@ -444,6 +513,10 @@ object InstalledAppsManager {
                             coverLastModified = coverLastModified,
                             coverImageId = coverImageId,
                             defaultLabel = defaultLabel,
+                            libraryIconPath = libraryIconPath,
+                            libraryIconImageId = libraryIconRef?.id,
+                            libraryIconType = libraryIconRef?.type,
+                            libraryIconLastModified = libraryIconLastModified,
                         )
                     }.sortedBy { it.label.lowercase() }
 
@@ -467,6 +540,24 @@ object InstalledAppsManager {
         }
         installedAndroidAppsFlow.update { it.withUpdatedCover(packageName, coverPath, coverImageId) }
         AppLog.i(TAG, "Updated in-memory cover path for $packageName to $coverPath (imageId: $coverImageId)")
+    }
+
+    fun updateAppLibraryIcon(
+        packageName: String,
+        iconPath: String?,
+        imageId: Int? = null,
+        type: String? = null,
+        lastModified: Long = System.currentTimeMillis(),
+    ) {
+        if (packageName.startsWith(ROM_PACKAGE_PREFIX)) {
+            RomManager.updateRomLibraryIcon(packageName, iconPath, imageId, type, lastModified)
+            return
+        }
+        installedAndroidAppsFlow.update { it.withUpdatedLibraryIcon(packageName, iconPath, imageId, type, lastModified) }
+        AppLog.i(
+            TAG,
+            "Updated in-memory library icon path for $packageName to $iconPath (imageId: $imageId, type: $type, lastModified: $lastModified)",
+        )
     }
 
     /**
@@ -593,6 +684,130 @@ object InstalledAppsManager {
         updateAppCover(packageName, null, null)
         markAppAsScraped(context, packageName)
         AppLog.i(TAG, "Reverted $packageName to default icon")
+    }
+
+    /**
+     * Normalizes downloaded icon [bytes] for disk storage: unpacks Windows ICO containers via
+     * [IcoImageExtractor] and downsamples images larger than [maxDimensionPx] to PNG.
+     *
+     * @return bytes safe to persist, or `null` if the payload cannot be decoded as an image
+     *   (callers must not write anything to disk in that case).
+     */
+    internal fun downsampleIconBytes(
+        bytes: ByteArray,
+        maxDimensionPx: Int = MAX_LIBRARY_ICON_DIMENSION_PX,
+    ): ByteArray? {
+        val inputBytes =
+            if (IcoImageExtractor.isIco(bytes)) {
+                IcoImageExtractor.extractBestImage(bytes) ?: bytes
+            } else {
+                bytes
+            }
+
+        return try {
+            val boundsOptions = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeByteArray(inputBytes, 0, inputBytes.size, boundsOptions)
+            val rawW = boundsOptions.outWidth
+            val rawH = boundsOptions.outHeight
+            if (rawW <= 0 || rawH <= 0) {
+                AppLog.w(TAG, "downsampleIconBytes: undecodable image bytes (${bytes.size} bytes)")
+                return null
+            }
+
+            if (rawW <= maxDimensionPx && rawH <= maxDimensionPx) {
+                return inputBytes
+            }
+
+            var inSampleSize = 1
+            val halfH = rawH / 2
+            val halfW = rawW / 2
+            while ((halfH / inSampleSize) >= maxDimensionPx && (halfW / inSampleSize) >= maxDimensionPx) {
+                inSampleSize *= 2
+            }
+
+            val decodeOptions =
+                BitmapFactory.Options().apply {
+                    this.inSampleSize = inSampleSize
+                    inPreferredConfig = Bitmap.Config.ARGB_8888
+                }
+            val decoded = BitmapFactory.decodeByteArray(inputBytes, 0, inputBytes.size, decodeOptions) ?: return null
+
+            val finalBitmap =
+                if (decoded.width > maxDimensionPx || decoded.height > maxDimensionPx) {
+                    val scale = minOf(maxDimensionPx.toFloat() / decoded.width, maxDimensionPx.toFloat() / decoded.height)
+                    val scaledW = (decoded.width * scale).toInt().coerceAtLeast(1)
+                    val scaledH = (decoded.height * scale).toInt().coerceAtLeast(1)
+                    val scaled = Bitmap.createScaledBitmap(decoded, scaledW, scaledH, true)
+                    if (scaled != decoded) {
+                        decoded.recycle()
+                    }
+                    scaled
+                } else {
+                    decoded
+                }
+
+            val out = ByteArrayOutputStream()
+            finalBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+            finalBitmap.recycle()
+            out.toByteArray()
+        } catch (e: Exception) {
+            AppLog.w(TAG, "Failed to downsample icon bytes: ${e.message}")
+            null
+        }
+    }
+
+    /** Location of the cached library icon image for [packageName]. */
+    fun libraryIconFileFor(
+        context: Context,
+        packageName: String,
+    ): File = File(File(context.cacheDir, DIR_LIBRARY_ICONS), "$packageName$COVER_FILE_EXTENSION")
+
+    /**
+     * Stores user-selected library icon artwork for [packageName], records its SteamGridDB [imageId] and [type],
+     * and publishes the new icon path to the catalog. Downsamples oversized icons (greater than [MAX_LIBRARY_ICON_DIMENSION_PX])
+     * before saving to disk.
+     */
+    suspend fun applyCustomLibraryIcon(
+        context: Context,
+        packageName: String,
+        bytes: ByteArray,
+        imageId: Int,
+        type: String,
+        onIconWritten: () -> Unit = {},
+    ): String? =
+        withContext(Dispatchers.IO) {
+            val file = libraryIconFileFor(context, packageName)
+            val downsampledBytes = downsampleIconBytes(bytes)
+            if (downsampledBytes == null) {
+                AppLog.w(TAG, "Cannot apply custom library icon for $packageName: image data could not be decoded")
+                return@withContext null
+            }
+            if (!writeCoverAtomically(file, downsampledBytes)) return@withContext null
+            val lastModified = file.lastModified()
+            onIconWritten()
+            setLibraryIconRef(context, packageName, LibraryIconRef(id = imageId, type = type))
+            updateAppLibraryIcon(packageName, file.absolutePath, imageId, type, lastModified)
+            AppLog.i(TAG, "Applied custom library icon for $packageName (imageId=$imageId, type=$type)")
+            file.absolutePath
+        }
+
+    /**
+     * Deletes any cached library icon for [packageName], clears its image reference, and restores
+     * the default library icon in the catalog.
+     */
+    suspend fun revertToDefaultLibraryIcon(
+        context: Context,
+        packageName: String,
+        onIconRemoved: () -> Unit = {},
+    ) = withContext(Dispatchers.IO) {
+        val file = libraryIconFileFor(context, packageName)
+        if (file.exists() && !file.delete()) {
+            AppLog.w(TAG, "Failed to delete library icon ${file.absolutePath}")
+        }
+        onIconRemoved()
+        setLibraryIconRef(context, packageName, null)
+        updateAppLibraryIcon(packageName, null, null, null, 0L)
+        AppLog.i(TAG, "Reverted $packageName to default library icon")
     }
 
     private var isSettingsObserverRegistered = false

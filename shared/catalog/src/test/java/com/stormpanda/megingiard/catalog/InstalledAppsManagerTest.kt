@@ -2,6 +2,8 @@ package com.stormpanda.megingiard.catalog
 
 import android.content.Context
 import android.content.pm.ApplicationInfo
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -16,6 +18,9 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
+import java.io.ByteArrayOutputStream
+import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
@@ -60,6 +65,18 @@ class InstalledAppsManagerTest {
         assertEquals(99, updatedList[0].coverImageId)
         assertNull(updatedList[1].coverPath)
         assertNull(updatedList[1].coverImageId)
+
+        val withIcon = app.withLibraryIcon("/tmp/icon.png", 777, "icons", 54321L)
+        assertEquals("/tmp/icon.png", withIcon.libraryIconPath)
+        assertEquals(777, withIcon.libraryIconImageId)
+        assertEquals("icons", withIcon.libraryIconType)
+        assertEquals(54321L, withIcon.libraryIconLastModified)
+
+        val updatedIconList = list.withUpdatedLibraryIcon("com.example.game", "/tmp/new_icon.png", 888, "logos")
+        assertEquals("/tmp/new_icon.png", updatedIconList[0].libraryIconPath)
+        assertEquals(888, updatedIconList[0].libraryIconImageId)
+        assertEquals("logos", updatedIconList[0].libraryIconType)
+        assertNull(updatedIconList[1].libraryIconPath)
     }
 
     @Test
@@ -227,6 +244,82 @@ class InstalledAppsManagerTest {
             val reverted = InstalledAppsManager.installedAndroidAppsForTesting().single()
             assertNull(reverted.coverPath)
             assertNull(reverted.coverImageId)
+        }
+
+    @Test
+    fun testApplyAndRevertCustomLibraryIcon() =
+        runTest {
+            val context: Context = RuntimeEnvironment.getApplication()
+            InstalledAppsManager.setInstalledAndroidAppsForTesting(listOf(seedApp()))
+            val testBmp = Bitmap.createBitmap(32, 32, Bitmap.Config.ARGB_8888)
+            val stream = ByteArrayOutputStream()
+            testBmp.compress(Bitmap.CompressFormat.PNG, 100, stream)
+            val bytes = stream.toByteArray()
+            var writtenCallbacks = 0
+
+            val path = InstalledAppsManager.applyCustomLibraryIcon(context, PKG_GAME, bytes, 777, "icons") { writtenCallbacks++ }
+
+            val file = InstalledAppsManager.libraryIconFileFor(context, PKG_GAME)
+            assertEquals(file.absolutePath, path)
+            assertTrue(file.exists())
+            assertTrue(bytes.contentEquals(file.readBytes()))
+            assertEquals(1, writtenCallbacks)
+            val iconRef = InstalledAppsManager.getLibraryIconRef(PKG_GAME)
+            assertNotNull(iconRef)
+            assertEquals(777, iconRef?.id)
+            assertEquals("icons", iconRef?.type)
+            val applied = InstalledAppsManager.installedAndroidAppsForTesting().single()
+            assertEquals(file.absolutePath, applied.libraryIconPath)
+            assertEquals(777, applied.libraryIconImageId)
+            assertEquals("icons", applied.libraryIconType)
+            assertEquals(file.lastModified(), applied.libraryIconLastModified)
+
+            var removedCallbacks = 0
+            InstalledAppsManager.revertToDefaultLibraryIcon(context, PKG_GAME) { removedCallbacks++ }
+
+            assertFalse(file.exists())
+            assertEquals(1, removedCallbacks)
+            assertNull(InstalledAppsManager.getLibraryIconRef(PKG_GAME))
+            val reverted = InstalledAppsManager.installedAndroidAppsForTesting().single()
+            assertNull(reverted.libraryIconPath)
+            assertNull(reverted.libraryIconImageId)
+            assertNull(reverted.libraryIconType)
+            assertEquals(0L, reverted.libraryIconLastModified)
+        }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun testApplyCustomLibraryIconWithUndecodableBytesReturnsNull() =
+        runTest {
+            val context: Context = RuntimeEnvironment.getApplication()
+            InstalledAppsManager.setInstalledAndroidAppsForTesting(listOf(seedApp()))
+            val corruptBytes = byteArrayOf(1, 2, 3, 4, 5)
+
+            val path = InstalledAppsManager.applyCustomLibraryIcon(context, PKG_GAME, corruptBytes, 999, "icons")
+            assertNull(path)
+            val file = InstalledAppsManager.libraryIconFileFor(context, PKG_GAME)
+            assertFalse(file.exists())
+        }
+
+    @Test
+    fun testApplyCustomLibraryIconDownsamplesOversizedImage() =
+        runTest {
+            val context: Context = RuntimeEnvironment.getApplication()
+            InstalledAppsManager.setInstalledAndroidAppsForTesting(listOf(seedApp()))
+            val largeBitmap = Bitmap.createBitmap(512, 512, Bitmap.Config.ARGB_8888)
+            val stream = ByteArrayOutputStream()
+            largeBitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+            val largeBytes = stream.toByteArray()
+
+            val path = InstalledAppsManager.applyCustomLibraryIcon(context, PKG_GAME, largeBytes, 888, "logos")
+            assertNotNull(path)
+            val file = File(path!!)
+            assertTrue(file.exists())
+
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(file.absolutePath, bounds)
+            assertTrue(bounds.outWidth <= 256)
+            assertTrue(bounds.outHeight <= 256)
         }
 
     @Test

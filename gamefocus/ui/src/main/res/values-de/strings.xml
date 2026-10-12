@@ -87,7 +87,8 @@
 
     <string name="gamefocus_edit_overlay_title">Spiel bearbeiten</string>
     <string name="gamefocus_cat_game_info">Spiel-Info</string>
-    <string name="gamefocus_cat_scraping">Cover-Suche</string>
+    <string name="gamefocus_cat_scraping">Galerie-Cover</string>
+    <string name="gamefocus_cat_library_icon">Bibliotheks-Symbol</string>
     <string name="gamefocus_field_display_name_title">Anzeigename</string>
     <string name="gamefocus_field_display_name_desc">Passe an, wie der Titel in der Launcher-Galerie und -Bibliothek dargestellt wird.</string>
     <string name="gamefocus_field_display_name_placeholder">Anzeigenamen eingeben</string>
@@ -101,10 +102,18 @@
     <string name="gamefocus_toggle_use_rom_icon_title">System-Symbol verwenden</string>
     <string name="gamefocus_toggle_use_app_icon_desc">Das native Android-App-Symbol anstelle von heruntergeladenen Covern anzeigen.</string>
     <string name="gamefocus_toggle_use_rom_icon_desc">Das System-Emulator-Logo anstelle von heruntergeladenen Covern anzeigen.</string>
+    <string name="gamefocus_toggle_use_default_icon_title">Standard-Symbol verwenden</string>
+    <string name="gamefocus_toggle_use_default_icon_desc">Zeigt das Standard-App-Symbol oder System-Logo in der Bibliothek an.</string>
+    <string name="gamefocus_scraping_using_default_icon_notice">Standard-Bibliotheks-Symbol ist aktiv. Schalte die Option oben aus, um Symbole zu suchen und anzuwenden.</string>
+    <string name="gamefocus_scraping_type_choice_title">Symbol-Typ</string>
+    <string name="gamefocus_scraping_type_choice_desc">Wähle zwischen quadratischen Symbolen oder transparenten Logos von SteamGridDB.</string>
+    <string name="gamefocus_scraping_type_icons">Symbole (Icons)</string>
+    <string name="gamefocus_scraping_type_logos">Logos</string>
     <string name="gamefocus_scraping_images_section">Verfügbare Cover</string>
     <string name="gamefocus_scraping_using_app_icon_notice">Natives App-Symbol ist aktiv. Schalte die Option oben aus, um Cover zu suchen und anzuwenden.</string>
     <string name="gamefocus_scraping_using_rom_icon_notice">System-Emulator-Symbol ist aktiv. Schalte die Option oben aus, um Cover zu suchen und anzuwenden.</string>
     <string name="gamefocus_scraping_applied_badge_cd">Ausgewähltes Cover</string>
+    <string name="gamefocus_scraping_no_icons_found">Keine Symbole oder Logos für „%1$s“ auf SteamGridDB gefunden.</string>
     <string name="gamefocus_action_reset_display_name_title">Auf Standardnamen zurücksetzen</string>
     <string name="gamefocus_action_reset_display_name_desc">Ursprünglichen Titel wiederherstellen: %1$s</string>
 </resources>

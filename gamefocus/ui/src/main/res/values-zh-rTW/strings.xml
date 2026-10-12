@@ -87,7 +87,8 @@
 
     <string name="gamefocus_edit_overlay_title">編輯遊戲</string>
     <string name="gamefocus_cat_game_info">遊戲資訊</string>
-    <string name="gamefocus_cat_scraping">封面擷取</string>
+    <string name="gamefocus_cat_scraping">圖庫封面</string>
+    <string name="gamefocus_cat_library_icon">遊戲庫圖示</string>
     <string name="gamefocus_field_display_name_title">顯示名稱</string>
     <string name="gamefocus_field_display_name_desc">自訂遊戲名稱在啟動器圖庫與遊戲庫中的顯示方式。</string>
     <string name="gamefocus_field_display_name_placeholder">輸入顯示名稱</string>
@@ -101,10 +102,18 @@
     <string name="gamefocus_toggle_use_rom_icon_title">使用系統圖示</string>
     <string name="gamefocus_toggle_use_app_icon_desc">顯示原生 Android 應用程式圖示，而非已擷取的封面圖。</string>
     <string name="gamefocus_toggle_use_rom_icon_desc">顯示系統模擬器標誌，而非已擷取的封面圖。</string>
+    <string name="gamefocus_toggle_use_default_icon_title">使用預設圖示</string>
+    <string name="gamefocus_toggle_use_default_icon_desc">在遊戲庫中顯示原生應用程式圖示或系統標誌。</string>
+    <string name="gamefocus_scraping_using_default_icon_notice">目前使用預設遊戲庫圖示。關閉上方開關即可瀏覽並套用自訂圖示。</string>
+    <string name="gamefocus_scraping_type_choice_title">圖示類型</string>
+    <string name="gamefocus_scraping_type_choice_desc">選擇來自 SteamGridDB 的方形圖示或透明標誌。</string>
+    <string name="gamefocus_scraping_type_icons">圖示</string>
+    <string name="gamefocus_scraping_type_logos">標誌</string>
     <string name="gamefocus_scraping_images_section">可用的封面圖</string>
     <string name="gamefocus_scraping_using_app_icon_notice">目前使用原生應用程式圖示。關閉上方開關即可瀏覽並套用自訂封面圖。</string>
     <string name="gamefocus_scraping_using_rom_icon_notice">目前使用系統模擬器圖示。關閉上方開關即可瀏覽並套用自訂封面圖。</string>
     <string name="gamefocus_scraping_applied_badge_cd">已選取的封面圖</string>
+    <string name="gamefocus_scraping_no_icons_found">在 SteamGridDB 上找不到「%1$s」的圖示或標誌。</string>
     <string name="gamefocus_action_reset_display_name_title">重設為預設名稱</string>
     <string name="gamefocus_action_reset_display_name_desc">還原原始名稱：%1$s</string>
 </resources>

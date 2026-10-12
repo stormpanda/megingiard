@@ -37,6 +37,7 @@ import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SportsEsports
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -54,16 +55,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.catalog.InstalledAppsManager
+import com.stormpanda.megingiard.catalog.LibraryIconRef
+import com.stormpanda.megingiard.catalog.RomManager
 import com.stormpanda.megingiard.media.SteamGridDbClient
 import com.stormpanda.megingiard.media.SteamGridDbGame
 import com.stormpanda.megingiard.media.SteamGridDbImage
@@ -83,6 +89,7 @@ import com.stormpanda.megingiard.ui.PrimaryOverlayContainer
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
@@ -106,6 +113,8 @@ private val GF_PROGRESS_SIZE_SMALL = 24.dp
 private val GF_PROGRESS_STROKE = 2.dp
 private val GF_BADGE_CONTAINER_SIZE = 24.dp
 private val GF_BADGE_ICON_SIZE = 14.dp
+private val GF_ICON_THUMB_SIZE = 140.dp
+private val GF_ICON_SHAPE = RoundedCornerShape(GF_POSTER_CORNER_RADIUS)
 
 internal enum class EditGameCategory(
     val titleResId: Int,
@@ -113,6 +122,7 @@ internal enum class EditGameCategory(
 ) {
     GAME_INFO(R.string.gamefocus_cat_game_info, Icons.Rounded.Info),
     SCRAPING(R.string.gamefocus_cat_scraping, Icons.Rounded.Image),
+    LIBRARY_ICON(R.string.gamefocus_cat_library_icon, Icons.Rounded.Apps),
 }
 
 @Composable
@@ -125,6 +135,18 @@ fun GameFocusEditGameOverlay(
     val appColors = LocalAppColors.current
     val categories = remember { EditGameCategory.entries.toList() }
     var selectedCategory by remember { mutableStateOf(EditGameCategory.GAME_INFO) }
+
+    val installedApps by InstalledAppsManager.installedApps.collectAsStateWithLifecycle()
+    val romApps by RomManager.romApps.collectAsStateWithLifecycle()
+
+    val liveAppInfo =
+        remember(appInfo.packageName, appInfo.isRom, installedApps, romApps) {
+            if (appInfo.isRom) {
+                romApps.find { it.packageName == appInfo.packageName } ?: appInfo
+            } else {
+                installedApps.find { it.packageName == appInfo.packageName } ?: appInfo
+            }
+        }
 
     PrimaryOverlayContainer(
         title = stringResource(R.string.gamefocus_edit_overlay_title),
@@ -164,7 +186,7 @@ fun GameFocusEditGameOverlay(
                     when (category) {
                         EditGameCategory.GAME_INFO -> {
                             GameInfoDeckContent(
-                                appInfo = appInfo,
+                                appInfo = liveAppInfo,
                                 accentColor = appColors.accent,
                                 onDismiss = onDismiss,
                             )
@@ -172,7 +194,15 @@ fun GameFocusEditGameOverlay(
 
                         EditGameCategory.SCRAPING -> {
                             ScrapingDeckContent(
-                                appInfo = appInfo,
+                                appInfo = liveAppInfo,
+                                apiKey = apiKey,
+                                accentColor = appColors.accent,
+                            )
+                        }
+
+                        EditGameCategory.LIBRARY_ICON -> {
+                            LibraryIconDeckContent(
+                                appInfo = liveAppInfo,
                                 apiKey = apiKey,
                                 accentColor = appColors.accent,
                             )
@@ -270,18 +300,184 @@ private fun ScrapingDeckContent(
 ) {
     val context = LocalContext.current
     val appColors = LocalAppColors.current
+
+    SteamGridDbArtworkDeck(
+        appInfo = appInfo,
+        apiKey = apiKey,
+        accentColor = accentColor,
+        initialAppliedImageId = if (appInfo.coverPath != null) appInfo.coverImageId else null,
+        initialAppliedImageType = null,
+        initialIsDefault = appInfo.coverPath == null,
+        initialArtworkType = GF_GRIDS_IMAGE_TYPE,
+        thumbWidth = GF_POSTER_HEIGHT * GF_POSTER_ASPECT_RATIO,
+        thumbHeight = GF_POSTER_HEIGHT,
+        thumbShape = GF_POSTER_SHAPE,
+        contentScaleForType = { ContentScale.Crop },
+        renderToggleCard = { isDefault, isDownloading, onToggleChange ->
+            GamepadToggleCard(
+                title =
+                    if (appInfo.isRom) {
+                        stringResource(R.string.gamefocus_toggle_use_rom_icon_title)
+                    } else {
+                        stringResource(R.string.gamefocus_toggle_use_app_icon_title)
+                    },
+                description =
+                    if (appInfo.isRom) {
+                        stringResource(R.string.gamefocus_toggle_use_rom_icon_desc)
+                    } else {
+                        stringResource(R.string.gamefocus_toggle_use_app_icon_desc)
+                    },
+                checked = isDefault,
+                onCheckedChange = onToggleChange,
+                enabled = !isDownloading,
+                modifier = Modifier.firstDeckItem(),
+            )
+        },
+        renderDefaultActiveNotice = {
+            GamepadInfoBox(
+                text =
+                    if (appInfo.isRom) {
+                        stringResource(R.string.gamefocus_scraping_using_rom_icon_notice)
+                    } else {
+                        stringResource(R.string.gamefocus_scraping_using_app_icon_notice)
+                    },
+                icon = Icons.Rounded.Apps,
+                iconTint = appColors.onSurfaceSecondary,
+            )
+        },
+        emptyImagesNoticeRes = R.string.steamgriddb_no_covers_found,
+        onSaveArtworkBytes = { image, bytes, _ ->
+            val savedPath =
+                InstalledAppsManager.applyCustomCover(context, appInfo.packageName, bytes, image.id) {
+                    AppPaletteExtractor.invalidatePalette(appInfo.packageName)
+                }
+            savedPath != null
+        },
+        onRevertToDefault = {
+            InstalledAppsManager.revertToDefaultCover(context, appInfo.packageName) {
+                AppPaletteExtractor.invalidatePalette(appInfo.packageName)
+            }
+        },
+    )
+}
+
+@Composable
+private fun LibraryIconDeckContent(
+    appInfo: InstalledAppInfo,
+    apiKey: String,
+    accentColor: Color,
+) {
+    val context = LocalContext.current
+    val appColors = LocalAppColors.current
+
+    SteamGridDbArtworkDeck(
+        appInfo = appInfo,
+        apiKey = apiKey,
+        accentColor = accentColor,
+        initialAppliedImageId = if (appInfo.libraryIconPath != null) appInfo.libraryIconImageId else null,
+        initialAppliedImageType = if (appInfo.libraryIconPath != null) appInfo.libraryIconType else null,
+        initialIsDefault = appInfo.libraryIconPath == null,
+        initialArtworkType = appInfo.libraryIconType ?: LibraryIconRef.TYPE_ICONS,
+        thumbWidth = GF_ICON_THUMB_SIZE,
+        thumbHeight = GF_ICON_THUMB_SIZE,
+        thumbShape = GF_ICON_SHAPE,
+        contentScaleForType = { type ->
+            if (type == LibraryIconRef.TYPE_LOGOS) {
+                ContentScale.Fit
+            } else {
+                ContentScale.Crop
+            }
+        },
+        renderToggleCard = { isDefault, isDownloading, onToggleChange ->
+            GamepadToggleCard(
+                title = stringResource(R.string.gamefocus_toggle_use_default_icon_title),
+                description = stringResource(R.string.gamefocus_toggle_use_default_icon_desc),
+                checked = isDefault,
+                onCheckedChange = onToggleChange,
+                enabled = !isDownloading,
+                modifier = Modifier.firstDeckItem(),
+            )
+        },
+        renderDefaultActiveNotice = {
+            GamepadInfoBox(
+                text = stringResource(R.string.gamefocus_scraping_using_default_icon_notice),
+                icon = Icons.Rounded.Apps,
+                iconTint = appColors.onSurfaceSecondary,
+            )
+        },
+        renderTypeChoiceCard = { currentType, onToggleType ->
+            GamepadChoiceCard(
+                title = stringResource(R.string.gamefocus_scraping_type_choice_title),
+                description = stringResource(R.string.gamefocus_scraping_type_choice_desc),
+                selectedText =
+                    if (currentType == LibraryIconRef.TYPE_ICONS) {
+                        stringResource(R.string.gamefocus_scraping_type_icons)
+                    } else {
+                        stringResource(R.string.gamefocus_scraping_type_logos)
+                    },
+                icon = Icons.Rounded.Tune,
+                enabled = true,
+                onPrevious = onToggleType,
+                onNext = onToggleType,
+            )
+        },
+        emptyImagesNoticeRes = R.string.gamefocus_scraping_no_icons_found,
+        onSaveArtworkBytes = { image, bytes, type ->
+            val savedPath =
+                InstalledAppsManager.applyCustomLibraryIcon(
+                    context = context,
+                    packageName = appInfo.packageName,
+                    bytes = bytes,
+                    imageId = image.id,
+                    type = type,
+                    onIconWritten = {
+                        FocusImageCache.invalidateLibraryIcon(appInfo.packageName)
+                    },
+                )
+            savedPath != null
+        },
+        onRevertToDefault = {
+            InstalledAppsManager.revertToDefaultLibraryIcon(
+                context = context,
+                packageName = appInfo.packageName,
+                onIconRemoved = {
+                    FocusImageCache.invalidateLibraryIcon(appInfo.packageName)
+                },
+            )
+        },
+    )
+}
+
+@Composable
+private fun SteamGridDbArtworkDeck(
+    appInfo: InstalledAppInfo,
+    apiKey: String,
+    accentColor: Color,
+    initialAppliedImageId: Int?,
+    initialAppliedImageType: String?,
+    initialIsDefault: Boolean,
+    initialArtworkType: String,
+    thumbWidth: Dp,
+    thumbHeight: Dp,
+    thumbShape: Shape,
+    contentScaleForType: (String) -> ContentScale,
+    renderToggleCard: @Composable (isDefault: Boolean, isDownloading: Boolean, onToggleChange: (Boolean) -> Unit) -> Unit,
+    renderDefaultActiveNotice: @Composable () -> Unit,
+    renderTypeChoiceCard: (@Composable (currentType: String, onToggleType: () -> Unit) -> Unit)? = null,
+    @StringRes emptyImagesNoticeRes: Int,
+    onSaveArtworkBytes: suspend (image: SteamGridDbImage, bytes: ByteArray, type: String) -> Boolean,
+    onRevertToDefault: suspend () -> Unit,
+) {
+    val appColors = LocalAppColors.current
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
-    val thumbHeightPx = with(density) { GF_POSTER_HEIGHT.roundToPx() }
-    val thumbWidthPx = (thumbHeightPx * GF_POSTER_ASPECT_RATIO).roundToInt()
+    val thumbWidthPx = with(density) { thumbWidth.roundToPx() }
+    val thumbHeightPx = with(density) { thumbHeight.roundToPx() }
 
-    val initialUseAppIcon = appInfo.coverPath == null
-    var useAppIcon by remember(appInfo.packageName, initialUseAppIcon) { mutableStateOf(initialUseAppIcon) }
-    // Only a persisted SteamGridDB image ID identifies the applied artwork; untracked covers stay unbadged.
-    val initialAppliedImageId = if (appInfo.coverPath != null) appInfo.coverImageId else null
-    var appliedImageId by remember(appInfo.packageName, initialAppliedImageId) {
-        mutableStateOf(initialAppliedImageId)
-    }
+    var isDefault by remember(appInfo.packageName, initialIsDefault) { mutableStateOf(initialIsDefault) }
+    var appliedImageId by remember(appInfo.packageName, initialAppliedImageId) { mutableStateOf(initialAppliedImageId) }
+    var appliedImageType by remember(appInfo.packageName, initialAppliedImageType) { mutableStateOf(initialAppliedImageType) }
+    var selectedArtworkType by remember(appInfo.packageName, initialArtworkType) { mutableStateOf(initialArtworkType) }
 
     var searchQuery by remember(appInfo.packageName) {
         mutableStateOf(SteamGridDbClient.cleanSearchQuery(appInfo.label))
@@ -294,17 +490,20 @@ private fun ScrapingDeckContent(
     var images by remember { mutableStateOf<List<SteamGridDbImage>>(emptyList()) }
     var scrapeErrorRes by remember { mutableStateOf<Int?>(null) }
     var isDownloading by remember { mutableStateOf(false) }
+    var downloadJob by remember { mutableStateOf<Job?>(null) }
 
     val isTokenMissing = apiKey.isBlank()
     val currentGame = games.getOrNull(selectedGameIndex)
     val rowState = rememberLazyListState()
 
-    val onRevertToAppIcon: () -> Unit = {
+    val onRevert: () -> Unit = {
+        downloadJob?.cancel()
+        downloadJob = null
+        isDownloading = false
         scope.launch {
-            InstalledAppsManager.revertToDefaultCover(context, appInfo.packageName) {
-                AppPaletteExtractor.invalidatePalette(appInfo.packageName)
-            }
+            onRevertToDefault()
             appliedImageId = null
+            appliedImageType = null
         }
     }
 
@@ -312,35 +511,38 @@ private fun ScrapingDeckContent(
         if (!isDownloading) {
             isDownloading = true
             scrapeErrorRes = null
-            scope.launch {
-                try {
-                    AppLog.i(TAG, "Downloading SteamGridDB artwork for ${appInfo.label} from: ${image.url}")
-                    val bytesResult = SteamGridDbClient.downloadImageBytes(image.url)
-                    val bytes = bytesResult.getOrNull()
-                    if (bytes == null) {
-                        AppLog.w(TAG, "Artwork download failed for ${appInfo.packageName}: ${bytesResult.exceptionOrNull()?.message}")
-                        scrapeErrorRes = steamGridDbErrorMessageRes(bytesResult.exceptionOrNull())
-                    } else {
-                        val savedPath =
-                            InstalledAppsManager.applyCustomCover(context, appInfo.packageName, bytes, image.id) {
-                                AppPaletteExtractor.invalidatePalette(appInfo.packageName)
-                            }
-                        if (savedPath != null) {
-                            appliedImageId = image.id
-                            useAppIcon = false
+            downloadJob?.cancel()
+            downloadJob =
+                scope.launch {
+                    try {
+                        AppLog.i(TAG, "Downloading SteamGridDB artwork for ${appInfo.label} from: ${image.url}")
+                        val bytesResult = SteamGridDbClient.downloadImageBytes(image.url)
+                        val bytes = bytesResult.getOrNull()
+                        if (bytes == null) {
+                            AppLog.w(
+                                TAG,
+                                "Artwork download failed for ${appInfo.packageName}: ${bytesResult.exceptionOrNull()?.message}",
+                            )
+                            scrapeErrorRes = steamGridDbErrorMessageRes(bytesResult.exceptionOrNull())
                         } else {
-                            scrapeErrorRes = R.string.steamgriddb_error_save_failed
+                            val saved = onSaveArtworkBytes(image, bytes, selectedArtworkType)
+                            if (saved) {
+                                appliedImageId = image.id
+                                appliedImageType = selectedArtworkType
+                                isDefault = false
+                            } else {
+                                scrapeErrorRes = R.string.steamgriddb_error_save_failed
+                            }
                         }
+                    } finally {
+                        isDownloading = false
                     }
-                } finally {
-                    isDownloading = false
                 }
-            }
         }
     }
 
-    LaunchedEffect(searchQuery, apiKey, useAppIcon) {
-        if (useAppIcon || isTokenMissing || searchQuery.isBlank()) {
+    LaunchedEffect(searchQuery, apiKey, isDefault) {
+        if (isDefault || isTokenMissing || searchQuery.isBlank()) {
             isSearchLoading = false
             games = emptyList()
             selectedGameIndex = 0
@@ -364,9 +566,9 @@ private fun ScrapingDeckContent(
             }
     }
 
-    LaunchedEffect(currentGame?.id, useAppIcon) {
+    LaunchedEffect(currentGame?.id, selectedArtworkType, isDefault) {
         val gameId = currentGame?.id
-        if (useAppIcon || gameId == null || isTokenMissing) {
+        if (isDefault || gameId == null || isTokenMissing) {
             images = emptyList()
             isImagesLoading = false
             return@LaunchedEffect
@@ -374,44 +576,26 @@ private fun ScrapingDeckContent(
         isImagesLoading = true
         scrapeErrorRes = null
         images = emptyList()
-        val imagesRes = SteamGridDbClient.fetchImages(gameId, GF_GRIDS_IMAGE_TYPE, apiKey)
+        val imagesRes = SteamGridDbClient.fetchImages(gameId, selectedArtworkType, apiKey)
         isImagesLoading = false
         imagesRes
             .onSuccess { fetchedImages ->
                 images = fetchedImages
             }.onFailure { err ->
-                AppLog.w(TAG, "SteamGridDB image fetch failed for gameId=$gameId: ${err.message}")
+                AppLog.w(TAG, "SteamGridDB image fetch failed for gameId=$gameId, type=$selectedArtworkType: ${err.message}")
                 scrapeErrorRes = steamGridDbErrorMessageRes(err)
                 images = emptyList()
             }
     }
 
-    GamepadDeck(
-        accentColor = accentColor,
-    ) {
-        // ── 1. Use App Icon Toggle Card ─────────────────────────────
-        GamepadToggleCard(
-            title =
-                if (appInfo.isRom) {
-                    stringResource(R.string.gamefocus_toggle_use_rom_icon_title)
-                } else {
-                    stringResource(R.string.gamefocus_toggle_use_app_icon_title)
-                },
-            description =
-                if (appInfo.isRom) {
-                    stringResource(R.string.gamefocus_toggle_use_rom_icon_desc)
-                } else {
-                    stringResource(R.string.gamefocus_toggle_use_app_icon_desc)
-                },
-            checked = useAppIcon,
-            onCheckedChange = { checked ->
-                useAppIcon = checked
-                if (checked) {
-                    onRevertToAppIcon()
-                }
-            },
-            modifier = Modifier.firstDeckItem(),
-        )
+    GamepadDeck(accentColor = accentColor) {
+        // ── 1. Toggle Card ───────────────────────────────────────────
+        renderToggleCard(isDefault, isDownloading) { checked ->
+            isDefault = checked
+            if (checked) {
+                onRevert()
+            }
+        }
 
         // ── 2. Search Query Card ─────────────────────────────────────
         GamepadTextFieldCard(
@@ -421,7 +605,7 @@ private fun ScrapingDeckContent(
             value = searchQuery,
             onValueChange = { searchQuery = it },
             icon = Icons.Rounded.Search,
-            enabled = !useAppIcon,
+            enabled = !isDefault,
         )
 
         // ── 3. Matched Game Card ─────────────────────────────────────
@@ -437,7 +621,7 @@ private fun ScrapingDeckContent(
                 description = stringResource(R.string.gamefocus_scraping_matched_game_desc),
                 selectedText = gameLabel,
                 icon = Icons.Rounded.SportsEsports,
-                enabled = !useAppIcon && games.size > 1,
+                enabled = !isDefault && games.size > 1,
                 onPrevious = {
                     selectedGameIndex = (selectedGameIndex - 1 + games.size) % games.size
                 },
@@ -447,25 +631,26 @@ private fun ScrapingDeckContent(
             )
         }
 
-        // ── 4. Section Header ────────────────────────────────────────
+        // ── 4. Optional Type Choice Card ─────────────────────────────
+        renderTypeChoiceCard?.invoke(selectedArtworkType) {
+            selectedArtworkType =
+                if (selectedArtworkType == LibraryIconRef.TYPE_ICONS) {
+                    LibraryIconRef.TYPE_LOGOS
+                } else {
+                    LibraryIconRef.TYPE_ICONS
+                }
+        }
+
+        // ── 5. Section Header ────────────────────────────────────────
         GamepadSectionHeader(
             text = stringResource(R.string.gamefocus_scraping_images_section),
             color = accentColor,
         )
 
-        // ── 5. Status states or horizontal artwork gallery ───────────
+        // ── 6. Status states or horizontal artwork gallery ───────────
         val errorRes = scrapeErrorRes
-        if (useAppIcon) {
-            GamepadInfoBox(
-                text =
-                    if (appInfo.isRom) {
-                        stringResource(R.string.gamefocus_scraping_using_rom_icon_notice)
-                    } else {
-                        stringResource(R.string.gamefocus_scraping_using_app_icon_notice)
-                    },
-                icon = Icons.Rounded.Apps,
-                iconTint = appColors.onSurfaceSecondary,
-            )
+        if (isDefault) {
+            renderDefaultActiveNotice()
         } else if (isTokenMissing) {
             GamepadInfoBox(
                 text = stringResource(R.string.steamgriddb_token_missing_message),
@@ -493,13 +678,13 @@ private fun ScrapingDeckContent(
             )
         } else if (images.isEmpty() && currentGame != null) {
             GamepadInfoBox(
-                text = stringResource(R.string.steamgriddb_no_covers_found, currentGame.name),
+                text = stringResource(emptyImagesNoticeRes, currentGame.name),
                 icon = Icons.Rounded.Image,
                 iconTint = appColors.onSurfaceSecondary,
             )
         } else {
             BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                val itemWidth = GF_POSTER_HEIGHT * GF_POSTER_ASPECT_RATIO
+                val itemWidth = thumbWidth
                 val horizontalPadding = ((maxWidth - itemWidth) / 2).coerceAtLeast(0.dp)
 
                 LazyRow(
@@ -509,12 +694,13 @@ private fun ScrapingDeckContent(
                     horizontalArrangement = Arrangement.spacedBy(GF_ROW_SPACING),
                 ) {
                     itemsIndexed(images, key = { _, it -> it.id }) { index, image ->
-                        val isApplied = !useAppIcon && appliedImageId == image.id
+                        val isApplied =
+                            !isDefault &&
+                                appliedImageId == image.id &&
+                                (appliedImageType == null || appliedImageType == selectedArtworkType)
 
                         GamepadFocusCard(
-                            onClick = {
-                                onApplyArtwork(image)
-                            },
+                            onClick = { onApplyArtwork(image) },
                             onFocusChanged = { isFocused ->
                                 if (isFocused) {
                                     scope.launch {
@@ -522,14 +708,11 @@ private fun ScrapingDeckContent(
                                     }
                                 }
                             },
-                            shape = GF_POSTER_SHAPE,
+                            shape = thumbShape,
                             contentPadding = PaddingValues(0.dp),
                             clipToShape = true,
                             unfocusedBorderColor = if (isApplied) accentColor else appColors.subduedBorder,
-                            modifier =
-                                Modifier
-                                    .height(GF_POSTER_HEIGHT)
-                                    .aspectRatio(GF_POSTER_ASPECT_RATIO),
+                            modifier = Modifier.size(thumbWidth, thumbHeight),
                             cardBgColor =
                                 if (isApplied) {
                                     accentColor.copy(alpha = GF_CARD_SELECTED_BG_ALPHA)
@@ -543,6 +726,7 @@ private fun ScrapingDeckContent(
                                     reqWidthPx = thumbWidthPx,
                                     reqHeightPx = thumbHeightPx,
                                     contentDescription = stringResource(R.string.steamgriddb_cd_artwork_option),
+                                    contentScale = contentScaleForType(selectedArtworkType),
                                     modifier = Modifier.fillMaxSize(),
                                 )
                                 if (isApplied) {
@@ -604,6 +788,7 @@ private fun SteamGridDbImageThumbnail(
     reqHeightPx: Int,
     contentDescription: String?,
     modifier: Modifier = Modifier,
+    contentScale: ContentScale = ContentScale.Crop,
 ) {
     val colors = LocalAppColors.current
     var bitmap by remember(url) { mutableStateOf<ImageBitmap?>(null) }
@@ -645,7 +830,7 @@ private fun SteamGridDbImageThumbnail(
                 bitmap = loadedBitmap,
                 contentDescription = contentDescription,
                 modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop,
+                contentScale = contentScale,
             )
         }
     }

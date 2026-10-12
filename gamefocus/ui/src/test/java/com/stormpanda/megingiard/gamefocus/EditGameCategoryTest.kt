@@ -12,9 +12,10 @@ class EditGameCategoryTest {
     fun testCategoryCountAndProperties() {
         AppLog.d(TAG, "testCategoryCountAndProperties: verifying category enum entries")
         val entries = EditGameCategory.entries
-        assertEquals(2, entries.size)
+        assertEquals(3, entries.size)
         assertEquals(EditGameCategory.GAME_INFO, entries[0])
         assertEquals(EditGameCategory.SCRAPING, entries[1])
+        assertEquals(EditGameCategory.LIBRARY_ICON, entries[2])
 
         entries.forEach { entry ->
             assertNotEquals(0, entry.titleResId)

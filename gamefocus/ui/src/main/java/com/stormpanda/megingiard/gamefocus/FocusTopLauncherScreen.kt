@@ -86,6 +86,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.CustomRomFolder
+import com.stormpanda.megingiard.catalog.IcoImageExtractor
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.catalog.LetterNavigationHelper
 import com.stormpanda.megingiard.catalog.LibraryTab
@@ -541,6 +542,7 @@ fun FocusTopLauncherScreen(
                         onOptionsMenuExpandedChange = onLibraryOptionsMenuExpandedChange,
                         selectedIndex = libraryMenuSelectedIndex,
                         onToggleHidden = onToggleHidden,
+                        onEditArtwork = onEditArtwork,
                         onOpenAppInfo = onOpenAppInfo,
                         onUninstallApp = onUninstallApp,
                         onChangeCore = onChangeCore,
@@ -549,7 +551,7 @@ fun FocusTopLauncherScreen(
                         onAppClickTop = onAppClickTop,
                         onAppClickBottom = onAppClickBottom,
                         onCloseRequested = onCloseLibrary,
-                        enabled = isLibraryOpen,
+                        enabled = isLibraryOpen && editingAppInfo == null && pairingTargetApp == null,
                         tabs = libraryTabs,
                         isRemoveRomFolderDialogOpen = isRemoveRomFolderDialogOpen,
                         onRemoveRomFolderDialogOpenChange = onRemoveRomFolderDialogOpenChange,
@@ -964,15 +966,6 @@ fun FocusTopLauncherScreen(
                             )
                         }
                     }
-
-                    // Game Edit Primary Overlay (Game Info & Scraping)
-                    if (editingAppInfo != null) {
-                        GameFocusEditGameOverlay(
-                            appInfo = editingAppInfo,
-                            apiKey = apiKey,
-                            onDismiss = onDismissEditingApp,
-                        )
-                    }
                 }
             }
         }
@@ -1001,15 +994,33 @@ fun FocusTopLauncherScreen(
                 },
             )
         }
+
+        // Game Edit Primary Overlay (Game Info, Gallery Artwork, Library Icon)
+        if (editingAppInfo != null) {
+            GameFocusEditGameOverlay(
+                appInfo = editingAppInfo,
+                apiKey = apiKey,
+                onDismiss = onDismissEditingApp,
+            )
+        }
     }
 }
+
+/** Result of [FocusImageCache.decodeSampledIcon]; [wasIcoContainer] signals the disk file should be normalized to PNG. */
+internal class SampledIcon(
+    val bitmap: Bitmap,
+    val wasIcoContainer: Boolean,
+)
 
 internal object FocusImageCache {
     private const val MAX_ICON_DIMENSION_PX = 256
     private const val MAX_ICON_DISK_BYTES = 256 * 1024L
+    private const val ICON_REWRITE_PNG_QUALITY = 95
+    private const val BYTES_PER_KB = 1024
     private val coverCache = LruCache<String, ImageBitmap>(80)
     private val iconCache = LruCache<String, ImageBitmap>(80)
     private val missingIconKeys = ConcurrentHashMap.newKeySet<String>()
+    private val missingLibraryIconKeys = ConcurrentHashMap.newKeySet<String>()
 
     fun getAppIcon(
         context: Context,
@@ -1079,9 +1090,78 @@ internal object FocusImageCache {
         return iconCache.get(packageName)
     }
 
-    fun invalidateIcon(packageName: String) {
+    fun isLibraryIconMissing(
+        packageName: String,
+        lastModified: Long,
+    ): Boolean {
+        val cacheKey = "libicon:$packageName:$lastModified"
+        return missingLibraryIconKeys.contains(cacheKey)
+    }
+
+    fun getCachedLibraryIconBitmap(
+        packageName: String,
+        lastModified: Long,
+    ): ImageBitmap? {
+        val cacheKey = "libicon:$packageName:$lastModified"
+        if (missingLibraryIconKeys.contains(cacheKey)) return null
+        return iconCache.get(cacheKey)
+    }
+
+    suspend fun getLibraryIconBitmapAsync(appInfo: InstalledAppInfo): ImageBitmap? {
+        val path = appInfo.libraryIconPath ?: return null
+        val cacheKey = "libicon:${appInfo.packageName}:${appInfo.libraryIconLastModified}"
+        if (missingLibraryIconKeys.contains(cacheKey)) return null
+        val cached = iconCache.get(cacheKey)
+        if (cached != null) return cached
+
+        return withContext(Dispatchers.IO) {
+            val file = File(path)
+            if (!file.exists() || file.length() == 0L) {
+                missingLibraryIconKeys.add(cacheKey)
+                AppLog.w(TAG, "Library icon file does not exist or is empty: $path")
+                return@withContext null
+            }
+            val sampled = decodeSampledIcon(file)
+            if (sampled == null) {
+                missingLibraryIconKeys.add(cacheKey)
+                AppLog.w(TAG, "Failed to decode library icon bitmap from $path")
+                return@withContext null
+            }
+            val diskBitmap = sampled.bitmap.asImageBitmap()
+            iconCache.put(cacheKey, diskBitmap)
+
+            // Normalize legacy ICO containers and oversized (>256KB) files to a downsampled PNG thumbnail
+            if (sampled.wasIcoContainer || file.length() > MAX_ICON_DISK_BYTES) {
+                rewriteIconThumbnail(file, sampled.bitmap, appInfo.label)
+            }
+
+            diskBitmap
+        }
+    }
+
+    fun invalidateLibraryIcon(
+        packageName: String,
+        lastModified: Long? = null,
+    ) {
+        if (lastModified != null) {
+            val key = "libicon:$packageName:$lastModified"
+            iconCache.remove(key)
+            missingLibraryIconKeys.remove(key)
+        } else {
+            val prefix = "libicon:$packageName:"
+            iconCache
+                .snapshot()
+                .keys
+                .filter { it.startsWith(prefix) }
+                .forEach { iconCache.remove(it) }
+            missingLibraryIconKeys.removeAll { it.startsWith(prefix) }
+        }
         iconCache.remove(packageName)
         missingIconKeys.remove(packageName)
+    }
+
+    fun invalidateIcon(packageName: String) {
+        invalidateLibraryIcon(packageName)
     }
 
     @androidx.annotation.VisibleForTesting
@@ -1089,18 +1169,76 @@ internal object FocusImageCache {
         coverCache.evictAll()
         iconCache.evictAll()
         missingIconKeys.clear()
+        missingLibraryIconKeys.clear()
+    }
+
+    /**
+     * Replaces [file] with a PNG encoding of [bitmap] via a temp file + rename.
+     * Must be called off the main thread.
+     */
+    private fun rewriteIconThumbnail(
+        file: File,
+        bitmap: Bitmap,
+        label: String,
+    ) {
+        val tempFile = File(file.parentFile, "${file.name}.tmp")
+        try {
+            FileOutputStream(tempFile).use { out ->
+                bitmap.compress(Bitmap.CompressFormat.PNG, ICON_REWRITE_PNG_QUALITY, out)
+            }
+            if (tempFile.length() > 0L && tempFile.renameTo(file)) {
+                AppLog.i(TAG, "Rewrote disk icon as downsampled PNG for $label (${file.length() / BYTES_PER_KB} KB)")
+            } else {
+                AppLog.w(TAG, "Failed to replace disk icon for $label with downsampled PNG")
+            }
+        } catch (e: Exception) {
+            AppLog.w(TAG, "Failed to rewrite downsampled icon thumbnail for $label: ${e.message}")
+        } finally {
+            if (tempFile.exists() && !tempFile.delete()) {
+                AppLog.w(TAG, "Failed to delete temp icon file ${tempFile.name}")
+            }
+        }
     }
 
     internal fun decodeSampledIconBitmap(
         file: File,
         maxDimensionPx: Int = MAX_ICON_DIMENSION_PX,
-    ): Bitmap? {
+    ): Bitmap? = decodeSampledIcon(file, maxDimensionPx)?.bitmap
+
+    /**
+     * Decodes [file] downsampled to at most [maxDimensionPx]. Windows ICO containers that the
+     * platform decoder cannot read are unpacked via [IcoImageExtractor]. Has no disk side effects.
+     */
+    internal fun decodeSampledIcon(
+        file: File,
+        maxDimensionPx: Int = MAX_ICON_DIMENSION_PX,
+    ): SampledIcon? {
         if (!file.exists() || file.length() == 0L) return null
         return try {
             val boundsOptions = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             BitmapFactory.decodeFile(file.absolutePath, boundsOptions)
-            val rawW = boundsOptions.outWidth
-            val rawH = boundsOptions.outHeight
+            var rawW = boundsOptions.outWidth
+            var rawH = boundsOptions.outHeight
+            var extractedBytes: ByteArray? = null
+
+            if (rawW <= 0 || rawH <= 0) {
+                try {
+                    val fileBytes = file.readBytes()
+                    if (IcoImageExtractor.isIco(fileBytes)) {
+                        val extracted = IcoImageExtractor.extractBestImage(fileBytes)
+                        if (extracted != null) {
+                            extractedBytes = extracted
+                            boundsOptions.inJustDecodeBounds = true
+                            BitmapFactory.decodeByteArray(extracted, 0, extracted.size, boundsOptions)
+                            rawW = boundsOptions.outWidth
+                            rawH = boundsOptions.outHeight
+                        }
+                    }
+                } catch (e: Exception) {
+                    AppLog.w(TAG, "Failed to inspect file as ICO: ${e.message}")
+                }
+            }
+
             if (rawW <= 0 || rawH <= 0) return null
 
             var inSampleSize = 1
@@ -1117,20 +1255,28 @@ internal object FocusImageCache {
                     this.inSampleSize = inSampleSize
                     inPreferredConfig = Bitmap.Config.ARGB_8888
                 }
-            val decoded = BitmapFactory.decodeFile(file.absolutePath, decodeOptions) ?: return null
+            val decoded =
+                if (extractedBytes != null) {
+                    BitmapFactory.decodeByteArray(extractedBytes, 0, extractedBytes.size, decodeOptions)
+                } else {
+                    BitmapFactory.decodeFile(file.absolutePath, decodeOptions)
+                } ?: return null
 
-            if (decoded.width > maxDimensionPx || decoded.height > maxDimensionPx) {
-                val scale = minOf(maxDimensionPx.toFloat() / decoded.width, maxDimensionPx.toFloat() / decoded.height)
-                val scaledW = (decoded.width * scale).toInt().coerceAtLeast(1)
-                val scaledH = (decoded.height * scale).toInt().coerceAtLeast(1)
-                val scaled = Bitmap.createScaledBitmap(decoded, scaledW, scaledH, true)
-                if (scaled != decoded) {
-                    decoded.recycle()
+            val finalBitmap =
+                if (decoded.width > maxDimensionPx || decoded.height > maxDimensionPx) {
+                    val scale = minOf(maxDimensionPx.toFloat() / decoded.width, maxDimensionPx.toFloat() / decoded.height)
+                    val scaledW = (decoded.width * scale).toInt().coerceAtLeast(1)
+                    val scaledH = (decoded.height * scale).toInt().coerceAtLeast(1)
+                    val scaled = Bitmap.createScaledBitmap(decoded, scaledW, scaledH, true)
+                    if (scaled != decoded) {
+                        decoded.recycle()
+                    }
+                    scaled
+                } else {
+                    decoded
                 }
-                scaled
-            } else {
-                decoded
-            }
+
+            SampledIcon(bitmap = finalBitmap, wasIcoContainer = extractedBytes != null)
         } catch (e: Exception) {
             AppLog.w(TAG, "Failed to decode sampled icon from ${file.name}: ${e.message}")
             null
@@ -1156,31 +1302,17 @@ internal object FocusImageCache {
             val iconFile = File(fileDir, "${appInfo.packageName}.png")
             if (iconFile.exists() && iconFile.length() > 0) {
                 val startTime = System.currentTimeMillis()
-                val sampledBitmap = decodeSampledIconBitmap(iconFile)
-                val diskBitmap = sampledBitmap?.asImageBitmap()
+                val sampled = decodeSampledIcon(iconFile)
+                val diskBitmap = sampled?.bitmap?.asImageBitmap()
 
-                if (diskBitmap != null) {
+                if (sampled != null && diskBitmap != null) {
                     val elapsed = System.currentTimeMillis() - startTime
                     AppLog.d(TAG, "Loaded disk-cached ${if (appInfo.isRom) "logo" else "icon"} PNG for ${appInfo.label} in ${elapsed}ms")
                     iconCache.put(cacheKey, diskBitmap)
 
-                    // If disk file was oversized (>256KB), rewrite as downsampled thumbnail to accelerate future loads and free storage
-                    if (appInfo.isRom && iconFile.length() > MAX_ICON_DISK_BYTES) {
-                        try {
-                            val tempFile = File(fileDir, "${appInfo.packageName}.tmp")
-                            FileOutputStream(tempFile).use { out ->
-                                sampledBitmap.compress(Bitmap.CompressFormat.PNG, 95, out)
-                            }
-                            if (tempFile.exists() && tempFile.length() > 0L) {
-                                tempFile.renameTo(iconFile)
-                                AppLog.i(
-                                    TAG,
-                                    "Rewrote oversized logo on disk with downsampled thumbnail for ${appInfo.label} (${iconFile.length() / 1024} KB)",
-                                )
-                            }
-                        } catch (e: Exception) {
-                            AppLog.w(TAG, "Failed to rewrite downsampled logo thumbnail for ${appInfo.label}: ${e.message}")
-                        }
+                    // Normalize ICO containers, and rewrite oversized (>256KB) ROM logos as downsampled thumbnails
+                    if (sampled.wasIcoContainer || (appInfo.isRom && iconFile.length() > MAX_ICON_DISK_BYTES)) {
+                        rewriteIconThumbnail(iconFile, sampled.bitmap, appInfo.label)
                     }
 
                     return@withContext diskBitmap
@@ -1348,6 +1480,67 @@ internal fun rememberIconBitmap(
             }
         }
     return state.value
+}
+
+private sealed interface LibraryIconLoadResult {
+    data class Success(
+        val bitmap: ImageBitmap,
+    ) : LibraryIconLoadResult
+
+    data object Loading : LibraryIconLoadResult
+
+    data object Failed : LibraryIconLoadResult
+}
+
+@Composable
+internal fun rememberLibraryIconBitmap(
+    appInfo: InstalledAppInfo,
+    enabled: Boolean = true,
+): ImageBitmap? {
+    val cachedBitmap =
+        if (appInfo.libraryIconPath != null) {
+            FocusImageCache.getCachedLibraryIconBitmap(appInfo.packageName, appInfo.libraryIconLastModified)
+        } else {
+            null
+        }
+
+    val isMissing =
+        appInfo.libraryIconPath == null ||
+            FocusImageCache.isLibraryIconMissing(appInfo.packageName, appInfo.libraryIconLastModified)
+
+    val state =
+        produceState<LibraryIconLoadResult>(
+            initialValue =
+                when {
+                    isMissing -> LibraryIconLoadResult.Failed
+                    cachedBitmap != null -> LibraryIconLoadResult.Success(cachedBitmap)
+                    else -> LibraryIconLoadResult.Loading
+                },
+            key1 = appInfo.packageName,
+            key2 = appInfo.libraryIconLastModified,
+            key3 = enabled,
+        ) {
+            if (!enabled || isMissing || appInfo.libraryIconPath == null) {
+                value = LibraryIconLoadResult.Failed
+                return@produceState
+            }
+            val memoryCached = FocusImageCache.getCachedLibraryIconBitmap(appInfo.packageName, appInfo.libraryIconLastModified)
+            if (memoryCached != null) {
+                value = LibraryIconLoadResult.Success(memoryCached)
+                return@produceState
+            }
+            val diskBitmap = FocusImageCache.getLibraryIconBitmapAsync(appInfo)
+            value = if (diskBitmap != null) LibraryIconLoadResult.Success(diskBitmap) else LibraryIconLoadResult.Failed
+        }
+
+    val needDefaultIcon = isMissing || state.value is LibraryIconLoadResult.Failed
+    val defaultIcon = rememberIconBitmap(appInfo, enabled = enabled && needDefaultIcon)
+
+    return when (val result = state.value) {
+        is LibraryIconLoadResult.Success -> result.bitmap
+        LibraryIconLoadResult.Loading -> null
+        LibraryIconLoadResult.Failed -> defaultIcon
+    }
 }
 
 @Composable
