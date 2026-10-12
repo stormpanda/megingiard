@@ -106,6 +106,20 @@ object MacroExecutor {
     }
 
     /**
+     * Stops every running macro (e.g. when the active MacroPad profile changes and the
+     * running macros would otherwise become unreachable from the UI). Each job releases its
+     * live inputs and clears its running-ID in the [executeSuspend] finally block.
+     */
+    fun stopAll() {
+        synchronized(runningJobs) {
+            if (runningJobs.isEmpty()) return
+            AppLog.i(TAG, "stopAll: cancelling ${runningJobs.size} running macro(s) ids=${runningJobs.keys}")
+            // Do NOT clear the map — let each finally block remove its own entry via job-identity check.
+            runningJobs.values.forEach { it.cancel() }
+        }
+    }
+
+    /**
      * Executes a single-shot test run of [macro] with modal UI overlay suspension.
      *
      * Suspends the primary modal overlay via [AppStateManager.suspendCurrentAndDismiss] so the

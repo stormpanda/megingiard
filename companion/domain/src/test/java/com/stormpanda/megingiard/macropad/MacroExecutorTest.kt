@@ -52,9 +52,24 @@ class MacroExecutorTest {
 
     @After
     fun tearDown() {
+        MacroExecutor.stopAll()
         PrivdClient.isConnectedForTest = null
         Dispatchers.resetMain()
     }
+
+    private fun loopMacro(id: String) = testMacro(id, durationMs = 50L).copy(loopEnabled = true)
+
+    private fun profileWith(
+        id: String,
+        layoutIds: List<String>,
+        macros: List<Macro> = emptyList(),
+    ) = PadProfile(
+        id = id,
+        name = id,
+        layouts = layoutIds.map { PadLayout(id = it, name = it) },
+        activeLayoutId = layoutIds.first(),
+        macros = macros,
+    )
 
     @Test
     fun testMacroExecutionRejectedWhenPrivdDisconnected() =
@@ -120,5 +135,70 @@ class MacroExecutorTest {
             assertTrue(waitUntil(1000) { completedSuccess != null })
             assertEquals(true, completedSuccess)
             assertEquals(modalConfig, AppStateManager.activePrimaryModal.value)
+        }
+
+    @Test
+    fun testStopAllCancelsEveryRunningMacro() =
+        runBlocking {
+            val m1 = loopMacro("loop-1")
+            val m2 = loopMacro("loop-2")
+            MacroExecutor.execute(m1)
+            MacroExecutor.execute(m2)
+            assertTrue(waitUntil(500) { MacroExecutor.isRunning(m1.id) && MacroExecutor.isRunning(m2.id) })
+
+            MacroExecutor.stopAll()
+
+            assertTrue(waitUntil(500) { MacroExecutor.runningMacroIds.value.isEmpty() })
+        }
+
+    @Test
+    fun testStopAllWithNoRunningMacrosIsNoOp() {
+        MacroExecutor.stopAll()
+        assertTrue(MacroExecutor.runningMacroIds.value.isEmpty())
+    }
+
+    @Test
+    fun testProfileSwitchStopsRunningMacros() =
+        runBlocking {
+            val macro = loopMacro("profile-loop")
+            MacroPadState.loadFrom(
+                listOf(profileWith("pA", listOf("lA"), listOf(macro)), profileWith("pB", listOf("lB"))),
+                "pA",
+            )
+            MacroExecutor.execute(macro)
+            assertTrue(waitUntil(500) { MacroExecutor.isRunning(macro.id) })
+
+            MacroPadState.setActiveProfileId("pB")
+
+            assertTrue(waitUntil(500) { !MacroExecutor.isRunning(macro.id) })
+        }
+
+    @Test
+    fun testReselectingSameProfileKeepsMacrosRunning() =
+        runBlocking {
+            val macro = loopMacro("same-profile-loop")
+            MacroPadState.loadFrom(listOf(profileWith("pA", listOf("lA"), listOf(macro))), "pA")
+            MacroExecutor.execute(macro)
+            assertTrue(waitUntil(500) { MacroExecutor.isRunning(macro.id) })
+
+            MacroPadState.setActiveProfileId("pA")
+            delay(100)
+
+            assertTrue(MacroExecutor.isRunning(macro.id))
+        }
+
+    @Test
+    fun testLayoutSwitchKeepsMacrosRunning() =
+        runBlocking {
+            val macro = loopMacro("layout-loop")
+            MacroPadState.loadFrom(listOf(profileWith("pA", listOf("l1", "l2"), listOf(macro))), "pA")
+            MacroExecutor.execute(macro)
+            assertTrue(waitUntil(500) { MacroExecutor.isRunning(macro.id) })
+
+            MacroPadState.nextLayout()
+            delay(100)
+
+            assertEquals("l2", MacroPadState.activeProfile.value?.activeLayoutId)
+            assertTrue(MacroExecutor.isRunning(macro.id))
         }
 }

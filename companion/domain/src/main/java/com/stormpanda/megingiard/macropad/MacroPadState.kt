@@ -474,7 +474,7 @@ object MacroPadState {
             } else {
                 activeProfileId
             }
-        _activeProfileId.value = resolvedActiveId
+        assignActiveProfileId(resolvedActiveId)
         recomputeActiveState()
 
         AppLog.d(TAG, "loadFrom: ${withFlags.size} profiles, activeId=$resolvedActiveId, needsSave=$needsSave")
@@ -521,7 +521,7 @@ object MacroPadState {
         val remaining = _profiles.value.filter { it.id != profileId }
         _profiles.value = remaining
         if (_activeProfileId.value == profileId) {
-            _activeProfileId.value = remaining.firstOrNull()?.id
+            assignActiveProfileId(remaining.firstOrNull()?.id)
         }
         recomputeActiveState()
         AppLog.d(TAG, "deleteProfile id=$profileId → activeId=${_activeProfileId.value}")
@@ -564,9 +564,23 @@ object MacroPadState {
     fun setActiveProfileId(id: String?) {
         AppLog.i(TAG, "setActiveProfileId: $id")
         _previewLayout.value = null
-        _activeProfileId.value = id
+        assignActiveProfileId(id)
         recomputeActiveState()
         MacroPadSettings.saveMacroPadData()
+    }
+
+    /**
+     * Single write path for [_activeProfileId]. When the active profile actually changes, all
+     * running macros are stopped: macro IDs are profile-scoped, so macros of the previous profile
+     * would otherwise keep running (looping macros indefinitely) with no button left to stop them.
+     */
+    private fun assignActiveProfileId(id: String?) {
+        val previousId = _activeProfileId.value
+        _activeProfileId.value = id
+        if (previousId != null && previousId != id) {
+            AppLog.d(TAG, "assignActiveProfileId: profile changed $previousId → $id, stopping running macros")
+            MacroExecutor.stopAll()
+        }
     }
 
     /** Deletes all profiles and creates a single blank default profile. */
@@ -582,7 +596,7 @@ object MacroPadState {
                 activeLayoutId = defaultLayoutId,
             )
         _profiles.value = listOf(defaultProfile)
-        _activeProfileId.value = defaultId
+        assignActiveProfileId(defaultId)
         recomputeActiveState()
         AppLog.i(TAG, "restoreDefaults: created default profile $defaultId")
         MacroPadSettings.saveMacroPadData()
