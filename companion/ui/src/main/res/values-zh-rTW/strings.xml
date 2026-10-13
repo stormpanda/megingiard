@@ -702,6 +702,13 @@ Open Settings to create a layout.</string>
     <string name="macropad_delete_cutout_desc">從版面配置中永久移除此區塊</string>
     <string name="mirror_editor_shape_mode">區塊形狀</string>
     <string name="mirror_editor_shape_desc">在矩形與圓形視窗算圖之間切換</string>
+    <string name="mirror_editor_rotation_title">旋轉</string>
+    <string name="mirror_editor_rotate_blocked">無法旋轉：被其他區塊阻擋</string>
+    <string name="mirror_editor_flip_title">翻轉</string>
+    <string name="mirror_editor_flip_none">無</string>
+    <string name="mirror_editor_flip_horizontal">水平</string>
+    <string name="mirror_editor_flip_vertical">垂直</string>
+    <string name="mirror_editor_flip_both">兩者</string>
     <string name="settings_mirror_cutout_summary_fmt">平滑化: %1$s • 投影: %2$s</string>
     <string name="settings_mirror_cutout_summary_with_filter_fmt">平滑化：%1$s • %2$s • 投影：%3$s</string>
     <string name="settings_mirror_cutout_filter_transparency_mask">HUD / UI 隔離</string>
@@ -809,6 +816,10 @@ Open Settings to create a layout.</string>
     <string name="help_mirror_editor_aspect_desc">為所選區塊循環切換三種長寬比模式。「自由」— 無限制，可獨立調整大小。「上螢幕」— 鎖定長寬比以匹配上螢幕的裁切。「下螢幕」— 鎖定長寬比以匹配下螢幕的區塊。</string>
     <string name="help_mirror_editor_shape_label">形狀</string>
     <string name="help_mirror_editor_shape_desc">在矩形與圓形之間切換所選區塊的形狀。適用於遊戲小地圖或圓形儀表，圓形裁切外觀更佳。</string>
+    <string name="help_mirror_editor_rotation_label">旋轉</string>
+    <string name="help_mirror_editor_rotation_desc">以 90° 為單位旋轉所選區塊（0°、90°、180°、270°）。在橫向與直向之間旋轉時，邊界框會自動調整並避免與其他區塊重疊。</string>
+    <string name="help_mirror_editor_flip_label">翻轉</string>
+    <string name="help_mirror_editor_flip_desc">循環切換所選區塊的鏡像翻轉模式：無、水平、垂直或兩者。</string>
     <string name="help_mirror_editor_adjust_label">調整座標</string>
     <string name="help_mirror_editor_adjust_desc" formatted="false">進入微調模式。使用方向鍵逐像素移動區塊。按住 R2 同時按方向鍵可調整區塊大小（繞中心點對稱放大或縮小，最小可縮至螢幕的 1%）。低於 5% 時將隱藏觸控控制點以保持畫面清晰。</string>
     <string name="help_mirror_editor_hide_bg_desc">在編輯時暫時隱藏下螢幕上的配置背景圖片，以便更容易看清並調整區塊邊界。這不會變更您已儲存的配置設定。</string>

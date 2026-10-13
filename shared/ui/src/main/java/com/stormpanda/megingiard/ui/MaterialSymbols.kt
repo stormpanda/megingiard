@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.ui
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
@@ -12,6 +13,7 @@ import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.shared.ui.R
 
 private const val TAG = "MaterialSymbols"
@@ -70,6 +72,9 @@ fun MaterialSymbol(
     filled: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
+    if (name.isBlank()) {
+        LaunchedEffect(Unit) { AppLog.w(TAG, "MaterialSymbol requested with blank ligature name — renders empty") }
+    }
     val fontSize = with(LocalDensity.current) { size.toSp() }
     Text(
         text = name,

@@ -20,10 +20,11 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.ui.AppPalettes
 import kotlin.math.sqrt
 
 private const val PBF_DISABLED_ALPHA = 0.38f
-private val PBF_BACKING_COLOR = Color(0x80121212)
+private val PBF_BACKING_COLOR = AppPalettes.padButtonBacking
 private val PBF_BORDER_WIDTH = 1.dp
 
 @Composable

@@ -50,9 +50,9 @@ private val SS_IMAGE_BORDER_WIDTH = 1.dp
 private val SS_FRAME_PADDING = 12.dp
 
 // Colors
-private val SS_BG_COLOR = Color(0xFFFCFBF9) // Clean off-white Polaroid frame
-private val SS_BORDER_COLOR = Color(0xFFE5E4E0)
-private val SS_IMAGE_BORDER_COLOR = Color(0x22000000)
+private val SS_BG_COLOR = AppPalettes.polaroidFrame
+private val SS_BORDER_COLOR = AppPalettes.polaroidFrameBorder
+private val SS_IMAGE_BORDER_COLOR = AppPalettes.polaroidImageBorder
 
 // Glare animation sweeps
 private const val SS_GLARE_START_OFFSET = -0.5f

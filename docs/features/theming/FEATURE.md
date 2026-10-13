@@ -1,6 +1,6 @@
 # Feature: App Theming
 
-> **Related source:** `companion/ui/src/main/java/com/stormpanda/megingiard/ui/AppTheme.kt`
+> **Related source:** `shared/ui/src/main/java/com/stormpanda/megingiard/ui/AppTheme.kt`, `shared/ui/src/main/java/com/stormpanda/megingiard/ui/AppPalettes.kt`
 > _(Settings persistence in `settings/SettingsManager.kt`. Theme provider wired in `MainActivity.kt`.)_
 
 ---
@@ -32,6 +32,7 @@ Megingiard supports user-selectable colour themes. The app provides three themes
   - Standard dialog scrim overlays (`Color.Black.copy(alpha = 0.5f)` behind modal panels).
   - Material 3 component internal styling (`SwitchDefaults.colors`, `CheckboxDefaults.colors`) where tokens do not apply.
   - Explicit slider track colours (`Color.LightGray` / `Color.DarkGray` in `MediaScreen`).
+- Fixed, theme-independent colours (accent presets, touch-pointer slot colours, hue spectrum, gamepad face buttons, MacroPad ambient-neutral defaults, probe/status colours, Polaroid screenshot frame) MUST be declared as named tokens in `AppPalettes` (`:shared:ui`), never as `Color(0x…)` literals in screen code. The build enforces this (`HARDCODED_COLOR` rule; only `AppTheme.kt`, `AppColors.kt`, `AppPalettes.kt` are exempt).
 
 ### FR-TH3: Real-Time Application
 
@@ -109,6 +110,22 @@ Eight palettes are defined:
 
 A new theme requires only a new `AppColors` instance and a corresponding `ThemeMode` entry — no per-screen changes.
 
+### Fixed Palettes — `ui/AppPalettes.kt`
+
+`AppPalettes` is an `object` holding colours that intentionally do **not** follow the active theme:
+
+| Token(s) | Used by |
+| --- | --- |
+| `accentPresets` | Accent preset swatches (`GS_ACCENT_PALETTE_PRESETS` in `AppearanceSettingsTab`) |
+| `touchPointerSlots` | Per-slot pointer colours in `TouchRecordingSheet` |
+| `hueSpectrum` | Hue slider gradient in the MacroPad colour wheel |
+| `gamepadFace{Blue,Green,Red,Yellow}` | Face buttons in `VisualGamepadPicker` |
+| `macroPadNeutral{Background,Border,Text}` | MacroPad ambient-neutral defaults (`MP_AMBIENT_NEUTRAL_*`) |
+| `padButtonBacking` | Backing plate behind MacroPad button faces |
+| `probeMatched` / `probeMismatched` / `probeOutline` | Anchor-testing probes |
+| `batteryLow` | Integration home battery indicator |
+| `polaroidFrame` / `polaroidFrameBorder` / `polaroidImageBorder` | Screenshot preview overlay |
+
 ### Theme Metadata — `ThemeMode`
 
 `ThemeMode` carries a `supportsCustomAccent: Boolean` flag:
@@ -163,7 +180,7 @@ MaterialTheme(
 For external applications (such as the standalone Megingiard Game Focus launcher app `:gamefocus`), theme settings are shared across process boundaries via Android's `ContentProvider` and `ContentObserver` architecture:
 
 - **IPC Contract & Parsing (`companion/domain/src/main/java/com/stormpanda/megingiard/ipc/`):** Defines `MegingiardIpcContract` (`content://com.stormpanda.megingiard.provider/theme`), `IpcThemeParser`, `IpcSettingsParser`, and the generic `observeContentProvider` reactive Flow extension.
-- **Provider Host (`MegingiardSettingsProvider.kt` in `:app`):** Exposes `/theme` and `/settings` endpoints. Listens to `SettingsManager.onThemeChangedListener` and invokes `contentResolver.notifyChange()` whenever the user changes the theme mode or custom accent color.
+- **Provider Host (`MegingiardSettingsProvider.kt` in `:companion:ui`):** Exposes `/theme` and `/settings` endpoints. Listens to `SettingsManager.onThemeChangedListener` and invokes `contentResolver.notifyChange()` whenever the user changes the theme mode or custom accent color.
 - **Observer Client (`MegingiardThemeClient.kt` in `:gamefocus`):** Consumes `observeContentProvider()` to query initial state synchronously on launch and reactively update `LocalAppColors` whenever theme change notifications arrive.
 
 ### Secondary Display — `MainActivity.kt`
@@ -174,8 +191,8 @@ For external applications (such as the standalone Megingiard Game Focus launcher
 
 - Theme selection uses a picker/dropdown row, not a binary switch.
 - The Accent Color section is only shown when `themeMode.supportsCustomAccent` is `true`.
-- Accent color selection provides an inline palette card (`GamepadColorPaletteCard`) containing preset swatches (`ACCENT_PALETTE_PRESETS`) and an action card opening a dedicated custom accent sub-page (`CustomAccentSubPage`) with Hue, Saturation, and Brightness (HSV) sliders and a Save action card.
-- The custom accent color is persisted independently (`KEY_CUSTOM_ACCENT_COLOR` / `customAccentColor`), retaining the user's custom HSV values and preview swatch even when an `ACCENT_PALETTE_PRESETS` preset is actively selected.
+- Accent color selection provides an inline palette card (`GamepadColorPaletteCard`) containing preset swatches (`GS_ACCENT_PALETTE_PRESETS`, backed by `AppPalettes.accentPresets`) and an action card opening a dedicated custom accent sub-page (`CustomAccentSubPage`) with Hue, Saturation, and Brightness (HSV) sliders and a Save action card.
+- The custom accent color is persisted independently (`KEY_CUSTOM_ACCENT_COLOR` / `customAccentColor`), retaining the user's custom HSV values and preview swatch even when a `GS_ACCENT_PALETTE_PRESETS` preset is actively selected.
 - The accent swatch still shows the stored user accent even when the currently active theme may ignore it.
 
 ### Separators — `AppDivider`

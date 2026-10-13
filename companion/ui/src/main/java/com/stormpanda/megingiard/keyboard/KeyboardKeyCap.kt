@@ -82,6 +82,15 @@ private val KC_ICON_SIZE = 18.dp
 private val KC_SUPER_PADDING_TOP = 2.dp
 private val KC_SUPER_PADDING_END = 5.dp
 
+// §16.1 documented exception: key-cap text is sized to the key geometry, not to a typography
+// role. Sizes below 11sp are intentionally tiny secondary labels.
+private val KC_LABEL_FONT_SIZE = 14.sp
+private val KC_LABEL_WIDE_FONT_SIZE = 11.sp
+private val KC_DUAL_PRIMARY_FONT_SIZE = 11.sp
+private val KC_DUAL_SHIFT_FONT_SIZE = 10.sp
+private val KC_SUPER_LABEL_FONT_SIZE = 8.sp
+private const val KC_WIDE_KEY_WEIGHT = 1.5f
+
 @Composable
 internal fun KeyCap(
     keyDef: KeyDef,
@@ -264,7 +273,7 @@ private fun PhysicalKeyContent(
                     Text(
                         text = shiftLabel,
                         color = shiftColor,
-                        fontSize = 10.sp,
+                        fontSize = KC_DUAL_SHIFT_FONT_SIZE,
                         fontWeight = shiftWeight,
                         textAlign = TextAlign.Center,
                         maxLines = 1,
@@ -272,7 +281,7 @@ private fun PhysicalKeyContent(
                     Text(
                         text = keyDef.label,
                         color = normalColor,
-                        fontSize = 11.sp,
+                        fontSize = KC_DUAL_PRIMARY_FONT_SIZE,
                         fontWeight = normalWeight,
                         textAlign = TextAlign.Center,
                         maxLines = 1,
@@ -299,7 +308,7 @@ private fun PhysicalKeyContent(
                 Text(
                     text = displayLabel,
                     color = contentColor,
-                    fontSize = if (keyDef.widthWeight >= 1.5f) 11.sp else 14.sp,
+                    fontSize = if (keyDef.widthWeight >= KC_WIDE_KEY_WEIGHT) KC_LABEL_WIDE_FONT_SIZE else KC_LABEL_FONT_SIZE,
                     fontWeight = if (isPressed || isModifierActive) FontWeight.Bold else FontWeight.Normal,
                     textAlign = TextAlign.Center,
                     maxLines = 1,
@@ -403,7 +412,7 @@ private fun ErgoKeyContent(
                 Text(
                     text = displayLabel,
                     color = contentColor,
-                    fontSize = if (keyDef.widthWeight >= 1.5f) 11.sp else 14.sp,
+                    fontSize = if (keyDef.widthWeight >= KC_WIDE_KEY_WEIGHT) KC_LABEL_WIDE_FONT_SIZE else KC_LABEL_FONT_SIZE,
                     fontWeight = if (isPressed || isModifierActive) FontWeight.Bold else FontWeight.Normal,
                     textAlign = TextAlign.Center,
                     maxLines = 1,
@@ -424,7 +433,7 @@ private fun ErgoKeyContent(
                 Text(
                     text = superLabel,
                     color = contentColor.copy(alpha = 0.5f),
-                    fontSize = 8.sp,
+                    fontSize = KC_SUPER_LABEL_FONT_SIZE,
                     fontWeight = FontWeight.Light,
                 )
             }

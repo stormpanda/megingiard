@@ -421,12 +421,16 @@ All text sizing uses `MaterialTheme.typography.*`. Inline `fontSize = XX.sp` in 
 | Dialog subtitles               | `MaterialTheme.typography.labelMedium` (13sp Medium)   |
 | Category headers, pill labels  | `MaterialTheme.typography.labelSmall` (11sp Normal)    |
 
-**Allowed exceptions** (must be commented):
+**Allowed exceptions** (must be commented and declared as prefixed file-scope constants, e.g.
+`KC_LABEL_WIDE_FONT_SIZE` in `KeyboardKeyCap.kt`):
 
 - Computed/data-driven sizes: `(11 * btn.buttonSize.cols).sp` (button label scaled by size)
-- Conditional key sizes: `if (widthWeight >= 1.5f) 11.sp else 12.sp` (keyboard key cap)
+- Conditional key sizes: `if (widthWeight >= KC_WIDE_KEY_WEIGHT) KC_LABEL_WIDE_FONT_SIZE else KC_LABEL_FONT_SIZE`
 - Internal renderers: `MaterialSymbols` size→sp conversion
-- Intentionally tiny labels below 11sp (e.g. icon name under icon picker grid at 8sp)
+- Intentionally tiny labels below 11sp (e.g. key-cap super labels at 8sp)
+
+When only the size of a token is wanted (custom weight kept), pass `style = MaterialTheme.typography.<token>`
+and keep the explicit `fontWeight` — it overrides the style's weight.
 
 ### 16.2 Colors — never hardcode `Color(0xFF...)`
 
@@ -434,10 +438,12 @@ All colors in Composables come from:
 
 - `LocalAppColors.current.<token>` — app-defined semantic colors (accent, surface, error, etc.)
 - `MaterialTheme.colorScheme.<token>` — M3 semantic colors (primary, onPrimary, etc.)
+- `AppPalettes.<token>` (`:shared:ui`) — fixed, theme-independent colors (preset swatches,
+  hardware-mimicking colors, data-visualisation palettes, status probes)
 
-Hardcoded `Color(0xFF...)` literals in screen/composable code are forbidden.
-(§8.3's prefixed file-scope color constants apply only to theme/palette definition files
-and legacy code awaiting migration — new screen code uses tokens.)
+Hardcoded `Color(0xFF...)` literals in screen/composable code are forbidden. A new fixed color
+goes into `AppPalettes.kt` as a named token; screens may alias it with a prefixed file-scope
+constant (`private val SS_BG_COLOR = AppPalettes.polaroidFrame`).
 
 Key token mapping:
 
@@ -497,8 +503,8 @@ Comment lines (`//`, `*`, `/*`) are ignored.
 | `VOLUME_UUID_PATH` | `src/main` | §8.3 no hardcoded `/storage/XXXX-XXXX` paths |
 | `PUBLIC_MUTABLE_STATE_FLOW` | `src/main`, top-level / first-level members | §7.1 `MutableStateFlow` must be `private` |
 | `HEURISTIC_SUBSTRING` | `src/main` | §7.5 no `.contains("launcher" / "home" / "game")` role guessing |
-| `INLINE_FONT_SIZE` | `src/main` except `AppTheme.kt` | §16.1 typography tokens |
-| `HARDCODED_COLOR` | `src/main` except `AppTheme.kt` / `AppColors.kt` | §16.2 color tokens |
+| `INLINE_FONT_SIZE` | `src/main` except `AppTheme.kt` / `AppColors.kt` / `AppPalettes.kt` | §16.1 typography tokens |
+| `HARDCODED_COLOR` | `src/main` except `AppTheme.kt` / `AppColors.kt` / `AppPalettes.kt` | §16.2 color tokens |
 | `UNUSED_TAG` | `src/main` | §8.4 a declared `TAG` must be used (add logs, don't delete it) |
 | `MISSING_TRANSLATION` | `src/main/res` | §9.2 every translatable default string exists in every locale |
 | `STALE_TRANSLATION` | `src/main/res` | §9.2 no locale string without a default string |
@@ -506,8 +512,9 @@ Comment lines (`//`, `*`, `/*`) are ignored.
 ### Baselines
 
 Pre-existing violations are recorded per module in `<module>/architecture-baseline.txt`
-(`RULE_ID|path|max_count`). The build fails only when a file's count for a rule **exceeds** its
-baseline, and warns when a baseline can be lowered.
+(`RULE_ID|path|max_count`); a missing file means zero tolerated violations. The build fails only
+when a file's count for a rule **exceeds** its baseline, and warns when a baseline can be lowered.
+All original baselines have been burned down — currently no module has one, so any hit fails.
 
 - **Agents never add or raise baseline entries.** Fix the code instead.
 - When you fix an old violation, lower or delete its entry.

@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.ui.AppPalettes
 import com.stormpanda.megingiard.ui.MaterialSymbol
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -95,9 +96,9 @@ internal const val MP_BTN_GRADIENT_OUTER = 0.7f
 // Neutral (theme-independent) ambient button style — intentionally NOT derived from AppColors;
 // these are muted, always-dim values designed to look unobtrusive on any background color and
 // are identical across all palettes (Dark / Dark OLED).
-internal val MP_AMBIENT_NEUTRAL_BG = Color(0xB3FFFFFF) // 70% white (matching previous default resting level)
-internal val MP_AMBIENT_NEUTRAL_BORDER = Color(0x99AAAAAA)
-internal val MP_AMBIENT_NEUTRAL_TEXT = Color(0xFFDDDDDD).copy(alpha = 0.9f)
+internal val MP_AMBIENT_NEUTRAL_BG = AppPalettes.macroPadNeutralBackground
+internal val MP_AMBIENT_NEUTRAL_BORDER = AppPalettes.macroPadNeutralBorder
+internal val MP_AMBIENT_NEUTRAL_TEXT = AppPalettes.macroPadNeutralText
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Individual pad button

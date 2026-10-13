@@ -36,6 +36,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.MacroPadSettings
+import com.stormpanda.megingiard.ui.AppPalettes
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.primaryOverlayFocusable
@@ -79,10 +80,10 @@ private val VGP_LABEL_FONT_SIZE = 12.sp
 private val VGP_STICK_LABEL_FONT_SIZE = 11.sp
 
 // Face Button Theme Accents
-private val VGP_COLOR_BLUE = Color(0xFF42A5F5)
-private val VGP_COLOR_GREEN = Color(0xFF66BB6A)
-private val VGP_COLOR_RED = Color(0xFFEF5350)
-private val VGP_COLOR_YELLOW = Color(0xFFFFD54F)
+private val VGP_COLOR_BLUE = AppPalettes.gamepadFaceBlue
+private val VGP_COLOR_GREEN = AppPalettes.gamepadFaceGreen
+private val VGP_COLOR_RED = AppPalettes.gamepadFaceRed
+private val VGP_COLOR_YELLOW = AppPalettes.gamepadFaceYellow
 
 private fun preset(code: Int) = GamepadKeycodes.PRESETS.first { it.code == code }
 

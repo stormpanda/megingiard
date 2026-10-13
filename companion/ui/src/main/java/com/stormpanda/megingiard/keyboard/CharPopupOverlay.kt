@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -21,7 +22,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.ui.LocalAppColors
 
 private val KB_POPUP_SHAPE = RoundedCornerShape(12.dp)
@@ -83,7 +83,7 @@ internal fun CharPopupOverlay(
                     Text(
                         text = opt,
                         color = if (isSelected) colors.onAccent else colors.onSurfaceSecondary,
-                        fontSize = 18.sp,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                     )
                 }

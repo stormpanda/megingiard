@@ -63,6 +63,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.MAX_LAYOUT_ANCHOR_MATCH_THRESHOLD
 import com.stormpanda.megingiard.macropad.MIN_LAYOUT_ANCHOR_MATCH_THRESHOLD
+import com.stormpanda.megingiard.ui.AppPalettes
 import com.stormpanda.megingiard.ui.GamepadSliderCard
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.blockPointerEvents
@@ -108,9 +109,9 @@ private val TOGGLE_BUTTON_SIZE = 28.dp
 private val TOGGLE_ICON_SIZE = 16.dp
 private val PROBE_OUTLINE_RADIUS = 3.dp
 private val PROBE_FILL_RADIUS = 1.8.dp
-private val PROBE_MATCHED_COLOR = Color(0xFF00E676)
-private val PROBE_MISMATCHED_COLOR = Color(0xFFFF5252)
-private val PROBE_OUTLINE_COLOR = Color(0xCC000000)
+private val PROBE_MATCHED_COLOR = AppPalettes.probeMatched
+private val PROBE_MISMATCHED_COLOR = AppPalettes.probeMismatched
+private val PROBE_OUTLINE_COLOR = AppPalettes.probeOutline
 
 /**
  * Secondary display diagnostic overlay rendered on Display 4 during active anchor testing.

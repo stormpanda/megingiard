@@ -162,9 +162,9 @@ PadProfile
 | `reset()` | Restores default state (`QUICK_ACTIONS`, empty stack) upon explicit editor exit (`onDone`). |
 | `applyPrimaryModalPayload(payload)` | Directs incoming `PrimaryModalPayload` deep links into the appropriate section and subpage stack. |
 
-### MacroPadMediaRepository (`:app`)
+### MacroPadMediaRepository (`:companion:ui`)
 
-`MacroPadMediaRepository` is an `object` singleton in `app/…/macropad/` that encapsulates all filesystem and bitmap storage operations for MacroPad layout backgrounds.
+`MacroPadMediaRepository` is an `object` singleton in `companion/ui/…/macropad/` that encapsulates all filesystem and bitmap storage operations for MacroPad layout backgrounds.
 
 | Method | Description |
 | --- | --- |

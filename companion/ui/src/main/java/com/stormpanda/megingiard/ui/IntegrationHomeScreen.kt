@@ -130,7 +130,7 @@ private val IH_DIALOG_ICON_SIZE = 32.dp
 private val IH_DIALOG_BUTTON_CORNER_RADIUS = 8.dp
 private val IH_DIALOG_BUTTON_SHAPE = RoundedCornerShape(IH_DIALOG_BUTTON_CORNER_RADIUS)
 
-private val IH_BATTERY_LOW_COLOR = Color(0xFFE57373)
+private val IH_BATTERY_LOW_COLOR = AppPalettes.batteryLow
 
 @Composable
 fun IntegrationHomeScreen(modifier: Modifier = Modifier) {

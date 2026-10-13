@@ -15,6 +15,7 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.ColorWheelSubPageContent
 import com.stormpanda.megingiard.settings.ThemeMode
 import com.stormpanda.megingiard.settings.displayNameResId
+import com.stormpanda.megingiard.ui.AppPalettes
 import com.stormpanda.megingiard.ui.BumperDirection
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
@@ -24,19 +25,7 @@ import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.cycle
 import com.stormpanda.megingiard.ui.firstDeckItem
 
-val GS_ACCENT_PALETTE_PRESETS =
-    listOf(
-        Color(0xFFFF5252), // Red
-        Color(0xFFFF7043), // Deep Orange
-        Color(0xFFFFA726), // Orange
-        Color(0xFFFFCA28), // Amber
-        Color(0xFF66BB6A), // Green
-        Color(0xFF26A69A), // Teal
-        Color(0xFF29B6F6), // Light Blue
-        Color(0xFF42A5F5), // Blue
-        Color(0xFF7E57C2), // Deep Purple
-        Color(0xFFEC407A), // Pink
-    )
+val GS_ACCENT_PALETTE_PRESETS = AppPalettes.accentPresets
 
 @Composable
 fun AppearanceSettingsTab(

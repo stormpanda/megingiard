@@ -47,7 +47,7 @@ object ArchitectureRules {
     const val STALE_TRANSLATION = "STALE_TRANSLATION"
 
     private const val APP_LOG_FILE = "AppLog.kt"
-    private val THEME_DEFINITION_FILES = setOf("AppTheme.kt", "AppColors.kt")
+    private val THEME_DEFINITION_FILES = setOf("AppTheme.kt", "AppColors.kt", "AppPalettes.kt")
 
     private val ENUM_VALUES_REGEX = Regex("""\.values\(\)""")
     private val JAVA_MATH_REGEX = Regex("""\bjava\.lang\.Math\b|(?<![\w.])Math\.[a-zA-Z]+\(""")

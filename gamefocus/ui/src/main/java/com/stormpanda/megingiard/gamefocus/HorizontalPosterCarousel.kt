@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.math.floorMod
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -183,8 +184,10 @@ private fun CarouselPosterCard(
         remember(page, actualIndex) {
             {
                 if (currentIsSelected) {
+                    AppLog.d(TAG, "Carousel card activated: index=$actualIndex")
                     currentOnItemClick(actualIndex)
                 } else {
+                    AppLog.d(TAG, "Carousel card tapped, scrolling to page=$page (index=$actualIndex)")
                     coroutineScope.launch {
                         pagerState.animateScrollToPage(page)
                     }

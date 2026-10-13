@@ -52,5 +52,5 @@
 | `IconPickerDialog.kt` | Full-screen icon picker (3-zone layout: header with ✓, search + filled toggle, selection row with preview/name/🗑); `LazyVerticalGrid` (5 columns), `pendingIcon` local state; called from `PadButtonEditDialog` |
 | `RoundedIconNames.kt` | Auto-generated list of ~4 154 sorted snake_case icon name strings extracted from the font's GSUB table (regenerated via `scripts/generate_icon_names.py`) |
 | `AutoSwitchCoordinator.kt` | Domain singleton coordinating active profile transitions when foreground packages change, filtering out self-exclusion packages, and matching active profile mappings. |
-| `MegingiardAccessibilityService.kt` | Event-driven accessibility service in `:app` that captures foreground window focus transitions and forwards package changes to the domain-level coordinator. |
+| `MegingiardAccessibilityService.kt` | Event-driven accessibility service in `:companion:ui` that captures foreground window focus transitions and forwards package changes to the domain-level coordinator. |
 | `SystemRoleClassifier.kt` | Deterministic system role and launcher classifier in `:shared:catalog` querying `PackageManager` for `Intent.CATEGORY_HOME` manifest registrations. |

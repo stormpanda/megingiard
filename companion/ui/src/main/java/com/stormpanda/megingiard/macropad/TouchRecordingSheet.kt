@@ -66,6 +66,7 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.AppDivider
+import com.stormpanda.megingiard.ui.AppPalettes
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.blockPointerEvents
 import com.stormpanda.megingiard.ui.isBackKeyDown
@@ -107,18 +108,7 @@ private const val TRS_TOUCH_INDICATOR_RADIUS_DP = 10f
 private const val TRS_TOUCH_PULSE_RADIUS_DP = 22f
 private const val TRS_TRAIL_STROKE_WIDTH_DP = 3.5f
 
-private val TRS_POINTER_PALETTE =
-    listOf(
-        Color(0xFFFFB300), // Amber (Slot 1)
-        Color(0xFF00E676), // Emerald Green (Slot 2)
-        Color(0xFFFF4081), // Magenta / Pink (Slot 3)
-        Color(0xFF00E5FF), // Cyan / Sky (Slot 4)
-        Color(0xFFFF9100), // Deep Orange (Slot 5)
-        Color(0xFFD500F9), // Purple / Violet (Slot 6)
-        Color(0xFFAEEA00), // Lime (Slot 7)
-        Color(0xFFFF6E40), // Coral (Slot 8)
-        Color(0xFF1DE9B6), // Teal (Slot 9)
-    )
+private val TRS_POINTER_PALETTE = AppPalettes.touchPointerSlots
 
 private fun pointerColor(
     slot: Int,

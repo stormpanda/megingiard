@@ -78,6 +78,8 @@ class ArchitectureRulesTest {
         assertEquals(listOf(ArchitectureRules.HARDCODED_COLOR), rules(mainKt, "val c = Color(0xFF121212)"))
         val theme = "shared/ui/src/main/java/com/stormpanda/megingiard/ui/AppTheme.kt"
         assertEquals(emptyList<String>(), rules(theme, "TextStyle(fontSize = 18.sp)", "val c = Color(0xFF121212)"))
+        val palettes = "shared/ui/src/main/java/com/stormpanda/megingiard/ui/AppPalettes.kt"
+        assertEquals(emptyList<String>(), rules(palettes, "    val batteryLow = Color(0xFFE57373)"))
     }
 
     @Test

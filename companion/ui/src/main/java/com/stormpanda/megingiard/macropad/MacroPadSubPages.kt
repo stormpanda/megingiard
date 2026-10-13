@@ -32,6 +32,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.ui.AppPalettes
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadColorSwatch
 import com.stormpanda.megingiard.ui.GamepadSliderCard
@@ -403,16 +404,7 @@ internal fun ColorWheelSubPageContent(
     val hueGradient =
         remember {
             Brush.horizontalGradient(
-                colors =
-                    listOf(
-                        Color(0xFFFF0000),
-                        Color(0xFFFFFF00),
-                        Color(0xFF00FF00),
-                        Color(0xFF00FFFF),
-                        Color(0xFF0000FF),
-                        Color(0xFFFF00FF),
-                        Color(0xFFFF0000),
-                    ),
+                colors = AppPalettes.hueSpectrum,
             )
         }
 

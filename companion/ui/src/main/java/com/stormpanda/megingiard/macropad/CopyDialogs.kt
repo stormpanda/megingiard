@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -44,7 +45,10 @@ internal fun CopyLayoutSubPageContent(
                 actionText = stringResource(R.string.gamepad_prompt_select),
                 icon = Icons.Rounded.Folder,
                 modifier = Modifier.firstDeckItem(index == 0),
-                onClick = { onSelect(profile.id) },
+                onClick = {
+                    AppLog.d(TAG, "Copy layout target selected: profileId=${profile.id}")
+                    onSelect(profile.id)
+                },
             )
         }
     }
@@ -91,7 +95,10 @@ internal fun CopyButtonSubPageContent(
                     actionText = stringResource(R.string.gamepad_action_copy),
                     icon = Icons.Rounded.ContentCopy,
                     modifier = Modifier.firstDeckItem(first),
-                    onClick = { onSelect(profile.id, layout.id) },
+                    onClick = {
+                        AppLog.d(TAG, "Copy button target selected: profileId=${profile.id}, layoutId=${layout.id}")
+                        onSelect(profile.id, layout.id)
+                    },
                 )
             }
         }

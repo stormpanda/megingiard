@@ -55,8 +55,12 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
 import java.util.Locale
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 
 private const val TAG = "QuickMenuComponents"
+private const val PM_DEGREES_TO_RADIANS = PI / 180.0
 internal val PM_CHIP_LABEL_GAP = 6.dp
 internal val PM_AUTO_SWITCH_GAP = 8.dp
 
@@ -268,13 +272,13 @@ internal fun MagicalAutoToggleChip(
 
                                 // Magical shimmer border fading out smoothly
                                 if (shimmerAlpha > 0.001f) {
-                                    val rad = Math.toRadians(currentAngle.toDouble())
-                                    val cos = kotlin.math.cos(rad).toFloat()
-                                    val sin = kotlin.math.sin(rad).toFloat()
-                                    val startX = size.width * (1f - cos)
-                                    val startY = size.height * (1f - sin)
-                                    val endX = size.width * (1f + cos)
-                                    val endY = size.height * (1f + sin)
+                                    val rad = currentAngle * PM_DEGREES_TO_RADIANS
+                                    val cosVal = cos(rad).toFloat()
+                                    val sinVal = sin(rad).toFloat()
+                                    val startX = size.width * (1f - cosVal)
+                                    val startY = size.height * (1f - sinVal)
+                                    val endX = size.width * (1f + cosVal)
+                                    val endY = size.height * (1f + sinVal)
 
                                     val magicalBrush =
                                         Brush.linearGradient(
