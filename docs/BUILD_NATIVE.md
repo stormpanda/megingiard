@@ -31,7 +31,7 @@ At runtime, `BinaryIntegrity.verify()` fails closed if an asset is missing from 
 
 ### Privd Authentication Key
 
-The `megingiard_privd` daemon uses a per-install HMAC key generated on the device during Megingiard System Service bootstrap and provisioned to the daemon over the ADB TLS channel (see [Privileged Mode — Per-install Key Scheme](features/privileged-mode/FEATURE.md#per-install-key-scheme)). No compile-time key needs to be set in `local.properties` or passed to `scripts/build_megingiard_privd.sh`.
+The `megingiard_privd` daemon uses a per-install HMAC key generated on the device during Megingiard System Service bootstrap and provisioned to the daemon over the ADB TLS channel (see [Privileged Mode — Per-install Key Scheme](features/privileged-mode/technical-security-protocol.md#per-install-key-scheme)). No compile-time key needs to be set in `local.properties` or passed to `scripts/build_megingiard_privd.sh`.
 
 ---
 

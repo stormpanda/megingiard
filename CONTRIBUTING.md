@@ -121,7 +121,10 @@ Before submitting a translation Pull Request, you **must** manually verify that 
 2. **Implement:** Write your code following the guidelines in [AGENTS.md](AGENTS.md).
 3. **Mandatory Testing & Coverage:** Run the unit tests and coverage report locally before submitting any contribution to ensure there are no regressions:
    ```bash
-   # Run all unit tests (canonical task list lives in this script)
+   # Full quality gate: architecture rules + all unit tests
+   ./scripts/verify.sh
+
+   # Unit tests only (canonical task list lives in this script)
    ./scripts/run_unit_tests.sh
 
    # Generate consolidated test coverage report

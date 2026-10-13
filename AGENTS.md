@@ -38,14 +38,14 @@
 | `docs/REQUIREMENTS.md` | Requirements & non-functional requirements |
 | `docs/features/FEATURE_TEMPLATE.md` | Template for new feature docs |
 | `docs/features/config/FEATURE.md` | Config Export/Import (`.mgrd` backup, profile sharing) |
-| `docs/features/gamefocus/FEATURE.md` | Game Focus launcher variant |
+| `docs/features/gamefocus/FEATURE.md` | Game Focus launcher variant — split, see its doc map |
 | `docs/features/help/FEATURE.md` | In-App Help (HelpModal infrastructure & content) |
 | `docs/features/integration-api/FEATURE.md` | Integration API (clients, state sharing, profile query) |
 | `docs/features/keyboard/FEATURE.md` | Virtual Keyboard |
 | `docs/features/log-report/FEATURE.md` | Log Report Export |
-| `docs/features/macropad/FEATURE.md` | MacroPad (profiles, layouts, macros) |
-| `docs/features/mirror/FEATURE.md` | Screen Mirror |
-| `docs/features/privileged-mode/FEATURE.md` | Privileged Mode (daemon, ADB-Wireless bootstrap, feature flags) |
+| `docs/features/macropad/FEATURE.md` | MacroPad (profiles, layouts, macros) — split, see its doc map |
+| `docs/features/mirror/FEATURE.md` | Screen Mirror — split, see its doc map |
+| `docs/features/privileged-mode/FEATURE.md` | Privileged Mode (daemon, bootstrap, feature flags) — split |
 | `docs/features/quickmenu/FEATURE.md` | Quick Menu Bar & Quick Menu |
 | `docs/features/theming/FEATURE.md` | Design System (AppColors, Typography, AppDimens) |
 | `docs/features/touchpad/FEATURE.md` | Virtual Touchpad |
@@ -53,6 +53,7 @@
 
 - **Documentation language is English only** — every `*.md` file in this repository.
 - **New features:** create `docs/features/<feature>/FEATURE.md` from the template first, then add a row to the table above.
+- **Size cap:** every `*.md` file < 40 KB so it fits one agent read (`verify.sh`-enforced). Split larger specs into sibling part files listed in a document map at the top of `FEATURE.md`; doc sync (§5) covers all parts.
 - **Doc sync after every change:** see §5.
 
 ---
@@ -63,12 +64,14 @@
 
 | Purpose | Command | Notes |
 | ------- | ------- | ----- |
-| Unit tests (all modules) | `./scripts/run_unit_tests.sh` | Canonical test entry point. Extra args are forwarded to Gradle. |
-| Compile check | `./gradlew compileDebugKotlin` or `./gradlew :companion:ui:assembleDebug` | |
-| Coverage | `./gradlew koverHtmlReport` / `koverLog` / `koverXmlReport` | HTML report: `build/reports/kover/html/index.html` |
+| **Quality gate** | `./scripts/verify.sh` | AGENTS.md size + architecture rules (CODING_GUIDE §17) + all unit tests. Loop until green. |
+| Unit tests only | `./scripts/run_unit_tests.sh` | Canonical test task list. Extra args forwarded to Gradle. |
+| Compile check | `./gradlew compileDebugKotlin` or `./gradlew :companion:ui:assembleDebug` | Also runs `verifyArchitectureRules`. |
+| Coverage | `./gradlew koverHtmlReport` / `koverLog` / `koverXmlReport` | `build/reports/kover/html/index.html` |
 | Native daemon rebuild | `./scripts/build_megingiard_privd.sh` | Mandatory after editing `megingiard_privd.c` |
 
-- These are the **only** Gradle commands the agent may run. Gradle (incl. the test script) needs local TCP sockets → always run with `BypassSandbox: true`.
+- These are the **only** Gradle commands the agent may run. Gradle needs local TCP sockets → always `BypassSandbox: true`.
+- Fix rule-verifier findings in code. Never add to or raise `architecture-baseline.txt` counts; lower them when you fix old violations.
 - **No deployment** without explicit operator permission: no `installDebug`, no ADB deploy, no clearing app data.
 
 ### 3.2 Native binaries
@@ -82,7 +85,7 @@ After every implementation (feature, bug fix, refactor):
 
 1. **Write new tests** for new pure logic (pure functions, data compilers, state machines, serialization round-trips).
 2. **Update existing tests** whose behaviour or signature changed.
-3. **Run `./scripts/run_unit_tests.sh`** and report the result. Confirm new test classes actually ran by checking their `build/test-results/**/TEST-*.xml`.
+3. **Run `./scripts/verify.sh`** and report the result. Confirm new test classes ran via their `build/test-results/**/TEST-*.xml`.
 
 - Placement: `:shared:core` → `shared/core/src/test/kotlin/`; other modules → `<module>/src/test/java/`. Prefer plain JUnit over Robolectric when possible.
 - New `src/test` directory in a module → add its task to `scripts/run_unit_tests.sh` (the only place the task list lives).
@@ -97,27 +100,22 @@ After completing an implementation and before proposing the commit message, run 
 
 Before marking a task as done, verify:
 
+- [ ] `./scripts/verify.sh` passes (mechanical rules: CODING_GUIDE §17)
 - [ ] `megingiard-code-review` pass executed on all modified files (§3.4)
-- [ ] `./scripts/run_unit_tests.sh` executed and all tests pass; new/changed pure logic is covered and existing tests updated where behaviour changed (§3.3); coverage checked via Kover when required
-- [ ] Compiles (`compileDebugKotlin`) or no suspected compile errors
+- [ ] New/changed pure logic covered by tests; existing tests updated where behaviour changed (§3.3); Kover checked when required
 - [ ] Native daemon rebuilt and `PRIVD_VERSION` bumped if C source changed (§3.2)
-- [ ] No public `MutableStateFlow` (§7.1); disk-backed state uses load-once guard (§7.6)
-- [ ] Zero-Heuristics respected — no substring guessing, synthetic fallbacks, or approximations without explicit approval (§7.5)
-- [ ] No star imports, no inline FQNs, no magic numbers, no hardcoded volume UUID paths (§8.2, §8.3)
-- [ ] No `android.util.Log` outside `AppLog.kt`; every new file has `private const val TAG` and logs per §8.4
+- [ ] Disk-backed state uses load-once guard (§7.6); bitmap recycling owned by the manager (§7.3)
+- [ ] Zero-Heuristics respected — no fuzzy matching, synthetic fallbacks, or approximations without explicit approval (§7.5)
+- [ ] No inline FQNs, no magic numbers (§8.2, §8.3); new files declare `TAG` and log per §8.4
 - [ ] Deprecated API branches annotated `@Suppress("DEPRECATION")` (§8.5)
-- [ ] All user-visible strings in `strings.xml` **and** `values-de/strings.xml`; all Icons have `contentDescription` (§9.2, §9.3)
-- [ ] `snapshotFlow` imported from `androidx.compose.runtime`; no fast-changing `LaunchedEffect` keys (§9.1)
-- [ ] Modal dialogs / non-fullscreen popups use `AppModalDialog` / `AppAlertDialog` or `rememberBezelBrush()` border; destructive actions in overlays use in-place two-step confirmation (§9.6)
-- [ ] Class-level scopes use `SupervisorJob()` and are cancelled in `onDestroy()` in the §12.1 order (§10.1)
-- [ ] Bitmap recycling handled by the manager, not call sites (PixelCopy exception, §7.3)
-- [ ] New `Activity` launches set `ActivityOptions.setLaunchDisplayId()` (§12.2)
-- [ ] `WindowOverlayLifecycleOwner.destroy()` called when an overlay view is removed
-- [ ] Service `onStartCommand` returns `START_NOT_STICKY`
-- [ ] Input injectors managed only by `InjectorLifecycleManager` (active while foregrounded, stopped on backgrounding or Privd setup wizard IME) — no local start/stop in screen `DisposableEffect`s
+- [ ] Icons have `contentDescription` (§9.3); no fast-changing `LaunchedEffect` keys (§9.1)
+- [ ] Modal dialogs / popups use `AppModalDialog` / `AppAlertDialog` or `rememberBezelBrush()`; destructive overlay actions use two-step confirmation (§9.6)
+- [ ] Scopes cancelled in `onDestroy()` in the §12.1 order; new `Activity` launches set `setLaunchDisplayId()` (§12.2)
+- [ ] `WindowOverlayLifecycleOwner.destroy()` called when an overlay view is removed; Service `onStartCommand` returns `START_NOT_STICKY`
+- [ ] Input injectors managed only by `InjectorLifecycleManager` — no local start/stop in screen `DisposableEffect`s
 - [ ] Companion bugs fixed only in Companion / shared modules — never via Game Focus (§6.1)
-- [ ] Typography, colors and spacing use design-system tokens (§16)
-- [ ] `FEATURE.md`, HelpModal entries, onboarding, and localized strings updated (§5)
+- [ ] Spacing uses prefixed constants (§16.3)
+- [ ] `FEATURE.md`, HelpModal entries, onboarding, and strings in **every** locale updated (§5)
 
 ---
 
@@ -145,7 +143,7 @@ Applies to **every** change that affects behaviour, interface, or architecture �
 2. Architecturally significant changes → also update `docs/ARCHITECTURE.md`.
 3. Security-affecting changes → also update `SECURITY_CONCEPT.md` and the detailed doc owning the mechanism (`docs/ARCHITECTURE.md`, `docs/BUILD_NATIVE.md`, or the feature's `FEATURE.md`).
 4. New features → new `FEATURE.md` from the template + row in §2.
-5. **In-app help:** if user interaction changes (buttons, modes, settings, gestures), update the matching `HelpModal`, onboarding popups, and `strings.xml` + `values-de/strings.xml`. **Every settings option visible in the UI must have an explanation entry in its HelpModal.**
+5. **In-app help:** if user interaction changes (buttons, modes, settings, gestures), update the matching `HelpModal`, onboarding popups, and strings in every locale (§9.2). **Every settings option visible in the UI must have an explanation entry in its HelpModal.**
 6. **Walkthroughs** / session summaries include a "Future Improvements" section listing code, design, or architecture improvements noticed during the work (even if unrelated).
 
 ---
@@ -205,7 +203,7 @@ Applies to **every** change that affects behaviour, interface, or architecture �
 ## 9 Jetpack Compose Rules — details: [CODING_GUIDE §9](docs/agents/CODING_GUIDE.md#9-jetpack-compose-rules)
 
 - **9.1** Never key a `LaunchedEffect` on fast-changing state; use `LaunchedEffect(Unit) { snapshotFlow { … }.collectLatest { … } }`. `snapshotFlow` comes from `androidx.compose.runtime`. For non-Flow imperative state, poll with `while (true) { …; delay(POLL_MS) }` inside a keyed `LaunchedEffect`.
-- **9.2** All user-visible strings in `strings.xml`, translated in every locale (`values-de`). Use `stringResource(R.string.x, args)` — never concatenation.
+- **9.2** All user-visible strings in `strings.xml`, translated in every locale (`values-de`, `values-zh-rTW`; build-enforced). Use `stringResource(R.string.x, args)` — never concatenation.
 - **9.3** Every `Icon` / `Image` has a string-resource `contentDescription`, or `null` if decorative.
 - **9.4** Reusable Composables live in `ui/`; never duplicate overlay code — use `AppStateManager.overlayVisible` / `triggerOverlay()`.
 - **9.5** `.collectAsState()` inside Composables only; `.collect {}` only in Services / Presentations / coroutine scopes.

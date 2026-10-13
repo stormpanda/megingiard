@@ -3,6 +3,7 @@
 > This file holds the full rationale and code examples for the rules summarized in
 > [`AGENTS.md`](../../AGENTS.md). Section numbers (§7–§16) are identical in both files, so
 > references such as "§7.5" or "§8.4" resolve to the same rule in either document.
+> §17 documents which rules the build enforces automatically.
 > `AGENTS.md` is authoritative for *what* the rule is; this file explains *how* to apply it.
 >
 > Read the relevant section before editing code in that area (e.g. §9 before touching
@@ -213,7 +214,7 @@ The coroutine is automatically cancelled when the key (`isActive`) changes to `f
 
 ### 9.2 String Resources
 
-- **All user-visible strings** live in `res/values/strings.xml`, translated in every supported locale (currently `values-de/strings.xml`).
+- **All user-visible strings** live in `res/values/strings.xml`, translated in every supported locale (currently `values-de` and `values-zh-rTW`). Parity is build-enforced (§17).
 - Composables: `stringResource(R.string.key)`.
 - Services / non-Compose code: `getString(R.string.key)` or `context.getString(...)`.
 - Format args: `stringResource(R.string.key, arg1, arg2)` — not string concatenation.
@@ -364,6 +365,12 @@ Do not add ad-hoc low-level rules here. The `FEATURE.md` files are the canonical
 - **Native key injection & uinput:** [keyboard/FEATURE.md](../features/keyboard/FEATURE.md) — stdin commands (`KD`/`KU`), event classification filters, `1..255` keycode limits.
 - **Native touch injection & evdev:** [touchpad/FEATURE.md](../features/touchpad/FEATURE.md) — touchscreen event nodes (`/dev/input/event6`), landscape-inversion math, relative touch-move coalescing.
 
+### 12.5 Input Injector Lifecycle
+
+Input injector lifecycles are managed centrally by `InjectorLifecycleManager`: injectors are active
+while the app is foregrounded and stopped on backgrounding or while the Privd setup wizard IME is
+active. Screens never start/stop injectors locally (e.g. in a `DisposableEffect`).
+
 ---
 
 ## 13 Build & Dependencies
@@ -468,3 +475,47 @@ Applies to `Switch`, `Slider`, `Checkbox`, `RadioButton`, `OutlinedTextField`
 Do not add `accentColor: Color` as a new Composable parameter. Read accent from
 `LocalAppColors.current.accent` or `MaterialTheme.colorScheme.primary` directly.
 Existing `accentColor` parameters in older Composables may remain until a future refactor.
+
+---
+
+## 17 Build-Enforced Rules (`verifyArchitectureRules`)
+
+The mechanically checkable rules above are enforced by the `verifyArchitectureRules` Gradle task
+(`build-logic/src/main/kotlin/ArchitectureRules.kt`, tests in `build-logic/src/test/`). It runs
+automatically before every `compile*Kotlin` task and as part of `./scripts/verify.sh`.
+Comment lines (`//`, `*`, `/*`) are ignored.
+
+| Rule ID | Scope | Enforces |
+| ------- | ----- | -------- |
+| `STAR_IMPORT` | all sources | §8.2 no star imports |
+| `CORE_ANDROID_IMPORT` | `shared/core` | §6 no `android.*` / `androidx.*` in the pure JVM module |
+| `DOMAIN_UI_IMPORT` | `*domain/src` | §6 no `androidx.compose.*` / `android.view.*` in domain modules |
+| `ANDROID_LOG` | all sources except `AppLog.kt` | §8.4 `AppLog` only |
+| `ENUM_VALUES` | `src/main` | §8.1 `enum.entries`, not `values()` |
+| `JAVA_MATH` | `src/main` | §8.1 `kotlin.math`, not `java.lang.Math` |
+| `BARE_JOB` | `src/main` | §10.1 `CoroutineScope(SupervisorJob() …)`, not `Job()` |
+| `VOLUME_UUID_PATH` | `src/main` | §8.3 no hardcoded `/storage/XXXX-XXXX` paths |
+| `PUBLIC_MUTABLE_STATE_FLOW` | `src/main`, top-level / first-level members | §7.1 `MutableStateFlow` must be `private` |
+| `HEURISTIC_SUBSTRING` | `src/main` | §7.5 no `.contains("launcher" / "home" / "game")` role guessing |
+| `INLINE_FONT_SIZE` | `src/main` except `AppTheme.kt` | §16.1 typography tokens |
+| `HARDCODED_COLOR` | `src/main` except `AppTheme.kt` / `AppColors.kt` | §16.2 color tokens |
+| `UNUSED_TAG` | `src/main` | §8.4 a declared `TAG` must be used (add logs, don't delete it) |
+| `MISSING_TRANSLATION` | `src/main/res` | §9.2 every translatable default string exists in every locale |
+| `STALE_TRANSLATION` | `src/main/res` | §9.2 no locale string without a default string |
+
+### Baselines
+
+Pre-existing violations are recorded per module in `<module>/architecture-baseline.txt`
+(`RULE_ID|path|max_count`). The build fails only when a file's count for a rule **exceeds** its
+baseline, and warns when a baseline can be lowered.
+
+- **Agents never add or raise baseline entries.** Fix the code instead.
+- When you fix an old violation, lower or delete its entry.
+- The operator may regenerate all baselines after a deliberate decision:
+  `./gradlew verifyArchitectureRules -PupdateArchitectureBaseline`.
+
+### Adding a rule
+
+Add the rule ID, regex, and check to `ArchitectureRules.kt`, cover it in `ArchitectureRulesTest.kt`,
+add a row to the table above, and reference it from the matching AGENTS.md section. Rules must be
+exact patterns without false positives on current code — otherwise baseline the existing hits.

@@ -60,16 +60,13 @@ For large change sets, export per-file diffs to `<artifact-dir>/scratch/diff_*.t
 
 To avoid "lost in the middle" attention leaks and ensure a 100% comprehensive check, you **must** execute a two-pass audit process:
 
-1. **Programmatic Grep Checks**: Prior to manual analysis, perform a repository search (restricted to the list of modified files) for known violations:
-   - Search for `android.util.Log` to catch standard log leaks.
-   - Search for `.*` in imports to catch star imports.
-   - Search for `MutableStateFlow` to ensure no public flow exposures.
-   - Search for `.values()` to enforce `enum.entries`.
-   - Search for unauthorized heuristic patterns (e.g. `.contains("launcher")`, `.contains("home")`, `.contains("game")`, synthetic fallback generation, loose guessing) to strictly enforce §7.5 Zero-Heuristics Policy.
-2. **Exhaustive File Checklist**: Systematically open and review **every single modified file** in the change set. Verify that:
+1. **Automated rule check**: Run `./scripts/verify.sh` (sandbox bypass). The `verifyArchitectureRules` task mechanically enforces star imports, `android.util.Log`, `.values()`, `java.lang.Math`, bare `Job()`, volume UUID paths, public `MutableStateFlow`, substring role guessing (`.contains("launcher")` …), inline `fontSize`, hardcoded `Color(0x…)`, unused `TAG`, and translation parity — see `docs/agents/CODING_GUIDE.md` §17. Report every finding; flag any change that **adds to or raises** an `architecture-baseline.txt` entry as a High-severity finding.
+2. **Programmatic grep checks** for what the verifier cannot decide, restricted to the modified files:
+   - Inline fully-qualified names in code bodies (`= com.`, `(android.`, `kotlinx.coroutines.` outside imports).
+   - Synthetic fallback data or loose guessing beyond the verifier's substring patterns (§7.4, §7.5).
+3. **Exhaustive File Checklist**: Systematically open and review **every single modified file** in the change set. Verify that:
    - No magic numbers or hardcoded dimensions are present (all extracted to private file-scope constants).
-   - If a file defines a `private const val TAG = "..."`, that tag is actively used in `AppLog` logs (or add logs if missing).
-   - Star imports are absent and all FQNs are moved to top-level imports.
+   - New files declare `private const val TAG` and log per §8.4.
 
 ---
 

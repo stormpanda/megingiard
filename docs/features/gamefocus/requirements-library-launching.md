@@ -1,0 +1,100 @@
+# Feature: Megingiard Game Focus — Library, Launching, Pairing & Haptics
+
+> Part 2 of 3 of the Megingiard Game Focus feature spec. Start at [FEATURE.md](FEATURE.md) for the overview and document map.
+
+---
+
+## Functional Requirements (continued)
+
+### FR-GF9: Library View & R2 Slide Transition
+
+- Pressing Gamepad **R2** (`KEYCODE_BUTTON_R2`) on the launcher MUST toggle the **Library** view.
+- Toggling the Library view MUST trigger a smooth horizontal slide transition across screens:
+  - Opening: Main gallery slides out to the left while the Library slides in from the right.
+  - Closing: Library slides out to the right while the main gallery slides in from the left.
+- The Library MUST display all installed applications and games in a scrollable condensed grid with square rounded-corner cards (`16.dp` corner radius). Each card renders its custom library icon if configured (from SteamGridDB icons or logos), falling back to the default Android app icon or ROM system logo. Hidden applications MUST display a `visibility_off` Material Symbol badge icon in the top-right corner of their card (with smooth fade-in/fade-out animation when toggled), and the entire card MUST animatively become partially transparent (`0.4f` opacity) when hidden. If the game or app name is longer than the width it fits, the name MUST scroll through marquee style when that app is highlighted (focused), starting with a `500ms` delay.
+- The Library layout is divided into two distinct planes: a full-screen scrollable app grid and a floating controls overlay plane on top of it. To prevent grid items from permanently overlapping the floating top header and bottom footer controls, the grid MUST have top content padding (`80.dp`) and bottom content padding (`64.dp`). A dedicated floating bottom action bar houses an `ExpandableActionsMenu` in the lower-left corner and subdued touch launch indicator buttons in the lower-right corner.
+- Pressing Gamepad **Y** or **Menu** inside the Library view MUST toggle the Library Action Menu. When expanded, the menu presents a vertical toolbox-style `ExpandableActionsMenu` anchored above the actions bar visually partitioned into two distinct sections separated by a glowing horizontal accent divider line:
+  - **Item Actions:** "Edit" (`palette`, opens `GameFocusEditGameOverlay`), "Hide"/"Unhide" (`visibility`/`visibility_off`), "App Info" (`info`, for Android apps), and "Uninstall" (`delete`, destructive accent, for Android apps). Selecting "Uninstall" launches Android's native system uninstallation dialog via `Intent.ACTION_DELETE` (with `android.permission.REQUEST_DELETE_PACKAGES` declared in the manifest and `ActivityOptions.setLaunchDisplayId` targeting the active display).
+  - **System / Library Actions:** "Add ROM Folder" (`create_new_folder`), "Remove ROM Folder" (`folder`, only if custom ROM folders are registered), and "Change Core" (`tune`, for RetroArch ROM systems) or "Change Emulator" (`tune`, for Nintendo Switch systems).
+  The divider line only renders when both the item group and the system/library group contain actions. Directional UP/DOWN navigates between all options with wrap-around, Button A activates the selected option, Button B or Y closes the menu, and tapping outside dismisses it.
+- The top of the Library MUST present a horizontal 3D category reel (`InteractiveLibraryCategoryHeader`) flanked by `[L1]` and `[R1]` gamepad shoulder button badges, displaying the active and neighboring tabs: **Android Games** (first category, unconditional), **Android Apps**, and any dynamic added ROM folders sorted alphabetically (e.g. **GBA**, **SNES**) (`LibraryTab`) with Y-axis 3D rotation (`±25°`), matching the typography and aesthetic of the launcher header while aligning directionally with L1/R1 controller inputs and horizontal grid sliding. Switching between tabs MUST animate the app grid horizontally (`AnimatedContent` with `slideInHorizontally` and `slideOutHorizontally` combined with `fadeIn`/`fadeOut`).
+- The Library screen background MUST remain static using the default theme background color (`appColors.appBackground`) and does not adapt dynamically to the highlighted app icon palette.
+- The highlighted Library card MUST animate a vibrant accent blur glow (`BlurMaskFilter`) and accent focus border smoothly gliding across grid items (`200ms` `animateFloatAsState` translation/size interpolation relative to grid bounds) as D-pad or joystick focus moves to the next application.
+- Gamepad D-pad / Joystick navigation inside the Library MUST be restricted strictly to grid items (0..N). Static tabs MUST be excluded from D-pad focus, and tab category switching MUST be handled exclusively via **L1** / **R1**.
+- Dual-display launching inside the Library MUST be triggered via **A** (top display) and **X** (bottom display). Pressing **R2**, **B**, **BACK**, or **HOME** (`KEYCODE_HOME` / `KEYCODE_BUTTON_MODE` / system HOME intent) MUST close sub-views/dialogs and return the user directly to the main gallery screen.
+- When peripheral button prompts are hidden via the R3 toggle, the Library's top-right `[R2] Gallery` button, bottom-left `[Y] Actions` menu bar, and bottom-right `[A]/[X]` touch launch buttons smoothly slide and fade away (`200ms tween`), and the `[L1]` and `[R1]` category header badges fade out with subtle translation without collapsing layout width to maintain stationary tab positions. Pressing Gamepad R3 inside the Library toggles the visibility state and persists it to `GameFocusPreferences`.
+
+### FR-GF10: ROM & Emulator Launching
+
+- Game Focus MUST support dynamic ROM scanning and custom emulator launching.
+- Users can choose to "Add ROM Folder" via the Library Action Menu. Choosing a folder via Android's Storage Access Framework (SAF) tree directory picker MUST automatically scan files and detect the emulator/system type by analyzing file extensions (supporting NES, SNES, GBA, GB/GBC, N64, Nintendo DS, Virtual Boy, Pokémon Mini, GameCube/Wii, 3DS, Master System/Game Gear, Genesis, Sega 32X, Saturn, Dreamcast, PS1, PSP, PS2, Arcade/MAME, Neo Geo Pocket, Atari 2600/5200/7800/Lynx/Jaguar, MS-DOS, MSX, Commodore 64/Amiga, ZX Spectrum, PC Engine, PC-FX, ColecoVision, Vectrex, WonderSwan, Neo Geo CD, ScummVM, Nintendo Switch, and PC games).
+- Directory traversal: ROM folders MUST be scanned recursively up to a depth of 3 levels (`RomManager.MAX_SCAN_DEPTH = 3`) during both system auto-detection (`addRomFolder`) and library scanning (`reloadRomAppsSuspend`). This ensures ROMs placed in dedicated subdirectories (e.g. `ROMs/switch/<GameName>/`) are properly discovered and indexed.
+- Switch ROM Base Filtering: For Nintendo Switch ROM folders, game folders commonly contain base games alongside separate update and DLC files (`.nsp`, `.nsz`, `.xci`). `SwitchRomClassifier` MUST filter out updates (Title ID ending in `800` or tags `[Update]`, `[UPD]`, `[v<N>]`) and DLCs (Title ID ending in `001-FFE` or tags `[DLC]`, `[DLC <N>]`, `[Addon]`), indexing strictly base games (Title ID ending in `000`, `.xci`, or `[Base]`). Cleaned game titles are derived exclusively from `cleanRomName(filename)`.
+- When adding a Nintendo Switch ROM folder, the app checks for installed Switch emulators (`SwitchEmulators.getInstalledEmulators`). If no supported Switch emulator is installed, adding the folder is rejected with an explanatory error notice. If exactly one is installed, it is auto-assigned to the folder. If multiple are installed, an emulator selection carousel dialog is displayed to allow the user to select their preferred emulator.
+- After successfully adding a new system folder, the UI MUST show a dialog to the user indicating which system was recognized. If it is a RetroArch-compatible system, the user MUST be able to choose which RetroArch core to assign to this folder from the available default and alternative cores. The chosen core is stored in the folder config and passed to `RetroArchLauncher` when launching game files from this folder.
+- The newly added folder core chooser dialog, the ROM folder removal selection dialog, and all secondary confirmation dialogs MUST be fully navigable and controllable using the gamepad first.
+  - They MUST support **D-pad UP/DOWN** to navigate lists (cores or folders), apply a clear visual focus background highlight and focus border to the selected item, use Gamepad **Button A** / **Enter** (`KEYCODE_BUTTON_A` / `KEYCODE_DPAD_CENTER`) to confirm/select, and Gamepad **Button B** / **Back** (`KEYCODE_BUTTON_B` / `KEYCODE_BACK`) to cancel or close the dialog.
+  - Buttons inside these dialogs MUST use `GamePadButtonAction` visual badges to guide gamepad navigation.
+  - Gamepad input MUST be intercepted and consumed by the parent Activity while any dialog is open to isolate inputs, preventing background launcher or library screen traversal.
+- Recognized systems MUST dynamically expand the launcher's category list as rolling category options (e.g., "SNES", "NES", "GBA", "Genesis") after the standard built-ins.
+- Each RetroArch-compatible system definition MUST configure a primary core (`retroArchCore`) and a set of popular alternative cores (`retroArchCoreAlternatives`) to prepare for future user-configurable core adjustments.
+- Starting a dynamic ROM game MUST invoke the appropriate launcher:
+  - **RetroArchLauncher**: Resolves physical file paths and fires a targeted Android Intent (`com.retroarch` / `com.retroarch.aarch64` activity `RetroActivityFuture`) passing the target `ROM` path and the matching core `LIBRETRO` name.
+  - **SwitchLauncher**: Invokes Nintendo Switch games via Intent `android.nfc.action.TECH_DISCOVERED` with the SAF `content://` URI (`romUri`) and `FLAG_GRANT_READ_URI_PERMISSION` (falling back to `Uri.fromFile(romPath)` with relaxed `StrictMode.VmPolicy`) and `ComponentName(targetPackage, "org.yuzu.yuzu_emu.activities.EmulationActivity")`, supporting installed Switch emulators (Eden variants, Citron, Sudachi, Suyu, Yuzu).
+- Selecting "Remove ROM Folder" in the Library Action Menu MUST display an `AppModalDialog` detailing added systems, followed by an `AppAlertDialog` confirmation overlay. Removing a folder immediately unregisters its scanned ROMs and dynamic category.
+- When cover artwork is absent for ROMs, the UI MUST render the scraped game logo if available, falling back to the `"sports_esports"` symbol ligature from the Material Symbols Rounded font if no logo was scraped.
+
+### FR-GF11: Dual-Screen App Pairing
+
+- Game Focus MUST allow users to pair an application or ROM displayed on the top screen with a companion Android application to be launched simultaneously on the bottom screen (Display 4).
+- The action menu on the main gallery poster carousel (`ExpandableActionsMenu`, triggered via Button `Y` / `KEYCODE_BUTTON_Y`) MUST display:
+  - `"Pair Bottom App"` (`splitscreen` icon) when the highlighted item is unpaired (totaling 4 menu items: Favorite, Artwork, Hide, Pair Bottom App).
+  - `"Change Paired App"` (`splitscreen` icon) and `"Remove Paired App"` (`delete` icon with destructive styling) when the highlighted item is currently paired (totaling 5 menu items: Favorite, Artwork, Hide, Change Paired App, Remove Paired App).
+- Selecting `"Remove Paired App"` MUST immediately unpair the bottom companion app and persist the change without an additional confirmation dialog.
+- Selecting `"Pair Bottom App"` or `"Change Paired App"` MUST open a 5-column 2D grid modal dialog (`GameFocusPairAppDialog`) inside an `AppModalDialog` container:
+  - The dialog MUST present all installed Android apps sorted alphabetically (excluding ROMs and excluding Game Focus itself).
+  - Cards MUST follow the Library card aesthetic (`16.dp` rounded corners, app icon, animated accent border on focus, marquee text on focus for labels exceeding available width).
+  - Focus MUST initially settle on the currently paired app if present, or index 0 otherwise.
+  - Directional gamepad navigation (D-pad and joystick) MUST navigate the 2D grid with bounds clamping across rows and columns.
+  - Pressing Gamepad Button **A** MUST confirm the pairing, persist the mapping, and dismiss the dialog.
+  - Pressing Gamepad Button **B** or tapping the backdrop/Cancel button MUST dismiss the dialog without changes.
+  - While the pairing dialog is open, all launcher inputs MUST be trapped and consumed.
+- When an app or ROM has a paired bottom companion:
+  - The gallery layout MUST render a secondary subtitle line below the main title featuring a `splitscreen` Material Symbol icon (`14.dp`) in `onSurfaceSecondary` color alongside the paired app's label, anchored such that the title and poster carousel maintain an identical, stationary baseline without upward layout shift.
+  - The primary launch button in `DualScreenLaunchButtons` MUST update its label to `[A] Dual Launch`.
+  - Pressing Gamepad Button **A** (`KEYCODE_BUTTON_A` / `KEYCODE_DPAD_CENTER`) or tapping the top launch button from the main gallery carousel MUST launch both the top application on Display 0 and the paired companion app on Display 4 simultaneously without artificial delay.
+  - Button **X** (`KEYCODE_BUTTON_X`) in the gallery MUST continue launching only the highlighted app on Display 4.
+  - Library launches (`FocusLibraryScreen`) remain single-screen launches on either Display 0 (Button A) or Display 4 (Button X), unaffected by pairings.
+- Pairings MUST be persisted to disk (`filesDir/gamefocus_app_pairs.json`) via `GameFocusPairManager` using atomic file writes (`AtomicFile`).
+
+### FR-GF12: Default Launcher Companion Restoration
+
+- When Game Focus is configured as the Android system's default home launcher (`PackageManager.resolveActivity` with `MATCH_DEFAULT_ONLY` matches Game Focus), returning to the home screen MUST automatically restore / bring Megingiard Companion to the foreground on the secondary bottom display (`DisplayDetector.findSecondaryDisplay(context)`, Display 4).
+- **Home Navigation Triggers:**
+  - Launching or returning to Game Focus from an external game or app via system home navigation (`savedInstanceState == null && intent.hasCategory(Intent.CATEGORY_HOME)` in `onCreate`, or incoming `CATEGORY_HOME` intent in `onNewIntent`).
+  - Pressing the hardware Home key or controller Home button (`KEYCODE_HOME` / `KEYCODE_BUTTON_MODE`) while inside Game Focus.
+- **Strict Default Launcher Guard:** If Game Focus is NOT the system's default launcher (e.g. launched manually while stock Android or another launcher is active), automatic companion restoration MUST be skipped to avoid unexpectedly stealing focus or changing apps on the secondary display.
+- **State Preservation:** Megingiard Companion MUST be brought to front using `Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED` and `ActivityOptions.setLaunchDisplayId(secondaryDisplayId)`, preserving its existing view/screen state (MacroPad, Touchpad, Keyboard, Mirror) on Display 4 rather than resetting to a default tool.
+- **Standalone Autonomy:** The restoration logic resides strictly within `:gamefocus:domain` and `:gamefocus:ui`. Megingiard Companion has zero knowledge of or dependency on Game Focus.
+
+### FR-GF13: Back Button Session Restoration
+
+- When the user presses the Back button (hardware `KEYCODE_BACK` / `KEYCODE_ESCAPE`), Gamepad Button B (`BUTTON_B`), or triggers the system predictive back gesture while Game Focus is in the foreground:
+  - **Sub-View Dismissal:** If a sub-view, modal, or dialog is open (Library grid, actions menu, artwork dialog, core chooser, or pairing modal), the Back action MUST dismiss that sub-view/dialog first and return the user to the main gallery.
+  - **Root Gallery Restoration:** When already on the root gallery, the Back action MUST bring back up the applications that were active before navigating Home:
+    - **Top Screen (Display 0):** Brings the previous top game or application back to the foreground using `FLAG_ACTIVITY_NEW_TASK or FLAG_ACTIVITY_RESET_TASK_IF_NEEDED` and `ActivityOptions.setLaunchDisplayId(0)`.
+    - **Bottom Screen (Display 4):** If a non-companion bottom app was active (such as a paired app or an app launched to the bottom screen via Button X), brings that application back to the foreground on Display 4 using `FLAG_ACTIVITY_NEW_TASK or FLAG_ACTIVITY_RESET_TASK_IF_NEEDED` and `ActivityOptions.setLaunchDisplayId(secondaryDisplayId)`. If no bottom app was running (or only Megingiard Companion was on Display 4), Display 4 is left untouched.
+  - **Empty Session Guard:** If Back is pressed on the root gallery but no previous session is tracked (e.g. freshly booted), Game Focus MUST consume the Back event and do nothing, preventing the launcher from closing or exiting.
+  - **Always Active:** Back button session restoration operates whenever Game Focus is running, regardless of whether it is configured as the default system launcher or opened manually.
+
+### FR-GF14: Tactile Navigation Haptics
+
+- Game Focus MUST provide subtle, mechanical "clicky" tactile feedback during gamepad navigation, feeling like a physical rotary dial or mechanical switch rather than a continuous vibration buzz.
+- **Haptic Tuning:**
+  - **Micro-Tick (`tick`):** A microscopic, crisp 6ms pulse triggered when navigating individual items (moving left/right across gallery posters, or stepping left/right/up/down across library grid cards). Employs Android's hardware composition primitive `VibrationEffect.Composition.PRIMITIVE_CLICK` scaled down to `0.45f` power (with graceful fallback to `createOneShot(8L, 35)` if the actuator lacks primitive support). Note: `PRIMITIVE_LOW_TICK` and `PRIMITIVE_TICK` are strictly avoided because Qualcomm's Snapdragon G3x Gen 2 HAL erroneously reports support but has 0ms waveform tables (`errno = -22`).
+  - **Firm Click (`click`):** A distinct, full-power 6ms mechanical tactile click triggered when switching categories (D-pad Up/Down), switching library tabs (Gamepad L1/R1), skipping starting letters in the gallery (Gamepad L1/R1), or toggling the Library screen (Gamepad R2 open/close or Back dismissal). Employs Android's hardware composition primitive `VibrationEffect.Composition.PRIMITIVE_CLICK` at `1.0f` scale (fallback to `createOneShot(12L, 75)`).
+- **Gamepad-Exclusive Triggering:** Tactile feedback MUST trigger strictly from physical gamepad controller inputs (D-pad steps, analog stick hold-repeat, shoulder bumpers L1/R1/R2). Touch dragging and swipe gestures on the screen MUST remain silent to avoid gesture interference and jitter.
+- **Continuous Hold-Repeat Ratchet:** When holding a directional stick or D-pad to rapidly scroll (`220ms` initial delay, `70ms` repeat interval), haptics MUST trigger on every repeated step (~14 clicks/sec), synchronized with a snappy `120ms` carousel animation tween to provide continuous mechanical ratchet feedback without skipped frames or dropped inputs.
+- **Silent Boundary Behavior:** In the library grid, category switching, and tab switching, haptics MUST trigger only when the selection actually changes. When focus or cycling is blocked against an edge or boundary (where focus cannot move further), haptics MUST remain silent.
+- **Zero Configuration & System Touch-Feedback Compliance:** Haptic feedback operates automatically out of the box directly via the device's hardware vibrator service without requiring setup wizards, configuration screens, or external toggles. Impulses are dispatched with `VibrationAttributes.USAGE_TOUCH`, cleanly honoring the user's Android system touch-feedback toggle and vibration intensity preferences.

@@ -392,7 +392,7 @@ Ensure the output matches the checksum in the `.txt` file exactly before sideloa
 
 ## Security
 
-Megingiard combines APK signature pinning, release-build fail-closed checks, SHA-256 verification of native assets, and mutual HMAC-SHA256 authentication for the Megingiard System Service socket. The concise entry point is [SECURITY_CONCEPT.md](SECURITY_CONCEPT.md); detailed daemon and native-binary behavior is documented in [System Service](docs/features/privileged-mode/FEATURE.md#security-model) and [Build Native](docs/BUILD_NATIVE.md#native-asset-integrity).
+Megingiard combines APK signature pinning, release-build fail-closed checks, SHA-256 verification of native assets, and mutual HMAC-SHA256 authentication for the Megingiard System Service socket. The concise entry point is [SECURITY_CONCEPT.md](SECURITY_CONCEPT.md); detailed daemon and native-binary behavior is documented in [System Service](docs/features/privileged-mode/technical-security-protocol.md#security-model) and [Build Native](docs/BUILD_NATIVE.md#native-asset-integrity).
 
 ---
 

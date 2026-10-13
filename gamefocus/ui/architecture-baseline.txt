@@ -1,0 +1,4 @@
+# Architecture rule baseline — pre-existing violations tolerated by verifyArchitectureRules.
+# Format: RULE_ID|path/from/repo/root|max_count. Lower or delete entries as you fix them;
+# never raise a count to make a new violation pass.
+UNUSED_TAG|gamefocus/ui/src/main/java/com/stormpanda/megingiard/gamefocus/HorizontalPosterCarousel.kt|1

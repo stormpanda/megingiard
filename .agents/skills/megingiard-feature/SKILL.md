@@ -225,31 +225,13 @@ After implementation, always synchronize documentation and in-app help:
 
 ---
 
-### 8. ✅ Static analysis & checklist
+### 8. ✅ Verify & checklist
 
-Perform a static review — no build command:
-
-- [ ] No `MutableStateFlow` exposed outside its owning singleton
-- [ ] All new references as imports — no FQN in function bodies
-- [ ] No magic numbers — `private const val` used
-- [ ] No `android.util.Log` — all logging via `AppLog`
-- [ ] Every new file has `private const val TAG` + `AppLog` usage per §8.4
-- [ ] All user-visible strings in `strings.xml`
-- [ ] Icons have `contentDescription`
-- [ ] `SupervisorJob()` for new class-level scopes
-- [ ] Scope cancelled in `onDestroy()`
-- [ ] Bitmap recycling handled by the manager, not call sites
-- [ ] `snapshotFlow` imported from `androidx.compose.runtime`
-- [ ] Deprecated APIs annotated with `@Suppress("DEPRECATION")`
-- [ ] New Activities launched on correct display via `ActivityOptions.setLaunchDisplayId()`
-- [ ] `Presentation` mode switches use `hide()`/`show()`, not `dismiss()`
-- [ ] Service `onStartCommand` returns `START_NOT_STICKY` (for new Services)
-- [ ] `FEATURE.md` updated / created
-- [ ] In-app help, tutorials, and localized strings updated / created
-- [ ] No suspected compile errors
-- [ ] New or changed pure logic is covered by unit tests in `:shared:core` or `:companion:domain`
-- [ ] Existing tests updated if the change modifies previously-tested behaviour
-- [ ] `./scripts/run_unit_tests.sh` executed and all tests pass
+1. Run `./scripts/verify.sh` (sandbox bypass). It runs the architecture rule verifier (imports, logging, `MutableStateFlow` visibility, design tokens, translations, …) and all unit tests. Fix every reported finding — never raise a baseline count.
+2. Walk through the full **Done checklist in `AGENTS.md` §3.5** (do not rely on a partial copy). Feature-specific emphasis:
+   - `FEATURE.md` created / updated and added to the `AGENTS.md` §2 table if new
+   - In-app help (`HelpModal`), onboarding, and `strings.xml` + `values-de/strings.xml` updated
+   - New pure logic covered by unit tests
 
 ---
 

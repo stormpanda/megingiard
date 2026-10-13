@@ -140,23 +140,12 @@ Pure internal bug fixes with no behavioral change do not require documentation u
 
 ---
 
-### 8. ✅ Static analysis & checklist
+### 8. ✅ Verify & checklist
 
-Perform a static review — no build command:
-
-- [ ] No `MutableStateFlow` exposed outside its owning singleton
-- [ ] All new references as imports — no FQN in the function body
-- [ ] No magic numbers — `private const val` used
-- [ ] No `android.util.Log` — all logging via `AppLog`
-- [ ] Every new file has `private const val TAG` + `AppLog` usage
-- [ ] All user-visible strings in `strings.xml`
-- [ ] Icons have `contentDescription`
-- [ ] `SupervisorJob()` for new class-level scopes
-- [ ] Scope cancelled in `onDestroy()`
-- [ ] No suspected compile errors
-- [ ] Companion autonomy respected: Companion bug fix does not modify or depend on Game Focus
-- [ ] If the fix touches pure logic in `:shared:*` / `:companion:domain`: a regression test added or updated
-- [ ] `./scripts/run_unit_tests.sh` executed and all tests pass
+1. Run `./scripts/verify.sh` (sandbox bypass). It runs the architecture rule verifier (imports, logging, `MutableStateFlow` visibility, design tokens, translations, …) and all unit tests. Fix every reported finding — never raise a baseline count.
+2. Walk through the full **Done checklist in `AGENTS.md` §3.5** (do not rely on a partial copy). Bugfix-specific emphasis:
+   - Companion autonomy: a Companion fix must not modify or depend on Game Focus (§6.1)
+   - A regression test reproduces the bug if the fix touches pure logic
 
 ---
 
