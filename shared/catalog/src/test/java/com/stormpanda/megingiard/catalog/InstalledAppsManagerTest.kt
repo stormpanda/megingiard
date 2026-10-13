@@ -433,6 +433,24 @@ class InstalledAppsManagerTest {
     }
 
     @Test
+    fun testMetadataMaps_laterReloadDoesNotOverwriteInMemoryChanges() {
+        val context: Context = RuntimeEnvironment.getApplication()
+        InstalledAppsManager.updateAppLabel(context, PKG_ROM, "Fresh Name")
+        InstalledAppsManager.setCoverImageId(context, PKG_GAME, COVER_ID)
+        InstalledAppsManager.setLibraryIconRef(context, PKG_GAME, LibraryIconRef(id = COVER_ID, type = LibraryIconRef.TYPE_ICONS))
+        runBlocking { InstalledAppsManager.awaitPendingWritesForTesting() }
+
+        // Simulate stale on-disk snapshots (e.g. saves that have not been flushed yet).
+        listOf("gamefocus_app_names.json", "gamefocus_cover_image_ids.json", "gamefocus_library_icon_ids.json")
+            .forEach { File(context.filesDir, it).writeText("{}") }
+        InstalledAppsManager.reloadPersistedMetadataForTesting(context)
+
+        assertEquals("Fresh Name", InstalledAppsManager.getCustomLabel(PKG_ROM))
+        assertEquals(COVER_ID, InstalledAppsManager.getCoverImageId(PKG_GAME))
+        assertEquals(COVER_ID, InstalledAppsManager.getLibraryIconRef(PKG_GAME)?.id)
+    }
+
+    @Test
     fun testRecordScrapeAttempt_mergesWithNotYetLoadedDiskState() {
         val context: Context = RuntimeEnvironment.getApplication()
         File(context.filesDir, "gamefocus_scrape_attempts.json").writeText("""{"cover":["com.disk.app"]}""")
@@ -512,5 +530,6 @@ class InstalledAppsManagerTest {
         const val PKG_GAME = "com.test.game"
         const val PKG_ROM = "rom.snes.smw"
         const val DEFAULT_LABEL = "Test Game"
+        const val COVER_ID = 4242
     }
 }

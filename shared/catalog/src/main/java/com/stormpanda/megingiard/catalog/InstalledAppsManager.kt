@@ -128,43 +128,62 @@ object InstalledAppsManager {
             scrapeAttempts = ScrapeAttempts()
             isScrapeAttemptsLoaded = false
         }
-        synchronized(customAppNames) { customAppNames.clear() }
-        synchronized(coverImageIds) { coverImageIds.clear() }
-        synchronized(libraryIconRefs) { libraryIconRefs.clear() }
+        synchronized(customAppNames) {
+            customAppNames.clear()
+            isCustomAppNamesLoaded = false
+        }
+        synchronized(coverImageIds) {
+            coverImageIds.clear()
+            isCoverImageIdsLoaded = false
+        }
+        synchronized(libraryIconRefs) {
+            libraryIconRefs.clear()
+            isLibraryIconRefsLoaded = false
+        }
         isSettingsObserverRegistered = false
     }
 
+    /** Load-once guards (AGENTS.md §7.6): later reloads must never overwrite unsaved in-memory changes. */
+    @Volatile
+    private var isCustomAppNamesLoaded = false
+
+    @Volatile
+    private var isCoverImageIdsLoaded = false
+
+    @Volatile
+    private var isLibraryIconRefsLoaded = false
+
     private fun loadCustomAppNames(context: Context) {
-        val file = File(context.filesDir, FILE_APP_NAMES)
-        if (!file.exists()) return
-        val atomicFile = AtomicFile(file)
-        try {
-            val text = atomicFile.readFully().toString(Charsets.UTF_8)
-            val map = Json.decodeFromString<Map<String, String>>(text)
-            synchronized(customAppNames) {
-                customAppNames.clear()
+        synchronized(customAppNames) {
+            if (isCustomAppNamesLoaded) return
+            isCustomAppNamesLoaded = true
+            val file = File(context.filesDir, FILE_APP_NAMES)
+            if (!file.exists()) return
+            try {
+                val text = AtomicFile(file).readFully().toString(Charsets.UTF_8)
+                val map = Json.decodeFromString<Map<String, String>>(text)
                 customAppNames.putAll(map)
+                AppLog.d(TAG, "Loaded ${map.size} custom app names from disk")
+            } catch (e: Exception) {
+                AppLog.w(TAG, "Failed to load $FILE_APP_NAMES: ${e.message}")
             }
-            AppLog.d(TAG, "Loaded ${map.size} custom app names from disk")
-        } catch (e: Exception) {
-            AppLog.w(TAG, "Failed to load $FILE_APP_NAMES: ${e.message}")
         }
     }
 
     private fun loadCoverImageIds(context: Context) {
-        val file = File(context.filesDir, FILE_COVER_IMAGE_IDS)
-        if (!file.exists()) return
-        val atomicFile = AtomicFile(file)
-        try {
-            val text = atomicFile.readFully().toString(Charsets.UTF_8)
-            val map = Json.decodeFromString<Map<String, Int>>(text)
-            synchronized(coverImageIds) {
-                coverImageIds.clear()
+        synchronized(coverImageIds) {
+            if (isCoverImageIdsLoaded) return
+            isCoverImageIdsLoaded = true
+            val file = File(context.filesDir, FILE_COVER_IMAGE_IDS)
+            if (!file.exists()) return
+            try {
+                val text = AtomicFile(file).readFully().toString(Charsets.UTF_8)
+                val map = Json.decodeFromString<Map<String, Int>>(text)
                 coverImageIds.putAll(map)
+                AppLog.d(TAG, "Loaded ${map.size} cover image IDs from disk")
+            } catch (e: Exception) {
+                AppLog.w(TAG, "Failed to load $FILE_COVER_IMAGE_IDS: ${e.message}")
             }
-            AppLog.d(TAG, "Loaded ${map.size} cover image IDs from disk")
-        } catch (e: Exception) {
-            AppLog.w(TAG, "Failed to load $FILE_COVER_IMAGE_IDS: ${e.message}")
         }
     }
 
@@ -195,6 +214,7 @@ object InstalledAppsManager {
         packageName: String,
         imageId: Int?,
     ) {
+        loadCoverImageIds(context)
         synchronized(coverImageIds) {
             if (imageId != null) {
                 coverImageIds[packageName] = imageId
@@ -206,19 +226,19 @@ object InstalledAppsManager {
     }
 
     private fun loadLibraryIconIds(context: Context) {
-        val file = File(context.filesDir, FILE_LIBRARY_ICON_IDS)
-        if (!file.exists()) return
-        val atomicFile = AtomicFile(file)
-        try {
-            val text = atomicFile.readFully().toString(Charsets.UTF_8)
-            val map = LibraryIconRef.parseMap(text)
-            synchronized(libraryIconRefs) {
-                libraryIconRefs.clear()
+        synchronized(libraryIconRefs) {
+            if (isLibraryIconRefsLoaded) return
+            isLibraryIconRefsLoaded = true
+            val file = File(context.filesDir, FILE_LIBRARY_ICON_IDS)
+            if (!file.exists()) return
+            try {
+                val text = AtomicFile(file).readFully().toString(Charsets.UTF_8)
+                val map = LibraryIconRef.parseMap(text)
                 libraryIconRefs.putAll(map)
+                AppLog.d(TAG, "Loaded ${map.size} library icon refs from disk")
+            } catch (e: Exception) {
+                AppLog.w(TAG, "Failed to load $FILE_LIBRARY_ICON_IDS: ${e.message}")
             }
-            AppLog.d(TAG, "Loaded ${map.size} library icon refs from disk")
-        } catch (e: Exception) {
-            AppLog.w(TAG, "Failed to load $FILE_LIBRARY_ICON_IDS: ${e.message}")
         }
     }
 
@@ -248,6 +268,7 @@ object InstalledAppsManager {
         packageName: String,
         ref: LibraryIconRef?,
     ) {
+        loadLibraryIconIds(context)
         synchronized(libraryIconRefs) {
             if (ref != null) {
                 libraryIconRefs[packageName] = ref
@@ -782,6 +803,7 @@ object InstalledAppsManager {
         packageName: String,
         newLabel: String,
     ) {
+        loadCustomAppNames(context)
         synchronized(customAppNames) {
             customAppNames[packageName] = newLabel
         }
@@ -799,6 +821,7 @@ object InstalledAppsManager {
         context: Context,
         packageName: String,
     ): String? {
+        loadCustomAppNames(context)
         val removed = synchronized(customAppNames) { customAppNames.remove(packageName) != null }
         if (removed) {
             persistScope.launch { saveCustomAppNames(context) }

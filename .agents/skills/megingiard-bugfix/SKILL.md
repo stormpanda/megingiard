@@ -156,7 +156,7 @@ Perform a static review — no build command:
 - [ ] No suspected compile errors
 - [ ] Companion autonomy respected: Companion bug fix does not modify or depend on Game Focus
 - [ ] If the fix touches pure logic in `:core` / `:domain`: a regression test added or updated
-- [ ] `./gradlew :shared:core:test :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:ui:testDebugUnitTest` executed and all tests pass
+- [ ] `./gradlew :shared:core:test :shared:catalog:testDebugUnitTest :shared:media:testDebugUnitTest :shared:session:testDebugUnitTest :shared:ui:testDebugUnitTest :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:domain:testDebugUnitTest :gamefocus:ui:testDebugUnitTest --continue` executed and all tests pass
 
 ---
 
@@ -178,7 +178,7 @@ fix: <short imperative summary>
 ## Constraints
 
 - Never run `./gradlew` or any other build command
-- **One exception:** `./gradlew :shared:core:test :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:ui:testDebugUnitTest` **must** be run after every fix to verify all unit tests pass (run with sandbox bypass enabled). This is the only permitted Gradle invocation.
+- **One exception:** `./gradlew :shared:core:test :shared:catalog:testDebugUnitTest :shared:media:testDebugUnitTest :shared:session:testDebugUnitTest :shared:ui:testDebugUnitTest :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:domain:testDebugUnitTest :gamefocus:ui:testDebugUnitTest --continue` **must** be run after every fix to verify all unit tests pass (run with sandbox bypass enabled). This is the only permitted Gradle invocation.
 - If the fix touches pure logic in `:shared:core` / `:companion:domain`, always write a regression test covering the fixed behaviour. If not testable without major refactoring, document it as a follow-up.
 - Never use `android.util.Log` directly
 - Do not remove or refactor any functionality unrelated to the bug

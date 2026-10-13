@@ -249,7 +249,7 @@ Perform a static review — no build command:
 - [ ] No suspected compile errors
 - [ ] New or changed pure logic is covered by unit tests in `:shared:core` or `:companion:domain`
 - [ ] Existing tests updated if the change modifies previously-tested behaviour
-- [ ] `./gradlew :shared:core:test :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:ui:testDebugUnitTest` executed and all tests pass
+- [ ] `./gradlew :shared:core:test :shared:catalog:testDebugUnitTest :shared:media:testDebugUnitTest :shared:session:testDebugUnitTest :shared:ui:testDebugUnitTest :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:domain:testDebugUnitTest :gamefocus:ui:testDebugUnitTest --continue` executed and all tests pass
 
 ---
 
@@ -274,7 +274,7 @@ feat: <short imperative summary>
 ## Constraints
 
 - Never run `./gradlew` or any other build command
-- **One exception:** `./gradlew :shared:core:test :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:ui:testDebugUnitTest` **must** be run after every implementation to verify all unit tests pass (run with sandbox bypass enabled). This is the only permitted Gradle invocation.
+- **One exception:** `./gradlew :shared:core:test :shared:catalog:testDebugUnitTest :shared:media:testDebugUnitTest :shared:session:testDebugUnitTest :shared:ui:testDebugUnitTest :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:domain:testDebugUnitTest :gamefocus:ui:testDebugUnitTest --continue` **must** be run after every implementation to verify all unit tests pass (run with sandbox bypass enabled). This is the only permitted Gradle invocation.
 - After implementation, always write or update unit tests for new or changed pure logic in `:shared:core` / `:companion:domain`. If logic is not testable without major refactoring, document it as a follow-up task instead of skipping silently.
 - **Always conduct an interactive interview via `ask_question` before drafting the plan** — walk down each branch of the design tree one question at a time with recommendations until all requirements are unambiguous.
 - **Always present the plan before implementing** — no silent coding

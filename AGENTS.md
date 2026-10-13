@@ -113,12 +113,17 @@
 >    data compilers, state machines, serialization round-trips).
 > 2. **Update existing tests** if the change modifies the behaviour or signature of
 >    already-tested code.
-> 3. **Run all tests** via `./gradlew :shared:core:test :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:ui:testDebugUnitTest` and report the result. Due to Gradle's reliance on local TCP/loopback sockets, this command MUST always be executed with the sandbox bypass enabled (`BypassSandbox: true` / unsandboxed). This, along with sandbox bypass compilation commands for verifying compile safety, and test coverage tasks (`./gradlew koverHtmlReport`, `./gradlew koverLog`, `./gradlew koverXmlReport`), are the **only** Gradle commands the agent is permitted to run.
+> 3. **Run all tests** via `./gradlew :shared:core:test :shared:catalog:testDebugUnitTest :shared:media:testDebugUnitTest :shared:session:testDebugUnitTest :shared:ui:testDebugUnitTest :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:domain:testDebugUnitTest :gamefocus:ui:testDebugUnitTest --continue` and report the result. Due to Gradle's reliance on local TCP/loopback sockets, this command MUST always be executed with the sandbox bypass enabled (`BypassSandbox: true` / unsandboxed). This, along with sandbox bypass compilation commands for verifying compile safety, and test coverage tasks (`./gradlew koverHtmlReport`, `./gradlew koverLog`, `./gradlew koverXmlReport`), are the **only** Gradle commands the agent is permitted to run.
 >
 > Tests must be placed in the correct source set:
 >
 > - `:shared:core` pure-JVM tests → `shared/core/src/test/kotlin/`
 > - `:companion:domain` local tests → `companion/domain/src/test/java/`
+> - `:shared:catalog` / `:shared:media` / `:shared:session` / `:shared:ui` / `:gamefocus:domain` Robolectric/local tests → `<module>/src/test/java/`
+>
+> When a module gains a new `src/test` directory, it MUST be added to the permitted test command above and in every skill that repeats it.
+>
+> `--continue` is part of the canonical command so one failing module never hides results of the others. If a failure is in a test unrelated to the change set, inspect `build/test-results/**/TEST-*.xml`, re-run once, and report it as flaky (with the test name) instead of treating it as a regression.
 >
 > If logic cannot be unit-tested without significant refactoring, state that explicitly
 > as a follow-up task rather than skipping silently.
@@ -151,10 +156,11 @@ Before marking a task as done, verify:
 - [ ] All modal dialogs and non-fullscreen popups use the centralized AppModalDialog / AppAlertDialog container or rememberBezelBrush() border
 - [ ] New or changed pure logic is covered by unit tests in `:core` or `:domain`
 - [ ] Existing tests updated if the change modifies previously-tested behaviour
-- [ ] `./gradlew :shared:core:test :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:ui:testDebugUnitTest` executed and all tests pass (permitted test command)
+- [ ] `./gradlew :shared:core:test :shared:catalog:testDebugUnitTest :shared:media:testDebugUnitTest :shared:session:testDebugUnitTest :shared:ui:testDebugUnitTest :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:domain:testDebugUnitTest :gamefocus:ui:testDebugUnitTest --continue` executed and all tests pass (permitted test command)
 - [ ] Test coverage verified or generated via `./gradlew koverLog` / `./gradlew koverHtmlReport` when required
 - [ ] If any native C source was modified, the corresponding build script was run and produced a new binary
 - [ ] Strict Zero-Heuristics Policy (§7.5) respected: No heuristics, substring guessing (e.g. contains("launcher")), synthetic fallbacks, or approximations introduced without explicit user permission
+- [ ] Disk-backed in-memory state uses a load-once guard and is loaded before any mutation (§7.6)
 - [ ] Standalone Companion Autonomy respected: Megingiard Companion bugs are resolved strictly within Companion / shared modules — zero dependency on or delegation to Game Focus (§6.1)
 - [ ] Help menus, onboardings, and localized strings updated if user interaction behavior changed (verify that every settings preference option has a corresponding explanation entry in its HelpModal)
 
@@ -318,6 +324,17 @@ PixelCopy.request(sv, bitmap, { result ->
   - ❌ **No synthetic fallback data:** Never invent guessed or synthetic paths, filenames, or IDs (e.g. `"$title.iso"`) when exact data cannot be resolved (per §7.4).
   - ❌ **No heuristic fallback defaults:** If an entity, role, or state cannot be resolved with certainty through canonical APIs or exact data, return `null`, empty, or no-op. Never approximate or guess.
 - **Seeking Permission for Edge Cases:** If a technical requirement genuinely lacks a canonical API and appears to require a heuristic, the agent MUST pause, explain the limitation to the user, propose the approach, and obtain their explicit written approval before writing any heuristic code.
+
+### 7.6 Persisted State Loading (Load-Once Guard)
+
+Singletons that mirror a persisted file in memory (opt-out sets, registries, ID maps, custom names) MUST:
+
+1. Load from disk **at most once per process**, guarded by a `@Volatile` `isXLoaded` flag that is checked and set inside the state lock.
+2. Call the loader **before any in-memory mutation** (e.g. at the top of `setX` / `recordX`), so a later lazy load can never overwrite a fresh change.
+3. Persist asynchronously from the in-memory snapshot (`persistScope` + `persistLock`); never re-read disk to "refresh" state while writes may be pending.
+4. Reset the flag in `resetForTesting()`.
+
+Re-reading disk on every reload or catalog refresh is a **High-severity** review finding: pending writes race with the reload and silently drop user choices.
 
 ---
 

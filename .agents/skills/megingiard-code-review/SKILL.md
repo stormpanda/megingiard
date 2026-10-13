@@ -20,7 +20,7 @@ You are a Lead Android Architect and Senior Kotlin Engineer on the **Megingiard*
 | Language       | Kotlin 2.0+ (no Java files except `:mirrorserver`), Jetpack Compose Material 3                               |
 | Modules        | `:companion:ui` (UI) · `:companion:domain` (domain logic) · `:shared:*` · `:mirrorserver`                   |
 | Coding rules   | **`AGENTS.md`** at workspace root — treat every rule as mandatory                                            |
-| Permitted tests| `./gradlew :shared:core:test :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:ui:testDebugUnitTest` (Must be run with sandbox bypass enabled, i.e., `BypassSandbox: true` / unsandboxed) |
+| Permitted tests| `./gradlew :shared:core:test :shared:catalog:testDebugUnitTest :shared:media:testDebugUnitTest :shared:session:testDebugUnitTest :shared:ui:testDebugUnitTest :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:domain:testDebugUnitTest :gamefocus:ui:testDebugUnitTest --continue` (Must be run with sandbox bypass enabled, i.e., `BypassSandbox: true` / unsandboxed) |
 | Deployment     | **STRICTLY PROHIBITED** from running deployment/install commands or deleting app data without explicit permission |
 | Log tag prefix | All app logs are tagged `Mgnrd.*` using `AppLog` with file-scoped `private const val TAG`                    |
 | Target Device  | AYN Thor dual-screen handheld (Display 0 = top screen, Display 4 = bottom screen)                           |
@@ -46,6 +46,8 @@ git diff main..HEAD --stat
 ```
 
 Identify all modified/created Kotlin files, C sources, resources (`strings.xml`, `values-de/strings.xml`), unit tests, and documentation files (`docs/features/*/FEATURE.md`). Compile the definitive list of changed files.
+
+For large change sets, export per-file diffs to `<artifact-dir>/scratch/diff_*.txt` (`git --no-pager diff -- <paths> > <file>`) and read them with `view_file` — terminal output is truncated.
 
 ---
 
@@ -76,6 +78,7 @@ Verify strict adherence to module dependencies (§6 of `AGENTS.md`):
 - **Companion Autonomy & Zero Game Focus Dependency (§6.1)**: Verify that any changes, fixes, or logic in Megingiard Companion (`:companion:*`) have ZERO dependencies on Game Focus (`:gamefocus:*`). Companion bugs must NEVER be fixed, partially fixed, or mitigated by modifying Game Focus.
 - **State Singletons (§7.1)**: Ensure state singletons (`AppStateManager`, `ScreenCaptureManager`, etc.) expose only **read-only `StateFlow`** (`val bar: StateFlow<T> = _bar.asStateFlow()`) and keep `MutableStateFlow` private.
 - **Zero-Heuristics & Strict Determinism (§7.5)**: Verify that ZERO heuristics, loose substring deductions, synthetic fallbacks, or probabilistic guessing algorithms exist in the change set without explicit user authorization. All state transitions, role classifications, and data paths must be 100% deterministic.
+- **Persisted State (§7.6)**: Check every disk-backed singleton touched by the change for a load-once guard and load-before-mutate ordering. Re-reading disk on reload is a High-severity finding.
 
 ---
 
@@ -106,7 +109,9 @@ Audit every line of code against §8 of `AGENTS.md`:
 
 ### 6. ✅ Unit Test & Documentation Sync Audit
 
-- **Test Suite Execution (§3)**: Run `./gradlew :shared:core:test :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:ui:testDebugUnitTest` to verify test suite health (MUST always be run with the sandbox bypass enabled, i.e., `BypassSandbox: true` / unsandboxed).
+- **Test Suite Execution (§3)**: Run `./gradlew :shared:core:test :shared:catalog:testDebugUnitTest :shared:media:testDebugUnitTest :shared:session:testDebugUnitTest :shared:ui:testDebugUnitTest :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:domain:testDebugUnitTest :gamefocus:ui:testDebugUnitTest --continue` to verify test suite health (MUST always be run with the sandbox bypass enabled, i.e., `BypassSandbox: true` / unsandboxed).
+  - *Flaky failures:* If a failure is in a test unrelated to the change set, read its `build/test-results/**/TEST-*.xml`, re-run once, and report it as flaky (with the test name) rather than as a regression.
+  - *Execution proof:* Confirm new/changed test classes actually ran by checking their `TEST-*.xml` (`tests` / `failures` counts) — Gradle `-q` output alone does not prove it.
 - **Test Set Placement**: Ensure pure JVM tests are placed in `:shared/core/src/test/` or `:companion/domain/src/test/`. If a unit test has no Android SDK dependencies, prefer fast pure JUnit over Robolectric.
 - **Documentation Sync (§2 & §5)**: Identify which `docs/features/<feature>/FEATURE.md` owns the modified code. Ensure Functional Requirements and Technical Implementation details accurately reflect all behavioral changes.
   - *Requirements Discrepancy:* If the codebase diverges from requirements, evaluate whether the implementation is correct and the *documentation* should be updated, rather than assuming code is wrong.
