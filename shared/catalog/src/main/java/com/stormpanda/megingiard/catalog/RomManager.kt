@@ -303,96 +303,114 @@ object RomManager {
         }
     }
 
-    suspend fun reloadRomAppsSuspend(context: Context) =
-        withContext(Dispatchers.IO) {
-            var namesChanged = false
-            val allRomApps =
-                buildList {
-                    for (folder in _romFolders.value) {
-                        val uri = Uri.parse(folder.uriString)
-                        val documentFile = resolveDocumentFile(context, uri) ?: continue
-                        if (!documentFile.exists()) continue
+    /**
+     * Rescans all ROM folders and publishes the result.
+     *
+     * @param triggerScrape when true, starts background SteamGridDB scraping for newly found ROMs. Callers that
+     *   trigger scraping themselves afterwards (e.g. a full catalog load) pass false to avoid a redundant pass.
+     */
+    suspend fun reloadRomAppsSuspend(
+        context: Context,
+        triggerScrape: Boolean = true,
+    ) = withContext(Dispatchers.IO) {
+        var namesChanged = false
+        val allRomApps =
+            buildList {
+                for (folder in _romFolders.value) {
+                    val uri = Uri.parse(folder.uriString)
+                    val documentFile = resolveDocumentFile(context, uri) ?: continue
+                    if (!documentFile.exists()) continue
 
-                        val systemDef = SUPPORTED_SYSTEMS.find { it.id == folder.systemId } ?: continue
+                    val systemDef = SUPPORTED_SYSTEMS.find { it.id == folder.systemId } ?: continue
 
-                        val files = collectRomFilesRecursively(documentFile)
-                        val isConsoleSystem = folder.systemId != "pc"
-                        val isSwitchSystem = folder.systemId == SYSTEM_ID_SWITCH
-                        for (file in files) {
-                            if (file.isDirectory) continue
-                            val name = file.name ?: continue
-                            val ext = name.substringAfterLast('.', "").lowercase()
-                            val isMatch = systemDef.extensions.contains(ext) || (isConsoleSystem && ext == "zip")
-                            if (!isMatch) continue
+                    val files = collectRomFilesRecursively(documentFile)
+                    val isConsoleSystem = folder.systemId != "pc"
+                    val isSwitchSystem = folder.systemId == SYSTEM_ID_SWITCH
+                    for (file in files) {
+                        if (file.isDirectory) continue
+                        val name = file.name ?: continue
+                        val ext = name.substringAfterLast('.', "").lowercase()
+                        val isMatch = systemDef.extensions.contains(ext) || (isConsoleSystem && ext == "zip")
+                        if (!isMatch) continue
 
-                            // For Switch ROM folders, exclude update and DLC packages
-                            if (isSwitchSystem && !SwitchRomClassifier.isSwitchBaseGame(name)) {
-                                AppLog.d(TAG, "Filtering out non-base Switch ROM: '$name'")
-                                continue
+                        // For Switch ROM folders, exclude update and DLC packages
+                        if (isSwitchSystem && !SwitchRomClassifier.isSwitchBaseGame(name)) {
+                            AppLog.d(TAG, "Filtering out non-base Switch ROM: '$name'")
+                            continue
+                        }
+
+                        val rawLabel = name.substringBeforeLast('.')
+                        val romUriStr = file.uri.toString()
+                        val romPath = SafPathResolver.resolveFilePath(romUriStr) ?: romUriStr
+
+                        val cleanedLabel =
+                            synchronized(romCleanedNames) {
+                                romCleanedNames.getOrPut(romUriStr) {
+                                    namesChanged = true
+                                    cleanRomName(rawLabel)
+                                }
                             }
 
-                            val rawLabel = name.substringBeforeLast('.')
-                            val romUriStr = file.uri.toString()
-                            val romPath = SafPathResolver.resolveFilePath(romUriStr) ?: romUriStr
+                        val pseudoPackageName =
+                            "rom.${folder.systemId}." +
+                                rawLabel.replace(Regex("[^a-zA-Z0-9_]"), "_") +
+                                "_" + romUriStr.hashCode().absoluteValue
+                        val label = InstalledAppsManager.getCustomLabel(pseudoPackageName) ?: cleanedLabel
 
-                            val cleanedLabel =
-                                synchronized(romCleanedNames) {
-                                    romCleanedNames.getOrPut(romUriStr) {
-                                        namesChanged = true
-                                        cleanRomName(rawLabel)
-                                    }
-                                }
+                        val cachedCoverFile = InstalledAppsManager.coverFileFor(context, pseudoPackageName)
+                        val hasCover = cachedCoverFile.exists() && cachedCoverFile.length() > 0
+                        val coverPath = if (hasCover) cachedCoverFile.absolutePath else null
+                        val coverLastModified = if (hasCover) cachedCoverFile.lastModified() else 0L
+                        val coverImageId = if (hasCover) InstalledAppsManager.getCoverImageId(pseudoPackageName) else null
 
-                            val pseudoPackageName =
-                                "rom.${folder.systemId}." +
-                                    rawLabel.replace(Regex("[^a-zA-Z0-9_]"), "_") +
-                                    "_" + romUriStr.hashCode().absoluteValue
-                            val label = InstalledAppsManager.getCustomLabel(pseudoPackageName) ?: cleanedLabel
+                        val cachedLibraryIconFile = InstalledAppsManager.libraryIconFileFor(context, pseudoPackageName)
+                        val hasLibraryIcon = cachedLibraryIconFile.exists() && cachedLibraryIconFile.length() > 0
+                        val libraryIconPath = if (hasLibraryIcon) cachedLibraryIconFile.absolutePath else null
+                        val libraryIconLastModified = if (hasLibraryIcon) cachedLibraryIconFile.lastModified() else 0L
+                        val libraryIconRef = if (hasLibraryIcon) InstalledAppsManager.getLibraryIconRef(pseudoPackageName) else null
 
-                            val cachedCoverFile = InstalledAppsManager.coverFileFor(context, pseudoPackageName)
-                            val hasCover = cachedCoverFile.exists() && cachedCoverFile.length() > 0
-                            val coverPath = if (hasCover) cachedCoverFile.absolutePath else null
-                            val coverLastModified = if (hasCover) cachedCoverFile.lastModified() else 0L
-                            val coverImageId = if (hasCover) InstalledAppsManager.getCoverImageId(pseudoPackageName) else null
+                        val cachedLogoFile = InstalledAppsManager.logoFileFor(context, pseudoPackageName)
+                        val hasLogo = cachedLogoFile.exists() && cachedLogoFile.length() > 0
+                        val logoLastModified = if (hasLogo) cachedLogoFile.lastModified() else 0L
 
-                            val cachedLibraryIconFile = InstalledAppsManager.libraryIconFileFor(context, pseudoPackageName)
-                            val hasLibraryIcon = cachedLibraryIconFile.exists() && cachedLibraryIconFile.length() > 0
-                            val libraryIconPath = if (hasLibraryIcon) cachedLibraryIconFile.absolutePath else null
-                            val libraryIconLastModified = if (hasLibraryIcon) cachedLibraryIconFile.lastModified() else 0L
-                            val libraryIconRef = if (hasLibraryIcon) InstalledAppsManager.getLibraryIconRef(pseudoPackageName) else null
-
-                            add(
-                                InstalledAppInfo(
-                                    packageName = pseudoPackageName,
-                                    activityName = "",
-                                    label = label,
-                                    coverPath = coverPath,
-                                    isGame = true,
-                                    isRom = true,
-                                    romPath = romPath,
-                                    romUri = romUriStr,
-                                    systemId = folder.systemId,
-                                    retroArchCore = folder.retroArchCore,
-                                    emulatorPackage = folder.emulatorPackage,
-                                    coverLastModified = coverLastModified,
-                                    coverImageId = coverImageId,
-                                    defaultLabel = cleanedLabel,
-                                    libraryIconPath = libraryIconPath,
-                                    libraryIconImageId = libraryIconRef?.id,
-                                    libraryIconType = libraryIconRef?.type,
-                                    libraryIconLastModified = libraryIconLastModified,
-                                ),
-                            )
-                        }
+                        add(
+                            InstalledAppInfo(
+                                packageName = pseudoPackageName,
+                                activityName = "",
+                                label = label,
+                                coverPath = coverPath,
+                                isGame = true,
+                                isRom = true,
+                                romPath = romPath,
+                                romUri = romUriStr,
+                                systemId = folder.systemId,
+                                retroArchCore = folder.retroArchCore,
+                                emulatorPackage = folder.emulatorPackage,
+                                coverLastModified = coverLastModified,
+                                coverImageId = coverImageId,
+                                defaultLabel = cleanedLabel,
+                                libraryIconPath = libraryIconPath,
+                                libraryIconImageId = libraryIconRef?.id,
+                                libraryIconType = libraryIconRef?.type,
+                                libraryIconLastModified = libraryIconLastModified,
+                                coverOptedOut = InstalledAppsManager.isCoverOptedOut(pseudoPackageName),
+                                libraryIconOptedOut = InstalledAppsManager.isLibraryIconOptedOut(pseudoPackageName),
+                                logoLastModified = logoLastModified,
+                            ),
+                        )
                     }
                 }
-
-            _romApps.value = allRomApps.sortedBy { it.label.lowercase() }
-            AppLog.d(TAG, "Scanned and loaded ${_romApps.value.size} ROMs across ${_romFolders.value.size} folders")
-            if (namesChanged) {
-                saveRomCleanedNames(context)
             }
+
+        _romApps.value = allRomApps.sortedBy { it.label.lowercase() }
+        AppLog.d(TAG, "Scanned and loaded ${_romApps.value.size} ROMs across ${_romFolders.value.size} folders")
+        if (namesChanged) {
+            saveRomCleanedNames(context)
         }
+        if (triggerScrape) {
+            InstalledAppsManager.triggerSteamGridDbScraping(context)
+        }
+    }
 
     fun updateRomCover(
         packageName: String,
@@ -401,6 +419,30 @@ object RomManager {
     ) {
         _romApps.update { it.withUpdatedCover(packageName, coverPath, coverImageId) }
         AppLog.i(TAG, "Updated in-memory ROM cover path for $packageName to $coverPath (imageId: $coverImageId)")
+    }
+
+    fun updateRomLogo(
+        packageName: String,
+        lastModified: Long,
+    ) {
+        _romApps.update { it.withUpdatedLogo(packageName, lastModified) }
+        AppLog.i(TAG, "Updated in-memory ROM logo timestamp for $packageName to $lastModified")
+    }
+
+    fun updateRomCoverOptOut(
+        packageName: String,
+        optedOut: Boolean,
+    ) {
+        _romApps.update { it.withUpdatedCoverOptOut(packageName, optedOut) }
+        AppLog.i(TAG, "Updated in-memory ROM cover opt-out for $packageName to $optedOut")
+    }
+
+    fun updateRomLibraryIconOptOut(
+        packageName: String,
+        optedOut: Boolean,
+    ) {
+        _romApps.update { it.withUpdatedLibraryIconOptOut(packageName, optedOut) }
+        AppLog.i(TAG, "Updated in-memory ROM library icon opt-out for $packageName to $optedOut")
     }
 
     fun updateRomLibraryIcon(

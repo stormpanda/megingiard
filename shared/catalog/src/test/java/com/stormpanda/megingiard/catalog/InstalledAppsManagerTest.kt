@@ -323,13 +323,6 @@ class InstalledAppsManagerTest {
         }
 
     @Test
-    fun testMarkAppAsScraped() {
-        val context: Context = RuntimeEnvironment.getApplication()
-        InstalledAppsManager.markAppAsScraped(context, "com.test.scraped")
-        // Verified persistence
-    }
-
-    @Test
     fun testLoadInstalledApps_executesWithoutCrash() {
         val context: Context = RuntimeEnvironment.getApplication()
         InstalledAppsManager.loadInstalledApps(context)
@@ -415,6 +408,96 @@ class InstalledAppsManagerTest {
     fun testResetAppLabel_unknownPackageReturnsNull() {
         val context: Context = RuntimeEnvironment.getApplication()
         assertNull(InstalledAppsManager.resetAppLabel(context, "com.test.unknown"))
+    }
+
+    @Test
+    fun testShouldAutoScrape_truthTable() {
+        assertTrue(shouldAutoScrape(isOptedOut = false, wasAttempted = false, hasFile = false))
+        assertFalse(shouldAutoScrape(isOptedOut = true, wasAttempted = false, hasFile = false))
+        assertFalse(shouldAutoScrape(isOptedOut = false, wasAttempted = true, hasFile = false))
+        assertFalse(shouldAutoScrape(isOptedOut = false, wasAttempted = false, hasFile = true))
+        assertFalse(shouldAutoScrape(isOptedOut = true, wasAttempted = true, hasFile = true))
+    }
+
+    @Test
+    fun testArtworkOptOuts_laterReloadDoesNotOverwriteInMemoryChoice() {
+        val context: Context = RuntimeEnvironment.getApplication()
+        InstalledAppsManager.setCoverOptedOut(context, PKG_GAME, true)
+        runBlocking { InstalledAppsManager.awaitPendingWritesForTesting() }
+
+        // Simulate a stale on-disk snapshot (e.g. a save that has not been flushed yet).
+        File(context.filesDir, "gamefocus_artwork_optouts.json").writeText("""{"cover":[],"libraryIcon":[]}""")
+        InstalledAppsManager.reloadPersistedMetadataForTesting(context)
+
+        assertTrue(InstalledAppsManager.isCoverOptedOut(PKG_GAME))
+    }
+
+    @Test
+    fun testRecordScrapeAttempt_mergesWithNotYetLoadedDiskState() {
+        val context: Context = RuntimeEnvironment.getApplication()
+        File(context.filesDir, "gamefocus_scrape_attempts.json").writeText("""{"cover":["com.disk.app"]}""")
+
+        InstalledAppsManager.recordScrapeAttempt(context, "com.new.app", ArtworkKind.COVER)
+
+        assertTrue(InstalledAppsManager.wasAttempted("com.disk.app", ArtworkKind.COVER))
+        assertTrue(InstalledAppsManager.wasAttempted("com.new.app", ArtworkKind.COVER))
+    }
+
+    @Test
+    fun testArtworkOptOuts_persistenceAndCatalogUpdate() {
+        val context: Context = RuntimeEnvironment.getApplication()
+        InstalledAppsManager.setInstalledAndroidAppsForTesting(listOf(seedApp()))
+
+        assertFalse(InstalledAppsManager.isCoverOptedOut(PKG_GAME))
+        assertFalse(InstalledAppsManager.isLibraryIconOptedOut(PKG_GAME))
+
+        InstalledAppsManager.setCoverOptedOut(context, PKG_GAME, true)
+        InstalledAppsManager.setLibraryIconOptedOut(context, PKG_GAME, true)
+
+        assertTrue(InstalledAppsManager.isCoverOptedOut(PKG_GAME))
+        assertTrue(InstalledAppsManager.isLibraryIconOptedOut(PKG_GAME))
+        val inMemoryApp = InstalledAppsManager.installedAndroidAppsForTesting().single()
+        assertTrue(inMemoryApp.coverOptedOut)
+        assertTrue(inMemoryApp.libraryIconOptedOut)
+
+        runBlocking { InstalledAppsManager.awaitPendingWritesForTesting() }
+        InstalledAppsManager.resetForTesting()
+        assertFalse(InstalledAppsManager.isCoverOptedOut(PKG_GAME))
+        assertFalse(InstalledAppsManager.isLibraryIconOptedOut(PKG_GAME))
+
+        InstalledAppsManager.reloadPersistedMetadataForTesting(context)
+        assertTrue(InstalledAppsManager.isCoverOptedOut(PKG_GAME))
+        assertTrue(InstalledAppsManager.isLibraryIconOptedOut(PKG_GAME))
+    }
+
+    @Test
+    fun testScrapeAttempts_legacyMigrationAndPerKind() {
+        val context: Context = RuntimeEnvironment.getApplication()
+        val legacyFile = File(context.filesDir, "gamefocus_scraped_apps.txt")
+        legacyFile.writeText("com.legacy.app\n")
+
+        InstalledAppsManager.reloadPersistedMetadataForTesting(context)
+        runBlocking { InstalledAppsManager.awaitPendingWritesForTesting() }
+
+        assertTrue(InstalledAppsManager.wasAttempted("com.legacy.app", ArtworkKind.COVER))
+        assertTrue(InstalledAppsManager.wasAttempted("com.legacy.app", ArtworkKind.LOGO))
+        assertTrue(InstalledAppsManager.wasAttempted("com.legacy.app", ArtworkKind.LIBRARY_ICON))
+
+        assertFalse(InstalledAppsManager.wasAttempted("com.new.app", ArtworkKind.COVER))
+        InstalledAppsManager.recordScrapeAttempt(context, "com.new.app", ArtworkKind.COVER)
+        assertTrue(InstalledAppsManager.wasAttempted("com.new.app", ArtworkKind.COVER))
+        assertFalse(InstalledAppsManager.wasAttempted("com.new.app", ArtworkKind.LOGO))
+        assertFalse(InstalledAppsManager.wasAttempted("com.new.app", ArtworkKind.LIBRARY_ICON))
+    }
+
+    @Test
+    fun testUpdateAppLogo_updatesState() {
+        val app = seedApp()
+        InstalledAppsManager.setInstalledAndroidAppsForTesting(listOf(app))
+        InstalledAppsManager.updateAppLogo(PKG_GAME, 123456L)
+
+        val updated = InstalledAppsManager.installedAndroidAppsForTesting().single()
+        assertEquals(123456L, updated.logoLastModified)
     }
 
     private fun seedApp() =

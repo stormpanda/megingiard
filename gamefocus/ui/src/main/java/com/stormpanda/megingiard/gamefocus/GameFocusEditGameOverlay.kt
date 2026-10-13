@@ -307,7 +307,7 @@ private fun ScrapingDeckContent(
         accentColor = accentColor,
         initialAppliedImageId = if (appInfo.coverPath != null) appInfo.coverImageId else null,
         initialAppliedImageType = null,
-        initialIsDefault = appInfo.coverPath == null,
+        initialIsDefault = appInfo.coverOptedOut,
         initialArtworkType = GF_GRIDS_IMAGE_TYPE,
         thumbWidth = GF_POSTER_HEIGHT * GF_POSTER_ASPECT_RATIO,
         thumbHeight = GF_POSTER_HEIGHT,
@@ -358,6 +358,9 @@ private fun ScrapingDeckContent(
                 AppPaletteExtractor.invalidatePalette(appInfo.packageName)
             }
         },
+        onSetOptOut = { optedOut ->
+            InstalledAppsManager.setCoverOptedOut(context, appInfo.packageName, optedOut)
+        },
     )
 }
 
@@ -376,7 +379,7 @@ private fun LibraryIconDeckContent(
         accentColor = accentColor,
         initialAppliedImageId = if (appInfo.libraryIconPath != null) appInfo.libraryIconImageId else null,
         initialAppliedImageType = if (appInfo.libraryIconPath != null) appInfo.libraryIconType else null,
-        initialIsDefault = appInfo.libraryIconPath == null,
+        initialIsDefault = appInfo.libraryIconOptedOut,
         initialArtworkType = appInfo.libraryIconType ?: LibraryIconRef.TYPE_ICONS,
         thumbWidth = GF_ICON_THUMB_SIZE,
         thumbHeight = GF_ICON_THUMB_SIZE,
@@ -445,6 +448,9 @@ private fun LibraryIconDeckContent(
                 },
             )
         },
+        onSetOptOut = { optedOut ->
+            InstalledAppsManager.setLibraryIconOptedOut(context, appInfo.packageName, optedOut)
+        },
     )
 }
 
@@ -467,6 +473,7 @@ private fun SteamGridDbArtworkDeck(
     @StringRes emptyImagesNoticeRes: Int,
     onSaveArtworkBytes: suspend (image: SteamGridDbImage, bytes: ByteArray, type: String) -> Boolean,
     onRevertToDefault: suspend () -> Unit,
+    onSetOptOut: (Boolean) -> Unit,
 ) {
     val appColors = LocalAppColors.current
     val scope = rememberCoroutineScope()
@@ -501,6 +508,7 @@ private fun SteamGridDbArtworkDeck(
         downloadJob = null
         isDownloading = false
         scope.launch {
+            // revertToDefault* persists the opt-out itself; no separate onSetOptOut(true) needed.
             onRevertToDefault()
             appliedImageId = null
             appliedImageType = null
@@ -594,6 +602,8 @@ private fun SteamGridDbArtworkDeck(
             isDefault = checked
             if (checked) {
                 onRevert()
+            } else {
+                onSetOptOut(false)
             }
         }
 

@@ -31,18 +31,23 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.coroutines.cancellation.CancellationException
 
 private const val TAG = "InstalledAppsManager"
 private const val FILE_FAVORITES = "gamefocus_favorites.txt"
 private const val FILE_HIDDEN = "gamefocus_hidden.txt"
 private const val FILE_LAST_USED = "gamefocus_last_used.txt"
 private const val FILE_SCRAPED_APPS = "gamefocus_scraped_apps.txt"
+private const val FILE_ARTWORK_OPTOUTS = "gamefocus_artwork_optouts.json"
+private const val FILE_SCRAPE_ATTEMPTS = "gamefocus_scrape_attempts.json"
 private const val FILE_APP_NAMES = "gamefocus_app_names.json"
 private const val FILE_COVER_IMAGE_IDS = "gamefocus_cover_image_ids.json"
 private const val FILE_LIBRARY_ICON_IDS = "gamefocus_library_icon_ids.json"
@@ -53,6 +58,7 @@ internal const val MAX_LIBRARY_ICON_DIMENSION_PX = 256
 private const val COVER_FILE_EXTENSION = ".png"
 private const val IMAGE_TYPE_GRIDS = "grids"
 private const val IMAGE_TYPE_LOGOS = "logos"
+private const val IMAGE_TYPE_ICONS = "icons"
 private const val ROM_PACKAGE_PREFIX = "rom."
 private const val MAX_RECENT_APPS = 10
 private const val INTENT_CATEGORY_GAME = "android.intent.category.GAME"
@@ -83,10 +89,22 @@ object InstalledAppsManager {
             (androidApps + romApps).sortedBy { it.label.lowercase() }
         }.stateIn(scope, SharingStarted.Eagerly, emptyList())
 
-    private val scrapedPackages = HashSet<String>()
+    private val artworkOptOutsLock = Any()
+    private var artworkOptOuts = ArtworkOptOuts()
+
+    /** Opt-outs are loaded from disk once; later reloads would overwrite unsaved in-memory user choices. */
+    @Volatile
+    private var isArtworkOptOutsLoaded = false
+
+    private val scrapeAttemptsLock = Any()
+    private var scrapeAttempts = ScrapeAttempts()
 
     @Volatile
-    private var isScrapedPackagesLoaded = false
+    private var isScrapeAttemptsLoaded = false
+
+    /** Single-flight guard for scraping passes; [isRerunRequested] schedules a follow-up pass. */
+    private val scrapeMutex = Mutex()
+    private val isRerunRequested = AtomicBoolean(false)
 
     private val _favorites = MutableStateFlow<Set<String>>(emptySet())
     val favorites: StateFlow<Set<String>> = _favorites.asStateFlow()
@@ -102,11 +120,17 @@ object InstalledAppsManager {
         _favorites.value = emptySet()
         _hiddenApps.value = emptySet()
         _lastUsed.value = emptyList()
-        synchronized(scrapedPackages) { scrapedPackages.clear() }
+        synchronized(artworkOptOutsLock) {
+            artworkOptOuts = ArtworkOptOuts()
+            isArtworkOptOutsLoaded = false
+        }
+        synchronized(scrapeAttemptsLock) {
+            scrapeAttempts = ScrapeAttempts()
+            isScrapeAttemptsLoaded = false
+        }
         synchronized(customAppNames) { customAppNames.clear() }
         synchronized(coverImageIds) { coverImageIds.clear() }
         synchronized(libraryIconRefs) { libraryIconRefs.clear() }
-        isScrapedPackagesLoaded = false
         isSettingsObserverRegistered = false
     }
 
@@ -266,6 +290,8 @@ object InstalledAppsManager {
         loadCustomAppNames(context)
         loadCoverImageIds(context)
         loadLibraryIconIds(context)
+        loadArtworkOptOuts(context)
+        loadScrapeAttempts(context)
     }
 
     @VisibleForTesting
@@ -390,30 +416,210 @@ object InstalledAppsManager {
         AppLog.i(TAG, "Recorded launch for $packageName (recent count=${trimmed.size})")
     }
 
-    private fun loadScrapedPackages(context: Context): Set<String> =
-        synchronized(scrapedPackages) {
-            if (!isScrapedPackagesLoaded) {
-                scrapedPackages.addAll(loadStringSet(context, FILE_SCRAPED_APPS))
-                AppLog.d(TAG, "Loaded ${scrapedPackages.size} scraped package records from disk")
-                isScrapedPackagesLoaded = true
+    private fun loadScrapeAttempts(context: Context): ScrapeAttempts =
+        synchronized(scrapeAttemptsLock) {
+            if (!isScrapeAttemptsLoaded) {
+                val attemptsFile = File(context.filesDir, FILE_SCRAPE_ATTEMPTS)
+                if (attemptsFile.exists()) {
+                    val atomicFile = AtomicFile(attemptsFile)
+                    try {
+                        val text = atomicFile.readFully().toString(Charsets.UTF_8)
+                        scrapeAttempts = Json.decodeFromString<ScrapeAttempts>(text)
+                        AppLog.d(
+                            TAG,
+                            "Loaded scrape attempts from disk (covers=${scrapeAttempts.cover.size}, logos=${scrapeAttempts.logo.size}, icons=${scrapeAttempts.libraryIcon.size})",
+                        )
+                    } catch (e: Exception) {
+                        AppLog.w(TAG, "Failed to load $FILE_SCRAPE_ATTEMPTS: ${e.message}")
+                    }
+                } else {
+                    val legacyFile = File(context.filesDir, FILE_SCRAPED_APPS)
+                    if (legacyFile.exists()) {
+                        scrapeAttempts = ScrapeAttempts.fromLegacy(loadStringSet(context, FILE_SCRAPED_APPS))
+                        persistScope.launch {
+                            if (!saveScrapeAttempts(context)) {
+                                AppLog.w(TAG, "Keeping legacy $FILE_SCRAPED_APPS because migrated attempts could not be saved")
+                                return@launch
+                            }
+                            try {
+                                if (legacyFile.delete()) {
+                                    AppLog.d(TAG, "Deleted legacy $FILE_SCRAPED_APPS after migration")
+                                }
+                            } catch (e: Exception) {
+                                AppLog.w(TAG, "Failed to delete legacy $FILE_SCRAPED_APPS: ${e.message}")
+                            }
+                        }
+                    }
+                }
+                isScrapeAttemptsLoaded = true
             }
-            scrapedPackages
+            scrapeAttempts
         }
 
-    fun markAppAsScraped(
+    /** @return true if the current in-memory attempts were written to disk. */
+    private fun saveScrapeAttempts(context: Context): Boolean =
+        synchronized(persistLock) {
+            val content = synchronized(scrapeAttemptsLock) { scrapeAttempts }
+            val file = File(context.filesDir, FILE_SCRAPE_ATTEMPTS)
+            val atomicFile = AtomicFile(file)
+            var fos: FileOutputStream? = null
+            try {
+                val text = Json.encodeToString(content)
+                fos = atomicFile.startWrite()
+                fos.write(text.toByteArray(Charsets.UTF_8))
+                atomicFile.finishWrite(fos)
+                AppLog.d(TAG, "Saved scrape attempts to disk")
+                true
+            } catch (e: Exception) {
+                AppLog.w(TAG, "Failed to save $FILE_SCRAPE_ATTEMPTS: ${e.message}")
+                if (fos != null) atomicFile.failWrite(fos)
+                false
+            }
+        }
+
+    fun wasAttempted(
+        packageName: String,
+        kind: ArtworkKind,
+    ): Boolean = synchronized(scrapeAttemptsLock) { scrapeAttempts.wasAttempted(kind, packageName) }
+
+    fun recordScrapeAttempt(
         context: Context,
         packageName: String,
+        kind: ArtworkKind,
     ) {
-        val needsWrite =
-            synchronized(scrapedPackages) {
-                loadScrapedPackages(context)
-                scrapedPackages.add(packageName)
+        // Ensure disk state is loaded first so a later lazy load cannot overwrite this record.
+        loadScrapeAttempts(context)
+        val modified =
+            synchronized(scrapeAttemptsLock) {
+                val updated = scrapeAttempts.withAttempt(kind, packageName)
+                val changed = updated !== scrapeAttempts
+                scrapeAttempts = updated
+                changed
             }
-        if (needsWrite) {
-            persistLines(context, FILE_SCRAPED_APPS, synchronized(scrapedPackages) { scrapedPackages.toList() })
-            AppLog.i(TAG, "Persisted $packageName to scraped packages registry")
+        if (modified) {
+            AppLog.d(TAG, "Recorded $kind scrape attempt for $packageName")
+            persistScope.launch { saveScrapeAttempts(context) }
         }
     }
+
+    private fun loadArtworkOptOuts(context: Context): ArtworkOptOuts =
+        synchronized(artworkOptOutsLock) {
+            if (!isArtworkOptOutsLoaded) {
+                val file = File(context.filesDir, FILE_ARTWORK_OPTOUTS)
+                if (file.exists()) {
+                    val atomicFile = AtomicFile(file)
+                    try {
+                        val text = atomicFile.readFully().toString(Charsets.UTF_8)
+                        artworkOptOuts = Json.decodeFromString<ArtworkOptOuts>(text)
+                        AppLog.d(
+                            TAG,
+                            "Loaded artwork opt-outs (covers=${artworkOptOuts.cover.size}, icons=${artworkOptOuts.libraryIcon.size})",
+                        )
+                    } catch (e: Exception) {
+                        AppLog.w(TAG, "Failed to load $FILE_ARTWORK_OPTOUTS: ${e.message}")
+                    }
+                }
+                isArtworkOptOutsLoaded = true
+            }
+            artworkOptOuts
+        }
+
+    private fun saveArtworkOptOuts(context: Context) {
+        synchronized(persistLock) {
+            val content = synchronized(artworkOptOutsLock) { artworkOptOuts }
+            val file = File(context.filesDir, FILE_ARTWORK_OPTOUTS)
+            val atomicFile = AtomicFile(file)
+            var fos: FileOutputStream? = null
+            try {
+                val text = Json.encodeToString(content)
+                fos = atomicFile.startWrite()
+                fos.write(text.toByteArray(Charsets.UTF_8))
+                atomicFile.finishWrite(fos)
+                AppLog.d(TAG, "Saved artwork opt-outs to disk")
+            } catch (e: Exception) {
+                AppLog.w(TAG, "Failed to save $FILE_ARTWORK_OPTOUTS: ${e.message}")
+                if (fos != null) atomicFile.failWrite(fos)
+            }
+        }
+    }
+
+    fun isCoverOptedOut(packageName: String): Boolean =
+        synchronized(artworkOptOutsLock) { artworkOptOuts.isOptedOut(ArtworkKind.COVER, packageName) }
+
+    fun isLibraryIconOptedOut(packageName: String): Boolean =
+        synchronized(artworkOptOutsLock) { artworkOptOuts.isOptedOut(ArtworkKind.LIBRARY_ICON, packageName) }
+
+    fun setCoverOptedOut(
+        context: Context,
+        packageName: String,
+        optedOut: Boolean,
+    ) {
+        setArtworkOptOut(context, ArtworkKind.COVER, packageName, optedOut)
+        updateCoverOptOut(packageName, optedOut)
+    }
+
+    fun setLibraryIconOptedOut(
+        context: Context,
+        packageName: String,
+        optedOut: Boolean,
+    ) {
+        setArtworkOptOut(context, ArtworkKind.LIBRARY_ICON, packageName, optedOut)
+        updateLibraryIconOptOut(packageName, optedOut)
+    }
+
+    private fun setArtworkOptOut(
+        context: Context,
+        kind: ArtworkKind,
+        packageName: String,
+        optedOut: Boolean,
+    ) {
+        // Ensure disk state is loaded first so a later lazy load cannot overwrite this choice.
+        loadArtworkOptOuts(context)
+        synchronized(artworkOptOutsLock) {
+            artworkOptOuts = artworkOptOuts.withOptOut(kind, packageName, optedOut)
+        }
+        AppLog.i(TAG, "Set $kind opt-out for $packageName to $optedOut")
+        persistScope.launch { saveArtworkOptOuts(context) }
+    }
+
+    fun updateCoverOptOut(
+        packageName: String,
+        optedOut: Boolean,
+    ) {
+        if (packageName.startsWith(ROM_PACKAGE_PREFIX)) {
+            RomManager.updateRomCoverOptOut(packageName, optedOut)
+            return
+        }
+        installedAndroidAppsFlow.update { it.withUpdatedCoverOptOut(packageName, optedOut) }
+    }
+
+    fun updateLibraryIconOptOut(
+        packageName: String,
+        optedOut: Boolean,
+    ) {
+        if (packageName.startsWith(ROM_PACKAGE_PREFIX)) {
+            RomManager.updateRomLibraryIconOptOut(packageName, optedOut)
+            return
+        }
+        installedAndroidAppsFlow.update { it.withUpdatedLibraryIconOptOut(packageName, optedOut) }
+    }
+
+    fun updateAppLogo(
+        packageName: String,
+        lastModified: Long,
+    ) {
+        if (packageName.startsWith(ROM_PACKAGE_PREFIX)) {
+            RomManager.updateRomLogo(packageName, lastModified)
+            return
+        }
+        installedAndroidAppsFlow.update { it.withUpdatedLogo(packageName, lastModified) }
+    }
+
+    /** Location of the cached logo image for ROM [packageName]. */
+    fun logoFileFor(
+        context: Context,
+        packageName: String,
+    ): File = File(File(context.cacheDir, DIR_LOGOS), "$packageName$COVER_FILE_EXTENSION")
 
     @Suppress("DEPRECATION")
     fun isPackageAGame(
@@ -428,13 +634,17 @@ object InstalledAppsManager {
     fun loadInstalledApps(context: Context) {
         SwitchEmulators.invalidateCache()
         scope.launch {
+            loadArtworkOptOuts(context)
+            loadScrapeAttempts(context)
+
             // Custom names, cover IDs, and library icon IDs must be loaded before the ROM scan, which reads them.
             loadCustomAppNames(context)
             loadCoverImageIds(context)
             loadLibraryIconIds(context)
 
             RomManager.loadRomFolders(context)
-            RomManager.reloadRomApps(context)
+            // Scraping is triggered once below, after the Android app list is published.
+            RomManager.reloadRomAppsSuspend(context, triggerScrape = false)
 
             SystemRoleClassifier.refreshLaunchers(context)
 
@@ -517,6 +727,9 @@ object InstalledAppsManager {
                             libraryIconImageId = libraryIconRef?.id,
                             libraryIconType = libraryIconRef?.type,
                             libraryIconLastModified = libraryIconLastModified,
+                            coverOptedOut = isCoverOptedOut(packageName),
+                            libraryIconOptedOut = isLibraryIconOptedOut(packageName),
+                            logoLastModified = 0L,
                         )
                     }.sortedBy { it.label.lowercase() }
 
@@ -525,7 +738,7 @@ object InstalledAppsManager {
             AppLog.d(TAG, "Loaded ${apps.size} installed apps ($gameCount games, ${apps.size - gameCount} apps) for launcher browser")
 
             // Trigger background SteamGridDB cover scraping if API key is configured
-            triggerSteamGridDbScraping(context, coversDir)
+            triggerSteamGridDbScraping(context)
         }
     }
 
@@ -619,7 +832,7 @@ object InstalledAppsManager {
     ): File = File(File(context.cacheDir, DIR_COVERS), "$packageName$COVER_FILE_EXTENSION")
 
     /** Writes [bytes] to [file] atomically so a failed write never leaves a truncated image behind. */
-    private fun writeCoverAtomically(
+    internal fun writeImageAtomically(
         file: File,
         bytes: ByteArray,
     ): Boolean {
@@ -633,14 +846,14 @@ object InstalledAppsManager {
             true
         } catch (e: Exception) {
             if (fos != null) atomicFile.failWrite(fos)
-            AppLog.e(TAG, "Failed to write cover ${file.absolutePath}: ${e.message}", e)
+            AppLog.e(TAG, "Failed to write image ${file.absolutePath}: ${e.message}", e)
             false
         }
     }
 
     /**
      * Stores user-selected artwork for [packageName], records its SteamGridDB [imageId], publishes the new
-     * cover to the catalog, and marks the package as scraped.
+     * cover to the catalog, clears opt-out, and records the scrape attempt.
      *
      * @param onCoverWritten invoked after the file is written and before the catalog is updated
      *   (e.g. to invalidate palette caches so observers never read a stale palette).
@@ -655,18 +868,19 @@ object InstalledAppsManager {
     ): String? =
         withContext(Dispatchers.IO) {
             val file = coverFileFor(context, packageName)
-            if (!writeCoverAtomically(file, bytes)) return@withContext null
+            if (!writeImageAtomically(file, bytes)) return@withContext null
             onCoverWritten()
+            setCoverOptedOut(context, packageName, false)
+            recordScrapeAttempt(context, packageName, ArtworkKind.COVER)
             setCoverImageId(context, packageName, imageId)
             updateAppCover(packageName, file.absolutePath, imageId)
-            markAppAsScraped(context, packageName)
             AppLog.i(TAG, "Applied custom cover for $packageName (imageId=$imageId)")
             file.absolutePath
         }
 
     /**
      * Deletes any cached cover for [packageName], clears its image ID, restores the default icon,
-     * and marks the package as scraped so background scraping does not re-download artwork.
+     * marks cover as opted out, and records the attempt.
      *
      * @param onCoverRemoved invoked after the file is deleted and before the catalog is updated.
      */
@@ -680,9 +894,10 @@ object InstalledAppsManager {
             AppLog.w(TAG, "Failed to delete cover ${file.absolutePath}")
         }
         onCoverRemoved()
+        setCoverOptedOut(context, packageName, true)
+        recordScrapeAttempt(context, packageName, ArtworkKind.COVER)
         setCoverImageId(context, packageName, null)
         updateAppCover(packageName, null, null)
-        markAppAsScraped(context, packageName)
         AppLog.i(TAG, "Reverted $packageName to default icon")
     }
 
@@ -782,9 +997,11 @@ object InstalledAppsManager {
                 AppLog.w(TAG, "Cannot apply custom library icon for $packageName: image data could not be decoded")
                 return@withContext null
             }
-            if (!writeCoverAtomically(file, downsampledBytes)) return@withContext null
+            if (!writeImageAtomically(file, downsampledBytes)) return@withContext null
             val lastModified = file.lastModified()
             onIconWritten()
+            setLibraryIconOptedOut(context, packageName, false)
+            recordScrapeAttempt(context, packageName, ArtworkKind.LIBRARY_ICON)
             setLibraryIconRef(context, packageName, LibraryIconRef(id = imageId, type = type))
             updateAppLibraryIcon(packageName, file.absolutePath, imageId, type, lastModified)
             AppLog.i(TAG, "Applied custom library icon for $packageName (imageId=$imageId, type=$type)")
@@ -805,6 +1022,8 @@ object InstalledAppsManager {
             AppLog.w(TAG, "Failed to delete library icon ${file.absolutePath}")
         }
         onIconRemoved()
+        setLibraryIconOptedOut(context, packageName, true)
+        recordScrapeAttempt(context, packageName, ArtworkKind.LIBRARY_ICON)
         setLibraryIconRef(context, packageName, null)
         updateAppLibraryIcon(packageName, null, null, null, 0L)
         AppLog.i(TAG, "Reverted $packageName to default library icon")
@@ -812,10 +1031,7 @@ object InstalledAppsManager {
 
     private var isSettingsObserverRegistered = false
 
-    private fun registerSettingsObserverIfNeeded(
-        context: Context,
-        coversDir: File,
-    ) {
+    private fun registerSettingsObserverIfNeeded(context: Context) {
         if (isSettingsObserverRegistered) return
         isSettingsObserverRegistered = true
         MegingiardIpcContract.init(context)
@@ -827,103 +1043,279 @@ object InstalledAppsManager {
             ).collect { config ->
                 if (config.steamGridDbApiToken.isNotBlank()) {
                     AppLog.i(TAG, "SteamGridDB API key updated via IPC ContentObserver -> triggering cover scraping")
-                    triggerSteamGridDbScraping(context, coversDir)
+                    triggerSteamGridDbScraping(context)
                 }
             }
         }
     }
 
-    private fun triggerSteamGridDbScraping(
-        context: Context,
-        coversDir: File,
-    ) {
-        registerSettingsObserverIfNeeded(context, coversDir)
+    fun triggerSteamGridDbScraping(context: Context) {
+        registerSettingsObserverIfNeeded(context)
         MegingiardIpcContract.init(context)
+        scope.launch { runScrapingPasses(context) }
+    }
 
-        val ipcConfig = IpcSettingsParser.parse(context.contentResolver)
-        var apiKey = ipcConfig.steamGridDbApiToken
+    /**
+     * Runs scraping passes single-flight. A request arriving while a pass is active only sets
+     * [isRerunRequested]; the active owner re-checks the flag after unlocking, so no request is lost.
+     */
+    private suspend fun runScrapingPasses(context: Context) {
+        while (true) {
+            if (!scrapeMutex.tryLock()) {
+                AppLog.d(TAG, "Scraping pass already in progress; scheduling follow-up pass")
+                isRerunRequested.set(true)
+                return
+            }
+            try {
+                do {
+                    isRerunRequested.set(false)
+                    executeScrapingPass(context)
+                } while (isRerunRequested.get())
+            } finally {
+                scrapeMutex.unlock()
+            }
+            // A request may have arrived between the last flag check and unlock.
+            if (!isRerunRequested.get()) return
+            AppLog.d(TAG, "Follow-up scraping pass requested during unlock; restarting")
+        }
+    }
+
+    private suspend fun executeScrapingPass(context: Context) {
+        // Read the token per pass so follow-up passes pick up token changes.
+        val apiKey = IpcSettingsParser.parse(context.contentResolver).steamGridDbApiToken
         if (apiKey.isBlank()) {
-            AppLog.d(TAG, "SteamGridDB API key is blank locally and via IPC, skipping cover scraping")
+            AppLog.d(TAG, "SteamGridDB API key is blank locally and via IPC, skipping artwork scraping")
             return
         }
 
-        scope.launch {
-            val scrapedSet = synchronized(scrapedPackages) { loadScrapedPackages(context).toSet() }
-            val currentApps = installedApps.value
-            val missingCovers =
-                currentApps.filter { app ->
-                    !scrapedSet.contains(app.packageName)
+        val coversDir = File(context.cacheDir, DIR_COVERS).apply { mkdirs() }
+        val logosDir = File(context.cacheDir, DIR_LOGOS).apply { mkdirs() }
+        val libraryIconsDir = File(context.cacheDir, DIR_LIBRARY_ICONS).apply { mkdirs() }
+
+        loadArtworkOptOuts(context)
+        loadScrapeAttempts(context)
+
+        val currentApps = installedApps.value
+        val appsToScrape =
+            currentApps.mapNotNull { app ->
+                val coverFile = File(coversDir, "${app.packageName}$COVER_FILE_EXTENSION")
+                val hasCover = coverFile.exists() && coverFile.length() > 0L
+                val scrapeCover =
+                    shouldAutoScrape(
+                        isOptedOut = isCoverOptedOut(app.packageName),
+                        wasAttempted = wasAttempted(app.packageName, ArtworkKind.COVER),
+                        hasFile = hasCover,
+                    )
+
+                val logoFile = File(logosDir, "${app.packageName}$COVER_FILE_EXTENSION")
+                val hasLogo = logoFile.exists() && logoFile.length() > 0L
+                val scrapeLogo =
+                    app.isRom &&
+                        shouldAutoScrape(
+                            isOptedOut = false,
+                            wasAttempted = wasAttempted(app.packageName, ArtworkKind.LOGO),
+                            hasFile = hasLogo,
+                        )
+
+                val libraryIconFile = File(libraryIconsDir, "${app.packageName}$COVER_FILE_EXTENSION")
+                val hasLibraryIcon = libraryIconFile.exists() && libraryIconFile.length() > 0L
+                val isGameOrRom = app.isGame || app.isRom
+                val scrapeLibraryIcon =
+                    isGameOrRom &&
+                        shouldAutoScrape(
+                            isOptedOut = isLibraryIconOptedOut(app.packageName),
+                            wasAttempted = wasAttempted(app.packageName, ArtworkKind.LIBRARY_ICON),
+                            hasFile = hasLibraryIcon,
+                        )
+
+                if (scrapeCover || scrapeLogo || scrapeLibraryIcon) {
+                    AppScrapePlan(app, scrapeCover, scrapeLogo, scrapeLibraryIcon, coverFile, logoFile, libraryIconFile)
+                } else {
+                    null
                 }
-            if (missingCovers.isEmpty()) {
-                AppLog.d(TAG, "No un-scraped apps missing cover art or logo")
-                return@launch
             }
 
-            AppLog.i(TAG, "Starting background SteamGridDB cover/logo scraping for ${missingCovers.size} apps")
+        if (appsToScrape.isEmpty()) {
+            AppLog.d(TAG, "No un-scraped apps missing artwork")
+            return
+        }
 
-            missingCovers.forEach { app ->
-                try {
-                    val cleanedQuery = SteamGridDbClient.cleanSearchQuery(app.label)
-                    AppLog.d(TAG, "Scraping cover art/logo for '${app.label}' (cleaned: '$cleanedQuery')")
-                    val searchResult = SteamGridDbClient.searchGames(cleanedQuery, apiKey)
-                    if (searchResult.isFailure) {
-                        AppLog.w(TAG, "Network error searching SteamGridDB for ${app.label}, will retry next startup")
-                        return@forEach
-                    }
+        AppLog.i(TAG, "Starting background SteamGridDB scraping pass for ${appsToScrape.size} apps")
 
-                    // Search request completed (HTTP success) -> mark as scraped
-                    markAppAsScraped(context, app.packageName)
-
-                    val games = searchResult.getOrNull()
-                    val gameId = games?.firstOrNull()?.id ?: return@forEach
-
-                    // 1. Scrape cover if missing
-                    val coverFile = File(coversDir, "${app.packageName}$COVER_FILE_EXTENSION")
-                    val hasCover = coverFile.exists() && coverFile.length() > 0L
-                    if (!hasCover) {
-                        val imagesResult = SteamGridDbClient.fetchImages(gameId, IMAGE_TYPE_GRIDS, apiKey)
-                        val images = imagesResult.getOrNull()
-                        val firstImage = images?.firstOrNull()
-                        val imageUrl = firstImage?.url
-                        if (imageUrl != null) {
-                            val bytes = SteamGridDbClient.downloadImageBytes(imageUrl).getOrNull()
-                            if (bytes != null && writeCoverAtomically(coverFile, bytes)) {
-                                setCoverImageId(context, app.packageName, firstImage.id)
-                                updateAppCover(app.packageName, coverFile.absolutePath, firstImage.id)
-                                AppLog.i(TAG, "Successfully scraped SteamGridDB cover for ${app.label} (imageId=${firstImage.id})")
-                            }
-                        }
-                    }
-
-                    // 2. Scrape logo if ROM and logo is missing
-                    if (app.isRom) {
-                        val logosDir = File(context.cacheDir, DIR_LOGOS).apply { mkdirs() }
-                        val logoFile = File(logosDir, "${app.packageName}$COVER_FILE_EXTENSION")
-                        val hasLogo = logoFile.exists() && logoFile.length() > 0L
-                        if (!hasLogo) {
-                            try {
-                                val logosResult = SteamGridDbClient.fetchImages(gameId, IMAGE_TYPE_LOGOS, apiKey)
-                                val logos = logosResult.getOrNull()
-                                val firstLogo = logos?.firstOrNull()
-                                val logoUrl = firstLogo?.let { it.thumb.ifBlank { it.url } }
-                                if (logoUrl != null) {
-                                    val logoBytes = SteamGridDbClient.downloadImageBytes(logoUrl).getOrNull()
-                                    if (logoBytes != null) {
-                                        logoFile.writeBytes(logoBytes)
-                                        AppLog.i(TAG, "Successfully scraped SteamGridDB logo for ROM: ${app.label}")
-                                    }
-                                }
-                            } catch (logoEx: Exception) {
-                                AppLog.w(TAG, "Failed to scrape logo for ROM ${app.label}: ${logoEx.message}")
-                            }
-                        }
-                    }
-                } catch (e: Exception) {
-                    AppLog.w(TAG, "Failed to scrape for ${app.label}: ${e.message}")
+        appsToScrape.forEach { plan ->
+            val app = plan.app
+            try {
+                val cleanedQuery = SteamGridDbClient.cleanSearchQuery(app.label)
+                AppLog.d(
+                    TAG,
+                    "Scraping artwork for '${app.label}' (cleaned: '$cleanedQuery', cover=${plan.scrapeCover}, logo=${plan.scrapeLogo}, icon=${plan.scrapeLibraryIcon})",
+                )
+                val searchResult = SteamGridDbClient.searchGames(cleanedQuery, apiKey)
+                if (searchResult.isFailure) {
+                    AppLog.w(TAG, "Network error searching SteamGridDB for ${app.label}, will retry on a later pass")
+                    return@forEach
                 }
+
+                val games = searchResult.getOrNull()
+                val gameId = games?.firstOrNull()?.id
+                if (gameId == null) {
+                    if (plan.scrapeCover) recordScrapeAttempt(context, app.packageName, ArtworkKind.COVER)
+                    if (plan.scrapeLogo) recordScrapeAttempt(context, app.packageName, ArtworkKind.LOGO)
+                    if (plan.scrapeLibraryIcon) recordScrapeAttempt(context, app.packageName, ArtworkKind.LIBRARY_ICON)
+                    AppLog.d(TAG, "No SteamGridDB game match for '${app.label}'")
+                    return@forEach
+                }
+
+                if (plan.scrapeCover) {
+                    runScrapeStep(context, app, ArtworkKind.COVER) { scrapeCover(context, plan, gameId, apiKey) }
+                }
+                if (plan.scrapeLogo) {
+                    runScrapeStep(context, app, ArtworkKind.LOGO) { scrapeLogo(plan, gameId, apiKey) }
+                }
+                if (plan.scrapeLibraryIcon) {
+                    runScrapeStep(context, app, ArtworkKind.LIBRARY_ICON) { scrapeLibraryIcon(context, plan, gameId, apiKey) }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLog.w(TAG, "Failed to scrape for ${app.label}: ${e.message}")
             }
         }
     }
+
+    /**
+     * Runs one artwork scrape [step] and records the attempt only when the step completed (HTTP success,
+     * including "no artwork available"). Network or write failures are not recorded so a later pass retries.
+     */
+    private inline fun runScrapeStep(
+        context: Context,
+        app: InstalledAppInfo,
+        kind: ArtworkKind,
+        step: () -> Boolean,
+    ) {
+        val completed =
+            try {
+                step()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLog.w(TAG, "Failed to scrape $kind for ${app.label}: ${e.message}")
+                false
+            }
+        if (completed) {
+            recordScrapeAttempt(context, app.packageName, kind)
+        } else {
+            AppLog.d(TAG, "$kind scrape for ${app.label} incomplete; not recorded so a later pass retries")
+        }
+    }
+
+    /** @return true when the cover step completed (saved, or no cover available). */
+    private suspend fun scrapeCover(
+        context: Context,
+        plan: AppScrapePlan,
+        gameId: Int,
+        apiKey: String,
+    ): Boolean {
+        val app = plan.app
+        val imagesResult = SteamGridDbClient.fetchImages(gameId, IMAGE_TYPE_GRIDS, apiKey)
+        if (imagesResult.isFailure) {
+            AppLog.w(TAG, "Network error fetching covers for ${app.label}")
+            return false
+        }
+        val firstImage = imagesResult.getOrNull()?.firstOrNull()
+        if (firstImage == null) {
+            AppLog.d(TAG, "No SteamGridDB cover available for ${app.label}")
+            return true
+        }
+        val bytes =
+            SteamGridDbClient.downloadImageBytes(firstImage.url).getOrElse { e ->
+                AppLog.w(TAG, "Failed to download cover for ${app.label}: ${e.message}")
+                return false
+            }
+        if (!writeImageAtomically(plan.coverFile, bytes)) return false
+        setCoverImageId(context, app.packageName, firstImage.id)
+        updateAppCover(app.packageName, plan.coverFile.absolutePath, firstImage.id)
+        AppLog.i(TAG, "Successfully scraped SteamGridDB cover for ${app.label} (imageId=${firstImage.id})")
+        return true
+    }
+
+    /** @return true when the ROM logo step completed (saved, or no logo available). */
+    private suspend fun scrapeLogo(
+        plan: AppScrapePlan,
+        gameId: Int,
+        apiKey: String,
+    ): Boolean {
+        val app = plan.app
+        val logosResult = SteamGridDbClient.fetchImages(gameId, IMAGE_TYPE_LOGOS, apiKey)
+        if (logosResult.isFailure) {
+            AppLog.w(TAG, "Network error fetching logos for ROM ${app.label}")
+            return false
+        }
+        val firstLogo = logosResult.getOrNull()?.firstOrNull()
+        if (firstLogo == null) {
+            AppLog.d(TAG, "No SteamGridDB logo available for ROM ${app.label}")
+            return true
+        }
+        // Logos are stored thumb-sized; the full-size URL is only used when no thumbnail exists.
+        val logoUrl = firstLogo.thumb.ifBlank { firstLogo.url }
+        val logoBytes =
+            SteamGridDbClient.downloadImageBytes(logoUrl).getOrElse { e ->
+                AppLog.w(TAG, "Failed to download logo for ROM ${app.label}: ${e.message}")
+                return false
+            }
+        if (!writeImageAtomically(plan.logoFile, logoBytes)) return false
+        updateAppLogo(app.packageName, plan.logoFile.lastModified())
+        AppLog.i(TAG, "Successfully scraped SteamGridDB logo for ROM: ${app.label}")
+        return true
+    }
+
+    /** @return true when the library icon step completed (saved, no icon available, or undecodable payload). */
+    private suspend fun scrapeLibraryIcon(
+        context: Context,
+        plan: AppScrapePlan,
+        gameId: Int,
+        apiKey: String,
+    ): Boolean {
+        val app = plan.app
+        val iconsResult = SteamGridDbClient.fetchImages(gameId, IMAGE_TYPE_ICONS, apiKey)
+        if (iconsResult.isFailure) {
+            AppLog.w(TAG, "Network error fetching library icons for ${app.label}")
+            return false
+        }
+        val firstIcon = iconsResult.getOrNull()?.firstOrNull()
+        if (firstIcon == null) {
+            AppLog.d(TAG, "No SteamGridDB library icon available for ${app.label}")
+            return true
+        }
+        // Same source as manual selection: the full image (ICO containers are unpacked by downsampleIconBytes).
+        val rawBytes =
+            SteamGridDbClient.downloadImageBytes(firstIcon.url).getOrElse { e ->
+                AppLog.w(TAG, "Failed to download library icon for ${app.label}: ${e.message}")
+                return false
+            }
+        val downsampledBytes = downsampleIconBytes(rawBytes)
+        if (downsampledBytes == null) {
+            // Permanently undecodable payload: record the attempt instead of retrying on every pass.
+            AppLog.w(TAG, "Library icon for ${app.label} could not be decoded; skipping")
+            return true
+        }
+        if (!writeImageAtomically(plan.libraryIconFile, downsampledBytes)) return false
+        val lastModified = plan.libraryIconFile.lastModified()
+        setLibraryIconRef(context, app.packageName, LibraryIconRef(id = firstIcon.id, type = IMAGE_TYPE_ICONS))
+        updateAppLibraryIcon(app.packageName, plan.libraryIconFile.absolutePath, firstIcon.id, IMAGE_TYPE_ICONS, lastModified)
+        AppLog.i(TAG, "Successfully scraped SteamGridDB library icon for ${app.label} (imageId=${firstIcon.id})")
+        return true
+    }
+
+    private data class AppScrapePlan(
+        val app: InstalledAppInfo,
+        val scrapeCover: Boolean,
+        val scrapeLogo: Boolean,
+        val scrapeLibraryIcon: Boolean,
+        val coverFile: File,
+        val logoFile: File,
+        val libraryIconFile: File,
+    )
 
     suspend fun launchAppOnPrimaryDisplay(
         context: Context,

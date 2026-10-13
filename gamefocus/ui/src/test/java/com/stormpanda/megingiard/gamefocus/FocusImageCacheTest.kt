@@ -1,8 +1,11 @@
 package com.stormpanda.megingiard.gamefocus
 
+import android.content.Context
 import android.graphics.Bitmap
+import androidx.test.core.app.ApplicationProvider
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -145,10 +148,8 @@ class FocusImageCacheTest {
 
     @Test
     fun testNegativeCaching_cachesMissingIconsAndInvalidates() {
-        kotlinx.coroutines.runBlocking {
-            val context =
-                androidx.test.core.app.ApplicationProvider
-                    .getApplicationContext<android.content.Context>()
+        runBlocking {
+            val context = ApplicationProvider.getApplicationContext<Context>()
             FocusImageCache.clearForTesting()
 
             val missingRom =
@@ -164,20 +165,55 @@ class FocusImageCacheTest {
             assertNull(result1)
 
             // Second check should be caught by missingIconKeys
+            assertNull(FocusImageCache.getCachedIconBitmap(missingRom))
             assertNull(FocusImageCache.getCachedIconBitmap(missingRom.packageName))
 
             // Invalidation should remove from missingIconKeys
             FocusImageCache.invalidateIcon(missingRom.packageName)
-            assertNull(FocusImageCache.getCachedIconBitmap(missingRom.packageName))
+            assertNull(FocusImageCache.getCachedIconBitmap(missingRom))
+        }
+    }
+
+    @Test
+    fun testNegativeCaching_bypassedWhenLogoLastModifiedChanges() {
+        runBlocking {
+            val context = ApplicationProvider.getApplicationContext<Context>()
+            FocusImageCache.clearForTesting()
+
+            val romPackage = "rom.pc.Halo"
+            val initialRom =
+                InstalledAppInfo(
+                    packageName = romPackage,
+                    activityName = "",
+                    label = "Halo",
+                    isRom = true,
+                    logoLastModified = 0L,
+                )
+
+            assertNull(FocusImageCache.getIconBitmapAsync(context, initialRom))
+            assertNull(FocusImageCache.getCachedIconBitmap(initialRom))
+
+            val logosDir = File(context.cacheDir, "gamefocus_logos").apply { mkdirs() }
+            val logoFile = File(logosDir, "$romPackage.png")
+            val testBmp = Bitmap.createBitmap(32, 32, Bitmap.Config.ARGB_8888)
+            FileOutputStream(logoFile).use { out ->
+                testBmp.compress(Bitmap.CompressFormat.PNG, 100, out)
+            }
+            testBmp.recycle()
+
+            val updatedTimestamp = 123456789L
+            val updatedRom = initialRom.withLogoLastModified(updatedTimestamp)
+
+            val loadedBmp = FocusImageCache.getIconBitmapAsync(context, updatedRom)
+            assertNotNull(loadedBmp)
+            assertNotNull(FocusImageCache.getCachedIconBitmap(updatedRom))
         }
     }
 
     @Test
     fun testOversizedLogoRewrite_rewritesDiskFileAsThumbnail() {
-        kotlinx.coroutines.runBlocking {
-            val context =
-                androidx.test.core.app.ApplicationProvider
-                    .getApplicationContext<android.content.Context>()
+        runBlocking {
+            val context = ApplicationProvider.getApplicationContext<Context>()
             FocusImageCache.clearForTesting()
 
             val logosDir = File(context.cacheDir, "gamefocus_logos").apply { mkdirs() }
@@ -218,10 +254,8 @@ class FocusImageCacheTest {
 
     @Test
     fun testLibraryIconCachingAndInvalidation() {
-        kotlinx.coroutines.runBlocking {
-            val context =
-                androidx.test.core.app.ApplicationProvider
-                    .getApplicationContext<android.content.Context>()
+        runBlocking {
+            val context = ApplicationProvider.getApplicationContext<Context>()
             FocusImageCache.clearForTesting()
 
             val iconsDir = File(context.cacheDir, "gamefocus_library_icons").apply { mkdirs() }

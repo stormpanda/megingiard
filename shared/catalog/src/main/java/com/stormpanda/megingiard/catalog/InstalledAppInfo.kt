@@ -24,6 +24,12 @@ data class InstalledAppInfo(
     val libraryIconType: String? = null,
     /** Last modified timestamp of the cached library icon file for cache-busting. */
     val libraryIconLastModified: Long = 0L,
+    /** True if the user explicitly opted out of having cover artwork (persisted preference). */
+    val coverOptedOut: Boolean = false,
+    /** True if the user explicitly opted out of having custom library icon artwork (persisted preference). */
+    val libraryIconOptedOut: Boolean = false,
+    /** Last modified timestamp of the cached ROM logo file for cache-busting and reactive updates. */
+    val logoLastModified: Long = 0L,
 ) {
     /** True when the user has overridden [defaultLabel] with a custom display name. */
     val hasCustomLabel: Boolean
@@ -54,6 +60,12 @@ data class InstalledAppInfo(
         )
 
     fun withLabel(newLabel: String): InstalledAppInfo = copy(label = newLabel)
+
+    fun withCoverOptedOut(optedOut: Boolean): InstalledAppInfo = copy(coverOptedOut = optedOut)
+
+    fun withLibraryIconOptedOut(optedOut: Boolean): InstalledAppInfo = copy(libraryIconOptedOut = optedOut)
+
+    fun withLogoLastModified(lastModified: Long): InstalledAppInfo = copy(logoLastModified = lastModified)
 }
 
 fun List<InstalledAppInfo>.withUpdatedCover(
@@ -79,6 +91,42 @@ fun List<InstalledAppInfo>.withUpdatedLibraryIcon(
     map {
         if (it.packageName == packageName) {
             it.withLibraryIcon(iconPath, imageId = imageId, type = type, lastModified = lastModified)
+        } else {
+            it
+        }
+    }
+
+fun List<InstalledAppInfo>.withUpdatedLogo(
+    packageName: String,
+    lastModified: Long,
+): List<InstalledAppInfo> =
+    map {
+        if (it.packageName == packageName) {
+            it.withLogoLastModified(lastModified)
+        } else {
+            it
+        }
+    }
+
+fun List<InstalledAppInfo>.withUpdatedCoverOptOut(
+    packageName: String,
+    optedOut: Boolean,
+): List<InstalledAppInfo> =
+    map {
+        if (it.packageName == packageName) {
+            it.withCoverOptedOut(optedOut)
+        } else {
+            it
+        }
+    }
+
+fun List<InstalledAppInfo>.withUpdatedLibraryIconOptOut(
+    packageName: String,
+    optedOut: Boolean,
+): List<InstalledAppInfo> =
+    map {
+        if (it.packageName == packageName) {
+            it.withLibraryIconOptedOut(optedOut)
         } else {
             it
         }
