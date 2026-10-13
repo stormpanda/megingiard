@@ -1,174 +1,129 @@
 # AGENTS.md – AI Agent Coding Guidelines for Megingiard
 
-> This file instructs AI coding agents (GitHub Copilot, Cursor, Cline, etc.) on the
-> conventions, patterns, and constraints that govern this project. Treat every rule
-> as mandatory unless the human operator explicitly overrides it.
+> Mandatory rules for AI coding agents unless the human operator explicitly overrides them.
+>
+> This file states every rule compactly and must stay **below 20 KB** so it is loaded in full
+> into every agent session. Rationale and code examples for §7–§16 live in
+> [`docs/agents/CODING_GUIDE.md`](docs/agents/CODING_GUIDE.md) under the **same section
+> numbers** — read the matching section before editing code in that area. Put new long
+> examples there, not here.
 
 ---
 
 ## 1 Project Identity
 
-| Key               | Value                                                                                                                                                                                                  |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Package**       | `com.stormpanda.megingiard`                                                                                                                                                                            |
-| **Language**      | Kotlin 2.0+ (no Java files). **Exception:** the `:mirrorserver` module uses Java because it produces a standalone shell-UID DEX loaded by `/system/bin/app_process`. No new Java modules may be added. |
-| **UI Framework**  | Jetpack Compose (Material 3, BOM-managed)                                                                                                                                                              |
-| **Min SDK**       | 33 — **must not be raised**                                                                                                                                                                            |
-| **Target SDK**    | 35                                                                                                                                                                                                     |
-| **Build System**  | Gradle (Kotlin DSL), version catalog `libs.versions.toml`                                                                                                                                              |
-| **Device Target** | AYN Thor dual-screen Android handheld (**Dual-screen only — single-screen is permanently unsupported**) |
+| Key               | Value |
+| ----------------- | ----- |
+| **Package**       | `com.stormpanda.megingiard` |
+| **Language**      | Kotlin 2.0+. Only `:mirrorserver` is Java (shell-UID DEX for `app_process`). No new Java modules. |
+| **UI Framework**  | Jetpack Compose (Material 3, BOM-managed) |
+| **Min SDK**       | 33 — **must not be raised** |
+| **Target SDK**    | 35 |
+| **Build System**  | Gradle (Kotlin DSL), version catalog `gradle/libs.versions.toml` |
+| **Device Target** | AYN Thor dual-screen handheld (Display 0 = top, Display 4 = bottom). **Dual-screen only — single-screen is permanently unsupported.** |
 
 ---
 
 ## 2 Documentation Map
 
-| Document                                   | Purpose                                                                                  |
-| ------------------------------------------ | ---------------------------------------------------------------------------------------- |
-| `README.md`                                | Project overview, feature list, quick links                                              |
-| `LICENSE`                                  | Megingiard Source-Available License (Version 1.0)                                        |
-| `CONTRIBUTING.md`                          | Contribution guidelines, codebase standards, and licensing compliance                    |
-| `SECURITY_CONCEPT.md`                      | Security concept overview, threat model, hardening layers, and links to detailed docs    |
-| `docs/ARCHITECTURE.md`                     | System architecture overview & key design decisions                                      |
-| `docs/BUILD_NATIVE.md`                     | Build setup, instructions, and protocol specifications for native C binaries             |
-| `docs/GAMEPAD_NAVIGATION.md`               | Gamepad Navigation & Focus Architecture — 2D focus traversal, focus isolation & recovery |
-| `docs/MANUAL_VERIFICATION.md`              | Manual Verification Guide — step-by-step manual regression tests and PR sanity checklists |
-| `docs/REQUIREMENTS.md`                     | Requirements overview & non-functional requirements                                      |
-| `docs/features/config/FEATURE.md`          | Configuration Export/Import — portable `.mgrd` app-wide backup and profile sharing       |
-| `docs/features/FEATURE_TEMPLATE.md`        | Template for new feature documentation                                                   |
-| `docs/features/gamefocus/FEATURE.md`       | Megingiard Game Focus — dual-screen top launcher & bottom companion build variant        |
-| `docs/features/help/FEATURE.md`            | In-App Help Tutorials — shared HelpModal infrastructure and per-screen content composables |
-| `docs/features/integration-api/FEATURE.md` | Megingiard Integration API — dynamic client connection, state sharing, and profile query   |
-| `docs/features/keyboard/FEATURE.md`        | Virtual Keyboard — functional requirements & technical implementation                    |
+| Document | Purpose |
+| -------- | ------- |
+| `README.md` / `LICENSE` / `CONTRIBUTING.md` | Overview · Source-Available License 1.0 · contribution & licensing rules |
+| `SECURITY_CONCEPT.md` | Threat model, hardening layers, links to detailed docs |
+| `docs/agents/CODING_GUIDE.md` | **Full rules & examples for §7–§16** |
+| `docs/ARCHITECTURE.md` | Architecture overview & key design decisions |
+| `docs/BUILD_NATIVE.md` | Native C binaries: build & protocol specs |
+| `docs/GAMEPAD_NAVIGATION.md` | Gamepad focus traversal, isolation & recovery |
+| `docs/MANUAL_VERIFICATION.md` | Manual regression tests, PR sanity checklists |
+| `docs/REQUIREMENTS.md` | Requirements & non-functional requirements |
+| `docs/features/FEATURE_TEMPLATE.md` | Template for new feature docs |
+| `docs/features/config/FEATURE.md` | Config Export/Import (`.mgrd` backup, profile sharing) |
+| `docs/features/gamefocus/FEATURE.md` | Game Focus launcher variant |
+| `docs/features/help/FEATURE.md` | In-App Help (HelpModal infrastructure & content) |
+| `docs/features/integration-api/FEATURE.md` | Integration API (clients, state sharing, profile query) |
+| `docs/features/keyboard/FEATURE.md` | Virtual Keyboard |
+| `docs/features/log-report/FEATURE.md` | Log Report Export |
+| `docs/features/macropad/FEATURE.md` | MacroPad (profiles, layouts, macros) |
+| `docs/features/mirror/FEATURE.md` | Screen Mirror |
+| `docs/features/privileged-mode/FEATURE.md` | Privileged Mode (daemon, ADB-Wireless bootstrap, feature flags) |
+| `docs/features/quickmenu/FEATURE.md` | Quick Menu Bar & Quick Menu |
+| `docs/features/theming/FEATURE.md` | Design System (AppColors, Typography, AppDimens) |
+| `docs/features/touchpad/FEATURE.md` | Virtual Touchpad |
+| `docs/features/updates/FEATURE.md` | Update Check & Release Launcher |
 
-| `docs/features/log-report/FEATURE.md`      | Log Report Export — save logcat output to a file for bug reports                         |
-| `docs/features/macropad/FEATURE.md`        | MacroPad — profiles, layouts, and custom macro triggers & execution                      |
-| `docs/features/mirror/FEATURE.md`          | Screen Mirror — functional requirements & technical implementation                       |
-| `docs/features/quickmenu/FEATURE.md`        | Quick Menu Bar & Quick Menu — navigation overlays & mirror control cards                 |
-| `docs/features/privileged-mode/FEATURE.md` | Privileged Mode — on-device privileged daemon, ADB-Wireless bootstrap, per-feature flags |
-| `docs/features/theming/FEATURE.md`         | Design System — AppColors, Typography, AppDimens, ColorScheme bridge                     |
-| `docs/features/touchpad/FEATURE.md`        | Virtual Touchpad — functional requirements & technical implementation                    |
-| `docs/features/updates/FEATURE.md`         | Automatic Update Check & Browser Release Launcher — functional requirements & technical implementation |
-
-> [!IMPORTANT]
-> **Documentation language: English only.**
->
-> All documentation files in this repository (`*.md` under `docs/`, `AGENTS.md`,
-> `README.md`, `FEATURE.md` files, etc.) MUST be written in **English**.
-> Every file — including new `FEATURE.md` files, and architecture notes — must be written and maintained in
-> English so that all AI agents can process them without ambiguity.
-
-> [!IMPORTANT]
-> **Mandatory doc-sync rule — applies after every code change.**
->
-> After implementing any change that affects a feature’s behaviour, interface, or architecture,
-> you MUST:
->
-> 1. Identify which `FEATURE.md` file(s) cover the changed code (use the table above).
-> 2. Read the relevant `FEATURE.md` and check whether the change invalidates any Functional
->    Requirements or Technical Implementation section.
-> 3. Update `FEATURE.md` to reflect the change — correct outdated descriptions, remove stale
->    requirements, add documentation for new behaviour.
-> 4. If the change is architecturally significant, also update `docs/ARCHITECTURE.md`.
->
-> This applies to **all** changes — including bug fixes, refactors, and dependency updates that
-> affect runtime behaviour. Do not skip this step.
->
-> Security-affecting changes MUST also update `SECURITY_CONCEPT.md` and whichever detailed
-> document owns the changed mechanism (`docs/ARCHITECTURE.md`, `docs/BUILD_NATIVE.md`, or the
-> relevant feature `FEATURE.md`).
-
-> [!NOTE]
-> **New features — create a `FEATURE.md` first.**
->
-> Every new feature MUST have its own `FEATURE.md` in a dedicated subfolder
-> `docs/features/<feature>/`. Use [`docs/features/FEATURE_TEMPLATE.md`](docs/features/FEATURE_TEMPLATE.md)
-> as the starting point. Once created, **add a row for it to the Documentation Map table above**
-> so all agents can discover it.
+- **Documentation language is English only** — every `*.md` file in this repository.
+- **New features:** create `docs/features/<feature>/FEATURE.md` from the template first, then add a row to the table above.
+- **Doc sync after every change:** see §5.
 
 ---
 
 ## 3 Checklist for Every Change
 
-> **Compilation policy:** The agent is encouraged to run `./gradlew compileDebugKotlin` or `./gradlew :app:assembleDebug` to verify compile safety before presenting changes to the human operator. Due to Gradle's reliance on local TCP/loopback sockets, these commands MUST always be executed with the sandbox bypass enabled (`BypassSandbox: true` / unsandboxed).
+### 3.1 Permitted commands
 
-> **Deployment policy:** The agent is STRICTLY PROHIBITED from running any deployment commands (such as `./gradlew installDebug`) or executing ADB commands to deploy the APK or delete/clear app data without the human operator's explicit permission.
+| Purpose | Command | Notes |
+| ------- | ------- | ----- |
+| Unit tests (all modules) | `./scripts/run_unit_tests.sh` | Canonical test entry point. Extra args are forwarded to Gradle. |
+| Compile check | `./gradlew compileDebugKotlin` or `./gradlew :companion:ui:assembleDebug` | |
+| Coverage | `./gradlew koverHtmlReport` / `koverLog` / `koverXmlReport` | HTML report: `build/reports/kover/html/index.html` |
+| Native daemon rebuild | `./scripts/build_megingiard_privd.sh` | Mandatory after editing `megingiard_privd.c` |
 
-> **Native binary rebuild policy:** Whenever a native C source file is modified, the
-> agent **must** immediately run the corresponding build script to rebuild the bundled
-> binary. The scripts are located in `scripts/`:
->
-> | Source file                           | Build script                                                             |
-> | ------------------------------------- | ------------------------------------------------------------------------ |
-> | `companion/ui/src/main/cpp/megingiard_privd.c` | `./scripts/build_megingiard_privd.sh`                                   |
->
-> Run the script **before** proposing the commit message. If the build fails, fix the
-> source error before proceeding. The scripts must be run from the workspace root.
->
-> **Daemon Versioning Rule:** Whenever modifying `megingiard_privd.c` (or daemon protocol logic), you **must** increment `PRIVD_VERSION` in both `companion/ui/src/main/cpp/megingiard_privd.c` (`#define PRIVD_VERSION <N>`) and `core/.../privd/PrivdConstants.kt` (`const val PRIVD_VERSION = <N>`), then rebuild via `./scripts/build_megingiard_privd.sh`. This ensures the app detects version mismatches and triggers automatic daemon updates.
+- These are the **only** Gradle commands the agent may run. Gradle (incl. the test script) needs local TCP sockets → always run with `BypassSandbox: true`.
+- **No deployment** without explicit operator permission: no `installDebug`, no ADB deploy, no clearing app data.
 
-> **Unit test policy:** After every implementation — feature, bug fix, or refactor —
-> the agent **must**:
->
-> 1. **Write new tests** for any new pure logic in `:core` or `:domain` (pure functions,
->    data compilers, state machines, serialization round-trips).
-> 2. **Update existing tests** if the change modifies the behaviour or signature of
->    already-tested code.
-> 3. **Run all tests** via `./gradlew :shared:core:test :shared:catalog:testDebugUnitTest :shared:media:testDebugUnitTest :shared:session:testDebugUnitTest :shared:ui:testDebugUnitTest :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:domain:testDebugUnitTest :gamefocus:ui:testDebugUnitTest --continue` and report the result. Due to Gradle's reliance on local TCP/loopback sockets, this command MUST always be executed with the sandbox bypass enabled (`BypassSandbox: true` / unsandboxed). This, along with sandbox bypass compilation commands for verifying compile safety, and test coverage tasks (`./gradlew koverHtmlReport`, `./gradlew koverLog`, `./gradlew koverXmlReport`), are the **only** Gradle commands the agent is permitted to run.
->
-> Tests must be placed in the correct source set:
->
-> - `:shared:core` pure-JVM tests → `shared/core/src/test/kotlin/`
-> - `:companion:domain` local tests → `companion/domain/src/test/java/`
-> - `:shared:catalog` / `:shared:media` / `:shared:session` / `:shared:ui` / `:gamefocus:domain` Robolectric/local tests → `<module>/src/test/java/`
->
-> When a module gains a new `src/test` directory, it MUST be added to the permitted test command above and in every skill that repeats it.
->
-> `--continue` is part of the canonical command so one failing module never hides results of the others. If a failure is in a test unrelated to the change set, inspect `build/test-results/**/TEST-*.xml`, re-run once, and report it as flaky (with the test name) instead of treating it as a regression.
->
-> If logic cannot be unit-tested without significant refactoring, state that explicitly
-> as a follow-up task rather than skipping silently.
->
-> **Test Coverage Tooling:** The project uses **Kotlinx-Kover** for unified code coverage across all JVM and Android modules. Run `./gradlew koverHtmlReport` to generate the consolidated HTML report (`build/reports/kover/html/index.html`), `./gradlew koverLog` for console summaries, or `./gradlew koverXmlReport` for CI/Codecov XML output.
+### 3.2 Native binaries
 
-> **Auto Code Review policy:** After completing any implementation (feature, bug fix, or refactor) and before proposing the final commit message, the agent **must** run a complete code review pass on all modified files following the instructions in the `megingiard-code-review` skill (specifically executing the systematic file-by-file audit checklist and programmatic grep checks) and report any findings or perform the fixes directly.
+- After modifying `companion/ui/src/main/cpp/megingiard_privd.c`, run `./scripts/build_megingiard_privd.sh` from the workspace root **before** proposing the commit message. Fix build errors before continuing.
+- **Daemon versioning:** when changing the daemon or its protocol, increment `PRIVD_VERSION` in both `megingiard_privd.c` (`#define PRIVD_VERSION <N>`) and `shared/core/src/main/kotlin/com/stormpanda/megingiard/privd/PrivdConstants.kt` (`const val PRIVD_VERSION = <N>`), then rebuild.
+
+### 3.3 Unit tests
+
+After every implementation (feature, bug fix, refactor):
+
+1. **Write new tests** for new pure logic (pure functions, data compilers, state machines, serialization round-trips).
+2. **Update existing tests** whose behaviour or signature changed.
+3. **Run `./scripts/run_unit_tests.sh`** and report the result. Confirm new test classes actually ran by checking their `build/test-results/**/TEST-*.xml`.
+
+- Placement: `:shared:core` → `shared/core/src/test/kotlin/`; other modules → `<module>/src/test/java/`. Prefer plain JUnit over Robolectric when possible.
+- New `src/test` directory in a module → add its task to `scripts/run_unit_tests.sh` (the only place the task list lives).
+- Failure unrelated to the change set → inspect its `TEST-*.xml`, re-run once, report as flaky (with test name), not as a regression.
+- Logic untestable without major refactoring → state it as a follow-up task; never skip silently.
+
+### 3.4 Auto code review
+
+After completing an implementation and before proposing the commit message, run the `megingiard-code-review` skill on all modified files (grep sweeps + file-by-file checklist). Because this review is part of your own implementation task, **fix the findings directly** and list them in your summary. (A review the user requests on its own presents findings first — see the skill.)
+
+### 3.5 Done checklist
 
 Before marking a task as done, verify:
 
-- [ ] A complete code review pass was executed on all modified files following the `megingiard-code-review` workflow
-- [ ] No `MutableStateFlow` exposed outside its owning singleton
-- [ ] No FQN references inline — all moved to imports
-- [ ] No magic numbers — all extracted to named constants
-- [ ] No hardcoded device volume UUID paths (e.g. `/storage/6914-318F`) — all storage volume roots resolved dynamically via `SafPathResolver.getStorageVolumeRoots()`
-- [ ] No `android.util.Log` calls outside `AppLog.kt` — all logging via `AppLog`
-- [ ] Every new file has `private const val TAG = "ClassName"` and uses `AppLog` per §8.4 Coverage Requirements
-- [ ] All user-visible strings in `strings.xml`
-- [ ] All Icons have `contentDescription` (string resource or `null`)
-- [ ] `SupervisorJob()` used (not `Job()`) for class-level scopes
-- [ ] Scope cancelled in `onDestroy()`
-- [ ] Bitmap recycling handled by the manager, not call sites (see §7.3 for the PixelCopy exception)
-- [ ] `snapshotFlow` imported from `androidx.compose.runtime`
-- [ ] Deprecated API branches annotated with `@Suppress("DEPRECATION")`
-- [ ] New `Activity` launches on correct display via `ActivityOptions.setLaunchDisplayId()`
-- [ ] WindowOverlayLifecycleOwner.destroy() called when overlay view is removed
+- [ ] `megingiard-code-review` pass executed on all modified files (§3.4)
+- [ ] `./scripts/run_unit_tests.sh` executed and all tests pass; new/changed pure logic is covered and existing tests updated where behaviour changed (§3.3); coverage checked via Kover when required
+- [ ] Compiles (`compileDebugKotlin`) or no suspected compile errors
+- [ ] Native daemon rebuilt and `PRIVD_VERSION` bumped if C source changed (§3.2)
+- [ ] No public `MutableStateFlow` (§7.1); disk-backed state uses load-once guard (§7.6)
+- [ ] Zero-Heuristics respected — no substring guessing, synthetic fallbacks, or approximations without explicit approval (§7.5)
+- [ ] No star imports, no inline FQNs, no magic numbers, no hardcoded volume UUID paths (§8.2, §8.3)
+- [ ] No `android.util.Log` outside `AppLog.kt`; every new file has `private const val TAG` and logs per §8.4
+- [ ] Deprecated API branches annotated `@Suppress("DEPRECATION")` (§8.5)
+- [ ] All user-visible strings in `strings.xml` **and** `values-de/strings.xml`; all Icons have `contentDescription` (§9.2, §9.3)
+- [ ] `snapshotFlow` imported from `androidx.compose.runtime`; no fast-changing `LaunchedEffect` keys (§9.1)
+- [ ] Modal dialogs / non-fullscreen popups use `AppModalDialog` / `AppAlertDialog` or `rememberBezelBrush()` border; destructive actions in overlays use in-place two-step confirmation (§9.6)
+- [ ] Class-level scopes use `SupervisorJob()` and are cancelled in `onDestroy()` in the §12.1 order (§10.1)
+- [ ] Bitmap recycling handled by the manager, not call sites (PixelCopy exception, §7.3)
+- [ ] New `Activity` launches set `ActivityOptions.setLaunchDisplayId()` (§12.2)
+- [ ] `WindowOverlayLifecycleOwner.destroy()` called when an overlay view is removed
 - [ ] Service `onStartCommand` returns `START_NOT_STICKY`
-- [ ] Input injector lifecycles managed centrally via `InjectorLifecycleManager` (active while foregrounded, stopped on backgrounding or Privd setup wizard IME) — no local injector stop/start in screen Composable Disposables
-- [ ] No suspected compile errors (verified via static analysis or build compiles)
-- [ ] All modal dialogs and non-fullscreen popups use the centralized AppModalDialog / AppAlertDialog container or rememberBezelBrush() border
-- [ ] New or changed pure logic is covered by unit tests in `:core` or `:domain`
-- [ ] Existing tests updated if the change modifies previously-tested behaviour
-- [ ] `./gradlew :shared:core:test :shared:catalog:testDebugUnitTest :shared:media:testDebugUnitTest :shared:session:testDebugUnitTest :shared:ui:testDebugUnitTest :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:domain:testDebugUnitTest :gamefocus:ui:testDebugUnitTest --continue` executed and all tests pass (permitted test command)
-- [ ] Test coverage verified or generated via `./gradlew koverLog` / `./gradlew koverHtmlReport` when required
-- [ ] If any native C source was modified, the corresponding build script was run and produced a new binary
-- [ ] Strict Zero-Heuristics Policy (§7.5) respected: No heuristics, substring guessing (e.g. contains("launcher")), synthetic fallbacks, or approximations introduced without explicit user permission
-- [ ] Disk-backed in-memory state uses a load-once guard and is loaded before any mutation (§7.6)
-- [ ] Standalone Companion Autonomy respected: Megingiard Companion bugs are resolved strictly within Companion / shared modules — zero dependency on or delegation to Game Focus (§6.1)
-- [ ] Help menus, onboardings, and localized strings updated if user interaction behavior changed (verify that every settings preference option has a corresponding explanation entry in its HelpModal)
+- [ ] Input injectors managed only by `InjectorLifecycleManager` (active while foregrounded, stopped on backgrounding or Privd setup wizard IME) — no local start/stop in screen `DisposableEffect`s
+- [ ] Companion bugs fixed only in Companion / shared modules — never via Game Focus (§6.1)
+- [ ] Typography, colors and spacing use design-system tokens (§16)
+- [ ] `FEATURE.md`, HelpModal entries, onboarding, and localized strings updated (§5)
 
 ---
 
 ## 4 Commit Message Proposal
 
-After completing every set of changes, you MUST propose a ready-to-use commit message. Use Conventional Commits format:
+After every set of changes, propose a copy-paste-ready commit message (no placeholders) in its own code block, using Conventional Commits:
 
 ```
 <type>: <short imperative summary>
@@ -177,547 +132,138 @@ After completing every set of changes, you MUST propose a ready-to-use commit me
 - bullet describing change 2
 ```
 
-**Scope of the commit message:**
-The message MUST cover **every uncommitted change currently visible in `git status`** — across the entire active working copy. If the session involved multiple rounds of edits without commits, all of them must appear as bullets in the final proposal. However, never include files that have already been committed in previous steps of the conversation and are no longer present in `git status`.
-
-**Determining which files changed:** Before writing the commit message, run `git status` to get the definitive list of modified files. Include **all** files shown — both staged and unstaged — without distinguishing between the two states. Do not rely solely on memory of what was edited during the conversation; the `git status` output is the authoritative source.
-
-The proposal must be copy-paste ready — no placeholders. You must present it as a separate code block so the user can copy it directly.
+- Run `git status` first. The message MUST cover **every** file it lists (staged and unstaged alike) — not just what you remember editing. Never include files already committed earlier in the conversation.
+- Types: `feat:`, `fix:`, `refactor:`, `docs:`, `chore:`, `test:`. Keep commits atomic when feasible (§14).
 
 ---
 
 ## 5 Documentation Sync After Changes
 
-After implementing any change that affects a feature’s behaviour, interface, or architecture:
+Applies to **every** change that affects behaviour, interface, or architecture — including bug fixes, refactors, and dependency updates:
 
-1. **Identify affected features** — determine which `FEATURE.md` file(s) cover the changed code
-   (consult the Documentation Map in §2).
-2. **Review the documentation** — read the relevant `FEATURE.md` and check whether the change
-   invalidates any Functional Requirements or Technical Implementation section.
-3. **Update `FEATURE.md` if needed** — keep the documentation in sync with the implementation:
-   - Correct or remove outdated requirements or technical descriptions.
-   - Add documentation for new behaviour introduced by the change.
-4. **Propagate to higher-level docs if necessary** — if the change is architecturally significant,
-   also review `docs/ARCHITECTURE.md`.
-5. **New features** — create a new `docs/features/<feature>/FEATURE.md` using
-   [`docs/features/FEATURE_TEMPLATE.md`](docs/features/FEATURE_TEMPLATE.md) as the starting
-   point, then **add a row to the Documentation Map table in §2**.
-6. **In-App Help & Tutorials** — if the change adds, removes, or modifies how the user interacts with the app (e.g. adding new buttons, modes, settings, or gesture flows), you MUST review and update the corresponding in-app help menus, `HelpModal` files, onboarding popups, and localized strings (`strings.xml`, `values-de/strings.xml`). Ensure that **every settings preference option visible in the UI has a corresponding explanation entry in the HelpModal** to avoid undocumented features.
-7. **Walkthrough & Future Improvements** — every implementation walkthrough (e.g., `walkthrough.md` or session summary) MUST contain a dedicated section highlighting potential code, design, or architectural improvements recognized during implementation, even if not directly related to the current task. This logs future refactoring candidates and preserves codebase health.
-
-This rule applies to all changes, including bug fixes, refactors, and dependency updates that
-affect runtime behaviour or user-facing interactions.
+1. Identify the owning `FEATURE.md` file(s) via the §2 table, read them, and fix any Functional Requirement or Technical Implementation text the change invalidated; document new behaviour.
+2. Architecturally significant changes → also update `docs/ARCHITECTURE.md`.
+3. Security-affecting changes → also update `SECURITY_CONCEPT.md` and the detailed doc owning the mechanism (`docs/ARCHITECTURE.md`, `docs/BUILD_NATIVE.md`, or the feature's `FEATURE.md`).
+4. New features → new `FEATURE.md` from the template + row in §2.
+5. **In-app help:** if user interaction changes (buttons, modes, settings, gestures), update the matching `HelpModal`, onboarding popups, and `strings.xml` + `values-de/strings.xml`. **Every settings option visible in the UI must have an explanation entry in its HelpModal.**
+6. **Walkthroughs** / session summaries include a "Future Improvements" section listing code, design, or architecture improvements noticed during the work (even if unrelated).
 
 ---
 
 ## 6 Package Structure
 
-The project is structured into 10 Feature-First Gradle modules:
+10 feature-first Gradle modules:
 
-### App Modules (Executables)
-* **`:companion:ui`** — Main Android companion app UI layer (`com.stormpanda.megingiard`). Contains Activities, viewmodels, custom Compose views, and secondary screen presentations.
-* **`:gamefocus:ui`** — Standalone Android launcher application (`com.stormpanda.megingiard.gamefocus`) providing top-screen 2:3 game poster browsing, SteamGridDB artwork scraping, and inter-process theme syncing.
+| Module | Role |
+| ------ | ---- |
+| `:companion:ui` | Companion app UI (`com.stormpanda.megingiard`): Activities, ViewModels, Composables, Presentations |
+| `:companion:domain` | Companion business logic, device managers, injection facades (Touchpad, MacroPad, Keyboard, Mirror, Privd) |
+| `:gamefocus:ui` | Launcher app (`com.stormpanda.megingiard.gamefocus`): poster browsing, SteamGridDB artwork, theme sync |
+| `:gamefocus:domain` | Launcher logic, ROM launchers (`RetroArchLauncher`, `GameNativeLauncher`) |
+| `:shared:ui` | Design system (`AppColors`, `AppTheme`), `AppModalDialog`, overlay modifiers, `GamePadButton`, Material Symbols |
+| `:shared:catalog` | App index, ROM scanning (`InstalledAppsManager`, `RomManager`, `DisplayDetector`, `RomLauncherRegistry`) |
+| `:shared:media` | Artwork fetchers, HTTP, caches (`SteamGridDbClient`) |
+| `:shared:session` | Active game detection (`EmulatorDetectionFunnel`, `*Detector`) |
+| `:shared:core` | Pure JVM models, schemas, `AppLog`, constants, math (`ViewportMath`). **No Android dependencies.** |
+| `:mirrorserver` | Java shell-UID DEX (`app_process`) for privileged mirroring |
 
-### App Domain Modules (Feature Logic)
-* **`:companion:domain`** — Companion business logic, device managers, input injection facades (Touchpad, MacroPad, Keyboard, Mirror, Privd).
-* **`:gamefocus:domain`** — Standalone launcher domain logic and ROM launcher implementations (`RetroArchLauncher`, `GameNativeLauncher`).
-
-### Shared UI, Domain & Core Modules
-* **`:shared:ui`** — App-wide design system tokens, themes (`AppColors`, `AppTheme`), modal dialogs (`AppModalDialog`), overlay modifiers, button glyphs (`GamePadButton`), and Material Symbol font resources.
-* **`:shared:catalog`** — Installed app index, ROM file scanning, system definitions (`InstalledAppsManager`, `RomManager`, `DisplayDetector`, `RomLauncherRegistry`).
-* **`:shared:media`** — External artwork fetchers, HTTP clients, and caching layers (`SteamGridDbClient`).
-* **`:shared:session`** — Active game detection engines (`EmulatorDetectionFunnel`, `GameNativeDetector`, `RetroArchDetector`, `Pcsx2AndroidDetector`, `YuzuDetector`).
-* **`:shared:core`** — Pure JVM/Kotlin data models, serializable schemas, logging facade (`AppLog`), constants, and math helpers (`ViewportMath`). Must **never** have Android dependencies.
-
-### Auxiliary Standalone Modules
-* **`:mirrorserver`** — Standalone shell-UID DEX executable loaded via `/system/bin/app_process` for un-throttled privileged display mirroring.
-
-### Core Architectural Directories
-Across all modules, files are organized into feature-centric packages. Keep these structural rules in mind:
-* `macropad/` — Profiles, layout configurations, macro engines, and injection coordinator flows (`:companion:domain`, `:companion:ui`).
-* `mirror/` — Screen mirroring presentation views, viewport math, and capture-session managers (`:companion:domain`, `:companion:ui`).
-* `keyboard/` — Virtual keyboard Composable layouts, key caps, and key injector services (`:companion:domain`, `:companion:ui`).
-* `input/` / `privd/` — Local socket IPC clients, ADB-Wireless wizards, and evdev/uinput wrappers (`:companion:domain`).
-* `catalog/` / `media/` / `session/` — Shared app/game indexing, poster artwork scraping, and active game session tracking (`:shared:catalog`, `:shared:media`, `:shared:session`).
-* `ui/` — Design system constants, AppTheme palette factories, and reusable edge overlay quick menu bars.
-
-**Rule:** Shared business logic belongs in `:shared:catalog`, `:shared:media`, or `:shared:session`. Pure data types, math helpers, and logging facades belong in `:shared:core`. Feature-specific app logic belongs in `:companion:domain` or `:gamefocus:domain`. UI components belong in `:companion:ui` or `:gamefocus:ui`.
+- Packages inside modules are feature-centric: `macropad/`, `mirror/`, `keyboard/`, `input/`, `privd/`, `catalog/`, `media/`, `session/`, `ui/`.
+- **Placement rule:** shared business logic → `:shared:catalog` / `:shared:media` / `:shared:session`; pure data types, math, logging → `:shared:core`; feature logic → `:companion:domain` / `:gamefocus:domain` (no Android UI or Compose imports); UI → `:companion:ui` / `:gamefocus:ui`.
 
 ### 6.1 Strict Decoupling: Megingiard Companion vs. Game Focus
 
 > [!CAUTION]
-> **CRITICAL ARCHITECTURAL RULE: MEGNINGIARD COMPANION IS A FULLY STANDALONE APP WITH ZERO DEPENDENCY ON GAME FOCUS.**
+> **Megingiard Companion is a fully standalone app with zero dependency on Game Focus.**
 >
-> 1. **Public vs. Unreleased:** Megingiard Companion (`:companion:ui`, `:companion:domain`, `:mirrorserver`, and `:shared:*`) is the primary standalone product distributed to users. **Game Focus (`:gamefocus:ui`, `:gamefocus:domain`) is currently NOT released to the public.**
-> 2. **Optional Usage:** Users are **never** forced or required to use Game Focus. Users may use stock Android, Odin/Thor launcher, Nova, Daijisho, ES-DE, Beacon, or any other third-party launcher on the top screen.
-> 3. **NO COMPANION BUGS FIXED IN GAME FOCUS:** Whenever an issue, bug, crash, focus glitch, lifecycle collision, or unexpected behavior occurs in Megingiard Companion, AI agents must **NEVER** assume that fixing or modifying Game Focus is a valid solution. Megingiard Companion must function with 100% stability and correctness completely on its own.
-> 4. **Strict Architectural Independence:** Megingiard Companion must have zero runtime dependencies on Game Focus. It must never assume Game Focus is installed, running, active in the foreground, or managing top-screen window state. Any inter-process integration (such as theme synchronization via `MegingiardThemeProvider`) is strictly optional and one-way: Companion acts as the independent authority/host, while Game Focus acts as an optional passive consumer.
+> - Companion (`:companion:*`, `:mirrorserver`, `:shared:*`) is the public product. Game Focus (`:gamefocus:*`) is **not released** and users are never required to use it — they may run any launcher (stock, Odin/Thor, Nova, Daijisho, ES-DE, Beacon, …) on the top screen.
+> - **Never fix, partially fix, or mitigate a Companion bug by changing Game Focus.** Companion must be 100% correct on its own.
+> - Companion must never assume Game Focus is installed, running, foregrounded, or managing top-screen window state. Inter-process integration (e.g. `MegingiardThemeProvider` theme sync) is optional and one-way: Companion is the authority, Game Focus a passive consumer.
 
 ---
 
-## 7 State Management
+## 7 State Management — details: [CODING_GUIDE §7](docs/agents/CODING_GUIDE.md#7-state-management)
 
-### 7.1 Singleton State Holders
-
-State is managed by **`object` singletons** (`AppStateManager`, `ScreenCaptureManager`) that expose **read-only `StateFlow`** and keep all `MutableStateFlow` backing fields **`private`**.
-
-```kotlin
-// ✅ Correct pattern
-object FooManager {
-    private val _bar = MutableStateFlow(0)
-    val bar: StateFlow<Int> = _bar.asStateFlow()
-
-    fun setBar(value: Int) { _bar.value = value }
-}
-
-// ❌ Never expose MutableStateFlow
-object FooManager {
-    val bar = MutableStateFlow(0) // WRONG
-}
-```
-
-### 7.2 Visibility Rules
-
-| Layer                           | Access to `MutableStateFlow` |
-| ------------------------------- | ---------------------------- |
-| Owning singleton                | `private` backing field      |
-| Same module (Service, Listener) | `internal` update functions  |
-| Composable / UI                 | Read-only `StateFlow` only   |
-
-### 7.3 Bitmap Lifecycle
-
-`ScreenCaptureManager.setFrozenBitmap(bitmap)` **always calls `recycle()` on the
-previous bitmap** before assigning the new one. Never call `recycle()` at call
-sites — the manager owns the lifecycle.
-
-**Exception:** If a `Bitmap` was just created but the operation that was meant to
-hand it to the manager fails (e.g. `PixelCopy` returns a non-SUCCESS result), the
-local call site **must** recycle it immediately, since the manager never received it.
-
-```kotlin
-PixelCopy.request(sv, bitmap, { result ->
-    if (result == PixelCopy.SUCCESS) {
-        ScreenCaptureManager.setFrozenBitmap(bitmap) // manager takes ownership
-    } else {
-        bitmap.recycle() // manager never got it, local cleanup required
-    }
-}, Handler(Looper.getMainLooper()))
-```
-
-### 7.4 Active Game Session Integrity
-
-- **NO SYNTHETIC FALLBACK ROM PATHS EVER:** When constructing an `ActiveGameSession`, `ActiveGameSession.romPath` MUST contain either an exact, verified file path/name (e.g. `Tactics Ogre (USA).iso` or `/storage/.../game.iso`) or `null` if the exact file path cannot be resolved directly from the emulator or SAF URI. **Never** populate `romPath` with synthetic, guessed, or fake fallback filenames (such as `"$derivedTitle.iso"`).
-
-### 7.5 Zero-Heuristics & Strict Determinism Policy
-
-> [!CAUTION]
-> **ABSOLUTE RULE: ZERO HEURISTICS WITHOUT EXPLICIT HUMAN OPERATOR PERMISSION.**
->
-> AI coding agents and developers are **STRICTLY PROHIBITED** from introducing ANY heuristics, fuzzy matching, guessing algorithms, loose substring deductions, synthetic fallbacks, or probabilistic approximations anywhere in the codebase without the human operator's prior explicit approval.
-
-- **Mandatory Strict Determinism:** Every state transition, app detection, package classification, path resolution, input routing, and configuration decision MUST be 100% deterministic and backed by:
-  1. **Canonical Operating System APIs:** (e.g. Android `PackageManager` intent resolution `Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)`, official lifecycle callbacks, verified system services).
-  2. **Explicit Contracts & Constants:** (e.g. verified IPC contracts like `MegingiardIpcContract.GAMEFOCUS_PACKAGE`, explicit package constants, exact system package IDs).
-  3. **Exact User Configuration / Verified Data:** (e.g. exact user-configured profile associations, exact filesystem paths confirmed to exist).
-- **Prohibited Patterns (Non-Exhaustive Examples):**
-  - ❌ **No substring guessing for roles or types:** Never use `packageName.contains("launcher")`, `packageName.contains("home")`, `packageName.contains("game")`, `title.contains("...")`, etc. to infer system roles or app categories. Substring checks cause severe false positives (e.g. `com.playrix.homescapes`, `net.kdt.pojavlaunch`, `com.ea.gp.homeworld`).
-  - ❌ **No synthetic fallback data:** Never invent guessed or synthetic paths, filenames, or IDs (e.g. `"$title.iso"`) when exact data cannot be resolved (per §7.4).
-  - ❌ **No heuristic fallback defaults:** If an entity, role, or state cannot be resolved with certainty through canonical APIs or exact data, return `null`, empty, or no-op. Never approximate or guess.
-- **Seeking Permission for Edge Cases:** If a technical requirement genuinely lacks a canonical API and appears to require a heuristic, the agent MUST pause, explain the limitation to the user, propose the approach, and obtain their explicit written approval before writing any heuristic code.
-
-### 7.6 Persisted State Loading (Load-Once Guard)
-
-Singletons that mirror a persisted file in memory (opt-out sets, registries, ID maps, custom names) MUST:
-
-1. Load from disk **at most once per process**, guarded by a `@Volatile` `isXLoaded` flag that is checked and set inside the state lock.
-2. Call the loader **before any in-memory mutation** (e.g. at the top of `setX` / `recordX`), so a later lazy load can never overwrite a fresh change.
-3. Persist asynchronously from the in-memory snapshot (`persistScope` + `persistLock`); never re-read disk to "refresh" state while writes may be pending.
-4. Reset the flag in `resetForTesting()`.
-
-Re-reading disk on every reload or catalog refresh is a **High-severity** review finding: pending writes race with the reload and silently drop user choices.
+- **7.1** State lives in `object` singletons (`AppStateManager`, `ScreenCaptureManager`). `MutableStateFlow` backing fields are always `private`; expose `val x: StateFlow<T> = _x.asStateFlow()`.
+- **7.2** Same-module callers (Services, Listeners) mutate via `internal` update functions; Composables only read `StateFlow`.
+- **7.3** `ScreenCaptureManager.setFrozenBitmap()` recycles the previous bitmap — never call `recycle()` at call sites. **Exception:** if the hand-off fails (e.g. `PixelCopy` non-SUCCESS), the call site recycles the bitmap it just created.
+- **7.4** `ActiveGameSession.romPath` is an exact verified path/filename or `null` — never a synthetic name like `"$title.iso"`.
+- **7.5 Zero-Heuristics (red line):** no heuristics, fuzzy matching, substring guessing (`packageName.contains("launcher")`), synthetic fallbacks, or approximations **without the operator's prior explicit approval**. Decisions must rest on canonical OS APIs, explicit contracts/constants, or exact user/verified data. If unresolvable, return `null` / empty / no-op. If a requirement seems to need a heuristic, stop, explain, propose, and wait for written approval.
+- **7.6 Load-once guard:** singletons mirroring a persisted file load from disk at most once per process (`@Volatile isXLoaded` checked/set inside the state lock), call the loader before any mutation, persist asynchronously from the in-memory snapshot (`persistScope` + `persistLock`), never re-read disk to "refresh", and reset the flag in `resetForTesting()`. Re-reading disk on reload is a High-severity finding.
 
 ---
 
-## 8 Kotlin Conventions
+## 8 Kotlin Conventions — details: [CODING_GUIDE §8](docs/agents/CODING_GUIDE.md#8-kotlin-conventions)
 
-### 8.1 Language Level
-
-- Use `enum.entries` (Kotlin 1.9+), never `enum.values()`.
-- Use `kotlin.math.min` / `kotlin.math.max`, never `java.lang.Math.*`.
-- Use `data class` destructuring or named access (`triple.first`) — avoid
-  anonymous destructuring of non-data-class types like `Triple` in lambdas
-  (causes ambiguous `componentN()` errors).
-- String templates: `"$variable"`, not `"${variable}"` unless accessing a
-  property (e.g. `"${obj.name}"`).
-
-### 8.2 Imports
-
-- **Always use explicit imports.** No star imports (`import foo.*`).
-- **Never use fully-qualified names inline** in function bodies.
-  Move every reference to a top-level `import` statement.
-- Sort imports alphabetically; Android Studio / ktlint default ordering.
-
-### 8.3 Constants
-
-- Extract **all magic numbers** to `private const val` (primitives) or
-  `private val` (Compose `Dp`, `Color`, etc.) at file scope.
-- Use SCREAMING_SNAKE_CASE: `ZOOM_MIN`, `CONTROL_BUTTON_SIZE`, `OVERLAY_TIMEOUT_MS`.
-- File-scoped color constants **must be prefixed** with a 2–3 letter screen/feature abbreviation to avoid cross-file collisions:
-  ```kotlin
-  // GlobalSettingsScreen.kt
-  private val GS_BG = Color(0xFF121212)
-  private val GS_SURFACE = Color(0xFF1C1C1E)
-  ```
-- **No hardcoded hardware volume UUIDs:** Never hardcode specific MicroSD card volume UUID paths (such as `/storage/6914-318F/...` or `/storage/1234-5678/...`). Use dynamic volume resolution via `SafPathResolver.getStorageVolumeRoots()` to discover mounted storage locations dynamically on any device.
-
-### 8.4 Logging
-
-> **Logging mandate: be generous.** The goal is that a single logcat capture at DEBUG level is sufficient to diagnose any bug — without needing a second run. When in doubt, log it.
-
-- **Never use `android.util.Log` directly.** All log calls must go through `AppLog` (`com.stormpanda.megingiard.AppLog`).
-- The active log level is controlled at runtime via **Global Settings → Log Level** (persisted in DataStore). Default is `Level.WARN`.
-- Use `AppLog.d()` for lifecycle / state-change events, `AppLog.w()` / `AppLog.e()` for genuine warnings and errors.
-- High-volume per-frame or per-event calls (e.g., every MOVE event) must **not** be logged at any level.
-
-#### Coverage Requirements
-
-Every file must declare `private const val TAG = "ClassName"` at file scope (or a short alias ≤ 23 chars for Android's tag limit). Every feature implementation must include `AppLog` calls at the following call sites:
-
-| Event type                | Level | Mandatory coverage                                                                                                                            |
-| ------------------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| Unrecoverable failure     | ERROR | Hardware init, VirtualDisplay, binary deploy                                                                                                  |
-| Recoverable / fallback    | WARN  | Out-of-range params, unexpected signals                                                                                                       |
-| Major lifecycle milestone | INFO  | Service start/stop, capture start/stop, mode change, `setOnValidScreen`, `setCapturing`, consent result, injector lifecycle (start confirmed) |
-| State mutation / CRUD     | DEBUG | Every setter in state singletons, every profile/macro/folder add/update/delete/rename/reorder                                                 |
-| Screen lifecycle          | DEBUG | `LaunchedEffect` injector start/stop blocks, `DisposableEffect.onDispose` for all screens                                                     |
-| Modifier state machine    | DEBUG | All `KeyboardState` transitions (INACTIVE↔STICKY↔HELD)                                                                                        |
-| Action dispatch           | DEBUG | Every `injectActionDown` / `injectActionUp` (except continuous-fire: ScrollWheel, TrackpointMove)                                             |
-
-**What NOT to log (even at VERBOSE):**
-
-- Per-MOVE-event touch/mouse/trackpoint coordinates (continuous fire)
-- Per-animation-frame values
-- Key repeat interval ticks
-- Pan/zoom velocity
-- `SettingsManager.updateXxxLive()` methods (called on every drag frame)
-
-### 8.5 API-Level Branching
-
-- When calling APIs that changed signature across SDK versions, use
-  `if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.XYZ)` branching with
-  `@Suppress("DEPRECATION")` on the legacy branch — never silently call the
-  deprecated path without the annotation.
-
-```kotlin
-@Suppress("DEPRECATION")
-val data: Intent? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-    intent?.getParcelableExtra("DATA", Intent::class.java)
-} else {
-    intent?.getParcelableExtra("DATA")
-}
-```
+- **8.1** `enum.entries` (never `.values()`); `kotlin.math.min/max` (never `java.lang.Math`); no anonymous destructuring of `Triple`/non-data classes in lambdas; `"$x"` not `"${x}"` unless accessing a property.
+- **8.2** Explicit imports only — no star imports, no fully-qualified names inline in code bodies; default ktlint ordering.
+- **8.3** No magic numbers: extract to file-scope `private const val` / `private val` in SCREAMING_SNAKE_CASE. File-scope UI constants carry a 2–3 letter feature prefix (`GS_SECTION_PADDING`). Never hardcode volume UUID paths like `/storage/6914-318F` — use `SafPathResolver.getStorageVolumeRoots()`.
+- **8.4 Logging:** be generous — one DEBUG logcat capture should diagnose any bug. Only `AppLog` (never `android.util.Log`). Every file declares `private const val TAG = "ClassName"` (≤ 23 chars). Mandatory coverage: ERROR for unrecoverable failures, WARN for recoverable/fallback paths, INFO for lifecycle milestones, DEBUG for every state-singleton setter / CRUD op / screen lifecycle effect / modifier state transition / action dispatch. **Never log** per-frame, per-MOVE, key-repeat, velocity, or `updateXxxLive()` events. An unused `TAG` means logging is missing — add logs, don't delete the `TAG`.
+- **8.5** SDK-dependent API calls use `Build.VERSION.SDK_INT` branching with `@Suppress("DEPRECATION")` on the legacy branch.
 
 ---
 
-## 9 Jetpack Compose Rules
+## 9 Jetpack Compose Rules — details: [CODING_GUIDE §9](docs/agents/CODING_GUIDE.md#9-jetpack-compose-rules)
 
-### 9.1 Side Effects & LaunchedEffect
-
-- **Never use rapidly-changing Compose state as a `LaunchedEffect` key.**
-  If you need to react to animation values or frequently-updating state,
-  use `snapshotFlow { ... }.collectLatest { }` inside a `LaunchedEffect(Unit)`.
-
-```kotlin
-// ✅ Correct – single launch, reactive collection
-LaunchedEffect(Unit) {
-    snapshotFlow { animScale.value }
-        .collectLatest { scale -> manager.setScale(scale) }
-}
-
-// ❌ Wrong – restarts coroutine on every animation frame
-LaunchedEffect(animScale.value) {
-    manager.setScale(animScale.value)
-}
-```
-
-- `snapshotFlow` is in `androidx.compose.runtime`, **not** `kotlinx.coroutines`.
-
-**Polling fallback:** When reacting to state that is _not_ exposed as a `Flow` (e.g., an imperative property updated by a system callback), use a `while(true) + delay()` poll inside a keyed `LaunchedEffect` rather than forcing an artificial flow:
-
-```kotlin
-// ✅ Correct – polling imperative state
-LaunchedEffect(isActive) {
-    if (isActive) {
-        while (true) {
-            val state = someManager.currentState
-            // use state …
-            delay(POLL_INTERVAL_MS)
-        }
-    }
-}
-```
-
-The coroutine is automatically cancelled when the key (`isActive`) changes to `false`.
-
-### 9.2 String Resources
-
-- **All user-visible strings** must live in `res/values/strings.xml`.
-- Composables: `stringResource(R.string.key)`.
-- Services / non-Compose code: `getString(R.string.key)` or `context.getString(...)`.
-- Format args: `stringResource(R.string.key, arg1, arg2)` — not string concatenation.
-- Internal defaults in singletons that are immediately overwritten by
-  callbacks may remain as literals.
-- All strings must be translated to all supported languages.
-
-### 9.3 Accessibility
-
-- Every `Icon` and `Image` must have a meaningful `contentDescription`
-  backed by a string resource, or `null` if purely decorative.
-
-### 9.4 Shared UI Components
-
-- Reusable Composables (overlay controls, auto-hide timers) belong in `ui/`.
-- Do not duplicate overlay code across screens. Use
-  shared overlay tools and `AppStateManager.overlayVisible` / `triggerOverlay()`.
-
-### 9.5 Collecting StateFlows
-
-| Context                                                | Pattern                                                                   |
-| ------------------------------------------------------ | ------------------------------------------------------------------------- |
-| Inside a `@Composable`                                 | `.collectAsState()` — converts to Compose `State`, triggers recomposition |
-| Inside a `Service`, `Presentation`, or coroutine scope | `.collect { }` — imperative side-effect, no recomposition involved        |
-
-Never call `.collectAsState()` outside a Composable; never call raw `.collect {}` inside a Composable when the result drives UI.
-
-### 9.6 Gamepad & Settings UI Conventions
-
-- **No Controller Button Prompts in Settings / Editor Menus:** Controller button prompt glyphs (e.g. `GamePadGlyph` badges for A/B/X/Y or footer prompt bars) must **NEVER** be displayed inside Megingiard Companion settings screens or MacroPad editor menus. Button prompt glyphs are exclusively reserved for Game Focus launcher UI.
-- **In-Place Two-Step Confirmation for Destructive Actions:** Never launch modal window dialogs (`Dialog`, `AlertDialog`) from within overlay window contexts or editor menus (prevents window type mismatch crashes on overlay contexts). Instead, destructive actions (e.g. deleting profiles, layouts, buttons, macros) must use in-place two-step confirmation (`GamepadTwoStepConfirmCard`):
-  1. Activating the item (Button A / touch click) changes its headline to a confirmation prompt (e.g. *"Really delete 'Profile'?"*) and changes the badge to *"Confirm"*.
-  2. Activating again executes the action and resets state.
-  3. Pressing Button B or navigating away (losing focus) cancels the confirmation state.
-  4. Upon deletion, focus switches back to the primary selection item in the deck (e.g. profile choice card) and a toast notification confirms the deletion.
+- **9.1** Never key a `LaunchedEffect` on fast-changing state; use `LaunchedEffect(Unit) { snapshotFlow { … }.collectLatest { … } }`. `snapshotFlow` comes from `androidx.compose.runtime`. For non-Flow imperative state, poll with `while (true) { …; delay(POLL_MS) }` inside a keyed `LaunchedEffect`.
+- **9.2** All user-visible strings in `strings.xml`, translated in every locale (`values-de`). Use `stringResource(R.string.x, args)` — never concatenation.
+- **9.3** Every `Icon` / `Image` has a string-resource `contentDescription`, or `null` if decorative.
+- **9.4** Reusable Composables live in `ui/`; never duplicate overlay code — use `AppStateManager.overlayVisible` / `triggerOverlay()`.
+- **9.5** `.collectAsState()` inside Composables only; `.collect {}` only in Services / Presentations / coroutine scopes.
+- **9.6** No controller button-prompt glyphs in Companion settings or MacroPad editor menus (Game Focus only). Never open `Dialog` / `AlertDialog` from overlay windows or editor menus — destructive actions use in-place two-step confirmation (`GamepadTwoStepConfirmCard`).
 
 ---
 
-## 10 Coroutines & Lifecycle
+## 10 Coroutines & Lifecycle — details: [CODING_GUIDE §10](docs/agents/CODING_GUIDE.md#10-coroutines--lifecycle)
 
-### 10.1 CoroutineScope in Services / Presentation
-
-- Use **`SupervisorJob()`**, never bare `Job()`, for class-level
-  `CoroutineScope` instances in `Service` or `Presentation` subclasses.
-  This prevents a single child failure from cancelling unrelated siblings.
-- **Cancel the scope** in `onDestroy()` / teardown:
-
-```kotlin
-private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-
-override fun onDestroy() {
-    scope.cancel()
-    super.onDestroy()
-}
-```
-
-### 10.2 No Duplicate Scopes
-
-- Never create a local `CoroutineScope` inside `onStartCommand()` or
-  similar lifecycle methods. Reuse the class-level scope.
-
-### 10.3 Naming
-
-- Avoid naming your own methods identically to framework methods.
-  Example: rename a helper `startForegroundNotification()` instead of
-  `startForegroundService()` to prevent shadowing `Context.startForegroundService()`.
-
-### 10.4 Combining Multiple StateFlows
-
-When logic depends on **two or more independent `StateFlow`s**, use `combine()` rather than nesting `collect {}` calls:
-
-```kotlin
-// ✅ Correct – single derived signal
-scope.launch {
-    combine(
-        AppStateManager.isActivityResumed,
-        AppStateManager.isOnValidScreen
-    ) { resumed, valid ->
-        resumed && valid
-    }.collect { shouldShow ->
-        if (shouldShow) show() else hide()
-    }
-}
-
-// ❌ Wrong – nested collects create race conditions
-scope.launch {
-    AppStateManager.currentMode.collect { mode ->
-        AppStateManager.isActivityResumed.collect { resumed -> … }
-    }
-}
-```
+- **10.1** Class-level scopes in Services / Presentations use `CoroutineScope(SupervisorJob() + …)` and are cancelled in `onDestroy()` (order: §12.1).
+- **10.2** Never create a local `CoroutineScope` in `onStartCommand()` or other lifecycle methods — reuse the class scope.
+- **10.3** Don't name methods like framework methods (use `startForegroundNotification()`, not `startForegroundService()`).
+- **10.4** Depend on several `StateFlow`s via `combine()`, never nested `collect {}`.
 
 ---
 
 ## 11 Android Manifest & Permissions
 
-- Only declare components that **actually exist** as classes. A missing
-  class behind a `<service>` or `<receiver>` declaration causes a runtime
-  crash on some OEMs.
-- Required permissions for this project:
-  - `FOREGROUND_SERVICE`
-  - `FOREGROUND_SERVICE_MEDIA_PROJECTION`
-  - `POST_NOTIFICATIONS`
+Only declare components whose classes exist (missing classes crash on some OEMs). Required permissions: `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_MEDIA_PROJECTION`, `POST_NOTIFICATIONS`.
 
 ---
 
-## 12 Resource & Hardware Lifecycle
+## 12 Resource & Hardware Lifecycle — details: [CODING_GUIDE §12](docs/agents/CODING_GUIDE.md#12-resource--hardware-lifecycle)
 
-### 12.1 Teardown Order in Services & Presentations
-- **Cancel Scopes First:** In `onDestroy()` or cleanup callbacks, always cancel the coroutine scope _before_ releasing hardware handles or dismissing windows. This ensures in-flight async tasks do not race against resource deallocation or throw illegal state exceptions.
-- **Teardown Sequence:**
-  ```kotlin
-  override fun onDestroy() {
-      super.onDestroy()
-      scope.cancel()          // 1. Stop all async tasks first
-      virtualDisplay?.release() // 2. Release hardware handles
-      mediaProjection?.stop()
-      mirrorPresentation?.dismiss() // 3. Tear down presentation windows
-  }
-  ```
-
-### 12.2 Multi-Display Activity Launching
-- When starting any `Activity` intended for the primary handheld screen (e.g., global settings, Privileged Mode setup, or media consent prompts) from a secondary-screen context, you **must** explicitly configure `ActivityOptions.setLaunchDisplayId(Display.DEFAULT_DISPLAY)`. 
-- By default, Android activity launches inherit the display ID of the invoking context, which would cause primary-screen activities to open incorrectly on the secondary display.
-  ```kotlin
-  val options = ActivityOptions.makeBasic().apply {
-      launchDisplayId = Display.DEFAULT_DISPLAY
-  }
-  startActivity(intent, options.toBundle())
-  ```
-
-### 12.3 Window Presentation Lifecycle
-- **Toggle Visibility, Preserve Resources:** Use `Presentation.hide()` and `Presentation.show()` for mode switching during an active session to temporarily hide overlay windows without destroying their backing resources.
-- Only invoke `Presentation.dismiss()` in `onDestroy()` or deep service teardowns, as it permanently destroys the window context and backing lifecycle.
-- **Z-Order Layering:** Any `SurfaceView` receiving hardware rendering streams (e.g., `VirtualDisplay` outputs) **must** call `setZOrderMediaOverlay(true)` to ensure that Android's Hardware Composer layers it correctly on top of window backgrounds instead of rendering it behind them.
-
-### 12.4 Feature-Specific Architectures & Protocols
-For feature-specific, low-level technical configurations, do **not** add ad-hoc rules to this document. Instead, consult the dedicated `FEATURE.md` files which serve as the canonical technical specifications:
-- **Screen Capture & Mirroring Server:** See [docs/features/mirror/FEATURE.md](docs/features/mirror/FEATURE.md) for detail on privileged socket controls, `app_process` dex servers, and generation race-guards.
-- **Native Key Injection & uinput:** See [docs/features/keyboard/FEATURE.md](docs/features/keyboard/FEATURE.md) for the stdin commands (`KD`/`KU`), event classification filters, and the `1..255` keyboard keycode limits.
-- **Native Touch Injection & evdev:** See [docs/features/touchpad/FEATURE.md](docs/features/touchpad/FEATURE.md) for touchscreen event nodes (`/dev/input/event6`), absolute coordinate landscape-inversion math, and relative touch-move coalescing queues.
+- **12.1 Teardown order:** `super.onDestroy()` → `scope.cancel()` → release hardware (`VirtualDisplay`, `MediaProjection`) → dismiss windows/Presentations. The scope is always cancelled before resources are released.
+- **12.2** Activities meant for the primary screen launched from a secondary-screen context set `ActivityOptions.makeBasic().apply { launchDisplayId = Display.DEFAULT_DISPLAY }`.
+- **12.3** Use `Presentation.hide()` / `show()` for mode switches; `dismiss()` only in final teardown. `SurfaceView`s fed by `VirtualDisplay` call `setZOrderMediaOverlay(true)`.
+- **12.4** Low-level protocol rules live in the feature specs (mirror, keyboard, touchpad `FEATURE.md`), not here.
 
 ---
 
 ## 13 Build & Dependencies
 
-- All dependency versions live in `gradle/libs.versions.toml`.
-  Never hardcode version strings in `build.gradle.kts`.
-- `isMinifyEnabled = true` for release builds (R8 + resource shrinking).
-  Keep rules live in `app/proguard-rules.pro`. When adding new components
-  referenced by name from `AndroidManifest.xml`, by reflection, or by
-  kotlinx.serialization, add explicit keep rules.
+- All versions in `gradle/libs.versions.toml`; never hardcode versions in `build.gradle.kts`.
+- Release builds use R8 (`isMinifyEnabled = true`) + resource shrinking. Keep rules live in each module's `proguard-rules.pro` (`companion/ui/`, `companion/domain/`, `gamefocus/ui/`); add keep rules for anything referenced from the manifest, by reflection, or by kotlinx.serialization.
 
 ---
 
 ## 14 Git Conventions
 
-- **Commit messages** follow [Conventional Commits](https://www.conventionalcommits.org/):
-  `feat:`, `fix:`, `refactor:`, `docs:`, `chore:`, `test:`.
-- Use a short imperative summary line, then a blank line, then bullet-point
-  details for multi-topic commits.
-- Keep commits atomic — one logical change per commit when feasible.
+Conventional Commits; short imperative summary, blank line, bullet details; atomic commits when feasible.
 
 ---
 
 ## 15 What NOT to Change
 
-These constraints are non-negotiable:
-
-1. **`minSdk = 33`** — the device ships with this API level.
-2. **`targetSdk = 35`** — keep in sync with `compileSdk`.
-3. **All existing user-facing functionality** must be preserved across
-   refactors. No feature removals without explicit human approval.
-4. **Hardware rendering pipeline** (`MediaProjection` → `VirtualDisplay` →
-   `SurfaceView` inside `Presentation`) — this is the only architecture
-   that achieves zero-latency DRM-free mirroring on the AYN Thor.
-5. **Synthetic LifecycleOwner in Presentation** — required for Compose
-   inside the background-service window.
-6. **Megingiard Companion Autonomy & Zero Game Focus Dependency** — Megingiard
-   Companion is a completely standalone application with zero dependencies on
-   Game Focus. Bugs in Companion must NEVER be fixed or mitigated by altering
-   Game Focus.
+1. `minSdk = 33` and `targetSdk = 35` (in sync with `compileSdk`).
+2. Existing user-facing functionality — no removals without explicit operator approval.
+3. The hardware mirroring pipeline (`MediaProjection` → `VirtualDisplay` → `SurfaceView` inside `Presentation`).
+4. The synthetic `LifecycleOwner` in `Presentation` (required for Compose in the service window).
+5. Companion autonomy from Game Focus (§6.1).
 
 ---
 
-## 16 Design System Rules
+## 16 Design System Rules — details: [CODING_GUIDE §16](docs/agents/CODING_GUIDE.md#16-design-system-rules)
 
-These rules encode the unified design system introduced in the typography/theming refactor.
-Every agent **must** follow them when writing or editing any Composable.
-
-### 16.1 Typography — NEVER inline `fontSize`
-
-All text sizing **must** use `MaterialTheme.typography.*`. Inline `fontSize = XX.sp`
-in Composables (outside `AppTheme.kt`) is **forbidden**.
-
-| Use case                       | Token                                                  |
-| ------------------------------ | ------------------------------------------------------ |
-| Dialog titles, section headers | `MaterialTheme.typography.titleLarge` (18sp SemiBold)  |
-| Section titles                 | `MaterialTheme.typography.titleMedium` (16sp SemiBold) |
-| Subsection titles              | `MaterialTheme.typography.titleSmall` (14sp Medium)    |
-| Macro names, list items        | `MaterialTheme.typography.bodyLarge` (15sp Normal)     |
-| Standard row labels (default)  | `MaterialTheme.typography.bodyMedium` (14sp Normal)    |
-| Secondary descriptions, hints  | `MaterialTheme.typography.bodySmall` (12sp Normal)     |
-| Button labels                  | `MaterialTheme.typography.labelLarge` (14sp Medium)    |
-| Dialog subtitles               | `MaterialTheme.typography.labelMedium` (13sp Medium)   |
-| Category headers, pill labels  | `MaterialTheme.typography.labelSmall` (11sp Normal)    |
-
-**Allowed exceptions** (must be commented):
-
-- Computed/data-driven sizes: `(11 * btn.buttonSize.cols).sp` (button label scaled by size)
-- Conditional key sizes: `if (widthWeight >= 1.5f) 11.sp else 12.sp` (keyboard key cap)
-- Internal renderers: `MaterialSymbols` size→sp conversion
-- Intentionally tiny labels below 11sp (e.g. icon name under icon picker grid at 8sp)
-
-### 16.2 Colors — NEVER hardcode `Color(0xFF...)`
-
-All colors in Composables must come from:
-
-- `LocalAppColors.current.<token>` — for app-defined semantic colors (accent, surface, error, etc.)
-- `MaterialTheme.colorScheme.<token>` — for M3 semantic colors (primary, onPrimary, etc.)
-
-**Hardcoded `Color(0xFF...)` literals in screen/composable code are forbidden.**
-
-Key token mapping:
-| Value | Token |
-|---|---|
-| `Color(0xFFCF6679)` / `Color(0xFFB00020)` | `LocalAppColors.current.error` |
-| `Color(0xFFFF9800)` (gamepad orange) | `LocalAppColors.current.actionColorGamepad` |
-| `Color(0xFF2196F3)` (system blue) | `LocalAppColors.current.actionColorSystem` |
-
-### 16.3 Spacing — Prefer named constants over bare `XX.dp`
-
-All dimension values must be extracted to `private val` constants at file scope using
-SCREAMING_SNAKE_CASE with a 2-3 letter feature prefix (e.g. `GS_SECTION_PADDING = 16.dp`).
-Bare magic `XX.dp` inline in Composable code is a code smell.
-
-### 16.4 M3 Component Colors — do NOT override what the ColorScheme provides
-
-Do **not** pass manual `colors =` overrides to M3 components when the `ColorScheme`
-already handles them correctly:
-
-```kotlin
-// ❌ WRONG — override defeats the design system
-Switch(
-    colors = SwitchDefaults.colors(checkedTrackColor = accentColor)
-)
-
-// ✅ CORRECT — let MaterialTheme.colorScheme.primary drive it
-Switch(checked = ..., onCheckedChange = ...)
-```
-
-This applies to: `Switch`, `Slider`, `Checkbox`, `RadioButton`, `OutlinedTextField`
-(border colors are OK to override via `colors =` for contextual accent).
-
-### 16.5 New Composable Parameters — no `accentColor: Color` proliferation
-
-Do **not** add `accentColor: Color` as a new Composable parameter.
-Read accent from `LocalAppColors.current.accent` or `MaterialTheme.colorScheme.primary` directly.
-Existing `accentColor` parameters in older Composables may remain until a future refactor.
+- **16.1** Never inline `fontSize = XX.sp`; use `MaterialTheme.typography.*` (token table in CODING_GUIDE). Documented, commented exceptions only.
+- **16.2** Never hardcode `Color(0xFF…)` in screen/Composable code; use `LocalAppColors.current.*` or `MaterialTheme.colorScheme.*`.
+- **16.3** No bare `XX.dp` in Composables; use prefixed file-scope constants.
+- **16.4** Don't pass `colors =` overrides to M3 `Switch` / `Slider` / `Checkbox` / `RadioButton` / `OutlinedTextField` when the ColorScheme already covers it (text-field border accents are OK).
+- **16.5** Don't add new `accentColor: Color` parameters; read `LocalAppColors.current.accent` or `MaterialTheme.colorScheme.primary`.

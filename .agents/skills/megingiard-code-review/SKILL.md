@@ -1,6 +1,6 @@
 ---
 name: megingiard-code-review
-description: "Conduct a thorough code review of the current Git branch or specific files in Megingiard. Evaluates architecture compliance (:app, :domain, :core), AGENTS.md rules, Compose performance (re-compositions, LaunchedEffect keys, draw scopes), state management, thread safety, unit test coverage, documentation sync (FEATURE.md), and provides a structured implementation plan for any findings."
+description: "Conduct a thorough code review of the current Git branch or specific files in Megingiard. Evaluates architecture compliance (:companion:*, :gamefocus:*, :shared:*), AGENTS.md rules, Compose performance (re-compositions, LaunchedEffect keys, draw scopes), state management, thread safety, unit test coverage, documentation sync (FEATURE.md), and provides a structured implementation plan for any findings."
 argument-hint: 'Optional git reference or scope (e.g. "feature/ocr-privd-mode" or "companion/ui/src/main/java/com/stormpanda/megingiard/privd/")'
 ---
 
@@ -19,8 +19,8 @@ You are a Lead Android Architect and Senior Kotlin Engineer on the **Megingiard*
 | Package        | `com.stormpanda.megingiard`                                                                                  |
 | Language       | Kotlin 2.0+ (no Java files except `:mirrorserver`), Jetpack Compose Material 3                               |
 | Modules        | `:companion:ui` (UI) · `:companion:domain` (domain logic) · `:shared:*` · `:mirrorserver`                   |
-| Coding rules   | **`AGENTS.md`** at workspace root — treat every rule as mandatory                                            |
-| Permitted tests| `./gradlew :shared:core:test :shared:catalog:testDebugUnitTest :shared:media:testDebugUnitTest :shared:session:testDebugUnitTest :shared:ui:testDebugUnitTest :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:domain:testDebugUnitTest :gamefocus:ui:testDebugUnitTest --continue` (Must be run with sandbox bypass enabled, i.e., `BypassSandbox: true` / unsandboxed) |
+| Coding rules   | **`AGENTS.md`** at workspace root (compact rules) + **`docs/agents/CODING_GUIDE.md`** (full rules & examples, same § numbers) |
+| Permitted tests| `./scripts/run_unit_tests.sh` (must run with sandbox bypass enabled, i.e. `BypassSandbox: true`) |
 | Deployment     | **STRICTLY PROHIBITED** from running deployment/install commands or deleting app data without explicit permission |
 | Log tag prefix | All app logs are tagged `Mgnrd.*` using `AppLog` with file-scoped `private const val TAG`                    |
 | Target Device  | AYN Thor dual-screen handheld (Display 0 = top screen, Display 4 = bottom screen)                           |
@@ -30,6 +30,11 @@ You are a Lead Android Architect and Senior Kotlin Engineer on the **Megingiard*
 ## User Input
 
 The user requests a code review — either for the current working branch, a specific target branch comparison (e.g., `main..HEAD`), or specific files/packages. If no scope is specified, review all uncommitted changes (`git status`) and recent commits on the current branch compared to `main`.
+
+**Review modes:**
+
+- **Standalone review** (the user asked for a review): present findings and the implementation plan first; do not modify code unless the user asks for auto-fix.
+- **Post-implementation self-review** (triggered by `AGENTS.md` §3.4 at the end of your own implementation task): fix findings directly, then list each finding and its fix in the summary.
 
 ---
 
@@ -72,9 +77,9 @@ To avoid "lost in the middle" attention leaks and ensure a 100% comprehensive ch
 
 Verify strict adherence to module dependencies (§6 of `AGENTS.md`):
 
-- **`:core` / `:shared:core`**: Must contain pure Kotlin/JVM data models, schemas, and math helpers. **Zero Android or Compose dependencies**.
-- **`:domain` / `:companion:domain`**: Must contain business logic, singleton state holders, input strategy routers, and IPC wrappers. **Must never import Android UI or Composable packages**.
-- **`:app` / `:companion:ui`**: Contains UI screens, viewmodels, Composables, Services, and presentation modes.
+- **`:shared:core`**: Must contain pure Kotlin/JVM data models, schemas, and math helpers. **Zero Android or Compose dependencies**.
+- **`:companion:domain` / `:gamefocus:domain` / `:shared:catalog|media|session`**: Business logic, singleton state holders, input strategy routers, and IPC wrappers. **Must never import Android UI or Composable packages**.
+- **`:companion:ui` / `:gamefocus:ui` / `:shared:ui`**: UI screens, viewmodels, Composables, Services, and presentation modes.
 - **Companion Autonomy & Zero Game Focus Dependency (§6.1)**: Verify that any changes, fixes, or logic in Megingiard Companion (`:companion:*`) have ZERO dependencies on Game Focus (`:gamefocus:*`). Companion bugs must NEVER be fixed, partially fixed, or mitigated by modifying Game Focus.
 - **State Singletons (§7.1)**: Ensure state singletons (`AppStateManager`, `ScreenCaptureManager`, etc.) expose only **read-only `StateFlow`** (`val bar: StateFlow<T> = _bar.asStateFlow()`) and keep `MutableStateFlow` private.
 - **Zero-Heuristics & Strict Determinism (§7.5)**: Verify that ZERO heuristics, loose substring deductions, synthetic fallbacks, or probabilistic guessing algorithms exist in the change set without explicit user authorization. All state transitions, role classifications, and data paths must be 100% deterministic.
@@ -84,7 +89,7 @@ Verify strict adherence to module dependencies (§6 of `AGENTS.md`):
 
 ### 4. ✅ Jetpack Compose & Performance Audit
 
-Inspect all Compose code (`:app` and `:gamefocus` modules) against §9 of `AGENTS.md`:
+Inspect all Compose code (`:companion:ui`, `:gamefocus:ui`, `:shared:ui`) against §9 and §16 of `AGENTS.md` / `docs/agents/CODING_GUIDE.md`:
 
 - **Re-composition Leaks**: Verify that rapidly-changing animation values (e.g., infinite transitions, float animations) do **NOT** cause top-level composable recompositions. State reads for drawing borders, background highlights, or custom paths must occur inside `drawWithCache` / `drawBehind` or custom draw scopes.
   - *Modifier Check:* Audit for color, alpha, or scale state reads inside static modifiers (e.g. `.background(animatedColor)`, `.scale(animatedScale)`). Recommend refactoring to `.drawBehind { drawRect(animatedColor) }` or `.graphicsLayer { scaleX = animatedScale; scaleY = animatedScale }` to bypass composition.
@@ -109,10 +114,10 @@ Audit every line of code against §8 of `AGENTS.md`:
 
 ### 6. ✅ Unit Test & Documentation Sync Audit
 
-- **Test Suite Execution (§3)**: Run `./gradlew :shared:core:test :shared:catalog:testDebugUnitTest :shared:media:testDebugUnitTest :shared:session:testDebugUnitTest :shared:ui:testDebugUnitTest :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:domain:testDebugUnitTest :gamefocus:ui:testDebugUnitTest --continue` to verify test suite health (MUST always be run with the sandbox bypass enabled, i.e., `BypassSandbox: true` / unsandboxed).
+- **Test Suite Execution (§3)**: Run `./scripts/run_unit_tests.sh` to verify test suite health (MUST always be run with the sandbox bypass enabled, i.e., `BypassSandbox: true`).
   - *Flaky failures:* If a failure is in a test unrelated to the change set, read its `build/test-results/**/TEST-*.xml`, re-run once, and report it as flaky (with the test name) rather than as a regression.
   - *Execution proof:* Confirm new/changed test classes actually ran by checking their `TEST-*.xml` (`tests` / `failures` counts) — Gradle `-q` output alone does not prove it.
-- **Test Set Placement**: Ensure pure JVM tests are placed in `:shared/core/src/test/` or `:companion/domain/src/test/`. If a unit test has no Android SDK dependencies, prefer fast pure JUnit over Robolectric.
+- **Test Set Placement**: Ensure pure JVM tests are placed in `shared/core/src/test/kotlin/` or `<module>/src/test/java/`. If a unit test has no Android SDK dependencies, prefer fast pure JUnit over Robolectric.
 - **Documentation Sync (§2 & §5)**: Identify which `docs/features/<feature>/FEATURE.md` owns the modified code. Ensure Functional Requirements and Technical Implementation details accurately reflect all behavioral changes.
   - *Requirements Discrepancy:* If the codebase diverges from requirements, evaluate whether the implementation is correct and the *documentation* should be updated, rather than assuming code is wrong.
 
@@ -138,7 +143,7 @@ Present the code review using clear, structured GitHub Markdown:
 
 ## Constraints
 
-- **Never modify code silently** during a code review pass — present findings to the user first unless explicitly asked to auto-fix.
+- **Standalone reviews never modify code silently** — present findings to the user first unless explicitly asked to auto-fix. (Post-implementation self-reviews fix directly — see *Review modes*.)
 - **Never skip unit test execution** — execute permitted unit test commands to verify test suite status.
 - **Never propose code fixes that break existing animations, layout math, or visual styling**.
 - **Never accept or propose Game Focus modifications as a fix or workaround for Megingiard Companion bugs**. Megingiard Companion is a standalone app and must be 100% self-contained.

@@ -16,9 +16,9 @@ You are an expert Android/Kotlin engineer for Megingiard. Your goal is to fetch 
 | -------------- | -------------------------------------------------------------------------- |
 | Package        | `com.stormpanda.megingiard`                                                |
 | Language       | Kotlin 2.0+, Jetpack Compose Material 3                                    |
-| Modules        | `:app` (UI) · `:domain` (business logic) · `:core` (pure data)             |
+| Modules        | `:companion:ui` (UI) · `:companion:domain` (business logic) · `:shared:*` |
 | Coding rules   | **`AGENTS.md`** at workspace root — treat every rule as mandatory          |
-| Build policy   | **Never run `./gradlew`** — static analysis only (imports, symbols, types) |
+| Build policy   | Only the commands permitted in `AGENTS.md` §3.1 (`./scripts/run_unit_tests.sh`, compile check) — always with sandbox bypass |
 | Log tag prefix | All app logs are tagged `Mgnrd.*`                                          |
 | ADB path       | `~/Library/Android/sdk/platform-tools/adb`                                 |
 
@@ -34,7 +34,7 @@ The user provides a free-form request to implement requested GitHub PR review ch
 4. ✅ **Propose implementation plan** — present files, ordered steps, assumptions, risks, validation, and potential doc impacts.
 5. ✅ **Wait for explicit approval** — do not edit code before user confirms the plan.
 6. ✅ **Implement approved changes** — apply minimal, traceable edits and keep behavior aligned with requested review changes.
-7. ✅ **Run static validation only** — perform static checks and map each review item to implemented change or explicit rationale.
+7. ✅ **Validate** — run `./scripts/run_unit_tests.sh` (and optionally the compile check from `AGENTS.md` §3.1), then map each review item to an implemented change or explicit rationale.
 8. ✅ **Run documentation sync check** — update affected FEATURE.md files and, if architecture changed, also docs/ARCHITECTURE.md.
 9. ✅ **Deliver final report** — include mapping from comments to fixes, unresolved items, and a Conventional Commits message proposal.
 10. ⚡ **Fallback mode without gh auth** — if GitHub CLI is unavailable or unauthenticated, ask for PR URL/number and continue with user-provided context.
@@ -97,7 +97,7 @@ gh api graphql \
 - Actionable feedback list, grouped and prioritized.
 - Implementation plan shown before edits, then explicit user approval gate.
 - Implementation summary with per-file change mapping.
-- Static validation summary and unresolved items with rationale.
+- Validation summary (test results) and unresolved items with rationale.
 - Documentation sync summary with exact updated files or explicit no-change reason.
 - Always conclude with a Conventional Commits message proposal covering all changes made in the session.
 
@@ -105,26 +105,12 @@ gh api graphql \
 
 - Do not write code before user approves the implementation plan.
 - Treat reviews, inline comments, issue comments, and unresolved threads as mandatory feedback sources.
-- Perform static validation only; do not run `./gradlew` or build/compile tasks.
-- **One exception:** `./gradlew :core:test :domain:test` **must** be run after every implementation to verify all unit tests pass. This is the only permitted Gradle invocation.
-- After any implementation, write or update unit tests for new or changed pure logic in `:core` / `:domain`. If not testable without major refactoring, document as a follow-up task instead of skipping silently.
+- Only run the build/test commands permitted in `AGENTS.md` §3.1 (sandbox bypass enabled).
+- `./scripts/run_unit_tests.sh` **must** be run after every implementation to verify all unit tests pass.
+- After any implementation, write or update unit tests for new or changed pure logic in `:shared:*` / `:companion:domain` / `:gamefocus:domain`. If not testable without major refactoring, document as a follow-up task instead of skipping silently.
 - Keep changes minimal and targeted to requested review items; avoid unrelated refactors.
 - End by proposing a commit message only; do not auto-commit.
 
-## Mandatory Completion Checklist (from `AGENTS.md §3`)
+## Mandatory Completion Checklist
 
-Before marking the task done, verify:
-
-- [ ] No `MutableStateFlow` exposed outside its owning singleton
-- [ ] No FQN references inline — all moved to imports
-- [ ] No magic numbers — extracted to named constants
-- [ ] No `android.util.Log` — all logging via `AppLog`
-- [ ] Every new file has `private const val TAG` and uses `AppLog`
-- [ ] All user-visible strings in `strings.xml`
-- [ ] All Icons have `contentDescription`
-- [ ] `SupervisorJob()` used for class-level scopes
-- [ ] Scope cancelled in `onDestroy()`
-- [ ] No suspected compile errors (verified by static analysis)
-- [ ] New or changed pure logic is covered by unit tests in `:core` or `:domain`
-- [ ] Existing tests updated if the change modifies previously-tested behaviour
-- [ ] `./gradlew :core:test :domain:test` executed and all tests pass (permitted test command)
+Before marking the task done, walk through the full **Done checklist in `AGENTS.md` §3.5** (do not rely on a partial copy).

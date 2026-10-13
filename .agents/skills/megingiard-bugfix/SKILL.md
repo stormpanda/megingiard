@@ -21,7 +21,7 @@ You are an experienced Android/Kotlin engineer with deep knowledge of the **Megi
 | Modules        | `:companion:ui` (UI) · `:companion:domain` (business logic) · `:shared:*` |
 | Coding rules   | **`AGENTS.md`** at workspace root — treat every rule as mandatory          |
 | Standalone Rule| Companion has ZERO dependencies on Game Focus. Never fix Companion bugs via Game Focus! |
-| Build policy   | **Never run `./gradlew`** — static analysis only (imports, symbols, types) |
+| Build policy   | Only the commands permitted in `AGENTS.md` §3.1 (`./scripts/run_unit_tests.sh`, compile check) — always with sandbox bypass |
 | Log tag prefix | All app logs are tagged `Mgnrd.*`                                          |
 | ADB path       | `~/Library/Android/sdk/platform-tools/adb`                                 |
 
@@ -94,9 +94,9 @@ Navigate from the hypothesis to the relevant files:
 - Search for the affected class/function using semantic search or grep
 - Read the relevant source files (ViewModel, Manager, Composable, Service)
 - Respect the module structure from `AGENTS.md §6`:
-  - State singletons → `:domain`
-  - Composables / ViewModels → `:app`
-  - Data models → `:core`
+  - State singletons → `:companion:domain` (or `:shared:catalog` / `:shared:session` / `:shared:media`)
+  - Composables / ViewModels → `:companion:ui`
+  - Data models → `:shared:core`
 
 Also check:
 
@@ -155,8 +155,8 @@ Perform a static review — no build command:
 - [ ] Scope cancelled in `onDestroy()`
 - [ ] No suspected compile errors
 - [ ] Companion autonomy respected: Companion bug fix does not modify or depend on Game Focus
-- [ ] If the fix touches pure logic in `:core` / `:domain`: a regression test added or updated
-- [ ] `./gradlew :shared:core:test :shared:catalog:testDebugUnitTest :shared:media:testDebugUnitTest :shared:session:testDebugUnitTest :shared:ui:testDebugUnitTest :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:domain:testDebugUnitTest :gamefocus:ui:testDebugUnitTest --continue` executed and all tests pass
+- [ ] If the fix touches pure logic in `:shared:*` / `:companion:domain`: a regression test added or updated
+- [ ] `./scripts/run_unit_tests.sh` executed and all tests pass
 
 ---
 
@@ -177,8 +177,8 @@ fix: <short imperative summary>
 
 ## Constraints
 
-- Never run `./gradlew` or any other build command
-- **One exception:** `./gradlew :shared:core:test :shared:catalog:testDebugUnitTest :shared:media:testDebugUnitTest :shared:session:testDebugUnitTest :shared:ui:testDebugUnitTest :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:domain:testDebugUnitTest :gamefocus:ui:testDebugUnitTest --continue` **must** be run after every fix to verify all unit tests pass (run with sandbox bypass enabled). This is the only permitted Gradle invocation.
+- Only run the build/test commands permitted in `AGENTS.md` §3.1 (sandbox bypass enabled).
+- `./scripts/run_unit_tests.sh` **must** be run after every fix to verify all unit tests pass.
 - If the fix touches pure logic in `:shared:core` / `:companion:domain`, always write a regression test covering the fixed behaviour. If not testable without major refactoring, document it as a follow-up.
 - Never use `android.util.Log` directly
 - Do not remove or refactor any functionality unrelated to the bug

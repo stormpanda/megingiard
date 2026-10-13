@@ -75,7 +75,7 @@ Megingiard is split into modular layers:
 We welcome translation contributions to make Megingiard accessible to more users worldwide! When submitting new or updated translations, please adhere to the following requirements:
 
 ### 1. Multi-Module Translation Scope
-* You can provide translations for both `:app` (`companion/ui/src/main/res/values-<lang>/strings.xml`) and `:gamefocus` (`gamefocus/ui/src/main/res/values-<lang>/strings.xml`) in a single Pull Request. Maintainers develop and coordinate features across both modules simultaneously.
+* You can provide translations for both `:companion:ui` (`companion/ui/src/main/res/values-<lang>/strings.xml`) and `:gamefocus` (`gamefocus/ui/src/main/res/values-<lang>/strings.xml`) in a single Pull Request. Maintainers develop and coordinate features across both modules simultaneously.
 
 ### 2. Mandatory Privileged Auto Setup Support
 * **Strict Requirement:** Any language offered as an app translation **must** also support **Privileged Auto Setup**. (Auto Setup is permitted and welcomed to support *more* system languages than Megingiard offers UI translations for, but any language with UI translations must support Auto Setup).
@@ -121,8 +121,8 @@ Before submitting a translation Pull Request, you **must** manually verify that 
 2. **Implement:** Write your code following the guidelines in [AGENTS.md](AGENTS.md).
 3. **Mandatory Testing & Coverage:** Run the unit tests and coverage report locally before submitting any contribution to ensure there are no regressions:
    ```bash
-   # Run all unit tests
-   ./gradlew :shared:core:test :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:ui:testDebugUnitTest
+   # Run all unit tests (canonical task list lives in this script)
+   ./scripts/run_unit_tests.sh
 
    # Generate consolidated test coverage report
    ./gradlew koverHtmlReport

@@ -21,7 +21,7 @@ You are an experienced Android/Kotlin engineer with deep knowledge of the **Megi
 | Modules        | `:companion:ui` (UI) · `:companion:domain` (business logic) · `:shared:*` |
 | Coding rules   | **`AGENTS.md`** at workspace root — treat every rule as mandatory          |
 | Standalone Rule| Companion has ZERO dependencies on Game Focus. Never couple Companion to Game Focus! |
-| Build policy   | **Never run `./gradlew`** (except the mandatory unit test suite via sandbox bypass) |
+| Build policy   | Only the commands permitted in `AGENTS.md` §3.1 (`./scripts/run_unit_tests.sh`, compile check) — always with sandbox bypass |
 | Log tag prefix | All app logs are tagged `Mgnrd.*`                                          |
 | ADB path       | `~/Library/Android/sdk/platform-tools/adb`                                 |
 
@@ -249,7 +249,7 @@ Perform a static review — no build command:
 - [ ] No suspected compile errors
 - [ ] New or changed pure logic is covered by unit tests in `:shared:core` or `:companion:domain`
 - [ ] Existing tests updated if the change modifies previously-tested behaviour
-- [ ] `./gradlew :shared:core:test :shared:catalog:testDebugUnitTest :shared:media:testDebugUnitTest :shared:session:testDebugUnitTest :shared:ui:testDebugUnitTest :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:domain:testDebugUnitTest :gamefocus:ui:testDebugUnitTest --continue` executed and all tests pass
+- [ ] `./scripts/run_unit_tests.sh` executed and all tests pass
 
 ---
 
@@ -273,8 +273,8 @@ feat: <short imperative summary>
 
 ## Constraints
 
-- Never run `./gradlew` or any other build command
-- **One exception:** `./gradlew :shared:core:test :shared:catalog:testDebugUnitTest :shared:media:testDebugUnitTest :shared:session:testDebugUnitTest :shared:ui:testDebugUnitTest :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:domain:testDebugUnitTest :gamefocus:ui:testDebugUnitTest --continue` **must** be run after every implementation to verify all unit tests pass (run with sandbox bypass enabled). This is the only permitted Gradle invocation.
+- Only run the build/test commands permitted in `AGENTS.md` §3.1 (sandbox bypass enabled).
+- `./scripts/run_unit_tests.sh` **must** be run after every implementation to verify all unit tests pass.
 - After implementation, always write or update unit tests for new or changed pure logic in `:shared:core` / `:companion:domain`. If logic is not testable without major refactoring, document it as a follow-up task instead of skipping silently.
 - **Always conduct an interactive interview via `ask_question` before drafting the plan** — walk down each branch of the design tree one question at a time with recommendations until all requirements are unambiguous.
 - **Always present the plan before implementing** — no silent coding

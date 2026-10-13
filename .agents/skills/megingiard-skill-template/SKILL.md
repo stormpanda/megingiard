@@ -30,7 +30,7 @@ Example: "You are an expert Android/Kotlin engineer working on the **Megingiard*
 | -------------- | -------------------------------------------------------------------------- |
 | Package        | `com.stormpanda.megingiard`                                                |
 | Language       | Kotlin 2.0+, Jetpack Compose Material 3                                    |
-| Modules        | `:app` (UI) · `:domain` (business logic) · `:core` (pure data)             |
+| Modules        | `:companion:ui` (UI) · `:companion:domain` (business logic) · `:shared:*` |
 | Coding rules   | **`AGENTS.md`** at workspace root — treat every rule as mandatory          |
 | Build policy   | **Never run `./gradlew`** — static analysis only (imports, symbols, types) |
 | Log tag prefix | All app logs are tagged `Mgnrd.*`                                          |
@@ -69,7 +69,7 @@ Example: "The user provides a free-form description of …"
 ## Constraints
 
 - _List hard rules specific to this skill that differ from or add to `AGENTS.md`._
-- Example: "Do not modify files outside the `:app` module."
+- Example: "Do not modify files outside the `:companion:ui` module."
 - Example: "Always present the implementation plan before writing code."
 
 ---

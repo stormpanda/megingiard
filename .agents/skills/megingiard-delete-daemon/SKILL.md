@@ -18,7 +18,7 @@ You are an Android engineer working on **Megingiard**. Your task is to cleanly r
 | -------------- | -------------------------------------------------------------------------- |
 | Package        | `com.stormpanda.megingiard`                                                |
 | Language       | Kotlin 2.0+, Jetpack Compose Material 3                                    |
-| Modules        | `:app` (UI) · `:domain` (business logic) · `:core` (pure data)             |
+| Modules        | `:companion:ui` (UI) · `:companion:domain` (business logic) · `:shared:*` |
 | Coding rules   | **`AGENTS.md`** at workspace root — treat every rule as mandatory          |
 | Build policy   | **Never run `./gradlew`** — static analysis only (imports, symbols, types) |
 | Log tag prefix | All app logs are tagged `Mgnrd.*`                                          |
