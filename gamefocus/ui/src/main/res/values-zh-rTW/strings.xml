@@ -90,6 +90,9 @@
     <string name="gamefocus_cat_game_info">遊戲資訊</string>
     <string name="gamefocus_cat_scraping">圖庫封面</string>
     <string name="gamefocus_cat_library_icon">遊戲庫圖示</string>
+    <string name="gamefocus_cat_collections">收藏集</string>
+    <string name="gamefocus_edit_collections_empty_info">尚無自訂收藏集。請至「管理圖庫」建立收藏集以整理遊戲。</string>
+    <string name="gamefocus_edit_open_manage_galleries_desc">開啟「管理圖庫」以建立並整理自訂收藏集。</string>
     <string name="gamefocus_field_display_name_title">顯示名稱</string>
     <string name="gamefocus_field_display_name_desc">自訂遊戲名稱在啟動器圖庫與遊戲庫中的顯示方式。</string>
     <string name="gamefocus_field_display_name_placeholder">輸入顯示名稱</string>

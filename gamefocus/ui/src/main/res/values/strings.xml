@@ -90,6 +90,9 @@
     <string name="gamefocus_cat_game_info">Game Info</string>
     <string name="gamefocus_cat_scraping">Gallery Artwork</string>
     <string name="gamefocus_cat_library_icon">Library Icon</string>
+    <string name="gamefocus_cat_collections">Collections</string>
+    <string name="gamefocus_edit_collections_empty_info">No custom collections yet. Create collections in Manage Galleries to organize your games.</string>
+    <string name="gamefocus_edit_open_manage_galleries_desc">Open Manage Galleries to create and organize custom collections.</string>
     <string name="gamefocus_field_display_name_title">Display Name</string>
     <string name="gamefocus_field_display_name_desc">Customize how the title appears in the launcher gallery and library.</string>
     <string name="gamefocus_field_display_name_placeholder">Enter display name</string>

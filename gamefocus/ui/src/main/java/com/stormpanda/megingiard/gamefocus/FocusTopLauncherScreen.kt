@@ -1059,12 +1059,16 @@ fun FocusTopLauncherScreen(
             )
         }
 
-        // Game Edit Primary Overlay (Game Info, Gallery Artwork, Library Icon)
+        // Game Edit Primary Overlay (Game Info, Gallery Artwork, Library Icon, Collections)
         if (editingAppInfo != null) {
             GameFocusEditGameOverlay(
                 appInfo = editingAppInfo,
                 apiKey = apiKey,
                 onDismiss = onDismissEditingApp,
+                onOpenManageGalleries = {
+                    onDismissEditingApp()
+                    onOpenManageGalleries()
+                },
             )
         }
 

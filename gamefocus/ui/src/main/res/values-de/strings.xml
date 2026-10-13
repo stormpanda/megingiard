@@ -90,6 +90,9 @@
     <string name="gamefocus_cat_game_info">Spiel-Info</string>
     <string name="gamefocus_cat_scraping">Galerie-Cover</string>
     <string name="gamefocus_cat_library_icon">Bibliotheks-Symbol</string>
+    <string name="gamefocus_cat_collections">Sammlungen</string>
+    <string name="gamefocus_edit_collections_empty_info">Noch keine Sammlungen erstellt. Erstelle Sammlungen unter „Galerien verwalten“, um deine Spiele zu organisieren.</string>
+    <string name="gamefocus_edit_open_manage_galleries_desc">„Galerien verwalten“ öffnen, um Sammlungen zu erstellen und zu organisieren.</string>
     <string name="gamefocus_field_display_name_title">Anzeigename</string>
     <string name="gamefocus_field_display_name_desc">Passe an, wie der Titel in der Launcher-Galerie und -Bibliothek dargestellt wird.</string>
     <string name="gamefocus_field_display_name_placeholder">Anzeigenamen eingeben</string>

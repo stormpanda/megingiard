@@ -29,6 +29,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.CollectionsBookmark
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Info
@@ -38,6 +39,7 @@ import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.ViewCarousel
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -70,6 +72,7 @@ import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.catalog.InstalledAppsManager
 import com.stormpanda.megingiard.catalog.LibraryIconRef
 import com.stormpanda.megingiard.catalog.RomManager
+import com.stormpanda.megingiard.gamefocus.domain.GameFocusGalleryManager
 import com.stormpanda.megingiard.media.SteamGridDbClient
 import com.stormpanda.megingiard.media.SteamGridDbGame
 import com.stormpanda.megingiard.media.SteamGridDbImage
@@ -92,6 +95,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Locale
 import kotlin.math.roundToInt
 import com.stormpanda.megingiard.shared.ui.R as SharedUiR
 
@@ -123,6 +127,7 @@ internal enum class EditGameCategory(
     GAME_INFO(R.string.gamefocus_cat_game_info, Icons.Rounded.Info),
     SCRAPING(R.string.gamefocus_cat_scraping, Icons.Rounded.Image),
     LIBRARY_ICON(R.string.gamefocus_cat_library_icon, Icons.Rounded.Apps),
+    COLLECTIONS(R.string.gamefocus_cat_collections, Icons.Rounded.CollectionsBookmark),
 }
 
 @Composable
@@ -131,6 +136,7 @@ fun GameFocusEditGameOverlay(
     apiKey: String,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    onOpenManageGalleries: (() -> Unit)? = null,
 ) {
     val appColors = LocalAppColors.current
     val categories = remember { EditGameCategory.entries.toList() }
@@ -205,6 +211,14 @@ fun GameFocusEditGameOverlay(
                                 appInfo = liveAppInfo,
                                 apiKey = apiKey,
                                 accentColor = appColors.accent,
+                            )
+                        }
+
+                        EditGameCategory.COLLECTIONS -> {
+                            CollectionsMembershipDeckContent(
+                                appInfo = liveAppInfo,
+                                accentColor = appColors.accent,
+                                onOpenManageGalleries = onOpenManageGalleries,
                             )
                         }
                     }
@@ -842,6 +856,70 @@ private fun SteamGridDbImageThumbnail(
                 modifier = Modifier.fillMaxSize(),
                 contentScale = contentScale,
             )
+        }
+    }
+}
+
+@Composable
+private fun CollectionsMembershipDeckContent(
+    appInfo: InstalledAppInfo,
+    accentColor: Color,
+    onOpenManageGalleries: (() -> Unit)?,
+) {
+    val context = LocalContext.current
+    val galleryConfig by GameFocusGalleryManager.config.collectAsStateWithLifecycle()
+    val installedApps by InstalledAppsManager.installedApps.collectAsStateWithLifecycle()
+    val romApps by RomManager.romApps.collectAsStateWithLifecycle()
+    val catalogPackages =
+        remember(installedApps, romApps) {
+            (installedApps.map { it.packageName } + romApps.map { it.packageName }).toSet()
+        }
+    val sortedCollections =
+        remember(galleryConfig.collections) {
+            galleryConfig.collections.sortedBy { it.name.lowercase(Locale.ROOT) }
+        }
+
+    GamepadDeck(
+        accentColor = accentColor,
+    ) {
+        if (sortedCollections.isEmpty()) {
+            GamepadInfoBox(
+                text = stringResource(R.string.gamefocus_edit_collections_empty_info),
+                icon = Icons.Rounded.Info,
+                modifier = Modifier.firstDeckItem(),
+            )
+            if (onOpenManageGalleries != null) {
+                GamepadActionCard(
+                    title = stringResource(R.string.gamefocus_manage_galleries_title),
+                    description = stringResource(R.string.gamefocus_edit_open_manage_galleries_desc),
+                    icon = Icons.Rounded.ViewCarousel,
+                    onClick = onOpenManageGalleries,
+                )
+            }
+        } else {
+            sortedCollections.forEachIndexed { index, collection ->
+                val isMember = appInfo.packageName in collection.members
+                val memberCount = collectionMemberCount(collection, catalogPackages)
+                GamepadToggleCard(
+                    title = collection.name,
+                    description = stringResource(R.string.gamefocus_collection_member_count, memberCount),
+                    checked = isMember,
+                    onCheckedChange = { isChecked ->
+                        val changed =
+                            GameFocusGalleryManager.setCollectionMembership(
+                                context = context,
+                                collectionId = collection.id,
+                                packageName = appInfo.packageName,
+                                isMember = isChecked,
+                            )
+                        AppLog.d(
+                            TAG,
+                            "Toggled collection ${collection.id} for ${appInfo.packageName} -> isMember=$isChecked (changed=$changed)",
+                        )
+                    },
+                    modifier = if (index == 0) Modifier.firstDeckItem() else Modifier,
+                )
+            }
         }
     }
 }
