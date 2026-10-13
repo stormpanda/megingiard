@@ -21,7 +21,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.shared.ui.R
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import java.util.Collections
@@ -49,7 +49,7 @@ fun <T> GamepadReorderDeck(
     headerDescription: String? = null,
     itemDescription: ((T) -> String?)? = null,
     itemIcon: ((T) -> ImageVector?)? = null,
-    emptyMessage: String = stringResource(R.string.macropad_reorder_empty),
+    emptyMessage: String = stringResource(R.string.gamepad_reorder_empty),
 ) {
     val colors = LocalAppColors.current
     val lazyListState = rememberLazyListState()

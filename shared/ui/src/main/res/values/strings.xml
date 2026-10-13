@@ -23,4 +23,5 @@
     <string name="gamepad_search_clear">Clear search</string>
     <string name="gamepad_category_all">All</string>
     <string name="gamepad_slider_fine_adjustment_toast">Use L2/R2 for fine adjustment</string>
+    <string name="gamepad_reorder_empty">No items to reorder</string>
 </resources>

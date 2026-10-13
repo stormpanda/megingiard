@@ -76,9 +76,27 @@ private const val JOYSTICK_NEGATIVE_THRESHOLD = -0.5f
 
 internal fun getMainMenuCount(isPaired: Boolean): Int = if (isPaired) MAIN_MENU_PAIRED_ITEMS_COUNT else MAIN_MENU_UNPAIRED_ITEMS_COUNT
 
+/** Number of gallery-level (non-item) actions in the gallery Y menu: "Manage Galleries". */
+internal const val GALLERY_MANAGE_ACTIONS_COUNT = 1
+
+/** Total gallery Y menu size: item actions (only with a focused app) followed by "Manage Galleries". */
+internal fun getGalleryMenuCount(
+    hasApp: Boolean,
+    isPaired: Boolean,
+): Int = (if (hasApp) getMainMenuCount(isPaired) else 0) + GALLERY_MANAGE_ACTIONS_COUNT
+
+/** Index of "Manage Galleries" in the gallery Y menu (always the last item). */
+internal fun getGalleryManageGalleriesIndex(
+    hasApp: Boolean,
+    isPaired: Boolean,
+): Int = getGalleryMenuCount(hasApp, isPaired) - 1
+
 internal const val LIBRARY_APP_ACTIONS_COUNT = 4
 internal const val LIBRARY_ROM_ACTIONS_COUNT = 2
 internal const val LIBRARY_BASE_ACTIONS_COUNT = 1
+
+/** "Manage Galleries" is always the last Library menu item (index `getLibraryMenuCount(...) - 1`). */
+internal const val LIBRARY_MANAGE_GALLERIES_ACTIONS_COUNT = 1
 
 internal fun getLibraryMenuCount(
     hasApp: Boolean,
@@ -96,7 +114,7 @@ internal fun getLibraryMenuCount(
         LIBRARY_BASE_ACTIONS_COUNT +
             (if (hasRomFolders) 1 else 0) +
             (if (isConfigurableRomSystem) 1 else 0)
-    return appActionCount + romFolderActionCount
+    return appActionCount + romFolderActionCount + LIBRARY_MANAGE_GALLERIES_ACTIONS_COUNT
 }
 
 class FocusTopLauncherActivity : ComponentActivity() {
@@ -192,6 +210,11 @@ class FocusTopLauncherActivity : ComponentActivity() {
                         viewModel.setFolderToRemove(null)
                         return
                     }
+                    if (viewModel.isManageGalleriesOpen.value) {
+                        AppLog.i(TAG, "Back pressed -> closing Manage Galleries overlay")
+                        viewModel.setManageGalleriesOpen(false)
+                        return
+                    }
                     if (resetToGallery()) {
                         AppLog.i(TAG, "Back pressed -> closed sub-view, returned to main gallery")
                         return
@@ -256,6 +279,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
             val coreChooserDialogSelectedIndex by viewModel.coreChooserDialogSelectedIndex.collectAsStateWithLifecycle()
             val confirmCoreChooserTrigger by viewModel.confirmCoreChooserTrigger.collectAsStateWithLifecycle()
             val editingAppInfo by viewModel.editingAppInfo.collectAsStateWithLifecycle()
+            val isManageGalleriesOpen by viewModel.isManageGalleriesOpen.collectAsStateWithLifecycle()
             val prevLetterTrigger by viewModel.prevLetterTrigger.collectAsStateWithLifecycle()
             val nextLetterTrigger by viewModel.nextLetterTrigger.collectAsStateWithLifecycle()
             val dpadLeftTrigger by viewModel.dpadLeftTrigger.collectAsStateWithLifecycle()
@@ -431,6 +455,11 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             dpadStepRightTrigger = dpadStepRightTrigger,
                             onFocusedAppChanged = { viewModel.setFocusedApp(it) },
                             onDismissEditingApp = { viewModel.setEditingAppInfo(null) },
+                            isManageGalleriesOpen = isManageGalleriesOpen,
+                            allGalleryCategories = allGalleryCategories,
+                            galleryConfig = galleryConfig,
+                            onOpenManageGalleries = { viewModel.setManageGalleriesOpen(true) },
+                            onDismissManageGalleries = { viewModel.setManageGalleriesOpen(false) },
                             newlyAddedFolder = newlyAddedFolder,
                             onDismissNewlyAddedFolder = { viewModel.setNewlyAddedFolder(null) },
                             onConfirmNewlyAddedFolderCore = { folder, coreOrPackage ->
@@ -584,6 +613,9 @@ class FocusTopLauncherActivity : ComponentActivity() {
         return viewModel.resetToGallery()
     }
 
+    /** True while a primary overlay (Edit Game or Manage Galleries) owns gamepad input. */
+    private fun isPrimaryOverlayOpen(): Boolean = viewModel.editingAppInfo.value != null || viewModel.isManageGalleriesOpen.value
+
     private fun stepLibraryFocus(direction: LauncherScrollDirection): Boolean {
         val allApps = InstalledAppsManager.installedApps.value
         val currentTab = viewModel.librarySelectedTab.value
@@ -660,7 +692,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
         if (viewModel.isMainOptionsMenuExpanded.value) {
             val targetApp = viewModel.focusedApp.value
             val isPaired = targetApp != null && GameFocusPairManager.pairedApps.value.containsKey(targetApp.packageName)
-            val count = getMainMenuCount(isPaired)
+            val count = getGalleryMenuCount(hasApp = targetApp != null, isPaired = isPaired)
             when (direction) {
                 LauncherScrollDirection.UP -> viewModel.navigateMainMenuUp(count)
                 LauncherScrollDirection.DOWN -> viewModel.navigateMainMenuDown(count)
@@ -898,16 +930,17 @@ class FocusTopLauncherActivity : ComponentActivity() {
             }
         }
 
-        if (viewModel.editingAppInfo.value != null) {
+        if (isPrimaryOverlayOpen()) {
             if (keyCode == KeyEvent.KEYCODE_BUTTON_THUMBL || keyCode == KeyEvent.KEYCODE_BUTTON_THUMBR) {
                 return true
             }
             if (isDismissKey(keyCode)) {
-                AppLog.i(TAG, "onKeyDown: Back/B-Button pressed while editing app")
+                AppLog.i(TAG, "onKeyDown: Back/B-Button pressed while a primary overlay is open")
                 if (onBackPressedDispatcher.hasEnabledCallbacks()) {
                     onBackPressedDispatcher.onBackPressed()
                 } else {
                     viewModel.setEditingAppInfo(null)
+                    viewModel.setManageGalleriesOpen(false)
                 }
                 return true
             }
@@ -954,6 +987,19 @@ class FocusTopLauncherActivity : ComponentActivity() {
                         val isSwitchRomSystem = currentRomFolder?.systemId == SYSTEM_ID_SWITCH
                         val isConfigurableRomSystem = isRetroArchRomSystem || isSwitchRomSystem
 
+                        val libraryMenuCount =
+                            getLibraryMenuCount(
+                                hasApp = hasApp,
+                                isRom = isRom,
+                                hasRomFolders = hasRomFolders,
+                                isConfigurableRomSystem = isConfigurableRomSystem,
+                            )
+                        if (selectedIndex == libraryMenuCount - 1) {
+                            AppLog.i(TAG, "Opening Manage Galleries overlay from Library menu")
+                            viewModel.setLibraryOptionsMenuExpanded(false)
+                            viewModel.setManageGalleriesOpen(true)
+                            return true
+                        }
                         val baseIndex = if (hasApp) (if (!isRom) LIBRARY_APP_ACTIONS_COUNT else LIBRARY_ROM_ACTIONS_COUNT) else 0
                         if (hasApp && selectedIndex < baseIndex) {
                             if (!isRom) {
@@ -1041,10 +1087,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
             return when {
                 isMenuKey(keyCode) -> {
-                    if (focusedLibraryApp != null) {
-                        AppLog.i(TAG, "Gamepad Y/Menu pressed in Library -> Opening Library options menu for ${focusedLibraryApp.label}")
-                        viewModel.setLibraryOptionsMenuExpanded(true)
-                    }
+                    AppLog.i(TAG, "Gamepad Y/Menu pressed in Library -> Opening Library options menu (focused=${focusedLibraryApp?.label})")
+                    viewModel.setLibraryOptionsMenuExpanded(true)
                     true
                 }
 
@@ -1160,7 +1204,15 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 isConfirmKey(keyCode) -> {
                     val selectedIndex = viewModel.mainMenuSelectedIndex.value
                     AppLog.i(TAG, "Main options menu confirmed at index $selectedIndex via gamepad A for ${targetApp?.label}")
-                    if (targetApp != null) {
+                    val isTargetPaired =
+                        targetApp != null && GameFocusPairManager.pairedApps.value.containsKey(targetApp.packageName)
+                    val manageGalleriesIndex = getGalleryManageGalleriesIndex(hasApp = targetApp != null, isPaired = isTargetPaired)
+                    if (selectedIndex == manageGalleriesIndex) {
+                        AppLog.i(TAG, "Opening Manage Galleries overlay from gallery menu")
+                        stopRepeat()
+                        viewModel.setMainOptionsMenuExpanded(false)
+                        viewModel.setManageGalleriesOpen(true)
+                    } else if (targetApp != null) {
                         when (selectedIndex) {
                             0 -> InstalledAppsManager.toggleFavorite(this, targetApp.packageName)
                             1 -> viewModel.openEditGameOverlay(targetApp)
@@ -1187,10 +1239,9 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
         when {
             isMenuKey(keyCode) -> {
-                if (apps.isNotEmpty()) {
-                    stopRepeat()
-                    viewModel.setMainOptionsMenuExpanded(true)
-                }
+                AppLog.i(TAG, "Gamepad Y/Menu pressed in gallery -> opening gallery options menu (entries=${apps.size})")
+                stopRepeat()
+                viewModel.setMainOptionsMenuExpanded(true)
                 return true
             }
 
@@ -1320,7 +1371,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
             return true
         }
 
-        if (viewModel.editingAppInfo.value != null) {
+        if (isPrimaryOverlayOpen()) {
             if (keyCode == GamePadButton.BUTTON_A.keyCode) {
                 val dpadCenterUp = KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER)
                 val handled = dispatchKeyEvent(dpadCenterUp)
@@ -1353,8 +1404,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
             val x = if (axisHatX != 0f) axisHatX else axisX
             val y = if (axisHatY != 0f) axisHatY else axisY
 
-            if (viewModel.editingAppInfo.value != null) {
-                // The edit overlay owns all joystick input; translate axes into D-pad key events for Compose focus.
+            if (isPrimaryOverlayOpen()) {
+                // A primary overlay owns all joystick input; translate axes into D-pad key events for Compose focus.
                 PrimaryOverlayInputBridge.processGenericMotionEvent(event) { action, dpadKeyCode ->
                     val keyEvent = KeyEvent(action, dpadKeyCode)
                     val handled = dispatchKeyEvent(keyEvent)
@@ -1495,7 +1546,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 }
             }
         }
-        return if (viewModel.editingAppInfo.value != null ||
+        return if (isPrimaryOverlayOpen() ||
             viewModel.pairingTargetApp.value != null
         ) {
             true

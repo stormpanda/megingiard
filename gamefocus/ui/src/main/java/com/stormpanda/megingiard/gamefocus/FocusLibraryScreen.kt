@@ -193,6 +193,7 @@ fun FocusLibraryScreen(
     onChangeCore: (CustomRomFolder) -> Unit = {},
     onAddRomFolder: () -> Unit = {},
     onRemoveRomFolder: (CustomRomFolder) -> Unit = {},
+    onOpenManageGalleries: () -> Unit = {},
     enabled: Boolean = true,
     tabs: List<LibraryTab> = listOf(LibraryTab.GAMES, LibraryTab.APPS),
     isRemoveRomFolderDialogOpen: Boolean = false,
@@ -678,6 +679,16 @@ fun FocusLibraryScreen(
                                         ),
                                     )
                                 }
+                                add(
+                                    ExpandableActionItem(
+                                        label = context.getString(R.string.gamefocus_manage_galleries_title),
+                                        iconSymbol = "view_carousel",
+                                        onClick = {
+                                            onOpenManageGalleries()
+                                            onOptionsMenuExpandedChange(false)
+                                        },
+                                    ),
+                                )
                             }
                         }
                     val itemActionsCount =

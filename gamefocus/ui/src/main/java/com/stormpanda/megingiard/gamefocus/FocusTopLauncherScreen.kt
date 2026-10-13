@@ -93,6 +93,7 @@ import com.stormpanda.megingiard.catalog.LetterNavigationHelper
 import com.stormpanda.megingiard.catalog.LibraryTab
 import com.stormpanda.megingiard.catalog.RomManager
 import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
+import com.stormpanda.megingiard.gamefocus.domain.GalleryConfig
 import com.stormpanda.megingiard.math.floorMod
 import com.stormpanda.megingiard.ui.ExpandableActionItem
 import com.stormpanda.megingiard.ui.ExpandableActionsMenu
@@ -185,6 +186,11 @@ fun FocusTopLauncherScreen(
     dpadStepRightTrigger: Int = 0,
     onFocusedAppChanged: (InstalledAppInfo?) -> Unit = {},
     onDismissEditingApp: () -> Unit = {},
+    isManageGalleriesOpen: Boolean = false,
+    allGalleryCategories: List<GameFocusCategory> = emptyList(),
+    galleryConfig: GalleryConfig = GalleryConfig(),
+    onOpenManageGalleries: () -> Unit = {},
+    onDismissManageGalleries: () -> Unit = {},
     newlyAddedFolder: CustomRomFolder? = null,
     onDismissNewlyAddedFolder: () -> Unit = {},
     onConfirmNewlyAddedFolderCore: (CustomRomFolder, String?) -> Unit = { _, _ -> },
@@ -573,10 +579,11 @@ fun FocusTopLauncherScreen(
                         onChangeCore = onChangeCore,
                         onAddRomFolder = onAddRomFolder,
                         onRemoveRomFolder = onRemoveRomFolder,
+                        onOpenManageGalleries = onOpenManageGalleries,
                         onAppClickTop = onAppClickTop,
                         onAppClickBottom = onAppClickBottom,
                         onCloseRequested = onCloseLibrary,
-                        enabled = isLibraryOpen && editingAppInfo == null && pairingTargetApp == null,
+                        enabled = isLibraryOpen && editingAppInfo == null && pairingTargetApp == null && !isManageGalleriesOpen,
                         tabs = libraryTabs,
                         isRemoveRomFolderDialogOpen = isRemoveRomFolderDialogOpen,
                         onRemoveRomFolderDialogOpenChange = onRemoveRomFolderDialogOpenChange,
@@ -834,7 +841,8 @@ fun FocusTopLauncherScreen(
                         // Plane 2: Hovering Controls Layer (Categories, Actions, Touch Launch Buttons)
 
                         // Top-Right Library navigation button hovering over the gallery plane
-                        val isControlsEnabled = editingAppInfo == null && pairingTargetApp == null && !isLibraryOpen
+                        val isControlsEnabled =
+                            editingAppInfo == null && pairingTargetApp == null && !isLibraryOpen && !isManageGalleriesOpen
 
                         // Top-Left Category Header hovering over the gallery plane
                         InteractiveCategoryHeader(
@@ -975,6 +983,16 @@ fun FocusTopLauncherScreen(
                                                 )
                                             }
                                         }
+                                        add(
+                                            ExpandableActionItem(
+                                                label = context.getString(R.string.gamefocus_manage_galleries_title),
+                                                iconSymbol = "view_carousel",
+                                                onClick = {
+                                                    onOpenManageGalleries()
+                                                    onMainOptionsMenuExpandedChange(false)
+                                                },
+                                            ),
+                                        )
                                     }
                                 }
                             ExpandableActionsMenu(
@@ -982,6 +1000,7 @@ fun FocusTopLauncherScreen(
                                 onExpandedChange = onMainOptionsMenuExpandedChange,
                                 actions = actions,
                                 selectedIndex = mainMenuSelectedIndex,
+                                dividerAfterIndex = if (currentApp != null) actions.lastIndex - 1 else null,
                                 enabled = isControlsEnabled,
                             )
                         }
@@ -1046,6 +1065,16 @@ fun FocusTopLauncherScreen(
                 appInfo = editingAppInfo,
                 apiKey = apiKey,
                 onDismiss = onDismissEditingApp,
+            )
+        }
+
+        // Manage Galleries Primary Overlay (Visibility, Order, Collections)
+        if (isManageGalleriesOpen) {
+            GameFocusManageGalleriesOverlay(
+                galleries = allGalleryCategories,
+                galleryConfig = galleryConfig,
+                allApps = allApps,
+                onDismiss = onDismissManageGalleries,
             )
         }
     }

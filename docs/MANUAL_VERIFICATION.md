@@ -112,6 +112,18 @@ The universal navigation overlay accessed via swipe-to-reveal gestures.
 
 ---
 
+### 2.6 Game Focus — Manage Galleries (unreleased launcher)
+
+| Action / Test Step | Expected Behavior / Visual Verification | Failure Recovery / Notes |
+| :--- | :--- | :--- |
+| **1. Open from Gallery** | • Press Y on a gallery -> divider + "Manage Galleries" is the last item.<br>• Select it -> overlay opens on the Visibility page. | On an empty gallery Y shows only "Manage Galleries". |
+| **2. Hide / Show** | • Toggle a gallery off -> it disappears from the category roll after closing.<br>• Hide all but one -> the last toggle is disabled. | Restart Game Focus: hidden state persists. |
+| **3. Reorder** | • Order page: A picks up, D-pad moves, A drops.<br>• Close overlay -> category roll follows the new order (hidden galleries skipped). | B while moving cancels the move only. |
+| **4. Collections CRUD** | • Create "RPGs" -> appears in list and as a gallery.<br>• Duplicate / 33-char names show an error and disable Create.<br>• Open "RPGs" -> rename + Save; Delete needs two presses. | B in the detail view returns to the list. |
+| **5. Open from Library** | • In Library press Y (also on an empty tab) -> "Manage Galleries" is last.<br>• Close the overlay with B -> Library is still open. | Home closes the overlay and returns to the gallery. |
+
+---
+
 ## 3. Megingiard System Service (Hardware Root Bridge & Wireless ADB)
 
 Megingiard System Service runs `megingiard_privd` under shell UID (2000) or native hardware bridge to emulate advanced input hardware.

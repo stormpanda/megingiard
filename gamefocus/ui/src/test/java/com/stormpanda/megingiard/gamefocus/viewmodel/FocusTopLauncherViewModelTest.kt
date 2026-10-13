@@ -34,6 +34,7 @@ class FocusTopLauncherViewModelTest {
         assertNull(viewModel.focusedApp.value)
         assertNull(viewModel.newlyAddedFolder.value)
         assertFalse(viewModel.isRemoveRomFolderDialogOpen.value)
+        assertFalse(viewModel.isManageGalleriesOpen.value)
     }
 
     @Test
@@ -324,6 +325,24 @@ class FocusTopLauncherViewModelTest {
         assertFalse(viewModel.isMainOptionsMenuExpanded.value)
         assertEquals(0, viewModel.mainMenuSelectedIndex.value)
         assertEquals(0, viewModel.libraryMenuSelectedIndex.value)
+    }
+
+    @Test
+    fun testSetManageGalleriesOpen() {
+        viewModel.setManageGalleriesOpen(true)
+        assertTrue(viewModel.isManageGalleriesOpen.value)
+
+        viewModel.setManageGalleriesOpen(false)
+        assertFalse(viewModel.isManageGalleriesOpen.value)
+    }
+
+    @Test
+    fun testResetToGalleryClosesManageGalleries() {
+        viewModel.setManageGalleriesOpen(true)
+
+        assertTrue(viewModel.resetToGallery())
+        assertFalse(viewModel.isManageGalleriesOpen.value)
+        assertFalse(viewModel.resetToGallery())
     }
 
     @Test

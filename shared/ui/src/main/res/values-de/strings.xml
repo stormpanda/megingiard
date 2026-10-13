@@ -23,4 +23,5 @@
     <string name="gamepad_search_clear">Suche löschen</string>
     <string name="gamepad_category_all">Alle</string>
     <string name="gamepad_slider_fine_adjustment_toast">L2/R2 für Feinjustierung nutzen</string>
+    <string name="gamepad_reorder_empty">Keine Einträge zum Neuanordnen</string>
 </resources>

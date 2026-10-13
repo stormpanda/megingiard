@@ -23,4 +23,5 @@
     <string name="gamepad_search_clear">清除搜尋</string>
     <string name="gamepad_category_all">全部</string>
     <string name="gamepad_slider_fine_adjustment_toast">按住 L2 進行微調</string>
+    <string name="gamepad_reorder_empty">沒有可重新排序的項目</string>
 </resources>
