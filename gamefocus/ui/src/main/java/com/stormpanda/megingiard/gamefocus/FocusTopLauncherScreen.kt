@@ -256,8 +256,19 @@ fun FocusTopLauncherScreen(
                     }.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.displayName })
         }
 
+    val collectionAppsById =
+        remember(allApps, collectionMembers) {
+            collectionMembers.mapValues { (_, members) ->
+                if (members.isEmpty()) emptyList() else allApps.filter { it.packageName in members }
+            }
+        }
+
     fun getAppsForCategory(cat: GameFocusCategory): List<InstalledAppInfo> =
-        cat.filterApps(allApps, favoritesSet, frozenHiddenSet, lastUsed, collectionMembers)
+        if (cat is GameFocusCategory.CustomCollection) {
+            collectionAppsById[cat.collectionId].orEmpty()
+        } else {
+            cat.filterApps(allApps, favoritesSet, frozenHiddenSet, lastUsed, collectionMembers)
+        }
 
     val categoryApps = getAppsForCategory(selectedCategory)
     val uniqueLetters = remember(categoryApps) { LetterNavigationHelper.getUniqueStartingLetters(categoryApps) }
@@ -270,6 +281,15 @@ fun FocusTopLauncherScreen(
     val lastUsedPagerState = rememberPagerState(initialPage = 0) { getAppsForCategory(GameFocusCategory.LAST_USED).size }
 
     val romPagerStates = remember { mutableMapOf<String, PagerState>() }
+    val activeGalleryIds =
+        remember(categories, allGalleryCategories, selectedCategory) {
+            buildSet {
+                categories.forEach { add(it.id) }
+                allGalleryCategories.forEach { add(it.id) }
+                add(selectedCategory.id)
+            }
+        }
+    romPagerStates.keys.retainAll(activeGalleryIds)
 
     // Collection galleries read their page count through this updated state so membership
     // changes are reflected without recreating the remembered pager state.

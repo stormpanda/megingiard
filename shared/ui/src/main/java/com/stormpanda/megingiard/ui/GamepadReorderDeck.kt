@@ -46,7 +46,6 @@ fun <T> GamepadReorderDeck(
     modifier: Modifier = Modifier,
     breadcrumbs: List<String>? = null,
     headerTitle: String? = null,
-    headerDescription: String? = null,
     itemDescription: ((T) -> String?)? = null,
     itemIcon: ((T) -> ImageVector?)? = null,
     emptyMessage: String = stringResource(R.string.gamepad_reorder_empty),
