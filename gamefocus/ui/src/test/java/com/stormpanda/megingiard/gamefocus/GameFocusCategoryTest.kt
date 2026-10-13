@@ -55,7 +55,7 @@ class GameFocusCategoryTest {
     @Test
     fun testFilterAppsAcrossAllCategories() {
         val gameApp =
-            com.stormpanda.megingiard.catalog.InstalledAppInfo(
+            InstalledAppInfo(
                 packageName = "com.game.test",
                 activityName = "MainActivity",
                 label = "Test Game",
@@ -63,7 +63,7 @@ class GameFocusCategoryTest {
                 isRom = false,
             )
         val nonGameApp =
-            com.stormpanda.megingiard.catalog.InstalledAppInfo(
+            InstalledAppInfo(
                 packageName = "com.app.test",
                 activityName = "MainActivity",
                 label = "Test App",
@@ -71,7 +71,7 @@ class GameFocusCategoryTest {
                 isRom = false,
             )
         val romApp =
-            com.stormpanda.megingiard.catalog.InstalledAppInfo(
+            InstalledAppInfo(
                 packageName = "rom.snes.test",
                 activityName = "MainActivity",
                 label = "Test Rom",

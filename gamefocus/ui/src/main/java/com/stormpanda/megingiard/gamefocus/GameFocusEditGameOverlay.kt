@@ -95,7 +95,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.Locale
 import kotlin.math.roundToInt
 import com.stormpanda.megingiard.shared.ui.R as SharedUiR
 
@@ -872,11 +871,14 @@ private fun CollectionsMembershipDeckContent(
     val romApps by RomManager.romApps.collectAsStateWithLifecycle()
     val catalogPackages =
         remember(installedApps, romApps) {
-            (installedApps.map { it.packageName } + romApps.map { it.packageName }).toSet()
+            buildSet(installedApps.size + romApps.size) {
+                installedApps.forEach { add(it.packageName) }
+                romApps.forEach { add(it.packageName) }
+            }
         }
     val sortedCollections =
         remember(galleryConfig.collections) {
-            galleryConfig.collections.sortedBy { it.name.lowercase(Locale.ROOT) }
+            galleryConfig.collections.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
         }
 
     GamepadDeck(
