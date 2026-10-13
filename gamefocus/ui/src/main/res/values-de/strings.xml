@@ -21,6 +21,7 @@
     <string name="gamefocus_option_actions">Aktionen</string>
     <string name="gamefocus_no_favorites">Keine Favoriten vorhanden</string>
     <string name="gamefocus_no_last_used">Keine kürzlich genutzten Apps</string>
+    <string name="gamefocus_no_collection_items">Diese Sammlung ist leer</string>
     <string name="gamefocus_no_games">Keine Android-Spiele gefunden</string>
     <string name="gamefocus_no_apps_category">Keine Android-Apps gefunden</string>
 

@@ -41,6 +41,7 @@ import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
 import com.stormpanda.megingiard.catalog.SYSTEM_ID_SWITCH
 import com.stormpanda.megingiard.catalog.SwitchEmulators
 import com.stormpanda.megingiard.gamefocus.domain.GameFocusDefaultLauncherManager
+import com.stormpanda.megingiard.gamefocus.domain.GameFocusGalleryManager
 import com.stormpanda.megingiard.gamefocus.domain.GameFocusPairManager
 import com.stormpanda.megingiard.gamefocus.domain.GameFocusPreferences
 import com.stormpanda.megingiard.gamefocus.domain.GameFocusSessionTracker
@@ -177,6 +178,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
         AppPaletteExtractor.init(applicationContext)
         InstalledAppsManager.loadInstalledApps(this)
         GameFocusPairManager.loadPairs(this)
+        GameFocusGalleryManager.load(this)
         viewModel.setButtonPromptsVisible(GameFocusPreferences.areButtonPromptsVisible(this))
         if (savedInstanceState == null && intent?.hasCategory(Intent.CATEGORY_HOME) == true) {
             GameFocusDefaultLauncherManager.handleHomeNavigation(this)
@@ -224,6 +226,11 @@ class FocusTopLauncherActivity : ComponentActivity() {
             val lastUsed by InstalledAppsManager.lastUsed.collectAsStateWithLifecycle()
             val customRomFolders by RomManager.romFolders.collectAsStateWithLifecycle()
             val pairedApps by GameFocusPairManager.pairedApps.collectAsStateWithLifecycle()
+            val galleryConfig by GameFocusGalleryManager.config.collectAsStateWithLifecycle()
+            val collectionMembers =
+                remember(galleryConfig.collections) {
+                    galleryConfig.collections.associate { collection -> collection.id to collection.members.toSet() }
+                }
             val pairingTargetApp by viewModel.pairingTargetApp.collectAsStateWithLifecycle()
             val pairingFocusedIndex by viewModel.pairingFocusedIndex.collectAsStateWithLifecycle()
             val confirmPairingTrigger by viewModel.confirmPairingTrigger.collectAsStateWithLifecycle()
@@ -256,18 +263,13 @@ class FocusTopLauncherActivity : ComponentActivity() {
             val focusedApp by viewModel.focusedApp.collectAsStateWithLifecycle()
             val isStarted by viewModel.isStarted.collectAsStateWithLifecycle()
 
+            val allGalleryCategories =
+                remember(customRomFolders, galleryConfig.collections, galleryConfig.order) {
+                    GameFocusCategory.buildOrderedGalleries(customRomFolders, galleryConfig.collections, galleryConfig.order)
+                }
             val categories =
-                remember(customRomFolders) {
-                    GameFocusCategory.builtIns +
-                        customRomFolders
-                            .map { folder ->
-                                GameFocusCategory.RomSystem(
-                                    id = "rom_${folder.systemId}_${folder.uriString.hashCode()}",
-                                    systemId = folder.systemId,
-                                    displayName = folder.systemName,
-                                    folderUri = folder.uriString,
-                                )
-                            }.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.displayName })
+                remember(allGalleryCategories, galleryConfig.hidden) {
+                    GameFocusCategory.visibleGalleries(allGalleryCategories, galleryConfig.hidden)
                 }
 
             val libraryTabs =
@@ -290,7 +292,9 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
             SideEffect {
                 if (selectedCategory !in categories) {
-                    viewModel.setSelectedCategory(GameFocusCategory.LAST_USED)
+                    val fallbackCategory = categories.first()
+                    AppLog.i(TAG, "Selected gallery ${selectedCategory.id} is not visible -> falling back to ${fallbackCategory.id}")
+                    viewModel.setSelectedCategory(fallbackCategory)
                 }
                 if (librarySelectedTab !in libraryTabs) {
                     viewModel.setLibrarySelectedTab(LibraryTab.GAMES)
@@ -300,11 +304,11 @@ class FocusTopLauncherActivity : ComponentActivity() {
             var hasSetStartupCategory by remember { mutableStateOf(false) }
             val currentHidden = hidden
 
-            LaunchedEffect(categories, allApps, favorites, lastUsed, currentHidden) {
+            LaunchedEffect(categories, allApps, favorites, lastUsed, currentHidden, collectionMembers) {
                 if (!hasSetStartupCategory && allApps.isNotEmpty()) {
                     val startupCat =
                         categories.firstOrNull { cat ->
-                            cat.filterApps(allApps, favorites, currentHidden, lastUsed).isNotEmpty()
+                            cat.filterApps(allApps, favorites, currentHidden, lastUsed, collectionMembers).isNotEmpty()
                         }
                     if (startupCat != null) {
                         viewModel.setSelectedCategory(startupCat)
@@ -319,8 +323,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
             }
 
             val displayedApps =
-                remember(allApps, favorites, frozenHidden, lastUsed, selectedCategory) {
-                    selectedCategory.filterApps(allApps, favorites, frozenHidden, lastUsed)
+                remember(allApps, favorites, frozenHidden, lastUsed, selectedCategory, collectionMembers) {
+                    selectedCategory.filterApps(allApps, favorites, frozenHidden, lastUsed, collectionMembers)
                 }
 
             MaterialTheme(
@@ -398,6 +402,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             onCategoryDown = { viewModel.cycleCategoryDown(categories) },
                             favoritesSet = favorites,
                             hiddenSet = hidden,
+                            collectionMembers = collectionMembers,
                             isMainOptionsMenuExpanded = isMainOptionsMenuExpanded,
                             onMainOptionsMenuExpandedChange = { viewModel.setMainOptionsMenuExpanded(it) },
                             mainMenuSelectedIndex = mainMenuSelectedIndex,
@@ -568,7 +573,10 @@ class FocusTopLauncherActivity : ComponentActivity() {
         val hidden = frozenHiddenSetForInput
         val lastUsed = InstalledAppsManager.lastUsed.value
         val selectedCategory = viewModel.selectedCategory.value
-        return selectedCategory.filterApps(allApps, favorites, hidden, lastUsed)
+        val collectionMembers =
+            GameFocusGalleryManager.config.value.collections
+                .associate { collection -> collection.id to collection.members.toSet() }
+        return selectedCategory.filterApps(allApps, favorites, hidden, lastUsed, collectionMembers)
     }
 
     private fun resetToGallery(): Boolean {

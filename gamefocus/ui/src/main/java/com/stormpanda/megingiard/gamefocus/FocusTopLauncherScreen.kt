@@ -58,6 +58,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -165,6 +166,7 @@ fun FocusTopLauncherScreen(
     onCategoryDown: () -> Unit = {},
     favoritesSet: Set<String> = emptySet(),
     hiddenSet: Set<String> = emptySet(),
+    collectionMembers: Map<String, Set<String>> = emptyMap(),
     isMainOptionsMenuExpanded: Boolean = false,
     onMainOptionsMenuExpandedChange: (Boolean) -> Unit = {},
     mainMenuSelectedIndex: Int = 0,
@@ -249,7 +251,7 @@ fun FocusTopLauncherScreen(
         }
 
     fun getAppsForCategory(cat: GameFocusCategory): List<InstalledAppInfo> =
-        cat.filterApps(allApps, favoritesSet, frozenHiddenSet, lastUsed)
+        cat.filterApps(allApps, favoritesSet, frozenHiddenSet, lastUsed, collectionMembers)
 
     val categoryApps = getAppsForCategory(selectedCategory)
     val uniqueLetters = remember(categoryApps) { LetterNavigationHelper.getUniqueStartingLetters(categoryApps) }
@@ -263,16 +265,39 @@ fun FocusTopLauncherScreen(
 
     val romPagerStates = remember { mutableMapOf<String, PagerState>() }
 
+    // Collection galleries read their page count through this updated state so membership
+    // changes are reflected without recreating the remembered pager state.
+    val collectionPageCountProvider: (GameFocusCategory) -> Int = { cat -> getAppsForCategory(cat).size }
+    val collectionPageCount = rememberUpdatedState(collectionPageCountProvider)
+
     fun getPagerStateForCategory(
         cat: GameFocusCategory,
         size: Int,
     ): PagerState =
         when (cat) {
-            GameFocusCategory.GAMES -> gamesPagerState
-            GameFocusCategory.APPS -> appsPagerState
-            GameFocusCategory.FAVORITES -> favoritesPagerState
-            GameFocusCategory.LAST_USED -> lastUsedPagerState
-            is GameFocusCategory.RomSystem -> romPagerStates.getOrPut(cat.id) { RomPagerState(0, 0f) { size } }
+            GameFocusCategory.GAMES -> {
+                gamesPagerState
+            }
+
+            GameFocusCategory.APPS -> {
+                appsPagerState
+            }
+
+            GameFocusCategory.FAVORITES -> {
+                favoritesPagerState
+            }
+
+            GameFocusCategory.LAST_USED -> {
+                lastUsedPagerState
+            }
+
+            is GameFocusCategory.RomSystem -> {
+                romPagerStates.getOrPut(cat.id) { RomPagerState(0, 0f) { size } }
+            }
+
+            is GameFocusCategory.CustomCollection -> {
+                romPagerStates.getOrPut(cat.id) { RomPagerState(0, 0f) { collectionPageCount.value(cat) } }
+            }
         }
 
     val activePagerState = getPagerStateForCategory(selectedCategory, categoryApps.size)
@@ -624,11 +649,31 @@ fun FocusTopLauncherScreen(
                                             Text(
                                                 text =
                                                     when (category) {
-                                                        GameFocusCategory.GAMES -> stringResource(R.string.gamefocus_no_games)
-                                                        GameFocusCategory.APPS -> stringResource(R.string.gamefocus_no_apps_category)
-                                                        GameFocusCategory.FAVORITES -> stringResource(R.string.gamefocus_no_favorites)
-                                                        GameFocusCategory.LAST_USED -> stringResource(R.string.gamefocus_no_last_used)
-                                                        else -> stringResource(R.string.focus_launcher_no_apps)
+                                                        GameFocusCategory.GAMES -> {
+                                                            stringResource(R.string.gamefocus_no_games)
+                                                        }
+
+                                                        GameFocusCategory.APPS -> {
+                                                            stringResource(R.string.gamefocus_no_apps_category)
+                                                        }
+
+                                                        GameFocusCategory.FAVORITES -> {
+                                                            stringResource(R.string.gamefocus_no_favorites)
+                                                        }
+
+                                                        GameFocusCategory.LAST_USED -> {
+                                                            stringResource(R.string.gamefocus_no_last_used)
+                                                        }
+
+                                                        is GameFocusCategory.CustomCollection -> {
+                                                            stringResource(
+                                                                R.string.gamefocus_no_collection_items,
+                                                            )
+                                                        }
+
+                                                        else -> {
+                                                            stringResource(R.string.focus_launcher_no_apps)
+                                                        }
                                                     },
                                                 style = MaterialTheme.typography.titleMedium.copy(color = appColors.onSurfaceSecondary),
                                             )
@@ -1619,6 +1664,7 @@ internal fun rememberAppPalette(
 private fun getCategoryName(category: GameFocusCategory): String =
     when (category) {
         is GameFocusCategory.RomSystem -> category.displayName
+        is GameFocusCategory.CustomCollection -> category.displayName
         else -> stringResource(category.stringResId)
     }
 

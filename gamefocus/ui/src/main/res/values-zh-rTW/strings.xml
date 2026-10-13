@@ -21,6 +21,7 @@
     <string name="gamefocus_option_actions">動作</string>
     <string name="gamefocus_no_favorites">尚未加入任何最愛應用程式</string>
     <string name="gamefocus_no_last_used">沒有最近使用的應用程式</string>
+    <string name="gamefocus_no_collection_items">此收藏集是空的</string>
     <string name="gamefocus_no_games">找不到 Android 遊戲</string>
     <string name="gamefocus_no_apps_category">找不到 Android 應用程式</string>
 
