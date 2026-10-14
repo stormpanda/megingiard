@@ -8,7 +8,7 @@ import android.os.Bundle
 import android.os.SystemClock
 import android.view.Display
 
-private const val TAG = "PrimaryFocusAnchorActivity"
+private const val TAG = "PrimaryFocusAnchorAct"
 private const val ANCHOR_DEBOUNCE_INTERVAL_MS = 250L
 
 /**

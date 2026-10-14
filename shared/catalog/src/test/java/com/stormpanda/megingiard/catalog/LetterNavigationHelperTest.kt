@@ -3,7 +3,7 @@ package com.stormpanda.megingiard.catalog
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-private const val TAG = "LetterNavigationHelperTest"
+private const val TAG = "LetterNavHelperTest"
 
 class LetterNavigationHelperTest {
     private fun makeApp(label: String): InstalledAppInfo =

@@ -506,6 +506,7 @@ Comment lines (`//`, `*`, `/*`) are ignored.
 | `INLINE_FONT_SIZE` | `src/main` except `AppTheme.kt` / `AppColors.kt` / `AppPalettes.kt` | §16.1 typography tokens |
 | `HARDCODED_COLOR` | `src/main` except `AppTheme.kt` / `AppColors.kt` / `AppPalettes.kt` | §16.2 color tokens |
 | `UNUSED_TAG` | `src/main` | §8.4 a declared `TAG` must be used (add logs, don't delete it) |
+| `TAG_TOO_LONG` | `src/main` | §8.4 `TAG` length must be `<= 23` chars |
 | `MISSING_TRANSLATION` | `src/main/res` | §9.2 every translatable default string exists in every locale |
 | `STALE_TRANSLATION` | `src/main/res` | §9.2 no locale string without a default string |
 

@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlin.math.sqrt
 
 private const val TAG = "PhysGamepadRecManager"
 
@@ -358,7 +359,7 @@ object PhysicalGamepadRecordingManager {
         y: Float,
         nowMs: Long,
     ) {
-        val mag = kotlin.math.sqrt(x * x + y * y)
+        val mag = sqrt(x * x + y * y)
         val deadZone =
             if (stick == JoystickStick.LEFT) {
                 MacroPadSettings.deadzoneLeft.value

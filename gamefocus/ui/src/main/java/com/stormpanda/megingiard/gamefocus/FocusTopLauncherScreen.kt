@@ -7,6 +7,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.drawable.Drawable
 import android.util.LruCache
+import androidx.annotation.VisibleForTesting
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -1305,7 +1306,7 @@ internal object FocusImageCache {
         invalidateLibraryIcon(packageName)
     }
 
-    @androidx.annotation.VisibleForTesting
+    @VisibleForTesting
     internal fun clearForTesting() {
         coverCache.evictAll()
         iconCache.evictAll()

@@ -12,7 +12,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
-private const val TAG = "FocusTopLauncherViewModelTest"
+private const val TAG = "FocusTopVMTest"
 
 class FocusTopLauncherViewModelTest {
     private lateinit var viewModel: FocusTopLauncherViewModel

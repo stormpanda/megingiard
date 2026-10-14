@@ -2,7 +2,7 @@ package com.stormpanda.megingiard.privd
 
 import com.stormpanda.megingiard.AppLog
 
-private const val TAG = "PrivdPairScreenTextScanner"
+private const val TAG = "PrivdPairTextScanner"
 
 /**
  * Extracted ADB Wireless Debugging pairing parameters.

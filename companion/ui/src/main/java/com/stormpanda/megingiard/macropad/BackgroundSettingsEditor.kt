@@ -65,9 +65,10 @@ import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
-private const val TAG = "BackgroundSettingsEditor"
+private const val TAG = "BgSettingsEditor"
 
 private fun BackgroundScaleMode.labelResId(): Int =
     when (this) {
@@ -367,10 +368,10 @@ internal fun LayoutBackgroundSubPageContent(
         pendingImageUri != null ||
             currentBgPath != layout.backgroundImagePath ||
             bgScaleMode != layout.bgScaleMode ||
-            kotlin.math.abs(bgScale - layout.bgImageScale) > 0.001f ||
-            kotlin.math.abs(bgOffsetX - layout.bgImageOffsetX) > 0.001f ||
-            kotlin.math.abs(bgOffsetY - layout.bgImageOffsetY) > 0.001f ||
-            kotlin.math.abs(bgImageDim - layout.backgroundImageDim) > 0.001f
+            abs(bgScale - layout.bgImageScale) > 0.001f ||
+            abs(bgOffsetX - layout.bgImageOffsetX) > 0.001f ||
+            abs(bgOffsetY - layout.bgImageOffsetY) > 0.001f ||
+            abs(bgImageDim - layout.backgroundImageDim) > 0.001f
 
     val promptState =
         rememberSaveExitPromptState(

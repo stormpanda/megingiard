@@ -89,6 +89,14 @@ class ArchitectureRulesTest {
     }
 
     @Test
+    fun `tag length exceeding 23 chars is flagged`() {
+        val longTag = "private const val TAG = \"123456789012345678901234\""
+        val okTag = "private const val TAG = \"12345678901234567890123\""
+        assertEquals(listOf(ArchitectureRules.TAG_TOO_LONG), rules(mainKt, longTag, "AppLog.d(TAG, \"hi\")"))
+        assertEquals(emptyList<String>(), rules(mainKt, okTag, "AppLog.d(TAG, \"hi\")"))
+    }
+
+    @Test
     fun `translations report missing and stale keys`() {
         val result =
             ArchitectureRules.checkTranslations(

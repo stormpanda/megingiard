@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-private const val TAG = "FocusTopLauncherViewModel"
+private const val TAG = "FocusTopLauncherVM"
 const val DEFAULT_LIBRARY_GRID_COLUMNS = 6
 const val DEFAULT_PAIRING_GRID_COLUMNS = 5
 

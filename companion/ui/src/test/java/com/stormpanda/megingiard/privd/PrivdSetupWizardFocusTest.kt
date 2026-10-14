@@ -18,7 +18,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-private const val TAG = "PrivdSetupWizardFocusTest"
+private const val TAG = "PrivdWizardFocusTest"
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])

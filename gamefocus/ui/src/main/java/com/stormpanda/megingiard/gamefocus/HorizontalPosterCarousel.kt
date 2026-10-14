@@ -47,7 +47,7 @@ import kotlin.math.absoluteValue
 import kotlin.math.sign
 import android.graphics.Paint as NativePaint
 
-private const val TAG = "HorizontalPosterCarousel"
+private const val TAG = "HorizPosterCarousel"
 
 private val HPC_DEFAULT_POSTER_WIDTH = 175.dp
 private val HPC_DEFAULT_POSTER_HEIGHT = 262.dp

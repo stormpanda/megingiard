@@ -14,7 +14,7 @@ import com.stormpanda.megingiard.macropad.AutoSwitchCoordinator
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.settings.SettingsManager
 
-private const val TAG = "MegingiardSettingsProvider"
+private const val TAG = "MegingiardSettingsProv"
 
 class MegingiardSettingsProvider : ContentProvider() {
     companion object {

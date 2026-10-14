@@ -75,6 +75,7 @@ import com.stormpanda.megingiard.macropad.triggerHapticFeedback
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 private const val TAG = "QuickMenuTutorialDialog"
 
@@ -306,7 +307,7 @@ fun QuickMenuGestureTrialOverlay(
                             val type =
                                 when {
                                     down.position.x <= kbZoneWidthPx -> SwipeGestureType.KEYBOARD
-                                    kotlin.math.abs(down.position.x - screenWidth / 2f) <= qmZoneWidthPx / 2f -> SwipeGestureType.MENU
+                                    abs(down.position.x - screenWidth / 2f) <= qmZoneWidthPx / 2f -> SwipeGestureType.MENU
                                     down.position.x >= screenWidth - tpZoneWidthPx -> SwipeGestureType.TOUCHPAD
                                     else -> null
                                 } ?: return@awaitPointerEventScope

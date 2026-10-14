@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-private const val TAG = "InjectorLifecycleManager"
+private const val TAG = "InjectorLifecycleMgr"
 
 internal data class InjectorStates(
     val startKeyboard: Boolean,

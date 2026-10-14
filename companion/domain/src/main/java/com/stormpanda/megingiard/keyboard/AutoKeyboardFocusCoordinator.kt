@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-private const val TAG = "AutoKeyboardFocusCoordinator"
+private const val TAG = "AutoKbFocusCoord"
 
 /**
  * Coordinates automatic presentation and dismissal of Megingiard's virtual keyboard

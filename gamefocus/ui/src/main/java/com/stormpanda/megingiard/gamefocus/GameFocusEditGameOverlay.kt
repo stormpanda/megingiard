@@ -98,7 +98,7 @@ import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 import com.stormpanda.megingiard.shared.ui.R as SharedUiR
 
-private const val TAG = "GameFocusEditGameOverlay"
+private const val TAG = "GFEditGameOverlay"
 private const val GF_TRANSITION_DURATION_MS = 150
 private const val GF_POSTER_ASPECT_RATIO = 2f / 3f
 private const val GF_CARD_SELECTED_BG_ALPHA = 0.25f

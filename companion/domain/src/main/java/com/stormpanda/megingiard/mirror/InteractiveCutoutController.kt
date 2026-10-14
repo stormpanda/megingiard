@@ -15,7 +15,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.hypot
 import kotlin.math.max
 
-private const val TAG = "InteractiveCutoutController"
+private const val TAG = "InteractiveCutoutCtrl"
 
 const val DOUBLE_TAP_TIMEOUT_MS = 300L
 const val DOUBLE_TAP_MAX_DISTANCE_PX = 48f

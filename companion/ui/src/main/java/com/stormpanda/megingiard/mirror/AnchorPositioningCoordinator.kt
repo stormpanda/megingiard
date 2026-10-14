@@ -5,7 +5,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-private const val TAG = "AnchorPositioningCoordinator"
+private const val TAG = "AnchorPosCoordinator"
 
 /**
  * Singleton coordinator bridging the top-screen anchor editor ([AnchorSelectorOverlay])

@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
-private const val TAG = "VisualAutoTuneCoordinator"
+private const val TAG = "VisualAutoTuneCoord"
 
 private const val MAX_CALIBRATION_DURATION_MS = 180_000L
 private const val SAMPLE_INTERVAL_MS = 120L

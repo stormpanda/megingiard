@@ -65,7 +65,7 @@ import com.stormpanda.megingiard.ui.blockPointerEvents
 import com.stormpanda.megingiard.ui.rememberBezelBrush
 import kotlin.math.ceil
 
-private const val TAG = "AutoTuneCalibrationSheet"
+private const val TAG = "AutoTuneCalibSheet"
 
 private const val SHEET_MAX_WIDTH_FRACTION = 0.88f
 private val SHEET_CORNER_RADIUS = 16.dp

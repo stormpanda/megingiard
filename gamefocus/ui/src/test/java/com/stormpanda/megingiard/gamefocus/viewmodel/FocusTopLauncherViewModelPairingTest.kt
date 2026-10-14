@@ -10,7 +10,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
-private const val TAG = "FocusTopLauncherViewModelPairingTest"
+private const val TAG = "FocusTopVMPairingTest"
 private const val INITIAL_PAIRING_INDEX = 2
 private const val TOTAL_GRID_APPS = 12
 private const val COLUMNS_COUNT = 5

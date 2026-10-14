@@ -30,7 +30,7 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.firstDeckItem
 import kotlin.math.roundToInt
 
-private const val TAG = "BackgroundTouchpadSettingsEditor"
+private const val TAG = "BgTouchpadEditor"
 
 @Composable
 internal fun LayoutTouchpadSubPageContent(

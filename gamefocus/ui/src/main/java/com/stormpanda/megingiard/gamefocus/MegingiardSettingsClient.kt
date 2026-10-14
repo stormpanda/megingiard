@@ -41,7 +41,7 @@ internal data class ClientStateRequest(
 )
 
 object MegingiardSettingsClient {
-    private const val TAG = "MegingiardSettingsClient"
+    private const val TAG = "MegingiardSettingsCli"
     private val clientScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /**

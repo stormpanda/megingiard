@@ -16,7 +16,7 @@ exec ./gradlew \
   :shared:media:testDebugUnitTest \
   :shared:session:testDebugUnitTest \
   :shared:ui:testDebugUnitTest \
-  :companion:domain:test \
+  :companion:domain:testDebugUnitTest \
   :companion:ui:testDebugUnitTest \
   :gamefocus:domain:testDebugUnitTest \
   :gamefocus:ui:testDebugUnitTest \

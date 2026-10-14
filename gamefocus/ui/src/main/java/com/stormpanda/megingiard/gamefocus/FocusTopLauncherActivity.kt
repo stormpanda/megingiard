@@ -66,7 +66,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
-private const val TAG = "FocusTopLauncherActivity"
+private const val TAG = "FocusTopLauncherAct"
 private const val INITIAL_REPEAT_DELAY_MS = 220L
 private const val REPEAT_INTERVAL_MS = 70L
 private const val MAIN_MENU_UNPAIRED_ITEMS_COUNT = 4

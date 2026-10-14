@@ -61,6 +61,7 @@ import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 private const val TAG = "MaskSettingsEditor"
@@ -349,10 +350,10 @@ internal fun LayoutMaskSubPageContent(
         pendingImageUri != null ||
             currentMaskPath != layout.maskImagePath ||
             maskScaleMode != layout.maskScaleMode ||
-            kotlin.math.abs(maskScale - layout.maskImageScale) > 0.001f ||
-            kotlin.math.abs(maskOffsetX - layout.maskImageOffsetX) > 0.001f ||
-            kotlin.math.abs(maskOffsetY - layout.maskImageOffsetY) > 0.001f ||
-            kotlin.math.abs(maskImageDim - layout.maskImageDim) > 0.001f
+            abs(maskScale - layout.maskImageScale) > 0.001f ||
+            abs(maskOffsetX - layout.maskImageOffsetX) > 0.001f ||
+            abs(maskOffsetY - layout.maskImageOffsetY) > 0.001f ||
+            abs(maskImageDim - layout.maskImageDim) > 0.001f
 
     val promptState =
         rememberSaveExitPromptState(

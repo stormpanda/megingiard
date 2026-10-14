@@ -28,7 +28,7 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.abs
 import kotlin.math.sign
 
-private const val TAG = "HorizontalLetterCarousel"
+private const val TAG = "HorizLetterCarousel"
 private val HLC_ITEM_WIDTH = 26.dp
 private val HLC_SPACING = 4.dp
 private const val HLC_CAMERA_DISTANCE_MULTIPLIER = 16

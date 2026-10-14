@@ -30,6 +30,7 @@ import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
 import java.security.spec.PKCS8EncodedKeySpec
 import java.util.Date
+import java.util.UUID
 import javax.net.ssl.SSLContext
 
 private const val TAG = "PrivdAdbCM"
@@ -152,7 +153,7 @@ internal class PrivdAdbConnectionManager private constructor(
         ): Pair<Pair<PrivateKey, Certificate>, String> {
             flushLibaDBCache()
             val suffix =
-                java.util.UUID
+                UUID
                     .randomUUID()
                     .toString()
                     .substring(0, 4)

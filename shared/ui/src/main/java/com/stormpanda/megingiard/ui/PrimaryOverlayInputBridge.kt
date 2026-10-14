@@ -35,7 +35,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.max
 
-private const val TAG = "PrimaryOverlayInputBridge"
+private const val TAG = "PrimaryOvlyInputBridge"
 
 private const val STICK_DEADZONE = 0.5f
 private const val REPEAT_INITIAL_DELAY_MS = 250L

@@ -1,5 +1,7 @@
 package com.stormpanda.megingiard
 
+import java.lang.reflect.Method
+
 private const val APPLOG_TAG_PREFIX = "Mgnrd"
 
 /**
@@ -16,7 +18,7 @@ object AppLog {
 
     @Volatile var level: Level = Level.DEBUG
 
-    private val logMethod: java.lang.reflect.Method? by lazy {
+    private val logMethod: Method? by lazy {
         try {
             val clazz = Class.forName("android.util.Log")
             clazz.getMethod("println", Int::class.javaPrimitiveType, String::class.java, String::class.java)
@@ -25,7 +27,7 @@ object AppLog {
         }
     }
 
-    private val logThrowableMethod: java.lang.reflect.Method? by lazy {
+    private val logThrowableMethod: Method? by lazy {
         try {
             val clazz = Class.forName("android.util.Log")
             clazz.getMethod("e", String::class.java, String::class.java, Throwable::class.java)

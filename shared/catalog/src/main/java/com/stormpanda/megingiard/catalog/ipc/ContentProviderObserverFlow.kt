@@ -11,7 +11,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 
-private const val TAG = "ContentProviderObserverFlow"
+private const val TAG = "ProviderObserverFlow"
 
 /**
  * Creates a reactive [Flow] that performs an initial query on [uri] using [parser],

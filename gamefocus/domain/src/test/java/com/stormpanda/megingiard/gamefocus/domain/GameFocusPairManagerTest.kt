@@ -14,7 +14,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import java.io.File
 
-private const val TAG = "GameFocusPairManagerTest"
+private const val TAG = "GFPairManagerTest"
 private const val TEST_APP_PAIRS_FILE = "gamefocus_app_pairs.json"
 
 @RunWith(RobolectricTestRunner::class)
