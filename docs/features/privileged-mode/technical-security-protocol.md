@@ -106,17 +106,24 @@ the existing protocol.
 | D → App | `MIRROR_DIRECT_ERR <reason>\n` | Direct mirror child failed to start |
 | App → D | `MIRROR STOP\n` | Terminate the running mirror child (idempotent) |
 | D → App | `MIRROR_STOPPED\n` | Mirror child has been reaped |
-| App → D | `SCREENSHOT <path>\n` | Take primary display screenshot, output to path |
+| App → D | `SCREENSHOT [<display_id>] <path>\n` | Take display screenshot (defaults to primary if display_id omitted), output to path |
 | D → App | `SCREENSHOT_OK\n` | Screenshot completed successfully |
 | D → App | `SCREENSHOT_ERR <reason>\n` | Screenshot failed (e.g. invalid path / execution error) |
 | App → D | `READ_FILE <path>\n` | Read text file (up to 128KB) from storage under shell UID |
 | D → App | `READ_BEGIN\n` | Stream file contents start marker |
 | D → App | `READ_END\n` | Stream file contents end marker |
 | D → App | `READ_ERR <reason>\n` | File read failed (e.g. file not found) |
+| App → D | `LIST_PROCESSES\n` | List running processes from `/proc` under shell UID |
+| D → App | `PROC_BEGIN\n` | Stream process list start marker |
+| D → App | `PROC <pid> <uid> <cmdline>\n` | Running process entry |
+| D → App | `PROC_END\n` | Stream process list end marker |
+| D → App | `PROC_ERR <reason>\n` | Process listing failed |
 
 For the privileged mirror (`MIRROR START_DIRECT`), the `app_process` child registers the Binder service `megingiard.direct.surface` to receive multiple target `Surface` instances and their physical dimensions. This allows the direct mirror server to set up and capture multiple concurrent virtual displays mapping to different cutout regions without process restarts.
 
 `SUB GAMEPAD` and `SUB TOUCH` open the physical evdev nodes (`/dev/input/event*` for gamepad, `/dev/input/event6` for touchscreen) read-only/read-write and start dedicated reader threads that forward filtered `EVT` and `EVT_TOUCH` lines to the app. The fds are **not** grabbed via `EVIOCGRAB` — evdev is multicast, so Android's EventHub continues to dispatch the same events to the foreground game in parallel. Recording is therefore purely passive observation; nothing is intercepted or replayed.
+
+Active multi-touch slots are automatically tracked; when a client disconnects or sends `QUIT`, any remaining active touch slots are automatically released (via synthesized UP events) to prevent stuck touch points on the screen (`PRIVD_VERSION = 9`).
 
 On startup the daemon prints exactly one line on **stdout** so the
 spawn command can detect success:

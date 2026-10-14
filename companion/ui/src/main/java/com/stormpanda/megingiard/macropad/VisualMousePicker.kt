@@ -5,6 +5,7 @@ import androidx.compose.material.icons.rounded.ControlCamera
 import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -76,7 +77,9 @@ internal fun VisualMousePicker(
     onSelectAction: (action: PadAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    AppLog.d(TAG, "VisualMousePicker: currentAction=$currentAction")
+    LaunchedEffect(currentAction) {
+        AppLog.d(TAG, "VisualMousePicker: currentAction=$currentAction")
+    }
 
     GamepadTwoColumnGrid(
         items = MOUSE_ACTION_ITEMS,

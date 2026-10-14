@@ -41,12 +41,12 @@ The `megingiard_privd` daemon uses a per-install HMAC key generated on the devic
 
 `companion/ui/src/main/cpp/megingiard_privd.c`
 
-The privileged daemon runs under shell UID (`com.android.shell`, UID 2000) or root, listening on an abstract Unix domain socket (`@megingiard_privd`). It provides:
+The privileged daemon runs under shell UID (`com.android.shell`, UID 2000) or root, listening on a local TCP loopback socket (127.0.0.1:51234–51238 for release, 51244–51248 for debug). It provides:
 1. Multi-touch injection via direct raw `input_event` writes to `/dev/input/event6` (AYN Thor touchscreen).
 2. Mouse event injection via `/dev/uinput`.
 3. Keyboard key injection via `/dev/uinput`.
 4. Gamepad input injection and physical gamepad observation via `/dev/input/event*`.
-5. Screenshot frame capture via direct framebuffer read.
+5. Screenshot frame capture via /system/bin/screencap.
 6. System-level package / activity foreground detection.
 7. Low-latency lifecycle control and privileged DEX spawning.
 
@@ -54,7 +54,7 @@ The privileged daemon runs under shell UID (`com.android.shell`, UID 2000) or ro
 
 | Tool        | Version used          | Notes                           |
 | ----------- | --------------------- | ------------------------------- |
-| Android NDK | **r27c**              | Standalone, not managed by AGP  |
+| Android NDK | **r29**               | Standalone, not managed by AGP  |
 | Host OS     | macOS (darwin-x86_64) | Adjust toolchain path for Linux |
 
 ### Compile

@@ -469,17 +469,26 @@ private fun TouchScreenRadar(
     val dividerColor = colors.divider
     val surfaceVariant = colors.surfaceVariant
 
-    val pulseTransition = rememberInfiniteTransition(label = "radarTouchPulse")
-    val livePulseScale by pulseTransition.animateFloat(
-        initialValue = 0.8f,
-        targetValue = 1.35f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(durationMillis = 600, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "touchRadarLiveScale",
-    )
+    val hasActiveTouch = !recording?.activePointers.isNullOrEmpty() || recording?.isTouchDown == true
+    val livePulseScale =
+        if (hasActiveTouch) {
+            val pulseTransition = rememberInfiniteTransition(label = "radarTouchPulse")
+            val scale by pulseTransition.animateFloat(
+                initialValue = 0.8f,
+                targetValue = 1.35f,
+                animationSpec =
+                    infiniteRepeatable(
+                        animation = tween(durationMillis = 600, easing = FastOutSlowInEasing),
+                        repeatMode = RepeatMode.Reverse,
+                    ),
+                label = "touchRadarLiveScale",
+            )
+            scale
+        } else {
+            1.0f
+        }
+
+    val trailPath = remember { Path() }
 
     Box(
         modifier =
@@ -512,7 +521,7 @@ private fun TouchScreenRadar(
             if (activePointers.isNotEmpty()) {
                 for (pointer in activePointers) {
                     val color = pointerColor(pointer.slot, accentColor)
-                    drawNormalizedTrail(pointer.trail, width, height, color, trailStrokeWidthPx)
+                    drawNormalizedTrail(trailPath, pointer.trail, width, height, color, trailStrokeWidthPx)
                     drawPointerDot(
                         center = Offset(pointer.normX * width, pointer.normY * height),
                         color = color,
@@ -521,7 +530,7 @@ private fun TouchScreenRadar(
                     )
                 }
             } else {
-                drawNormalizedTrail(recording?.activeTrailPoints ?: emptyList(), width, height, accentColor, trailStrokeWidthPx)
+                drawNormalizedTrail(trailPath, recording?.activeTrailPoints ?: emptyList(), width, height, accentColor, trailStrokeWidthPx)
                 val liveX = recording?.liveNormX
                 val liveY = recording?.liveNormY
                 if (liveX != null && liveY != null) {
@@ -538,20 +547,21 @@ private fun TouchScreenRadar(
 }
 
 private fun DrawScope.drawNormalizedTrail(
+    trailPath: Path,
     trail: List<Pair<Float, Float>>,
     width: Float,
     height: Float,
     color: Color,
     strokeWidthPx: Float,
 ) {
+    trailPath.rewind()
     if (trail.size < 2) return
-    val path = Path()
     trail.forEachIndexed { index, (nx, ny) ->
         val px = nx * width
         val py = ny * height
-        if (index == 0) path.moveTo(px, py) else path.lineTo(px, py)
+        if (index == 0) trailPath.moveTo(px, py) else trailPath.lineTo(px, py)
     }
-    drawPath(path = path, color = color.copy(alpha = 0.85f), style = Stroke(width = strokeWidthPx))
+    drawPath(path = trailPath, color = color.copy(alpha = 0.85f), style = Stroke(width = strokeWidthPx))
 }
 
 private fun DrawScope.drawPointerDot(

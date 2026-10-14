@@ -66,12 +66,7 @@ private const val TAG = "MacroPadButton"
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
 
-internal const val MP_BTN_PRESSED_ALPHA = 0.80f
-internal const val MP_BTN_NORMAL_ALPHA = 0.25f
-
-// Pulsing animation for running macros: alpha cycles between low and high.
-private const val MP_BTN_RUNNING_PULSE_LOW = 0.30f
-private const val MP_BTN_RUNNING_PULSE_HIGH = 0.80f
+// Pulsing animation for running macros.
 private const val MP_PULSE_HALF_PERIOD_MS = 600
 
 internal val MP_BTN_SQUARE_RADIUS = 4.dp
@@ -129,52 +124,35 @@ internal fun PadButton(
     val effectiveTextTint = resolveColorOption(resolvedTextColorOption, accentColor, MP_AMBIENT_NEUTRAL_TEXT)
     val effectiveContentAccent = effectiveTextTint
 
-    val alphaTarget = if (isPressed) MP_BTN_PRESSED_ALPHA else MP_BTN_NORMAL_ALPHA
     val animDuration = if (isPressed) MP_PRESS_ANIM_MS else MP_RELEASE_ANIM_MS
-    val pressedAlpha by animateFloatAsState(
-        targetValue = alphaTarget,
-        animationSpec = tween(animDuration),
-        label = "btnAlpha",
-    )
-    val alpha =
+
+    val (runningBreathe, rippleProgress) =
         if (isRunning) {
-            val infiniteTransition = rememberInfiniteTransition(label = "btnPulse")
-            val runningAlpha by infiniteTransition.animateFloat(
-                initialValue = MP_BTN_RUNNING_PULSE_LOW,
-                targetValue = MP_BTN_RUNNING_PULSE_HIGH,
+            val infiniteTransition = rememberInfiniteTransition(label = "btnRunning")
+            val breathe by infiniteTransition.animateFloat(
+                initialValue = 1.0f,
+                targetValue = 1.12f,
                 animationSpec =
                     infiniteRepeatable(
                         animation = tween(MP_PULSE_HALF_PERIOD_MS, easing = FastOutSlowInEasing),
                         repeatMode = RepeatMode.Reverse,
                     ),
-                label = "btnRunningAlpha",
+                label = "btnBreathe",
             )
-            runningAlpha
+            val ripple by infiniteTransition.animateFloat(
+                initialValue = 0f,
+                targetValue = 1f,
+                animationSpec =
+                    infiniteRepeatable(
+                        animation = tween(MP_PULSE_HALF_PERIOD_MS * 2, easing = LinearEasing),
+                        repeatMode = RepeatMode.Restart,
+                    ),
+                label = "btnRippleProgress",
+            )
+            breathe to ripple
         } else {
-            pressedAlpha
+            1.0f to 0f
         }
-
-    val infiniteTransition = rememberInfiniteTransition(label = "btnRunning")
-    val runningBreathe by infiniteTransition.animateFloat(
-        initialValue = 1.0f,
-        targetValue = 1.12f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(MP_PULSE_HALF_PERIOD_MS, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "btnBreathe",
-    )
-    val rippleProgress by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(MP_PULSE_HALF_PERIOD_MS * 2, easing = LinearEasing),
-                repeatMode = RepeatMode.Restart,
-            ),
-        label = "btnRippleProgress",
-    )
     val pressedScale by animateFloatAsState(
         targetValue = if (isPressed) 0.95f else 1.0f,
         animationSpec = tween(animDuration),

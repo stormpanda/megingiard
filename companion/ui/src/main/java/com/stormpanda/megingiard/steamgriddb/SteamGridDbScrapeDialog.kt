@@ -50,6 +50,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.media.SteamGridDbClient
@@ -133,7 +134,7 @@ internal fun SteamGridDbScrapeSubPageContent(
 
     var activeFetchJob by remember { mutableStateOf<Job?>(null) }
 
-    val apiKey = SettingsManager.steamGridDbApiToken.value
+    val apiKey by SettingsManager.steamGridDbApiToken.collectAsStateWithLifecycle()
     val rowState = rememberLazyListState()
     val imagesCache = remember { HashMap<Pair<Int, String>, List<SteamGridDbImage>>() }
 
@@ -539,9 +540,14 @@ private fun SteamGridDbImageThumbnail(
         isLoading = true
         isError = false
         val bytes = SteamGridDbClient.downloadImageBytes(url).getOrNull()
-        val decoded = bytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
+        val decoded =
+            bytes?.let {
+                withContext(Dispatchers.Default) {
+                    BitmapFactory.decodeByteArray(it, 0, it.size)?.asImageBitmap()
+                }
+            }
         if (decoded != null) {
-            bitmap = decoded.asImageBitmap()
+            bitmap = decoded
         } else {
             isError = true
         }
