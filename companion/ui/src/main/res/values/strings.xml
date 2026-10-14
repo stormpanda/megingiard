@@ -1124,7 +1124,6 @@ Open Settings to create a layout.</string>
     <string name="gamepad_action_moving">Moving</string>
     <string name="gamepad_action_resizing">Resizing</string>
     <string name="gamepad_action_delete">Delete</string>
-    <string name="macropad_reorder_empty">No items to reorder</string>
     <string name="gamepad_action_copy">Copy</string>
     <string name="gamepad_action_clear">Clear</string>
     <string name="gamepad_action_unlink">Unlink</string>

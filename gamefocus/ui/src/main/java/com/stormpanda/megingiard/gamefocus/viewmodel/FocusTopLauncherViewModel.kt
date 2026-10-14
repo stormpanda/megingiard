@@ -57,6 +57,9 @@ class FocusTopLauncherViewModel : ViewModel() {
     private val _editingAppInfo = MutableStateFlow<InstalledAppInfo?>(null)
     val editingAppInfo: StateFlow<InstalledAppInfo?> = _editingAppInfo.asStateFlow()
 
+    private val _isManageGalleriesOpen = MutableStateFlow(false)
+    val isManageGalleriesOpen: StateFlow<Boolean> = _isManageGalleriesOpen.asStateFlow()
+
     private val _isLibraryOpen = MutableStateFlow(false)
     val isLibraryOpen: StateFlow<Boolean> = _isLibraryOpen.asStateFlow()
 
@@ -264,6 +267,11 @@ class FocusTopLauncherViewModel : ViewModel() {
         _editingAppInfo.value = appInfo
     }
 
+    fun setManageGalleriesOpen(open: Boolean) {
+        AppLog.i(TAG, "Manage Galleries overlay open=$open (was ${_isManageGalleriesOpen.value})")
+        _isManageGalleriesOpen.value = open
+    }
+
     fun triggerPrevLetter() {
         _prevLetterTrigger.value += 1
     }
@@ -449,6 +457,7 @@ class FocusTopLauncherViewModel : ViewModel() {
         val wasNotInGallery =
             _isLibraryOpen.value ||
                 _editingAppInfo.value != null ||
+                _isManageGalleriesOpen.value ||
                 _isMainOptionsMenuExpanded.value ||
                 _isLibraryOptionsMenuExpanded.value ||
                 _isRemoveRomFolderDialogOpen.value ||
@@ -460,6 +469,7 @@ class FocusTopLauncherViewModel : ViewModel() {
             AppLog.i(TAG, "Resetting view state to main gallery")
             _isLibraryOpen.value = false
             _editingAppInfo.value = null
+            _isManageGalleriesOpen.value = false
             _isMainOptionsMenuExpanded.value = false
             _mainMenuSelectedIndex.value = 0
             _isLibraryOptionsMenuExpanded.value = false

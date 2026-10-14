@@ -21,6 +21,7 @@
     <string name="gamefocus_option_actions">Actions</string>
     <string name="gamefocus_no_favorites">No Favorite Apps Added</string>
     <string name="gamefocus_no_last_used">No Recently Used Apps</string>
+    <string name="gamefocus_no_collection_items">This Collection Is Empty</string>
     <string name="gamefocus_no_games">No Android Games Found</string>
     <string name="gamefocus_no_apps_category">No Android Apps Found</string>
 
@@ -89,6 +90,9 @@
     <string name="gamefocus_cat_game_info">Game Info</string>
     <string name="gamefocus_cat_scraping">Gallery Artwork</string>
     <string name="gamefocus_cat_library_icon">Library Icon</string>
+    <string name="gamefocus_cat_collections">Collections</string>
+    <string name="gamefocus_edit_collections_empty_info">No custom collections yet. Create collections in Manage Galleries to organize your games.</string>
+    <string name="gamefocus_edit_open_manage_galleries_desc">Open Manage Galleries to create and organize custom collections.</string>
     <string name="gamefocus_field_display_name_title">Display Name</string>
     <string name="gamefocus_field_display_name_desc">Customize how the title appears in the launcher gallery and library.</string>
     <string name="gamefocus_field_display_name_placeholder">Enter display name</string>
@@ -116,5 +120,33 @@
     <string name="gamefocus_scraping_no_icons_found">No icons or logos found for \"%1$s\" on SteamGridDB.</string>
     <string name="gamefocus_action_reset_display_name_title">Reset to Default Name</string>
     <string name="gamefocus_action_reset_display_name_desc">Restore the original title: %1$s</string>
+
+    <!-- Manage Galleries -->
+    <string name="gamefocus_manage_galleries_title">Manage Galleries</string>
+    <string name="gamefocus_manage_page_visibility">Visibility</string>
+    <string name="gamefocus_manage_page_order">Order</string>
+    <string name="gamefocus_manage_page_collections">Collections</string>
+    <string name="gamefocus_manage_visibility_info">Hidden galleries are removed from the gallery roll. Their games stay available in the Library.</string>
+    <string name="gamefocus_manage_last_visible_desc">At least one gallery must stay visible</string>
+    <string name="gamefocus_manage_order_hidden">Hidden</string>
+    <string name="gamefocus_collection_new_title">New Collection</string>
+    <string name="gamefocus_collection_name_placeholder">Collection name</string>
+    <string name="gamefocus_collection_name_desc">Up to %1$d characters; must be unique.</string>
+    <string name="gamefocus_collection_create_title">Create Collection</string>
+    <string name="gamefocus_collection_create_desc">Adds an empty collection gallery.</string>
+    <string name="gamefocus_collection_name_error_empty">Enter a name.</string>
+    <string name="gamefocus_collection_name_error_too_long">The name can have at most %1$d characters.</string>
+    <string name="gamefocus_collection_name_error_duplicate">A collection with this name already exists.</string>
+    <string name="gamefocus_collections_empty">No collections yet. Create one above.</string>
+    <string name="gamefocus_collection_member_count">Entries: %1$d</string>
+    <string name="gamefocus_collection_rename_title">Collection Name</string>
+    <string name="gamefocus_collection_save_name_title">Save Name</string>
+    <string name="gamefocus_collection_save_name_desc">Apply the new collection name.</string>
+    <string name="gamefocus_collection_delete_title">Delete Collection</string>
+    <string name="gamefocus_collection_delete_desc">Removes this collection gallery (%1$d entries). Games are not uninstalled.</string>
+    <string name="gamefocus_collection_delete_confirm_title">Really Delete?</string>
+    <string name="gamefocus_collection_delete_confirm_desc">Press again to delete this collection permanently.</string>
+    <string name="gamefocus_collection_back_title">Back to Collections</string>
+    <string name="gamefocus_collection_back_desc">Return to the collection list.</string>
 </resources>
 

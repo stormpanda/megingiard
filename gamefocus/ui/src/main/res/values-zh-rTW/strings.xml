@@ -21,6 +21,7 @@
     <string name="gamefocus_option_actions">動作</string>
     <string name="gamefocus_no_favorites">尚未加入任何最愛應用程式</string>
     <string name="gamefocus_no_last_used">沒有最近使用的應用程式</string>
+    <string name="gamefocus_no_collection_items">此收藏集是空的</string>
     <string name="gamefocus_no_games">找不到 Android 遊戲</string>
     <string name="gamefocus_no_apps_category">找不到 Android 應用程式</string>
 
@@ -89,6 +90,9 @@
     <string name="gamefocus_cat_game_info">遊戲資訊</string>
     <string name="gamefocus_cat_scraping">圖庫封面</string>
     <string name="gamefocus_cat_library_icon">遊戲庫圖示</string>
+    <string name="gamefocus_cat_collections">收藏集</string>
+    <string name="gamefocus_edit_collections_empty_info">尚無自訂收藏集。請至「管理圖庫」建立收藏集以整理遊戲。</string>
+    <string name="gamefocus_edit_open_manage_galleries_desc">開啟「管理圖庫」以建立並整理自訂收藏集。</string>
     <string name="gamefocus_field_display_name_title">顯示名稱</string>
     <string name="gamefocus_field_display_name_desc">自訂遊戲名稱在啟動器圖庫與遊戲庫中的顯示方式。</string>
     <string name="gamefocus_field_display_name_placeholder">輸入顯示名稱</string>
@@ -116,5 +120,33 @@
     <string name="gamefocus_scraping_no_icons_found">在 SteamGridDB 上找不到「%1$s」的圖示或標誌。</string>
     <string name="gamefocus_action_reset_display_name_title">重設為預設名稱</string>
     <string name="gamefocus_action_reset_display_name_desc">還原原始名稱：%1$s</string>
+
+    <!-- Manage Galleries -->
+    <string name="gamefocus_manage_galleries_title">管理圖庫</string>
+    <string name="gamefocus_manage_page_visibility">顯示設定</string>
+    <string name="gamefocus_manage_page_order">排序</string>
+    <string name="gamefocus_manage_page_collections">收藏集</string>
+    <string name="gamefocus_manage_visibility_info">隱藏的圖庫會從圖庫清單中移除，其中的遊戲仍可在遊戲庫中使用。</string>
+    <string name="gamefocus_manage_last_visible_desc">至少須保留一個可見的圖庫</string>
+    <string name="gamefocus_manage_order_hidden">已隱藏</string>
+    <string name="gamefocus_collection_new_title">新增收藏集</string>
+    <string name="gamefocus_collection_name_placeholder">收藏集名稱</string>
+    <string name="gamefocus_collection_name_desc">最多 %1$d 個字元，且不可重複。</string>
+    <string name="gamefocus_collection_create_title">建立收藏集</string>
+    <string name="gamefocus_collection_create_desc">新增一個空白的收藏集圖庫。</string>
+    <string name="gamefocus_collection_name_error_empty">請輸入名稱。</string>
+    <string name="gamefocus_collection_name_error_too_long">名稱最多只能有 %1$d 個字元。</string>
+    <string name="gamefocus_collection_name_error_duplicate">已有相同名稱的收藏集。</string>
+    <string name="gamefocus_collections_empty">尚無收藏集，請在上方建立。</string>
+    <string name="gamefocus_collection_member_count">項目：%1$d</string>
+    <string name="gamefocus_collection_rename_title">收藏集名稱</string>
+    <string name="gamefocus_collection_save_name_title">儲存名稱</string>
+    <string name="gamefocus_collection_save_name_desc">套用新的收藏集名稱。</string>
+    <string name="gamefocus_collection_delete_title">刪除收藏集</string>
+    <string name="gamefocus_collection_delete_desc">移除此收藏集圖庫（%1$d 個項目），遊戲不會被解除安裝。</string>
+    <string name="gamefocus_collection_delete_confirm_title">確定要刪除？</string>
+    <string name="gamefocus_collection_delete_confirm_desc">再按一次即可永久刪除此收藏集。</string>
+    <string name="gamefocus_collection_back_title">返回收藏集</string>
+    <string name="gamefocus_collection_back_desc">返回收藏集清單。</string>
 </resources>
 

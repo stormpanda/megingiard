@@ -58,6 +58,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -92,6 +93,7 @@ import com.stormpanda.megingiard.catalog.LetterNavigationHelper
 import com.stormpanda.megingiard.catalog.LibraryTab
 import com.stormpanda.megingiard.catalog.RomManager
 import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
+import com.stormpanda.megingiard.gamefocus.domain.GalleryConfig
 import com.stormpanda.megingiard.math.floorMod
 import com.stormpanda.megingiard.ui.ExpandableActionItem
 import com.stormpanda.megingiard.ui.ExpandableActionsMenu
@@ -165,6 +167,7 @@ fun FocusTopLauncherScreen(
     onCategoryDown: () -> Unit = {},
     favoritesSet: Set<String> = emptySet(),
     hiddenSet: Set<String> = emptySet(),
+    collectionMembers: Map<String, Set<String>> = emptyMap(),
     isMainOptionsMenuExpanded: Boolean = false,
     onMainOptionsMenuExpandedChange: (Boolean) -> Unit = {},
     mainMenuSelectedIndex: Int = 0,
@@ -183,6 +186,11 @@ fun FocusTopLauncherScreen(
     dpadStepRightTrigger: Int = 0,
     onFocusedAppChanged: (InstalledAppInfo?) -> Unit = {},
     onDismissEditingApp: () -> Unit = {},
+    isManageGalleriesOpen: Boolean = false,
+    allGalleryCategories: List<GameFocusCategory> = emptyList(),
+    galleryConfig: GalleryConfig = GalleryConfig(),
+    onOpenManageGalleries: () -> Unit = {},
+    onDismissManageGalleries: () -> Unit = {},
     newlyAddedFolder: CustomRomFolder? = null,
     onDismissNewlyAddedFolder: () -> Unit = {},
     onConfirmNewlyAddedFolderCore: (CustomRomFolder, String?) -> Unit = { _, _ -> },
@@ -248,8 +256,19 @@ fun FocusTopLauncherScreen(
                     }.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.displayName })
         }
 
+    val collectionAppsById =
+        remember(allApps, collectionMembers) {
+            collectionMembers.mapValues { (_, members) ->
+                if (members.isEmpty()) emptyList() else allApps.filter { it.packageName in members }
+            }
+        }
+
     fun getAppsForCategory(cat: GameFocusCategory): List<InstalledAppInfo> =
-        cat.filterApps(allApps, favoritesSet, frozenHiddenSet, lastUsed)
+        if (cat is GameFocusCategory.CustomCollection) {
+            collectionAppsById[cat.collectionId].orEmpty()
+        } else {
+            cat.filterApps(allApps, favoritesSet, frozenHiddenSet, lastUsed, collectionMembers)
+        }
 
     val categoryApps = getAppsForCategory(selectedCategory)
     val uniqueLetters = remember(categoryApps) { LetterNavigationHelper.getUniqueStartingLetters(categoryApps) }
@@ -262,17 +281,49 @@ fun FocusTopLauncherScreen(
     val lastUsedPagerState = rememberPagerState(initialPage = 0) { getAppsForCategory(GameFocusCategory.LAST_USED).size }
 
     val romPagerStates = remember { mutableMapOf<String, PagerState>() }
+    val activeGalleryIds =
+        remember(categories, allGalleryCategories, selectedCategory) {
+            buildSet {
+                categories.forEach { add(it.id) }
+                allGalleryCategories.forEach { add(it.id) }
+                add(selectedCategory.id)
+            }
+        }
+    romPagerStates.keys.retainAll(activeGalleryIds)
+
+    // Collection galleries read their page count through this updated state so membership
+    // changes are reflected without recreating the remembered pager state.
+    val collectionPageCountProvider: (GameFocusCategory) -> Int = { cat -> getAppsForCategory(cat).size }
+    val collectionPageCount = rememberUpdatedState(collectionPageCountProvider)
 
     fun getPagerStateForCategory(
         cat: GameFocusCategory,
         size: Int,
     ): PagerState =
         when (cat) {
-            GameFocusCategory.GAMES -> gamesPagerState
-            GameFocusCategory.APPS -> appsPagerState
-            GameFocusCategory.FAVORITES -> favoritesPagerState
-            GameFocusCategory.LAST_USED -> lastUsedPagerState
-            is GameFocusCategory.RomSystem -> romPagerStates.getOrPut(cat.id) { RomPagerState(0, 0f) { size } }
+            GameFocusCategory.GAMES -> {
+                gamesPagerState
+            }
+
+            GameFocusCategory.APPS -> {
+                appsPagerState
+            }
+
+            GameFocusCategory.FAVORITES -> {
+                favoritesPagerState
+            }
+
+            GameFocusCategory.LAST_USED -> {
+                lastUsedPagerState
+            }
+
+            is GameFocusCategory.RomSystem -> {
+                romPagerStates.getOrPut(cat.id) { RomPagerState(0, 0f) { size } }
+            }
+
+            is GameFocusCategory.CustomCollection -> {
+                romPagerStates.getOrPut(cat.id) { RomPagerState(0, 0f) { collectionPageCount.value(cat) } }
+            }
         }
 
     val activePagerState = getPagerStateForCategory(selectedCategory, categoryApps.size)
@@ -548,10 +599,11 @@ fun FocusTopLauncherScreen(
                         onChangeCore = onChangeCore,
                         onAddRomFolder = onAddRomFolder,
                         onRemoveRomFolder = onRemoveRomFolder,
+                        onOpenManageGalleries = onOpenManageGalleries,
                         onAppClickTop = onAppClickTop,
                         onAppClickBottom = onAppClickBottom,
                         onCloseRequested = onCloseLibrary,
-                        enabled = isLibraryOpen && editingAppInfo == null && pairingTargetApp == null,
+                        enabled = isLibraryOpen && editingAppInfo == null && pairingTargetApp == null && !isManageGalleriesOpen,
                         tabs = libraryTabs,
                         isRemoveRomFolderDialogOpen = isRemoveRomFolderDialogOpen,
                         onRemoveRomFolderDialogOpenChange = onRemoveRomFolderDialogOpenChange,
@@ -624,11 +676,31 @@ fun FocusTopLauncherScreen(
                                             Text(
                                                 text =
                                                     when (category) {
-                                                        GameFocusCategory.GAMES -> stringResource(R.string.gamefocus_no_games)
-                                                        GameFocusCategory.APPS -> stringResource(R.string.gamefocus_no_apps_category)
-                                                        GameFocusCategory.FAVORITES -> stringResource(R.string.gamefocus_no_favorites)
-                                                        GameFocusCategory.LAST_USED -> stringResource(R.string.gamefocus_no_last_used)
-                                                        else -> stringResource(R.string.focus_launcher_no_apps)
+                                                        GameFocusCategory.GAMES -> {
+                                                            stringResource(R.string.gamefocus_no_games)
+                                                        }
+
+                                                        GameFocusCategory.APPS -> {
+                                                            stringResource(R.string.gamefocus_no_apps_category)
+                                                        }
+
+                                                        GameFocusCategory.FAVORITES -> {
+                                                            stringResource(R.string.gamefocus_no_favorites)
+                                                        }
+
+                                                        GameFocusCategory.LAST_USED -> {
+                                                            stringResource(R.string.gamefocus_no_last_used)
+                                                        }
+
+                                                        is GameFocusCategory.CustomCollection -> {
+                                                            stringResource(
+                                                                R.string.gamefocus_no_collection_items,
+                                                            )
+                                                        }
+
+                                                        else -> {
+                                                            stringResource(R.string.focus_launcher_no_apps)
+                                                        }
                                                     },
                                                 style = MaterialTheme.typography.titleMedium.copy(color = appColors.onSurfaceSecondary),
                                             )
@@ -789,7 +861,8 @@ fun FocusTopLauncherScreen(
                         // Plane 2: Hovering Controls Layer (Categories, Actions, Touch Launch Buttons)
 
                         // Top-Right Library navigation button hovering over the gallery plane
-                        val isControlsEnabled = editingAppInfo == null && pairingTargetApp == null && !isLibraryOpen
+                        val isControlsEnabled =
+                            editingAppInfo == null && pairingTargetApp == null && !isLibraryOpen && !isManageGalleriesOpen
 
                         // Top-Left Category Header hovering over the gallery plane
                         InteractiveCategoryHeader(
@@ -930,6 +1003,16 @@ fun FocusTopLauncherScreen(
                                                 )
                                             }
                                         }
+                                        add(
+                                            ExpandableActionItem(
+                                                label = context.getString(R.string.gamefocus_manage_galleries_title),
+                                                iconSymbol = "view_carousel",
+                                                onClick = {
+                                                    onOpenManageGalleries()
+                                                    onMainOptionsMenuExpandedChange(false)
+                                                },
+                                            ),
+                                        )
                                     }
                                 }
                             ExpandableActionsMenu(
@@ -937,6 +1020,7 @@ fun FocusTopLauncherScreen(
                                 onExpandedChange = onMainOptionsMenuExpandedChange,
                                 actions = actions,
                                 selectedIndex = mainMenuSelectedIndex,
+                                dividerAfterIndex = if (currentApp != null) actions.lastIndex - 1 else null,
                                 enabled = isControlsEnabled,
                             )
                         }
@@ -995,12 +1079,26 @@ fun FocusTopLauncherScreen(
             )
         }
 
-        // Game Edit Primary Overlay (Game Info, Gallery Artwork, Library Icon)
+        // Game Edit Primary Overlay (Game Info, Gallery Artwork, Library Icon, Collections)
         if (editingAppInfo != null) {
             GameFocusEditGameOverlay(
                 appInfo = editingAppInfo,
                 apiKey = apiKey,
                 onDismiss = onDismissEditingApp,
+                onOpenManageGalleries = {
+                    onDismissEditingApp()
+                    onOpenManageGalleries()
+                },
+            )
+        }
+
+        // Manage Galleries Primary Overlay (Visibility, Order, Collections)
+        if (isManageGalleriesOpen) {
+            GameFocusManageGalleriesOverlay(
+                galleries = allGalleryCategories,
+                galleryConfig = galleryConfig,
+                allApps = allApps,
+                onDismiss = onDismissManageGalleries,
             )
         }
     }
@@ -1619,6 +1717,7 @@ internal fun rememberAppPalette(
 private fun getCategoryName(category: GameFocusCategory): String =
     when (category) {
         is GameFocusCategory.RomSystem -> category.displayName
+        is GameFocusCategory.CustomCollection -> category.displayName
         else -> stringResource(category.stringResId)
     }
 

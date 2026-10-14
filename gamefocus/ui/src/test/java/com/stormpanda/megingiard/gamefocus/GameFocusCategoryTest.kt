@@ -1,5 +1,8 @@
 package com.stormpanda.megingiard.gamefocus
 
+import com.stormpanda.megingiard.catalog.CustomRomFolder
+import com.stormpanda.megingiard.catalog.InstalledAppInfo
+import com.stormpanda.megingiard.gamefocus.domain.GalleryCollection
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
@@ -52,7 +55,7 @@ class GameFocusCategoryTest {
     @Test
     fun testFilterAppsAcrossAllCategories() {
         val gameApp =
-            com.stormpanda.megingiard.catalog.InstalledAppInfo(
+            InstalledAppInfo(
                 packageName = "com.game.test",
                 activityName = "MainActivity",
                 label = "Test Game",
@@ -60,7 +63,7 @@ class GameFocusCategoryTest {
                 isRom = false,
             )
         val nonGameApp =
-            com.stormpanda.megingiard.catalog.InstalledAppInfo(
+            InstalledAppInfo(
                 packageName = "com.app.test",
                 activityName = "MainActivity",
                 label = "Test App",
@@ -68,7 +71,7 @@ class GameFocusCategoryTest {
                 isRom = false,
             )
         val romApp =
-            com.stormpanda.megingiard.catalog.InstalledAppInfo(
+            InstalledAppInfo(
                 packageName = "rom.snes.test",
                 activityName = "MainActivity",
                 label = "Test Rom",
@@ -102,5 +105,96 @@ class GameFocusCategoryTest {
         // Hidden filter
         val gamesWithoutHidden = GameFocusCategory.GAMES.filterApps(allApps, hidden = setOf("com.game.test"))
         assertTrue(gamesWithoutHidden.isEmpty())
+    }
+
+    private fun testApp(
+        packageName: String,
+        isGame: Boolean,
+        isRom: Boolean = false,
+        systemId: String? = null,
+    ): InstalledAppInfo =
+        InstalledAppInfo(
+            packageName = packageName,
+            activityName = "MainActivity",
+            label = packageName,
+            isGame = isGame,
+            isRom = isRom,
+            systemId = systemId,
+        )
+
+    @Test
+    fun testFilterApps_customCollection_includesHiddenMembersInCatalogOrder() {
+        val gameApp = testApp("com.game.test", isGame = true)
+        val nonGameApp = testApp("com.app.test", isGame = false)
+        val romApp = testApp("rom.snes.test", isGame = true, isRom = true, systemId = "snes")
+        val collection = GameFocusCategory.CustomCollection(id = "collection_c1", collectionId = "c1", displayName = "Mix")
+
+        val result =
+            collection.filterApps(
+                listOf(gameApp, nonGameApp, romApp),
+                hidden = setOf("com.game.test"),
+                collectionMembers = mapOf("c1" to setOf("rom.snes.test", "com.game.test")),
+            )
+
+        assertEquals(listOf(gameApp, romApp), result)
+    }
+
+    @Test
+    fun testFilterApps_customCollection_unknownCollectionIsEmpty() {
+        val collection = GameFocusCategory.CustomCollection(id = "collection_c9", collectionId = "c9", displayName = "None")
+        assertTrue(collection.filterApps(listOf(testApp("com.game.test", isGame = true))).isEmpty())
+    }
+
+    @Test
+    fun testDefaultGalleries_orderAndRomIdFormat() {
+        val snes = CustomRomFolder(uriString = "content://snes", folderPath = "/roms/snes", systemId = "snes", systemName = "SNES")
+        val gba = CustomRomFolder(uriString = "content://gba", folderPath = "/roms/gba", systemId = "gba", systemName = "GBA")
+        val collections = listOf(GalleryCollection(id = "c2", name = "Zelda"), GalleryCollection(id = "c1", name = "action"))
+
+        val ids = GameFocusCategory.defaultGalleries(listOf(snes, gba), collections).map { it.id }
+
+        assertEquals(
+            listOf(
+                "LAST_USED",
+                "FAVORITES",
+                "collection_c1",
+                "collection_c2",
+                "GAMES",
+                "APPS",
+                "rom_gba_${"content://gba".hashCode()}",
+                "rom_snes_${"content://snes".hashCode()}",
+            ),
+            ids,
+        )
+    }
+
+    @Test
+    fun testBuildOrderedGalleries_savedOrderFirstThenDefaults() {
+        val collections = listOf(GalleryCollection(id = "c1", name = "action"))
+
+        val ids =
+            GameFocusCategory
+                .buildOrderedGalleries(emptyList(), collections, listOf("GAMES", "collection_c1", "rom_missing_1"))
+                .map { it.id }
+
+        assertEquals(listOf("GAMES", "collection_c1", "LAST_USED", "FAVORITES", "APPS"), ids)
+    }
+
+    @Test
+    fun testVisibleGalleries_filtersHiddenAndNeverEmpty() {
+        val ordered = GameFocusCategory.builtIns
+        assertEquals(
+            listOf(GameFocusCategory.LAST_USED, GameFocusCategory.GAMES),
+            GameFocusCategory.visibleGalleries(ordered, setOf("FAVORITES", "APPS")),
+        )
+        assertEquals(ordered, GameFocusCategory.visibleGalleries(ordered, setOf("LAST_USED", "FAVORITES", "GAMES", "APPS")))
+    }
+
+    @Test
+    fun testCustomCollection_equalityIgnoresDisplayName() {
+        val before = GameFocusCategory.CustomCollection(id = "collection_c1", collectionId = "c1", displayName = "Old")
+        val after = GameFocusCategory.CustomCollection(id = "collection_c1", collectionId = "c1", displayName = "New")
+        assertEquals(before, after)
+        assertEquals(before.hashCode(), after.hashCode())
     }
 }
