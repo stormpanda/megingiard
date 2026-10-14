@@ -486,6 +486,7 @@ fun GlobalSettingsScreen(
                                     ConfigManager.requestImport(ConfigManager.ImportMode.BACKUP_RESTORE)
                                 },
                                 onSelectInternalBackup = { backup ->
+                                    ConfigManager.setPendingInAppImportMode(ConfigManager.ImportMode.BACKUP_RESTORE)
                                     showImportPreviewDialog = backup.export
                                     subPageStack = subPageStack + SettingsSubPage.RESTORE_REVIEW
                                 },

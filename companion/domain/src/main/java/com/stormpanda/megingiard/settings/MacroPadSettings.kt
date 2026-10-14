@@ -52,8 +52,7 @@ object MacroPadSettings {
             encodeDefaults = true
         }
 
-    private var lastLoadedProfilesJson: String? = null
-    private var lastLoadedActiveProfileId: String? = null
+    @Volatile
     private var hasLoadedOnce = false
 
     private val _gamepadSwapFaceButtons = MutableStateFlow(false)
@@ -102,8 +101,6 @@ object MacroPadSettings {
         _deadzoneRight.value = PRIVD_DEFAULT_DEADZONE
         _buttonAlignmentSnapping.value = true
         hasLoadedOnce = false
-        lastLoadedProfilesJson = null
-        lastLoadedActiveProfileId = null
     }
 
     internal fun loadFrom(prefs: Preferences) {
@@ -114,16 +111,11 @@ object MacroPadSettings {
         prefs[KEY_MACROPAD_SNAP_ALIGNMENT]?.let { _buttonAlignmentSnapping.value = it }
 
         // MacroPad profiles
+        if (hasLoadedOnce) return
+        hasLoadedOnce = true
+
         val macropadProfilesJson = prefs[KEY_MACROPAD_PROFILES]
         val activeId = prefs[KEY_MACROPAD_ACTIVE_PROFILE_ID]
-
-        if (hasLoadedOnce && macropadProfilesJson == lastLoadedProfilesJson && activeId == lastLoadedActiveProfileId) {
-            return
-        }
-        hasLoadedOnce = true
-        lastLoadedProfilesJson = macropadProfilesJson
-        lastLoadedActiveProfileId = activeId
-
         val profiles =
             if (macropadProfilesJson != null) {
                 runCatching {
@@ -207,7 +199,5 @@ object MacroPadSettings {
                 prefs.remove(KEY_MACROPAD_ACTIVE_PROFILE_ID)
             }
         }
-        lastLoadedProfilesJson = json
-        lastLoadedActiveProfileId = activeId
     }
 }

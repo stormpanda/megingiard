@@ -115,11 +115,19 @@ object InstalledAppsManager {
     private val _lastUsed = MutableStateFlow<List<String>>(emptyList())
     val lastUsed: StateFlow<List<String>> = _lastUsed.asStateFlow()
 
+    private val userListsLock = Any()
+
+    @Volatile
+    private var isUserListsLoaded = false
+
     internal fun resetForTesting() {
         installedAndroidAppsFlow.value = emptyList()
         _favorites.value = emptySet()
         _hiddenApps.value = emptySet()
         _lastUsed.value = emptyList()
+        synchronized(userListsLock) {
+            isUserListsLoaded = false
+        }
         synchronized(artworkOptOutsLock) {
             artworkOptOuts = ArtworkOptOuts()
             isArtworkOptOutsLoaded = false
@@ -313,6 +321,7 @@ object InstalledAppsManager {
         loadLibraryIconIds(context)
         loadArtworkOptOuts(context)
         loadScrapeAttempts(context)
+        ensureUserListsLoaded(context)
     }
 
     @VisibleForTesting
@@ -395,6 +404,16 @@ object InstalledAppsManager {
         persistLines(context, filename, current)
     }
 
+    private fun ensureUserListsLoaded(context: Context) {
+        synchronized(userListsLock) {
+            if (isUserListsLoaded) return
+            isUserListsLoaded = true
+            loadFavorites(context)
+            loadHidden(context)
+            loadLastUsed(context)
+        }
+    }
+
     private fun loadFavorites(context: Context) {
         _favorites.value = loadStringSet(context, FILE_FAVORITES)
         AppLog.d(TAG, "Loaded ${_favorites.value.size} favorite apps from disk")
@@ -404,6 +423,7 @@ object InstalledAppsManager {
         context: Context,
         packageName: String,
     ) {
+        ensureUserListsLoaded(context)
         toggleInSet(context, FILE_FAVORITES, _favorites, packageName, "favorites")
     }
 
@@ -416,6 +436,7 @@ object InstalledAppsManager {
         context: Context,
         packageName: String,
     ) {
+        ensureUserListsLoaded(context)
         toggleInSet(context, FILE_HIDDEN, _hiddenApps, packageName, "hidden apps")
     }
 
@@ -428,6 +449,7 @@ object InstalledAppsManager {
         context: Context,
         packageName: String,
     ) {
+        ensureUserListsLoaded(context)
         val list = _lastUsed.value.toMutableList()
         list.remove(packageName)
         list.add(0, packageName)
@@ -669,9 +691,7 @@ object InstalledAppsManager {
 
             SystemRoleClassifier.refreshLaunchers(context)
 
-            loadFavorites(context)
-            loadHidden(context)
-            loadLastUsed(context)
+            ensureUserListsLoaded(context)
 
             val packageManager = context.packageManager
             val mainIntent =

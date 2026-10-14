@@ -30,7 +30,9 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.InputStream
 import java.time.Instant
 import java.util.UUID
 import java.util.zip.ZipEntry
@@ -41,6 +43,10 @@ private const val TAG = "ConfigManager"
 
 /** Safety cap — reject files larger than 10 MB to prevent OOM. */
 private const val MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024
+
+/** Safety cap — reject extracted archives larger than 20 MB total to prevent ZIP-bomb OOM. */
+private const val MAX_TOTAL_ZIP_BYTES = 20 * 1024 * 1024
+private const val READ_BUFFER_SIZE = 8192
 
 /** Minimum schema version accepted on import. Currently only v3 is supported. */
 private const val MIN_SUPPORTED_SCHEMA = 3
@@ -216,6 +222,10 @@ object ConfigManager {
         _pendingInAppUri.value = uri
     }
 
+    fun setPendingInAppImportMode(mode: ImportMode) {
+        _pendingInAppImportMode.value = mode
+    }
+
     /** Called by MainAppScreen after successfully parsing an in-app import URI. */
     fun setInAppParsedImport(export: MegingiardExport) {
         AppLog.d(TAG, "setInAppParsedImport")
@@ -328,6 +338,32 @@ object ConfigManager {
         )
     }
 
+    private fun InputStream.readBytesBounded(maxBytes: Int): ByteArray {
+        val out = ByteArrayOutputStream()
+        val buf = ByteArray(READ_BUFFER_SIZE)
+        var total = 0
+        while (true) {
+            val n = read(buf)
+            if (n < 0) break
+            total += n
+            check(total <= maxBytes) {
+                "File too large: exceeds $maxBytes bytes"
+            }
+            out.write(buf, 0, n)
+        }
+        return out.toByteArray()
+    }
+
+    private fun isSafeFileInDir(
+        baseDir: File,
+        target: File,
+    ): Boolean =
+        runCatching {
+            val baseCanonical = baseDir.canonicalFile.path
+            val targetCanonical = target.canonicalFile.path
+            targetCanonical.startsWith("$baseCanonical${File.separator}")
+        }.getOrDefault(false)
+
     private fun resolveLayoutBackgroundFile(
         context: Context,
         bgPath: String?,
@@ -335,7 +371,9 @@ object ConfigManager {
     ): File? {
         if (bgPath.isNullOrEmpty()) return null
         val fileByPath = File(context.filesDir, bgPath)
-        if (fileByPath.exists() && fileByPath.isFile) return fileByPath
+        if (!bgPath.contains("..") && isSafeFileInDir(context.filesDir, fileByPath) && fileByPath.exists() && fileByPath.isFile) {
+            return fileByPath
+        }
         val fileByLayoutId = File(File(context.filesDir, "backgrounds"), "bg_$layoutId")
         if (fileByLayoutId.exists() && fileByLayoutId.isFile) return fileByLayoutId
         return null
@@ -348,7 +386,9 @@ object ConfigManager {
     ): File? {
         if (maskPath.isNullOrEmpty()) return null
         val fileByPath = File(context.filesDir, maskPath)
-        if (fileByPath.exists() && fileByPath.isFile) return fileByPath
+        if (!maskPath.contains("..") && isSafeFileInDir(context.filesDir, fileByPath) && fileByPath.exists() && fileByPath.isFile) {
+            return fileByPath
+        }
         val fileByLayoutId = File(File(context.filesDir, "masks"), "mask_$layoutId")
         if (fileByLayoutId.exists() && fileByLayoutId.isFile) return fileByLayoutId
         return null
@@ -488,11 +528,7 @@ object ConfigManager {
                 }
             val bytes =
                 context.contentResolver.openInputStream(uri)?.use { input ->
-                    val read = input.readBytes()
-                    check(read.size <= MAX_FILE_SIZE_BYTES) {
-                        "File too large: ${read.size} bytes (max $MAX_FILE_SIZE_BYTES)"
-                    }
-                    read
+                    input.readBytesBounded(MAX_FILE_SIZE_BYTES)
                 } ?: error("Could not open input stream for URI: $uri")
 
             val isZip =
@@ -505,12 +541,17 @@ object ConfigManager {
             if (isZip) {
                 var jsonText: String? = null
                 val imagesMap = mutableMapOf<String, ByteArray>()
+                var totalExtractedBytes = 0
                 ZipInputStream(ByteArrayInputStream(bytes)).use { zip ->
                     var entry = zip.nextEntry
                     while (entry != null) {
                         val entryName = entry.name
                         if (!entry.isDirectory) {
-                            val entryBytes = zip.readBytes()
+                            val entryBytes = zip.readBytesBounded(MAX_FILE_SIZE_BYTES)
+                            totalExtractedBytes += entryBytes.size
+                            check(totalExtractedBytes <= MAX_TOTAL_ZIP_BYTES) {
+                                "Archive too large when uncompressed: exceeds $MAX_TOTAL_ZIP_BYTES bytes"
+                            }
                             if (entryName == "config.json" || entryName.endsWith(".json")) {
                                 jsonText = entryBytes.toString(Charsets.UTF_8)
                             } else if (entryName.startsWith("backgrounds/") ||
@@ -641,10 +682,7 @@ object ConfigManager {
 
         if (!currentPath.isNullOrEmpty()) {
             val srcFile = File(context.filesDir, currentPath)
-            val filesDirCanonical = context.filesDir.canonicalPath
-            val isSafePath =
-                !currentPath.contains("..") &&
-                    runCatching { srcFile.canonicalPath.startsWith(filesDirCanonical) }.getOrDefault(false)
+            val isSafePath = !currentPath.contains("..") && isSafeFileInDir(context.filesDir, srcFile)
             val srcFileFallback = File(targetDir, "${prefix}_$oldLayoutId")
             val existingSrc =
                 if (isSafePath && srcFile.exists()) {

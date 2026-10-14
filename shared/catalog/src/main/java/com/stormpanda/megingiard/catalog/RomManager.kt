@@ -67,6 +67,23 @@ object RomManager {
     private val _romApps = MutableStateFlow<List<InstalledAppInfo>>(emptyList())
     val romApps: StateFlow<List<InstalledAppInfo>> = _romApps.asStateFlow()
 
+    private val stateLock = Any()
+
+    @Volatile
+    private var isRomFoldersLoaded = false
+
+    @VisibleForTesting
+    fun resetForTesting() {
+        synchronized(stateLock) {
+            isRomFoldersLoaded = false
+            _romFolders.value = emptyList()
+            _romApps.value = emptyList()
+        }
+        synchronized(romCleanedNames) {
+            romCleanedNames.clear()
+        }
+    }
+
     @VisibleForTesting
     fun setRomAppsForTesting(apps: List<InstalledAppInfo>) {
         _romApps.value = apps
@@ -114,17 +131,20 @@ object RomManager {
     }
 
     fun loadRomFolders(context: Context) {
-        loadJsonFile<List<CustomRomFolder>>(context, FILE_ROM_FOLDERS)?.let { folders ->
-            _romFolders.value = folders
-            AppLog.d(TAG, "Loaded ${folders.size} ROM folders from disk")
-        }
-
-        loadJsonFile<Map<String, String>>(context, FILE_ROM_CLEANED_NAMES)?.let { map ->
-            synchronized(romCleanedNames) {
-                romCleanedNames.clear()
-                romCleanedNames.putAll(map)
+        synchronized(stateLock) {
+            if (isRomFoldersLoaded) return
+            isRomFoldersLoaded = true
+            loadJsonFile<List<CustomRomFolder>>(context, FILE_ROM_FOLDERS)?.let { folders ->
+                _romFolders.value = folders
+                AppLog.d(TAG, "Loaded ${folders.size} ROM folders from disk")
             }
-            AppLog.d(TAG, "Loaded ${map.size} cleaned ROM names from disk")
+            loadJsonFile<Map<String, String>>(context, FILE_ROM_CLEANED_NAMES)?.let { map ->
+                synchronized(romCleanedNames) {
+                    romCleanedNames.clear()
+                    romCleanedNames.putAll(map)
+                }
+                AppLog.d(TAG, "Loaded ${map.size} cleaned ROM names from disk")
+            }
         }
     }
 
@@ -166,6 +186,7 @@ object RomManager {
         uri: Uri,
     ): AddRomFolderResult =
         withContext(Dispatchers.IO) {
+            loadRomFolders(context)
             // 1. Take persistable URI permission
             try {
                 context.contentResolver.takePersistableUriPermission(
@@ -244,6 +265,7 @@ object RomManager {
         folderUri: String,
         coreName: String?,
     ) {
+        loadRomFolders(context)
         val current = _romFolders.value.map { if (it.uriString == folderUri) it.copy(retroArchCore = coreName) else it }
         saveRomFolders(context, current)
         reloadRomApps(context)
@@ -254,6 +276,7 @@ object RomManager {
         folderUri: String,
         packageName: String?,
     ) {
+        loadRomFolders(context)
         val current = _romFolders.value.map { if (it.uriString == folderUri) it.copy(emulatorPackage = packageName) else it }
         saveRomFolders(context, current)
         reloadRomApps(context)
@@ -263,6 +286,7 @@ object RomManager {
         context: Context,
         folder: CustomRomFolder,
     ) {
+        loadRomFolders(context)
         val current = _romFolders.value.toMutableList()
         current.removeAll { it.uriString == folder.uriString }
         saveRomFolders(context, current)

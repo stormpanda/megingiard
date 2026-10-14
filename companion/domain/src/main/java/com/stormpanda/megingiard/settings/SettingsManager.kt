@@ -143,6 +143,10 @@ object SettingsManager {
         _welcomeTourCompletedVersion.value = 0
         _showMacroEditorTutorial.value = true
         _internalBackups.value = emptyList()
+        autoBackupTriggered = false
+        lastBackupsJsonStr = null
+        TouchpadSettings.resetForTesting()
+        MirrorSettings.resetForTesting()
         MacroPadSettings.resetForTesting()
         KeyboardSettings.resetForTesting()
         UpdateManager.resetForTesting()

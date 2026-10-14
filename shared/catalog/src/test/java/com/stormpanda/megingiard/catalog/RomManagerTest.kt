@@ -5,10 +5,12 @@ import android.content.pm.PackageInfo
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -25,6 +27,16 @@ import java.util.zip.ZipOutputStream
 @Config(sdk = [33])
 class RomManagerTest {
     private val context: Context = RuntimeEnvironment.getApplication()
+
+    @Before
+    fun setUp() {
+        RomManager.resetForTesting()
+    }
+
+    @After
+    fun tearDown() {
+        RomManager.resetForTesting()
+    }
 
     private fun docFiles(vararg names: String): Array<DocumentFile> = names.map { DocumentFile.fromFile(File(it)) }.toTypedArray()
 

@@ -54,6 +54,7 @@ class RomDiscoveryToLaunchPipelineE2ETest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         context = RuntimeEnvironment.getApplication()
+        RomManager.resetForTesting()
 
         romsDir = File(context.cacheDir, "e2e_roms_${UUID.randomUUID()}").apply { mkdirs() }
 
@@ -69,6 +70,7 @@ class RomDiscoveryToLaunchPipelineE2ETest {
 
     @After
     fun tearDown() {
+        RomManager.resetForTesting()
         romsDir.deleteRecursively()
         Dispatchers.resetMain()
     }

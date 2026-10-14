@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.settings
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.emptyPreferences
 import com.stormpanda.megingiard.AppLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -73,6 +74,10 @@ object TouchpadSettings {
     // Enable physical haptic feedback tick on clicks / taps
     private val _touchpadHapticsEnabled = MutableStateFlow(true)
     val touchpadHapticsEnabled: StateFlow<Boolean> = _touchpadHapticsEnabled.asStateFlow()
+
+    internal fun resetForTesting() {
+        loadFrom(emptyPreferences())
+    }
 
     internal fun init(
         dataStore: DataStore<Preferences>,

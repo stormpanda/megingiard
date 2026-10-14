@@ -158,5 +158,7 @@ object EmulatorDetectionFunnel {
         pollingJob?.cancel()
         _activeSession.value = null
         _lastDetectedSession.value = null
+        currentFocusedRomPath = null
+        currentFocusedRomIdentifier = null
     }
 }
