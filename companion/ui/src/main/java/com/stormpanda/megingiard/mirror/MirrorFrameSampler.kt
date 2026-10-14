@@ -52,9 +52,6 @@ internal object MirrorFrameSampler {
             AppLog.d(TAG, "Unregistering active TextureView and Surface")
             activeTextureView = null
             activeSurface = null
-            reusableFullFrameBitmap?.let {
-                if (!it.isRecycled) it.recycle()
-            }
             reusableFullFrameBitmap = null
         }
     }
@@ -105,9 +102,6 @@ internal object MirrorFrameSampler {
                     } else {
                         var fullFrame = reusableFullFrameBitmap
                         if (fullFrame == null || fullFrame.width != fullW || fullFrame.height != fullH || fullFrame.isRecycled) {
-                            if (fullFrame != null && !fullFrame.isRecycled) {
-                                fullFrame.recycle()
-                            }
                             fullFrame =
                                 try {
                                     Bitmap.createBitmap(fullW, fullH, Bitmap.Config.ARGB_8888)
@@ -186,9 +180,6 @@ internal object MirrorFrameSampler {
                 val fullH = tv.height
                 var fullFrame = reusableFullFrameBitmap
                 if (fullFrame == null || fullFrame.width != fullW || fullFrame.height != fullH || fullFrame.isRecycled) {
-                    if (fullFrame != null && !fullFrame.isRecycled) {
-                        fullFrame.recycle()
-                    }
                     fullFrame =
                         try {
                             Bitmap.createBitmap(fullW, fullH, Bitmap.Config.ARGB_8888)

@@ -345,6 +345,10 @@ object PrimaryOverlayManager {
             AppLog.i(TAG, "Primary overlay window successfully attached to Display 0 WindowManager (non-activity)")
         } catch (e: Exception) {
             AppLog.e(TAG, "Failed to attach primary overlay window: ${e.message}", e)
+            lifecycleOwner?.destroy()
+            lifecycleOwner = null
+            overlayWindowManager = null
+            overlayView = null
             if (wasFrozenForModal && ScreenCaptureManager.isCapturing.value) {
                 ScreenCaptureManager.setFrozen(false)
             }

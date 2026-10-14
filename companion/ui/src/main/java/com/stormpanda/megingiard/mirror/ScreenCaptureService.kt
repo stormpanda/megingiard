@@ -123,11 +123,12 @@ class ScreenCaptureService : Service() {
     }
 
     private fun startPrivdPath(): Int {
+        startForegroundNotificationConnectedDevice()
         if (ScreenCaptureManager.isCapturing.value) {
-            AppLog.w(TAG, "startPrivdPath: already capturing — ignoring duplicate start")
+            AppLog.d(TAG, "Direct Privd capture already running, ignoring duplicate start")
             return START_NOT_STICKY
         }
-        startForegroundNotificationConnectedDevice()
+        AppLog.i(TAG, "Starting Direct Privd mirror capture")
 
         val displayManager = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
         val secondaryDisplay =
@@ -142,6 +143,12 @@ class ScreenCaptureService : Service() {
         }
 
         val primaryDisplay = displayManager.getDisplay(Display.DEFAULT_DISPLAY)
+        if (primaryDisplay == null) {
+            AppLog.e(TAG, "Primary display not found, aborting Direct Privd capture")
+            AppStateManager.setPromptInFlight(false)
+            stopSelf()
+            return START_NOT_STICKY
+        }
         val windowContext = createWindowContext(primaryDisplay, WindowManager.LayoutParams.TYPE_APPLICATION, null)
         val windowMetrics = windowContext.getSystemService(WindowManager::class.java).maximumWindowMetrics
         val bounds = windowMetrics.bounds

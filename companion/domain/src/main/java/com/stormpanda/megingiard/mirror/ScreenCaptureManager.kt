@@ -214,15 +214,21 @@ object ScreenCaptureManager {
     }
 
     fun showScreenshotPreview(bitmap: Bitmap) {
-        AppLog.d(TAG, "showScreenshotPreview")
-        _screenshotPreview.value?.recycle()
+        val old = _screenshotPreview.value
         _screenshotPreview.value = bitmap
+        if (old != null && old !== bitmap && !old.isRecycled) {
+            old.recycle()
+        }
+        AppLog.d(TAG, "Showing screenshot preview (${bitmap.width}x${bitmap.height})")
     }
 
     fun clearScreenshotPreview() {
-        AppLog.d(TAG, "clearScreenshotPreview")
-        _screenshotPreview.value?.recycle()
+        val old = _screenshotPreview.value
         _screenshotPreview.value = null
+        if (old != null && !old.isRecycled) {
+            old.recycle()
+        }
+        AppLog.d(TAG, "Cleared screenshot preview")
     }
 
     fun setLocked(locked: Boolean) {

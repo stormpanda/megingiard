@@ -287,7 +287,7 @@ fun AnchorSelectorOverlay(
         var anchorHToggle by remember(layoutId) { mutableIntStateOf(0) }
         var anchorVToggle by remember(layoutId) { mutableIntStateOf(0) }
 
-        if (effectiveCrop.width >= MIN_TOUCH_CUTOUT_SIZE && effectiveCrop.height >= MIN_TOUCH_CUTOUT_SIZE) {
+        if (effectiveCrop.width >= MIN_ANCHOR_SIZE && effectiveCrop.height >= MIN_ANCHOR_SIZE) {
             var dragStartX by remember(layoutId) { mutableFloatStateOf(0f) }
             var dragStartY by remember(layoutId) { mutableFloatStateOf(0f) }
             var dragStartW by remember(layoutId) { mutableFloatStateOf(0f) }
@@ -320,7 +320,7 @@ fun AnchorSelectorOverlay(
                 onDragStart = { captureDragStart() },
                 onDrag = { _, totalDy ->
                     val bottom = dragStartY + dragStartH
-                    val newY = (dragStartY + totalDy / screenH).coerceIn(0f, bottom - MIN_TOUCH_CUTOUT_SIZE)
+                    val newY = (dragStartY + totalDy / screenH).coerceIn(0f, bottom - MIN_ANCHOR_SIZE)
                     updateAnchorCrop(dragStartX, newY, dragStartW, bottom - newY)
                 },
             )
@@ -338,7 +338,7 @@ fun AnchorSelectorOverlay(
                 color = colors.accent,
                 onDragStart = { captureDragStart() },
                 onDrag = { _, totalDy ->
-                    val newH = ((dragStartY + dragStartH + totalDy / screenH).coerceIn(dragStartY + MIN_TOUCH_CUTOUT_SIZE, 1f)) - dragStartY
+                    val newH = ((dragStartY + dragStartH + totalDy / screenH).coerceIn(dragStartY + MIN_ANCHOR_SIZE, 1f)) - dragStartY
                     updateAnchorCrop(dragStartX, dragStartY, dragStartW, newH)
                 },
             )
@@ -357,7 +357,7 @@ fun AnchorSelectorOverlay(
                 onDragStart = { captureDragStart() },
                 onDrag = { totalDx, _ ->
                     val right = dragStartX + dragStartW
-                    val newX = (dragStartX + totalDx / screenW).coerceIn(0f, right - MIN_TOUCH_CUTOUT_SIZE)
+                    val newX = (dragStartX + totalDx / screenW).coerceIn(0f, right - MIN_ANCHOR_SIZE)
                     updateAnchorCrop(newX, dragStartY, right - newX, dragStartH)
                 },
             )
@@ -375,7 +375,7 @@ fun AnchorSelectorOverlay(
                 color = colors.accent,
                 onDragStart = { captureDragStart() },
                 onDrag = { totalDx, _ ->
-                    val newW = ((dragStartX + dragStartW + totalDx / screenW).coerceIn(dragStartX + MIN_TOUCH_CUTOUT_SIZE, 1f)) - dragStartX
+                    val newW = ((dragStartX + dragStartW + totalDx / screenW).coerceIn(dragStartX + MIN_ANCHOR_SIZE, 1f)) - dragStartX
                     updateAnchorCrop(dragStartX, dragStartY, newW, dragStartH)
                 },
             )

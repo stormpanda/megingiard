@@ -48,6 +48,8 @@ private const val AUTO_SWITCH_COOLDOWN_MS = 500L
 private const val DEFAULT_SOURCE_WIDTH = 1920
 private const val DEFAULT_SOURCE_HEIGHT = 1080
 
+private fun CutoutFrameRingBuffer.clear() = recycle()
+
 /**
  * Singleton manager coordinating real-time visual anchor presence detection and freeze-frame caching.
  *
@@ -303,7 +305,11 @@ object AnchorPresenceManager {
 
     private suspend fun runMonitoringLoop() {
         while (scope.isActive) {
-            val context = appContext ?: continue
+            val context = appContext
+            if (context == null) {
+                delay(PRESENCE_CHECK_INTERVAL_LOST_FAST_MS)
+                continue
+            }
 
             // Suspend presence monitoring and layout auto-switching during calibration or while editor/modal is open
             if (VisualAutoTuneCoordinator.isCalibrating.value ||
@@ -345,16 +351,14 @@ object AnchorPresenceManager {
             }
 
             val allCutouts = ScreenCaptureManager.cutouts.value
-            // Zero-allocation stale cutout ring buffer cleanup
-            if (cutoutRingBuffers.size > allCutouts.size) {
-                val it = cutoutRingBuffers.keys.iterator()
-                while (it.hasNext()) {
-                    val id = it.next()
-                    if (allCutouts.none { it.id == id }) {
-                        cutoutRingBuffers.remove(id)?.recycle()
-                        lastValidFrameBitmaps.remove(id)?.let { if (!it.isRecycled) it.recycle() }
-                    }
-                }
+            val validIds = allCutouts.map { it.id }.toSet()
+            val staleRingIds = cutoutRingBuffers.keys.filter { it !in validIds }
+            staleRingIds.forEach { staleId ->
+                cutoutRingBuffers.remove(staleId)?.clear()
+            }
+            val staleValidIds = lastValidFrameBitmaps.keys.filter { it !in validIds }
+            staleValidIds.forEach { staleId ->
+                lastValidFrameBitmaps.remove(staleId)
             }
 
             // 60 Hz during active display; tiered back-off (33ms -> 100ms -> 500ms) when lost

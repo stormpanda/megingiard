@@ -309,13 +309,15 @@ internal object VisualAutoTuneCoordinator {
                                     } else {
                                         null
                                     }
-                            CutoutMaskManager.saveMask(
-                                context = context.applicationContext,
-                                cutoutId = cutout.id,
-                                bitmap = maskBitmap,
-                                varianceMap = result.varianceMap,
-                                freezeFrame = freezeBitmap,
-                            )
+                            withContext(Dispatchers.IO) {
+                                CutoutMaskManager.saveMask(
+                                    context = context.applicationContext,
+                                    cutoutId = cutout.id,
+                                    bitmap = maskBitmap,
+                                    varianceMap = result.varianceMap,
+                                    freezeFrame = freezeBitmap,
+                                )
+                            }
                         }
 
                         val hasMask = mask != null && !result.isStaticScene
@@ -524,19 +526,21 @@ internal object VisualAutoTuneCoordinator {
                                     null
                                 }
                             if (freezeBitmap != null) {
-                                val mask = result.maskPixels
-                                if (mask != null && result.maskWidth > 0 && result.maskHeight > 0) {
-                                    val maskBitmap =
-                                        Bitmap.createBitmap(mask, result.maskWidth, result.maskHeight, Bitmap.Config.ARGB_8888)
-                                    CutoutMaskManager.saveMask(
-                                        context = context.applicationContext,
-                                        cutoutId = layout.id,
-                                        bitmap = maskBitmap,
-                                        varianceMap = result.varianceMap,
-                                        freezeFrame = freezeBitmap,
-                                    )
-                                } else {
-                                    CutoutMaskManager.saveFreezeFrame(context.applicationContext, layout.id, freezeBitmap)
+                                withContext(Dispatchers.IO) {
+                                    val mask = result.maskPixels
+                                    if (mask != null && result.maskWidth > 0 && result.maskHeight > 0) {
+                                        val maskBitmap =
+                                            Bitmap.createBitmap(mask, result.maskWidth, result.maskHeight, Bitmap.Config.ARGB_8888)
+                                        CutoutMaskManager.saveMask(
+                                            context = context.applicationContext,
+                                            cutoutId = layout.id,
+                                            bitmap = maskBitmap,
+                                            varianceMap = result.varianceMap,
+                                            freezeFrame = freezeBitmap,
+                                        )
+                                    } else {
+                                        CutoutMaskManager.saveFreezeFrame(context.applicationContext, layout.id, freezeBitmap)
+                                    }
                                 }
                             }
                         }

@@ -97,7 +97,7 @@ fun ScreenshotPreviewOverlay(modifier: Modifier = Modifier) {
         }
     }
 
-    val currentBitmap = previewBitmap
+    val currentBitmap = previewBitmap?.takeIf { !it.isRecycled }
     if (currentBitmap != null) {
         AnimatedVisibility(
             visible = isPreviewVisible,
@@ -150,8 +150,9 @@ fun ScreenshotPreviewOverlay(modifier: Modifier = Modifier) {
                             }
                         },
             ) {
+                val imageBitmap = remember(currentBitmap) { currentBitmap.asImageBitmap() }
                 Image(
-                    bitmap = currentBitmap.asImageBitmap(),
+                    bitmap = imageBitmap,
                     contentDescription = null,
                     modifier =
                         if (aspectRatio >= 1.0f) {
