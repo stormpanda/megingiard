@@ -98,7 +98,7 @@ internal fun TextSequenceGeneratorSubPageContent(
         }
 
     val isConfirmEnabled = generatedSteps.isNotEmpty()
-    val hasChanges = textInput.isNotBlank()
+    val hasChanges = generatedSteps.isNotEmpty()
 
     val promptState =
         rememberSaveExitPromptState(
@@ -177,6 +177,7 @@ internal fun TextSequenceGeneratorSubPageContent(
 
     GamepadSaveExitActionRow(
         title = stringResource(R.string.macropad_macro_text_sequence_generate_title),
+        enabled = isConfirmEnabled,
         description =
             if (generatedSteps.isNotEmpty()) {
                 stringResource(

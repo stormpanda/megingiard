@@ -48,8 +48,7 @@ class MacroPadViewModel(
     }
 
     fun stopInjectors() {
-        AppLog.i(TAG, "stopInjectors called")
-        InjectorLifecycleManager.stopAll()
+        AppLog.d(TAG, "stopInjectors")
         MacroPadState.resetPeek()
     }
 

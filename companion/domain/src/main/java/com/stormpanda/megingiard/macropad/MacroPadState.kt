@@ -87,24 +87,31 @@ private fun PadProfile.withSyncedDeviceFlags(): PadProfile {
     }
 }
 
-private fun List<PadButton>.cloneWithMacroMapping(macroMapping: Map<String, String>): List<PadButton> =
-    map { btn ->
-        val updatedAction =
-            when (val action = btn.action) {
-                is PadAction.Macro -> {
-                    val newMacroId = macroMapping[action.macroId] ?: action.macroId
-                    PadAction.Macro(newMacroId)
-                }
-
-                else -> {
-                    action
-                }
+private fun PadButton.cloneWithMacroMapping(
+    macroMapping: Map<String, String>,
+    layoutMapping: Map<String, String> = emptyMap(),
+): PadButton {
+    val updatedAction =
+        when (val action = this.action) {
+            is PadAction.Macro -> {
+                val newMacroId = macroMapping[action.macroId] ?: action.macroId
+                PadAction.Macro(newMacroId)
             }
-        btn.copy(
-            id = UUID.randomUUID().toString(),
-            action = updatedAction,
-        )
-    }
+
+            else -> {
+                action
+            }
+        }
+    return this.copy(
+        id = UUID.randomUUID().toString(),
+        action = updatedAction,
+    )
+}
+
+private fun List<PadButton>.cloneWithMacroMapping(
+    macroMapping: Map<String, String>,
+    layoutMapping: Map<String, String> = emptyMap(),
+): List<PadButton> = map { it.cloneWithMacroMapping(macroMapping, layoutMapping) }
 
 /**
  * Runtime state holder for the MacroPad-centric UI.
@@ -616,7 +623,7 @@ object MacroPadState {
 
         val newProfileId = UUID.randomUUID().toString()
         val macroMapping = mutableMapOf<String, String>() // source macro ID -> target macro ID
-        val layoutMapping = mutableMapOf<String, String>() // source layout ID -> target layout ID
+        val layoutMapping = sourceProfile.layouts.associate { lay -> lay.id to UUID.randomUUID().toString() }
 
         // Copy macros
         val copiedMacros =
@@ -629,11 +636,10 @@ object MacroPadState {
         // Copy layouts
         val copiedLayouts =
             sourceProfile.layouts.map { layout ->
-                val targetLayoutId = UUID.randomUUID().toString()
-                layoutMapping[layout.id] = targetLayoutId
+                val targetLayoutId = layoutMapping.getValue(layout.id)
                 layout.copy(
                     id = targetLayoutId,
-                    buttons = layout.buttons.cloneWithMacroMapping(macroMapping),
+                    buttons = layout.buttons.cloneWithMacroMapping(macroMapping, layoutMapping),
                     backgroundImagePath = layout.backgroundImagePath?.let { "backgrounds/bg_$targetLayoutId" },
                     backgroundImageVersion = 0,
                     maskImagePath = layout.maskImagePath?.let { "masks/mask_$targetLayoutId" },
@@ -643,8 +649,7 @@ object MacroPadState {
 
         val newActiveLayoutId =
             sourceProfile.activeLayoutId?.let { activeId ->
-                val sourceIndex = sourceProfile.layouts.indexOfFirst { it.id == activeId }
-                if (sourceIndex != -1) copiedLayouts[sourceIndex].id else copiedLayouts.firstOrNull()?.id
+                layoutMapping[activeId] ?: copiedLayouts.firstOrNull()?.id
             } ?: copiedLayouts.firstOrNull()?.id
 
         val duplicated =

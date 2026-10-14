@@ -69,6 +69,7 @@ sealed interface GamepadRecordingState {
  * The scope is never cancelled — only the per-session collector [Job] is cancelled.
  */
 object PhysicalGamepadRecordingManager {
+    private val recordingLock = Any()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private val _state = MutableStateFlow<GamepadRecordingState>(GamepadRecordingState.Idle)
@@ -185,14 +186,14 @@ object PhysicalGamepadRecordingManager {
     internal fun recordEvdevEvent(
         event: EvdevEvent,
         nowElapsedMs: Long,
-    ) {
-        if (_state.value !is GamepadRecordingState.Recording) return
+    ) = synchronized(recordingLock) {
+        if (_state.value !is GamepadRecordingState.Recording) return@synchronized
         when (event.type) {
             EV_KEY -> handleKeyEvent(code = event.code, value = event.value, nowMs = relativeElapsedMs(nowElapsedMs))
             EV_ABS -> handleAbsEvent(code = event.code, rawValue = event.value, nowMs = nowElapsedMs)
         }
         // Update Recording state snapshot after each event for UI reactivity.
-        val current = _state.value as? GamepadRecordingState.Recording ?: return
+        val current = _state.value as? GamepadRecordingState.Recording ?: return@synchronized
         val activeStepCount =
             recordedSteps.size +
                 pendingButtonDowns.size +
@@ -213,28 +214,30 @@ object PhysicalGamepadRecordingManager {
             )
     }
 
-    private fun beginRecordingSession(startElapsedMs: Long) {
-        recordingStartEpochMs = startElapsedMs
-        _state.value =
-            GamepadRecordingState.Recording(
-                pressedButtons = emptySet(),
-                dpadDirectionX = 0,
-                dpadDirectionY = 0,
-                leftStickX = 0f,
-                leftStickY = 0f,
-                rightStickX = 0f,
-                rightStickY = 0f,
-                stepCount = 0,
-                startElapsedRealtime = startElapsedMs,
-            )
-    }
+    private fun beginRecordingSession(startElapsedMs: Long) =
+        synchronized(recordingLock) {
+            recordingStartEpochMs = startElapsedMs
+            _state.value =
+                GamepadRecordingState.Recording(
+                    pressedButtons = emptySet(),
+                    dpadDirectionX = 0,
+                    dpadDirectionY = 0,
+                    leftStickX = 0f,
+                    leftStickY = 0f,
+                    rightStickX = 0f,
+                    rightStickY = 0f,
+                    stepCount = 0,
+                    startElapsedRealtime = startElapsedMs,
+                )
+        }
 
-    private fun completeRecordingAt(stopElapsedMs: Long): List<MacroStep> {
-        val stopRelativeMs = relativeElapsedMs(stopElapsedMs)
-        flushOpenButtonAndHatSteps(stopRelativeMs)
-        closeOpenGestures(stopElapsedMs)
-        return trimLeadingIdle(recordedSteps.sortedBy { it.startTimeMs })
-    }
+    private fun completeRecordingAt(stopElapsedMs: Long): List<MacroStep> =
+        synchronized(recordingLock) {
+            val stopRelativeMs = relativeElapsedMs(stopElapsedMs)
+            flushOpenButtonAndHatSteps(stopRelativeMs)
+            closeOpenGestures(stopElapsedMs)
+            return@synchronized trimLeadingIdle(recordedSteps.sortedBy { it.startTimeMs })
+        }
 
     private fun handleKeyEvent(
         code: Int,
@@ -478,23 +481,24 @@ object PhysicalGamepadRecordingManager {
         return (nowElapsedMs - recordingStartEpochMs).coerceAtLeast(0L)
     }
 
-    private fun resetInternalState() {
-        leftSamples.clear()
-        rightSamples.clear()
-        leftInGesture = false
-        rightInGesture = false
-        leftGestureStartMs = 0L
-        rightGestureStartMs = 0L
-        leftX = 0f
-        leftY = 0f
-        rightX = 0f
-        rightY = 0f
-        pendingButtonDowns.clear()
-        pressedButtons = mutableSetOf()
-        hatStartMs = null
-        dpadX = 0
-        dpadY = 0
-        recordedSteps.clear()
-        recordingStartEpochMs = 0L
-    }
+    private fun resetInternalState() =
+        synchronized(recordingLock) {
+            leftSamples.clear()
+            rightSamples.clear()
+            leftInGesture = false
+            rightInGesture = false
+            leftGestureStartMs = 0L
+            rightGestureStartMs = 0L
+            leftX = 0f
+            leftY = 0f
+            rightX = 0f
+            rightY = 0f
+            pendingButtonDowns.clear()
+            pressedButtons = mutableSetOf()
+            hatStartMs = null
+            dpadX = 0
+            dpadY = 0
+            recordedSteps.clear()
+            recordingStartEpochMs = 0L
+        }
 }

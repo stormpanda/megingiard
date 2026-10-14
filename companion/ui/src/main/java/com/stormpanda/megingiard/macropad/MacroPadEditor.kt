@@ -425,8 +425,10 @@ fun MacroPadEditor(
                                                                 }
                                                             }
                                                         }
-                                                        val duplicatedProfile = MacroPadState.activeProfile.value
-                                                        val duplicatedName = duplicatedProfile?.name ?: originalProfile.name
+                                                        val duplicatedName =
+                                                            MacroPadState.profiles.value
+                                                                .lastOrNull()
+                                                                ?.name ?: originalProfile.name
                                                         DialogToastManager.show(
                                                             context.getString(R.string.macropad_profile_duplicated_toast, duplicatedName),
                                                         )
@@ -443,6 +445,7 @@ fun MacroPadEditor(
                                                         scope.launch {
                                                             layoutsToDelete.forEach { lay ->
                                                                 MacroPadMediaRepository.deleteBackgroundImage(context, lay.id)
+                                                                MacroPadMediaRepository.deleteMaskImage(context, lay.id)
                                                             }
                                                         }
                                                         DialogToastManager.show(
@@ -524,6 +527,7 @@ fun MacroPadEditor(
                                                         if (isDeleted) {
                                                             scope.launch {
                                                                 MacroPadMediaRepository.deleteBackgroundImage(context, activeLayout.id)
+                                                                MacroPadMediaRepository.deleteMaskImage(context, activeLayout.id)
                                                             }
                                                             DialogToastManager.show(
                                                                 context.getString(R.string.macropad_layout_deleted_toast, deletedName),
@@ -821,6 +825,7 @@ fun MacroPadEditor(
                                                         scope.launch {
                                                             layoutsToDelete.forEach { lay ->
                                                                 MacroPadMediaRepository.deleteBackgroundImage(context, lay.id)
+                                                                MacroPadMediaRepository.deleteMaskImage(context, lay.id)
                                                             }
                                                         }
                                                         MacroPadNavState.pop()
@@ -969,6 +974,7 @@ fun MacroPadEditor(
                                                         if (isDeleted) {
                                                             scope.launch {
                                                                 MacroPadMediaRepository.deleteBackgroundImage(context, lay.id)
+                                                                MacroPadMediaRepository.deleteMaskImage(context, lay.id)
                                                             }
                                                             appearanceDraft = null
                                                             MacroPadNavState.pop()
@@ -1266,6 +1272,15 @@ fun MacroPadEditor(
                                                             if (lay.backgroundImagePath != null) {
                                                                 scope.launch {
                                                                     MacroPadMediaRepository.duplicateBackgroundImage(
+                                                                        context,
+                                                                        lay.id,
+                                                                        newLayoutId,
+                                                                    )
+                                                                }
+                                                            }
+                                                            if (lay.maskImagePath != null) {
+                                                                scope.launch {
+                                                                    MacroPadMediaRepository.duplicateMaskImage(
                                                                         context,
                                                                         lay.id,
                                                                         newLayoutId,

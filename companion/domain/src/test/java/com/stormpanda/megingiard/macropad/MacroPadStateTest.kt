@@ -517,6 +517,31 @@ class MacroPadStateTest {
     }
 
     @Test
+    fun `duplicateProfile remaps layout ids and active layout id`() {
+        val l1 = testLayout(id = "layout-1", name = "Lay1")
+        val l2 = testLayout(id = "layout-2", name = "Lay2")
+        loadProfiles(testProfile(id = "p1", name = "P1", layouts = listOf(l1, l2), activeLayoutId = "layout-2"))
+
+        val layoutMapping = MacroPadState.duplicateProfile("p1")
+        assertNotNull(layoutMapping)
+        assertEquals(2, layoutMapping?.size)
+
+        val profiles = MacroPadState.profiles.value
+        assertEquals(2, profiles.size)
+        val dupProfile = profiles.first { it.id != "p1" }
+
+        val newLayout1Id = layoutMapping?.get("layout-1")
+        val newLayout2Id = layoutMapping?.get("layout-2")
+        assertNotNull(newLayout1Id)
+        assertNotNull(newLayout2Id)
+        assertNotEquals("layout-1", newLayout1Id)
+        assertNotEquals("layout-2", newLayout2Id)
+
+        assertEquals(listOf(newLayout1Id, newLayout2Id), dupProfile.layouts.map { it.id })
+        assertEquals(newLayout2Id, dupProfile.activeLayoutId)
+    }
+
+    @Test
     fun `updateLayout preserves and updates backgroundImagePath`() {
         val l1 = testLayout(id = "layout-1", name = "Lay1", backgroundImagePath = null)
         loadProfiles(testProfile(id = "p1", layouts = listOf(l1), activeLayoutId = "layout-1"))

@@ -9,6 +9,7 @@ import android.view.Window
 import android.view.animation.AccelerateDecelerateInterpolator
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -136,22 +137,32 @@ object LayoutTransitionManager {
             }
 
         val pixelCopySuccess =
-            suspendCancellableCoroutine { cont ->
-                try {
-                    PixelCopy.request(
-                        window,
-                        bitmap,
-                        { result ->
-                            if (cont.isActive) {
-                                cont.resume(result == PixelCopy.SUCCESS)
-                            }
-                        },
-                        mainHandler,
-                    )
-                } catch (e: Exception) {
-                    AppLog.e(TAG, "Exception during PixelCopy.request", e)
-                    if (cont.isActive) cont.resume(false)
+            try {
+                suspendCancellableCoroutine<Boolean> { cont ->
+                    cont.invokeOnCancellation {
+                        // PixelCopy callback may still fire on main handler; handled below
+                    }
+                    try {
+                        PixelCopy.request(
+                            window,
+                            bitmap,
+                            { result ->
+                                if (cont.isActive) {
+                                    cont.resume(result == PixelCopy.SUCCESS)
+                                } else if (!bitmap.isRecycled) {
+                                    bitmap.recycle()
+                                }
+                            },
+                            mainHandler,
+                        )
+                    } catch (e: Exception) {
+                        AppLog.e(TAG, "Exception during PixelCopy.request", e)
+                        if (cont.isActive) cont.resume(false)
+                    }
                 }
+            } catch (e: CancellationException) {
+                MacroPadState.setActiveLayoutId(newLayoutId)
+                throw e
             }
 
         if (!pixelCopySuccess) {

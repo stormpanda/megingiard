@@ -40,6 +40,7 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.cycle
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
+import kotlin.math.max
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
@@ -123,7 +124,8 @@ internal fun MacroStepEditSubPageContent(
             step != null -> step.startTimeMs.coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
             else -> suggestedStartTimeMs.coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
         }
-    val initialDurationMs = (step?.durationMs ?: MSD_DEFAULT_DURATION_MS).coerceIn(10L, MSD_MAX_DURATION_MS).toInt()
+    val maxDurationMs = max(MSD_MAX_DURATION_MS, step?.durationMs ?: MSD_DEFAULT_DURATION_MS)
+    val initialDurationMs = (step?.durationMs ?: MSD_DEFAULT_DURATION_MS).coerceIn(10L, maxDurationMs).toInt()
 
     var stepType by remember { mutableStateOf(initialType) }
     var startMs by remember { mutableIntStateOf(initialStartMs) }
@@ -532,12 +534,12 @@ internal fun MacroStepEditSubPageContent(
         title = stringResource(R.string.macropad_macro_step_duration_ms),
         description = stringResource(R.string.macropad_macro_step_duration_desc),
         value = durMs.toFloat(),
-        valueRange = 10f..MSD_MAX_DURATION_MS.toFloat(),
+        valueRange = 10f..maxDurationMs.toFloat(),
         step = MSD_TIME_SLIDER_STEP,
         fineStep = 1f,
         valueLabel = "$durMs ms",
         icon = Icons.Rounded.Schedule,
-        onValueChange = { durMs = it.roundToInt().coerceIn(10, MSD_MAX_DURATION_MS.toInt()) },
+        onValueChange = { durMs = it.roundToInt().coerceIn(10, maxDurationMs.toInt()) },
     )
 
     if (step != null) {
