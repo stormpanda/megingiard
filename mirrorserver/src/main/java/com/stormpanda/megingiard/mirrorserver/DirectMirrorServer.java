@@ -126,6 +126,14 @@ public final class DirectMirrorServer {
                 release();
 
                 int numSurfaces = data.readInt();
+                if (numSurfaces < 0 || numSurfaces > 8) {
+                    System.err.println("[DirectMirror] Invalid numSurfaces: " + numSurfaces);
+                    if (reply != null) {
+                        reply.writeNoException();
+                        reply.writeInt(0);
+                    }
+                    return true;
+                }
                 System.err.println("DirectMirrorServer: receiving " + numSurfaces + " surfaces");
                 
                 if (numSurfaces == 0) {

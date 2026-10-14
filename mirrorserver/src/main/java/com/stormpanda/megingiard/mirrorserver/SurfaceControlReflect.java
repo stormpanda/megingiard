@@ -108,12 +108,20 @@ final class SurfaceControlReflect {
      */
     static void configureDisplay(IBinder displayToken, Surface surface,
                                  int layerStack, Rect layerStackRect, Rect displayRect) {
+        Object tx = null;
         try {
-            Object tx = TRANSACTION_CTOR.newInstance();
+            tx = TRANSACTION_CTOR.newInstance();
             M_TX_SET_DISPLAY_SURFACE.invoke(tx, displayToken, surface);
             configureDisplayTransaction(tx, displayToken, layerStack, 0, layerStackRect, displayRect);
         } catch (ReflectiveOperationException e) {
             throw new RuntimeException(e);
+        } finally {
+            if (tx instanceof AutoCloseable) {
+                try {
+                    ((AutoCloseable) tx).close();
+                } catch (Exception ignored) {
+                }
+            }
         }
     }
 

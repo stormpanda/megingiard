@@ -224,6 +224,42 @@ static void test_touch_protocol_parsing(void) {
     res = parse_touch_command("INVALID\n", MOCK_FD, &active_slots);
     assert(res == 0);
 
+    // Out of range slots
+    active_slots = 0;
+    res = parse_touch_command("D -1 500 500\n", MOCK_FD, &active_slots);
+    assert(res == 0);
+    assert(active_slots == 0);
+
+    res = parse_touch_command("D 10 500 500\n", MOCK_FD, &active_slots);
+    assert(res == 0);
+    assert(active_slots == 0);
+
+    res = parse_touch_command("U 32\n", MOCK_FD, &active_slots);
+    assert(res == 0);
+    assert(active_slots == 0);
+
+    res = parse_touch_command("U -1\n", MOCK_FD, &active_slots);
+    assert(res == 0);
+    assert(active_slots == 0);
+
+    // Test release_all_active_touch_slots
+    res = parse_touch_command("D 0 100 100\n", MOCK_FD, &active_slots);
+    assert(res == 1);
+    res = parse_touch_command("D 2 200 200\n", MOCK_FD, &active_slots);
+    assert(res == 1);
+    assert(active_slots == ((1 << 0) | (1 << 2)));
+
+    g_event_count = 0;
+    release_all_active_touch_slots(MOCK_FD, &active_slots);
+    assert(active_slots == 0);
+    assert(g_event_count == 6);
+    assert(g_events[0].type == EV_ABS && g_events[0].code == ABS_MT_SLOT && g_events[0].value == 0);
+    assert(g_events[1].type == EV_ABS && g_events[1].code == ABS_MT_TRACKING_ID && g_events[1].value == -1);
+    assert(g_events[2].type == EV_ABS && g_events[2].code == ABS_MT_SLOT && g_events[2].value == 2);
+    assert(g_events[3].type == EV_ABS && g_events[3].code == ABS_MT_TRACKING_ID && g_events[3].value == -1);
+    assert(g_events[4].type == EV_KEY && g_events[4].code == BTN_TOUCH && g_events[4].value == 0);
+    assert(g_events[5].type == EV_SYN && g_events[5].code == SYN_REPORT && g_events[5].value == 0);
+
     printf("PASS\n");
 }
 

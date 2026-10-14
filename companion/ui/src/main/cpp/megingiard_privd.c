@@ -65,7 +65,7 @@
 #include <dirent.h>
 #include "cmd_parsers.h"
 
-#define PRIVD_VERSION 8
+#define PRIVD_VERSION 9
 
 static int g_port_start = 51234;
 #define SCAN_MAX 32
@@ -1086,6 +1086,7 @@ static int serve_client(int client_fd) {
     char line[MAX_LINE];
     char action[5];
     int a, b;
+    int active_slots_mask = 0;
 
     /* Publish this fd so evdev_reader_thread can send EVT lines to it. */
     g_client_fd_for_reader = client_fd;
@@ -1102,7 +1103,14 @@ static int serve_client(int client_fd) {
             continue;
         }
         if (line[0] == 'Q' && strcmp(line, "QUIT") == 0) {
+            release_all_active_touch_slots(g_touch_fd, &active_slots_mask);
+            if (g_keyboard_fd >= 0) {
+                ioctl(g_keyboard_fd, UI_DEV_DESTROY);
+                close(g_keyboard_fd);
+                g_keyboard_fd = -1;
+            }
             stop_reader_thread();
+            stop_touch_reader_thread();
             stop_mirror_child();
             return 1;
         }
@@ -1276,7 +1284,6 @@ static int serve_client(int client_fd) {
             continue;
         }
 
-        static int active_slots_mask = 0;
         if (parse_touch_command(line, g_touch_fd, &active_slots_mask)) continue;
         if (parse_mouse_command(line, g_mouse_fd)) continue;
         if (parse_key_command(line, g_keyboard_fd)) continue;
@@ -1285,6 +1292,7 @@ static int serve_client(int client_fd) {
         /* Unknown commands are silently ignored — forward-compat for future
          * feature prefixes. */
     }
+    release_all_active_touch_slots(g_touch_fd, &active_slots_mask);
     if (g_keyboard_fd >= 0) {
         ioctl(g_keyboard_fd, UI_DEV_DESTROY);
         close(g_keyboard_fd);

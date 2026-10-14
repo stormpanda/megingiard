@@ -33,7 +33,9 @@ private const val PORT_DEBUG_START = 51244
 @Volatile private var portEnd = PORT_RELEASE_START + 4
 private const val CONNECT_TIMEOUT_MS = 500
 private const val PING_TIMEOUT_MS = 1_500L
-private const val MIRROR_DIRECT_START_TIMEOUT_MS = 4_000L
+
+// Daemon polls ServiceManager up to 6s for Binder registration; timeout must exceed that.
+private const val MIRROR_DIRECT_START_TIMEOUT_MS = 7_500L
 private const val MIRROR_STOP_TIMEOUT_MS = 3_000L
 private const val SCREENSHOT_TIMEOUT_MS = 4_000L
 private const val READ_FILE_TIMEOUT_MS = 5_000L
