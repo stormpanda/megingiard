@@ -12,6 +12,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private const val TAG = "ProviderObserverFlow"
 
@@ -45,7 +46,9 @@ fun <T> observeContentProvider(
         }
 
         // Emit initial state on IO
-        trySend(parser(appContext.contentResolver, uri))
+        withContext(Dispatchers.IO) {
+            trySend(parser(appContext.contentResolver, uri))
+        }
 
         awaitClose {
             try {

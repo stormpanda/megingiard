@@ -223,6 +223,7 @@ object ConfigManager {
     }
 
     fun setPendingInAppImportMode(mode: ImportMode) {
+        AppLog.d(TAG, "setPendingInAppImportMode: $mode")
         _pendingInAppImportMode.value = mode
     }
 
@@ -370,12 +371,15 @@ object ConfigManager {
         layoutId: String,
     ): File? {
         if (bgPath.isNullOrEmpty()) return null
+        val backgroundsDir = File(context.filesDir, "backgrounds")
         val fileByPath = File(context.filesDir, bgPath)
-        if (!bgPath.contains("..") && isSafeFileInDir(context.filesDir, fileByPath) && fileByPath.exists() && fileByPath.isFile) {
+        if (!bgPath.contains("..") && isSafeFileInDir(backgroundsDir, fileByPath) && fileByPath.exists() && fileByPath.isFile) {
             return fileByPath
         }
-        val fileByLayoutId = File(File(context.filesDir, "backgrounds"), "bg_$layoutId")
-        if (fileByLayoutId.exists() && fileByLayoutId.isFile) return fileByLayoutId
+        val fileByLayoutId = File(backgroundsDir, "bg_$layoutId")
+        if (isSafeFileInDir(backgroundsDir, fileByLayoutId) && fileByLayoutId.exists() && fileByLayoutId.isFile) {
+            return fileByLayoutId
+        }
         return null
     }
 
@@ -385,12 +389,15 @@ object ConfigManager {
         layoutId: String,
     ): File? {
         if (maskPath.isNullOrEmpty()) return null
+        val masksDir = File(context.filesDir, "masks")
         val fileByPath = File(context.filesDir, maskPath)
-        if (!maskPath.contains("..") && isSafeFileInDir(context.filesDir, fileByPath) && fileByPath.exists() && fileByPath.isFile) {
+        if (!maskPath.contains("..") && isSafeFileInDir(masksDir, fileByPath) && fileByPath.exists() && fileByPath.isFile) {
             return fileByPath
         }
-        val fileByLayoutId = File(File(context.filesDir, "masks"), "mask_$layoutId")
-        if (fileByLayoutId.exists() && fileByLayoutId.isFile) return fileByLayoutId
+        val fileByLayoutId = File(masksDir, "mask_$layoutId")
+        if (isSafeFileInDir(masksDir, fileByLayoutId) && fileByLayoutId.exists() && fileByLayoutId.isFile) {
+            return fileByLayoutId
+        }
         return null
     }
 
@@ -682,12 +689,13 @@ object ConfigManager {
 
         if (!currentPath.isNullOrEmpty()) {
             val srcFile = File(context.filesDir, currentPath)
-            val isSafePath = !currentPath.contains("..") && isSafeFileInDir(context.filesDir, srcFile)
+            val isSafePath = !currentPath.contains("..") && isSafeFileInDir(targetDir, srcFile)
             val srcFileFallback = File(targetDir, "${prefix}_$oldLayoutId")
+            val isSafeFallback = isSafeFileInDir(targetDir, srcFileFallback)
             val existingSrc =
-                if (isSafePath && srcFile.exists()) {
+                if (isSafePath && srcFile.exists() && srcFile.isFile) {
                     srcFile
-                } else if (srcFileFallback.exists()) {
+                } else if (isSafeFallback && srcFileFallback.exists() && srcFileFallback.isFile) {
                     srcFileFallback
                 } else {
                     null

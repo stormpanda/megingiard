@@ -71,7 +71,9 @@ The Megingiard Integration API exposes a standardized, robust, and backwards-com
  └───────────────────────────────────────────────┘
 ```
 
-The Integration API is built on top of Android's IPC `ContentProvider` system. It is fully declared as exported in the manifest (`android:exported="true"`), making it visible to all applications on the system without requiring dangerous permissions.
+The Integration API is built on top of Android's IPC `ContentProvider` system. It is declared as exported in the manifest (`android:exported="true"`), making `/profiles`, `/theme`, and `updateClientState` accessible to integration clients while enforcing caller verification on sensitive operations:
+- **`updateClientState` Caller Package Verification**: `MegingiardSettingsProvider.isCallerPackageValid()` verifies that a non-blank `client_package` belongs to `Binder.getCallingUid()` via `PackageManager.getPackagesForUid()` before accepting state updates from external processes.
+- **`/settings` Signature Verification**: Queries to `content://com.stormpanda.megingiard.provider/settings` (which includes the user's SteamGridDB API token and RetroArch package preference) are restricted to callers signed with the same certificate (`PackageManager.checkSignatures(Process.myUid(), callingUid) == SIGNATURE_MATCH`).
 
 ### Provider Call Interface (`updateClientState`)
 

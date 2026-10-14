@@ -87,10 +87,7 @@ private fun PadProfile.withSyncedDeviceFlags(): PadProfile {
     }
 }
 
-private fun PadButton.cloneWithMacroMapping(
-    macroMapping: Map<String, String>,
-    layoutMapping: Map<String, String> = emptyMap(),
-): PadButton {
+private fun PadButton.cloneWithMacroMapping(macroMapping: Map<String, String>): PadButton {
     val updatedAction =
         when (val action = this.action) {
             is PadAction.Macro -> {
@@ -108,10 +105,8 @@ private fun PadButton.cloneWithMacroMapping(
     )
 }
 
-private fun List<PadButton>.cloneWithMacroMapping(
-    macroMapping: Map<String, String>,
-    layoutMapping: Map<String, String> = emptyMap(),
-): List<PadButton> = map { it.cloneWithMacroMapping(macroMapping, layoutMapping) }
+private fun List<PadButton>.cloneWithMacroMapping(macroMapping: Map<String, String>): List<PadButton> =
+    map { it.cloneWithMacroMapping(macroMapping) }
 
 /**
  * Runtime state holder for the MacroPad-centric UI.
@@ -637,9 +632,14 @@ object MacroPadState {
         val copiedLayouts =
             sourceProfile.layouts.map { layout ->
                 val targetLayoutId = layoutMapping.getValue(layout.id)
+                val copiedCutouts =
+                    layout.mirrorCutouts.map { cutout ->
+                        cutout.copy(id = UUID.randomUUID().toString())
+                    }
                 layout.copy(
                     id = targetLayoutId,
-                    buttons = layout.buttons.cloneWithMacroMapping(macroMapping, layoutMapping),
+                    buttons = layout.buttons.cloneWithMacroMapping(macroMapping),
+                    mirrorCutouts = copiedCutouts,
                     backgroundImagePath = layout.backgroundImagePath?.let { "backgrounds/bg_$targetLayoutId" },
                     backgroundImageVersion = 0,
                     maskImagePath = layout.maskImagePath?.let { "masks/mask_$targetLayoutId" },

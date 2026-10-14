@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard
 
 import com.stormpanda.megingiard.macropad.GamepadKeycodes
+import com.stormpanda.megingiard.macropad.GamepadRecordingState
 import com.stormpanda.megingiard.macropad.JoystickStick
 import com.stormpanda.megingiard.macropad.MacroStep
 import com.stormpanda.megingiard.macropad.PhysicalGamepadRecordingManager
@@ -271,7 +272,7 @@ class PrivdSubsystemTest {
     @Test
     fun `PhysicalGamepadRecordingManager cancelRecording resets state to Idle`() {
         PhysicalGamepadRecordingManager.cancelRecording()
-        assertEquals(com.stormpanda.megingiard.macropad.GamepadRecordingState.Idle, PhysicalGamepadRecordingManager.state.value)
+        assertEquals(GamepadRecordingState.Idle, PhysicalGamepadRecordingManager.state.value)
     }
 
     @Test

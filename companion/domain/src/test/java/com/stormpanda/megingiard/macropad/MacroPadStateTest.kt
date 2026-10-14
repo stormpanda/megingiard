@@ -1206,4 +1206,37 @@ class MacroPadStateTest {
         // Custom threshold preserved
         assertEquals(0.90f, layouts[2].visualAnchor.matchThreshold)
     }
+
+    @Test
+    fun `duplicateProfile clones mirrorCutouts with new UUIDs`() {
+        val cutout =
+            ScreenCutout(
+                id = "cutout-orig",
+                name = "HUD",
+                srcX = 0.1f,
+                srcY = 0.1f,
+                srcWidth = 0.3f,
+                srcHeight = 0.3f,
+                destX = 0.2f,
+                destY = 0.2f,
+                destWidth = 0.4f,
+                destHeight = 0.4f,
+            )
+        val layout = testLayout(id = "l1", name = "Main", mirrorCutouts = listOf(cutout))
+        val profile = testProfile(id = "p1", name = "RPG", layouts = listOf(layout), activeLayoutId = "l1")
+        loadProfiles(profile)
+
+        MacroPadState.duplicateProfile("p1")
+
+        val profiles = MacroPadState.profiles.value
+        assertEquals(2, profiles.size)
+        val duplicatedProfile = profiles.first { it.id != "p1" }
+        val duplicatedCutout =
+            duplicatedProfile.layouts
+                .single()
+                .mirrorCutouts
+                .single()
+        assertNotEquals("cutout-orig", duplicatedCutout.id)
+        assertEquals("HUD", duplicatedCutout.name)
+    }
 }

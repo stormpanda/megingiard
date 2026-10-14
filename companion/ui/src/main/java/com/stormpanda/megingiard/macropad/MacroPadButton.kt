@@ -84,6 +84,8 @@ private const val MP_BTN_LABEL_MAX_HEIGHT_RATIO = 0.4f
 
 private const val MP_PRESS_ANIM_MS = 80
 private const val MP_RELEASE_ANIM_MS = 160
+private const val MP_BTN_BREATHE_SCALE_MAX = 1.12f
+private const val MP_BTN_PRESSED_SCALE = 0.95f
 
 // Outer gradient edge alpha at resting state; intermediate stops follow r² quadratic curve.
 internal const val MP_BTN_GRADIENT_OUTER = 0.7f
@@ -125,21 +127,28 @@ internal fun PadButton(
     val effectiveContentAccent = effectiveTextTint
 
     val animDuration = if (isPressed) MP_PRESS_ANIM_MS else MP_RELEASE_ANIM_MS
+    val isIconOnly = btn.buttonShape == ButtonShape.ICON_ONLY
 
-    val (runningBreathe, rippleProgress) =
+    val infiniteTransition =
         if (isRunning) {
-            val infiniteTransition = rememberInfiniteTransition(label = "btnRunning")
-            val breathe by infiniteTransition.animateFloat(
-                initialValue = 1.0f,
-                targetValue = 1.12f,
-                animationSpec =
-                    infiniteRepeatable(
-                        animation = tween(MP_PULSE_HALF_PERIOD_MS, easing = FastOutSlowInEasing),
-                        repeatMode = RepeatMode.Reverse,
-                    ),
-                label = "btnBreathe",
-            )
-            val ripple by infiniteTransition.animateFloat(
+            rememberInfiniteTransition(label = "btnRunning")
+        } else {
+            null
+        }
+    val runningBreatheState =
+        infiniteTransition?.animateFloat(
+            initialValue = 1.0f,
+            targetValue = MP_BTN_BREATHE_SCALE_MAX,
+            animationSpec =
+                infiniteRepeatable(
+                    animation = tween(MP_PULSE_HALF_PERIOD_MS, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse,
+                ),
+            label = "btnBreathe",
+        )
+    val rippleProgressState =
+        if (isIconOnly) {
+            infiniteTransition?.animateFloat(
                 initialValue = 0f,
                 targetValue = 1f,
                 animationSpec =
@@ -149,23 +158,15 @@ internal fun PadButton(
                     ),
                 label = "btnRippleProgress",
             )
-            breathe to ripple
         } else {
-            1.0f to 0f
+            null
         }
-    val pressedScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.95f else 1.0f,
-        animationSpec = tween(animDuration),
-        label = "btnPressedScale",
-    )
-    val contentScale =
-        if (isPressed) {
-            pressedScale
-        } else if (isRunning) {
-            runningBreathe
-        } else {
-            1.0f
-        }
+    val pressedScaleState =
+        animateFloatAsState(
+            targetValue = if (isPressed) MP_BTN_PRESSED_SCALE else 1.0f,
+            animationSpec = tween(animDuration),
+            label = "btnPressedScale",
+        )
 
     val isTrackpoint = btn.action is PadAction.TrackpointMove
 
@@ -183,8 +184,6 @@ internal fun PadButton(
                 }
             }
         }
-
-    val isIconOnly = btn.buttonShape == ButtonShape.ICON_ONLY
 
     val btnWidthDp = btn.widthDp.dp
     val btnHeightDp = btn.heightDp.dp
@@ -210,6 +209,7 @@ internal fun PadButton(
                 .height(btnHeightDp)
                 .drawBehind {
                     if (isRunning && isIconOnly) {
+                        val rippleProgress = rippleProgressState?.value ?: 0f
                         val maxRadius = minOf(size.width, size.height) * 0.75f
                         val currentRadius = maxRadius * (0.2f + rippleProgress * 0.8f)
                         val rippleAlpha = (1f - rippleProgress) * 0.6f
@@ -235,6 +235,14 @@ internal fun PadButton(
             Box(
                 modifier =
                     Modifier.graphicsLayer {
+                        val contentScale =
+                            if (isPressed) {
+                                pressedScaleState.value
+                            } else if (isRunning) {
+                                runningBreatheState?.value ?: 1.0f
+                            } else {
+                                1.0f
+                            }
                         scaleX = contentScale
                         scaleY = contentScale
                     },

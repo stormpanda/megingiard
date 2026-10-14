@@ -18,6 +18,7 @@ public final class DirectMirrorServer {
     private static final String DIRECT_SURFACE_DESCRIPTOR = "com.stormpanda.megingiard.mirrorserver.IDirectSurfaceReceiver";
     private static final int TRANSACTION_SET_SURFACE = IBinder.FIRST_CALL_TRANSACTION;
     private static final long SURFACE_DELIVERY_TIMEOUT_MS = 5_000L;
+    private static final int MAX_DIRECT_SURFACES = 8;
 
     private DirectMirrorServer() {}
 
@@ -126,7 +127,7 @@ public final class DirectMirrorServer {
                 release();
 
                 int numSurfaces = data.readInt();
-                if (numSurfaces < 0 || numSurfaces > 8) {
+                if (numSurfaces < 0 || numSurfaces > MAX_DIRECT_SURFACES) {
                     System.err.println("[DirectMirror] Invalid numSurfaces: " + numSurfaces);
                     if (reply != null) {
                         reply.writeNoException();

@@ -46,6 +46,7 @@ import kotlin.math.sqrt
 
 private const val TAG = "MacroStepEditDialog"
 
+private const val MSD_MIN_DURATION_MS = 10L
 private const val MSD_DEFAULT_DURATION_MS = 100L
 private const val MSD_MAX_START_TIME_BUFFER_MS = 5000L
 private const val MSD_MAX_DURATION_MS = 5000L
@@ -125,7 +126,7 @@ internal fun MacroStepEditSubPageContent(
             else -> suggestedStartTimeMs.coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
         }
     val maxDurationMs = max(MSD_MAX_DURATION_MS, step?.durationMs ?: MSD_DEFAULT_DURATION_MS)
-    val initialDurationMs = (step?.durationMs ?: MSD_DEFAULT_DURATION_MS).coerceIn(10L, maxDurationMs).toInt()
+    val initialDurationMs = (step?.durationMs ?: MSD_DEFAULT_DURATION_MS).coerceIn(MSD_MIN_DURATION_MS, maxDurationMs).toInt()
 
     var stepType by remember { mutableStateOf(initialType) }
     var startMs by remember { mutableIntStateOf(initialStartMs) }
@@ -534,12 +535,12 @@ internal fun MacroStepEditSubPageContent(
         title = stringResource(R.string.macropad_macro_step_duration_ms),
         description = stringResource(R.string.macropad_macro_step_duration_desc),
         value = durMs.toFloat(),
-        valueRange = 10f..maxDurationMs.toFloat(),
+        valueRange = MSD_MIN_DURATION_MS.toFloat()..maxDurationMs.toFloat(),
         step = MSD_TIME_SLIDER_STEP,
         fineStep = 1f,
         valueLabel = "$durMs ms",
         icon = Icons.Rounded.Schedule,
-        onValueChange = { durMs = it.roundToInt().coerceIn(10, maxDurationMs.toInt()) },
+        onValueChange = { durMs = it.roundToInt().coerceIn(MSD_MIN_DURATION_MS.toInt(), maxDurationMs.toInt()) },
     )
 
     if (step != null) {

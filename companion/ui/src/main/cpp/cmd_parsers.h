@@ -3,6 +3,8 @@
 
 #include "uinput_common.h"
 
+#define MAX_TOUCH_SLOTS 10
+
 /**
  * Parses and dispatches multi-touch / single-touch commands:
  *   D <slot> <x> <y>  or  D <x> <y>
@@ -17,7 +19,7 @@ static inline int parse_touch_command(const char* line, int fd, int* active_slot
 
     int parsed = sscanf(line, "%7s %d %d %d", action, &slot, &x, &y);
     if (parsed == 4) {
-        if (slot < 0 || slot > 9) return 0;
+        if (slot < 0 || slot >= MAX_TOUCH_SLOTS) return 0;
         // Multi-touch protocol format: D/M <slot> <x> <y>
         if (strcmp(action, "D") == 0) {
             write_event(fd, EV_ABS, ABS_MT_SLOT, slot);
@@ -65,7 +67,7 @@ static inline int parse_touch_command(const char* line, int fd, int* active_slot
             return 1;
         }
     } else if (parsed == 2) {
-        if (slot < 0 || slot > 9) return 0;
+        if (slot < 0 || slot >= MAX_TOUCH_SLOTS) return 0;
         // Multi-touch UP format: U <slot>
         if (strcmp(action, "U") == 0) {
             write_event(fd, EV_ABS, ABS_MT_SLOT, slot);
@@ -83,7 +85,7 @@ static inline int parse_touch_command(const char* line, int fd, int* active_slot
 static inline void release_all_active_touch_slots(int fd, int* active_slots_mask) {
     if (!active_slots_mask) return;
     if (fd >= 0 && *active_slots_mask != 0) {
-        for (int s = 0; s < 10; s++) {
+        for (int s = 0; s < MAX_TOUCH_SLOTS; s++) {
             if ((*active_slots_mask & (1 << s)) != 0) {
                 write_event(fd, EV_ABS, ABS_MT_SLOT, s);
                 write_event(fd, EV_ABS, ABS_MT_TRACKING_ID, -1);

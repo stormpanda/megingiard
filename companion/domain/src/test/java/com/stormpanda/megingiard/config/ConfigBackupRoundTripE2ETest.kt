@@ -304,4 +304,36 @@ class ConfigBackupRoundTripE2ETest {
                 exception.message?.contains("Checksum mismatch") == true,
             )
         }
+
+    @Test
+    fun testImportRejectsMediaPathsOutsideMediaSubdirectories() =
+        runTest(testDispatcher) {
+            val datastoreDir = File(context.filesDir, "datastore").apply { mkdirs() }
+            val secretFile = File(datastoreDir, "megingiard_settings.preferences_pb")
+            secretFile.writeBytes("secret_token".toByteArray(Charsets.UTF_8))
+
+            val maliciousLayout =
+                PadLayout(
+                    id = "layout-malicious",
+                    name = "Malicious",
+                    backgroundImagePath = "datastore/megingiard_settings.preferences_pb",
+                    maskImagePath = "datastore/megingiard_settings.preferences_pb",
+                )
+            val maliciousProfile =
+                PadProfile(
+                    id = "profile-malicious",
+                    name = "Malicious Profile",
+                    layouts = listOf(maliciousLayout),
+                    activeLayoutId = maliciousLayout.id,
+                )
+
+            val export = ConfigManager.buildProfileExport(testMetadata, maliciousProfile, context, includeBackgrounds = true)
+            ConfigManager.applyProfileImport(context, export, emptyMap())
+            testScheduler.advanceUntilIdle()
+
+            val imported = MacroPadState.profiles.value.first { it.name == "Malicious Profile" }
+            val importedLayout = imported.layouts.single()
+            assertEquals(null, importedLayout.backgroundImagePath)
+            assertEquals(null, importedLayout.maskImagePath)
+        }
 }

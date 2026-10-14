@@ -252,8 +252,17 @@ object RomManager {
                     systemName = systemDef.displayName,
                     emulatorPackage = defaultEmulatorPackage,
                 )
-            current.add(newFolder)
-            saveRomFolders(context, current)
+            val updated =
+                synchronized(stateLock) {
+                    val latest = _romFolders.value.toMutableList()
+                    if (latest.none { it.uriString == newFolder.uriString }) {
+                        latest.add(newFolder)
+                    }
+                    val snapshot = latest.toList()
+                    _romFolders.value = snapshot
+                    snapshot
+                }
+            saveRomFolders(context, updated)
 
             // 4. Reload ROM apps
             reloadRomAppsSuspend(context)
@@ -266,8 +275,13 @@ object RomManager {
         coreName: String?,
     ) {
         loadRomFolders(context)
-        val current = _romFolders.value.map { if (it.uriString == folderUri) it.copy(retroArchCore = coreName) else it }
-        saveRomFolders(context, current)
+        val updated =
+            synchronized(stateLock) {
+                val next = _romFolders.value.map { if (it.uriString == folderUri) it.copy(retroArchCore = coreName) else it }
+                _romFolders.value = next
+                next
+            }
+        saveRomFolders(context, updated)
         reloadRomApps(context)
     }
 
@@ -277,8 +291,13 @@ object RomManager {
         packageName: String?,
     ) {
         loadRomFolders(context)
-        val current = _romFolders.value.map { if (it.uriString == folderUri) it.copy(emulatorPackage = packageName) else it }
-        saveRomFolders(context, current)
+        val updated =
+            synchronized(stateLock) {
+                val next = _romFolders.value.map { if (it.uriString == folderUri) it.copy(emulatorPackage = packageName) else it }
+                _romFolders.value = next
+                next
+            }
+        saveRomFolders(context, updated)
         reloadRomApps(context)
     }
 
@@ -287,9 +306,15 @@ object RomManager {
         folder: CustomRomFolder,
     ) {
         loadRomFolders(context)
-        val current = _romFolders.value.toMutableList()
-        current.removeAll { it.uriString == folder.uriString }
-        saveRomFolders(context, current)
+        val updated =
+            synchronized(stateLock) {
+                val current = _romFolders.value.toMutableList()
+                current.removeAll { it.uriString == folder.uriString }
+                val next = current.toList()
+                _romFolders.value = next
+                next
+            }
+        saveRomFolders(context, updated)
 
         val namesChanged =
             synchronized(romCleanedNames) {
@@ -337,6 +362,7 @@ object RomManager {
         context: Context,
         triggerScrape: Boolean = true,
     ) = withContext(Dispatchers.IO) {
+        loadRomFolders(context)
         var namesChanged = false
         val allRomApps =
             buildList {

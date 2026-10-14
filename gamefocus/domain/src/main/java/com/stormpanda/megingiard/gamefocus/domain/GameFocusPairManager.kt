@@ -76,18 +76,20 @@ object GameFocusPairManager {
         bottomPackageName: String?,
     ) {
         loadPairs(context)
-        val current = _pairedApps.value.toMutableMap()
-        if (bottomPackageName.isNullOrBlank()) {
-            val removed = current.remove(topPackageName)
-            if (removed != null) {
-                AppLog.i(TAG, "Removed pairing for $topPackageName")
+        synchronized(stateLock) {
+            val current = _pairedApps.value.toMutableMap()
+            if (bottomPackageName.isNullOrBlank()) {
+                val removed = current.remove(topPackageName)
+                if (removed != null) {
+                    AppLog.i(TAG, "Removed pairing for $topPackageName")
+                }
+            } else {
+                current[topPackageName] = bottomPackageName
+                AppLog.i(TAG, "Set pairing: $topPackageName -> $bottomPackageName")
             }
-        } else {
-            current[topPackageName] = bottomPackageName
-            AppLog.i(TAG, "Set pairing: $topPackageName -> $bottomPackageName")
+            _pairedApps.value = current.toMap()
         }
-        _pairedApps.value = current
-        persistPairs(context, current)
+        persistPairs(context)
     }
 
     fun removePair(
@@ -99,12 +101,10 @@ object GameFocusPairManager {
 
     fun getPairedPackage(topPackageName: String): String? = _pairedApps.value[topPackageName]
 
-    private fun persistPairs(
-        context: Context,
-        pairs: Map<String, String>,
-    ) {
+    private fun persistPairs(context: Context) {
         persistScope.launch {
             synchronized(persistLock) {
+                val pairs = synchronized(stateLock) { _pairedApps.value }
                 val file = File(context.filesDir, FILE_APP_PAIRS)
                 val atomicFile = AtomicFile(file)
                 var fos: FileOutputStream? = null

@@ -80,6 +80,10 @@ private const val TRS_RADAR_ASPECT_RATIO = 16f / 9f
 private const val TRS_RADAR_CROSSHAIR_ALPHA = 0.25f
 private const val TRS_RADAR_BG_ALPHA = 0.12f
 private const val TRS_CONTAINER_MAX_WIDTH_DP = 560
+private const val TRS_PULSE_SCALE_MIN = 0.8f
+private const val TRS_PULSE_SCALE_MAX = 1.35f
+private const val TRS_PULSE_DURATION_MS = 600
+private const val TRS_TRAIL_HEAD_ALPHA = 0.85f
 
 private val TRS_CONTAINER_RADIUS = 20.dp
 private val TRS_BUTTON_RADIUS = 12.dp
@@ -470,23 +474,23 @@ private fun TouchScreenRadar(
     val surfaceVariant = colors.surfaceVariant
 
     val hasActiveTouch = !recording?.activePointers.isNullOrEmpty() || recording?.isTouchDown == true
-    val livePulseScale =
+    val pulseTransition =
         if (hasActiveTouch) {
-            val pulseTransition = rememberInfiniteTransition(label = "radarTouchPulse")
-            val scale by pulseTransition.animateFloat(
-                initialValue = 0.8f,
-                targetValue = 1.35f,
-                animationSpec =
-                    infiniteRepeatable(
-                        animation = tween(durationMillis = 600, easing = FastOutSlowInEasing),
-                        repeatMode = RepeatMode.Reverse,
-                    ),
-                label = "touchRadarLiveScale",
-            )
-            scale
+            rememberInfiniteTransition(label = "radarTouchPulse")
         } else {
-            1.0f
+            null
         }
+    val livePulseScaleState =
+        pulseTransition?.animateFloat(
+            initialValue = TRS_PULSE_SCALE_MIN,
+            targetValue = TRS_PULSE_SCALE_MAX,
+            animationSpec =
+                infiniteRepeatable(
+                    animation = tween(durationMillis = TRS_PULSE_DURATION_MS, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse,
+                ),
+            label = "touchRadarLiveScale",
+        )
 
     val trailPath = remember { Path() }
 
@@ -500,6 +504,7 @@ private fun TouchScreenRadar(
         Canvas(modifier = Modifier.fillMaxSize()) {
             val width = size.width
             val height = size.height
+            val livePulseScale = livePulseScaleState?.value ?: 1.0f
 
             // Center crosshair grid
             val midX = width / 2f
@@ -561,7 +566,7 @@ private fun DrawScope.drawNormalizedTrail(
         val py = ny * height
         if (index == 0) trailPath.moveTo(px, py) else trailPath.lineTo(px, py)
     }
-    drawPath(path = trailPath, color = color.copy(alpha = 0.85f), style = Stroke(width = strokeWidthPx))
+    drawPath(path = trailPath, color = color.copy(alpha = TRS_TRAIL_HEAD_ALPHA), style = Stroke(width = strokeWidthPx))
 }
 
 private fun DrawScope.drawPointerDot(

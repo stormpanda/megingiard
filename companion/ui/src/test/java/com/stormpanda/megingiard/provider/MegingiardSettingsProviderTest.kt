@@ -218,8 +218,9 @@ class MegingiardSettingsProviderTest {
         val provider = MegingiardSettingsProvider()
         val context = RuntimeEnvironment.getApplication()
         assertTrue(provider.isCallerPackageValid(context, "com.stormpanda.megingiard", Process.myUid()))
-        assertTrue(provider.isCallerPackageValid(context, null, Process.myUid() + 9999))
-        assertTrue(provider.isCallerPackageValid(context, "", Process.myUid() + 9999))
+        assertTrue(provider.isCallerPackageValid(context, null, Process.myUid()))
+        assertFalse(provider.isCallerPackageValid(context, null, Process.myUid() + 9999))
+        assertFalse(provider.isCallerPackageValid(context, "", Process.myUid() + 9999))
         assertFalse(provider.isCallerPackageValid(context, "com.invalid.client", Process.myUid() + 9999))
     }
 }

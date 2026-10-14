@@ -34,7 +34,8 @@ class MegingiardSettingsProvider : ContentProvider() {
         clientPackage: String?,
         callingUid: Int = Binder.getCallingUid(),
     ): Boolean {
-        if (callingUid == Process.myUid() || clientPackage.isNullOrBlank()) return true
+        if (callingUid == Process.myUid()) return true
+        if (clientPackage.isNullOrBlank()) return false
         val packages = context.packageManager.getPackagesForUid(callingUid) ?: return false
         return clientPackage in packages
     }

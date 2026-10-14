@@ -48,8 +48,6 @@ private const val AUTO_SWITCH_COOLDOWN_MS = 500L
 private const val DEFAULT_SOURCE_WIDTH = 1920
 private const val DEFAULT_SOURCE_HEIGHT = 1080
 
-private fun CutoutFrameRingBuffer.clear() = recycle()
-
 /**
  * Singleton manager coordinating real-time visual anchor presence detection and freeze-frame caching.
  *
@@ -351,14 +349,24 @@ object AnchorPresenceManager {
             }
 
             val allCutouts = ScreenCaptureManager.cutouts.value
-            val validIds = allCutouts.map { it.id }.toSet()
-            val staleRingIds = cutoutRingBuffers.keys.filter { it !in validIds }
-            staleRingIds.forEach { staleId ->
-                cutoutRingBuffers.remove(staleId)?.clear()
+            val ringIter = cutoutRingBuffers.entries.iterator()
+            while (ringIter.hasNext()) {
+                val entry = ringIter.next()
+                if (allCutouts.none { it.id == entry.key }) {
+                    entry.value.recycle()
+                    ringIter.remove()
+                }
             }
-            val staleValidIds = lastValidFrameBitmaps.keys.filter { it !in validIds }
-            staleValidIds.forEach { staleId ->
-                lastValidFrameBitmaps.remove(staleId)
+            val validBitmapIter = lastValidFrameBitmaps.entries.iterator()
+            while (validBitmapIter.hasNext()) {
+                val entry = validBitmapIter.next()
+                if (allCutouts.none { it.id == entry.key }) {
+                    val bmp = entry.value
+                    validBitmapIter.remove()
+                    if (!bmp.isRecycled) {
+                        bmp.recycle()
+                    }
+                }
             }
 
             // 60 Hz during active display; tiered back-off (33ms -> 100ms -> 500ms) when lost

@@ -362,11 +362,11 @@ object InstalledAppsManager {
     private fun persistLines(
         context: Context,
         filename: String,
-        lines: Iterable<String>,
+        linesProvider: () -> Iterable<String>,
     ) {
-        val snapshot = lines.toList()
         persistScope.launch {
             synchronized(persistLock) {
+                val snapshot = synchronized(userListsLock) { linesProvider().toList() }
                 val file = File(context.filesDir, filename)
                 val atomicFile = AtomicFile(file)
                 var fos: FileOutputStream? = null
@@ -396,12 +396,14 @@ object InstalledAppsManager {
         item: String,
         label: String,
     ) {
-        val current = stateFlow.value.toMutableSet()
-        val added = !current.remove(item)
-        if (added) current.add(item)
-        AppLog.i(TAG, "${if (added) "Added" else "Removed"} $item ${if (added) "to" else "from"} $label")
-        stateFlow.value = current
-        persistLines(context, filename, current)
+        synchronized(userListsLock) {
+            val current = stateFlow.value.toMutableSet()
+            val added = !current.remove(item)
+            if (added) current.add(item)
+            AppLog.i(TAG, "${if (added) "Added" else "Removed"} $item ${if (added) "to" else "from"} $label")
+            stateFlow.value = current.toSet()
+        }
+        persistLines(context, filename) { stateFlow.value }
     }
 
     private fun ensureUserListsLoaded(context: Context) {
@@ -450,12 +452,16 @@ object InstalledAppsManager {
         packageName: String,
     ) {
         ensureUserListsLoaded(context)
-        val list = _lastUsed.value.toMutableList()
-        list.remove(packageName)
-        list.add(0, packageName)
-        val trimmed = list.take(MAX_RECENT_APPS)
-        _lastUsed.value = trimmed
-        persistLines(context, FILE_LAST_USED, trimmed)
+        val trimmed =
+            synchronized(userListsLock) {
+                val list = _lastUsed.value.toMutableList()
+                list.remove(packageName)
+                list.add(0, packageName)
+                val updated = list.take(MAX_RECENT_APPS)
+                _lastUsed.value = updated
+                updated
+            }
+        persistLines(context, FILE_LAST_USED) { _lastUsed.value }
         AppLog.i(TAG, "Recorded launch for $packageName (recent count=${trimmed.size})")
     }
 
