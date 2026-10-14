@@ -298,7 +298,7 @@ class TouchpadGestureProcessor(
                         clickButton(MouseButton.RIGHT)
                     }
 
-                    tapCount >= 3 && threeFingerTap() -> {
+                    tapCount == 3 && threeFingerTap() -> {
                         clickButton(MouseButton.MIDDLE)
                     }
                 }

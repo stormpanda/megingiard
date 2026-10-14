@@ -14,6 +14,8 @@ object MouseInjector {
     @Volatile
     private var active: Boolean = false
 
+    private val heldButtons = mutableSetOf<Char>()
+
     fun start(context: Context? = null) {
         active = true
         AppLog.i(TAG, "start()")
@@ -21,16 +23,25 @@ object MouseInjector {
 
     fun stop() {
         AppLog.i(TAG, "stop()")
+        val toRelease =
+            synchronized(heldButtons) {
+                val copy = heldButtons.toList()
+                heldButtons.clear()
+                copy
+            }
+        toRelease.forEach { code -> PrivdClient.send("MB $code U\n") }
         active = false
     }
 
     val isRunning: Boolean get() = active && PrivdClient.isConnected
 
     fun buttonDown(code: Char) {
+        synchronized(heldButtons) { heldButtons.add(code) }
         PrivdClient.send("MB $code D\n")
     }
 
     fun buttonUp(code: Char) {
+        synchronized(heldButtons) { heldButtons.remove(code) }
         PrivdClient.send("MB $code U\n")
     }
 

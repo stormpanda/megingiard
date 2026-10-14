@@ -172,6 +172,11 @@ object ScreenCaptureManager {
         _surfaceHeight.value = height
     }
 
+    fun setCutouts(cutouts: List<ScreenCutout>) {
+        AppLog.d(TAG, "setCutouts count=${cutouts.size}")
+        _cutouts.value = cutouts
+    }
+
     fun setFrozen(frozen: Boolean) {
         AppLog.d(TAG, "setFrozen($frozen)")
         _isFrozen.value = frozen

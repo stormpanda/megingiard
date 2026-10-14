@@ -5,6 +5,7 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -121,5 +122,65 @@ class KeyRepeatControllerTest {
         controller.dispose()
         assertTrue(controller.pressedKeys.value.isEmpty())
         assertFalse(controller.trackpointVisible.value)
+    }
+
+    @Test
+    fun testKeyMoveFromControlKeyToAnotherKey() {
+        val testKeyUp = KeyDef(id = "up", label = "▲", linuxKeycode = 103, type = KeyType.NORMAL)
+        val testKeyLeft = KeyDef(id = "left", label = "◀", linuxKeycode = 105, type = KeyType.NORMAL)
+        val layout = listOf(listOf(testKeyUp, testKeyLeft, testKeyA))
+
+        val handledDown =
+            controller.onKeyDown(
+                pointerId = 1L,
+                keyId = "up",
+                layout = layout,
+                repeatEnabled = true,
+            )
+        assertTrue(handledDown)
+        assertTrue(controller.pressedKeys.value.contains("up"))
+        assertEquals("up", controller.getKeyIdForPointer(1L))
+
+        val moveHandled =
+            controller.onKeyMove(
+                pointerId = 1L,
+                newKeyId = "left",
+                deltaX = 10f,
+                deltaY = 0f,
+                layout = layout,
+                repeatEnabled = true,
+            )
+        assertTrue(moveHandled)
+        assertFalse(controller.pressedKeys.value.contains("up"))
+        assertTrue(controller.pressedKeys.value.contains("left"))
+        assertEquals("left", controller.getKeyIdForPointer(1L))
+    }
+
+    @Test
+    fun testOnKeyUpWithSkipInjectionOnControlKey() {
+        val testKeyDel = KeyDef(id = "del", label = "Del", linuxKeycode = 111, type = KeyType.NORMAL)
+        val layout = listOf(listOf(testKeyDel, testKeyA))
+
+        val handledDown =
+            controller.onKeyDown(
+                pointerId = 1L,
+                keyId = "del",
+                layout = layout,
+                repeatEnabled = true,
+            )
+        assertTrue(handledDown)
+        assertTrue(controller.pressedKeys.value.contains("del"))
+        assertEquals("del", controller.getKeyIdForPointer(1L))
+
+        val handledUp =
+            controller.onKeyUp(
+                pointerId = 1L,
+                layout = layout,
+                repeatEnabled = true,
+                skipInjection = true,
+            )
+        assertTrue(handledUp)
+        assertFalse(controller.pressedKeys.value.contains("del"))
+        assertNull(controller.getKeyIdForPointer(1L))
     }
 }

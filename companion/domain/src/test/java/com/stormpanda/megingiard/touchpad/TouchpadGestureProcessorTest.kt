@@ -198,6 +198,23 @@ class TouchpadGestureProcessorTest {
         }
 
     @Test
+    fun `haptic feedback does not trigger on four finger tap`() =
+        runTest(testDispatcher) {
+            var hapticCount = 0
+            val processor = createProcessor(useMouse = { true }, threeFingerTap = true, onHapticFeedback = { hapticCount++ })
+
+            processor.press(1L, 100f, 200f)
+            processor.press(2L, 120f, 220f)
+            processor.press(3L, 140f, 240f)
+            processor.press(4L, 160f, 260f)
+            processor.release(1L, 100f, 200f)
+            processor.release(2L, 120f, 220f)
+            processor.release(3L, 140f, 240f)
+            processor.release(4L, 160f, 260f)
+            assertEquals(0, hapticCount)
+        }
+
+    @Test
     fun `onCancel cleans absolute mode touch slots`() =
         runTest(testDispatcher) {
             val processor = createProcessor()

@@ -41,4 +41,14 @@ class MouseInjectorTest {
         MouseInjector.stop()
         assertFalse(MouseInjector.isRunning)
     }
+
+    @Test
+    fun testStopReleasesHeldButtons() {
+        MouseInjector.start()
+        MouseInjector.leftDown()
+        MouseInjector.rightDown()
+        MouseInjector.middleDown()
+        MouseInjector.stop()
+        assertFalse(MouseInjector.isRunning)
+    }
 }
