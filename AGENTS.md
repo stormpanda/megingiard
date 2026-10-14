@@ -36,7 +36,6 @@
 | `docs/GAMEPAD_NAVIGATION.md` | Gamepad focus traversal, isolation & recovery |
 | `docs/MANUAL_VERIFICATION.md` | Manual regression tests & PR sanity checklists |
 | `docs/REQUIREMENTS.md` | Functional & non-functional requirements |
-| `docs/audit/README.md` | Codebase audit reports & remediation tracking |
 | `docs/features/FEATURE_TEMPLATE.md` | Template for new feature docs |
 | `docs/features/config/FEATURE.md` | Config Export/Import (`.mgrd` backup, profile sharing) |
 | `docs/features/gamefocus/FEATURE.md` | Game Focus launcher variant — split, see its doc map |
