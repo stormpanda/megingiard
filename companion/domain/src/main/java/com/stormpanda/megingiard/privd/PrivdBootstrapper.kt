@@ -152,6 +152,7 @@ object PrivdBootstrapper {
                 try {
                     AppLog.d(TAG, "Attempting ADB pair to $h:$port")
                     if (mgr.pair(h, port, pairingCode)) {
+                        mgr.persistCredentials(context)
                         ok = true
                         break
                     }
@@ -211,6 +212,7 @@ object PrivdBootstrapper {
                 try {
                     AppLog.d(TAG, "Attempting ADB connect to $h:$connectPort (attempt $attempt/$ADB_CONNECT_RETRY_COUNT)")
                     if (mgr.connect(h, connectPort)) {
+                        mgr.persistCredentials(context)
                         connected = true
                         break
                     }

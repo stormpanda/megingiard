@@ -3,10 +3,13 @@ package com.stormpanda.megingiard.provider
 import android.content.ContentProvider
 import android.content.ContentValues
 import android.content.Context
+import android.content.pm.PackageManager
 import android.database.Cursor
 import android.database.MatrixCursor
 import android.net.Uri
+import android.os.Binder
 import android.os.Bundle
+import android.os.Process
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
@@ -17,6 +20,25 @@ import com.stormpanda.megingiard.settings.SettingsManager
 private const val TAG = "MegingiardSettingsProv"
 
 class MegingiardSettingsProvider : ContentProvider() {
+    internal fun isCallerSignatureTrusted(
+        context: Context,
+        callingUid: Int = Binder.getCallingUid(),
+    ): Boolean {
+        if (callingUid == Process.myUid()) return true
+        return context.packageManager.checkSignatures(Process.myUid(), callingUid) ==
+            PackageManager.SIGNATURE_MATCH
+    }
+
+    internal fun isCallerPackageValid(
+        context: Context,
+        clientPackage: String?,
+        callingUid: Int = Binder.getCallingUid(),
+    ): Boolean {
+        if (callingUid == Process.myUid() || clientPackage.isNullOrBlank()) return true
+        val packages = context.packageManager.getPackagesForUid(callingUid) ?: return false
+        return clientPackage in packages
+    }
+
     companion object {
         fun notifyThemeChanged(context: Context) {
             try {
@@ -87,6 +109,10 @@ class MegingiardSettingsProvider : ContentProvider() {
             }
 
             "/${MegingiardIpcContract.PATH_SETTINGS}" -> {
+                if (!isCallerSignatureTrusted(context)) {
+                    AppLog.w(TAG, "Rejected /settings query from untrusted caller uid=${Binder.getCallingUid()}")
+                    return null
+                }
                 val cursor =
                     MatrixCursor(
                         arrayOf(
@@ -174,6 +200,13 @@ class MegingiardSettingsProvider : ContentProvider() {
                 AppLog.i(TAG, "updateClientState received with API version: $apiVersion")
 
                 val clientPackage = extras.getString(MegingiardIpcContract.COLUMN_CLIENT_PACKAGE)
+                if (!isCallerPackageValid(context, clientPackage)) {
+                    AppLog.w(TAG, "Rejected updateClientState with mismatched package=$clientPackage from uid=${Binder.getCallingUid()}")
+                    return Bundle().apply {
+                        putBoolean("success", false)
+                        putString("error", "Caller UID does not match client_package")
+                    }
+                }
                 val isActive = extras.getBoolean(MegingiardIpcContract.COLUMN_IS_ACTIVE, false)
                 val focusedPackage = extras.getString(MegingiardIpcContract.COLUMN_FOCUSED_PACKAGE)
                 val romPath = extras.getString(MegingiardIpcContract.COLUMN_FOCUSED_ROM_PATH)

@@ -20,6 +20,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -27,6 +28,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import javax.net.ssl.SSLContext
 
@@ -270,5 +272,21 @@ class PrivdSubsystemTest {
     fun `PhysicalGamepadRecordingManager cancelRecording resets state to Idle`() {
         PhysicalGamepadRecordingManager.cancelRecording()
         assertEquals(com.stormpanda.megingiard.macropad.GamepadRecordingState.Idle, PhysicalGamepadRecordingManager.state.value)
+    }
+
+    @Test
+    fun `ADB credentials are generated in memory and only persisted on explicit persistCredentials call`() {
+        val context = RuntimeEnvironment.getApplication()
+        PrivdAdbConnectionManager.clearCredentials(context)
+        assertFalse(PrivdAdbConnectionManager.hasCredentials(context))
+
+        val mgr = PrivdAdbConnectionManager.getInstance(context)
+        assertFalse(PrivdAdbConnectionManager.hasCredentials(context))
+
+        mgr.persistCredentials(context)
+        assertTrue(PrivdAdbConnectionManager.hasCredentials(context))
+
+        PrivdAdbConnectionManager.clearCredentials(context)
+        assertFalse(PrivdAdbConnectionManager.hasCredentials(context))
     }
 }

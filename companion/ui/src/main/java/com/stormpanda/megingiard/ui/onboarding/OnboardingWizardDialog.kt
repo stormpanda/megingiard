@@ -181,6 +181,13 @@ fun OnboardingWizardDialog(
     var isAutoSetupActive by remember { mutableStateOf(MegingiardAccessibilityService.isAutoSetupActive) }
 
     val isRootBridgeAvailable = remember { PrivdManager.isRootBridgeAvailable }
+    val isLanguageSupported =
+        remember {
+            val lm = context.getSystemService(LocaleManager::class.java)
+            val locales = lm?.systemLocales
+            val locale = if (locales != null && !locales.isEmpty) locales.get(0) else Locale.getDefault()
+            AutoSetupLanguageConfig.fromLocaleOrNull(locale) != null
+        }
     var isActivatingAccessibility by remember { mutableStateOf(false) }
     var isActivatingPrivd by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
@@ -435,12 +442,7 @@ fun OnboardingWizardDialog(
                             }
 
                             OnboardingStepId.PRIVILEGED -> {
-                                if (isRootBridgeAvailable) {
-                                    privdState == PrivdState.RUNNING
-                                } else {
-                                    isWifiActive && isDevModeActive && isWirelessActive && isDevicePaired &&
-                                        privdState == PrivdState.RUNNING
-                                }
+                                privdState == PrivdState.RUNNING || (!isRootBridgeAvailable && !isLanguageSupported)
                             }
 
                             else -> {
