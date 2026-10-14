@@ -94,4 +94,30 @@ class RetroArchLplParserTest {
         assertEquals("game", RetroArchLplParser.deriveGameTitle(null, "/path/to/game.sfc"))
         assertNull(RetroArchLplParser.deriveGameTitle(null, null))
     }
+
+    @Test
+    fun extractMostRecentRomPath_pathWithBraces_extractsSuccessfully() {
+        val json =
+            """
+            {
+              "version": "1.5",
+              "items": [
+                {
+                  "path": "/storage/emulated/0/ROMs/SNES/Super Metroid {USA}.sfc",
+                  "label": "Super Metroid {USA}",
+                  "core_path": "/data/data/com.retroarch.aarch64/cores/snes9x_libretro_android.so",
+                  "core_name": "Nintendo - SNES / SFC (Snes9x)"
+                }
+              ]
+            }
+            """.trimIndent()
+
+        val romPath = RetroArchLplParser.extractMostRecentRomPath(json)
+        assertEquals("/storage/emulated/0/ROMs/SNES/Super Metroid {USA}.sfc", romPath)
+
+        val session = RetroArchLplParser.parseMostRecentSession("com.retroarch.aarch64", json)
+        assertNotNull(session)
+        assertEquals("/storage/emulated/0/ROMs/SNES/Super Metroid {USA}.sfc", session?.romPath)
+        assertEquals("Super Metroid {USA}", session?.gameTitle)
+    }
 }

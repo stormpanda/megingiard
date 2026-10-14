@@ -47,8 +47,21 @@ object SemVerComparator {
         return isCurrentPreRelease && "-" !in cleanLatestRaw
     }
 
-    private fun parseVersionComponents(versionString: String): List<Int> =
-        versionString
+    /**
+     * Alias for [isUpdateAvailable] to check if [latestTag] is strictly newer than [currentVersion].
+     */
+    fun isNewer(
+        currentVersion: String,
+        latestTag: String,
+    ): Boolean = isUpdateAvailable(currentVersion, latestTag)
+
+    private fun parseVersionComponents(version: String): List<Int> =
+        version
+            .trim()
+            .removePrefix("v")
+            .removePrefix("V")
+            .substringBefore("+")
+            .substringBefore("-")
             .split(".")
-            .mapNotNull { it.filter { char -> char.isDigit() }.toIntOrNull() }
+            .map { segment -> segment.takeWhile { it.isDigit() }.toIntOrNull() ?: 0 }
 }

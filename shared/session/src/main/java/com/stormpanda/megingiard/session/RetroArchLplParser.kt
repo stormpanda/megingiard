@@ -15,6 +15,8 @@ private val EXT_GENESIS = setOf("md", "gen", "smd")
  * Pure Kotlin parser for RetroArch `content_history.lpl` and system playlist JSON files.
  */
 object RetroArchLplParser {
+    fun extractMostRecentRomPath(jsonContent: String): String? = parseMostRecentSession("com.retroarch.aarch64", jsonContent)?.romPath
+
     fun parseMostRecentSession(
         packageName: String,
         jsonContent: String,
@@ -25,7 +27,7 @@ object RetroArchLplParser {
             if (itemsIndex == -1) return null
             val firstBraceIndex = jsonContent.indexOf('{', itemsIndex)
             if (firstBraceIndex == -1) return null
-            val closeBraceIndex = jsonContent.indexOf('}', firstBraceIndex)
+            val closeBraceIndex = findMatchingCloseBrace(jsonContent, firstBraceIndex)
             if (closeBraceIndex == -1 || closeBraceIndex <= firstBraceIndex) return null
 
             val firstItemBlock = jsonContent.substring(firstBraceIndex, closeBraceIndex + 1)
@@ -64,6 +66,39 @@ object RetroArchLplParser {
         val match = pattern.find(json) ?: return null
         val value = match.groupValues[1]
         return value.replace("\\\"", "\"").replace("\\\\", "\\").takeIf { it.isNotBlank() }
+    }
+
+    private fun findMatchingCloseBrace(
+        text: String,
+        openBraceIdx: Int,
+    ): Int {
+        var inQuotes = false
+        var escaped = false
+        var depth = 0
+        for (i in openBraceIdx until text.length) {
+            val ch = text[i]
+            if (escaped) {
+                escaped = false
+                continue
+            }
+            if (ch == '\\' && inQuotes) {
+                escaped = true
+                continue
+            }
+            if (ch == '"') {
+                inQuotes = !inQuotes
+                continue
+            }
+            if (!inQuotes) {
+                if (ch == '{') {
+                    depth++
+                } else if (ch == '}') {
+                    depth--
+                    if (depth == 0) return i
+                }
+            }
+        }
+        return -1
     }
 
     fun deriveGameTitle(

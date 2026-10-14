@@ -39,6 +39,12 @@ class SafPathResolverTest {
     }
 
     @Test
+    fun resolveFilePath_preservesLiteralPlus() {
+        val uri = "content://com.android.externalstorage.documents/tree/primary%3AROMs/document/primary%3AROMs%2FNew+Game+.nsp"
+        assertEquals("/storage/emulated/0/ROMs/New+Game+.nsp", SafPathResolver.resolveFilePath(uri))
+    }
+
+    @Test
     fun deriveGameTitle_fromPath() {
         assertEquals("Super Mario World", SafPathResolver.deriveGameTitle("/storage/emulated/0/ROMs/snes/Super Mario World.sfc"))
         assertEquals("Chrono Trigger", SafPathResolver.deriveGameTitle("Chrono Trigger.sfc"))

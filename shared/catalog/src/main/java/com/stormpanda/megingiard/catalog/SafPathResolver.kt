@@ -36,7 +36,7 @@ object SafPathResolver {
         if (uriStr.startsWith("/")) return uriStr
 
         return try {
-            val decoded = URLDecoder.decode(uriStr, StandardCharsets.UTF_8)
+            val decoded = URLDecoder.decode(uriStr.replace("+", "%2B"), StandardCharsets.UTF_8)
             val rawPath =
                 when {
                     decoded.contains("/document/") -> decoded.substringAfter("/document/")

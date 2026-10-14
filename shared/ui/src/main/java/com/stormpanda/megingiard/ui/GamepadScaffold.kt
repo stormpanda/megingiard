@@ -43,6 +43,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -680,6 +681,9 @@ fun GamepadTwoPaneScaffold(
             }
         }
 
+        val currentIsCustomBackActive by rememberUpdatedState(isCustomBackActive)
+        val currentTransferFocusToDeck by rememberUpdatedState(transferFocusToDeck)
+
         LaunchedEffect(Unit) {
             PrimaryOverlayInputBridge.focusRecoveryEvents.collect { keyCode ->
                 AppLog.d(
@@ -689,11 +693,16 @@ fun GamepadTwoPaneScaffold(
                 inputModeManager.requestInputMode(InputMode.Keyboard)
                 // Only recover focus if focus was completely lost (neither deck nor sidebar is currently focused)
                 if (!isDeckFocused && !isSidebarFocused) {
-                    try {
-                        activeCategoryRequester.requestFocus()
-                        AppLog.d(TAG, "GamepadTwoPaneScaffold: focus recovered to active category")
-                    } catch (_: IllegalStateException) {
-                        AppLog.d(TAG, "GamepadTwoPaneScaffold: activeCategoryRequester unattached on focus recovery")
+                    if (currentIsCustomBackActive) {
+                        currentTransferFocusToDeck()
+                        AppLog.d(TAG, "GamepadTwoPaneScaffold: focus recovered to sub-page deck")
+                    } else {
+                        try {
+                            activeCategoryRequester.requestFocus()
+                            AppLog.d(TAG, "GamepadTwoPaneScaffold: focus recovered to active category")
+                        } catch (_: IllegalStateException) {
+                            AppLog.d(TAG, "GamepadTwoPaneScaffold: activeCategoryRequester unattached on focus recovery")
+                        }
                     }
                 }
             }
