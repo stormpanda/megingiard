@@ -38,6 +38,8 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
@@ -94,6 +96,7 @@ import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.AppDimens
+import com.stormpanda.megingiard.ui.DialogToastManager
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.LocalAppDimens
 import com.stormpanda.megingiard.ui.LocalFullscreenKeyboardRequester
@@ -183,11 +186,20 @@ class MainActivity : ComponentActivity() {
         ) { uri ->
             if (uri == null) return@registerForActivityResult
             lifecycleScope.launch {
-                LogReportManager.writeReportToUri(
-                    context = applicationContext,
-                    uri = uri,
-                    appVersion = BuildConfig.VERSION_NAME,
-                )
+                LogReportManager
+                    .writeReportToUri(
+                        context = applicationContext,
+                        uri = uri,
+                        appVersion = BuildConfig.VERSION_NAME,
+                    ).onSuccess {
+                        DialogToastManager.show(getString(R.string.log_report_save_success))
+                    }.onFailure {
+                        DialogToastManager.show(
+                            message = getString(R.string.log_report_save_error),
+                            icon = Icons.Rounded.ErrorOutline,
+                            isError = true,
+                        )
+                    }
             }
         }
 

@@ -8,7 +8,6 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -37,12 +36,10 @@ class LogReportSanitizationPipelineE2ETest {
     fun setUp() {
         context = RuntimeEnvironment.getApplication()
         tempDir = File(context.cacheDir, "e2e_log_reports_${UUID.randomUUID()}").apply { mkdirs() }
-        LogReportManager.clearSaveResult()
     }
 
     @After
     fun tearDown() {
-        LogReportManager.clearSaveResult()
         tempDir.deleteRecursively()
     }
 
@@ -80,14 +77,10 @@ class LogReportSanitizationPipelineE2ETest {
                 )
 
             assertTrue("Expected writeReportToUri to succeed", result.isSuccess)
-            assertEquals(LogReportManager.SaveResult.Success, LogReportManager.saveResult.value)
             assertTrue("Exported file must exist on disk", reportFile.exists())
             val writtenText = reportFile.readText()
             assertTrue(writtenText.contains("=== Megingiard Log Report ==="))
             assertTrue(writtenText.contains(sampleLogLine))
-
-            LogReportManager.clearSaveResult()
-            assertNull("SaveResult should be null after clearSaveResult", LogReportManager.saveResult.value)
         }
 
     @Test
@@ -113,6 +106,5 @@ class LogReportSanitizationPipelineE2ETest {
                 )
 
             assertTrue("Expected failure when writing to invalid URI", result.isFailure)
-            assertEquals(LogReportManager.SaveResult.Failure, LogReportManager.saveResult.value)
         }
 }

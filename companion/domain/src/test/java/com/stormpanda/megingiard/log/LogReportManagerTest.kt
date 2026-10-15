@@ -2,7 +2,6 @@ package com.stormpanda.megingiard.log
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -98,38 +97,6 @@ class LogReportManagerTest {
                 timestamp = "2026-01-01 00:00:00",
             )
         assertTrue("Header should end with a newline", header.endsWith("\n"))
-    }
-
-    // ── SaveResult sealed class ───────────────────────────────────────────────
-
-    @Test
-    fun `SaveResult Success is distinct from Failure`() {
-        val success: LogReportManager.SaveResult = LogReportManager.SaveResult.Success
-        val failure: LogReportManager.SaveResult = LogReportManager.SaveResult.Failure
-        // Verify they are different types at compile time via exhaustive when
-        val successLabel =
-            when (success) {
-                LogReportManager.SaveResult.Success -> "success"
-                LogReportManager.SaveResult.Failure -> "failure"
-            }
-        val failureLabel =
-            when (failure) {
-                LogReportManager.SaveResult.Success -> "success"
-                LogReportManager.SaveResult.Failure -> "failure"
-            }
-        assertEquals("success", successLabel)
-        assertEquals("failure", failureLabel)
-    }
-
-    @Test
-    fun `setSaveResult and clearSaveResult update stateFlow`() {
-        assertNull(LogReportManager.saveResult.value)
-
-        LogReportManager.setSaveResult(LogReportManager.SaveResult.Success)
-        assertEquals(LogReportManager.SaveResult.Success, LogReportManager.saveResult.value)
-
-        LogReportManager.clearSaveResult()
-        assertNull(LogReportManager.saveResult.value)
     }
 
     @Test

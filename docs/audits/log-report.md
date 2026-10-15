@@ -234,5 +234,5 @@ None identified — `LogReportManager.saveRequest` is collected in a single `lif
 - [x] **`[LR-06]`** — Duplicate Test Suite & Unreachable Success Branch in `LogReportSanitizationPipelineE2ETest` *(Complexity: Med, Risk: Low)*
 - [x] **`[LR-07]`** — Split-Brain Log Level State & Contradictory Defaults Between `AppLog.level` and `SettingsManager._logLevel` *(Complexity: Med, Risk: Low)*
 - [x] **`[LR-08]`** — Duplicated Bootstrap Preference Parsing in `SettingsManager.init()` *(Complexity: Low, Risk: Low)*
-- [ ] **`[LR-09]`** — Domain `SaveResult` StateFlow Round-Trip to Trigger UI Toast Feedback *(Complexity: High, Risk: Low)*
+- [x] **`[LR-09]`** — Domain `SaveResult` StateFlow Round-Trip to Trigger UI Toast Feedback *(Complexity: High, Risk: Low)*
 - [ ] **`[LR-10]`** — Stale Architecture Prose, Return-Behavior Mismatch, and UI Layout Drift in `FEATURE.md` *(Complexity: Low, Risk: Low)*

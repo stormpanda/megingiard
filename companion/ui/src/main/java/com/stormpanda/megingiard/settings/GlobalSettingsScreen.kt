@@ -102,7 +102,6 @@ fun GlobalSettingsScreen(
     val effectiveAccent = colors.accent
 
     val exportResult by ConfigManager.exportResult.collectAsStateWithLifecycle()
-    val logReportSaveResult by LogReportManager.saveResult.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
     LaunchedEffect(Unit) {
@@ -629,25 +628,6 @@ fun GlobalSettingsScreen(
                     isError = true,
                 )
                 ConfigManager.clearExportResult()
-            }
-
-            null -> {}
-        }
-    }
-    LaunchedEffect(logReportSaveResult) {
-        when (logReportSaveResult) {
-            LogReportManager.SaveResult.Success -> {
-                DialogToastManager.show(context.getString(R.string.log_report_save_success))
-                LogReportManager.clearSaveResult()
-            }
-
-            LogReportManager.SaveResult.Failure -> {
-                DialogToastManager.show(
-                    message = context.getString(R.string.log_report_save_error),
-                    icon = Icons.Rounded.ErrorOutline,
-                    isError = true,
-                )
-                LogReportManager.clearSaveResult()
             }
 
             null -> {}

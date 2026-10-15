@@ -8,11 +8,8 @@ import com.stormpanda.megingiard.AppLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -36,24 +33,6 @@ private val REPORT_TIMESTAMP_FORMATTER: DateTimeFormatter =
  * response, mirroring the pattern used by [ConfigManager] for config exports.
  */
 object LogReportManager {
-    /** Result of the most recent save attempt; cleared by [clearSaveResult]. */
-    sealed class SaveResult {
-        data object Success : SaveResult()
-
-        data object Failure : SaveResult()
-    }
-
-    private val _saveResult = MutableStateFlow<SaveResult?>(null)
-    val saveResult: StateFlow<SaveResult?> = _saveResult.asStateFlow()
-
-    fun setSaveResult(result: SaveResult) {
-        _saveResult.value = result
-    }
-
-    fun clearSaveResult() {
-        _saveResult.value = null
-    }
-
     // ── Save request (Settings → MainActivity) ────────────────────────────────
 
     private val _saveRequest =
@@ -105,10 +84,8 @@ object LogReportManager {
                 } ?: error("Could not open output stream for $uri")
             }.onSuccess {
                 AppLog.i(TAG, "Log report written to $uri")
-                setSaveResult(SaveResult.Success)
             }.onFailure { e ->
                 AppLog.e(TAG, "Log report save failed", e)
-                setSaveResult(SaveResult.Failure)
             }
         }
 
@@ -159,7 +136,6 @@ object LogReportManager {
      * a blocking I/O operation.
      *
      * @throws Exception if logcat cannot be started or exits with a non-zero exit code.
-     * The caller is responsible for handling the exception and surfacing a [SaveResult.Failure].
      */
     fun readLogcatLines(pid: Int): String {
         val process =
