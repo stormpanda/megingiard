@@ -253,7 +253,7 @@
 - [x] **`[KB-03]`** — Remove unused `isUpper` / `kbLayout` params & stop threading `accentColor` *(Complexity: Low, Risk: Low)*
 - [x] **`[KB-04]`** — Replace 23 `findKeyDef` linear searches in `NUMERIC` grid with row slicing *(Complexity: Med, Risk: Low)*
 - [x] **`[KB-05]`** — Replace `injectPopupChar` & `POPUP_CHAR_MAP` with `LinuxKeycodes.charToKeyMapping` *(Complexity: High, Risk: Low)*
-- [ ] **`[KB-06]`** — Remove `CancellationException`-swallowing `try / catch` in long-press coroutine *(Complexity: Low, Risk: Low)*
+- [x] **`[KB-06]`** — Remove `CancellationException`-swallowing `try / catch` in long-press coroutine *(Complexity: Low, Risk: Low)*
 - [ ] **`[KB-07]`** — Simplify `KeyboardGestureProcessor.updateBounds` to direct map assignment *(Complexity: Low, Risk: Low)*
 - [ ] **`[KB-08]`** — Replace mutable pixel-threshold cache fields in `KeyboardGestureProcessor` with DP constants *(Complexity: Low, Risk: Low)*
 - [ ] **`[KB-09]`** — Remove unreachable Trackpoint & Virtual Mouse Button Overlay subsystem *(Complexity: High, Risk: Low)*

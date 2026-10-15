@@ -159,22 +159,19 @@ class KeyboardGestureProcessor(
             if (!isFullLayout) {
                 val job =
                     scope.launch {
-                        try {
-                            delay(KB_LONG_PRESS_DELAY_MS)
-                            val options = getPopupOptions(hoveredKeyDef)
-                            if (bounds != null && options.isNotEmpty()) {
-                                _activePopupState.value =
-                                    PopupState(
-                                        hoveredKeyDef,
-                                        options,
-                                        0,
-                                        bounds,
-                                        isLongPress = true,
-                                        pointerId = pointerId,
-                                    )
-                                virtualAnchorX = 0f
-                            }
-                        } catch (_: Exception) {
+                        delay(KB_LONG_PRESS_DELAY_MS)
+                        val options = getPopupOptions(hoveredKeyDef)
+                        if (bounds != null && options.isNotEmpty()) {
+                            _activePopupState.value =
+                                PopupState(
+                                    hoveredKeyDef,
+                                    options,
+                                    0,
+                                    bounds,
+                                    isLongPress = true,
+                                    pointerId = pointerId,
+                                )
+                            virtualAnchorX = 0f
                         }
                     }
                 longPressJobs[pointerId] = job
