@@ -83,25 +83,6 @@ class KeyboardGestureProcessor(
         keyDef != null && keyDef.type == KeyType.NORMAL &&
             keyDef.id != "bksp" && keyDef.id != "space" && keyDef.id != "space_num" && keyDef.id != "enter"
 
-    private fun resolveDisplayLabel(hoveredKeyDef: KeyDef): String {
-        val isLetter = hoveredKeyDef.label.length == 1 && hoveredKeyDef.label[0].isLetter()
-        val useShiftLabel = isShiftActive() || isCapsActive()
-        return when {
-            isAltGrActive() && hoveredKeyDef.altGrLabel != null -> {
-                hoveredKeyDef.altGrLabel!!
-            }
-
-            useShiftLabel -> {
-                val s = hoveredKeyDef.shiftLabel ?: hoveredKeyDef.label
-                if (isLetter) s.uppercase() else s
-            }
-
-            else -> {
-                hoveredKeyDef.label
-            }
-        }
-    }
-
     fun onPress(
         pointerId: Long,
         x: Float,
@@ -116,7 +97,7 @@ class KeyboardGestureProcessor(
         if (hoveredKeyDef != null && isCharKey(hoveredKeyDef)) {
             val bounds = keyBounds[keyId]
             if (bounds != null) {
-                val label = resolveDisplayLabel(hoveredKeyDef)
+                val label = hoveredKeyDef.resolveDisplayLabel(isShiftActive(), isCapsActive(), isAltGrActive())
                 _activePopupState.value =
                     PopupState(
                         hoveredKeyDef,
@@ -181,7 +162,7 @@ class KeyboardGestureProcessor(
             if (hoveredKeyDef != null && isCharKey(hoveredKeyDef)) {
                 val bounds = keyBounds[keyId]
                 if (bounds != null) {
-                    val label = resolveDisplayLabel(hoveredKeyDef)
+                    val label = hoveredKeyDef.resolveDisplayLabel(isShiftActive(), isCapsActive(), isAltGrActive())
                     val currentPopup = _activePopupState.value
                     if (currentPopup == null || currentPopup.keyDef.id != keyId) {
                         _activePopupState.value =

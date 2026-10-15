@@ -114,6 +114,29 @@ val KeyDef.isCharacterKey: Boolean
 val KeyDef.injectedKeycode: Int
     get() = if (id == "caps") LinuxKeycodes.KEY_LEFTSHIFT else linuxKeycode
 
+fun KeyDef.resolveDisplayLabel(
+    isShiftActive: Boolean,
+    isCapsActive: Boolean,
+    isAltGrActive: Boolean,
+): String {
+    val isLetter = label.length == 1 && label[0].isLetter()
+    val useShiftLabel = isShiftActive || isCapsActive
+    return when {
+        isAltGrActive && altGrLabel != null -> {
+            altGrLabel
+        }
+
+        useShiftLabel -> {
+            val s = shiftLabel ?: label
+            if (isLetter) s.uppercase() else s
+        }
+
+        else -> {
+            label
+        }
+    }
+}
+
 enum class KeyType { NORMAL, MODIFIER }
 
 enum class KeyboardMode { LETTERS, SYMBOLS_1, NUMERIC, FULL }

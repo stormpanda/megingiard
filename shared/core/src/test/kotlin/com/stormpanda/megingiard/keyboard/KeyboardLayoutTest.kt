@@ -204,4 +204,18 @@ class KeyboardLayoutTest {
             }
         }
     }
+
+    @Test
+    fun `resolveDisplayLabel returns normal, shift, caps, and altGr labels`() {
+        val letterKey = KeyDef("q", "q", LinuxKeycodes.KEY_Q, altGrLabel = "@")
+        assertEquals("q", letterKey.resolveDisplayLabel(isShiftActive = false, isCapsActive = false, isAltGrActive = false))
+        assertEquals("Q", letterKey.resolveDisplayLabel(isShiftActive = true, isCapsActive = false, isAltGrActive = false))
+        assertEquals("Q", letterKey.resolveDisplayLabel(isShiftActive = false, isCapsActive = true, isAltGrActive = false))
+        assertEquals("@", letterKey.resolveDisplayLabel(isShiftActive = false, isCapsActive = false, isAltGrActive = true))
+        assertEquals("@", letterKey.resolveDisplayLabel(isShiftActive = true, isCapsActive = false, isAltGrActive = true))
+
+        val digitKey = KeyDef("1", "1", LinuxKeycodes.KEY_1, shiftLabel = "!")
+        assertEquals("1", digitKey.resolveDisplayLabel(isShiftActive = false, isCapsActive = false, isAltGrActive = false))
+        assertEquals("!", digitKey.resolveDisplayLabel(isShiftActive = true, isCapsActive = false, isAltGrActive = false))
+    }
 }
