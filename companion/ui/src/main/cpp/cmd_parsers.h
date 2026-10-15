@@ -6,10 +6,10 @@
 #define MAX_TOUCH_SLOTS 10
 
 /**
- * Parses and dispatches multi-touch / single-touch commands:
- *   D <slot> <x> <y>  or  D <x> <y>
- *   M <slot> <x> <y>  or  M <x> <y>
- *   U <slot>          or  U
+ * Parses and dispatches multi-touch commands:
+ *   D <slot> <x> <y>
+ *   M <slot> <x> <y>
+ *   U <slot>
  * Returns 1 if handled, 0 otherwise.
  */
 static inline int parse_touch_command(const char* line, int fd, int* active_slots_mask) {
@@ -34,35 +34,6 @@ static inline int parse_touch_command(const char* line, int fd, int* active_slot
             write_event(fd, EV_ABS, ABS_MT_SLOT, slot);
             write_event(fd, EV_ABS, ABS_MT_POSITION_X, x);
             write_event(fd, EV_ABS, ABS_MT_POSITION_Y, y);
-            write_event(fd, EV_SYN, SYN_REPORT, 0);
-            return 1;
-        }
-    } else if (parsed == 3) {
-        // Single-touch format: D/M <x> <y> (or legacy U with trailing args)
-        int px = slot;
-        int py = x;
-        slot = 0;
-        if (strcmp(action, "D") == 0) {
-            write_event(fd, EV_ABS, ABS_MT_SLOT, slot);
-            write_event(fd, EV_ABS, ABS_MT_TRACKING_ID, slot + 1);
-            write_event(fd, EV_ABS, ABS_MT_POSITION_X, px);
-            write_event(fd, EV_ABS, ABS_MT_POSITION_Y, py);
-            if (active_slots_mask) *active_slots_mask |= (1 << slot);
-            write_event(fd, EV_KEY, BTN_TOUCH, 1);
-            write_event(fd, EV_SYN, SYN_REPORT, 0);
-            return 1;
-        } else if (strcmp(action, "M") == 0) {
-            write_event(fd, EV_ABS, ABS_MT_SLOT, slot);
-            write_event(fd, EV_ABS, ABS_MT_POSITION_X, px);
-            write_event(fd, EV_ABS, ABS_MT_POSITION_Y, py);
-            write_event(fd, EV_SYN, SYN_REPORT, 0);
-            return 1;
-        } else if (strcmp(action, "U") == 0) {
-            write_event(fd, EV_ABS, ABS_MT_SLOT, slot);
-            write_event(fd, EV_ABS, ABS_MT_TRACKING_ID, -1);
-            if (active_slots_mask) *active_slots_mask &= ~(1 << slot);
-            int is_active = (active_slots_mask && *active_slots_mask != 0) ? 1 : 0;
-            write_event(fd, EV_KEY, BTN_TOUCH, is_active);
             write_event(fd, EV_SYN, SYN_REPORT, 0);
             return 1;
         }
