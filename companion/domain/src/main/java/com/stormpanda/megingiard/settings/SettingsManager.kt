@@ -74,9 +74,6 @@ object SettingsManager {
     private var initialized = false
 
     @Volatile
-    private var autoBackupTriggered = false
-
-    @Volatile
     private var isInternalBackupsLoaded = false
 
     private val _internalBackups = MutableStateFlow<List<InternalBackup>>(emptyList())
@@ -138,7 +135,6 @@ object SettingsManager {
         AppLog.level = AppLog.Level.WARN
         _welcomeTourCompletedVersion.value = 0
         _internalBackups.value = emptyList()
-        autoBackupTriggered = false
         isInternalBackupsLoaded = false
         TouchpadSettings.resetForTesting()
         MirrorSettings.resetForTesting()
@@ -220,10 +216,6 @@ object SettingsManager {
                     if (!isInternalBackupsLoaded) {
                         isInternalBackupsLoaded = true
                         _internalBackups.value = decodeBackups(prefs[KEY_INTERNAL_BACKUPS])
-                    }
-
-                    if (!autoBackupTriggered) {
-                        autoBackupTriggered = true
                         triggerAutoBackupIfNeeded(context.applicationContext)
                     }
                 }
@@ -437,37 +429,35 @@ object SettingsManager {
         }
     }
 
-    private fun triggerAutoBackupIfNeeded(context: Context) {
-        scope.launch {
-            try {
-                val currentDateStr =
-                    LocalDate
-                        .now()
-                        .toString()
-                val alreadyHasBackup = _internalBackups.value.any { it.dateString == currentDateStr }
-                if (alreadyHasBackup) {
-                    AppLog.d(TAG, "Auto-backup already exists for today ($currentDateStr), skipping.")
-                    return@launch
-                }
-
-                AppLog.i(TAG, "Creating automatic daily configuration backup for $currentDateStr")
-                val metadata =
-                    ConfigManager.defaultMetadata(context).copy(
-                        author = null,
-                        description = null,
-                    )
-                val export = ConfigManager.buildExport(metadata)
-                val backup =
-                    InternalBackup(
-                        dateString = currentDateStr,
-                        timestampMs = System.currentTimeMillis(),
-                        export = export,
-                    )
-                saveBackup(backup)
-                AppLog.i(TAG, "Automatic daily backup saved successfully.")
-            } catch (e: Exception) {
-                AppLog.e(TAG, "Failed to create automatic daily backup", e)
+    private suspend fun triggerAutoBackupIfNeeded(context: Context) {
+        try {
+            val currentDateStr =
+                LocalDate
+                    .now()
+                    .toString()
+            val alreadyHasBackup = _internalBackups.value.any { it.dateString == currentDateStr }
+            if (alreadyHasBackup) {
+                AppLog.d(TAG, "Auto-backup already exists for today ($currentDateStr), skipping.")
+                return
             }
+
+            AppLog.i(TAG, "Creating automatic daily configuration backup for $currentDateStr")
+            val metadata =
+                ConfigManager.defaultMetadata(context).copy(
+                    author = null,
+                    description = null,
+                )
+            val export = ConfigManager.buildExport(metadata)
+            val backup =
+                InternalBackup(
+                    dateString = currentDateStr,
+                    timestampMs = System.currentTimeMillis(),
+                    export = export,
+                )
+            saveBackup(backup)
+            AppLog.i(TAG, "Automatic daily backup saved successfully.")
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Failed to create automatic daily backup", e)
         }
     }
 }
