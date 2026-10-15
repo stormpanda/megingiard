@@ -32,7 +32,7 @@ class KeyboardStateTest {
 
         assertState("ctrl", ModifierState.STICKY)
         assertTrue(releasedKeycodes.isEmpty())
-        assertTrue(LinuxKeycodes.KEY_LEFTCTRL in KeyboardState.activeModifierKeycodes(emptyList()))
+        assertTrue(LinuxKeycodes.KEY_LEFTCTRL in KeyboardState.activeModifierKeycodes())
     }
 
     @Test
@@ -66,16 +66,21 @@ class KeyboardStateTest {
         KeyboardState.onModifierTouchUp("ctrl", LinuxKeycodes.KEY_LEFTCTRL)
         KeyboardState.onModifierTouchDown("alt")
         KeyboardState.onModifierTouchUp("alt", LinuxKeycodes.KEY_LEFTALT)
+        KeyboardState.onModifierTouchDown("rctrl")
+        KeyboardState.onModifierTouchUp("rctrl", LinuxKeycodes.KEY_RIGHTCTRL)
 
         assertState("ctrl", ModifierState.STICKY)
         assertState("alt", ModifierState.STICKY)
+        assertState("rctrl", ModifierState.STICKY)
 
-        val released = KeyboardState.releaseStickyModifiers(emptyList())
+        val released = KeyboardState.releaseStickyModifiers()
 
         assertState("ctrl", ModifierState.INACTIVE)
         assertState("alt", ModifierState.INACTIVE)
+        assertState("rctrl", ModifierState.INACTIVE)
         assertTrue(LinuxKeycodes.KEY_LEFTCTRL in released)
         assertTrue(LinuxKeycodes.KEY_LEFTALT in released)
+        assertTrue(LinuxKeycodes.KEY_RIGHTCTRL in released)
     }
 
     @Test
@@ -84,13 +89,11 @@ class KeyboardStateTest {
         KeyboardState.onModifierTouchUp("caps", LinuxKeycodes.KEY_CAPSLOCK)
         assertState("caps", ModifierState.STICKY)
 
-        val layout = listOf(listOf(KeyDef("caps", "Caps", LinuxKeycodes.KEY_CAPSLOCK, type = KeyType.MODIFIER)))
-
-        val released = KeyboardState.releaseStickyModifiers(layout)
+        val released = KeyboardState.releaseStickyModifiers()
         assertState("caps", ModifierState.STICKY)
         assertTrue(LinuxKeycodes.KEY_CAPSLOCK !in released)
 
-        val active = KeyboardState.activeModifierKeycodes(layout)
+        val active = KeyboardState.activeModifierKeycodes()
         assertTrue(LinuxKeycodes.KEY_LEFTSHIFT in active)
         assertTrue(LinuxKeycodes.KEY_CAPSLOCK !in active)
 
@@ -151,17 +154,16 @@ class KeyboardStateTest {
     @Test
     fun testActiveModifierKeycodesFor_handlesKeyDef() {
         val keyDef = KeyDef("a", "a", LinuxKeycodes.KEY_A, type = KeyType.NORMAL)
-        val layout = listOf(listOf(keyDef))
 
         KeyboardState.onModifierTouchDown("ctrl")
         KeyboardState.onModifierTouchUp("ctrl", LinuxKeycodes.KEY_LEFTCTRL)
 
-        val codes = KeyboardState.activeModifierKeycodesFor(keyDef, layout)
+        val codes = KeyboardState.activeModifierKeycodesFor(keyDef, isFullLayout = false)
         assertTrue(LinuxKeycodes.KEY_LEFTCTRL in codes)
     }
 
     @Test
-    fun testModifierQueries() {
+    fun testModifierQueriesAndResetReleasesRctrl() {
         KeyboardState.onModifierTouchDown("ctrl")
         KeyboardState.onModifierTouchUp("ctrl", LinuxKeycodes.KEY_LEFTCTRL)
         assertEquals(ModifierState.STICKY, KeyboardState.stateFor("ctrl").value)
@@ -174,9 +176,15 @@ class KeyboardStateTest {
         KeyboardState.onModifierTouchUp("meta", LinuxKeycodes.KEY_LEFTMETA)
         assertEquals(ModifierState.STICKY, KeyboardState.stateFor("meta").value)
 
-        KeyboardState.reset()
+        KeyboardState.onModifierTouchDown("rctrl")
+        KeyboardState.onModifierTouchUp("rctrl", LinuxKeycodes.KEY_RIGHTCTRL)
+        assertEquals(ModifierState.STICKY, KeyboardState.stateFor("rctrl").value)
+
+        val releasedOnReset = KeyboardState.reset()
+        assertTrue(LinuxKeycodes.KEY_RIGHTCTRL in releasedOnReset)
         assertEquals(ModifierState.INACTIVE, KeyboardState.stateFor("ctrl").value)
         assertEquals(ModifierState.INACTIVE, KeyboardState.stateFor("alt").value)
         assertEquals(ModifierState.INACTIVE, KeyboardState.stateFor("meta").value)
+        assertEquals(ModifierState.INACTIVE, KeyboardState.stateFor("rctrl").value)
     }
 }

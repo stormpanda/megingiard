@@ -17,7 +17,6 @@ private const val KB_REPEAT_INITIAL_DELAY_MS = 500L
 private const val KB_REPEAT_INTERVAL_MS = 30L
 private const val KB_MODIFIER_HOLD_MS = 300L
 private const val KB_LONG_PRESS_DELAY_MS = 400L
-private const val KB_FULL_LAYOUT_ROW_COUNT = 6
 private const val KB_SWIPE_THRESHOLD_DP = 16f
 private const val KB_SWIPE_STEP_DP = 8f
 private const val KB_LONG_PRESS_SWIPE_THRESHOLD_DP = 24f
@@ -158,7 +157,7 @@ class KeyboardGestureProcessor(
             accumulatedSpaceDeltaX = 0f
         }
 
-        onKeyDown(pointerId, hoveredKeyDef, grid)
+        onKeyDown(pointerId, hoveredKeyDef, isFullLayout)
     }
 
     fun onMove(
@@ -196,10 +195,10 @@ class KeyboardGestureProcessor(
                             )
                     }
                 }
-                onKeyMove(pointerId, hoveredKeyDef, dx, dy, grid)
+                onKeyMove(pointerId, hoveredKeyDef, dx, dy, isFullLayout)
             } else {
                 _activePopupState.value = null
-                onKeyMove(pointerId, hoveredKeyDef, dx, dy, grid)
+                onKeyMove(pointerId, hoveredKeyDef, dx, dy, isFullLayout)
             }
         } else {
             val popup = _activePopupState.value
@@ -267,7 +266,7 @@ class KeyboardGestureProcessor(
                             longPressJobs.remove(pointerId)
                         }
                     }
-                    onKeyMove(pointerId, hoveredKeyDef, dx, dy, grid)
+                    onKeyMove(pointerId, hoveredKeyDef, dx, dy, isFullLayout)
                 }
             }
         }
@@ -275,7 +274,7 @@ class KeyboardGestureProcessor(
 
     fun onRelease(
         pointerId: Long,
-        grid: List<List<KeyDef>> = emptyList(),
+        isFullLayout: Boolean = false,
     ) {
         longPressJobs[pointerId]?.cancel()
         longPressJobs.remove(pointerId)
@@ -289,7 +288,7 @@ class KeyboardGestureProcessor(
         }
 
         if (wasDragging) {
-            onKeyUp(pointerId, grid, skipInjection = true)
+            onKeyUp(pointerId, isFullLayout, skipInjection = true)
         } else {
             val popup = _activePopupState.value
             if (popup != null && pointerId == popup.pointerId) {
@@ -299,14 +298,14 @@ class KeyboardGestureProcessor(
                     if (charToInject != null) {
                         onInjectPopupSelection(popup.keyDef, charToInject)
                     }
-                    onKeyUp(pointerId, grid, skipInjection = true)
+                    onKeyUp(pointerId, isFullLayout, skipInjection = true)
                 } else {
-                    onKeyUp(pointerId, grid, skipInjection = false)
+                    onKeyUp(pointerId, isFullLayout, skipInjection = false)
                 }
                 _activePopupState.value = null
                 virtualAnchorX = 0f
             } else {
-                onKeyUp(pointerId, grid, skipInjection = false)
+                onKeyUp(pointerId, isFullLayout, skipInjection = false)
             }
             if (pressPositions.isEmpty()) {
                 _activePopupState.value = null
@@ -314,10 +313,10 @@ class KeyboardGestureProcessor(
         }
     }
 
-    fun onCancel(grid: List<List<KeyDef>> = emptyList()) {
+    fun onCancel(isFullLayout: Boolean = false) {
         val activePids = pressPositions.keys.toList()
         for (p in activePids) {
-            onKeyUp(p, grid, skipInjection = true)
+            onKeyUp(p, isFullLayout, skipInjection = true)
         }
         longPressJobs.values.forEach { it.cancel() }
         longPressJobs.clear()
@@ -332,7 +331,7 @@ class KeyboardGestureProcessor(
     fun onKeyDown(
         pointerId: Long,
         keyDef: KeyDef?,
-        layout: List<List<KeyDef>> = emptyList(),
+        isFullLayout: Boolean = false,
     ): Boolean {
         val resolved = keyDef ?: return false
         val id = resolved.id
@@ -345,20 +344,19 @@ class KeyboardGestureProcessor(
                 heldKey = resolved
                 val isCharKey = resolved.isCharacterKey
                 if (!isCharKey && resolved.linuxKeycode != 0) {
-                    injectKeyDownWithModifiers(pointerId, resolved, layout)
+                    injectKeyDownWithModifiers(pointerId, resolved, isFullLayout)
                 }
                 if (!isCharKey) {
-                    startRepeat(resolved, layout)
+                    startRepeat(resolved, isFullLayout)
                 }
             }
 
             KeyType.MODIFIER -> {
                 pointerKeyMap[pointerId] = resolved
                 modifierBeingHeld = resolved
-                val isFull = layout.size == KB_FULL_LAYOUT_ROW_COUNT
-                val code = KeyboardState.onModifierTouchDown(id, resolved.injectedKeycode, isFull)
+                val code = KeyboardState.onModifierTouchDown(id, resolved.injectedKeycode, isFullLayout)
                 if (code != null) injector.keyDown(code)
-                startModifierHold(resolved, isFull)
+                startModifierHold(resolved, isFullLayout)
             }
         }
         return true
@@ -369,7 +367,7 @@ class KeyboardGestureProcessor(
         newKeyDef: KeyDef?,
         deltaX: Float,
         deltaY: Float,
-        layout: List<List<KeyDef>> = emptyList(),
+        isFullLayout: Boolean = false,
     ): Boolean {
         val prevDef = pointerKeyMap[pointerId] ?: return false
         val newDef = newKeyDef ?: return false
@@ -391,10 +389,10 @@ class KeyboardGestureProcessor(
             heldKey = newDef
             val isNewCharKey = newDef.isCharacterKey
             if (!isNewCharKey && newDef.linuxKeycode != 0) {
-                injectKeyDownWithModifiers(pointerId, newDef, layout)
+                injectKeyDownWithModifiers(pointerId, newDef, isFullLayout)
             }
             if (!isNewCharKey) {
-                startRepeat(newDef, layout)
+                startRepeat(newDef, isFullLayout)
             }
             return true
         }
@@ -403,7 +401,7 @@ class KeyboardGestureProcessor(
 
     fun onKeyUp(
         pointerId: Long,
-        layout: List<List<KeyDef>> = emptyList(),
+        isFullLayout: Boolean = false,
         skipInjection: Boolean = false,
     ): Boolean {
         val keyDef = pointerKeyMap.remove(pointerId) ?: return false
@@ -418,14 +416,14 @@ class KeyboardGestureProcessor(
                 } else {
                     val isCharKey = keyDef.isCharacterKey
                     if (isCharKey && keyDef.linuxKeycode != 0) {
-                        injectKeyStroke(keyDef, layout)
+                        injectKeyStroke(keyDef, isFullLayout)
                         KeyboardState
-                            .releaseStickyModifiers(layout)
+                            .releaseStickyModifiers()
                             .forEach { injector.keyUp(it) }
                     } else if (keyDef.linuxKeycode != 0) {
                         releasePointerDownKeycodes(pointerId)
                         KeyboardState
-                            .releaseStickyModifiers(layout)
+                            .releaseStickyModifiers()
                             .forEach { injector.keyUp(it) }
                     }
                 }
@@ -435,9 +433,8 @@ class KeyboardGestureProcessor(
             KeyType.MODIFIER -> {
                 modifierBeingHeld = null
                 modifierHoldJob?.cancel()
-                val isFull = layout.size == KB_FULL_LAYOUT_ROW_COUNT
                 KeyboardState
-                    .onModifierTouchUp(releasedId, keyDef.injectedKeycode, isFull)
+                    .onModifierTouchUp(releasedId, keyDef.injectedKeycode, isFullLayout)
                     .forEach { injector.keyUp(it) }
             }
         }
@@ -476,9 +473,9 @@ class KeyboardGestureProcessor(
     private fun injectKeyDownWithModifiers(
         pointerId: Long,
         keyDef: KeyDef,
-        layout: List<List<KeyDef>>,
+        isFullLayout: Boolean,
     ) {
-        val mods = KeyboardState.activeModifierKeycodesFor(keyDef, layout)
+        val mods = KeyboardState.activeModifierKeycodesFor(keyDef, isFullLayout)
         mods.forEach { injector.keyDown(it) }
         keyDef.autoModifiers.forEach { injector.keyDown(it) }
         injector.keyDown(keyDef.linuxKeycode)
@@ -492,9 +489,9 @@ class KeyboardGestureProcessor(
 
     private fun injectKeyStroke(
         keyDef: KeyDef,
-        layout: List<List<KeyDef>>,
+        isFullLayout: Boolean,
     ) {
-        val mods = KeyboardState.activeModifierKeycodesFor(keyDef, layout)
+        val mods = KeyboardState.activeModifierKeycodesFor(keyDef, isFullLayout)
         mods.forEach { injector.keyDown(it) }
         keyDef.autoModifiers.forEach { injector.keyDown(it) }
         injector.keyDown(keyDef.linuxKeycode)
@@ -505,7 +502,7 @@ class KeyboardGestureProcessor(
 
     private fun startRepeat(
         keyDef: KeyDef,
-        layout: List<List<KeyDef>>,
+        isFullLayout: Boolean,
     ) {
         repeatJob?.cancel()
         if (keyDef.linuxKeycode == 0 || keyDef.id != "bksp") return
@@ -513,7 +510,7 @@ class KeyboardGestureProcessor(
             scope.launch {
                 delay(KB_REPEAT_INITIAL_DELAY_MS)
                 while (heldKey == keyDef) {
-                    injectKeyStroke(keyDef, layout)
+                    injectKeyStroke(keyDef, isFullLayout)
                     delay(KB_REPEAT_INTERVAL_MS)
                 }
             }
