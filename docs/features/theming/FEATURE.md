@@ -9,7 +9,7 @@
 
 ### Overview
 
-Megingiard supports user-selectable colour themes. The app provides three themes: **Dark** (default), **Dark OLED**, and **Norse**. The architecture is token-based so new themes can be added without per-screen rewrites, and themes specify whether their accent colour is user-configurable or fixed.
+Megingiard supports user-selectable colour themes. The app provides eight themes: **Dark** (default), **Dark OLED**, **Megingiard (Norse Forest)**, **Mjölnir Steel**, **Valhalla Sunset**, **Aurora Borealis**, **Retro Phosphor**, and **Royal Asgard**. The architecture is token-based so new themes can be added without per-screen rewrites, and themes specify whether their accent colour is user-configurable or fixed.
 
 ### FR-TH1: Manual Theme Selection
 
@@ -20,7 +20,7 @@ Megingiard supports user-selectable colour themes. The app provides three themes
 ### FR-TH1a: Optional Custom Accent Support
 
 - A theme MAY allow the user to override its accent colour (e.g. Dark, Dark OLED).
-- A theme MAY instead ship with a fixed built-in accent colour (e.g. Norse).
+- A theme MAY instead ship with a fixed built-in accent colour (e.g. Megingiard, Mjölnir, Valhalla, Aurora, Retro Phosphor, Royal Asgard).
 - Whether the accent picker is shown MUST be derived from theme metadata (`supportsCustomAccent`).
 
 ### FR-TH2: Token-Based Colour Architecture
@@ -149,7 +149,7 @@ For accent-driven UI, screens read `colors.accent` rather than subscribing direc
 
 ```kotlin
 MaterialTheme(
-    colorScheme = colorSchemeFor(appColors, themeMode),
+    colorScheme = colorSchemeFor(appColors),
     typography  = megingiardTypography,
 ) {
     CompositionLocalProvider(
@@ -166,13 +166,13 @@ MaterialTheme(
 
 For external applications (such as the standalone Megingiard Game Focus launcher app `:gamefocus`), theme settings are shared across process boundaries via Android's `ContentProvider` and `ContentObserver` architecture:
 
-- **IPC Contract & Parsing (`companion/domain/src/main/java/com/stormpanda/megingiard/ipc/`):** Defines `MegingiardIpcContract` (`content://com.stormpanda.megingiard.provider/theme`), `IpcThemeParser`, `IpcSettingsParser`, and the generic `observeContentProvider` reactive Flow extension.
+- **IPC Contract & Parsing (`shared/catalog/src/main/java/com/stormpanda/megingiard/catalog/ipc/`):** Defines `MegingiardIpcContract` (`content://com.stormpanda.megingiard.provider/theme`), `IpcThemeParser`, `IpcSettingsParser`, and the generic `observeContentProvider` reactive Flow extension.
 - **Provider Host (`MegingiardSettingsProvider.kt` in `:companion:ui`):** Exposes `/theme` and `/settings` endpoints. Listens to `SettingsManager.onThemeChangedListener` and invokes `contentResolver.notifyChange()` whenever the user changes the theme mode or custom accent color.
 - **Observer Client (`MegingiardThemeClient.kt` in `:gamefocus`):** Consumes `observeContentProvider()` to query initial state synchronously on launch and reactively update `LocalAppColors` whenever theme change notifications arrive.
 
 ### Secondary Display — `MainActivity.kt`
 
-`MainActivity` wraps its Compose tree with `ProvideAppColors` derived from `SettingsManager.themeMode` and `SettingsManager.accentColor`, ensuring all screens, overlays, and embedded cutouts respond to theme changes and use the effective accent.
+`MainActivity` wraps its Compose tree with `CompositionLocalProvider(LocalAppColors provides appColors)` derived from `SettingsManager.themeMode` and `SettingsManager.accentColor`, ensuring all screens, overlays, and embedded cutouts respond to theme changes and use the effective accent.
 
 ### Settings UI — `GlobalSettingsScreen.kt`
 
@@ -186,12 +186,11 @@ For external applications (such as the standalone Megingiard Game Focus launcher
 
 **`AppDivider`** renders a thin `HorizontalDivider` using `AppColors.settingsSeparator` as its default colour.
 
-- `settingsSeparator` is a dedicated token distinct from `divider`; it is tuned per theme for the standard settings/content background, while `divider` continues to serve non-row drawing (timeline grid lines, lane tick marks).
-- Values: Dark `White(α=0.10)`, Light `#1C1C1E(α=0.10)`, Cyberpunk `CP_SECTION_HEADER(α=0.12)`.
+- `settingsSeparator` is a dedicated token distinct from `divider`; it defaults to `onSurface.copy(alpha = 0.12f)` (`Color.White.copy(alpha = 0.10f)` in `darkPalette`) for standard settings/content backgrounds, while `divider` continues to serve non-row drawing (timeline grid lines, lane tick marks).
 - Use `AppDivider` everywhere a visible horizontal rule is needed — settings rows, content lists, dialog dividers, and card separators alike.
 - The `divider` token is reserved for non-row guide lines drawn directly on a Canvas (e.g. `MacroVerticalTimeline`).
 
-**`quickMenuBarIdleColor` — per-palette constants:** Each palette defines its own named constant (`DARK_QM_BAR_IDLE`, `LIGHT_QM_BAR_IDLE`, `CP_QM_BAR_IDLE`), all set to `Color.White.copy(alpha = 0.4f)`. This ensures consistent pull-tab visibility across Dark, Light, and Cyberpunk themes while keeping theme-specific constants for future divergence.
+**`quickMenuBarIdleColor`:** Defaults to `Color.White.copy(alpha = 0.4f)` across all palettes, ensuring consistent pull-tab visibility while keeping a dedicated semantic token for theme-specific overrides.
 
 ### Persistence — `SettingsManager.kt`
 
@@ -291,27 +290,11 @@ Text("Hint", style = MaterialTheme.typography.bodySmall)
 
 ## ColorScheme Bridge (`colorSchemeFor`)
 
-`colorSchemeFor(colors: AppColors, mode: ThemeMode): ColorScheme` maps app tokens to M3 `ColorScheme` so all M3 components (Switch, Slider, Checkbox, etc.) auto-theme without manual `colors =` overrides.
+`colorSchemeFor(colors: AppColors): ColorScheme` maps app tokens to M3 `ColorScheme` so all M3 components (Switch, Slider, Checkbox, etc.) auto-theme without manual `colors =` overrides.
 
 **Key mappings:** `primary`→`accent`, `onPrimary`→`onAccent`, `surface`→`surface`, `background`→`appBackground`, `error`→`error`.
 
 **M3 component color overrides are forbidden** when the ColorScheme handles them. Do not pass `SwitchDefaults.colors(...)` or `SliderDefaults.colors(...)` unless the component has a contextual color need (e.g., `OutlinedTextField` border accent).
-
----
-
-## Additional AppColors Tokens (added in design-system refactor)
-
-| Token                  | Dark          | Light         | Cyberpunk           | Usage                                   |
-| ---------------------- | ------------- | ------------- | ------------------- | --------------------------------------- |
-| `error`                | `0xFFCF6679`  | `0xFFB00020`  | `CP_ACCENT`         | Destructive action text, error states   |
-| `onError`              | `Color.White` | `Color.White` | `CP_DARK_RED`       | Text on error-colored surfaces          |
-| `actionColorGamepad`   | `0xFFFF9800`  | `0xFFFF9800`  | `0xFFFF9800`        | Gamepad button step indicators          |
-| `actionColorSystem`    | `0xFF2196F3`  | `0xFF2196F3`  | `CP_ACCENT`         | System/mirror action indicators         |
-| `macroPadOnSurface`    | `Color.White` | `Color.White` | `CP_TEXT`           | MacroPad placement labels/icons         |
-| `macroPadAccentBorder` | `White@30%`   | `White@30%`   | `CP_ACCENT@35%`     | MacroPad placement border tint          |
-| `sectionHeaderColor`   | `accent`      | `accent`      | `CP_SECTION_HEADER` | Section-header labels and pull-tab tint |
-
-Use these tokens instead of hardcoding `Color(0xFFCF6679)` / `Color(0xFFFF9800)` / `Color(0xFF2196F3)` in screen code.
 
 ---
 
@@ -321,7 +304,7 @@ Megingiard provides a centralized, reusable suite of handheld gamepad-first comp
 
 | Component | Description | Primary Usage |
 | --------- | ----------- | ------------- |
-| `GamepadTwoPaneScaffold` | Split-screen scaffold with fixed `210.dp` category sidebar, scrollable content deck, sticky sidebar footer, and bottom prompt bar. | `GlobalSettingsScreen`, `MacroPadEditor` |
+| `GamepadTwoPaneScaffold` | Split-screen scaffold with fixed `180.dp` (`GS_SIDEBAR_WIDTH`) category sidebar, pinned breadcrumb header, and scrollable content deck. | `GlobalSettingsScreen`, `MacroPadEditor`, `GameFocusEditGameOverlay`, `GameFocusManageGalleriesOverlay` |
 | `GamepadSectionHeader` | Uppercase section header with tracked letter-spacing, localized text, and themed accent/section coloring. | `GlobalSettingsScreen`, `MacroPadEditor`, `MacroTimelineEditor` |
 | `GamepadCategoryTile` | Focusable navigation tile for sidebar category rails with subtle background highlight and icon/label layout. | `GamepadTwoPaneScaffold` sidebars |
 | `GamepadFocusCard` | Standard focusable card container with animated scaling, draw-phase glowing accent border on focus, and click handling. | Base for all gamepad cards |
