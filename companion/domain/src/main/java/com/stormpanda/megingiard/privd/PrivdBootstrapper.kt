@@ -1,20 +1,15 @@
 package com.stormpanda.megingiard.privd
 
 import android.content.Context
-import android.net.nsd.NsdManager
-import android.net.nsd.NsdServiceInfo
 import android.provider.Settings
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.security.BinaryIntegrity
 import com.stormpanda.megingiard.security.HmacUtil
 import io.github.muntashirakon.adb.AdbPairingRequiredException
 import io.github.muntashirakon.adb.AdbStream
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeoutOrNull
 import java.io.BufferedReader
 import java.io.InputStream
 import java.io.InputStreamReader
@@ -37,10 +32,9 @@ private const val VERIFY_RETRY_DELAY_MS = 300L
 private const val SYNC_SERVICE = "sync:"
 private const val SYNC_SEND = "SEND"
 private const val GETPROP_TIMEOUT_MS = 2_000L
-private const val NSD_DISCOVERY_TIMEOUT_MS = 3_000L
 private const val PORT_READ_RETRY_COUNT = 5
 private const val PORT_READ_RETRY_DELAY_MS = 200L
-private const val ADB_CONNECT_RETRY_COUNT = 3
+private const val ADB_CONNECT_RETRY_COUNT = 2
 private const val ADB_CONNECT_RETRY_DELAY_MS = 500L
 private const val SYNC_DATA = "DATA"
 private const val SYNC_DONE = "DONE"
@@ -125,19 +119,10 @@ object PrivdBootstrapper {
         return try {
             val mgr = PrivdAdbConnectionManager.getInstance(context)
             disconnectQuietly(mgr)
-            val hosts = listOf(host, "127.0.0.1", "::1", "localhost").distinct()
-            var ok = false
-            for (h in hosts) {
-                try {
-                    AppLog.d(TAG, "Attempting ADB pair to $h:$port")
-                    if (mgr.pair(h, port, pairingCode)) {
-                        mgr.persistCredentials(context)
-                        ok = true
-                        break
-                    }
-                } catch (e: Exception) {
-                    AppLog.w(TAG, "pair($h:$port) failed: $e")
-                }
+            AppLog.d(TAG, "Attempting ADB pair to $host:$port")
+            val ok = mgr.pair(host, port, pairingCode)
+            if (ok) {
+                mgr.persistCredentials(context)
             }
             AppLog.i(TAG, "pair() → $ok")
             if (!ok) {
@@ -170,7 +155,7 @@ object PrivdBootstrapper {
         host: String,
     ): Boolean {
         PrivdClient.setPackageName(context.packageName)
-        val connectPort = readAdbTlsConnectPortWithRetry(context)
+        val connectPort = readAdbTlsConnectPortWithRetry()
         clearScreenConnectPort() // Clean up any cached port after the read attempt
         if (connectPort <= 0) {
             AppLog.w(TAG, "bootstrapAndConnect: wireless debugging port not available (port=$connectPort) — is Wireless Debugging enabled?")
@@ -183,26 +168,22 @@ object PrivdBootstrapper {
         disconnectQuietly(mgr)
         // Connect directly to adbd — mDNS self-discovery is unreliable on-device.
         _stage.value = BootstrapStage.CONNECTING_ADB
-        val hosts = listOf(host, "127.0.0.1", "::1", "localhost").distinct()
         var connected = false
         var pairingRequired = false
         for (attempt in 1..ADB_CONNECT_RETRY_COUNT) {
-            for (h in hosts) {
-                try {
-                    AppLog.d(TAG, "Attempting ADB connect to $h:$connectPort (attempt $attempt/$ADB_CONNECT_RETRY_COUNT)")
-                    if (mgr.connect(h, connectPort)) {
-                        mgr.persistCredentials(context)
-                        connected = true
-                        break
-                    }
-                } catch (e: Exception) {
-                    AppLog.w(TAG, "connect($h:$connectPort) failed (attempt $attempt): $e")
-                    if (e is AdbPairingRequiredException) {
-                        pairingRequired = true
-                    }
+            try {
+                AppLog.d(TAG, "Attempting ADB connect to $host:$connectPort (attempt $attempt/$ADB_CONNECT_RETRY_COUNT)")
+                if (mgr.connect(host, connectPort)) {
+                    mgr.persistCredentials(context)
+                    connected = true
+                    break
+                }
+            } catch (e: Exception) {
+                AppLog.w(TAG, "connect($host:$connectPort) failed (attempt $attempt): $e")
+                if (e is AdbPairingRequiredException) {
+                    pairingRequired = true
                 }
             }
-            if (connected) break
             if (attempt < ADB_CONNECT_RETRY_COUNT) {
                 try {
                     Thread.sleep(ADB_CONNECT_RETRY_DELAY_MS)
@@ -315,7 +296,7 @@ object PrivdBootstrapper {
     // Internal
     // -------------------------------------------------------------------------
 
-    private fun readAdbTlsConnectPortWithRetry(context: Context): Int {
+    private fun readAdbTlsConnectPortWithRetry(): Int {
         val port = readAdbTlsConnectPort()
         if (port > 0) return port
 
@@ -325,10 +306,6 @@ object PrivdBootstrapper {
             AppLog.i(TAG, "getprop returned 0, attempting screen-scanned connect port fallback: $scannedPort")
             return scannedPort
         }
-
-        AppLog.i(TAG, "getprop service.adb.tls.port returned 0, attempting NSD discovery fallback...")
-        val nsdPort = discoverAdbTlsPortWithNsd(context)
-        if (nsdPort > 0) return nsdPort
 
         for (i in 0 until PORT_READ_RETRY_COUNT) {
             val p = readAdbTlsConnectPort()
@@ -365,7 +342,7 @@ object PrivdBootstrapper {
                 false
             }
         if (toggleEnabled) return true
-        return readAdbTlsConnectPort(context) > 0
+        return readAdbTlsConnectPort() > 0
     }
 
     /**
@@ -374,115 +351,29 @@ object PrivdBootstrapper {
      * not enabled), if the `getprop` invocation hangs beyond [GETPROP_TIMEOUT_MS],
      * or if the output cannot be parsed.
      */
-    fun readAdbTlsConnectPort(context: Context? = null): Int {
+    fun readAdbTlsConnectPort(): Int {
         var proc: Process? = null
-        val port =
-            try {
-                proc =
-                    ProcessBuilder("getprop", "service.adb.tls.port")
-                        .redirectErrorStream(true)
-                        .start()
-                val exited = proc.waitFor(GETPROP_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                if (!exited) {
-                    AppLog.w(TAG, "readAdbTlsConnectPort() getprop timed out after $GETPROP_TIMEOUT_MS ms")
-                    proc.destroyForcibly()
-                    0
-                } else {
-                    val output =
-                        proc.inputStream.bufferedReader().use { reader ->
-                            reader.readLine()?.trim().orEmpty()
-                        }
-                    output.toIntOrNull() ?: 0
-                }
-            } catch (e: Exception) {
-                AppLog.w(TAG, "readAdbTlsConnectPort() threw: $e")
-                proc?.destroyForcibly()
+        return try {
+            proc =
+                ProcessBuilder("getprop", "service.adb.tls.port")
+                    .redirectErrorStream(true)
+                    .start()
+            val exited = proc.waitFor(GETPROP_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+            if (!exited) {
+                AppLog.w(TAG, "readAdbTlsConnectPort() getprop timed out after $GETPROP_TIMEOUT_MS ms")
+                proc.destroyForcibly()
                 0
-            }
-
-        if (port > 0) return port
-        if (context != null) {
-            AppLog.d(TAG, "readAdbTlsConnectPort getprop returned 0, attempting NSD discovery")
-            return discoverAdbTlsPortWithNsd(context)
-        }
-        return 0
-    }
-
-    @Suppress("DEPRECATION")
-    private fun discoverAdbTlsPortWithNsd(
-        context: Context,
-        timeoutMs: Long = NSD_DISCOVERY_TIMEOUT_MS,
-    ): Int {
-        val nsdManager = context.getSystemService(Context.NSD_SERVICE) as? NsdManager ?: return 0
-        val deferredPort = CompletableDeferred<Int>()
-
-        val discoveryListener =
-            object : NsdManager.DiscoveryListener {
-                override fun onStartDiscoveryFailed(
-                    serviceType: String?,
-                    errorCode: Int,
-                ) {
-                    AppLog.w(TAG, "NSD start discovery failed: $errorCode")
-                    deferredPort.complete(0)
-                }
-
-                override fun onStopDiscoveryFailed(
-                    serviceType: String?,
-                    errorCode: Int,
-                ) {
-                    AppLog.w(TAG, "NSD stop discovery failed: $errorCode")
-                }
-
-                override fun onDiscoveryStarted(serviceType: String?) {
-                    AppLog.d(TAG, "NSD discovery started for $serviceType")
-                }
-
-                override fun onDiscoveryStopped(serviceType: String?) {
-                    AppLog.d(TAG, "NSD discovery stopped")
-                }
-
-                override fun onServiceFound(serviceInfo: NsdServiceInfo?) {
-                    AppLog.d(TAG, "NSD service found: ${serviceInfo?.serviceName}")
-                    if (serviceInfo != null) {
-                        nsdManager.resolveService(
-                            serviceInfo,
-                            object : NsdManager.ResolveListener {
-                                override fun onResolveFailed(
-                                    serviceInfo: NsdServiceInfo?,
-                                    errorCode: Int,
-                                ) {
-                                    AppLog.w(TAG, "NSD resolve failed: $errorCode")
-                                }
-
-                                override fun onServiceResolved(resolvedInfo: NsdServiceInfo?) {
-                                    if (resolvedInfo != null) {
-                                        val port = resolvedInfo.port
-                                        AppLog.i(TAG, "NSD resolved port: $port")
-                                        deferredPort.complete(port)
-                                    }
-                                }
-                            },
-                        )
+            } else {
+                val output =
+                    proc.inputStream.bufferedReader().use { reader ->
+                        reader.readLine()?.trim().orEmpty()
                     }
-                }
-
-                override fun onServiceLost(serviceInfo: NsdServiceInfo?) {
-                    AppLog.d(TAG, "NSD service lost")
-                }
-            }
-
-        try {
-            nsdManager.discoverServices("_adb-tls-connect._tcp", NsdManager.PROTOCOL_DNS_SD, discoveryListener)
-            return runBlocking {
-                withTimeoutOrNull(timeoutMs) {
-                    deferredPort.await()
-                } ?: 0
-            }.also {
-                runCatching { nsdManager.stopServiceDiscovery(discoveryListener) }
+                output.toIntOrNull() ?: 0
             }
         } catch (e: Exception) {
-            AppLog.w(TAG, "NSD discovery threw: $e")
-            return 0
+            AppLog.w(TAG, "readAdbTlsConnectPort() threw: $e")
+            proc?.destroyForcibly()
+            0
         }
     }
 
