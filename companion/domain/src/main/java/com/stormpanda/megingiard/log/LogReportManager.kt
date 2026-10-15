@@ -2,6 +2,8 @@ package com.stormpanda.megingiard.log
 
 import android.content.Context
 import android.net.Uri
+import android.os.Build
+import android.os.Process
 import com.stormpanda.megingiard.AppLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
@@ -78,9 +80,9 @@ object LogReportManager {
         context: Context,
         uri: Uri,
         appVersion: String,
-        deviceModel: String,
-        androidVersion: String,
-        pid: Int,
+        deviceModel: String = Build.MODEL,
+        androidVersion: String = Build.VERSION.RELEASE,
+        pid: Int = Process.myPid(),
     ): Result<Unit> =
         withContext(Dispatchers.IO) {
             runCatching {
@@ -127,8 +129,8 @@ object LogReportManager {
      * All parameters are explicit so the function is pure and easily testable.
      *
      * @param appVersion e.g. `"0.2.0-SNAPSHOT"` from [BuildConfig.VERSION_NAME]
-     * @param deviceModel e.g. `"AYN Thor 2"` from [android.os.Build.MODEL]
-     * @param androidVersion e.g. `"14"` from [android.os.Build.VERSION.RELEASE]
+     * @param deviceModel e.g. `"AYN Thor 2"` from [Build.MODEL]
+     * @param androidVersion e.g. `"14"` from [Build.VERSION.RELEASE]
      * @param timestamp e.g. `"2026-05-18 14:32:00"`
      */
     fun buildReportHeader(

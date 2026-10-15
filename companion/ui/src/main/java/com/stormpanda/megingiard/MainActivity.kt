@@ -10,7 +10,6 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.media.MediaScannerConnection
-import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.os.Handler
@@ -190,9 +189,6 @@ class MainActivity : ComponentActivity() {
                     context = applicationContext,
                     uri = uri,
                     appVersion = BuildConfig.VERSION_NAME,
-                    deviceModel = Build.MODEL,
-                    androidVersion = Build.VERSION.RELEASE,
-                    pid = Process.myPid(),
                 )
             }
         }
