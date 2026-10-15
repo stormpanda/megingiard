@@ -41,32 +41,24 @@ class MegingiardSettingsProvider : ContentProvider() {
     }
 
     companion object {
-        fun notifyThemeChanged(context: Context) {
+        private fun notifyUriChanged(
+            context: Context,
+            uri: Uri,
+            label: String,
+        ) {
             try {
-                context.contentResolver.notifyChange(MegingiardIpcContract.THEME_URI, null)
-                AppLog.d(TAG, "Notified theme change on ${MegingiardIpcContract.THEME_URI}")
+                context.contentResolver.notifyChange(uri, null)
+                AppLog.d(TAG, "Notified $label change on $uri")
             } catch (e: Exception) {
-                AppLog.w(TAG, "Failed to notify theme change: ${e.message}")
+                AppLog.w(TAG, "Failed to notify $label change: ${e.message}")
             }
         }
 
-        fun notifySettingsChanged(context: Context) {
-            try {
-                context.contentResolver.notifyChange(MegingiardIpcContract.SETTINGS_URI, null)
-                AppLog.d(TAG, "Notified settings change on ${MegingiardIpcContract.SETTINGS_URI}")
-            } catch (e: Exception) {
-                AppLog.w(TAG, "Failed to notify settings change: ${e.message}")
-            }
-        }
+        fun notifyThemeChanged(context: Context) = notifyUriChanged(context, MegingiardIpcContract.THEME_URI, "theme")
 
-        fun notifyProfilesChanged(context: Context) {
-            try {
-                context.contentResolver.notifyChange(MegingiardIpcContract.PROFILES_URI, null)
-                AppLog.d(TAG, "Notified profiles change on ${MegingiardIpcContract.PROFILES_URI}")
-            } catch (e: Exception) {
-                AppLog.w(TAG, "Failed to notify profiles change: ${e.message}")
-            }
-        }
+        fun notifySettingsChanged(context: Context) = notifyUriChanged(context, MegingiardIpcContract.SETTINGS_URI, "settings")
+
+        fun notifyProfilesChanged(context: Context) = notifyUriChanged(context, MegingiardIpcContract.PROFILES_URI, "profiles")
     }
 
     override fun onCreate(): Boolean {
