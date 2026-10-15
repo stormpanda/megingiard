@@ -269,7 +269,7 @@
 - [x] **`[IA-01]`** — Simplify `EmulatorDetector` to a single method with default arguments *(Complexity: Low, Risk: Low)*
 - [x] **`[IA-02]`** — Replace hand-rolled brace/regex JSON parser in `RetroArchLplParser` with `kotlinx.serialization.json` *(Complexity: High, Risk: Low)*
 - [x] **`[IA-03]`** — Reuse `MacroPadState.findBestMatchingProfile` in `IntegrationHomeScreen` *(Complexity: Low, Risk: Low)*
-- [ ] **`[IA-04]`** — Deduplicate auto-switch lookup calls inside `AutoSwitchCoordinator.onPackageChanged` *(Complexity: Med, Risk: Low)*
+- [x] **`[IA-04]`** — Deduplicate auto-switch lookup calls inside `AutoSwitchCoordinator.onPackageChanged` *(Complexity: Med, Risk: Low)*
 - [ ] **`[IA-05]`** — Simplify redundant boolean branches in `MegingiardIpcContract.init()` *(Complexity: Low, Risk: Low)*
 - [ ] **`[IA-06]`** — Consolidate `notify*Changed` helpers in `MegingiardSettingsProvider` *(Complexity: Low, Risk: Low)*
 - [ ] **`[IA-07]`** — Remove empty `try / finally` block in `MegingiardAccessibilityService` *(Complexity: Low, Risk: Low)*
