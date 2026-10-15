@@ -28,6 +28,18 @@ private const val TP_SCROLL_SPEED_MAX = 10.0f
 private const val TP_SCROLL_THRESHOLD_BASE_PX = 12f
 private const val MAX_TOUCH_SLOTS = 10
 
+data class TouchpadGestureConfig(
+    val useMouse: Boolean = true,
+    val sensitivity: Float = 1.0f,
+    val twoFingerScrollEnabled: Boolean = true,
+    val naturalScrollEnabled: Boolean = true,
+    val scrollSpeed: Float = 1.0f,
+    val tapToClick: Boolean = true,
+    val twoFingerTap: Boolean = true,
+    val threeFingerTap: Boolean = true,
+    val tapDrag: Boolean = true,
+)
+
 /**
  * Gesture processor for the virtual touchpad, supporting two input modes:
  *
@@ -43,20 +55,12 @@ private const val MAX_TOUCH_SLOTS = 10
  * scope and dispatches raw pointer events through the `on*` methods.
  */
 class TouchpadGestureProcessor(
-    private val useMouse: () -> Boolean,
     private val scope: CoroutineScope,
-    private val sensitivity: () -> Float = { 1.0f },
-    private val twoFingerScrollEnabled: () -> Boolean = { true },
-    private val naturalScrollEnabled: () -> Boolean = { true },
-    private val scrollSpeed: () -> Float = { 1.0f },
-    private val tapToClick: () -> Boolean = { true },
-    private val twoFingerTap: () -> Boolean = { true },
-    private val threeFingerTap: () -> Boolean = { true },
-    private val tapDrag: () -> Boolean = { true },
+    private val config: () -> TouchpadGestureConfig = { TouchpadGestureConfig() },
     private val onHapticFeedback: () -> Unit = {},
 ) {
-    private fun getSensitivity(): Float {
-        val s = sensitivity()
+    private fun getSensitivity(currentConfig: TouchpadGestureConfig): Float {
+        val s = currentConfig.sensitivity
         return if (s.isFinite() && s > 0f) {
             s.coerceIn(TP_SENSITIVITY_MIN, TP_SENSITIVITY_MAX)
         } else {
@@ -64,8 +68,8 @@ class TouchpadGestureProcessor(
         }
     }
 
-    private fun getScrollSpeed(): Float {
-        val s = scrollSpeed()
+    private fun getScrollSpeed(currentConfig: TouchpadGestureConfig): Float {
+        val s = currentConfig.scrollSpeed
         return if (s.isFinite() && s > 0f) {
             s.coerceIn(TP_SCROLL_SPEED_MIN, TP_SCROLL_SPEED_MAX)
         } else {
@@ -126,14 +130,15 @@ class TouchpadGestureProcessor(
         surfaceW: Float,
         surfaceH: Float,
     ) {
-        if (useMouse()) {
+        val currentConfig = config()
+        if (currentConfig.useMouse) {
             pressTimes[pointerId] = System.currentTimeMillis()
             downPositions[pointerId] = Pair(x, y)
             if (primaryPointer == null) primaryPointer = pointerId
             if (downPositions.size != 2) {
                 scrollAccumY = 0f
             }
-            if (tapDrag() && downPositions.size == 1) {
+            if (currentConfig.tapDrag && downPositions.size == 1) {
                 val now = System.currentTimeMillis()
                 AppLog.d(TAG, "onPress: tapDrag=true, delta=${now - lastTapReleaseTime}ms, limit=$TP_DOUBLE_TAP_TIMEOUT_MS")
                 if (now - lastTapReleaseTime < TP_DOUBLE_TAP_TIMEOUT_MS) {
@@ -186,7 +191,8 @@ class TouchpadGestureProcessor(
         surfaceW: Float,
         surfaceH: Float,
     ) {
-        if (useMouse()) {
+        val currentConfig = config()
+        if (currentConfig.useMouse) {
             // Disqualify as tap if slop exceeded
             val initPos = downPositions[pointerId]
             if (initPos != null && pointerId !in movedTooFar) {
@@ -196,20 +202,21 @@ class TouchpadGestureProcessor(
                     movedTooFar.add(pointerId)
                 }
             }
-            if (twoFingerScrollEnabled() && downPositions.size == 2) {
+            if (currentConfig.twoFingerScrollEnabled && downPositions.size == 2) {
                 if (pointerId == primaryPointer) {
                     scrollAccumY += deltaY
-                    val scrollThreshold = TP_SCROLL_THRESHOLD_BASE_PX / getScrollSpeed() // Sensitivity threshold in pixels
+                    val scrollThreshold = TP_SCROLL_THRESHOLD_BASE_PX / getScrollSpeed(currentConfig) // Sensitivity threshold in pixels
                     val units = (scrollAccumY / scrollThreshold).toInt()
                     if (units != 0) {
-                        val directionMultiplier = if (naturalScrollEnabled()) 1 else -1
+                        val directionMultiplier = if (currentConfig.naturalScrollEnabled) 1 else -1
                         MouseInjector.scrollWheel(units * directionMultiplier)
                         scrollAccumY -= units * scrollThreshold
                     }
                 }
             } else if (pointerId == primaryPointer) {
-                val dx = (deltaX * TP_MOUSE_SENSITIVITY * getSensitivity()).roundToInt()
-                val dy = (deltaY * TP_MOUSE_SENSITIVITY * getSensitivity()).roundToInt()
+                val sens = getSensitivity(currentConfig)
+                val dx = (deltaX * TP_MOUSE_SENSITIVITY * sens).roundToInt()
+                val dy = (deltaY * TP_MOUSE_SENSITIVITY * sens).roundToInt()
                 if (dx != 0 || dy != 0) MouseInjector.moveMouse(dx, dy)
             }
         } else {
@@ -241,7 +248,8 @@ class TouchpadGestureProcessor(
         surfaceW: Float,
         surfaceH: Float,
     ) {
-        if (useMouse()) {
+        val currentConfig = config()
+        if (currentConfig.useMouse) {
             val pressTime = pressTimes.remove(pointerId)
             downPositions.remove(pointerId)
             val disqualified = movedTooFar.remove(pointerId)
@@ -271,7 +279,7 @@ class TouchpadGestureProcessor(
                 val tapCount = releasedAsTap.size
                 resetMousePointers()
                 when {
-                    tapCount == 1 && tapToClick() -> {
+                    tapCount == 1 && currentConfig.tapToClick -> {
                         lastTapReleaseTime = System.currentTimeMillis()
                         onHapticFeedback()
                         pendingClickJob =
@@ -286,11 +294,11 @@ class TouchpadGestureProcessor(
                             }
                     }
 
-                    tapCount == 2 && twoFingerTap() -> {
+                    tapCount == 2 && currentConfig.twoFingerTap -> {
                         clickButton(MouseButton.RIGHT)
                     }
 
-                    tapCount == 3 && threeFingerTap() -> {
+                    tapCount == 3 && currentConfig.threeFingerTap -> {
                         clickButton(MouseButton.MIDDLE)
                     }
                 }

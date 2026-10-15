@@ -129,18 +129,20 @@ fun FullscreenMouseOverlay() {
     val isCapturing by ScreenCaptureManager.isCapturing.collectAsStateWithLifecycle()
     val isMirroringActive = !touchpadUseMouse && touchpadMirroringEnabled && isCapturing
 
-    val useMouseState = rememberUpdatedState(touchpadUseMouse)
-    val tapToClickState = rememberUpdatedState(tapToClick)
-    val twoFingerTapState = rememberUpdatedState(twoFingerTap)
-    val threeFingerTapState = rememberUpdatedState(threeFingerTap)
-    val tapDragState = rememberUpdatedState(tapDrag)
-    val twoFingerScrollState = rememberUpdatedState(twoFingerScroll)
-
-    // Recreate processor parameters dynamically via rememberUpdatedState so values apply immediately without stale closures.
     val finalSensitivity = touchpadSensitivity * sensitivity
-    val sensitivityState = rememberUpdatedState(finalSensitivity)
-    val naturalScrollState = rememberUpdatedState(touchpadNaturalScroll)
-    val scrollSpeedState = rememberUpdatedState(touchpadScrollSpeed)
+    val gestureConfig by rememberUpdatedState(
+        TouchpadGestureConfig(
+            useMouse = touchpadUseMouse,
+            sensitivity = finalSensitivity,
+            twoFingerScrollEnabled = twoFingerScroll,
+            naturalScrollEnabled = touchpadNaturalScroll,
+            scrollSpeed = touchpadScrollSpeed,
+            tapToClick = tapToClick,
+            twoFingerTap = twoFingerTap,
+            threeFingerTap = threeFingerTap,
+            tapDrag = tapDrag,
+        ),
+    )
     val currentOnHapticFeedback by rememberUpdatedState {
         if (touchpadHapticsEnabled && vibrator != null) {
             triggerHaptic(vibrator, HapticStrength.LIGHT)
@@ -149,16 +151,8 @@ fun FullscreenMouseOverlay() {
     val processor =
         remember {
             TouchpadGestureProcessor(
-                useMouse = { useMouseState.value },
                 scope = coroutineScope,
-                sensitivity = { sensitivityState.value },
-                twoFingerScrollEnabled = { twoFingerScrollState.value },
-                naturalScrollEnabled = { naturalScrollState.value },
-                scrollSpeed = { scrollSpeedState.value },
-                tapToClick = { tapToClickState.value },
-                twoFingerTap = { twoFingerTapState.value },
-                threeFingerTap = { threeFingerTapState.value },
-                tapDrag = { tapDragState.value },
+                config = { gestureConfig },
                 onHapticFeedback = { currentOnHapticFeedback() },
             )
         }
@@ -258,7 +252,7 @@ fun FullscreenMouseOverlay() {
 
                                             PointerEventType.Move -> {
                                                 if (wasTracked) {
-                                                    if (!isInside && !useMouseState.value) {
+                                                    if (!isInside && !gestureConfig.useMouse) {
                                                         pointersInsideTouchpad.remove(id)
                                                         processor.onRelease(
                                                             pointerId = id,

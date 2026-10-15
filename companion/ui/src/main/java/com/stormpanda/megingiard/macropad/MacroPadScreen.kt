@@ -81,6 +81,7 @@ import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.TouchProjectionController
 import com.stormpanda.megingiard.mirror.TouchScreenObserver
 import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.touchpad.TouchpadGestureConfig
 import com.stormpanda.megingiard.touchpad.TouchpadGestureProcessor
 import com.stormpanda.megingiard.ui.DialogToastManager
 import com.stormpanda.megingiard.ui.DialogToastPill
@@ -414,16 +415,20 @@ internal fun PadSurface(
     val bgTouchpadProcessor =
         remember(layout, bgTouchpadActive) {
             TouchpadGestureProcessor(
-                useMouse = { true },
                 scope = coroutineScope,
-                sensitivity = { layout.backgroundTouchpad.sensitivity },
-                twoFingerScrollEnabled = { layout.backgroundTouchpad.twoFingerScroll },
-                naturalScrollEnabled = { layout.backgroundTouchpad.naturalScroll },
-                scrollSpeed = { layout.backgroundTouchpad.scrollSpeed },
-                tapToClick = { layout.backgroundTouchpad.tapToClick },
-                twoFingerTap = { layout.backgroundTouchpad.twoFingerTap },
-                threeFingerTap = { layout.backgroundTouchpad.threeFingerTap },
-                tapDrag = { layout.backgroundTouchpad.tapDrag },
+                config = {
+                    TouchpadGestureConfig(
+                        useMouse = true,
+                        sensitivity = layout.backgroundTouchpad.sensitivity,
+                        twoFingerScrollEnabled = layout.backgroundTouchpad.twoFingerScroll,
+                        naturalScrollEnabled = layout.backgroundTouchpad.naturalScroll,
+                        scrollSpeed = layout.backgroundTouchpad.scrollSpeed,
+                        tapToClick = layout.backgroundTouchpad.tapToClick,
+                        twoFingerTap = layout.backgroundTouchpad.twoFingerTap,
+                        threeFingerTap = layout.backgroundTouchpad.threeFingerTap,
+                        tapDrag = layout.backgroundTouchpad.tapDrag,
+                    )
+                },
                 onHapticFeedback = {
                     if (layout.backgroundTouchpad.hapticsEnabled) {
                         triggerHaptic(vibrator, HapticStrength.MEDIUM, 0, 0)

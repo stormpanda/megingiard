@@ -46,6 +46,7 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.macropad.HapticStrength
 import com.stormpanda.megingiard.macropad.triggerHaptic
 import com.stormpanda.megingiard.settings.TouchpadSettings
+import com.stormpanda.megingiard.touchpad.TouchpadGestureConfig
 import com.stormpanda.megingiard.touchpad.TouchpadGestureProcessor
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.rememberBezelBrush
@@ -136,19 +137,22 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                 val processor =
                     remember {
                         TouchpadGestureProcessor(
-                            useMouse = { true },
                             scope = coroutineScope,
-                            sensitivity = {
-                                TouchpadSettings.touchpadSensitivity.value *
-                                    AppStateManager.fullscreenMouseSensitivity.value
+                            config = {
+                                TouchpadGestureConfig(
+                                    useMouse = true,
+                                    sensitivity =
+                                        TouchpadSettings.touchpadSensitivity.value *
+                                            AppStateManager.fullscreenMouseSensitivity.value,
+                                    twoFingerScrollEnabled = TouchpadSettings.touchpadTwoFingerScroll.value,
+                                    naturalScrollEnabled = TouchpadSettings.touchpadNaturalScroll.value,
+                                    scrollSpeed = TouchpadSettings.touchpadScrollSpeed.value,
+                                    tapToClick = TouchpadSettings.touchpadTapToClick.value,
+                                    twoFingerTap = TouchpadSettings.touchpadTwoFingerTap.value,
+                                    threeFingerTap = TouchpadSettings.touchpadThreeFingerTap.value,
+                                    tapDrag = TouchpadSettings.touchpadTapDrag.value,
+                                )
                             },
-                            twoFingerScrollEnabled = { TouchpadSettings.touchpadTwoFingerScroll.value },
-                            naturalScrollEnabled = { TouchpadSettings.touchpadNaturalScroll.value },
-                            scrollSpeed = { TouchpadSettings.touchpadScrollSpeed.value },
-                            tapToClick = { TouchpadSettings.touchpadTapToClick.value },
-                            twoFingerTap = { TouchpadSettings.touchpadTwoFingerTap.value },
-                            threeFingerTap = { TouchpadSettings.touchpadThreeFingerTap.value },
-                            tapDrag = { TouchpadSettings.touchpadTapDrag.value },
                             onHapticFeedback = {
                                 if (TouchpadSettings.touchpadHapticsEnabled.value && vibrator != null) {
                                     triggerHaptic(vibrator, HapticStrength.LIGHT)

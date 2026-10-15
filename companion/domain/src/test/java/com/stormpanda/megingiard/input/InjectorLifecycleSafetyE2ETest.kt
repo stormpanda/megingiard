@@ -7,6 +7,7 @@ import com.stormpanda.megingiard.keyboard.KeyboardGestureProcessor
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdConnectionState
+import com.stormpanda.megingiard.touchpad.TouchpadGestureConfig
 import com.stormpanda.megingiard.touchpad.TouchpadGestureProcessor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -91,16 +92,13 @@ class InjectorLifecycleSafetyE2ETest {
         runTest(testDispatcher) {
             val processor =
                 TouchpadGestureProcessor(
-                    useMouse = { true },
                     scope = this,
-                    sensitivity = { 1.5f },
-                    twoFingerScrollEnabled = { true },
-                    naturalScrollEnabled = { true },
-                    scrollSpeed = { 1.0f },
-                    tapToClick = { true },
-                    twoFingerTap = { true },
-                    threeFingerTap = { true },
-                    tapDrag = { true },
+                    config = {
+                        TouchpadGestureConfig(
+                            useMouse = true,
+                            sensitivity = 1.5f,
+                        )
+                    },
                 )
 
             // 1. Dispatch 2-finger touch down

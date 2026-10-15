@@ -248,7 +248,7 @@
 > Select which findings to implement (`All`, `Low-risk only`, or specific IDs):
 
 - [x] **`[TP-01]`** — Remove dead `overlayOpen` parameter and `AppStateManager` coupling from `TouchpadGestureProcessor.onPress` *(Complexity: Low, Risk: Low)*
-- [ ] **`[TP-02]`** — Replace 9 setting lambdas in `TouchpadGestureProcessor` with a single `TouchpadGestureConfig` *(Complexity: High, Risk: Low)*
+- [x] **`[TP-02]`** — Replace 9 setting lambdas in `TouchpadGestureProcessor` with a single `TouchpadGestureConfig` *(Complexity: High, Risk: Low)*
 - [ ] **`[TP-03]`** — Consolidate sensitivity/scroll-speed bounds and remove redundant `isFinite()` guards *(Complexity: Low, Risk: Low)*
 - [ ] **`[TP-04]`** — Replace `outerCoords`/`innerCoords`/`touchpadCoords` with `PointerInputScope.size` on the inner Box *(Complexity: Med, Risk: Low)*
 - [ ] **`[TP-05]`** — Remove parallel `activeSlots` `BooleanArray` in `TouchpadGestureProcessor` *(Complexity: Low, Risk: Low)*

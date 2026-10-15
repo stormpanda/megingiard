@@ -22,16 +22,20 @@ class TouchpadGestureProcessorTest {
         scrollSpeed: Float = 1.0f,
         onHapticFeedback: () -> Unit = {},
     ) = TouchpadGestureProcessor(
-        useMouse = useMouse,
         scope = this,
-        sensitivity = { 1.0f },
-        twoFingerScrollEnabled = { true },
-        tapToClick = { tapToClick },
-        tapDrag = { tapDrag },
-        twoFingerTap = { twoFingerTap },
-        threeFingerTap = { threeFingerTap },
-        naturalScrollEnabled = { naturalScrollEnabled },
-        scrollSpeed = { scrollSpeed },
+        config = {
+            TouchpadGestureConfig(
+                useMouse = useMouse(),
+                sensitivity = 1.0f,
+                twoFingerScrollEnabled = true,
+                naturalScrollEnabled = naturalScrollEnabled,
+                scrollSpeed = scrollSpeed,
+                tapToClick = tapToClick,
+                twoFingerTap = twoFingerTap,
+                threeFingerTap = threeFingerTap,
+                tapDrag = tapDrag,
+            )
+        },
         onHapticFeedback = onHapticFeedback,
     )
 
