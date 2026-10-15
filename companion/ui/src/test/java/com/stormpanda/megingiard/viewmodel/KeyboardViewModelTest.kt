@@ -16,14 +16,8 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.RuntimeEnvironment
-import org.robolectric.annotation.Config
 
 @OptIn(ExperimentalCoroutinesApi::class)
-@RunWith(RobolectricTestRunner::class)
-@Config(sdk = [33])
 class KeyboardViewModelTest {
     private val testDispatcher = UnconfinedTestDispatcher()
 
@@ -43,8 +37,7 @@ class KeyboardViewModelTest {
 
     @Test
     fun testKeyboardModeTransitions() {
-        val app = RuntimeEnvironment.getApplication()
-        val vm = KeyboardViewModel(app)
+        val vm = KeyboardViewModel()
 
         assertEquals(KeyboardMode.LETTERS, vm.keyboardMode.value)
         vm.setKeyboardMode(KeyboardMode.SYMBOLS_1)
@@ -55,8 +48,7 @@ class KeyboardViewModelTest {
 
     @Test
     fun testLayoutCyclingAndSetters() {
-        val app = RuntimeEnvironment.getApplication()
-        val vm = KeyboardViewModel(app)
+        val vm = KeyboardViewModel()
 
         vm.setKbLayout(KbLayout.QWERTY)
         assertEquals(KbLayout.QWERTY, vm.kbLayout.value)
@@ -70,8 +62,7 @@ class KeyboardViewModelTest {
 
     @Test
     fun testShortcutHelpers() {
-        val app = RuntimeEnvironment.getApplication()
-        val vm = KeyboardViewModel(app)
+        val vm = KeyboardViewModel()
 
         vm.selectAll()
         vm.copy()
@@ -81,8 +72,7 @@ class KeyboardViewModelTest {
 
     @Test
     fun testQuickMenuControl() {
-        val app = RuntimeEnvironment.getApplication()
-        val vm = KeyboardViewModel(app)
+        val vm = KeyboardViewModel()
 
         AppStateManager.openQuickMenu()
         assertTrue(vm.isQuickMenuOpen.value)
@@ -93,8 +83,7 @@ class KeyboardViewModelTest {
 
     @Test
     fun testGestureProcessorNotNull() {
-        val app = RuntimeEnvironment.getApplication()
-        val vm = KeyboardViewModel(app)
+        val vm = KeyboardViewModel()
 
         assertNotNull(vm.gestureProcessor)
     }

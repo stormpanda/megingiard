@@ -63,8 +63,6 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
     val density = LocalDensity.current
     val kbLayout by viewModel.kbLayout.collectAsStateWithLifecycle()
     val kbRepeatEnabled by viewModel.kbRepeatEnabled.collectAsStateWithLifecycle()
-    val kbTrackpointEnabled by viewModel.kbTrackpointEnabled.collectAsStateWithLifecycle()
-    val kbFullscreen by viewModel.kbFullscreen.collectAsStateWithLifecycle()
     val kbMouseBtnPos by viewModel.kbMouseBtnPos.collectAsStateWithLifecycle()
     val isQuickMenuOpen by viewModel.isQuickMenuOpen.collectAsStateWithLifecycle()
     val colors = LocalAppColors.current

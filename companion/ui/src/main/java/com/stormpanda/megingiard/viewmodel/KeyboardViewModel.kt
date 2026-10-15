@@ -1,8 +1,7 @@
 package com.stormpanda.megingiard.viewmodel
 
-import android.app.Application
 import android.content.Context
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
@@ -18,7 +17,6 @@ import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.keyboard.ModifierState
 import com.stormpanda.megingiard.math.nextItem
 import com.stormpanda.megingiard.settings.KeyboardSettings
-import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,17 +29,12 @@ private const val TAG = "KeyboardViewModel"
  * ViewModel for [KeyboardScreen] — manages injector lifecycle, key repeat,
  * and keyboard state.
  */
-class KeyboardViewModel(
-    application: Application,
-) : AndroidViewModel(application) {
+class KeyboardViewModel : ViewModel() {
     val kbLayout: StateFlow<KbLayout> = KeyboardSettings.kbLayout
     val kbRepeatEnabled: StateFlow<Boolean> = KeyboardSettings.kbRepeatEnabled
-    val kbTrackpointEnabled: StateFlow<Boolean> = KeyboardSettings.kbTrackpointEnabled
-    val kbFullscreen: StateFlow<Boolean> = KeyboardSettings.kbFullscreen
     val kbMouseBtnPos: StateFlow<KbMouseBtnPos> = KeyboardSettings.kbMouseBtnPos
     val kbTouchpadEnabled: StateFlow<Boolean> = KeyboardSettings.kbTouchpadEnabled
     val kbAutoOpenOnFocus: StateFlow<Boolean> = KeyboardSettings.kbAutoOpenOnFocus
-    val overlayAtBottom: StateFlow<Boolean> = SettingsManager.overlayAtBottom
     val isQuickMenuOpen: StateFlow<Boolean> = AppStateManager.isQuickMenuOpen
 
     private val _keyboardMode = MutableStateFlow(KeyboardMode.LETTERS)
