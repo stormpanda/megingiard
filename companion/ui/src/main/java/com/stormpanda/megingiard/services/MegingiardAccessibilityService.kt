@@ -55,11 +55,6 @@ private const val AUTO_SETUP_WARMUP_DELAY_MS = 400L
 private const val DEV_MODE_CLICK_COUNT = 7
 private const val POST_PAIRING_STABILIZATION_DELAY_MS = 1500L
 
-private enum class AutoSetupTargetStage {
-    STAGE_B_WIRELESS_DEBUG,
-    STAGE_C_PAIRING,
-}
-
 private enum class AutoToggleStage {
     ACTIVATE_DEV_MODE,
     TOGGLE_USB_DEBUG,
@@ -80,7 +75,6 @@ class MegingiardAccessibilityService : AccessibilityService() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var autoToggleJob: Job? = null
     private var autoToggleStage = AutoToggleStage.TOGGLE_WIRELESS_DEBUG
-    private var autoSetupTargetStage = AutoSetupTargetStage.STAGE_C_PAIRING
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -990,7 +984,6 @@ class MegingiardAccessibilityService : AccessibilityService() {
                                 "startMultiStageAutoSetup: Connect/bootstrap failed despite saved credentials. Falling back to Stage C (Pairing).",
                             )
                             withContext(Dispatchers.Main) {
-                                inst.autoSetupTargetStage = AutoSetupTargetStage.STAGE_C_PAIRING
                                 inst.autoToggleStage = AutoToggleStage.TOGGLE_WIRELESS_DEBUG
                                 _isAutoSetupActive.value = true
                                 launchSettingsScreenWarmedUp(
@@ -1016,13 +1009,6 @@ class MegingiardAccessibilityService : AccessibilityService() {
                 return
             }
 
-            val targetStage =
-                if (!wirelessActive && paired && devModeActive) {
-                    AutoSetupTargetStage.STAGE_B_WIRELESS_DEBUG
-                } else {
-                    AutoSetupTargetStage.STAGE_C_PAIRING
-                }
-
             val initialStage =
                 when {
                     !devModeActive -> AutoToggleStage.ACTIVATE_DEV_MODE
@@ -1030,7 +1016,6 @@ class MegingiardAccessibilityService : AccessibilityService() {
                     else -> AutoToggleStage.TOGGLE_WIRELESS_DEBUG
                 }
 
-            inst.autoSetupTargetStage = targetStage
             inst.autoToggleStage = initialStage
             _isAutoSetupActive.value = true
 
