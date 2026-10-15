@@ -368,7 +368,6 @@ object SettingsManager {
                     when (raw) {
                         is Boolean -> JsonPrimitive(raw)
                         is Int -> JsonPrimitive(raw)
-                        is Long -> JsonPrimitive(raw)
                         is Float -> JsonPrimitive(raw)
                         is String -> JsonPrimitive(raw)
                         else -> continue
