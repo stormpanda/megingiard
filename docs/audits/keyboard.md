@@ -261,7 +261,7 @@
 - [x] **`[KB-11]`** — Remove unreachable `KeyboardMode.SYMBOLS_2`, blank `mode_switch_2`, `"globe"` key, and `"ralt"` ID *(Complexity: Med, Risk: Low)*
 - [x] **`[KB-12]`** — Consolidate `KeyboardState` modifier-keycode lookups into one map (fixing `"rctrl"` on `reset()`) *(Complexity: Med, Risk: Low)*
 - [x] **`[KB-13]`** — Remove unread `hasActivePointers` state in `KeyboardScreen` & deduplicate pointer sets *(Complexity: Low, Risk: Low)*
-- [ ] **`[KB-14]`** — Unify modifier hold coroutine between `KeyboardTopToolbar` and `KeyRepeatController` *(Complexity: Low, Risk: Low)*
+- [x] **`[KB-14]`** — Unify modifier hold coroutine between `KeyboardTopToolbar` and `KeyRepeatController` *(Complexity: Low, Risk: Low)*
 - [ ] **`[KB-15]`** — Remove unnecessary `Dispatchers.IO` launch in `KeyboardViewModel.sendCtrlCombo` *(Complexity: Low, Risk: Low)*
 - [ ] **`[KB-16]`** — Remove redundant `InjectorLifecycleManager.watch` in `KeyboardScreen` & deduplicate `KeyboardState.reset()` *(Complexity: Low, Risk: Low)*
 - [ ] **`[KB-17]`** — Merge `PhysicalKeyContent` / `ErgoKeyContent` in `KeyboardKeyCap.kt` & extract `KeyDef.resolveDisplayLabel` *(Complexity: High, Risk: Low)*

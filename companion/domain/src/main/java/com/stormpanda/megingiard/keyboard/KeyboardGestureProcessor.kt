@@ -46,7 +46,7 @@ class KeyboardGestureProcessor(
     private var repeatJob: Job? = null
     private var modifierHoldJob: Job? = null
     private var heldKey: KeyDef? = null
-    private var modifierBeingHeld: KeyDef? = null
+    private var modifierBeingHeldId: String? = null
 
     var virtualAnchorX = 0f
     val longPressJobs = mutableMapOf<Long, Job>()
@@ -353,10 +353,7 @@ class KeyboardGestureProcessor(
 
             KeyType.MODIFIER -> {
                 pointerKeyMap[pointerId] = resolved
-                modifierBeingHeld = resolved
-                val code = KeyboardState.onModifierTouchDown(id, resolved.injectedKeycode, isFullLayout)
-                if (code != null) injector.keyDown(code)
-                startModifierHold(resolved, isFullLayout)
+                onModifierPress(id, resolved.injectedKeycode, isFullLayout)
             }
         }
         return true
@@ -431,14 +428,33 @@ class KeyboardGestureProcessor(
             }
 
             KeyType.MODIFIER -> {
-                modifierBeingHeld = null
-                modifierHoldJob?.cancel()
-                KeyboardState
-                    .onModifierTouchUp(releasedId, keyDef.injectedKeycode, isFullLayout)
-                    .forEach { injector.keyUp(it) }
+                onModifierRelease(releasedId, keyDef.injectedKeycode, isFullLayout)
             }
         }
         return true
+    }
+
+    fun onModifierPress(
+        id: String,
+        keycode: Int,
+        isFullLayout: Boolean = false,
+    ) {
+        modifierBeingHeldId = id
+        val code = KeyboardState.onModifierTouchDown(id, keycode, isFullLayout)
+        if (code != null) injector.keyDown(code)
+        startModifierHold(id, keycode, isFullLayout)
+    }
+
+    fun onModifierRelease(
+        id: String,
+        keycode: Int,
+        isFullLayout: Boolean = false,
+    ) {
+        modifierBeingHeldId = null
+        modifierHoldJob?.cancel()
+        KeyboardState
+            .onModifierTouchUp(id, keycode, isFullLayout)
+            .forEach { injector.keyUp(it) }
     }
 
     fun getKeyIdForPointer(pointerId: Long): String? = pointerKeyMap[pointerId]?.id
@@ -461,7 +477,7 @@ class KeyboardGestureProcessor(
         _pressedKeys.value = emptySet()
         _activePopupState.value = null
         heldKey = null
-        modifierBeingHeld = null
+        modifierBeingHeldId = null
         virtualAnchorX = 0f
         spaceDragPointerId = null
         isSpaceDragging = false
@@ -519,16 +535,17 @@ class KeyboardGestureProcessor(
     }
 
     private fun startModifierHold(
-        keyDef: KeyDef,
+        id: String,
+        keycode: Int,
         isFullLayout: Boolean,
     ) {
         modifierHoldJob?.cancel()
         modifierHoldJob =
             scope.launch {
                 delay(KB_MODIFIER_HOLD_MS)
-                if (modifierBeingHeld == keyDef) {
-                    val keycode = KeyboardState.onModifierLongPress(keyDef.id, keyDef.linuxKeycode, isFullLayout)
-                    if (keycode != null) injector.keyDown(keycode)
+                if (modifierBeingHeldId == id) {
+                    val heldCode = KeyboardState.onModifierLongPress(id, keycode, isFullLayout)
+                    if (heldCode != null) injector.keyDown(heldCode)
                 }
             }
     }

@@ -32,7 +32,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,8 +54,6 @@ import com.stormpanda.megingiard.keyboard.LinuxKeycodes.KEY_LEFTCTRL
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes.KEY_TAB
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.viewmodel.KeyboardViewModel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 private val KTT_BUTTON_SHAPE = RoundedCornerShape(4.dp)
 private val KTT_BUTTON_HEIGHT = 28.dp
@@ -66,7 +63,6 @@ private val KTT_BUTTON_FONT_SIZE = 10.sp
 private const val KTT_ACTIVE_ALPHA = 0.7f
 private const val KTT_INACTIVE_BORDER_ALPHA = 0.35f
 private const val KTT_CONTENT_ALPHA = 0.8f
-private const val KTT_MODIFIER_HOLD_DELAY_MS = 300L
 
 @Composable
 internal fun KeyboardTopToolbar(
@@ -76,6 +72,7 @@ internal fun KeyboardTopToolbar(
 ) {
     if (activeState.mode == KeyboardMode.FULL) return
     val colors = LocalAppColors.current
+    val gestureProcessor = viewModel.gestureProcessor
 
     Row(
         modifier =
@@ -102,11 +99,13 @@ internal fun KeyboardTopToolbar(
                 id = "ctrl",
                 label = "CTRL",
                 keycode = KEY_LEFTCTRL,
+                gestureProcessor = gestureProcessor,
             )
             ModifierButton(
                 id = "alt",
                 label = "ALT",
                 keycode = KEY_LEFTALT,
+                gestureProcessor = gestureProcessor,
             )
         }
 
@@ -186,6 +185,7 @@ private fun ModifierButton(
     id: String,
     label: String,
     keycode: Int,
+    gestureProcessor: KeyboardGestureProcessor,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
@@ -196,8 +196,6 @@ private fun ModifierButton(
     val contentColor = if (isActive) colors.onSurface else colors.onSurface.copy(alpha = KTT_CONTENT_ALPHA)
     val borderColor = if (isActive) Color.Transparent else colors.onSurface.copy(alpha = KTT_INACTIVE_BORDER_ALPHA)
 
-    val scope = rememberCoroutineScope()
-
     BaseToolbarButton(
         label = label,
         bg = bg,
@@ -205,21 +203,11 @@ private fun ModifierButton(
         borderColor = borderColor,
         modifier = modifier,
         onPress = { _ ->
-            KeyboardState.onModifierTouchDown(id)
-            val job =
-                scope.launch {
-                    delay(KTT_MODIFIER_HOLD_DELAY_MS)
-                    val code = KeyboardState.onModifierLongPress(id, keycode)
-                    if (code != null) {
-                        KeyInjector.keyDown(code)
-                    }
-                }
+            gestureProcessor.onModifierPress(id, keycode)
             try {
                 awaitRelease()
             } finally {
-                job.cancel()
-                val upCodes = KeyboardState.onModifierTouchUp(id, keycode)
-                upCodes.forEach { KeyInjector.keyUp(it) }
+                gestureProcessor.onModifierRelease(id, keycode)
             }
         },
     )

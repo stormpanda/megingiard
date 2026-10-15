@@ -279,4 +279,26 @@ class KeyboardGestureProcessorTest {
             assertNull(injectedChar)
             assertNull(processor.activePopupState.value)
         }
+
+    @Test
+    fun `caps modifier hold injects KEY_LEFTSHIFT via injectedKeycode`() =
+        runTest(testDispatcher) {
+            KeyboardState.reset()
+            val testInjector = TestKeyCodeInjector()
+            val processor = createProcessor(injector = testInjector)
+            val capsDef = KeyDef("caps", "CAPS", LinuxKeycodes.KEY_CAPSLOCK, type = KeyType.MODIFIER)
+
+            processor.onKeyDown(1L, capsDef, isFullLayout = false)
+            testScheduler.advanceTimeBy(350L)
+            testScheduler.runCurrent()
+
+            assertEquals(listOf("down" to LinuxKeycodes.KEY_LEFTSHIFT), testInjector.calls)
+
+            processor.onKeyUp(1L, isFullLayout = false)
+            assertEquals(
+                listOf("down" to LinuxKeycodes.KEY_LEFTSHIFT, "up" to LinuxKeycodes.KEY_LEFTSHIFT),
+                testInjector.calls,
+            )
+            KeyboardState.reset()
+        }
 }
