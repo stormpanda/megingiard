@@ -42,6 +42,7 @@ object UpdateManager {
     private val json = Json { ignoreUnknownKeys = true }
 
     private var isLoadedFromDataStore = false
+    private var currentAppVersion: String = ""
     private var pendingCheckVersion: String? = null
     private var pendingCheckApiUrl: String? = null
     private var lastCheckTimeMs = 0L
@@ -61,6 +62,16 @@ object UpdateManager {
     private val _checkError = MutableStateFlow<String?>(null)
     val checkError: StateFlow<String?> = _checkError.asStateFlow()
 
+    private fun applyReleaseInfo(info: AppReleaseInfo?) {
+        _latestReleaseInfo.value = info
+        _updateAvailable.value =
+            if (info != null && currentAppVersion.isNotBlank()) {
+                SemVerComparator.isUpdateAvailable(currentAppVersion, info.tagName)
+            } else {
+                false
+            }
+    }
+
     internal fun init(
         dataStore: DataStore<Preferences>,
         scope: CoroutineScope,
@@ -77,8 +88,8 @@ object UpdateManager {
         this.dataStore = dataStore
         this.scope = scope
         _autoUpdateCheckEnabled.value = true
-        _updateAvailable.value = false
-        _latestReleaseInfo.value = null
+        currentAppVersion = ""
+        applyReleaseInfo(null)
         _isChecking.value = false
         lastCheckTimeMs = 0L
         _checkError.value = null
@@ -93,17 +104,16 @@ object UpdateManager {
     ) {
         val firstLoad = !isLoadedFromDataStore
         isLoadedFromDataStore = true
+        if (currentVersion.isNotBlank()) {
+            currentAppVersion = currentVersion
+        }
         prefs[KEY_AUTO_UPDATE_CHECK_ENABLED]?.let { _autoUpdateCheckEnabled.value = it }
 
         val tag = prefs[KEY_LATEST_RELEASE_TAG] ?: ""
         val url = prefs[KEY_LATEST_RELEASE_URL] ?: ""
 
         if (tag.isNotBlank() && url.isNotBlank()) {
-            val info = AppReleaseInfo(tagName = tag, htmlUrl = url)
-            _latestReleaseInfo.value = info
-            if (currentVersion.isNotBlank()) {
-                _updateAvailable.value = SemVerComparator.isUpdateAvailable(currentVersion, tag)
-            }
+            applyReleaseInfo(AppReleaseInfo(tagName = tag, htmlUrl = url))
         }
         AppLog.d(
             TAG,
@@ -146,6 +156,11 @@ object UpdateManager {
         currentVersion: String,
         releasesApiUrl: String = DEFAULT_RELEASES_API_URL,
     ) {
+        if (currentVersion.isNotBlank()) {
+            currentAppVersion = currentVersion
+            applyReleaseInfo(_latestReleaseInfo.value)
+        }
+
         if (!force && !isLoadedFromDataStore) {
             AppLog.d(TAG, "DataStore preferences not loaded yet, queuing initial update check")
             pendingCheckVersion = currentVersion
@@ -180,14 +195,14 @@ object UpdateManager {
         scope?.launch {
             try {
                 val releaseInfo = fetchLatestRelease(releasesApiUrl)
-                val updateIsAvail = SemVerComparator.isUpdateAvailable(currentVersion, releaseInfo.tagName)
-
-                _latestReleaseInfo.value = releaseInfo
-                _updateAvailable.value = updateIsAvail
+                applyReleaseInfo(releaseInfo)
                 lastCheckTimeMs = now
                 _isChecking.value = false
 
-                AppLog.i(TAG, "Update check completed: latestTag=${releaseInfo.tagName}, updateAvailable=$updateIsAvail")
+                AppLog.i(
+                    TAG,
+                    "Update check completed: latestTag=${releaseInfo.tagName}, updateAvailable=${_updateAvailable.value}",
+                )
 
                 dataStore?.edit { prefs ->
                     prefs[KEY_LATEST_RELEASE_TAG] = releaseInfo.tagName

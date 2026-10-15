@@ -96,6 +96,8 @@ class UpdateManagerTest {
 
             testDataStore.edit { prefs ->
                 prefs[KEY_AUTO_UPDATE_CHECK_ENABLED] = false
+                prefs[KEY_LATEST_RELEASE_TAG] = "v0.8.1"
+                prefs[KEY_LATEST_RELEASE_URL] = "https://github.com/stormpanda/megingiard/releases/tag/v0.8.1"
             }
 
             // Simulate MainActivity calling checkForUpdates before DataStore loads
@@ -103,10 +105,11 @@ class UpdateManagerTest {
             assertFalse(UpdateManager.isChecking.value)
 
             val prefs = testDataStore.data.first()
-            UpdateManager.loadFrom(prefs, currentVersion = "0.8.0")
+            UpdateManager.loadFrom(prefs)
 
             assertFalse(UpdateManager.autoUpdateCheckEnabled.value)
             assertFalse(UpdateManager.isChecking.value)
+            assertTrue(UpdateManager.updateAvailable.value)
         }
 
     @Test
