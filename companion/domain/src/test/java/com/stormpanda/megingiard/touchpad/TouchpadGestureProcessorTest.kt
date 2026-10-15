@@ -78,14 +78,17 @@ class TouchpadGestureProcessorTest {
     fun `absolute mode dispatches touch commands`() =
         runTest(testDispatcher) {
             val processor = createProcessor()
+            assertEquals(false, processor.hasActivePointers.value)
 
             processor.press(1L, 100f, 200f)
+            assertEquals(true, processor.hasActivePointers.value)
             assertEquals("D 0 864 192\n", PrivdClient.pollCommandForTest())
 
             processor.move(1L, 150f, 250f, 50f, 50f)
             assertEquals("M 0 810 288\n", PrivdClient.pollCommandForTest())
 
             processor.release(1L, 150f, 250f)
+            assertEquals(false, processor.hasActivePointers.value)
             assertEquals("U 0\n", PrivdClient.pollCommandForTest())
         }
 
@@ -95,15 +98,19 @@ class TouchpadGestureProcessorTest {
             val processor = createProcessor()
 
             processor.press(1L, 100f, 200f)
+            assertEquals(true, processor.hasActivePointers.value)
             assertEquals("D 0 864 192\n", PrivdClient.pollCommandForTest())
 
             processor.press(2L, 300f, 400f)
+            assertEquals(true, processor.hasActivePointers.value)
             assertEquals("D 1 648 576\n", PrivdClient.pollCommandForTest())
 
             processor.release(1L, 150f, 250f)
+            assertEquals(true, processor.hasActivePointers.value)
             assertEquals("U 0\n", PrivdClient.pollCommandForTest())
 
             processor.release(2L, 350f, 450f)
+            assertEquals(false, processor.hasActivePointers.value)
             assertEquals("U 1\n", PrivdClient.pollCommandForTest())
         }
 

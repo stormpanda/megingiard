@@ -150,21 +150,16 @@ fun FullscreenMouseOverlay() {
             )
         }
 
-    val pointersInsideTouchpad = remember { HashSet<Long>() }
-    var hasActivePointers by remember { mutableStateOf(false) }
+    val hasActivePointers by processor.hasActivePointers.collectAsStateWithLifecycle()
 
     LaunchedEffect(touchpadUseMouse) {
         processor.onCancel()
-        pointersInsideTouchpad.clear()
-        hasActivePointers = false
     }
 
     DisposableEffect(Unit) {
         onDispose {
             AppLog.i(TAG, "dispose: resetting gesture processor state")
             processor.onCancel()
-            pointersInsideTouchpad.clear()
-            hasActivePointers = false
             if (AppStateManager.isTouchpadSettingsOpen.value) {
                 AppStateManager.setTouchpadSettingsOpen(false)
             }
@@ -182,7 +177,6 @@ fun FullscreenMouseOverlay() {
                         val sh = size.height.toFloat().coerceAtLeast(1f)
                         for (change in event.changes) {
                             val id = change.id.value
-                            val wasTracked = pointersInsideTouchpad.contains(id)
                             val localPos = change.position
                             val clampedX = localPos.x.coerceIn(0f, sw)
                             val clampedY = localPos.y.coerceIn(0f, sh)
@@ -190,58 +184,49 @@ fun FullscreenMouseOverlay() {
 
                             when (event.type) {
                                 PointerEventType.Press -> {
-                                    if (!change.previousPressed && isInside) {
-                                        pointersInsideTouchpad.add(id)
-                                        if (!change.isConsumed) {
-                                            processor.onPress(
-                                                pointerId = id,
-                                                x = clampedX,
-                                                y = clampedY,
-                                                surfaceW = sw,
-                                                surfaceH = sh,
-                                            )
-                                        }
+                                    if (!change.previousPressed && isInside && !change.isConsumed) {
+                                        processor.onPress(
+                                            pointerId = id,
+                                            x = clampedX,
+                                            y = clampedY,
+                                            surfaceW = sw,
+                                            surfaceH = sh,
+                                        )
                                     }
                                 }
 
                                 PointerEventType.Move -> {
-                                    if (wasTracked) {
-                                        if (!isInside && !gestureConfig.useMouse) {
-                                            pointersInsideTouchpad.remove(id)
-                                            processor.onRelease(
-                                                pointerId = id,
-                                                x = clampedX,
-                                                y = clampedY,
-                                                surfaceW = sw,
-                                                surfaceH = sh,
-                                            )
-                                        } else if (!change.isConsumed) {
-                                            val delta = change.positionChange()
-                                            processor.onMove(
-                                                pointerId = id,
-                                                x = clampedX,
-                                                y = clampedY,
-                                                deltaX = delta.x,
-                                                deltaY = delta.y,
-                                                surfaceW = sw,
-                                                surfaceH = sh,
-                                            )
-                                        }
+                                    if (!isInside && !gestureConfig.useMouse) {
+                                        processor.onRelease(
+                                            pointerId = id,
+                                            x = clampedX,
+                                            y = clampedY,
+                                            surfaceW = sw,
+                                            surfaceH = sh,
+                                        )
+                                    } else if (!change.isConsumed) {
+                                        val delta = change.positionChange()
+                                        processor.onMove(
+                                            pointerId = id,
+                                            x = clampedX,
+                                            y = clampedY,
+                                            deltaX = delta.x,
+                                            deltaY = delta.y,
+                                            surfaceW = sw,
+                                            surfaceH = sh,
+                                        )
                                     }
                                 }
 
                                 PointerEventType.Release -> {
                                     if (!change.pressed) {
-                                        pointersInsideTouchpad.remove(id)
-                                        if (wasTracked) {
-                                            processor.onRelease(
-                                                pointerId = id,
-                                                x = clampedX,
-                                                y = clampedY,
-                                                surfaceW = sw,
-                                                surfaceH = sh,
-                                            )
-                                        }
+                                        processor.onRelease(
+                                            pointerId = id,
+                                            x = clampedX,
+                                            y = clampedY,
+                                            surfaceW = sw,
+                                            surfaceH = sh,
+                                        )
                                     }
                                 }
 
@@ -251,12 +236,9 @@ fun FullscreenMouseOverlay() {
                             }
                             change.consume()
                         }
-                        hasActivePointers = pointersInsideTouchpad.isNotEmpty()
                     }
                 }
             } finally {
-                pointersInsideTouchpad.clear()
-                hasActivePointers = false
                 processor.onCancel()
             }
         }

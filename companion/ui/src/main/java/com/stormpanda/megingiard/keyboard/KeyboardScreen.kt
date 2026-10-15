@@ -157,8 +157,6 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                         )
                     }
 
-                val pointersInsideTouchpad = remember { HashSet<Long>() }
-
                 val insetBezelBrush = rememberBezelBrush()
 
                 Box(
@@ -198,7 +196,6 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                                                     when (event.type) {
                                                         PointerEventType.Press -> {
                                                             if (!change.previousPressed && isInside) {
-                                                                pointersInsideTouchpad.add(id)
                                                                 processor.onPress(
                                                                     pointerId = id,
                                                                     x = clampedX,
@@ -210,23 +207,20 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                                                         }
 
                                                         PointerEventType.Move -> {
-                                                            if (pointersInsideTouchpad.contains(id)) {
-                                                                val delta = change.positionChange()
-                                                                processor.onMove(
-                                                                    pointerId = id,
-                                                                    x = clampedX,
-                                                                    y = clampedY,
-                                                                    deltaX = delta.x,
-                                                                    deltaY = delta.y,
-                                                                    surfaceW = sw,
-                                                                    surfaceH = sh,
-                                                                )
-                                                            }
+                                                            val delta = change.positionChange()
+                                                            processor.onMove(
+                                                                pointerId = id,
+                                                                x = clampedX,
+                                                                y = clampedY,
+                                                                deltaX = delta.x,
+                                                                deltaY = delta.y,
+                                                                surfaceW = sw,
+                                                                surfaceH = sh,
+                                                            )
                                                         }
 
                                                         PointerEventType.Release -> {
-                                                            if (!change.pressed && pointersInsideTouchpad.contains(id)) {
-                                                                pointersInsideTouchpad.remove(id)
+                                                            if (!change.pressed) {
                                                                 processor.onRelease(
                                                                     pointerId = id,
                                                                     x = clampedX,
@@ -242,7 +236,6 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                                             }
                                         }
                                     } finally {
-                                        pointersInsideTouchpad.clear()
                                         processor.onCancel()
                                     }
                                 },

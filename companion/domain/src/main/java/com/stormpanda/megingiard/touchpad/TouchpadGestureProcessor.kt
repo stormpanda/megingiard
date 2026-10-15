@@ -9,6 +9,9 @@ import com.stormpanda.megingiard.settings.TouchpadSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -54,6 +57,9 @@ class TouchpadGestureProcessor(
     private val config: () -> TouchpadGestureConfig = { TouchpadGestureConfig() },
     private val onHapticFeedback: () -> Unit = {},
 ) {
+    private val _hasActivePointers = MutableStateFlow(false)
+    val hasActivePointers: StateFlow<Boolean> = _hasActivePointers.asStateFlow()
+
     // ── Touch mode state ────────────────────────────────────────────────────
     private val pointerToSlotMap = HashMap<Long, Int>()
 
@@ -68,12 +74,17 @@ class TouchpadGestureProcessor(
     private var isDragging = false
     private var pendingClickJob: Job? = null
 
+    private fun updateActivePointers() {
+        _hasActivePointers.value = downPositions.isNotEmpty() || pointerToSlotMap.isNotEmpty()
+    }
+
     private fun resetMousePointers() {
         releasedAsTap.clear()
         pressTimes.clear()
         downPositions.clear()
         movedTooFar.clear()
         primaryPointer = null
+        updateActivePointers()
     }
 
     private fun clickButton(button: MouseButton) {
@@ -136,6 +147,7 @@ class TouchpadGestureProcessor(
                 TouchInjector.injectTouch(slot, TouchAction.DOWN, nx, ny)
             }
         }
+        updateActivePointers()
     }
 
     /**
@@ -160,9 +172,9 @@ class TouchpadGestureProcessor(
     ) {
         val currentConfig = config()
         if (currentConfig.useMouse) {
+            val initPos = downPositions[pointerId] ?: return
             // Disqualify as tap if slop exceeded
-            val initPos = downPositions[pointerId]
-            if (initPos != null && pointerId !in movedTooFar) {
+            if (pointerId !in movedTooFar) {
                 val dx = x - initPos.first
                 val dy = y - initPos.second
                 if (dx * dx + dy * dy > TP_TAP_SLOP_PX * TP_TAP_SLOP_PX) {
@@ -215,6 +227,7 @@ class TouchpadGestureProcessor(
     ) {
         val currentConfig = config()
         if (currentConfig.useMouse) {
+            if (!downPositions.containsKey(pointerId)) return
             val pressTime = pressTimes.remove(pointerId)
             downPositions.remove(pointerId)
             val disqualified = movedTooFar.remove(pointerId)
@@ -267,6 +280,8 @@ class TouchpadGestureProcessor(
                         clickButton(MouseButton.MIDDLE)
                     }
                 }
+            } else {
+                updateActivePointers()
             }
         } else {
             val slot = pointerToSlotMap.remove(pointerId)
@@ -275,6 +290,7 @@ class TouchpadGestureProcessor(
                 val ny = (y / surfaceH).coerceIn(0f, 1f)
                 TouchInjector.injectTouch(slot, TouchAction.UP, nx, ny)
             }
+            updateActivePointers()
         }
     }
 
@@ -299,5 +315,6 @@ class TouchpadGestureProcessor(
         for ((_, slot) in slotsToRelease) {
             TouchInjector.injectTouch(slot, TouchAction.UP, 0f, 0f)
         }
+        updateActivePointers()
     }
 }

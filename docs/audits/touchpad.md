@@ -258,7 +258,7 @@
 - [x] **`[TP-09]`** — Remove unobserved `TouchpadGestureProcessor.touchPos` `StateFlow` *(Complexity: Low, Risk: Low)*
 - [x] **`[TP-10]`** — Remove dead 3-token single-touch protocol branch in `cmd_parsers.h` *(Complexity: Low, Risk: Low)*
 - [x] **`[TP-11]`** — Unify touchpad mirroring lifecycle into `MirrorRuntimePolicy` and delete `wasMirroringStartedByTouchpad` *(Complexity: High, Risk: Low)*
-- [ ] **`[TP-12]`** — Remove duplicated `pointersInsideTouchpad` set and dead `hasActivePointers` state in UI *(Complexity: Low, Risk: Low)*
+- [x] **`[TP-12]`** — Remove duplicated `pointersInsideTouchpad` set and dead `hasActivePointers` state in UI *(Complexity: Low, Risk: Low)*
 - [ ] **`[TP-13]`** — Reset `fullscreenMouseSensitivity` on touchpad close and stop multiplying it into `KeyboardScreen` *(Complexity: Low, Risk: Low)*
 - [ ] **`[TP-14]`** — Unify tap-click coroutines in `TouchpadGestureProcessor` and guarantee `buttonUp` on cancellation *(Complexity: Low, Risk: Low)*
 - [ ] **`[TP-15]`** — Derive `primaryPointer` from `downPositions.keys.firstOrNull()` on multi-touch release *(Complexity: Low, Risk: Low)*
