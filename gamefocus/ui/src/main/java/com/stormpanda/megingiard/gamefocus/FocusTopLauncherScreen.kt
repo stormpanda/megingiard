@@ -90,6 +90,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.CustomRomFolder
 import com.stormpanda.megingiard.catalog.IcoImageExtractor
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
+import com.stormpanda.megingiard.catalog.InstalledAppsManager
 import com.stormpanda.megingiard.catalog.LetterNavigationHelper
 import com.stormpanda.megingiard.catalog.LibraryTab
 import com.stormpanda.megingiard.catalog.RomManager
@@ -233,6 +234,12 @@ fun FocusTopLauncherScreen(
     val context = LocalContext.current
     val apiKey by remember(context) { MegingiardSettingsClient.observeSteamGridDbApiToken(context) }
         .collectAsState(initial = "")
+
+    LaunchedEffect(apiKey) {
+        if (apiKey.isNotBlank()) {
+            InstalledAppsManager.triggerSteamGridDbScraping(context, apiKey)
+        }
+    }
 
     LaunchedEffect(Unit) {
         AppPaletteExtractor.init(context)

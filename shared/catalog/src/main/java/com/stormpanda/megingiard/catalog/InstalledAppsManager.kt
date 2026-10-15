@@ -15,12 +15,10 @@ import android.view.Display
 import androidx.annotation.VisibleForTesting
 import androidx.core.util.AtomicFile
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.ipc.IpcSettingsParser
-import com.stormpanda.megingiard.ipc.MegingiardIpcContract
-import com.stormpanda.megingiard.ipc.observeContentProvider
 import com.stormpanda.megingiard.media.SteamGridDbClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -120,7 +118,11 @@ object InstalledAppsManager {
     @Volatile
     private var isUserListsLoaded = false
 
+    private var loadAppsJob: Job? = null
+
     internal fun resetForTesting() {
+        loadAppsJob?.cancel()
+        loadAppsJob = null
         installedAndroidAppsFlow.value = emptyList()
         _favorites.value = emptySet()
         _hiddenApps.value = emptySet()
@@ -148,7 +150,7 @@ object InstalledAppsManager {
             libraryIconRefs.clear()
             isLibraryIconRefsLoaded = false
         }
-        isSettingsObserverRegistered = false
+        latestSteamGridDbApiKey = ""
     }
 
     /** Load-once guards (AGENTS.md §7.6): later reloads must never overwrite unsaved in-memory changes. */
@@ -682,111 +684,113 @@ object InstalledAppsManager {
     @Suppress("DEPRECATION")
     fun loadInstalledApps(context: Context) {
         SwitchEmulators.invalidateCache()
-        scope.launch {
-            loadArtworkOptOuts(context)
-            loadScrapeAttempts(context)
+        loadAppsJob?.cancel()
+        loadAppsJob =
+            scope.launch {
+                loadArtworkOptOuts(context)
+                loadScrapeAttempts(context)
 
-            // Custom names, cover IDs, and library icon IDs must be loaded before the ROM scan, which reads them.
-            loadCustomAppNames(context)
-            loadCoverImageIds(context)
-            loadLibraryIconIds(context)
+                // Custom names, cover IDs, and library icon IDs must be loaded before the ROM scan, which reads them.
+                loadCustomAppNames(context)
+                loadCoverImageIds(context)
+                loadLibraryIconIds(context)
 
-            RomManager.loadRomFolders(context)
-            // Scraping is triggered once below, after the Android app list is published.
-            RomManager.reloadRomAppsSuspend(context, triggerScrape = false)
+                RomManager.loadRomFolders(context)
+                // Scraping is triggered once below, after the Android app list is published.
+                RomManager.reloadRomAppsSuspend(context, triggerScrape = false)
 
-            SystemRoleClassifier.refreshLaunchers(context)
+                SystemRoleClassifier.refreshLaunchers(context)
 
-            ensureUserListsLoaded(context)
+                ensureUserListsLoaded(context)
 
-            val packageManager = context.packageManager
-            val mainIntent =
-                Intent(Intent.ACTION_MAIN, null).apply {
-                    addCategory(Intent.CATEGORY_LAUNCHER)
-                }
+                val packageManager = context.packageManager
+                val mainIntent =
+                    Intent(Intent.ACTION_MAIN, null).apply {
+                        addCategory(Intent.CATEGORY_LAUNCHER)
+                    }
 
-            val gameIntent =
-                Intent(Intent.ACTION_MAIN, null).apply {
-                    addCategory(INTENT_CATEGORY_GAME)
-                }
-            val appGamesIntent =
-                Intent(Intent.ACTION_MAIN, null).apply {
-                    addCategory(INTENT_CATEGORY_APP_GAMES)
-                }
+                val gameIntent =
+                    Intent(Intent.ACTION_MAIN, null).apply {
+                        addCategory(INTENT_CATEGORY_GAME)
+                    }
+                val appGamesIntent =
+                    Intent(Intent.ACTION_MAIN, null).apply {
+                        addCategory(INTENT_CATEGORY_APP_GAMES)
+                    }
 
-            val resolveInfoList: List<ResolveInfo> =
-                packageManager.queryIntentActivities(
-                    mainIntent,
-                    PackageManager.ResolveInfoFlags.of(0L),
-                )
-
-            val gameResolveList: List<ResolveInfo> =
-                packageManager.queryIntentActivities(
-                    gameIntent,
-                    PackageManager.ResolveInfoFlags.of(0L),
-                ) +
+                val resolveInfoList: List<ResolveInfo> =
                     packageManager.queryIntentActivities(
-                        appGamesIntent,
+                        mainIntent,
                         PackageManager.ResolveInfoFlags.of(0L),
                     )
-            val gamePackagesFromIntent = gameResolveList.map { it.activityInfo.packageName }.toSet()
 
-            val coversDir = File(context.cacheDir, DIR_COVERS).apply { mkdirs() }
-
-            val apps =
-                resolveInfoList
-                    .filter { resolveInfo ->
-                        resolveInfo.activityInfo.packageName != context.packageName
-                    }.map { resolveInfo ->
-                        val packageName = resolveInfo.activityInfo.packageName
-                        val appInfo = resolveInfo.activityInfo.applicationInfo
-                        val rawLabel =
-                            appInfo
-                                .loadLabel(packageManager)
-                                .toString()
-                        val defaultLabel = PackageAliasMapper.getTitleForPackage(packageName, rawLabel)
-                        val label = synchronized(customAppNames) { customAppNames[packageName] } ?: defaultLabel
-                        val activityName = resolveInfo.activityInfo.name
-                        val isGame = isPackageAGame(appInfo, gamePackagesFromIntent)
-
-                        val cachedCoverFile = File(coversDir, "$packageName$COVER_FILE_EXTENSION")
-                        val hasCover = cachedCoverFile.exists() && cachedCoverFile.length() > 0
-                        val coverPath = if (hasCover) cachedCoverFile.absolutePath else null
-                        val coverLastModified = if (hasCover) cachedCoverFile.lastModified() else 0L
-                        val coverImageId = if (hasCover) getCoverImageId(packageName) else null
-
-                        val cachedLibraryIconFile = libraryIconFileFor(context, packageName)
-                        val hasLibraryIcon = cachedLibraryIconFile.exists() && cachedLibraryIconFile.length() > 0
-                        val libraryIconPath = if (hasLibraryIcon) cachedLibraryIconFile.absolutePath else null
-                        val libraryIconLastModified = if (hasLibraryIcon) cachedLibraryIconFile.lastModified() else 0L
-                        val libraryIconRef = if (hasLibraryIcon) getLibraryIconRef(packageName) else null
-
-                        InstalledAppInfo(
-                            packageName = packageName,
-                            activityName = activityName,
-                            label = label,
-                            coverPath = coverPath,
-                            isGame = isGame,
-                            coverLastModified = coverLastModified,
-                            coverImageId = coverImageId,
-                            defaultLabel = defaultLabel,
-                            libraryIconPath = libraryIconPath,
-                            libraryIconImageId = libraryIconRef?.id,
-                            libraryIconType = libraryIconRef?.type,
-                            libraryIconLastModified = libraryIconLastModified,
-                            coverOptedOut = isCoverOptedOut(packageName),
-                            libraryIconOptedOut = isLibraryIconOptedOut(packageName),
-                            logoLastModified = 0L,
+                val gameResolveList: List<ResolveInfo> =
+                    packageManager.queryIntentActivities(
+                        gameIntent,
+                        PackageManager.ResolveInfoFlags.of(0L),
+                    ) +
+                        packageManager.queryIntentActivities(
+                            appGamesIntent,
+                            PackageManager.ResolveInfoFlags.of(0L),
                         )
-                    }.sortedBy { it.label.lowercase() }
+                val gamePackagesFromIntent = gameResolveList.map { it.activityInfo.packageName }.toSet()
 
-            installedAndroidAppsFlow.value = apps
-            val gameCount = apps.count { it.isGame }
-            AppLog.d(TAG, "Loaded ${apps.size} installed apps ($gameCount games, ${apps.size - gameCount} apps) for launcher browser")
+                val coversDir = File(context.cacheDir, DIR_COVERS).apply { mkdirs() }
 
-            // Trigger background SteamGridDB cover scraping if API key is configured
-            triggerSteamGridDbScraping(context)
-        }
+                val apps =
+                    resolveInfoList
+                        .filter { resolveInfo ->
+                            resolveInfo.activityInfo.packageName != context.packageName
+                        }.map { resolveInfo ->
+                            val packageName = resolveInfo.activityInfo.packageName
+                            val appInfo = resolveInfo.activityInfo.applicationInfo
+                            val rawLabel =
+                                appInfo
+                                    .loadLabel(packageManager)
+                                    .toString()
+                            val defaultLabel = PackageAliasMapper.getTitleForPackage(packageName, rawLabel)
+                            val label = synchronized(customAppNames) { customAppNames[packageName] } ?: defaultLabel
+                            val activityName = resolveInfo.activityInfo.name
+                            val isGame = isPackageAGame(appInfo, gamePackagesFromIntent)
+
+                            val cachedCoverFile = File(coversDir, "$packageName$COVER_FILE_EXTENSION")
+                            val hasCover = cachedCoverFile.exists() && cachedCoverFile.length() > 0
+                            val coverPath = if (hasCover) cachedCoverFile.absolutePath else null
+                            val coverLastModified = if (hasCover) cachedCoverFile.lastModified() else 0L
+                            val coverImageId = if (hasCover) getCoverImageId(packageName) else null
+
+                            val cachedLibraryIconFile = libraryIconFileFor(context, packageName)
+                            val hasLibraryIcon = cachedLibraryIconFile.exists() && cachedLibraryIconFile.length() > 0
+                            val libraryIconPath = if (hasLibraryIcon) cachedLibraryIconFile.absolutePath else null
+                            val libraryIconLastModified = if (hasLibraryIcon) cachedLibraryIconFile.lastModified() else 0L
+                            val libraryIconRef = if (hasLibraryIcon) getLibraryIconRef(packageName) else null
+
+                            InstalledAppInfo(
+                                packageName = packageName,
+                                activityName = activityName,
+                                label = label,
+                                coverPath = coverPath,
+                                isGame = isGame,
+                                coverLastModified = coverLastModified,
+                                coverImageId = coverImageId,
+                                defaultLabel = defaultLabel,
+                                libraryIconPath = libraryIconPath,
+                                libraryIconImageId = libraryIconRef?.id,
+                                libraryIconType = libraryIconRef?.type,
+                                libraryIconLastModified = libraryIconLastModified,
+                                coverOptedOut = isCoverOptedOut(packageName),
+                                libraryIconOptedOut = isLibraryIconOptedOut(packageName),
+                                logoLastModified = 0L,
+                            )
+                        }.sortedBy { it.label.lowercase() }
+
+                installedAndroidAppsFlow.value = apps
+                val gameCount = apps.count { it.isGame }
+                AppLog.d(TAG, "Loaded ${apps.size} installed apps ($gameCount games, ${apps.size - gameCount} apps) for launcher browser")
+
+                // Trigger background SteamGridDB cover scraping if API key is configured
+                triggerSteamGridDbScraping(context)
+            }
     }
 
     fun updateAppCover(
@@ -1078,29 +1082,16 @@ object InstalledAppsManager {
         AppLog.i(TAG, "Reverted $packageName to default library icon")
     }
 
-    private var isSettingsObserverRegistered = false
+    @Volatile
+    private var latestSteamGridDbApiKey: String = ""
 
-    private fun registerSettingsObserverIfNeeded(context: Context) {
-        if (isSettingsObserverRegistered) return
-        isSettingsObserverRegistered = true
-        MegingiardIpcContract.init(context)
-        scope.launch {
-            observeContentProvider(
-                context,
-                MegingiardIpcContract.SETTINGS_URI,
-                IpcSettingsParser::parse,
-            ).collect { config ->
-                if (config.steamGridDbApiToken.isNotBlank()) {
-                    AppLog.i(TAG, "SteamGridDB API key updated via IPC ContentObserver -> triggering cover scraping")
-                    triggerSteamGridDbScraping(context)
-                }
-            }
+    fun triggerSteamGridDbScraping(
+        context: Context,
+        apiKey: String = latestSteamGridDbApiKey,
+    ) {
+        if (apiKey.isNotBlank()) {
+            latestSteamGridDbApiKey = apiKey
         }
-    }
-
-    fun triggerSteamGridDbScraping(context: Context) {
-        registerSettingsObserverIfNeeded(context)
-        MegingiardIpcContract.init(context)
         scope.launch { runScrapingPasses(context) }
     }
 
@@ -1131,9 +1122,9 @@ object InstalledAppsManager {
 
     private suspend fun executeScrapingPass(context: Context) {
         // Read the token per pass so follow-up passes pick up token changes.
-        val apiKey = IpcSettingsParser.parse(context.contentResolver).steamGridDbApiToken
+        val apiKey = latestSteamGridDbApiKey
         if (apiKey.isBlank()) {
-            AppLog.d(TAG, "SteamGridDB API key is blank locally and via IPC, skipping artwork scraping")
+            AppLog.d(TAG, "SteamGridDB API key is blank, skipping artwork scraping")
             return
         }
 
