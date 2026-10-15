@@ -18,8 +18,7 @@ the same device or share individual profiles with other Megingiard users.
   MacroPad profiles (each containing its own macros) to a single `.mgrd` backup file.
 - The export file MUST be created via the Android Storage Access Framework (SAF) so the user
   controls the destination folder.
-- The user MAY optionally provide author, description, and comma-separated tags before exporting
-  (community metadata).
+- The user MAY optionally provide author and description before exporting (community metadata; the schema also supports an optional `tags` list, which is displayed on import if present in the archive but is not exposed in the export UI).
 - The suggested default filename MUST include the application version name (prefixed with "v"), the current date, and, if provided, the author
   (up to 20 chars) and description (up to 30 chars) to help users identify files.
   Format: `megingiard_v<versionName>_<date>[_<author>][_<description>].mgrd`.
@@ -69,7 +68,7 @@ the same device or share individual profiles with other Megingiard users.
 - The user MUST be able to select which profile to export when more than one profile exists.
 - The export file MUST contain an empty `settings` map — app settings are never included in
   a profile-share export, so importing it cannot overwrite another user's app preferences.
-- The user MAY optionally provide author, description, and comma-separated tags before exporting.
+- The user MAY optionally provide author and description before exporting (`tags` is supported in the schema and displayed on import, though not exposed in the export UI).
 - The suggested filename format is:
   `megingiard_profile_v<versionName>_<date>[_<profileName up to 30 chars>][_<author up to 20 chars>].mgrd`.
 - An animated toast notification ("Profile exported successfully") MUST be shown after the profile export is saved without interrupting the user with a modal dialog.
@@ -211,12 +210,14 @@ Adding a new setting requires assigning the key to a section in `SECTION_MAP` or
   Macros are embedded inside each `PadProfile.macros`.
 
 - **Checksum scope (v4):** SHA-256 of the minified kotlinx.serialization JSON encoding (with
-  `encodeDefaults = true`) of settings and profiles only.
-  Key order is determined by the declaration order of the `@Serializable` data class fields —
-  no additional sorting or canonicalization is applied. Metadata changes do not invalidate the
-  checksum. On import, verification first attempts raw JSON element payload evaluation to preserve
-  hash fidelity for legacy/older exports created before new default fields were introduced, falling back to
-  re-encoded object graph verification.
+  `encodeDefaults = true`) of `settings`, `profiles`, and (when bundled images are present) sorted
+  `imageHashes` (`bg_<layoutId>` / `mask_<layoutId>` → SHA-256 hex of raw image bytes).
+  Key order is determined by the declaration order of the `@Serializable` data class fields
+  (with `imageHashes` sorted lexicographically by key) — no additional sorting or canonicalization is
+  applied to `settings` or `profiles`. Metadata changes do not invalidate the checksum. On import,
+  verification first attempts raw JSON element payload evaluation (including `imageHashes` when present)
+  to preserve hash fidelity for legacy/older exports created before new default fields were introduced,
+  falling back to re-encoded object graph verification.
 
 ### Source Files
 
@@ -241,13 +242,11 @@ Adding a new setting requires assigning the key to a section in `SECTION_MAP` or
 
 When MacroPad data is imported, `ConfigManager.importMacroPadData()`:
 
-1. For each imported `PadProfile`, assigns a new UUID.
+1. For each imported `PadProfile`, assigns a new UUID and clears device-specific transient flags (`skipAutoRestoration`, `assignedRomId`, `assignedRomTitle`).
 2. For each macro inside the profile, assigns a new UUID and builds `macroIdMap` (old → new).
-3. For v2 imports: collects referenced legacy macros (from the top-level `macros` list) that
-   aren't already inside the profile and adopts them with new UUIDs.
-4. Remaps every `PadButton` whose action is `PadAction.Macro` via `macroIdMap`
+3. Remaps every `PadButton` whose action is `PadAction.Macro` via `macroIdMap`
    (falls back to original ID if not mapped).
-5. For each layout containing custom background images (`backgrounds/bg_<layoutId>`) or mask overlay images (`masks/mask_<layoutId>`), copies or extracts the media files into the target directories (`backgrounds/` and `masks/`) under new UUID paths. For legacy archives with `useBackgroundImageAsMask = true`, automatically migrates the image and adjustment properties into `masks/mask_<newLayoutId>` and clears `useBackgroundImageAsMask`.
+4. For each layout containing custom background images or mask overlay images (stored in the ZIP archive under `backgrounds/bg_<layoutId>` and `backgrounds/mask_<layoutId>`, normalized in-memory to keys `bg_<layoutId>` and `mask_<layoutId>`), extracts or copies the media files into the target directories (`filesDir/backgrounds/bg_<newLayoutId>` and `filesDir/masks/mask_<newLayoutId>`) under new UUID paths. For legacy archives with `useBackgroundImageAsMask = true`, automatically migrates the background image and adjustment properties into `filesDir/masks/mask_<newLayoutId>` and clears `useBackgroundImageAsMask`.
 
 This guarantees imported data never collides with existing data even when re-importing the same
 file multiple times.
