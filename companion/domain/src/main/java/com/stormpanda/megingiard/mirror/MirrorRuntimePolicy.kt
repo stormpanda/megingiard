@@ -11,7 +11,7 @@ fun isPrivdMirrorConnecting(
     promptActive: Boolean,
     hasCreds: Boolean,
     dismissed: Boolean,
-    isManuallyDisconnected: Boolean,
+    isManuallyDisconnected: Boolean = false,
 ): Boolean {
     val autoConnectPending = !isManuallyDisconnected
     val promptShouldShow = privdState == PrivdState.FAILED && hasCreds && !dismissed

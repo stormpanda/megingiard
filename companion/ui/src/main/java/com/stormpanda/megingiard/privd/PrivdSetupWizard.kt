@@ -816,12 +816,10 @@ fun PrivdError?.descriptionResId(): Int? =
     when (this) {
         PrivdError.DAEMON_UNREACHABLE -> R.string.privd_error_daemon_unreachable
         PrivdError.PAIRING_FAILED -> R.string.privd_error_pairing_failed
-        PrivdError.ADB_DISCOVERY_FAILED -> R.string.privd_error_adb_discovery_failed
         PrivdError.ADB_CONNECT_FAILED -> R.string.privd_error_adb_connect_failed
         PrivdError.BOOTSTRAP_PUSH_FAILED -> R.string.privd_error_bootstrap_push_failed
         PrivdError.BOOTSTRAP_SPAWN_FAILED -> R.string.privd_error_bootstrap_spawn_failed
         PrivdError.BOOTSTRAP_PROVISION_FAILED -> R.string.privd_error_bootstrap_provision_failed
         PrivdError.ADB_PAIRING_REQUIRED -> R.string.privd_error_adb_pairing_required
-        PrivdError.VERSION_MISMATCH -> R.string.privd_error_version_mismatch
         null -> null
     }

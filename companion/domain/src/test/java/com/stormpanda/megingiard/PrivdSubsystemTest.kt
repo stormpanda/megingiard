@@ -11,7 +11,6 @@ import com.stormpanda.megingiard.privd.PrivdAdbConnectionManager
 import com.stormpanda.megingiard.privd.PrivdBootstrapper
 import com.stormpanda.megingiard.privd.PrivdConnectionState
 import com.stormpanda.megingiard.privd.PrivdError
-import com.stormpanda.megingiard.privd.PrivdFeature
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
 import kotlinx.coroutines.Dispatchers
@@ -88,23 +87,16 @@ class PrivdSubsystemTest {
     }
 
     @Test
-    fun `PrivdFeature enum lists known features`() {
-        assertEquals(listOf("GAMEPAD_MERGE", "GAMEPAD_RECORDING", "MIRROR"), PrivdFeature.entries.map { it.name })
-    }
-
-    @Test
     fun `PrivdError enum covers all bootstrap failure modes`() {
         val expected =
             listOf(
                 "DAEMON_UNREACHABLE",
                 "PAIRING_FAILED",
-                "ADB_DISCOVERY_FAILED",
                 "ADB_CONNECT_FAILED",
                 "BOOTSTRAP_PUSH_FAILED",
                 "BOOTSTRAP_SPAWN_FAILED",
                 "BOOTSTRAP_PROVISION_FAILED",
                 "ADB_PAIRING_REQUIRED",
-                "VERSION_MISMATCH",
             )
         assertEquals(expected, PrivdError.entries.map { it.name })
     }
@@ -251,7 +243,7 @@ class PrivdSubsystemTest {
     }
 
     @Test
-    fun `PrivdManager state transitions and disconnect`() {
+    fun `PrivdManager state transitions`() {
         PrivdManager.setStateForTesting(PrivdState.OFF)
         assertEquals(PrivdState.OFF, PrivdManager.state.value)
 
@@ -262,11 +254,6 @@ class PrivdSubsystemTest {
         PrivdManager.reportBootstrapFailure(PrivdError.DAEMON_UNREACHABLE)
         assertEquals(PrivdState.FAILED, PrivdManager.state.value)
         assertEquals(PrivdError.DAEMON_UNREACHABLE, PrivdManager.lastError.value)
-
-        PrivdManager.disconnect()
-        assertEquals(PrivdState.OFF, PrivdManager.state.value)
-        assertNull(PrivdManager.lastError.value)
-        assertTrue(PrivdManager.isManuallyDisconnected)
     }
 
     @Test
