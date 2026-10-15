@@ -151,6 +151,7 @@ object ConfigManager {
 
     fun requestImport(mode: ImportMode = ImportMode.BACKUP_RESTORE) {
         AppLog.d(TAG, "requestImport mode=$mode")
+        _pendingInAppImportMode.value = mode
         _importRequest.tryEmit(mode)
     }
 
@@ -198,7 +199,7 @@ object ConfigManager {
     /** Called by MainActivity when the in-app file picker returns a .mgrd URI. */
     fun setPendingInAppUri(
         uri: Uri,
-        mode: ImportMode = ImportMode.BACKUP_RESTORE,
+        mode: ImportMode = _pendingInAppImportMode.value,
     ) {
         AppLog.i(TAG, "setPendingInAppUri: $uri mode=$mode")
         _pendingInAppImportMode.value = mode

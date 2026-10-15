@@ -129,7 +129,6 @@ class MainActivity : ComponentActivity() {
     // Settings screens post requests to ConfigManager and these launchers pick them up.
 
     private var pendingExportKind: ConfigManager.ExportKind? = null
-    private var pendingInAppImportMode = ConfigManager.ImportMode.BACKUP_RESTORE
 
     private val createDocumentLauncher =
         registerForActivityResult(
@@ -177,7 +176,7 @@ class MainActivity : ComponentActivity() {
             if (uri == null) {
                 return@registerForActivityResult
             }
-            ConfigManager.setPendingInAppUri(uri, pendingInAppImportMode)
+            ConfigManager.setPendingInAppUri(uri)
         }
 
     private val createLogDocumentLauncher =
@@ -374,8 +373,7 @@ class MainActivity : ComponentActivity() {
         }
         lifecycleScope.launch {
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                ConfigManager.importRequest.collect { mode ->
-                    pendingInAppImportMode = mode
+                ConfigManager.importRequest.collect {
                     openDocumentLauncher.launch("*/*")
                 }
             }
