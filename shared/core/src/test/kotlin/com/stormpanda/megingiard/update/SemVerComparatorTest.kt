@@ -48,7 +48,7 @@ class SemVerComparatorTest {
 
     @Test
     fun `semver with build metadata comparison`() {
-        assertTrue(SemVerComparator.isNewer("0.10.0+build.1", "0.10.1+build.2"))
-        assertFalse(SemVerComparator.isNewer("0.10.1+20260414", "0.10.1"))
+        assertTrue(SemVerComparator.isUpdateAvailable("0.10.0+build.1", "0.10.1+build.2"))
+        assertFalse(SemVerComparator.isUpdateAvailable("0.10.1+20260414", "0.10.1"))
     }
 }

@@ -47,14 +47,6 @@ object SemVerComparator {
         return isCurrentPreRelease && "-" !in cleanLatestRaw
     }
 
-    /**
-     * Alias for [isUpdateAvailable] to check if [latestTag] is strictly newer than [currentVersion].
-     */
-    fun isNewer(
-        currentVersion: String,
-        latestTag: String,
-    ): Boolean = isUpdateAvailable(currentVersion, latestTag)
-
     private fun parseVersionComponents(version: String): List<Int> =
         version
             .trim()
