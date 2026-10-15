@@ -40,7 +40,7 @@ class UpdateManagerTest {
                 produceFile = { tempFile },
             )
 
-        UpdateManager.init(
+        UpdateManager.resetForTesting(
             dataStore = testDataStore,
             scope = CoroutineScope(SupervisorJob() + testDispatcher),
         )

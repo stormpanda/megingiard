@@ -41,6 +41,9 @@ object UpdateManager {
 
     private val json = Json { ignoreUnknownKeys = true }
 
+    private val stateLock = Any()
+
+    @Volatile
     private var isLoadedFromDataStore = false
     private var currentAppVersion: String = ""
     private var pendingCheckVersion: String? = null
@@ -76,8 +79,10 @@ object UpdateManager {
         dataStore: DataStore<Preferences>,
         scope: CoroutineScope,
     ) {
-        this.dataStore = dataStore
-        this.scope = scope
+        synchronized(stateLock) {
+            this.dataStore = dataStore
+            this.scope = scope
+        }
         AppLog.d(TAG, "UpdateManager initialized with shared DataStore and scope")
     }
 
@@ -85,50 +90,64 @@ object UpdateManager {
         dataStore: DataStore<Preferences>? = null,
         scope: CoroutineScope? = null,
     ) {
-        this.dataStore = dataStore
-        this.scope = scope
-        _autoUpdateCheckEnabled.value = true
-        currentAppVersion = ""
-        applyReleaseInfo(null)
-        _isChecking.value = false
-        lastCheckTimeMs = 0L
-        _checkError.value = null
-        isLoadedFromDataStore = false
-        pendingCheckVersion = null
-        pendingCheckApiUrl = null
+        synchronized(stateLock) {
+            this.dataStore = dataStore
+            this.scope = scope
+            _autoUpdateCheckEnabled.value = true
+            currentAppVersion = ""
+            applyReleaseInfo(null)
+            _isChecking.value = false
+            lastCheckTimeMs = 0L
+            _checkError.value = null
+            isLoadedFromDataStore = false
+            pendingCheckVersion = null
+            pendingCheckApiUrl = null
+        }
     }
 
     internal fun loadFrom(
         prefs: Preferences,
         currentVersion: String = "",
     ) {
-        val firstLoad = !isLoadedFromDataStore
-        isLoadedFromDataStore = true
-        if (currentVersion.isNotBlank()) {
-            currentAppVersion = currentVersion
-        }
-        prefs[KEY_AUTO_UPDATE_CHECK_ENABLED]?.let { _autoUpdateCheckEnabled.value = it }
-
-        val tag = prefs[KEY_LATEST_RELEASE_TAG] ?: ""
-        val url = prefs[KEY_LATEST_RELEASE_URL] ?: ""
-
-        if (tag.isNotBlank() && url.isNotBlank()) {
-            applyReleaseInfo(AppReleaseInfo(tagName = tag, htmlUrl = url))
-        }
-        AppLog.d(
-            TAG,
-            "loadFrom: autoCheck=${_autoUpdateCheckEnabled.value}, lastCheck=$lastCheckTimeMs, tag=$tag, updateAvailable=${_updateAvailable.value}",
-        )
-
-        if (firstLoad) {
-            val pendingVer = pendingCheckVersion
-            val pendingUrl = pendingCheckApiUrl
-            if (pendingVer != null && pendingUrl != null) {
-                pendingCheckVersion = null
-                pendingCheckApiUrl = null
-                AppLog.d(TAG, "DataStore load complete, executing pending initial update check")
-                checkForUpdates(force = false, currentVersion = pendingVer, releasesApiUrl = pendingUrl)
+        var pendingVer: String? = null
+        var pendingUrl: String? = null
+        synchronized(stateLock) {
+            prefs[KEY_AUTO_UPDATE_CHECK_ENABLED]?.let { _autoUpdateCheckEnabled.value = it }
+            if (currentVersion.isNotBlank()) {
+                currentAppVersion = currentVersion
             }
+            if (isLoadedFromDataStore) {
+                if (currentVersion.isNotBlank()) {
+                    applyReleaseInfo(_latestReleaseInfo.value)
+                }
+                return
+            }
+            isLoadedFromDataStore = true
+
+            val tag = prefs[KEY_LATEST_RELEASE_TAG] ?: ""
+            val url = prefs[KEY_LATEST_RELEASE_URL] ?: ""
+
+            if (tag.isNotBlank() && url.isNotBlank()) {
+                applyReleaseInfo(AppReleaseInfo(tagName = tag, htmlUrl = url))
+            } else if (currentVersion.isNotBlank()) {
+                applyReleaseInfo(_latestReleaseInfo.value)
+            }
+            AppLog.d(
+                TAG,
+                "loadFrom: autoCheck=${_autoUpdateCheckEnabled.value}, lastCheck=$lastCheckTimeMs, tag=$tag, updateAvailable=${_updateAvailable.value}",
+            )
+
+            pendingVer = pendingCheckVersion
+            pendingUrl = pendingCheckApiUrl
+            pendingCheckVersion = null
+            pendingCheckApiUrl = null
+        }
+
+        val ver = pendingVer
+        val url = pendingUrl
+        if (ver != null && url != null) {
+            AppLog.d(TAG, "DataStore load complete, executing pending initial update check")
+            checkForUpdates(force = false, currentVersion = ver, releasesApiUrl = url)
         }
     }
 
@@ -156,47 +175,50 @@ object UpdateManager {
         currentVersion: String,
         releasesApiUrl: String = DEFAULT_RELEASES_API_URL,
     ) {
-        if (currentVersion.isNotBlank()) {
-            currentAppVersion = currentVersion
-            applyReleaseInfo(_latestReleaseInfo.value)
-        }
-
-        if (!force && !isLoadedFromDataStore) {
-            AppLog.d(TAG, "DataStore preferences not loaded yet, queuing initial update check")
-            pendingCheckVersion = currentVersion
-            pendingCheckApiUrl = releasesApiUrl
-            return
-        }
-
         val now = System.currentTimeMillis()
-        if (!force) {
-            if (!_autoUpdateCheckEnabled.value) {
-                AppLog.d(TAG, "Automatic update check skipped: feature disabled in settings")
+        synchronized(stateLock) {
+            if (currentVersion.isNotBlank()) {
+                currentAppVersion = currentVersion
+                applyReleaseInfo(_latestReleaseInfo.value)
+            }
+
+            if (!force && !isLoadedFromDataStore) {
+                AppLog.d(TAG, "DataStore preferences not loaded yet, queuing initial update check")
+                pendingCheckVersion = currentVersion
+                pendingCheckApiUrl = releasesApiUrl
                 return
             }
-            if (now - lastCheckTimeMs < AUTO_UPDATE_CHECK_INTERVAL_MS) {
-                AppLog.d(
-                    TAG,
-                    "Automatic update check skipped: last checked less than 24h ago in this session (${now - lastCheckTimeMs}ms ago)",
-                )
-                return
+
+            if (!force) {
+                if (!_autoUpdateCheckEnabled.value) {
+                    AppLog.d(TAG, "Automatic update check skipped: feature disabled in settings")
+                    return
+                }
+                if (now - lastCheckTimeMs < AUTO_UPDATE_CHECK_INTERVAL_MS) {
+                    AppLog.d(
+                        TAG,
+                        "Automatic update check skipped: last checked less than 24h ago in this session (${now - lastCheckTimeMs}ms ago)",
+                    )
+                    return
+                }
             }
         }
 
-        if (_isChecking.value) {
+        if (!_isChecking.compareAndSet(false, true)) {
             AppLog.d(TAG, "Update check already in progress, skipping duplicate call")
             return
         }
 
         AppLog.i(TAG, "Starting update check against $releasesApiUrl (force=$force, currentVersion=$currentVersion)")
-        _isChecking.value = true
         _checkError.value = null
 
         scope?.launch {
             try {
                 val releaseInfo = fetchLatestRelease(releasesApiUrl)
-                applyReleaseInfo(releaseInfo)
-                lastCheckTimeMs = now
+                synchronized(stateLock) {
+                    applyReleaseInfo(releaseInfo)
+                    lastCheckTimeMs = now
+                }
                 _isChecking.value = false
 
                 AppLog.i(

@@ -246,6 +246,7 @@ object SettingsManager {
         prefs[KEY_CUSTOM_ACCENT_COLOR]?.let { _customAccentColor.value = it }
         prefs[KEY_STEAMGRIDDB_API_TOKEN]?.let { _steamGridDbApiToken.value = it }
         MacroPadSettings.loadFrom(prefs)
+        UpdateManager.loadFrom(prefs)
     }
 
     private val optionalDataStore: DataStore<Preferences>?
