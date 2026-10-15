@@ -35,8 +35,6 @@ internal data class RetroArchPlaylistItem(
 object RetroArchLplParser {
     private val json = Json { ignoreUnknownKeys = true }
 
-    fun extractMostRecentRomPath(jsonContent: String): String? = parseMostRecentSession("com.retroarch.aarch64", jsonContent)?.romPath
-
     fun parseMostRecentSession(
         packageName: String,
         jsonContent: String,

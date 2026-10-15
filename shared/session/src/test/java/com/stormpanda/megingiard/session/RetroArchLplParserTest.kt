@@ -96,7 +96,7 @@ class RetroArchLplParserTest {
     }
 
     @Test
-    fun extractMostRecentRomPath_pathWithBraces_extractsSuccessfully() {
+    fun parseMostRecentSession_pathWithBraces_extractsSuccessfully() {
         val json =
             """
             {
@@ -111,9 +111,6 @@ class RetroArchLplParserTest {
               ]
             }
             """.trimIndent()
-
-        val romPath = RetroArchLplParser.extractMostRecentRomPath(json)
-        assertEquals("/storage/emulated/0/ROMs/SNES/Super Metroid {USA}.sfc", romPath)
 
         val session = RetroArchLplParser.parseMostRecentSession("com.retroarch.aarch64", json)
         assertNotNull(session)
