@@ -338,7 +338,6 @@ object PrimaryOverlayManager {
             wm.addView(view, params)
             view.post {
                 view.requestFocus()
-                PrimaryOverlayInputBridge.sendFocusRecovery(KeyEvent.KEYCODE_DPAD_DOWN)
             }
             overlayView = view
             AppLog.i(TAG, "Primary overlay window successfully attached to Display 0 WindowManager (non-activity)")

@@ -263,7 +263,7 @@ None identified — animations in `GamepadFocusCard`, `drawBehind` border render
 - [x] **`[TH-10]`** — Delete dead `CutoutLetterButton` / `CutoutSymbolButton` and redundant `observeThemeUpdates` *(Complexity: Med, Risk: Low)*
 - [x] **`[TH-11]`** — Unify `savedFocusKeyByDepth` lookup and `resolveNavigationDepth` in `GamepadTwoPaneScaffold` *(Complexity: Med, Risk: Low)*
 - [x] **`[TH-12]`** — Reuse `launchDirectionalRepeat` in `PrimaryOverlayInputBridge` *(Complexity: Low, Risk: Low)*
-- [ ] **`[TH-13]`** — Consolidate triplicated focus restoration logic in `GamepadTwoPaneScaffold` *(Complexity: High, Risk: Med)*
+- [x] **`[TH-13]`** — Consolidate triplicated focus restoration logic in `GamepadTwoPaneScaffold` *(Complexity: High, Risk: Med)*
 - [ ] **`[TH-14]`** — Deduplicate overlay key dispatch, mirror-freeze lifecycle, and theme root between `PrimaryOverlayManager` and `PrimaryOverlayActivity` *(Complexity: High, Risk: Low)*
 - [ ] **`[TH-15]`** — Remove redundant `accentColor` parameter threading in `GamepadScaffold` (`AGENTS.md §16.5`) *(Complexity: Low, Risk: Low)*
 - [ ] **`[TH-16]`** — Remove duplicate `keyboardRequester?.invoke(false)` call in `GamepadTextFieldCard` *(Complexity: Low, Risk: Low)*
