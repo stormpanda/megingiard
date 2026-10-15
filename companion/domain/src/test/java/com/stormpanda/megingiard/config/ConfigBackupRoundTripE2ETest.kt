@@ -171,14 +171,15 @@ class ConfigBackupRoundTripE2ETest {
             assertTrue(tempFile.length() > 0)
 
             // 5. Read and verify from URI
-            val readResult = ConfigManager.readFromUri(context, exportUri, isInApp = true)
+            val readResult = ConfigManager.readFromUri(context, exportUri)
             assertTrue("Expected readFromUri to succeed", readResult.isSuccess)
-            val parsedExport = readResult.getOrThrow()
+            val parsedArchive = readResult.getOrThrow()
+            val parsedExport = parsedArchive.export
             assertEquals(SCHEMA_VERSION, parsedExport.schemaVersion)
             assertEquals(export.checksum, parsedExport.checksum)
             assertEquals(2, parsedExport.profiles.size)
 
-            val extractedImages = ConfigManager.getPendingInAppImages()
+            val extractedImages = parsedArchive.images
             assertTrue("Expected background image extracted from ZIP", extractedImages.containsKey(layoutId))
 
             // 6. Reset all settings and MacroPad profiles to clean/default state

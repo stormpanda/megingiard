@@ -113,7 +113,7 @@ fun GlobalSettingsScreen(
     var showImportPreviewDialog by remember { mutableStateOf<MegingiardExport?>(null) }
     val pendingInAppParsedImport by ConfigManager.pendingInAppParsedImport.collectAsStateWithLifecycle()
     val configImportError by ConfigManager.inAppImportError.collectAsStateWithLifecycle()
-    val activeImportPreview = showImportPreviewDialog ?: pendingInAppParsedImport
+    val activeImportPreview = showImportPreviewDialog ?: pendingInAppParsedImport?.export
     var lastReviewExport by remember { mutableStateOf<MegingiardExport?>(null) }
     LaunchedEffect(activeImportPreview) {
         if (activeImportPreview != null) {
@@ -500,7 +500,7 @@ fun GlobalSettingsScreen(
                                     export = reviewExport,
                                     pendingInAppImportMode = pendingInAppImportMode,
                                     onConfirmImport = { exp, mode ->
-                                        val pendingImages = ConfigManager.getPendingInAppImages()
+                                        val pendingImages = pendingInAppParsedImport?.images.orEmpty()
                                         showImportPreviewDialog = null
                                         subPageStack = emptyList()
                                         coroutineScope.launch {

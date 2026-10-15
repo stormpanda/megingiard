@@ -526,7 +526,7 @@ class ConfigExportImportStructureTest {
             )
 
         ConfigManager.setInAppParsedImport(testExport)
-        assertEquals(testExport, ConfigManager.pendingInAppParsedImport.value)
+        assertEquals(testExport, ConfigManager.pendingInAppParsedImport.value?.export)
 
         ConfigManager.setInAppImportError("Corrupted archive")
         assertEquals("Corrupted archive", ConfigManager.inAppImportError.value)
@@ -534,7 +534,7 @@ class ConfigExportImportStructureTest {
         ConfigManager.clearInAppPendingImport()
         assertEquals(null, ConfigManager.pendingInAppParsedImport.value)
         assertEquals(null, ConfigManager.inAppImportError.value)
-        assertEquals(emptyMap<String, ByteArray>(), ConfigManager.getPendingInAppImages())
+        assertEquals(0, ConfigManager.getPendingInAppImageCount())
     }
 
     // ── 5. Background Image Restoration Tests ─────────────────────────────────

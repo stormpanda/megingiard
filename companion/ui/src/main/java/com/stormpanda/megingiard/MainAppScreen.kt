@@ -158,40 +158,33 @@ fun MainAppScreen() {
     val context = LocalContext.current
     var showExitDialog by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
-    val pendingImportUri by ConfigManager.pendingUri.collectAsStateWithLifecycle()
+    val pendingUriRequest by ConfigManager.pendingUriRequest.collectAsStateWithLifecycle()
     val pendingImport by ConfigManager.pendingParsedImport.collectAsStateWithLifecycle()
-    val pendingInAppUri by ConfigManager.pendingInAppUri.collectAsStateWithLifecycle()
     var importError by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(pendingImportUri) {
-        val uri = pendingImportUri ?: return@LaunchedEffect
-        AppLog.d(TAG, "Parsing SAF import URI")
+    LaunchedEffect(pendingUriRequest) {
+        val request = pendingUriRequest ?: return@LaunchedEffect
+        AppLog.d(TAG, "Parsing import URI (isInApp=${request.isInApp})")
         ConfigManager
-            .parseImportUri(context, uri, isInApp = false)
-            .onSuccess { export ->
-                AppLog.i(TAG, "SAF import parsed: ${export.profiles.size} profile(s)")
-                ConfigManager.setParsedImport(export)
+            .parseImportUri(context, request.uri)
+            .onSuccess { archive ->
+                AppLog.i(TAG, "Import parsed: ${archive.export.profiles.size} profile(s)")
+                if (request.isInApp) {
+                    ConfigManager.setInAppParsedImport(archive)
+                } else {
+                    ConfigManager.setParsedImport(archive)
+                }
             }.onFailure { err ->
-                AppLog.e(TAG, "SAF import parse failed: ${err.message}")
-                ConfigManager.clearPendingImport()
-                importError = err.message ?: context.getString(R.string.config_error_unknown)
-            }
-    }
-
-    LaunchedEffect(pendingInAppUri) {
-        val uri = pendingInAppUri ?: return@LaunchedEffect
-        AppLog.d(TAG, "Parsing in-app import URI")
-        ConfigManager
-            .parseImportUri(context, uri, isInApp = true)
-            .onSuccess { export ->
-                AppLog.i(TAG, "In-app import parsed: ${export.profiles.size} profile(s)")
-                ConfigManager.setInAppParsedImport(export)
-            }.onFailure { err ->
-                AppLog.e(TAG, "In-app import parse failed: ${err.message}")
+                AppLog.e(TAG, "Import parse failed: ${err.message}")
                 val errorMsg = err.message ?: context.getString(R.string.config_error_unknown)
-                ConfigManager.clearInAppPendingImport()
-                ConfigManager.setInAppImportError(errorMsg)
-                importError = errorMsg
+                if (request.isInApp) {
+                    ConfigManager.clearInAppPendingImport()
+                    ConfigManager.setInAppImportError(errorMsg)
+                    importError = errorMsg
+                } else {
+                    ConfigManager.clearPendingImport()
+                    importError = errorMsg
+                }
             }
     }
 
@@ -495,13 +488,12 @@ fun MainAppScreen() {
             ScreenshotPreviewOverlay(modifier = Modifier.align(Alignment.Center))
         }
 
-        pendingImport?.let { export ->
+        pendingImport?.let { archive ->
             IncomingImportDialog(
-                export = export,
+                export = archive.export,
                 onConfirm = {
-                    val pendingImages = ConfigManager.getPendingImages()
                     coroutineScope.launch {
-                        ConfigManager.applyImport(context, export, pendingImages)
+                        ConfigManager.applyImport(context, archive.export, archive.images)
                     }
                 },
                 onDismiss = { ConfigManager.clearPendingImport() },

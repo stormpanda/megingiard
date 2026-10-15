@@ -129,10 +129,10 @@ MainActivity  ← holds ActivityResultLaunchers
                 ConfigManager.setPendingInAppUri(uri, mode)
                         │
                         ▼
-                MainAppScreen.LaunchedEffect(pendingImportUri)
+                MainAppScreen.LaunchedEffect(pendingUriRequest)
                         │  suspend – Dispatchers.IO
                         ▼
-                ConfigManager.readFromUri()  →  ConfigManager.setParsedImport()
+                ConfigManager.readFromUri()  →  ConfigManager.setInAppParsedImport(archive)
                         │
                         ▼
                 GlobalSettingsScreen RestoreBackupSubPage (In-Deck Review & Apply)
@@ -152,10 +152,10 @@ MainActivity.onNewIntent() / onCreate()
 ConfigManager.setPendingUri(uri)   ← StateFlow bridge
         │
         ▼
-MainAppScreen.LaunchedEffect(pendingImportUri)
+MainAppScreen.LaunchedEffect(pendingUriRequest)
         │  suspend – Dispatchers.IO
         ▼
-ConfigManager.readFromUri()  →  ConfigManager.setParsedImport(export)
+ConfigManager.readFromUri()  →  ConfigManager.setParsedImport(archive)
         │
         ▼
 IncomingImportDialog  ─── user confirms → ConfigManager.applyImport()

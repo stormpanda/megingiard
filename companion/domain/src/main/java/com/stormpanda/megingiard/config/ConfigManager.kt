@@ -155,62 +155,46 @@ object ConfigManager {
         _importRequest.tryEmit(mode)
     }
 
-    // ── Coordinator StateFlows (import from external ACTION_VIEW intent) ────────
+    // ── Coordinator StateFlows (import from external ACTION_VIEW & in-app picker) ──
 
-    /** Non-null while MainAppScreen should parse an externally-opened .mgrd URI. */
-    private val _pendingUri = MutableStateFlow<Uri?>(null)
-    val pendingUri: StateFlow<Uri?> = _pendingUri.asStateFlow()
+    /** Request to parse a `.mgrd` URI in [MainAppScreen], tagged by origin. */
+    data class PendingUriRequest(
+        val uri: Uri,
+        val isInApp: Boolean,
+    )
+
+    /** Self-contained result of parsing a `.mgrd` JSON or ZIP archive. */
+    data class ParsedArchive(
+        val export: MegingiardExport,
+        val images: Map<String, ByteArray> = emptyMap(),
+    )
+
+    /** Non-null while MainAppScreen should parse an incoming .mgrd URI. */
+    private val _pendingUriRequest = MutableStateFlow<PendingUriRequest?>(null)
+    val pendingUriRequest: StateFlow<PendingUriRequest?> = _pendingUriRequest.asStateFlow()
 
     /** Non-null while MainAppScreen should show IncomingImportDialog for an external import. */
-    private val _pendingParsedImport = MutableStateFlow<MegingiardExport?>(null)
-    val pendingParsedImport: StateFlow<MegingiardExport?> = _pendingParsedImport.asStateFlow()
+    private val _pendingParsedImport = MutableStateFlow<ParsedArchive?>(null)
+    val pendingParsedImport: StateFlow<ParsedArchive?> = _pendingParsedImport.asStateFlow()
 
-    /** Extracted background image binaries from pending external import ZIP package. */
-    private val _pendingImportImages = MutableStateFlow<Map<String, ByteArray>>(emptyMap())
-
-    /** Called by MainActivity when an ACTION_VIEW intent with a .mgrd URI is received. */
-    fun setPendingUri(uri: Uri) {
-        AppLog.i(TAG, "setPendingUri: $uri")
-        _pendingUri.value = uri
-    }
-
-    /** Called by MainAppScreen after successfully parsing an external import URI. */
-    fun setParsedImport(export: MegingiardExport) {
-        AppLog.d(TAG, "setParsedImport")
-        _pendingParsedImport.value = export
-        _pendingUri.value = null
-    }
-
-    /** Clears external import state — call after confirm or dismiss of IncomingImportDialog. */
-    fun clearPendingImport() {
-        AppLog.d(TAG, "clearPendingImport")
-        _pendingUri.value = null
-        _pendingParsedImport.value = null
-        _pendingImportImages.value = emptyMap()
-    }
-
-    // ── Coordinator StateFlows (import from in-app Settings picker) ───────────
-
-    /** Non-null while MainAppScreen should parse an in-app Settings .mgrd URI. */
-    private val _pendingInAppUri = MutableStateFlow<Uri?>(null)
-    val pendingInAppUri: StateFlow<Uri?> = _pendingInAppUri.asStateFlow()
-
-    /** Non-null while GlobalSettingsScreen should show ImportPreviewDialog. */
-    private val _pendingInAppParsedImport = MutableStateFlow<MegingiardExport?>(null)
-    val pendingInAppParsedImport: StateFlow<MegingiardExport?> = _pendingInAppParsedImport.asStateFlow()
-
-    /** Extracted background image binaries from pending in-app import ZIP package. */
-    private val _pendingInAppImportImages = MutableStateFlow<Map<String, ByteArray>>(emptyMap())
+    /** Non-null while GlobalSettingsScreen should show RestoreReviewSubPage. */
+    private val _pendingInAppParsedImport = MutableStateFlow<ParsedArchive?>(null)
+    val pendingInAppParsedImport: StateFlow<ParsedArchive?> = _pendingInAppParsedImport.asStateFlow()
 
     /** Tracks whether the pending in-app import is a full backup or a profile share. */
     private val _pendingInAppImportMode = MutableStateFlow(ImportMode.BACKUP_RESTORE)
     val pendingInAppImportMode: StateFlow<ImportMode> = _pendingInAppImportMode.asStateFlow()
 
-    fun getPendingInAppImageCount(): Int = _pendingInAppImportImages.value.size
+    private val _inAppImportError = MutableStateFlow<String?>(null)
+    val inAppImportError: StateFlow<String?> = _inAppImportError.asStateFlow()
 
-    fun getPendingInAppImages(): Map<String, ByteArray> = _pendingInAppImportImages.value
+    fun getPendingInAppImageCount(): Int = _pendingInAppParsedImport.value?.images?.size ?: 0
 
-    fun getPendingImages(): Map<String, ByteArray> = _pendingImportImages.value
+    /** Called by MainActivity when an ACTION_VIEW intent with a .mgrd URI is received. */
+    fun setPendingUri(uri: Uri) {
+        AppLog.i(TAG, "setPendingUri: $uri")
+        _pendingUriRequest.value = PendingUriRequest(uri, isInApp = false)
+    }
 
     /** Called by MainActivity when the in-app file picker returns a .mgrd URI. */
     fun setPendingInAppUri(
@@ -219,7 +203,7 @@ object ConfigManager {
     ) {
         AppLog.i(TAG, "setPendingInAppUri: $uri mode=$mode")
         _pendingInAppImportMode.value = mode
-        _pendingInAppUri.value = uri
+        _pendingUriRequest.value = PendingUriRequest(uri, isInApp = true)
     }
 
     fun setPendingInAppImportMode(mode: ImportMode) {
@@ -227,27 +211,48 @@ object ConfigManager {
         _pendingInAppImportMode.value = mode
     }
 
-    /** Called by MainAppScreen after successfully parsing an in-app import URI. */
-    fun setInAppParsedImport(export: MegingiardExport) {
-        AppLog.d(TAG, "setInAppParsedImport")
-        _pendingInAppParsedImport.value = export
-        _pendingInAppUri.value = null
+    /** Called by MainAppScreen after successfully parsing an external import URI. */
+    fun setParsedImport(archive: ParsedArchive) {
+        AppLog.d(TAG, "setParsedImport")
+        _pendingParsedImport.value = archive
+        _pendingUriRequest.value = null
     }
 
-    private val _inAppImportError = MutableStateFlow<String?>(null)
-    val inAppImportError: StateFlow<String?> = _inAppImportError.asStateFlow()
+    /** Called by MainAppScreen or GlobalSettingsScreen when staging an in-app import for review. */
+    fun setInAppParsedImport(
+        export: MegingiardExport,
+        images: Map<String, ByteArray> = emptyMap(),
+    ) {
+        setInAppParsedImport(ParsedArchive(export, images))
+    }
+
+    fun setInAppParsedImport(archive: ParsedArchive) {
+        AppLog.d(TAG, "setInAppParsedImport")
+        _pendingInAppParsedImport.value = archive
+        _pendingUriRequest.value = null
+    }
 
     fun setInAppImportError(error: String?) {
         AppLog.d(TAG, "setInAppImportError: $error")
         _inAppImportError.value = error
     }
 
-    /** Clears in-app import state — call after confirm or dismiss of ImportPreviewDialog. */
+    /** Clears external import state — call after confirm or dismiss of IncomingImportDialog. */
+    fun clearPendingImport() {
+        AppLog.d(TAG, "clearPendingImport")
+        if (_pendingUriRequest.value?.isInApp == false) {
+            _pendingUriRequest.value = null
+        }
+        _pendingParsedImport.value = null
+    }
+
+    /** Clears in-app import state — call after confirm or dismiss of RestoreReviewSubPage. */
     fun clearInAppPendingImport() {
         AppLog.d(TAG, "clearInAppPendingImport")
-        _pendingInAppUri.value = null
+        if (_pendingUriRequest.value?.isInApp == true) {
+            _pendingUriRequest.value = null
+        }
         _pendingInAppParsedImport.value = null
-        _pendingInAppImportImages.value = emptyMap()
         _inAppImportError.value = null
         _pendingInAppImportMode.value = ImportMode.BACKUP_RESTORE
     }
@@ -493,11 +498,10 @@ object ConfigManager {
     suspend fun parseImportUri(
         context: Context,
         uri: Uri,
-        isInApp: Boolean = false,
-    ): Result<MegingiardExport> {
-        AppLog.i(TAG, "parseImportUri uri=$uri isInApp=$isInApp")
+    ): Result<ParsedArchive> {
+        AppLog.i(TAG, "parseImportUri uri=$uri")
         return withContext(Dispatchers.IO) {
-            readFromUri(context, uri, isInApp).also { result ->
+            readFromUri(context, uri).also { result ->
                 if (result.isSuccess) {
                     AppLog.i(TAG, "parseImportUri succeeded")
                 } else {
@@ -513,10 +517,9 @@ object ConfigManager {
     fun readFromUri(
         context: Context,
         uri: Uri,
-        isInApp: Boolean = false,
-    ): Result<MegingiardExport> =
+    ): Result<ParsedArchive> =
         runCatching {
-            AppLog.i(TAG, "readFromUri: uri=$uri isInApp=$isInApp")
+            AppLog.i(TAG, "readFromUri: uri=$uri")
             // Reject oversized files before allocating: check declared size if available.
             context.contentResolver
                 .query(
@@ -576,20 +579,10 @@ object ConfigManager {
                 }
                 val json = jsonText ?: error("Invalid .mgrd package — missing config.json")
                 val export = parseAndVerify(json, imagesMap)
-                if (isInApp) {
-                    _pendingInAppImportImages.value = imagesMap
-                } else {
-                    _pendingImportImages.value = imagesMap
-                }
-                export
+                ParsedArchive(export, imagesMap)
             } else {
                 val json = bytes.toString(Charsets.UTF_8)
-                if (isInApp) {
-                    _pendingInAppImportImages.value = emptyMap()
-                } else {
-                    _pendingImportImages.value = emptyMap()
-                }
-                parseAndVerify(json)
+                ParsedArchive(parseAndVerify(json))
             }
         }
 
@@ -622,7 +615,10 @@ object ConfigManager {
         images: Map<String, ByteArray>? = null,
     ) {
         AppLog.i(TAG, "applyImport: schema=${export.schemaVersion}")
-        val resolvedImages = images ?: _pendingInAppImportImages.value.ifEmpty { _pendingImportImages.value }
+        val resolvedImages =
+            images
+                ?: _pendingInAppParsedImport.value?.images?.ifEmpty { null }
+                ?: _pendingParsedImport.value?.images.orEmpty()
         try {
             if (export.settings.isNotEmpty()) {
                 SettingsManager.importGroupedSettingsAwait(export.settings)
@@ -647,7 +643,10 @@ object ConfigManager {
     ) {
         AppLog.i(TAG, "applyProfileImport: schema=${export.schemaVersion} profiles=${export.profiles.size}")
         check(export.profiles.isNotEmpty()) { "The file does not contain any profiles" }
-        val resolvedImages = images ?: _pendingInAppImportImages.value.ifEmpty { _pendingImportImages.value }
+        val resolvedImages =
+            images
+                ?: _pendingInAppParsedImport.value?.images?.ifEmpty { null }
+                ?: _pendingParsedImport.value?.images.orEmpty()
         try {
             importMacroPadData(context, export.profiles, resolvedImages)
         } finally {
