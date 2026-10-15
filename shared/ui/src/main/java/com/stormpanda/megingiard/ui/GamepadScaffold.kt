@@ -403,6 +403,16 @@ fun GamepadCategoryTile(
     }
 }
 
+private fun resolveNavigationDepth(
+    navigationKey: Any?,
+    isCustomBackActive: Boolean,
+): Int =
+    when (navigationKey) {
+        is Collection<*> -> navigationKey.size
+        is Boolean -> if (navigationKey) 1 else 0
+        else -> if (isCustomBackActive) 1 else 0
+    }
+
 /**
  * Standardized split-screen two-pane scaffold for primary screen settings and editors.
  */
@@ -429,12 +439,7 @@ fun GamepadTwoPaneScaffold(
     val firstContentRequester = remember { FocusRequester() }
     val activeDeckCardRequesters = remember { mutableMapOf<Any, FocusRequester>() }
     val savedFocusKeyByDepth = remember { mutableMapOf<Int, Any>().apply { if (savedFocusKeys != null) putAll(savedFocusKeys) } }
-    val initialDepth =
-        when (navigationKey) {
-            is Collection<*> -> navigationKey.size
-            is Boolean -> if (navigationKey) 1 else 0
-            else -> if (isCustomBackActive) 1 else 0
-        }
+    val initialDepth = resolveNavigationDepth(navigationKey, isCustomBackActive)
     var currentDepth by remember { mutableIntStateOf(initialDepth) }
     var isDeckFocused by remember { mutableStateOf(false) }
     var isSidebarFocused by remember { mutableStateOf(false) }
@@ -443,7 +448,7 @@ fun GamepadTwoPaneScaffold(
 
     val transferFocusToDeck: () -> Unit = {
         var handled = false
-        val targetKey = savedFocusKeys?.get(currentDepth) ?: savedFocusKeyByDepth[currentDepth]
+        val targetKey = savedFocusKeyByDepth[currentDepth]
         val targetRequester = if (targetKey != null) activeDeckCardRequesters[targetKey] else null
         if (targetRequester != null) {
             try {
@@ -554,12 +559,7 @@ fun GamepadTwoPaneScaffold(
         LaunchedEffect(effectiveNavKey) {
             if (effectiveNavKey != previousNavKey) {
                 previousNavKey = effectiveNavKey
-                val newDepth =
-                    when (effectiveNavKey) {
-                        is Collection<*> -> effectiveNavKey.size
-                        is Boolean -> if (effectiveNavKey) 1 else 0
-                        else -> if (isCustomBackActive) 1 else 0
-                    }
+                val newDepth = resolveNavigationDepth(effectiveNavKey, isCustomBackActive)
                 val isBackTransition = newDepth < currentDepth
                 currentDepth = newDepth
 
@@ -572,7 +572,7 @@ fun GamepadTwoPaneScaffold(
                 fun performFocus(allowFallback: Boolean = false): Boolean {
                     inputModeManager.requestInputMode(InputMode.Keyboard)
                     if (isBackTransition) {
-                        val parentKey = savedFocusKeys?.get(newDepth) ?: savedFocusKeyByDepth[newDepth]
+                        val parentKey = savedFocusKeyByDepth[newDepth]
                         if (parentKey != null) {
                             val parentRequester = activeDeckCardRequesters[parentKey]
                             if (parentRequester != null) {
@@ -659,7 +659,7 @@ fun GamepadTwoPaneScaffold(
             try {
                 inputModeManager.requestInputMode(InputMode.Keyboard)
                 if (isCustomBackActive) {
-                    val savedKey = savedFocusKeys?.get(currentDepth) ?: savedFocusKeyByDepth[currentDepth]
+                    val savedKey = savedFocusKeyByDepth[currentDepth]
                     val savedRequester = if (savedKey != null) activeDeckCardRequesters[savedKey] else null
                     if (savedRequester != null) {
                         savedRequester.requestFocus()
