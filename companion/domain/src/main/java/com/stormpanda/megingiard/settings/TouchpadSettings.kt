@@ -20,6 +20,13 @@ private const val TAG = "TouchpadSettings"
  * by SettingsManager).
  */
 object TouchpadSettings {
+    const val SENSITIVITY_MIN = 0.2f
+    const val SENSITIVITY_MAX = 3.0f
+    const val SCROLL_SPEED_MIN = 0.5f
+    const val SCROLL_SPEED_MAX = 3.0f
+    const val MIRROR_DIM_MIN = 0
+    const val MIRROR_DIM_MAX = 90
+
     private lateinit var dataStore: DataStore<Preferences>
     private lateinit var scope: CoroutineScope
 
@@ -180,7 +187,7 @@ object TouchpadSettings {
     fun setTouchpadMirrorDim(value: Int) {
         updateSettingPref(
             KEY_TOUCHPAD_MIRROR_DIM,
-            value.coerceIn(0, 90),
+            value.coerceIn(MIRROR_DIM_MIN, MIRROR_DIM_MAX),
             _touchpadMirrorDim,
             optionalScope,
             optionalDataStore,
@@ -204,7 +211,7 @@ object TouchpadSettings {
     fun setTouchpadSensitivity(value: Float) {
         updateSettingPref(
             KEY_TOUCHPAD_SENSITIVITY,
-            value.coerceIn(0.1f, 3.0f),
+            value.coerceIn(SENSITIVITY_MIN, SENSITIVITY_MAX),
             _touchpadSensitivity,
             optionalScope,
             optionalDataStore,
@@ -228,7 +235,7 @@ object TouchpadSettings {
     fun setTouchpadScrollSpeed(value: Float) {
         updateSettingPref(
             KEY_TOUCHPAD_SCROLL_SPEED,
-            value.coerceIn(0.5f, 3.0f),
+            value.coerceIn(SCROLL_SPEED_MIN, SCROLL_SPEED_MAX),
             _touchpadScrollSpeed,
             optionalScope,
             optionalDataStore,

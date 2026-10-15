@@ -88,11 +88,11 @@ class TouchpadSettingsTest {
 
             TouchpadSettings.setTouchpadSensitivity(0.0f)
             testScheduler.advanceUntilIdle()
-            assertEquals(0.1f, TouchpadSettings.touchpadSensitivity.value, 1e-5f)
+            assertEquals(TouchpadSettings.SENSITIVITY_MIN, TouchpadSettings.touchpadSensitivity.value, 1e-5f)
 
             TouchpadSettings.setTouchpadSensitivity(4.0f)
             testScheduler.advanceUntilIdle()
-            assertEquals(3.0f, TouchpadSettings.touchpadSensitivity.value, 1e-5f)
+            assertEquals(TouchpadSettings.SENSITIVITY_MAX, TouchpadSettings.touchpadSensitivity.value, 1e-5f)
         }
 
     @Test

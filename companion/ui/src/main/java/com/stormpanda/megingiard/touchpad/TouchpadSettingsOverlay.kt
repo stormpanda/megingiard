@@ -119,10 +119,16 @@ fun TouchpadSettingsOverlay() {
                 valueText = "%.1fx".format(Locale.US, touchpadScrollSpeed),
                 icon = Icons.Rounded.Speed,
                 onDecrement = {
-                    TouchpadSettings.setTouchpadScrollSpeed((((touchpadScrollSpeed - 0.1f) * 10f).roundToInt() / 10f).coerceAtLeast(0.5f))
+                    TouchpadSettings.setTouchpadScrollSpeed(
+                        (((touchpadScrollSpeed - 0.1f) * 10f).roundToInt() / 10f)
+                            .coerceAtLeast(TouchpadSettings.SCROLL_SPEED_MIN),
+                    )
                 },
                 onIncrement = {
-                    TouchpadSettings.setTouchpadScrollSpeed((((touchpadScrollSpeed + 0.1f) * 10f).roundToInt() / 10f).coerceAtMost(3.0f))
+                    TouchpadSettings.setTouchpadScrollSpeed(
+                        (((touchpadScrollSpeed + 0.1f) * 10f).roundToInt() / 10f)
+                            .coerceAtMost(TouchpadSettings.SCROLL_SPEED_MAX),
+                    )
                 },
             )
         }
@@ -133,10 +139,16 @@ fun TouchpadSettingsOverlay() {
             valueText = "%.1fx".format(Locale.US, touchpadSensitivity),
             icon = Icons.Rounded.Speed,
             onDecrement = {
-                TouchpadSettings.setTouchpadSensitivity((((touchpadSensitivity - 0.1f) * 10f).roundToInt() / 10f).coerceAtLeast(0.2f))
+                TouchpadSettings.setTouchpadSensitivity(
+                    (((touchpadSensitivity - 0.1f) * 10f).roundToInt() / 10f)
+                        .coerceAtLeast(TouchpadSettings.SENSITIVITY_MIN),
+                )
             },
             onIncrement = {
-                TouchpadSettings.setTouchpadSensitivity((((touchpadSensitivity + 0.1f) * 10f).roundToInt() / 10f).coerceAtMost(3.0f))
+                TouchpadSettings.setTouchpadSensitivity(
+                    (((touchpadSensitivity + 0.1f) * 10f).roundToInt() / 10f)
+                        .coerceAtMost(TouchpadSettings.SENSITIVITY_MAX),
+                )
             },
         )
 
@@ -175,8 +187,16 @@ fun TouchpadSettingsOverlay() {
                 description = stringResource(R.string.help_touchpad_settings_mirror_dim_desc),
                 valueText = "$touchpadMirrorDim%",
                 icon = Icons.Rounded.BrightnessMedium,
-                onDecrement = { TouchpadSettings.setTouchpadMirrorDim((touchpadMirrorDim - 10).coerceAtLeast(0)) },
-                onIncrement = { TouchpadSettings.setTouchpadMirrorDim((touchpadMirrorDim + 10).coerceAtMost(90)) },
+                onDecrement = {
+                    TouchpadSettings.setTouchpadMirrorDim(
+                        (touchpadMirrorDim - 10).coerceAtLeast(TouchpadSettings.MIRROR_DIM_MIN),
+                    )
+                },
+                onIncrement = {
+                    TouchpadSettings.setTouchpadMirrorDim(
+                        (touchpadMirrorDim + 10).coerceAtMost(TouchpadSettings.MIRROR_DIM_MAX),
+                    )
+                },
             )
         }
     }

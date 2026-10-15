@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.settings.TouchpadSettings
 import com.stormpanda.megingiard.ui.GamepadInfoBox
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadSliderCard
@@ -109,7 +110,7 @@ internal fun LayoutTouchpadSubPageContent(
             title = stringResource(R.string.settings_touchpad_sensitivity),
             description = stringResource(R.string.settings_touchpad_sensitivity_desc),
             value = cfg.sensitivity,
-            valueRange = 0.5f..3.0f,
+            valueRange = TouchpadSettings.SENSITIVITY_MIN..TouchpadSettings.SENSITIVITY_MAX,
             onValueChange = { onUpdate(cfg.copy(sensitivity = it), false) },
             valueLabel = "${(cfg.sensitivity * 10f).roundToInt() / 10f}x",
             step = 0.1f,
@@ -181,11 +182,29 @@ internal fun LayoutTouchpadSubPageContent(
             icon = Icons.Rounded.Speed,
             onDecrement = {
                 val newVal = ((cfg.scrollSpeed - 0.1f) * 10f).roundToInt() / 10f
-                onUpdate(cfg.copy(scrollSpeed = newVal.coerceIn(0.1f, 3.0f)), false)
+                onUpdate(
+                    cfg.copy(
+                        scrollSpeed =
+                            newVal.coerceIn(
+                                TouchpadSettings.SCROLL_SPEED_MIN,
+                                TouchpadSettings.SCROLL_SPEED_MAX,
+                            ),
+                    ),
+                    false,
+                )
             },
             onIncrement = {
                 val newVal = ((cfg.scrollSpeed + 0.1f) * 10f).roundToInt() / 10f
-                onUpdate(cfg.copy(scrollSpeed = newVal.coerceIn(0.1f, 3.0f)), false)
+                onUpdate(
+                    cfg.copy(
+                        scrollSpeed =
+                            newVal.coerceIn(
+                                TouchpadSettings.SCROLL_SPEED_MIN,
+                                TouchpadSettings.SCROLL_SPEED_MAX,
+                            ),
+                    ),
+                    false,
+                )
             },
         )
 

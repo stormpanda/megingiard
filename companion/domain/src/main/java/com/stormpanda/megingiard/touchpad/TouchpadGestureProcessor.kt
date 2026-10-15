@@ -5,6 +5,7 @@ import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.input.TouchAction
 import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.macropad.MouseButton
+import com.stormpanda.megingiard.settings.TouchpadSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -21,10 +22,7 @@ private const val TP_TAP_TIMEOUT_MS = 200L
 private const val TP_TAP_SLOP_PX = 20f
 private const val TP_CLICK_DURATION_MS = 40L
 private const val TP_DOUBLE_TAP_TIMEOUT_MS = 500L
-private const val TP_SENSITIVITY_MIN = 0.1f
 private const val TP_SENSITIVITY_MAX = 10f
-private const val TP_SCROLL_SPEED_MIN = 0.1f
-private const val TP_SCROLL_SPEED_MAX = 10.0f
 private const val TP_SCROLL_THRESHOLD_BASE_PX = 12f
 private const val MAX_TOUCH_SLOTS = 10
 
@@ -59,24 +57,6 @@ class TouchpadGestureProcessor(
     private val config: () -> TouchpadGestureConfig = { TouchpadGestureConfig() },
     private val onHapticFeedback: () -> Unit = {},
 ) {
-    private fun getSensitivity(currentConfig: TouchpadGestureConfig): Float {
-        val s = currentConfig.sensitivity
-        return if (s.isFinite() && s > 0f) {
-            s.coerceIn(TP_SENSITIVITY_MIN, TP_SENSITIVITY_MAX)
-        } else {
-            1.0f
-        }
-    }
-
-    private fun getScrollSpeed(currentConfig: TouchpadGestureConfig): Float {
-        val s = currentConfig.scrollSpeed
-        return if (s.isFinite() && s > 0f) {
-            s.coerceIn(TP_SCROLL_SPEED_MIN, TP_SCROLL_SPEED_MAX)
-        } else {
-            1.0f
-        }
-    }
-
     // ── Touch mode state ────────────────────────────────────────────────────
     private val _touchPos = MutableStateFlow<Pair<Float, Float>?>(null)
 
@@ -205,7 +185,8 @@ class TouchpadGestureProcessor(
             if (currentConfig.twoFingerScrollEnabled && downPositions.size == 2) {
                 if (pointerId == primaryPointer) {
                     scrollAccumY += deltaY
-                    val scrollThreshold = TP_SCROLL_THRESHOLD_BASE_PX / getScrollSpeed(currentConfig) // Sensitivity threshold in pixels
+                    val speed = currentConfig.scrollSpeed.coerceIn(TouchpadSettings.SCROLL_SPEED_MIN, TouchpadSettings.SCROLL_SPEED_MAX)
+                    val scrollThreshold = TP_SCROLL_THRESHOLD_BASE_PX / speed // Sensitivity threshold in pixels
                     val units = (scrollAccumY / scrollThreshold).toInt()
                     if (units != 0) {
                         val directionMultiplier = if (currentConfig.naturalScrollEnabled) 1 else -1
@@ -214,7 +195,7 @@ class TouchpadGestureProcessor(
                     }
                 }
             } else if (pointerId == primaryPointer) {
-                val sens = getSensitivity(currentConfig)
+                val sens = currentConfig.sensitivity.coerceIn(TouchpadSettings.SENSITIVITY_MIN, TP_SENSITIVITY_MAX)
                 val dx = (deltaX * TP_MOUSE_SENSITIVITY * sens).roundToInt()
                 val dy = (deltaY * TP_MOUSE_SENSITIVITY * sens).roundToInt()
                 if (dx != 0 || dy != 0) MouseInjector.moveMouse(dx, dy)
