@@ -66,6 +66,7 @@ import com.stormpanda.megingiard.SwipeGestureType
 import com.stormpanda.megingiard.macropad.HapticStrength
 import com.stormpanda.megingiard.macropad.triggerHapticFeedback
 import com.stormpanda.megingiard.settings.SettingsManager
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -169,6 +170,7 @@ fun QuickMenuGestureTrialOverlay(
     val context = LocalContext.current
 
     var activePostRelease by remember { mutableStateOf<PostReleasePillState?>(null) }
+    var postReleaseJob by remember { mutableStateOf<Job?>(null) }
     val postReleaseAlpha = remember { Animatable(1f) }
 
     var activeDragType by remember { mutableStateOf<SwipeGestureType?>(null) }
@@ -199,19 +201,21 @@ fun QuickMenuGestureTrialOverlay(
             triggerHapticFeedback(context, HapticStrength.MEDIUM)
 
             activePostRelease = PostReleasePillState(type, visualDp)
-            coroutineScope.launch {
-                postReleaseAlpha.snapTo(1f)
-                // Blink twice
-                postReleaseAlpha.animateTo(0.2f, tween(100))
-                postReleaseAlpha.animateTo(1f, tween(100))
-                postReleaseAlpha.animateTo(0.2f, tween(100))
-                postReleaseAlpha.animateTo(1f, tween(100))
-                // Reside there for a moment (1.2 seconds)
-                delay(1200L)
-                // Disappear smoothly (300ms)
-                postReleaseAlpha.animateTo(0f, tween(300))
-                activePostRelease = null
-            }
+            postReleaseJob?.cancel()
+            postReleaseJob =
+                coroutineScope.launch {
+                    postReleaseAlpha.snapTo(1f)
+                    // Blink twice
+                    postReleaseAlpha.animateTo(0.2f, tween(100))
+                    postReleaseAlpha.animateTo(1f, tween(100))
+                    postReleaseAlpha.animateTo(0.2f, tween(100))
+                    postReleaseAlpha.animateTo(1f, tween(100))
+                    // Reside there for a moment (1.2 seconds)
+                    delay(1200L)
+                    // Disappear smoothly (300ms)
+                    postReleaseAlpha.animateTo(0f, tween(300))
+                    activePostRelease = null
+                }
         }
     }
 

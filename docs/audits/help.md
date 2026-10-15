@@ -222,7 +222,7 @@ None identified — `HelpModal` and onboarding composables render only on explic
 - [x] **`[HP-06]`** — Delete dead `AppTutorialModal.kt`, standalone `WelcomeTutorialDialog` / `QuickMenuTutorialDialog` wrappers, and unused imports *(Complexity: High, Risk: Low)*
 - [x] **`[HP-07]`** — Remove ghost `showMacroEditorTutorial` setting, dead `OnboardingWizardManager.skipWizard()`, and orphaned strings *(Complexity: Medium, Risk: Low)*
 - [x] **`[HP-08]`** — Derive `OnboardingWizardManager.steps` from `activeStepIndex` and remove redundant `activeStepIndex` param from `OnboardingStepper` *(Complexity: Medium, Risk: Low)*
-- [ ] **`[HP-09]`** — Cancel prior `postReleaseAlpha` animation job on rapid consecutive swipes in `QuickMenuGestureTrialOverlay` *(Complexity: Low, Risk: Low)*
+- [x] **`[HP-09]`** — Cancel prior `postReleaseAlpha` animation job on rapid consecutive swipes in `QuickMenuGestureTrialOverlay` *(Complexity: Low, Risk: Low)*
 - [ ] **`[HP-10]`** — Consolidate duplicate `ON_RESUME` + 1s polling loops into shared hook and fix missing `isUsbActive` poll in `PrivdReconnectPromptDialog` *(Complexity: Medium, Risk: Low)*
 - [ ] **`[HP-11]`** — Extract shared wizard card scaffold, root-bridge activation helpers, and deduplicate locale lookup *(Complexity: Medium, Risk: Low)*
 - [ ] **`[HP-12]`** — Inline single-use `ensureMacroPadModeForProfile` closure in `QuickMenu.kt` *(Complexity: Low, Risk: Low)*
