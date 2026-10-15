@@ -53,7 +53,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -80,9 +79,6 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.onboarding.FinishedStepContent
 import com.stormpanda.megingiard.ui.onboarding.OnboardingWizardCardScaffold
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 private const val TAG = "PrivdSetupWizard"
 private val PRD_EXAMPLE_BOX_SHAPE = RoundedCornerShape(8.dp)
@@ -92,7 +88,10 @@ private val PRD_DIALOG_MARGIN = 16.dp
 private val SW_GAP = 12.dp
 private val SW_SECTION_GAP = 8.dp
 private val SW_CHECKLIST_GAP = 6.dp
+private val SW_EXAMPLE_LINE_GAP = 4.dp
 private val SW_CHECKLIST_ICON_SIZE = 18.dp
+private val SW_SPINNER_STROKE = 2.dp
+private const val SW_PENDING_ICON_ALPHA = 0.6f
 
 /**
  * On-device Wireless-Debugging bootstrap wizard for Privileged Mode.
@@ -112,22 +111,18 @@ internal fun PrivdSetupWizardDialog(
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     val colors = LocalAppColors.current
     val stage by viewModel.privdBootstrapStage.collectAsStateWithLifecycle()
     val lastError by viewModel.privdLastError.collectAsStateWithLifecycle()
+    val isBusy = stage != BootstrapStage.IDLE && stage != BootstrapStage.DONE
 
     var step by rememberSaveable { mutableStateOf(0) }
     var isNextAnimation by remember { mutableStateOf(true) }
     var connectPort by rememberSaveable { mutableStateOf("") }
     var pairPort by rememberSaveable { mutableStateOf("") }
     var pairCode by rememberSaveable { mutableStateOf("") }
-    var pairError by remember { mutableStateOf(false) }
     var hasAttemptedSubmit by remember { mutableStateOf(false) }
     var step1Error by remember { mutableStateOf(false) }
-    var step1Busy by remember { mutableStateOf(false) }
-    var pairBusy by remember { mutableStateOf(false) }
-    var bootstrapBusy by remember { mutableStateOf(false) }
 
     val fieldColors =
         OutlinedTextFieldDefaults.colors(
@@ -189,7 +184,6 @@ internal fun PrivdSetupWizardDialog(
         }
         if (step != 2) {
             hasAttemptedSubmit = false
-            pairError = false
         }
     }
 
@@ -198,10 +192,10 @@ internal fun PrivdSetupWizardDialog(
     }
 
     BackHandler(enabled = true) {
-        if (step > 0 && step < 3 && !step1Busy && !pairBusy && !bootstrapBusy) {
+        if (step > 0 && step < 3 && !isBusy) {
             isNextAnimation = false
             step--
-        } else if (!step1Busy && !pairBusy && !bootstrapBusy) {
+        } else if (!isBusy) {
             AppLog.i(TAG, "PrivdSetupWizardDialog: Back handler triggered, resetting and dismissing")
             PrivdBootstrapper.resetStage()
             onDismiss()
@@ -217,7 +211,7 @@ internal fun PrivdSetupWizardDialog(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
                     onClick = {
-                        if (!step1Busy && !pairBusy && !bootstrapBusy) {
+                        if (!isBusy) {
                             AppLog.i(TAG, "PrivdSetupWizardDialog: Scrim clicked, resetting and dismissing")
                             PrivdBootstrapper.resetStage()
                             onDismiss()
@@ -255,7 +249,7 @@ internal fun PrivdSetupWizardDialog(
                         1 -> {
                             Step2ConnectPort(
                                 connectPort = connectPort,
-                                busy = pairBusy || bootstrapBusy,
+                                busy = isBusy,
                                 fieldColors = fieldColors,
                                 focusManager = focusManager,
                                 onConnectPortChange = { connectPort = it.filter { ch -> ch.isDigit() }.take(5) },
@@ -266,8 +260,7 @@ internal fun PrivdSetupWizardDialog(
                             Step3Pairing(
                                 pairPort = pairPort,
                                 code = pairCode,
-                                busy = pairBusy || bootstrapBusy,
-                                error = pairError,
+                                busy = isBusy,
                                 hasAttemptedSubmit = hasAttemptedSubmit,
                                 lastError = lastError,
                                 stage = stage,
@@ -299,7 +292,7 @@ internal fun PrivdSetupWizardDialog(
                 when {
                     step == 0 -> {
                         OutlinedButton(
-                            enabled = !step1Busy,
+                            enabled = !isBusy,
                             onClick = {
                                 val devOptionsEnabled =
                                     Settings.Global.getInt(
@@ -349,7 +342,7 @@ internal fun PrivdSetupWizardDialog(
 
                     step in 1..2 -> {
                         OutlinedButton(
-                            enabled = !step1Busy && !pairBusy && !bootstrapBusy,
+                            enabled = !isBusy,
                             onClick = {
                                 isNextAnimation = false
                                 step--
@@ -369,9 +362,9 @@ internal fun PrivdSetupWizardDialog(
 
                 val isNextEnabled =
                     when (step) {
-                        0 -> !step1Busy
+                        0 -> !isBusy
                         1 -> connectPort.length == 5
-                        2 -> pairCode.length == 6 && pairPort.length == 5 && !pairBusy && !bootstrapBusy
+                        2 -> pairCode.length == 6 && pairPort.length == 5 && !isBusy
                         3 -> true
                         else -> false
                     }
@@ -381,48 +374,38 @@ internal fun PrivdSetupWizardDialog(
                     onClick = {
                         when (step) {
                             0 -> {
-                                step1Busy = true
-                                scope.launch {
-                                    val (isUsbDebuggingOn, isWirelessDebuggingOn, hasCreds) =
-                                        withContext(Dispatchers.IO) {
-                                            val usb =
-                                                Settings.Global.getInt(
-                                                    context.contentResolver,
-                                                    Settings.Global.ADB_ENABLED,
-                                                    0,
-                                                ) != 0
-                                            val wireless =
-                                                Settings.Global.getInt(
-                                                    context.contentResolver,
-                                                    "adb_wifi_enabled",
-                                                    0,
-                                                ) != 0
-                                            val creds = PrivdBootstrapper.hasCredentials(context)
-                                            Triple(usb, wireless, creds)
-                                        }
+                                val isUsbDebuggingOn =
+                                    Settings.Global.getInt(
+                                        context.contentResolver,
+                                        Settings.Global.ADB_ENABLED,
+                                        0,
+                                    ) != 0
+                                val isWirelessDebuggingOn =
+                                    Settings.Global.getInt(
+                                        context.contentResolver,
+                                        "adb_wifi_enabled",
+                                        0,
+                                    ) != 0
+                                val hasCreds = PrivdBootstrapper.hasCredentials(context)
 
-                                    if (!isUsbDebuggingOn || !isWirelessDebuggingOn) {
-                                        step1Busy = false
-                                        step1Error = true
-                                    } else {
-                                        step1Error = false
-                                        if (hasCreds) {
-                                            viewModel.privdBootstrap(context, "127.0.0.1") { ok ->
-                                                step1Busy = false
-                                                if (ok) {
-                                                    isNextAnimation = true
-                                                    step = 3
-                                                } else {
-                                                    PrivdBootstrapper.resetStage()
-                                                    isNextAnimation = true
-                                                    step = 1
-                                                }
+                                if (!isUsbDebuggingOn || !isWirelessDebuggingOn) {
+                                    step1Error = true
+                                } else {
+                                    step1Error = false
+                                    if (hasCreds) {
+                                        viewModel.privdBootstrap(context, "127.0.0.1") { ok ->
+                                            if (ok) {
+                                                isNextAnimation = true
+                                                step = 3
+                                            } else {
+                                                PrivdBootstrapper.resetStage()
+                                                isNextAnimation = true
+                                                step = 1
                                             }
-                                        } else {
-                                            step1Busy = false
-                                            isNextAnimation = true
-                                            step = 1
                                         }
+                                    } else {
+                                        isNextAnimation = true
+                                        step = 1
                                     }
                                 }
                             }
@@ -442,27 +425,19 @@ internal fun PrivdSetupWizardDialog(
                                     )
                                     PrivdBootstrapper.setScreenConnectPort(connectPortInt)
                                     hasAttemptedSubmit = true
-                                    pairBusy = true
-                                    pairError = false
                                     viewModel.privdPair(context, "127.0.0.1", portInt, pairCode) { ok ->
                                         AppLog.i(TAG, "PrivdSetupWizardDialog: Pairing result ok=$ok")
                                         if (ok) {
-                                            bootstrapBusy = true
                                             viewModel.privdBootstrap(context, "127.0.0.1") { bOk ->
                                                 AppLog.i(TAG, "PrivdSetupWizardDialog: Bootstrap result bOk=$bOk")
-                                                bootstrapBusy = false
-                                                pairBusy = false
                                                 if (bOk) {
                                                     isNextAnimation = true
                                                     step = 3
                                                 } else {
-                                                    pairError = true
                                                     PrivdBootstrapper.resetStage()
                                                 }
                                             }
                                         } else {
-                                            pairBusy = false
-                                            pairError = true
                                             PrivdBootstrapper.resetStage()
                                         }
                                     }
@@ -481,7 +456,7 @@ internal fun PrivdSetupWizardDialog(
                         text =
                             when {
                                 step == 0 -> {
-                                    if (step1Busy) {
+                                    if (isBusy) {
                                         stringResource(R.string.privd_wizard_bootstrapping)
                                     } else {
                                         stringResource(R.string.privd_wizard_next)
@@ -493,7 +468,7 @@ internal fun PrivdSetupWizardDialog(
                                 }
 
                                 step == 2 -> {
-                                    if (pairBusy || bootstrapBusy) {
+                                    if (isBusy) {
                                         stringResource(R.string.privd_wizard_pairing)
                                     } else {
                                         stringResource(R.string.privd_wizard_step2_pair)
@@ -603,7 +578,7 @@ private fun Step2ConnectPort(
                 Modifier
                     .fillMaxWidth()
                     .background(colors.surfaceVariant, PRD_EXAMPLE_BOX_SHAPE)
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                    .padding(horizontal = SW_GAP, vertical = SW_SECTION_GAP),
         ) {
             Text(
                 text = exampleConnectPortString,
@@ -636,7 +611,6 @@ private fun Step3Pairing(
     pairPort: String,
     code: String,
     busy: Boolean,
-    error: Boolean,
     hasAttemptedSubmit: Boolean,
     lastError: PrivdError?,
     stage: BootstrapStage,
@@ -683,8 +657,8 @@ private fun Step3Pairing(
                     Modifier
                         .fillMaxWidth()
                         .background(colors.surfaceVariant, PRD_EXAMPLE_BOX_SHAPE)
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                        .padding(horizontal = SW_GAP, vertical = SW_SECTION_GAP),
+                verticalArrangement = Arrangement.spacedBy(SW_EXAMPLE_LINE_GAP),
             ) {
                 Text(
                     text = exampleCodeString,
@@ -742,7 +716,7 @@ private fun Step3Pairing(
             }
         }
 
-        if (hasAttemptedSubmit && error && !isProgressActive) {
+        if (hasAttemptedSubmit && lastError != null && !isProgressActive) {
             val errorRes = lastError.descriptionResId() ?: R.string.privd_error_pairing_failed
             Text(
                 text = stringResource(errorRes),
@@ -771,16 +745,28 @@ fun PrivdChecklistRow(
         if (status == ChecklistStatus.ACTIVE) {
             CircularProgressIndicator(
                 modifier = Modifier.size(SW_CHECKLIST_ICON_SIZE),
-                strokeWidth = 2.dp,
+                strokeWidth = SW_SPINNER_STROKE,
                 color = colors.accent,
             )
         } else {
             val (icon, tint) =
                 when (status) {
-                    ChecklistStatus.PENDING -> Icons.Rounded.RadioButtonUnchecked to colors.onSurfaceSecondary.copy(alpha = 0.6f)
-                    ChecklistStatus.DONE -> Icons.Rounded.CheckCircle to colors.accent
-                    ChecklistStatus.FAILED -> Icons.Rounded.Cancel to colors.error
-                    ChecklistStatus.ACTIVE -> error("unreachable")
+                    ChecklistStatus.PENDING -> {
+                        Icons.Rounded.RadioButtonUnchecked to
+                            colors.onSurfaceSecondary.copy(alpha = SW_PENDING_ICON_ALPHA)
+                    }
+
+                    ChecklistStatus.DONE -> {
+                        Icons.Rounded.CheckCircle to colors.accent
+                    }
+
+                    ChecklistStatus.FAILED -> {
+                        Icons.Rounded.Cancel to colors.error
+                    }
+
+                    ChecklistStatus.ACTIVE -> {
+                        error("unreachable")
+                    }
                 }
             Icon(
                 imageVector = icon,
