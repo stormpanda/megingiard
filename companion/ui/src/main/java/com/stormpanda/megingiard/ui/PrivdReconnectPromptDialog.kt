@@ -1,36 +1,23 @@
 package com.stormpanda.megingiard.ui
 
 import android.app.Activity
-import android.app.ActivityOptions
-import android.content.Intent
-import android.os.SystemClock
-import android.provider.Settings
-import android.view.Display
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -40,13 +27,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -56,30 +40,19 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.onboarding.OnboardingStepId
 import com.stormpanda.megingiard.onboarding.OnboardingStepState
-import com.stormpanda.megingiard.privd.PServiceBridge
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.ui.onboarding.AccessibilityStepContent
 import com.stormpanda.megingiard.ui.onboarding.FinishedStepContent
-import com.stormpanda.megingiard.ui.onboarding.OnboardingStepper
+import com.stormpanda.megingiard.ui.onboarding.OnboardingWizardCardScaffold
 import com.stormpanda.megingiard.ui.onboarding.PrivilegedStepContent
+import com.stormpanda.megingiard.ui.onboarding.launchSystemAccessibilitySettings
+import com.stormpanda.megingiard.ui.onboarding.rememberRootBridgeActions
 import com.stormpanda.megingiard.ui.onboarding.rememberSystemSetupStatus
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 private const val TAG = "PrivdPromptDialog"
 
-private val PRD_DIALOG_MAX_WIDTH = 480.dp
-private val PRD_DIALOG_CORNER_RADIUS = 16.dp
-private val PRD_DIALOG_SHAPE = RoundedCornerShape(PRD_DIALOG_CORNER_RADIUS)
-private val PRD_DIALOG_BORDER_WIDTH = 2.dp
-private val PRD_DIALOG_SHADOW_ELEVATION = 12.dp
-private val PRD_DIALOG_PADDING_HORIZONTAL = 20.dp
-private val PRD_DIALOG_PADDING_TOP = 20.dp
-private val PRD_DIALOG_PADDING_BOTTOM = 16.dp
 private const val PRD_SCRIM_ALPHA = 0.55f
 private val PRD_DIALOG_MARGIN = 16.dp
 private val PRD_BUTTON_SPACING = 8.dp
@@ -92,7 +65,6 @@ private val PRD_BUTTON_SPACING = 8.dp
 @Composable
 fun PrivdReconnectPromptDialog(onDone: () -> Unit) {
     val context = LocalContext.current
-    val colors = LocalAppColors.current
 
     val initialAccessibilityActive =
         rememberSaveable {
@@ -131,12 +103,10 @@ fun PrivdReconnectPromptDialog(onDone: () -> Unit) {
     var isNextAnimation by remember { mutableStateOf(true) }
 
     val setupStatus = rememberSystemSetupStatus(currentStepState.id)
+    val rootBridgeActions = rememberRootBridgeActions(setupStatus)
     val privdState by PrivdManager.state.collectAsStateWithLifecycle()
 
     val isRootBridgeAvailable = remember { PrivdManager.isRootBridgeAvailable }
-    var isActivatingAccessibility by remember { mutableStateOf(false) }
-    var isActivatingPrivd by remember { mutableStateOf(false) }
-    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(setupStatus.isAccessibilityActive) {
         if (!setupStatus.isAccessibilityActive) {
@@ -145,62 +115,9 @@ fun PrivdReconnectPromptDialog(onDone: () -> Unit) {
     }
 
     val startAutoSetup = {
+        AppLog.d(TAG, "Starting multi-stage auto-setup from reconnect prompt")
         MegingiardAccessibilityService.startMultiStageAutoSetup(context)
         setupStatus.isAutoSetupActive = true
-    }
-
-    val activateAccessibilityViaRoot = {
-        if (!isActivatingAccessibility) {
-            isActivatingAccessibility = true
-            coroutineScope.launch(Dispatchers.IO) {
-                val startTime = SystemClock.uptimeMillis()
-                val success = PServiceBridge.enableAccessibility(context)
-                val elapsed = SystemClock.uptimeMillis() - startTime
-                if (elapsed < 1000L) {
-                    delay(1000L - elapsed)
-                }
-                val active = MegingiardAccessibilityService.isEnabled(context)
-                withContext(Dispatchers.Main) {
-                    setupStatus.isAccessibilityActive = active || success
-                    isActivatingAccessibility = false
-                }
-            }
-        }
-    }
-
-    val activatePrivdViaRoot = {
-        if (!isActivatingPrivd) {
-            isActivatingPrivd = true
-            coroutineScope.launch(Dispatchers.IO) {
-                val startTime = SystemClock.uptimeMillis()
-                PrivdManager.connect(context)
-                val elapsed = SystemClock.uptimeMillis() - startTime
-                if (elapsed < 1000L) {
-                    delay(1000L - elapsed)
-                }
-                withContext(Dispatchers.Main) {
-                    isActivatingPrivd = false
-                }
-            }
-        }
-    }
-
-    val launchAccessibilitySettings = {
-        try {
-            val intent =
-                Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
-                    addFlags(
-                        Intent.FLAG_ACTIVITY_NEW_TASK or
-                            Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
-                            Intent.FLAG_ACTIVITY_CLEAR_TOP,
-                    )
-                }
-            val options = ActivityOptions.makeBasic()
-            options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-            context.startActivity(intent, options.toBundle())
-        } catch (e: Exception) {
-            AppLog.e(TAG, "Failed to open accessibility settings from reconnect dialog: ${e.message}")
-        }
     }
 
     BackHandler(enabled = true) {
@@ -224,39 +141,7 @@ fun PrivdReconnectPromptDialog(onDone: () -> Unit) {
                 ),
         contentAlignment = Alignment.Center,
     ) {
-        Column(
-            modifier =
-                Modifier
-                    .widthIn(max = PRD_DIALOG_MAX_WIDTH)
-                    .padding(horizontal = PRD_DIALOG_MARGIN)
-                    .animateContentSize(
-                        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                        alignment = Alignment.Center,
-                    ).shadow(PRD_DIALOG_SHADOW_ELEVATION, PRD_DIALOG_SHAPE)
-                    .clip(PRD_DIALOG_SHAPE)
-                    .background(colors.surface)
-                    .border(
-                        PRD_DIALOG_BORDER_WIDTH,
-                        brush = rememberBezelBrush(),
-                        shape = PRD_DIALOG_SHAPE,
-                    ).padding(
-                        start = PRD_DIALOG_PADDING_HORIZONTAL,
-                        end = PRD_DIALOG_PADDING_HORIZONTAL,
-                        top = PRD_DIALOG_PADDING_TOP,
-                        bottom = PRD_DIALOG_PADDING_BOTTOM,
-                    ).clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {}, // absorb clicks
-                    ),
-        ) {
-            // Header Stepper Indicator
-            OnboardingStepper(
-                steps = steps,
-            )
-
-            Spacer(modifier = Modifier.height(PRD_DIALOG_MARGIN))
-
+        OnboardingWizardCardScaffold(steps = steps) {
             // Step Content Host
             AnimatedContent(
                 targetState = currentStepState.id,
@@ -275,10 +160,10 @@ fun PrivdReconnectPromptDialog(onDone: () -> Unit) {
                     OnboardingStepId.ACCESSIBILITY -> {
                         AccessibilityStepContent(
                             isAccessibilityActive = setupStatus.isAccessibilityActive,
-                            onLaunchAccessibilitySettings = launchAccessibilitySettings,
+                            onLaunchAccessibilitySettings = { launchSystemAccessibilitySettings(context) },
                             isRootBridgeAvailable = isRootBridgeAvailable,
-                            onActivateViaRootBridge = activateAccessibilityViaRoot,
-                            isActivating = isActivatingAccessibility,
+                            onActivateViaRootBridge = rootBridgeActions::activateAccessibility,
+                            isActivating = rootBridgeActions.isActivatingAccessibility,
                         )
                     }
 
@@ -294,8 +179,8 @@ fun PrivdReconnectPromptDialog(onDone: () -> Unit) {
                             onStartAutoSetup = startAutoSetup,
                             isAutoSetupActive = setupStatus.isAutoSetupActive,
                             isRootBridgeAvailable = isRootBridgeAvailable,
-                            onActivateViaRootBridge = activatePrivdViaRoot,
-                            isActivatingRootBridge = isActivatingPrivd,
+                            onActivateViaRootBridge = rootBridgeActions::activatePrivd,
+                            isActivatingRootBridge = rootBridgeActions.isActivatingPrivd,
                             titleText =
                                 stringResource(
                                     if (isRootBridgeAvailable) {

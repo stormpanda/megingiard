@@ -11,16 +11,12 @@ import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -33,7 +29,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -63,8 +58,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -85,23 +78,14 @@ import com.stormpanda.megingiard.onboarding.OnboardingStepId
 import com.stormpanda.megingiard.onboarding.OnboardingStepState
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.onboarding.FinishedStepContent
-import com.stormpanda.megingiard.ui.onboarding.OnboardingStepper
-import com.stormpanda.megingiard.ui.rememberBezelBrush
+import com.stormpanda.megingiard.ui.onboarding.OnboardingWizardCardScaffold
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private const val TAG = "PrivdSetupWizard"
-private val PRD_DIALOG_MAX_WIDTH = 480.dp
-private val PRD_DIALOG_CORNER_RADIUS = 16.dp
-private val PRD_DIALOG_SHAPE = RoundedCornerShape(PRD_DIALOG_CORNER_RADIUS)
 private val PRD_EXAMPLE_BOX_SHAPE = RoundedCornerShape(8.dp)
-private val PRD_DIALOG_BORDER_WIDTH = 2.dp
-private val PRD_DIALOG_SHADOW_ELEVATION = 12.dp
-private val PRD_DIALOG_PADDING_HORIZONTAL = 20.dp
-private val PRD_DIALOG_PADDING_TOP = 20.dp
-private val PRD_DIALOG_PADDING_BOTTOM = 16.dp
 private const val PRD_SCRIM_ALPHA = 0.55f
 private val PRD_DIALOG_MARGIN = 16.dp
 
@@ -114,7 +98,7 @@ private val SW_CHECKLIST_ICON_SIZE = 18.dp
  * On-device Wireless-Debugging bootstrap wizard for Privileged Mode.
  *
  * Renders as a 4-step modal dialog using the reusable Welcome Tour wizard composables
- * ([OnboardingStepper], [FinishedStepContent], dark backdrop scrim, bezel card container).
+ * ([OnboardingWizardCardScaffold], [FinishedStepContent], dark backdrop scrim, bezel card container).
  *
  * Steps:
  *  1. **Menu Description** — step-by-step instructions + open system settings button.
@@ -242,39 +226,7 @@ internal fun PrivdSetupWizardDialog(
                 ),
         contentAlignment = Alignment.Center,
     ) {
-        Column(
-            modifier =
-                Modifier
-                    .widthIn(max = PRD_DIALOG_MAX_WIDTH)
-                    .padding(horizontal = PRD_DIALOG_MARGIN)
-                    .animateContentSize(
-                        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                        alignment = Alignment.Center,
-                    ).shadow(PRD_DIALOG_SHADOW_ELEVATION, PRD_DIALOG_SHAPE)
-                    .clip(PRD_DIALOG_SHAPE)
-                    .background(colors.surface)
-                    .border(
-                        PRD_DIALOG_BORDER_WIDTH,
-                        brush = rememberBezelBrush(),
-                        shape = PRD_DIALOG_SHAPE,
-                    ).padding(
-                        start = PRD_DIALOG_PADDING_HORIZONTAL,
-                        end = PRD_DIALOG_PADDING_HORIZONTAL,
-                        top = PRD_DIALOG_PADDING_TOP,
-                        bottom = PRD_DIALOG_PADDING_BOTTOM,
-                    ).clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {}, // absorb clicks
-                    ),
-        ) {
-            // Header Stepper Indicator
-            OnboardingStepper(
-                steps = steps,
-            )
-
-            Spacer(modifier = Modifier.height(PRD_DIALOG_MARGIN))
-
+        OnboardingWizardCardScaffold(steps = steps) {
             // Step Content Host
             Box(
                 modifier =

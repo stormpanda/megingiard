@@ -3,6 +3,7 @@ package com.stormpanda.megingiard.ui.onboarding
 import android.app.Activity
 import android.app.ActivityOptions
 import android.app.LocaleManager
+import android.content.Context
 import android.content.Intent
 import android.os.SystemClock
 import android.provider.Settings
@@ -28,6 +29,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -108,6 +110,7 @@ import com.stormpanda.megingiard.ui.QuickMenuGestureTrialOverlay
 import com.stormpanda.megingiard.ui.QuickMenuStepContent
 import com.stormpanda.megingiard.ui.WelcomeStepContent
 import com.stormpanda.megingiard.ui.rememberBezelBrush
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -125,6 +128,7 @@ private val OW_DIALOG_SHADOW_ELEVATION = 12.dp
 private val OW_DIALOG_PADDING_HORIZONTAL = 20.dp
 private val OW_DIALOG_PADDING_TOP = 20.dp
 private val OW_DIALOG_PADDING_BOTTOM = 16.dp
+private val OW_DIALOG_HORIZONTAL_MARGIN = 16.dp
 
 private val OW_STEPPER_DOT_SIZE = 24.dp
 
@@ -141,6 +145,124 @@ private val OW_BUTTON_SPACED_BY = 8.dp
 private const val OW_WARNING_ALPHA_BG = 0.12f
 private const val OW_WARNING_ALPHA_BORDER = 0.5f
 private const val OW_STATUS_POLL_DELAY_MS = 1000L
+private const val OW_ROOT_BRIDGE_MIN_DURATION_MS = 1000L
+
+internal fun resolveSystemLocale(context: Context): Locale {
+    val lm = context.getSystemService(LocaleManager::class.java)
+    val locales = lm?.systemLocales
+    return if (locales != null && !locales.isEmpty) locales.get(0) else Locale.getDefault()
+}
+
+internal fun launchSystemAccessibilitySettings(context: Context) {
+    try {
+        val intent =
+            Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+                addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP,
+                )
+            }
+        val options = ActivityOptions.makeBasic()
+        options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+        context.startActivity(intent, options.toBundle())
+    } catch (e: Exception) {
+        AppLog.e(TAG, "Failed to open accessibility settings: ${e.message}")
+    }
+}
+
+internal class RootBridgeActionsState(
+    private val context: Context,
+    private val coroutineScope: CoroutineScope,
+    private val setupStatus: SystemSetupStatus,
+) {
+    var isActivatingAccessibility by mutableStateOf(false)
+        private set
+    var isActivatingPrivd by mutableStateOf(false)
+        private set
+
+    fun activateAccessibility() {
+        if (isActivatingAccessibility) return
+        isActivatingAccessibility = true
+        coroutineScope.launch(Dispatchers.IO) {
+            val startTime = SystemClock.uptimeMillis()
+            val success = PServiceBridge.enableAccessibility(context)
+            val elapsed = SystemClock.uptimeMillis() - startTime
+            if (elapsed < OW_ROOT_BRIDGE_MIN_DURATION_MS) {
+                delay(OW_ROOT_BRIDGE_MIN_DURATION_MS - elapsed)
+            }
+            val active = MegingiardAccessibilityService.isEnabled(context)
+            withContext(Dispatchers.Main) {
+                setupStatus.isAccessibilityActive = active || success
+                isActivatingAccessibility = false
+            }
+        }
+    }
+
+    fun activatePrivd() {
+        if (isActivatingPrivd) return
+        isActivatingPrivd = true
+        coroutineScope.launch(Dispatchers.IO) {
+            val startTime = SystemClock.uptimeMillis()
+            PrivdManager.connect(context)
+            val elapsed = SystemClock.uptimeMillis() - startTime
+            if (elapsed < OW_ROOT_BRIDGE_MIN_DURATION_MS) {
+                delay(OW_ROOT_BRIDGE_MIN_DURATION_MS - elapsed)
+            }
+            withContext(Dispatchers.Main) {
+                isActivatingPrivd = false
+            }
+        }
+    }
+}
+
+@Composable
+internal fun rememberRootBridgeActions(setupStatus: SystemSetupStatus): RootBridgeActionsState {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    return remember(context, coroutineScope, setupStatus) {
+        RootBridgeActionsState(context, coroutineScope, setupStatus)
+    }
+}
+
+@Composable
+internal fun OnboardingWizardCardScaffold(
+    steps: List<OnboardingStepState>,
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val colors = LocalAppColors.current
+    Column(
+        modifier =
+            modifier
+                .widthIn(max = OW_DIALOG_MAX_WIDTH)
+                .padding(horizontal = OW_DIALOG_HORIZONTAL_MARGIN)
+                .animateContentSize(
+                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                    alignment = Alignment.Center,
+                ).shadow(OW_DIALOG_SHADOW_ELEVATION, OW_DIALOG_SHAPE)
+                .clip(OW_DIALOG_SHAPE)
+                .background(colors.surface)
+                .border(
+                    OW_DIALOG_BORDER_WIDTH,
+                    brush = rememberBezelBrush(),
+                    shape = OW_DIALOG_SHAPE,
+                ).padding(
+                    start = OW_DIALOG_PADDING_HORIZONTAL,
+                    end = OW_DIALOG_PADDING_HORIZONTAL,
+                    top = OW_DIALOG_PADDING_TOP,
+                    bottom = OW_DIALOG_PADDING_BOTTOM,
+                ).clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {}, // absorb clicks
+                ),
+    ) {
+        OnboardingStepper(steps = steps)
+        Spacer(modifier = Modifier.height(OW_DIALOG_HORIZONTAL_MARGIN))
+        content()
+    }
+}
 
 internal class SystemSetupStatus(
     initialAccessibilityActive: Boolean,
@@ -223,7 +345,6 @@ fun OnboardingWizardDialog(
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
-    val colors = LocalAppColors.current
     val steps by OnboardingWizardManager.steps.collectAsStateWithLifecycle()
     val activeStepIndex by OnboardingWizardManager.activeStepIndex.collectAsStateWithLifecycle()
 
@@ -234,77 +355,18 @@ fun OnboardingWizardDialog(
 
     val isQuickMenuStep = currentStepState.id == OnboardingStepId.QUICK_MENU
     val setupStatus = rememberSystemSetupStatus(currentStepState.id)
+    val rootBridgeActions = rememberRootBridgeActions(setupStatus)
     val privdState by PrivdManager.state.collectAsStateWithLifecycle()
 
     val isRootBridgeAvailable = remember { PrivdManager.isRootBridgeAvailable }
     val isLanguageSupported =
-        remember {
-            val lm = context.getSystemService(LocaleManager::class.java)
-            val locales = lm?.systemLocales
-            val locale = if (locales != null && !locales.isEmpty) locales.get(0) else Locale.getDefault()
-            AutoSetupLanguageConfig.fromLocaleOrNull(locale) != null
+        remember(context) {
+            AutoSetupLanguageConfig.fromLocaleOrNull(resolveSystemLocale(context)) != null
         }
-    var isActivatingAccessibility by remember { mutableStateOf(false) }
-    var isActivatingPrivd by remember { mutableStateOf(false) }
-    val coroutineScope = rememberCoroutineScope()
 
     val startAutoSetup = {
         MegingiardAccessibilityService.startMultiStageAutoSetup(context)
         setupStatus.isAutoSetupActive = true
-    }
-
-    val launchAccessibilitySettings = {
-        try {
-            val intent =
-                Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
-                    addFlags(
-                        Intent.FLAG_ACTIVITY_NEW_TASK or
-                            Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
-                            Intent.FLAG_ACTIVITY_CLEAR_TOP,
-                    )
-                }
-            val options = ActivityOptions.makeBasic()
-            options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-            context.startActivity(intent, options.toBundle())
-        } catch (e: Exception) {
-            AppLog.e(TAG, "Failed to open accessibility settings from onboarding: ${e.message}")
-        }
-    }
-
-    val activateAccessibilityViaRoot = {
-        if (!isActivatingAccessibility) {
-            isActivatingAccessibility = true
-            coroutineScope.launch(Dispatchers.IO) {
-                val startTime = SystemClock.uptimeMillis()
-                val success = PServiceBridge.enableAccessibility(context)
-                val elapsed = SystemClock.uptimeMillis() - startTime
-                if (elapsed < 1000L) {
-                    delay(1000L - elapsed)
-                }
-                val active = MegingiardAccessibilityService.isEnabled(context)
-                withContext(Dispatchers.Main) {
-                    setupStatus.isAccessibilityActive = active || success
-                    isActivatingAccessibility = false
-                }
-            }
-        }
-    }
-
-    val activatePrivdViaRoot = {
-        if (!isActivatingPrivd) {
-            isActivatingPrivd = true
-            coroutineScope.launch(Dispatchers.IO) {
-                val startTime = SystemClock.uptimeMillis()
-                PrivdManager.connect(context)
-                val elapsed = SystemClock.uptimeMillis() - startTime
-                if (elapsed < 1000L) {
-                    delay(1000L - elapsed)
-                }
-                withContext(Dispatchers.Main) {
-                    isActivatingPrivd = false
-                }
-            }
-        }
     }
 
     BackHandler(enabled = true) {
@@ -316,39 +378,7 @@ fun OnboardingWizardDialog(
     }
 
     val wizardCardContent: @Composable () -> Unit = {
-        Column(
-            modifier =
-                Modifier
-                    .widthIn(max = OW_DIALOG_MAX_WIDTH)
-                    .padding(horizontal = 16.dp)
-                    .animateContentSize(
-                        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                        alignment = Alignment.Center,
-                    ).shadow(OW_DIALOG_SHADOW_ELEVATION, OW_DIALOG_SHAPE)
-                    .clip(OW_DIALOG_SHAPE)
-                    .background(colors.surface)
-                    .border(
-                        OW_DIALOG_BORDER_WIDTH,
-                        brush = rememberBezelBrush(),
-                        shape = OW_DIALOG_SHAPE,
-                    ).padding(
-                        start = OW_DIALOG_PADDING_HORIZONTAL,
-                        end = OW_DIALOG_PADDING_HORIZONTAL,
-                        top = OW_DIALOG_PADDING_TOP,
-                        bottom = OW_DIALOG_PADDING_BOTTOM,
-                    ).clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {}, // absorb clicks
-                    ),
-        ) {
-            // Header Stepper Indicator
-            OnboardingStepper(
-                steps = steps,
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
+        OnboardingWizardCardScaffold(steps = steps) {
             // Step Content Host
             Box(
                 modifier =
@@ -377,10 +407,10 @@ fun OnboardingWizardDialog(
                         OnboardingStepId.ACCESSIBILITY -> {
                             AccessibilityStepContent(
                                 isAccessibilityActive = setupStatus.isAccessibilityActive,
-                                onLaunchAccessibilitySettings = launchAccessibilitySettings,
+                                onLaunchAccessibilitySettings = { launchSystemAccessibilitySettings(context) },
                                 isRootBridgeAvailable = isRootBridgeAvailable,
-                                onActivateViaRootBridge = activateAccessibilityViaRoot,
-                                isActivating = isActivatingAccessibility,
+                                onActivateViaRootBridge = rootBridgeActions::activateAccessibility,
+                                isActivating = rootBridgeActions.isActivatingAccessibility,
                             )
                         }
 
@@ -396,8 +426,8 @@ fun OnboardingWizardDialog(
                                 onStartAutoSetup = startAutoSetup,
                                 isAutoSetupActive = setupStatus.isAutoSetupActive,
                                 isRootBridgeAvailable = isRootBridgeAvailable,
-                                onActivateViaRootBridge = activatePrivdViaRoot,
-                                isActivatingRootBridge = isActivatingPrivd,
+                                onActivateViaRootBridge = rootBridgeActions::activatePrivd,
+                                isActivatingRootBridge = rootBridgeActions.isActivatingPrivd,
                             )
                         }
 
@@ -408,7 +438,7 @@ fun OnboardingWizardDialog(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(OW_DIALOG_HORIZONTAL_MARGIN))
 
             // Footer Navigation Controls
             Row(
@@ -836,16 +866,7 @@ fun PrivilegedStepContent(
         }
         return
     }
-    val systemLocale =
-        remember {
-            val lm = context.getSystemService(LocaleManager::class.java)
-            val locales = lm?.systemLocales
-            if (locales != null && !locales.isEmpty) {
-                locales.get(0)
-            } else {
-                Locale.getDefault()
-            }
-        }
+    val systemLocale = remember(context) { resolveSystemLocale(context) }
 
     val isLanguageSupported =
         remember(systemLocale) {
