@@ -1,5 +1,8 @@
 package com.stormpanda.megingiard
 
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import java.lang.reflect.Method
 
 private const val APPLOG_TAG_PREFIX = "Mgnrd"
@@ -30,7 +33,15 @@ object AppLog {
         NONE(Int.MAX_VALUE),
     }
 
-    @Volatile var level: Level = Level.DEBUG
+    private val _levelFlow = MutableStateFlow(Level.WARN)
+    val levelFlow: StateFlow<Level> = _levelFlow.asStateFlow()
+
+    @Volatile
+    var level: Level = Level.WARN
+        set(value) {
+            field = value
+            _levelFlow.value = value
+        }
 
     private val logMethod: Method? by lazy {
         try {

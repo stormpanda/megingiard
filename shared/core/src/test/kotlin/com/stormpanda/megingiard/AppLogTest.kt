@@ -22,6 +22,7 @@ class AppLogTest {
     fun testLogLevelHierarchy() {
         AppLog.level = AppLog.Level.VERBOSE
         assertEquals(AppLog.Level.VERBOSE, AppLog.level)
+        assertEquals(AppLog.Level.VERBOSE, AppLog.levelFlow.value)
         AppLog.v("Test", "verbose message")
         AppLog.d("Test", "debug message")
         AppLog.i("Test", "info message")
@@ -31,6 +32,7 @@ class AppLogTest {
 
         AppLog.level = AppLog.Level.NONE
         assertEquals(AppLog.Level.NONE, AppLog.level)
+        assertEquals(AppLog.Level.NONE, AppLog.levelFlow.value)
         AppLog.v("Test", "suppressed")
         AppLog.d("Test", "suppressed")
         AppLog.i("Test", "suppressed")

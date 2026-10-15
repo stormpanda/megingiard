@@ -120,8 +120,7 @@ object SettingsManager {
     val appLanguage: StateFlow<AppLanguage> = _appLanguage.asStateFlow()
 
     // Logging
-    private val _logLevel = MutableStateFlow(AppLog.Level.WARN)
-    val logLevel: StateFlow<AppLog.Level> = _logLevel.asStateFlow()
+    val logLevel: StateFlow<AppLog.Level> = AppLog.levelFlow
 
     fun resetForTesting(
         context: Context? = null,
@@ -138,7 +137,6 @@ object SettingsManager {
         _excludeFromRecents.value = false
         _steamGridDbApiToken.value = ""
         _appLanguage.value = AppLanguage.SYSTEM
-        _logLevel.value = AppLog.Level.WARN
         AppLog.level = AppLog.Level.WARN
         _welcomeTourCompletedVersion.value = 0
         _showMacroEditorTutorial.value = true
@@ -184,7 +182,6 @@ object SettingsManager {
                     val level =
                         AppLog.Level.entries.firstOrNull { it.name == prefs[KEY_LOG_LEVEL] }
                             ?: AppLog.Level.WARN
-                    _logLevel.value = level
                     AppLog.level = level
 
                     _themeMode.value = ThemeMode.entries.firstOrNull { it.name == prefs[KEY_THEME_MODE] } ?: ThemeMode.DARK
@@ -235,7 +232,6 @@ object SettingsManager {
                             it
                     }
                     prefs[KEY_LOG_LEVEL]?.let { name -> AppLog.Level.entries.firstOrNull { it.name == name } }?.let {
-                        _logLevel.value = it
                         AppLog.level = it
                     }
                     MacroPadSettings.loadFrom(prefs)
@@ -354,16 +350,18 @@ object SettingsManager {
     }
 
     fun setLogLevel(value: AppLog.Level) {
-        updateEnumSettingPref(
-            KEY_LOG_LEVEL,
-            value,
-            _logLevel,
-            scope,
-            optionalDataStore,
-            TAG,
-            "setLogLevel",
-            onChanged = { AppLog.level = value },
-        )
+        AppLog.d(TAG, "setLogLevel($value)")
+        AppLog.level = value
+        val ds = optionalDataStore ?: return
+        scope.launch {
+            try {
+                ds.edit { prefs ->
+                    prefs[KEY_LOG_LEVEL] = value.name
+                }
+            } catch (e: Exception) {
+                AppLog.e(TAG, "Failed to persist setting key ${KEY_LOG_LEVEL.name}: $e")
+            }
+        }
     }
 
     // Keyboard setters live in [KeyboardSettings]; touchpad setters in [TouchpadSettings].
