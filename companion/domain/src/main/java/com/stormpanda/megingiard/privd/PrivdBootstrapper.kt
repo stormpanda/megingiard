@@ -75,7 +75,7 @@ enum class BootstrapStage {
  *    via the ADB `sync:` protocol, then verify the remote byte size.
  * 4. **Spawn** the daemon as a detached background process; closing the shell
  *    stream is safe because the daemon `setsid()`s and ignores `SIGHUP`.
- * 5. **Verify** by calling [PrivdManager.connect] which opens the abstract socket.
+ * 5. **Verify** by calling [PrivdManager.verifyConnect] which opens the loopback TCP socket.
  *
  * All work is synchronous; the caller must invoke from a coroutine on
  * `Dispatchers.IO`. The [stage] flow drives the wizard UI; [PrivdManager] still

@@ -248,5 +248,5 @@
 - [x] **`[PM-14]`** — Remove copy-pasted 1,000 ms artificial spinner delays and redundant pre-checks in `MegingiardAccessibilityService.onServiceConnected()` *(Complexity: Low, Risk: Low)*
 - [x] **`[PM-15]`** — Deduplicate ~300 LOC between `PrivdReconnectPromptDialog.kt` and `OnboardingWizardDialog.kt` and delete the 5 unused parameters on `PrivdReconnectPromptDialog` *(Complexity: High, Risk: Low)*
 - [x] **`[PM-16]`** — Derive busy/error UI states in `PrivdSetupWizard.kt` directly from `BootstrapStage` instead of local `mutableStateOf` flags *(Complexity: Med, Risk: Low)*
-- [ ] **`[PM-17]`** — Synchronize `FEATURE.md` (Bootstrap Wizard, Settings Card, Reconnect Dialog, root/Accessibility flows) and update stale `@megingiard.privd` / `LocalSocket` comments *(Complexity: High, Risk: Low)*
+- [x] **`[PM-17]`** — Synchronize `FEATURE.md` (Bootstrap Wizard, Settings Card, Reconnect Dialog, root/Accessibility flows) and update stale `@megingiard.privd` / `LocalSocket` comments *(Complexity: High, Risk: Low)*
 - [ ] **`[PM-18]`** — Synchronize `technical-security-protocol.md`, `BUILD_NATIVE.md`, and `SECURITY_CONCEPT.md` with TCP transport, `SCREENSHOT`/`READ_FILE`/`PROCESSES` RPCs, `PRIVD_VERSION = 17`, and current Source Files *(Complexity: High, Risk: Low)*

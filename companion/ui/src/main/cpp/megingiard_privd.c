@@ -7,10 +7,10 @@
  * directly into /dev/input/event* nodes that are owned by group 1004.
  *
  * Communication path (after bootstrap):
- *   App (untrusted_app) ──LocalSocket──▶ Daemon (shell)
+ *   App (untrusted_app) ──TCP Socket (127.0.0.1)──▶ Daemon (shell)
  *
  * Listening endpoint:
- *   Abstract Unix socket "@megingiard.privd" (SOCK_STREAM).
+ *   Local loopback TCP socket 127.0.0.1:51234 (release) or 127.0.0.1:51244 (debug).
  *   Single-client semantics — second connect() blocks until the first
  *   client disconnects.
  *
@@ -24,7 +24,7 @@
  *   setsid(), and enters the accept loop. The ADB shell that spawned it can
  *   exit without killing the daemon.
  *
- * Wire protocol (ASCII, newline-terminated, on the LocalSocket):
+ * Wire protocol (ASCII, newline-terminated, on the loopback TCP socket):
  *   Gamepad commands:
  *     GD <btn>\n         button DOWN   (Linux BTN_* code, 0x100..0x1FF)
  *     GU <btn>\n         button UP
@@ -65,7 +65,7 @@
 #include <dirent.h>
 #include "cmd_parsers.h"
 
-#define PRIVD_VERSION 12
+#define PRIVD_VERSION 17
 
 static int g_port_start = 51234;
 #define SCAN_MAX 32

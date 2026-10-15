@@ -46,9 +46,9 @@ private const val HMAC_HEX_LEN = 64 // SHA-256 digest → 64 hex chars
 /**
  * Async loopback TCP transport to the `megingiard_privd` daemon.
  *
- * The daemon is bootstrapped via the privileged ADB shell channel (see
- * `PrivdManager`) and listens on `127.0.0.1` (release ports `51234..51238`,
- * debug ports `51244..51248`). After bootstrap, the app process — running in
+ * The daemon is bootstrapped via the privileged root bridge or ADB shell channel
+ * (see `PrivdManager`) and listens on `127.0.0.1` (release port `51234`,
+ * debug port `51244`). After bootstrap, the app process — running in
  * the unprivileged `untrusted_app` SELinux domain — connects over loopback TCP,
  * completes an HMAC-SHA256 challenge-response handshake, and pipes
  * feature-prefixed ASCII commands.
