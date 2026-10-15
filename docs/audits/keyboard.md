@@ -266,5 +266,5 @@
 - [x] **`[KB-16]`** — Remove redundant `InjectorLifecycleManager.watch` in `KeyboardScreen` & deduplicate `KeyboardState.reset()` *(Complexity: Low, Risk: Low)*
 - [x] **`[KB-17]`** — Merge `PhysicalKeyContent` / `ErgoKeyContent` in `KeyboardKeyCap.kt` & extract `KeyDef.resolveDisplayLabel` *(Complexity: High, Risk: Low)*
 - [x] **`[KB-18]`** — Deduplicate `KeyboardKey` call sites in `KeyboardLayoutGrid.kt` & guard `KeyboardState.stateFor` *(Complexity: Med, Risk: Low)*
-- [ ] **`[KB-19]`** — Read `TouchpadSettings.*.value` directly in `KeyboardScreen` lambdas & remove duplicate `boxCoords` *(Complexity: Low, Risk: Low)*
+- [x] **`[KB-19]`** — Read `TouchpadSettings.*.value` directly in `KeyboardScreen` lambdas & remove duplicate `boxCoords` *(Complexity: Low, Risk: Low)*
 - [ ] **`[KB-20]`** — Synchronize `docs/features/keyboard/FEATURE.md` with actual protocol, layouts, settings, and source files *(Complexity: Low, Risk: Low)*

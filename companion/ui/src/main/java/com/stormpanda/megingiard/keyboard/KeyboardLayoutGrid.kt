@@ -21,10 +21,12 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 private const val KB_NUMERIC_GRID_ROW_COUNT = 3
+private const val KB_DEFAULT_BOX_WIDTH_PX = 1240
 
 @Composable
 internal fun KeyboardLayoutGrid(
@@ -42,6 +44,8 @@ internal fun KeyboardLayoutGrid(
     val isQuickMenuOpenState = rememberUpdatedState(isQuickMenuOpen)
     val gridHeight = if (activeState.mode == KeyboardMode.FULL) 220.dp else 168.dp
     val boxCoords = remember { mutableStateOf<LayoutCoordinates?>(null) }
+    val activePopupState = gestureProcessor.activePopupState.collectAsStateWithLifecycle().value
+    val density = LocalDensity.current
 
     @Composable
     fun renderKey(
@@ -254,6 +258,14 @@ internal fun KeyboardLayoutGrid(
                     }
                 }
             }
+        }
+
+        if (activePopupState != null) {
+            CharPopupOverlay(
+                popup = activePopupState,
+                boxWidthPx = boxCoords.value?.size?.width ?: KB_DEFAULT_BOX_WIDTH_PX,
+                density = density,
+            )
         }
     }
 }
