@@ -30,7 +30,11 @@ object PpssppDetector : EmulatorDetector {
 
     var webSocketPort: Int = DEFAULT_REMOTE_DEBUGGER_PORT
 
-    override suspend fun detectActiveSession(packageName: String): ActiveGameSession? =
+    override suspend fun detectActiveSession(
+        packageName: String,
+        focusedRomPath: String?,
+        focusedRomIdentifier: String?,
+    ): ActiveGameSession? =
         withContext(Dispatchers.IO) {
             if (!supportedPackages.contains(packageName)) return@withContext null
 

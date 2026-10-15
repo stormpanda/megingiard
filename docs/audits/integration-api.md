@@ -266,7 +266,7 @@
 
 > Select which findings to implement (`All`, `Low-risk only`, or specific IDs):
 
-- [ ] **`[IA-01]`** — Simplify `EmulatorDetector` to a single method with default arguments *(Complexity: Low, Risk: Low)*
+- [x] **`[IA-01]`** — Simplify `EmulatorDetector` to a single method with default arguments *(Complexity: Low, Risk: Low)*
 - [ ] **`[IA-02]`** — Replace hand-rolled brace/regex JSON parser in `RetroArchLplParser` with `kotlinx.serialization.json` *(Complexity: High, Risk: Low)*
 - [ ] **`[IA-03]`** — Reuse `MacroPadState.findBestMatchingProfile` in `IntegrationHomeScreen` *(Complexity: Low, Risk: Low)*
 - [ ] **`[IA-04]`** — Deduplicate auto-switch lookup calls inside `AutoSwitchCoordinator.onPackageChanged` *(Complexity: Med, Risk: Low)*

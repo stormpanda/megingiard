@@ -34,7 +34,11 @@ object RetroArchDetector : EmulatorDetector {
         }
     }
 
-    override suspend fun detectActiveSession(packageName: String): ActiveGameSession? {
+    override suspend fun detectActiveSession(
+        packageName: String,
+        focusedRomPath: String?,
+        focusedRomIdentifier: String?,
+    ): ActiveGameSession? {
         if (!supportedPackages.contains(packageName)) return null
 
         val candidatePaths = getCandidatePaths(packageName)

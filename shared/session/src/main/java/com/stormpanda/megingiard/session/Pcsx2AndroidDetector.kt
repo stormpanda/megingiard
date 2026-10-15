@@ -25,7 +25,11 @@ object Pcsx2AndroidDetector : EmulatorDetector {
         return SafPathResolver.getStorageVolumeRoots().map { root -> "$root/$relativeSubPath" }
     }
 
-    override suspend fun detectActiveSession(packageName: String): ActiveGameSession? {
+    override suspend fun detectActiveSession(
+        packageName: String,
+        focusedRomPath: String?,
+        focusedRomIdentifier: String?,
+    ): ActiveGameSession? {
         if (!supportedPackages.contains(packageName)) return null
 
         val candidatePaths = getCandidatePaths(packageName)

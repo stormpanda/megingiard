@@ -84,8 +84,6 @@ object GameNativeDetector : EmulatorDetector {
 
     override val systemId: String = "pc"
 
-    override suspend fun detectActiveSession(packageName: String): ActiveGameSession? = detectActiveSession(packageName, null, null)
-
     override suspend fun detectActiveSession(
         packageName: String,
         focusedRomPath: String?,
