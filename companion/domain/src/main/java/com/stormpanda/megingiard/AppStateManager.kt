@@ -201,6 +201,50 @@ object AppStateManager {
 
     // ── Integration Client State ──────────────────────────────────────────────
 
+    data class ExternalClientState(
+        val packageName: String?,
+        val focusedApp: String?,
+        val focusedRomPath: String? = null,
+        val focusedRomIdentifier: String? = null,
+        val hoveredPackage: String? = null,
+        val hoveredLabel: String? = null,
+        val hoveredRomPath: String? = null,
+        val hoveredRomIdentifier: String? = null,
+        val hoveredSystemId: String? = null,
+        val hoveredPrimaryColor: Int? = null,
+        val hoveredSecondaryColor: Int? = null,
+    )
+
+    data class StandaloneFocusState(
+        val focusedApp: String? = null,
+        val focusedRomPath: String? = null,
+        val focusedRomIdentifier: String? = null,
+    )
+
+    data class EffectiveFocusState(
+        val isExternalClientActive: Boolean = false,
+        val externalClientPackage: String? = null,
+        val focusedAppPackageName: String? = null,
+        val focusedRomPath: String? = null,
+        val focusedRomIdentifier: String? = null,
+        val hoveredAppPackageName: String? = null,
+        val hoveredAppLabel: String? = null,
+        val hoveredRomPath: String? = null,
+        val hoveredRomIdentifier: String? = null,
+        val hoveredSystemId: String? = null,
+        val hoveredAppPrimaryColor: Int? = null,
+        val hoveredAppSecondaryColor: Int? = null,
+    )
+
+    private val _externalClientState = MutableStateFlow<ExternalClientState?>(null)
+    val externalClientState: StateFlow<ExternalClientState?> = _externalClientState.asStateFlow()
+
+    private val _standaloneFocusState = MutableStateFlow(StandaloneFocusState())
+    val standaloneFocusState: StateFlow<StandaloneFocusState> = _standaloneFocusState.asStateFlow()
+
+    private val _effectiveFocusState = MutableStateFlow(EffectiveFocusState())
+    val effectiveFocusState: StateFlow<EffectiveFocusState> = _effectiveFocusState.asStateFlow()
+
     private val _isExternalClientActive = MutableStateFlow(false)
     val isExternalClientActive: StateFlow<Boolean> = _isExternalClientActive.asStateFlow()
 
@@ -237,6 +281,52 @@ object AppStateManager {
     private val _hoveredAppSecondaryColor = MutableStateFlow<Int?>(null)
     val hoveredAppSecondaryColor: StateFlow<Int?> = _hoveredAppSecondaryColor.asStateFlow()
 
+    private fun deriveEffectiveFocusState(
+        client: ExternalClientState?,
+        standalone: StandaloneFocusState,
+    ): EffectiveFocusState =
+        if (client != null) {
+            EffectiveFocusState(
+                isExternalClientActive = true,
+                externalClientPackage = client.packageName,
+                focusedAppPackageName = client.focusedApp,
+                focusedRomPath = client.focusedRomPath,
+                focusedRomIdentifier = client.focusedRomIdentifier,
+                hoveredAppPackageName = client.hoveredPackage,
+                hoveredAppLabel = client.hoveredLabel,
+                hoveredRomPath = client.hoveredRomPath,
+                hoveredRomIdentifier = client.hoveredRomIdentifier,
+                hoveredSystemId = client.hoveredSystemId,
+                hoveredAppPrimaryColor = client.hoveredPrimaryColor,
+                hoveredAppSecondaryColor = client.hoveredSecondaryColor,
+            )
+        } else {
+            EffectiveFocusState(
+                isExternalClientActive = false,
+                externalClientPackage = null,
+                focusedAppPackageName = standalone.focusedApp,
+                focusedRomPath = standalone.focusedRomPath,
+                focusedRomIdentifier = standalone.focusedRomIdentifier,
+            )
+        }
+
+    private fun applyEffectiveFocusState(effective: EffectiveFocusState) {
+        _effectiveFocusState.value = effective
+        _isExternalClientActive.value = effective.isExternalClientActive
+        _externalClientPackage.value = effective.externalClientPackage
+        _focusedAppPackageName.value = effective.focusedAppPackageName
+        _focusedRomPath.value = effective.focusedRomPath
+        _focusedRomIdentifier.value = effective.focusedRomIdentifier
+        _hoveredAppPackageName.value = effective.hoveredAppPackageName
+        _hoveredAppLabel.value = effective.hoveredAppLabel
+        _hoveredRomPath.value = effective.hoveredRomPath
+        _hoveredRomIdentifier.value = effective.hoveredRomIdentifier
+        _hoveredSystemId.value = effective.hoveredSystemId
+        _hoveredAppPrimaryColor.value = effective.hoveredAppPrimaryColor
+        _hoveredAppSecondaryColor.value = effective.hoveredAppSecondaryColor
+        EmulatorDetectionFunnel.setFocusedRomContext(effective.focusedRomPath, effective.focusedRomIdentifier)
+    }
+
     fun setExternalClientState(
         isActive: Boolean,
         packageName: String?,
@@ -255,62 +345,33 @@ object AppStateManager {
             TAG,
             "setExternalClientState: active=$isActive package=$packageName focused=$focusedApp focusedRom=$focusedRomPath focusedId=$focusedRomIdentifier hovered=$hoveredLabel ($hoveredPackage) romPath=$hoveredRomPath romId=$hoveredRomIdentifier systemId=$hoveredSystemId primary=$hoveredPrimaryColor secondary=$hoveredSecondaryColor",
         )
-        if (_isExternalClientActive.value != isActive ||
-            _focusedAppPackageName.value != focusedApp ||
-            _focusedRomPath.value != focusedRomPath ||
-            _focusedRomIdentifier.value != focusedRomIdentifier
-        ) {
-            AppLog.d(
-                TAG,
-                "setExternalClientState focus updated: active=$isActive focusedApp=$focusedApp focusedRom=$focusedRomPath focusedId=$focusedRomIdentifier",
-            )
-        }
-        _isExternalClientActive.value = isActive
-        _externalClientPackage.value = if (isActive) packageName else null
-
-        if (isActive || focusedApp != null) {
-            _focusedAppPackageName.value = focusedApp
-            _focusedRomPath.value = focusedRomPath
-            _focusedRomIdentifier.value = focusedRomIdentifier
-            EmulatorDetectionFunnel.setFocusedRomContext(focusedRomPath, focusedRomIdentifier)
+        if (isActive) {
+            _externalClientState.value =
+                ExternalClientState(
+                    packageName = packageName,
+                    focusedApp = focusedApp,
+                    focusedRomPath = focusedRomPath,
+                    focusedRomIdentifier = focusedRomIdentifier,
+                    hoveredPackage = hoveredPackage,
+                    hoveredLabel = hoveredLabel,
+                    hoveredRomPath = hoveredRomPath,
+                    hoveredRomIdentifier = hoveredRomIdentifier,
+                    hoveredSystemId = hoveredSystemId,
+                    hoveredPrimaryColor = hoveredPrimaryColor,
+                    hoveredSecondaryColor = hoveredSecondaryColor,
+                )
         } else {
-            val foreground = AutoSwitchCoordinator.foregroundApp.value
-            val session = EmulatorDetectionFunnel.activeSession.value ?: EmulatorDetectionFunnel.lastDetectedSession.value
-            if (session != null && session.packageName == foreground) {
-                _focusedAppPackageName.value = session.packageName
-                _focusedRomPath.value = session.romPath ?: session.romIdentifier
-                _focusedRomIdentifier.value = session.romIdentifier ?: session.romPath
-                EmulatorDetectionFunnel.setFocusedRomContext(_focusedRomPath.value, _focusedRomIdentifier.value)
-            } else if (foreground != null && !SystemRoleClassifier.isLauncherOrSystemUi(foreground)) {
-                _focusedAppPackageName.value = foreground
-                _focusedRomPath.value = null
-                _focusedRomIdentifier.value = null
-                EmulatorDetectionFunnel.setFocusedRomContext(null, null)
-            } else {
-                _focusedAppPackageName.value = null
-                _focusedRomPath.value = null
-                _focusedRomIdentifier.value = null
-                EmulatorDetectionFunnel.setFocusedRomContext(null, null)
+            _externalClientState.value = null
+            if (focusedApp != null) {
+                _standaloneFocusState.value =
+                    StandaloneFocusState(
+                        focusedApp = focusedApp,
+                        focusedRomPath = focusedRomPath,
+                        focusedRomIdentifier = focusedRomIdentifier,
+                    )
             }
         }
-
-        if (isActive) {
-            _hoveredAppPackageName.value = hoveredPackage
-            _hoveredAppLabel.value = hoveredLabel
-            _hoveredRomPath.value = hoveredRomPath
-            _hoveredRomIdentifier.value = hoveredRomIdentifier
-            _hoveredSystemId.value = hoveredSystemId
-            _hoveredAppPrimaryColor.value = hoveredPrimaryColor
-            _hoveredAppSecondaryColor.value = hoveredSecondaryColor
-        } else {
-            _hoveredAppPackageName.value = null
-            _hoveredAppLabel.value = null
-            _hoveredRomPath.value = null
-            _hoveredRomIdentifier.value = null
-            _hoveredSystemId.value = null
-            _hoveredAppPrimaryColor.value = null
-            _hoveredAppSecondaryColor.value = null
-        }
+        applyEffectiveFocusState(deriveEffectiveFocusState(_externalClientState.value, _standaloneFocusState.value))
     }
 
     fun setStandaloneForegroundState(
@@ -318,17 +379,12 @@ object AppStateManager {
         focusedRomPath: String? = null,
         focusedRomIdentifier: String? = null,
     ) {
-        if (_isExternalClientActive.value) return
-        if (_focusedAppPackageName.value != focusedApp ||
-            _focusedRomPath.value != focusedRomPath ||
-            _focusedRomIdentifier.value != focusedRomIdentifier
-        ) {
+        val next = StandaloneFocusState(focusedApp, focusedRomPath, focusedRomIdentifier)
+        if (_standaloneFocusState.value != next) {
             AppLog.d(TAG, "setStandaloneForegroundState: focusedApp=$focusedApp focusedRom=$focusedRomPath focusedId=$focusedRomIdentifier")
+            _standaloneFocusState.value = next
         }
-        _focusedAppPackageName.value = focusedApp
-        _focusedRomPath.value = focusedRomPath
-        _focusedRomIdentifier.value = focusedRomIdentifier
-        EmulatorDetectionFunnel.setFocusedRomContext(focusedRomPath, focusedRomIdentifier)
+        applyEffectiveFocusState(deriveEffectiveFocusState(_externalClientState.value, _standaloneFocusState.value))
     }
 
     fun setActivityResumed(resumed: Boolean) {
@@ -452,12 +508,15 @@ object AppStateManager {
 
     private val focusContextFlow: Flow<FocusContext> =
         combine(
-            _focusedAppPackageName,
-            _focusedRomPath,
-            _focusedRomIdentifier,
+            _effectiveFocusState,
             EmulatorDetectionFunnel.activeSession,
-        ) { pkg, path, id, session ->
-            FocusContext(pkg, path, id, session)
+        ) { effective, session ->
+            FocusContext(
+                packageName = effective.focusedAppPackageName,
+                romPath = effective.focusedRomPath,
+                romIdentifier = effective.focusedRomIdentifier,
+                activeSession = session,
+            )
         }
 
     val showIntegrationHome: StateFlow<Boolean> =
