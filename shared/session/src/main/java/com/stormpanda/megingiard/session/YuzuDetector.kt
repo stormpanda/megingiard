@@ -21,8 +21,6 @@ private const val BASE_TITLE_ID_SUFFIX = "000"
  * Reads active emulator log files over privileged socket.
  */
 object YuzuDetector : EmulatorDetector {
-    private val titleCache = mutableMapOf<String, String>()
-
     override val supportedPackages: Set<String> =
         SwitchEmulators.SUPPORTED_EMULATOR_OPTIONS.map { it.packageName }.toSet()
 
@@ -167,19 +165,12 @@ object YuzuDetector : EmulatorDetector {
             return null
         }
 
-        if (lastGameTitle != null && lastTitleId != null) {
-            synchronized(titleCache) {
-                titleCache[lastTitleId] = lastGameTitle
-            }
-        }
-
         val knownTitle =
             lastGameTitle ?: lastTitleId?.let { id ->
-                synchronized(titleCache) { titleCache[id] }
-                    ?: RomManager.romApps.value
-                        .firstOrNull { app ->
-                            app.romPath?.contains(id, ignoreCase = true) == true
-                        }?.label
+                RomManager.romApps.value
+                    .firstOrNull { app ->
+                        app.romPath?.contains(id, ignoreCase = true) == true
+                    }?.label
             }
 
         val resolvedTitle = knownTitle ?: "Switch Game (${lastTitleId ?: ""})".trim()

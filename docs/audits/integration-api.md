@@ -273,7 +273,7 @@
 - [x] **`[IA-05]`** — Simplify redundant boolean branches in `MegingiardIpcContract.init()` *(Complexity: Low, Risk: Low)*
 - [x] **`[IA-06]`** — Consolidate `notify*Changed` helpers in `MegingiardSettingsProvider` *(Complexity: Low, Risk: Low)*
 - [x] **`[IA-07]`** — Remove empty `try / finally` block in `MegingiardAccessibilityService` *(Complexity: Low, Risk: Low)*
-- [ ] **`[IA-08]`** — Remove stateful synchronized `titleCache` in `YuzuDetector` *(Complexity: Low, Risk: Low)*
+- [x] **`[IA-08]`** — Remove stateful synchronized `titleCache` in `YuzuDetector` *(Complexity: Low, Risk: Low)*
 - [ ] **`[IA-09]`** — Consolidate duplicate Switch emulator package/brand maps into `SwitchEmulators` *(Complexity: Med, Risk: Low)*
 - [ ] **`[IA-10]`** — Remove unread `AutoSetupTargetStage` enum and field in `MegingiardAccessibilityService` *(Complexity: Low, Risk: Low)*
 - [ ] **`[IA-11]`** — Delete unused `isMegingiardInPairedDevices` method in `MegingiardAccessibilityService` *(Complexity: Low, Risk: Low)*
