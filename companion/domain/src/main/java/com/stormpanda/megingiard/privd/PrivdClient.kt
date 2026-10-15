@@ -75,9 +75,7 @@ object PrivdClient {
 
     internal fun setStateForTesting(newState: PrivdConnectionState?) {
         isConnectedForTest = if (newState == null) null else (newState == PrivdConnectionState.CONNECTED)
-        if (newState != null) {
-            _state.value = newState
-        }
+        _state.value = newState ?: PrivdConnectionState.DISCONNECTED
     }
 
     private val commandMutex = Mutex()
@@ -530,6 +528,7 @@ object PrivdClient {
     private fun markBroken() {
         if (!running) return
         running = false
+        PrivdManager.onClientDisconnected()
         _state.value = PrivdConnectionState.DISCONNECTED
         // Schedule full cleanup on a daemon thread so the socket fd is released
         // and the writer thread is unblocked. We can't call disconnect() directly

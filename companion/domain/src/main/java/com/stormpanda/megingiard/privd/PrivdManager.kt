@@ -4,12 +4,13 @@ import android.content.Context
 import com.stormpanda.megingiard.AppLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import java.io.File
 
 /**
@@ -68,49 +69,71 @@ enum class PrivdError {
 /**
  * Top-level controller for Privileged Mode.
  *
- * Owns the lifecycle abstraction (`OFF` → `CONNECTING` → `RUNNING` / `FAILED`)
- * and exposes a single read-only [state] stream that the UI binds to.
+ * Derives the user-visible [state] stream reactively from [PrivdClient.state],
+ * bootstrap status, and [lastError].
  *
  * Per AGENTS.md §7.1: backing `MutableStateFlow`s are private; only the
  * read-only [state] / [lastError] surfaces escape this object.
  */
 object PrivdManager {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private var clientObserverJob: Job? = null
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
 
-    private val _state = MutableStateFlow(PrivdState.OFF)
-    val state: StateFlow<PrivdState> = _state.asStateFlow()
-
-    internal fun setStateForTesting(state: PrivdState) {
-        _state.value = state
-    }
+    private val _isBootstrapping = MutableStateFlow(false)
+    private val _testStateOverride = MutableStateFlow<PrivdState?>(null)
 
     private val _lastError = MutableStateFlow<PrivdError?>(null)
     val lastError: StateFlow<PrivdError?> = _lastError.asStateFlow()
 
+    val state: StateFlow<PrivdState> =
+        combine(
+            PrivdClient.state,
+            _isBootstrapping,
+            _lastError,
+            _testStateOverride,
+        ) { clientState, bootstrapping, error, testOverride ->
+            when {
+                testOverride != null -> testOverride
+                clientState == PrivdConnectionState.CONNECTED -> PrivdState.RUNNING
+                bootstrapping -> PrivdState.BOOTSTRAPPING
+                clientState == PrivdConnectionState.CONNECTING -> PrivdState.CONNECTING
+                error != null -> PrivdState.FAILED
+                else -> PrivdState.OFF
+            }
+        }.stateIn(
+            scope = scope,
+            started = SharingStarted.Eagerly,
+            initialValue = PrivdState.OFF,
+        )
+
+    internal fun setStateForTesting(state: PrivdState?) {
+        if (state == PrivdState.OFF || state == null) {
+            _isBootstrapping.value = false
+            _lastError.value = null
+        }
+        _testStateOverride.value = state
+    }
+
     val isRootBridgeAvailable: Boolean get() = PServiceBridge.isAvailable()
 
     fun connect(context: Context): Boolean {
-        AppLog.i(TAG, "connect() called (current state=${_state.value})")
-        _state.value = PrivdState.CONNECTING
+        AppLog.i(TAG, "connect() called (current state=${state.value})")
+        _testStateOverride.value = null
+        _isBootstrapping.value = false
         _lastError.value = null
         val ok = PrivdClient.connect()
         if (ok) {
-            _state.value = PrivdState.RUNNING
             AppLog.i(TAG, "Privileged Mode is RUNNING")
-            startClientObserver()
             return true
         }
 
         // Direct connect failed. Attempt Tier-1 fast-track via PServer root bridge
         if (PServiceBridge.isAvailable()) {
             AppLog.i(TAG, "Direct connect failed. PServer root bridge is available — attempting fast-track bootstrap.")
-            _state.value = PrivdState.BOOTSTRAPPING
+            _isBootstrapping.value = true
             val pOk = PServerBootstrapper.bootstrap(context)
+            _isBootstrapping.value = false
             if (pOk) {
-                _state.value = PrivdState.RUNNING
                 AppLog.i(TAG, "PServer fast-track bootstrap succeeded — Privileged Mode is RUNNING")
-                startClientObserver()
                 return true
             }
             AppLog.w(TAG, "PServer fast-track bootstrap failed — falling back to Tier-2 ADB route")
@@ -124,7 +147,6 @@ object PrivdManager {
             return PrivdBootstrapper.bootstrapAndConnect(context, "127.0.0.1")
         }
 
-        _state.value = PrivdState.FAILED
         _lastError.value = PrivdError.DAEMON_UNREACHABLE
         AppLog.w(TAG, "Privileged Mode FAILED — daemon not reachable and no bootstrap method succeeded")
         return false
@@ -132,54 +154,39 @@ object PrivdManager {
 
     /**
      * Used during the VERIFYING phase of bootstrap. Attempts a raw socket
-     * connect without publishing CONNECTING/FAILED state transitions, to avoid
-     * UI flicker on each retry. On success, transitions state to RUNNING and
-     * starts the client observer. The caller is responsible for calling
-     * [reportBootstrapFailure] if all retries are exhausted.
-     *
-     * @return `true` if the daemon socket was reached and `PrivdClient` is now
-     * connected.
+     * connect while [_isBootstrapping] keeps [state] at [PrivdState.BOOTSTRAPPING]
+     * to avoid UI flicker on each retry. On success, [PrivdClient.state] becomes
+     * [PrivdConnectionState.CONNECTED] and [state] transitions to [PrivdState.RUNNING].
      */
     internal fun verifyConnect(): Boolean {
+        _testStateOverride.value = null
         val ok = PrivdClient.connect()
         if (ok) {
-            _state.value = PrivdState.RUNNING
+            _isBootstrapping.value = false
+            _lastError.value = null
             AppLog.i(TAG, "verifyConnect() succeeded — Privileged Mode is RUNNING")
-            startClientObserver()
         }
         return ok
     }
 
     internal fun reportBootstrapStart() {
         AppLog.i(TAG, "bootstrap started")
-        _state.value = PrivdState.BOOTSTRAPPING
+        _testStateOverride.value = null
         _lastError.value = null
+        _isBootstrapping.value = true
     }
 
     internal fun reportBootstrapFailure(error: PrivdError) {
         AppLog.w(TAG, "bootstrap failed: $error")
-        _state.value = PrivdState.FAILED
+        _testStateOverride.value = null
+        _isBootstrapping.value = false
         _lastError.value = error
     }
 
-    /**
-     * Observes [PrivdClient.state] while the connection is RUNNING. If the
-     * transport drops unexpectedly (I/O error, daemon killed) this drives
-     * [PrivdManager.state] back to FAILED so the UI reflects the real state.
-     */
-    private fun startClientObserver() {
-        clientObserverJob?.cancel()
-        clientObserverJob =
-            scope.launch {
-                PrivdClient.state.collect { clientState ->
-                    if (clientState == PrivdConnectionState.DISCONNECTED &&
-                        _state.value == PrivdState.RUNNING
-                    ) {
-                        AppLog.w(TAG, "PrivdClient dropped unexpectedly — setting state to FAILED")
-                        _state.value = PrivdState.FAILED
-                        _lastError.value = PrivdError.DAEMON_UNREACHABLE
-                    }
-                }
-            }
+    internal fun onClientDisconnected() {
+        AppLog.w(TAG, "PrivdClient dropped unexpectedly — setting lastError to DAEMON_UNREACHABLE")
+        _testStateOverride.value = null
+        _isBootstrapping.value = false
+        _lastError.value = PrivdError.DAEMON_UNREACHABLE
     }
 }

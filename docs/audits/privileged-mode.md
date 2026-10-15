@@ -240,7 +240,7 @@
 - [x] **`[PM-06]`** — Bind a single canonical TCP port per variant (`51234` release, `51244` debug) with `SO_REUSEADDR` instead of 5-port cycling *(Complexity: Low, Risk: Low)*
 - [x] **`[PM-07]`** — Delete dead `PrivdFeature` enum, `PrivdError.ADB_DISCOVERY_FAILED`, `PrivdManager.disconnect()`, and `isManuallyDisconnected` *(Complexity: Med, Risk: Low)*
 - [x] **`[PM-08]`** — Delete write-only `_isWirelessDebuggingActive` / `_hasCredentials` flows (`GlobalSettingsViewModel`), vestigial `UID=` (`g_expected_app_uid` in C), and legacy 3-token touch branch (`cmd_parsers.h`) *(Complexity: High, Risk: Low)*
-- [ ] **`[PM-09]`** — Derive `PrivdManager.state` reactively from `PrivdClient.state` + bootstrap status, delete `clientObserverJob`, and remove unused `PServerBootstrapper.stage` *(Complexity: High, Risk: Low)*
+- [x] **`[PM-09]`** — Derive `PrivdManager.state` reactively from `PrivdClient.state` + bootstrap status, delete `clientObserverJob`, and remove unused `PServerBootstrapper.stage` *(Complexity: High, Risk: Low)*
 - [ ] **`[PM-10]`** — Express `AppStateManager.isPrivdPromptActive` as a pure derived `StateFlow<Boolean>` via `combine(...)` and delete stale `_hasAdbCredentials` *(Complexity: High, Risk: Low)*
 - [ ] **`[PM-11]`** — Collapse the 6 `@Volatile CompletableDeferred` fields, 2 capture flags, 2 buffers, and `dumpLock` in `PrivdClient` into a single `PendingRpc` under `commandMutex` *(Complexity: High, Risk: Low)*
 - [ ] **`[PM-12]`** — Move blocking socket connect/handshake outside `PrivdClient`'s `@Synchronized` lock (eliminating raw `Thread { disconnect() }`) and convert `MegingiardAccessibilityService.isAutoSetupActive` to `StateFlow<Boolean>` *(Complexity: High, Risk: Low)*

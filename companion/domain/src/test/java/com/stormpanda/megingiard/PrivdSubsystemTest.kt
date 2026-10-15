@@ -9,6 +9,7 @@ import com.stormpanda.megingiard.privd.BootstrapStage
 import com.stormpanda.megingiard.privd.EvdevEvent
 import com.stormpanda.megingiard.privd.PrivdAdbConnectionManager
 import com.stormpanda.megingiard.privd.PrivdBootstrapper
+import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdConnectionState
 import com.stormpanda.megingiard.privd.PrivdError
 import com.stormpanda.megingiard.privd.PrivdManager
@@ -244,16 +245,32 @@ class PrivdSubsystemTest {
 
     @Test
     fun `PrivdManager state transitions`() {
-        PrivdManager.setStateForTesting(PrivdState.OFF)
+        PrivdClient.setStateForTesting(null)
+        PrivdManager.setStateForTesting(null)
         assertEquals(PrivdState.OFF, PrivdManager.state.value)
+
+        PrivdClient.setStateForTesting(PrivdConnectionState.CONNECTING)
+        assertEquals(PrivdState.CONNECTING, PrivdManager.state.value)
 
         PrivdManager.reportBootstrapStart()
         assertEquals(PrivdState.BOOTSTRAPPING, PrivdManager.state.value)
         assertNull(PrivdManager.lastError.value)
 
-        PrivdManager.reportBootstrapFailure(PrivdError.DAEMON_UNREACHABLE)
+        PrivdClient.setStateForTesting(PrivdConnectionState.CONNECTED)
+        assertEquals(PrivdState.RUNNING, PrivdManager.state.value)
+
+        PrivdManager.onClientDisconnected()
+        PrivdClient.setStateForTesting(PrivdConnectionState.DISCONNECTED)
         assertEquals(PrivdState.FAILED, PrivdManager.state.value)
         assertEquals(PrivdError.DAEMON_UNREACHABLE, PrivdManager.lastError.value)
+
+        PrivdManager.reportBootstrapFailure(PrivdError.PAIRING_FAILED)
+        assertEquals(PrivdState.FAILED, PrivdManager.state.value)
+        assertEquals(PrivdError.PAIRING_FAILED, PrivdManager.lastError.value)
+
+        PrivdClient.setStateForTesting(null)
+        PrivdManager.setStateForTesting(PrivdState.OFF)
+        assertEquals(PrivdState.OFF, PrivdManager.state.value)
     }
 
     @Test
