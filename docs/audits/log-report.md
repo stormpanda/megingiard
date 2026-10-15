@@ -229,7 +229,7 @@ None identified — `LogReportManager.saveRequest` is collected in a single `lif
 - [x] **`[LR-01]`** — Over-Parameterized `writeReportToUri` & Redundant Dual Return/Side-Effect Contract *(Complexity: Med, Risk: Low)*
 - [x] **`[LR-02]`** — Redundant Timestamp Formatting Split Between `MainActivity` and `LogReportManager` *(Complexity: Low, Risk: Low)*
 - [x] **`[LR-03]`** — Single-Call Pass-Through `GlobalSettingsViewModel.requestSaveLogReport()` *(Complexity: Low, Risk: Low)*
-- [ ] **`[LR-04]`** — Duplicate Reflection Lookup & Redundant `logThrowableMethod` in `AppLog` *(Complexity: Med, Risk: Low)*
+- [x] **`[LR-04]`** — Duplicate Reflection Lookup & Redundant `logThrowableMethod` in `AppLog` *(Complexity: Med, Risk: Low)*
 - [ ] **`[LR-05]`** — Unlocalized Raw Exception Message Exposure & Dead Fallback in `SaveResult.Failure` *(Complexity: Low, Risk: Low)*
 - [ ] **`[LR-06]`** — Duplicate Test Suite & Unreachable Success Branch in `LogReportSanitizationPipelineE2ETest` *(Complexity: Med, Risk: Low)*
 - [ ] **`[LR-07]`** — Split-Brain Log Level State & Contradictory Defaults Between `AppLog.level` and `SettingsManager._logLevel` *(Complexity: Med, Risk: Low)*
