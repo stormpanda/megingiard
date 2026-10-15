@@ -154,7 +154,7 @@ internal fun PrivdSetupWizardDialog(
 
     LaunchedEffect(Unit) {
         AppLog.d(TAG, "PrivdSetupWizardDialog: wizard opened")
-        viewModel.privdResetBootstrapStage()
+        PrivdBootstrapper.resetStage()
     }
 
     DisposableEffect(Unit) {
@@ -203,7 +203,7 @@ internal fun PrivdSetupWizardDialog(
             step--
         } else if (!step1Busy && !pairBusy && !bootstrapBusy) {
             AppLog.i(TAG, "PrivdSetupWizardDialog: Back handler triggered, resetting and dismissing")
-            viewModel.privdResetBootstrapStage()
+            PrivdBootstrapper.resetStage()
             onDismiss()
         }
     }
@@ -219,7 +219,7 @@ internal fun PrivdSetupWizardDialog(
                     onClick = {
                         if (!step1Busy && !pairBusy && !bootstrapBusy) {
                             AppLog.i(TAG, "PrivdSetupWizardDialog: Scrim clicked, resetting and dismissing")
-                            viewModel.privdResetBootstrapStage()
+                            PrivdBootstrapper.resetStage()
                             onDismiss()
                         }
                     },
@@ -413,7 +413,7 @@ internal fun PrivdSetupWizardDialog(
                                                     isNextAnimation = true
                                                     step = 3
                                                 } else {
-                                                    viewModel.privdResetBootstrapStage()
+                                                    PrivdBootstrapper.resetStage()
                                                     isNextAnimation = true
                                                     step = 1
                                                 }
@@ -457,13 +457,13 @@ internal fun PrivdSetupWizardDialog(
                                                     step = 3
                                                 } else {
                                                     pairError = true
-                                                    viewModel.privdResetBootstrapStage()
+                                                    PrivdBootstrapper.resetStage()
                                                 }
                                             }
                                         } else {
                                             pairBusy = false
                                             pairError = true
-                                            viewModel.privdResetBootstrapStage()
+                                            PrivdBootstrapper.resetStage()
                                         }
                                     }
                                 }
@@ -471,7 +471,7 @@ internal fun PrivdSetupWizardDialog(
 
                             3 -> {
                                 AppLog.i(TAG, "PrivdSetupWizardDialog: Wizard finished successfully, resetting stage and dismissing")
-                                viewModel.privdResetBootstrapStage()
+                                PrivdBootstrapper.resetStage()
                                 onDismiss()
                             }
                         }

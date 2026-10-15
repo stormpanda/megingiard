@@ -233,7 +233,7 @@
 > Select which findings to implement (`All`, `Low-risk only`, or specific IDs):
 
 - [x] **`[PM-01]`** — Consolidate triplicated daemon path, process-name, and TCP port helpers into `PrivdConstants.kt` *(Complexity: Med, Risk: Low)*
-- [ ] **`[PM-02]`** — Remove unused `config: AutoSetupLanguageConfig?` param in `PrivdPairScreenTextScanner` and dead `GlobalSettingsViewModel.enableAccessibility()` *(Complexity: Low, Risk: Low)*
+- [x] **`[PM-02]`** — Remove unused `config: AutoSetupLanguageConfig?` param in `PrivdPairScreenTextScanner` and dead `GlobalSettingsViewModel.enableAccessibility()` *(Complexity: Low, Risk: Low)*
 - [ ] **`[PM-03]`** — Delete broken 3-second NSD mDNS fallback (`discoverAdbTlsPortWithNsd`) and multi-host (`127.0.0.1`, `::1`, `localhost`) retry loops in `PrivdBootstrapper` *(Complexity: High, Risk: Low)*
 - [ ] **`[PM-04]`** — Remove duplicate `kill -9; sleep 1` and redundant post-`"R"` 500 ms sleep during daemon startup *(Complexity: Med, Risk: Low)*
 - [ ] **`[PM-05]`** — Remove 45-line string-splitting `MM`/`M` coalescer in `PrivdClient.writerLoop()` *(Complexity: Med, Risk: Low)*

@@ -268,7 +268,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
                                 if (isSubScreen) {
                                     if (isWirelessOn) {
                                         val screenText = scanActiveWindowText(Display.DEFAULT_DISPLAY)
-                                        val connectPort = PrivdPairScreenTextScanner.parseConnectPortFromText(screenText, config)
+                                        val connectPort = PrivdPairScreenTextScanner.parseConnectPortFromText(screenText)
                                         if (connectPort > 0) {
                                             PrivdBootstrapper.setScreenConnectPort(connectPort)
                                         }
@@ -335,7 +335,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
 
                             AutoToggleStage.CLICK_PAIR_DIALOG -> {
                                 val screenText = scanActiveWindowText(Display.DEFAULT_DISPLAY)
-                                val connectPort = PrivdPairScreenTextScanner.parseConnectPortFromText(screenText, config)
+                                val connectPort = PrivdPairScreenTextScanner.parseConnectPortFromText(screenText)
                                 if (connectPort > 0) {
                                     PrivdBootstrapper.setScreenConnectPort(connectPort)
                                 }
@@ -352,7 +352,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
 
                             AutoToggleStage.SCAN_PAIRING_CODE_AND_PAIR -> {
                                 val allText = scanActiveWindowText(Display.DEFAULT_DISPLAY)
-                                val scanResult = PrivdPairScreenTextScanner.parsePairingInfoFromText(allText, config)
+                                val scanResult = PrivdPairScreenTextScanner.parsePairingInfoFromText(allText)
                                 if (scanResult.isComplete) {
                                     val portInt = scanResult.port?.toIntOrNull()
                                     val codeStr = scanResult.code
@@ -391,7 +391,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
 
                                     // Rescan the main Wireless Debugging screen for the connect port
                                     val screenText = scanActiveWindowText(Display.DEFAULT_DISPLAY)
-                                    val connectPort = PrivdPairScreenTextScanner.parseConnectPortFromText(screenText, config)
+                                    val connectPort = PrivdPairScreenTextScanner.parseConnectPortFromText(screenText)
                                     if (connectPort > 0) {
                                         AppLog.i(TAG, "startAutoToggleLoop: Scanned connect port after pairing: $connectPort")
                                         PrivdBootstrapper.setScreenConnectPort(connectPort)

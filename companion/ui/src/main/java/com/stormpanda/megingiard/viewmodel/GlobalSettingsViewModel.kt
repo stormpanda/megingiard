@@ -12,7 +12,6 @@ import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.media.SteamGridDbClient
 import com.stormpanda.megingiard.media.SteamGridDbException
 import com.stormpanda.megingiard.privd.BootstrapStage
-import com.stormpanda.megingiard.privd.PServiceBridge
 import com.stormpanda.megingiard.privd.PrivdBootstrapper
 import com.stormpanda.megingiard.privd.PrivdError
 import com.stormpanda.megingiard.privd.PrivdManager
@@ -190,34 +189,9 @@ class GlobalSettingsViewModel : ViewModel() {
         }
     }
 
-    /**
-     * Enables MegingiardAccessibilityService via root bridge non-destructively on [Dispatchers.IO].
-     * Guarantees at least 1 second execution duration to allow the UI progress spinner to display.
-     */
-    fun enableAccessibility(
-        context: Context,
-        onComplete: (Boolean) -> Unit,
-    ) {
-        AppLog.i(TAG, "enableAccessibility()")
-        val appContext = context.applicationContext
-        viewModelScope.launch(Dispatchers.IO) {
-            val startTime = SystemClock.uptimeMillis()
-            val success = PServiceBridge.enableAccessibility(appContext)
-            val elapsed = SystemClock.uptimeMillis() - startTime
-            if (elapsed < 1000L) {
-                delay(1000L - elapsed)
-            }
-            withContext(Dispatchers.Main) {
-                onComplete(success)
-            }
-        }
-    }
-
     fun setPrivdDeadzoneLeft(value: Float) = MacroPadSettings.setDeadzoneLeft(value)
 
     fun setPrivdDeadzoneRight(value: Float) = MacroPadSettings.setDeadzoneRight(value)
-
-    fun privdResetBootstrapStage() = PrivdBootstrapper.resetStage()
 
     /**
      * Pair with the device's ADB Wireless-Debugging service.

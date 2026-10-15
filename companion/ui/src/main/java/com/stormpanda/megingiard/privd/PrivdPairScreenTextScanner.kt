@@ -31,10 +31,7 @@ object PrivdPairScreenTextScanner {
      * Parses raw text (from Accessibility node trees) to extract the
      * 6-digit pairing code, pairing port, and optional connect port.
      */
-    fun parsePairingInfoFromText(
-        text: String,
-        config: AutoSetupLanguageConfig? = null,
-    ): PrivdPairScreenTextResult {
+    fun parsePairingInfoFromText(text: String): PrivdPairScreenTextResult {
         if (text.isBlank()) {
             AppLog.d(TAG, "parsePairingInfoFromText: input text is blank")
             return PrivdPairScreenTextResult(port = null, code = null, connectPort = null)
@@ -83,10 +80,7 @@ object PrivdPairScreenTextScanner {
      * Parses raw text from the main Wireless Debugging screen to extract the
      * 5-digit connect port (IP:PORT format). Returns 0 if not found.
      */
-    fun parseConnectPortFromText(
-        text: String,
-        config: AutoSetupLanguageConfig? = null,
-    ): Int {
+    fun parseConnectPortFromText(text: String): Int {
         if (text.isBlank()) return 0
 
         val ipPorts = IP_PORT_REGEX.findAll(text).map { it.groupValues[1] }.toList()

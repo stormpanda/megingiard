@@ -123,7 +123,6 @@ class GlobalSettingsViewModelTest {
     fun testResetActions() {
         val vm = GlobalSettingsViewModel()
         vm.resetAllTutorials()
-        vm.privdResetBootstrapStage()
     }
 
     @Test
