@@ -517,13 +517,18 @@ private fun CompanionHubHelpModal(
         HelpSection(stringResource(R.string.help_companion_hub_sec_hero))
         HelpEntry(
             icon = Icons.Rounded.Visibility,
-            label = stringResource(R.string.integration_home_show_macropad),
+            label = stringResource(R.string.integration_home_launch_controls),
             description = stringResource(R.string.help_companion_hub_hero_show_desc),
         )
         HelpEntry(
             icon = Icons.Rounded.Edit,
             label = stringResource(R.string.integration_home_edit_layout),
             description = stringResource(R.string.help_companion_hub_hero_edit_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.Add,
+            label = stringResource(R.string.integration_home_create_profile),
+            description = stringResource(R.string.help_companion_hub_hero_create_desc),
         )
         HelpEntry(
             icon = Icons.Rounded.Link,

@@ -828,10 +828,9 @@ Open Settings to create a layout.</string>
     <string name="help_quickmenu_intro">快速選單讓您快速存取設定檔、配置與最常用的動作 — 且無需離開目前的遊戲。輕觸螢幕邊緣的快速選單列即可開啟；輕觸背景遮罩即可關閉。</string>
     <string name="help_quickmenu_section_mirror">投影控制 (頂端卡片)</string>
     <string name="help_quickmenu_start_label">開始 / 停止投影</string>
-    <string name="help_quickmenu_start_desc">開始或停止螢幕投影擷取。投影進行時，頂端卡片會展開以顯示更多控制項。</string>
+    <string name="help_quickmenu_start_desc">開始或停止螢幕投影擷取。</string>
     <string name="help_quickmenu_freeze_label">凍結 / 解除凍結</string>
     <string name="help_quickmenu_freeze_desc">凍結投影影像，使其顯示靜態畫面而非即時畫面。適合在您需要仔細閱讀遊戲畫面時暫停。</string>
-    <string name="help_quickmenu_viewport_desc">在下螢幕開啟區塊配置編輯器，讓您在投影覆蓋層中調整大小、移動或新增透明區塊視窗。</string>
     <string name="help_quickmenu_screenshot_top_label">上螢幕截圖</string>
     <string name="help_quickmenu_screenshot_top_desc">截取上螢幕畫面。若未在投影中，則需要 Megingiard 系統服務已連線。</string>
     <string name="help_quickmenu_screenshot_bottom_label">下螢幕截圖</string>
@@ -858,7 +857,8 @@ Open Settings to create a layout.</string>
     <string name="help_companion_hub_sec_hero">目前遊戲與控制設定檔</string>
     <string name="help_companion_hub_hero_show_desc">在下螢幕全螢幕開啟目前進行中遊戲的 MacroPad 觸控版面。</string>
     <string name="help_companion_hub_hero_edit_desc">開啟設定檔與版面編輯器，以自訂按鈕位置、樣式及巨集設定。</string>
-    <string name="help_companion_hub_hero_link_desc">將自訂 MacroPad 控制設定檔連結至目前執行或選取的遊戲，或為其建立專屬設定檔。</string>
+    <string name="help_companion_hub_hero_create_desc">為目前執行或選取的遊戲建立並預先連結一個全新的專屬 MacroPad 控制設定檔。</string>
+    <string name="help_companion_hub_hero_link_desc">將既有的自訂 MacroPad 控制設定檔連結至目前執行或選取的遊戲。</string>
     <string name="help_companion_hub_sec_tools">下螢幕工具</string>
     <string name="help_companion_hub_macropad_desc">快速捷徑，用於開啟目前使用中的 MacroPad 觸控控制介面。</string>
     <string name="help_companion_hub_settings_desc">存取全域應用程式設定，包括主題色彩、系統服務狀態、輸入死區與設定檔備份。</string>
@@ -1042,7 +1042,6 @@ Open Settings to create a layout.</string>
     <string name="integration_home_relink_dialog_cancel">取消</string>
     <string name="integration_home_new_profile">新增設定檔</string>
     <string name="integration_home_default_layout">預設</string>
-    <string name="integration_home_show_macropad">顯示</string>
     <string name="integration_home_hero_idle_title">Megingiard Companion Hub</string>
     <string name="integration_home_hero_idle_subtitle">請在上螢幕選擇遊戲，或在下方啟動下螢幕工具。</string>
     <string name="integration_home_launch_controls">顯示</string>

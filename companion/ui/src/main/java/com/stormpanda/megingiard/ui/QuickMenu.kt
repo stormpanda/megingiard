@@ -86,7 +86,7 @@ private val PM_PANEL_SHAPE = RoundedCornerShape(PM_PANEL_CORNER)
  *
  * Two-card layout:
  * - **Bottom card** (always visible): Profile / Layout selectors + action buttons.
- * - **Top card** (only when mirroring): Ambient Settings + mirror control icon buttons.
+ * - **Top card** (always visible): Screen mirroring and screenshot control buttons.
  *
  * Tapping the scrim calls [onDismiss].
  */
@@ -340,11 +340,6 @@ private fun QuickMenuHelpModal(
             icon = Icons.Rounded.Pause,
             label = stringResource(R.string.help_quickmenu_freeze_label),
             description = stringResource(R.string.help_quickmenu_freeze_desc),
-        )
-        HelpEntry(
-            icon = Icons.Rounded.Edit,
-            label = stringResource(R.string.quick_menu_screen_mirroring),
-            description = stringResource(R.string.help_quickmenu_viewport_desc),
         )
         HelpEntry(
             symbolName = "splitscreen_bottom",

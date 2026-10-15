@@ -829,10 +829,9 @@ Open Settings to create a layout.</string>
     <string name="help_quickmenu_intro">Das Schnellmenü bietet schnellen Zugriff auf Profile, Layouts und die häufigsten Aktionen — ohne das aktuelle Spiel zu verlassen. Tippe auf die Schnellmenüleiste am Bildschirmrand, um es zu öffnen; auf den Scrim, um es zu schließen.</string>
     <string name="help_quickmenu_section_mirror">Spiegel-Steuerung (obere Karte)</string>
     <string name="help_quickmenu_start_label">Spiegelung starten / stoppen</string>
-    <string name="help_quickmenu_start_desc">Startet oder stoppt die Bildschirmspiegelung. Bei aktiver Spiegelung erweitert sich die obere Karte um weitere Steuerelemente.</string>
+    <string name="help_quickmenu_start_desc">Startet oder stoppt die Bildschirmspiegelung.</string>
     <string name="help_quickmenu_freeze_label">Einfrieren / Auftauen</string>
     <string name="help_quickmenu_freeze_desc">Friert das gespiegelte Bild ein, sodass ein Standbild statt des Live-Feeds angezeigt wird. Nützlich, um eine Spielszene zum genauen Lesen anzuhalten.</string>
-    <string name="help_quickmenu_viewport_desc">Öffnet den Ausschnitt-Layout-Editor auf dem Sekundärbildschirm, um transparente Ausschnittfenster im Spiegel-Overlay zu verschieben, zu skalieren oder hinzuzufügen.</string>
     <string name="help_quickmenu_screenshot_top_label">Screenshot oberer Bildschirm</string>
     <string name="help_quickmenu_screenshot_top_desc">Nimmt einen Screenshot des oberen Bildschirms auf. Wenn kein Mirroring aktiv ist, muss der Megingiard Systemdienst verbunden sein.</string>
     <string name="help_quickmenu_screenshot_bottom_label">Screenshot unterer Bildschirm</string>
@@ -859,7 +858,8 @@ Open Settings to create a layout.</string>
     <string name="help_companion_hub_sec_hero">Aktives Spiel &amp; Steuerungsprofil</string>
     <string name="help_companion_hub_hero_show_desc">Öffnet das MacroPad-Touch-Layout für das aktive Spiel im Vollbildmodus auf dem unteren Bildschirm.</string>
     <string name="help_companion_hub_hero_edit_desc">Startet den Profil- und Layout-Editor zum Anpassen von Tastenpositionen, Styles und Makro-Zuweisungen.</string>
-    <string name="help_companion_hub_hero_link_desc">Verknüpft ein benutzerdefiniertes Steuerungsprofil oder erstellt ein neues Profil für das aktuell aktive oder ausgewählte Spiel.</string>
+    <string name="help_companion_hub_hero_create_desc">Erstellt ein neues MacroPad-Steuerungsprofil, das direkt mit dem aktuell aktiven oder ausgewählten Spiel verknüpft ist.</string>
+    <string name="help_companion_hub_hero_link_desc">Verknüpft ein bestehendes benutzerdefiniertes Steuerungsprofil mit dem aktuell aktiven oder ausgewählten Spiel.</string>
     <string name="help_companion_hub_sec_tools">Begleit-Tools</string>
     <string name="help_companion_hub_macropad_desc">Schnellzugriff zum Öffnen der aktiven MacroPad-Touch-Bedienoberfläche.</string>
     <string name="help_companion_hub_settings_desc">Zugriff auf app-weite Einstellungen wie Theme-Farben, Systemdienst-Status, Totzonen und Konfigurations-Backups.</string>
@@ -1047,7 +1047,6 @@ Open Settings to create a layout.</string>
     <string name="integration_home_relink_dialog_cancel">Abbrechen</string>
     <string name="integration_home_new_profile">Neues Profil</string>
     <string name="integration_home_default_layout">Standard</string>
-    <string name="integration_home_show_macropad">Anzeigen</string>
     <string name="integration_home_hero_idle_title">Megingiard Begleiter-Hub</string>
     <string name="integration_home_hero_idle_subtitle">Wähle ein Spiel auf dem oberen Bildschirm oder öffne unten ein Werkzeug.</string>
     <string name="integration_home_launch_controls">Anzeigen</string>

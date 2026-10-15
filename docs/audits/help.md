@@ -2,7 +2,7 @@
 
 > **Feature Spec:** [`docs/features/help/FEATURE.md`](../features/help/FEATURE.md)
 > **Modules & Packages:** `:companion:ui` (`ui/`, `ui/onboarding/`, `mirror/`, `privd/`, `settings/`), `:companion:domain` (`onboarding/`, `settings/`)
-> **Audit Status:** Draft — Awaiting Operator Selection
+> **Audit Status:** Completed
 
 ---
 
@@ -227,4 +227,4 @@ None identified — `HelpModal` and onboarding composables render only on explic
 - [x] **`[HP-11]`** — Extract shared wizard card scaffold, root-bridge activation helpers, and deduplicate locale lookup *(Complexity: Medium, Risk: Low)*
 - [x] **`[HP-12]`** — Inline single-use `ensureMacroPadModeForProfile` closure in `QuickMenu.kt` *(Complexity: Low, Risk: Low)*
 - [x] **`[HP-13]`** — Sync `docs/features/help/FEATURE.md` onboarding wizard step count, mandatory Accessibility, root-bridge, and settings path *(Complexity: Low, Risk: Low)*
-- [ ] **`[HP-14]`** — Sync `QuickMenuHelpModal`, `CompanionHubHelpModal`, and `FEATURE.md` coverage table / locale list *(Complexity: Low, Risk: Low)*
+- [x] **`[HP-14]`** — Sync `QuickMenuHelpModal`, `CompanionHubHelpModal`, and `FEATURE.md` coverage table / locale list *(Complexity: Low, Risk: Low)*
