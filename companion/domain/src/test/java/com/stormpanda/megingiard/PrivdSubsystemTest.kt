@@ -7,6 +7,7 @@ import com.stormpanda.megingiard.macropad.MacroStep
 import com.stormpanda.megingiard.macropad.PhysicalGamepadRecordingManager
 import com.stormpanda.megingiard.privd.BootstrapStage
 import com.stormpanda.megingiard.privd.EvdevEvent
+import com.stormpanda.megingiard.privd.PendingRpc
 import com.stormpanda.megingiard.privd.PrivdAdbConnectionManager
 import com.stormpanda.megingiard.privd.PrivdBootstrapper
 import com.stormpanda.megingiard.privd.PrivdClient
@@ -293,5 +294,44 @@ class PrivdSubsystemTest {
 
         PrivdAdbConnectionManager.clearCredentials(context)
         assertFalse(PrivdAdbConnectionManager.hasCredentials(context))
+    }
+
+    @Test
+    fun `PendingRpc SingleLine and MultiLine frame responses and handle errors`() {
+        val pingRpc = PendingRpc.SingleLine(successPrefix = "PONG")
+        assertFalse(pingRpc.onLine("EVT 1 304 1"))
+        assertTrue(pingRpc.onLine("PONG"))
+        assertTrue(pingRpc.deferred.isCompleted)
+
+        val mirrorRpc =
+            PendingRpc.SingleLine(
+                successPrefix = "MIRROR_DIRECT_READY",
+                errorPrefix = "MIRROR_DIRECT_ERR",
+                exactSuccessMatch = false,
+            )
+        assertTrue(mirrorRpc.onLine("MIRROR_DIRECT_ERR spawn failed"))
+        assertTrue(mirrorRpc.deferred.isCompleted)
+
+        val multiRpc =
+            PendingRpc.MultiLine(
+                beginMarker = "READ_BEGIN",
+                endMarker = "READ_END",
+                errorPrefix = "READ_ERR",
+            )
+        assertFalse(multiRpc.onLine("EVT 1 304 0"))
+        assertTrue(multiRpc.onLine("READ_BEGIN"))
+        assertTrue(multiRpc.onLine("line 1"))
+        assertTrue(multiRpc.onLine("line 2"))
+        assertTrue(multiRpc.onLine("READ_END"))
+        assertEquals("line 1\nline 2\n", multiRpc.deferred.getCompleted())
+
+        val errorMultiRpc =
+            PendingRpc.MultiLine(
+                beginMarker = "PROC_BEGIN",
+                endMarker = "PROC_END",
+                errorPrefix = "PROC_ERR",
+            )
+        assertTrue(errorMultiRpc.onLine("PROC_ERR permission denied"))
+        assertNull(errorMultiRpc.deferred.getCompleted())
     }
 }

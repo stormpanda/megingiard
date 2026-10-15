@@ -242,7 +242,7 @@
 - [x] **`[PM-08]`** — Delete write-only `_isWirelessDebuggingActive` / `_hasCredentials` flows (`GlobalSettingsViewModel`), vestigial `UID=` (`g_expected_app_uid` in C), and legacy 3-token touch branch (`cmd_parsers.h`) *(Complexity: High, Risk: Low)*
 - [x] **`[PM-09]`** — Derive `PrivdManager.state` reactively from `PrivdClient.state` + bootstrap status, delete `clientObserverJob`, and remove unused `PServerBootstrapper.stage` *(Complexity: High, Risk: Low)*
 - [x] **`[PM-10]`** — Express `AppStateManager.isPrivdPromptActive` as a pure derived `StateFlow<Boolean>` via `combine(...)` and delete stale `_hasAdbCredentials` *(Complexity: High, Risk: Low)*
-- [ ] **`[PM-11]`** — Collapse the 6 `@Volatile CompletableDeferred` fields, 2 capture flags, 2 buffers, and `dumpLock` in `PrivdClient` into a single `PendingRpc` under `commandMutex` *(Complexity: High, Risk: Low)*
+- [x] **`[PM-11]`** — Collapse the 6 `@Volatile CompletableDeferred` fields, 2 capture flags, 2 buffers, and `dumpLock` in `PrivdClient` into a single `PendingRpc` under `commandMutex` *(Complexity: High, Risk: Low)*
 - [ ] **`[PM-12]`** — Move blocking socket connect/handshake outside `PrivdClient`'s `@Synchronized` lock (eliminating raw `Thread { disconnect() }`) and convert `MegingiardAccessibilityService.isAutoSetupActive` to `StateFlow<Boolean>` *(Complexity: High, Risk: Low)*
 - [ ] **`[PM-13]`** — Consolidate the 5 concurrent 1-second prerequisite polling loops and `ON_RESUME` observers into a single shared `rememberPrivilegedPrerequisitesState()` hook *(Complexity: High, Risk: Low)*
 - [ ] **`[PM-14]`** — Remove copy-pasted 1,000 ms artificial spinner delays and redundant pre-checks in `MegingiardAccessibilityService.onServiceConnected()` *(Complexity: Low, Risk: Low)*
