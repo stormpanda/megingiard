@@ -53,7 +53,6 @@ import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.LayoutTransitionManager
 import com.stormpanda.megingiard.macropad.MacroPadState
-import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenshotTarget
 
@@ -158,18 +157,6 @@ fun QuickMenu(
                 onTakeBothScreenshot = { ScreenCaptureManager.requestScreenshot(ScreenshotTarget.BOTH) },
             )
 
-            fun ensureMacroPadModeForProfile(profile: PadProfile?) {
-                val matchesFocused =
-                    profile?.matches(
-                        AppStateManager.focusedAppPackageName.value,
-                        AppStateManager.focusedRomPath.value,
-                        isActiveProfile = true,
-                    ) == true
-                if (companionViewMode != CompanionViewMode.AUTO || !matchesFocused) {
-                    AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
-                }
-            }
-
             // ── Bottom card — Profiles / Layouts / Actions ─────────────────
             Column(
                 modifier =
@@ -245,7 +232,7 @@ fun QuickMenu(
                             icon = Icons.Rounded.Gamepad,
                             colors = colors,
                             onClick = {
-                                ensureMacroPadModeForProfile(MacroPadState.activeProfile.value)
+                                AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
                             },
                             modifier = Modifier.weight(1f),
                         )
