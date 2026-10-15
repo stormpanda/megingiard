@@ -1,6 +1,5 @@
 package com.stormpanda.megingiard.input
 
-import android.content.Context
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.keyboard.KeyInjector
@@ -12,7 +11,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 private const val TAG = "InjectorLifecycleMgr"
 
@@ -35,9 +33,8 @@ object InjectorLifecycleManager {
     private var watcherJob: Job? = null
 
     @Synchronized
-    fun watch(context: Context) {
+    fun watch() {
         if (watcherJob?.isActive == true) return
-        val appContext = context.applicationContext
 
         watcherJob =
             scope.launch {
@@ -51,7 +48,9 @@ object InjectorLifecycleManager {
                     )
                 }.distinctUntilChanged()
                     .collectLatest { states ->
-                        if (!states.startKeyboard) {
+                        if (states.startKeyboard) {
+                            KeyInjector.start()
+                        } else {
                             AppLog.d(TAG, "stopping KeyInjector")
                             KeyInjector.stop()
                         }
@@ -62,12 +61,6 @@ object InjectorLifecycleManager {
                         if (!states.startTouch) {
                             AppLog.d(TAG, "stopping TouchInjector")
                             TouchInjector.releaseAllSlots()
-                        }
-
-                        withContext(Dispatchers.IO) {
-                            if (states.startKeyboard) {
-                                KeyInjector.start(appContext)
-                            }
                         }
                     }
             }

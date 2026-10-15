@@ -167,7 +167,7 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
 
     // Single watcher that starts/stops injectors reactively based on all modal flags
     LaunchedEffect(Unit) {
-        viewModel.watchInjectorLifecycle(context)
+        viewModel.watchInjectorLifecycle()
     }
 
     // Stop all injectors and reset peek state when leaving MACROPAD mode

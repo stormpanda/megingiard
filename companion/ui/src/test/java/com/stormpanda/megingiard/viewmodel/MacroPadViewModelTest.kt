@@ -107,7 +107,7 @@ class MacroPadViewModelTest {
         val app = RuntimeEnvironment.getApplication()
         val vm = MacroPadViewModel(app)
 
-        vm.watchInjectorLifecycle(app)
+        vm.watchInjectorLifecycle()
         vm.stopInjectors()
     }
 }

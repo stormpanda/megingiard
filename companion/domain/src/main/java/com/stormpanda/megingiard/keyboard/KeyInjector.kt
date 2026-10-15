@@ -1,6 +1,5 @@
 package com.stormpanda.megingiard.keyboard
 
-import android.content.Context
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdConnectionState
@@ -31,7 +30,7 @@ object KeyInjector {
         }
     }
 
-    fun start(context: Context? = null) {
+    fun start() {
         active = true
         AppLog.i(TAG, "start()")
         if (PrivdClient.isConnected) {

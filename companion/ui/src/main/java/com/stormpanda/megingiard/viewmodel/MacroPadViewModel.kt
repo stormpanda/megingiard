@@ -1,7 +1,6 @@
 package com.stormpanda.megingiard.viewmodel
 
 import android.app.Application
-import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
@@ -43,8 +42,8 @@ class MacroPadViewModel(
     /**
      * Starts watching injector lifecycles via [InjectorLifecycleManager].
      */
-    fun watchInjectorLifecycle(context: Context) {
-        InjectorLifecycleManager.watch(context)
+    fun watchInjectorLifecycle() {
+        InjectorLifecycleManager.watch()
     }
 
     fun stopInjectors() {

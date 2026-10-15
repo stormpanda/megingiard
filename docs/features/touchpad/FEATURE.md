@@ -65,7 +65,7 @@ Megingiard uses the mandatory **Megingiard System Service** (`megingiard_privd`)
 
 Injector lifecycles are managed globally by `InjectorLifecycleManager`, which maintains active `MouseInjector`, `TouchInjector`, and `KeyInjector` registrations whenever Megingiard is in the foreground (`AppStateManager.isActivityResumed`), stopping them when backgrounded (`onStop`) or during the Privileged Mode setup wizard IME:
 
-1. `InjectorLifecycleManager.watch(context)` is initiated centrally in `MainActivity.onCreate()`.
+1. `InjectorLifecycleManager.watch()` is initiated centrally in `MainActivity.onCreate()`.
 2. Commands are routed from `MouseInjector` and `TouchInjector` directly into `PrivdClient`, which communicates with `megingiard_privd` over the local abstract UNIX domain socket.
 3. Individual screens (`FullscreenMouseOverlay`, `MacroPadScreen`) route events directly to `MouseInjector` or `TouchInjector` without starting or stopping background processes on local composition/disposal.
 

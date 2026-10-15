@@ -275,7 +275,7 @@ class MainActivity : ComponentActivity() {
         SettingsManager.init(this)
 
         // Centralized input injector lifecycle watching (keeps Key, Mouse, Touch active while foregrounded)
-        InjectorLifecycleManager.watch(this)
+        InjectorLifecycleManager.watch()
 
         // Initialize canonical home launcher and system role classifier
         SystemRoleClassifier.init(this)
