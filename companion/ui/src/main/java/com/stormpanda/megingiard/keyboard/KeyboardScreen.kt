@@ -23,10 +23,8 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,8 +32,6 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
-import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
@@ -161,7 +157,6 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                         )
                     }
 
-                var touchpadCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
                 val pointersInsideTouchpad = remember { HashSet<Long>() }
 
                 val insetBezelBrush = rememberBezelBrush()
@@ -183,15 +178,13 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                                     width = KB_TOUCHPAD_BORDER_WIDTH,
                                     brush = insetBezelBrush,
                                     shape = KB_TOUCHPAD_SHAPE,
-                                ).onGloballyPositioned { touchpadCoords = it }
-                                .pointerInput(processor) {
+                                ).pointerInput(processor) {
                                     try {
                                         awaitPointerEventScope {
                                             while (true) {
                                                 val event = awaitPointerEvent(PointerEventPass.Main)
-                                                val coords = touchpadCoords ?: continue
-                                                val sw = coords.size.width.toFloat()
-                                                val sh = coords.size.height.toFloat()
+                                                val sw = size.width.toFloat().coerceAtLeast(1f)
+                                                val sh = size.height.toFloat().coerceAtLeast(1f)
                                                 for (change in event.changes) {
                                                     val id = change.id.value
                                                     val localPos = change.position
