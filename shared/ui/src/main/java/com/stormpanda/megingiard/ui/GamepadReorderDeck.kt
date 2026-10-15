@@ -104,7 +104,6 @@ fun <T> GamepadReorderDeck(
         breadcrumbs = breadcrumbTrail,
         scrollable = false,
         modifier = modifier,
-        accentColor = colors.accent,
     ) {
         if (items.isEmpty()) {
             Text(

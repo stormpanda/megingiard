@@ -265,7 +265,7 @@ None identified — animations in `GamepadFocusCard`, `drawBehind` border render
 - [x] **`[TH-12]`** — Reuse `launchDirectionalRepeat` in `PrimaryOverlayInputBridge` *(Complexity: Low, Risk: Low)*
 - [x] **`[TH-13]`** — Consolidate triplicated focus restoration logic in `GamepadTwoPaneScaffold` *(Complexity: High, Risk: Med)*
 - [x] **`[TH-14]`** — Deduplicate overlay key dispatch, mirror-freeze lifecycle, and theme root between `PrimaryOverlayManager` and `PrimaryOverlayActivity` *(Complexity: High, Risk: Low)*
-- [ ] **`[TH-15]`** — Remove redundant `accentColor` parameter threading in `GamepadScaffold` (`AGENTS.md §16.5`) *(Complexity: Low, Risk: Low)*
+- [x] **`[TH-15]`** — Remove redundant `accentColor` parameter threading in `GamepadScaffold` (`AGENTS.md §16.5`) *(Complexity: Low, Risk: Low)*
 - [ ] **`[TH-16]`** — Remove duplicate `keyboardRequester?.invoke(false)` call in `GamepadTextFieldCard` *(Complexity: Low, Risk: Low)*
 - [ ] **`[TH-17]`** — Sync `docs/features/theming/FEATURE.md` with current 8-palette architecture and active tokens/components *(Complexity: Med, Risk: Low)*
 - [ ] **`[TH-18]`** — Fix broken `:companion:ui` and `GamepadComponents.kt` links in `docs/GAMEPAD_NAVIGATION.md` *(Complexity: Low, Risk: Low)*

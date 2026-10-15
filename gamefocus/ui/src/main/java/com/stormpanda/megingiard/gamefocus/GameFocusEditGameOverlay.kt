@@ -192,7 +192,6 @@ fun GameFocusEditGameOverlay(
                         EditGameCategory.GAME_INFO -> {
                             GameInfoDeckContent(
                                 appInfo = liveAppInfo,
-                                accentColor = appColors.accent,
                                 onDismiss = onDismiss,
                             )
                         }
@@ -216,7 +215,6 @@ fun GameFocusEditGameOverlay(
                         EditGameCategory.COLLECTIONS -> {
                             CollectionsMembershipDeckContent(
                                 appInfo = liveAppInfo,
-                                accentColor = appColors.accent,
                                 onOpenManageGalleries = onOpenManageGalleries,
                             )
                         }
@@ -231,7 +229,6 @@ fun GameFocusEditGameOverlay(
 @Composable
 private fun GameInfoDeckContent(
     appInfo: InstalledAppInfo,
-    accentColor: Color,
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -259,9 +256,7 @@ private fun GameInfoDeckContent(
             onDiscard = onDismiss,
         )
 
-    GamepadDeck(
-        accentColor = accentColor,
-    ) {
+    GamepadDeck {
         GamepadTextFieldCard(
             title = stringResource(R.string.gamefocus_field_display_name_title),
             description = stringResource(R.string.gamefocus_field_display_name_desc),
@@ -609,7 +604,7 @@ private fun SteamGridDbArtworkDeck(
             }
     }
 
-    GamepadDeck(accentColor = accentColor) {
+    GamepadDeck {
         // ── 1. Toggle Card ───────────────────────────────────────────
         renderToggleCard(isDefault, isDownloading) { checked ->
             isDefault = checked
@@ -862,7 +857,6 @@ private fun SteamGridDbImageThumbnail(
 @Composable
 private fun CollectionsMembershipDeckContent(
     appInfo: InstalledAppInfo,
-    accentColor: Color,
     onOpenManageGalleries: (() -> Unit)?,
 ) {
     val context = LocalContext.current
@@ -881,9 +875,7 @@ private fun CollectionsMembershipDeckContent(
             galleryConfig.collections.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
         }
 
-    GamepadDeck(
-        accentColor = accentColor,
-    ) {
+    GamepadDeck {
         if (sortedCollections.isEmpty()) {
             GamepadInfoBox(
                 text = stringResource(R.string.gamefocus_edit_collections_empty_info),

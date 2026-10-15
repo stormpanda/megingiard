@@ -155,8 +155,8 @@ fun rememberGamepadBringIntoViewSpec(extraPadding: Dp = GS_DECK_SCROLL_EXTRA_PAD
 fun GamepadBreadcrumbHeader(
     breadcrumbs: List<String>,
     modifier: Modifier = Modifier,
-    accentColor: Color = LocalAppColors.current.accent,
 ) {
+    val accentColor = LocalAppColors.current.accent
     AnimatedContent(
         targetState = breadcrumbs,
         transitionSpec = {
@@ -190,7 +190,6 @@ fun GamepadDeck(
     breadcrumbs: List<String> = emptyList(),
     modifier: Modifier = Modifier,
     scrollable: Boolean = true,
-    accentColor: Color = LocalAppColors.current.accent,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val breadcrumbConsumer = LocalBreadcrumbConsumer.current
@@ -256,7 +255,7 @@ fun GamepadDeck(
             if (showLocalHeader) {
                 GamepadSectionHeader(
                     text = breadcrumbs.joinToString("  ›  ") { it.uppercase(Locale.ROOT) },
-                    color = accentColor,
+                    color = LocalAppColors.current.accent,
                 )
             }
 
@@ -273,13 +272,11 @@ fun GamepadDeck(
     title: String,
     modifier: Modifier = Modifier,
     scrollable: Boolean = true,
-    accentColor: Color = LocalAppColors.current.accent,
     content: @Composable ColumnScope.() -> Unit,
 ) = GamepadDeck(
     breadcrumbs = if (title.isNotBlank()) listOf(title) else emptyList(),
     modifier = modifier,
     scrollable = scrollable,
-    accentColor = accentColor,
     content = content,
 )
 
@@ -423,7 +420,6 @@ fun GamepadTwoPaneScaffold(
     content: @Composable ColumnScope.() -> Unit,
     modifier: Modifier = Modifier,
     breadcrumbs: List<String> = emptyList(),
-    accentColor: Color = LocalAppColors.current.accent,
     isCustomBackActive: Boolean = false,
     onCustomBack: (() -> Unit)? = null,
     navigationKey: Any? = null,
@@ -701,7 +697,6 @@ fun GamepadTwoPaneScaffold(
                         ) {
                             GamepadBreadcrumbHeader(
                                 breadcrumbs = effectiveBreadcrumbs,
-                                accentColor = accentColor,
                             )
                         }
                     }

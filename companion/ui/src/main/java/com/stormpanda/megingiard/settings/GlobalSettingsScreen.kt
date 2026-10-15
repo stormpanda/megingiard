@@ -179,7 +179,6 @@ fun GlobalSettingsScreen(
                         val categoryTitle = stringResource(selectedCategory.titleResId)
                         GamepadDeck(
                             title = categoryTitle,
-                            accentColor = effectiveAccent,
                         ) {
                             when (selectedCategory) {
                                 SettingsCategory.GENERAL -> {
@@ -312,7 +311,6 @@ fun GlobalSettingsScreen(
                                     stringResource(R.string.settings_section_input),
                                     stringResource(R.string.privd_deadzone_title),
                                 ),
-                            accentColor = effectiveAccent,
                         ) {
                             DeadzonesSubPage(
                                 deadzoneLeft = deadzoneLeft,
@@ -330,7 +328,6 @@ fun GlobalSettingsScreen(
                                     stringResource(R.string.settings_section_scraping),
                                     stringResource(R.string.settings_steamgriddb_token),
                                 ),
-                            accentColor = effectiveAccent,
                         ) {
                             SteamGridDbTokenSubPage(
                                 token = steamGridDbApiToken,
@@ -348,7 +345,6 @@ fun GlobalSettingsScreen(
                                     stringResource(R.string.settings_section_appearance),
                                     stringResource(R.string.settings_accent_custom_title),
                                 ),
-                            accentColor = effectiveAccent,
                         ) {
                             CustomAccentSubPage(
                                 initialColor = Color(customAccentColorArgb),
@@ -368,7 +364,6 @@ fun GlobalSettingsScreen(
                                     stringResource(R.string.settings_section_config),
                                     stringResource(R.string.settings_config_export),
                                 ),
-                            accentColor = effectiveAccent,
                         ) {
                             CreateBackupSubPage(
                                 onExport = { metadata, includeBackgrounds ->
@@ -388,7 +383,6 @@ fun GlobalSettingsScreen(
                                     stringResource(R.string.settings_section_config),
                                     stringResource(R.string.settings_config_export_profile),
                                 ),
-                            accentColor = effectiveAccent,
                         ) {
                             ShareProfileSubPage(
                                 onExportProfile = { metadata, profile, includeBackgrounds ->
@@ -409,7 +403,6 @@ fun GlobalSettingsScreen(
                                     stringResource(R.string.settings_section_config),
                                     stringResource(R.string.config_restore_dialog_title),
                                 ),
-                            accentColor = effectiveAccent,
                         ) {
                             RestoreBackupSubPage(
                                 internalBackups = internalBackups,
@@ -436,7 +429,6 @@ fun GlobalSettingsScreen(
                                         stringResource(R.string.config_restore_dialog_title),
                                         stringResource(R.string.config_import_review_title),
                                     ),
-                                accentColor = effectiveAccent,
                             ) {
                                 RestoreReviewSubPage(
                                     export = reviewExport,
@@ -499,7 +491,6 @@ fun GlobalSettingsScreen(
                                     stringResource(R.string.settings_jump_updates),
                                     stringResource(R.string.update_dialog_title, tagName),
                                 ),
-                            accentColor = effectiveAccent,
                         ) {
                             UpdateAvailableSubPage(
                                 tagName = tagName,
