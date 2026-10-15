@@ -305,10 +305,7 @@ fun paletteFor(
 // components (Switch, Slider, OutlinedTextField, AlertDialog, TextButton, …)
 // automatically use the correct theme colors without per-call overrides.
 
-fun colorSchemeFor(
-    colors: AppColors,
-    mode: ThemeMode,
-): ColorScheme =
+fun colorSchemeFor(colors: AppColors): ColorScheme =
     darkColorScheme().copy(
         primary = colors.accent,
         onPrimary = colors.onAccent,

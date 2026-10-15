@@ -45,7 +45,6 @@ fun <T> GamepadReorderDeck(
     onReorder: (List<T>) -> Unit,
     modifier: Modifier = Modifier,
     breadcrumbs: List<String>? = null,
-    headerTitle: String? = null,
     itemDescription: ((T) -> String?)? = null,
     itemIcon: ((T) -> ImageVector?)? = null,
     emptyMessage: String = stringResource(R.string.gamepad_reorder_empty),
@@ -55,12 +54,7 @@ fun <T> GamepadReorderDeck(
     var movingItemKey by remember { mutableStateOf<Any?>(null) }
     val movingIndex = if (movingItemKey != null) items.indexOfFirst { itemKey(it) == movingItemKey } else -1
 
-    val breadcrumbTrail =
-        when {
-            !breadcrumbs.isNullOrEmpty() -> breadcrumbs
-            !headerTitle.isNullOrBlank() -> listOf(headerTitle)
-            else -> emptyList()
-        }
+    val breadcrumbTrail = breadcrumbs ?: emptyList()
 
     val reorderState =
         rememberReorderableLazyListState(lazyListState) { from, to ->

@@ -314,7 +314,7 @@ object PrimaryOverlayManager {
                             LocalFullscreenKeyboardRequester provides { active -> AppStateManager.setFullscreenKeyboardActive(active) },
                         ) {
                             MaterialTheme(
-                                colorScheme = colorSchemeFor(appColors, themeMode),
+                                colorScheme = colorSchemeFor(appColors),
                                 typography = megingiardTypography,
                             ) {
                                 Surface(

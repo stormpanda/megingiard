@@ -81,11 +81,8 @@ fun GamepadFocusCard(
     enabled: Boolean = true,
     shape: Shape = GC_CARD_SHAPE,
     cardBgColor: Color? = null,
-    focusedBorderColor: Color = LocalAppColors.current.accent,
     unfocusedBorderColor: Color = LocalAppColors.current.subduedBorder,
     onCustomKeyEvent: ((ComposeKeyEvent) -> Boolean)? = null,
-    onLeftKey: (() -> Unit)? = null,
-    onRightKey: (() -> Unit)? = null,
     onFocusChanged: ((Boolean) -> Unit)? = null,
     isAdjusting: Boolean = false,
     contentPadding: PaddingValues = PaddingValues(horizontal = GC_CARD_H_PADDING, vertical = GC_CARD_V_PADDING),
@@ -122,7 +119,7 @@ fun GamepadFocusCard(
         label = "cardBorderWidth",
     )
     val animatedBorderColor by animateColorAsState(
-        targetValue = if (isEffectivelyFocused) focusedBorderColor else unfocusedBorderColor,
+        targetValue = if (isEffectivelyFocused) colors.accent else unfocusedBorderColor,
         animationSpec = tween(GC_ANIM_DURATION_MS),
         label = "cardBorderColor",
     )
@@ -202,26 +199,6 @@ fun GamepadFocusCard(
                         }
                         // Consume both KeyDown and KeyUp so clickable does not double-fire
                         true
-                    }
-
-                    KeyEvent.KEYCODE_DPAD_LEFT -> {
-                        lastActionDownKeyCode = 0
-                        if (enabled && onLeftKey != null) {
-                            onLeftKey()
-                            true
-                        } else {
-                            false
-                        }
-                    }
-
-                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                        lastActionDownKeyCode = 0
-                        if (enabled && onRightKey != null) {
-                            onRightKey()
-                            true
-                        } else {
-                            false
-                        }
                     }
 
                     else -> {

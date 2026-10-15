@@ -723,7 +723,7 @@ class MainActivity : ComponentActivity() {
             val appColors = paletteFor(themeMode, Color(userAccentArgb))
 
             MaterialTheme(
-                colorScheme = colorSchemeFor(appColors, themeMode),
+                colorScheme = colorSchemeFor(appColors),
                 typography = megingiardTypography,
             ) {
                 CompositionLocalProvider(

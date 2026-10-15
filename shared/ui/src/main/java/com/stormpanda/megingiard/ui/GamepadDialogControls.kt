@@ -209,15 +209,12 @@ fun GamepadSaveExitActionRow(
     description: String? = null,
     saveIcon: ImageVector = Icons.Rounded.Save,
     saveActionText: String = stringResource(R.string.gamepad_action_save),
-    saveActionLeadingContent: (@Composable () -> Unit)? = null,
-    cardBgColor: Color? = null,
     pulseOnChanges: Boolean = false,
     enabled: Boolean = true,
     showExitPrompt: Boolean = false,
     onDismissPrompt: (() -> Unit)? = null,
     saveFocusRequester: FocusRequester? = null,
     bringIntoViewRequester: BringIntoViewRequester? = null,
-    itemKey: Any? = title,
 ) {
     val bivrModifier =
         if (bringIntoViewRequester != null) {
@@ -297,12 +294,10 @@ fun GamepadSaveExitActionRow(
                 description = effectiveDescription,
                 actionText = saveActionText,
                 icon = saveIcon,
-                cardBgColor = cardBgColor,
                 pulseOnChanges = pulseOnChanges,
-                actionLeadingContent = if (!showExitPrompt) saveActionLeadingContent else null,
                 enabled = enabled,
                 onClick = onSave,
-                itemKey = itemKey,
+                itemKey = title,
                 modifier =
                     Modifier
                         .width(card1VisibleWidth)
@@ -428,12 +423,9 @@ fun GamepadReorderCard(
     modifier: Modifier = Modifier,
     description: String? = null,
     icon: ImageVector? = null,
-    leadingContent: (@Composable () -> Unit)? = null,
     isDragging: Boolean = false,
     dragHandleModifier: Modifier = Modifier,
-    cardFocusRequester: FocusRequester = remember { FocusRequester() },
     itemKey: Any? = title,
-    enabled: Boolean = true,
     onFocusChanged: ((Boolean) -> Unit)? = null,
 ) {
     val colors = LocalAppColors.current
@@ -444,14 +436,8 @@ fun GamepadReorderCard(
     }
 
     GamepadFocusCard(
-        onClick = {
-            if (enabled) {
-                onToggleMoving()
-            }
-        },
-        cardFocusRequester = cardFocusRequester,
+        onClick = onToggleMoving,
         itemKey = itemKey,
-        enabled = enabled,
         modifier = modifier,
         isAdjusting = isMoving,
         onCustomKeyEvent = { keyEvent ->
@@ -520,13 +506,12 @@ fun GamepadReorderCard(
             title = title,
             description = description,
             icon = icon,
-            leadingContent =
-                leadingContent ?: {
-                    GamepadPositionBadge(
-                        index = index,
-                        isFocused = isFocused || isMoving || isDragging,
-                    )
-                },
+            leadingContent = {
+                GamepadPositionBadge(
+                    index = index,
+                    isFocused = isFocused || isMoving || isDragging,
+                )
+            },
             isFocused = isFocused || isMoving || isDragging,
             trailingContent = {
                 Row(

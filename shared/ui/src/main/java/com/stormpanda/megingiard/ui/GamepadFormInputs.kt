@@ -160,15 +160,11 @@ fun GamepadTextFieldCard(
     placeholder: String? = null,
     icon: ImageVector? = null,
     isError: Boolean = false,
-    singleLine: Boolean = true,
     enabled: Boolean = true,
-    onLeftKey: (() -> Unit)? = null,
     itemKey: Any? = title,
-    onFullscreenKeyboardActive: ((Boolean) -> Unit)? = null,
 ) {
-    val colors = LocalAppColors.current
     val keyboardController = LocalSoftwareKeyboardController.current
-    val keyboardRequester = onFullscreenKeyboardActive ?: LocalFullscreenKeyboardRequester.current
+    val keyboardRequester = LocalFullscreenKeyboardRequester.current
     var isEditing by remember { mutableStateOf(false) }
     var hasBeenEditing by remember { mutableStateOf(false) }
     var draftValue by remember {
@@ -237,7 +233,6 @@ fun GamepadTextFieldCard(
         enabled = enabled,
         modifier = modifier,
         isAdjusting = isEditing,
-        onLeftKey = onLeftKey,
         onCustomKeyEvent = { keyEvent ->
             if (!isEditing) return@GamepadFocusCard false
             val keyCode = keyEvent.nativeKeyEvent.keyCode
@@ -248,22 +243,12 @@ fun GamepadTextFieldCard(
                     KeyEvent.KEYCODE_ESCAPE,
                     KeyEvent.KEYCODE_BUTTON_A,
                     KeyEvent.KEYCODE_DPAD_CENTER,
+                    KeyEvent.KEYCODE_ENTER,
+                    KeyEvent.KEYCODE_NUMPAD_ENTER,
                     -> {
                         onValueChange(draftValue.text.trim())
                         isEditing = false
                         true
-                    }
-
-                    KeyEvent.KEYCODE_ENTER,
-                    KeyEvent.KEYCODE_NUMPAD_ENTER,
-                    -> {
-                        if (singleLine) {
-                            onValueChange(draftValue.text.trim())
-                            isEditing = false
-                            true
-                        } else {
-                            false
-                        }
                     }
 
                     else -> {
@@ -277,11 +262,9 @@ fun GamepadTextFieldCard(
                     KeyEvent.KEYCODE_ESCAPE,
                     KeyEvent.KEYCODE_BUTTON_A,
                     KeyEvent.KEYCODE_DPAD_CENTER,
-                    -> true
-
                     KeyEvent.KEYCODE_ENTER,
                     KeyEvent.KEYCODE_NUMPAD_ENTER,
-                    -> singleLine
+                    -> true
 
                     else -> false
                 }
@@ -379,7 +362,7 @@ fun GamepadTextFieldCard(
                         },
                         placeholder = placeholder?.let { { Text(it) } },
                         isError = isError,
-                        singleLine = singleLine,
+                        singleLine = true,
                         enabled = enabled,
                         readOnly = false,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
@@ -400,16 +383,6 @@ fun GamepadTextFieldCard(
                                         when (keyCode) {
                                             KeyEvent.KEYCODE_ENTER,
                                             KeyEvent.KEYCODE_NUMPAD_ENTER,
-                                            -> {
-                                                if (singleLine) {
-                                                    onValueChange(draftValue.text.trim())
-                                                    isEditing = false
-                                                    true
-                                                } else {
-                                                    false
-                                                }
-                                            }
-
                                             KeyEvent.KEYCODE_ESCAPE,
                                             KeyEvent.KEYCODE_BUTTON_B,
                                             KeyEvent.KEYCODE_BACK,
@@ -429,8 +402,6 @@ fun GamepadTextFieldCard(
                                         when (keyCode) {
                                             KeyEvent.KEYCODE_ENTER,
                                             KeyEvent.KEYCODE_NUMPAD_ENTER,
-                                            -> singleLine
-
                                             KeyEvent.KEYCODE_ESCAPE,
                                             KeyEvent.KEYCODE_BUTTON_B,
                                             KeyEvent.KEYCODE_BACK,

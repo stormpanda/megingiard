@@ -94,7 +94,7 @@ class PrimaryOverlayActivity : ComponentActivity() {
             val activeModal by AppStateManager.activePrimaryModal.collectAsStateWithLifecycle()
 
             MaterialTheme(
-                colorScheme = colorSchemeFor(appColors, themeMode),
+                colorScheme = colorSchemeFor(appColors),
                 typography = megingiardTypography,
             ) {
                 CompositionLocalProvider(

@@ -352,7 +352,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 }
 
             MaterialTheme(
-                colorScheme = colorSchemeFor(appColors, themeMode),
+                colorScheme = colorSchemeFor(appColors),
                 typography = megingiardTypography,
             ) {
                 CompositionLocalProvider(

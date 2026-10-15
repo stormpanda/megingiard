@@ -293,7 +293,6 @@ fun GamepadCategoryTile(
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    onSelect: (() -> Unit)? = null,
 ) {
     val colors = LocalAppColors.current
     val interactionSource = remember { MutableInteractionSource() }
@@ -356,7 +355,7 @@ fun GamepadCategoryTile(
                     if (focusState.isFocused) {
                         if (!selected) {
                             resetLastFocused?.invoke()
-                            onSelect?.invoke() ?: onClick()
+                            onClick()
                         }
                     }
                 }.then(requesterModifier)
@@ -421,9 +420,6 @@ fun GamepadTwoPaneScaffold(
     savedFocusKeys: Map<Int, Any>? = null,
     onRecordFocusedKey: ((depth: Int, key: Any) -> Unit)? = null,
     onRemoveFocusedKey: ((depth: Int) -> Unit)? = null,
-    footerContent: (@Composable () -> Unit)? = null,
-    sidebarFooter: (@Composable () -> Unit)? = null,
-    sidebarWidth: Dp = GS_SIDEBAR_WIDTH,
     scrollableDeck: Boolean = true,
 ) {
     val colors = LocalAppColors.current
@@ -728,7 +724,7 @@ fun GamepadTwoPaneScaffold(
                 Column(
                     modifier =
                         Modifier
-                            .width(sidebarWidth)
+                            .width(GS_SIDEBAR_WIDTH)
                             .fillMaxHeight()
                             .background(colors.surfaceVariant.copy(alpha = GS_SIDEBAR_BG_ALPHA))
                             .padding(GS_SIDEBAR_PADDING)
@@ -754,9 +750,6 @@ fun GamepadTwoPaneScaffold(
                         verticalArrangement = Arrangement.spacedBy(GS_SIDEBAR_SPACING),
                     ) {
                         sidebarContent()
-                    }
-                    if (sidebarFooter != null) {
-                        sidebarFooter()
                     }
                 }
 
@@ -828,9 +821,6 @@ fun GamepadTwoPaneScaffold(
                         content()
                     }
                 }
-            }
-            if (footerContent != null) {
-                footerContent()
             }
         }
     }
