@@ -770,9 +770,6 @@ object AppStateManager {
             if (_companionSurfaceMode.value == CompanionSurfaceMode.TOUCHPAD) {
                 _companionSurfaceMode.value = CompanionSurfaceMode.MACROPAD
             }
-            if (isTouchpadSettingsOpen.value) {
-                setTouchpadSettingsOpen(false)
-            }
         }
     }
 

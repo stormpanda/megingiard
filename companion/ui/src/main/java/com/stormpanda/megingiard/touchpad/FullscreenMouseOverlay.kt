@@ -152,23 +152,9 @@ fun FullscreenMouseOverlay() {
 
     val hasActivePointers by processor.hasActivePointers.collectAsStateWithLifecycle()
 
-    LaunchedEffect(touchpadUseMouse) {
-        processor.onCancel()
-    }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            AppLog.i(TAG, "dispose: resetting gesture processor state")
-            processor.onCancel()
-            if (AppStateManager.isTouchpadSettingsOpen.value) {
-                AppStateManager.setTouchpadSettingsOpen(false)
-            }
-        }
-    }
-
     val insetBezelBrush = rememberBezelBrush()
     val touchpadPointerModifier =
-        Modifier.pointerInput(processor) {
+        Modifier.pointerInput(processor, touchpadUseMouse) {
             try {
                 awaitPointerEventScope {
                     while (true) {
@@ -239,6 +225,7 @@ fun FullscreenMouseOverlay() {
                     }
                 }
             } finally {
+                AppLog.d(TAG, "pointerInput finally: resetting gesture processor state")
                 processor.onCancel()
             }
         }
