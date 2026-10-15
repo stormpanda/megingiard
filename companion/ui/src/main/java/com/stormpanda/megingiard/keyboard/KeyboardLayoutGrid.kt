@@ -91,7 +91,6 @@ internal fun KeyboardLayoutGrid(
                                                             else -> KeyboardMode.LETTERS
                                                         }
                                                     onModeChange(targetMode)
-                                                    KeyboardState.reset()
                                                     change.consume()
                                                 } else {
                                                     gestureProcessor.onPress(

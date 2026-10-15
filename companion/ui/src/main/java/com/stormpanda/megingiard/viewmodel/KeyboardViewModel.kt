@@ -1,11 +1,9 @@
 package com.stormpanda.megingiard.viewmodel
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
-import com.stormpanda.megingiard.input.InjectorLifecycleManager
 import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.keyboard.KeyDef
 import com.stormpanda.megingiard.keyboard.KeyInjector
@@ -22,7 +20,7 @@ import kotlinx.coroutines.flow.asStateFlow
 private const val TAG = "KeyboardViewModel"
 
 /**
- * ViewModel for [KeyboardScreen] — manages injector lifecycle, key repeat,
+ * ViewModel for [KeyboardScreen] — manages key repeat, gestures,
  * and keyboard state.
  */
 class KeyboardViewModel : ViewModel() {
@@ -39,6 +37,7 @@ class KeyboardViewModel : ViewModel() {
 
     fun setKeyboardMode(mode: KeyboardMode) {
         _keyboardMode.value = mode
+        KeyboardState.reset()
     }
 
     fun toggleMacroRow() {
@@ -83,12 +82,9 @@ class KeyboardViewModel : ViewModel() {
 
     fun closeQuickMenu() = AppStateManager.closeQuickMenu()
 
-    fun setKbLayout(value: KbLayout) = KeyboardSettings.setKbLayout(value)
-
-    fun startInjectors(context: Context) {
-        AppLog.i(TAG, "startInjectors called -> watching InjectorLifecycleManager")
+    fun setKbLayout(value: KbLayout) {
+        KeyboardSettings.setKbLayout(value)
         KeyboardState.reset()
-        InjectorLifecycleManager.watch(context)
     }
 
     fun stopAndReset() {

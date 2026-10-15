@@ -3,6 +3,8 @@ package com.stormpanda.megingiard.viewmodel
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.keyboard.KeyboardMode
+import com.stormpanda.megingiard.keyboard.KeyboardState
+import com.stormpanda.megingiard.keyboard.ModifierState
 import com.stormpanda.megingiard.settings.KeyboardSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -25,12 +27,14 @@ class KeyboardViewModelTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         KeyboardSettings.resetForTesting()
+        KeyboardState.reset()
         AppStateManager.closeQuickMenu()
     }
 
     @After
     fun tearDown() {
         AppStateManager.closeQuickMenu()
+        KeyboardState.reset()
         KeyboardSettings.resetForTesting()
         Dispatchers.resetMain()
     }
@@ -40,8 +44,14 @@ class KeyboardViewModelTest {
         val vm = KeyboardViewModel()
 
         assertEquals(KeyboardMode.LETTERS, vm.keyboardMode.value)
+        KeyboardState.onModifierTouchDown("lshift")
+        KeyboardState.onModifierTouchUp("lshift", 42)
+        assertEquals(ModifierState.STICKY, KeyboardState.stateFor("lshift").value)
+
         vm.setKeyboardMode(KeyboardMode.SYMBOLS_1)
         assertEquals(KeyboardMode.SYMBOLS_1, vm.keyboardMode.value)
+        assertEquals(ModifierState.INACTIVE, KeyboardState.stateFor("lshift").value)
+
         vm.setKeyboardMode(KeyboardMode.NUMERIC)
         assertEquals(KeyboardMode.NUMERIC, vm.keyboardMode.value)
     }
@@ -50,8 +60,13 @@ class KeyboardViewModelTest {
     fun testLayoutCyclingAndSetters() {
         val vm = KeyboardViewModel()
 
+        KeyboardState.onModifierTouchDown("ctrl")
+        KeyboardState.onModifierTouchUp("ctrl", 29)
+        assertEquals(ModifierState.STICKY, KeyboardState.stateFor("ctrl").value)
+
         vm.setKbLayout(KbLayout.QWERTY)
         assertEquals(KbLayout.QWERTY, vm.kbLayout.value)
+        assertEquals(ModifierState.INACTIVE, KeyboardState.stateFor("ctrl").value)
 
         vm.setKbTouchpadEnabled(false)
         assertFalse(vm.kbTouchpadEnabled.value)

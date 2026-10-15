@@ -109,12 +109,6 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
     val isCapsActive = capsState != ModifierState.INACTIVE
     val isAltGrActive = altGrState != ModifierState.INACTIVE
 
-    // Start injectors via ViewModel
-    LaunchedEffect(Unit) {
-        AppLog.d(TAG, "KeyboardScreen composed: starting injectors")
-        viewModel.startInjectors(context)
-    }
-
     DisposableEffect(Unit) {
         onDispose {
             AppLog.d(TAG, "KeyboardScreen disposed: resetting controller and state")
@@ -334,10 +328,7 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                                 isAltGrActive = isAltGrActive,
                                 isQuickMenuOpen = isQuickMenuOpen,
                                 onCloseQuickMenu = { viewModel.closeQuickMenu() },
-                                onModeChange = { nextMode ->
-                                    viewModel.setKeyboardMode(nextMode)
-                                    KeyboardState.reset()
-                                },
+                                onModeChange = { nextMode -> viewModel.setKeyboardMode(nextMode) },
                             )
 
                             val popup = activePopupState
@@ -355,10 +346,7 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
 
             KeyboardBottomToolbar(
                 keyboardMode = keyboardMode,
-                onModeToggle = { nextMode ->
-                    viewModel.setKeyboardMode(nextMode)
-                    KeyboardState.reset()
-                },
+                onModeToggle = { nextMode -> viewModel.setKeyboardMode(nextMode) },
                 onCollapseClick = { AppStateManager.setFullscreenKeyboardActive(false) },
                 onSettingsClick = { AppStateManager.setKeyboardSettingsOpen(true) },
             )
