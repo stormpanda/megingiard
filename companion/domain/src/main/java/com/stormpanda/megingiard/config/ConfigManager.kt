@@ -896,27 +896,16 @@ object ConfigManager {
                 val rawSettings = rootObj["settings"] ?: JsonObject(emptyMap())
                 val rawProfiles = rootObj["profiles"] ?: JsonArray(emptyList())
 
-                val rawPayloadNoImages =
-                    checksumJson.encodeToString(RawChecksumPayload(rawSettings, rawProfiles, emptyMap()))
-                val hexNoImages = HmacUtil.sha256Hex(rawPayloadNoImages.toByteArray(Charsets.UTF_8)).lowercase()
-                if ("sha256:$hexNoImages" == export.checksum) return true
-
-                if (imageHashes.isNotEmpty()) {
-                    val rawPayloadWithImages =
-                        checksumJson.encodeToString(RawChecksumPayload(rawSettings, rawProfiles, imageHashes))
-                    val hexWithImages = HmacUtil.sha256Hex(rawPayloadWithImages.toByteArray(Charsets.UTF_8)).lowercase()
-                    if ("sha256:$hexWithImages" == export.checksum) return true
-                }
+                val rawPayload =
+                    checksumJson.encodeToString(RawChecksumPayload(rawSettings, rawProfiles, imageHashes))
+                val hex = HmacUtil.sha256Hex(rawPayload.toByteArray(Charsets.UTF_8)).lowercase()
+                if ("sha256:$hex" == export.checksum) return true
             }.onFailure { e ->
                 AppLog.w(TAG, "Raw JSON checksum verification failed: ${e.message}")
             }
         }
 
-        val expectedWithoutImages = computeChecksum(export.settings, export.profiles, emptyMap())
-        if (expectedWithoutImages == export.checksum) return true
-
-        val expectedWithImages = computeChecksum(export.settings, export.profiles, imageHashes)
-        return expectedWithImages == export.checksum
+        return computeChecksum(export.settings, export.profiles, imageHashes) == export.checksum
     }
 
     @Serializable

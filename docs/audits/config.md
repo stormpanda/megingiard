@@ -244,7 +244,7 @@
 - [x] **`[CF-04]`** — Normalize ZIP image keys consistently to `"bg_<id>"`/`"mask_<id>"` and remove dead prefix stripping / 6-way key probing *(Complexity: Med, Risk: Low)*
 - [x] **`[CF-05]`** — Remove unreachable `is Long` branch in `exportGroupedSettings` and unused `longPreferencesKey` import *(Complexity: Low, Risk: Low)*
 - [x] **`[CF-06]`** — Load `_internalBackups` once on startup and update in-memory state in `saveBackup` (removing `lastBackupsJsonStr` and double decoding) *(Complexity: Med, Risk: Low)*
-- [ ] **`[CF-07]`** — Eliminate redundant no-image checksum pass when `imageHashes` is non-empty in `verifyChecksum` *(Complexity: Med, Risk: Low)*
+- [x] **`[CF-07]`** — Eliminate redundant no-image checksum pass when `imageHashes` is non-empty in `verifyChecksum` *(Complexity: Med, Risk: Low)*
 - [ ] **`[CF-08]`** — Remove 6 orphaned DataStore preference keys from `SettingsKeys.kt` and stale `BackgroundSettings` comment *(Complexity: Med, Risk: Low)*
 - [ ] **`[CF-09]`** — Remove `EXCLUDED_KEYS` from import type-dispatch sets and enforce 100% type-set coverage in `SettingsKeysTest` *(Complexity: Med, Risk: Low)*
 - [ ] **`[CF-10]`** — Simplify legacy `useBackgroundImageAsMask` migration in `importMacroPadData` and sync device flags on imported profiles *(Complexity: Med, Risk: Low)*
