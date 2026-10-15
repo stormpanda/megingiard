@@ -1,7 +1,6 @@
 package com.stormpanda.megingiard.keyboard
 
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.input.MouseInjector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -10,7 +9,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlin.math.abs
-import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 private const val TAG = "KbGestureProcessor"
@@ -19,7 +17,6 @@ private const val KB_REPEAT_INITIAL_DELAY_MS = 500L
 private const val KB_REPEAT_INTERVAL_MS = 30L
 private const val KB_MODIFIER_HOLD_MS = 300L
 private const val KB_LONG_PRESS_DELAY_MS = 400L
-private const val KB_TRACKPOINT_MOUSE_SENSITIVITY = 3f
 private const val KB_FULL_LAYOUT_ROW_COUNT = 6
 private const val KB_SWIPE_THRESHOLD_DP = 16f
 private const val KB_SWIPE_STEP_DP = 8f
@@ -45,13 +42,9 @@ class KeyboardGestureProcessor(
     private val _pressedKeys = MutableStateFlow(emptySet<String>())
     val pressedKeys: StateFlow<Set<String>> = _pressedKeys.asStateFlow()
 
-    private val _trackpointVisible = MutableStateFlow(false)
-    val trackpointVisible: StateFlow<Boolean> = _trackpointVisible.asStateFlow()
-
     // Per-pointer key & repeat state
     private val pointerKeyMap = mutableMapOf<Long, KeyDef>()
     private val downKeycodesByPointer = mutableMapOf<Long, List<Int>>()
-    private val trackpointPointers = mutableSetOf<Long>()
     private var repeatJob: Job? = null
     private var modifierHoldJob: Job? = null
     private var heldKey: KeyDef? = null
@@ -369,12 +362,6 @@ class KeyboardGestureProcessor(
                 if (code != null) injector.keyDown(code)
                 startModifierHold(resolved, isFull)
             }
-
-            KeyType.TRACKPOINT -> {
-                trackpointPointers += pointerId
-                pointerKeyMap[pointerId] = resolved
-                _trackpointVisible.value = true
-            }
         }
         return true
     }
@@ -387,13 +374,6 @@ class KeyboardGestureProcessor(
         layout: List<List<KeyDef>> = emptyList(),
         repeatEnabled: Boolean = kbRepeatEnabled(),
     ): Boolean {
-        if (pointerId in trackpointPointers) {
-            val dx = (deltaX * KB_TRACKPOINT_MOUSE_SENSITIVITY).roundToInt()
-            val dy = (deltaY * KB_TRACKPOINT_MOUSE_SENSITIVITY).roundToInt()
-            if (dx != 0 || dy != 0) MouseInjector.moveMouse(dx, dy)
-            return true
-        }
-
         val prevDef = pointerKeyMap[pointerId] ?: return false
         val newDef = newKeyDef ?: return false
         if (prevDef.id == newDef.id) return false
@@ -430,13 +410,6 @@ class KeyboardGestureProcessor(
         repeatEnabled: Boolean = kbRepeatEnabled(),
         skipInjection: Boolean = false,
     ): Boolean {
-        if (pointerId in trackpointPointers) {
-            trackpointPointers -= pointerId
-            pointerKeyMap.remove(pointerId)
-            if (trackpointPointers.isEmpty()) _trackpointVisible.value = false
-            return true
-        }
-
         val keyDef = pointerKeyMap.remove(pointerId) ?: return false
         val releasedId = keyDef.id
 
@@ -471,15 +444,11 @@ class KeyboardGestureProcessor(
                     .onModifierTouchUp(releasedId, keyDef.injectedKeycode, isFull)
                     .forEach { injector.keyUp(it) }
             }
-
-            KeyType.TRACKPOINT -> { /* handled in trackpoint block above */ }
         }
         return true
     }
 
     fun getKeyIdForPointer(pointerId: Long): String? = pointerKeyMap[pointerId]?.id
-
-    fun isTrackpointPointer(pointerId: Long): Boolean = pointerId in trackpointPointers
 
     fun dispose() {
         AppLog.d(TAG, "dispose")
@@ -494,9 +463,7 @@ class KeyboardGestureProcessor(
             .forEach { injector.keyUp(it) }
         downKeycodesByPointer.clear()
         pointerKeyMap.clear()
-        trackpointPointers.clear()
         _pressedKeys.value = emptySet()
-        _trackpointVisible.value = false
         _activePopupState.value = null
         heldKey = null
         modifierBeingHeld = null

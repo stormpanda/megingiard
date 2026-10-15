@@ -72,29 +72,6 @@ internal fun KeyboardLayoutGrid(
                                 for (change in event.changes) {
                                     val pid = change.id.value
 
-                                    if (gestureProcessor.isTrackpointPointer(pid)) {
-                                        when {
-                                            change.pressed && event.type == PointerEventType.Move -> {
-                                                val delta = change.positionChange()
-                                                gestureProcessor.onKeyMove(
-                                                    pid,
-                                                    null,
-                                                    delta.x,
-                                                    delta.y,
-                                                    activeState.grid,
-                                                    kbRepeatEnabled,
-                                                )
-                                                change.consume()
-                                            }
-
-                                            !change.pressed && change.previousPressed -> {
-                                                gestureProcessor.onKeyUp(pid, activeState.grid, kbRepeatEnabled)
-                                                change.consume()
-                                            }
-                                        }
-                                        continue
-                                    }
-
                                     if (change.isConsumed) continue
 
                                     val hoveredKey =

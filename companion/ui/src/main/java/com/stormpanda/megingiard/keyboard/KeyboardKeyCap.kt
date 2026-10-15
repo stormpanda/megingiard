@@ -1,7 +1,6 @@
 package com.stormpanda.megingiard.keyboard
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,7 +8,6 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Backspace
@@ -76,8 +74,6 @@ private val KEY_CORNER = 5.dp
 private val KEY_SHAPE = RoundedCornerShape(KEY_CORNER)
 private val KEY_PADDING_V = 3.dp
 
-private val KC_TRACKPOINT_SIZE = 16.dp
-private val KC_BORDER_THICKNESS = 2.dp
 private val KC_ICON_SIZE = 18.dp
 private val KC_SUPER_PADDING_TOP = 2.dp
 private val KC_SUPER_PADDING_END = 5.dp
@@ -150,38 +146,26 @@ internal fun KeyCap(
                 },
         contentAlignment = Alignment.Center,
     ) {
-        if (keyDef.type == KeyType.TRACKPOINT) {
-            // Renders trackpoint dot
-            Box(
-                modifier =
-                    Modifier
-                        .size(KC_TRACKPOINT_SIZE)
-                        .border(KC_BORDER_THICKNESS, colors.accent, CircleShape)
-                        .clip(CircleShape)
-                        .background(colors.keyBackground),
+        if (isFullLayout) {
+            PhysicalKeyContent(
+                keyDef = keyDef,
+                isPressed = isPressed,
+                isModifierActive = isModifierActive,
+                isShiftActive = isShiftActive,
+                isCapsActive = isCapsActive,
+                isAltGrActive = isAltGrActive,
+                contentColor = contentColor,
             )
         } else {
-            if (isFullLayout) {
-                PhysicalKeyContent(
-                    keyDef = keyDef,
-                    isPressed = isPressed,
-                    isModifierActive = isModifierActive,
-                    isShiftActive = isShiftActive,
-                    isCapsActive = isCapsActive,
-                    isAltGrActive = isAltGrActive,
-                    contentColor = contentColor,
-                )
-            } else {
-                ErgoKeyContent(
-                    keyDef = keyDef,
-                    isPressed = isPressed,
-                    isModifierActive = isModifierActive,
-                    isShiftActive = isShiftActive,
-                    isCapsActive = isCapsActive,
-                    isAltGrActive = isAltGrActive,
-                    contentColor = contentColor,
-                )
-            }
+            ErgoKeyContent(
+                keyDef = keyDef,
+                isPressed = isPressed,
+                isModifierActive = isModifierActive,
+                isShiftActive = isShiftActive,
+                isCapsActive = isCapsActive,
+                isAltGrActive = isAltGrActive,
+                contentColor = contentColor,
+            )
         }
     }
 }

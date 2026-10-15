@@ -45,7 +45,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
-import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.macropad.HapticStrength
 import com.stormpanda.megingiard.macropad.triggerHaptic
 import com.stormpanda.megingiard.settings.TouchpadSettings
@@ -63,7 +62,6 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
     val density = LocalDensity.current
     val kbLayout by viewModel.kbLayout.collectAsStateWithLifecycle()
     val kbRepeatEnabled by viewModel.kbRepeatEnabled.collectAsStateWithLifecycle()
-    val kbMouseBtnPos by viewModel.kbMouseBtnPos.collectAsStateWithLifecycle()
     val isQuickMenuOpen by viewModel.isQuickMenuOpen.collectAsStateWithLifecycle()
     val colors = LocalAppColors.current
 
@@ -143,7 +141,6 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
     val coroutineScope = rememberCoroutineScope()
     val gestureProcessor = viewModel.gestureProcessor
     val pressedKeys by gestureProcessor.pressedKeys.collectAsStateWithLifecycle()
-    val trackpointVisible by gestureProcessor.trackpointVisible.collectAsStateWithLifecycle()
 
     val densityVal = density.density
     LaunchedEffect(densityVal) {
@@ -351,12 +348,6 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                                     viewModel.cycleKbLayout()
                                     KeyboardState.reset()
                                 },
-                            )
-
-                            TrackpointOverlay(
-                                trackpointVisible = trackpointVisible,
-                                kbMouseBtnPos = kbMouseBtnPos,
-                                modifier = Modifier.align(Alignment.Center),
                             )
 
                             val popup = activePopupState

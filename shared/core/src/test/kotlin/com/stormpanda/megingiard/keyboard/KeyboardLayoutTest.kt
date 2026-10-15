@@ -76,10 +76,9 @@ class KeyboardLayoutTest {
     }
 
     @Test
-    fun `non-trackpoint keycodes are within 0 to 255 range`() {
+    fun `all keycodes are within 0 to 255 range`() {
         for ((name, layout) in layouts) {
             for (key in layout.flatten()) {
-                if (key.type == KeyType.TRACKPOINT) continue
                 assertTrue(
                     "$name key '${key.id}' has out-of-range keycode ${key.linuxKeycode}",
                     key.linuxKeycode in 0..255,

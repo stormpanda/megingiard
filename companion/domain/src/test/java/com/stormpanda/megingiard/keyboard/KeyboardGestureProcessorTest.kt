@@ -58,7 +58,6 @@ class KeyboardGestureProcessorTest {
         runTest(testDispatcher) {
             val processor = createProcessor()
             assertTrue(processor.pressedKeys.value.isEmpty())
-            assertFalse(processor.trackpointVisible.value)
         }
 
     @Test
@@ -84,21 +83,6 @@ class KeyboardGestureProcessorTest {
             processor.onKeyUp(pointerId = 1L)
             assertFalse(processor.pressedKeys.value.contains("a"))
             assertEquals(listOf("down" to 30, "up" to 30), testInjector.calls)
-        }
-
-    @Test
-    fun testTrackpointKeyDownAndUp() =
-        runTest(testDispatcher) {
-            val processor = createProcessor()
-            val trackpointKey = KeyDef(id = "trackpoint", label = "•", linuxKeycode = 0, type = KeyType.TRACKPOINT)
-
-            val handled = processor.onKeyDown(pointerId = 2L, keyDef = trackpointKey, repeatEnabled = true)
-            assertTrue(handled)
-            assertTrue(processor.trackpointVisible.value)
-            assertTrue(processor.isTrackpointPointer(2L))
-
-            processor.onKeyUp(pointerId = 2L)
-            assertFalse(processor.trackpointVisible.value)
         }
 
     @Test
@@ -134,7 +118,6 @@ class KeyboardGestureProcessorTest {
             processor.onKeyDown(pointerId = 1L, keyDef = testKeyA, repeatEnabled = true)
             processor.dispose()
             assertTrue(processor.pressedKeys.value.isEmpty())
-            assertFalse(processor.trackpointVisible.value)
         }
 
     @Test

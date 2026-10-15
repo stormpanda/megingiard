@@ -7,7 +7,6 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.input.InjectorLifecycleManager
 import com.stormpanda.megingiard.keyboard.KbLayout
-import com.stormpanda.megingiard.keyboard.KbMouseBtnPos
 import com.stormpanda.megingiard.keyboard.KeyDef
 import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.keyboard.KeyboardGestureProcessor
@@ -32,7 +31,6 @@ private const val TAG = "KeyboardViewModel"
 class KeyboardViewModel : ViewModel() {
     val kbLayout: StateFlow<KbLayout> = KeyboardSettings.kbLayout
     val kbRepeatEnabled: StateFlow<Boolean> = KeyboardSettings.kbRepeatEnabled
-    val kbMouseBtnPos: StateFlow<KbMouseBtnPos> = KeyboardSettings.kbMouseBtnPos
     val kbTouchpadEnabled: StateFlow<Boolean> = KeyboardSettings.kbTouchpadEnabled
     val kbAutoOpenOnFocus: StateFlow<Boolean> = KeyboardSettings.kbAutoOpenOnFocus
     val isQuickMenuOpen: StateFlow<Boolean> = AppStateManager.isQuickMenuOpen

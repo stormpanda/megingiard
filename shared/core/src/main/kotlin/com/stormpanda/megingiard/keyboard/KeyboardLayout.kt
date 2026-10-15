@@ -89,7 +89,6 @@ import kotlinx.serialization.Serializable
  * standard key (1.0f). Rows are ordered top-to-bottom.
  *
  * Special keys:
- * - [KeyType.TRACKPOINT] — renders the accent-colored trackpoint dot; no key injection
  * - [KeyType.MODIFIER]   — participates in the sticky/hold modifier state machine
  * - [KeyType.NORMAL]     — regular character or function key
  */
@@ -115,7 +114,7 @@ val KeyDef.isCharacterKey: Boolean
 val KeyDef.injectedKeycode: Int
     get() = if (id == "caps") LinuxKeycodes.KEY_LEFTSHIFT else linuxKeycode
 
-enum class KeyType { NORMAL, MODIFIER, TRACKPOINT }
+enum class KeyType { NORMAL, MODIFIER }
 
 enum class KeyboardMode { LETTERS, SYMBOLS_1, SYMBOLS_2, NUMERIC, FULL }
 
