@@ -91,10 +91,6 @@ class GlobalSettingsViewModel : ViewModel() {
     val isCheckingUpdates: StateFlow<Boolean> = UpdateManager.isChecking
     val updateCheckError: StateFlow<String?> = UpdateManager.checkError
 
-    init {
-        checkForUpdatesBackground()
-    }
-
     // Privileged Mode
     val privdState: StateFlow<PrivdState> = PrivdManager.state
     val privdLastError: StateFlow<PrivdError?> = PrivdManager.lastError
@@ -164,10 +160,6 @@ class GlobalSettingsViewModel : ViewModel() {
 
     fun checkForUpdatesManually() {
         UpdateManager.checkForUpdates(force = true, currentVersion = BuildConfig.VERSION_NAME)
-    }
-
-    fun checkForUpdatesBackground() {
-        UpdateManager.checkForUpdates(force = false, currentVersion = BuildConfig.VERSION_NAME)
     }
 
     // Privileged Mode actions

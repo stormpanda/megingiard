@@ -116,7 +116,6 @@ class GlobalSettingsViewModelTest {
     fun testUpdateCheckTriggers() {
         val vm = GlobalSettingsViewModel()
         vm.checkForUpdatesManually()
-        vm.checkForUpdatesBackground()
         assertNotNull(vm.isCheckingUpdates)
     }
 
