@@ -2,7 +2,7 @@
 
 > **Feature Spec:** [`docs/features/touchpad/FEATURE.md`](../features/touchpad/FEATURE.md)
 > **Modules & Packages:** `:companion:ui` (`touchpad/`, `input/`, `keyboard/`, `macropad/`), `:companion:domain` (`touchpad/`, `input/`, `settings/`, `mirror/`), `:shared:core` (`input/`)
-> **Audit Status:** Draft — Awaiting Operator Selection
+> **Audit Status:** Completed
 
 ---
 
@@ -269,4 +269,4 @@
 - [x] **`[TP-20]`** — Sync `FEATURE.md` §FR-T2 with unified bottom toolbar UI *(Complexity: Low, Risk: Low)*
 - [x] **`[TP-21]`** — Sync `FEATURE.md` §FR-T4 & §Technical Implementation with `megingiard_privd` TCP + HMAC architecture *(Complexity: Low, Risk: Low)*
 - [x] **`[TP-22]`** — Document Mouse 4/5 and Touch Mode socket commands in `FEATURE.md` *(Complexity: Low, Risk: Low)*
-- [ ] **`[TP-23]`** — Update module names, file paths, and `MainAppScreen` notes in `FEATURE.md` *(Complexity: Low, Risk: Low)*
+- [x] **`[TP-23]`** — Update module names, file paths, and `MainAppScreen` notes in `FEATURE.md` *(Complexity: Low, Risk: Low)*

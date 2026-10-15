@@ -1,7 +1,7 @@
 # Feature: Virtual Touchpad
 
-> **Related source:** `companion/ui/src/main/java/com/stormpanda/megingiard/touchpad/` (UI), `companion/domain/src/main/java/com/stormpanda/megingiard/touchpad/` (gesture processing), `companion/domain/src/main/java/com/stormpanda/megingiard/input/` (shared injection infrastructure)
-> **Native source:** `companion/ui/src/main/cpp/megingiard_privd.c` (Megingiard System Service)
+> **Related source:** `companion/ui/src/main/java/com/stormpanda/megingiard/touchpad/` (UI), `companion/domain/src/main/java/com/stormpanda/megingiard/touchpad/` (gesture processing), `companion/domain/src/main/java/com/stormpanda/megingiard/settings/TouchpadSettings.kt` (settings), `companion/domain/src/main/java/com/stormpanda/megingiard/input/` (injection facades), `companion/ui/src/main/java/com/stormpanda/megingiard/input/InjectorLifecycleManager.kt` (injector lifecycle)
+> **Native source:** `companion/ui/src/main/cpp/megingiard_privd.c`, `companion/ui/src/main/cpp/cmd_parsers.h` (Megingiard System Service)
 > **Binary assets:** `companion/ui/src/main/assets/megingiard_privd_arm64`
 > **Build instructions:** [BUILD_NATIVE.md](../../BUILD_NATIVE.md)
 
@@ -135,24 +135,25 @@ In **Touch Mode** (shared absolute coordinate injection, e.g. for Mirror Touch P
 
 `FullscreenMouseOverlay` is composed directly inside `MainAppScreen` on the secondary display as an animated overlay layer above `MacroPadScreen`.
 
-`MainAppScreen` ensures only one instance of `MouseInjector` runs at a time.
-
-Dismissal on the secondary display reuses the edge-swipe gesture path: `SwipeGestureProcessor` → `AppStateManager.handleEdgeSwipe()` → `AppStateManager.closeActiveModal()` → `_isFullscreenMouseActive.value = false`.
+Dismissal on the secondary display reuses the edge-swipe gesture path: `SwipeGestureProcessor` → `AppStateManager.handleEdgeSwipe()` → `AppStateManager.closeActiveModal()` → `_companionSurfaceMode.value = CompanionSurfaceMode.MACROPAD`.
 
 **Touchpad Mirroring Integration:**
 
 - When absolute touchpad mirroring is active (`isMirroringActive == true`), `FullscreenMouseOverlay` renders `EmbeddedMirrorView` with owner `MasterSurfaceRegistry.OWNER_TOUCHPAD` (`priority = 20`) and `ScreenCutout.FULLSCREEN` directly inside its 16:9 touch pad area. `MasterSurfaceRegistry` routes the video capture stream to the Touchpad and automatically restores MacroPad's surface when the Touchpad closes or mirroring is paused.
 - A semi-transparent black overlay dims the mirrored stream based on the user-configured `touchpadMirrorDim` level.
-- The lifecycle of the capture service is managed: if the capture service was started _by_ the touchpad, it is stopped immediately when the touchpad is closed or mode is toggled, restoring the previous active/inactive screen capture state of the MacroPad.
+- The lifecycle of the capture service is managed declaratively by `MirrorRuntimePolicy` (`touchpadWantsMirror = isFullscreenMouseActive && !touchpadUseMouse && touchpadMirroringEnabled`): when the touchpad is closed or mode/mirroring is toggled off, capture demand falls back to MacroPad's layout mirror settings without mutating `PadLayout.mirrorAutoStart`.
 
 ### Source Files
 
-| File                          | Layer           | Responsibility                                                                        |
-| ----------------------------- | --------------- | ------------------------------------------------------------------------------------- |
-| `FullscreenMouseOverlay.kt`   | `:app` UI       | Fullscreen relative-mouse Compose overlay, pointer event loop                         |
-| `TouchpadGestureProcessor.kt` | `:domain` Logic | Compose-free gesture tracking; mouse (relative + taps) and touch (absolute) processor |
-| `TouchpadSettings.kt`         | `:domain` Logic | Persistent settings for touchpad mode (tap-to-click, two-finger-tap, etc.)            |
-| `MouseInjector.kt`            | `:domain` Logic | Relative mouse injection facade routing directly to `PrivdClient`                     |
-| `TouchInjector.kt`            | `:domain` Logic | Absolute touch injection facade routing directly to `PrivdClient`                     |
-| `megingiard_privd.c`          | C Source        | Megingiard System Service daemon handling multi-touch and virtual mouse injection     |
-| `megingiard_privd_arm64`      | Native Asset    | Pre-built Megingiard System Service binary asset (`companion/ui/src/main/assets/`)    |
+| File                                   | Layer               | Responsibility                                                                                       |
+| -------------------------------------- | ------------------- | ---------------------------------------------------------------------------------------------------- |
+| `FullscreenMouseOverlay.kt`            | `:companion:ui`     | Fullscreen mouse/touch Compose overlay, shared `rememberGlobalTouchpadProcessor` & `touchpadSurfaceInput` |
+| `TouchpadSettingsOverlay.kt`           | `:companion:ui`     | Top-display touchpad settings modal and shared `TouchpadGestureAndScrollCards` / `stepTenths`        |
+| `BackgroundTouchpadSettingsEditor.kt`  | `:companion:ui`     | MacroPad background touchpad settings editor reusing `TouchpadGestureAndScrollCards`                 |
+| `InjectorLifecycleManager.kt`          | `:companion:ui`     | Foreground/background lifecycle observer starting/stopping `KeyInjector`, `MouseInjector`, and `TouchInjector` |
+| `TouchpadGestureProcessor.kt`          | `:companion:domain` | Compose-free gesture tracking (`TouchpadGestureConfig`); relative mouse and absolute touch processor |
+| `TouchpadSettings.kt`                  | `:companion:domain` | Persistent settings in `settings/` for touchpad mode (sensitivity bounds, tap-to-click, scroll, etc.) |
+| `MouseInjector.kt`                     | `:companion:domain` | Relative mouse injection facade routing directly to `PrivdClient`                                    |
+| `TouchInjector.kt`                     | `:companion:domain` | Absolute touch injection facade routing directly to `PrivdClient`                                    |
+| `megingiard_privd.c` / `cmd_parsers.h` | C Source            | Megingiard System Service daemon and protocol parsers for multi-touch and virtual mouse injection    |
+| `megingiard_privd_arm64`               | Native Asset        | Pre-built Megingiard System Service binary asset (`companion/ui/src/main/assets/`)                   |
