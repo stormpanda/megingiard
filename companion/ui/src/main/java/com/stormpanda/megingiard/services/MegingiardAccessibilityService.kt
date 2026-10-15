@@ -624,22 +624,6 @@ class MegingiardAccessibilityService : AccessibilityService() {
         return false
     }
 
-    private fun isMegingiardInPairedDevices(node: AccessibilityNodeInfo): Boolean {
-        val text = node.text?.toString() ?: ""
-        val contentDesc = node.contentDescription?.toString() ?: ""
-        val combined = "$text $contentDesc".lowercase()
-
-        if (combined.contains("megingiard")) {
-            return true
-        }
-
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i) ?: continue
-            if (isMegingiardInPairedDevices(child)) return true
-        }
-        return false
-    }
-
     private fun findAndClickPairDialog(
         rootNode: AccessibilityNodeInfo,
         pairKeywords: List<String>,
