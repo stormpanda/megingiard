@@ -217,7 +217,7 @@ None identified — `HelpModal` and onboarding composables render only on explic
 - [x] **`[HP-01]`** — Remove unused `onDismiss`/`showScrim` params and misleading scrim click log in `QuickMenuGestureTrialOverlay` *(Complexity: Low, Risk: Low)*
 - [x] **`[HP-02]`** — Remove unread `isFulfilled` property from `OnboardingStepState` *(Complexity: Low, Risk: Low)*
 - [x] **`[HP-03]`** — Remove unreachable state reset in `startWizard()` and duplicate `finishWizard()` call on completion *(Complexity: Low, Risk: Low)*
-- [ ] **`[HP-04]`** — Deduplicate damped offset math and remove impossible `< visualThreshold` branch in `QuickMenuGestureTrialOverlay` *(Complexity: Low, Risk: Low)*
+- [x] **`[HP-04]`** — Deduplicate damped offset math and remove impossible `< visualThreshold` branch in `QuickMenuGestureTrialOverlay` *(Complexity: Low, Risk: Low)*
 - [ ] **`[HP-05]`** — Delete unreferenced `CutoutLayoutEditorHelpModal` and 42 localized `help_mirror_editor_*` strings *(Complexity: High, Risk: Low)*
 - [ ] **`[HP-06]`** — Delete dead `AppTutorialModal.kt`, standalone `WelcomeTutorialDialog` / `QuickMenuTutorialDialog` wrappers, and unused imports *(Complexity: High, Risk: Low)*
 - [ ] **`[HP-07]`** — Remove ghost `showMacroEditorTutorial` setting, dead `OnboardingWizardManager.skipWizard()`, and orphaned strings *(Complexity: Medium, Risk: Low)*

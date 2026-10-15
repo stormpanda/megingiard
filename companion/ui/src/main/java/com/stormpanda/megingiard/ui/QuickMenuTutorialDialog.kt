@@ -190,21 +190,26 @@ fun QuickMenuGestureTrialOverlay(
     var activeDragType by remember { mutableStateOf<SwipeGestureType?>(null) }
     var currentDragDeltaPx by remember { mutableFloatStateOf(0f) }
 
+    val thresholdPx = with(density) { QuickMenuBarLayout.SWIPE_THRESHOLD.toPx() }
+
+    fun computeDampedVisualOffsetDp(deltaPx: Float): Dp {
+        val visualDelta = deltaPx * GESTURE_VISUAL_MULTIPLIER
+        val visualThreshold = thresholdPx * GESTURE_VISUAL_MULTIPLIER
+        val visualPx =
+            if (visualDelta < visualThreshold) {
+                visualDelta
+            } else {
+                visualThreshold + (visualDelta - visualThreshold) * GESTURE_RESISTANCE_FACTOR
+            }
+        return with(density) { visualPx.toDp() }.coerceAtMost(GESTURE_MAX_OFFSET)
+    }
+
     fun onGestureReleased(
         type: SwipeGestureType,
         finalDeltaPx: Float,
     ) {
-        val thresholdPx = with(density) { QuickMenuBarLayout.SWIPE_THRESHOLD.toPx() }
         if (finalDeltaPx >= thresholdPx) {
-            val visualDelta = finalDeltaPx * GESTURE_VISUAL_MULTIPLIER
-            val visualThreshold = thresholdPx * GESTURE_VISUAL_MULTIPLIER
-            val visualPx =
-                if (visualDelta < visualThreshold) {
-                    visualDelta
-                } else {
-                    visualThreshold + (visualDelta - visualThreshold) * GESTURE_RESISTANCE_FACTOR
-                }
-            val visualDp = with(density) { visualPx.toDp() }.coerceAtMost(GESTURE_MAX_OFFSET)
+            val visualDp = computeDampedVisualOffsetDp(finalDeltaPx)
 
             triggerHapticFeedback(context, HapticStrength.MEDIUM)
 
@@ -239,17 +244,7 @@ fun QuickMenuGestureTrialOverlay(
 
     fun getTargetOffset(type: SwipeGestureType): Dp =
         if (activeDragType == type && currentDragDeltaPx > 0f) {
-            val threshold = with(density) { QuickMenuBarLayout.SWIPE_THRESHOLD.toPx() }
-            val visualDelta = currentDragDeltaPx * GESTURE_VISUAL_MULTIPLIER
-            val visualThreshold = threshold * GESTURE_VISUAL_MULTIPLIER
-            val visualPx =
-                if (visualDelta < visualThreshold) {
-                    visualDelta
-                } else {
-                    visualThreshold + (visualDelta - visualThreshold) * GESTURE_RESISTANCE_FACTOR
-                }
-            val visualDp = with(density) { visualPx.toDp() }
-            visualDp.coerceAtMost(GESTURE_MAX_OFFSET)
+            computeDampedVisualOffsetDp(currentDragDeltaPx)
         } else {
             0.dp
         }
