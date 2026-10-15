@@ -294,7 +294,7 @@ internal fun rememberSystemSetupStatus(currentStepId: OnboardingStepId): SystemS
                 initialUsbActive = MegingiardAccessibilityService.isUsbDebuggingActive(context),
                 initialWirelessActive = MegingiardAccessibilityService.isWirelessDebuggingActive(context),
                 initialDevicePaired = PrivdBootstrapper.hasCredentials(context),
-                initialAutoSetupActive = MegingiardAccessibilityService.isAutoSetupActive,
+                initialAutoSetupActive = MegingiardAccessibilityService.isAutoSetupActive.value,
             )
         }
 
@@ -321,7 +321,7 @@ internal fun rememberSystemSetupStatus(currentStepId: OnboardingStepId): SystemS
                     status.isUsbActive = MegingiardAccessibilityService.isUsbDebuggingActive(context)
                     status.isWirelessActive = MegingiardAccessibilityService.isWirelessDebuggingActive(context)
                     status.isDevicePaired = PrivdBootstrapper.hasCredentials(context)
-                    status.isAutoSetupActive = MegingiardAccessibilityService.isAutoSetupActive
+                    status.isAutoSetupActive = MegingiardAccessibilityService.isAutoSetupActive.value
                     delay(OW_STATUS_POLL_DELAY_MS)
                 }
             }

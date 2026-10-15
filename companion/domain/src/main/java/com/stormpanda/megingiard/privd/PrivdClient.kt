@@ -167,6 +167,9 @@ object PrivdClient {
 
     @Volatile private var running = false
 
+    private val stateLock = Any()
+    private val connectLock = Any()
+
     private val queue = LinkedBlockingQueue<String>()
 
     @Volatile private var pendingRpc: PendingRpc? = null
@@ -180,72 +183,81 @@ object PrivdClient {
      * Attempts to connect to the canonical local TCP port.
      * Returns `true` on success, `false` if the daemon is not listening.
      */
-    @Synchronized
-    fun connect(): Boolean {
-        isConnectedForTest = null
-        if (isConnected) return true
-        cleanupLocked()
-        _state.value = PrivdConnectionState.CONNECTING
-        val key = hmacKeyBytes
-        if (key == null) {
-            AppLog.w(TAG, "connect(): no per-install key provisioned — run Privileged Mode setup wizard")
-            _state.value = PrivdConnectionState.DISCONNECTED
+    fun connect(): Boolean =
+        synchronized(connectLock) {
+            synchronized(stateLock) {
+                isConnectedForTest = null
+                if (isConnected) return true
+                cleanupLocked()
+                _state.value = PrivdConnectionState.CONNECTING
+            }
+            val key = hmacKeyBytes
+            if (key == null) {
+                AppLog.w(TAG, "connect(): no per-install key provisioned — run Privileged Mode setup wizard")
+                synchronized(stateLock) {
+                    _state.value = PrivdConnectionState.DISCONNECTED
+                }
+                return false
+            }
+            val targetPort = port
+            try {
+                AppLog.d(TAG, "connect(): trying 127.0.0.1:$targetPort")
+                val s = Socket()
+                s.connect(InetSocketAddress("127.0.0.1", targetPort), CONNECT_TIMEOUT_MS)
+
+                val w = BufferedWriter(OutputStreamWriter(s.outputStream))
+                val r = BufferedReader(InputStreamReader(s.inputStream))
+
+                if (performHmacHandshake(s, r, w, key)) {
+                    synchronized(stateLock) {
+                        socket = s
+                        writer = w
+                        reader = r
+                        queue.clear()
+                        running = true
+                        writerThread =
+                            Thread(::writerLoop, WRITER_THREAD_NAME).apply {
+                                isDaemon = true
+                                start()
+                            }
+                        readerThread =
+                            Thread(::readerLoop, READER_THREAD_NAME).apply {
+                                isDaemon = true
+                                start()
+                            }
+                        _state.value = PrivdConnectionState.CONNECTED
+                    }
+                    AppLog.i(TAG, "connect() succeeded on port $targetPort")
+                    return true
+                } else {
+                    AppLog.w(TAG, "connect(): HMAC handshake failed on port $targetPort")
+                    try {
+                        s.close()
+                    } catch (_: Exception) {
+                    }
+                }
+            } catch (e: Exception) {
+                AppLog.d(TAG, "connect(): port $targetPort not available — $e")
+            }
+            AppLog.w(TAG, "connect() failed: daemon not reachable on port $targetPort")
+            synchronized(stateLock) {
+                cleanupLocked()
+                _state.value = PrivdConnectionState.DISCONNECTED
+            }
             return false
         }
-        val targetPort = port
-        try {
-            AppLog.d(TAG, "connect(): trying 127.0.0.1:$targetPort")
-            val s = Socket()
-            s.connect(InetSocketAddress("127.0.0.1", targetPort), CONNECT_TIMEOUT_MS)
-
-            val w = BufferedWriter(OutputStreamWriter(s.outputStream))
-            val r = BufferedReader(InputStreamReader(s.inputStream))
-
-            if (performHmacHandshake(s, r, w, key)) {
-                socket = s
-                writer = w
-                reader = r
-                queue.clear()
-                running = true
-                writerThread =
-                    Thread(::writerLoop, WRITER_THREAD_NAME).apply {
-                        isDaemon = true
-                        start()
-                    }
-                readerThread =
-                    Thread(::readerLoop, READER_THREAD_NAME).apply {
-                        isDaemon = true
-                        start()
-                    }
-                _state.value = PrivdConnectionState.CONNECTED
-                AppLog.i(TAG, "connect() succeeded on port $targetPort")
-                return true
-            } else {
-                AppLog.w(TAG, "connect(): HMAC handshake failed on port $targetPort")
-                try {
-                    s.close()
-                } catch (_: Exception) {
-                }
-            }
-        } catch (e: Exception) {
-            AppLog.d(TAG, "connect(): port $targetPort not available — $e")
-        }
-        AppLog.w(TAG, "connect() failed: daemon not reachable on port $targetPort")
-        cleanupLocked()
-        _state.value = PrivdConnectionState.DISCONNECTED
-        return false
-    }
 
     /**
      * Closes the socket. Daemon stays alive (continues to listen for the
      * next client).
      */
-    @Synchronized
     fun disconnect() {
-        if (!running && socket == null) return
-        AppLog.i(TAG, "disconnect()")
-        cleanupLocked()
-        _state.value = PrivdConnectionState.DISCONNECTED
+        synchronized(stateLock) {
+            if (!running && socket == null) return
+            AppLog.i(TAG, "disconnect()")
+            cleanupLocked()
+            _state.value = PrivdConnectionState.DISCONNECTED
+        }
     }
 
     /**
@@ -480,19 +492,23 @@ object PrivdClient {
     }
 
     private fun markBroken() {
-        if (!running) return
-        running = false
-        PrivdManager.onClientDisconnected()
-        _state.value = PrivdConnectionState.DISCONNECTED
-        // Schedule full cleanup on a daemon thread so the socket fd is released
-        // and the writer thread is unblocked. We can't call disconnect() directly
-        // here because the caller (writer / reader thread) may be called while
-        // the main thread is inside another @Synchronized function, causing a
-        // deadlock. Scheduling on a new thread avoids that race.
-        Thread { disconnect() }.also { it.isDaemon = true }.start()
+        val shouldNotify =
+            synchronized(stateLock) {
+                if (!running) {
+                    false
+                } else {
+                    cleanupLocked()
+                    _state.value = PrivdConnectionState.DISCONNECTED
+                    true
+                }
+            }
+        if (shouldNotify) {
+            AppLog.w(TAG, "markBroken: connection lost, cleaned up socket")
+            PrivdManager.onClientDisconnected()
+        }
     }
 
-    /** Must be invoked from a synchronized block. */
+    /** Must be invoked while holding [stateLock]. */
     private fun cleanupLocked() {
         isConnectedForTest = null
         running = false
