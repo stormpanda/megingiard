@@ -36,7 +36,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -52,16 +51,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.onboarding.OnboardingStepId
 import com.stormpanda.megingiard.onboarding.OnboardingStepState
 import com.stormpanda.megingiard.privd.PServiceBridge
-import com.stormpanda.megingiard.privd.PrivdBootstrapper
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
@@ -69,9 +64,9 @@ import com.stormpanda.megingiard.ui.onboarding.AccessibilityStepContent
 import com.stormpanda.megingiard.ui.onboarding.FinishedStepContent
 import com.stormpanda.megingiard.ui.onboarding.OnboardingStepper
 import com.stormpanda.megingiard.ui.onboarding.PrivilegedStepContent
+import com.stormpanda.megingiard.ui.onboarding.rememberSystemSetupStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -86,7 +81,6 @@ private val PRD_DIALOG_PADDING_HORIZONTAL = 20.dp
 private val PRD_DIALOG_PADDING_TOP = 20.dp
 private val PRD_DIALOG_PADDING_BOTTOM = 16.dp
 private const val PRD_SCRIM_ALPHA = 0.55f
-private const val PRD_POLL_DELAY_MS = 1000L
 private val PRD_DIALOG_MARGIN = 16.dp
 private val PRD_BUTTON_SPACING = 8.dp
 
@@ -136,75 +130,23 @@ fun PrivdReconnectPromptDialog(onDone: () -> Unit) {
 
     var isNextAnimation by remember { mutableStateOf(true) }
 
-    var isAccessibilityActive by remember { mutableStateOf(MegingiardAccessibilityService.isEnabled(context)) }
-    val isAccessibilityStep = currentStepState.id == OnboardingStepId.ACCESSIBILITY
-    val isPrivilegedStep = currentStepState.id == OnboardingStepId.PRIVILEGED
+    val setupStatus = rememberSystemSetupStatus(currentStepState.id)
     val privdState by PrivdManager.state.collectAsStateWithLifecycle()
-    var isWifiActive by remember { mutableStateOf(MegingiardAccessibilityService.isWifiActive(context)) }
-    var isDevModeActive by remember { mutableStateOf(MegingiardAccessibilityService.isDevModeActive(context)) }
-    var isWirelessActive by remember { mutableStateOf(MegingiardAccessibilityService.isWirelessDebuggingActive(context)) }
-    var isDevicePaired by remember { mutableStateOf(PrivdBootstrapper.hasCredentials(context)) }
-    var isAutoSetupActive by remember { mutableStateOf(MegingiardAccessibilityService.isAutoSetupActive) }
 
     val isRootBridgeAvailable = remember { PrivdManager.isRootBridgeAvailable }
     var isActivatingAccessibility by remember { mutableStateOf(false) }
     var isActivatingPrivd by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
 
-    val lifecycleOwner = LocalLifecycleOwner.current
-
-    DisposableEffect(lifecycleOwner) {
-        val observer =
-            LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) {
-                    isAccessibilityActive = MegingiardAccessibilityService.isEnabled(context)
-                    isWifiActive = MegingiardAccessibilityService.isWifiActive(context)
-                    isDevModeActive = MegingiardAccessibilityService.isDevModeActive(context)
-                    isWirelessActive = MegingiardAccessibilityService.isWirelessDebuggingActive(context)
-                    isDevicePaired = PrivdBootstrapper.hasCredentials(context)
-                    isAutoSetupActive = MegingiardAccessibilityService.isAutoSetupActive
-                }
-            }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
-
-    LaunchedEffect(isAccessibilityStep) {
-        if (isAccessibilityStep) {
-            while (isActive) {
-                val active = MegingiardAccessibilityService.isEnabled(context)
-                if (active != isAccessibilityActive) {
-                    isAccessibilityActive = active
-                }
-                delay(PRD_POLL_DELAY_MS)
-            }
-        }
-    }
-
-    LaunchedEffect(isAccessibilityActive) {
-        if (!isAccessibilityActive) {
+    LaunchedEffect(setupStatus.isAccessibilityActive) {
+        if (!setupStatus.isAccessibilityActive) {
             activeStepIndex = 0
-        }
-    }
-
-    LaunchedEffect(isPrivilegedStep) {
-        if (isPrivilegedStep) {
-            while (isActive) {
-                isWifiActive = MegingiardAccessibilityService.isWifiActive(context)
-                isDevModeActive = MegingiardAccessibilityService.isDevModeActive(context)
-                isWirelessActive = MegingiardAccessibilityService.isWirelessDebuggingActive(context)
-                isDevicePaired = PrivdBootstrapper.hasCredentials(context)
-                isAutoSetupActive = MegingiardAccessibilityService.isAutoSetupActive
-                delay(PRD_POLL_DELAY_MS)
-            }
         }
     }
 
     val startAutoSetup = {
         MegingiardAccessibilityService.startMultiStageAutoSetup(context)
-        isAutoSetupActive = true
+        setupStatus.isAutoSetupActive = true
     }
 
     val activateAccessibilityViaRoot = {
@@ -219,7 +161,7 @@ fun PrivdReconnectPromptDialog(onDone: () -> Unit) {
                 }
                 val active = MegingiardAccessibilityService.isEnabled(context)
                 withContext(Dispatchers.Main) {
-                    isAccessibilityActive = active || success
+                    setupStatus.isAccessibilityActive = active || success
                     isActivatingAccessibility = false
                 }
             }
@@ -332,7 +274,7 @@ fun PrivdReconnectPromptDialog(onDone: () -> Unit) {
                 when (stepId) {
                     OnboardingStepId.ACCESSIBILITY -> {
                         AccessibilityStepContent(
-                            isAccessibilityActive = isAccessibilityActive,
+                            isAccessibilityActive = setupStatus.isAccessibilityActive,
                             onLaunchAccessibilitySettings = launchAccessibilitySettings,
                             isRootBridgeAvailable = isRootBridgeAvailable,
                             onActivateViaRootBridge = activateAccessibilityViaRoot,
@@ -342,14 +284,15 @@ fun PrivdReconnectPromptDialog(onDone: () -> Unit) {
 
                     OnboardingStepId.PRIVILEGED -> {
                         PrivilegedStepContent(
-                            isWifiActive = isWifiActive,
-                            isAccessibilityActive = isAccessibilityActive,
-                            isDevModeActive = isDevModeActive,
-                            isWirelessActive = isWirelessActive,
-                            isDevicePaired = isDevicePaired,
+                            isWifiActive = setupStatus.isWifiActive,
+                            isAccessibilityActive = setupStatus.isAccessibilityActive,
+                            isDevModeActive = setupStatus.isDevModeActive,
+                            isWirelessActive = setupStatus.isWirelessActive,
+                            isUsbActive = setupStatus.isUsbActive,
+                            isDevicePaired = setupStatus.isDevicePaired,
                             privdState = privdState,
                             onStartAutoSetup = startAutoSetup,
-                            isAutoSetupActive = isAutoSetupActive,
+                            isAutoSetupActive = setupStatus.isAutoSetupActive,
                             isRootBridgeAvailable = isRootBridgeAvailable,
                             onActivateViaRootBridge = activatePrivdViaRoot,
                             isActivatingRootBridge = isActivatingPrivd,
@@ -415,14 +358,18 @@ fun PrivdReconnectPromptDialog(onDone: () -> Unit) {
                     val isNextEnabled =
                         when (currentStepState.id) {
                             OnboardingStepId.ACCESSIBILITY -> {
-                                isAccessibilityActive
+                                setupStatus.isAccessibilityActive
                             }
 
                             OnboardingStepId.PRIVILEGED -> {
                                 if (isRootBridgeAvailable) {
                                     privdState == PrivdState.RUNNING
                                 } else {
-                                    isWifiActive && isDevModeActive && isWirelessActive && isDevicePaired &&
+                                    setupStatus.isWifiActive &&
+                                        setupStatus.isDevModeActive &&
+                                        setupStatus.isUsbActive &&
+                                        setupStatus.isWirelessActive &&
+                                        setupStatus.isDevicePaired &&
                                         privdState == PrivdState.RUNNING
                                 }
                             }

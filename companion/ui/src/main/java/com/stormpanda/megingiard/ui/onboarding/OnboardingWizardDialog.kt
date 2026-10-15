@@ -58,7 +58,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -81,9 +80,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
@@ -144,6 +140,78 @@ private val OW_BUTTON_ICON_SIZE = 18.dp
 private val OW_BUTTON_SPACED_BY = 8.dp
 private const val OW_WARNING_ALPHA_BG = 0.12f
 private const val OW_WARNING_ALPHA_BORDER = 0.5f
+private const val OW_STATUS_POLL_DELAY_MS = 1000L
+
+internal class SystemSetupStatus(
+    initialAccessibilityActive: Boolean,
+    initialWifiActive: Boolean,
+    initialDevModeActive: Boolean,
+    initialUsbActive: Boolean,
+    initialWirelessActive: Boolean,
+    initialDevicePaired: Boolean,
+    initialAutoSetupActive: Boolean,
+) {
+    var isAccessibilityActive by mutableStateOf(initialAccessibilityActive)
+    var isWifiActive by mutableStateOf(initialWifiActive)
+    var isDevModeActive by mutableStateOf(initialDevModeActive)
+    var isUsbActive by mutableStateOf(initialUsbActive)
+    var isWirelessActive by mutableStateOf(initialWirelessActive)
+    var isDevicePaired by mutableStateOf(initialDevicePaired)
+    var isAutoSetupActive by mutableStateOf(initialAutoSetupActive)
+}
+
+@Composable
+internal fun rememberSystemSetupStatus(currentStepId: OnboardingStepId): SystemSetupStatus {
+    val context = LocalContext.current
+    val status =
+        remember(context) {
+            SystemSetupStatus(
+                initialAccessibilityActive = MegingiardAccessibilityService.isEnabled(context),
+                initialWifiActive = MegingiardAccessibilityService.isWifiActive(context),
+                initialDevModeActive = MegingiardAccessibilityService.isDevModeActive(context),
+                initialUsbActive = MegingiardAccessibilityService.isUsbDebuggingActive(context),
+                initialWirelessActive = MegingiardAccessibilityService.isWirelessDebuggingActive(context),
+                initialDevicePaired = PrivdBootstrapper.hasCredentials(context),
+                initialAutoSetupActive = MegingiardAccessibilityService.isAutoSetupActive,
+            )
+        }
+
+    LaunchedEffect(currentStepId) {
+        when (currentStepId) {
+            OnboardingStepId.ACCESSIBILITY -> {
+                AppLog.d(TAG, "Starting 1s continuous polling loop for accessibility status")
+                while (isActive) {
+                    val active = MegingiardAccessibilityService.isEnabled(context)
+                    if (active != status.isAccessibilityActive) {
+                        status.isAccessibilityActive = active
+                        AppLog.i(TAG, "Accessibility service status change detected: active=$active")
+                    }
+                    delay(OW_STATUS_POLL_DELAY_MS)
+                }
+            }
+
+            OnboardingStepId.PRIVILEGED -> {
+                AppLog.d(TAG, "Starting 1s continuous polling loop for Privileged Mode status & Wi-Fi")
+                while (isActive) {
+                    status.isAccessibilityActive = MegingiardAccessibilityService.isEnabled(context)
+                    status.isWifiActive = MegingiardAccessibilityService.isWifiActive(context)
+                    status.isDevModeActive = MegingiardAccessibilityService.isDevModeActive(context)
+                    status.isUsbActive = MegingiardAccessibilityService.isUsbDebuggingActive(context)
+                    status.isWirelessActive = MegingiardAccessibilityService.isWirelessDebuggingActive(context)
+                    status.isDevicePaired = PrivdBootstrapper.hasCredentials(context)
+                    status.isAutoSetupActive = MegingiardAccessibilityService.isAutoSetupActive
+                    delay(OW_STATUS_POLL_DELAY_MS)
+                }
+            }
+
+            else -> {
+                Unit
+            }
+        }
+    }
+
+    return status
+}
 
 /**
  * Root host dialog for the multi-step onboarding wizard.
@@ -165,20 +233,8 @@ fun OnboardingWizardDialog(
     val isFirstStep = activeStepIndex == 0
 
     val isQuickMenuStep = currentStepState.id == OnboardingStepId.QUICK_MENU
-
-    var isAccessibilityActive by remember {
-        mutableStateOf(MegingiardAccessibilityService.isEnabled(context))
-    }
-    val isAccessibilityStep = currentStepState.id == OnboardingStepId.ACCESSIBILITY
-
-    val isPrivilegedStep = currentStepState.id == OnboardingStepId.PRIVILEGED
+    val setupStatus = rememberSystemSetupStatus(currentStepState.id)
     val privdState by PrivdManager.state.collectAsStateWithLifecycle()
-    var isWifiActive by remember { mutableStateOf(MegingiardAccessibilityService.isWifiActive(context)) }
-    var isDevModeActive by remember { mutableStateOf(MegingiardAccessibilityService.isDevModeActive(context)) }
-    var isUsbActive by remember { mutableStateOf(MegingiardAccessibilityService.isUsbDebuggingActive(context)) }
-    var isWirelessActive by remember { mutableStateOf(MegingiardAccessibilityService.isWirelessDebuggingActive(context)) }
-    var isDevicePaired by remember { mutableStateOf(PrivdBootstrapper.hasCredentials(context)) }
-    var isAutoSetupActive by remember { mutableStateOf(MegingiardAccessibilityService.isAutoSetupActive) }
 
     val isRootBridgeAvailable = remember { PrivdManager.isRootBridgeAvailable }
     val isLanguageSupported =
@@ -192,59 +248,9 @@ fun OnboardingWizardDialog(
     var isActivatingPrivd by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
 
-    val lifecycleOwner = LocalLifecycleOwner.current
-
-    DisposableEffect(lifecycleOwner) {
-        val observer =
-            LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) {
-                    isAccessibilityActive = MegingiardAccessibilityService.isEnabled(context)
-                    isWifiActive = MegingiardAccessibilityService.isWifiActive(context)
-                    isDevModeActive = MegingiardAccessibilityService.isDevModeActive(context)
-                    isUsbActive = MegingiardAccessibilityService.isUsbDebuggingActive(context)
-                    isWirelessActive = MegingiardAccessibilityService.isWirelessDebuggingActive(context)
-                    isDevicePaired = PrivdBootstrapper.hasCredentials(context)
-                    isAutoSetupActive = MegingiardAccessibilityService.isAutoSetupActive
-                }
-            }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
-
-    LaunchedEffect(isAccessibilityStep) {
-        if (isAccessibilityStep) {
-            AppLog.d(TAG, "Starting 1s continuous polling loop for accessibility status in onboarding")
-            while (isActive) {
-                val active = MegingiardAccessibilityService.isEnabled(context)
-                if (active != isAccessibilityActive) {
-                    isAccessibilityActive = active
-                    AppLog.i(TAG, "Accessibility service status change detected in onboarding: active=$active")
-                }
-                delay(1000L)
-            }
-        }
-    }
-
-    LaunchedEffect(isPrivilegedStep) {
-        if (isPrivilegedStep) {
-            AppLog.d(TAG, "Starting 1s continuous polling loop for Privileged Mode status & Wi-Fi in onboarding")
-            while (isActive) {
-                isWifiActive = MegingiardAccessibilityService.isWifiActive(context)
-                isDevModeActive = MegingiardAccessibilityService.isDevModeActive(context)
-                isUsbActive = MegingiardAccessibilityService.isUsbDebuggingActive(context)
-                isWirelessActive = MegingiardAccessibilityService.isWirelessDebuggingActive(context)
-                isDevicePaired = PrivdBootstrapper.hasCredentials(context)
-                isAutoSetupActive = MegingiardAccessibilityService.isAutoSetupActive
-                delay(1000L)
-            }
-        }
-    }
-
     val startAutoSetup = {
         MegingiardAccessibilityService.startMultiStageAutoSetup(context)
-        isAutoSetupActive = true
+        setupStatus.isAutoSetupActive = true
     }
 
     val launchAccessibilitySettings = {
@@ -277,7 +283,7 @@ fun OnboardingWizardDialog(
                 }
                 val active = MegingiardAccessibilityService.isEnabled(context)
                 withContext(Dispatchers.Main) {
-                    isAccessibilityActive = active || success
+                    setupStatus.isAccessibilityActive = active || success
                     isActivatingAccessibility = false
                 }
             }
@@ -370,7 +376,7 @@ fun OnboardingWizardDialog(
 
                         OnboardingStepId.ACCESSIBILITY -> {
                             AccessibilityStepContent(
-                                isAccessibilityActive = isAccessibilityActive,
+                                isAccessibilityActive = setupStatus.isAccessibilityActive,
                                 onLaunchAccessibilitySettings = launchAccessibilitySettings,
                                 isRootBridgeAvailable = isRootBridgeAvailable,
                                 onActivateViaRootBridge = activateAccessibilityViaRoot,
@@ -380,15 +386,15 @@ fun OnboardingWizardDialog(
 
                         OnboardingStepId.PRIVILEGED -> {
                             PrivilegedStepContent(
-                                isWifiActive = isWifiActive,
-                                isAccessibilityActive = isAccessibilityActive,
-                                isDevModeActive = isDevModeActive,
-                                isWirelessActive = isWirelessActive,
-                                isUsbActive = isUsbActive,
-                                isDevicePaired = isDevicePaired,
+                                isWifiActive = setupStatus.isWifiActive,
+                                isAccessibilityActive = setupStatus.isAccessibilityActive,
+                                isDevModeActive = setupStatus.isDevModeActive,
+                                isWirelessActive = setupStatus.isWirelessActive,
+                                isUsbActive = setupStatus.isUsbActive,
+                                isDevicePaired = setupStatus.isDevicePaired,
                                 privdState = privdState,
                                 onStartAutoSetup = startAutoSetup,
-                                isAutoSetupActive = isAutoSetupActive,
+                                isAutoSetupActive = setupStatus.isAutoSetupActive,
                                 isRootBridgeAvailable = isRootBridgeAvailable,
                                 onActivateViaRootBridge = activatePrivdViaRoot,
                                 isActivatingRootBridge = isActivatingPrivd,
@@ -437,7 +443,7 @@ fun OnboardingWizardDialog(
                     val isNextEnabled =
                         when (currentStepState.id) {
                             OnboardingStepId.ACCESSIBILITY -> {
-                                isAccessibilityActive
+                                setupStatus.isAccessibilityActive
                             }
 
                             OnboardingStepId.PRIVILEGED -> {
