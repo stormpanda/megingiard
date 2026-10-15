@@ -3,7 +3,6 @@ package com.stormpanda.megingiard.touchpad
 import android.os.Vibrator
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -12,7 +11,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -36,10 +34,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -48,7 +43,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -70,7 +64,6 @@ import com.stormpanda.megingiard.mirror.EmbeddedMirrorView
 import com.stormpanda.megingiard.mirror.MasterSurfaceRegistry
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCutout
-import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.settings.TouchpadSettings
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.detectHoldPointerEvents
@@ -82,6 +75,10 @@ private const val TAG = "FullscreenMouseOverlay"
 private val TP_BOTTOM_BAR_HEIGHT = 50.dp
 private val TP_GLOBE_BUTTON_WIDTH = 72.dp
 private val TP_ICON_SIZE_MEDIUM = 24.dp
+private val TP_SURFACE_PADDING = 8.dp
+private val TP_SURFACE_BOTTOM_OFFSET = 4.dp
+private val TP_SURFACE_BORDER_WIDTH = 1.dp
+private const val TP_TOUCH_ASPECT_RATIO = 16f / 9f
 
 private val TP_ROUNDED_12 = RoundedCornerShape(12.dp)
 private val TP_ROUNDED_8 = RoundedCornerShape(8.dp)
@@ -235,7 +232,6 @@ fun FullscreenMouseOverlay() {
     val touchpadUseMouse by TouchpadSettings.touchpadUseMouse.collectAsStateWithLifecycle()
     val touchpadMouse45Enabled by TouchpadSettings.touchpadMouse45Enabled.collectAsStateWithLifecycle()
 
-    val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsStateWithLifecycle()
     val touchpadMirroringEnabled by TouchpadSettings.touchpadMirroringEnabled.collectAsStateWithLifecycle()
     val touchpadMirrorDim by TouchpadSettings.touchpadMirrorDim.collectAsStateWithLifecycle()
     val isCapturing by ScreenCaptureManager.isCapturing.collectAsStateWithLifecycle()
@@ -262,118 +258,107 @@ fun FullscreenMouseOverlay() {
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.BottomCenter,
             ) {
-                key(useMouse) {
+                val sizeModifier =
+                    if (useMouse) {
+                        Modifier.fillMaxSize()
+                    } else {
+                        Modifier.aspectRatio(TP_TOUCH_ASPECT_RATIO)
+                    }
+                val surfaceBg =
+                    if (!useMouse && isMirroringActive) {
+                        Color.Transparent
+                    } else {
+                        colors.appBackground
+                    }
+                Box(
+                    modifier =
+                        Modifier
+                            .padding(
+                                top = TP_SURFACE_PADDING,
+                                bottom = TP_BOTTOM_BAR_HEIGHT + TP_SURFACE_BOTTOM_OFFSET,
+                                start = TP_SURFACE_PADDING,
+                                end = TP_SURFACE_PADDING,
+                            ).then(sizeModifier)
+                            .clip(TP_ROUNDED_12)
+                            .background(surfaceBg)
+                            .border(
+                                width = TP_SURFACE_BORDER_WIDTH,
+                                brush = insetBezelBrush,
+                                shape = TP_ROUNDED_12,
+                            ).touchpadSurfaceInput(processor, useMouse = useMouse),
+                    contentAlignment = Alignment.Center,
+                ) {
                     if (useMouse) {
                         Box(
-                            modifier =
-                                Modifier
-                                    .padding(
-                                        top = 8.dp,
-                                        bottom = TP_BOTTOM_BAR_HEIGHT + 4.dp,
-                                        start = 8.dp,
-                                        end = 8.dp,
-                                    ).fillMaxSize()
-                                    .clip(TP_ROUNDED_12)
-                                    .background(colors.appBackground)
-                                    .border(
-                                        width = 1.dp,
-                                        brush = insetBezelBrush,
-                                        shape = TP_ROUNDED_12,
-                                    ).touchpadSurfaceInput(processor, useMouse = true),
-                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.BottomCenter,
                         ) {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.BottomCenter,
+                            Row(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .height(56.dp)
+                                        .padding(start = 4.dp, end = 4.dp, bottom = 2.dp),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
                             ) {
-                                Row(
+                                TouchpadMouseButton(
+                                    onDown = { MouseInjector.leftDown() },
+                                    onUp = { MouseInjector.leftUp() },
+                                    modifier = Modifier.weight(1.2f).fillMaxHeight(),
+                                )
+                                TouchpadMouseButton(
+                                    onDown = { MouseInjector.middleDown() },
+                                    onUp = { MouseInjector.middleUp() },
+                                    modifier = Modifier.weight(0.4f).fillMaxHeight(),
+                                )
+                                TouchpadMouseButton(
+                                    onDown = { MouseInjector.rightDown() },
+                                    onUp = { MouseInjector.rightUp() },
+                                    modifier = Modifier.weight(1.2f).fillMaxHeight(),
+                                )
+                            }
+
+                            if (touchpadMouse45Enabled) {
+                                TouchpadMouseButton(
+                                    onDown = { MouseInjector.mouse4Down() },
+                                    onUp = { MouseInjector.mouse4Up() },
+                                    text = stringResource(R.string.settings_touchpad_m4_label),
                                     modifier =
                                         Modifier
-                                            .fillMaxWidth()
-                                            .height(56.dp)
-                                            .padding(start = 4.dp, end = 4.dp, bottom = 2.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                ) {
-                                    TouchpadMouseButton(
-                                        onDown = { MouseInjector.leftDown() },
-                                        onUp = { MouseInjector.leftUp() },
-                                        modifier = Modifier.weight(1.2f).fillMaxHeight(),
-                                    )
-                                    TouchpadMouseButton(
-                                        onDown = { MouseInjector.middleDown() },
-                                        onUp = { MouseInjector.middleUp() },
-                                        modifier = Modifier.weight(0.4f).fillMaxHeight(),
-                                    )
-                                    TouchpadMouseButton(
-                                        onDown = { MouseInjector.rightDown() },
-                                        onUp = { MouseInjector.rightUp() },
-                                        modifier = Modifier.weight(1.2f).fillMaxHeight(),
-                                    )
-                                }
-
-                                if (touchpadMouse45Enabled) {
-                                    TouchpadMouseButton(
-                                        onDown = { MouseInjector.mouse4Down() },
-                                        onUp = { MouseInjector.mouse4Up() },
-                                        text = stringResource(R.string.settings_touchpad_m4_label),
-                                        modifier =
-                                            Modifier
-                                                .align(Alignment.TopStart)
-                                                .padding(
-                                                    start = TP_MOUSE_4_5_MARGIN_HORIZONTAL,
-                                                    top = TP_MOUSE_4_5_MARGIN_TOP,
-                                                ).size(TP_MOUSE_4_5_SIZE),
-                                    )
-                                    TouchpadMouseButton(
-                                        onDown = { MouseInjector.mouse5Down() },
-                                        onUp = { MouseInjector.mouse5Up() },
-                                        text = stringResource(R.string.settings_touchpad_m5_label),
-                                        modifier =
-                                            Modifier
-                                                .align(Alignment.TopEnd)
-                                                .padding(
-                                                    end = TP_MOUSE_4_5_MARGIN_HORIZONTAL,
-                                                    top = TP_MOUSE_4_5_MARGIN_TOP,
-                                                ).size(TP_MOUSE_4_5_SIZE),
-                                    )
-                                }
+                                            .align(Alignment.TopStart)
+                                            .padding(
+                                                start = TP_MOUSE_4_5_MARGIN_HORIZONTAL,
+                                                top = TP_MOUSE_4_5_MARGIN_TOP,
+                                            ).size(TP_MOUSE_4_5_SIZE),
+                                )
+                                TouchpadMouseButton(
+                                    onDown = { MouseInjector.mouse5Down() },
+                                    onUp = { MouseInjector.mouse5Up() },
+                                    text = stringResource(R.string.settings_touchpad_m5_label),
+                                    modifier =
+                                        Modifier
+                                            .align(Alignment.TopEnd)
+                                            .padding(
+                                                end = TP_MOUSE_4_5_MARGIN_HORIZONTAL,
+                                                top = TP_MOUSE_4_5_MARGIN_TOP,
+                                            ).size(TP_MOUSE_4_5_SIZE),
+                                )
                             }
                         }
-                    } else {
+                    } else if (isMirroringActive) {
+                        EmbeddedMirrorView(
+                            modifier = Modifier.fillMaxSize(),
+                            surfaceOwner = MasterSurfaceRegistry.OWNER_TOUCHPAD,
+                            surfacePriority = MasterSurfaceRegistry.PRIORITY_TOUCHPAD,
+                            overrideCutouts = listOf(ScreenCutout.FULLSCREEN),
+                            showLayoutBackground = false,
+                        )
                         Box(
                             modifier =
                                 Modifier
-                                    .padding(
-                                        top = 8.dp,
-                                        bottom = TP_BOTTOM_BAR_HEIGHT + 4.dp,
-                                        start = 8.dp,
-                                        end = 8.dp,
-                                    ).aspectRatio(16f / 9f)
-                                    .clip(TP_ROUNDED_12)
-                                    .background(if (isMirroringActive) Color.Transparent else colors.appBackground)
-                                    .border(
-                                        width = 1.dp,
-                                        brush = insetBezelBrush,
-                                        shape = TP_ROUNDED_12,
-                                    ).touchpadSurfaceInput(processor, useMouse = false),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            if (isMirroringActive) {
-                                EmbeddedMirrorView(
-                                    modifier = Modifier.fillMaxSize(),
-                                    surfaceOwner = MasterSurfaceRegistry.OWNER_TOUCHPAD,
-                                    surfacePriority = MasterSurfaceRegistry.PRIORITY_TOUCHPAD,
-                                    overrideCutouts = listOf(ScreenCutout.FULLSCREEN),
-                                    showLayoutBackground = false,
-                                )
-                                Box(
-                                    modifier =
-                                        Modifier
-                                            .fillMaxSize()
-                                            .background(Color.Black.copy(alpha = touchpadMirrorDim / 100f)),
-                                )
-                            }
-                        }
+                                    .fillMaxSize()
+                                    .background(Color.Black.copy(alpha = touchpadMirrorDim / 100f)),
+                        )
                     }
                 }
             }
