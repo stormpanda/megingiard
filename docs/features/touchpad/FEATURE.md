@@ -69,16 +69,19 @@ Injector lifecycles are managed globally by `InjectorLifecycleManager`, which ma
 2. Commands are routed from `MouseInjector` and `TouchInjector` directly into `PrivdClient`, which communicates with `megingiard_privd` over the authenticated loopback TCP socket.
 3. Individual screens (`FullscreenMouseOverlay`, `MacroPadScreen`) route events directly to `MouseInjector` or `TouchInjector` without starting or stopping background processes on local composition/disposal.
 
-### Socket Protocol (Mouse Mode)
+### Socket Protocol (Mouse & Touch Modes)
 
 Commands are sent as newline-terminated ASCII strings across the `PrivdClient` socket connection to `megingiard_privd`:
 
-| Command | Format       | Description                                                           |
-| ------- | ------------ | --------------------------------------------------------------------- |
-| MOVE    | `MM dx dy\n` | Move cursor relatively by `dx` and `dy` pixels                        |
-| CLICK   | `MB btn D\n` | Press mouse button `btn` down ('L' = Left, 'R' = Right, 'M' = Middle) |
-| RELEASE | `MB btn U\n` | Release mouse button `btn` up                                         |
-| SCROLL  | `MW delta\n` | Scroll relative wheel by `delta`                                      |
+| Command     | Format                | Description                                                                                                  |
+| ----------- | --------------------- | ------------------------------------------------------------------------------------------------------------ |
+| MOVE        | `MM dx dy\n`          | Move cursor relatively by `dx` and `dy` pixels                                                               |
+| CLICK       | `MB btn D\n`          | Press mouse button `btn` down (`'L'` = Left, `'R'` = Right, `'M'` = Middle, `'4'` = Mouse 4, `'5'` = Mouse 5) |
+| RELEASE     | `MB btn U\n`          | Release mouse button `btn` up (`'L'`, `'R'`, `'M'`, `'4'`, `'5'`)                                            |
+| SCROLL      | `MW delta\n`          | Scroll relative wheel by `delta`                                                                             |
+| TOUCH DOWN  | `D <slot> <x> <y>\n`  | Begin touch contact in MT slot `0..9` at raw physical sensor coordinates `(x, y)`                            |
+| TOUCH MOVE  | `M <slot> <x> <y>\n`  | Move active touch contact in MT slot `0..9` to raw physical sensor coordinates `(x, y)`                      |
+| TOUCH UP    | `U <slot>\n`          | Lift touch contact in MT slot `0..9`                                                                         |
 
 ### Writer Thread & Event Transmission
 
@@ -94,30 +97,23 @@ loop:
 
 ### Gesture & Movement Processing
 
-`FullscreenMouseOverlay` tracks finger touches using `awaitPointerEvent()` in a Compose `pointerInput` block and dispatches them to a `TouchpadGestureProcessor` instance.
+`FullscreenMouseOverlay` and `KeyboardScreen` track finger touches via the shared `Modifier.touchpadSurfaceInput(processor, useMouse)` modifier (`awaitPointerEvent()` loop) and dispatch them to a `TouchpadGestureProcessor` instance configured with a `TouchpadGestureConfig` snapshot.
 
 In relative **Mouse Mode** (`useMouse = true`):
 
-- Touch coordinates are measured. Relative delta values (`change.positionChange()`) are retrieved, scaled by a baseline speed (`TP_MOUSE_SENSITIVITY = 2f`) and the user's `sensitivity` setting (clamped between `0.1f` and `10.0f`), and forwarded to `MouseInjector.moveMouse(dx, dy)`.
-- If two-finger scroll is enabled and exactly two fingers are placed on the touchpad (`downPositions.size == 2`), vertical scroll wheel events are generated instead of cursor movement. Vertical movement (`deltaY`) is accumulated, and when crossing a threshold of `12f` pixels, `MouseInjector.scrollWheel(units)` is invoked.
+- Touch coordinates are measured. Relative delta values (`change.positionChange()`) are retrieved, scaled by a baseline speed (`TP_MOUSE_SENSITIVITY = 2f`) and the user's `sensitivity` setting (clamped to `0.1f..3.0f`), and forwarded to `MouseInjector.moveMouse(dx, dy)`.
+- If two-finger scroll is enabled and exactly two fingers are placed on the touchpad (`downPositions.size == 2`), vertical scroll wheel events are generated instead of cursor movement. Vertical movement (`deltaY`) is accumulated (scaled by `scrollSpeed`, clamped to `0.5f..3.0f`), and when crossing a threshold of `12f` pixels, `MouseInjector.scrollWheel(units)` is invoked.
 - Tap detection tracks pointer down times (`pressTimes`) and positions (`downPositions`).
-  - If a single finger is released within `TP_TAP_TIMEOUT_MS = 200L` without moving beyond `TP_TAP_SLOP_PX = 20f` pixels, a Left Click (LMB down + up) is simulated via a coroutine:
+  - Short taps released within `TP_TAP_TIMEOUT_MS = 200L` without moving beyond `TP_TAP_SLOP_PX = 20f` pixels invoke the unified `clickButton(button)` helper for 1-finger (`MouseButton.LEFT`), 2-finger (`MouseButton.RIGHT`), or 3-finger (`MouseButton.MIDDLE`) taps, guaranteeing `buttonUp` inside `finally` unless handed off to tap-and-drag:
     ```kotlin
-    MouseInjector.leftDown()
-    delay(TP_CLICK_DURATION_MS) // 40ms hold time
-    MouseInjector.leftUp()
-    ```
-  - If two fingers are tapped under the same constraints, a Right Click (RMB down + up) is simulated:
-    ```kotlin
-    MouseInjector.rightDown()
-    delay(TP_CLICK_DURATION_MS)
-    MouseInjector.rightUp()
-    ```
-  - If three fingers are tapped under the same constraints, a Middle Click (MMB down + up) is simulated:
-    ```kotlin
-    MouseInjector.middleDown()
-    delay(TP_CLICK_DURATION_MS)
-    MouseInjector.middleUp()
+    MouseInjector.buttonDown(button)
+    try {
+        delay(TP_CLICK_DURATION_MS) // 40ms hold time
+    } finally {
+        if (button != MouseButton.LEFT || !isDragging) {
+            MouseInjector.buttonUp(button)
+        }
+    }
     ```
   - If a double tap is initiated (a finger press within `TP_DOUBLE_TAP_TIMEOUT_MS = 500L` after a single-finger tap release) and held down, a drag state (`isDragging = true`) is activated:
     - On press: triggers `MouseInjector.leftDown()`.
@@ -133,7 +129,7 @@ In **Touch Mode** (shared absolute coordinate injection, e.g. for Mirror Touch P
   ```
 - These coordinates are sent to slot-aware `TouchInjector.injectTouch(slot, action, normX, normY)` which maps concurrent pointer contacts to distinct Linux input slots (`0..9`) and transmits commands directly to `PrivdClient`, enabling slot-aware multi-touch on the absolute touchpad.
 - When `TouchInjector.releaseAllSlots()` is called (for example by `InjectorLifecycleManager` on backgrounding), the injector sends slot-specific `UP` commands for all supported touch slots (`0..9`). This prevents Android from retaining a visible touch indicator.
-- **Mode Switching Safety:** When toggling dynamically between Mouse Mode and Touch Mode while fingers are down, `TouchpadGestureProcessor.onCancel()` and `LaunchedEffect(touchpadUseMouse)` unconditionally release all active touch slots (`TouchAction.UP`) and mouse drag/click states before switching background injectors. This prevents orphaned pointer slots or stuck mouse buttons.
+- **Mode Switching Safety:** `Modifier.touchpadSurfaceInput` is keyed on `(processor, useMouse)`. When toggling dynamically between Mouse Mode and Touch Mode or disposing the surface while fingers are down, its `finally` block invokes `TouchpadGestureProcessor.onCancel()`, which unconditionally releases all active touch slots (`TouchAction.UP`) and mouse drag/click states. This prevents orphaned pointer slots or stuck mouse buttons.
 
 ### Secondary Display Rendering & Touchpad Mirroring
 
