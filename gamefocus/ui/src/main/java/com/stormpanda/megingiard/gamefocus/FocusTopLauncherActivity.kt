@@ -237,10 +237,6 @@ class FocusTopLauncherActivity : ComponentActivity() {
             val (themeMode, userAccent) = remoteThemeState
             val appColors = paletteFor(themeMode, userAccent)
 
-            val themeUpdateTrigger by MegingiardThemeClient
-                .observeThemeUpdates(this)
-                .collectAsStateWithLifecycle(initialValue = 0)
-
             val allApps by InstalledAppsManager.installedApps.collectAsStateWithLifecycle()
             val favorites by InstalledAppsManager.favorites.collectAsStateWithLifecycle()
             val hidden by InstalledAppsManager.hiddenApps.collectAsStateWithLifecycle()
@@ -372,7 +368,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             }
                         }
 
-                    LaunchedEffect(currentHoveredApp, isStarted, themeUpdateTrigger) {
+                    LaunchedEffect(currentHoveredApp, isStarted, remoteThemeState) {
                         if (isStarted && launchedTopScreenPackage == null) {
                             val palette =
                                 currentHoveredApp?.let { app ->
