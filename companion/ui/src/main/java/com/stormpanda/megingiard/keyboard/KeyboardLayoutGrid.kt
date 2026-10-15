@@ -25,6 +25,8 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
+private const val KB_NUMERIC_GRID_ROW_COUNT = 3
+
 @Composable
 internal fun KeyboardLayoutGrid(
     activeState: KeyboardLayoutState,
@@ -178,44 +180,9 @@ internal fun KeyboardLayoutGrid(
     ) {
         val isNumericLayout = activeState.mode == KeyboardMode.NUMERIC
         if (isNumericLayout) {
-            val ops =
-                listOf(
-                    findKeyDef(activeState.grid, "plus") ?: KeyDef("plus", "+", 0),
-                    findKeyDef(activeState.grid, "minus") ?: KeyDef("minus", "-", 0),
-                    findKeyDef(activeState.grid, "asterisk") ?: KeyDef("asterisk", "*", 0),
-                    findKeyDef(activeState.grid, "slash") ?: KeyDef("slash", "/", 0),
-                )
-            val gridRows =
-                listOf(
-                    listOf(
-                        findKeyDef(activeState.grid, "num_1") ?: KeyDef("num_1", "1", 0),
-                        findKeyDef(activeState.grid, "num_2") ?: KeyDef("num_2", "2", 0),
-                        findKeyDef(activeState.grid, "num_3") ?: KeyDef("num_3", "3", 0),
-                        findKeyDef(activeState.grid, "percent") ?: KeyDef("percent", "%", 0),
-                    ),
-                    listOf(
-                        findKeyDef(activeState.grid, "num_4") ?: KeyDef("num_4", "4", 0),
-                        findKeyDef(activeState.grid, "num_5") ?: KeyDef("num_5", "5", 0),
-                        findKeyDef(activeState.grid, "num_6") ?: KeyDef("num_6", "6", 0),
-                        findKeyDef(activeState.grid, "space_num") ?: KeyDef("space_num", "␣", 0),
-                    ),
-                    listOf(
-                        findKeyDef(activeState.grid, "num_7") ?: KeyDef("num_7", "7", 0),
-                        findKeyDef(activeState.grid, "num_8") ?: KeyDef("num_8", "8", 0),
-                        findKeyDef(activeState.grid, "num_9") ?: KeyDef("num_9", "9", 0),
-                        findKeyDef(activeState.grid, "bksp") ?: KeyDef("bksp", "⌫", 0),
-                    ),
-                )
-            val bottomRow =
-                listOf(
-                    findKeyDef(activeState.grid, "mode_switch_abc") ?: KeyDef("mode_switch_abc", "ABC", 0),
-                    findKeyDef(activeState.grid, "comma") ?: KeyDef("comma", ",", 0),
-                    findKeyDef(activeState.grid, "mode_switch") ?: KeyDef("mode_switch", "!?#", 0),
-                    findKeyDef(activeState.grid, "num_0") ?: KeyDef("num_0", "0", 0),
-                    findKeyDef(activeState.grid, "equal") ?: KeyDef("equal", "=", 0),
-                    findKeyDef(activeState.grid, "dot") ?: KeyDef("dot", ".", 0),
-                    findKeyDef(activeState.grid, "enter") ?: KeyDef("enter", "Enter", 0),
-                )
+            val ops = activeState.grid.map { it.first() }
+            val gridRows = activeState.grid.take(KB_NUMERIC_GRID_ROW_COUNT).map { it.drop(1) }
+            val bottomRow = activeState.grid.last().drop(1)
 
             Column(
                 modifier = Modifier.fillMaxSize(),
@@ -397,16 +364,4 @@ private fun KeyboardKey(
         modifier = modifier,
         onBoundsUpdate = onBoundsUpdate,
     )
-}
-
-private fun findKeyDef(
-    grid: List<List<KeyDef>>,
-    id: String,
-): KeyDef? {
-    for (row in grid) {
-        for (key in row) {
-            if (key.id == id) return key
-        }
-    }
-    return null
 }
