@@ -259,7 +259,7 @@ None identified — animations in `GamepadFocusCard`, `drawBehind` border render
 - [x] **`[TH-06]`** — Remove unused `AppDimens` and `LocalAppDimens` from `AppTheme.kt` and composition roots *(Complexity: Med, Risk: Low)*
 - [x] **`[TH-07]`** — Remove 13 unused `AppColors` tokens and dead `appSwitchColors()` helper *(Complexity: Med, Risk: Low)*
 - [x] **`[TH-08]`** — Delete dead `GamepadGlyphs.kt` and remove unused `actionGlyph` from `GamepadActionCard` *(Complexity: Med, Risk: Low)*
-- [ ] **`[TH-09]`** — Delete dead `GamepadSearchBar` overloads and unused `AppTextField(String)` overload *(Complexity: Med, Risk: Low)*
+- [x] **`[TH-09]`** — Delete dead `GamepadSearchBar` overloads and unused `AppTextField(String)` overload *(Complexity: Med, Risk: Low)*
 - [ ] **`[TH-10]`** — Delete dead `CutoutLetterButton` / `CutoutSymbolButton` and redundant `observeThemeUpdates` *(Complexity: Med, Risk: Low)*
 - [ ] **`[TH-11]`** — Unify `savedFocusKeyByDepth` lookup and `resolveNavigationDepth` in `GamepadTwoPaneScaffold` *(Complexity: Med, Risk: Low)*
 - [ ] **`[TH-12]`** — Reuse `launchDirectionalRepeat` in `PrimaryOverlayInputBridge` *(Complexity: Low, Risk: Low)*

@@ -334,7 +334,6 @@ Megingiard provides a centralized, reusable suite of handheld gamepad-first comp
 | `GamepadColorPaletteCard` | Two-tier focusable color palette card. Tier 1: `[Up/Down]` row traversal, `[Left]` back to sidebar. Pressing `[A]` enters Tier 2 color selection (`[Left/Right]` cycles preset colors, `[B]` exits). | Accent color preset picker |
 | `GamepadColorPaletteGrid` | Color swatch grid with checkmark selection indicators and touch click support. | Color picker options |
 | `GamepadColorSwatch` | Standalone circular color swatch with checkmark icon and 3 dp focus outline. | Preset palette, action card swatch badge |
-| `GamepadSearchBar` | Focusable search field with clear (`X`) button and optional horizontal filter chips. | `IconPickerDialog`, `SteamGridDbScrapeDialog` |
 | `GamepadTwoStepConfirmCard` | Destructive action card requiring two-step confirmation (`[ Delete ]` -> `[ Confirm ]`) with in-deck B-button cancellation. | Profiles, layouts, buttons, macros, conflict resolution |
 | `GamepadInfoBox` | Themed info banner / notice box with vector icon, surface background, subtle border, and optional title/description layout. | Sub-menu instructions, empty search/list notices |
 
