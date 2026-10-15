@@ -434,7 +434,6 @@ Open Settings to create a layout.</string>
     <string name="layout_settings_visual_anchor_blur_desc">Milchglas-Weichzeichnung anwenden, wenn der Referenzanker verschwindet.</string>
     <string name="layout_settings_visual_anchor_remove_title">Anker-Kalibrierung löschen</string>
     <string name="layout_settings_visual_anchor_remove_desc">Gespeicherte Referenz-Signatur entfernen und visuellen Anker deaktivieren</string>
-    <string name="help_layout_settings_auto_switch_desc">Konfiguriere visuelle Verankerung und automatischen Layout-Wechsel für dieses Layout. Überwacht einen Referenzbereich auf dem Hauptbildschirm, um Cutouts einzufrieren oder das Layout zu wechseln, wenn der vorgesehene Inhalt nicht im Spiel angezeigt wird.</string>
 
     <string name="settings_profile_automation_header">Automatisierung</string>
     <string name="settings_profile_auto_layout_switching_title">Automatischer Layout-Wechsel</string>
@@ -916,7 +915,6 @@ Open Settings to create a layout.</string>
     <string name="onboarding_finished_desc">Du hast die Willkommenstour abgeschlossen. Du kannst diese Tour jederzeit unter Globale Einstellungen → Allgemein erneut starten.</string>
     <string name="onboarding_btn_next">Weiter</string>
     <string name="onboarding_btn_back">Zurück</string>
-    <string name="onboarding_btn_skip">Überspringen</string>
     <string name="onboarding_btn_finish">Yeah man, I wanna do it!</string>
     <!-- Quick Menu Tutorial -->
     <string name="quick_menu_tutorial_title">Menü öffnen</string>

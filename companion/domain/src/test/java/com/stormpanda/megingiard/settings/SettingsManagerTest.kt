@@ -45,18 +45,14 @@ class SettingsManagerTest {
     fun testWelcomeTutorialDefaultsAndUpdates() {
         // 1. Verify default values
         assertEquals(0, SettingsManager.welcomeTourCompletedVersion.value)
-        assertTrue(SettingsManager.showMacroEditorTutorial.value)
 
         // 2. Set updates and verify
         SettingsManager.setWelcomeTourCompletedVersion(1)
-        SettingsManager.setShowMacroEditorTutorial(false)
         assertEquals(1, SettingsManager.welcomeTourCompletedVersion.value)
-        assertFalse(SettingsManager.showMacroEditorTutorial.value)
 
         // 3. Reset all tutorials and verify reset
         SettingsManager.resetAllTutorials()
         assertEquals(0, SettingsManager.welcomeTourCompletedVersion.value)
-        assertTrue(SettingsManager.showMacroEditorTutorial.value)
     }
 
     @Test

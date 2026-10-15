@@ -98,7 +98,6 @@ internal val KEY_SAVED_LOCKED = booleanPreferencesKey("mirror_saved_locked")
 internal val KEY_SAVED_PROJECTION = booleanPreferencesKey("mirror_saved_projection")
 
 // Tutorials persistence
-internal val KEY_SHOW_MACRO_EDITOR_TUTORIAL = booleanPreferencesKey("show_macro_editor_tutorial")
 internal val KEY_WELCOME_TOUR_COMPLETED_VERSION = intPreferencesKey("welcome_tour_completed_version")
 
 // Internal backups storage key — isolated from SECTION_MAP export/import
@@ -187,7 +186,6 @@ internal val EXCLUDED_KEYS: Set<Preferences.Key<*>> =
         KEY_SKIP_TOUCH_RECORD_DIALOG,
         KEY_SAVED_LOCKED,
         KEY_SAVED_PROJECTION,
-        KEY_SHOW_MACRO_EDITOR_TUTORIAL,
         KEY_WELCOME_TOUR_COMPLETED_VERSION,
         KEY_INTERNAL_BACKUPS,
         KEY_PRIVD_PROMPT_DISMISSED,
@@ -231,7 +229,6 @@ internal val BOOLEAN_KEYS: Set<Preferences.Key<*>> =
         KEY_MACROPAD_SNAP_ALIGNMENT,
         KEY_SAVED_LOCKED,
         KEY_SAVED_PROJECTION,
-        KEY_SHOW_MACRO_EDITOR_TUTORIAL,
         KEY_AUTO_UPDATE_CHECK_ENABLED,
     )
 

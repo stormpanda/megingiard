@@ -447,7 +447,6 @@ Open Settings to create a layout.</string>
     <string name="layout_settings_visual_anchor_blur_desc">當參考錨點遺失時套用毛玻璃模糊。</string>
     <string name="layout_settings_visual_anchor_remove_title">刪除錨點校準</string>
     <string name="layout_settings_visual_anchor_remove_desc">移除已校準的參考簽章並停用視覺錨點</string>
-    <string name="help_layout_settings_auto_switch_desc">為此版面設定視覺錨點與自動切換。監控主螢幕上的參考區域，當此版面的預期內容未顯示時凍結或模糊切角，或切換版面。</string>
 
     <string name="settings_profile_automation_header">自動化</string>
     <string name="settings_profile_auto_layout_switching_title">自動配置切換</string>
@@ -915,7 +914,6 @@ Open Settings to create a layout.</string>
     <string name="onboarding_finished_desc">您已完成歡迎導覽。隨時可從 全域設定 → 一般 重新執行此導覽。</string>
     <string name="onboarding_btn_next">下一步</string>
     <string name="onboarding_btn_back">上一步</string>
-    <string name="onboarding_btn_skip">略過</string>
     <string name="onboarding_btn_finish">好，開始動手吧！</string>
     <!-- Quick Menu Tutorial -->
     <string name="quick_menu_tutorial_title">開啟選單</string>

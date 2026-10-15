@@ -434,7 +434,6 @@ Open Settings to create a layout.</string>
     <string name="layout_settings_visual_anchor_blur_desc">Apply frosted-glass blur when the reference anchor is lost.</string>
     <string name="layout_settings_visual_anchor_remove_title">Delete Anchor Calibration</string>
     <string name="layout_settings_visual_anchor_remove_desc">Remove calibrated reference signature and disable visual anchor</string>
-    <string name="help_layout_settings_auto_switch_desc">Configure visual anchoring and automatic layout switching for this layout. Monitors a reference region on the primary screen to freeze or blur cutouts or switch layouts whenever this layout\'s intended content is not shown.</string>
 
     <string name="settings_profile_automation_header">Automation</string>
     <string name="settings_profile_auto_layout_switching_title">Automatic Layout Switching</string>
@@ -916,7 +915,6 @@ Open Settings to create a layout.</string>
     <string name="onboarding_finished_desc">You have completed the welcome tour. You can re-run this tour at any time from Global Settings → General.</string>
     <string name="onboarding_btn_next">Next</string>
     <string name="onboarding_btn_back">Back</string>
-    <string name="onboarding_btn_skip">Skip</string>
     <string name="onboarding_btn_finish">Yeah man, I wanna do it!</string>
     <!-- Quick Menu Tutorial -->
     <string name="quick_menu_tutorial_title">Opening the Menu</string>

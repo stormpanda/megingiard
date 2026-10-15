@@ -104,9 +104,6 @@ object SettingsManager {
 
     const val CURRENT_WELCOME_TOUR_VERSION = 1
 
-    private val _showMacroEditorTutorial = MutableStateFlow(true)
-    val showMacroEditorTutorial: StateFlow<Boolean> = _showMacroEditorTutorial.asStateFlow()
-
     private val _welcomeTourCompletedVersion = MutableStateFlow(0)
     val welcomeTourCompletedVersion: StateFlow<Int> = _welcomeTourCompletedVersion.asStateFlow()
 
@@ -139,7 +136,6 @@ object SettingsManager {
         _appLanguage.value = AppLanguage.SYSTEM
         AppLog.level = AppLog.Level.WARN
         _welcomeTourCompletedVersion.value = 0
-        _showMacroEditorTutorial.value = true
         _internalBackups.value = emptyList()
         autoBackupTriggered = false
         lastBackupsJsonStr = null
@@ -211,7 +207,6 @@ object SettingsManager {
                     prefs[KEY_OVERLAY_AT_BOTTOM]?.let { _overlayAtBottom.value = it }
                     prefs[KEY_OVERLAY_FADE_OUT]?.let { _overlayFadeOut.value = it }
 
-                    prefs[KEY_SHOW_MACRO_EDITOR_TUTORIAL]?.let { _showMacroEditorTutorial.value = it }
                     prefs[KEY_WELCOME_TOUR_COMPLETED_VERSION]?.let { _welcomeTourCompletedVersion.value = it }
                     MirrorSettings.loadFrom(prefs)
                     KeyboardSettings.loadFrom(prefs)
@@ -252,18 +247,6 @@ object SettingsManager {
     private val optionalDataStore: DataStore<Preferences>?
         get() = if (::dataStore.isInitialized) dataStore else null
 
-    fun setShowMacroEditorTutorial(value: Boolean) {
-        updateSettingPref(
-            KEY_SHOW_MACRO_EDITOR_TUTORIAL,
-            value,
-            _showMacroEditorTutorial,
-            scope,
-            optionalDataStore,
-            TAG,
-            "setShowMacroEditorTutorial",
-        )
-    }
-
     fun setWelcomeTourCompletedVersion(value: Int) {
         updateSettingPref(
             KEY_WELCOME_TOUR_COMPLETED_VERSION,
@@ -278,11 +261,9 @@ object SettingsManager {
 
     fun resetAllTutorials() {
         AppLog.d(TAG, "resetAllTutorials()")
-        _showMacroEditorTutorial.value = true
         _welcomeTourCompletedVersion.value = 0
         scope.launch {
             optionalDataStore?.edit { prefs ->
-                prefs[KEY_SHOW_MACRO_EDITOR_TUTORIAL] = true
                 prefs[KEY_WELCOME_TOUR_COMPLETED_VERSION] = 0
             }
         }
