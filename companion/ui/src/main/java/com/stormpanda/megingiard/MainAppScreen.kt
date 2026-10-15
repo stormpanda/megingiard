@@ -180,7 +180,6 @@ fun MainAppScreen() {
                 if (request.isInApp) {
                     ConfigManager.clearInAppPendingImport()
                     ConfigManager.setInAppImportError(errorMsg)
-                    importError = errorMsg
                 } else {
                     ConfigManager.clearPendingImport()
                     importError = errorMsg

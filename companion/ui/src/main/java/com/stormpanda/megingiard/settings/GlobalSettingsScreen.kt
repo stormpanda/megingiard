@@ -102,23 +102,14 @@ fun GlobalSettingsScreen(
     }
     var subPageStack by rememberSaveable { mutableStateOf<List<SettingsSubPage>>(emptyList()) }
     val currentSubPage = subPageStack.lastOrNull()
-    var showImportPreviewDialog by remember { mutableStateOf<MegingiardExport?>(null) }
     val pendingInAppParsedImport by ConfigManager.pendingInAppParsedImport.collectAsStateWithLifecycle()
     val configImportError by ConfigManager.inAppImportError.collectAsStateWithLifecycle()
-    val activeImportPreview = showImportPreviewDialog ?: pendingInAppParsedImport?.export
     var lastReviewExport by remember { mutableStateOf<MegingiardExport?>(null) }
-    LaunchedEffect(activeImportPreview) {
-        if (activeImportPreview != null) {
-            lastReviewExport = activeImportPreview
-        }
-    }
     LaunchedEffect(subPageStack) {
         if (SettingsSubPage.RESTORE_REVIEW !in subPageStack) {
-            showImportPreviewDialog = null
             ConfigManager.clearInAppPendingImport()
         }
     }
-    var importError by rememberSaveable { mutableStateOf<String?>(null) }
     val pendingInAppImportMode by ConfigManager.pendingInAppImportMode.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
     var selectedCategory by remember { mutableStateOf(SettingsCategory.GENERAL) }
@@ -136,7 +127,9 @@ fun GlobalSettingsScreen(
     }
 
     LaunchedEffect(pendingInAppParsedImport) {
-        if (pendingInAppParsedImport != null) {
+        val parsed = pendingInAppParsedImport
+        if (parsed != null) {
+            lastReviewExport = parsed.export
             selectedCategory = SettingsCategory.CONFIGURATION
             subPageStack = listOf(SettingsSubPage.RESTORE_BACKUP, SettingsSubPage.RESTORE_REVIEW)
         }
@@ -426,7 +419,7 @@ fun GlobalSettingsScreen(
                                 },
                                 onSelectInternalBackup = { backup ->
                                     ConfigManager.setPendingInAppImportMode(ConfigManager.ImportMode.BACKUP_RESTORE)
-                                    showImportPreviewDialog = backup.export
+                                    ConfigManager.setInAppParsedImport(backup.export)
                                     subPageStack = subPageStack + SettingsSubPage.RESTORE_REVIEW
                                 },
                             )
@@ -434,7 +427,7 @@ fun GlobalSettingsScreen(
                     }
 
                     SettingsSubPage.RESTORE_REVIEW -> {
-                        val reviewExport = activeImportPreview ?: lastReviewExport
+                        val reviewExport = pendingInAppParsedImport?.export ?: lastReviewExport
                         if (reviewExport != null) {
                             GamepadDeck(
                                 breadcrumbs =
@@ -450,7 +443,6 @@ fun GlobalSettingsScreen(
                                     pendingInAppImportMode = pendingInAppImportMode,
                                     onConfirmImport = { exp, mode ->
                                         val pendingImages = pendingInAppParsedImport?.images.orEmpty()
-                                        showImportPreviewDialog = null
                                         subPageStack = emptyList()
                                         coroutineScope.launch {
                                             runCatching {
@@ -480,9 +472,14 @@ fun GlobalSettingsScreen(
                                                     }
                                                 DialogToastManager.show(context.getString(msgRes))
                                             }.onFailure { e ->
-                                                importError =
+                                                val errorMsg =
                                                     e.message?.takeIf { it.isNotBlank() }
                                                         ?: context.getString(R.string.config_error_unknown)
+                                                DialogToastManager.show(
+                                                    message = errorMsg,
+                                                    icon = Icons.Rounded.ErrorOutline,
+                                                    isError = true,
+                                                )
                                             }
                                         }
                                     },
@@ -522,15 +519,14 @@ fun GlobalSettingsScreen(
             }
         },
     )
-    LaunchedEffect(importError, configImportError) {
-        val error = importError ?: configImportError
+    LaunchedEffect(configImportError) {
+        val error = configImportError
         if (error != null) {
             DialogToastManager.show(
                 message = error,
                 icon = Icons.Rounded.ErrorOutline,
                 isError = true,
             )
-            importError = null
             ConfigManager.setInAppImportError(null)
         }
     }
