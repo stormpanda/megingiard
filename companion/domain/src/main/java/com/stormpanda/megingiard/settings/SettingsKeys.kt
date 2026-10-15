@@ -18,7 +18,6 @@ import androidx.datastore.preferences.core.stringPreferencesKey
  * widens access within `:domain`.
  */
 
-internal val KEY_AUTO_SWITCH_PROFILES = booleanPreferencesKey("auto_switch_profiles")
 internal val KEY_EXCLUDE_FROM_RECENTS = booleanPreferencesKey("exclude_from_recents")
 internal val KEY_ACCENT_COLOR = intPreferencesKey("accent_color")
 internal val KEY_CUSTOM_ACCENT_COLOR = intPreferencesKey("custom_accent_color")
@@ -70,14 +69,8 @@ internal val KEY_TOUCHPAD_NATURAL_SCROLL = booleanPreferencesKey("touchpad_natur
 internal val KEY_TOUCHPAD_SCROLL_SPEED = floatPreferencesKey("touchpad_scroll_speed")
 internal val KEY_TOUCHPAD_HAPTICS_ENABLED = booleanPreferencesKey("touchpad_haptics_enabled")
 
-// MacroPad touch recording
-internal val KEY_SKIP_TOUCH_RECORD_DIALOG = booleanPreferencesKey("skip_touch_record_dialog")
-
 // MacroPad — gamepad face-button label swap (display only, keycodes unchanged)
 internal val KEY_GAMEPAD_SWAP_FACE_BUTTONS = booleanPreferencesKey("gamepad_swap_face_buttons")
-
-// MacroPad — 10 most recently used colors (stored as comma-separated ARGB integers)
-internal val KEY_MACROPAD_RECENT_COLORS = stringPreferencesKey("macropad_recent_colors")
 
 // MacroPad — button alignment snapping toggle
 internal val KEY_MACROPAD_SNAP_ALIGNMENT = booleanPreferencesKey("macropad_snap_alignment")
@@ -87,11 +80,6 @@ internal val KEY_PRIVD_PROMPT_DISMISSED = booleanPreferencesKey("privd_prompt_di
 // Privileged Mode — per-stick evdev dead zone for physical gamepad recording (0.0–1.0, default 0.15).
 internal val KEY_PRIVD_DEADZONE_LEFT = floatPreferencesKey("privd_deadzone_left")
 internal val KEY_PRIVD_DEADZONE_RIGHT = floatPreferencesKey("privd_deadzone_right")
-
-// MacroPad ambient display settings
-internal val KEY_MACROPAD_AMBIENT_DIM = floatPreferencesKey("macropad_ambient_dim")
-internal val KEY_MACROPAD_AMBIENT_PREVIEW = booleanPreferencesKey("macropad_ambient_preview")
-internal val KEY_MACROPAD_AMBIENT_APPLY_THEME = booleanPreferencesKey("macropad_ambient_apply_theme")
 
 internal val KEY_SAVED_LOCKED = booleanPreferencesKey("mirror_saved_locked")
 internal val KEY_SAVED_PROJECTION = booleanPreferencesKey("mirror_saved_projection")
@@ -118,7 +106,6 @@ private val GLOBAL_KEYS: Set<Preferences.Key<*>> =
         KEY_THEME_MODE,
         KEY_APP_LANGUAGE,
         KEY_LOG_LEVEL,
-        KEY_AUTO_SWITCH_PROFILES,
         KEY_EXCLUDE_FROM_RECENTS,
         KEY_STEAMGRIDDB_API_TOKEN,
         KEY_AUTO_UPDATE_CHECK_ENABLED,
@@ -157,11 +144,7 @@ private val KEYBOARD_KEYS: Set<Preferences.Key<*>> =
     )
 private val MACROPAD_SETTINGS_KEYS: Set<Preferences.Key<*>> =
     setOf(
-        KEY_MACROPAD_AMBIENT_DIM,
-        KEY_MACROPAD_AMBIENT_PREVIEW,
-        KEY_MACROPAD_AMBIENT_APPLY_THEME,
         KEY_GAMEPAD_SWAP_FACE_BUTTONS,
-        KEY_MACROPAD_RECENT_COLORS,
         KEY_MACROPAD_SNAP_ALIGNMENT,
         KEY_PRIVD_DEADZONE_LEFT,
         KEY_PRIVD_DEADZONE_RIGHT,
@@ -182,7 +165,6 @@ internal val EXCLUDED_KEYS: Set<Preferences.Key<*>> =
         KEY_MACROPAD_PROFILES,
         KEY_MACROPAD_ACTIVE_PROFILE_ID,
         KEY_KB_TOUCHPAD_ENABLED,
-        KEY_SKIP_TOUCH_RECORD_DIALOG,
         KEY_SAVED_LOCKED,
         KEY_SAVED_PROJECTION,
         KEY_WELCOME_TOUR_COMPLETED_VERSION,
@@ -199,7 +181,6 @@ internal val KEY_BY_NAME: Map<String, Preferences.Key<*>> by lazy {
 
 internal val BOOLEAN_KEYS: Set<Preferences.Key<*>> =
     setOf(
-        KEY_AUTO_SWITCH_PROFILES,
         KEY_EXCLUDE_FROM_RECENTS,
         KEY_OVERLAY_AT_BOTTOM,
         KEY_OVERLAY_FADE_OUT,
@@ -221,10 +202,7 @@ internal val BOOLEAN_KEYS: Set<Preferences.Key<*>> =
         KEY_TOUCHPAD_MOUSE_4_5_ENABLED,
         KEY_TOUCHPAD_NATURAL_SCROLL,
         KEY_TOUCHPAD_HAPTICS_ENABLED,
-        KEY_SKIP_TOUCH_RECORD_DIALOG,
         KEY_GAMEPAD_SWAP_FACE_BUTTONS,
-        KEY_MACROPAD_AMBIENT_PREVIEW,
-        KEY_MACROPAD_AMBIENT_APPLY_THEME,
         KEY_MACROPAD_SNAP_ALIGNMENT,
         KEY_SAVED_LOCKED,
         KEY_SAVED_PROJECTION,
@@ -243,7 +221,6 @@ internal val FLOAT_KEYS: Set<Preferences.Key<*>> =
     setOf(
         KEY_PRIVD_DEADZONE_LEFT,
         KEY_PRIVD_DEADZONE_RIGHT,
-        KEY_MACROPAD_AMBIENT_DIM,
         KEY_TOUCHPAD_SENSITIVITY,
         KEY_TOUCHPAD_SCROLL_SPEED,
     )
@@ -258,7 +235,6 @@ internal val STRING_KEYS: Set<Preferences.Key<*>> =
         KEY_KB_MOUSE_BTN_POS,
         KEY_APP_LANGUAGE,
         KEY_LOG_LEVEL,
-        KEY_MACROPAD_RECENT_COLORS,
         KEY_INTERNAL_BACKUPS,
         KEY_LATEST_RELEASE_TAG,
         KEY_LATEST_RELEASE_URL,

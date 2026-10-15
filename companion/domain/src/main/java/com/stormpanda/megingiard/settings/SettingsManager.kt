@@ -344,9 +344,7 @@ object SettingsManager {
     }
 
     // Keyboard setters live in [KeyboardSettings]; touchpad setters in [TouchpadSettings].
-
-    // MacroPad background setters live in [BackgroundSettings].
-    // MacroPad recording-dialog flags + gamepad-swap setter + saveMacroPadData live in [MacroPadSettings].
+    // MacroPad gamepad-swap + snap-alignment setters + saveMacroPadData live in [MacroPadSettings].
 
     // Mirror session state save/restore lives in [MirrorSettings].
 
