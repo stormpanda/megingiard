@@ -66,7 +66,6 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
     val kbMouseBtnPos by viewModel.kbMouseBtnPos.collectAsStateWithLifecycle()
     val isQuickMenuOpen by viewModel.isQuickMenuOpen.collectAsStateWithLifecycle()
     val colors = LocalAppColors.current
-    val accentColor = colors.accent
 
     val kbTouchpadEnabled by viewModel.kbTouchpadEnabled.collectAsStateWithLifecycle()
     val tapToClick by TouchpadSettings.touchpadTapToClick.collectAsStateWithLifecycle()
@@ -321,12 +320,10 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                     ) {
                         KeyboardTopToolbar(
                             activeState = activeState,
-                            accentColor = accentColor,
                         )
 
                         KeyboardMacroQuickRow(
                             visible = isMacroRowVisible && activeState.mode != KeyboardMode.FULL,
-                            accentColor = accentColor,
                         )
 
                         Box(
@@ -340,13 +337,11 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                                 activeState = activeState,
                                 gestureProcessor = gestureProcessor,
                                 pressedKeys = pressedKeys,
-                                accentColor = accentColor,
                                 isShiftActive = isShiftActive,
                                 isCapsActive = isCapsActive,
                                 isAltGrActive = isAltGrActive,
                                 isQuickMenuOpen = isQuickMenuOpen,
                                 kbRepeatEnabled = kbRepeatEnabled,
-                                kbLayout = kbLayout,
                                 onCloseQuickMenu = { viewModel.closeQuickMenu() },
                                 onModeChange = { nextMode ->
                                     viewModel.setKeyboardMode(nextMode)
@@ -361,7 +356,6 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                             TrackpointOverlay(
                                 trackpointVisible = trackpointVisible,
                                 kbMouseBtnPos = kbMouseBtnPos,
-                                accentColor = accentColor,
                                 modifier = Modifier.align(Alignment.Center),
                             )
 
@@ -371,7 +365,6 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                                     popup = popup,
                                     boxWidthPx = boxCoords?.size?.width ?: 1240,
                                     density = density,
-                                    accentColor = accentColor,
                                 )
                             }
                         }

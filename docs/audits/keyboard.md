@@ -250,7 +250,7 @@
 
 - [x] **`[KB-01]`** — Merge `KeyRepeatController` into `KeyboardGestureProcessor` & unify hit-testing/injection *(Complexity: High, Risk: Med)*
 - [x] **`[KB-02]`** — Drop `AndroidViewModel` & unused pass-through properties in `KeyboardViewModel` *(Complexity: Med, Risk: Low)*
-- [ ] **`[KB-03]`** — Remove unused `isUpper` / `kbLayout` params & stop threading `accentColor` *(Complexity: Low, Risk: Low)*
+- [x] **`[KB-03]`** — Remove unused `isUpper` / `kbLayout` params & stop threading `accentColor` *(Complexity: Low, Risk: Low)*
 - [ ] **`[KB-04]`** — Replace 23 `findKeyDef` linear searches in `NUMERIC` grid with row slicing *(Complexity: Med, Risk: Low)*
 - [ ] **`[KB-05]`** — Replace `injectPopupChar` & `POPUP_CHAR_MAP` with `LinuxKeycodes.charToKeyMapping` *(Complexity: High, Risk: Low)*
 - [ ] **`[KB-06]`** — Remove `CancellationException`-swallowing `try / catch` in long-press coroutine *(Complexity: Low, Risk: Low)*

@@ -31,7 +31,6 @@ internal fun CharPopupOverlay(
     popup: PopupState,
     boxWidthPx: Int,
     density: Density,
-    accentColor: Color,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
@@ -77,7 +76,7 @@ internal fun CharPopupOverlay(
                         Modifier
                             .size(KB_POPUP_CELL_SIZE)
                             .clip(CircleShape)
-                            .background(if (isSelected) accentColor else Color.Transparent),
+                            .background(if (isSelected) colors.accent else Color.Transparent),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(

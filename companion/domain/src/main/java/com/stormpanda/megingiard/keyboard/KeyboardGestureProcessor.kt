@@ -161,7 +161,7 @@ class KeyboardGestureProcessor(
                     scope.launch {
                         try {
                             delay(KB_LONG_PRESS_DELAY_MS)
-                            val options = getPopupOptions(hoveredKeyDef, isUpper = isShiftActive() || isCapsActive())
+                            val options = getPopupOptions(hoveredKeyDef)
                             if (bounds != null && options.isNotEmpty()) {
                                 _activePopupState.value =
                                     PopupState(

@@ -166,17 +166,16 @@ class KeyboardLayoutTest {
     @Test
     fun `getPopupOptions generates expected options list`() {
         val eKey = KeyDef("e", "e", 18, superscript = "3")
-        assertEquals(listOf("3"), getPopupOptions(eKey, isUpper = false))
-        assertEquals(listOf("3"), getPopupOptions(eKey, isUpper = true))
-        assertTrue(getPopupOptions(KeyDef("f", "f", 33), isUpper = false).isEmpty())
-        assertEquals(listOf("!"), getPopupOptions(KeyDef("1", "1", 2, shiftLabel = "!"), isUpper = false))
+        assertEquals(listOf("3"), getPopupOptions(eKey))
+        assertTrue(getPopupOptions(KeyDef("f", "f", 33)).isEmpty())
+        assertEquals(listOf("!"), getPopupOptions(KeyDef("1", "1", 2, shiftLabel = "!")))
         assertEquals(
             listOf("(", "[", "{", "<"),
-            getPopupOptions(KeyDef("j", "j", 36, superscript = "(", popupOptions = listOf("(", "[", "{", "<")), isUpper = false),
+            getPopupOptions(KeyDef("j", "j", 36, superscript = "(", popupOptions = listOf("(", "[", "{", "<"))),
         )
         assertEquals(
             listOf("[", "{", "<"),
-            getPopupOptions(KeyDef("lparen", "(", 10, popupOptions = listOf("[", "{", "<")), isUpper = false),
+            getPopupOptions(KeyDef("lparen", "(", 10, popupOptions = listOf("[", "{", "<"))),
         )
     }
 

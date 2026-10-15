@@ -96,7 +96,6 @@ internal fun KeyCap(
     keyDef: KeyDef,
     isPressed: Boolean,
     modifierState: ModifierState,
-    accentColor: Color,
     isShiftActive: Boolean,
     isCapsActive: Boolean,
     isAltGrActive: Boolean,
@@ -118,11 +117,11 @@ internal fun KeyCap(
 
     val bg =
         when {
-            isEnterKey -> if (isPressed) accentColor.copy(alpha = 0.8f) else accentColor
+            isEnterKey -> if (isPressed) colors.accent.copy(alpha = 0.8f) else colors.accent
 
             isPressed -> if (isSpecialKey) colors.keyPressed.copy(alpha = 0.8f) else colors.keyPressed
 
-            isBgActive -> accentColor.copy(alpha = 0.7f)
+            isBgActive -> colors.accent.copy(alpha = 0.7f)
 
             isSpecialKey -> colors.keyBackground.copy(alpha = 0.5f)
 

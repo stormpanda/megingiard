@@ -71,11 +71,11 @@ private const val KTT_MODIFIER_HOLD_DELAY_MS = 300L
 @Composable
 internal fun KeyboardTopToolbar(
     activeState: KeyboardLayoutState,
-    accentColor: Color,
     modifier: Modifier = Modifier,
     viewModel: KeyboardViewModel = viewModel(),
 ) {
     if (activeState.mode == KeyboardMode.FULL) return
+    val colors = LocalAppColors.current
 
     Row(
         modifier =
@@ -102,13 +102,11 @@ internal fun KeyboardTopToolbar(
                 id = "ctrl",
                 label = "CTRL",
                 keycode = KEY_LEFTCTRL,
-                accentColor = accentColor,
             )
             ModifierButton(
                 id = "alt",
                 label = "ALT",
                 keycode = KEY_LEFTALT,
-                accentColor = accentColor,
             )
         }
 
@@ -123,7 +121,7 @@ internal fun KeyboardTopToolbar(
             ToolbarIcon(
                 imageVector = Icons.AutoMirrored.Rounded.PlaylistPlay,
                 contentDescription = stringResource(R.string.cd_kb_macros),
-                tint = if (isMacroRowVisible) accentColor else null,
+                tint = if (isMacroRowVisible) colors.accent else null,
                 onClick = { viewModel.toggleMacroRow() },
             )
             ToolbarIcon(
@@ -188,14 +186,13 @@ private fun ModifierButton(
     id: String,
     label: String,
     keycode: Int,
-    accentColor: Color,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
     val state by KeyboardState.stateFor(id).collectAsStateWithLifecycle()
     val isActive = state != ModifierState.INACTIVE
 
-    val bg = if (isActive) accentColor.copy(alpha = KTT_ACTIVE_ALPHA) else Color.Transparent
+    val bg = if (isActive) colors.accent.copy(alpha = KTT_ACTIVE_ALPHA) else Color.Transparent
     val contentColor = if (isActive) colors.onSurface else colors.onSurface.copy(alpha = KTT_CONTENT_ALPHA)
     val borderColor = if (isActive) Color.Transparent else colors.onSurface.copy(alpha = KTT_INACTIVE_BORDER_ALPHA)
 

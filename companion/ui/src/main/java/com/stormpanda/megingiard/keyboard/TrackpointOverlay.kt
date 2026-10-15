@@ -16,7 +16,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -31,7 +30,6 @@ private val TPO_ROUNDED_8 = RoundedCornerShape(8.dp)
 internal fun TrackpointOverlay(
     trackpointVisible: Boolean,
     kbMouseBtnPos: KbMouseBtnPos,
-    accentColor: Color,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
@@ -62,7 +60,7 @@ internal fun TrackpointOverlay(
             if (trackpointVisible) {
                 if (kbMouseBtnPos == KbMouseBtnPos.LEFT || kbMouseBtnPos == KbMouseBtnPos.BOTH) {
                     MouseButtonColumn(
-                        accentColor = accentColor,
+                        accentColor = colors.accent,
                         onLmbDown = MouseInjector::leftDown,
                         onLmbUp = MouseInjector::leftUp,
                         onRmbDown = MouseInjector::rightDown,
@@ -75,7 +73,7 @@ internal fun TrackpointOverlay(
                 }
                 if (kbMouseBtnPos == KbMouseBtnPos.RIGHT || kbMouseBtnPos == KbMouseBtnPos.BOTH) {
                     MouseButtonColumn(
-                        accentColor = accentColor,
+                        accentColor = colors.accent,
                         onLmbDown = MouseInjector::leftDown,
                         onLmbUp = MouseInjector::leftUp,
                         onRmbDown = MouseInjector::rightDown,

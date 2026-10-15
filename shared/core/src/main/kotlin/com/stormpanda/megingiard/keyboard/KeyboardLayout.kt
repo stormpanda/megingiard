@@ -129,10 +129,7 @@ data class KeyboardLayoutState(
     val grid: List<List<KeyDef>>,
 )
 
-fun getPopupOptions(
-    keyDef: KeyDef,
-    isUpper: Boolean,
-): List<String> {
+fun getPopupOptions(keyDef: KeyDef): List<String> {
     if (keyDef.shiftLabel != null) {
         return listOf(keyDef.shiftLabel)
     }

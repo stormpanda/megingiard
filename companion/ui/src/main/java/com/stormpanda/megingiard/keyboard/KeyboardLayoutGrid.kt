@@ -16,7 +16,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -31,13 +30,11 @@ internal fun KeyboardLayoutGrid(
     activeState: KeyboardLayoutState,
     gestureProcessor: KeyboardGestureProcessor,
     pressedKeys: Set<String>,
-    accentColor: Color,
     isShiftActive: Boolean,
     isCapsActive: Boolean,
     isAltGrActive: Boolean,
     isQuickMenuOpen: Boolean,
     kbRepeatEnabled: Boolean,
-    kbLayout: KbLayout,
     onCloseQuickMenu: () -> Unit,
     onModeChange: (KeyboardMode) -> Unit,
     onCycleKbLayout: () -> Unit,
@@ -242,7 +239,6 @@ internal fun KeyboardLayoutGrid(
                             KeyboardKey(
                                 keyDef = key,
                                 isPressed = key.id in pressedKeys,
-                                accentColor = accentColor,
                                 isShiftActive = isShiftActive,
                                 isCapsActive = isCapsActive,
                                 isAltGrActive = isAltGrActive,
@@ -282,7 +278,6 @@ internal fun KeyboardLayoutGrid(
                                     KeyboardKey(
                                         keyDef = key,
                                         isPressed = key.id in pressedKeys,
-                                        accentColor = accentColor,
                                         isShiftActive = isShiftActive,
                                         isCapsActive = isCapsActive,
                                         isAltGrActive = isAltGrActive,
@@ -317,7 +312,6 @@ internal fun KeyboardLayoutGrid(
                         KeyboardKey(
                             keyDef = key,
                             isPressed = key.id in pressedKeys,
-                            accentColor = accentColor,
                             isShiftActive = isShiftActive,
                             isCapsActive = isCapsActive,
                             isAltGrActive = isAltGrActive,
@@ -355,7 +349,6 @@ internal fun KeyboardLayoutGrid(
                             KeyboardKey(
                                 keyDef = key,
                                 isPressed = key.id in pressedKeys,
-                                accentColor = accentColor,
                                 isShiftActive = isShiftActive,
                                 isCapsActive = isCapsActive,
                                 isAltGrActive = isAltGrActive,
@@ -385,7 +378,6 @@ internal fun KeyboardLayoutGrid(
 private fun KeyboardKey(
     keyDef: KeyDef,
     isPressed: Boolean,
-    accentColor: Color,
     isShiftActive: Boolean,
     isCapsActive: Boolean,
     isAltGrActive: Boolean,
@@ -398,7 +390,6 @@ private fun KeyboardKey(
         keyDef = keyDef,
         isPressed = isPressed,
         modifierState = modState,
-        accentColor = accentColor,
         isShiftActive = isShiftActive,
         isCapsActive = isCapsActive,
         isAltGrActive = isAltGrActive,
