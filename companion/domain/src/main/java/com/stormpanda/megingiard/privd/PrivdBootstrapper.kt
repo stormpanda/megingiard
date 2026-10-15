@@ -25,27 +25,6 @@ import java.util.concurrent.TimeUnit
 import android.os.Process as AndroidProcess
 
 private const val TAG = "PrivdBootstrapper"
-private const val DAEMON_ASSET_NAME = "megingiard_privd_arm64"
-
-private const val PORT_RELEASE_START = 51234
-private const val PORT_DEBUG_START = 51244
-
-private fun isDebugPackage(context: Context): Boolean = context.packageName.contains(".debug")
-
-private fun getDaemonRemotePath(context: Context): String =
-    if (isDebugPackage(context)) "/data/local/tmp/megingiard_privd_debug" else "/data/local/tmp/megingiard_privd"
-
-private fun getDaemonProcessName(context: Context): String = if (isDebugPackage(context)) "megingiard_privd_debug" else "megingiard_privd"
-
-private const val MIRROR_DEX_ASSET_NAME = "megingiard_mirror.dex"
-
-private fun getMirrorDexRemotePath(context: Context): String =
-    if (isDebugPackage(context)) "/data/local/tmp/megingiard_mirror_debug.dex" else "/data/local/tmp/megingiard_mirror.dex"
-
-private fun getStateKeyFilePath(context: Context): String =
-    if (isDebugPackage(context)) "/data/local/tmp/megingiard_privd_debug.key" else "/data/local/tmp/megingiard_privd.key"
-
-private fun getPortStart(context: Context): Int = if (isDebugPackage(context)) PORT_DEBUG_START else PORT_RELEASE_START
 
 private const val MIRROR_DEX_REMOTE_MODE_RAW = 33188 // 0100644 = regular + rw-r--r--
 
@@ -511,8 +490,9 @@ object PrivdBootstrapper {
         context: Context,
         mgr: PrivdAdbConnectionManager,
     ) {
-        val processName = getDaemonProcessName(context)
-        val remotePath = getDaemonRemotePath(context)
+        val isDebug = PrivdConstants.isDebugPackageName(context.packageName)
+        val processName = PrivdConstants.getDaemonProcessName(isDebug)
+        val remotePath = PrivdConstants.getDaemonRemotePath(isDebug)
         val killCmd = "shell:kill -9 \$(pidof $processName 2>/dev/null) 2>/dev/null; rm -f $remotePath; sleep 1"
         AppLog.d(TAG, "stopExistingDaemon cmd: $killCmd")
         runCatching {
@@ -540,12 +520,13 @@ object PrivdBootstrapper {
         context: Context,
         mgr: PrivdAdbConnectionManager,
     ): Boolean {
-        val binaryBytes = context.assets.open(DAEMON_ASSET_NAME).use { it.readBytes() }
-        if (!BinaryIntegrity.verify(DAEMON_ASSET_NAME, binaryBytes)) {
-            AppLog.e(TAG, "Refusing to push $DAEMON_ASSET_NAME — integrity check failed")
+        val isDebug = PrivdConstants.isDebugPackageName(context.packageName)
+        val binaryBytes = context.assets.open(PrivdConstants.DAEMON_ASSET_NAME).use { it.readBytes() }
+        if (!BinaryIntegrity.verify(PrivdConstants.DAEMON_ASSET_NAME, binaryBytes)) {
+            AppLog.e(TAG, "Refusing to push ${PrivdConstants.DAEMON_ASSET_NAME} — integrity check failed")
             return false
         }
-        val remotePath = getDaemonRemotePath(context)
+        val remotePath = PrivdConstants.getDaemonRemotePath(isDebug)
         AppLog.d(TAG, "push: ${binaryBytes.size} bytes -> $remotePath")
         val daemonOk =
             mgr.openStream(SYNC_SERVICE)?.use { s ->
@@ -557,13 +538,13 @@ object PrivdBootstrapper {
         // Also push the privileged-mirror DEX (used by Privileged Mode mirror).
         // The DEX is harmless if Privileged Mirror is never enabled, so we always
         // push it as part of the bootstrap to avoid a separate setup flow.
-        val dexBytes = context.assets.open(MIRROR_DEX_ASSET_NAME).use { it.readBytes() }
-        if (!BinaryIntegrity.verify(MIRROR_DEX_ASSET_NAME, dexBytes)) {
-            AppLog.e(TAG, "Refusing to push $MIRROR_DEX_ASSET_NAME — integrity check failed")
+        val dexBytes = context.assets.open(PrivdConstants.MIRROR_DEX_ASSET_NAME).use { it.readBytes() }
+        if (!BinaryIntegrity.verify(PrivdConstants.MIRROR_DEX_ASSET_NAME, dexBytes)) {
+            AppLog.e(TAG, "Refusing to push ${PrivdConstants.MIRROR_DEX_ASSET_NAME} — integrity check failed")
             // Daemon push already succeeded; treat as DEX failure (non-fatal below).
             return true
         }
-        val dexRemotePath = getMirrorDexRemotePath(context)
+        val dexRemotePath = PrivdConstants.getMirrorDexRemotePath(isDebug)
         AppLog.d(TAG, "push: ${dexBytes.size} bytes -> $dexRemotePath")
         val dexOk =
             mgr.openStream(SYNC_SERVICE)?.use { s ->
@@ -705,9 +686,10 @@ object PrivdBootstrapper {
         keyHex: String,
         appUid: Int,
     ): Boolean {
-        val remotePath = getDaemonRemotePath(context)
-        val stateFilePath = getStateKeyFilePath(context)
-        val portStart = getPortStart(context)
+        val isDebug = PrivdConstants.isDebugPackageName(context.packageName)
+        val remotePath = PrivdConstants.getDaemonRemotePath(isDebug)
+        val stateFilePath = PrivdConstants.getStateKeyFilePath(isDebug)
+        val portStart = PrivdConstants.getPortStart(isDebug)
         val cmd = "shell:$remotePath --keyfile $stateFilePath --port $portStart --provision $keyHex $appUid && echo $PROVISION_OK_MARKER"
         AppLog.d(TAG, "provision cmd issued (keyHex redacted, appUid=$appUid)")
         val stream = mgr.openStream(cmd) ?: return false
@@ -737,11 +719,12 @@ object PrivdBootstrapper {
         // a race: kill(2) returns as soon as the signal is queued, but the process may
         // not have been fully reaped yet when the shell continues to the next command,
         // causing the new binary to fail with EADDRINUSE and exit immediately.
-        val processName = getDaemonProcessName(context)
-        val remotePath = getDaemonRemotePath(context)
-        val dexPath = getMirrorDexRemotePath(context)
-        val stateFilePath = getStateKeyFilePath(context)
-        val portStart = getPortStart(context)
+        val isDebug = PrivdConstants.isDebugPackageName(context.packageName)
+        val processName = PrivdConstants.getDaemonProcessName(isDebug)
+        val remotePath = PrivdConstants.getDaemonRemotePath(isDebug)
+        val dexPath = PrivdConstants.getMirrorDexRemotePath(isDebug)
+        val stateFilePath = PrivdConstants.getStateKeyFilePath(isDebug)
+        val portStart = PrivdConstants.getPortStart(isDebug)
         val killCmd = "kill -9 \$(pidof $processName 2>/dev/null) 2>/dev/null; sleep 1"
         // Run the daemon in the foreground. Since the daemon forks inside
         // detach_from_shell(), the parent exits immediately after writing the

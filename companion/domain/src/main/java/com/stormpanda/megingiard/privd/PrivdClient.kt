@@ -25,12 +25,10 @@ import java.security.SecureRandom
 import java.util.concurrent.LinkedBlockingQueue
 
 private const val TAG = "PrivdClient"
-private const val PORT_RELEASE_START = 51234
-private const val PORT_DEBUG_START = 51244
 
-@Volatile private var portStart = PORT_RELEASE_START
+@Volatile private var portStart = PrivdConstants.PORT_RELEASE_START
 
-@Volatile private var portEnd = PORT_RELEASE_START + 4
+@Volatile private var portEnd = PrivdConstants.PORT_RELEASE_START + 4
 private const val CONNECT_TIMEOUT_MS = 500
 private const val PING_TIMEOUT_MS = 1_500L
 
@@ -130,8 +128,8 @@ object PrivdClient {
      * The decryption involves a short (~10 ms) hardware-backed Keystore operation.
      */
     fun setPackageName(name: String) {
-        val isDebug = name.contains(".debug")
-        portStart = if (isDebug) PORT_DEBUG_START else PORT_RELEASE_START
+        val isDebug = PrivdConstants.isDebugPackageName(name)
+        portStart = PrivdConstants.getPortStart(isDebug)
         portEnd = portStart + 4
         AppLog.d(TAG, "setPackageName: $name -> port range $portStart..$portEnd")
     }
