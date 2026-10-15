@@ -766,6 +766,7 @@ object AppStateManager {
             _fullscreenMouseSensitivity.value = sensitivity
             _companionSurfaceMode.value = CompanionSurfaceMode.TOUCHPAD
         } else {
+            _fullscreenMouseSensitivity.value = 1.0f
             if (_companionSurfaceMode.value == CompanionSurfaceMode.TOUCHPAD) {
                 _companionSurfaceMode.value = CompanionSurfaceMode.MACROPAD
             }
@@ -820,6 +821,7 @@ object AppStateManager {
         )
         _activePrimaryModal.value = null
         _companionSurfaceMode.value = CompanionSurfaceMode.MACROPAD
+        _fullscreenMouseSensitivity.value = 1.0f
         _activeCropCutoutId.value = null
         _selectedCutoutId.value = null
         _currentNavDestination.value = null
@@ -864,8 +866,11 @@ object AppStateManager {
                 if (mode != CompanionSurfaceMode.KEYBOARD && isKeyboardSettingsOpen.value) {
                     setKeyboardSettingsOpen(false)
                 }
-                if (mode != CompanionSurfaceMode.TOUCHPAD && isTouchpadSettingsOpen.value) {
-                    setTouchpadSettingsOpen(false)
+                if (mode != CompanionSurfaceMode.TOUCHPAD) {
+                    _fullscreenMouseSensitivity.value = 1.0f
+                    if (isTouchpadSettingsOpen.value) {
+                        setTouchpadSettingsOpen(false)
+                    }
                 }
             }
         }

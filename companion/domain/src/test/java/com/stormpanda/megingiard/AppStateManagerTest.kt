@@ -1492,4 +1492,20 @@ class AppStateManagerTest {
             assertFalse(AppStateManager.showEmptyCutoutsDialog.value)
             assertTrue(AppStateManager.isViewportEditActive.value)
         }
+
+    @Test
+    fun `fullscreenMouseSensitivity resets to 1_0f when leaving touchpad mode or closing active modal`() =
+        runTest {
+            AppStateManager.setFullscreenMouseActive(true, sensitivity = 2.5f)
+            assertEquals(2.5f, AppStateManager.fullscreenMouseSensitivity.value)
+
+            AppStateManager.setFullscreenMouseActive(false)
+            assertEquals(1.0f, AppStateManager.fullscreenMouseSensitivity.value)
+
+            AppStateManager.setFullscreenMouseActive(true, sensitivity = 0.4f)
+            assertEquals(0.4f, AppStateManager.fullscreenMouseSensitivity.value)
+
+            AppStateManager.closeActiveModal()
+            assertEquals(1.0f, AppStateManager.fullscreenMouseSensitivity.value)
+        }
 }

@@ -137,9 +137,7 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                             config = {
                                 TouchpadGestureConfig(
                                     useMouse = true,
-                                    sensitivity =
-                                        TouchpadSettings.touchpadSensitivity.value *
-                                            AppStateManager.fullscreenMouseSensitivity.value,
+                                    sensitivity = TouchpadSettings.touchpadSensitivity.value,
                                     twoFingerScrollEnabled = TouchpadSettings.touchpadTwoFingerScroll.value,
                                     naturalScrollEnabled = TouchpadSettings.touchpadNaturalScroll.value,
                                     scrollSpeed = TouchpadSettings.touchpadScrollSpeed.value,
