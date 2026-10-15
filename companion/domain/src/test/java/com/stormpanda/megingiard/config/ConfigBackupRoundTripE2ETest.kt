@@ -180,7 +180,7 @@ class ConfigBackupRoundTripE2ETest {
             assertEquals(2, parsedExport.profiles.size)
 
             val extractedImages = parsedArchive.images
-            assertTrue("Expected background image extracted from ZIP", extractedImages.containsKey(layoutId))
+            assertTrue("Expected background image extracted from ZIP", extractedImages.containsKey("bg_$layoutId"))
 
             // 6. Reset all settings and MacroPad profiles to clean/default state
             SettingsManager.setThemeMode(ThemeMode.DARK)

@@ -546,7 +546,7 @@ class ConfigExportImportStructureTest {
                 isProfileImport = false,
                 layoutId = "layout-bg-import-1",
                 profileName = "ProfileToImport",
-                imageKey = "layout-bg-import-1",
+                imageKey = "bg_layout-bg-import-1",
             )
         }
 

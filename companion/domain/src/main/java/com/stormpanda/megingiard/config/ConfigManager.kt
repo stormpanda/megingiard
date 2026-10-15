@@ -553,7 +553,7 @@ object ConfigManager {
                                 entryName.startsWith("bg_") ||
                                 entryName.startsWith("mask_")
                             ) {
-                                val key = entryName.removePrefix("backgrounds/").removePrefix("masks/").removePrefix("bg_")
+                                val key = entryName.substringAfterLast("/")
                                 imagesMap[key] = entryBytes
                             }
                         }
@@ -652,12 +652,7 @@ object ConfigManager {
         currentPath: String?,
         destPrefix: String = prefix,
     ): String? {
-        val keyFromPath = currentPath?.substringAfterLast("/")?.removePrefix("${prefix}_")
-        val imageBytes =
-            images["${prefix}_$oldLayoutId"]
-                ?: images["$dirPrefix/${prefix}_$oldLayoutId"]
-                ?: (if (prefix == "bg") images[oldLayoutId] else null)
-                ?: keyFromPath?.let { key -> images[key] ?: images["${prefix}_$key"] ?: images["$dirPrefix/${prefix}_$key"] }
+        val imageBytes = images["${prefix}_$oldLayoutId"] ?: if (prefix == "bg") images[oldLayoutId] else null
 
         if (imageBytes != null) {
             val destFile = File(targetDir, "${destPrefix}_$newLayoutId")
@@ -883,11 +878,11 @@ object ConfigManager {
         val imageHashes =
             extractedImages
                 .mapKeys { (k, _) ->
-                    val cleanKey = k.removePrefix("backgrounds/").removePrefix("masks/")
+                    val cleanKey = k.substringAfterLast("/")
                     if (cleanKey.startsWith("bg_") || cleanKey.startsWith("mask_")) {
                         cleanKey
                     } else {
-                        "bg_${cleanKey.removePrefix("bg_")}"
+                        "bg_$cleanKey"
                     }
                 }.mapValues { (_, bytes) ->
                     HmacUtil
