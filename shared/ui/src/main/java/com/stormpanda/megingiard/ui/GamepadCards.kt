@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -63,11 +64,30 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.shared.ui.R
 import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 
 private const val TAG = "GamepadCards"
+
+private val GC_FOCUS_ELEVATION = 6.dp
+private val GC_DEFAULT_ELEVATION = 0.dp
+private val GC_ICON_SIZE = 22.dp
+private val GC_STATUS_PILL_H_PADDING = 10.dp
+private val GC_STATUS_PILL_V_PADDING = 4.dp
+private val GC_TEXT_SIZE_PILL = 12.sp
+private const val GC_CARD_FOCUSED_BG_ALPHA = 0.95f
+private const val GC_CARD_UNFOCUSED_BG_ALPHA = 0.55f
+private const val GC_DESTRUCTIVE_BG_ALPHA = 0.15f
+private const val GC_DESTRUCTIVE_BORDER_ALPHA = 0.6f
+private const val GC_UNFOCUSED_MAX_LINES = 2
+private const val GC_DISABLED_CARD_ALPHA = 0.38f
+private const val GC_PULSE_DURATION_MS = 1400
+private const val GC_PULSE_ACCENT_ALPHA = 0.35f
+private const val GC_PULSE_SURFACE_ALPHA = 0.55f
+private val GC_CORNER_8 = 8.dp
+private val GC_CORNER_8_SHAPE = RoundedCornerShape(GC_CORNER_8)
 
 /**
  * Base focusable gamepad card container with glowing accent bezel and spring focus transitions.

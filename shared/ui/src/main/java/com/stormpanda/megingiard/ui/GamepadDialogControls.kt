@@ -57,6 +57,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 
 private const val TAG = "GamepadDialogControls"
+private const val GC_SPLIT_ANIM_DURATION_MS = 220
 
 /**
  * State holder for in-flight changes exit confirmation prompt.

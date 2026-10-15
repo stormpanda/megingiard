@@ -253,7 +253,7 @@ None identified — animations in `GamepadFocusCard`, `drawBehind` border render
 
 - [x] **`[TH-01]`** — Consolidate `GamepadStepperCard` / `GamepadChoiceCard` / `GamepadAdjustableCard` and drop unused click params *(Complexity: Med, Risk: Low)*
 - [x] **`[TH-02]`** — Strip unused speculative parameters across `:shared:ui` components and `colorSchemeFor` *(Complexity: High, Risk: Low)*
-- [ ] **`[TH-03]`** — Move file-local `GC_*` constants out of `GamepadTokens.kt` to their single owning files *(Complexity: Low, Risk: Low)*
+- [x] **`[TH-03]`** — Move file-local `GC_*` constants out of `GamepadTokens.kt` to their single owning files *(Complexity: Low, Risk: Low)*
 - [ ] **`[TH-04]`** — Deduplicate synchronous + coroutine focus calls and nested `try/catch` in `rememberSaveExitPromptState` *(Complexity: Med, Risk: Low)*
 - [ ] **`[TH-05]`** — Deduplicate 50-line key event handler in `GamepadTextFieldCard` *(Complexity: Med, Risk: Low)*
 - [ ] **`[TH-06]`** — Remove unused `AppDimens` and `LocalAppDimens` from `AppTheme.kt` and composition roots *(Complexity: Med, Risk: Low)*

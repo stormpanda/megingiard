@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -56,8 +57,19 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.shared.ui.R
 import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
+
+private val GC_STEPPER_BTN_SIZE = 32.dp
+private val GC_SLIDER_HEIGHT = 24.dp
+private val GC_SLIDER_TRACK_HEIGHT = 8.dp
+private val GC_TEXT_SIZE_CAPSULE = 13.sp
+private val GC_CAPSULE_TEXT_WIDTH = 140.dp
+private const val GC_SLIDER_TRACK_BORDER_ALPHA = 0.25f
+private const val GC_DEFAULT_SLIDER_STEP = 0.05f
+private val GC_CORNER_4 = 4.dp
+private val GC_CORNER_4_SHAPE = RoundedCornerShape(GC_CORNER_4)
 
 @Composable
 fun CapsuleArrowButton(
