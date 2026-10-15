@@ -271,4 +271,17 @@ class TouchpadGestureProcessorTest {
             processor.move(1L, 110f, 210f, dx = 10f, dy = 10f)
             processor.release(1L, 110f, 210f)
         }
+
+    @Test
+    fun `onCancel during tap click window sends buttonUp`() =
+        runTest(testDispatcher) {
+            val processor = createProcessor(useMouse = { true }, tapToClick = true)
+
+            processor.press(1L, 100f, 200f)
+            processor.release(1L, 100f, 200f)
+            assertEquals("MB L D\n", PrivdClient.pollCommandForTest())
+
+            processor.onCancel()
+            assertEquals("MB L U\n", PrivdClient.pollCommandForTest())
+        }
 }

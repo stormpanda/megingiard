@@ -89,11 +89,26 @@ class TouchpadGestureProcessor(
 
     private fun clickButton(button: MouseButton) {
         onHapticFeedback()
-        scope.launch {
-            MouseInjector.buttonDown(button)
-            delay(TP_CLICK_DURATION_MS)
-            MouseInjector.buttonUp(button)
-        }
+        pendingClickJob?.cancel()
+        var jobRef: Job? = null
+        val job =
+            scope.launch {
+                var downSent = false
+                try {
+                    MouseInjector.buttonDown(button)
+                    downSent = true
+                    delay(TP_CLICK_DURATION_MS)
+                } finally {
+                    if (downSent && (button != MouseButton.LEFT || !isDragging)) {
+                        MouseInjector.buttonUp(button)
+                    }
+                    if (pendingClickJob === jobRef) {
+                        pendingClickJob = null
+                    }
+                }
+            }
+        jobRef = job
+        pendingClickJob = job
     }
 
     /**
@@ -259,17 +274,7 @@ class TouchpadGestureProcessor(
                 when {
                     tapCount == 1 && currentConfig.tapToClick -> {
                         lastTapReleaseTime = System.currentTimeMillis()
-                        onHapticFeedback()
-                        pendingClickJob =
-                            scope.launch {
-                                try {
-                                    MouseInjector.leftDown()
-                                    delay(TP_CLICK_DURATION_MS)
-                                    MouseInjector.leftUp()
-                                } finally {
-                                    pendingClickJob = null
-                                }
-                            }
+                        clickButton(MouseButton.LEFT)
                     }
 
                     tapCount == 2 && currentConfig.twoFingerTap -> {
