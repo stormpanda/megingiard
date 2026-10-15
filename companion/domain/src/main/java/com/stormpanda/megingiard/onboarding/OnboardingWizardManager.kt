@@ -50,7 +50,6 @@ object OnboardingWizardManager {
                 TAG,
                 "Welcome tour already completed for version ${SettingsManager.welcomeTourCompletedVersion.value}. Skipping auto-start.",
             )
-            _isWizardActive.value = false
             return
         }
 

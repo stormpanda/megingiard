@@ -454,7 +454,6 @@ fun OnboardingWizardDialog(
                         enabled = isNextEnabled,
                         onClick = {
                             if (isLastStep) {
-                                OnboardingWizardManager.finishWizard()
                                 onDismiss()
                             } else {
                                 OnboardingWizardManager.nextStep()
