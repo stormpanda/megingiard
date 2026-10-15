@@ -221,7 +221,7 @@ None identified — update checks run at most once every 24 hours (or on manual 
 - [x] **`[UP-05]`** — Unused `releaseNotes` (`KEY_LATEST_RELEASE_NOTES`) and `publishedAt` Deserialized and Persisted to DataStore *(Complexity: Med, Risk: Low)*
 - [x] **`[UP-06]`** — `_updateAvailable` Stored as Independent Mutable State and Desynchronized in `SettingsManager.loadFrom` *(Complexity: Med, Risk: Low)*
 - [x] **`[UP-07]`** — Unsynchronized Cross-Thread `pendingCheck*` Queue and Repeated `loadFrom` Execution on Every DataStore Edit *(Complexity: High, Risk: Low)*
-- [ ] **`[UP-08]`** — 5-Second `Thread.sleep` Busy-Wait Deadlock Against `StandardTestDispatcher` in `UpdateManagerTest` *(Complexity: Med, Risk: Low)*
+- [x] **`[UP-08]`** — 5-Second `Thread.sleep` Busy-Wait Deadlock Against `StandardTestDispatcher` in `UpdateManagerTest` *(Complexity: Med, Risk: Low)*
 - [ ] **`[UP-09]`** — Duplicate Background Update Check Trigger in `GlobalSettingsViewModel.init` *(Complexity: Low, Risk: Low)*
 - [ ] **`[UP-10]`** — Ad-Hoc `pendingUpdateReleaseUrl` State and `LaunchedEffect(subPageStack)` Cleanup Instead of `subPageStack` Navigation *(Complexity: Med, Risk: Low)*
 - [ ] **`[UP-11]`** — Scoped `hasTriggeredManualCheck` State Hiding Discovered Updates and Resetting on Sub-Page Drill-Down *(Complexity: Low, Risk: Low)*

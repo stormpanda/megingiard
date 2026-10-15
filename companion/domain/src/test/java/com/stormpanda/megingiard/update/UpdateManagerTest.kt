@@ -1,6 +1,8 @@
 package com.stormpanda.megingiard.update
 
+import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.stormpanda.megingiard.settings.KEY_AUTO_UPDATE_CHECK_ENABLED
 import com.stormpanda.megingiard.settings.KEY_LATEST_RELEASE_TAG
@@ -22,11 +24,16 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.io.File
+import java.net.ServerSocket
+
+private const val MAX_WAIT_TRIES = 250
+private const val WAIT_POLL_MS = 20L
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class UpdateManagerTest {
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var tempFile: File
+    private lateinit var testDataStore: DataStore<Preferences>
 
     @Before
     fun setUp() {
@@ -34,7 +41,7 @@ class UpdateManagerTest {
         tempFile = File.createTempFile("update_manager_test", ".preferences_pb")
         tempFile.deleteOnExit()
 
-        val testDataStore =
+        testDataStore =
             PreferenceDataStoreFactory.create(
                 scope = CoroutineScope(SupervisorJob() + testDispatcher),
                 produceFile = { tempFile },
@@ -55,12 +62,6 @@ class UpdateManagerTest {
     @Test
     fun `loadFrom correctly sets state when update is available`() =
         runTest(testDispatcher) {
-            val testDataStore =
-                PreferenceDataStoreFactory.create(
-                    scope = CoroutineScope(SupervisorJob() + testDispatcher),
-                    produceFile = { tempFile },
-                )
-
             testDataStore.edit { prefs ->
                 prefs[KEY_AUTO_UPDATE_CHECK_ENABLED] = true
                 prefs[KEY_LATEST_RELEASE_TAG] = "v0.8.1"
@@ -88,12 +89,6 @@ class UpdateManagerTest {
     @Test
     fun `checkForUpdates before loadFrom respects disabled auto update setting after loadFrom`() =
         runTest(testDispatcher) {
-            val testDataStore =
-                PreferenceDataStoreFactory.create(
-                    scope = CoroutineScope(SupervisorJob() + testDispatcher),
-                    produceFile = { tempFile },
-                )
-
             testDataStore.edit { prefs ->
                 prefs[KEY_AUTO_UPDATE_CHECK_ENABLED] = false
                 prefs[KEY_LATEST_RELEASE_TAG] = "v0.8.1"
@@ -115,7 +110,7 @@ class UpdateManagerTest {
     @Test
     fun `checkForUpdates with mock server updates release info and updateAvailable`() =
         runTest(testDispatcher) {
-            val server = java.net.ServerSocket(0)
+            val server = ServerSocket(0)
             val port = server.localPort
             val releaseJson =
                 """
@@ -127,7 +122,7 @@ class UpdateManagerTest {
                 """.trimIndent()
 
             val job =
-                kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+                CoroutineScope(Dispatchers.IO).launch {
                     val client = server.accept()
                     val reader = client.getInputStream().bufferedReader()
                     while (reader.readLine()?.isNotEmpty() == true) {}
@@ -147,8 +142,11 @@ class UpdateManagerTest {
             )
             job.join()
             var tries = 0
-            while (UpdateManager.isChecking.value && tries < 250) {
-                Thread.sleep(20)
+            while (UpdateManager.isChecking.value && tries < MAX_WAIT_TRIES) {
+                testScheduler.runCurrent()
+                if (UpdateManager.isChecking.value) {
+                    Thread.sleep(WAIT_POLL_MS)
+                }
                 tries++
             }
             testScheduler.advanceUntilIdle()
@@ -161,11 +159,11 @@ class UpdateManagerTest {
     @Test
     fun `checkForUpdates with server error sets checkError`() =
         runTest(testDispatcher) {
-            val server = java.net.ServerSocket(0)
+            val server = ServerSocket(0)
             val port = server.localPort
 
             val job =
-                kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+                CoroutineScope(Dispatchers.IO).launch {
                     val client = server.accept()
                     val reader = client.getInputStream().bufferedReader()
                     while (reader.readLine()?.isNotEmpty() == true) {}
@@ -185,8 +183,11 @@ class UpdateManagerTest {
             )
             job.join()
             var tries = 0
-            while (UpdateManager.isChecking.value && tries < 250) {
-                Thread.sleep(20)
+            while (UpdateManager.isChecking.value && tries < MAX_WAIT_TRIES) {
+                testScheduler.runCurrent()
+                if (UpdateManager.isChecking.value) {
+                    Thread.sleep(WAIT_POLL_MS)
+                }
                 tries++
             }
             testScheduler.advanceUntilIdle()
