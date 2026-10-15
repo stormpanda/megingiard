@@ -145,23 +145,19 @@ class MegingiardAccessibilityService : AccessibilityService() {
             AccessibilityEvent.TYPE_VIEW_CLICKED,
             -> {
                 val source = event.source ?: return
-                try {
-                    val isEditable = source.isEditable
-                    val isFocused = source.isFocused
-                    if (isEditable && isFocused) {
-                        val stableId = source.uniqueId ?: "${source.windowId}:${source.viewIdResourceName ?: source.className ?: "field"}"
-                        val fieldId = "$eventPackage:$stableId"
-                        val isClicked = event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED
-                        AutoKeyboardFocusCoordinator.onTextFieldFocused(
-                            fieldId = fieldId,
-                            packageName = eventPackage,
-                            isClicked = isClicked,
-                        )
-                    } else if (event.eventType == AccessibilityEvent.TYPE_VIEW_FOCUSED && !isEditable) {
-                        AutoKeyboardFocusCoordinator.onNonEditableFocused()
-                    }
-                } finally {
-                    // source reference GC
+                val isEditable = source.isEditable
+                val isFocused = source.isFocused
+                if (isEditable && isFocused) {
+                    val stableId = source.uniqueId ?: "${source.windowId}:${source.viewIdResourceName ?: source.className ?: "field"}"
+                    val fieldId = "$eventPackage:$stableId"
+                    val isClicked = event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED
+                    AutoKeyboardFocusCoordinator.onTextFieldFocused(
+                        fieldId = fieldId,
+                        packageName = eventPackage,
+                        isClicked = isClicked,
+                    )
+                } else if (event.eventType == AccessibilityEvent.TYPE_VIEW_FOCUSED && !isEditable) {
+                    AutoKeyboardFocusCoordinator.onNonEditableFocused()
                 }
             }
 
