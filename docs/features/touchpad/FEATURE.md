@@ -26,10 +26,10 @@ The Virtual Touchpad is instantiated via the **Fullscreen Mouse Overlay** (`Full
 - The touchpad overlay renders an interactive touch surface above a single unified bottom toolbar. In Mouse Mode, physical LMB, MMB (middle mouse button, scaled to 1/3 width of LMB/RMB), and RMB click buttons with no text labels are anchored along the bottom of the touch surface, with optional M4 and M5 buttons in the top-left and top-right corners.
 - The unified bottom toolbar contains a left-aligned collapse button (down arrow), a center-aligned segmented mode toggle (`ModeToggleButton` switching between Mouse and Touch modes), and right-aligned action buttons: a play/pause button (visible only in absolute Touch Mode to toggle top-screen mirroring) and a settings button (cog icon).
 
-### FR-T4: No Special Permissions Required
+### FR-T4: Privileged Mode Requirement
 
-- The touchpad MUST function within the standard app permission set on the AYN Thor.
-- No root access or additional Android permissions beyond the app's declared set are required (the `/dev/uinput` and `/dev/input/event6` device nodes have permissions allowing access for the standard shell/app UID).
+- The touchpad requires **Privileged Mode** (`megingiard_privd` running as `shell` UID 2000) rather than root access.
+- Because the unprivileged app process (`untrusted_app` SELinux domain) cannot open `/dev/uinput` or `/dev/input/event6` directly, `PrivdClient` connects to `megingiard_privd` over a local loopback TCP socket (`127.0.0.1`, release ports `51234..51238` / debug ports `51244..51248`) authenticated via an HMAC-SHA256 challenge-response handshake, and the `shell`-UID daemon performs the kernel input writes.
 
 ### FR-T5: Input Modes & Settings
 
@@ -56,9 +56,9 @@ The Virtual Touchpad is instantiated via the **Fullscreen Mouse Overlay** (`Full
 
 Android's `adb shell input` APIs perform synchronous Binder IPC to `InputManagerService` for each event — approximately **7 ms per call**, which is too slow for real-time mouse/touch injection.
 
-Megingiard uses the mandatory **Megingiard System Service** (`megingiard_privd`) running with shell privileges for low-latency (< 1 ms) direct Linux input injection over a local abstract domain socket (`megingiard_privd`):
+Megingiard uses the mandatory **Megingiard System Service** (`megingiard_privd`) running with `shell` privileges (UID 2000) for low-latency (< 1 ms) direct Linux input injection over an HMAC-SHA256-authenticated loopback TCP socket (`127.0.0.1`, ports `51234..51238` in release / `51244..51248` in debug):
 
-1. **Mouse Mode**: The daemon initializes a virtual input device via `/dev/uinput` (`uinput_mouse`) and accepts socket commands to simulate relative mouse motion (`REL_X`/`REL_Y`), mouse button presses (`BTN_LEFT`/`BTN_RIGHT`/`BTN_MIDDLE`), and scroll wheel events (`REL_WHEEL`).
+1. **Mouse Mode**: The daemon initializes a virtual input device via `/dev/uinput` (`uinput_mouse`) and accepts socket commands to simulate relative mouse motion (`REL_X`/`REL_Y`), mouse button presses (`BTN_LEFT`/`BTN_RIGHT`/`BTN_MIDDLE`/`BTN_SIDE`/`BTN_EXTRA`), and scroll wheel events (`REL_WHEEL`).
 2. **Touch Mode**: Used in Touch Mode and Mirror Touch Projection. The daemon opens the touchscreen device node `/dev/input/event6` directly and writes Linux `struct input_event` Multi-Touch Protocol Type B structures.
 
 ### System Service: Socket Protocol & Lifecycle
@@ -66,7 +66,7 @@ Megingiard uses the mandatory **Megingiard System Service** (`megingiard_privd`)
 Injector lifecycles are managed globally by `InjectorLifecycleManager`, which maintains active `MouseInjector`, `TouchInjector`, and `KeyInjector` registrations whenever Megingiard is in the foreground (`AppStateManager.isActivityResumed`), stopping them when backgrounded (`onStop`) or during the Privileged Mode setup wizard IME:
 
 1. `InjectorLifecycleManager.watch()` is initiated centrally in `MainActivity.onCreate()`.
-2. Commands are routed from `MouseInjector` and `TouchInjector` directly into `PrivdClient`, which communicates with `megingiard_privd` over the local abstract UNIX domain socket.
+2. Commands are routed from `MouseInjector` and `TouchInjector` directly into `PrivdClient`, which communicates with `megingiard_privd` over the authenticated loopback TCP socket.
 3. Individual screens (`FullscreenMouseOverlay`, `MacroPadScreen`) route events directly to `MouseInjector` or `TouchInjector` without starting or stopping background processes on local composition/disposal.
 
 ### Socket Protocol (Mouse Mode)
@@ -87,10 +87,10 @@ Commands are sent as newline-terminated ASCII strings across the `PrivdClient` s
 ```
 loop:
   command = queue.take()               // blocks until an event is available
-  write command to abstract domain socket
+  write command to loopback TCP socket
 ```
 
-**Rationale:** Touch or mouse move events can arrive rapidly. Transmitting commands over the non-blocking abstract domain socket to the daemon's event loop achieves sub-millisecond dispatch without IPC stalls. Clicks, scrolls, and key presses are preserved in order.
+**Rationale:** Touch or mouse move events can arrive rapidly. Transmitting commands over the loopback TCP socket to the daemon's event loop achieves sub-millisecond dispatch without IPC stalls. Clicks, scrolls, and key presses are preserved in order.
 
 ### Gesture & Movement Processing
 

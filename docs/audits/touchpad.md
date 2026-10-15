@@ -267,6 +267,6 @@
 - [x] **`[TP-18]`** — Deduplicate relative-mouse settings cards and stepper math between `TouchpadSettingsOverlay` and `BackgroundTouchpadSettingsEditor` *(Complexity: Med, Risk: Low)*
 - [x] **`[TP-19]`** — Remove redundant `key(useMouse)`, duplicate surface Box modifiers, and unused `overlayAtBottom` collector *(Complexity: Low, Risk: Low)*
 - [x] **`[TP-20]`** — Sync `FEATURE.md` §FR-T2 with unified bottom toolbar UI *(Complexity: Low, Risk: Low)*
-- [ ] **`[TP-21]`** — Sync `FEATURE.md` §FR-T4 & §Technical Implementation with `megingiard_privd` TCP + HMAC architecture *(Complexity: Low, Risk: Low)*
+- [x] **`[TP-21]`** — Sync `FEATURE.md` §FR-T4 & §Technical Implementation with `megingiard_privd` TCP + HMAC architecture *(Complexity: Low, Risk: Low)*
 - [ ] **`[TP-22]`** — Document Mouse 4/5 and Touch Mode socket commands in `FEATURE.md` *(Complexity: Low, Risk: Low)*
 - [ ] **`[TP-23]`** — Update module names, file paths, and `MainAppScreen` notes in `FEATURE.md` *(Complexity: Low, Risk: Low)*
