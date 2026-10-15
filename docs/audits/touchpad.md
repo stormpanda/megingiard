@@ -255,7 +255,7 @@
 - [x] **`[TP-06]`** — Remove vestigial `start(context)`, `active`, and `isRunning` from `MouseInjector` *(Complexity: Low, Risk: Low)*
 - [x] **`[TP-07]`** — Remove vestigial multi-client token reference counting (`activeClients`) from `TouchInjector` *(Complexity: Med, Risk: Low)*
 - [x] **`[TP-08]`** — Remove vestigial `Context`/`Dispatchers.IO` from `InjectorLifecycleManager.watch()` and `KeyboardViewModel.startInjectors` *(Complexity: Med, Risk: Low)*
-- [ ] **`[TP-09]`** — Remove unobserved `TouchpadGestureProcessor.touchPos` `StateFlow` *(Complexity: Low, Risk: Low)*
+- [x] **`[TP-09]`** — Remove unobserved `TouchpadGestureProcessor.touchPos` `StateFlow` *(Complexity: Low, Risk: Low)*
 - [ ] **`[TP-10]`** — Remove dead 3-token single-touch protocol branch in `cmd_parsers.h` *(Complexity: Low, Risk: Low)*
 - [ ] **`[TP-11]`** — Unify touchpad mirroring lifecycle into `MirrorRuntimePolicy` and delete `wasMirroringStartedByTouchpad` *(Complexity: High, Risk: Low)*
 - [ ] **`[TP-12]`** — Remove duplicated `pointersInsideTouchpad` set and dead `hasActivePointers` state in UI *(Complexity: Low, Risk: Low)*

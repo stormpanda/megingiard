@@ -1,16 +1,31 @@
 package com.stormpanda.megingiard.touchpad
 
+import com.stormpanda.megingiard.privd.PrivdClient
+import com.stormpanda.megingiard.privd.PrivdConnectionState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
+import org.junit.Before
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class TouchpadGestureProcessorTest {
     private val testDispatcher = UnconfinedTestDispatcher()
+
+    @Before
+    fun setUp() {
+        PrivdClient.setStateForTesting(PrivdConnectionState.CONNECTED)
+        PrivdClient.clearQueueForTest()
+    }
+
+    @After
+    fun tearDown() {
+        PrivdClient.clearQueueForTest()
+        PrivdClient.setStateForTesting(null)
+    }
 
     private fun TestScope.createProcessor(
         useMouse: () -> Boolean = { false },
@@ -60,38 +75,36 @@ class TouchpadGestureProcessorTest {
     ) = onMove(id, x, y, dx, dy, 1000f, 1000f)
 
     @Test
-    fun `absolute mode updates touch positions`() =
+    fun `absolute mode dispatches touch commands`() =
         runTest(testDispatcher) {
             val processor = createProcessor()
-            assertNull(processor.touchPos.value)
 
             processor.press(1L, 100f, 200f)
-            assertEquals(Pair(100f, 200f), processor.touchPos.value)
+            assertEquals("D 0 864 192\n", PrivdClient.pollCommandForTest())
 
             processor.move(1L, 150f, 250f, 50f, 50f)
-            assertEquals(Pair(150f, 250f), processor.touchPos.value)
+            assertEquals("M 0 810 288\n", PrivdClient.pollCommandForTest())
 
             processor.release(1L, 150f, 250f)
-            assertNull(processor.touchPos.value)
+            assertEquals("U 0\n", PrivdClient.pollCommandForTest())
         }
 
     @Test
     fun `absolute mode multi touch allocates distinct slots`() =
         runTest(testDispatcher) {
             val processor = createProcessor()
-            assertNull(processor.touchPos.value)
 
             processor.press(1L, 100f, 200f)
-            assertEquals(Pair(100f, 200f), processor.touchPos.value)
+            assertEquals("D 0 864 192\n", PrivdClient.pollCommandForTest())
 
             processor.press(2L, 300f, 400f)
-            assertEquals(Pair(100f, 200f), processor.touchPos.value)
+            assertEquals("D 1 648 576\n", PrivdClient.pollCommandForTest())
 
             processor.release(1L, 150f, 250f)
-            assertNull(processor.touchPos.value)
+            assertEquals("U 0\n", PrivdClient.pollCommandForTest())
 
             processor.release(2L, 350f, 450f)
-            assertNull(processor.touchPos.value)
+            assertEquals("U 1\n", PrivdClient.pollCommandForTest())
         }
 
     @Test
@@ -223,10 +236,10 @@ class TouchpadGestureProcessorTest {
             val processor = createProcessor()
 
             processor.press(1L, 100f, 200f)
-            assertEquals(Pair(100f, 200f), processor.touchPos.value)
+            assertEquals("D 0 864 192\n", PrivdClient.pollCommandForTest())
 
             processor.onCancel()
-            assertNull(processor.touchPos.value)
+            assertEquals("U 0\n", PrivdClient.pollCommandForTest())
         }
 
     @Test
@@ -236,11 +249,11 @@ class TouchpadGestureProcessorTest {
             val processor = createProcessor(useMouse = { currentUseMouse })
 
             processor.press(1L, 100f, 200f)
-            assertEquals(Pair(100f, 200f), processor.touchPos.value)
+            assertEquals("D 0 864 192\n", PrivdClient.pollCommandForTest())
 
             currentUseMouse = true
             processor.onCancel()
-            assertNull(processor.touchPos.value)
+            assertEquals("U 0\n", PrivdClient.pollCommandForTest())
         }
 
     @Test

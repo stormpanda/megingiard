@@ -9,9 +9,6 @@ import com.stormpanda.megingiard.settings.TouchpadSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -58,11 +55,6 @@ class TouchpadGestureProcessor(
     private val onHapticFeedback: () -> Unit = {},
 ) {
     // ── Touch mode state ────────────────────────────────────────────────────
-    private val _touchPos = MutableStateFlow<Pair<Float, Float>?>(null)
-
-    /** Current finger position (touch mode only), null when not touching. */
-    val touchPos: StateFlow<Pair<Float, Float>?> = _touchPos.asStateFlow()
-
     private val pointerToSlotMap = HashMap<Long, Int>()
 
     // ── Mouse mode state ────────────────────────────────────────────────────
@@ -141,9 +133,6 @@ class TouchpadGestureProcessor(
                 pointerToSlotMap[pointerId] = slot
                 val nx = (x / surfaceW).coerceIn(0f, 1f)
                 val ny = (y / surfaceH).coerceIn(0f, 1f)
-                if (pointerToSlotMap.size == 1) {
-                    _touchPos.value = Pair(x, y)
-                }
                 TouchInjector.injectTouch(slot, TouchAction.DOWN, nx, ny)
             }
         }
@@ -203,9 +192,6 @@ class TouchpadGestureProcessor(
             if (slot != null) {
                 val nx = (x / surfaceW).coerceIn(0f, 1f)
                 val ny = (y / surfaceH).coerceIn(0f, 1f)
-                if (pointerToSlotMap.keys.firstOrNull() == pointerId) {
-                    _touchPos.value = Pair(x, y)
-                }
                 TouchInjector.injectTouch(slot, TouchAction.MOVE, nx, ny)
             }
         }
@@ -287,7 +273,6 @@ class TouchpadGestureProcessor(
             if (slot != null) {
                 val nx = (x / surfaceW).coerceIn(0f, 1f)
                 val ny = (y / surfaceH).coerceIn(0f, 1f)
-                _touchPos.value = null
                 TouchInjector.injectTouch(slot, TouchAction.UP, nx, ny)
             }
         }
@@ -311,7 +296,6 @@ class TouchpadGestureProcessor(
         // Unconditionally clean up Touch mode state synchronously
         val slotsToRelease = pointerToSlotMap.entries.toList()
         pointerToSlotMap.clear()
-        _touchPos.value = null
         for ((_, slot) in slotsToRelease) {
             TouchInjector.injectTouch(slot, TouchAction.UP, 0f, 0f)
         }
