@@ -346,11 +346,8 @@ fun GlobalSettingsScreen(
                                             }
                                         },
                                         onOpenObtainium = {
-                                            val deepLink = "obtainium://add/${GS_OBTAINIUM_REPO_URL}"
-                                            try {
-                                                launchUrlOnPrimaryDisplay(context, deepLink)
-                                            } catch (e: Exception) {
-                                                AppLog.w(TAG, "Obtainium deep link failed: ${e.message}, falling back to browser")
+                                            if (!launchUrlOnPrimaryDisplay(context, "obtainium://add/$GS_OBTAINIUM_REPO_URL")) {
+                                                AppLog.w(TAG, "Obtainium deep link failed, falling back to browser")
                                                 launchUrlOnPrimaryDisplay(context, GS_OBTAINIUM_FALLBACK_URL)
                                             }
                                             AppStateManager.closeActiveModal()

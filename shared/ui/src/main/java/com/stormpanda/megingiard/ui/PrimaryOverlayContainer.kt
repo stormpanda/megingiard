@@ -317,11 +317,13 @@ fun PrimaryOverlayContainer(
 
 /**
  * Launches an external URL via browser intent targeted to the primary (default) display.
+ *
+ * @return `true` if the intent was launched, or `false` if no activity could handle [url].
  */
 fun launchUrlOnPrimaryDisplay(
     context: Context,
     url: String,
-) {
+): Boolean =
     try {
         val intent =
             Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
@@ -331,7 +333,8 @@ fun launchUrlOnPrimaryDisplay(
         options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
         context.startActivity(intent, options.toBundle())
         AppLog.d(TAG, "Launched URL on primary display: $url")
+        true
     } catch (e: Exception) {
         AppLog.e(TAG, "Failed to launch URL ($url) on primary display: ${e.message}")
+        false
     }
-}
