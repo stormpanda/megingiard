@@ -635,18 +635,15 @@ fun GlobalSettingsScreen(
         }
     }
     LaunchedEffect(logReportSaveResult) {
-        when (val logResult = logReportSaveResult) {
-            is LogReportManager.SaveResult.Success -> {
+        when (logReportSaveResult) {
+            LogReportManager.SaveResult.Success -> {
                 DialogToastManager.show(context.getString(R.string.log_report_save_success))
                 LogReportManager.clearSaveResult()
             }
 
-            is LogReportManager.SaveResult.Failure -> {
-                val errorMsg =
-                    logResult.message?.takeIf { it.isNotBlank() }
-                        ?: context.getString(R.string.log_report_save_error)
+            LogReportManager.SaveResult.Failure -> {
                 DialogToastManager.show(
-                    message = errorMsg,
+                    message = context.getString(R.string.log_report_save_error),
                     icon = Icons.Rounded.ErrorOutline,
                     isError = true,
                 )

@@ -40,9 +40,7 @@ object LogReportManager {
     sealed class SaveResult {
         data object Success : SaveResult()
 
-        data class Failure(
-            val message: String?,
-        ) : SaveResult()
+        data object Failure : SaveResult()
     }
 
     private val _saveResult = MutableStateFlow<SaveResult?>(null)
@@ -109,7 +107,7 @@ object LogReportManager {
                 setSaveResult(SaveResult.Success)
             }.onFailure { e ->
                 AppLog.e(TAG, "Log report save failed", e)
-                setSaveResult(SaveResult.Failure(e.message))
+                setSaveResult(SaveResult.Failure)
             }
         }
 
