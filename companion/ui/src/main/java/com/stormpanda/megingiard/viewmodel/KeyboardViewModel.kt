@@ -15,11 +15,9 @@ import com.stormpanda.megingiard.keyboard.KeyboardState
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.keyboard.ModifierState
 import com.stormpanda.megingiard.settings.KeyboardSettings
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
 private const val TAG = "KeyboardViewModel"
 
@@ -52,12 +50,10 @@ class KeyboardViewModel : ViewModel() {
     fun setKbAutoOpenOnFocus(value: Boolean) = KeyboardSettings.setKbAutoOpenOnFocus(value)
 
     private fun sendCtrlCombo(keyCode: Int) {
-        viewModelScope.launch(Dispatchers.IO) {
-            KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
-            KeyInjector.keyDown(keyCode)
-            KeyInjector.keyUp(keyCode)
-            KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
-        }
+        KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
+        KeyInjector.keyDown(keyCode)
+        KeyInjector.keyUp(keyCode)
+        KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
     }
 
     fun selectAll() = sendCtrlCombo(LinuxKeycodes.KEY_A)
