@@ -423,14 +423,6 @@ object AppStateManager {
 
     // ── Modal overlay states ──────────────────────────────────────────────────
 
-    private val _hasAdbCredentials = MutableStateFlow(false)
-    val hasAdbCredentials: StateFlow<Boolean> = _hasAdbCredentials.asStateFlow()
-
-    fun setHasAdbCredentials(has: Boolean) {
-        AppLog.d(TAG, "setHasAdbCredentials($has)")
-        _hasAdbCredentials.value = has
-    }
-
     private val _companionViewMode = MutableStateFlow(CompanionViewMode.AUTO)
     val companionViewMode: StateFlow<CompanionViewMode> = _companionViewMode.asStateFlow()
 
@@ -513,7 +505,15 @@ object AppStateManager {
 
     fun setPrivdPromptDismissed(dismissed: Boolean) {
         AppLog.d(TAG, "setPrivdPromptDismissed($dismissed)")
-        MacroPadSettings.setPrivdPromptDismissed(dismissed)
+        if (!_isAccessibilityActive.value) {
+            MacroPadSettings.setPrivdPromptDismissed(false)
+            return
+        }
+        if (dismissed) {
+            privdPromptLatched.value = false
+        }
+        val effectiveDismissed = dismissed && PrivdManager.state.value != PrivdState.RUNNING
+        MacroPadSettings.setPrivdPromptDismissed(effectiveDismissed)
     }
 
     private val _isAccessibilityActive = MutableStateFlow(true)
@@ -522,15 +522,35 @@ object AppStateManager {
     fun setAccessibilityActive(active: Boolean) {
         AppLog.d(TAG, "setAccessibilityActive($active)")
         _isAccessibilityActive.value = active
+        if (!active) {
+            privdPromptLatched.value = true
+            MacroPadSettings.setPrivdPromptDismissed(false)
+        }
     }
 
     fun resetPrivdPromptState() {
         AppLog.d(TAG, "resetPrivdPromptState")
-        _isPrivdPromptActive.value = false
+        privdPromptLatched.value = false
+        MacroPadSettings.setPrivdPromptDismissed(false)
     }
 
-    private val _isPrivdPromptActive = MutableStateFlow(false)
-    val isPrivdPromptActive: StateFlow<Boolean> = _isPrivdPromptActive.asStateFlow()
+    private val privdPromptLatched = MutableStateFlow(false)
+
+    val isPrivdPromptActive: StateFlow<Boolean> =
+        combine(
+            PrivdManager.state,
+            MacroPadSettings.privdPromptDismissed,
+            isBackgroundSettingsActive,
+            _isAccessibilityActive,
+            privdPromptLatched,
+        ) { state, dismissed, bgSettingsActive, accessibilityActive, latched ->
+            when {
+                !accessibilityActive -> true
+                dismissed || bgSettingsActive -> false
+                state == PrivdState.FAILED -> true
+                else -> latched
+            }
+        }.stateIn(scope, SharingStarted.Eagerly, false)
 
     private val _isPrivdSetupWizardActive = MutableStateFlow(false)
     val isPrivdSetupWizardActive: StateFlow<Boolean> = _isPrivdSetupWizardActive.asStateFlow()
@@ -887,31 +907,19 @@ object AppStateManager {
             }
         }
         scope.launch {
-            combine(
-                PrivdManager.state,
-                _hasAdbCredentials,
-                MacroPadSettings.privdPromptDismissed,
-                isBackgroundSettingsActive,
-                _isAccessibilityActive,
-            ) { array ->
-                val state = array[0] as PrivdState
-                val hasCreds = array[1] as Boolean
-                val dismissed = array[2] as Boolean
-                val bgSettingsActive = array[3] as Boolean
-                val accessibilityActive = array[4] as Boolean
-
-                if (state == PrivdState.RUNNING && accessibilityActive && dismissed) {
+            PrivdManager.state.collect { state ->
+                if (state == PrivdState.FAILED &&
+                    !MacroPadSettings.privdPromptDismissed.value &&
+                    !isBackgroundSettingsActive.value
+                ) {
+                    privdPromptLatched.value = true
+                } else if (state == PrivdState.RUNNING &&
+                    _isAccessibilityActive.value &&
+                    MacroPadSettings.privdPromptDismissed.value
+                ) {
                     MacroPadSettings.setPrivdPromptDismissed(false)
                 }
-                if (!accessibilityActive) {
-                    MacroPadSettings.setPrivdPromptDismissed(false)
-                    _isPrivdPromptActive.value = true
-                } else if (dismissed || bgSettingsActive) {
-                    _isPrivdPromptActive.value = false
-                } else if (state == PrivdState.FAILED && hasCreds) {
-                    _isPrivdPromptActive.value = true
-                }
-            }.collect {}
+            }
         }
     }
 }

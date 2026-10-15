@@ -40,13 +40,11 @@ class MirrorRuntimePolicyTest {
     private fun checkConnecting(
         privdState: PrivdState,
         promptActive: Boolean = false,
-        hasCreds: Boolean = true,
         dismissed: Boolean = false,
         isManuallyDisconnected: Boolean = false,
     ) = isPrivdMirrorConnecting(
         privdState = privdState,
         promptActive = promptActive,
-        hasCreds = hasCreds,
         dismissed = dismissed,
         isManuallyDisconnected = isManuallyDisconnected,
     )
@@ -172,16 +170,14 @@ class MirrorRuntimePolicyTest {
 
     @Test
     fun `isPrivdMirrorConnecting blocks during race window and allows once dismissed`() {
-        assertTrue(checkConnecting(PrivdState.FAILED, hasCreds = true, dismissed = false))
-        assertFalse(checkConnecting(PrivdState.FAILED, hasCreds = true, dismissed = true))
+        assertTrue(checkConnecting(PrivdState.FAILED, dismissed = false))
+        assertFalse(checkConnecting(PrivdState.FAILED, dismissed = true))
 
         assertTrue(checkConnecting(PrivdState.CONNECTING))
         assertTrue(checkConnecting(PrivdState.BOOTSTRAPPING))
 
-        assertTrue(checkConnecting(PrivdState.OFF, hasCreds = true))
-        assertTrue(checkConnecting(PrivdState.OFF, hasCreds = false))
+        assertTrue(checkConnecting(PrivdState.OFF))
 
-        assertFalse(checkConnecting(PrivdState.OFF, hasCreds = true, isManuallyDisconnected = true))
-        assertFalse(checkConnecting(PrivdState.OFF, hasCreds = false, isManuallyDisconnected = true))
+        assertFalse(checkConnecting(PrivdState.OFF, isManuallyDisconnected = true))
     }
 }

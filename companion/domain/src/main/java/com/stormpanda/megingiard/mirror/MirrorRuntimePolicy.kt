@@ -9,12 +9,11 @@ import com.stormpanda.megingiard.privd.PrivdState
 fun isPrivdMirrorConnecting(
     privdState: PrivdState,
     promptActive: Boolean,
-    hasCreds: Boolean,
     dismissed: Boolean,
     isManuallyDisconnected: Boolean = false,
 ): Boolean {
     val autoConnectPending = !isManuallyDisconnected
-    val promptShouldShow = privdState == PrivdState.FAILED && hasCreds && !dismissed
+    val promptShouldShow = privdState == PrivdState.FAILED && !dismissed
     return privdState == PrivdState.CONNECTING ||
         privdState == PrivdState.BOOTSTRAPPING ||
         (privdState == PrivdState.OFF && autoConnectPending) ||

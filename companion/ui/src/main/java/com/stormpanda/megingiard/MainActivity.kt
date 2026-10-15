@@ -351,10 +351,6 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        val hasCreds =
-            File(noBackupFilesDir, "privd_adb_key.bin").exists() &&
-                File(noBackupFilesDir, "privd_adb_cert.bin").exists()
-        AppStateManager.setHasAdbCredentials(hasCreds)
         AppStateManager.setAccessibilityActive(MegingiardAccessibilityService.isEnabled(this))
         AppStateManager.resetPrivdPromptState()
 
@@ -465,13 +461,11 @@ class MainActivity : ComponentActivity() {
                     combine(
                         PrivdManager.state,
                         AppStateManager.isPrivdPromptActive,
-                        AppStateManager.hasAdbCredentials,
                         AppStateManager.isPrivdPromptDismissed,
-                    ) { privdState, promptActive, hasCreds, dismissed ->
+                    ) { privdState, promptActive, dismissed ->
                         isPrivdMirrorConnecting(
                             privdState = privdState,
                             promptActive = promptActive,
-                            hasCreds = hasCreds,
                             dismissed = dismissed,
                         )
                     }

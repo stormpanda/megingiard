@@ -153,7 +153,6 @@ class AppStateManagerTest {
     fun `reconnect prompt dialog stays active during transitions and auto-resets on success`() =
         runTest {
             // Reset states
-            AppStateManager.setHasAdbCredentials(true)
             AppStateManager.setPrivdPromptDismissed(false)
             AppStateManager.setBackgroundSettingsActive(false)
             PrivdManager.setStateForTesting(PrivdState.OFF)
@@ -310,7 +309,6 @@ class AppStateManagerTest {
     @Test
     fun `resetPrivdPromptState clears prompt showing and dismissed flags`() =
         runTest {
-            AppStateManager.setHasAdbCredentials(true)
             AppStateManager.setPrivdPromptDismissed(false)
             AppStateManager.setBackgroundSettingsActive(false)
             PrivdManager.setStateForTesting(PrivdState.FAILED)
@@ -342,7 +340,6 @@ class AppStateManagerTest {
         runTest {
             // Reset states
             AppStateManager.resetPrivdPromptState()
-            AppStateManager.setHasAdbCredentials(true)
             AppStateManager.setBackgroundSettingsActive(false)
             AppStateManager.setAccessibilityActive(true)
             PrivdManager.setStateForTesting(PrivdState.RUNNING)
@@ -367,7 +364,6 @@ class AppStateManagerTest {
         runTest {
             // Setup initial running state with accessibility active
             AppStateManager.resetPrivdPromptState()
-            AppStateManager.setHasAdbCredentials(true)
             AppStateManager.setBackgroundSettingsActive(false)
             AppStateManager.setAccessibilityActive(true)
             PrivdManager.setStateForTesting(PrivdState.RUNNING)
