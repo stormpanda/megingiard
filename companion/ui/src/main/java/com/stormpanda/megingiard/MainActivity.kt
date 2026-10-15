@@ -261,7 +261,8 @@ class MainActivity : ComponentActivity() {
 
         // Init settings first so the persisted log level is active before anything
         // else runs (including SignatureGuard below). SettingsManager.init() reads
-        // just the log level synchronously from DataStore then continues async.
+        // bootstrap settings (log level, theme, accent, MacroPad profiles) synchronously
+        // from DataStore then continues async.
         SettingsManager.init(this)
 
         // Centralized input injector lifecycle watching (keeps Key, Mouse, Touch active while foregrounded)

@@ -167,11 +167,12 @@ object SettingsManager {
         initialized = true
         dataStore = context.applicationContext.settingsDataStore
 
-        // Apply the persisted log level synchronously before returning so that
-        // code running immediately after init() (e.g. SignatureGuard) already
-        // logs at the user-configured level.  A bounded timeout prevents ANR on
-        // pathological I/O — if DataStore does not respond within the window, the
-        // default WARN level is retained and startup proceeds normally.
+        // Apply bootstrap settings (log level, theme, accent, SteamGridDB token,
+        // and MacroPad profiles) synchronously before returning so that code
+        // running immediately after init() (e.g. SignatureGuard, initial UI frame)
+        // already uses the user-configured state. A bounded timeout prevents ANR on
+        // pathological I/O — if DataStore does not respond within the window,
+        // defaults are retained and startup proceeds normally.
         runBlocking(Dispatchers.IO) {
             try {
                 val prefs =
@@ -179,16 +180,7 @@ object SettingsManager {
                         dataStore.data.first()
                     }
                 if (prefs != null) {
-                    val level =
-                        AppLog.Level.entries.firstOrNull { it.name == prefs[KEY_LOG_LEVEL] }
-                            ?: AppLog.Level.WARN
-                    AppLog.level = level
-
-                    _themeMode.value = ThemeMode.entries.firstOrNull { it.name == prefs[KEY_THEME_MODE] } ?: ThemeMode.DARK
-                    _accentColor.value = prefs[KEY_ACCENT_COLOR] ?: DEFAULT_ACCENT_COLOR
-                    _customAccentColor.value = prefs[KEY_CUSTOM_ACCENT_COLOR] ?: prefs[KEY_ACCENT_COLOR] ?: DEFAULT_ACCENT_COLOR
-                    _steamGridDbApiToken.value = prefs[KEY_STEAMGRIDDB_API_TOKEN] ?: ""
-                    MacroPadSettings.loadFrom(prefs)
+                    applyBootstrapPrefs(prefs)
                 } else {
                     AppLog.w(TAG, "DataStore bootstrap timed out — retaining default log level")
                 }
@@ -214,13 +206,10 @@ object SettingsManager {
                 .collect { prefs ->
                     AppLog.i(TAG, "settings loaded from DataStore")
 
+                    applyBootstrapPrefs(prefs)
                     prefs[KEY_EXCLUDE_FROM_RECENTS]?.let { _excludeFromRecents.value = it }
-                    prefs[KEY_ACCENT_COLOR]?.let { _accentColor.value = it }
-                    prefs[KEY_CUSTOM_ACCENT_COLOR]?.let { _customAccentColor.value = it }
-                    prefs[KEY_THEME_MODE]?.let { name -> ThemeMode.entries.firstOrNull { it.name == name } }?.let { _themeMode.value = it }
                     prefs[KEY_OVERLAY_AT_BOTTOM]?.let { _overlayAtBottom.value = it }
                     prefs[KEY_OVERLAY_FADE_OUT]?.let { _overlayFadeOut.value = it }
-                    prefs[KEY_STEAMGRIDDB_API_TOKEN]?.let { _steamGridDbApiToken.value = it }
 
                     prefs[KEY_SHOW_MACRO_EDITOR_TUTORIAL]?.let { _showMacroEditorTutorial.value = it }
                     prefs[KEY_WELCOME_TOUR_COMPLETED_VERSION]?.let { _welcomeTourCompletedVersion.value = it }
@@ -228,13 +217,8 @@ object SettingsManager {
                     KeyboardSettings.loadFrom(prefs)
                     TouchpadSettings.loadFrom(prefs)
                     prefs[KEY_APP_LANGUAGE]?.let { name -> AppLanguage.entries.firstOrNull { it.name == name } }?.let {
-                        _appLanguage.value =
-                            it
+                        _appLanguage.value = it
                     }
-                    prefs[KEY_LOG_LEVEL]?.let { name -> AppLog.Level.entries.firstOrNull { it.name == name } }?.let {
-                        AppLog.level = it
-                    }
-                    MacroPadSettings.loadFrom(prefs)
                     UpdateManager.loadFrom(prefs)
 
                     val backupsJsonStr = prefs[KEY_INTERNAL_BACKUPS]
@@ -249,6 +233,19 @@ object SettingsManager {
                     }
                 }
         }
+    }
+
+    private fun applyBootstrapPrefs(prefs: Preferences) {
+        prefs[KEY_LOG_LEVEL]?.let { name -> AppLog.Level.entries.firstOrNull { it.name == name } }?.let {
+            AppLog.level = it
+        }
+        prefs[KEY_THEME_MODE]?.let { name -> ThemeMode.entries.firstOrNull { it.name == name } }?.let {
+            _themeMode.value = it
+        }
+        prefs[KEY_ACCENT_COLOR]?.let { _accentColor.value = it }
+        prefs[KEY_CUSTOM_ACCENT_COLOR]?.let { _customAccentColor.value = it }
+        prefs[KEY_STEAMGRIDDB_API_TOKEN]?.let { _steamGridDbApiToken.value = it }
+        MacroPadSettings.loadFrom(prefs)
     }
 
     private val optionalDataStore: DataStore<Preferences>?
