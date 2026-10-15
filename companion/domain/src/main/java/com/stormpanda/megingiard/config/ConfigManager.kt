@@ -284,7 +284,7 @@ object ConfigManager {
     // ── Export ────────────────────────────────────────────────────────────────
 
     /**
-     * Builds a export from the current app state.
+     * Builds an export from the current app state.
      * Macros are embedded inside each PadProfile — no top-level macros or folders.
      */
     suspend fun buildExport(
@@ -293,25 +293,12 @@ object ConfigManager {
         includeBackgrounds: Boolean = true,
     ): MegingiardExport {
         AppLog.i(TAG, "buildExport: author=${metadata.author} includeBackgrounds=$includeBackgrounds")
-        val settings = SettingsManager.exportGroupedSettings()
-        val profiles = MacroPadState.profiles.value
-
-        val imageHashes =
-            if (context != null && includeBackgrounds) {
-                collectImageHashes(context, profiles)
-            } else {
-                emptyMap()
-            }
-
-        val checksum = computeChecksum(settings, profiles, imageHashes)
-        AppLog.d(TAG, "buildExport: checksum=$checksum profiles=${profiles.size} imageHashes=${imageHashes.size}")
-
-        return MegingiardExport(
-            schemaVersion = SCHEMA_VERSION,
+        return buildExportInternal(
             metadata = metadata,
-            checksum = checksum,
-            settings = settings,
-            profiles = profiles,
+            settings = SettingsManager.exportGroupedSettings(),
+            profiles = MacroPadState.profiles.value,
+            context = context,
+            includeBackgrounds = includeBackgrounds,
         )
     }
 
@@ -326,20 +313,35 @@ object ConfigManager {
         includeBackgrounds: Boolean = true,
     ): MegingiardExport {
         AppLog.i(TAG, "buildProfileExport: profile=${profile.name} includeBackgrounds=$includeBackgrounds")
-        val profiles = listOf(profile)
+        return buildExportInternal(
+            metadata = metadata,
+            settings = emptyMap(),
+            profiles = listOf(profile),
+            context = context,
+            includeBackgrounds = includeBackgrounds,
+        )
+    }
+
+    private fun buildExportInternal(
+        metadata: ExportMetadata,
+        settings: Map<String, Map<String, JsonElement>>,
+        profiles: List<PadProfile>,
+        context: Context?,
+        includeBackgrounds: Boolean,
+    ): MegingiardExport {
         val imageHashes =
             if (context != null && includeBackgrounds) {
                 collectImageHashes(context, profiles)
             } else {
                 emptyMap()
             }
-        val checksum = computeChecksum(emptyMap(), profiles, imageHashes)
-        AppLog.d(TAG, "buildProfileExport: checksum=$checksum imageHashes=${imageHashes.size}")
+        val checksum = computeChecksum(settings, profiles, imageHashes)
+        AppLog.d(TAG, "buildExportInternal: checksum=$checksum profiles=${profiles.size} imageHashes=${imageHashes.size}")
         return MegingiardExport(
             schemaVersion = SCHEMA_VERSION,
             metadata = metadata,
             checksum = checksum,
-            settings = emptyMap(),
+            settings = settings,
             profiles = profiles,
         )
     }

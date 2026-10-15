@@ -383,28 +383,9 @@ object SettingsManager {
      * Writes all settings from [sections] into DataStore in a single edit.
      * The existing `.collect {}` in [init] automatically re-hydrates every [StateFlow]
      * after the edit completes — no manual setter calls needed.
-     *
-     * Type dispatch uses [KEY_BY_NAME] to resolve the actual [Preferences.Key] and
-     * `prefs.asMap()` to detect the stored type, so DataStore proto fields are always
-     * written with the correct type (not a heuristic-guessed type).
-     */
-    fun importGroupedSettings(sections: Map<String, Map<String, JsonElement>>) {
-        AppLog.i(TAG, "importGroupedSettings: sections=${sections.keys}")
-        scope.launch {
-            importGroupedSettingsInternal(sections)
-        }
-    }
-
-    /**
-     * Awaitable variant — callers that need to know when the DataStore write completes
-     * (e.g. [ConfigManager.applyImport]) should call this directly from a suspend context.
      */
     suspend fun importGroupedSettingsAwait(sections: Map<String, Map<String, JsonElement>>) {
         AppLog.i(TAG, "importGroupedSettingsAwait: sections=${sections.keys}")
-        importGroupedSettingsInternal(sections)
-    }
-
-    private suspend fun importGroupedSettingsInternal(sections: Map<String, Map<String, JsonElement>>) {
         dataStore.edit { prefs ->
             for ((_, entries) in sections) {
                 for ((keyName, element) in entries) {
