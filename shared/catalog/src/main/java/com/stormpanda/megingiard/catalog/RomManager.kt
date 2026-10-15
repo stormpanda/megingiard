@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -60,6 +61,9 @@ object RomManager {
     private const val MAX_SCAN_DEPTH = 3
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val persistSupervisor = SupervisorJob()
+    private val persistScope = CoroutineScope(Dispatchers.IO + persistSupervisor)
+    private val persistLock = Any()
 
     private val _romFolders = MutableStateFlow<List<CustomRomFolder>>(emptyList())
     val romFolders: StateFlow<List<CustomRomFolder>> = _romFolders.asStateFlow()
@@ -82,6 +86,11 @@ object RomManager {
         synchronized(romCleanedNames) {
             romCleanedNames.clear()
         }
+    }
+
+    @VisibleForTesting
+    internal suspend fun awaitPersistenceForTesting() {
+        persistSupervisor.children.toList().joinAll()
     }
 
     @VisibleForTesting
@@ -149,18 +158,23 @@ object RomManager {
     }
 
     private fun saveRomCleanedNames(context: Context) {
-        val content = synchronized(romCleanedNames) { romCleanedNames.toMap() }
-        saveJsonFile(context, FILE_ROM_CLEANED_NAMES, content)
-        AppLog.d(TAG, "Saved cleaned ROM names to disk")
+        persistScope.launch {
+            synchronized(persistLock) {
+                val content = synchronized(romCleanedNames) { romCleanedNames.toMap() }
+                saveJsonFile(context, FILE_ROM_CLEANED_NAMES, content)
+                AppLog.d(TAG, "Saved cleaned ROM names to disk")
+            }
+        }
     }
 
-    private fun saveRomFolders(
-        context: Context,
-        folders: List<CustomRomFolder>,
-    ) {
-        _romFolders.value = folders
-        saveJsonFile(context, FILE_ROM_FOLDERS, folders)
-        AppLog.d(TAG, "Saved ${folders.size} ROM folders to disk")
+    private fun saveRomFolders(context: Context) {
+        persistScope.launch {
+            synchronized(persistLock) {
+                val folders = synchronized(stateLock) { _romFolders.value }
+                saveJsonFile(context, FILE_ROM_FOLDERS, folders)
+                AppLog.d(TAG, "Saved ${folders.size} ROM folders to disk")
+            }
+        }
     }
 
     private fun resolveDocumentFile(
@@ -252,17 +266,14 @@ object RomManager {
                     systemName = systemDef.displayName,
                     emulatorPackage = defaultEmulatorPackage,
                 )
-            val updated =
-                synchronized(stateLock) {
-                    val latest = _romFolders.value.toMutableList()
-                    if (latest.none { it.uriString == newFolder.uriString }) {
-                        latest.add(newFolder)
-                    }
-                    val snapshot = latest.toList()
-                    _romFolders.value = snapshot
-                    snapshot
+            synchronized(stateLock) {
+                val latest = _romFolders.value.toMutableList()
+                if (latest.none { it.uriString == newFolder.uriString }) {
+                    latest.add(newFolder)
                 }
-            saveRomFolders(context, updated)
+                _romFolders.value = latest.toList()
+            }
+            saveRomFolders(context)
 
             // 4. Reload ROM apps
             reloadRomAppsSuspend(context)
@@ -275,13 +286,10 @@ object RomManager {
         coreName: String?,
     ) {
         loadRomFolders(context)
-        val updated =
-            synchronized(stateLock) {
-                val next = _romFolders.value.map { if (it.uriString == folderUri) it.copy(retroArchCore = coreName) else it }
-                _romFolders.value = next
-                next
-            }
-        saveRomFolders(context, updated)
+        synchronized(stateLock) {
+            _romFolders.value = _romFolders.value.map { if (it.uriString == folderUri) it.copy(retroArchCore = coreName) else it }
+        }
+        saveRomFolders(context)
         reloadRomApps(context)
     }
 
@@ -291,13 +299,10 @@ object RomManager {
         packageName: String?,
     ) {
         loadRomFolders(context)
-        val updated =
-            synchronized(stateLock) {
-                val next = _romFolders.value.map { if (it.uriString == folderUri) it.copy(emulatorPackage = packageName) else it }
-                _romFolders.value = next
-                next
-            }
-        saveRomFolders(context, updated)
+        synchronized(stateLock) {
+            _romFolders.value = _romFolders.value.map { if (it.uriString == folderUri) it.copy(emulatorPackage = packageName) else it }
+        }
+        saveRomFolders(context)
         reloadRomApps(context)
     }
 
@@ -306,15 +311,12 @@ object RomManager {
         folder: CustomRomFolder,
     ) {
         loadRomFolders(context)
-        val updated =
-            synchronized(stateLock) {
-                val current = _romFolders.value.toMutableList()
-                current.removeAll { it.uriString == folder.uriString }
-                val next = current.toList()
-                _romFolders.value = next
-                next
-            }
-        saveRomFolders(context, updated)
+        synchronized(stateLock) {
+            val current = _romFolders.value.toMutableList()
+            current.removeAll { it.uriString == folder.uriString }
+            _romFolders.value = current.toList()
+        }
+        saveRomFolders(context)
 
         val namesChanged =
             synchronized(romCleanedNames) {

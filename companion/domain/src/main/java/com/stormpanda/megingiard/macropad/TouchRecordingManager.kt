@@ -236,20 +236,21 @@ object TouchRecordingManager {
     /**
      * Updates live touch pointer states for the secondary companion monitor radar.
      */
-    fun updateLivePointers(pointers: List<TouchPointerState>) {
-        val current = _state.value as? TouchRecordingState.Recording ?: return
-        val primary = pointers.firstOrNull()
-        val allTrail = pointers.flatMap { it.trail }
-        _state.value =
-            current.copy(
-                activePointers = pointers,
-                liveNormX = primary?.normX,
-                liveNormY = primary?.normY,
-                isTouchDown = pointers.isNotEmpty(),
-                activePointersCount = pointers.size,
-                activeTrailPoints = allTrail,
-            )
-    }
+    fun updateLivePointers(pointers: List<TouchPointerState>) =
+        synchronized(recordingLock) {
+            val current = _state.value as? TouchRecordingState.Recording ?: return
+            val primary = pointers.firstOrNull()
+            val allTrail = pointers.flatMap { it.trail }
+            _state.value =
+                current.copy(
+                    activePointers = pointers,
+                    liveNormX = primary?.normX,
+                    liveNormY = primary?.normY,
+                    isTouchDown = pointers.isNotEmpty(),
+                    activePointersCount = pointers.size,
+                    activeTrailPoints = allTrail,
+                )
+        }
 
     /**
      * Updates live touch pointer states for testing or explicit updates.
@@ -260,7 +261,7 @@ object TouchRecordingManager {
         isDown: Boolean,
         activePointersCount: Int,
         activeTrailPoints: List<Pair<Float, Float>>,
-    ) {
+    ) = synchronized(recordingLock) {
         val current = _state.value as? TouchRecordingState.Recording ?: return
         val pointers =
             if (normX != null && normY != null && isDown) {
@@ -286,7 +287,7 @@ object TouchRecordingManager {
     fun onTapRecorded(
         normX: Float,
         normY: Float,
-    ) {
+    ) = synchronized(recordingLock) {
         AppLog.i(TAG, "onTapRecorded normX=$normX normY=$normY")
         TouchScreenObserver.stop(CLIENT_TOKEN)
         val step =
@@ -373,6 +374,7 @@ object TouchRecordingManager {
                 )
                 currentGestureSamples.clear()
             }
+            isGestureSegmentRecording = false
             TouchScreenObserver.stop(CLIENT_TOKEN)
             AppLog.i(TAG, "finishRecording steps=${recordedGestureSteps.size}")
             val sorted = recordedGestureSteps.sortedBy { it.startTimeMs }
@@ -392,6 +394,7 @@ object TouchRecordingManager {
             TouchScreenObserver.stop(CLIENT_TOKEN)
             _recordingRequested.value = false
             _recordedTap.value = null
+            isGestureSegmentRecording = false
             recordedGestureSteps.clear()
             activePointers.clear()
             currentGestureSamples.clear()
@@ -402,15 +405,17 @@ object TouchRecordingManager {
      * Called by the timeline editor after it has appended the [MacroStep.TouchTap].
      * Resets [recordedTap] to `null` so the `LaunchedEffect` does not re-trigger.
      */
-    fun consumeRecordedTap() {
-        AppLog.d(TAG, "consumeRecordedTap")
-        _recordedTap.value = null
-    }
+    fun consumeRecordedTap() =
+        synchronized(recordingLock) {
+            AppLog.d(TAG, "consumeRecordedTap")
+            _recordedTap.value = null
+        }
 
     fun resetState() =
         synchronized(recordingLock) {
             AppLog.d(TAG, "resetState")
             TouchScreenObserver.stop(CLIENT_TOKEN)
+            isGestureSegmentRecording = false
             recordedGestureSteps.clear()
             activePointers.clear()
             currentGestureSamples.clear()

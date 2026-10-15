@@ -43,6 +43,7 @@ object LayoutTransitionManager {
 
     private var windowProvider: (() -> Window?)? = null
     private var transitionJob: Job? = null
+    private var pendingLayoutId: String? = null
 
     private val _transitionSnapshot = MutableStateFlow<Bitmap?>(null)
     val transitionSnapshot: StateFlow<Bitmap?> = _transitionSnapshot.asStateFlow()
@@ -80,7 +81,12 @@ object LayoutTransitionManager {
     ) {
         val currentLayoutId = MacroPadState.activeLayout.value?.id
         if (currentLayoutId == newLayoutId) {
-            AppLog.d(TAG, "switchLayout: target layout $newLayoutId is already active")
+            if (pendingLayoutId != null) {
+                AppLog.d(TAG, "switchLayout: cancelling pending transition to stay on active layout $newLayoutId")
+                cancelTransition()
+            } else {
+                AppLog.d(TAG, "switchLayout: target layout $newLayoutId is already active")
+            }
             return
         }
 
@@ -111,6 +117,7 @@ object LayoutTransitionManager {
         }
 
         transitionJob?.cancel()
+        pendingLayoutId = newLayoutId
         transitionJob =
             scope.launch {
                 executeTransition(window, newLayoutId, width, height, durationMs)
@@ -132,6 +139,7 @@ object LayoutTransitionManager {
                 Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             } catch (e: OutOfMemoryError) {
                 AppLog.e(TAG, "OOM allocating layout transition snapshot (${width}x$height)", e)
+                pendingLayoutId = null
                 MacroPadState.setActiveLayoutId(newLayoutId)
                 return
             }
@@ -161,7 +169,10 @@ object LayoutTransitionManager {
                     }
                 }
             } catch (e: CancellationException) {
-                MacroPadState.setActiveLayoutId(newLayoutId)
+                if (pendingLayoutId == newLayoutId) {
+                    pendingLayoutId = null
+                    MacroPadState.setActiveLayoutId(newLayoutId)
+                }
                 throw e
             }
 
@@ -170,6 +181,7 @@ object LayoutTransitionManager {
             if (!bitmap.isRecycled) {
                 bitmap.recycle()
             }
+            pendingLayoutId = null
             MacroPadState.setActiveLayoutId(newLayoutId)
             return
         }
@@ -180,6 +192,7 @@ object LayoutTransitionManager {
         _isTransitioning.value = true
 
         AppLog.i(TAG, "Starting ${durationMs}ms crossfade transition to layout $newLayoutId")
+        pendingLayoutId = null
         MacroPadState.setActiveLayoutId(newLayoutId)
 
         try {
@@ -204,6 +217,7 @@ object LayoutTransitionManager {
      * Cancels any active layout transition animation and recycles the snapshot bitmap.
      */
     fun cancelTransition() {
+        pendingLayoutId = null
         transitionJob?.cancel()
         transitionJob = null
         recycleSnapshotBitmap()

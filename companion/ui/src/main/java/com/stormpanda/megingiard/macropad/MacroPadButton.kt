@@ -86,6 +86,15 @@ private const val MP_PRESS_ANIM_MS = 80
 private const val MP_RELEASE_ANIM_MS = 160
 private const val MP_BTN_BREATHE_SCALE_MAX = 1.12f
 private const val MP_BTN_PRESSED_SCALE = 0.95f
+private val MP_BTN_RIPPLE_STROKE_WIDTH = 2.dp
+private const val MP_BTN_RIPPLE_MAX_RADIUS_RATIO = 0.75f
+private const val MP_BTN_RIPPLE_MIN_RADIUS_FACTOR = 0.2f
+private const val MP_BTN_RIPPLE_RANGE_FACTOR = 0.8f
+private const val MP_BTN_RIPPLE_MAX_ALPHA = 0.6f
+private val MP_SCROLL_CHEVRON_SIZE = 18.dp
+private val MP_SCROLL_CHEVRON_GAP = 4.dp
+private const val MP_SCROLL_CHEVRON_DIM_ALPHA = 0.5f
+private val MP_PEEK_ICON_SIZE = 24.dp
 
 // Outer gradient edge alpha at resting state; intermediate stops follow r² quadratic curve.
 internal const val MP_BTN_GRADIENT_OUTER = 0.7f
@@ -197,7 +206,7 @@ internal fun PadButton(
 
     val rippleStroke =
         remember(density) {
-            Stroke(width = with(density) { 2.dp.toPx() })
+            Stroke(width = with(density) { MP_BTN_RIPPLE_STROKE_WIDTH.toPx() })
         }
 
     Box(
@@ -210,9 +219,10 @@ internal fun PadButton(
                 .drawBehind {
                     if (isRunning && isIconOnly) {
                         val rippleProgress = rippleProgressState?.value ?: 0f
-                        val maxRadius = minOf(size.width, size.height) * 0.75f
-                        val currentRadius = maxRadius * (0.2f + rippleProgress * 0.8f)
-                        val rippleAlpha = (1f - rippleProgress) * 0.6f
+                        val maxRadius = minOf(size.width, size.height) * MP_BTN_RIPPLE_MAX_RADIUS_RATIO
+                        val currentRadius =
+                            maxRadius * (MP_BTN_RIPPLE_MIN_RADIUS_FACTOR + rippleProgress * MP_BTN_RIPPLE_RANGE_FACTOR)
+                        val rippleAlpha = (1f - rippleProgress) * MP_BTN_RIPPLE_MAX_ALPHA
                         drawCircle(
                             color = effectiveContentAccent.copy(alpha = rippleAlpha),
                             radius = currentRadius,
@@ -411,22 +421,32 @@ internal fun ScrollWheelFace(accentColor: Color) {
         modifier = Modifier.fillMaxSize(),
     ) {
         // Up chevrons
-        Icon(Icons.Rounded.KeyboardArrowUp, contentDescription = null, tint = accentColor, modifier = Modifier.size(18.dp))
         Icon(
             Icons.Rounded.KeyboardArrowUp,
             contentDescription = null,
-            tint = accentColor.copy(alpha = 0.5f * accentColor.alpha),
-            modifier = Modifier.size(18.dp),
+            tint = accentColor,
+            modifier = Modifier.size(MP_SCROLL_CHEVRON_SIZE),
         )
-        Spacer(Modifier.height(4.dp))
+        Icon(
+            Icons.Rounded.KeyboardArrowUp,
+            contentDescription = null,
+            tint = accentColor.copy(alpha = MP_SCROLL_CHEVRON_DIM_ALPHA * accentColor.alpha),
+            modifier = Modifier.size(MP_SCROLL_CHEVRON_SIZE),
+        )
+        Spacer(Modifier.height(MP_SCROLL_CHEVRON_GAP))
         // Down chevrons
         Icon(
             Icons.Rounded.KeyboardArrowDown,
             contentDescription = null,
-            tint = accentColor.copy(alpha = 0.5f * accentColor.alpha),
-            modifier = Modifier.size(18.dp),
+            tint = accentColor.copy(alpha = MP_SCROLL_CHEVRON_DIM_ALPHA * accentColor.alpha),
+            modifier = Modifier.size(MP_SCROLL_CHEVRON_SIZE),
         )
-        Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = accentColor, modifier = Modifier.size(18.dp))
+        Icon(
+            Icons.Rounded.KeyboardArrowDown,
+            contentDescription = null,
+            tint = accentColor,
+            modifier = Modifier.size(MP_SCROLL_CHEVRON_SIZE),
+        )
     }
 }
 
@@ -441,7 +461,7 @@ internal fun BackgroundPeekFace(accentColor: Color) {
         imageVector = if (isPeekActive) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
         contentDescription = null,
         tint = accentColor,
-        modifier = Modifier.size(24.dp),
+        modifier = Modifier.size(MP_PEEK_ICON_SIZE),
     )
 }
 

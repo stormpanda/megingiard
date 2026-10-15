@@ -115,6 +115,7 @@ class RomManagerTest {
         assertEquals("snes9x_libretro_android.so", folder.retroArchCore)
 
         // Verify it was persisted to disk
+        runBlocking { RomManager.awaitPersistenceForTesting() }
         val diskContent = file.readText()
         assertTrue(diskContent.contains("snes9x_libretro_android.so"))
 
@@ -146,6 +147,7 @@ class RomManagerTest {
         assertEquals("dev.eden.eden_emulator", folder.emulatorPackage)
 
         // Verify persistence
+        runBlocking { RomManager.awaitPersistenceForTesting() }
         val diskContent = file.readText()
         assertTrue(diskContent.contains("dev.eden.eden_emulator"))
 
