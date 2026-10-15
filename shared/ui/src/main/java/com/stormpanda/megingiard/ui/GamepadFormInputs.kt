@@ -214,7 +214,6 @@ fun GamepadTextFieldCard(
             }
         } else if (hasBeenEditing) {
             keyboardController?.hide()
-            keyboardRequester?.invoke(false)
             try {
                 cardFocusRequester.requestFocus()
             } catch (_: IllegalStateException) {
