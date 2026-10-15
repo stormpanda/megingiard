@@ -9,7 +9,7 @@ object PrivdConstants {
      * Incrementing this value triggers automatic binary re-push and reconnection
      * dialogs across app upgrades and downgrades.
      */
-    const val PRIVD_VERSION = 10
+    const val PRIVD_VERSION = 11
 
     const val DAEMON_ASSET_NAME = "megingiard_privd_arm64"
     const val MIRROR_DEX_ASSET_NAME = "megingiard_mirror.dex"

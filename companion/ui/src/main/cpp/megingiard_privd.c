@@ -65,7 +65,7 @@
 #include <dirent.h>
 #include "cmd_parsers.h"
 
-#define PRIVD_VERSION 10
+#define PRIVD_VERSION 11
 
 static int g_port_start = 51234;
 #define SCAN_MAX 32
@@ -402,7 +402,7 @@ static int discover_gamepad_fd(void) {
 
 
 /*
- * Binds a local TCP socket to 127.0.0.1, scanning port range 51234-51238.
+ * Binds a local TCP socket to 127.0.0.1 on the canonical port (g_port_start).
  * Returns a listening fd on success, -1 on failure.
  * Writes the bound port back to out_port.
  */
@@ -422,16 +422,11 @@ static int bind_listening_socket(int *out_port) {
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    addr.sin_port = htons(g_port_start);
 
-    int port_end = g_port_start + 4;
-    for (int port = g_port_start; port <= port_end; port++) {
-        addr.sin_port = htons(port);
-        if (bind(srv, (struct sockaddr *)&addr, sizeof(addr)) == 0) {
-            if (listen(srv, 1) == 0) {
-                *out_port = port;
-                return srv;
-            }
-        }
+    if (bind(srv, (struct sockaddr *)&addr, sizeof(addr)) == 0 && listen(srv, 1) == 0) {
+        *out_port = g_port_start;
+        return srv;
     }
     close(srv);
     return -1;

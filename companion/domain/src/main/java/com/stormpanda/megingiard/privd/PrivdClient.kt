@@ -26,9 +26,8 @@ import java.util.concurrent.LinkedBlockingQueue
 
 private const val TAG = "PrivdClient"
 
-@Volatile private var portStart = PrivdConstants.PORT_RELEASE_START
+@Volatile private var port = PrivdConstants.PORT_RELEASE_START
 
-@Volatile private var portEnd = PrivdConstants.PORT_RELEASE_START + 4
 private const val CONNECT_TIMEOUT_MS = 500
 private const val PING_TIMEOUT_MS = 1_500L
 
@@ -129,17 +128,12 @@ object PrivdClient {
      */
     fun setPackageName(name: String) {
         val isDebug = PrivdConstants.isDebugPackageName(name)
-        portStart = PrivdConstants.getPortStart(isDebug)
-        portEnd = portStart + 4
-        AppLog.d(TAG, "setPackageName: $name -> port range $portStart..$portEnd")
+        port = PrivdConstants.getPortStart(isDebug)
+        AppLog.d(TAG, "setPackageName: $name -> port $port")
     }
 
-    internal fun setPortRangeForTesting(
-        start: Int,
-        end: Int = start,
-    ) {
-        portStart = start
-        portEnd = end
+    internal fun setPortForTesting(testPort: Int) {
+        port = testPort
     }
 
     fun loadKey(context: Context) {
@@ -205,7 +199,7 @@ object PrivdClient {
         get() = isConnectedForTest ?: (running && (socket?.isConnected == true) && (socket?.isClosed == false))
 
     /**
-     * Attempts to connect to the local TCP port range.
+     * Attempts to connect to the canonical local TCP port.
      * Returns `true` on success, `false` if the daemon is not listening.
      */
     @Synchronized
@@ -220,46 +214,45 @@ object PrivdClient {
             _state.value = PrivdConnectionState.DISCONNECTED
             return false
         }
-        for (port in portStart..portEnd) {
-            try {
-                AppLog.d(TAG, "connect(): trying 127.0.0.1:$port")
-                val s = Socket()
-                s.connect(InetSocketAddress("127.0.0.1", port), CONNECT_TIMEOUT_MS)
+        val targetPort = port
+        try {
+            AppLog.d(TAG, "connect(): trying 127.0.0.1:$targetPort")
+            val s = Socket()
+            s.connect(InetSocketAddress("127.0.0.1", targetPort), CONNECT_TIMEOUT_MS)
 
-                val w = BufferedWriter(OutputStreamWriter(s.outputStream))
-                val r = BufferedReader(InputStreamReader(s.inputStream))
+            val w = BufferedWriter(OutputStreamWriter(s.outputStream))
+            val r = BufferedReader(InputStreamReader(s.inputStream))
 
-                if (performHmacHandshake(s, r, w, key)) {
-                    socket = s
-                    writer = w
-                    reader = r
-                    queue.clear()
-                    running = true
-                    writerThread =
-                        Thread(::writerLoop, WRITER_THREAD_NAME).apply {
-                            isDaemon = true
-                            start()
-                        }
-                    readerThread =
-                        Thread(::readerLoop, READER_THREAD_NAME).apply {
-                            isDaemon = true
-                            start()
-                        }
-                    _state.value = PrivdConnectionState.CONNECTED
-                    AppLog.i(TAG, "connect() succeeded on port $port")
-                    return true
-                } else {
-                    AppLog.w(TAG, "connect(): HMAC handshake failed on port $port")
-                    try {
-                        s.close()
-                    } catch (_: Exception) {
+            if (performHmacHandshake(s, r, w, key)) {
+                socket = s
+                writer = w
+                reader = r
+                queue.clear()
+                running = true
+                writerThread =
+                    Thread(::writerLoop, WRITER_THREAD_NAME).apply {
+                        isDaemon = true
+                        start()
                     }
+                readerThread =
+                    Thread(::readerLoop, READER_THREAD_NAME).apply {
+                        isDaemon = true
+                        start()
+                    }
+                _state.value = PrivdConnectionState.CONNECTED
+                AppLog.i(TAG, "connect() succeeded on port $targetPort")
+                return true
+            } else {
+                AppLog.w(TAG, "connect(): HMAC handshake failed on port $targetPort")
+                try {
+                    s.close()
+                } catch (_: Exception) {
                 }
-            } catch (e: Exception) {
-                AppLog.d(TAG, "connect(): port $port not available — $e")
             }
+        } catch (e: Exception) {
+            AppLog.d(TAG, "connect(): port $targetPort not available — $e")
         }
-        AppLog.w(TAG, "connect() failed: daemon not reachable on any port in range $portStart..$portEnd")
+        AppLog.w(TAG, "connect() failed: daemon not reachable on port $targetPort")
         cleanupLocked()
         _state.value = PrivdConnectionState.DISCONNECTED
         return false
