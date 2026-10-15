@@ -67,9 +67,6 @@ object InjectorLifecycleManager {
                             if (states.startKeyboard) {
                                 KeyInjector.start(appContext)
                             }
-                            if (states.startMouse) {
-                                MouseInjector.start(appContext)
-                            }
                             if (states.startTouch) {
                                 TouchInjector.start(appContext, "InjectorLifecycleManager")
                             }

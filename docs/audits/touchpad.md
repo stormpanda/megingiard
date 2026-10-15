@@ -252,7 +252,7 @@
 - [x] **`[TP-03]`** — Consolidate sensitivity/scroll-speed bounds and remove redundant `isFinite()` guards *(Complexity: Low, Risk: Low)*
 - [x] **`[TP-04]`** — Replace `outerCoords`/`innerCoords`/`touchpadCoords` with `PointerInputScope.size` on the inner Box *(Complexity: Med, Risk: Low)*
 - [x] **`[TP-05]`** — Remove parallel `activeSlots` `BooleanArray` in `TouchpadGestureProcessor` *(Complexity: Low, Risk: Low)*
-- [ ] **`[TP-06]`** — Remove vestigial `start(context)`, `active`, and `isRunning` from `MouseInjector` *(Complexity: Low, Risk: Low)*
+- [x] **`[TP-06]`** — Remove vestigial `start(context)`, `active`, and `isRunning` from `MouseInjector` *(Complexity: Low, Risk: Low)*
 - [ ] **`[TP-07]`** — Remove vestigial multi-client token reference counting (`activeClients`) from `TouchInjector` *(Complexity: Med, Risk: Low)*
 - [ ] **`[TP-08]`** — Remove vestigial `Context`/`Dispatchers.IO` from `InjectorLifecycleManager.watch()` and `KeyboardViewModel.startInjectors` *(Complexity: Med, Risk: Low)*
 - [ ] **`[TP-09]`** — Remove unobserved `TouchpadGestureProcessor.touchPos` `StateFlow` *(Complexity: Low, Risk: Low)*
