@@ -370,37 +370,21 @@ object ConfigManager {
             targetCanonical.startsWith("$baseCanonical${File.separator}")
         }.getOrDefault(false)
 
-    private fun resolveLayoutBackgroundFile(
+    private fun resolveLocalMediaFile(
         context: Context,
-        bgPath: String?,
+        dirName: String,
+        prefix: String,
+        relativePath: String?,
         layoutId: String,
     ): File? {
-        if (bgPath.isNullOrEmpty()) return null
-        val backgroundsDir = File(context.filesDir, "backgrounds")
-        val fileByPath = File(context.filesDir, bgPath)
-        if (!bgPath.contains("..") && isSafeFileInDir(backgroundsDir, fileByPath) && fileByPath.exists() && fileByPath.isFile) {
+        if (relativePath.isNullOrEmpty()) return null
+        val mediaDir = File(context.filesDir, dirName)
+        val fileByPath = File(context.filesDir, relativePath)
+        if (!relativePath.contains("..") && isSafeFileInDir(mediaDir, fileByPath) && fileByPath.exists() && fileByPath.isFile) {
             return fileByPath
         }
-        val fileByLayoutId = File(backgroundsDir, "bg_$layoutId")
-        if (isSafeFileInDir(backgroundsDir, fileByLayoutId) && fileByLayoutId.exists() && fileByLayoutId.isFile) {
-            return fileByLayoutId
-        }
-        return null
-    }
-
-    private fun resolveLayoutMaskFile(
-        context: Context,
-        maskPath: String?,
-        layoutId: String,
-    ): File? {
-        if (maskPath.isNullOrEmpty()) return null
-        val masksDir = File(context.filesDir, "masks")
-        val fileByPath = File(context.filesDir, maskPath)
-        if (!maskPath.contains("..") && isSafeFileInDir(masksDir, fileByPath) && fileByPath.exists() && fileByPath.isFile) {
-            return fileByPath
-        }
-        val fileByLayoutId = File(masksDir, "mask_$layoutId")
-        if (isSafeFileInDir(masksDir, fileByLayoutId) && fileByLayoutId.exists() && fileByLayoutId.isFile) {
+        val fileByLayoutId = File(mediaDir, "${prefix}_$layoutId")
+        if (isSafeFileInDir(mediaDir, fileByLayoutId) && fileByLayoutId.exists() && fileByLayoutId.isFile) {
             return fileByLayoutId
         }
         return null
@@ -413,13 +397,11 @@ object ConfigManager {
         buildMap {
             for (profile in profiles) {
                 for (layout in profile.layouts) {
-                    val bgFile = resolveLayoutBackgroundFile(context, layout.backgroundImagePath, layout.id)
-                    if (bgFile != null) {
-                        put("bg_${layout.id}", bgFile)
+                    resolveLocalMediaFile(context, "backgrounds", "bg", layout.backgroundImagePath, layout.id)?.let {
+                        put("bg_${layout.id}", it)
                     }
-                    val maskFile = resolveLayoutMaskFile(context, layout.maskImagePath, layout.id)
-                    if (maskFile != null) {
-                        put("mask_${layout.id}", maskFile)
+                    resolveLocalMediaFile(context, "masks", "mask", layout.maskImagePath, layout.id)?.let {
+                        put("mask_${layout.id}", it)
                     }
                 }
             }
@@ -686,28 +668,15 @@ object ConfigManager {
             }
         }
 
-        if (!currentPath.isNullOrEmpty()) {
-            val srcFile = File(context.filesDir, currentPath)
-            val isSafePath = !currentPath.contains("..") && isSafeFileInDir(targetDir, srcFile)
-            val srcFileFallback = File(targetDir, "${prefix}_$oldLayoutId")
-            val isSafeFallback = isSafeFileInDir(targetDir, srcFileFallback)
-            val existingSrc =
-                if (isSafePath && srcFile.exists() && srcFile.isFile) {
-                    srcFile
-                } else if (isSafeFallback && srcFileFallback.exists() && srcFileFallback.isFile) {
-                    srcFileFallback
-                } else {
-                    null
-                }
-            if (existingSrc != null) {
-                val destFile = File(targetDir, "${destPrefix}_$newLayoutId")
-                return runCatching {
-                    existingSrc.copyTo(destFile, overwrite = true)
-                    "$dirPrefix/${destPrefix}_$newLayoutId"
-                }.getOrElse { e ->
-                    AppLog.e(TAG, "Failed to copy local $prefix for layout $newLayoutId", e)
-                    null
-                }
+        val existingSrc = resolveLocalMediaFile(context, dirPrefix, prefix, currentPath, oldLayoutId)
+        if (existingSrc != null) {
+            val destFile = File(targetDir, "${destPrefix}_$newLayoutId")
+            return runCatching {
+                existingSrc.copyTo(destFile, overwrite = true)
+                "$dirPrefix/${destPrefix}_$newLayoutId"
+            }.getOrElse { e ->
+                AppLog.e(TAG, "Failed to copy local $prefix for layout $newLayoutId", e)
+                null
             }
         }
         return null

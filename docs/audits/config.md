@@ -239,7 +239,7 @@
 > Select which findings to implement (`All`, `Low-risk only`, or specific IDs):
 
 - [x] **`[CF-01]`** — Unify external/in-app import coordinator state & return `ParsedArchive(export, images)` from `readFromUri` *(Complexity: High, Risk: Low)*
-- [ ] **`[CF-02]`** — Deduplicate local background/mask file resolution into a single `resolveLocalMediaFile` helper *(Complexity: Med, Risk: Low)*
+- [x] **`[CF-02]`** — Deduplicate local background/mask file resolution into a single `resolveLocalMediaFile` helper *(Complexity: Med, Risk: Low)*
 - [ ] **`[CF-03]`** — Share internal export builder in `ConfigManager` and remove unused `SettingsManager.importGroupedSettings` wrapper *(Complexity: Low, Risk: Low)*
 - [ ] **`[CF-04]`** — Normalize ZIP image keys consistently to `"bg_<id>"`/`"mask_<id>"` and remove dead prefix stripping / 6-way key probing *(Complexity: Med, Risk: Low)*
 - [ ] **`[CF-05]`** — Remove unreachable `is Long` branch in `exportGroupedSettings` and unused `longPreferencesKey` import *(Complexity: Low, Risk: Low)*
