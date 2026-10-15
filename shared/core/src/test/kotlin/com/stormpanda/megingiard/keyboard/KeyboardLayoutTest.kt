@@ -188,4 +188,23 @@ class KeyboardLayoutTest {
         assertEquals("[ { <", getSuperscriptDisplayLabel(KeyDef("lparen", "(", 10, popupOptions = listOf("[", "{", "<"))))
         assertEquals("3", getSuperscriptDisplayLabel(KeyDef("e", "e", 18, superscript = "3")))
     }
+
+    @Test
+    fun `all ergonomic popup options resolve via LinuxKeycodes charToKeyMapping`() {
+        val ergoModes = listOf(KeyboardMode.LETTERS, KeyboardMode.SYMBOLS_1, KeyboardMode.NUMERIC)
+        for (mode in ergoModes) {
+            val modeGrids = listOf(qwertzLayout(mode), qwertyLayout(mode), azertyLayout(mode))
+            for (grid in modeGrids) {
+                for (row in grid) {
+                    for (key in row) {
+                        for (opt in getPopupOptions(key)) {
+                            if (key.shiftLabel == opt) continue
+                            val mapping = opt.singleOrNull()?.let(LinuxKeycodes::charToKeyMapping)
+                            assertNotNull("Expected mapping for popup option '$opt' on key '${key.id}'", mapping)
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
