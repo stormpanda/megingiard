@@ -117,7 +117,6 @@ fun FullscreenMouseOverlay() {
     val vibrator = remember { context.getSystemService(Vibrator::class.java) }
 
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsStateWithLifecycle()
-    val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsStateWithLifecycle()
     val touchpadMirroringEnabled by TouchpadSettings.touchpadMirroringEnabled.collectAsStateWithLifecycle()
     val touchpadMirrorDim by TouchpadSettings.touchpadMirrorDim.collectAsStateWithLifecycle()
     val isCapturing by ScreenCaptureManager.isCapturing.collectAsStateWithLifecycle()
@@ -160,30 +159,12 @@ fun FullscreenMouseOverlay() {
         hasActivePointers = false
     }
 
-    LaunchedEffect(isFullscreenMouseActive, touchpadUseMouse, touchpadMirroringEnabled) {
-        if (isFullscreenMouseActive && !touchpadUseMouse && touchpadMirroringEnabled) {
-            if (!isCapturing) {
-                AppStateManager.setWasMirroringStartedByTouchpad(true)
-                AppStateManager.requestMirrorStart()
-            }
-        } else {
-            if (AppStateManager.wasMirroringStartedByTouchpad.value) {
-                AppStateManager.requestMirrorStop()
-                AppStateManager.setWasMirroringStartedByTouchpad(false)
-            }
-        }
-    }
-
     DisposableEffect(Unit) {
         onDispose {
             AppLog.i(TAG, "dispose: resetting gesture processor state")
             processor.onCancel()
             pointersInsideTouchpad.clear()
             hasActivePointers = false
-            if (AppStateManager.wasMirroringStartedByTouchpad.value && !isFullscreenMouseActive) {
-                AppStateManager.requestMirrorStop()
-                AppStateManager.setWasMirroringStartedByTouchpad(false)
-            }
             if (AppStateManager.isTouchpadSettingsOpen.value) {
                 AppStateManager.setTouchpadSettingsOpen(false)
             }

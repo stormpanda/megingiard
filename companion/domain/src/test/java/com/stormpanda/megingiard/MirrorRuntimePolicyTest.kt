@@ -24,6 +24,7 @@ class MirrorRuntimePolicyTest {
         autoSwitchWantsMirror: Boolean = false,
         privdMirrorConnecting: Boolean = false,
         tutorialsActive: Boolean = false,
+        touchpadWantsMirror: Boolean = false,
     ) = MirrorRuntimePolicyState(
         promptInFlight = promptInFlight,
         isOnValidScreen = isOnValidScreen,
@@ -33,6 +34,7 @@ class MirrorRuntimePolicyTest {
         autoSwitchWantsMirror = autoSwitchWantsMirror,
         privdMirrorConnecting = privdMirrorConnecting,
         tutorialsActive = tutorialsActive,
+        touchpadWantsMirror = touchpadWantsMirror,
     )
 
     private fun checkConnecting(
@@ -82,6 +84,44 @@ class MirrorRuntimePolicyTest {
                     isCapturing = false,
                     layoutWantsMirror = false,
                     autoSwitchWantsMirror = true,
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun `starts when touchpad wants mirror even if layout does not want mirror`() {
+        assertEquals(
+            MirrorRuntimeAction.START,
+            decideMirrorRuntimeAction(
+                policyState(
+                    isCapturing = false,
+                    layoutWantsMirror = false,
+                    touchpadWantsMirror = true,
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun `keeps capture running while touchpad wants mirror and stops once touchpad no longer wants mirror`() {
+        assertEquals(
+            MirrorRuntimeAction.NONE,
+            decideMirrorRuntimeAction(
+                policyState(
+                    isCapturing = true,
+                    layoutWantsMirror = false,
+                    touchpadWantsMirror = true,
+                ),
+            ),
+        )
+        assertEquals(
+            MirrorRuntimeAction.STOP,
+            decideMirrorRuntimeAction(
+                policyState(
+                    isCapturing = true,
+                    layoutWantsMirror = false,
+                    touchpadWantsMirror = false,
                 ),
             ),
         )

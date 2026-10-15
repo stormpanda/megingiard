@@ -95,6 +95,7 @@ import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.settings.TouchpadSettings
 import com.stormpanda.megingiard.ui.DialogToastManager
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.LocalFullscreenKeyboardRequester
@@ -484,8 +485,8 @@ class MainActivity : ComponentActivity() {
                     AppStateManager.isOnValidScreen,
                     OnboardingWizardManager.isWizardActive,
                     AppStateManager.isFullscreenMouseActive,
-                    AppStateManager.isFullscreenKeyboardActive,
-                    AppStateManager.wasMirroringStartedByTouchpad,
+                    TouchpadSettings.touchpadUseMouse,
+                    TouchpadSettings.touchpadMirroringEnabled,
                 ) { values ->
                     val promptInFlight = values[0] as Boolean
                     val capturing = values[1] as Boolean
@@ -495,8 +496,8 @@ class MainActivity : ComponentActivity() {
                     val onValidScreen = values[5] as Boolean
                     val wizardActive = values[6] as Boolean
                     val isFullscreenMouseActive = values[7] as Boolean
-                    val isFullscreenKeyboardActive = values[8] as Boolean
-                    val wasMirroringStartedByTouchpad = values[9] as Boolean
+                    val touchpadUseMouse = values[8] as Boolean
+                    val touchpadMirroringEnabled = values[9] as Boolean
 
                     val isAutoSwitchEligible =
                         viewMode == CompanionViewMode.AUTO &&
@@ -512,9 +513,7 @@ class MainActivity : ComponentActivity() {
                         layoutWantsMirror = currentLayout?.mirrorAutoStart == true,
                         autoSwitchWantsMirror = isAutoSwitchEligible && hasAnyAnchoredLayout,
                         tutorialsActive = wizardActive,
-                        isFullscreenMouseActive = isFullscreenMouseActive,
-                        isFullscreenKeyboardActive = isFullscreenKeyboardActive,
-                        wasMirroringStartedByTouchpad = wasMirroringStartedByTouchpad,
+                        touchpadWantsMirror = isFullscreenMouseActive && !touchpadUseMouse && touchpadMirroringEnabled,
                     )
                 }.combine(privdMirrorConnectingFlow) { policy, connecting ->
                     policy.copy(privdMirrorConnecting = connecting)

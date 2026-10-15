@@ -431,13 +431,6 @@ object AppStateManager {
         _hasAdbCredentials.value = has
     }
 
-    private val _wasMirroringStartedByTouchpad = MutableStateFlow(false)
-    val wasMirroringStartedByTouchpad: StateFlow<Boolean> = _wasMirroringStartedByTouchpad.asStateFlow()
-
-    fun setWasMirroringStartedByTouchpad(started: Boolean) {
-        _wasMirroringStartedByTouchpad.value = started
-    }
-
     private val _companionViewMode = MutableStateFlow(CompanionViewMode.AUTO)
     val companionViewMode: StateFlow<CompanionViewMode> = _companionViewMode.asStateFlow()
 
