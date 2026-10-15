@@ -23,8 +23,8 @@ The Virtual Touchpad is instantiated via the **Fullscreen Mouse Overlay** (`Full
 
 ### FR-T2: Visual Feedback & UI Style
 
-- The touchpad overlay is styled similarly to the keyboard layout with a top toolbar showing a mode toggle button, a middle touch surface with informational text, and physical LMB, MMB (middle mouse button, scaled to 1/3 size of LMB/RMB), and RMB click buttons (in Mouse Mode) with no text labels.
-- A bottom toolbar contains a collapse button (down arrow), a play/pause button (visible only in absolute touch mode to toggle top screen mirroring), and a settings button (cog icon).
+- The touchpad overlay renders an interactive touch surface above a single unified bottom toolbar. In Mouse Mode, physical LMB, MMB (middle mouse button, scaled to 1/3 width of LMB/RMB), and RMB click buttons with no text labels are anchored along the bottom of the touch surface, with optional M4 and M5 buttons in the top-left and top-right corners.
+- The unified bottom toolbar contains a left-aligned collapse button (down arrow), a center-aligned segmented mode toggle (`ModeToggleButton` switching between Mouse and Touch modes), and right-aligned action buttons: a play/pause button (visible only in absolute Touch Mode to toggle top-screen mirroring) and a settings button (cog icon).
 
 ### FR-T4: No Special Permissions Required
 
