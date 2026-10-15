@@ -810,24 +810,6 @@ Open Settings to create a layout.</string>
     <string name="help_ambient_dim_desc" formatted="false">Reduces the brightness of the mirrored display with a black veil overlay. 0% means no dimming; 90% is near black.</string>
     <string name="help_ambient_blend_desc">Fades the edges of the mirrored display inward so content softly transitions into the background rather than clipping abruptly. Higher values create a stronger vignette.</string>
 
-    <!-- Mirror editor (Cutout Layout Editor) help -->
-    <string name="help_mirror_editor_title">Mirror Editor — Help</string>
-    <string name="help_mirror_editor_intro">The Mirror Editor lets you add, position, resize, and configure the viewport cutouts that appear on the secondary screen during mirroring. Select a cutout by tapping it on screen, then use the toolbar buttons below to act on it.</string>
-    <string name="help_mirror_editor_section_selected">Selected cutout</string>
-    <string name="help_mirror_editor_aspect_desc">Cycles through three aspect ratio modes for the selected cutout. Free — no constraint, resize independently. Top — lock aspect ratio to match the crop on the Top screen. Bottom — lock aspect ratio to match the cutout on the Bottom screen.</string>
-    <string name="help_mirror_editor_shape_label">Shape</string>
-    <string name="help_mirror_editor_shape_desc">Toggles the selected cutout between rectangle and circle shapes. Useful for game mini-maps or round gauges that look better clipped to a circle.</string>
-    <string name="help_mirror_editor_rotation_label">Rotation</string>
-    <string name="help_mirror_editor_rotation_desc">Rotates the selected cutout in 90° increments (0°, 90°, 180°, 270°). When rotating between landscape and portrait, the bounding box automatically adjusts while preventing collisions.</string>
-    <string name="help_mirror_editor_flip_label">Flip</string>
-    <string name="help_mirror_editor_flip_desc">Cycles mirror flipping modes for the selected cutout: None, Horizontal, Vertical, or Both.</string>
-    <string name="help_mirror_editor_adjust_label">Adjust Coordinates</string>
-    <string name="help_mirror_editor_adjust_desc" formatted="false">Enters fine-tuning mode. Use D-Pad to move the cutout pixel-by-pixel. Hold R2 while pressing D-Pad to resize the cutout (expanding or shrinking symmetrically around its center, down to 1% of the screen). Below 5%, touch resize handles are hidden to keep the display clear.</string>
-    <string name="help_mirror_editor_hide_bg_desc">Temporarily hides the layout background image on the secondary display while editing to make it easier to see and adjust cutout boundaries. Does not change your saved layout settings.</string>
-    <string name="help_mirror_editor_section_finish">Finish</string>
-    <string name="help_mirror_editor_done_desc">Saves all changes made in this session and closes the editor. The updated cutout layout becomes immediately active.</string>
-    <string name="help_mirror_editor_cancel_desc">Discards all changes made since the editor was opened and reverts the layout to its previous state. No modifications are saved.</string>
-
     <!-- Global Settings card descriptions -->
     <string name="help_settings_overlay_position_desc">Recommended if your hand grip naturally rests near the bottom of the device, making the Quick Menu easier to swipe open without shifting your thumbs.</string>
     <string name="help_settings_language_desc">Changes the language of all app menus, overlays, and help tutorials. Choose English, German, or Traditional Chinese depending on your preference.</string>

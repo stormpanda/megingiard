@@ -13,16 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.RotateRight
-import androidx.compose.material.icons.rounded.AspectRatio
-import androidx.compose.material.icons.rounded.CenterFocusStrong
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Crop
-import androidx.compose.material.icons.rounded.CropSquare
-import androidx.compose.material.icons.rounded.Flip
-import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,23 +32,17 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
-import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.math.ALIGNMENT_VISUAL_TOLERANCE_PX
 import com.stormpanda.megingiard.math.calculateCutoutAlignmentSnap
 import com.stormpanda.megingiard.math.findAlignedCutoutCenterGuides
 import com.stormpanda.megingiard.settings.MirrorSettings
-import com.stormpanda.megingiard.ui.HelpEntry
-import com.stormpanda.megingiard.ui.HelpIntro
-import com.stormpanda.megingiard.ui.HelpModal
-import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.abs
 import kotlin.math.min
@@ -623,69 +607,6 @@ private data class EdgeHandleDef(
     val handleHeight: Dp,
     val handle: ResizeHandle,
 )
-
-@Composable
-internal fun CutoutLayoutEditorHelpModal(
-    visible: Boolean,
-    onDismiss: () -> Unit,
-) {
-    HelpModal(
-        visible = visible,
-        title = stringResource(R.string.help_mirror_editor_title),
-        onDismiss = onDismiss,
-    ) {
-        HelpIntro(stringResource(R.string.help_mirror_editor_intro))
-
-        HelpSection(stringResource(R.string.help_mirror_editor_section_selected))
-        HelpEntry(
-            icon = Icons.Rounded.AspectRatio,
-            label = stringResource(R.string.mirror_editor_aspect_ratio_mode),
-            description = stringResource(R.string.help_mirror_editor_aspect_desc),
-        )
-        HelpEntry(
-            icon = Icons.Rounded.Crop,
-            label = stringResource(R.string.help_mirror_editor_adjust_label),
-            description = stringResource(R.string.help_mirror_editor_adjust_desc),
-        )
-        HelpEntry(
-            icon = Icons.Rounded.Flip,
-            label = stringResource(R.string.help_mirror_editor_flip_label),
-            description = stringResource(R.string.help_mirror_editor_flip_desc),
-        )
-        HelpEntry(
-            icon = Icons.AutoMirrored.Rounded.RotateRight,
-            label = stringResource(R.string.help_mirror_editor_rotation_label),
-            description = stringResource(R.string.help_mirror_editor_rotation_desc),
-        )
-        HelpEntry(
-            icon = Icons.Rounded.CropSquare,
-            label = stringResource(R.string.help_mirror_editor_shape_label),
-            description = stringResource(R.string.help_mirror_editor_shape_desc),
-        )
-        HelpEntry(
-            icon = Icons.Rounded.VisibilityOff,
-            label = stringResource(R.string.mirror_editor_hide_background),
-            description = stringResource(R.string.help_mirror_editor_hide_bg_desc),
-        )
-        HelpEntry(
-            icon = Icons.Rounded.CenterFocusStrong,
-            label = stringResource(R.string.mirror_editor_snap_alignment),
-            description = stringResource(R.string.mirror_editor_snap_alignment_desc),
-        )
-
-        HelpSection(stringResource(R.string.help_mirror_editor_section_finish))
-        HelpEntry(
-            icon = Icons.Rounded.Check,
-            label = stringResource(R.string.mirror_editor_toolbar_done),
-            description = stringResource(R.string.help_mirror_editor_done_desc),
-        )
-        HelpEntry(
-            icon = Icons.Rounded.Close,
-            label = stringResource(R.string.mirror_editor_toolbar_cancel),
-            description = stringResource(R.string.help_mirror_editor_cancel_desc),
-        )
-    }
-}
 
 @Composable
 private fun ResizeHandleView(

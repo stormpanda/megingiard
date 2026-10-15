@@ -809,24 +809,6 @@ Open Settings to create a layout.</string>
     <string name="help_ambient_dim_desc" formatted="false">透過覆蓋一層黑色遮罩來降低投影畫面的亮度。0% 表示不調暗；90% 幾乎為全黑。</string>
     <string name="help_ambient_blend_desc">使投影畫面的邊緣向內淡出，讓投影內容與背景平滑過渡而非生硬切斷。較高的值會產生更強的暈影效果。</string>
 
-    <!-- Mirror editor (Cutout Layout Editor) help -->
-    <string name="help_mirror_editor_title">投影編輯器 — 說明</string>
-    <string name="help_mirror_editor_intro">投影編輯器讓您在投影過程中，於下螢幕上新增、定位、調整大小與設定視窗區塊。輕觸螢幕上的區塊即可選取，然後使用下方的工具列按鈕進行操作。</string>
-    <string name="help_mirror_editor_section_selected">所選區塊</string>
-    <string name="help_mirror_editor_aspect_desc">為所選區塊循環切換三種長寬比模式。「自由」— 無限制，可獨立調整大小。「上螢幕」— 鎖定長寬比以匹配上螢幕的裁切。「下螢幕」— 鎖定長寬比以匹配下螢幕的區塊。</string>
-    <string name="help_mirror_editor_shape_label">形狀</string>
-    <string name="help_mirror_editor_shape_desc">在矩形與圓形之間切換所選區塊的形狀。適用於遊戲小地圖或圓形儀表，圓形裁切外觀更佳。</string>
-    <string name="help_mirror_editor_rotation_label">旋轉</string>
-    <string name="help_mirror_editor_rotation_desc">以 90° 為單位旋轉所選區塊（0°、90°、180°、270°）。在橫向與直向之間旋轉時，邊界框會自動調整並避免與其他區塊重疊。</string>
-    <string name="help_mirror_editor_flip_label">翻轉</string>
-    <string name="help_mirror_editor_flip_desc">循環切換所選區塊的鏡像翻轉模式：無、水平、垂直或兩者。</string>
-    <string name="help_mirror_editor_adjust_label">調整座標</string>
-    <string name="help_mirror_editor_adjust_desc" formatted="false">進入微調模式。使用方向鍵逐像素移動區塊。按住 R2 同時按方向鍵可調整區塊大小（繞中心點對稱放大或縮小，最小可縮至螢幕的 1%）。低於 5% 時將隱藏觸控控制點以保持畫面清晰。</string>
-    <string name="help_mirror_editor_hide_bg_desc">在編輯時暫時隱藏下螢幕上的配置背景圖片，以便更容易看清並調整區塊邊界。這不會變更您已儲存的配置設定。</string>
-    <string name="help_mirror_editor_section_finish">完成</string>
-    <string name="help_mirror_editor_done_desc">儲存本次的所有變更並關閉編輯器。更新後的區塊配置會立即生效。</string>
-    <string name="help_mirror_editor_cancel_desc">捨棄開啟編輯器後的所有變更，並將配置還原為先前的狀態。不會儲存任何修改。</string>
-
     <!-- Global Settings card descriptions -->
     <string name="help_settings_overlay_position_desc">如果您的手握姿勢自然落在裝置底部附近，建議開啟此項，使快速選單更容易滑開而無需移動大拇指。</string>
     <string name="help_settings_language_desc">更改所有應用程式選單、覆蓋層與說明教學的語言。目前提供英文、德文與繁體中文。</string>
