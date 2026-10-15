@@ -117,7 +117,6 @@ fun PrivdReconnectPromptDialog(onDone: () -> Unit) {
     val startAutoSetup = {
         AppLog.d(TAG, "Starting multi-stage auto-setup from reconnect prompt")
         MegingiardAccessibilityService.startMultiStageAutoSetup(context)
-        setupStatus.isAutoSetupActive = true
     }
 
     BackHandler(enabled = true) {

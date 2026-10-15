@@ -60,6 +60,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -82,6 +83,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
@@ -280,11 +284,26 @@ internal class SystemSetupStatus(
     var isWirelessActive by mutableStateOf(initialWirelessActive)
     var isDevicePaired by mutableStateOf(initialDevicePaired)
     var isAutoSetupActive by mutableStateOf(initialAutoSetupActive)
+
+    fun refresh(context: Context) {
+        val active = MegingiardAccessibilityService.isEnabled(context)
+        if (active != isAccessibilityActive) {
+            isAccessibilityActive = active
+            AppLog.i(TAG, "Accessibility service status change detected: active=$active")
+        }
+        isWifiActive = MegingiardAccessibilityService.isWifiActive(context)
+        isDevModeActive = MegingiardAccessibilityService.isDevModeActive(context)
+        isUsbActive = MegingiardAccessibilityService.isUsbDebuggingActive(context)
+        isWirelessActive = MegingiardAccessibilityService.isWirelessDebuggingActive(context)
+        isDevicePaired = PrivdBootstrapper.hasCredentials(context)
+    }
 }
 
 @Composable
 internal fun rememberSystemSetupStatus(currentStepId: OnboardingStepId): SystemSetupStatus {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val isAutoSetupActive by MegingiardAccessibilityService.isAutoSetupActive.collectAsStateWithLifecycle()
     val status =
         remember(context) {
             SystemSetupStatus(
@@ -294,40 +313,30 @@ internal fun rememberSystemSetupStatus(currentStepId: OnboardingStepId): SystemS
                 initialUsbActive = MegingiardAccessibilityService.isUsbDebuggingActive(context),
                 initialWirelessActive = MegingiardAccessibilityService.isWirelessDebuggingActive(context),
                 initialDevicePaired = PrivdBootstrapper.hasCredentials(context),
-                initialAutoSetupActive = MegingiardAccessibilityService.isAutoSetupActive.value,
+                initialAutoSetupActive = isAutoSetupActive,
             )
         }
+    status.isAutoSetupActive = isAutoSetupActive
+
+    DisposableEffect(context, lifecycleOwner) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    status.refresh(context)
+                }
+            }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     LaunchedEffect(currentStepId) {
-        when (currentStepId) {
-            OnboardingStepId.ACCESSIBILITY -> {
-                AppLog.d(TAG, "Starting 1s continuous polling loop for accessibility status")
-                while (isActive) {
-                    val active = MegingiardAccessibilityService.isEnabled(context)
-                    if (active != status.isAccessibilityActive) {
-                        status.isAccessibilityActive = active
-                        AppLog.i(TAG, "Accessibility service status change detected: active=$active")
-                    }
-                    delay(OW_STATUS_POLL_DELAY_MS)
-                }
-            }
-
-            OnboardingStepId.PRIVILEGED -> {
-                AppLog.d(TAG, "Starting 1s continuous polling loop for Privileged Mode status & Wi-Fi")
-                while (isActive) {
-                    status.isAccessibilityActive = MegingiardAccessibilityService.isEnabled(context)
-                    status.isWifiActive = MegingiardAccessibilityService.isWifiActive(context)
-                    status.isDevModeActive = MegingiardAccessibilityService.isDevModeActive(context)
-                    status.isUsbActive = MegingiardAccessibilityService.isUsbDebuggingActive(context)
-                    status.isWirelessActive = MegingiardAccessibilityService.isWirelessDebuggingActive(context)
-                    status.isDevicePaired = PrivdBootstrapper.hasCredentials(context)
-                    status.isAutoSetupActive = MegingiardAccessibilityService.isAutoSetupActive.value
-                    delay(OW_STATUS_POLL_DELAY_MS)
-                }
-            }
-
-            else -> {
-                Unit
+        if (currentStepId == OnboardingStepId.ACCESSIBILITY || currentStepId == OnboardingStepId.PRIVILEGED) {
+            AppLog.d(TAG, "Starting 1s continuous polling loop for prerequisite status ($currentStepId)")
+            while (isActive) {
+                status.refresh(context)
+                delay(OW_STATUS_POLL_DELAY_MS)
             }
         }
     }
@@ -366,7 +375,6 @@ fun OnboardingWizardDialog(
 
     val startAutoSetup = {
         MegingiardAccessibilityService.startMultiStageAutoSetup(context)
-        setupStatus.isAutoSetupActive = true
     }
 
     BackHandler(enabled = true) {

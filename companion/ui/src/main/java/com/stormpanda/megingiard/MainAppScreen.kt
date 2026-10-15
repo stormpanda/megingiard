@@ -9,7 +9,6 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.view.Display
-import android.view.accessibility.AccessibilityManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -518,10 +517,6 @@ fun MainAppScreen() {
             val uri = Settings.Secure.getUriFor(Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
             context.contentResolver.registerContentObserver(uri, false, contentObserver)
 
-            val am = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
-            val listener = AccessibilityManager.AccessibilityStateChangeListener { syncAccessibilityState(context) }
-            am?.addAccessibilityStateChangeListener(listener)
-
             val observer =
                 LifecycleEventObserver { _, event ->
                     if (event == Lifecycle.Event.ON_RESUME) {
@@ -532,7 +527,6 @@ fun MainAppScreen() {
 
             onDispose {
                 context.contentResolver.unregisterContentObserver(contentObserver)
-                am?.removeAccessibilityStateChangeListener(listener)
                 lifecycleOwner.lifecycle.removeObserver(observer)
             }
         }
