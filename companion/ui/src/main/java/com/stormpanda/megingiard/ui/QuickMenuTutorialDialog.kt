@@ -176,8 +176,6 @@ fun QuickMenuStepContent(overlayAtBottom: Boolean) {
 @Composable
 fun QuickMenuGestureTrialOverlay(
     overlayAtBottom: Boolean,
-    onDismiss: () -> Unit = {},
-    showScrim: Boolean = true,
     enabled: Boolean = true,
     content: @Composable (() -> Unit)? = null,
 ) {
@@ -276,13 +274,8 @@ fun QuickMenuGestureTrialOverlay(
         modifier =
             Modifier
                 .fillMaxSize()
-                .then(
-                    if (showScrim) {
-                        Modifier.background(Color.Black.copy(alpha = QM_SCRIM_ALPHA))
-                    } else {
-                        Modifier
-                    },
-                ).pointerInput(overlayAtBottom) {
+                .background(Color.Black.copy(alpha = QM_SCRIM_ALPHA))
+                .pointerInput(overlayAtBottom) {
                     val swipeThresholdPx = QuickMenuBarLayout.SWIPE_THRESHOLD.toPx()
                     val edgeZonePx = QuickMenuBarLayout.SWIPE_EDGE_ZONE.toPx()
                     val kbZoneWidthPx = QuickMenuBarLayout.TAB_ZONE_WIDTH.toPx()
@@ -335,10 +328,7 @@ fun QuickMenuGestureTrialOverlay(
                 }.clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
-                    onClick = {
-                        AppLog.d(TAG, "Quick Menu tutorial gesture overlay dismissed via background click")
-                        onDismiss()
-                    },
+                    onClick = {},
                 ),
         contentAlignment = Alignment.Center,
     ) {
@@ -469,8 +459,6 @@ fun QuickMenuTutorialDialog(
 
     QuickMenuGestureTrialOverlay(
         overlayAtBottom = overlayAtBottom,
-        onDismiss = onDismiss,
-        showScrim = true,
     ) {
         Column(
             modifier =

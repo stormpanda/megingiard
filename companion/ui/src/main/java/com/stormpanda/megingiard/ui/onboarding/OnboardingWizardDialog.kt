@@ -478,8 +478,6 @@ fun OnboardingWizardDialog(
 
     QuickMenuGestureTrialOverlay(
         overlayAtBottom = overlayAtBottom,
-        onDismiss = {},
-        showScrim = true,
         enabled = isQuickMenuStep,
         content = wizardCardContent,
     )

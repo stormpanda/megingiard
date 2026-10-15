@@ -214,7 +214,7 @@ None identified — `HelpModal` and onboarding composables render only on explic
 
 > Select which findings to implement (`All`, `Low-risk only`, or specific IDs):
 
-- [ ] **`[HP-01]`** — Remove unused `onDismiss`/`showScrim` params and misleading scrim click log in `QuickMenuGestureTrialOverlay` *(Complexity: Low, Risk: Low)*
+- [x] **`[HP-01]`** — Remove unused `onDismiss`/`showScrim` params and misleading scrim click log in `QuickMenuGestureTrialOverlay` *(Complexity: Low, Risk: Low)*
 - [ ] **`[HP-02]`** — Remove unread `isFulfilled` property from `OnboardingStepState` *(Complexity: Low, Risk: Low)*
 - [ ] **`[HP-03]`** — Remove unreachable state reset in `startWizard()` and duplicate `finishWizard()` call on completion *(Complexity: Low, Risk: Low)*
 - [ ] **`[HP-04]`** — Deduplicate damped offset math and remove impossible `< visualThreshold` branch in `QuickMenuGestureTrialOverlay` *(Complexity: Low, Risk: Low)*
