@@ -41,14 +41,14 @@ The `megingiard_privd` daemon uses a per-install HMAC key generated on the devic
 
 `companion/ui/src/main/cpp/megingiard_privd.c`
 
-The privileged daemon runs under shell UID (`com.android.shell`, UID 2000) or root, listening on a local TCP loopback socket (127.0.0.1:51234–51238 for release, 51244–51248 for debug). It provides:
-1. Multi-touch injection via direct raw `input_event` writes to `/dev/input/event6` (AYN Thor touchscreen).
-2. Mouse event injection via `/dev/uinput`.
-3. Keyboard key injection via `/dev/uinput`.
-4. Gamepad input injection and physical gamepad observation via `/dev/input/event*`.
-5. Screenshot frame capture via /system/bin/screencap.
-6. System-level package / activity foreground detection.
-7. Low-latency lifecycle control and privileged DEX spawning.
+The privileged daemon runs under shell UID (`com.android.shell`, UID 2000) or root, listening on a local TCP loopback socket (`127.0.0.1:51234` for release, `127.0.0.1:51244` for debug; current protocol `PRIVD_VERSION = 17`). It provides:
+1. Multi-touch injection (`D`/`M`/`U`) and touchscreen event observation (`SUB TOUCH`) via `/dev/input/event6` (AYN Thor touchscreen).
+2. Mouse event injection (`MM`/`MB`/`MW`) via `/dev/uinput`.
+3. Keyboard key injection (`KB_START`/`KB_STOP`/`KD`/`KU`) via `/dev/uinput`.
+4. Gamepad input injection (`GD`/`GU`/`HD`/`JS`) and physical gamepad observation (`SUB GAMEPAD`) via `/dev/input/event*`.
+5. Display screenshot capture (`SCREENSHOT [<display_id>] <path>`) via `/system/bin/screencap`.
+6. Privileged text file reading (`READ_FILE <path>`) and process listing (`LIST_PROCESSES`) from `/proc` for active game detection.
+7. Low-latency lifecycle control (`PING`/`VERSION`/`QUIT`) and privileged DEX spawning (`MIRROR START_DIRECT`/`MIRROR STOP`).
 
 ### Prerequisites
 
@@ -92,7 +92,7 @@ mirrorserver/src/main/java/com/stormpanda/megingiard/mirrorserver/
 
 ### Runtime deployment
 
-`PrivdBootstrapper` pushes the DEX to `/data/local/tmp/megingiard_mirror.dex` during ADB-Wireless bootstrap (mode `0100644`). For direct-Surface privileged mirroring, the daemon spawns:
+`PServerBootstrapper` (Tier-1 root bridge) and `PrivdBootstrapper` (Tier-2 ADB-Wireless) deploy the DEX to `/data/local/tmp/megingiard_mirror.dex` (or `/data/local/tmp/megingiard_mirror_debug.dex` for debug builds, mode `0100644`). For direct-Surface privileged mirroring, the daemon spawns:
 
 ```bash
 CLASSPATH=/data/local/tmp/megingiard_mirror.dex \

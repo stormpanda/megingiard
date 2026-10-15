@@ -2,7 +2,7 @@
 
 > **Feature Spec:** [`docs/features/privileged-mode/FEATURE.md`](../features/privileged-mode/FEATURE.md), [`technical-security-protocol.md`](../features/privileged-mode/technical-security-protocol.md), [`docs/BUILD_NATIVE.md`](../BUILD_NATIVE.md), [`SECURITY_CONCEPT.md`](../../SECURITY_CONCEPT.md)
 > **Modules & Packages:** `:companion:ui` (`.../privd/`, `.../ui/`, `.../services/`, `src/main/cpp/`), `:companion:domain` (`.../privd/`), `:shared:core` (`.../privd/`)
-> **Audit Status:** Draft — Awaiting Operator Selection
+> **Audit Status:** Completed
 
 ---
 
@@ -249,4 +249,4 @@
 - [x] **`[PM-15]`** — Deduplicate ~300 LOC between `PrivdReconnectPromptDialog.kt` and `OnboardingWizardDialog.kt` and delete the 5 unused parameters on `PrivdReconnectPromptDialog` *(Complexity: High, Risk: Low)*
 - [x] **`[PM-16]`** — Derive busy/error UI states in `PrivdSetupWizard.kt` directly from `BootstrapStage` instead of local `mutableStateOf` flags *(Complexity: Med, Risk: Low)*
 - [x] **`[PM-17]`** — Synchronize `FEATURE.md` (Bootstrap Wizard, Settings Card, Reconnect Dialog, root/Accessibility flows) and update stale `@megingiard.privd` / `LocalSocket` comments *(Complexity: High, Risk: Low)*
-- [ ] **`[PM-18]`** — Synchronize `technical-security-protocol.md`, `BUILD_NATIVE.md`, and `SECURITY_CONCEPT.md` with TCP transport, `SCREENSHOT`/`READ_FILE`/`PROCESSES` RPCs, `PRIVD_VERSION = 17`, and current Source Files *(Complexity: High, Risk: Low)*
+- [x] **`[PM-18]`** — Synchronize `technical-security-protocol.md`, `BUILD_NATIVE.md`, and `SECURITY_CONCEPT.md` with TCP transport, `SCREENSHOT`/`READ_FILE`/`PROCESSES` RPCs, `PRIVD_VERSION = 17`, and current Source Files *(Complexity: High, Risk: Low)*
