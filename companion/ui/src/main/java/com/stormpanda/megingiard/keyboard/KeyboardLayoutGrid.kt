@@ -42,7 +42,6 @@ internal fun KeyboardLayoutGrid(
 ) {
     val isQuickMenuOpenState = rememberUpdatedState(isQuickMenuOpen)
     val gridHeight = if (activeState.mode == KeyboardMode.FULL) 220.dp else 168.dp
-    val activePointers = remember { HashSet<Long>() }
     val boxCoords = remember { mutableStateOf<LayoutCoordinates?>(null) }
 
     Box(
@@ -82,8 +81,7 @@ internal fun KeyboardLayoutGrid(
 
                                     when (event.type) {
                                         PointerEventType.Press -> {
-                                            if (!activePointers.contains(pid)) {
-                                                activePointers.add(pid)
+                                            if (!gestureProcessor.isPointerActive(pid)) {
                                                 if (keyId != null && keyId.startsWith("mode_switch")) {
                                                     val targetMode =
                                                         when (keyId) {
@@ -110,7 +108,7 @@ internal fun KeyboardLayoutGrid(
                                         }
 
                                         PointerEventType.Move -> {
-                                            if (activePointers.contains(pid)) {
+                                            if (gestureProcessor.isPointerActive(pid)) {
                                                 val delta = change.positionChange()
                                                 if (keyId != null && keyId.startsWith("mode_switch")) {
                                                     change.consume()
@@ -131,8 +129,7 @@ internal fun KeyboardLayoutGrid(
                                         }
 
                                         PointerEventType.Release -> {
-                                            if (!change.pressed && activePointers.contains(pid)) {
-                                                activePointers.remove(pid)
+                                            if (!change.pressed && gestureProcessor.isPointerActive(pid)) {
                                                 gestureProcessor.onRelease(
                                                     pointerId = pid,
                                                     isFullLayout = activeState.mode == KeyboardMode.FULL,
@@ -145,7 +142,6 @@ internal fun KeyboardLayoutGrid(
                             }
                         }
                     } finally {
-                        activePointers.clear()
                         gestureProcessor.onCancel(isFullLayout = activeState.mode == KeyboardMode.FULL)
                     }
                 },

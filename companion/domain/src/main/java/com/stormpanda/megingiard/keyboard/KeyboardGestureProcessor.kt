@@ -443,6 +443,8 @@ class KeyboardGestureProcessor(
 
     fun getKeyIdForPointer(pointerId: Long): String? = pointerKeyMap[pointerId]?.id
 
+    fun isPointerActive(pointerId: Long): Boolean = pressPositions.containsKey(pointerId)
+
     fun dispose() {
         AppLog.d(TAG, "dispose")
         repeatJob?.cancel()

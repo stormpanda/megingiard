@@ -187,7 +187,6 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
 
                 var touchpadCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
                 val pointersInsideTouchpad = remember { HashSet<Long>() }
-                var hasActivePointers by remember { mutableStateOf(false) }
 
                 val insetBezelBrush = rememberBezelBrush()
 
@@ -272,12 +271,10 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                                                     }
                                                     change.consume()
                                                 }
-                                                hasActivePointers = pointersInsideTouchpad.isNotEmpty()
                                             }
                                         }
                                     } finally {
                                         pointersInsideTouchpad.clear()
-                                        hasActivePointers = false
                                         processor.onCancel()
                                     }
                                 },
