@@ -83,15 +83,7 @@ class KeyboardGestureProcessor(
         right: Float,
         bottom: Float,
     ) {
-        val existing = keyBounds[id]
-        if (existing == null ||
-            existing.left != left ||
-            existing.top != top ||
-            existing.right != right ||
-            existing.bottom != bottom
-        ) {
-            keyBounds[id] = KeyBounds(left, top, right, bottom)
-        }
+        keyBounds[id] = KeyBounds(left, top, right, bottom)
     }
 
     fun findKeyAt(
