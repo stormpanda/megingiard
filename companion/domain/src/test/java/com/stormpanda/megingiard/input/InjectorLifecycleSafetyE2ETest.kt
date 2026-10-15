@@ -181,7 +181,6 @@ class InjectorLifecycleSafetyE2ETest {
             val processor =
                 KeyboardGestureProcessor(
                     scope = this,
-                    kbRepeatEnabled = { true },
                     isShiftActive = { false },
                     isCapsActive = { false },
                     isAltGrActive = { false },

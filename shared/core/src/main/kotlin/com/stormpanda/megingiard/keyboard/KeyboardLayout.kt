@@ -121,8 +121,6 @@ enum class KeyboardMode { LETTERS, SYMBOLS_1, SYMBOLS_2, NUMERIC, FULL }
 @Serializable
 enum class KbLayout { QWERTZ, QWERTY, AZERTY }
 
-enum class KbMouseBtnPos { LEFT, RIGHT, BOTH }
-
 data class KeyboardLayoutState(
     val mode: KeyboardMode,
     val grid: List<List<KeyDef>>,

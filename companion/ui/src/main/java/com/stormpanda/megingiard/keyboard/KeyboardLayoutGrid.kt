@@ -36,7 +36,6 @@ internal fun KeyboardLayoutGrid(
     isCapsActive: Boolean,
     isAltGrActive: Boolean,
     isQuickMenuOpen: Boolean,
-    kbRepeatEnabled: Boolean,
     onCloseQuickMenu: () -> Unit,
     onModeChange: (KeyboardMode) -> Unit,
     onCycleKbLayout: () -> Unit,

@@ -2,9 +2,7 @@ package com.stormpanda.megingiard.settings
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.keyboard.KbLayout
-import com.stormpanda.megingiard.keyboard.KbMouseBtnPos
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,9 +11,8 @@ import kotlinx.coroutines.flow.asStateFlow
 private const val TAG = "KeyboardSettings"
 
 /**
- * Keyboard-feature persisted settings. Owns the layout/trackpoint/repeat/fullscreen/
- * mouse-button-position state and persists it to the shared DataStore owned by
- * [SettingsManager].
+ * Keyboard-feature persisted settings. Owns the layout, touchpad, and auto-open
+ * state and persists it to the shared DataStore owned by [SettingsManager].
  *
  * Lifecycle:
  * - [SettingsManager.init] calls [init] with the shared `dataStore` + `scope`.
@@ -33,19 +30,6 @@ object KeyboardSettings {
     private val _kbLayout = MutableStateFlow(KbLayout.QWERTZ)
     val kbLayout: StateFlow<KbLayout> = _kbLayout.asStateFlow()
 
-    private val _kbTrackpointEnabled = MutableStateFlow(true)
-    val kbTrackpointEnabled: StateFlow<Boolean> = _kbTrackpointEnabled.asStateFlow()
-
-    private val _kbRepeatEnabled = MutableStateFlow(true)
-    val kbRepeatEnabled: StateFlow<Boolean> = _kbRepeatEnabled.asStateFlow()
-
-    // false = bottom padding for IME (default); true = fullscreen, no padding
-    private val _kbFullscreen = MutableStateFlow(false)
-    val kbFullscreen: StateFlow<Boolean> = _kbFullscreen.asStateFlow()
-
-    private val _kbMouseBtnPos = MutableStateFlow(KbMouseBtnPos.LEFT)
-    val kbMouseBtnPos: StateFlow<KbMouseBtnPos> = _kbMouseBtnPos.asStateFlow()
-
     private val _kbTouchpadEnabled = MutableStateFlow(true)
     val kbTouchpadEnabled: StateFlow<Boolean> = _kbTouchpadEnabled.asStateFlow()
 
@@ -62,10 +46,6 @@ object KeyboardSettings {
 
     fun resetForTesting() {
         _kbLayout.value = KbLayout.QWERTZ
-        _kbTrackpointEnabled.value = true
-        _kbRepeatEnabled.value = true
-        _kbFullscreen.value = false
-        _kbMouseBtnPos.value = KbMouseBtnPos.LEFT
         _kbTouchpadEnabled.value = true
         _kbAutoOpenOnFocus.value = true
     }
@@ -73,12 +53,6 @@ object KeyboardSettings {
     internal fun loadFrom(prefs: Preferences) {
         prefs[KEY_KB_LAYOUT]?.let { name ->
             KbLayout.entries.firstOrNull { it.name == name }?.let { _kbLayout.value = it }
-        }
-        prefs[KEY_KB_TRACKPOINT_ENABLED]?.let { _kbTrackpointEnabled.value = it }
-        prefs[KEY_KB_REPEAT_ENABLED]?.let { _kbRepeatEnabled.value = it }
-        prefs[KEY_KB_FULLSCREEN]?.let { _kbFullscreen.value = it }
-        prefs[KEY_KB_MOUSE_BTN_POS]?.let { name ->
-            KbMouseBtnPos.entries.firstOrNull { it.name == name }?.let { _kbMouseBtnPos.value = it }
         }
         prefs[KEY_KB_TOUCHPAD_ENABLED]?.let { _kbTouchpadEnabled.value = it }
         prefs[KEY_KB_AUTO_OPEN_ON_FOCUS]?.let { _kbAutoOpenOnFocus.value = it }
@@ -92,30 +66,6 @@ object KeyboardSettings {
 
     fun setKbLayout(value: KbLayout) {
         updateEnumSettingPref(KEY_KB_LAYOUT, value, _kbLayout, optionalScope, optionalDataStore, TAG, "setKbLayout")
-    }
-
-    fun setKbTrackpointEnabled(value: Boolean) {
-        updateSettingPref(
-            KEY_KB_TRACKPOINT_ENABLED,
-            value,
-            _kbTrackpointEnabled,
-            optionalScope,
-            optionalDataStore,
-            TAG,
-            "setKbTrackpointEnabled",
-        )
-    }
-
-    fun setKbRepeatEnabled(value: Boolean) {
-        updateSettingPref(KEY_KB_REPEAT_ENABLED, value, _kbRepeatEnabled, optionalScope, optionalDataStore, TAG, "setKbRepeatEnabled")
-    }
-
-    fun setKbFullscreen(value: Boolean) {
-        updateSettingPref(KEY_KB_FULLSCREEN, value, _kbFullscreen, optionalScope, optionalDataStore, TAG, "setKbFullscreen")
-    }
-
-    fun setKbMouseBtnPos(value: KbMouseBtnPos) {
-        updateEnumSettingPref(KEY_KB_MOUSE_BTN_POS, value, _kbMouseBtnPos, optionalScope, optionalDataStore, TAG, "setKbMouseBtnPos")
     }
 
     fun setKbTouchpadEnabled(value: Boolean) {

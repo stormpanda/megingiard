@@ -44,7 +44,6 @@ class KeyboardGestureProcessorTest {
         onInjectPopupSelection: (KeyDef, String) -> Unit = { _, _ -> },
     ) = KeyboardGestureProcessor(
         scope = this,
-        kbRepeatEnabled = { true },
         isShiftActive = { false },
         isCapsActive = { false },
         isAltGrActive = { false },
@@ -64,7 +63,7 @@ class KeyboardGestureProcessorTest {
     fun testOnKeyDownWithNullKeyDefReturnsFalse() =
         runTest(testDispatcher) {
             val processor = createProcessor()
-            val handled = processor.onKeyDown(pointerId = 1L, keyDef = null, repeatEnabled = true)
+            val handled = processor.onKeyDown(pointerId = 1L, keyDef = null)
             assertFalse(handled)
         }
 
@@ -75,7 +74,7 @@ class KeyboardGestureProcessorTest {
             val processor = createProcessor(injector = testInjector)
             val testKeyA = KeyDef(id = "a", label = "a", linuxKeycode = 30, type = KeyType.NORMAL)
 
-            val handledDown = processor.onKeyDown(pointerId = 1L, keyDef = testKeyA, repeatEnabled = true)
+            val handledDown = processor.onKeyDown(pointerId = 1L, keyDef = testKeyA)
             assertTrue(handledDown)
             assertTrue(processor.pressedKeys.value.contains("a"))
             assertEquals("a", processor.getKeyIdForPointer(1L))
@@ -92,7 +91,7 @@ class KeyboardGestureProcessorTest {
             val testKeyA = KeyDef(id = "a", label = "a", linuxKeycode = 30, type = KeyType.NORMAL)
             val testKeyB = KeyDef(id = "b", label = "b", linuxKeycode = 48, type = KeyType.NORMAL)
 
-            processor.onKeyDown(pointerId = 1L, keyDef = testKeyA, repeatEnabled = true)
+            processor.onKeyDown(pointerId = 1L, keyDef = testKeyA)
             assertTrue(processor.pressedKeys.value.contains("a"))
 
             val moveHandled =
@@ -101,7 +100,6 @@ class KeyboardGestureProcessorTest {
                     newKeyDef = testKeyB,
                     deltaX = 10f,
                     deltaY = 0f,
-                    repeatEnabled = true,
                 )
             assertTrue(moveHandled)
             assertFalse(processor.pressedKeys.value.contains("a"))
@@ -115,7 +113,7 @@ class KeyboardGestureProcessorTest {
             val processor = createProcessor()
             val testKeyA = KeyDef(id = "a", label = "a", linuxKeycode = 30, type = KeyType.NORMAL)
 
-            processor.onKeyDown(pointerId = 1L, keyDef = testKeyA, repeatEnabled = true)
+            processor.onKeyDown(pointerId = 1L, keyDef = testKeyA)
             processor.dispose()
             assertTrue(processor.pressedKeys.value.isEmpty())
         }
@@ -127,7 +125,7 @@ class KeyboardGestureProcessorTest {
             val testKeyUp = KeyDef(id = "up", label = "▲", linuxKeycode = 103, type = KeyType.NORMAL)
             val testKeyLeft = KeyDef(id = "left", label = "◀", linuxKeycode = 105, type = KeyType.NORMAL)
 
-            val handledDown = processor.onKeyDown(pointerId = 1L, keyDef = testKeyUp, repeatEnabled = true)
+            val handledDown = processor.onKeyDown(pointerId = 1L, keyDef = testKeyUp)
             assertTrue(handledDown)
             assertTrue(processor.pressedKeys.value.contains("up"))
             assertEquals("up", processor.getKeyIdForPointer(1L))
@@ -138,7 +136,6 @@ class KeyboardGestureProcessorTest {
                     newKeyDef = testKeyLeft,
                     deltaX = 10f,
                     deltaY = 0f,
-                    repeatEnabled = true,
                 )
             assertTrue(moveHandled)
             assertFalse(processor.pressedKeys.value.contains("up"))
@@ -153,7 +150,7 @@ class KeyboardGestureProcessorTest {
             val processor = createProcessor(injector = testInjector)
             val testKeyDel = KeyDef(id = "del", label = "Del", linuxKeycode = 111, type = KeyType.NORMAL)
 
-            val handledDown = processor.onKeyDown(pointerId = 1L, keyDef = testKeyDel, repeatEnabled = true)
+            val handledDown = processor.onKeyDown(pointerId = 1L, keyDef = testKeyDel)
             assertTrue(handledDown)
             assertTrue(processor.pressedKeys.value.contains("del"))
             assertEquals("del", processor.getKeyIdForPointer(1L))

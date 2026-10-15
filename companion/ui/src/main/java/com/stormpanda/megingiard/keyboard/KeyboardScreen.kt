@@ -61,7 +61,6 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val density = LocalDensity.current
     val kbLayout by viewModel.kbLayout.collectAsStateWithLifecycle()
-    val kbRepeatEnabled by viewModel.kbRepeatEnabled.collectAsStateWithLifecycle()
     val isQuickMenuOpen by viewModel.isQuickMenuOpen.collectAsStateWithLifecycle()
     val colors = LocalAppColors.current
 
@@ -338,7 +337,6 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                                 isCapsActive = isCapsActive,
                                 isAltGrActive = isAltGrActive,
                                 isQuickMenuOpen = isQuickMenuOpen,
-                                kbRepeatEnabled = kbRepeatEnabled,
                                 onCloseQuickMenu = { viewModel.closeQuickMenu() },
                                 onModeChange = { nextMode ->
                                     viewModel.setKeyboardMode(nextMode)

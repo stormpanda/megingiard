@@ -41,10 +41,6 @@ internal val KEY_MACROPAD_ACTIVE_PROFILE_ID = stringPreferencesKey("macropad_act
 
 // Keyboard settings
 internal val KEY_KB_LAYOUT = stringPreferencesKey("kb_layout")
-internal val KEY_KB_TRACKPOINT_ENABLED = booleanPreferencesKey("kb_trackpoint_enabled")
-internal val KEY_KB_REPEAT_ENABLED = booleanPreferencesKey("kb_repeat_enabled")
-internal val KEY_KB_FULLSCREEN = booleanPreferencesKey("kb_fullscreen")
-internal val KEY_KB_MOUSE_BTN_POS = stringPreferencesKey("kb_mouse_btn_pos")
 internal val KEY_KB_TOUCHPAD_ENABLED = booleanPreferencesKey("kb_touchpad_enabled")
 internal val KEY_KB_AUTO_OPEN_ON_FOCUS = booleanPreferencesKey("kb_auto_open_on_focus")
 
@@ -136,10 +132,7 @@ private val TOUCHPAD_KEYS: Set<Preferences.Key<*>> =
 private val KEYBOARD_KEYS: Set<Preferences.Key<*>> =
     setOf(
         KEY_KB_LAYOUT,
-        KEY_KB_TRACKPOINT_ENABLED,
-        KEY_KB_REPEAT_ENABLED,
-        KEY_KB_FULLSCREEN,
-        KEY_KB_MOUSE_BTN_POS,
+        KEY_KB_TOUCHPAD_ENABLED,
         KEY_KB_AUTO_OPEN_ON_FOCUS,
     )
 private val MACROPAD_SETTINGS_KEYS: Set<Preferences.Key<*>> =
@@ -164,7 +157,6 @@ internal val EXCLUDED_KEYS: Set<Preferences.Key<*>> =
     setOf(
         KEY_MACROPAD_PROFILES,
         KEY_MACROPAD_ACTIVE_PROFILE_ID,
-        KEY_KB_TOUCHPAD_ENABLED,
         KEY_SAVED_LOCKED,
         KEY_SAVED_PROJECTION,
         KEY_WELCOME_TOUR_COMPLETED_VERSION,
@@ -188,9 +180,7 @@ internal val BOOLEAN_KEYS: Set<Preferences.Key<*>> =
         KEY_REMEMBER_LOCK,
         KEY_REMEMBER_PROJECTION,
         KEY_MIRROR_SNAP_ALIGNMENT,
-        KEY_KB_TRACKPOINT_ENABLED,
-        KEY_KB_REPEAT_ENABLED,
-        KEY_KB_FULLSCREEN,
+        KEY_KB_TOUCHPAD_ENABLED,
         KEY_KB_AUTO_OPEN_ON_FOCUS,
         KEY_TOUCHPAD_USE_MOUSE,
         KEY_TOUCHPAD_TAP_TO_CLICK,
@@ -227,7 +217,6 @@ internal val STRING_KEYS: Set<Preferences.Key<*>> =
         KEY_STEAMGRIDDB_API_TOKEN,
         KEY_THEME_MODE,
         KEY_KB_LAYOUT,
-        KEY_KB_MOUSE_BTN_POS,
         KEY_APP_LANGUAGE,
         KEY_LOG_LEVEL,
     )

@@ -30,7 +30,6 @@ private const val TAG = "KeyboardViewModel"
  */
 class KeyboardViewModel : ViewModel() {
     val kbLayout: StateFlow<KbLayout> = KeyboardSettings.kbLayout
-    val kbRepeatEnabled: StateFlow<Boolean> = KeyboardSettings.kbRepeatEnabled
     val kbTouchpadEnabled: StateFlow<Boolean> = KeyboardSettings.kbTouchpadEnabled
     val kbAutoOpenOnFocus: StateFlow<Boolean> = KeyboardSettings.kbAutoOpenOnFocus
     val isQuickMenuOpen: StateFlow<Boolean> = AppStateManager.isQuickMenuOpen
@@ -73,7 +72,6 @@ class KeyboardViewModel : ViewModel() {
     val gestureProcessor =
         KeyboardGestureProcessor(
             scope = viewModelScope,
-            kbRepeatEnabled = { kbRepeatEnabled.value },
             isShiftActive = {
                 KeyboardState.stateFor("lshift").value != ModifierState.INACTIVE ||
                     KeyboardState.stateFor("rshift").value != ModifierState.INACTIVE

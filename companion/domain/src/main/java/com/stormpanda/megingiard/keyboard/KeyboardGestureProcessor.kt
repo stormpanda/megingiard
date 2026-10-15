@@ -25,7 +25,6 @@ private const val KB_POPUP_STEP_WIDTH_DP = 48f / 2.5f
 
 class KeyboardGestureProcessor(
     private val scope: CoroutineScope,
-    private val kbRepeatEnabled: () -> Boolean = { true },
     private val isShiftActive: () -> Boolean = { false },
     private val isCapsActive: () -> Boolean = { false },
     private val isAltGrActive: () -> Boolean = { false },
@@ -159,7 +158,7 @@ class KeyboardGestureProcessor(
             accumulatedSpaceDeltaX = 0f
         }
 
-        onKeyDown(pointerId, hoveredKeyDef, grid, kbRepeatEnabled())
+        onKeyDown(pointerId, hoveredKeyDef, grid)
     }
 
     fun onMove(
@@ -197,10 +196,10 @@ class KeyboardGestureProcessor(
                             )
                     }
                 }
-                onKeyMove(pointerId, hoveredKeyDef, dx, dy, grid, kbRepeatEnabled())
+                onKeyMove(pointerId, hoveredKeyDef, dx, dy, grid)
             } else {
                 _activePopupState.value = null
-                onKeyMove(pointerId, hoveredKeyDef, dx, dy, grid, kbRepeatEnabled())
+                onKeyMove(pointerId, hoveredKeyDef, dx, dy, grid)
             }
         } else {
             val popup = _activePopupState.value
@@ -268,7 +267,7 @@ class KeyboardGestureProcessor(
                             longPressJobs.remove(pointerId)
                         }
                     }
-                    onKeyMove(pointerId, hoveredKeyDef, dx, dy, grid, kbRepeatEnabled())
+                    onKeyMove(pointerId, hoveredKeyDef, dx, dy, grid)
                 }
             }
         }
@@ -290,7 +289,7 @@ class KeyboardGestureProcessor(
         }
 
         if (wasDragging) {
-            onKeyUp(pointerId, grid, kbRepeatEnabled(), skipInjection = true)
+            onKeyUp(pointerId, grid, skipInjection = true)
         } else {
             val popup = _activePopupState.value
             if (popup != null && pointerId == popup.pointerId) {
@@ -300,14 +299,14 @@ class KeyboardGestureProcessor(
                     if (charToInject != null) {
                         onInjectPopupSelection(popup.keyDef, charToInject)
                     }
-                    onKeyUp(pointerId, grid, kbRepeatEnabled(), skipInjection = true)
+                    onKeyUp(pointerId, grid, skipInjection = true)
                 } else {
-                    onKeyUp(pointerId, grid, kbRepeatEnabled(), skipInjection = false)
+                    onKeyUp(pointerId, grid, skipInjection = false)
                 }
                 _activePopupState.value = null
                 virtualAnchorX = 0f
             } else {
-                onKeyUp(pointerId, grid, kbRepeatEnabled(), skipInjection = false)
+                onKeyUp(pointerId, grid, skipInjection = false)
             }
             if (pressPositions.isEmpty()) {
                 _activePopupState.value = null
@@ -318,7 +317,7 @@ class KeyboardGestureProcessor(
     fun onCancel(grid: List<List<KeyDef>> = emptyList()) {
         val activePids = pressPositions.keys.toList()
         for (p in activePids) {
-            onKeyUp(p, grid, kbRepeatEnabled(), skipInjection = true)
+            onKeyUp(p, grid, skipInjection = true)
         }
         longPressJobs.values.forEach { it.cancel() }
         longPressJobs.clear()
@@ -334,7 +333,6 @@ class KeyboardGestureProcessor(
         pointerId: Long,
         keyDef: KeyDef?,
         layout: List<List<KeyDef>> = emptyList(),
-        repeatEnabled: Boolean = kbRepeatEnabled(),
     ): Boolean {
         val resolved = keyDef ?: return false
         val id = resolved.id
@@ -347,10 +345,10 @@ class KeyboardGestureProcessor(
                 heldKey = resolved
                 val isCharKey = resolved.isCharacterKey
                 if (!isCharKey && resolved.linuxKeycode != 0) {
-                    injectKeyDownWithModifiers(pointerId, resolved, layout, repeatEnabled)
+                    injectKeyDownWithModifiers(pointerId, resolved, layout)
                 }
                 if (!isCharKey) {
-                    startRepeat(resolved, layout, repeatEnabled)
+                    startRepeat(resolved, layout)
                 }
             }
 
@@ -372,7 +370,6 @@ class KeyboardGestureProcessor(
         deltaX: Float,
         deltaY: Float,
         layout: List<List<KeyDef>> = emptyList(),
-        repeatEnabled: Boolean = kbRepeatEnabled(),
     ): Boolean {
         val prevDef = pointerKeyMap[pointerId] ?: return false
         val newDef = newKeyDef ?: return false
@@ -382,7 +379,7 @@ class KeyboardGestureProcessor(
             heldKey = null
             repeatJob?.cancel()
             val isPrevCharKey = prevDef.isCharacterKey
-            if (!isPrevCharKey && repeatEnabled) {
+            if (!isPrevCharKey) {
                 releasePointerDownKeycodes(pointerId)
             }
             _pressedKeys.value = _pressedKeys.value - prevDef.id
@@ -394,10 +391,10 @@ class KeyboardGestureProcessor(
             heldKey = newDef
             val isNewCharKey = newDef.isCharacterKey
             if (!isNewCharKey && newDef.linuxKeycode != 0) {
-                injectKeyDownWithModifiers(pointerId, newDef, layout, repeatEnabled)
+                injectKeyDownWithModifiers(pointerId, newDef, layout)
             }
             if (!isNewCharKey) {
-                startRepeat(newDef, layout, repeatEnabled)
+                startRepeat(newDef, layout)
             }
             return true
         }
@@ -407,7 +404,6 @@ class KeyboardGestureProcessor(
     fun onKeyUp(
         pointerId: Long,
         layout: List<List<KeyDef>> = emptyList(),
-        repeatEnabled: Boolean = kbRepeatEnabled(),
         skipInjection: Boolean = false,
     ): Boolean {
         val keyDef = pointerKeyMap.remove(pointerId) ?: return false
@@ -481,24 +477,17 @@ class KeyboardGestureProcessor(
         pointerId: Long,
         keyDef: KeyDef,
         layout: List<List<KeyDef>>,
-        repeatEnabled: Boolean,
     ) {
         val mods = KeyboardState.activeModifierKeycodesFor(keyDef, layout)
         mods.forEach { injector.keyDown(it) }
         keyDef.autoModifiers.forEach { injector.keyDown(it) }
         injector.keyDown(keyDef.linuxKeycode)
-        if (!repeatEnabled) {
-            injector.keyUp(keyDef.linuxKeycode)
-            keyDef.autoModifiers.forEach { injector.keyUp(it) }
-            mods.forEach { injector.keyUp(it) }
-        } else {
-            downKeycodesByPointer[pointerId] =
-                buildList {
-                    add(keyDef.linuxKeycode)
-                    addAll(keyDef.autoModifiers)
-                    addAll(mods)
-                }
-        }
+        downKeycodesByPointer[pointerId] =
+            buildList {
+                add(keyDef.linuxKeycode)
+                addAll(keyDef.autoModifiers)
+                addAll(mods)
+            }
     }
 
     private fun injectKeyStroke(
@@ -517,10 +506,9 @@ class KeyboardGestureProcessor(
     private fun startRepeat(
         keyDef: KeyDef,
         layout: List<List<KeyDef>>,
-        enabled: Boolean,
     ) {
         repeatJob?.cancel()
-        if (!enabled || keyDef.linuxKeycode == 0 || keyDef.id != "bksp") return
+        if (keyDef.linuxKeycode == 0 || keyDef.id != "bksp") return
         repeatJob =
             scope.launch {
                 delay(KB_REPEAT_INITIAL_DELAY_MS)

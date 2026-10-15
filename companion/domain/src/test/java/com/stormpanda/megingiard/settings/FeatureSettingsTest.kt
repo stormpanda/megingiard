@@ -3,7 +3,6 @@ package com.stormpanda.megingiard.settings
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.emptyPreferences
 import com.stormpanda.megingiard.keyboard.KbLayout
-import com.stormpanda.megingiard.keyboard.KbMouseBtnPos
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -108,20 +107,11 @@ class FeatureSettingsTest {
         KeyboardSettings.setKbLayout(KbLayout.QWERTY)
         assertEquals(KbLayout.QWERTY, KeyboardSettings.kbLayout.value)
 
-        KeyboardSettings.setKbTrackpointEnabled(false)
-        assertFalse(KeyboardSettings.kbTrackpointEnabled.value)
-
-        KeyboardSettings.setKbRepeatEnabled(false)
-        assertFalse(KeyboardSettings.kbRepeatEnabled.value)
-
-        KeyboardSettings.setKbFullscreen(true)
-        assertTrue(KeyboardSettings.kbFullscreen.value)
-
-        KeyboardSettings.setKbMouseBtnPos(KbMouseBtnPos.RIGHT)
-        assertEquals(KbMouseBtnPos.RIGHT, KeyboardSettings.kbMouseBtnPos.value)
-
         KeyboardSettings.setKbTouchpadEnabled(false)
         assertFalse(KeyboardSettings.kbTouchpadEnabled.value)
+
+        KeyboardSettings.setKbAutoOpenOnFocus(false)
+        assertFalse(KeyboardSettings.kbAutoOpenOnFocus.value)
     }
 
     @Test
