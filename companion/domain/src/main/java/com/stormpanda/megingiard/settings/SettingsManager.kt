@@ -76,7 +76,8 @@ object SettingsManager {
     @Volatile
     private var autoBackupTriggered = false
 
-    private var lastBackupsJsonStr: String? = null
+    @Volatile
+    private var isInternalBackupsLoaded = false
 
     private val _internalBackups = MutableStateFlow<List<InternalBackup>>(emptyList())
     val internalBackups: StateFlow<List<InternalBackup>> = _internalBackups.asStateFlow()
@@ -138,7 +139,7 @@ object SettingsManager {
         _welcomeTourCompletedVersion.value = 0
         _internalBackups.value = emptyList()
         autoBackupTriggered = false
-        lastBackupsJsonStr = null
+        isInternalBackupsLoaded = false
         TouchpadSettings.resetForTesting()
         MirrorSettings.resetForTesting()
         MacroPadSettings.resetForTesting()
@@ -216,10 +217,9 @@ object SettingsManager {
                     }
                     UpdateManager.loadFrom(prefs)
 
-                    val backupsJsonStr = prefs[KEY_INTERNAL_BACKUPS]
-                    if (backupsJsonStr != lastBackupsJsonStr) {
-                        lastBackupsJsonStr = backupsJsonStr
-                        _internalBackups.value = decodeBackups(backupsJsonStr)
+                    if (!isInternalBackupsLoaded) {
+                        isInternalBackupsLoaded = true
+                        _internalBackups.value = decodeBackups(prefs[KEY_INTERNAL_BACKUPS])
                     }
 
                     if (!autoBackupTriggered) {
@@ -429,12 +429,12 @@ object SettingsManager {
 
     suspend fun saveBackup(backup: InternalBackup) {
         AppLog.d(TAG, "saveBackup: date=${backup.dateString}")
+        val newList =
+            (_internalBackups.value.filter { it.dateString != backup.dateString } + backup)
+                .sortedByDescending { it.timestampMs }
+                .take(5)
+        _internalBackups.value = newList
         dataStore.edit { prefs ->
-            val currentList = decodeBackups(prefs[KEY_INTERNAL_BACKUPS])
-            val newList =
-                (currentList.filter { it.dateString != backup.dateString } + backup)
-                    .sortedByDescending { it.timestampMs }
-                    .take(5)
             prefs[KEY_INTERNAL_BACKUPS] = backupsJson.encodeToString(newList)
         }
     }
