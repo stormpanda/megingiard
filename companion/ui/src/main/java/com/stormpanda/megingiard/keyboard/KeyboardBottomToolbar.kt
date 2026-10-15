@@ -32,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -51,7 +52,7 @@ internal fun KeyboardBottomToolbar(
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = LocalAppColors.current
+    val isFullModeActive = keyboardMode == KeyboardMode.FULL
 
     Row(
         modifier =
@@ -61,32 +62,11 @@ internal fun KeyboardBottomToolbar(
                 .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        val interactionSource = remember { MutableInteractionSource() }
-        val isPressed by interactionSource.collectIsPressedAsState()
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxHeight()
-                    .width(KB_GLOBE_BUTTON_WIDTH)
-                    .offset(y = (-3).dp)
-                    .clip(KB_ROUNDED_8)
-                    .background(if (isPressed) colors.keyPressed else Color.Transparent)
-                    .clickable(
-                        interactionSource = interactionSource,
-                        indication = null,
-                        onClick = onCollapseClick,
-                    ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.KeyboardArrowDown,
-                contentDescription = stringResource(R.string.cd_kb_collapse),
-                tint = colors.onSurface.copy(alpha = 0.7f),
-                modifier = Modifier.size(KB_ICON_SIZE_MEDIUM),
-            )
-        }
-
-        val isFullModeActive = keyboardMode == KeyboardMode.FULL
+        BottomToolbarIconButton(
+            imageVector = Icons.Rounded.KeyboardArrowDown,
+            contentDescription = stringResource(R.string.cd_kb_collapse),
+            onClick = onCollapseClick,
+        )
 
         Spacer(modifier = Modifier.weight(1f))
 
@@ -100,30 +80,44 @@ internal fun KeyboardBottomToolbar(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        val interactionSourceSettings = remember { MutableInteractionSource() }
-        val isSettingsPressed by interactionSourceSettings.collectIsPressedAsState()
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxHeight()
-                    .width(KB_GLOBE_BUTTON_WIDTH)
-                    .offset(y = (-3).dp)
-                    .clip(KB_ROUNDED_8)
-                    .background(if (isSettingsPressed) colors.keyPressed else Color.Transparent)
-                    .clickable(
-                        interactionSource = interactionSourceSettings,
-                        indication = null,
-                        onClick = onSettingsClick,
-                    ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.Settings,
-                contentDescription = stringResource(R.string.cd_kb_settings),
-                tint = colors.onSurface.copy(alpha = 0.7f),
-                modifier = Modifier.size(KB_ICON_SIZE_MEDIUM),
-            )
-        }
+        BottomToolbarIconButton(
+            imageVector = Icons.Rounded.Settings,
+            contentDescription = stringResource(R.string.cd_kb_settings),
+            onClick = onSettingsClick,
+        )
+    }
+}
+
+@Composable
+private fun BottomToolbarIconButton(
+    imageVector: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+) {
+    val colors = LocalAppColors.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    Box(
+        modifier =
+            Modifier
+                .fillMaxHeight()
+                .width(KB_GLOBE_BUTTON_WIDTH)
+                .offset(y = (-3).dp)
+                .clip(KB_ROUNDED_8)
+                .background(if (isPressed) colors.keyPressed else Color.Transparent)
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    onClick = onClick,
+                ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = imageVector,
+            contentDescription = contentDescription,
+            tint = colors.onSurface.copy(alpha = 0.7f),
+            modifier = Modifier.size(KB_ICON_SIZE_MEDIUM),
+        )
     }
 }
 

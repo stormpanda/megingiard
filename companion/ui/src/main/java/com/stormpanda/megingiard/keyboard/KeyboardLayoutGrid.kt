@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -43,6 +42,33 @@ internal fun KeyboardLayoutGrid(
     val isQuickMenuOpenState = rememberUpdatedState(isQuickMenuOpen)
     val gridHeight = if (activeState.mode == KeyboardMode.FULL) 220.dp else 168.dp
     val boxCoords = remember { mutableStateOf<LayoutCoordinates?>(null) }
+
+    @Composable
+    fun renderKey(
+        key: KeyDef,
+        keyModifier: Modifier,
+    ) {
+        KeyboardKey(
+            keyDef = key,
+            isPressed = key.id in pressedKeys,
+            isShiftActive = isShiftActive,
+            isCapsActive = isCapsActive,
+            isAltGrActive = isAltGrActive,
+            isFullLayout = activeState.mode == KeyboardMode.FULL,
+            modifier = keyModifier,
+            onBoundsUpdate = { coords ->
+                val box = boxCoords.value
+                if (box != null && coords.isAttached) {
+                    val localTopLeft = box.localPositionOf(coords, Offset.Zero)
+                    val left = localTopLeft.x
+                    val top = localTopLeft.y
+                    val right = left + coords.size.width
+                    val bottom = top + coords.size.height
+                    gestureProcessor.updateBounds(key.id, left, top, right, bottom)
+                }
+            },
+        )
+    }
 
     Box(
         modifier =
@@ -170,26 +196,7 @@ internal fun KeyboardLayoutGrid(
                         verticalArrangement = Arrangement.spacedBy(KB_KEY_PADDING_V),
                     ) {
                         ops.forEach { key ->
-                            KeyboardKey(
-                                keyDef = key,
-                                isPressed = key.id in pressedKeys,
-                                isShiftActive = isShiftActive,
-                                isCapsActive = isCapsActive,
-                                isAltGrActive = isAltGrActive,
-                                isFullLayout = false,
-                                modifier = Modifier.weight(1f),
-                                onBoundsUpdate = { coords ->
-                                    val box = boxCoords.value
-                                    if (box != null && coords.isAttached) {
-                                        val localTopLeft = box.localPositionOf(coords, Offset.Zero)
-                                        val left = localTopLeft.x
-                                        val top = localTopLeft.y
-                                        val right = left + coords.size.width
-                                        val bottom = top + coords.size.height
-                                        gestureProcessor.updateBounds(key.id, left, top, right, bottom)
-                                    }
-                                },
-                            )
+                            renderKey(key, Modifier.weight(1f))
                         }
                     }
 
@@ -209,26 +216,7 @@ internal fun KeyboardLayoutGrid(
                                 horizontalArrangement = Arrangement.spacedBy(KB_KEY_PADDING_H),
                             ) {
                                 row.forEach { key ->
-                                    KeyboardKey(
-                                        keyDef = key,
-                                        isPressed = key.id in pressedKeys,
-                                        isShiftActive = isShiftActive,
-                                        isCapsActive = isCapsActive,
-                                        isAltGrActive = isAltGrActive,
-                                        isFullLayout = false,
-                                        modifier = Modifier.weight(key.widthWeight),
-                                        onBoundsUpdate = { coords ->
-                                            val box = boxCoords.value
-                                            if (box != null && coords.isAttached) {
-                                                val localTopLeft = box.localPositionOf(coords, Offset.Zero)
-                                                val left = localTopLeft.x
-                                                val top = localTopLeft.y
-                                                val right = left + coords.size.width
-                                                val bottom = top + coords.size.height
-                                                gestureProcessor.updateBounds(key.id, left, top, right, bottom)
-                                            }
-                                        },
-                                    )
+                                    renderKey(key, Modifier.weight(key.widthWeight))
                                 }
                             }
                         }
@@ -243,26 +231,7 @@ internal fun KeyboardLayoutGrid(
                     horizontalArrangement = Arrangement.spacedBy(KB_KEY_PADDING_H),
                 ) {
                     bottomRow.forEach { key ->
-                        KeyboardKey(
-                            keyDef = key,
-                            isPressed = key.id in pressedKeys,
-                            isShiftActive = isShiftActive,
-                            isCapsActive = isCapsActive,
-                            isAltGrActive = isAltGrActive,
-                            isFullLayout = false,
-                            modifier = Modifier.weight(key.widthWeight),
-                            onBoundsUpdate = { coords ->
-                                val box = boxCoords.value
-                                if (box != null && coords.isAttached) {
-                                    val localTopLeft = box.localPositionOf(coords, Offset.Zero)
-                                    val left = localTopLeft.x
-                                    val top = localTopLeft.y
-                                    val right = left + coords.size.width
-                                    val bottom = top + coords.size.height
-                                    gestureProcessor.updateBounds(key.id, left, top, right, bottom)
-                                }
-                            },
-                        )
+                        renderKey(key, Modifier.weight(key.widthWeight))
                     }
                 }
             }
@@ -280,26 +249,7 @@ internal fun KeyboardLayoutGrid(
                         horizontalArrangement = Arrangement.spacedBy(KB_KEY_PADDING_H),
                     ) {
                         row.forEach { key ->
-                            KeyboardKey(
-                                keyDef = key,
-                                isPressed = key.id in pressedKeys,
-                                isShiftActive = isShiftActive,
-                                isCapsActive = isCapsActive,
-                                isAltGrActive = isAltGrActive,
-                                isFullLayout = activeState.mode == KeyboardMode.FULL,
-                                modifier = Modifier.weight(key.widthWeight),
-                                onBoundsUpdate = { coords ->
-                                    val box = boxCoords.value
-                                    if (box != null && coords.isAttached) {
-                                        val localTopLeft = box.localPositionOf(coords, Offset.Zero)
-                                        val left = localTopLeft.x
-                                        val top = localTopLeft.y
-                                        val right = left + coords.size.width
-                                        val bottom = top + coords.size.height
-                                        gestureProcessor.updateBounds(key.id, left, top, right, bottom)
-                                    }
-                                },
-                            )
+                            renderKey(key, Modifier.weight(key.widthWeight))
                         }
                     }
                 }
@@ -319,7 +269,12 @@ private fun KeyboardKey(
     modifier: Modifier = Modifier,
     onBoundsUpdate: (LayoutCoordinates) -> Unit = {},
 ) {
-    val modState by KeyboardState.stateFor(keyDef.id).collectAsStateWithLifecycle()
+    val modState =
+        if (keyDef.type == KeyType.MODIFIER) {
+            KeyboardState.stateFor(keyDef.id).collectAsStateWithLifecycle().value
+        } else {
+            ModifierState.INACTIVE
+        }
     KeyCap(
         keyDef = keyDef,
         isPressed = isPressed,
