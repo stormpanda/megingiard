@@ -223,52 +223,17 @@ fun GamepadTextFieldCard(
         }
     }
 
-    BackHandler(enabled = isEditing) {
+    val commitAndExitEditing: () -> Unit = {
         onValueChange(draftValue.text.trim())
         isEditing = false
     }
 
-    GamepadFocusCard(
-        onClick = {
-            if (enabled) {
-                if (!isEditing) {
-                    draftValue = TextFieldValue(text = value, selection = TextRange(0, value.length))
-                    isEditing = true
-                } else {
-                    onValueChange(draftValue.text.trim())
-                    isEditing = false
-                }
-            }
-        },
-        cardFocusRequester = cardFocusRequester,
-        itemKey = itemKey,
-        enabled = enabled,
-        modifier = modifier,
-        isAdjusting = isEditing,
-        onCustomKeyEvent = { keyEvent ->
-            if (!isEditing) return@GamepadFocusCard false
-            val keyCode = keyEvent.nativeKeyEvent.keyCode
-            if (keyEvent.type == KeyEventType.KeyDown) {
-                when (keyCode) {
-                    KeyEvent.KEYCODE_BUTTON_B,
-                    KeyEvent.KEYCODE_BACK,
-                    KeyEvent.KEYCODE_ESCAPE,
-                    KeyEvent.KEYCODE_BUTTON_A,
-                    KeyEvent.KEYCODE_DPAD_CENTER,
-                    KeyEvent.KEYCODE_ENTER,
-                    KeyEvent.KEYCODE_NUMPAD_ENTER,
-                    -> {
-                        onValueChange(draftValue.text.trim())
-                        isEditing = false
-                        true
-                    }
-
-                    else -> {
-                        false
-                    }
-                }
-            } else if (keyEvent.type == KeyEventType.KeyUp) {
-                when (keyCode) {
+    val handleEditingKeyEvent: (ComposeKeyEvent) -> Boolean = { keyEvent ->
+        if (!isEditing) {
+            false
+        } else {
+            val isCommitOrExitKey =
+                when (keyEvent.nativeKeyEvent.keyCode) {
                     KeyEvent.KEYCODE_BUTTON_B,
                     KeyEvent.KEYCODE_BACK,
                     KeyEvent.KEYCODE_ESCAPE,
@@ -280,10 +245,48 @@ fun GamepadTextFieldCard(
 
                     else -> false
                 }
-            } else {
-                false
+            when {
+                !isCommitOrExitKey -> {
+                    false
+                }
+
+                keyEvent.type == KeyEventType.KeyDown -> {
+                    commitAndExitEditing()
+                    true
+                }
+
+                keyEvent.type == KeyEventType.KeyUp -> {
+                    true
+                }
+
+                else -> {
+                    false
+                }
+            }
+        }
+    }
+
+    BackHandler(enabled = isEditing) {
+        commitAndExitEditing()
+    }
+
+    GamepadFocusCard(
+        onClick = {
+            if (enabled) {
+                if (!isEditing) {
+                    draftValue = TextFieldValue(text = value, selection = TextRange(0, value.length))
+                    isEditing = true
+                } else {
+                    commitAndExitEditing()
+                }
             }
         },
+        cardFocusRequester = cardFocusRequester,
+        itemKey = itemKey,
+        enabled = enabled,
+        modifier = modifier,
+        isAdjusting = isEditing,
+        onCustomKeyEvent = handleEditingKeyEvent,
     ) { isFocused ->
         Box(
             modifier =
@@ -355,11 +358,7 @@ fun GamepadTextFieldCard(
                             GamepadPill(
                                 text = stringResource(R.string.gamepad_action_save),
                                 isAccent = true,
-                                modifier =
-                                    Modifier.clickable {
-                                        onValueChange(draftValue.text.trim())
-                                        isEditing = false
-                                    },
+                                modifier = Modifier.clickable(onClick = commitAndExitEditing),
                             )
                         }
                     }
@@ -378,55 +377,14 @@ fun GamepadTextFieldCard(
                         enabled = enabled,
                         readOnly = false,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                        keyboardActions =
-                            KeyboardActions(onDone = {
-                                onValueChange(draftValue.text.trim())
-                                isEditing = false
-                            }),
+                        keyboardActions = KeyboardActions(onDone = { commitAndExitEditing() }),
                         modifier =
                             Modifier
                                 .fillMaxWidth()
                                 .focusProperties {
                                     canFocus = true
                                 }.focusRequester(textFieldFocusRequester)
-                                .onPreviewKeyEvent { keyEvent ->
-                                    val keyCode = keyEvent.nativeKeyEvent.keyCode
-                                    if (keyEvent.type == KeyEventType.KeyDown) {
-                                        when (keyCode) {
-                                            KeyEvent.KEYCODE_ENTER,
-                                            KeyEvent.KEYCODE_NUMPAD_ENTER,
-                                            KeyEvent.KEYCODE_ESCAPE,
-                                            KeyEvent.KEYCODE_BUTTON_B,
-                                            KeyEvent.KEYCODE_BACK,
-                                            KeyEvent.KEYCODE_BUTTON_A,
-                                            KeyEvent.KEYCODE_DPAD_CENTER,
-                                            -> {
-                                                onValueChange(draftValue.text.trim())
-                                                isEditing = false
-                                                true
-                                            }
-
-                                            else -> {
-                                                false
-                                            }
-                                        }
-                                    } else if (keyEvent.type == KeyEventType.KeyUp) {
-                                        when (keyCode) {
-                                            KeyEvent.KEYCODE_ENTER,
-                                            KeyEvent.KEYCODE_NUMPAD_ENTER,
-                                            KeyEvent.KEYCODE_ESCAPE,
-                                            KeyEvent.KEYCODE_BUTTON_B,
-                                            KeyEvent.KEYCODE_BACK,
-                                            KeyEvent.KEYCODE_BUTTON_A,
-                                            KeyEvent.KEYCODE_DPAD_CENTER,
-                                            -> true
-
-                                            else -> false
-                                        }
-                                    } else {
-                                        false
-                                    }
-                                },
+                                .onPreviewKeyEvent(handleEditingKeyEvent),
                     )
                 }
             }
