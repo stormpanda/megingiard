@@ -79,6 +79,8 @@ private fun BackgroundScaleMode.labelResId(): Int =
 
 private const val BSE_DIM_MAX = 0.95f
 private const val BSE_DIM_STEP = 0.05f
+private const val BSE_DIM_FINE_STEP = 0.01f
+private const val BSE_FLOAT_EPSILON = 0.001f
 private const val BSE_PERCENT_DIVISOR = 100f
 
 private val BSE_PREVIEW_PADDING = 12.dp
@@ -349,7 +351,7 @@ internal fun LayoutBackgroundSubPageContent(
             value = bgImageDim,
             valueRange = 0f..BSE_DIM_MAX,
             step = BSE_DIM_STEP,
-            fineStep = 0.01f,
+            fineStep = BSE_DIM_FINE_STEP,
             icon = Icons.Rounded.BrightnessMedium,
             valueLabel = "${(bgImageDim * BSE_PERCENT_DIVISOR).roundToInt()}%",
             onValueChange = { newVal ->
@@ -368,10 +370,10 @@ internal fun LayoutBackgroundSubPageContent(
         pendingImageUri != null ||
             currentBgPath != layout.backgroundImagePath ||
             bgScaleMode != layout.bgScaleMode ||
-            abs(bgScale - layout.bgImageScale) > 0.001f ||
-            abs(bgOffsetX - layout.bgImageOffsetX) > 0.001f ||
-            abs(bgOffsetY - layout.bgImageOffsetY) > 0.001f ||
-            abs(bgImageDim - layout.backgroundImageDim) > 0.001f
+            abs(bgScale - layout.bgImageScale) > BSE_FLOAT_EPSILON ||
+            abs(bgOffsetX - layout.bgImageOffsetX) > BSE_FLOAT_EPSILON ||
+            abs(bgOffsetY - layout.bgImageOffsetY) > BSE_FLOAT_EPSILON ||
+            abs(bgImageDim - layout.backgroundImageDim) > BSE_FLOAT_EPSILON
 
     val promptState =
         rememberSaveExitPromptState(

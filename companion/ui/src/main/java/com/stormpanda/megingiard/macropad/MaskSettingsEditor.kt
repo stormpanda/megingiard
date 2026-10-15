@@ -75,6 +75,8 @@ private fun BackgroundScaleMode.labelResId(): Int =
 
 private const val MSE_DIM_MAX = 0.95f
 private const val MSE_DIM_STEP = 0.05f
+private const val MSE_DIM_FINE_STEP = 0.01f
+private const val MSE_FLOAT_EPSILON = 0.001f
 private const val MSE_PERCENT_DIVISOR = 100f
 
 private val MSE_PREVIEW_PADDING = 12.dp
@@ -331,7 +333,7 @@ internal fun LayoutMaskSubPageContent(
             value = maskImageDim,
             valueRange = 0f..MSE_DIM_MAX,
             step = MSE_DIM_STEP,
-            fineStep = 0.01f,
+            fineStep = MSE_DIM_FINE_STEP,
             icon = Icons.Rounded.BrightnessMedium,
             valueLabel = "${(maskImageDim * MSE_PERCENT_DIVISOR).roundToInt()}%",
             onValueChange = { newVal ->
@@ -350,10 +352,10 @@ internal fun LayoutMaskSubPageContent(
         pendingImageUri != null ||
             currentMaskPath != layout.maskImagePath ||
             maskScaleMode != layout.maskScaleMode ||
-            abs(maskScale - layout.maskImageScale) > 0.001f ||
-            abs(maskOffsetX - layout.maskImageOffsetX) > 0.001f ||
-            abs(maskOffsetY - layout.maskImageOffsetY) > 0.001f ||
-            abs(maskImageDim - layout.maskImageDim) > 0.001f
+            abs(maskScale - layout.maskImageScale) > MSE_FLOAT_EPSILON ||
+            abs(maskOffsetX - layout.maskImageOffsetX) > MSE_FLOAT_EPSILON ||
+            abs(maskOffsetY - layout.maskImageOffsetY) > MSE_FLOAT_EPSILON ||
+            abs(maskImageDim - layout.maskImageDim) > MSE_FLOAT_EPSILON
 
     val promptState =
         rememberSaveExitPromptState(

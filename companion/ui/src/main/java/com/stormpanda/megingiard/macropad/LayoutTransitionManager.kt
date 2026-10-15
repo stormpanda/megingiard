@@ -66,7 +66,11 @@ object LayoutTransitionManager {
      */
     fun unregisterWindowProvider() {
         windowProvider = null
+        val pending = pendingLayoutId
         cancelTransition()
+        if (pending != null) {
+            MacroPadState.setActiveLayoutId(pending)
+        }
     }
 
     /**
@@ -87,6 +91,10 @@ object LayoutTransitionManager {
             } else {
                 AppLog.d(TAG, "switchLayout: target layout $newLayoutId is already active")
             }
+            return
+        }
+        if (pendingLayoutId == newLayoutId) {
+            AppLog.d(TAG, "switchLayout: transition to $newLayoutId is already in flight")
             return
         }
 
@@ -116,8 +124,8 @@ object LayoutTransitionManager {
             return
         }
 
-        transitionJob?.cancel()
         pendingLayoutId = newLayoutId
+        transitionJob?.cancel()
         transitionJob =
             scope.launch {
                 executeTransition(window, newLayoutId, width, height, durationMs)
