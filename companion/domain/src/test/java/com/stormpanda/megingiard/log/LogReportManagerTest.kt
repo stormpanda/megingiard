@@ -6,11 +6,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Unit tests for the pure helpers in [LogReportManager].
+ * Unit tests for the pure helpers and request signaling in [LogReportManager].
  *
- * The SAF coordination (SharedFlow / StateFlow) is not tested here because it
- * relies on Android framework classes and is covered by integration testing.
- * Only the pure, JVM-runnable functions are exercised.
+ * SAF stream serialization and I/O error handling are covered in
+ * [LogReportSanitizationPipelineE2ETest].
  */
 class LogReportManagerTest {
     // ── buildReportFilename ───────────────────────────────────────────────────
