@@ -402,63 +402,18 @@ object PrivdClient {
 
     private fun writerLoop() {
         while (running) {
-            var line =
+            val line =
                 try {
                     queue.take()
                 } catch (_: InterruptedException) {
                     break
                 }
-            if (line.startsWith("MM ")) {
-                var dx = 0
-                var dy = 0
-                var parsedOk = false
-                try {
-                    val parts = line.trim().split(' ')
-                    if (parts.size == 3) {
-                        dx = parts[1].toInt()
-                        dy = parts[2].toInt()
-                        parsedOk = true
-                    }
-                } catch (_: Exception) {
-                }
-
-                if (parsedOk) {
-                    while (true) {
-                        val next = queue.peek() ?: break
-                        if (!next.startsWith("MM ")) break
-                        queue.poll()
-                        try {
-                            val parts = next.trim().split(' ')
-                            if (parts.size == 3) {
-                                dx += parts[1].toInt()
-                                dy += parts[2].toInt()
-                            }
-                        } catch (_: Exception) {
-                        }
-                    }
-                    line = "MM $dx $dy\n"
-                }
-            } else if (line.startsWith("M ")) {
-                try {
-                    val parts = line.trim().split(' ')
-                    if (parts.size == 4) {
-                        val slot = parts[1].toInt()
-                        while (true) {
-                            val next = queue.peek() ?: break
-                            if (!next.startsWith("M ")) break
-                            val nextParts = next.trim().split(' ')
-                            if (nextParts.size != 4 || nextParts[1].toInt() != slot) break
-                            queue.poll()
-                            line = next
-                        }
-                    }
-                } catch (_: Exception) {
-                }
-            }
             val w = writer ?: break
             try {
                 w.write(line)
-                w.flush()
+                if (queue.isEmpty()) {
+                    w.flush()
+                }
             } catch (e: Exception) {
                 AppLog.w(TAG, "writerLoop failed: $e")
                 markBroken()
