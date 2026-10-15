@@ -251,7 +251,7 @@
 - [x] **`[CF-11]`** — Compute `suggestedFilename` directly on `ExportKind` and remove `_exportFilename` `StateFlow` *(Complexity: Low, Risk: Low)*
 - [x] **`[CF-12]`** — Set `_pendingInAppImportMode` inside `ConfigManager.requestImport` and remove duplicate field in `MainActivity` *(Complexity: Low, Risk: Low)*
 - [x] **`[CF-13]`** — Run startup daily auto-backup check sequentially after initial load settles without spawning a racing coroutine *(Complexity: Low, Risk: Low)*
-- [ ] **`[CF-14]`** — Encapsulate "Delete all custom profiles" countdown inside `ConfigurationSettingsTab` using a single coroutine *(Complexity: Med, Risk: Low)*
+- [x] **`[CF-14]`** — Encapsulate "Delete all custom profiles" countdown inside `ConfigurationSettingsTab` using a single coroutine *(Complexity: Med, Risk: Low)*
 - [ ] **`[CF-15]`** — Collapse triplicated import review state in `GlobalSettingsScreen` and fix duplicate error dialog on in-app import failure *(Complexity: High, Risk: Low)*
 - [ ] **`[CF-16]`** — Fix false-positive background count fallback, localize `summarySubtitle`, and replace bare `.dp` literals in `RestoreReviewSubPage` *(Complexity: Med, Risk: Low)*
 - [ ] **`[CF-17]`** — Update module paths, `FilenameBuilder.kt`, and `SettingsEnums.kt` in `docs/features/config/FEATURE.md` *(Complexity: Low, Risk: Low)*

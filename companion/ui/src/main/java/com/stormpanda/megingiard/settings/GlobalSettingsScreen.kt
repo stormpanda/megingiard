@@ -9,7 +9,6 @@ import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -27,7 +26,6 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.log.LogReportManager
-import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.settings.tabs.AppearanceSettingsTab
 import com.stormpanda.megingiard.settings.tabs.ConfigurationSettingsTab
@@ -56,14 +54,10 @@ import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
 import com.stormpanda.megingiard.ui.cycle
 import com.stormpanda.megingiard.ui.launchUrlOnPrimaryDisplay
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private const val TAG = "GlobalSettingsScreen"
 
-private const val GS_RESTORE_COUNTDOWN_SECONDS = 5
-private const val GS_RESTORE_COUNTDOWN_INTERVAL_MS = 1_000L
-private const val GS_RESTORE_CONFIRM_TIMEOUT_MS = 8_000L
 private const val GS_RELEASES_FALLBACK_URL = "$GS_OBTAINIUM_REPO_URL/releases"
 
 @Composable
@@ -129,29 +123,6 @@ fun GlobalSettingsScreen(
     val coroutineScope = rememberCoroutineScope()
     var selectedCategory by remember { mutableStateOf(SettingsCategory.GENERAL) }
     var hasTriggeredManualCheck by rememberSaveable { mutableStateOf(false) }
-
-    var deleteCountdown by rememberSaveable(selectedCategory, subPageStack) { mutableIntStateOf(-1) }
-    var isDeleteCountingDown by rememberSaveable(selectedCategory, subPageStack) { mutableStateOf(false) }
-
-    LaunchedEffect(isDeleteCountingDown) {
-        if (isDeleteCountingDown) {
-            deleteCountdown = GS_RESTORE_COUNTDOWN_SECONDS
-            while (deleteCountdown > 0) {
-                delay(GS_RESTORE_COUNTDOWN_INTERVAL_MS)
-                deleteCountdown--
-            }
-            isDeleteCountingDown = false
-        }
-    }
-
-    LaunchedEffect(deleteCountdown) {
-        if (deleteCountdown == 0) {
-            delay(GS_RESTORE_CONFIRM_TIMEOUT_MS)
-            if (deleteCountdown == 0) {
-                deleteCountdown = -1
-            }
-        }
-    }
 
     val categoryList = remember { SettingsCategory.entries }
     val activePrimaryModal by AppStateManager.activePrimaryModal.collectAsStateWithLifecycle()
@@ -284,29 +255,11 @@ fun GlobalSettingsScreen(
 
                                 SettingsCategory.CONFIGURATION -> {
                                     ConfigurationSettingsTab(
-                                        deleteCountdown = deleteCountdown,
                                         onExportBackup = { subPageStack = listOf(SettingsSubPage.CREATE_BACKUP) },
                                         onRestoreBackup = { subPageStack = listOf(SettingsSubPage.RESTORE_BACKUP) },
                                         onShareProfile = { subPageStack = listOf(SettingsSubPage.SHARE_PROFILE) },
                                         onImportProfile = {
                                             ConfigManager.requestImport(ConfigManager.ImportMode.PROFILE_SHARE)
-                                        },
-                                        onDeleteCountdownClick = {
-                                            when {
-                                                deleteCountdown > 0 -> {}
-
-                                                deleteCountdown == 0 -> {
-                                                    MacroPadState.restoreDefaults()
-                                                    DialogToastManager.show(
-                                                        context.getString(R.string.settings_restore_defaults_toast),
-                                                    )
-                                                    deleteCountdown = -1
-                                                }
-
-                                                else -> {
-                                                    isDeleteCountingDown = true
-                                                }
-                                            }
                                         },
                                     )
                                 }

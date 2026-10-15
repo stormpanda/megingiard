@@ -20,7 +20,9 @@ import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -39,6 +41,7 @@ import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.ui.BumperDirection
+import com.stormpanda.megingiard.ui.DialogToastManager
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadCardRow
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
@@ -50,20 +53,42 @@ import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.cycle
 import com.stormpanda.megingiard.ui.firstDeckItem
+import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+private const val CF_RESTORE_COUNTDOWN_SECONDS = 5
+private const val CF_RESTORE_COUNTDOWN_INTERVAL_MS = 1_000L
+private const val CF_RESTORE_CONFIRM_TIMEOUT_MS = 8_000L
+
 @Composable
 fun ConfigurationSettingsTab(
-    deleteCountdown: Int,
     onExportBackup: () -> Unit,
     onRestoreBackup: () -> Unit,
     onShareProfile: () -> Unit,
     onImportProfile: () -> Unit,
-    onDeleteCountdownClick: () -> Unit,
 ) {
+    val context = LocalContext.current
+    var deleteCountdown by rememberSaveable { mutableIntStateOf(-1) }
+    var isCountingDown by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(isCountingDown) {
+        if (isCountingDown) {
+            deleteCountdown = CF_RESTORE_COUNTDOWN_SECONDS
+            while (deleteCountdown > 0) {
+                delay(CF_RESTORE_COUNTDOWN_INTERVAL_MS)
+                deleteCountdown--
+            }
+            isCountingDown = false
+            delay(CF_RESTORE_CONFIRM_TIMEOUT_MS)
+            if (deleteCountdown == 0) {
+                deleteCountdown = -1
+            }
+        }
+    }
+
     GamepadActionCard(
         title = stringResource(R.string.settings_config_export),
         description = stringResource(R.string.help_settings_export_desc),
@@ -124,7 +149,23 @@ fun ConfigurationSettingsTab(
         },
         isDestructive = true,
         icon = Icons.Rounded.Delete,
-        onClick = onDeleteCountdownClick,
+        onClick = {
+            when {
+                deleteCountdown > 0 -> {}
+
+                deleteCountdown == 0 -> {
+                    MacroPadState.restoreDefaults()
+                    DialogToastManager.show(
+                        context.getString(R.string.settings_restore_defaults_toast),
+                    )
+                    deleteCountdown = -1
+                }
+
+                else -> {
+                    isCountingDown = true
+                }
+            }
+        },
     )
 }
 
