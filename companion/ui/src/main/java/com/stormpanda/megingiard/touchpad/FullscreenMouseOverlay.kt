@@ -97,10 +97,10 @@ private val TP_MOUSE_4_5_MARGIN_TOP = 6.dp
 private val TP_MOUSE_4_5_SIZE = 56.dp
 
 @Composable
-fun FullscreenMouseOverlay() {
+fun rememberGlobalTouchpadProcessor(forceMouseMode: Boolean = false): TouchpadGestureProcessor {
     val context = LocalContext.current
-    val colors = LocalAppColors.current
     val coroutineScope = rememberCoroutineScope()
+    val vibrator = remember { context.getSystemService(Vibrator::class.java) }
 
     val touchpadUseMouse by TouchpadSettings.touchpadUseMouse.collectAsStateWithLifecycle()
     val sensitivity by AppStateManager.fullscreenMouseSensitivity.collectAsStateWithLifecycle()
@@ -110,22 +110,20 @@ fun FullscreenMouseOverlay() {
     val threeFingerTap by TouchpadSettings.touchpadThreeFingerTap.collectAsStateWithLifecycle()
     val twoFingerScroll by TouchpadSettings.touchpadTwoFingerScroll.collectAsStateWithLifecycle()
     val tapDrag by TouchpadSettings.touchpadTapDrag.collectAsStateWithLifecycle()
-    val touchpadMouse45Enabled by TouchpadSettings.touchpadMouse45Enabled.collectAsStateWithLifecycle()
     val touchpadNaturalScroll by TouchpadSettings.touchpadNaturalScroll.collectAsStateWithLifecycle()
     val touchpadScrollSpeed by TouchpadSettings.touchpadScrollSpeed.collectAsStateWithLifecycle()
     val touchpadHapticsEnabled by TouchpadSettings.touchpadHapticsEnabled.collectAsStateWithLifecycle()
-    val vibrator = remember { context.getSystemService(Vibrator::class.java) }
 
-    val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsStateWithLifecycle()
-    val touchpadMirroringEnabled by TouchpadSettings.touchpadMirroringEnabled.collectAsStateWithLifecycle()
-    val touchpadMirrorDim by TouchpadSettings.touchpadMirrorDim.collectAsStateWithLifecycle()
-    val isCapturing by ScreenCaptureManager.isCapturing.collectAsStateWithLifecycle()
-    val isMirroringActive = !touchpadUseMouse && touchpadMirroringEnabled && isCapturing
-
-    val finalSensitivity = touchpadSensitivity * sensitivity
+    val effectiveUseMouse = forceMouseMode || touchpadUseMouse
+    val finalSensitivity =
+        if (forceMouseMode) {
+            touchpadSensitivity
+        } else {
+            touchpadSensitivity * sensitivity
+        }
     val gestureConfig by rememberUpdatedState(
         TouchpadGestureConfig(
-            useMouse = touchpadUseMouse,
+            useMouse = effectiveUseMouse,
             sensitivity = finalSensitivity,
             twoFingerScrollEnabled = twoFingerScroll,
             naturalScrollEnabled = touchpadNaturalScroll,
@@ -141,94 +139,112 @@ fun FullscreenMouseOverlay() {
             triggerHaptic(vibrator, HapticStrength.LIGHT)
         }
     }
-    val processor =
-        remember {
-            TouchpadGestureProcessor(
-                scope = coroutineScope,
-                config = { gestureConfig },
-                onHapticFeedback = { currentOnHapticFeedback() },
-            )
-        }
+    return remember(coroutineScope) {
+        TouchpadGestureProcessor(
+            scope = coroutineScope,
+            config = { gestureConfig },
+            onHapticFeedback = { currentOnHapticFeedback() },
+        )
+    }
+}
 
+fun Modifier.touchpadSurfaceInput(
+    processor: TouchpadGestureProcessor,
+    useMouse: Boolean,
+): Modifier =
+    this.pointerInput(processor, useMouse) {
+        try {
+            awaitPointerEventScope {
+                while (true) {
+                    val event = awaitPointerEvent(PointerEventPass.Main)
+                    val sw = size.width.toFloat().coerceAtLeast(1f)
+                    val sh = size.height.toFloat().coerceAtLeast(1f)
+                    for (change in event.changes) {
+                        val id = change.id.value
+                        val localPos = change.position
+                        val clampedX = localPos.x.coerceIn(0f, sw)
+                        val clampedY = localPos.y.coerceIn(0f, sh)
+                        val isInside = localPos.x in 0f..sw && localPos.y in 0f..sh
+
+                        when (event.type) {
+                            PointerEventType.Press -> {
+                                if (!change.previousPressed && isInside && !change.isConsumed) {
+                                    processor.onPress(
+                                        pointerId = id,
+                                        x = clampedX,
+                                        y = clampedY,
+                                        surfaceW = sw,
+                                        surfaceH = sh,
+                                    )
+                                }
+                            }
+
+                            PointerEventType.Move -> {
+                                if (!isInside && !useMouse) {
+                                    processor.onRelease(
+                                        pointerId = id,
+                                        x = clampedX,
+                                        y = clampedY,
+                                        surfaceW = sw,
+                                        surfaceH = sh,
+                                    )
+                                } else if (!change.isConsumed) {
+                                    val delta = change.positionChange()
+                                    processor.onMove(
+                                        pointerId = id,
+                                        x = clampedX,
+                                        y = clampedY,
+                                        deltaX = delta.x,
+                                        deltaY = delta.y,
+                                        surfaceW = sw,
+                                        surfaceH = sh,
+                                    )
+                                }
+                            }
+
+                            PointerEventType.Release -> {
+                                if (!change.pressed) {
+                                    processor.onRelease(
+                                        pointerId = id,
+                                        x = clampedX,
+                                        y = clampedY,
+                                        surfaceW = sw,
+                                        surfaceH = sh,
+                                    )
+                                }
+                            }
+
+                            else -> {
+                                Unit
+                            }
+                        }
+                        change.consume()
+                    }
+                }
+            }
+        } finally {
+            AppLog.d(TAG, "touchpadSurfaceInput finally: resetting gesture processor state")
+            processor.onCancel()
+        }
+    }
+
+@Composable
+fun FullscreenMouseOverlay() {
+    val colors = LocalAppColors.current
+
+    val touchpadUseMouse by TouchpadSettings.touchpadUseMouse.collectAsStateWithLifecycle()
+    val touchpadMouse45Enabled by TouchpadSettings.touchpadMouse45Enabled.collectAsStateWithLifecycle()
+
+    val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsStateWithLifecycle()
+    val touchpadMirroringEnabled by TouchpadSettings.touchpadMirroringEnabled.collectAsStateWithLifecycle()
+    val touchpadMirrorDim by TouchpadSettings.touchpadMirrorDim.collectAsStateWithLifecycle()
+    val isCapturing by ScreenCaptureManager.isCapturing.collectAsStateWithLifecycle()
+    val isMirroringActive = !touchpadUseMouse && touchpadMirroringEnabled && isCapturing
+
+    val processor = rememberGlobalTouchpadProcessor(forceMouseMode = false)
     val hasActivePointers by processor.hasActivePointers.collectAsStateWithLifecycle()
 
     val insetBezelBrush = rememberBezelBrush()
-    val touchpadPointerModifier =
-        Modifier.pointerInput(processor, touchpadUseMouse) {
-            try {
-                awaitPointerEventScope {
-                    while (true) {
-                        val event = awaitPointerEvent(PointerEventPass.Main)
-                        val sw = size.width.toFloat().coerceAtLeast(1f)
-                        val sh = size.height.toFloat().coerceAtLeast(1f)
-                        for (change in event.changes) {
-                            val id = change.id.value
-                            val localPos = change.position
-                            val clampedX = localPos.x.coerceIn(0f, sw)
-                            val clampedY = localPos.y.coerceIn(0f, sh)
-                            val isInside = localPos.x in 0f..sw && localPos.y in 0f..sh
-
-                            when (event.type) {
-                                PointerEventType.Press -> {
-                                    if (!change.previousPressed && isInside && !change.isConsumed) {
-                                        processor.onPress(
-                                            pointerId = id,
-                                            x = clampedX,
-                                            y = clampedY,
-                                            surfaceW = sw,
-                                            surfaceH = sh,
-                                        )
-                                    }
-                                }
-
-                                PointerEventType.Move -> {
-                                    if (!isInside && !gestureConfig.useMouse) {
-                                        processor.onRelease(
-                                            pointerId = id,
-                                            x = clampedX,
-                                            y = clampedY,
-                                            surfaceW = sw,
-                                            surfaceH = sh,
-                                        )
-                                    } else if (!change.isConsumed) {
-                                        val delta = change.positionChange()
-                                        processor.onMove(
-                                            pointerId = id,
-                                            x = clampedX,
-                                            y = clampedY,
-                                            deltaX = delta.x,
-                                            deltaY = delta.y,
-                                            surfaceW = sw,
-                                            surfaceH = sh,
-                                        )
-                                    }
-                                }
-
-                                PointerEventType.Release -> {
-                                    if (!change.pressed) {
-                                        processor.onRelease(
-                                            pointerId = id,
-                                            x = clampedX,
-                                            y = clampedY,
-                                            surfaceW = sw,
-                                            surfaceH = sh,
-                                        )
-                                    }
-                                }
-
-                                else -> {
-                                    Unit
-                                }
-                            }
-                            change.consume()
-                        }
-                    }
-                }
-            } finally {
-                AppLog.d(TAG, "pointerInput finally: resetting gesture processor state")
-                processor.onCancel()
-            }
-        }
 
     Box(
         modifier =
@@ -263,7 +279,7 @@ fun FullscreenMouseOverlay() {
                                         width = 1.dp,
                                         brush = insetBezelBrush,
                                         shape = TP_ROUNDED_12,
-                                    ).then(touchpadPointerModifier),
+                                    ).touchpadSurfaceInput(processor, useMouse = true),
                             contentAlignment = Alignment.Center,
                         ) {
                             Box(
@@ -339,7 +355,7 @@ fun FullscreenMouseOverlay() {
                                         width = 1.dp,
                                         brush = insetBezelBrush,
                                         shape = TP_ROUNDED_12,
-                                    ).then(touchpadPointerModifier),
+                                    ).touchpadSurfaceInput(processor, useMouse = false),
                             contentAlignment = Alignment.Center,
                         ) {
                             if (isMirroringActive) {

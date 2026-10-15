@@ -1,6 +1,5 @@
 package com.stormpanda.megingiard.keyboard
 
-import android.os.Vibrator
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -17,33 +16,23 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.PointerEventType
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.positionChange
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
-import com.stormpanda.megingiard.macropad.HapticStrength
-import com.stormpanda.megingiard.macropad.triggerHaptic
-import com.stormpanda.megingiard.settings.TouchpadSettings
-import com.stormpanda.megingiard.touchpad.TouchpadGestureConfig
-import com.stormpanda.megingiard.touchpad.TouchpadGestureProcessor
+import com.stormpanda.megingiard.touchpad.rememberGlobalTouchpadProcessor
+import com.stormpanda.megingiard.touchpad.touchpadSurfaceInput
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.rememberBezelBrush
 import com.stormpanda.megingiard.viewmodel.KeyboardViewModel
@@ -53,14 +42,12 @@ private const val TAG = "KeyboardScreen"
 @Composable
 fun KeyboardScreen(modifier: Modifier = Modifier) {
     val viewModel: KeyboardViewModel = viewModel()
-    val context = LocalContext.current
     val density = LocalDensity.current
     val kbLayout by viewModel.kbLayout.collectAsStateWithLifecycle()
     val isQuickMenuOpen by viewModel.isQuickMenuOpen.collectAsStateWithLifecycle()
     val colors = LocalAppColors.current
 
     val kbTouchpadEnabled by viewModel.kbTouchpadEnabled.collectAsStateWithLifecycle()
-    val vibrator = remember { context.getSystemService(Vibrator::class.java) }
 
     // Sub-mode and layout tracking
     val keyboardMode by viewModel.keyboardMode.collectAsStateWithLifecycle()
@@ -110,7 +97,6 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
             KeyboardLayoutState(keyboardMode, grid)
         }
 
-    val coroutineScope = rememberCoroutineScope()
     val gestureProcessor = viewModel.gestureProcessor
     val pressedKeys by gestureProcessor.pressedKeys.collectAsStateWithLifecycle()
 
@@ -130,31 +116,7 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
             label = "Touchpad Switch",
         ) { enabled ->
             if (enabled) {
-                val processor =
-                    remember {
-                        TouchpadGestureProcessor(
-                            scope = coroutineScope,
-                            config = {
-                                TouchpadGestureConfig(
-                                    useMouse = true,
-                                    sensitivity = TouchpadSettings.touchpadSensitivity.value,
-                                    twoFingerScrollEnabled = TouchpadSettings.touchpadTwoFingerScroll.value,
-                                    naturalScrollEnabled = TouchpadSettings.touchpadNaturalScroll.value,
-                                    scrollSpeed = TouchpadSettings.touchpadScrollSpeed.value,
-                                    tapToClick = TouchpadSettings.touchpadTapToClick.value,
-                                    twoFingerTap = TouchpadSettings.touchpadTwoFingerTap.value,
-                                    threeFingerTap = TouchpadSettings.touchpadThreeFingerTap.value,
-                                    tapDrag = TouchpadSettings.touchpadTapDrag.value,
-                                )
-                            },
-                            onHapticFeedback = {
-                                if (TouchpadSettings.touchpadHapticsEnabled.value && vibrator != null) {
-                                    triggerHaptic(vibrator, HapticStrength.LIGHT)
-                                }
-                            },
-                        )
-                    }
-
+                val processor = rememberGlobalTouchpadProcessor(forceMouseMode = true)
                 val insetBezelBrush = rememberBezelBrush()
 
                 Box(
@@ -174,69 +136,7 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                                     width = KB_TOUCHPAD_BORDER_WIDTH,
                                     brush = insetBezelBrush,
                                     shape = KB_TOUCHPAD_SHAPE,
-                                ).pointerInput(processor) {
-                                    try {
-                                        awaitPointerEventScope {
-                                            while (true) {
-                                                val event = awaitPointerEvent(PointerEventPass.Main)
-                                                val sw = size.width.toFloat().coerceAtLeast(1f)
-                                                val sh = size.height.toFloat().coerceAtLeast(1f)
-                                                for (change in event.changes) {
-                                                    val id = change.id.value
-                                                    val localPos = change.position
-                                                    val isInside = localPos.x in 0f..sw && localPos.y in 0f..sh
-
-                                                    if (change.isConsumed) continue
-
-                                                    val clampedX = localPos.x.coerceIn(0f, sw)
-                                                    val clampedY = localPos.y.coerceIn(0f, sh)
-
-                                                    when (event.type) {
-                                                        PointerEventType.Press -> {
-                                                            if (!change.previousPressed && isInside) {
-                                                                processor.onPress(
-                                                                    pointerId = id,
-                                                                    x = clampedX,
-                                                                    y = clampedY,
-                                                                    surfaceW = sw,
-                                                                    surfaceH = sh,
-                                                                )
-                                                            }
-                                                        }
-
-                                                        PointerEventType.Move -> {
-                                                            val delta = change.positionChange()
-                                                            processor.onMove(
-                                                                pointerId = id,
-                                                                x = clampedX,
-                                                                y = clampedY,
-                                                                deltaX = delta.x,
-                                                                deltaY = delta.y,
-                                                                surfaceW = sw,
-                                                                surfaceH = sh,
-                                                            )
-                                                        }
-
-                                                        PointerEventType.Release -> {
-                                                            if (!change.pressed) {
-                                                                processor.onRelease(
-                                                                    pointerId = id,
-                                                                    x = clampedX,
-                                                                    y = clampedY,
-                                                                    surfaceW = sw,
-                                                                    surfaceH = sh,
-                                                                )
-                                                            }
-                                                        }
-                                                    }
-                                                    change.consume()
-                                                }
-                                            }
-                                        }
-                                    } finally {
-                                        processor.onCancel()
-                                    }
-                                },
+                                ).touchpadSurfaceInput(processor, useMouse = true),
                         contentAlignment = Alignment.Center,
                     ) {
                     }
