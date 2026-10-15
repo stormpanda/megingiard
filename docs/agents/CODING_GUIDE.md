@@ -242,7 +242,7 @@ Never call `.collectAsState()` outside a Composable; never call raw `.collect {}
 
 ### 9.6 Gamepad & Settings UI Conventions
 
-- **No controller button prompts in Settings / Editor menus:** Controller button prompt glyphs (e.g. `GamePadGlyph` badges for A/B/X/Y or footer prompt bars) must never be displayed inside Megingiard Companion settings screens or MacroPad editor menus. Button prompt glyphs are reserved for Game Focus launcher UI.
+- **No controller button prompts in Settings / Editor menus:** Controller button prompt glyphs (e.g. `GamePadButton` badges for A/B/X/Y or footer prompt bars) must never be displayed inside Megingiard Companion settings screens or MacroPad editor menus. Button prompt glyphs are reserved for Game Focus launcher UI.
 - **In-place two-step confirmation for destructive actions:** Never launch modal window dialogs (`Dialog`, `AlertDialog`) from within overlay window contexts or editor menus (window type mismatch crashes on overlay contexts). Destructive actions (deleting profiles, layouts, buttons, macros) use `GamepadTwoStepConfirmCard`:
   1. Activating the item (Button A / touch click) changes its headline to a confirmation prompt (e.g. *"Really delete 'Profile'?"*) and changes the badge to *"Confirm"*.
   2. Activating again executes the action and resets state.

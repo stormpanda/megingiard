@@ -700,7 +700,7 @@ fun GamepadChoiceCard(
 }
 
 /**
- * Gamepad-first action button card with trailing action badge or glyph.
+ * Gamepad-first action button card with trailing action badge.
  */
 @Composable
 fun GamepadActionCard(
@@ -711,7 +711,6 @@ fun GamepadActionCard(
     icon: ImageVector? = null,
     leadingContent: (@Composable () -> Unit)? = null,
     actionText: String? = null,
-    actionGlyph: GamePadGlyph? = null,
     actionLeadingContent: (@Composable () -> Unit)? = null,
     trailingContent: (@Composable () -> Unit)? = null,
     cardBgColor: Color? = null,
@@ -767,25 +766,16 @@ fun GamepadActionCard(
             isDestructive = isDestructive,
             alwaysShowFullDescription = alwaysShowFullDescription,
             trailingContent =
-                trailingContent ?: if (actionText != null || actionGlyph != null || actionLeadingContent != null) {
+                trailingContent ?: if (actionText != null || actionLeadingContent != null) {
                     {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(GC_SPACING_8),
                         ) {
                             actionLeadingContent?.invoke()
-                            if (actionText != null || actionGlyph != null) {
+                            if (actionText != null) {
                                 GamepadPill(
-                                    text = actionText ?: "",
-                                    leadingContent =
-                                        actionGlyph?.let { glyph ->
-                                            {
-                                                GamePadGlyphBadge(
-                                                    glyph = glyph,
-                                                    tint = if (isDestructive) colors.error else colors.accent,
-                                                )
-                                            }
-                                        },
+                                    text = actionText,
                                     isDestructive = isDestructive,
                                 )
                             }
