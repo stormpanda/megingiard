@@ -284,4 +284,19 @@ class TouchpadGestureProcessorTest {
             processor.onCancel()
             assertEquals("MB L U\n", PrivdClient.pollCommandForTest())
         }
+
+    @Test
+    fun `relative mode continues moving when first finger releases while second finger stays down`() =
+        runTest(testDispatcher) {
+            val processor = createProcessor(useMouse = { true })
+
+            processor.press(1L, 100f, 200f)
+            processor.press(2L, 120f, 220f)
+            processor.release(1L, 100f, 200f)
+
+            processor.move(2L, 130f, 225f, dx = 10f, dy = 5f)
+            assertEquals("MM 20 10\n", PrivdClient.pollCommandForTest())
+
+            processor.release(2L, 130f, 225f)
+        }
 }

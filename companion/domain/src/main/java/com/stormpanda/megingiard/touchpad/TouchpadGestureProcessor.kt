@@ -65,10 +65,9 @@ class TouchpadGestureProcessor(
 
     // ── Mouse mode state ────────────────────────────────────────────────────
     private val pressTimes = HashMap<Long, Long>()
-    private val downPositions = HashMap<Long, Pair<Float, Float>>()
+    private val downPositions = LinkedHashMap<Long, Pair<Float, Float>>()
     private val movedTooFar = HashSet<Long>()
     private val releasedAsTap = ArrayList<Long>()
-    private var primaryPointer: Long? = null
     private var scrollAccumY = 0f
     private var lastTapReleaseTime = 0L
     private var isDragging = false
@@ -83,7 +82,6 @@ class TouchpadGestureProcessor(
         pressTimes.clear()
         downPositions.clear()
         movedTooFar.clear()
-        primaryPointer = null
         updateActivePointers()
     }
 
@@ -131,7 +129,6 @@ class TouchpadGestureProcessor(
         if (currentConfig.useMouse) {
             pressTimes[pointerId] = System.currentTimeMillis()
             downPositions[pointerId] = Pair(x, y)
-            if (primaryPointer == null) primaryPointer = pointerId
             if (downPositions.size != 2) {
                 scrollAccumY = 0f
             }
@@ -196,8 +193,9 @@ class TouchpadGestureProcessor(
                     movedTooFar.add(pointerId)
                 }
             }
+            val isPrimary = downPositions.keys.firstOrNull() == pointerId
             if (currentConfig.twoFingerScrollEnabled && downPositions.size == 2) {
-                if (pointerId == primaryPointer) {
+                if (isPrimary) {
                     scrollAccumY += deltaY
                     val speed = currentConfig.scrollSpeed.coerceIn(TouchpadSettings.SCROLL_SPEED_MIN, TouchpadSettings.SCROLL_SPEED_MAX)
                     val scrollThreshold = TP_SCROLL_THRESHOLD_BASE_PX / speed // Sensitivity threshold in pixels
@@ -208,7 +206,7 @@ class TouchpadGestureProcessor(
                         scrollAccumY -= units * scrollThreshold
                     }
                 }
-            } else if (pointerId == primaryPointer) {
+            } else if (isPrimary) {
                 val sens = currentConfig.sensitivity.coerceIn(TouchpadSettings.SENSITIVITY_MIN, TP_SENSITIVITY_MAX)
                 val dx = (deltaX * TP_MOUSE_SENSITIVITY * sens).roundToInt()
                 val dy = (deltaY * TP_MOUSE_SENSITIVITY * sens).roundToInt()
@@ -251,9 +249,6 @@ class TouchpadGestureProcessor(
                     !disqualified &&
                     (System.currentTimeMillis() - pressTime) < TP_TAP_TIMEOUT_MS
             AppLog.d(TAG, "onRelease: pressTime=$pressTime, disqualified=$disqualified, isTap=$isTap")
-            if (pointerId == primaryPointer) {
-                primaryPointer = null // caller should set new primary if needed
-            }
             if (isTap) releasedAsTap.add(pointerId)
             if (downPositions.size != 2) {
                 scrollAccumY = 0f
