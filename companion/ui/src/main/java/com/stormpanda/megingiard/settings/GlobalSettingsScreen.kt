@@ -130,6 +130,7 @@ fun GlobalSettingsScreen(
     val pendingInAppImportMode by ConfigManager.pendingInAppImportMode.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
     var selectedCategory by remember { mutableStateOf(SettingsCategory.GENERAL) }
+    var hasTriggeredManualCheck by rememberSaveable { mutableStateOf(false) }
 
     var deleteCountdown by rememberSaveable(selectedCategory, subPageStack) { mutableIntStateOf(-1) }
     var isDeleteCountingDown by rememberSaveable(selectedCategory, subPageStack) { mutableStateOf(false) }
@@ -320,10 +321,6 @@ fun GlobalSettingsScreen(
                                 }
 
                                 SettingsCategory.UPDATES -> {
-                                    var hasTriggeredManualCheck by rememberSaveable(selectedCategory) {
-                                        mutableStateOf(false)
-                                    }
-
                                     UpdatesSettingsTab(
                                         autoUpdateCheckEnabled = autoUpdateCheckEnabled,
                                         updateAvailable = updateAvailable,
@@ -335,7 +332,7 @@ fun GlobalSettingsScreen(
                                         onManualCheckClick = {
                                             if (isCheckingUpdates) return@UpdatesSettingsTab
 
-                                            if (hasTriggeredManualCheck && updateAvailable) {
+                                            if (updateAvailable) {
                                                 subPageStack = listOf(SettingsSubPage.UPDATE_AVAILABLE)
                                             } else {
                                                 hasTriggeredManualCheck = true
