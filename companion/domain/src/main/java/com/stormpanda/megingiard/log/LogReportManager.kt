@@ -85,6 +85,7 @@ object LogReportManager {
         deviceModel: String = Build.MODEL,
         androidVersion: String = Build.VERSION.RELEASE,
         pid: Int = Process.myPid(),
+        logcatReader: (Int) -> String = ::readLogcatLines,
     ): Result<Unit> =
         withContext(Dispatchers.IO) {
             runCatching {
@@ -95,7 +96,7 @@ object LogReportManager {
                         androidVersion = androidVersion,
                         timestamp = LocalDateTime.now().format(REPORT_TIMESTAMP_FORMATTER),
                     )
-                val body = readLogcatLines(pid)
+                val body = logcatReader(pid)
                 context.contentResolver.openOutputStream(uri)?.use { stream ->
                     stream.bufferedWriter().use { writer ->
                         writer.write(header)
