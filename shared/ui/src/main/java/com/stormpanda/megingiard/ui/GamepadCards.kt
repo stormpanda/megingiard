@@ -583,7 +583,7 @@ fun GamepadToggleCard(
  * Shared base card for adjustable components (steppers, choices) supporting 2-tier D-pad navigation.
  */
 @Composable
-fun GamepadAdjustableCard(
+private fun GamepadAdjustableCard(
     title: String,
     valueText: String,
     onPrevious: () -> Unit,
@@ -591,7 +591,6 @@ fun GamepadAdjustableCard(
     modifier: Modifier = Modifier,
     description: String? = null,
     icon: ImageVector? = null,
-    onClick: (() -> Unit)? = null,
     enabled: Boolean = true,
     itemKey: Any? = title,
     onFocusChanged: ((Boolean) -> Unit)? = null,
@@ -600,13 +599,9 @@ fun GamepadAdjustableCard(
 
     GamepadFocusCard(
         onClick = {
-            if (onClick != null) {
-                onClick()
-            } else {
-                val nextState = !isAdjusting
-                AppLog.d(TAG, "GamepadAdjustableCard: '$title' adjustment mode=$nextState")
-                isAdjusting = nextState
-            }
+            val nextState = !isAdjusting
+            AppLog.d(TAG, "GamepadAdjustableCard: '$title' adjustment mode=$nextState")
+            isAdjusting = nextState
         },
         enabled = enabled,
         modifier = modifier,
@@ -659,7 +654,6 @@ fun GamepadStepperCard(
     modifier: Modifier = Modifier,
     description: String? = null,
     icon: ImageVector? = null,
-    onValueClick: (() -> Unit)? = null,
     enabled: Boolean = true,
     itemKey: Any? = title,
     onFocusChanged: ((Boolean) -> Unit)? = null,
@@ -672,7 +666,6 @@ fun GamepadStepperCard(
         modifier = modifier,
         description = description,
         icon = icon,
-        onClick = onValueClick,
         enabled = enabled,
         itemKey = itemKey,
         onFocusChanged = onFocusChanged,
@@ -691,7 +684,6 @@ fun GamepadChoiceCard(
     modifier: Modifier = Modifier,
     description: String? = null,
     icon: ImageVector? = null,
-    onClick: (() -> Unit)? = null,
     enabled: Boolean = true,
     itemKey: Any? = title,
     onFocusChanged: ((Boolean) -> Unit)? = null,
@@ -704,7 +696,6 @@ fun GamepadChoiceCard(
         modifier = modifier,
         description = description,
         icon = icon,
-        onClick = onClick,
         enabled = enabled,
         itemKey = itemKey,
         onFocusChanged = onFocusChanged,

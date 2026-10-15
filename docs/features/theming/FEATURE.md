@@ -365,7 +365,6 @@ Megingiard provides a centralized, reusable suite of handheld gamepad-first comp
 | `GamepadSectionHeader` | Uppercase section header with tracked letter-spacing, localized text, and themed accent/section coloring. | `GlobalSettingsScreen`, `MacroPadEditor`, `MacroTimelineEditor` |
 | `GamepadCategoryTile` | Focusable navigation tile for sidebar category rails with subtle background highlight and icon/label layout. | `GamepadTwoPaneScaffold` sidebars |
 | `GamepadFocusCard` | Standard focusable card container with animated scaling, draw-phase glowing accent border on focus, and click handling. | Base for all gamepad cards |
-| `GamepadAdjustableCard` | Shared two-tier focusable adjustable card container managing Tier-1/Tier-2 focus and value adjustment state machine. | Base for `GamepadStepperCard`, `GamepadChoiceCard` |
 | `GamepadToggleCard` | Focusable toggle card with switch control, title, description, and icon. Pressing `[A]` directly toggles the setting; `[Left]` moves back to sidebar rail. | Settings switches, lock toggles |
 | `GamepadStepperCard` | Two-tier focusable numeric stepper card. Pressing `[A]` enters Tier 2 value adjustment (`[Left/Right]` decrements/increments, `[B]` exits). | Numeric settings, step intervals |
 | `GamepadChoiceCard` | Two-tier focusable value carousel card. Tier 1: `[Up/Down]` row traversal, `[Left]` back to sidebar. Pressing `[A]` enters Tier 2 value adjustment (capsule glows, `[Left/Right]` changes value, `[B]` exits without closing dialog). | Enums, presets, log levels |
