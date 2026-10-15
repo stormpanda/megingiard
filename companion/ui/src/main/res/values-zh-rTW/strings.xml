@@ -637,6 +637,7 @@ Open Settings to create a layout.</string>
     <string name="config_restore_option_external">外部檔案</string>
     <string name="config_restore_option_external_sub">從儲存空間選擇 .mgrd 檔案</string>
     <string name="config_restore_option_internal_sub">%1$d 個設定檔 • %2$d 個配置 • %3$d 個巨集</string>
+    <string name="config_restore_option_internal_sub_with_backgrounds">%1$d 個設定檔 • %2$d 個配置 • %3$d 個巨集 • %4$d 個背景</string>
     <string name="config_restore_automatic_backups">自動備份</string>
     <string name="config_import_review_title">檢閱並套用</string>
     <string name="config_import_archive_title">Megingiard 備份封存</string>

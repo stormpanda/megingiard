@@ -638,6 +638,7 @@ Open Settings to create a layout.</string>
     <string name="config_restore_option_external">External File</string>
     <string name="config_restore_option_external_sub">Select a .mgrd file from storage</string>
     <string name="config_restore_option_internal_sub">%1$d profiles • %2$d layouts • %3$d macros</string>
+    <string name="config_restore_option_internal_sub_with_backgrounds">%1$d profiles • %2$d layouts • %3$d macros • %4$d backgrounds</string>
     <string name="config_restore_automatic_backups">Automatic Backups</string>
     <string name="config_import_review_title">Review &amp; Apply</string>
     <string name="config_import_archive_title">Megingiard Backup Archive</string>
