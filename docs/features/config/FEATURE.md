@@ -1,7 +1,6 @@
 # Feature: Configuration Export / Import
 
-> **Related source:** `companion/ui/src/main/java/com/stormpanda/megingiard/config/`  
-> _(Settings UI entry points are in `companion/ui/src/main/java/com/stormpanda/megingiard/settings/`.)_
+> **Related source:** `:shared:core` (`shared/core/src/main/kotlin/com/stormpanda/megingiard/config/`), `:companion:domain` (`companion/domain/src/main/java/com/stormpanda/megingiard/config/`), `:companion:ui` (`companion/ui/src/main/java/com/stormpanda/megingiard/settings/`)
 
 ---
 
@@ -221,20 +220,22 @@ Adding a new setting requires assigning the key to a section in `SECTION_MAP` or
 
 ### Source Files
 
-| File                                   | Role                                                                                                                                                                                                                |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `config/ConfigSchema.kt`               | `@Serializable` data classes (`MegingiardExport`, `ExportMetadata`) + `SCHEMA_VERSION` + `MGRD_MIME_TYPE`                                                                                                           |
-| `config/ConfigManager.kt`              | Unified export/import manager: `ExportKind` / `ImportMode` discriminators, coordinator StateFlows, export (`buildExport`, `buildProfileExport`), import (`applyImport`, `applyProfileImport`), UUID remap, checksum |
-| `settings/SettingsManager.kt`          | `exportGroupedSettings()` + `importGroupedSettingsAwait()` — bulk DataStore I/O                                                                                                                                     |
-| `settings/SettingsKeys.kt`             | Preference keys, section key groups (`GLOBAL_KEYS`, etc.), `SECTION_MAP`, and `EXCLUDED_KEYS`                                                                                                                     |
-| `settings/SettingsKeysTest.kt`         | Reflection-based unit test guard asserting 100% coverage of declared preference keys across `SECTION_MAP` and `EXCLUDED_KEYS`                                                                                    |
-| `settings/GlobalSettingsScreen.kt`     | State hoists, navigation scaffold, sections orchestrator                                                                                             |
-| `settings/tabs/ConfigurationSettingsTab.kt` | Configuration tab composable and export/import sub-pages (`CreateBackupSubPage`, `ShareProfileSubPage`, `RestoreBackupSubPage`, `RestoreReviewSubPage`) |
-| `settings/GlobalSettingsComponents.kt` | SettingsCategory enum, SettingsSubPage enum, and enum display name mapping helpers                                                                                                  |
-| `MainAppScreen.kt`                     | `LaunchedEffect(pendingImportUri)` + `IncomingImportDialog` for external file intents                                                                                                                               |
-| `MainActivity.kt`                      | `handleIncomingIntent()` / `onNewIntent()` — routes `ACTION_VIEW` uri to `ConfigManager`; holds `createDocumentLauncher` / `openDocumentLauncher`; discriminates `ExportKind` to call correct build function        |
-| `AndroidManifest.xml`                  | `ACTION_VIEW` intent-filter for `application/vnd.megingiard.config+json`                                                                                                                                            |
-| `res/values/strings.xml`               | All user-visible strings for the feature (prefix `config_`, `settings_config_`)                                                                                                                                     |
+| File                                                       | Role                                                                                                                                                                                                                |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `:shared:core` `config/ConfigSchema.kt`                    | `@Serializable` data classes (`MegingiardExport`, `ExportMetadata`, `InternalBackup`) + `SCHEMA_VERSION` + `MGRD_MIME_TYPE`                                                                                         |
+| `:shared:core` `config/FilenameBuilder.kt`                 | Suggested `.mgrd` filename generation and sanitization (`buildFilename`, `buildProfileFilename`, `sanitizeSegment`)                                                                                                 |
+| `:shared:core` `settings/SettingsEnums.kt`                 | `SettingsCategory` and `SettingsSubPage` enums                                                                                                                                                                      |
+| `:companion:domain` `config/ConfigManager.kt`              | Unified export/import manager: `ExportKind` / `ImportMode` discriminators, coordinator StateFlows, export (`buildExport`, `buildProfileExport`), import (`applyImport`, `applyProfileImport`), UUID remap, checksum |
+| `:companion:domain` `settings/SettingsManager.kt`          | `exportGroupedSettings()` + `importGroupedSettingsAwait()` — bulk DataStore I/O                                                                                                                                     |
+| `:companion:domain` `settings/SettingsKeys.kt`             | Preference keys, section key groups (`GLOBAL_KEYS`, etc.), `SECTION_MAP`, and `EXCLUDED_KEYS`                                                                                                                       |
+| `:companion:domain` `settings/SettingsKeysTest.kt`         | Reflection-based unit test guard asserting 100% coverage of declared preference keys across `SECTION_MAP`, `EXCLUDED_KEYS`, and import type sets                                                                    |
+| `:companion:ui` `settings/GlobalSettingsScreen.kt`         | State hoists, navigation scaffold, sections orchestrator                                                                                                                                                            |
+| `:companion:ui` `settings/tabs/ConfigurationSettingsTab.kt` | Configuration tab composable and export/import sub-pages (`CreateBackupSubPage`, `ShareProfileSubPage`, `RestoreBackupSubPage`, `RestoreReviewSubPage`)                                                            |
+| `:companion:ui` `settings/GlobalSettingsComponents.kt`     | Enum display name mapping helpers (`SettingsCategory.titleResId()`, `SettingsSubPage.titleResId()`)                                                                                                                 |
+| `:companion:ui` `MainAppScreen.kt`                         | `LaunchedEffect(pendingImportRequest)` + `IncomingImportDialog` for external file intents                                                                                                                           |
+| `:companion:ui` `MainActivity.kt`                          | `handleIncomingIntent()` / `onNewIntent()` — routes `ACTION_VIEW` uri to `ConfigManager`; holds `createDocumentLauncher` / `openDocumentLauncher`; discriminates `ExportKind` to call correct build function        |
+| `:companion:ui` `AndroidManifest.xml`                      | `ACTION_VIEW` intent-filter for `application/vnd.megingiard.config+json`                                                                                                                                            |
+| `:companion:ui` `res/values/strings.xml`                   | All user-visible strings for the feature (prefix `config_`, `settings_config_`)                                                                                                                                     |
 
 ### UUID Remapping on Import
 
