@@ -94,25 +94,24 @@ Modal visibility is controlled by a local `Boolean` state variable (`showXxxHelp
 
 ### Onboarding Welcome Tour & Wizard
 
-To onboard new users, the app runs a 5-step **Onboarding Welcome Tour Wizard** managed by `OnboardingWizardManager` and hosted inside `OnboardingWizardDialog`:
+To onboard new users, the app runs a 6-step **Onboarding Welcome Tour Wizard** managed by `OnboardingWizardManager` and hosted inside `OnboardingWizardDialog`:
 
 1. **Multi-Step Onboarding Tour:**
-   - **Step 1 (Welcome):** Introduces Megingiard's features and highlights in-app help (`?`) buttons.
-   - **Step 2 (Edge Gestures):** Explains edge swipe gestures with interactive trial drag pills, static edge labels, checkmark completion animations, and a live top/bottom position toggle switch.
+   - **Step 1 (Welcome):** Introduces Megingiard's features and highlights in-app help (`?`) buttons, with an **Exit App** secondary button if the user declines setup.
+   - **Step 2 (Edge Gestures):** Explains edge swipe gestures with interactive trial drag pills, static edge labels, checkmark completion animations, a live top/bottom position toggle switch, and an **Auto-Fade Quick Menu Bars** toggle switch.
    - **Step 3 (Theme):** Allows selecting a visual theme for the app with a live preview.
-   - **Step 4 (Accessibility Service):** Offers launching Android Accessibility Settings on the bottom screen (`Display.DEFAULT_DISPLAY`) to activate the accessibility service with a 1s polling loop and live status indicator dot, plus a secondary **Skip** button.
-   - **Step 5 (Megingiard System Service):** Provides a one-tap automated setup process (via native hardware root bridge or multi-stage Wireless Debugging) for Developer Options, Wireless Debugging, ADB Wireless Pairing, and System Service Connection with live checklist status icons, plus a secondary **Skip** button.
-   - **Step 6 (Finished):** Confirms tour completion with a completion icon, summary text, and an explicit **Finish Tour** button.
+   - **Step 4 (Accessibility Service):** Requires activating the Megingiard Accessibility Service before advancing (`isNextEnabled = isAccessibilityActive`). Offers one-tap activation via the native hardware root bridge (`su 0` when available) or launching Android Accessibility Settings on the primary display (`Display.DEFAULT_DISPLAY`) with a 1s polling loop and live status indicator dot.
+   - **Step 5 (Megingiard System Service):** Provides a one-tap automated setup process (via the native hardware root bridge or multi-stage Wireless Debugging) for Developer Options, USB/Wireless Debugging, ADB Wireless Pairing, and System Service Connection with live checklist status icons.
+   - **Step 6 (Finished):** Confirms tour completion with a completion icon, summary text, and an explicit **Finish** button.
 
 2. **Tour Versioning & Completion Persistence:**
    - `SettingsManager.welcomeTourCompletedVersion` tracks the integer version of the last completed welcome tour (default `0`, current version `CURRENT_WELCOME_TOUR_VERSION = 1`).
    - The welcome tour automatically launches if `welcomeTourCompletedVersion < CURRENT_WELCOME_TOUR_VERSION`, ensuring that new tour versions are presented even if a user completed an earlier version.
-   - **Strict Persistence Rule:** Only explicitly clicking the **Finish Tour** button on the final step (`FinishedStepContent`) persists `setWelcomeTourCompletedVersion(CURRENT_WELCOME_TOUR_VERSION)`. Dismissing or skipping the dialog does not persist completion state.
+   - **Strict Persistence Rule:** Only explicitly clicking the **Finish** button on the final step (`FinishedStepContent`) persists `setWelcomeTourCompletedVersion(CURRENT_WELCOME_TOUR_VERSION)`.
 
 3. **Footer Navigation & Settings Re-run Option:**
-   - Provides `Back` (outlined button), `Skip` (outlined button on Step 4), `Next` (primary button), and `Finish Tour` (primary button) navigation controls.
-   - Users can manually restart the welcome tour anytime via **Global Settings** -> **General** -> **Start Welcome Tour** (first entry in the General settings section).
-   - All tutorial flags can also be reset under **Global Settings** -> **Data** -> **Reset tutorials**.
+   - Provides **Exit App** (outlined button on Step 1), **Back** (outlined button on Steps 2–6), **Next** (primary button on Steps 1–5), and **Finish** (primary button on Step 6) navigation controls.
+   - Users can manually restart the welcome tour anytime via **Global Settings** -> **General** -> **Quick Setup** (or **Reset tutorials** in **Global Settings** -> **General**).
 
 ### String resource conventions
 

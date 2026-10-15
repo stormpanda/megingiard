@@ -226,5 +226,5 @@ None identified — `HelpModal` and onboarding composables render only on explic
 - [x] **`[HP-10]`** — Consolidate duplicate `ON_RESUME` + 1s polling loops into shared hook and fix missing `isUsbActive` poll in `PrivdReconnectPromptDialog` *(Complexity: Medium, Risk: Low)*
 - [x] **`[HP-11]`** — Extract shared wizard card scaffold, root-bridge activation helpers, and deduplicate locale lookup *(Complexity: Medium, Risk: Low)*
 - [x] **`[HP-12]`** — Inline single-use `ensureMacroPadModeForProfile` closure in `QuickMenu.kt` *(Complexity: Low, Risk: Low)*
-- [ ] **`[HP-13]`** — Sync `docs/features/help/FEATURE.md` onboarding wizard step count, mandatory Accessibility, root-bridge, and settings path *(Complexity: Low, Risk: Low)*
+- [x] **`[HP-13]`** — Sync `docs/features/help/FEATURE.md` onboarding wizard step count, mandatory Accessibility, root-bridge, and settings path *(Complexity: Low, Risk: Low)*
 - [ ] **`[HP-14]`** — Sync `QuickMenuHelpModal`, `CompanionHubHelpModal`, and `FEATURE.md` coverage table / locale list *(Complexity: Low, Risk: Low)*
