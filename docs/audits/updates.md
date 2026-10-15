@@ -214,7 +214,7 @@ None identified — update checks run at most once every 24 hours (or on manual 
 
 > Select which findings to implement (`All`, `Low-risk only`, or specific IDs):
 
-- [ ] **`[UP-01]`** — Unused `lastCheckTime` `StateFlow` Exposure and Hand-Rolled Preference Setter *(Complexity: Low, Risk: Low)*
+- [x] **`[UP-01]`** — Unused `lastCheckTime` `StateFlow` Exposure and Hand-Rolled Preference Setter *(Complexity: Low, Risk: Low)*
 - [ ] **`[UP-02]`** — Dead `SemVerComparator.isNewer` Alias Function *(Complexity: Low, Risk: Low)*
 - [ ] **`[UP-03]`** — Unreachable `try/catch` Around Non-Throwing `launchUrlOnPrimaryDisplay` (Breaking Obtainium Fallback) *(Complexity: Med, Risk: Low)*
 - [ ] **`[UP-04]`** — Duplicate Version String Sanitization in `SemVerComparator` *(Complexity: Low, Risk: Low)*

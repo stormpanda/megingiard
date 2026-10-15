@@ -73,7 +73,6 @@ class UpdateManagerTest {
             UpdateManager.loadFrom(prefs, currentVersion = "0.8.0")
 
             assertTrue(UpdateManager.autoUpdateCheckEnabled.value)
-            assertTrue(UpdateManager.lastCheckTime.value >= 0L)
             assertTrue(UpdateManager.updateAvailable.value)
             assertEquals("v0.8.1", UpdateManager.latestReleaseInfo.value?.tagName)
         }

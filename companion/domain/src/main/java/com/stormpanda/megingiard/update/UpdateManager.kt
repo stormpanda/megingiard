@@ -8,6 +8,7 @@ import com.stormpanda.megingiard.settings.KEY_AUTO_UPDATE_CHECK_ENABLED
 import com.stormpanda.megingiard.settings.KEY_LATEST_RELEASE_NOTES
 import com.stormpanda.megingiard.settings.KEY_LATEST_RELEASE_TAG
 import com.stormpanda.megingiard.settings.KEY_LATEST_RELEASE_URL
+import com.stormpanda.megingiard.settings.updateSettingPref
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -44,6 +45,7 @@ object UpdateManager {
     private var isLoadedFromDataStore = false
     private var pendingCheckVersion: String? = null
     private var pendingCheckApiUrl: String? = null
+    private var lastCheckTimeMs = 0L
 
     private val _autoUpdateCheckEnabled = MutableStateFlow(true)
     val autoUpdateCheckEnabled: StateFlow<Boolean> = _autoUpdateCheckEnabled.asStateFlow()
@@ -56,9 +58,6 @@ object UpdateManager {
 
     private val _isChecking = MutableStateFlow(false)
     val isChecking: StateFlow<Boolean> = _isChecking.asStateFlow()
-
-    private val _lastCheckTime = MutableStateFlow(0L)
-    val lastCheckTime: StateFlow<Long> = _lastCheckTime.asStateFlow()
 
     private val _checkError = MutableStateFlow<String?>(null)
     val checkError: StateFlow<String?> = _checkError.asStateFlow()
@@ -82,7 +81,7 @@ object UpdateManager {
         _updateAvailable.value = false
         _latestReleaseInfo.value = null
         _isChecking.value = false
-        _lastCheckTime.value = 0L
+        lastCheckTimeMs = 0L
         _checkError.value = null
         isLoadedFromDataStore = false
         pendingCheckVersion = null
@@ -110,7 +109,7 @@ object UpdateManager {
         }
         AppLog.d(
             TAG,
-            "loadFrom: autoCheck=${_autoUpdateCheckEnabled.value}, lastCheck=${_lastCheckTime.value}, tag=$tag, updateAvailable=${_updateAvailable.value}",
+            "loadFrom: autoCheck=${_autoUpdateCheckEnabled.value}, lastCheck=$lastCheckTimeMs, tag=$tag, updateAvailable=${_updateAvailable.value}",
         )
 
         if (firstLoad) {
@@ -126,13 +125,15 @@ object UpdateManager {
     }
 
     fun setAutoUpdateCheckEnabled(enabled: Boolean) {
-        AppLog.d(TAG, "setAutoUpdateCheckEnabled: $enabled")
-        _autoUpdateCheckEnabled.value = enabled
-        scope?.launch {
-            dataStore?.edit { prefs ->
-                prefs[KEY_AUTO_UPDATE_CHECK_ENABLED] = enabled
-            }
-        }
+        updateSettingPref(
+            KEY_AUTO_UPDATE_CHECK_ENABLED,
+            enabled,
+            _autoUpdateCheckEnabled,
+            scope,
+            dataStore,
+            TAG,
+            "setAutoUpdateCheckEnabled",
+        )
     }
 
     /**
@@ -160,10 +161,10 @@ object UpdateManager {
                 AppLog.d(TAG, "Automatic update check skipped: feature disabled in settings")
                 return
             }
-            if (now - _lastCheckTime.value < AUTO_UPDATE_CHECK_INTERVAL_MS) {
+            if (now - lastCheckTimeMs < AUTO_UPDATE_CHECK_INTERVAL_MS) {
                 AppLog.d(
                     TAG,
-                    "Automatic update check skipped: last checked less than 24h ago in this session (${now - _lastCheckTime.value}ms ago)",
+                    "Automatic update check skipped: last checked less than 24h ago in this session (${now - lastCheckTimeMs}ms ago)",
                 )
                 return
             }
@@ -185,7 +186,7 @@ object UpdateManager {
 
                 _latestReleaseInfo.value = releaseInfo
                 _updateAvailable.value = updateIsAvail
-                _lastCheckTime.value = now
+                lastCheckTimeMs = now
                 _isChecking.value = false
 
                 AppLog.i(TAG, "Update check completed: latestTag=${releaseInfo.tagName}, updateAvailable=$updateIsAvail")

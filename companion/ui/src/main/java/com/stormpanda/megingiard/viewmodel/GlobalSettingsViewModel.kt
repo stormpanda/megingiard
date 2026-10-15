@@ -89,7 +89,6 @@ class GlobalSettingsViewModel : ViewModel() {
     val updateAvailable: StateFlow<Boolean> = UpdateManager.updateAvailable
     val latestReleaseInfo: StateFlow<AppReleaseInfo?> = UpdateManager.latestReleaseInfo
     val isCheckingUpdates: StateFlow<Boolean> = UpdateManager.isChecking
-    val lastUpdateCheckTime: StateFlow<Long> = UpdateManager.lastCheckTime
     val updateCheckError: StateFlow<String?> = UpdateManager.checkError
 
     init {
