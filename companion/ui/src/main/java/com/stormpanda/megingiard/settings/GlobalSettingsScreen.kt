@@ -98,7 +98,7 @@ fun GlobalSettingsScreen(
 
     val context = LocalContext.current
     LaunchedEffect(Unit) {
-        viewModel.checkPrivilegedModeStatus(context)
+        viewModel.checkPrivilegedModeStatus()
     }
     var subPageStack by rememberSaveable { mutableStateOf<List<SettingsSubPage>>(emptyList()) }
     val currentSubPage = subPageStack.lastOrNull()

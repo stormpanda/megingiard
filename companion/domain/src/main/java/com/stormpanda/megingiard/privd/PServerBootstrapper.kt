@@ -5,7 +5,6 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.security.BinaryIntegrity
 import com.stormpanda.megingiard.security.HmacUtil
 import java.io.File
-import android.os.Process as AndroidProcess
 
 private const val TAG = "PServerBootstrapper"
 
@@ -80,7 +79,6 @@ object PServerBootstrapper {
                 } ?: return false
 
             val keyHex = HmacUtil.bytesToHex(keyBytes)
-            val appUid = AndroidProcess.myUid()
             val isDebug = PrivdConstants.isDebugPackageName(context.packageName)
 
             val remoteBinPath = PrivdConstants.getDaemonRemotePath(isDebug)
@@ -101,7 +99,6 @@ object PServerBootstrapper {
                     processName = processName,
                     portStart = portStart,
                     keyHex = keyHex,
-                    appUid = appUid,
                 )
 
             // 5. Execute script via PServerBridge
@@ -143,7 +140,6 @@ object PServerBootstrapper {
         processName: String,
         portStart: Int,
         keyHex: String,
-        appUid: Int,
     ): String =
         """
         kill -9 ${'$'}(pidof $processName 2>/dev/null) 2>/dev/null
@@ -160,7 +156,7 @@ object PServerBootstrapper {
         } else {
             ""
         }}
-        $remoteBinPath --keyfile $stateFilePath --port $portStart --provision $keyHex $appUid
+        $remoteBinPath --keyfile $stateFilePath --port $portStart --provision $keyHex
         PROV_RET=${'$'}?
         if [ ${'$'}PROV_RET -ne 0 ]; then
             echo "PROVISION_FAILED_${'$'}PROV_RET"

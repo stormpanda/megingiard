@@ -1,7 +1,6 @@
 package com.stormpanda.megingiard.privd
 
 import android.content.Context
-import android.provider.Settings
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.security.BinaryIntegrity
 import com.stormpanda.megingiard.security.HmacUtil
@@ -17,7 +16,6 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
-import android.os.Process as AndroidProcess
 
 private const val TAG = "PrivdBootstrapper"
 
@@ -229,7 +227,7 @@ object PrivdBootstrapper {
         }
         val provisionOk =
             runCatching {
-                provisionDaemon(context, mgr, HmacUtil.bytesToHex(keyBytes), AndroidProcess.myUid())
+                provisionDaemon(context, mgr, HmacUtil.bytesToHex(keyBytes))
             }.getOrElse { e ->
                 AppLog.w(TAG, "provisionDaemon() threw: $e")
                 false
@@ -242,7 +240,7 @@ object PrivdBootstrapper {
         }
         // Key is now stored on both sides. Update in-memory copy before verifyConnect().
         PrivdClient.setKey(keyBytes)
-        AppLog.i(TAG, "bootstrapAndConnect: per-install key provisioned (app UID=${AndroidProcess.myUid()})")
+        AppLog.i(TAG, "bootstrapAndConnect: per-install key provisioned")
 
         // Spawn
         _stage.value = BootstrapStage.SPAWNING_DAEMON
@@ -327,20 +325,6 @@ object PrivdBootstrapper {
      * Clears saved ADB key and certificate credentials from disk.
      */
     fun clearCredentials(context: Context) = PrivdAdbConnectionManager.clearCredentials(context)
-
-    /**
-     * Returns true if the device's ADB Wireless-Debugging service is enabled and active.
-     */
-    fun isWirelessDebuggingActive(context: Context): Boolean {
-        val toggleEnabled =
-            try {
-                Settings.Global.getInt(context.contentResolver, "adb_wifi_enabled", 0) != 0
-            } catch (e: Exception) {
-                false
-            }
-        if (toggleEnabled) return true
-        return readAdbTlsConnectPort() > 0
-    }
 
     /**
      * Reads the ADB Wireless-Debugging TLS connect port from the system property
@@ -554,9 +538,9 @@ object PrivdBootstrapper {
     private fun currentEpochSeconds(): Int = ((System.currentTimeMillis() / MS_PER_SECOND) and UINT_MASK).toInt()
 
     /**
-     * Runs the daemon in provisioning mode: `megingiard_privd --provision <keyHex> <appUid>`.
+     * Runs the daemon in provisioning mode: `megingiard_privd --provision <keyHex>`.
      *
-     * The daemon writes the per-install HMAC key and the expected app UID to a shell-owned
+     * The daemon writes the per-install HMAC key to a shell-owned
      * 0600 state file (`/data/local/tmp/megingiard_privd.key`), then exits with 0.
      * The shell then echoes [PROVISION_OK_MARKER] confirming success.
      *
@@ -565,21 +549,19 @@ object PrivdBootstrapper {
      *
      * @param mgr   The open ADB connection to use.
      * @param keyHex 64 uppercase hex characters (32 bytes) — the per-install HMAC key.
-     * @param appUid The Android UID of the Megingiard app process.
      * @return `true` if the daemon wrote the state file successfully.
      */
     private fun provisionDaemon(
         context: Context,
         mgr: PrivdAdbConnectionManager,
         keyHex: String,
-        appUid: Int,
     ): Boolean {
         val isDebug = PrivdConstants.isDebugPackageName(context.packageName)
         val remotePath = PrivdConstants.getDaemonRemotePath(isDebug)
         val stateFilePath = PrivdConstants.getStateKeyFilePath(isDebug)
         val portStart = PrivdConstants.getPortStart(isDebug)
-        val cmd = "shell:$remotePath --keyfile $stateFilePath --port $portStart --provision $keyHex $appUid && echo $PROVISION_OK_MARKER"
-        AppLog.d(TAG, "provision cmd issued (keyHex redacted, appUid=$appUid)")
+        val cmd = "shell:$remotePath --keyfile $stateFilePath --port $portStart --provision $keyHex && echo $PROVISION_OK_MARKER"
+        AppLog.d(TAG, "provision cmd issued (keyHex redacted)")
         val stream = mgr.openStream(cmd) ?: return false
         return stream.use { s -> readUntilMarker(s, PROVISION_OK_MARKER) }
     }

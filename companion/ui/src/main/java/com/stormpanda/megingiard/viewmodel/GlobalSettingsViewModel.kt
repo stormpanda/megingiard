@@ -97,12 +97,6 @@ class GlobalSettingsViewModel : ViewModel() {
     val privdDeadzoneRight: StateFlow<Float> = MacroPadSettings.deadzoneRight
     val privdBootstrapStage: StateFlow<BootstrapStage> = PrivdBootstrapper.stage
 
-    private val _isWirelessDebuggingActive = MutableStateFlow<Boolean?>(null)
-    val isWirelessDebuggingActive: StateFlow<Boolean?> = _isWirelessDebuggingActive.asStateFlow()
-
-    private val _hasCredentials = MutableStateFlow<Boolean?>(null)
-    val hasCredentials: StateFlow<Boolean?> = _hasCredentials.asStateFlow()
-
     private val _isRootBridgeAvailable = MutableStateFlow<Boolean?>(null)
     val isRootBridgeAvailable: StateFlow<Boolean?> = _isRootBridgeAvailable.asStateFlow()
 
@@ -237,15 +231,12 @@ class GlobalSettingsViewModel : ViewModel() {
         }
     }
 
-    fun checkPrivilegedModeStatus(context: Context) {
-        val appContext = context.applicationContext
+    fun checkPrivilegedModeStatus() {
         viewModelScope.launch(Dispatchers.IO) {
-            _hasCredentials.value = PrivdBootstrapper.hasCredentials(appContext)
-            _isWirelessDebuggingActive.value = PrivdBootstrapper.isWirelessDebuggingActive(appContext)
             _isRootBridgeAvailable.value = PrivdManager.isRootBridgeAvailable
             AppLog.d(
                 TAG,
-                "checkPrivilegedModeStatus: hasCredentials=${_hasCredentials.value} isWirelessDebuggingActive=${_isWirelessDebuggingActive.value} isRootBridgeAvailable=${_isRootBridgeAvailable.value}",
+                "checkPrivilegedModeStatus: isRootBridgeAvailable=${_isRootBridgeAvailable.value}",
             )
         }
     }

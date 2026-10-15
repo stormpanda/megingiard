@@ -65,7 +65,7 @@
 #include <dirent.h>
 #include "cmd_parsers.h"
 
-#define PRIVD_VERSION 11
+#define PRIVD_VERSION 12
 
 static int g_port_start = 51234;
 #define SCAN_MAX 32
@@ -98,7 +98,6 @@ static const char *g_state_file_path = "/data/local/tmp/megingiard_privd.key";
 #define HMAC_KEY_BYTES  32
 
 static uint8_t g_hmac_key[HMAC_KEY_BYTES];  /* loaded from STATE_FILE */
-static uid_t   g_expected_app_uid;           /* UID of the authorized app process */
 
 /* Evdev-streaming state (SUB GAMEPAD / UNSUB GAMEPAD). */
 static volatile int g_reader_active = 0;
@@ -745,9 +744,9 @@ static int read_line_n(int fd, char *out, int max_len) {
 }
 
 /*
- * Reads KEY= and UID= from STATE_FILE, decodes into g_hmac_key and
- * g_expected_app_uid. Returns 1 on success, 0 if the file is missing
- * or cannot be parsed (daemon must refuse to start without it).
+ * Reads KEY= from STATE_FILE and decodes into g_hmac_key.
+ * Returns 1 on success, 0 if the file is missing or cannot be parsed
+ * (daemon must refuse to start without it).
  */
 static int load_state_file(void) {
     FILE *f = fopen(g_state_file_path, "r");
@@ -756,7 +755,7 @@ static int load_state_file(void) {
         return 0;
     }
     char line[128];
-    int got_key = 0, got_uid = 0;
+    int got_key = 0;
     while (fgets(line, sizeof(line), f)) {
         /* Strip trailing newline. */
         size_t len = strlen(line);
@@ -770,31 +769,25 @@ static int load_state_file(void) {
                 g_hmac_key[i] = (uint8_t)strtol(b, NULL, 16);
             }
             got_key = 1;
-        } else if (strncmp(line, "UID=", 4) == 0) {
-            long uid = strtol(line + 4, NULL, 10);
-            if (uid > 0) {
-                g_expected_app_uid = (uid_t)uid;
-                got_uid = 1;
-            }
         }
     }
     fclose(f);
-    if (!got_key || !got_uid) {
-        fprintf(stderr, "privd: state file missing KEY or UID\n");
+    if (!got_key) {
+        fprintf(stderr, "privd: state file missing KEY\n");
         return 0;
     }
     return 1;
 }
 
 /*
- * --provision <key_hex> <app_uid>
- * Writes the state file and exits. Called by PrivdBootstrapper during bootstrap
- * via `adb shell megingiard_privd --provision <key_hex> <app_uid>`.
+ * --provision <key_hex>
+ * Writes the state file and exits. Called by PrivdBootstrapper / PServerBootstrapper
+ * during bootstrap via `megingiard_privd --provision <key_hex>`.
  *
- * State file format: KEY=<64 uppercase hex>\nUID=<decimal>\n, mode 0600.
+ * State file format: KEY=<64 uppercase hex>\n, mode 0600.
  * Returns 0 on success, 1 on error.
  */
-static int provision_state(const char *key_hex, const char *uid_str) {
+static int provision_state(const char *key_hex) {
     if (strlen(key_hex) != KEY_HEX_LEN) {
         fprintf(stderr, "privd: provision: invalid key length %zu (need %d)\n",
                 strlen(key_hex), KEY_HEX_LEN);
@@ -808,22 +801,17 @@ static int provision_state(const char *key_hex, const char *uid_str) {
             return 1;
         }
     }
-    long uid = strtol(uid_str, NULL, 10);
-    if (uid <= 0) {
-        fprintf(stderr, "privd: provision: invalid UID %ld\n", uid);
-        return 1;
-    }
     /* Write with mode 0600 so only the shell user (UID 2000) can read it. */
     int fd = open(g_state_file_path, O_WRONLY | O_CREAT | O_TRUNC, 0600);
     if (fd < 0) {
         fprintf(stderr, "privd: provision: cannot write %s: %s\n", g_state_file_path, strerror(errno));
         return 1;
     }
-    dprintf(fd, "KEY=%s\nUID=%ld\n", key_hex, uid);
+    dprintf(fd, "KEY=%s\n", key_hex);
     close(fd);
     /* Ensure umask didn't widen permissions. */
     chmod(g_state_file_path, 0600);
-    fprintf(stderr, "privd: provisioned (UID=%ld)\n", uid);
+    fprintf(stderr, "privd: provisioned\n");
     return 0;
 }
 
@@ -1352,13 +1340,13 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    /* --provision <key_hex> <app_uid>: write the state file and exit.
-     * Called by PrivdBootstrapper during bootstrap over the ADB TLS channel. */
-    if (arg_idx < argc && strcmp(argv[arg_idx], "--provision") == 0 && arg_idx + 2 < argc) {
-        return provision_state(argv[arg_idx + 1], argv[arg_idx + 2]);
+    /* --provision <key_hex>: write the state file and exit.
+     * Called by PrivdBootstrapper / PServerBootstrapper during bootstrap. */
+    if (arg_idx < argc && strcmp(argv[arg_idx], "--provision") == 0 && arg_idx + 1 < argc) {
+        return provision_state(argv[arg_idx + 1]);
     }
 
-    /* Daemon mode: load per-install key + authorized app UID from state file.
+    /* Daemon mode: load per-install key from state file.
      * Refuse to start if no state file is present — daemon cannot authenticate
      * without a provisioned key. */
     if (!load_state_file()) {
