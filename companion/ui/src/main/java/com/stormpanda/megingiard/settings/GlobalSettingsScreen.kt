@@ -66,6 +66,7 @@ private const val TAG = "GlobalSettingsScreen"
 private const val GS_RESTORE_COUNTDOWN_SECONDS = 5
 private const val GS_RESTORE_COUNTDOWN_INTERVAL_MS = 1_000L
 private const val GS_RESTORE_CONFIRM_TIMEOUT_MS = 8_000L
+private const val GS_RELEASES_FALLBACK_URL = "$GS_OBTAINIUM_REPO_URL/releases"
 
 @Composable
 fun GlobalSettingsScreen(
@@ -119,14 +120,10 @@ fun GlobalSettingsScreen(
             lastReviewExport = activeImportPreview
         }
     }
-    var pendingUpdateReleaseUrl by rememberSaveable { mutableStateOf<String?>(null) }
     LaunchedEffect(subPageStack) {
         if (SettingsSubPage.RESTORE_REVIEW !in subPageStack) {
             showImportPreviewDialog = null
             ConfigManager.clearInAppPendingImport()
-        }
-        if (SettingsSubPage.CREATE_BACKUP !in subPageStack) {
-            pendingUpdateReleaseUrl = null
         }
     }
     var importError by rememberSaveable { mutableStateOf<String?>(null) }
@@ -550,8 +547,8 @@ fun GlobalSettingsScreen(
 
                     SettingsSubPage.UPDATE_AVAILABLE -> {
                         val releaseUrl =
-                            latestReleaseInfo?.htmlUrl?.ifBlank { "https://github.com/stormpanda/megingiard/releases" }
-                                ?: "https://github.com/stormpanda/megingiard/releases"
+                            latestReleaseInfo?.htmlUrl?.ifBlank { GS_RELEASES_FALLBACK_URL }
+                                ?: GS_RELEASES_FALLBACK_URL
                         val tagName = latestReleaseInfo?.tagName ?: ""
                         GamepadDeck(
                             breadcrumbs =
@@ -565,9 +562,7 @@ fun GlobalSettingsScreen(
                                 tagName = tagName,
                                 effectiveAccent = effectiveAccent,
                                 onBackupAndOpen = {
-                                    pendingUpdateReleaseUrl = releaseUrl
-                                    selectedCategory = SettingsCategory.CONFIGURATION
-                                    subPageStack = listOf(SettingsSubPage.CREATE_BACKUP)
+                                    subPageStack = subPageStack + SettingsSubPage.CREATE_BACKUP
                                 },
                                 onOpenDirectly = {
                                     launchUrlOnPrimaryDisplay(context, releaseUrl)
@@ -596,8 +591,6 @@ fun GlobalSettingsScreen(
     LaunchedEffect(exportResult) {
         when (val result = exportResult) {
             is ConfigManager.ExportResult.Success -> {
-                val urlToLaunch = pendingUpdateReleaseUrl
-                pendingUpdateReleaseUrl = null
                 val toastMsg =
                     if (result.kind is ConfigManager.ExportKind.ProfileShare) {
                         context.getString(R.string.config_profile_export_success)
@@ -606,8 +599,11 @@ fun GlobalSettingsScreen(
                     }
                 DialogToastManager.show(toastMsg)
                 ConfigManager.clearExportResult()
-                if (urlToLaunch != null) {
-                    launchUrlOnPrimaryDisplay(context, urlToLaunch)
+                if (SettingsSubPage.UPDATE_AVAILABLE in subPageStack) {
+                    val releaseUrl =
+                        latestReleaseInfo?.htmlUrl?.ifBlank { GS_RELEASES_FALLBACK_URL }
+                            ?: GS_RELEASES_FALLBACK_URL
+                    launchUrlOnPrimaryDisplay(context, releaseUrl)
                     AppStateManager.closeActiveModal()
                     onBack()
                 } else if (subPageStack.isNotEmpty()) {
