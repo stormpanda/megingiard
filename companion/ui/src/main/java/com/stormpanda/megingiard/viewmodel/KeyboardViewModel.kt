@@ -14,7 +14,6 @@ import com.stormpanda.megingiard.keyboard.KeyboardMode
 import com.stormpanda.megingiard.keyboard.KeyboardState
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.keyboard.ModifierState
-import com.stormpanda.megingiard.math.nextItem
 import com.stormpanda.megingiard.settings.KeyboardSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -80,18 +79,13 @@ class KeyboardViewModel : ViewModel() {
                 KeyboardState.stateFor("caps").value != ModifierState.INACTIVE
             },
             isAltGrActive = {
-                KeyboardState.stateFor("altgr").value != ModifierState.INACTIVE ||
-                    KeyboardState.stateFor("ralt").value != ModifierState.INACTIVE
+                KeyboardState.stateFor("altgr").value != ModifierState.INACTIVE
             },
             initialDensity = 1f,
             onInjectPopupSelection = ::injectPopupSelection,
         )
 
     fun closeQuickMenu() = AppStateManager.closeQuickMenu()
-
-    fun cycleKbLayout() {
-        KeyboardSettings.setKbLayout(KbLayout.entries.nextItem(kbLayout.value))
-    }
 
     fun setKbLayout(value: KbLayout) = KeyboardSettings.setKbLayout(value)
 

@@ -116,7 +116,7 @@ val KeyDef.injectedKeycode: Int
 
 enum class KeyType { NORMAL, MODIFIER }
 
-enum class KeyboardMode { LETTERS, SYMBOLS_1, SYMBOLS_2, NUMERIC, FULL }
+enum class KeyboardMode { LETTERS, SYMBOLS_1, NUMERIC, FULL }
 
 @Serializable
 enum class KbLayout { QWERTZ, QWERTY, AZERTY }
@@ -156,7 +156,6 @@ private fun layoutForMode(
     when (mode) {
         KeyboardMode.LETTERS -> lettersRows()
         KeyboardMode.SYMBOLS_1 -> symbols1Layout()
-        KeyboardMode.SYMBOLS_2 -> symbols2Layout()
         KeyboardMode.NUMERIC -> numericLayout()
         KeyboardMode.FULL -> fullLayout()
     }
@@ -318,7 +317,6 @@ private fun symbols1Layout(): List<List<KeyDef>> =
             KeyDef("slash", "/", KEY_SLASH),
         ),
         listOf(
-            KeyDef("mode_switch_2", "", 0, widthWeight = 1.3f),
             KeyDef("asterisk", "*", KEY_8, autoModifiers = listOf(KEY_LEFTSHIFT)),
             KeyDef("quote", "\"", KEY_APOSTROPHE, autoModifiers = listOf(KEY_LEFTSHIFT)),
             KeyDef("singlequote", "'", KEY_APOSTROPHE),
@@ -334,53 +332,6 @@ private fun symbols1Layout(): List<List<KeyDef>> =
             KeyDef("mode_switch_1234", "1234", 0, widthWeight = 1.0f),
             KeyDef("space", " ", KEY_SPACE, widthWeight = 4.5f),
             KeyDef("dot", ".", KEY_DOT, widthWeight = 1.0f),
-            KeyDef("enter", "Enter", KEY_ENTER, widthWeight = 1.4f),
-        ),
-    )
-
-private fun symbols2Layout(): List<List<KeyDef>> =
-    listOf(
-        listOf(
-            KeyDef("tilde", "~", KEY_GRAVE, autoModifiers = listOf(KEY_LEFTSHIFT)),
-            KeyDef("backtick", "`", KEY_GRAVE),
-            KeyDef("pipe", "|", KEY_BACKSLASH, autoModifiers = listOf(KEY_LEFTSHIFT)),
-            KeyDef("bullet", "•", KEY_8, autoModifiers = listOf(KEY_LEFTSHIFT, KEY_RIGHTALT)),
-            KeyDef("root", "√", 0),
-            KeyDef("pi", "π", 0),
-            KeyDef("div", "÷", KEY_SLASH),
-            KeyDef("mul", "×", KEY_8, autoModifiers = listOf(KEY_LEFTSHIFT)),
-            KeyDef("section", "§", 0),
-            KeyDef("delta", "∆", 0),
-        ),
-        listOf(
-            KeyDef("pound", "£", KEY_3, autoModifiers = listOf(KEY_LEFTSHIFT)),
-            KeyDef("yen", "¥", 0),
-            KeyDef("dollar", "$", KEY_4, autoModifiers = listOf(KEY_LEFTSHIFT)),
-            KeyDef("cent", "¢", 0),
-            KeyDef("caret", "^", KEY_6, autoModifiers = listOf(KEY_LEFTSHIFT)),
-            KeyDef("deg", "°", 0),
-            KeyDef("equal", "=", KEY_EQUAL),
-            KeyDef("lbrace", "{", KEY_LEFTBRACE, autoModifiers = listOf(KEY_LEFTSHIFT)),
-            KeyDef("rbrace", "}", KEY_RIGHTBRACE, autoModifiers = listOf(KEY_LEFTSHIFT)),
-            KeyDef("bslash", "\\", KEY_BACKSLASH),
-        ),
-        listOf(
-            KeyDef("mode_switch_1", "?123", 0, widthWeight = 1.3f),
-            KeyDef("percent", "%", KEY_5, autoModifiers = listOf(KEY_LEFTSHIFT)),
-            KeyDef("copyright", "©", 0),
-            KeyDef("registered", "®", 0),
-            KeyDef("trademark", "™", 0),
-            KeyDef("checkmark", "✓", 0),
-            KeyDef("lbracket", "[", KEY_LEFTBRACE),
-            KeyDef("rbracket", "]", KEY_RIGHTBRACE),
-            KeyDef("bksp", "⌫", KEY_BACKSPACE, widthWeight = 1.3f),
-        ),
-        listOf(
-            KeyDef("mode_switch_abc", "ABC", 0, widthWeight = 1.4f),
-            KeyDef("less", "<", KEY_COMMA, widthWeight = 1.0f, autoModifiers = listOf(KEY_LEFTSHIFT)),
-            KeyDef("mode_switch_1234", "1234", 0, widthWeight = 1.0f),
-            KeyDef("space", " ", KEY_SPACE, widthWeight = 4.5f),
-            KeyDef("greater", ">", KEY_DOT, widthWeight = 1.0f, autoModifiers = listOf(KEY_LEFTSHIFT)),
             KeyDef("enter", "Enter", KEY_ENTER, widthWeight = 1.4f),
         ),
     )

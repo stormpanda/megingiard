@@ -179,12 +179,12 @@ object KeyboardState {
             }
             val toolbarMods =
                 listOf(
-                    Triple("ctrl", LinuxKeycodes.KEY_LEFTCTRL, "ctrl"),
-                    Triple("alt", LinuxKeycodes.KEY_LEFTALT, "alt"),
-                    Triple("altgr", LinuxKeycodes.KEY_RIGHTALT, "ralt"),
+                    "ctrl" to LinuxKeycodes.KEY_LEFTCTRL,
+                    "alt" to LinuxKeycodes.KEY_LEFTALT,
+                    "altgr" to LinuxKeycodes.KEY_RIGHTALT,
                 )
-            for ((id, code, modKey) in toolbarMods) {
-                val flow = _modifiers[id] ?: _modifiers[modKey] ?: continue
+            for ((id, code) in toolbarMods) {
+                val flow = _modifiers[id] ?: continue
                 if (flow.value == ModifierState.STICKY) {
                     flow.value = ModifierState.INACTIVE
                     add(code)
@@ -217,7 +217,6 @@ object KeyboardState {
                     "ctrl" to LinuxKeycodes.KEY_LEFTCTRL,
                     "alt" to LinuxKeycodes.KEY_LEFTALT,
                     "altgr" to LinuxKeycodes.KEY_RIGHTALT,
-                    "ralt" to LinuxKeycodes.KEY_RIGHTALT,
                 )
             for ((id, code) in toolbarMods) {
                 val state = _modifiers[id]?.value ?: ModifierState.INACTIVE
@@ -259,7 +258,7 @@ object KeyboardState {
                                 "caps" -> LinuxKeycodes.KEY_LEFTSHIFT
                                 "ctrl" -> LinuxKeycodes.KEY_LEFTCTRL
                                 "alt" -> LinuxKeycodes.KEY_LEFTALT
-                                "altgr", "ralt" -> LinuxKeycodes.KEY_RIGHTALT
+                                "altgr" -> LinuxKeycodes.KEY_RIGHTALT
                                 "meta" -> LinuxKeycodes.KEY_LEFTMETA
                                 else -> 0
                             }

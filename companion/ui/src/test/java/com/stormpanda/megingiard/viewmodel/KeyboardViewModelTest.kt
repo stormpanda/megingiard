@@ -53,9 +53,6 @@ class KeyboardViewModelTest {
         vm.setKbLayout(KbLayout.QWERTY)
         assertEquals(KbLayout.QWERTY, vm.kbLayout.value)
 
-        vm.cycleKbLayout()
-        assertEquals(KbLayout.AZERTY, vm.kbLayout.value)
-
         vm.setKbTouchpadEnabled(false)
         assertFalse(vm.kbTouchpadEnabled.value)
     }

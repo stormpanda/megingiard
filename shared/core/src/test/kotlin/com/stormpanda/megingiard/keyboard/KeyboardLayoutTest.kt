@@ -125,9 +125,7 @@ class KeyboardLayoutTest {
     @Test
     fun `symbols layouts contain ABC switcher key`() {
         val sym1 = qwertzLayout(KeyboardMode.SYMBOLS_1)
-        val sym2 = qwertzLayout(KeyboardMode.SYMBOLS_2)
         assertNotNull("Symbols 1 has ABC switcher key", findKeyInLayout(sym1, "mode_switch_abc"))
-        assertNotNull("Symbols 2 has ABC switcher key", findKeyInLayout(sym2, "mode_switch_abc"))
     }
 
     @Test

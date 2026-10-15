@@ -12,7 +12,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Backspace
 import androidx.compose.material.icons.automirrored.rounded.KeyboardReturn
-import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,7 +36,6 @@ private val SPECIAL_KEY_IDS =
         "lshift",
         "rshift",
         "bksp",
-        "globe",
         "ctrl",
         "rctrl",
         "meta",
@@ -228,15 +226,6 @@ private fun PhysicalKeyContent(
             )
         }
 
-        "globe" -> {
-            Icon(
-                imageVector = Icons.Rounded.Language,
-                contentDescription = stringResource(R.string.cd_kb_layout),
-                tint = contentColor,
-                modifier = Modifier.size(KC_ICON_SIZE),
-            )
-        }
-
         else -> {
             val isLetter = keyDef.label.length == 1 && keyDef.label[0].isLetter()
             val shiftLabel = keyDef.shiftLabel
@@ -359,15 +348,6 @@ private fun ErgoKeyContent(
                 Icon(
                     imageVector = Icons.AutoMirrored.Rounded.KeyboardReturn,
                     contentDescription = stringResource(R.string.cd_kb_enter),
-                    tint = contentColor,
-                    modifier = Modifier.size(KC_ICON_SIZE),
-                )
-            }
-
-            "globe" -> {
-                Icon(
-                    imageVector = Icons.Rounded.Language,
-                    contentDescription = stringResource(R.string.cd_kb_layout),
                     tint = contentColor,
                     modifier = Modifier.size(KC_ICON_SIZE),
                 )

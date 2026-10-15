@@ -105,10 +105,9 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
     val rshiftState by KeyboardState.stateFor("rshift").collectAsStateWithLifecycle()
     val capsState by KeyboardState.stateFor("caps").collectAsStateWithLifecycle()
     val altGrState by KeyboardState.stateFor("altgr").collectAsStateWithLifecycle()
-    val raltState by KeyboardState.stateFor("ralt").collectAsStateWithLifecycle()
     val isShiftActive = lshiftState != ModifierState.INACTIVE || rshiftState != ModifierState.INACTIVE
     val isCapsActive = capsState != ModifierState.INACTIVE
-    val isAltGrActive = altGrState != ModifierState.INACTIVE || raltState != ModifierState.INACTIVE
+    val isAltGrActive = altGrState != ModifierState.INACTIVE
 
     // Start injectors via ViewModel
     LaunchedEffect(Unit) {
@@ -340,10 +339,6 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                                 onCloseQuickMenu = { viewModel.closeQuickMenu() },
                                 onModeChange = { nextMode ->
                                     viewModel.setKeyboardMode(nextMode)
-                                    KeyboardState.reset()
-                                },
-                                onCycleKbLayout = {
-                                    viewModel.cycleKbLayout()
                                     KeyboardState.reset()
                                 },
                             )

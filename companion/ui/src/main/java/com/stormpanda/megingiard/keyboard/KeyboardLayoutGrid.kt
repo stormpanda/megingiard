@@ -38,7 +38,6 @@ internal fun KeyboardLayoutGrid(
     isQuickMenuOpen: Boolean,
     onCloseQuickMenu: () -> Unit,
     onModeChange: (KeyboardMode) -> Unit,
-    onCycleKbLayout: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val isQuickMenuOpenState = rememberUpdatedState(isQuickMenuOpen)
@@ -86,20 +85,14 @@ internal fun KeyboardLayoutGrid(
                                             if (!activePointers.contains(pid)) {
                                                 activePointers.add(pid)
                                                 if (keyId != null && keyId.startsWith("mode_switch")) {
-                                                    if (keyId != "mode_switch_2") {
-                                                        val targetMode =
-                                                            when (keyId) {
-                                                                "mode_switch", "mode_switch_1" -> KeyboardMode.SYMBOLS_1
-                                                                "mode_switch_abc" -> KeyboardMode.LETTERS
-                                                                "mode_switch_1234" -> KeyboardMode.NUMERIC
-                                                                else -> KeyboardMode.LETTERS
-                                                            }
-                                                        onModeChange(targetMode)
-                                                        KeyboardState.reset()
-                                                    }
-                                                    change.consume()
-                                                } else if (keyId == "globe") {
-                                                    onCycleKbLayout()
+                                                    val targetMode =
+                                                        when (keyId) {
+                                                            "mode_switch" -> KeyboardMode.SYMBOLS_1
+                                                            "mode_switch_abc" -> KeyboardMode.LETTERS
+                                                            "mode_switch_1234" -> KeyboardMode.NUMERIC
+                                                            else -> KeyboardMode.LETTERS
+                                                        }
+                                                    onModeChange(targetMode)
                                                     KeyboardState.reset()
                                                     change.consume()
                                                 } else {
@@ -119,7 +112,7 @@ internal fun KeyboardLayoutGrid(
                                         PointerEventType.Move -> {
                                             if (activePointers.contains(pid)) {
                                                 val delta = change.positionChange()
-                                                if (keyId != null && (keyId.startsWith("mode_switch") || keyId == "globe")) {
+                                                if (keyId != null && keyId.startsWith("mode_switch")) {
                                                     change.consume()
                                                 } else {
                                                     gestureProcessor.onMove(
