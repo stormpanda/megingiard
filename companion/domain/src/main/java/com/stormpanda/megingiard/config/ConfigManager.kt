@@ -715,25 +715,17 @@ object ConfigManager {
                 profile.layouts.map { layout ->
                     val oldLayoutId = layout.id
                     val newLayoutId = UUID.randomUUID().toString()
+                    val remappedButtons =
+                        layout.buttons.map { button ->
+                            button.copy(
+                                id = UUID.randomUUID().toString(),
+                                action = remapMacroAction(button.action, macroIdMap),
+                            )
+                        }
 
                     @Suppress("DEPRECATION")
-                    val isLegacyMask = layout.useBackgroundImageAsMask
-
-                    val newBgPath: String?
-                    val newMaskPath: String?
-                    val finalBgScale: Float
-                    val finalBgOffsetX: Float
-                    val finalBgOffsetY: Float
-                    val finalBgDim: Float
-                    val finalBgScaleMode: BackgroundScaleMode
-                    val finalMaskScale: Float
-                    val finalMaskOffsetX: Float
-                    val finalMaskOffsetY: Float
-                    val finalMaskDim: Float
-                    val finalMaskScaleMode: BackgroundScaleMode
-
-                    if (isLegacyMask) {
-                        newMaskPath =
+                    if (layout.useBackgroundImageAsMask) {
+                        val newMaskPath =
                             extractOrCopyMedia(
                                 context,
                                 images,
@@ -755,19 +747,25 @@ object ConfigManager {
                                 layout.maskImagePath,
                                 destPrefix = "mask",
                             )
-                        newBgPath = null
-                        finalBgScale = 1f
-                        finalBgOffsetX = 0f
-                        finalBgOffsetY = 0f
-                        finalBgDim = 0f
-                        finalBgScaleMode = BackgroundScaleMode.FILL
-                        finalMaskScale = layout.bgImageScale
-                        finalMaskOffsetX = layout.bgImageOffsetX
-                        finalMaskOffsetY = layout.bgImageOffsetY
-                        finalMaskDim = layout.backgroundImageDim
-                        finalMaskScaleMode = layout.bgScaleMode
+                        layout.copy(
+                            id = newLayoutId,
+                            backgroundImagePath = null,
+                            useBackgroundImageAsMask = false,
+                            bgImageScale = 1f,
+                            bgImageOffsetX = 0f,
+                            bgImageOffsetY = 0f,
+                            backgroundImageDim = 0f,
+                            bgScaleMode = BackgroundScaleMode.FILL,
+                            maskImagePath = newMaskPath,
+                            maskImageScale = layout.bgImageScale,
+                            maskImageOffsetX = layout.bgImageOffsetX,
+                            maskImageOffsetY = layout.bgImageOffsetY,
+                            maskImageDim = layout.backgroundImageDim,
+                            maskScaleMode = layout.bgScaleMode,
+                            buttons = remappedButtons,
+                        )
                     } else {
-                        newBgPath =
+                        val newBgPath =
                             extractOrCopyMedia(
                                 context,
                                 images,
@@ -778,7 +776,7 @@ object ConfigManager {
                                 newLayoutId,
                                 layout.backgroundImagePath,
                             )
-                        newMaskPath =
+                        val newMaskPath =
                             extractOrCopyMedia(
                                 context,
                                 images,
@@ -789,41 +787,14 @@ object ConfigManager {
                                 newLayoutId,
                                 layout.maskImagePath,
                             )
-                        finalBgScale = layout.bgImageScale
-                        finalBgOffsetX = layout.bgImageOffsetX
-                        finalBgOffsetY = layout.bgImageOffsetY
-                        finalBgDim = layout.backgroundImageDim
-                        finalBgScaleMode = layout.bgScaleMode
-                        finalMaskScale = layout.maskImageScale
-                        finalMaskOffsetX = layout.maskImageOffsetX
-                        finalMaskOffsetY = layout.maskImageOffsetY
-                        finalMaskDim = layout.maskImageDim
-                        finalMaskScaleMode = layout.maskScaleMode
+                        layout.copy(
+                            id = newLayoutId,
+                            backgroundImagePath = newBgPath,
+                            useBackgroundImageAsMask = false,
+                            maskImagePath = newMaskPath,
+                            buttons = remappedButtons,
+                        )
                     }
-
-                    layout.copy(
-                        id = newLayoutId,
-                        backgroundImagePath = newBgPath,
-                        useBackgroundImageAsMask = false,
-                        bgImageScale = finalBgScale,
-                        bgImageOffsetX = finalBgOffsetX,
-                        bgImageOffsetY = finalBgOffsetY,
-                        backgroundImageDim = finalBgDim,
-                        bgScaleMode = finalBgScaleMode,
-                        maskImagePath = newMaskPath,
-                        maskImageScale = finalMaskScale,
-                        maskImageOffsetX = finalMaskOffsetX,
-                        maskImageOffsetY = finalMaskOffsetY,
-                        maskImageDim = finalMaskDim,
-                        maskScaleMode = finalMaskScaleMode,
-                        buttons =
-                            layout.buttons.map { button ->
-                                button.copy(
-                                    id = UUID.randomUUID().toString(),
-                                    action = remapMacroAction(button.action, macroIdMap),
-                                )
-                            },
-                    )
                 }
 
             // Preserve the source profile's active layout selection when possible.

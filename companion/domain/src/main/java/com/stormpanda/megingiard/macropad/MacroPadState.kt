@@ -494,7 +494,7 @@ object MacroPadState {
         if (uniqueName != desiredName) {
             AppLog.w(TAG, "addProfile: duplicate profile name '$desiredName' adjusted to '$uniqueName'")
         }
-        val normalizedProfile = profile.copy(name = uniqueName)
+        val normalizedProfile = profile.copy(name = uniqueName).withSyncedDeviceFlags()
         AppLog.d(TAG, "addProfile id=${normalizedProfile.id} name='${normalizedProfile.name}'")
         _profiles.value = _profiles.value + normalizedProfile
         if (_activeProfileId.value == null) _activeProfileId.value = normalizedProfile.id
