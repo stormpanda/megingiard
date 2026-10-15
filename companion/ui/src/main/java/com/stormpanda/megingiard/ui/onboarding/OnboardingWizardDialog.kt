@@ -5,7 +5,6 @@ import android.app.ActivityOptions
 import android.app.LocaleManager
 import android.content.Context
 import android.content.Intent
-import android.os.SystemClock
 import android.provider.Settings
 import android.view.Display
 import androidx.activity.compose.BackHandler
@@ -149,7 +148,6 @@ private val OW_BUTTON_SPACED_BY = 8.dp
 private const val OW_WARNING_ALPHA_BG = 0.12f
 private const val OW_WARNING_ALPHA_BORDER = 0.5f
 private const val OW_STATUS_POLL_DELAY_MS = 1000L
-private const val OW_ROOT_BRIDGE_MIN_DURATION_MS = 1000L
 
 internal fun resolveSystemLocale(context: Context): Locale {
     val lm = context.getSystemService(LocaleManager::class.java)
@@ -189,12 +187,7 @@ internal class RootBridgeActionsState(
         if (isActivatingAccessibility) return
         isActivatingAccessibility = true
         coroutineScope.launch(Dispatchers.IO) {
-            val startTime = SystemClock.uptimeMillis()
             val success = PServiceBridge.enableAccessibility(context)
-            val elapsed = SystemClock.uptimeMillis() - startTime
-            if (elapsed < OW_ROOT_BRIDGE_MIN_DURATION_MS) {
-                delay(OW_ROOT_BRIDGE_MIN_DURATION_MS - elapsed)
-            }
             val active = MegingiardAccessibilityService.isEnabled(context)
             withContext(Dispatchers.Main) {
                 setupStatus.isAccessibilityActive = active || success
@@ -207,12 +200,7 @@ internal class RootBridgeActionsState(
         if (isActivatingPrivd) return
         isActivatingPrivd = true
         coroutineScope.launch(Dispatchers.IO) {
-            val startTime = SystemClock.uptimeMillis()
             PrivdManager.connect(context)
-            val elapsed = SystemClock.uptimeMillis() - startTime
-            if (elapsed < OW_ROOT_BRIDGE_MIN_DURATION_MS) {
-                delay(OW_ROOT_BRIDGE_MIN_DURATION_MS - elapsed)
-            }
             withContext(Dispatchers.Main) {
                 isActivatingPrivd = false
             }

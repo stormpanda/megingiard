@@ -88,6 +88,12 @@ class MegingiardAccessibilityService : AccessibilityService() {
         AppLog.i(TAG, "onServiceConnected: Megingiard Accessibility Service is active")
         AppStateManager.setAccessibilityActive(true)
 
+        serviceScope.launch(Dispatchers.IO) {
+            if (PrivdManager.state.value != PrivdState.RUNNING) {
+                PrivdManager.connect(applicationContext)
+            }
+        }
+
         serviceScope.launch {
             AppStateManager.isFullscreenKeyboardActive.collect { isActive ->
                 AutoKeyboardFocusCoordinator.onKeyboardVisibilityChanged(isActive)

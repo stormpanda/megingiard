@@ -1,7 +1,6 @@
 package com.stormpanda.megingiard.viewmodel
 
 import android.content.Context
-import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.stormpanda.megingiard.AppLog
@@ -24,7 +23,6 @@ import com.stormpanda.megingiard.settings.ThemeMode
 import com.stormpanda.megingiard.update.AppReleaseInfo
 import com.stormpanda.megingiard.update.UpdateManager
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -160,7 +158,6 @@ class GlobalSettingsViewModel : ViewModel() {
     /**
      * Initiates a connection to the daemon socket asynchronously on [Dispatchers.IO].
      * The result is reflected in [privdState] — optional [onComplete] callback on Main.
-     * Guarantees at least 1 second execution duration to allow the UI progress spinner to display.
      */
     fun privdConnect(
         context: Context,
@@ -169,12 +166,7 @@ class GlobalSettingsViewModel : ViewModel() {
         AppLog.i(TAG, "privdConnect()")
         val appContext = context.applicationContext
         viewModelScope.launch(Dispatchers.IO) {
-            val startTime = SystemClock.uptimeMillis()
             val success = PrivdManager.connect(appContext)
-            val elapsed = SystemClock.uptimeMillis() - startTime
-            if (elapsed < 1000L) {
-                delay(1000L - elapsed)
-            }
             if (onComplete != null) {
                 withContext(Dispatchers.Main) {
                     onComplete(success)

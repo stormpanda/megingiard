@@ -245,7 +245,7 @@
 - [x] **`[PM-11]`** — Collapse the 6 `@Volatile CompletableDeferred` fields, 2 capture flags, 2 buffers, and `dumpLock` in `PrivdClient` into a single `PendingRpc` under `commandMutex` *(Complexity: High, Risk: Low)*
 - [x] **`[PM-12]`** — Move blocking socket connect/handshake outside `PrivdClient`'s `@Synchronized` lock (eliminating raw `Thread { disconnect() }`) and convert `MegingiardAccessibilityService.isAutoSetupActive` to `StateFlow<Boolean>` *(Complexity: High, Risk: Low)*
 - [x] **`[PM-13]`** — Consolidate the 5 concurrent 1-second prerequisite polling loops and `ON_RESUME` observers into a single shared `rememberPrivilegedPrerequisitesState()` hook *(Complexity: High, Risk: Low)*
-- [ ] **`[PM-14]`** — Remove copy-pasted 1,000 ms artificial spinner delays and redundant pre-checks in `MegingiardAccessibilityService.onServiceConnected()` *(Complexity: Low, Risk: Low)*
+- [x] **`[PM-14]`** — Remove copy-pasted 1,000 ms artificial spinner delays and redundant pre-checks in `MegingiardAccessibilityService.onServiceConnected()` *(Complexity: Low, Risk: Low)*
 - [ ] **`[PM-15]`** — Deduplicate ~300 LOC between `PrivdReconnectPromptDialog.kt` and `OnboardingWizardDialog.kt` and delete the 5 unused parameters on `PrivdReconnectPromptDialog` *(Complexity: High, Risk: Low)*
 - [ ] **`[PM-16]`** — Derive busy/error UI states in `PrivdSetupWizard.kt` directly from `BootstrapStage` instead of local `mutableStateOf` flags *(Complexity: Med, Risk: Low)*
 - [ ] **`[PM-17]`** — Synchronize `FEATURE.md` (Bootstrap Wizard, Settings Card, Reconnect Dialog, root/Accessibility flows) and update stale `@megingiard.privd` / `LocalSocket` comments *(Complexity: High, Risk: Low)*
