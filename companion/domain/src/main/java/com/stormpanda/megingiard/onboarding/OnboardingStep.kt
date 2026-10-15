@@ -17,7 +17,6 @@ enum class OnboardingStepId {
  */
 data class OnboardingStepState(
     val id: OnboardingStepId,
-    val isFulfilled: Boolean,
     val isCompleted: Boolean,
     val isCurrent: Boolean,
 )

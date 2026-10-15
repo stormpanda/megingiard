@@ -125,7 +125,6 @@ fun PrivdReconnectPromptDialog(onDone: () -> Unit) {
             stepIds.mapIndexed { index, id ->
                 OnboardingStepState(
                     id = id,
-                    isFulfilled = true,
                     isCompleted = index < activeStepIndex,
                     isCurrent = index == activeStepIndex,
                 )

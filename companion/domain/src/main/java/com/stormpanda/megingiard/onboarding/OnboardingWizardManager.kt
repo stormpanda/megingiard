@@ -106,7 +106,6 @@ object OnboardingWizardManager {
             orderedStepIds.mapIndexed { index, id ->
                 OnboardingStepState(
                     id = id,
-                    isFulfilled = false,
                     isCompleted = index < activeStepIdx,
                     isCurrent = index == activeStepIdx,
                 )

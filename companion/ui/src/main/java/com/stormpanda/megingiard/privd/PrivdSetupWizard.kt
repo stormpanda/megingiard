@@ -162,7 +162,6 @@ internal fun PrivdSetupWizardDialog(
             (0..3).map { index ->
                 OnboardingStepState(
                     id = OnboardingStepId.PRIVILEGED,
-                    isFulfilled = true,
                     isCompleted = index < step,
                     isCurrent = index == step,
                 )
