@@ -29,6 +29,115 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 private const val TAG = "TouchpadSettingsOverlay"
+private const val TP_SETTINGS_STEP_TENTHS = 0.1f
+private const val TP_SETTINGS_TENTHS_SCALE = 10f
+
+internal fun stepTenths(
+    current: Float,
+    delta: Float,
+    min: Float,
+    max: Float,
+): Float = (((current + delta) * TP_SETTINGS_TENTHS_SCALE).roundToInt() / TP_SETTINGS_TENTHS_SCALE).coerceIn(min, max)
+
+@Composable
+internal fun TouchpadGestureAndScrollCards(
+    tapToClick: Boolean,
+    onTapToClickChange: (Boolean) -> Unit,
+    twoFingerTap: Boolean,
+    onTwoFingerTapChange: (Boolean) -> Unit,
+    threeFingerTap: Boolean,
+    onThreeFingerTapChange: (Boolean) -> Unit,
+    tapDrag: Boolean,
+    onTapDragChange: (Boolean) -> Unit,
+    twoFingerScroll: Boolean,
+    onTwoFingerScrollChange: (Boolean) -> Unit,
+    naturalScroll: Boolean,
+    onNaturalScrollChange: (Boolean) -> Unit,
+    scrollSpeed: Float,
+    onScrollSpeedChange: (Float) -> Unit,
+    firstCardModifier: Modifier = Modifier,
+    scrollingHeader: (@Composable () -> Unit)? = null,
+) {
+    GamepadToggleCard(
+        title = stringResource(R.string.settings_touchpad_tap_to_click),
+        description = stringResource(R.string.settings_touchpad_tap_to_click_desc),
+        checked = tapToClick,
+        icon = Icons.Rounded.TouchApp,
+        onCheckedChange = onTapToClickChange,
+        modifier = firstCardModifier,
+    )
+
+    GamepadToggleCard(
+        title = stringResource(R.string.settings_touchpad_two_finger_tap),
+        description = stringResource(R.string.settings_touchpad_two_finger_tap_desc),
+        checked = twoFingerTap,
+        icon = Icons.Rounded.PanTool,
+        onCheckedChange = onTwoFingerTapChange,
+    )
+
+    GamepadToggleCard(
+        title = stringResource(R.string.settings_touchpad_three_finger_tap),
+        description = stringResource(R.string.settings_touchpad_three_finger_tap_desc),
+        checked = threeFingerTap,
+        icon = Icons.Rounded.PanTool,
+        onCheckedChange = onThreeFingerTapChange,
+    )
+
+    GamepadToggleCard(
+        title = stringResource(R.string.settings_touchpad_tap_drag),
+        description = stringResource(R.string.settings_touchpad_tap_drag_desc),
+        checked = tapDrag,
+        icon = Icons.Rounded.TouchApp,
+        onCheckedChange = onTapDragChange,
+    )
+
+    scrollingHeader?.invoke()
+
+    GamepadToggleCard(
+        title = stringResource(R.string.settings_touchpad_two_finger_scroll),
+        description = stringResource(R.string.settings_touchpad_two_finger_scroll_desc),
+        checked = twoFingerScroll,
+        icon = Icons.Rounded.SwapVert,
+        onCheckedChange = onTwoFingerScrollChange,
+    )
+
+    if (twoFingerScroll) {
+        GamepadToggleCard(
+            title = stringResource(R.string.settings_touchpad_natural_scroll),
+            description = stringResource(R.string.settings_touchpad_natural_scroll_desc),
+            checked = naturalScroll,
+            icon = Icons.Rounded.SwapVert,
+            onCheckedChange = onNaturalScrollChange,
+        )
+
+        GamepadStepperCard(
+            title = stringResource(R.string.settings_touchpad_scroll_speed),
+            description = stringResource(R.string.help_touchpad_settings_scroll_speed_desc),
+            valueText = "%.1fx".format(Locale.US, scrollSpeed),
+            icon = Icons.Rounded.Speed,
+            onDecrement = {
+                onScrollSpeedChange(
+                    stepTenths(
+                        scrollSpeed,
+                        -TP_SETTINGS_STEP_TENTHS,
+                        TouchpadSettings.SCROLL_SPEED_MIN,
+                        TouchpadSettings.SCROLL_SPEED_MAX,
+                    ),
+                )
+            },
+            onIncrement = {
+                onScrollSpeedChange(
+                    stepTenths(
+                        scrollSpeed,
+                        TP_SETTINGS_STEP_TENTHS,
+                        TouchpadSettings.SCROLL_SPEED_MIN,
+                        TouchpadSettings.SCROLL_SPEED_MAX,
+                    ),
+                )
+            },
+        )
+    }
+}
 
 @Composable
 fun TouchpadSettingsOverlay() {
@@ -63,75 +172,23 @@ fun TouchpadSettingsOverlay() {
             color = colors.accent,
         )
 
-        GamepadToggleCard(
-            title = stringResource(R.string.settings_touchpad_tap_to_click),
-            description = stringResource(R.string.settings_touchpad_tap_to_click_desc),
-            checked = touchpadTapToClick,
-            icon = Icons.Rounded.TouchApp,
-            onCheckedChange = TouchpadSettings::setTouchpadTapToClick,
-            modifier = Modifier.firstDeckItem(),
+        TouchpadGestureAndScrollCards(
+            tapToClick = touchpadTapToClick,
+            onTapToClickChange = TouchpadSettings::setTouchpadTapToClick,
+            twoFingerTap = touchpadTwoFingerTap,
+            onTwoFingerTapChange = TouchpadSettings::setTouchpadTwoFingerTap,
+            threeFingerTap = touchpadThreeFingerTap,
+            onThreeFingerTapChange = TouchpadSettings::setTouchpadThreeFingerTap,
+            tapDrag = touchpadTapDrag,
+            onTapDragChange = TouchpadSettings::setTouchpadTapDrag,
+            twoFingerScroll = touchpadTwoFingerScroll,
+            onTwoFingerScrollChange = TouchpadSettings::setTouchpadTwoFingerScroll,
+            naturalScroll = touchpadNaturalScroll,
+            onNaturalScrollChange = TouchpadSettings::setTouchpadNaturalScroll,
+            scrollSpeed = touchpadScrollSpeed,
+            onScrollSpeedChange = TouchpadSettings::setTouchpadScrollSpeed,
+            firstCardModifier = Modifier.firstDeckItem(),
         )
-
-        GamepadToggleCard(
-            title = stringResource(R.string.settings_touchpad_two_finger_tap),
-            description = stringResource(R.string.settings_touchpad_two_finger_tap_desc),
-            checked = touchpadTwoFingerTap,
-            icon = Icons.Rounded.PanTool,
-            onCheckedChange = TouchpadSettings::setTouchpadTwoFingerTap,
-        )
-
-        GamepadToggleCard(
-            title = stringResource(R.string.settings_touchpad_three_finger_tap),
-            description = stringResource(R.string.settings_touchpad_three_finger_tap_desc),
-            checked = touchpadThreeFingerTap,
-            icon = Icons.Rounded.PanTool,
-            onCheckedChange = TouchpadSettings::setTouchpadThreeFingerTap,
-        )
-
-        GamepadToggleCard(
-            title = stringResource(R.string.settings_touchpad_tap_drag),
-            description = stringResource(R.string.settings_touchpad_tap_drag_desc),
-            checked = touchpadTapDrag,
-            icon = Icons.Rounded.TouchApp,
-            onCheckedChange = TouchpadSettings::setTouchpadTapDrag,
-        )
-
-        GamepadToggleCard(
-            title = stringResource(R.string.settings_touchpad_two_finger_scroll),
-            description = stringResource(R.string.settings_touchpad_two_finger_scroll_desc),
-            checked = touchpadTwoFingerScroll,
-            icon = Icons.Rounded.SwapVert,
-            onCheckedChange = TouchpadSettings::setTouchpadTwoFingerScroll,
-        )
-
-        if (touchpadTwoFingerScroll) {
-            GamepadToggleCard(
-                title = stringResource(R.string.settings_touchpad_natural_scroll),
-                description = stringResource(R.string.settings_touchpad_natural_scroll_desc),
-                checked = touchpadNaturalScroll,
-                icon = Icons.Rounded.SwapVert,
-                onCheckedChange = TouchpadSettings::setTouchpadNaturalScroll,
-            )
-
-            GamepadStepperCard(
-                title = stringResource(R.string.settings_touchpad_scroll_speed),
-                description = stringResource(R.string.help_touchpad_settings_scroll_speed_desc),
-                valueText = "%.1fx".format(Locale.US, touchpadScrollSpeed),
-                icon = Icons.Rounded.Speed,
-                onDecrement = {
-                    TouchpadSettings.setTouchpadScrollSpeed(
-                        (((touchpadScrollSpeed - 0.1f) * 10f).roundToInt() / 10f)
-                            .coerceAtLeast(TouchpadSettings.SCROLL_SPEED_MIN),
-                    )
-                },
-                onIncrement = {
-                    TouchpadSettings.setTouchpadScrollSpeed(
-                        (((touchpadScrollSpeed + 0.1f) * 10f).roundToInt() / 10f)
-                            .coerceAtMost(TouchpadSettings.SCROLL_SPEED_MAX),
-                    )
-                },
-            )
-        }
 
         GamepadStepperCard(
             title = stringResource(R.string.settings_touchpad_sensitivity),
@@ -140,14 +197,22 @@ fun TouchpadSettingsOverlay() {
             icon = Icons.Rounded.Speed,
             onDecrement = {
                 TouchpadSettings.setTouchpadSensitivity(
-                    (((touchpadSensitivity - 0.1f) * 10f).roundToInt() / 10f)
-                        .coerceAtLeast(TouchpadSettings.SENSITIVITY_MIN),
+                    stepTenths(
+                        touchpadSensitivity,
+                        -TP_SETTINGS_STEP_TENTHS,
+                        TouchpadSettings.SENSITIVITY_MIN,
+                        TouchpadSettings.SENSITIVITY_MAX,
+                    ),
                 )
             },
             onIncrement = {
                 TouchpadSettings.setTouchpadSensitivity(
-                    (((touchpadSensitivity + 0.1f) * 10f).roundToInt() / 10f)
-                        .coerceAtMost(TouchpadSettings.SENSITIVITY_MAX),
+                    stepTenths(
+                        touchpadSensitivity,
+                        TP_SETTINGS_STEP_TENTHS,
+                        TouchpadSettings.SENSITIVITY_MIN,
+                        TouchpadSettings.SENSITIVITY_MAX,
+                    ),
                 )
             },
         )
