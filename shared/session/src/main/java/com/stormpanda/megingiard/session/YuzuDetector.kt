@@ -26,52 +26,8 @@ object YuzuDetector : EmulatorDetector {
 
     override val systemId: String = SYSTEM_ID_SWITCH
 
-    private val logFileNames =
-        mapOf(
-            "org.citron.citron_emu" to "citron_log.txt",
-            "org.citron.citron_emu.debug" to "citron_log.txt",
-            "org.sudachi.sudachi_emu" to "sudachi_log.txt",
-            "com.suyu.suyu" to "suyu_log.txt",
-            "org.yuzu.yuzu_emu" to "yuzu_log.txt",
-            "org.yuzu.yuzu_emu.ea" to "yuzu_log.txt",
-            "dev.eden.eden_emulator" to "eden_log.txt",
-            "dev.eden.eden_emulator.debug" to "eden_log.txt",
-            "dev.eden.eden_emulator.nightly" to "eden_log.txt",
-            "dev.eden.eden_emulator.nightly.debug" to "eden_log.txt",
-            "dev.eden.eden_emulator.dualscreen" to "eden_log.txt",
-            "dev.eden.eden_emulator.dualscreen.debug" to "eden_log.txt",
-            "dev.eden.eden_emulator.dualscreen.nightly" to "eden_log.txt",
-            "dev.eden.eden_emulator.dualscreen.nightly.debug" to "eden_log.txt",
-            "dev.legacy.eden_emulator" to "eden_log.txt",
-            "dev.legacy.eden_emulator.debug" to "eden_log.txt",
-            "dev.legacy.eden_emulator.nightly" to "eden_log.txt",
-            "dev.legacy.eden_emulator.nightly.debug" to "eden_log.txt",
-        )
-
-    private val backendBrandByPackage =
-        mapOf(
-            "dev.eden.eden_emulator" to "eden",
-            "dev.eden.eden_emulator.debug" to "eden",
-            "dev.eden.eden_emulator.nightly" to "eden",
-            "dev.eden.eden_emulator.nightly.debug" to "eden",
-            "dev.eden.eden_emulator.dualscreen" to "eden",
-            "dev.eden.eden_emulator.dualscreen.debug" to "eden",
-            "dev.eden.eden_emulator.dualscreen.nightly" to "eden",
-            "dev.eden.eden_emulator.dualscreen.nightly.debug" to "eden",
-            "dev.legacy.eden_emulator" to "eden",
-            "dev.legacy.eden_emulator.debug" to "eden",
-            "dev.legacy.eden_emulator.nightly" to "eden",
-            "dev.legacy.eden_emulator.nightly.debug" to "eden",
-            "org.citron.citron_emu" to "citron",
-            "org.citron.citron_emu.debug" to "citron",
-            "org.sudachi.sudachi_emu" to "sudachi",
-            "com.suyu.suyu" to "suyu",
-            "org.yuzu.yuzu_emu" to "yuzu",
-            "org.yuzu.yuzu_emu.ea" to "yuzu",
-        )
-
     private fun getCandidateLogPaths(packageName: String): List<String> {
-        val logFileName = logFileNames[packageName] ?: "yuzu_log.txt"
+        val logFileName = "${SwitchEmulators.getLogBrand(packageName)}_log.txt"
         val relativeSubPath = "Android/data/$packageName/files/log/$logFileName"
         return SafPathResolver.getStorageVolumeRoots().map { root -> "$root/$relativeSubPath" }
     }
@@ -182,7 +138,7 @@ object YuzuDetector : EmulatorDetector {
             gameTitle = resolvedTitle,
             systemId = systemId,
             romIdentifier = resolvedRomIdentifier,
-            coreOrBackend = backendBrandByPackage[packageName] ?: "yuzu",
+            coreOrBackend = SwitchEmulators.getLogBrand(packageName),
             titleId = lastTitleId,
         )
     }
