@@ -257,7 +257,7 @@ None identified — animations in `GamepadFocusCard`, `drawBehind` border render
 - [x] **`[TH-04]`** — Deduplicate synchronous + coroutine focus calls and nested `try/catch` in `rememberSaveExitPromptState` *(Complexity: Med, Risk: Low)*
 - [x] **`[TH-05]`** — Deduplicate 50-line key event handler in `GamepadTextFieldCard` *(Complexity: Med, Risk: Low)*
 - [x] **`[TH-06]`** — Remove unused `AppDimens` and `LocalAppDimens` from `AppTheme.kt` and composition roots *(Complexity: Med, Risk: Low)*
-- [ ] **`[TH-07]`** — Remove 13 unused `AppColors` tokens and dead `appSwitchColors()` helper *(Complexity: Med, Risk: Low)*
+- [x] **`[TH-07]`** — Remove 13 unused `AppColors` tokens and dead `appSwitchColors()` helper *(Complexity: Med, Risk: Low)*
 - [ ] **`[TH-08]`** — Delete dead `GamepadGlyphs.kt` and remove unused `actionGlyph` from `GamepadActionCard` *(Complexity: Med, Risk: Low)*
 - [ ] **`[TH-09]`** — Delete dead `GamepadSearchBar` overloads and unused `AppTextField(String)` overload *(Complexity: Med, Risk: Low)*
 - [ ] **`[TH-10]`** — Delete dead `CutoutLetterButton` / `CutoutSymbolButton` and redundant `observeThemeUpdates` *(Complexity: Med, Risk: Low)*

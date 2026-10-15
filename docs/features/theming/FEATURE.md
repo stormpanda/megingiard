@@ -25,7 +25,7 @@ Megingiard supports user-selectable colour themes. The app provides three themes
 
 ### FR-TH2: Token-Based Colour Architecture
 
-- All screen and component colours MUST be expressed through the 35 semantic tokens defined in `AppColors`.
+- All screen and component colours MUST be expressed through the 23 semantic tokens defined in `AppColors`.
 - Screens MUST NOT use hardcoded `Color.Black`, `Color.White`, or other literal `Color` values for surface, background, or text colours. Exceptions are permitted for:
   - HSV color-wheel and slider rendering math in `MacroPadSubPages.kt` and `GlobalSettingsScreen.kt` (hue, saturation, brightness, and opacity gradients, selector thumb color).
   - Text / icon content placed on `accentColor` container surfaces — the `onAccent` token defines theming-appropriate contrast colour (dynamically calculated based on relative luminance when custom accent colors are applied).
@@ -51,49 +51,37 @@ Megingiard supports user-selectable colour themes. The app provides three themes
 
 ### Token Definitions — `ui/AppTheme.kt`
 
-Thirty-five semantic `AppColors` tokens cover all theming needs:
+Twenty-three semantic `AppColors` tokens cover all theming needs:
 
-| Token                    | Semantic purpose                                                                                                                   |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `appBackground`          | Full-screen background                                                                                                             |
-| `surface`                | Card / panel / row surface                                                                                                         |
-| `surfaceVariant`         | Elevated surface (e.g. dragged item)                                                                                               |
-| `onSurface`              | Primary text                                                                                                                       |
-| `onSurfaceSecondary`     | Secondary / hint text                                                                                                              |
-| `divider`                | Subtle separator lines                                                                                                             |
-| `controlOverlay`         | Floating control Quick Menu background                                                                                             |
-| `onControlOverlay`       | Text / icons on the control overlay                                                                                                |
-| `fingerCircle`           | Finger-indicator circle — always white-tinted (theme-invariant)                                                                    |
-| `keyBackground`          | Key face (normal)                                                                                                                  |
-| `keyPressed`             | Key face (pressed)                                                                                                                 |
-| `keyModifierActive`      | Modifier key when sticky/held                                                                                                      |
-| `touchpadBackground`     | Touchpad surface                                                                                                                   |
-| `touchpadIndicator`      | Touchpad border / hint dots                                                                                                        |
-| `pickerBackground`       | Color-picker dialog background                                                                                                     |
-| `accentBorder`           | Accent-colour swatch border                                                                                                        |
-| `accent`                 | Primary interactive accent colour (user-overridable or fixed per theme)                                                            |
-| `onAccent`               | Text / icons on accent / highlighted button backgrounds (theme-defined; dynamically resolved via relative luminance for custom accents) |
-| `quickMenuBarIdleColor`  | Always-visible pull-tab quick menu bar colour                                                                                      |
-| `controlIndicatorActive` | Active mode indicator dot in the navigation bar (tracks `onAccent` in custom-accent themes)                                        |
-| `navQuickMenuBody`       | Navigation bar background (tracks accent in custom-accent themes)                                                                 |
-| `buttonBody`             | Mirror control button background (tracks accent in custom-accent themes)                                                          |
-| `controlOverlayBorder`   | Border/outline of the carousel control overlay container                                                                           |
-| `navQuickMenuBorder`     | Border/outline of the navigation bar                                                                                               |
-| `mirrorQuickMenuBorder`  | Border/outline of the mirror control bar                                                                                           |
-| `buttonIconTint`         | Icon tint on mirror control buttons (tracks `onAccent` in custom-accent themes)                                                    |
-| `error`                  | Destructive/error action color                                                                                                     |
-| `onError`                | Text/icons on error-colored surfaces                                                                                               |
-| `actionColorGamepad`     | Badge tint for gamepad/joystick macro step chips                                                                                   |
-| `actionColorSystem`      | Badge tint for system/d-pad macro step chips                                                                                       |
-| `macroPadOnSurface`      | MacroPad button-placement text/icons                                                                                               |
-| `macroPadAccentBorder`   | MacroPad placement border/outline tint                                                                                             |
-| `sectionHeaderColor`     | Uppercase section-header label tint                                                                                                |
-| `settingsSeparator`      | Thin divider between transparent settings rows (distinct from `divider`); tuned per theme to the settings screen/dialog background |
-| `subduedBorder`          | Subtle, non-accented border (`onSurface.copy(alpha = 0.15f)`) used for unfocused cards, pills, text fields, and chips              |
+| Token                   | Semantic purpose                                                                                                                   |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `appBackground`         | Full-screen background                                                                                                             |
+| `surface`               | Card / panel / row surface                                                                                                         |
+| `surfaceVariant`        | Elevated surface (e.g. dragged item)                                                                                               |
+| `onSurface`             | Primary text                                                                                                                       |
+| `onSurfaceSecondary`    | Secondary / hint text                                                                                                              |
+| `accent`                | Primary interactive accent colour (user-overridable or fixed per theme)                                                            |
+| `onAccent`              | Text / icons on accent / highlighted button backgrounds (theme-defined; dynamically resolved via relative luminance for custom accents) |
+| `divider`               | Subtle separator lines                                                                                                             |
+| `controlOverlay`        | Floating control Quick Menu background                                                                                             |
+| `onControlOverlay`      | Text / icons on the control overlay                                                                                                |
+| `keyBackground`         | Key face (normal)                                                                                                                  |
+| `keyPressed`            | Key face (pressed)                                                                                                                 |
+| `keyboardBackground`    | Keyboard container background                                                                                                      |
+| `quickMenuBarIdleColor` | Always-visible pull-tab quick menu bar colour                                                                                      |
+| `navQuickMenuBody`      | Navigation bar background (tracks accent in custom-accent themes)                                                                 |
+| `controlOverlayBorder`  | Border/outline of the carousel control overlay container                                                                           |
+| `error`                 | Destructive/error action color                                                                                                     |
+| `onError`               | Text/icons on error-colored surfaces                                                                                               |
+| `actionColorGamepad`    | Badge tint for gamepad/joystick macro step chips                                                                                   |
+| `actionColorSystem`     | Badge tint for system/d-pad macro step chips                                                                                       |
+| `sectionHeaderColor`    | Uppercase section-header label tint                                                                                                |
+| `settingsSeparator`     | Thin divider between transparent settings rows (distinct from `divider`); tuned per theme to the settings screen/dialog background |
+| `subduedBorder`         | Subtle, non-accented border (`onSurface.copy(alpha = 0.15f)`) used for unfocused cards, pills, text fields, and chips              |
 
 > [!NOTE]
 > **Theme-Invariant Plain MacroPad Background:**
-> Unlike `keyboardBackground` and `touchpadBackground` which inherit the theme's `appBackground`, the plain canvas background of a MacroPad (when no custom background image is configured) is strictly theme-invariant and always pitch black (`Color.Black`). This guarantees maximum contrast for buttons, icons, and cutouts regardless of which theme palette is active.
+> Unlike `keyboardBackground` which inherits the theme's `appBackground`, the plain canvas background of a MacroPad (when no custom background image is configured) is strictly theme-invariant and always pitch black (`Color.Black`). This guarantees maximum contrast for buttons, icons, and cutouts regardless of which theme palette is active.
 
 ### Palettes
 
