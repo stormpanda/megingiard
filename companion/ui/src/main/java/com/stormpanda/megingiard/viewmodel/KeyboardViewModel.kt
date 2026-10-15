@@ -11,7 +11,6 @@ import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.keyboard.KbMouseBtnPos
 import com.stormpanda.megingiard.keyboard.KeyDef
 import com.stormpanda.megingiard.keyboard.KeyInjector
-import com.stormpanda.megingiard.keyboard.KeyRepeatController
 import com.stormpanda.megingiard.keyboard.KeyboardGestureProcessor
 import com.stormpanda.megingiard.keyboard.KeyboardMode
 import com.stormpanda.megingiard.keyboard.KeyboardState
@@ -80,10 +79,8 @@ class KeyboardViewModel(
 
     fun paste() = sendCtrlCombo(LinuxKeycodes.KEY_V)
 
-    val controller = KeyRepeatController(viewModelScope)
     val gestureProcessor =
         KeyboardGestureProcessor(
-            controller = controller,
             scope = viewModelScope,
             kbRepeatEnabled = { kbRepeatEnabled.value },
             isShiftActive = {
@@ -116,16 +113,16 @@ class KeyboardViewModel(
     }
 
     fun stopAndReset() {
-        AppLog.i(TAG, "stopAndReset called -> resetting KeyboardState & disposing controller")
-        controller.dispose()
+        AppLog.i(TAG, "stopAndReset called -> resetting KeyboardState & disposing gestureProcessor")
+        gestureProcessor.dispose()
         KeyboardState.reset()
     }
 
     override fun onCleared() {
         super.onCleared()
-        AppLog.i(TAG, "onCleared → KeyboardState reset & disposing controller")
+        AppLog.i(TAG, "onCleared → KeyboardState reset & disposing gestureProcessor")
         _keyboardMode.value = KeyboardMode.LETTERS
-        controller.dispose()
+        gestureProcessor.dispose()
         KeyboardState.reset()
     }
 

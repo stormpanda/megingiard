@@ -69,7 +69,6 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
     val isQuickMenuOpen by viewModel.isQuickMenuOpen.collectAsStateWithLifecycle()
     val colors = LocalAppColors.current
     val accentColor = colors.accent
-    val controller = viewModel.controller
 
     val kbTouchpadEnabled by viewModel.kbTouchpadEnabled.collectAsStateWithLifecycle()
     val tapToClick by TouchpadSettings.touchpadTapToClick.collectAsStateWithLifecycle()
@@ -145,10 +144,10 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
         }
 
     val coroutineScope = rememberCoroutineScope()
-    val pressedKeys by controller.pressedKeys.collectAsStateWithLifecycle()
-    val trackpointVisible by controller.trackpointVisible.collectAsStateWithLifecycle()
-
     val gestureProcessor = viewModel.gestureProcessor
+    val pressedKeys by gestureProcessor.pressedKeys.collectAsStateWithLifecycle()
+    val trackpointVisible by gestureProcessor.trackpointVisible.collectAsStateWithLifecycle()
+
     val densityVal = density.density
     LaunchedEffect(densityVal) {
         gestureProcessor.density = densityVal
@@ -342,7 +341,6 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                             KeyboardLayoutGrid(
                                 activeState = activeState,
                                 gestureProcessor = gestureProcessor,
-                                controller = controller,
                                 pressedKeys = pressedKeys,
                                 accentColor = accentColor,
                                 isShiftActive = isShiftActive,

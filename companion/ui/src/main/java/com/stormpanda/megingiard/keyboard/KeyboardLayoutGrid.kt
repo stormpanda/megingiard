@@ -30,7 +30,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 internal fun KeyboardLayoutGrid(
     activeState: KeyboardLayoutState,
     gestureProcessor: KeyboardGestureProcessor,
-    controller: KeyRepeatController,
     pressedKeys: Set<String>,
     accentColor: Color,
     isShiftActive: Boolean,
@@ -74,11 +73,11 @@ internal fun KeyboardLayoutGrid(
                                 for (change in event.changes) {
                                     val pid = change.id.value
 
-                                    if (controller.isTrackpointPointer(pid)) {
+                                    if (gestureProcessor.isTrackpointPointer(pid)) {
                                         when {
                                             change.pressed && event.type == PointerEventType.Move -> {
                                                 val delta = change.positionChange()
-                                                controller.onKeyMove(
+                                                gestureProcessor.onKeyMove(
                                                     pid,
                                                     null,
                                                     delta.x,
@@ -90,7 +89,7 @@ internal fun KeyboardLayoutGrid(
                                             }
 
                                             !change.pressed && change.previousPressed -> {
-                                                controller.onKeyUp(pid, activeState.grid, kbRepeatEnabled)
+                                                gestureProcessor.onKeyUp(pid, activeState.grid, kbRepeatEnabled)
                                                 change.consume()
                                             }
                                         }
@@ -99,11 +98,13 @@ internal fun KeyboardLayoutGrid(
 
                                     if (change.isConsumed) continue
 
-                                    val keyId =
-                                        gestureProcessor.keyBounds.entries
-                                            .filter { (id, _) -> findKeyInLayout(activeState.grid, id) != null }
-                                            .firstOrNull { (_, r) -> r.contains(change.position.x, change.position.y) }
-                                            ?.key
+                                    val hoveredKey =
+                                        gestureProcessor.findKeyAt(
+                                            activeState.grid,
+                                            change.position.x,
+                                            change.position.y,
+                                        )
+                                    val keyId = hoveredKey?.id
 
                                     when (event.type) {
                                         PointerEventType.Press -> {
@@ -133,6 +134,7 @@ internal fun KeyboardLayoutGrid(
                                                         y = change.position.y,
                                                         grid = activeState.grid,
                                                         isFullLayout = activeState.mode == KeyboardMode.FULL,
+                                                        hoveredKeyDef = hoveredKey,
                                                     )
                                                     change.consume()
                                                 }
@@ -153,6 +155,7 @@ internal fun KeyboardLayoutGrid(
                                                         dy = delta.y,
                                                         grid = activeState.grid,
                                                         isFullLayout = activeState.mode == KeyboardMode.FULL,
+                                                        hoveredKeyDef = hoveredKey,
                                                     )
                                                     change.consume()
                                                 }

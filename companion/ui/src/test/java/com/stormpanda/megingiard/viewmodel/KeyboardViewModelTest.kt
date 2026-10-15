@@ -92,11 +92,10 @@ class KeyboardViewModelTest {
     }
 
     @Test
-    fun testGestureProcessorAndControllerNotNull() {
+    fun testGestureProcessorNotNull() {
         val app = RuntimeEnvironment.getApplication()
         val vm = KeyboardViewModel(app)
 
-        assertNotNull(vm.controller)
         assertNotNull(vm.gestureProcessor)
     }
 }

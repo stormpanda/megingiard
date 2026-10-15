@@ -40,11 +40,9 @@ class KeyboardGestureProcessorTest {
         )
 
     private fun TestScope.createProcessor(
-        controller: KeyRepeatController = KeyRepeatController(this),
         injector: KeyCodeInjector = TestKeyCodeInjector(),
         onInjectPopupSelection: (KeyDef, String) -> Unit = { _, _ -> },
     ) = KeyboardGestureProcessor(
-        controller = controller,
         scope = this,
         kbRepeatEnabled = { true },
         isShiftActive = { false },
@@ -54,6 +52,135 @@ class KeyboardGestureProcessorTest {
         onInjectPopupSelection = onInjectPopupSelection,
         injector = injector,
     )
+
+    @Test
+    fun testInitialState() =
+        runTest(testDispatcher) {
+            val processor = createProcessor()
+            assertTrue(processor.pressedKeys.value.isEmpty())
+            assertFalse(processor.trackpointVisible.value)
+        }
+
+    @Test
+    fun testOnKeyDownWithNullKeyDefReturnsFalse() =
+        runTest(testDispatcher) {
+            val processor = createProcessor()
+            val handled = processor.onKeyDown(pointerId = 1L, keyDef = null, repeatEnabled = true)
+            assertFalse(handled)
+        }
+
+    @Test
+    fun testNormalKeyDownAndUp() =
+        runTest(testDispatcher) {
+            val testInjector = TestKeyCodeInjector()
+            val processor = createProcessor(injector = testInjector)
+            val testKeyA = KeyDef(id = "a", label = "a", linuxKeycode = 30, type = KeyType.NORMAL)
+
+            val handledDown = processor.onKeyDown(pointerId = 1L, keyDef = testKeyA, repeatEnabled = true)
+            assertTrue(handledDown)
+            assertTrue(processor.pressedKeys.value.contains("a"))
+            assertEquals("a", processor.getKeyIdForPointer(1L))
+
+            processor.onKeyUp(pointerId = 1L)
+            assertFalse(processor.pressedKeys.value.contains("a"))
+            assertEquals(listOf("down" to 30, "up" to 30), testInjector.calls)
+        }
+
+    @Test
+    fun testTrackpointKeyDownAndUp() =
+        runTest(testDispatcher) {
+            val processor = createProcessor()
+            val trackpointKey = KeyDef(id = "trackpoint", label = "•", linuxKeycode = 0, type = KeyType.TRACKPOINT)
+
+            val handled = processor.onKeyDown(pointerId = 2L, keyDef = trackpointKey, repeatEnabled = true)
+            assertTrue(handled)
+            assertTrue(processor.trackpointVisible.value)
+            assertTrue(processor.isTrackpointPointer(2L))
+
+            processor.onKeyUp(pointerId = 2L)
+            assertFalse(processor.trackpointVisible.value)
+        }
+
+    @Test
+    fun testKeyMoveBetweenNormalKeys() =
+        runTest(testDispatcher) {
+            val processor = createProcessor()
+            val testKeyA = KeyDef(id = "a", label = "a", linuxKeycode = 30, type = KeyType.NORMAL)
+            val testKeyB = KeyDef(id = "b", label = "b", linuxKeycode = 48, type = KeyType.NORMAL)
+
+            processor.onKeyDown(pointerId = 1L, keyDef = testKeyA, repeatEnabled = true)
+            assertTrue(processor.pressedKeys.value.contains("a"))
+
+            val moveHandled =
+                processor.onKeyMove(
+                    pointerId = 1L,
+                    newKeyDef = testKeyB,
+                    deltaX = 10f,
+                    deltaY = 0f,
+                    repeatEnabled = true,
+                )
+            assertTrue(moveHandled)
+            assertFalse(processor.pressedKeys.value.contains("a"))
+            assertTrue(processor.pressedKeys.value.contains("b"))
+            assertEquals("b", processor.getKeyIdForPointer(1L))
+        }
+
+    @Test
+    fun testDisposeClearsState() =
+        runTest(testDispatcher) {
+            val processor = createProcessor()
+            val testKeyA = KeyDef(id = "a", label = "a", linuxKeycode = 30, type = KeyType.NORMAL)
+
+            processor.onKeyDown(pointerId = 1L, keyDef = testKeyA, repeatEnabled = true)
+            processor.dispose()
+            assertTrue(processor.pressedKeys.value.isEmpty())
+            assertFalse(processor.trackpointVisible.value)
+        }
+
+    @Test
+    fun testKeyMoveFromControlKeyToAnotherKey() =
+        runTest(testDispatcher) {
+            val processor = createProcessor()
+            val testKeyUp = KeyDef(id = "up", label = "▲", linuxKeycode = 103, type = KeyType.NORMAL)
+            val testKeyLeft = KeyDef(id = "left", label = "◀", linuxKeycode = 105, type = KeyType.NORMAL)
+
+            val handledDown = processor.onKeyDown(pointerId = 1L, keyDef = testKeyUp, repeatEnabled = true)
+            assertTrue(handledDown)
+            assertTrue(processor.pressedKeys.value.contains("up"))
+            assertEquals("up", processor.getKeyIdForPointer(1L))
+
+            val moveHandled =
+                processor.onKeyMove(
+                    pointerId = 1L,
+                    newKeyDef = testKeyLeft,
+                    deltaX = 10f,
+                    deltaY = 0f,
+                    repeatEnabled = true,
+                )
+            assertTrue(moveHandled)
+            assertFalse(processor.pressedKeys.value.contains("up"))
+            assertTrue(processor.pressedKeys.value.contains("left"))
+            assertEquals("left", processor.getKeyIdForPointer(1L))
+        }
+
+    @Test
+    fun testOnKeyUpWithSkipInjectionOnControlKey() =
+        runTest(testDispatcher) {
+            val testInjector = TestKeyCodeInjector()
+            val processor = createProcessor(injector = testInjector)
+            val testKeyDel = KeyDef(id = "del", label = "Del", linuxKeycode = 111, type = KeyType.NORMAL)
+
+            val handledDown = processor.onKeyDown(pointerId = 1L, keyDef = testKeyDel, repeatEnabled = true)
+            assertTrue(handledDown)
+            assertTrue(processor.pressedKeys.value.contains("del"))
+            assertEquals("del", processor.getKeyIdForPointer(1L))
+
+            val handledUp = processor.onKeyUp(pointerId = 1L, skipInjection = true)
+            assertTrue(handledUp)
+            assertFalse(processor.pressedKeys.value.contains("del"))
+            assertNull(processor.getKeyIdForPointer(1L))
+            assertEquals(listOf("down" to 111, "up" to 111), testInjector.calls)
+        }
 
     @Test
     fun `bounds updates populate key bounds map`() =
@@ -110,17 +237,16 @@ class KeyboardGestureProcessorTest {
     @Test
     fun `cancel releases all active keys`() =
         runTest(testDispatcher) {
-            val controller = KeyRepeatController(this)
-            val processor = createProcessor(controller = controller)
+            val processor = createProcessor()
 
             processor.updateBounds("q", 0f, 0f, 50f, 50f)
             processor.onPress(1L, 25f, 25f, grid, isFullLayout = false)
 
-            assertTrue(controller.pressedKeys.value.contains("q"))
+            assertTrue(processor.pressedKeys.value.contains("q"))
 
-            processor.onCancel(grid)
+            processor.onCancel()
 
-            assertTrue(controller.pressedKeys.value.isEmpty())
+            assertTrue(processor.pressedKeys.value.isEmpty())
             assertNull(processor.activePopupState.value)
         }
 
@@ -150,7 +276,7 @@ class KeyboardGestureProcessorTest {
             assertTrue(popup!!.isLongPress)
             assertEquals(listOf("1"), popup.options)
 
-            processor.onRelease(1L, testGrid)
+            processor.onRelease(1L)
 
             assertEquals("1", injectedChar)
             assertEquals("q", injectedKeyDef?.id)
@@ -168,7 +294,7 @@ class KeyboardGestureProcessorTest {
             processor.updateBounds("q", 0f, 0f, 50f, 50f)
 
             processor.onPress(1L, 25f, 25f, testGrid, isFullLayout = false)
-            processor.onRelease(1L, testGrid)
+            processor.onRelease(1L)
 
             assertNull(injectedChar)
             assertNull(processor.activePopupState.value)

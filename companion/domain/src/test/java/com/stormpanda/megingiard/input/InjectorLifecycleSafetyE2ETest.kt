@@ -3,7 +3,6 @@ package com.stormpanda.megingiard.input
 import android.content.Context
 import com.stormpanda.megingiard.keyboard.KeyCodeInjector
 import com.stormpanda.megingiard.keyboard.KeyDef
-import com.stormpanda.megingiard.keyboard.KeyRepeatController
 import com.stormpanda.megingiard.keyboard.KeyboardGestureProcessor
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.privd.PrivdClient
@@ -33,7 +32,7 @@ import org.robolectric.annotation.Config
  *
  * 1. Multi-client reference counting and non-interfering start/stop lifecycle in [TouchInjector].
  * 2. Multi-finger gesture processing and touch-cancellation safety in [TouchpadGestureProcessor].
- * 3. Key repeat dispatch and gesture state cancellation safety in [KeyboardGestureProcessor] & [KeyRepeatController].
+ * 3. Key repeat dispatch and gesture state cancellation safety in [KeyboardGestureProcessor].
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -179,14 +178,8 @@ class InjectorLifecycleSafetyE2ETest {
                     }
                 }
 
-            val repeatController =
-                KeyRepeatController(
-                    scope = this,
-                )
-
             val processor =
                 KeyboardGestureProcessor(
-                    controller = repeatController,
                     scope = this,
                     kbRepeatEnabled = { true },
                     isShiftActive = { false },
@@ -225,7 +218,7 @@ class InjectorLifecycleSafetyE2ETest {
             assertTrue("Expected long press popup state active", processor.activePopupState.value?.isLongPress == true)
 
             // 3. Pointer up -> releases popup
-            processor.onRelease(1L, testGrid)
+            processor.onRelease(1L)
 
             // 4. Slide on space bar
             processor.onPress(2L, 75f, 75f, testGrid, isFullLayout = false)
@@ -236,7 +229,7 @@ class InjectorLifecycleSafetyE2ETest {
             assertTrue("Expected cursor left arrow key injected on space slide", calls.any { it.second == LinuxKeycodes.KEY_LEFT })
 
             // 5. Cancel all cleans up all ongoing repeat coroutines and popup states
-            processor.onCancel(testGrid)
+            processor.onCancel()
             assertNull(processor.activePopupState.value)
             assertFalse(processor.isSpaceDragging)
         }
