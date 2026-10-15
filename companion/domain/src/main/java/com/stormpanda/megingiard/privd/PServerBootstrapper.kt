@@ -9,7 +9,6 @@ import android.os.Process as AndroidProcess
 
 private const val TAG = "PServerBootstrapper"
 
-private const val VERIFY_INITIAL_DELAY_MS = 500L
 private const val VERIFY_RETRY_COUNT = 20
 private const val VERIFY_RETRY_DELAY_MS = 300L
 private const val SPAWN_OK_MARKER = "MGRD_SPAWN_OK"
@@ -118,7 +117,6 @@ object PServerBootstrapper {
             AppLog.i(TAG, "Per-install key provisioned, verifying daemon loopback socket")
 
             // 7. Verify connection via mutual handshake
-            Thread.sleep(VERIFY_INITIAL_DELAY_MS)
             for (i in 0 until VERIFY_RETRY_COUNT) {
                 if (PrivdManager.verifyConnect()) {
                     AppLog.i(TAG, "PServer fast-track bootstrap succeeded and verified on attempt ${i + 1}")

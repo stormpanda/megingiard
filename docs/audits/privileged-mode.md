@@ -235,7 +235,7 @@
 - [x] **`[PM-01]`** — Consolidate triplicated daemon path, process-name, and TCP port helpers into `PrivdConstants.kt` *(Complexity: Med, Risk: Low)*
 - [x] **`[PM-02]`** — Remove unused `config: AutoSetupLanguageConfig?` param in `PrivdPairScreenTextScanner` and dead `GlobalSettingsViewModel.enableAccessibility()` *(Complexity: Low, Risk: Low)*
 - [x] **`[PM-03]`** — Delete broken 3-second NSD mDNS fallback (`discoverAdbTlsPortWithNsd`) and multi-host (`127.0.0.1`, `::1`, `localhost`) retry loops in `PrivdBootstrapper` *(Complexity: High, Risk: Low)*
-- [ ] **`[PM-04]`** — Remove duplicate `kill -9; sleep 1` and redundant post-`"R"` 500 ms sleep during daemon startup *(Complexity: Med, Risk: Low)*
+- [x] **`[PM-04]`** — Remove duplicate `kill -9; sleep 1` and redundant post-`"R"` 500 ms sleep during daemon startup *(Complexity: Med, Risk: Low)*
 - [ ] **`[PM-05]`** — Remove 45-line string-splitting `MM`/`M` coalescer in `PrivdClient.writerLoop()` *(Complexity: Med, Risk: Low)*
 - [ ] **`[PM-06]`** — Bind a single canonical TCP port per variant (`51234` release, `51244` debug) with `SO_REUSEADDR` instead of 5-port cycling *(Complexity: Low, Risk: Low)*
 - [ ] **`[PM-07]`** — Delete dead `PrivdFeature` enum, `PrivdError.ADB_DISCOVERY_FAILED`, `PrivdManager.disconnect()`, and `isManuallyDisconnected` *(Complexity: Med, Risk: Low)*

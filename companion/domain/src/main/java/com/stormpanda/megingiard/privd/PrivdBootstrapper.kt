@@ -26,7 +26,6 @@ private const val MIRROR_DEX_REMOTE_MODE_RAW = 33188 // 0100644 = regular + rw-r
 // Marker echoed by the daemon's --provision mode on success (exits 0, then shell echoes this).
 private const val PROVISION_OK_MARKER = "MGRD_PROVISION_OK"
 private const val SHELL_READ_TIMEOUT_MS = 8_000L
-private const val VERIFY_INITIAL_DELAY_MS = 500L
 private const val VERIFY_RETRY_COUNT = 20
 private const val VERIFY_RETRY_DELAY_MS = 300L
 private const val SYNC_SERVICE = "sync:"
@@ -258,12 +257,10 @@ object PrivdBootstrapper {
             _stage.value = BootstrapStage.IDLE
             return false
         }
-        // Verify via abstract-socket round-trip.
-        // Give the daemon time to setsid() and bind the socket before the first attempt.
+        // Verify via loopback socket round-trip.
         // Use verifyConnect() instead of connect() to avoid CONNECTING→FAILED UI flicker
         // on each retry while PrivdManager.state is still BOOTSTRAPPING.
         _stage.value = BootstrapStage.VERIFYING
-        Thread.sleep(VERIFY_INITIAL_DELAY_MS)
         var ok = false
         for (i in 0 until VERIFY_RETRY_COUNT) {
             if (PrivdManager.verifyConnect()) {
@@ -591,36 +588,15 @@ object PrivdBootstrapper {
         context: Context,
         mgr: PrivdAdbConnectionManager,
     ): Boolean {
-        // Kill any previous daemon instance before spawning a fresh one.
-        // An old daemon (e.g. built without HMAC support) holds the abstract Unix
-        // socket and prevents the new binary from binding it.  Without this kill step
-        // the new binary exits immediately with EADDRINUSE and the old one continues
-        // to serve connections without the expected HMAC challenge — which is exactly
-        // the failure mode we saw after the HMAC feature was added in commit 6de02b3.
-        //
-        // SIGTERM (default kill) is insufficient: the daemon calls signal() which sets
-        // SA_RESTART on Android/Linux.  While the daemon is blocked in accept() waiting
-        // for a client, SIGTERM fires the handler (sets g_should_exit=1) but accept()
-        // is automatically restarted — the while(!g_should_exit) guard is never
-        // re-evaluated, so the process stays alive indefinitely.
-        // SIGKILL cannot be caught, blocked, or ignored — it unconditionally removes
-        // the process and releases the abstract socket immediately.
-        // The `sleep 1` after kill gives the kernel time to fully release the abstract
-        // socket before the new binary tries to bind it.  Without this delay there is
-        // a race: kill(2) returns as soon as the signal is queued, but the process may
-        // not have been fully reaped yet when the shell continues to the next command,
-        // causing the new binary to fail with EADDRINUSE and exit immediately.
         val isDebug = PrivdConstants.isDebugPackageName(context.packageName)
-        val processName = PrivdConstants.getDaemonProcessName(isDebug)
         val remotePath = PrivdConstants.getDaemonRemotePath(isDebug)
         val dexPath = PrivdConstants.getMirrorDexRemotePath(isDebug)
         val stateFilePath = PrivdConstants.getStateKeyFilePath(isDebug)
         val portStart = PrivdConstants.getPortStart(isDebug)
-        val killCmd = "kill -9 \$(pidof $processName 2>/dev/null) 2>/dev/null; sleep 1"
         // Run the daemon in the foreground. Since the daemon forks inside
         // detach_from_shell(), the parent exits immediately after writing the
         // token, which cleanly closes the shell stdout pipe without any race.
-        val cmd = "shell:$killCmd; $remotePath --keyfile $stateFilePath --dexfile $dexPath --port $portStart"
+        val cmd = "shell:$remotePath --keyfile $stateFilePath --dexfile $dexPath --port $portStart"
         AppLog.d(TAG, "spawn cmd: $cmd")
         val stream = mgr.openStream(cmd) ?: return false
         return stream.use { s ->
