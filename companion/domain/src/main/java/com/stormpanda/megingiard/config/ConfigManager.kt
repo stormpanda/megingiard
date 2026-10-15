@@ -81,19 +81,26 @@ object ConfigManager {
     sealed interface ExportKind {
         val metadata: ExportMetadata
         val includeBackgrounds: Boolean
+        val suggestedFilename: String
 
         /** Full-app backup: all settings + all profiles. */
         data class Backup(
             override val metadata: ExportMetadata,
             override val includeBackgrounds: Boolean = true,
-        ) : ExportKind
+        ) : ExportKind {
+            override val suggestedFilename: String
+                get() = buildExportFilename(metadata)
+        }
 
         /** Single-profile share: no settings, one profile. */
         data class ProfileShare(
             override val metadata: ExportMetadata,
             val profile: PadProfile,
             override val includeBackgrounds: Boolean = true,
-        ) : ExportKind
+        ) : ExportKind {
+            override val suggestedFilename: String
+                get() = buildProfileExportFilename(metadata, profile.name)
+        }
     }
 
     /** Discriminates backup restores from profile-only imports. */
@@ -111,28 +118,20 @@ object ConfigManager {
         )
     val exportRequest: SharedFlow<ExportKind> = _exportRequest.asSharedFlow()
 
-    /** Suggested default filename for the "create document" picker. */
-    private val _exportFilename = MutableStateFlow("")
-    val exportFilename: StateFlow<String> = _exportFilename.asStateFlow()
-
     fun requestExport(
         metadata: ExportMetadata,
-        filename: String,
         includeBackgrounds: Boolean = true,
     ) {
-        AppLog.d(TAG, "requestExport filename=$filename includeBackgrounds=$includeBackgrounds")
-        _exportFilename.value = filename
+        AppLog.d(TAG, "requestExport includeBackgrounds=$includeBackgrounds")
         _exportRequest.tryEmit(ExportKind.Backup(metadata, includeBackgrounds))
     }
 
     fun requestProfileExport(
         metadata: ExportMetadata,
         profile: PadProfile,
-        filename: String,
         includeBackgrounds: Boolean = true,
     ) {
-        AppLog.d(TAG, "requestProfileExport profile=${profile.name} filename=$filename includeBackgrounds=$includeBackgrounds")
-        _exportFilename.value = filename
+        AppLog.d(TAG, "requestProfileExport profile=${profile.name} includeBackgrounds=$includeBackgrounds")
         _exportRequest.tryEmit(ExportKind.ProfileShare(metadata, profile, includeBackgrounds))
     }
 

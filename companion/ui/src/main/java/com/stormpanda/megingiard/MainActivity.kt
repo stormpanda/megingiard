@@ -368,7 +368,7 @@ class MainActivity : ComponentActivity() {
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 ConfigManager.exportRequest.collect { kind ->
                     pendingExportKind = kind
-                    createDocumentLauncher.launch(ConfigManager.exportFilename.value)
+                    createDocumentLauncher.launch(kind.suggestedFilename)
                 }
             }
         }

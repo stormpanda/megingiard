@@ -248,7 +248,7 @@
 - [x] **`[CF-08]`** — Remove 6 orphaned DataStore preference keys from `SettingsKeys.kt` and stale `BackgroundSettings` comment *(Complexity: Med, Risk: Low)*
 - [x] **`[CF-09]`** — Remove `EXCLUDED_KEYS` from import type-dispatch sets and enforce 100% type-set coverage in `SettingsKeysTest` *(Complexity: Med, Risk: Low)*
 - [x] **`[CF-10]`** — Simplify legacy `useBackgroundImageAsMask` migration in `importMacroPadData` and sync device flags on imported profiles *(Complexity: Med, Risk: Low)*
-- [ ] **`[CF-11]`** — Compute `suggestedFilename` directly on `ExportKind` and remove `_exportFilename` `StateFlow` *(Complexity: Low, Risk: Low)*
+- [x] **`[CF-11]`** — Compute `suggestedFilename` directly on `ExportKind` and remove `_exportFilename` `StateFlow` *(Complexity: Low, Risk: Low)*
 - [ ] **`[CF-12]`** — Set `_pendingInAppImportMode` inside `ConfigManager.requestImport` and remove duplicate field in `MainActivity` *(Complexity: Low, Risk: Low)*
 - [ ] **`[CF-13]`** — Run startup daily auto-backup check sequentially after initial load settles without spawning a racing coroutine *(Complexity: Low, Risk: Low)*
 - [ ] **`[CF-14]`** — Encapsulate "Delete all custom profiles" countdown inside `ConfigurationSettingsTab` using a single coroutine *(Complexity: Med, Risk: Low)*

@@ -26,8 +26,6 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.MegingiardExport
-import com.stormpanda.megingiard.config.buildExportFilename
-import com.stormpanda.megingiard.config.buildProfileExportFilename
 import com.stormpanda.megingiard.log.LogReportManager
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
@@ -430,7 +428,6 @@ fun GlobalSettingsScreen(
                                 onExport = { metadata, includeBackgrounds ->
                                     ConfigManager.requestExport(
                                         metadata = metadata,
-                                        filename = buildExportFilename(metadata),
                                         includeBackgrounds = includeBackgrounds,
                                     )
                                 },
@@ -452,7 +449,6 @@ fun GlobalSettingsScreen(
                                     ConfigManager.requestProfileExport(
                                         metadata = metadata,
                                         profile = profile,
-                                        filename = buildProfileExportFilename(metadata, profile.name),
                                         includeBackgrounds = includeBackgrounds,
                                     )
                                 },
