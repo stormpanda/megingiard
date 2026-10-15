@@ -2,7 +2,7 @@
 
 > **Feature Spec:** [`docs/features/config/FEATURE.md`](../features/config/FEATURE.md)
 > **Modules & Packages:** `:companion:ui` (`settings/`, `settings/tabs/`), `:companion:domain` (`config/`, `settings/`, `macropad/`), `:shared:core` (`config/`, `settings/`)
-> **Audit Status:** Draft — Awaiting Operator Selection
+> **Audit Status:** Completed
 
 ---
 
@@ -256,4 +256,4 @@
 - [x] **`[CF-16]`** — Fix false-positive background count fallback, localize `summarySubtitle`, and replace bare `.dp` literals in `RestoreReviewSubPage` *(Complexity: Med, Risk: Low)*
 - [x] **`[CF-17]`** — Update module paths, `FilenameBuilder.kt`, and `SettingsEnums.kt` in `docs/features/config/FEATURE.md` *(Complexity: Low, Risk: Low)*
 - [x] **`[CF-18]`** — Sync `FEATURE.md` export metadata fields, removed v2 macro adoption, and `imageHashes` checksum scope *(Complexity: Low, Risk: Low)*
-- [ ] **`[CF-19]`** — Document `LaunchTrampolineActivity` `ACTION_VIEW` routing and actual restore toast string in `FEATURE.md` *(Complexity: Low, Risk: Low)*
+- [x] **`[CF-19]`** — Document `LaunchTrampolineActivity` `ACTION_VIEW` routing and actual restore toast string in `FEATURE.md` *(Complexity: Low, Risk: Low)*

@@ -92,7 +92,7 @@ the same device or share individual profiles with other Megingiard users.
 - When invoking the "Restore Backup" function under Global Settings, a dedicated sub-menu within the two-pane scaffold (`RestoreBackupSubPage`) MUST be displayed.
 - The first option in the selection list MUST be "External File", which routes the user to the standard SAF file picker upon selection.
 - Subsequent options in the list MUST show the 5 internal daily backups, labelled by their localized creation weekday, date, and time (e.g. `Sunday, 2026-05-24 21:15`), and showing the count of profiles, layouts, and macros.
-- Selecting an internal daily backup or an external file MUST transition the right-pane deck into a dedicated in-deck **Review & Apply** view showing archive metadata, contents breakdown, overwrite notice, and an "Apply & Restore" gamepad action card without showing floating popup modals. Pressing back smoothly returns to the backup selection list. Upon confirming the restore, an animated toast notification ("Backup restored successfully") MUST be shown.
+- Selecting an internal daily backup or an external file MUST transition the right-pane deck into a dedicated in-deck **Review & Apply** view showing archive metadata, contents breakdown, overwrite notice, and an "Import" gamepad action card without showing floating popup modals. Pressing back smoothly returns to the backup selection list. Upon confirming the restore, an animated toast notification ("Configuration imported successfully.") MUST be shown.
 
 ---
 
@@ -127,13 +127,13 @@ MainActivity  ← holds ActivityResultLaunchers
                 ConfigManager.setPendingInAppUri(uri, mode)
                         │
                         ▼
-                MainAppScreen.LaunchedEffect(pendingUriRequest)
+                MainAppScreen.LaunchedEffect(pendingImportRequest)
                         │  suspend – Dispatchers.IO
                         ▼
                 ConfigManager.readFromUri()  →  ConfigManager.setInAppParsedImport(archive)
                         │
                         ▼
-                GlobalSettingsScreen RestoreBackupSubPage (In-Deck Review & Apply)
+                GlobalSettingsScreen RestoreReviewSubPage (In-Deck Review & Apply)
                         ├── BACKUP_RESTORE → ConfigManager.applyImport()
                         └── PROFILE_SHARE  → ConfigManager.applyProfileImport()
 ```
@@ -144,13 +144,16 @@ For external file intents (`ACTION_VIEW`):
 File manager / share sheet
         │  Intent(ACTION_VIEW, uri, mimeType=application/vnd.megingiard.config+json)
         ▼
+LaunchTrampolineActivity.onCreate()
+        │  forwards ACTION_VIEW + uri + FLAG_GRANT_READ_URI_PERMISSION to secondary display
+        ▼
 MainActivity.onNewIntent() / onCreate()
         │
         ▼
 ConfigManager.setPendingUri(uri)   ← StateFlow bridge
         │
         ▼
-MainAppScreen.LaunchedEffect(pendingUriRequest)
+MainAppScreen.LaunchedEffect(pendingImportRequest)
         │  suspend – Dispatchers.IO
         ▼
 ConfigManager.readFromUri()  →  ConfigManager.setParsedImport(archive)
@@ -234,8 +237,9 @@ Adding a new setting requires assigning the key to a section in `SECTION_MAP` or
 | `:companion:ui` `settings/tabs/ConfigurationSettingsTab.kt` | Configuration tab composable and export/import sub-pages (`CreateBackupSubPage`, `ShareProfileSubPage`, `RestoreBackupSubPage`, `RestoreReviewSubPage`)                                                            |
 | `:companion:ui` `settings/GlobalSettingsComponents.kt`     | Enum display name mapping helpers (`SettingsCategory.titleResId()`, `SettingsSubPage.titleResId()`)                                                                                                                 |
 | `:companion:ui` `MainAppScreen.kt`                         | `LaunchedEffect(pendingImportRequest)` + `IncomingImportDialog` for external file intents                                                                                                                           |
+| `:companion:ui` `LaunchTrampolineActivity.kt`              | Receives external `ACTION_VIEW` intents from `AndroidManifest.xml` and forwards the `.mgrd` URI + read permissions to `MainActivity` on the secondary display                                                        |
 | `:companion:ui` `MainActivity.kt`                          | `handleIncomingIntent()` / `onNewIntent()` — routes `ACTION_VIEW` uri to `ConfigManager`; holds `createDocumentLauncher` / `openDocumentLauncher`; discriminates `ExportKind` to call correct build function        |
-| `:companion:ui` `AndroidManifest.xml`                      | `ACTION_VIEW` intent-filter for `application/vnd.megingiard.config+json`                                                                                                                                            |
+| `:companion:ui` `AndroidManifest.xml`                      | `ACTION_VIEW` intent-filter for `application/vnd.megingiard.config+json` on `LaunchTrampolineActivity`                                                                                                               |
 | `:companion:ui` `res/values/strings.xml`                   | All user-visible strings for the feature (prefix `config_`, `settings_config_`)                                                                                                                                     |
 
 ### UUID Remapping on Import
