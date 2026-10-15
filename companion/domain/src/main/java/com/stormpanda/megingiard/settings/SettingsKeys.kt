@@ -204,8 +204,6 @@ internal val BOOLEAN_KEYS: Set<Preferences.Key<*>> =
         KEY_TOUCHPAD_HAPTICS_ENABLED,
         KEY_GAMEPAD_SWAP_FACE_BUTTONS,
         KEY_MACROPAD_SNAP_ALIGNMENT,
-        KEY_SAVED_LOCKED,
-        KEY_SAVED_PROJECTION,
         KEY_AUTO_UPDATE_CHECK_ENABLED,
     )
 
@@ -214,7 +212,6 @@ internal val INT_KEYS: Set<Preferences.Key<*>> =
         KEY_ACCENT_COLOR,
         KEY_CUSTOM_ACCENT_COLOR,
         KEY_TOUCHPAD_MIRROR_DIM,
-        KEY_WELCOME_TOUR_COMPLETED_VERSION,
     )
 
 internal val FLOAT_KEYS: Set<Preferences.Key<*>> =
@@ -229,13 +226,8 @@ internal val STRING_KEYS: Set<Preferences.Key<*>> =
     setOf(
         KEY_STEAMGRIDDB_API_TOKEN,
         KEY_THEME_MODE,
-        KEY_MACROPAD_PROFILES,
-        KEY_MACROPAD_ACTIVE_PROFILE_ID,
         KEY_KB_LAYOUT,
         KEY_KB_MOUSE_BTN_POS,
         KEY_APP_LANGUAGE,
         KEY_LOG_LEVEL,
-        KEY_INTERNAL_BACKUPS,
-        KEY_LATEST_RELEASE_TAG,
-        KEY_LATEST_RELEASE_URL,
     )
