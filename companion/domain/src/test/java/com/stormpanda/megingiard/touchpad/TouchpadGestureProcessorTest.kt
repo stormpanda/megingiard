@@ -39,8 +39,7 @@ class TouchpadGestureProcessorTest {
         id: Long,
         x: Float,
         y: Float,
-        isHover: Boolean = false,
-    ) = onPress(id, x, y, 1000f, 1000f, isHover)
+    ) = onPress(id, x, y, 1000f, 1000f)
 
     private fun TouchpadGestureProcessor.release(
         id: Long,

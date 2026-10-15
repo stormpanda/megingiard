@@ -1,7 +1,6 @@
 package com.stormpanda.megingiard.touchpad
 
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.input.TouchAction
 import com.stormpanda.megingiard.input.TouchInjector
@@ -119,7 +118,6 @@ class TouchpadGestureProcessor(
      * @param y            pointer Y in surface pixels
      * @param surfaceW     width of the touch surface in pixels
      * @param surfaceH     height of the touch surface in pixels
-     * @param overlayOpen  true if the quick menu overlay is currently visible
      */
     fun onPress(
         pointerId: Long,
@@ -127,13 +125,7 @@ class TouchpadGestureProcessor(
         y: Float,
         surfaceW: Float,
         surfaceH: Float,
-        overlayOpen: Boolean,
     ) {
-        if (overlayOpen) {
-            AppStateManager.closeQuickMenu()
-            return
-        }
-
         if (useMouse()) {
             pressTimes[pointerId] = System.currentTimeMillis()
             downPositions[pointerId] = Pair(x, y)

@@ -251,7 +251,6 @@ fun FullscreenMouseOverlay() {
                                                             y = clampedY,
                                                             surfaceW = sw,
                                                             surfaceH = sh,
-                                                            overlayOpen = false,
                                                         )
                                                     }
                                                 }

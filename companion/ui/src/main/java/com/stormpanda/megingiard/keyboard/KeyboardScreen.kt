@@ -208,7 +208,6 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                                                                     y = clampedY,
                                                                     surfaceW = sw,
                                                                     surfaceH = sh,
-                                                                    overlayOpen = false,
                                                                 )
                                                             }
                                                         }

@@ -589,7 +589,6 @@ internal fun PadSurface(
                                                             change.position.y,
                                                             w,
                                                             h,
-                                                            overlayOpen = viewModel.isQuickMenuOpen.value,
                                                         )
                                                         change.consume()
                                                     }

@@ -110,7 +110,6 @@ class InjectorLifecycleSafetyE2ETest {
                 y = 100f,
                 surfaceW = 1000f,
                 surfaceH = 1000f,
-                overlayOpen = false,
             )
             processor.onPress(
                 pointerId = 1L,
@@ -118,7 +117,6 @@ class InjectorLifecycleSafetyE2ETest {
                 y = 100f,
                 surfaceW = 1000f,
                 surfaceH = 1000f,
-                overlayOpen = false,
             )
 
             // 2. Dispatch 2-finger scroll move
@@ -151,7 +149,6 @@ class InjectorLifecycleSafetyE2ETest {
                 y = 50f,
                 surfaceW = 1000f,
                 surfaceH = 1000f,
-                overlayOpen = false,
             )
             processor.onRelease(
                 pointerId = 0L,
