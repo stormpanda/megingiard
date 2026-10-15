@@ -23,15 +23,15 @@ The Automatic Update Check feature periodically and silently queries the GitHub 
 
 - Users MUST be able to trigger a manual check for updates anytime in the dedicated "Updates" section in Global Settings.
 - The UI MUST display the current update check status (e.g. checking status, app up-to-date, or new release tag).
-- The update available banner MUST remain prominently displayed at the top of the Global Settings screen when an update is available.
+- When an update is available, an update available banner card MUST be displayed at the top of the General Settings tab (`GeneralSettingsTab.kt`), the "Check for Updates" card in the Updates tab (`UpdatesSettingsTab.kt`) MUST display the new release tag and `"Update Now"` badge, and the Global Settings tool card in the Companion Hub (`IntegrationHomeScreen.kt`) MUST highlight that an update is available.
 
 ### FR-U3: Pre-Update Backup Drill-Down & Top-Screen Launcher
 
 - Clicking the update link or banner MUST drill down into the dedicated update sub-page (`SettingsSubPage.UPDATE_AVAILABLE`).
 - The sub-page MUST allow the user to choose between:
-  1. **Backup Config & Open Link**: Navigates to the full configuration export sub-page (`SettingsSubPage.CREATE_BACKUP`). Once the user successfully creates the backup, opens the release URL on the top display (`Display.DEFAULT_DISPLAY`) and closes the settings overlay.
+  1. **Backup Config & Open Link**: Pushes the full configuration export sub-page (`SettingsSubPage.CREATE_BACKUP`) onto `subPageStack`. Once the user successfully creates the backup, opens the release URL on the top display (`Display.DEFAULT_DISPLAY`) and closes the settings overlay.
   2. **Open Link Directly**: Opens the release URL on the top display (`Display.DEFAULT_DISPLAY`) and immediately closes the settings overlay so the user can view the browser.
-  3. **Cancel / Back**: Pressing `[B]` or back navigation returns to the main settings deck without closing settings.
+  3. **Cancel / Back**: Pressing `[B]` or back navigation pops `subPageStack` without closing settings.
 
 ### FR-U4: Obtainium App Tracking Shortcut
 
@@ -51,27 +51,32 @@ GitHub Releases API
   UpdateManager (Singleton in :companion:domain)
        │
        ├── Parses release tag & evaluates SemVerComparator (:shared:core)
-       ├── Persists check timestamp & release data in DataStore
+       ├── Enforces 24-hour session rate limit in memory
+       ├── Persists auto-check toggle & latest release tag/URL in DataStore
        ▼
-GlobalSettingsViewModel / GlobalSettingsScreen (:companion:ui)
+GlobalSettingsViewModel / GlobalSettingsScreen / IntegrationHomeScreen (:companion:ui)
        │
-       ├── Displays UpdateAvailableBanner & UpdateCheckSection
+       ├── Displays update banner in GeneralSettingsTab, status pill in UpdatesSettingsTab, & Hub badge
        └── Navigates to SettingsSubPage.UPDATE_AVAILABLE & launches top-screen browser
 ```
 
 ### Component Details
 
-- **`AppReleaseInfo` (`:shared:core`)**: Lightweight `@Serializable` data model for GitHub release payloads.
-- **`SemVerComparator` (`:shared:core`)**: Semantic version string comparison logic handling `'v'` prefixes, `-SNAPSHOT` pre-release tags, and `major.minor.patch` numerical ordering.
-- **`UpdateManager` (`:companion:domain`)**: Singleton managing background network calls on `Dispatchers.IO`, 24-hour rate limiting, and DataStore state persistence.
+- **`AppReleaseInfo` (`:shared:core`)**: Lightweight `@Serializable` data model for GitHub release payloads (`tagName`, `htmlUrl`).
+- **`SemVerComparator` (`:shared:core`)**: Semantic version string comparison logic handling `'v'` prefixes, `-SNAPSHOT` pre-release tags, build metadata, and `major.minor.patch` numerical ordering.
+- **`UpdateManager` (`:companion:domain`)**: Singleton managing background network calls on `Dispatchers.IO`, in-memory 24-hour session rate limiting, and DataStore persistence of the auto-check preference and latest release tag/URL.
 - **`SettingsSubPage.UPDATE_AVAILABLE` (`:companion:ui`)**: Dedicated in-tree gamepad sub-page offering configuration backup prior to opening the web browser on the top display.
 
 ### Source Files
 
 | File | Responsibility |
 | --- | --- |
-| `AppReleaseInfo.kt` | Data model for GitHub release JSON responses |
+| `AppReleaseInfo.kt` | Data model for GitHub release JSON responses (`tagName`, `htmlUrl`) |
 | `SemVerComparator.kt` | Version string parser and semver comparison logic |
-| `UpdateManager.kt` | Background fetcher, rate-limiter, and DataStore state persistence |
-| `GlobalSettingsScreen.kt` | Renders top-level navigation scaffold and delegates to tab composables in Global Settings |
-| `settings/tabs/UpdatesSettingsTab.kt` | Renders update checking controls, update available banner, and `UpdateAvailableSubPage` in Global Settings |
+| `UpdateManager.kt` | Background fetcher, in-memory session rate-limiter, and DataStore state persistence |
+| `settings/SettingsKeys.kt` | Preference keys for `KEY_AUTO_UPDATE_CHECK_ENABLED`, `KEY_LATEST_RELEASE_TAG`, and `KEY_LATEST_RELEASE_URL` |
+| `viewmodel/GlobalSettingsViewModel.kt` | Exposes `UpdateManager` `StateFlow`s and manual check/toggle actions to the Settings UI |
+| `settings/GlobalSettingsScreen.kt` | Renders top-level navigation scaffold, `subPageStack` drill-down (`UPDATE_AVAILABLE` -> `CREATE_BACKUP`), and top-display URL launching |
+| `settings/tabs/GeneralSettingsTab.kt` | Renders the top-of-deck update available banner card when `updateAvailable` is true |
+| `settings/tabs/UpdatesSettingsTab.kt` | Renders update checking controls, Obtainium shortcut, and `UpdateAvailableSubPage` in Global Settings |
+| `ui/IntegrationHomeScreen.kt` | Highlights the Global Settings tool card in the Companion Hub when `updateAvailable` is true |

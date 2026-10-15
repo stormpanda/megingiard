@@ -2,7 +2,7 @@
 
 > **Feature Spec:** [`docs/features/updates/FEATURE.md`](../features/updates/FEATURE.md)
 > **Modules & Packages:** `:companion:ui` (`settings/`, `settings/tabs/`, `viewmodel/`, `ui/`), `:companion:domain` (`update/`, `settings/`), `:shared:core` (`update/`, `settings/`), `:shared:ui` (`ui/`)
-> **Audit Status:** Draft — Awaiting Operator Selection
+> **Audit Status:** Completed
 
 ---
 
@@ -225,4 +225,4 @@ None identified — update checks run at most once every 24 hours (or on manual 
 - [x] **`[UP-09]`** — Duplicate Background Update Check Trigger in `GlobalSettingsViewModel.init` *(Complexity: Low, Risk: Low)*
 - [x] **`[UP-10]`** — Ad-Hoc `pendingUpdateReleaseUrl` State and `LaunchedEffect(subPageStack)` Cleanup Instead of `subPageStack` Navigation *(Complexity: Med, Risk: Low)*
 - [x] **`[UP-11]`** — Scoped `hasTriggeredManualCheck` State Hiding Discovered Updates and Resetting on Sub-Page Drill-Down *(Complexity: Low, Risk: Low)*
-- [ ] **`[UP-12]`** — Inaccurate Banner Location, Timestamp Persistence Claim, and Incomplete Source Table in `FEATURE.md` *(Complexity: Low, Risk: Low)*
+- [x] **`[UP-12]`** — Inaccurate Banner Location, Timestamp Persistence Claim, and Incomplete Source Table in `FEATURE.md` *(Complexity: Low, Risk: Low)*

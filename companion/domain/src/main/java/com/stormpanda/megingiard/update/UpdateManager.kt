@@ -32,8 +32,9 @@ const val AUTO_UPDATE_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000L
 /**
  * Manages background update checks against GitHub Releases.
  *
- * Exposes state via read-only [StateFlow]s and persists check timestamps and latest
- * release data into the shared DataStore owned by `SettingsManager`.
+ * Exposes state via read-only [StateFlow]s, rate-limits automatic checks in memory per session,
+ * and persists the auto-check preference and latest release tag/URL in the shared DataStore
+ * owned by `SettingsManager`.
  */
 object UpdateManager {
     private var dataStore: DataStore<Preferences>? = null
