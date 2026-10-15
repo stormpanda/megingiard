@@ -255,7 +255,7 @@
 - [x] **`[KB-05]`** — Replace `injectPopupChar` & `POPUP_CHAR_MAP` with `LinuxKeycodes.charToKeyMapping` *(Complexity: High, Risk: Low)*
 - [x] **`[KB-06]`** — Remove `CancellationException`-swallowing `try / catch` in long-press coroutine *(Complexity: Low, Risk: Low)*
 - [x] **`[KB-07]`** — Simplify `KeyboardGestureProcessor.updateBounds` to direct map assignment *(Complexity: Low, Risk: Low)*
-- [ ] **`[KB-08]`** — Replace mutable pixel-threshold cache fields in `KeyboardGestureProcessor` with DP constants *(Complexity: Low, Risk: Low)*
+- [x] **`[KB-08]`** — Replace mutable pixel-threshold cache fields in `KeyboardGestureProcessor` with DP constants *(Complexity: Low, Risk: Low)*
 - [ ] **`[KB-09]`** — Remove unreachable Trackpoint & Virtual Mouse Button Overlay subsystem *(Complexity: High, Risk: Low)*
 - [ ] **`[KB-10]`** — Remove 4 dead `KeyboardSettings` keys, move `KEY_KB_TOUCHPAD_ENABLED` to `KEYBOARD_KEYS`, delete `KeyAction.kt` *(Complexity: Med, Risk: Low)*
 - [ ] **`[KB-11]`** — Remove unreachable `KeyboardMode.SYMBOLS_2`, blank `mode_switch_2`, `"globe"` key, and `"ralt"` ID *(Complexity: Med, Risk: Low)*

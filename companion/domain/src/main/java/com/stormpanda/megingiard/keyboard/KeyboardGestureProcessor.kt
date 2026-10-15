@@ -21,6 +21,10 @@ private const val KB_MODIFIER_HOLD_MS = 300L
 private const val KB_LONG_PRESS_DELAY_MS = 400L
 private const val KB_TRACKPOINT_MOUSE_SENSITIVITY = 3f
 private const val KB_FULL_LAYOUT_ROW_COUNT = 6
+private const val KB_SWIPE_THRESHOLD_DP = 16f
+private const val KB_SWIPE_STEP_DP = 8f
+private const val KB_LONG_PRESS_SWIPE_THRESHOLD_DP = 24f
+private const val KB_POPUP_STEP_WIDTH_DP = 48f / 2.5f
 
 class KeyboardGestureProcessor(
     private val scope: CoroutineScope,
@@ -33,14 +37,6 @@ class KeyboardGestureProcessor(
     private val injector: KeyCodeInjector = RealKeyCodeInjector,
 ) {
     var density = initialDensity
-        set(value) {
-            field = value
-            swipeThresholdPx = 16f * value
-            swipeStepPx = 8f * value
-            longPressSwipeThresholdPx = 24f * value
-            cellWidthPx = 48f * value
-            stepWidthPx = cellWidthPx / 2.5f
-        }
 
     val keyBounds = mutableMapOf<String, KeyBounds>()
     private val _activePopupState = MutableStateFlow<PopupState?>(null)
@@ -68,13 +64,6 @@ class KeyboardGestureProcessor(
     var isSpaceDragging = false
     var accumulatedSpaceDeltaX = 0f
     var spaceDragPointerId: Long? = null
-
-    // Sizing/swipe constants in pixels
-    private var swipeThresholdPx = 16f * density
-    private var swipeStepPx = 8f * density
-    private var longPressSwipeThresholdPx = 24f * density
-    private var cellWidthPx = 48f * density
-    private var stepWidthPx = cellWidthPx / 2.5f
 
     fun updateBounds(
         id: String,
@@ -222,13 +211,14 @@ class KeyboardGestureProcessor(
             }
         } else {
             val popup = _activePopupState.value
+            val longPressSwipeThresholdPx = KB_LONG_PRESS_SWIPE_THRESHOLD_DP * density
             if (popup != null) {
                 if (popup.isLongPress) {
                     if (virtualAnchorX == 0f) {
                         virtualAnchorX = x
                     }
                     val deltaX = x - virtualAnchorX
-                    val shift = (deltaX / stepWidthPx).toInt()
+                    val shift = (deltaX / (KB_POPUP_STEP_WIDTH_DP * density)).toInt()
                     if (shift != 0) {
                         val oldIndex = popup.selectedIndex
                         val newIndex = (oldIndex + shift).coerceIn(0, popup.options.lastIndex)
@@ -250,6 +240,8 @@ class KeyboardGestureProcessor(
             } else {
                 if (pointerId == spaceDragPointerId) {
                     val dragDeltaX = x - spaceDragStartX
+                    val swipeThresholdPx = KB_SWIPE_THRESHOLD_DP * density
+                    val swipeStepPx = KB_SWIPE_STEP_DP * density
                     if (!isSpaceDragging && abs(dragDeltaX) > swipeThresholdPx) {
                         isSpaceDragging = true
                         spaceDragStartX = x
