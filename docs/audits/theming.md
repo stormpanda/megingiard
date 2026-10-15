@@ -2,7 +2,7 @@
 
 > **Feature Spec:** [`docs/features/theming/FEATURE.md`](../features/theming/FEATURE.md), [`docs/GAMEPAD_NAVIGATION.md`](../GAMEPAD_NAVIGATION.md)
 > **Modules & Packages:** `:shared:ui` (`com.stormpanda.megingiard.ui`), `:shared:core` (`com.stormpanda.megingiard.model`), `:shared:catalog` (`com.stormpanda.megingiard.catalog.ipc`), `:companion:ui` (`com.stormpanda.megingiard.ui`), `:companion:domain` (`com.stormpanda.megingiard.settings`)
-> **Audit Status:** Draft — Awaiting Operator Selection
+> **Audit Status:** Completed
 
 ---
 
@@ -268,4 +268,4 @@ None identified — animations in `GamepadFocusCard`, `drawBehind` border render
 - [x] **`[TH-15]`** — Remove redundant `accentColor` parameter threading in `GamepadScaffold` (`AGENTS.md §16.5`) *(Complexity: Low, Risk: Low)*
 - [x] **`[TH-16]`** — Remove duplicate `keyboardRequester?.invoke(false)` call in `GamepadTextFieldCard` *(Complexity: Low, Risk: Low)*
 - [x] **`[TH-17]`** — Sync `docs/features/theming/FEATURE.md` with current 8-palette architecture and active tokens/components *(Complexity: Med, Risk: Low)*
-- [ ] **`[TH-18]`** — Fix broken `:companion:ui` and `GamepadComponents.kt` links in `docs/GAMEPAD_NAVIGATION.md` *(Complexity: Low, Risk: Low)*
+- [x] **`[TH-18]`** — Fix broken `:companion:ui` and `GamepadComponents.kt` links in `docs/GAMEPAD_NAVIGATION.md` *(Complexity: Low, Risk: Low)*

@@ -16,7 +16,7 @@ Megingiard is built for the **AYN Thor** dual-screen handheld. While the seconda
 
 ## 2. Input Mapping & Event Pipeline
 
-The input pipeline is coordinated through [`PrimaryOverlayManager.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayManager.kt) and [`PrimaryOverlayInputBridge.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayInputBridge.kt):
+The input pipeline is coordinated through [`PrimaryOverlayManager.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayManager.kt) and [`PrimaryOverlayInputBridge.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/shared/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayInputBridge.kt):
 
 ```
  ┌────────────────────────────────────────────────────────┐
@@ -60,7 +60,7 @@ The input pipeline is coordinated through [`PrimaryOverlayManager.kt`](file:///U
 
 ## 3. Two-Pane Console Navigation (`GamepadTwoPaneScaffold`)
 
-[`GamepadScaffold.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/ui/src/main/java/com/stormpanda/megingiard/ui/GamepadScaffold.kt) provides `GamepadTwoPaneScaffold` to deliver a console-grade two-pane experience (Left Category Sidebar Rail + Right Content Deck) across [`GlobalSettingsScreen.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/ui/src/main/java/com/stormpanda/megingiard/settings/GlobalSettingsScreen.kt) and [`MacroPadEditor.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/ui/src/main/java/com/stormpanda/megingiard/macropad/MacroPadEditor.kt).
+[`GamepadScaffold.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/shared/ui/src/main/java/com/stormpanda/megingiard/ui/GamepadScaffold.kt) provides `GamepadTwoPaneScaffold` to deliver a console-grade two-pane experience (Left Category Sidebar Rail + Right Content Deck) across [`GlobalSettingsScreen.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/ui/src/main/java/com/stormpanda/megingiard/settings/GlobalSettingsScreen.kt) and [`MacroPadEditor.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/ui/src/main/java/com/stormpanda/megingiard/macropad/MacroPadEditor.kt).
 
 ```
  ┌──────────────────────┬────────────────────────────────────────┐
@@ -87,7 +87,7 @@ To ensure a seamless, non-jarring console UX when drilling into nested sub-menus
 * **Stationary Header:** `GamepadTwoPaneScaffold` hoists the breadcrumbs trail above the sliding sub-page `AnimatedContent`.
 * **In-Place Crossfade:** When navigating between menu levels, the breadcrumb trail crossfades in-place via `AnimatedContent` (`fadeIn(tween(150)) togetherWith fadeOut(tween(150))`), rather than sliding horizontally with deck cards.
 * **Sticky Positioning:** The breadcrumbs remain permanently visible at the top of the right deck pane, avoiding being scrolled off-screen when browsing deep lists.
-* **Usage:** Pass `breadcrumbs = activeBreadcrumbs` and `accentColor = colors.accent` directly to `GamepadTwoPaneScaffold`. Inner `GamepadDeck` calls omit local breadcrumbs definitions to prevent duplicate headers.
+* **Usage:** Pass `breadcrumbs = activeBreadcrumbs` directly to `GamepadTwoPaneScaffold` (or to the child `GamepadDeck`, which registers its breadcrumbs via `LocalBreadcrumbConsumer`). Inner `GamepadDeck` calls inside a scaffold omit local header rendering to prevent duplicate headers.
 
 ### 3.2 Bidirectional Horizontal Traversal & Sidebar Focus Isolation
 
@@ -133,81 +133,64 @@ Modifier.focusProperties {
 }
 ```
 
-### 3.2 Immediate Synchronous Focus at Depth Changes
+### 3.3 Immediate Synchronous Focus at Depth Changes
 
-When entering or leaving a sub-page, `GamepadTwoPaneScaffold` observes changes to `effectiveNavKey`:
+When mounting or entering/leaving a sub-page, `GamepadTwoPaneScaffold` observes changes to `effectiveNavKey` and invokes its consolidated `focusDeck` helper:
 
 ```kotlin
-fun performFocus(allowFallback: Boolean = false): Boolean {
+fun focusDeck(
+    depth: Int,
+    restoreSaved: Boolean,
+    allowCardFallback: Boolean,
+    allowSidebarFallback: Boolean,
+): Boolean {
     inputModeManager.requestInputMode(InputMode.Keyboard)
-    if (isBackTransition) {
-        val parentKey = savedFocusKeys?.get(newDepth) ?: savedFocusKeyByDepth[newDepth]
-        if (parentKey != null) {
-            val parentRequester = activeDeckCardRequesters[parentKey]
-            if (parentRequester != null) {
-                try {
-                    parentRequester.requestFocus()
+    if (restoreSaved) {
+        val savedKey = savedFocusKeyByDepth[depth]
+        if (savedKey != null) {
+            val savedRequester = activeDeckCardRequesters[savedKey]
+            if (savedRequester != null) {
+                if (tryRequestFocus(savedRequester)) {
                     return true
-                } catch (_: IllegalStateException) {
-                    savedFocusKeyByDepth.remove(newDepth)
-                    onRemoveFocusedKey?.invoke(newDepth)
                 }
+                savedFocusKeyByDepth.remove(depth)
+                onRemoveFocusedKey?.invoke(depth)
             }
-            if (!allowFallback) {
+            if (!allowCardFallback) {
                 return false
             }
         }
-        try {
-            firstContentRequester.requestFocus()
+    }
+    if (tryRequestFocus(firstContentRequester)) {
+        return true
+    }
+    if (allowCardFallback) {
+        val fallbackRequester = activeDeckCardRequesters.values.firstOrNull()
+        if (fallbackRequester != null && tryRequestFocus(fallbackRequester)) {
             return true
-        } catch (_: IllegalStateException) {
-            if (allowFallback) {
-                val fallbackRequester = activeDeckCardRequesters.values.firstOrNull()
-                if (fallbackRequester != null) {
-                    try {
-                        fallbackRequester.requestFocus()
-                        return true
-                    } catch (_: IllegalStateException) {
-                    }
-                }
-                if (newDepth == 0) {
-                    try {
-                        activeCategoryRequester.requestFocus()
-                        return true
-                    } catch (_: IllegalStateException) {
-                    }
-                }
-            }
-            return false
-        }
-    } else {
-        try {
-            firstContentRequester.requestFocus()
-            return true
-        } catch (_: IllegalStateException) {
-            if (allowFallback) {
-                val fallbackRequester = activeDeckCardRequesters.values.firstOrNull()
-                if (fallbackRequester != null) {
-                    try {
-                        fallbackRequester.requestFocus()
-                        return true
-                    } catch (_: IllegalStateException) {
-                    }
-                }
-            }
-            return false
         }
     }
+    if (allowSidebarFallback && tryRequestFocus(activeCategoryRequester)) {
+        return true
+    }
+    return false
 }
 
 // Attempt immediate synchronous focus on frame 0; fallback to delay only if unattached
-if (!performFocus(allowFallback = false)) {
+if (!focusDeck(
+        depth = newDepth,
+        restoreSaved = shouldRestoreSaved,
+        allowCardFallback = false,
+        allowSidebarFallback = false,
+    )
+) {
     delay(GS_INITIAL_FOCUS_DELAY_MS)
-    try {
-        performFocus(allowFallback = true)
-    } catch (_: IllegalStateException) {
-        AppLog.d(TAG, "GamepadTwoPaneScaffold: focus requester unattached on auto focus restore")
-    }
+    focusDeck(
+        depth = newDepth,
+        restoreSaved = shouldRestoreSaved,
+        allowCardFallback = true,
+        allowSidebarFallback = isInitialMount || (isBackTransition && newDepth == 0),
+    )
 }
 ```
 
@@ -291,7 +274,7 @@ Tapping or clicking with a touch screen or mouse pointer automatically sets `Inp
 
 If pointer interaction, empty dynamic items, or dialog dismissal leaves Compose without an active focused node:
 1. Subsequent hardware inputs (D-Pad, Stick motion, Button A) fail standard view consumption.
-2. `PrimaryOverlayManager` / `PrimaryOverlayActivity` catches the unhandled event and invokes `PrimaryOverlayInputBridge.sendFocusRecovery(keyCode)`. Additionally, `PrimaryOverlayManager` dispatches an initial focus recovery event upon `WindowManager.addView()` attachment to guarantee Display 0 window focus.
+2. `PrimaryOverlayManager` / `PrimaryOverlayActivity` catches the unhandled event and invokes `PrimaryOverlayInputBridge.sendFocusRecovery(keyCode)`.
 3. Overlays (`GamepadTwoPaneScaffold`, `MirrorEditorTopOverlay`, `AnchorSelectorOverlay`) receive the recovery trigger, request `InputMode.Keyboard`, and immediately restore focus to the primary focus requester.
 4. Modal switches on Display 0 use atomic transitions (`AppStateManager.suspendCurrentAndOpen`) and debounced window tear-down (32 ms) to eliminate window churn and OS focus drop during multi-modal flows.
 
@@ -299,7 +282,7 @@ If pointer interaction, empty dynamic items, or dialog dismissal leaves Compose 
 
 ## 6. Gamepad Component Library Catalog
 
-All gamepad UI components live in [`GamepadComponents.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/ui/src/main/java/com/stormpanda/megingiard/ui/GamepadComponents.kt) and [`GamepadScaffold.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/ui/src/main/java/com/stormpanda/megingiard/ui/GamepadScaffold.kt), implementing the following interactive patterns:
+All gamepad UI components live in `:shared:ui` across [`GamepadScaffold.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/shared/ui/src/main/java/com/stormpanda/megingiard/ui/GamepadScaffold.kt), [`GamepadCards.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/shared/ui/src/main/java/com/stormpanda/megingiard/ui/GamepadCards.kt), [`GamepadFormInputs.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/shared/ui/src/main/java/com/stormpanda/megingiard/ui/GamepadFormInputs.kt), [`GamepadColorPickers.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/shared/ui/src/main/java/com/stormpanda/megingiard/ui/GamepadColorPickers.kt), [`GamepadDialogs.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/shared/ui/src/main/java/com/stormpanda/megingiard/ui/GamepadDialogs.kt), [`GamepadDialogControls.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/shared/ui/src/main/java/com/stormpanda/megingiard/ui/GamepadDialogControls.kt), [`GamepadLayoutContainers.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/shared/ui/src/main/java/com/stormpanda/megingiard/ui/GamepadLayoutContainers.kt), [`GamepadKeyHandlers.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/shared/ui/src/main/java/com/stormpanda/megingiard/ui/GamepadKeyHandlers.kt), and [`GamepadTokens.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/shared/ui/src/main/java/com/stormpanda/megingiard/ui/GamepadTokens.kt), implementing the following interactive patterns:
 
 | Component | Interaction Model | Focus Visuals |
 | :--- | :--- | :--- |
