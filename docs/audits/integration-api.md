@@ -278,7 +278,7 @@
 - [x] **`[IA-10]`** — Remove unread `AutoSetupTargetStage` enum and field in `MegingiardAccessibilityService` *(Complexity: Low, Risk: Low)*
 - [x] **`[IA-11]`** — Delete unused `isMegingiardInPairedDevices` method in `MegingiardAccessibilityService` *(Complexity: Low, Risk: Low)*
 - [x] **`[IA-12]`** — Remove dead `RetroArchLplParser.extractMostRecentRomPath` and merge duplicate `SafPathResolverTest` *(Complexity: Low, Risk: Low)*
-- [ ] **`[IA-13]`** — Remove write-only `SystemRoleClassifier.isInitialized` flag *(Complexity: Low, Risk: Low)*
+- [x] **`[IA-13]`** — Remove write-only `SystemRoleClassifier.isInitialized` flag *(Complexity: Low, Risk: Low)*
 - [ ] **`[IA-14]`** — Eliminate self-IPC `ContentObserver` loopback in `InstalledAppsManager.triggerSteamGridDbScraping` *(Complexity: Med, Risk: Low)*
 - [ ] **`[IA-15]`** — Consolidate split-brain focus/hover state across `AppStateManager`, `AutoSwitchCoordinator`, and `EmulatorDetectionFunnel` *(Complexity: High, Risk: Med)*
 - [ ] **`[IA-16]`** — Avoid scanning `/storage` and double-reading `ppsspp.ini` on every 1s poll tick in `PpssppDetector` *(Complexity: Med, Risk: Low)*

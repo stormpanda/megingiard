@@ -22,16 +22,12 @@ object SystemRoleClassifier {
     private val _launcherPackages = MutableStateFlow<Set<String>>(emptySet())
     val launcherPackages: StateFlow<Set<String>> = _launcherPackages.asStateFlow()
 
-    @Volatile
-    private var isInitialized = false
-
     /**
      * Initializes the classifier and queries PackageManager for all activities declaring
      * [Intent.CATEGORY_HOME].
      */
     fun init(context: Context) {
         refreshLaunchers(context)
-        isInitialized = true
     }
 
     /**
@@ -90,6 +86,5 @@ object SystemRoleClassifier {
      */
     fun resetForTesting() {
         _launcherPackages.value = emptySet()
-        isInitialized = false
     }
 }
