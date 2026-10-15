@@ -64,7 +64,6 @@ class TouchpadGestureProcessor(
     val touchPos: StateFlow<Pair<Float, Float>?> = _touchPos.asStateFlow()
 
     private val pointerToSlotMap = HashMap<Long, Int>()
-    private val activeSlots = BooleanArray(MAX_TOUCH_SLOTS) { false }
 
     // ── Mouse mode state ────────────────────────────────────────────────────
     private val pressTimes = HashMap<Long, Long>()
@@ -137,9 +136,8 @@ class TouchpadGestureProcessor(
                 }
             }
         } else {
-            val slot = activeSlots.indexOfFirst { !it }
-            if (slot != -1) {
-                activeSlots[slot] = true
+            val slot = (0 until MAX_TOUCH_SLOTS).firstOrNull { !pointerToSlotMap.containsValue(it) }
+            if (slot != null) {
                 pointerToSlotMap[pointerId] = slot
                 val nx = (x / surfaceW).coerceIn(0f, 1f)
                 val ny = (y / surfaceH).coerceIn(0f, 1f)
@@ -287,7 +285,6 @@ class TouchpadGestureProcessor(
         } else {
             val slot = pointerToSlotMap.remove(pointerId)
             if (slot != null) {
-                activeSlots[slot] = false
                 val nx = (x / surfaceW).coerceIn(0f, 1f)
                 val ny = (y / surfaceH).coerceIn(0f, 1f)
                 _touchPos.value = null
@@ -314,7 +311,6 @@ class TouchpadGestureProcessor(
         // Unconditionally clean up Touch mode state synchronously
         val slotsToRelease = pointerToSlotMap.entries.toList()
         pointerToSlotMap.clear()
-        activeSlots.fill(false)
         _touchPos.value = null
         for ((_, slot) in slotsToRelease) {
             TouchInjector.injectTouch(slot, TouchAction.UP, 0f, 0f)
