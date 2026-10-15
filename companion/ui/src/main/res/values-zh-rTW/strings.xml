@@ -871,7 +871,6 @@ Open Settings to create a layout.</string>
     <string name="welcome_desc">Megingiard 是 AYN Thor 雙螢幕掌機的助手應用程式。它讓您能配置自訂 MacroPad 設定檔、虛擬鍵盤對應、虛擬觸控板以及螢幕間的投影。</string>
     <string name="welcome_help_title">如何獲取幫助</string>
     <string name="welcome_help_intro">尋找各個螢幕右上角的說明圖示 (?)，以查看該功能的詳細指南與最佳實踐。</string>
-    <string name="welcome_btn_got_it">了解</string>
     <string name="settings_reset_tutorials">重設教學</string>
     <string name="settings_reset_tutorials_desc">重設所有教學提示視窗，以便下次造訪時再次顯示</string>
     <string name="settings_reset_tutorials_toast">教學現在將再次顯示</string>

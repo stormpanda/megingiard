@@ -872,7 +872,6 @@ Open Settings to create a layout.</string>
     <string name="welcome_desc">Megingiard is a companion app for the AYN Thor dual-screen handheld. It allows you to configure custom MacroPad profiles, virtual keyboard maps, virtual touchpads, and screen mirroring between displays.</string>
     <string name="welcome_help_title">How to Get Help</string>
     <string name="welcome_help_intro">Look for the help icon (?) in the top-right corner of each screen to view detailed guides and best practices for that feature.</string>
-    <string name="welcome_btn_got_it">Got it</string>
     <string name="settings_reset_tutorials">Reset tutorials</string>
     <string name="settings_reset_tutorials_desc">Reset all tutorial popups to show them again on next access</string>
     <string name="settings_reset_tutorials_toast">Tutorials will now be shown again</string>

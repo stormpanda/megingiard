@@ -27,11 +27,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowDownward
 import androidx.compose.material.icons.rounded.ArrowUpward
@@ -39,13 +35,11 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material.icons.rounded.Mouse
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -54,7 +48,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -86,16 +79,7 @@ private const val QM_BOUNCE_DURATION_MS = 1000
 
 // ── Appearance ───────────────────────────────────────────────────────────────
 private const val QM_SCRIM_ALPHA = 0.6f
-private val QM_DIALOG_MAX_WIDTH = 340.dp
-private val QM_DIALOG_PADDING_HORIZONTAL = 24.dp
-private val QM_DIALOG_PADDING_TOP = 20.dp
-private val QM_DIALOG_PADDING_BOTTOM = 16.dp
-private val QM_DIALOG_SHADOW_ELEVATION = 8.dp
-private val QM_DIALOG_CORNER_RADIUS = 28.dp
-private val QM_DIALOG_SHAPE = RoundedCornerShape(QM_DIALOG_CORNER_RADIUS)
-private val QM_DIALOG_BORDER_WIDTH = 1.dp
 private val QM_TITLE_BODY_SPACING = 12.dp
-private val QM_BODY_BUTTON_SPACING = 12.dp
 private val QM_ARROW_EDGE_PADDING = 16.dp
 private val QM_ARROW_SIZE = 32.dp
 
@@ -210,6 +194,7 @@ fun QuickMenuGestureTrialOverlay(
     ) {
         if (finalDeltaPx >= thresholdPx) {
             val visualDp = computeDampedVisualOffsetDp(finalDeltaPx)
+            AppLog.d(TAG, "Quick Menu gesture trial completed for $type")
 
             triggerHapticFeedback(context, HapticStrength.MEDIUM)
 
@@ -437,65 +422,6 @@ fun QuickMenuGestureTrialOverlay(
                         .align(if (overlayAtBottom) Alignment.BottomEnd else Alignment.TopEnd)
                         .padding(end = QuickMenuBarLayout.SLIDING_PILL_PADDING),
             )
-        }
-    }
-}
-
-@Composable
-fun QuickMenuTutorialDialog(
-    overlayAtBottom: Boolean,
-    onDismiss: () -> Unit,
-) {
-    val colors = LocalAppColors.current
-
-    LaunchedEffect(Unit) {
-        AppLog.d(TAG, "Quick Menu tutorial dialog shown")
-    }
-
-    QuickMenuGestureTrialOverlay(
-        overlayAtBottom = overlayAtBottom,
-    ) {
-        Column(
-            modifier =
-                Modifier
-                    .widthIn(max = QM_DIALOG_MAX_WIDTH)
-                    .padding(horizontal = 16.dp)
-                    .shadow(QM_DIALOG_SHADOW_ELEVATION, QM_DIALOG_SHAPE)
-                    .clip(QM_DIALOG_SHAPE)
-                    .background(colors.surface)
-                    .border(
-                        QM_DIALOG_BORDER_WIDTH,
-                        brush = rememberBezelBrush(),
-                        shape = QM_DIALOG_SHAPE,
-                    ).padding(
-                        start = QM_DIALOG_PADDING_HORIZONTAL,
-                        end = QM_DIALOG_PADDING_HORIZONTAL,
-                        top = QM_DIALOG_PADDING_TOP,
-                        bottom = QM_DIALOG_PADDING_BOTTOM,
-                    ).clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {}, // absorb clicks so dialog itself doesn't dismiss
-                    ),
-        ) {
-            QuickMenuStepContent(overlayAtBottom = overlayAtBottom)
-            Spacer(modifier = Modifier.height(QM_BODY_BUTTON_SPACING))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                Button(
-                    onClick = {
-                        AppLog.d(TAG, "Quick Menu tutorial dialog confirmed")
-                        onDismiss()
-                    },
-                ) {
-                    Text(
-                        text = stringResource(R.string.welcome_btn_got_it),
-                        style = MaterialTheme.typography.labelLarge,
-                    )
-                }
-            }
         }
     }
 }
