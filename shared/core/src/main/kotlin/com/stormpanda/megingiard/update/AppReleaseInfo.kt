@@ -9,8 +9,6 @@ import kotlinx.serialization.Serializable
  *
  * @property tagName The release tag name, e.g., "v0.8.1".
  * @property htmlUrl The web browser URL to the release page on GitHub.
- * @property releaseNotes The Markdown release notes / body text.
- * @property publishedAt Publication ISO timestamp.
  */
 @Serializable
 data class AppReleaseInfo(
@@ -18,8 +16,4 @@ data class AppReleaseInfo(
     val tagName: String,
     @SerialName("html_url")
     val htmlUrl: String,
-    @SerialName("body")
-    val releaseNotes: String = "",
-    @SerialName("published_at")
-    val publishedAt: String = "",
 )

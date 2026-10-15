@@ -5,7 +5,6 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.settings.KEY_AUTO_UPDATE_CHECK_ENABLED
-import com.stormpanda.megingiard.settings.KEY_LATEST_RELEASE_NOTES
 import com.stormpanda.megingiard.settings.KEY_LATEST_RELEASE_TAG
 import com.stormpanda.megingiard.settings.KEY_LATEST_RELEASE_URL
 import com.stormpanda.megingiard.settings.updateSettingPref
@@ -98,10 +97,9 @@ object UpdateManager {
 
         val tag = prefs[KEY_LATEST_RELEASE_TAG] ?: ""
         val url = prefs[KEY_LATEST_RELEASE_URL] ?: ""
-        val notes = prefs[KEY_LATEST_RELEASE_NOTES] ?: ""
 
         if (tag.isNotBlank() && url.isNotBlank()) {
-            val info = AppReleaseInfo(tagName = tag, htmlUrl = url, releaseNotes = notes)
+            val info = AppReleaseInfo(tagName = tag, htmlUrl = url)
             _latestReleaseInfo.value = info
             if (currentVersion.isNotBlank()) {
                 _updateAvailable.value = SemVerComparator.isUpdateAvailable(currentVersion, tag)
@@ -194,7 +192,6 @@ object UpdateManager {
                 dataStore?.edit { prefs ->
                     prefs[KEY_LATEST_RELEASE_TAG] = releaseInfo.tagName
                     prefs[KEY_LATEST_RELEASE_URL] = releaseInfo.htmlUrl
-                    prefs[KEY_LATEST_RELEASE_NOTES] = releaseInfo.releaseNotes
                 }
             } catch (e: CancellationException) {
                 _isChecking.value = false

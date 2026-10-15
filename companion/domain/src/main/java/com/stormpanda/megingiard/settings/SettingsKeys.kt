@@ -108,7 +108,6 @@ internal val KEY_INTERNAL_BACKUPS = stringPreferencesKey("internal_backups")
 internal val KEY_AUTO_UPDATE_CHECK_ENABLED = booleanPreferencesKey("auto_update_check_enabled")
 internal val KEY_LATEST_RELEASE_TAG = stringPreferencesKey("latest_release_tag")
 internal val KEY_LATEST_RELEASE_URL = stringPreferencesKey("latest_release_url")
-internal val KEY_LATEST_RELEASE_NOTES = stringPreferencesKey("latest_release_notes")
 
 // ── Section key groups for config export/import ───────────────────────────
 
@@ -194,7 +193,6 @@ internal val EXCLUDED_KEYS: Set<Preferences.Key<*>> =
         KEY_PRIVD_PROMPT_DISMISSED,
         KEY_LATEST_RELEASE_TAG,
         KEY_LATEST_RELEASE_URL,
-        KEY_LATEST_RELEASE_NOTES,
     )
 
 /** Flat map from DataStore key name to the actual typed key instance, used by config import. */
@@ -268,5 +266,4 @@ internal val STRING_KEYS: Set<Preferences.Key<*>> =
         KEY_INTERNAL_BACKUPS,
         KEY_LATEST_RELEASE_TAG,
         KEY_LATEST_RELEASE_URL,
-        KEY_LATEST_RELEASE_NOTES,
     )

@@ -3,7 +3,6 @@ package com.stormpanda.megingiard.update
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.edit
 import com.stormpanda.megingiard.settings.KEY_AUTO_UPDATE_CHECK_ENABLED
-import com.stormpanda.megingiard.settings.KEY_LATEST_RELEASE_NOTES
 import com.stormpanda.megingiard.settings.KEY_LATEST_RELEASE_TAG
 import com.stormpanda.megingiard.settings.KEY_LATEST_RELEASE_URL
 import kotlinx.coroutines.CoroutineScope
@@ -66,7 +65,6 @@ class UpdateManagerTest {
                 prefs[KEY_AUTO_UPDATE_CHECK_ENABLED] = true
                 prefs[KEY_LATEST_RELEASE_TAG] = "v0.8.1"
                 prefs[KEY_LATEST_RELEASE_URL] = "https://github.com/stormpanda/megingiard/releases/tag/v0.8.1"
-                prefs[KEY_LATEST_RELEASE_NOTES] = "New release features"
             }
 
             val prefs = testDataStore.data.first()

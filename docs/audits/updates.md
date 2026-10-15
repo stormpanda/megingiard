@@ -218,7 +218,7 @@ None identified — update checks run at most once every 24 hours (or on manual 
 - [x] **`[UP-02]`** — Dead `SemVerComparator.isNewer` Alias Function *(Complexity: Low, Risk: Low)*
 - [x] **`[UP-03]`** — Unreachable `try/catch` Around Non-Throwing `launchUrlOnPrimaryDisplay` (Breaking Obtainium Fallback) *(Complexity: Med, Risk: Low)*
 - [x] **`[UP-04]`** — Duplicate Version String Sanitization in `SemVerComparator` *(Complexity: Low, Risk: Low)*
-- [ ] **`[UP-05]`** — Unused `releaseNotes` (`KEY_LATEST_RELEASE_NOTES`) and `publishedAt` Deserialized and Persisted to DataStore *(Complexity: Med, Risk: Low)*
+- [x] **`[UP-05]`** — Unused `releaseNotes` (`KEY_LATEST_RELEASE_NOTES`) and `publishedAt` Deserialized and Persisted to DataStore *(Complexity: Med, Risk: Low)*
 - [ ] **`[UP-06]`** — `_updateAvailable` Stored as Independent Mutable State and Desynchronized in `SettingsManager.loadFrom` *(Complexity: Med, Risk: Low)*
 - [ ] **`[UP-07]`** — Unsynchronized Cross-Thread `pendingCheck*` Queue and Repeated `loadFrom` Execution on Every DataStore Edit *(Complexity: High, Risk: Low)*
 - [ ] **`[UP-08]`** — 5-Second `Thread.sleep` Busy-Wait Deadlock Against `StandardTestDispatcher` in `UpdateManagerTest` *(Complexity: Med, Risk: Low)*
