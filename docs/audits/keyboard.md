@@ -2,7 +2,7 @@
 
 > **Feature Spec:** [`docs/features/keyboard/FEATURE.md`](../features/keyboard/FEATURE.md)
 > **Modules & Packages:** `:companion:ui` (`com.stormpanda.megingiard.keyboard`, `viewmodel/KeyboardViewModel.kt`, `macropad/VisualKeyboardPicker.kt`), `:companion:domain` (`com.stormpanda.megingiard.keyboard`, `settings/KeyboardSettings.kt`), `:shared:core` (`com.stormpanda.megingiard.keyboard`)
-> **Audit Status:** Draft — Awaiting Operator Selection
+> **Audit Status:** Completed
 
 ---
 
@@ -267,4 +267,4 @@
 - [x] **`[KB-17]`** — Merge `PhysicalKeyContent` / `ErgoKeyContent` in `KeyboardKeyCap.kt` & extract `KeyDef.resolveDisplayLabel` *(Complexity: High, Risk: Low)*
 - [x] **`[KB-18]`** — Deduplicate `KeyboardKey` call sites in `KeyboardLayoutGrid.kt` & guard `KeyboardState.stateFor` *(Complexity: Med, Risk: Low)*
 - [x] **`[KB-19]`** — Read `TouchpadSettings.*.value` directly in `KeyboardScreen` lambdas & remove duplicate `boxCoords` *(Complexity: Low, Risk: Low)*
-- [ ] **`[KB-20]`** — Synchronize `docs/features/keyboard/FEATURE.md` with actual protocol, layouts, settings, and source files *(Complexity: Low, Risk: Low)*
+- [x] **`[KB-20]`** — Synchronize `docs/features/keyboard/FEATURE.md` with actual protocol, layouts, settings, and source files *(Complexity: Low, Risk: Low)*
