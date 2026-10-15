@@ -235,17 +235,7 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
 
     val associatedProfile =
         remember(profiles, targetPkg, targetRomIdentifier, targetSystem) {
-            if (targetPkg == null) {
-                null
-            } else {
-                profiles.firstOrNull { profile ->
-                    profile.association?.romFileName != null &&
-                        profile.matches(targetPkg, targetRomIdentifier, targetSystem)
-                } ?: profiles.firstOrNull { profile ->
-                    profile.association?.romFileName == null &&
-                        profile.matches(targetPkg, targetRomIdentifier, targetSystem)
-                }
-            }
+            MacroPadState.findBestMatchingProfile(targetPkg, targetRomIdentifier, targetSystem)
         }
 
     LaunchedEffect(targetPkg, targetRomIdentifier, associatedProfile?.id) {
