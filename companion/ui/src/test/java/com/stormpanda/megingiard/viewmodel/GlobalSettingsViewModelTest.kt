@@ -125,7 +125,6 @@ class GlobalSettingsViewModelTest {
         val vm = GlobalSettingsViewModel()
         vm.resetAllTutorials()
         vm.privdResetBootstrapStage()
-        vm.requestSaveLogReport()
     }
 
     @Test

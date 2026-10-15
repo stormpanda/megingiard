@@ -71,7 +71,7 @@ object LogReportManager {
      */
     val saveRequest: SharedFlow<Unit> = _saveRequest.asSharedFlow()
 
-    /** Posted by [GlobalSettingsViewModel.requestSaveLogReport] on the main thread. */
+    /** Posted by the Diagnostics settings tab on the main thread. */
     fun requestSaveReport() {
         AppLog.d(TAG, "requestSaveReport")
         _saveRequest.tryEmit(Unit)

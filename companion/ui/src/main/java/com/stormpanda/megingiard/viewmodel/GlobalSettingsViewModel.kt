@@ -9,7 +9,6 @@ import com.stormpanda.megingiard.BuildConfig
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.config.InternalBackup
 import com.stormpanda.megingiard.keyboard.KbLayout
-import com.stormpanda.megingiard.log.LogReportManager
 import com.stormpanda.megingiard.media.SteamGridDbClient
 import com.stormpanda.megingiard.media.SteamGridDbException
 import com.stormpanda.megingiard.privd.BootstrapStage
@@ -149,8 +148,6 @@ class GlobalSettingsViewModel : ViewModel() {
                 )
         }
     }
-
-    fun requestSaveLogReport() = LogReportManager.requestSaveReport()
 
     fun resetAllTutorials() = SettingsManager.resetAllTutorials()
 

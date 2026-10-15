@@ -364,7 +364,7 @@ fun GlobalSettingsScreen(
                                     DiagnosticsSettingsTab(
                                         logLevel = logLevel,
                                         onLogLevelChange = { viewModel.setLogLevel(it) },
-                                        onSaveLogReport = { viewModel.requestSaveLogReport() },
+                                        onSaveLogReport = { LogReportManager.requestSaveReport() },
                                     )
                                 }
                             }
