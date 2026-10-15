@@ -48,9 +48,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.settings.SettingsManager
-import com.stormpanda.megingiard.ui.AppDimens
 import com.stormpanda.megingiard.ui.LocalAppColors
-import com.stormpanda.megingiard.ui.LocalAppDimens
 import com.stormpanda.megingiard.ui.MaterialSymbol
 import com.stormpanda.megingiard.ui.WindowOverlayLifecycleOwner
 import com.stormpanda.megingiard.ui.colorSchemeFor
@@ -208,7 +206,6 @@ object FloatingBubbleOverlay {
                 ) {
                     CompositionLocalProvider(
                         LocalAppColors provides appColors,
-                        LocalAppDimens provides AppDimens(),
                     ) {
                         FloatingBubbleContent()
                     }

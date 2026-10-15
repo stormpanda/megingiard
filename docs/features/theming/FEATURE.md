@@ -166,7 +166,6 @@ MaterialTheme(
 ) {
     CompositionLocalProvider(
         LocalAppColors provides appColors,
-        LocalAppDimens  provides AppDimens(),
     ) {
         // app content …
     }
@@ -299,33 +298,6 @@ Text("Hint", style = MaterialTheme.typography.bodySmall)
 ```
 
 **Inline `fontSize = XX.sp` is forbidden** outside `AppTheme.kt`. The only exceptions are programmatic sizes that cannot map to a semantic token (see AGENTS.md §16.1).
-
----
-
-## Dimension Tokens (`AppDimens`)
-
-| Token             | Default | Usage                      |
-| ----------------- | ------- | -------------------------- |
-| `paddingSmall`    | 4.dp    | Tight internal padding     |
-| `paddingMedium`   | 8.dp    | Standard component padding |
-| `paddingLarge`    | 16.dp   | Screen/card padding        |
-| `paddingXLarge`   | 24.dp   | Dialog/section padding     |
-| `cornerSmall`     | 4.dp    | Tags, small badges         |
-| `cornerMedium`    | 8.dp    | Buttons, list items        |
-| `cornerLarge`     | 12.dp   | Cards, dialogs             |
-| `cornerXLarge`    | 16.dp   | Bottom sheets, large cards |
-| `elevationCard`   | 2.dp    | Card shadow                |
-| `elevationDialog` | 8.dp    | Dialog shadow              |
-| `iconSizeSmall`   | 16.dp   | Inline / secondary icons   |
-| `iconSizeMedium`  | 24.dp   | Standard icons             |
-| `iconSizeLarge`   | 32.dp   | Primary action icons       |
-
-Access in Composables:
-
-```kotlin
-val dimens = LocalAppDimens.current
-Modifier.padding(dimens.paddingLarge)
-```
 
 ---
 

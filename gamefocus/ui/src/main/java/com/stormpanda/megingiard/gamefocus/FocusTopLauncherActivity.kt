@@ -53,10 +53,8 @@ import com.stormpanda.megingiard.gamefocus.viewmodel.LauncherScrollDirection
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import com.stormpanda.megingiard.math.floorMod
 import com.stormpanda.megingiard.settings.ThemeMode
-import com.stormpanda.megingiard.ui.AppDimens
 import com.stormpanda.megingiard.ui.GamePadButton
 import com.stormpanda.megingiard.ui.LocalAppColors
-import com.stormpanda.megingiard.ui.LocalAppDimens
 import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
 import com.stormpanda.megingiard.ui.colorSchemeFor
 import com.stormpanda.megingiard.ui.megingiardTypography
@@ -357,7 +355,6 @@ class FocusTopLauncherActivity : ComponentActivity() {
             ) {
                 CompositionLocalProvider(
                     LocalAppColors provides appColors,
-                    LocalAppDimens provides AppDimens(),
                 ) {
                     val currentHoveredApp =
                         remember(

@@ -12,8 +12,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.settings.ThemeMode
 
@@ -365,40 +363,6 @@ val megingiardTypography =
         labelSmall = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Normal),
     )
 
-// ─── Dimension tokens ─────────────────────────────────────────────────────────
-//
-// All spacing, corner-radius, elevation, and icon-size values are expressed
-// through these tokens.  Composables reference LocalAppDimens.current.paddingLarge
-// etc. — never hardcode 16.dp inline.
-
-@Immutable
-data class AppDimens(
-    // Padding / spacing
-    val paddingXSmall: Dp = 4.dp,
-    val paddingSmall: Dp = 8.dp,
-    val paddingMedium: Dp = 12.dp,
-    val paddingLarge: Dp = 16.dp,
-    val paddingXLarge: Dp = 20.dp,
-    val paddingXXLarge: Dp = 24.dp,
-    // Corner radii
-    val cornerSmall: Dp = 8.dp,
-    val cornerMedium: Dp = 12.dp,
-    val cornerLarge: Dp = 16.dp,
-    val cornerXLarge: Dp = 20.dp,
-    val cornerFull: Dp = 50.dp,
-    // Elevation / shadow
-    val elevationLow: Dp = 2.dp,
-    val elevationMedium: Dp = 4.dp,
-    val elevationHigh: Dp = 8.dp,
-    // Icon sizes
-    val iconSizeSmall: Dp = 16.dp,
-    val iconSizeMedium: Dp = 20.dp,
-    val iconSizeLarge: Dp = 24.dp,
-    // Divider
-    val dividerThickness: Dp = 1.dp,
-)
-
 // ─── CompositionLocals ────────────────────────────────────────────────────────
 
 val LocalAppColors = compositionLocalOf<AppColors> { darkPalette }
-val LocalAppDimens = compositionLocalOf { AppDimens() }

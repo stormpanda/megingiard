@@ -47,7 +47,7 @@
 | `docs/features/mirror/FEATURE.md` | Screen Mirror — split, see its doc map |
 | `docs/features/privileged-mode/FEATURE.md` | Privileged Mode (daemon, bootstrap, feature flags) — split |
 | `docs/features/quickmenu/FEATURE.md` | Quick Menu Bar & Quick Menu |
-| `docs/features/theming/FEATURE.md` | Design System (AppColors, Typography, AppDimens) |
+| `docs/features/theming/FEATURE.md` | Design System (AppColors, Typography, Gamepad UI) |
 | `docs/features/touchpad/FEATURE.md` | Virtual Touchpad |
 | `docs/features/updates/FEATURE.md` | Update Check & Release Launcher |
 
