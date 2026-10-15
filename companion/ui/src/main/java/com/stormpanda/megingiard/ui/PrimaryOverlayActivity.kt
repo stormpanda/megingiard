@@ -7,22 +7,12 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
-import com.stormpanda.megingiard.mirror.ScreenCaptureManager
-import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.launch
 
 private const val TAG = "PrimaryOverlayActivity"
@@ -43,14 +33,8 @@ class PrimaryOverlayActivity : ComponentActivity() {
         AppLog.i(TAG, "onCreate: started on display=$displayId")
 
         wasFrozenForModal = savedInstanceState?.getBoolean("wasFrozenForModal") ?: false
-        val initialModal = AppStateManager.activePrimaryModal.value
-        val shouldFreezeInitially = initialModal != null && initialModal.type != PrimaryModalType.MIRROR_VIEWPORT_EDITOR
-        if (savedInstanceState == null && shouldFreezeInitially && ScreenCaptureManager.isCapturing.value &&
-            !ScreenCaptureManager.isFrozen.value
-        ) {
-            AppLog.i(TAG, "Freezing mirror capture for primary modal activity")
-            wasFrozenForModal = true
-            ScreenCaptureManager.setFrozen(true)
+        if (savedInstanceState == null) {
+            wasFrozenForModal = syncPrimaryOverlayMirrorFreeze(AppStateManager.activePrimaryModal.value, wasFrozenForModal)
         }
 
         enableEdgeToEdge()
@@ -68,67 +52,20 @@ class PrimaryOverlayActivity : ComponentActivity() {
                     finish()
                     return@collect
                 }
-
-                if (modal.type != PrimaryModalType.MIRROR_VIEWPORT_EDITOR) {
-                    if (!wasFrozenForModal && ScreenCaptureManager.isCapturing.value && !ScreenCaptureManager.isFrozen.value) {
-                        AppLog.i(TAG, "Freezing mirror capture for primary modal activity")
-                        wasFrozenForModal = true
-                        ScreenCaptureManager.setFrozen(true)
-                    }
-                } else {
-                    if (wasFrozenForModal) {
-                        AppLog.i(TAG, "Resuming live mirror capture for viewport editor activity")
-                        if (ScreenCaptureManager.isCapturing.value) {
-                            ScreenCaptureManager.setFrozen(false)
-                        }
-                        wasFrozenForModal = false
-                    }
-                }
+                wasFrozenForModal = syncPrimaryOverlayMirrorFreeze(modal, wasFrozenForModal)
             }
         }
 
         setContent {
-            val themeMode by SettingsManager.themeMode.collectAsStateWithLifecycle()
-            val userAccentArgb by SettingsManager.accentColor.collectAsStateWithLifecycle()
-            val appColors = paletteFor(themeMode, Color(userAccentArgb))
-            val activeModal by AppStateManager.activePrimaryModal.collectAsStateWithLifecycle()
-
-            MaterialTheme(
-                colorScheme = colorSchemeFor(appColors),
-                typography = megingiardTypography,
-            ) {
-                CompositionLocalProvider(
-                    LocalAppColors provides appColors,
-                    LocalFullscreenKeyboardRequester provides { active -> AppStateManager.setFullscreenKeyboardActive(active) },
-                ) {
-                    Surface(
-                        modifier = Modifier.fillMaxSize(),
-                        color = Color.Transparent,
-                    ) {
-                        activeModal?.let { modal ->
-                            PrimaryModalHost(
-                                config = modal,
-                                onDismiss = {
-                                    AppLog.d(TAG, "Dismissing primary modal: ${modal.type}")
-                                    AppStateManager.closePrimaryModal()
-                                },
-                            )
-                        }
-                    }
-                }
-            }
+            PrimaryOverlayRootContent(
+                hostContext = this@PrimaryOverlayActivity,
+                backDispatcherOwner = this@PrimaryOverlayActivity,
+            )
         }
     }
 
     override fun onGenericMotionEvent(event: MotionEvent): Boolean {
-        if (PrimaryOverlayInputBridge.processGenericMotionEvent(event) { action, dpadKeyCode ->
-                val keyEvent = KeyEvent(action, dpadKeyCode)
-                val handled = dispatchKeyEvent(keyEvent)
-                if (!handled && action == KeyEvent.ACTION_DOWN) {
-                    PrimaryOverlayInputBridge.sendFocusRecovery(dpadKeyCode)
-                }
-            }
-        ) {
+        if (dispatchPrimaryOverlayGenericMotionEvent(event, ::dispatchKeyEvent)) {
             return true
         }
         return super.onGenericMotionEvent(event)
@@ -138,36 +75,8 @@ class PrimaryOverlayActivity : ComponentActivity() {
         keyCode: Int,
         event: KeyEvent?,
     ): Boolean {
-        if (isBackKey(keyCode)) {
-            AppLog.i(TAG, "onKeyDown: Back/B-Button pressed -> handling back")
-            if (onBackPressedDispatcher.hasEnabledCallbacks()) {
-                onBackPressedDispatcher.onBackPressed()
-            } else {
-                AppStateManager.closePrimaryModal()
-                AppStateManager.setActiveCropCutoutId(null)
-                AppStateManager.setSelectedCutoutId(null)
-            }
+        if (dispatchPrimaryOverlayKeyEvent(KeyEvent.ACTION_DOWN, keyCode, this, ::dispatchKeyEvent)) {
             return true
-        }
-        when (keyCode) {
-            KeyEvent.KEYCODE_BUTTON_L1 -> {
-                AppLog.d(TAG, "onKeyDown: L1 pressed -> Bumper PREV")
-                PrimaryOverlayInputBridge.sendBumper(BumperDirection.PREV)
-                return true
-            }
-
-            KeyEvent.KEYCODE_BUTTON_R1 -> {
-                AppLog.d(TAG, "onKeyDown: R1 pressed -> Bumper NEXT")
-                PrimaryOverlayInputBridge.sendBumper(BumperDirection.NEXT)
-                return true
-            }
-
-            KeyEvent.KEYCODE_BUTTON_A -> {
-                AppLog.d(TAG, "onKeyDown: Button A pressed -> Forwarding as DPAD_CENTER down")
-                val dpadCenterDown = KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER)
-                dispatchKeyEvent(dpadCenterDown)
-                return true
-            }
         }
         return super.onKeyDown(keyCode, event)
     }
@@ -176,16 +85,8 @@ class PrimaryOverlayActivity : ComponentActivity() {
         keyCode: Int,
         event: KeyEvent?,
     ): Boolean {
-        when (keyCode) {
-            KeyEvent.KEYCODE_BUTTON_A -> {
-                AppLog.d(TAG, "onKeyUp: Button A released -> Forwarding as DPAD_CENTER up")
-                val dpadCenterUp = KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER)
-                val handled = dispatchKeyEvent(dpadCenterUp)
-                if (!handled) {
-                    PrimaryOverlayInputBridge.sendFocusRecovery(KeyEvent.KEYCODE_BUTTON_A)
-                }
-                return true
-            }
+        if (dispatchPrimaryOverlayKeyEvent(KeyEvent.ACTION_UP, keyCode, this, ::dispatchKeyEvent)) {
+            return true
         }
         return super.onKeyUp(keyCode, event)
     }
@@ -201,11 +102,7 @@ class PrimaryOverlayActivity : ComponentActivity() {
         if (isFinishing) {
             AppStateManager.closePrimaryModal()
             AppStateManager.setActiveCropCutoutId(null)
-            if (wasFrozenForModal && ScreenCaptureManager.isCapturing.value) {
-                AppLog.i(TAG, "Resuming live mirror capture after closing primary overlay activity")
-                ScreenCaptureManager.setFrozen(false)
-            }
-            wasFrozenForModal = false
+            wasFrozenForModal = releasePrimaryOverlayMirrorFreeze(wasFrozenForModal)
         }
     }
 }
