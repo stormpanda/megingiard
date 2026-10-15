@@ -60,15 +60,13 @@ object InjectorLifecycleManager {
                             MouseInjector.stop()
                         }
                         if (!states.startTouch) {
-                            TouchInjector.stop("InjectorLifecycleManager")
+                            AppLog.d(TAG, "stopping TouchInjector")
+                            TouchInjector.releaseAllSlots()
                         }
 
                         withContext(Dispatchers.IO) {
                             if (states.startKeyboard) {
                                 KeyInjector.start(appContext)
-                            }
-                            if (states.startTouch) {
-                                TouchInjector.start(appContext, "InjectorLifecycleManager")
                             }
                         }
                     }
@@ -97,6 +95,6 @@ object InjectorLifecycleManager {
         watcherJob = null
         KeyInjector.stop()
         MouseInjector.stop()
-        TouchInjector.stop("InjectorLifecycleManager")
+        TouchInjector.releaseAllSlots()
     }
 }

@@ -41,7 +41,7 @@ The Virtual Touchpad is instantiated via the **Fullscreen Mouse Overlay** (`Full
   - **Two-finger scroll:** When enabled, dragging two fingers vertically scroll the screen (Mouse Mode only).
   - **Physical click buttons:** Three visual buttons (LMB, MMB, RMB) are rendered at the bottom of the touch area, styled like the space bar of the keyboard.
   - **Mouse 4 / Mouse 5 buttons:** When enabled via settings, two square buttons labeled **M4** and **M5** are displayed in the top-left and top-right corners of the relative touchpad area, simulating Mouse 4 (Back) and Mouse 5 (Forward) clicks.
-- **Touch Mode (Absolute Touch):** Maps coordinates directly to the native `TouchInjector` client registry to perform absolute touch projection.
+- **Touch Mode (Absolute Touch):** Maps coordinates directly to `TouchInjector` to perform absolute touch projection.
   - **16:9 Aspect Ratio:** The touch surface is constrained to a `16:9` aspect ratio aligned to the bottom part of the screen, matching the primary screen dimensions to prevent mapping scaling distortion.
   - **Touchpad Screen Mirroring:** Can display a real-time mirror of the full top screen inside the touch area. A play button in the bottom toolbar toggles mirroring.
   - **Restore State:** Closing the touchpad (or turning off touchpad mirroring) stops the screen capture if it was initiated by the touchpad, restoring the macro pad's mirror capture to its exact prior state.
@@ -132,7 +132,7 @@ In **Touch Mode** (shared absolute coordinate injection, e.g. for Mirror Touch P
   sensorY = normalizedX * 1920
   ```
 - These coordinates are sent to slot-aware `TouchInjector.injectTouch(slot, action, normX, normY)` which maps concurrent pointer contacts to distinct Linux input slots (`0..9`) and transmits commands directly to `PrivdClient`, enabling slot-aware multi-touch on the absolute touchpad.
-- When `TouchInjector.stop(token)` is called, it removes the client registration. If the client registry becomes empty, the injector sends slot-specific `UP` commands for all supported touch slots and flushes before releasing. This prevents Android from retaining a visible touch indicator.
+- When `TouchInjector.releaseAllSlots()` is called (for example by `InjectorLifecycleManager` on backgrounding), the injector sends slot-specific `UP` commands for all supported touch slots (`0..9`). This prevents Android from retaining a visible touch indicator.
 - **Mode Switching Safety:** When toggling dynamically between Mouse Mode and Touch Mode while fingers are down, `TouchpadGestureProcessor.onCancel()` and `LaunchedEffect(touchpadUseMouse)` unconditionally release all active touch slots (`TouchAction.UP`) and mouse drag/click states before switching background injectors. This prevents orphaned pointer slots or stuck mouse buttons.
 
 ### Secondary Display Rendering & Touchpad Mirroring

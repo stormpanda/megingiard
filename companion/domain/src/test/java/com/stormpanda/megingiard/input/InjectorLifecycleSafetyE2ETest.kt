@@ -1,6 +1,5 @@
 package com.stormpanda.megingiard.input
 
-import android.content.Context
 import com.stormpanda.megingiard.keyboard.KeyCodeInjector
 import com.stormpanda.megingiard.keyboard.KeyDef
 import com.stormpanda.megingiard.keyboard.KeyboardGestureProcessor
@@ -25,13 +24,12 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
 /**
  * End-to-End integration test suite verifying injector lifecycle safety:
  *
- * 1. Multi-client reference counting and non-interfering start/stop lifecycle in [TouchInjector].
+ * 1. Slot release safety in [TouchInjector].
  * 2. Multi-finger gesture processing and touch-cancellation safety in [TouchpadGestureProcessor].
  * 3. Key repeat dispatch and gesture state cancellation safety in [KeyboardGestureProcessor].
  */
@@ -40,51 +38,34 @@ import org.robolectric.annotation.Config
 @Config(sdk = [33])
 class InjectorLifecycleSafetyE2ETest {
     private val testDispatcher = StandardTestDispatcher()
-    private lateinit var context: Context
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        context = RuntimeEnvironment.getApplication()
         PrivdClient.setStateForTesting(PrivdConnectionState.DISCONNECTED)
+        PrivdClient.clearQueueForTest()
     }
 
     @After
     fun tearDown() {
-        TouchInjector.stop("touchpad_client")
-        TouchInjector.stop("mirror_client")
-        TouchInjector.stop("custom_client")
+        PrivdClient.clearQueueForTest()
         PrivdClient.setStateForTesting(PrivdConnectionState.DISCONNECTED)
         Dispatchers.resetMain()
     }
 
     @Test
-    fun testTouchInjectorMultiClientReferenceCounting() {
+    fun testTouchInjectorReleaseAllSlotsSafety() {
         PrivdClient.setStateForTesting(PrivdConnectionState.CONNECTED)
 
-        // 1. Initial state: inactive
-        assertFalse("Expected TouchInjector inactive initially", TouchInjector.isRunning)
+        TouchInjector.injectTouch(0, TouchAction.DOWN, 0.5f, 0.5f)
+        TouchInjector.injectTouch(1, TouchAction.DOWN, 0.25f, 0.75f)
+        PrivdClient.clearQueueForTest()
 
-        // 2. Start client A ("touchpad_client")
-        TouchInjector.start(context, "touchpad_client")
-        assertTrue("Expected TouchInjector running for client A", TouchInjector.isRunning)
-
-        // 3. Start client B ("mirror_client")
-        TouchInjector.start(context, "mirror_client")
-        assertTrue("Expected TouchInjector running for clients A & B", TouchInjector.isRunning)
-
-        // 4. Stop client A — client B is still active, so TouchInjector must NOT stop
-        TouchInjector.stop("touchpad_client")
-        assertTrue("Expected TouchInjector to remain running while client B is active", TouchInjector.isRunning)
-
-        // 5. Redundant stop for non-existent or already-stopped client should be a safe no-op
-        TouchInjector.stop("touchpad_client")
-        TouchInjector.stop("non_existent_client")
-        assertTrue("Expected TouchInjector to remain running after redundant stop", TouchInjector.isRunning)
-
-        // 6. Stop client B — all clients released, TouchInjector must now be stopped
-        TouchInjector.stop("mirror_client")
-        assertFalse("Expected TouchInjector stopped when all clients have released", TouchInjector.isRunning)
+        TouchInjector.releaseAllSlots()
+        assertEquals(10, PrivdClient.queueSizeForTest)
+        for (slot in 0..9) {
+            assertEquals("U $slot\n", PrivdClient.pollCommandForTest())
+        }
     }
 
     @Test
