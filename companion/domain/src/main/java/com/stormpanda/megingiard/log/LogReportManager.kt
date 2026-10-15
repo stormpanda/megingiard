@@ -25,6 +25,10 @@ private const val LOG_REPORT_MAX_LINES = 3000
 /** Logcat verbosity tag requested for the report. */
 private const val LOG_REPORT_FORMAT = "time"
 
+/** Shared timestamp formatter for report headers and suggested filenames. */
+private val REPORT_TIMESTAMP_FORMATTER: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+
 /**
  * Coordinates the log-report save flow.
  *
@@ -91,10 +95,7 @@ object LogReportManager {
                         appVersion = appVersion,
                         deviceModel = deviceModel,
                         androidVersion = androidVersion,
-                        timestamp =
-                            LocalDateTime
-                                .now()
-                                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")),
+                        timestamp = LocalDateTime.now().format(REPORT_TIMESTAMP_FORMATTER),
                     )
                 val body = readLogcatLines(pid)
                 context.contentResolver.openOutputStream(uri)?.use { stream ->
@@ -121,7 +122,8 @@ object LogReportManager {
      * [timestamp] should be an ISO-8601-style local date-time string
      * (passed in so the caller can supply a fixed value in tests).
      */
-    fun buildReportFilename(timestamp: String): String = "megingiard_log_${timestamp.replace(':', '-').replace(' ', '_')}.txt"
+    fun buildReportFilename(timestamp: String = LocalDateTime.now().format(REPORT_TIMESTAMP_FORMATTER)): String =
+        "megingiard_log_${timestamp.replace(':', '-').replace(' ', '_')}.txt"
 
     /**
      * Builds the plain-text header block that precedes the logcat lines.

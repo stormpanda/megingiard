@@ -113,8 +113,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.coroutines.resume
 
@@ -372,12 +370,7 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 LogReportManager.saveRequest.collect {
-                    val timestamp =
-                        LocalDateTime
-                            .now()
-                            .format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"))
-                    val filename = LogReportManager.buildReportFilename(timestamp)
-                    createLogDocumentLauncher.launch(filename)
+                    createLogDocumentLauncher.launch(LogReportManager.buildReportFilename())
                 }
             }
         }

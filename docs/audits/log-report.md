@@ -227,7 +227,7 @@ None identified — `LogReportManager.saveRequest` is collected in a single `lif
 > Select which findings to implement (`All`, `Low-risk only`, or specific IDs):
 
 - [x] **`[LR-01]`** — Over-Parameterized `writeReportToUri` & Redundant Dual Return/Side-Effect Contract *(Complexity: Med, Risk: Low)*
-- [ ] **`[LR-02]`** — Redundant Timestamp Formatting Split Between `MainActivity` and `LogReportManager` *(Complexity: Low, Risk: Low)*
+- [x] **`[LR-02]`** — Redundant Timestamp Formatting Split Between `MainActivity` and `LogReportManager` *(Complexity: Low, Risk: Low)*
 - [ ] **`[LR-03]`** — Single-Call Pass-Through `GlobalSettingsViewModel.requestSaveLogReport()` *(Complexity: Low, Risk: Low)*
 - [ ] **`[LR-04]`** — Duplicate Reflection Lookup & Redundant `logThrowableMethod` in `AppLog` *(Complexity: Med, Risk: Low)*
 - [ ] **`[LR-05]`** — Unlocalized Raw Exception Message Exposure & Dead Fallback in `SaveResult.Failure` *(Complexity: Low, Risk: Low)*

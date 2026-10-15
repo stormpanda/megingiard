@@ -37,6 +37,15 @@ class LogReportManagerTest {
         assertFalse(filename.contains(':'))
     }
 
+    @Test
+    fun `buildReportFilename with default timestamp generates sanitized filename`() {
+        val filename = LogReportManager.buildReportFilename()
+        assertTrue(filename.startsWith("megingiard_log_"))
+        assertTrue(filename.endsWith(".txt"))
+        assertFalse(filename.contains(' '))
+        assertFalse(filename.contains(':'))
+    }
+
     // ── buildReportHeader ─────────────────────────────────────────────────────
 
     @Test
