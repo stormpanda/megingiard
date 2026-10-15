@@ -339,7 +339,6 @@ fun OnboardingWizardDialog(
             // Header Stepper Indicator
             OnboardingStepper(
                 steps = steps,
-                activeStepIndex = activeStepIndex,
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -1100,10 +1099,10 @@ private fun OnboardingWarningBanner(
 @Composable
 fun OnboardingStepper(
     steps: List<OnboardingStepState>,
-    activeStepIndex: Int,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
+    val activeStepIndex = steps.indexOfFirst { it.isCurrent }.coerceAtLeast(0)
 
     val animatedStepProgress by animateFloatAsState(
         targetValue = activeStepIndex.toFloat(),
@@ -1118,7 +1117,7 @@ fun OnboardingStepper(
     ) {
         steps.forEachIndexed { index, step ->
             val isCompleted = step.isCompleted
-            val isCurrent = index == activeStepIndex
+            val isCurrent = step.isCurrent
 
             val targetBgColor =
                 when {

@@ -271,7 +271,6 @@ internal fun PrivdSetupWizardDialog(
             // Header Stepper Indicator
             OnboardingStepper(
                 steps = steps,
-                activeStepIndex = step,
             )
 
             Spacer(modifier = Modifier.height(PRD_DIALOG_MARGIN))

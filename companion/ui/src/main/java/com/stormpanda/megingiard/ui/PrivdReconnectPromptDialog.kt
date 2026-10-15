@@ -311,7 +311,6 @@ fun PrivdReconnectPromptDialog(onDone: () -> Unit) {
             // Header Stepper Indicator
             OnboardingStepper(
                 steps = steps,
-                activeStepIndex = activeStepIndex,
             )
 
             Spacer(modifier = Modifier.height(PRD_DIALOG_MARGIN))

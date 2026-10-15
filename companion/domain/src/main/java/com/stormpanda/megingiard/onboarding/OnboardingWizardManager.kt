@@ -17,12 +17,6 @@ object OnboardingWizardManager {
     private val _isWizardActive = MutableStateFlow(false)
     val isWizardActive: StateFlow<Boolean> = _isWizardActive.asStateFlow()
 
-    private val _activeStepIndex = MutableStateFlow(0)
-    val activeStepIndex: StateFlow<Int> = _activeStepIndex.asStateFlow()
-
-    private val _steps = MutableStateFlow<List<OnboardingStepState>>(emptyList())
-    val steps: StateFlow<List<OnboardingStepState>> = _steps.asStateFlow()
-
     val orderedStepIds =
         listOf(
             OnboardingStepId.WELCOME,
@@ -32,6 +26,12 @@ object OnboardingWizardManager {
             OnboardingStepId.PRIVILEGED,
             OnboardingStepId.FINISHED,
         )
+
+    private val _activeStepIndex = MutableStateFlow(0)
+    val activeStepIndex: StateFlow<Int> = _activeStepIndex.asStateFlow()
+
+    private val _steps = MutableStateFlow(buildSteps(0))
+    val steps: StateFlow<List<OnboardingStepState>> = _steps.asStateFlow()
 
     fun shouldAutoStartWizard(): Boolean = SettingsManager.welcomeTourCompletedVersion.value < SettingsManager.CURRENT_WELCOME_TOUR_VERSION
 
@@ -57,8 +57,7 @@ object OnboardingWizardManager {
         AppStateManager.setGlobalSettingsOpen(false)
 
         AppLog.d(TAG, "Initializing onboarding wizard at step 0 (force=$force)")
-        _activeStepIndex.value = 0
-        updateStepStates(0)
+        setActiveStep(0)
         _isWizardActive.value = true
     }
 
@@ -68,8 +67,7 @@ object OnboardingWizardManager {
 
         val nextIndex = currentIndex + 1
         AppLog.d(TAG, "Advancing wizard to step index: $nextIndex (${orderedStepIds[nextIndex]})")
-        _activeStepIndex.value = nextIndex
-        updateStepStates(nextIndex)
+        setActiveStep(nextIndex)
     }
 
     fun prevStep() {
@@ -78,8 +76,7 @@ object OnboardingWizardManager {
 
         val prevIndex = currentIndex - 1
         AppLog.d(TAG, "Navigating back in wizard to step index: $prevIndex (${orderedStepIds[prevIndex]})")
-        _activeStepIndex.value = prevIndex
-        updateStepStates(prevIndex)
+        setActiveStep(prevIndex)
     }
 
     fun finishWizard() {
@@ -89,20 +86,21 @@ object OnboardingWizardManager {
     }
 
     fun resetWizardForTest() {
-        _activeStepIndex.value = 0
         _isWizardActive.value = false
-        updateStepStates(0)
+        setActiveStep(0)
     }
 
-    private fun updateStepStates(activeStepIdx: Int) {
-        val updatedList =
-            orderedStepIds.mapIndexed { index, id ->
-                OnboardingStepState(
-                    id = id,
-                    isCompleted = index < activeStepIdx,
-                    isCurrent = index == activeStepIdx,
-                )
-            }
-        _steps.value = updatedList
+    fun buildSteps(activeStepIdx: Int): List<OnboardingStepState> =
+        orderedStepIds.mapIndexed { index, id ->
+            OnboardingStepState(
+                id = id,
+                isCompleted = index < activeStepIdx,
+                isCurrent = index == activeStepIdx,
+            )
+        }
+
+    private fun setActiveStep(activeStepIdx: Int) {
+        _activeStepIndex.value = activeStepIdx
+        _steps.value = buildSteps(activeStepIdx)
     }
 }

@@ -19,6 +19,12 @@ class OnboardingWizardManagerTest {
     fun `orderedStepIds contains all onboarding enum values`() {
         assertEquals(OnboardingStepId.entries.size, OnboardingWizardManager.orderedStepIds.size)
         assertTrue(OnboardingWizardManager.orderedStepIds.containsAll(OnboardingStepId.entries))
+        assertEquals(OnboardingStepId.entries.size, OnboardingWizardManager.steps.value.size)
+        assertTrue(
+            OnboardingWizardManager.steps.value
+                .first()
+                .isCurrent,
+        )
     }
 
     @Test
