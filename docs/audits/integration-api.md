@@ -288,7 +288,7 @@
 - [x] **`[IA-20]`** — Remove premature `notify*Changed` broadcasts from `MegingiardSettingsProvider.onCreate()` *(Complexity: Low, Risk: Low)*
 - [x] **`[IA-21]`** — Replace 16 individual `StateFlow` subscriptions & 11-arg `resolveTargetAppInfo` in `IntegrationHomeScreen` with consolidated focus state *(Complexity: High, Risk: Low)*
 - [x] **`[IA-22]`** — Deduplicate 3x `ProfileAssociation` construction blocks in `IntegrationHomeScreen` *(Complexity: Low, Risk: Low)*
-- [ ] **`[IA-23]`** — Fix stale `MegingiardIpcContract.kt` module path in `FEATURE.md` *(Complexity: Low, Risk: Low)*
+- [x] **`[IA-23]`** — Fix stale `MegingiardIpcContract.kt` module path in `FEATURE.md` *(Complexity: Low, Risk: Low)*
 - [ ] **`[IA-24]`** — Remove outdated RetroArch package preference claim from `FEATURE.md` §3.2 *(Complexity: Low, Risk: Low)*
 - [ ] **`[IA-25]`** — Document all `updateClientState` Bundle columns, `AutoSwitchCoordinator`, and `:shared:session` detectors in `FEATURE.md` *(Complexity: Low, Risk: Low)*
 - [ ] **`[IA-26]`** — Update `IntegrationHomeScreen` Tool Deck description in `FEATURE.md` §4.2 *(Complexity: Low, Risk: Low)*
