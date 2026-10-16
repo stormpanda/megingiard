@@ -11,7 +11,9 @@ import java.io.File
 
 private const val TAG = "MacroPadMediaRepo"
 private const val BACKGROUNDS_DIR = "backgrounds"
+private const val BG_PREFIX = "bg_"
 private const val MASKS_DIR = "masks"
+private const val MASK_PREFIX = "mask_"
 
 /**
  * Encapsulates filesystem and bitmap storage operations for MacroPad layout backgrounds and masks.
@@ -65,29 +67,7 @@ object MacroPadMediaRepository {
         context: Context,
         layoutId: String,
         srcUri: Uri,
-    ): String? =
-        withContext(Dispatchers.IO) {
-            val backgroundsDir = File(context.filesDir, BACKGROUNDS_DIR)
-            if (!backgroundsDir.exists()) {
-                backgroundsDir.mkdirs()
-            }
-            val destFile = File(backgroundsDir, "bg_$layoutId")
-            val (targetW, targetH) = BitmapUtils.getScreenTargetDimensions(context)
-            val saved =
-                BitmapUtils.saveScaledWebp(
-                    context = context,
-                    srcUri = srcUri,
-                    srcFile = null,
-                    destFile = destFile,
-                    targetW = targetW,
-                    targetH = targetH,
-                )
-            if (saved) {
-                "$BACKGROUNDS_DIR/bg_$layoutId"
-            } else {
-                null
-            }
-        }
+    ): String? = saveLayerImage(context, BACKGROUNDS_DIR, BG_PREFIX, layoutId, srcUri)
 
     /**
      * Deletes the background image associated with [layoutId] if it exists.
@@ -95,21 +75,7 @@ object MacroPadMediaRepository {
     suspend fun deleteBackgroundImage(
         context: Context,
         layoutId: String,
-    ): Boolean =
-        withContext(Dispatchers.IO) {
-            val backgroundsDir = File(context.filesDir, BACKGROUNDS_DIR)
-            val destFile = File(backgroundsDir, "bg_$layoutId")
-            if (destFile.exists()) {
-                try {
-                    destFile.delete()
-                } catch (e: Exception) {
-                    AppLog.e(TAG, "Failed to delete background file for layout $layoutId", e)
-                    false
-                }
-            } else {
-                true
-            }
-        }
+    ): Boolean = deleteLayerImage(context, BACKGROUNDS_DIR, BG_PREFIX, layoutId)
 
     /**
      * Copies the background image from [originalLayoutId] to [newLayoutId].
@@ -119,26 +85,7 @@ object MacroPadMediaRepository {
         context: Context,
         originalLayoutId: String,
         newLayoutId: String,
-    ): String? =
-        withContext(Dispatchers.IO) {
-            val backgroundsDir = File(context.filesDir, BACKGROUNDS_DIR)
-            val srcFile = File(backgroundsDir, "bg_$originalLayoutId")
-            if (srcFile.exists()) {
-                if (!backgroundsDir.exists()) {
-                    backgroundsDir.mkdirs()
-                }
-                val destFile = File(backgroundsDir, "bg_$newLayoutId")
-                try {
-                    srcFile.copyTo(destFile, overwrite = true)
-                    "$BACKGROUNDS_DIR/bg_$newLayoutId"
-                } catch (e: Exception) {
-                    AppLog.e(TAG, "Failed to copy background file from $originalLayoutId to $newLayoutId", e)
-                    null
-                }
-            } else {
-                null
-            }
-        }
+    ): String? = duplicateLayerImage(context, BACKGROUNDS_DIR, BG_PREFIX, originalLayoutId, newLayoutId)
 
     /**
      * Saves a mask image from [srcUri] to `masks/mask_[layoutId]` as a WebP image.
@@ -148,13 +95,40 @@ object MacroPadMediaRepository {
         context: Context,
         layoutId: String,
         srcUri: Uri,
+    ): String? = saveLayerImage(context, MASKS_DIR, MASK_PREFIX, layoutId, srcUri)
+
+    /**
+     * Deletes the mask image associated with [layoutId] if it exists.
+     */
+    suspend fun deleteMaskImage(
+        context: Context,
+        layoutId: String,
+    ): Boolean = deleteLayerImage(context, MASKS_DIR, MASK_PREFIX, layoutId)
+
+    /**
+     * Copies the mask image from [originalLayoutId] to [newLayoutId].
+     * Returns the relative storage path or `null` if no source mask existed or copy failed.
+     */
+    suspend fun duplicateMaskImage(
+        context: Context,
+        originalLayoutId: String,
+        newLayoutId: String,
+    ): String? = duplicateLayerImage(context, MASKS_DIR, MASK_PREFIX, originalLayoutId, newLayoutId)
+
+    private suspend fun saveLayerImage(
+        context: Context,
+        dirName: String,
+        filePrefix: String,
+        layoutId: String,
+        srcUri: Uri,
     ): String? =
         withContext(Dispatchers.IO) {
-            val masksDir = File(context.filesDir, MASKS_DIR)
-            if (!masksDir.exists()) {
-                masksDir.mkdirs()
+            val dir = File(context.filesDir, dirName)
+            if (!dir.exists()) {
+                dir.mkdirs()
             }
-            val destFile = File(masksDir, "mask_$layoutId")
+            val fileName = "$filePrefix$layoutId"
+            val destFile = File(dir, fileName)
             val (targetW, targetH) = BitmapUtils.getScreenTargetDimensions(context)
             val saved =
                 BitmapUtils.saveScaledWebp(
@@ -166,27 +140,27 @@ object MacroPadMediaRepository {
                     targetH = targetH,
                 )
             if (saved) {
-                "$MASKS_DIR/mask_$layoutId"
+                AppLog.d(TAG, "Saved $dirName image for layout $layoutId")
+                "$dirName/$fileName"
             } else {
                 null
             }
         }
 
-    /**
-     * Deletes the mask image associated with [layoutId] if it exists.
-     */
-    suspend fun deleteMaskImage(
+    private suspend fun deleteLayerImage(
         context: Context,
+        dirName: String,
+        filePrefix: String,
         layoutId: String,
     ): Boolean =
         withContext(Dispatchers.IO) {
-            val masksDir = File(context.filesDir, MASKS_DIR)
-            val destFile = File(masksDir, "mask_$layoutId")
+            val dir = File(context.filesDir, dirName)
+            val destFile = File(dir, "$filePrefix$layoutId")
             if (destFile.exists()) {
                 try {
                     destFile.delete()
                 } catch (e: Exception) {
-                    AppLog.e(TAG, "Failed to delete mask file for layout $layoutId", e)
+                    AppLog.e(TAG, "Failed to delete $dirName file for layout $layoutId", e)
                     false
                 }
             } else {
@@ -194,28 +168,27 @@ object MacroPadMediaRepository {
             }
         }
 
-    /**
-     * Copies the mask image from [originalLayoutId] to [newLayoutId].
-     * Returns the relative storage path or `null` if no source mask existed or copy failed.
-     */
-    suspend fun duplicateMaskImage(
+    private suspend fun duplicateLayerImage(
         context: Context,
+        dirName: String,
+        filePrefix: String,
         originalLayoutId: String,
         newLayoutId: String,
     ): String? =
         withContext(Dispatchers.IO) {
-            val masksDir = File(context.filesDir, MASKS_DIR)
-            val srcFile = File(masksDir, "mask_$originalLayoutId")
+            val dir = File(context.filesDir, dirName)
+            val srcFile = File(dir, "$filePrefix$originalLayoutId")
             if (srcFile.exists()) {
-                if (!masksDir.exists()) {
-                    masksDir.mkdirs()
+                if (!dir.exists()) {
+                    dir.mkdirs()
                 }
-                val destFile = File(masksDir, "mask_$newLayoutId")
+                val destFileName = "$filePrefix$newLayoutId"
+                val destFile = File(dir, destFileName)
                 try {
                     srcFile.copyTo(destFile, overwrite = true)
-                    "$MASKS_DIR/mask_$newLayoutId"
+                    "$dirName/$destFileName"
                 } catch (e: Exception) {
-                    AppLog.e(TAG, "Failed to copy mask file from $originalLayoutId to $newLayoutId", e)
+                    AppLog.e(TAG, "Failed to copy $dirName file from $originalLayoutId to $newLayoutId", e)
                     null
                 }
             } else {

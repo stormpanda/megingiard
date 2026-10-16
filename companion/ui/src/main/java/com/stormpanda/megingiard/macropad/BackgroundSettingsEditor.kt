@@ -40,13 +40,10 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.math.ViewportMath
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.BumperDirection
 import com.stormpanda.megingiard.ui.GamepadActionCard
@@ -70,6 +67,11 @@ import kotlin.math.roundToInt
 
 private const val TAG = "BgSettingsEditor"
 
+internal enum class LayerImageKind {
+    BACKGROUND,
+    MASK,
+}
+
 private fun BackgroundScaleMode.labelResId(): Int =
     when (this) {
         BackgroundScaleMode.FILL -> R.string.bg_scale_mode_fill
@@ -82,6 +84,7 @@ private const val BSE_DIM_STEP = 0.05f
 private const val BSE_DIM_FINE_STEP = 0.01f
 private const val BSE_FLOAT_EPSILON = 0.001f
 private const val BSE_PERCENT_DIVISOR = 100f
+private const val BSE_DISABLED_ICON_ALPHA = 0.38f
 
 private val BSE_PREVIEW_PADDING = 12.dp
 private val BSE_PREVIEW_IMAGE_ROUNDING = 8.dp
@@ -91,7 +94,6 @@ private val BSE_ICON_SIZE_48 = 48.dp
 private const val BSE_BOTTOM_SCREEN_ASPECT_RATIO = 31f / 27f // 1240 x 1080
 private const val BSE_PREVIEW_WIDTH_FRACTION = 0.5f
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun LayoutBackgroundSubPageContent(
     layout: PadLayout,
@@ -109,57 +111,135 @@ internal fun LayoutBackgroundSubPageContent(
         bgScaleMode: BackgroundScaleMode,
     ) -> Unit,
 ) {
+    LayerImageSettingsEditor(
+        kind = LayerImageKind.BACKGROUND,
+        layout = layout,
+        profileName = profileName,
+        accentColor = accentColor,
+        onOpenScrape = onOpenScrape,
+        onDiscard = onDiscard,
+        onConfirm = onConfirm,
+    )
+}
+
+@Composable
+internal fun LayoutMaskSubPageContent(
+    layout: PadLayout,
+    profileName: String,
+    accentColor: Color,
+    onDiscard: () -> Unit = {},
+    onConfirm: (
+        maskImagePath: String?,
+        maskImageChanged: Boolean,
+        maskScale: Float,
+        maskOffsetX: Float,
+        maskOffsetY: Float,
+        maskImageDim: Float,
+        maskScaleMode: BackgroundScaleMode,
+    ) -> Unit,
+) {
+    LayerImageSettingsEditor(
+        kind = LayerImageKind.MASK,
+        layout = layout,
+        profileName = profileName,
+        accentColor = accentColor,
+        onOpenScrape = null,
+        onDiscard = onDiscard,
+        onConfirm = onConfirm,
+    )
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+internal fun LayerImageSettingsEditor(
+    kind: LayerImageKind,
+    layout: PadLayout,
+    profileName: String,
+    accentColor: Color,
+    onOpenScrape: (() -> Unit)?,
+    onDiscard: () -> Unit = {},
+    onConfirm: (
+        imagePath: String?,
+        imageChanged: Boolean,
+        scale: Float,
+        offsetX: Float,
+        offsetY: Float,
+        imageDim: Float,
+        scaleMode: BackgroundScaleMode,
+    ) -> Unit,
+) {
     val context = LocalContext.current
     val colors = LocalAppColors.current
     val scope = rememberCoroutineScope()
+    val isMask = kind == LayerImageKind.MASK
+
+    val initialPath = if (isMask) layout.maskImagePath else layout.backgroundImagePath
+    val initialScale = if (isMask) layout.maskImageScale else layout.bgImageScale
+    val initialOffsetX = if (isMask) layout.maskImageOffsetX else layout.bgImageOffsetX
+    val initialOffsetY = if (isMask) layout.maskImageOffsetY else layout.bgImageOffsetY
+    val initialDim = if (isMask) layout.maskImageDim else layout.backgroundImageDim
+    val initialScaleMode = if (isMask) layout.maskScaleMode else layout.bgScaleMode
 
     var pendingImageUri by remember(layout) { mutableStateOf<Uri?>(null) }
-    var currentBgPath by remember(layout) { mutableStateOf(layout.backgroundImagePath) }
-    var bgScale by remember(layout) { mutableFloatStateOf(layout.bgImageScale) }
-    var bgOffsetX by remember(layout) { mutableFloatStateOf(layout.bgImageOffsetX) }
-    var bgOffsetY by remember(layout) { mutableFloatStateOf(layout.bgImageOffsetY) }
-    var bgImageDim by remember(layout) { mutableFloatStateOf(layout.backgroundImageDim) }
-    var bgScaleMode by remember(layout) { mutableStateOf(layout.bgScaleMode) }
+    var currentImagePath by remember(layout) { mutableStateOf(initialPath) }
+    var imageScale by remember(layout) { mutableFloatStateOf(initialScale) }
+    var imageOffsetX by remember(layout) { mutableFloatStateOf(initialOffsetX) }
+    var imageOffsetY by remember(layout) { mutableFloatStateOf(initialOffsetY) }
+    var imageDim by remember(layout) { mutableFloatStateOf(initialDim) }
+    var scaleMode by remember(layout) { mutableStateOf(initialScaleMode) }
     var isCropActive by remember(layout) { mutableStateOf(false) }
 
     var previewBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
     var isSaving by remember { mutableStateOf(false) }
 
+    fun setCropping(active: Boolean) {
+        if (isMask) {
+            MacroPadState.setCroppingMask(active)
+        } else {
+            MacroPadState.setCroppingBackground(active)
+        }
+    }
+
     LaunchedEffect(layout.id) {
-        AppLog.d(TAG, "LayoutBackgroundSubPageContent opened for profile: $profileName, layout: ${layout.name}")
+        AppLog.d(TAG, "LayerImageSettingsEditor($kind) opened for profile: $profileName, layout: ${layout.name}")
     }
 
     LaunchedEffect(isCropActive) {
-        MacroPadState.setCroppingBackground(isCropActive)
+        setCropping(isCropActive)
     }
 
     DisposableEffect(Unit) {
         onDispose {
-            MacroPadState.setCroppingBackground(false)
+            setCropping(false)
         }
     }
 
-    LaunchedEffect(bgScaleMode) {
+    LaunchedEffect(scaleMode) {
         val pl = MacroPadState.previewLayout.value ?: layout
-        MacroPadState.setPreviewLayout(pl.copy(bgScaleMode = bgScaleMode))
+        MacroPadState.setPreviewLayout(
+            if (isMask) pl.copy(maskScaleMode = scaleMode) else pl.copy(bgScaleMode = scaleMode),
+        )
     }
 
     val previewLayout by MacroPadState.previewLayout.collectAsStateWithLifecycle()
-    LaunchedEffect(previewLayout?.bgImageScale, previewLayout?.bgImageOffsetX, previewLayout?.bgImageOffsetY) {
+    val previewScale = if (isMask) previewLayout?.maskImageScale else previewLayout?.bgImageScale
+    val previewOffsetX = if (isMask) previewLayout?.maskImageOffsetX else previewLayout?.bgImageOffsetX
+    val previewOffsetY = if (isMask) previewLayout?.maskImageOffsetY else previewLayout?.bgImageOffsetY
+    LaunchedEffect(previewScale, previewOffsetX, previewOffsetY) {
         val pl = previewLayout ?: return@LaunchedEffect
-        bgScale = pl.bgImageScale
-        bgOffsetX = pl.bgImageOffsetX
-        bgOffsetY = pl.bgImageOffsetY
+        imageScale = if (isMask) pl.maskImageScale else pl.bgImageScale
+        imageOffsetX = if (isMask) pl.maskImageOffsetX else pl.bgImageOffsetX
+        imageOffsetY = if (isMask) pl.maskImageOffsetY else pl.bgImageOffsetY
     }
 
-    val bgImageDimFilter =
-        remember(bgImageDim) {
-            dimColorFilter(bgImageDim)
+    val imageDimFilter =
+        remember(imageDim) {
+            dimColorFilter(imageDim)
         }
 
-    LaunchedEffect(pendingImageUri, currentBgPath) {
-        val pathOrUri = pendingImageUri?.toString() ?: currentBgPath
-        AppLog.d(TAG, "Loading background bitmap for: $pathOrUri")
+    LaunchedEffect(pendingImageUri, currentImagePath) {
+        val pathOrUri = pendingImageUri?.toString() ?: currentImagePath
+        AppLog.d(TAG, "Loading $kind bitmap for: $pathOrUri")
         withContext(Dispatchers.IO) {
             val bitmap =
                 if (pathOrUri != null) {
@@ -179,24 +259,36 @@ internal fun LayoutBackgroundSubPageContent(
     val pickedUri by BackgroundPickerManager.pickedUri.collectAsStateWithLifecycle()
     LaunchedEffect(pickedUri) {
         val uri = pickedUri ?: return@LaunchedEffect
-        AppLog.d(TAG, "Background image picked from system picker: $uri")
+        AppLog.d(TAG, "$kind image picked from system picker: $uri")
         pendingImageUri = uri
-        currentBgPath = null
+        currentImagePath = null
         BackgroundPickerManager.clearPickedUri()
     }
 
-    // Stream in-flight background settings to bottom-screen preview in real-time
-    LaunchedEffect(pendingImageUri, currentBgPath, bgScale, bgOffsetX, bgOffsetY, bgImageDim, bgScaleMode) {
-        val effectivePath = pendingImageUri?.toString() ?: currentBgPath
+    // Stream in-flight layer settings to bottom-screen preview in real-time
+    LaunchedEffect(pendingImageUri, currentImagePath, imageScale, imageOffsetX, imageOffsetY, imageDim, scaleMode) {
+        val effectivePath = pendingImageUri?.toString() ?: currentImagePath
+        val base = MacroPadState.previewLayout.value ?: layout
         val inFlightLayout =
-            (MacroPadState.previewLayout.value ?: layout).copy(
-                backgroundImagePath = effectivePath,
-                bgImageScale = bgScale,
-                bgImageOffsetX = bgOffsetX,
-                bgImageOffsetY = bgOffsetY,
-                backgroundImageDim = bgImageDim,
-                bgScaleMode = bgScaleMode,
-            )
+            if (isMask) {
+                base.copy(
+                    maskImagePath = effectivePath,
+                    maskImageScale = imageScale,
+                    maskImageOffsetX = imageOffsetX,
+                    maskImageOffsetY = imageOffsetY,
+                    maskImageDim = imageDim,
+                    maskScaleMode = scaleMode,
+                )
+            } else {
+                base.copy(
+                    backgroundImagePath = effectivePath,
+                    bgImageScale = imageScale,
+                    bgImageOffsetX = imageOffsetX,
+                    bgImageOffsetY = imageOffsetY,
+                    backgroundImageDim = imageDim,
+                    bgScaleMode = scaleMode,
+                )
+            }
         MacroPadState.setPreviewLayout(inFlightLayout)
     }
 
@@ -227,49 +319,23 @@ internal fun LayoutBackgroundSubPageContent(
                     val bitmap = previewBitmap
                     if (bitmap != null) {
                         Canvas(modifier = Modifier.fillMaxSize()) {
-                            val cw = size.width
-                            val ch = size.height
-                            val iw = bitmap.width.toFloat()
-                            val ih = bitmap.height.toFloat()
-                            if (cw > 0f && ch > 0f && iw > 0f && ih > 0f) {
-                                val (dstOffset, dstSize) =
-                                    when (bgScaleMode) {
-                                        BackgroundScaleMode.STRETCH -> {
-                                            IntOffset.Zero to IntSize(cw.toInt(), ch.toInt())
-                                        }
-
-                                        BackgroundScaleMode.FIT, BackgroundScaleMode.FILL -> {
-                                            val scaleBase =
-                                                if (bgScaleMode == BackgroundScaleMode.FIT) {
-                                                    ViewportMath.calculateAspectFitScale(cw, ch, iw, ih)
-                                                } else {
-                                                    ViewportMath.calculateAspectFillScale(cw, ch, iw, ih)
-                                                }
-                                            val ws = iw * scaleBase
-                                            val hs = ih * scaleBase
-                                            val maxTx = ((ws * bgScale - cw) / 2f).coerceAtLeast(0f)
-                                            val maxTy = ((hs * bgScale - ch) / 2f).coerceAtLeast(0f)
-                                            val clampedX = (bgOffsetX * cw).coerceIn(-maxTx, maxTx)
-                                            val clampedY = (bgOffsetY * ch).coerceIn(-maxTy, maxTy)
-                                            IntOffset(
-                                                ((cw - ws * bgScale) / 2f + clampedX).toInt(),
-                                                ((ch - hs * bgScale) / 2f + clampedY).toInt(),
-                                            ) to IntSize((ws * bgScale).toInt(), (hs * bgScale).toInt())
-                                        }
-                                    }
-                                drawImage(
-                                    image = bitmap,
-                                    dstOffset = dstOffset,
-                                    dstSize = dstSize,
-                                    colorFilter = bgImageDimFilter,
-                                )
-                            }
+                            drawAdjustedBitmap(
+                                bitmap = bitmap,
+                                scaleMode = scaleMode,
+                                userScale = imageScale,
+                                offsetX = imageOffsetX,
+                                offsetY = imageOffsetY,
+                                colorFilter = imageDimFilter,
+                            )
                         }
                     } else {
                         Icon(
-                            imageVector = Icons.Rounded.Image,
-                            contentDescription = stringResource(R.string.layout_settings_bg_image_none),
-                            tint = colors.onSurfaceSecondary.copy(alpha = 0.38f),
+                            imageVector = if (isMask) Icons.Rounded.Layers else Icons.Rounded.Image,
+                            contentDescription =
+                                stringResource(
+                                    if (isMask) R.string.layout_settings_mask_image_none else R.string.layout_settings_bg_image_none,
+                                ),
+                            tint = colors.onSurfaceSecondary.copy(alpha = BSE_DISABLED_ICON_ALPHA),
                             modifier = Modifier.size(BSE_ICON_SIZE_48),
                         )
                     }
@@ -283,48 +349,60 @@ internal fun LayoutBackgroundSubPageContent(
         color = accentColor,
     )
 
-    GamepadActionCard(
-        title = stringResource(R.string.layout_settings_bg_image_scrape),
-        description = stringResource(R.string.macropad_editor_bg_steamgriddb_desc),
-        icon = Icons.Rounded.Search,
-        onClick = {
-            if (SettingsManager.steamGridDbApiToken.value.isBlank()) {
-                Toast.makeText(context, R.string.steamgriddb_token_missing_message, Toast.LENGTH_LONG).show()
-            } else {
-                onOpenScrape()
-            }
-        },
-        modifier = Modifier.firstDeckItem(),
-    )
+    if (onOpenScrape != null) {
+        GamepadActionCard(
+            title = stringResource(R.string.layout_settings_bg_image_scrape),
+            description = stringResource(R.string.macropad_editor_bg_steamgriddb_desc),
+            icon = Icons.Rounded.Search,
+            onClick = {
+                if (SettingsManager.steamGridDbApiToken.value.isBlank()) {
+                    Toast.makeText(context, R.string.steamgriddb_token_missing_message, Toast.LENGTH_LONG).show()
+                } else {
+                    onOpenScrape()
+                }
+            },
+            modifier = Modifier.firstDeckItem(),
+        )
+    }
 
     GamepadActionCard(
-        title = stringResource(R.string.layout_settings_bg_image_browse_local),
+        title =
+            stringResource(
+                if (isMask) R.string.layout_settings_mask_image_browse_local else R.string.layout_settings_bg_image_browse_local,
+            ),
         description = stringResource(R.string.macropad_editor_bg_storage_desc),
         icon = Icons.Rounded.Folder,
         onClick = { BackgroundPickerManager.requestImagePicker() },
+        modifier = if (onOpenScrape == null) Modifier.firstDeckItem() else Modifier,
     )
 
     if (previewBitmap != null) {
         GamepadSectionHeader(
-            text = stringResource(R.string.layout_settings_bg_image_adjustments),
+            text =
+                stringResource(
+                    if (isMask) R.string.layout_settings_mask_image_adjustments else R.string.layout_settings_bg_image_adjustments,
+                ),
             color = accentColor,
         )
 
         GamepadChoiceCard(
             title = stringResource(R.string.layout_settings_bg_scale_mode),
-            description = stringResource(R.string.layout_settings_bg_scale_mode_desc),
-            selectedText = stringResource(bgScaleMode.labelResId()),
+            description =
+                stringResource(
+                    if (isMask) R.string.layout_settings_mask_scale_mode_desc else R.string.layout_settings_bg_scale_mode_desc,
+                ),
+            selectedText = stringResource(scaleMode.labelResId()),
             icon = Icons.Rounded.AspectRatio,
             onPrevious = {
-                val newMode = BackgroundScaleMode.entries.cycle(bgScaleMode, BumperDirection.PREV)
-                bgScaleMode = newMode
+                val newMode = BackgroundScaleMode.entries.cycle(scaleMode, BumperDirection.PREV)
+                scaleMode = newMode
                 if (newMode == BackgroundScaleMode.STRETCH) {
                     isCropActive = false
                 }
             },
             onNext = {
-                val newMode = BackgroundScaleMode.entries.cycle(bgScaleMode, BumperDirection.NEXT)
-                bgScaleMode = newMode
+                val newMode = BackgroundScaleMode.entries.cycle(scaleMode, BumperDirection.NEXT)
+                scaleMode = newMode
                 if (newMode == BackgroundScaleMode.STRETCH) {
                     isCropActive = false
                 }
@@ -334,13 +412,21 @@ internal fun LayoutBackgroundSubPageContent(
         GamepadToggleCard(
             title = stringResource(R.string.layout_settings_bg_image_crop),
             description =
-                if (bgScaleMode == BackgroundScaleMode.STRETCH) {
-                    stringResource(R.string.layout_settings_bg_image_crop_disabled_stretch)
+                if (scaleMode == BackgroundScaleMode.STRETCH) {
+                    stringResource(
+                        if (isMask) {
+                            R.string.layout_settings_mask_image_crop_disabled_stretch
+                        } else {
+                            R.string.layout_settings_bg_image_crop_disabled_stretch
+                        },
+                    )
                 } else {
-                    stringResource(R.string.layout_settings_bg_image_crop_desc)
+                    stringResource(
+                        if (isMask) R.string.layout_settings_mask_image_crop_desc else R.string.layout_settings_bg_image_crop_desc,
+                    )
                 },
-            checked = isCropActive && bgScaleMode != BackgroundScaleMode.STRETCH,
-            enabled = bgScaleMode != BackgroundScaleMode.STRETCH,
+            checked = isCropActive && scaleMode != BackgroundScaleMode.STRETCH,
+            enabled = scaleMode != BackgroundScaleMode.STRETCH,
             icon = Icons.Rounded.Crop,
             onCheckedChange = { isCropActive = it },
         )
@@ -348,14 +434,14 @@ internal fun LayoutBackgroundSubPageContent(
         GamepadSliderCard(
             title = stringResource(R.string.layout_settings_bg_image_dimming_title),
             description = stringResource(R.string.help_bg_settings_dimming_desc),
-            value = bgImageDim,
+            value = imageDim,
             valueRange = 0f..BSE_DIM_MAX,
             step = BSE_DIM_STEP,
             fineStep = BSE_DIM_FINE_STEP,
             icon = Icons.Rounded.BrightnessMedium,
-            valueLabel = "${(bgImageDim * BSE_PERCENT_DIVISOR).roundToInt()}%",
+            valueLabel = "${(imageDim * BSE_PERCENT_DIVISOR).roundToInt()}%",
             onValueChange = { newVal ->
-                bgImageDim = (newVal * BSE_PERCENT_DIVISOR).roundToInt() / BSE_PERCENT_DIVISOR
+                imageDim = (newVal * BSE_PERCENT_DIVISOR).roundToInt() / BSE_PERCENT_DIVISOR
             },
         )
     }
@@ -368,12 +454,12 @@ internal fun LayoutBackgroundSubPageContent(
 
     val hasChanges =
         pendingImageUri != null ||
-            currentBgPath != layout.backgroundImagePath ||
-            bgScaleMode != layout.bgScaleMode ||
-            abs(bgScale - layout.bgImageScale) > BSE_FLOAT_EPSILON ||
-            abs(bgOffsetX - layout.bgImageOffsetX) > BSE_FLOAT_EPSILON ||
-            abs(bgOffsetY - layout.bgImageOffsetY) > BSE_FLOAT_EPSILON ||
-            abs(bgImageDim - layout.backgroundImageDim) > BSE_FLOAT_EPSILON
+            currentImagePath != initialPath ||
+            scaleMode != initialScaleMode ||
+            abs(imageScale - initialScale) > BSE_FLOAT_EPSILON ||
+            abs(imageOffsetX - initialOffsetX) > BSE_FLOAT_EPSILON ||
+            abs(imageOffsetY - initialOffsetY) > BSE_FLOAT_EPSILON ||
+            abs(imageDim - initialDim) > BSE_FLOAT_EPSILON
 
     val promptState =
         rememberSaveExitPromptState(
@@ -383,37 +469,45 @@ internal fun LayoutBackgroundSubPageContent(
                     isSaving = true
                     scope.launch {
                         isCropActive = false
-                        MacroPadState.setCroppingBackground(false)
-                        var bgChanged = false
+                        setCropping(false)
+                        var imageChanged = false
                         val pending = pendingImageUri
-                        val finalBgPath =
+                        val finalPath =
                             if (pending != null) {
-                                bgChanged = true
-                                MacroPadMediaRepository.saveBackgroundImage(context, layout.id, pending)
-                            } else if (currentBgPath == null && layout.backgroundImagePath != null) {
-                                bgChanged = true
-                                MacroPadMediaRepository.deleteBackgroundImage(context, layout.id)
+                                imageChanged = true
+                                if (isMask) {
+                                    MacroPadMediaRepository.saveMaskImage(context, layout.id, pending)
+                                } else {
+                                    MacroPadMediaRepository.saveBackgroundImage(context, layout.id, pending)
+                                }
+                            } else if (currentImagePath == null && initialPath != null) {
+                                imageChanged = true
+                                if (isMask) {
+                                    MacroPadMediaRepository.deleteMaskImage(context, layout.id)
+                                } else {
+                                    MacroPadMediaRepository.deleteBackgroundImage(context, layout.id)
+                                }
                                 null
                             } else {
-                                currentBgPath
+                                currentImagePath
                             }
                         pendingImageUri = null
-                        currentBgPath = finalBgPath
-                        onConfirm(finalBgPath, bgChanged, bgScale, bgOffsetX, bgOffsetY, bgImageDim, bgScaleMode)
+                        currentImagePath = finalPath
+                        onConfirm(finalPath, imageChanged, imageScale, imageOffsetX, imageOffsetY, imageDim, scaleMode)
                         isSaving = false
                     }
                 }
             },
             onDiscard = {
                 isCropActive = false
-                MacroPadState.setCroppingBackground(false)
+                setCropping(false)
                 pendingImageUri = null
-                currentBgPath = layout.backgroundImagePath
-                bgScale = layout.bgImageScale
-                bgOffsetX = layout.bgImageOffsetX
-                bgOffsetY = layout.bgImageOffsetY
-                bgImageDim = layout.backgroundImageDim
-                bgScaleMode = layout.bgScaleMode
+                currentImagePath = initialPath
+                imageScale = initialScale
+                imageOffsetX = initialOffsetX
+                imageOffsetY = initialOffsetY
+                imageDim = initialDim
+                scaleMode = initialScaleMode
                 MacroPadState.clearPreviewLayout()
                 onDiscard()
             },
@@ -435,9 +529,18 @@ internal fun LayoutBackgroundSubPageContent(
     )
 
     GamepadTwoStepConfirmCard(
-        title = stringResource(R.string.macropad_editor_remove_bg_image),
-        confirmTitle = stringResource(R.string.macropad_editor_bg_delete_confirm_title),
-        description = stringResource(R.string.macropad_editor_remove_bg_image_desc),
+        title =
+            stringResource(
+                if (isMask) R.string.macropad_editor_remove_mask_image else R.string.macropad_editor_remove_bg_image,
+            ),
+        confirmTitle =
+            stringResource(
+                if (isMask) R.string.macropad_editor_mask_delete_confirm_title else R.string.macropad_editor_bg_delete_confirm_title,
+            ),
+        description =
+            stringResource(
+                if (isMask) R.string.macropad_editor_remove_mask_image_desc else R.string.macropad_editor_remove_bg_image_desc,
+            ),
         actionText = stringResource(R.string.gamepad_action_clear),
         confirmActionText = stringResource(R.string.gamepad_action_confirm),
         icon = Icons.Rounded.Delete,
@@ -445,13 +548,13 @@ internal fun LayoutBackgroundSubPageContent(
         enabled = previewBitmap != null,
         onConfirm = {
             isCropActive = false
-            MacroPadState.setCroppingBackground(false)
+            setCropping(false)
             pendingImageUri = null
-            currentBgPath = null
+            currentImagePath = null
             previewBitmap = null
-            bgScale = 1f
-            bgOffsetX = 0f
-            bgOffsetY = 0f
+            imageScale = 1f
+            imageOffsetX = 0f
+            imageOffsetY = 0f
         },
     )
 }
