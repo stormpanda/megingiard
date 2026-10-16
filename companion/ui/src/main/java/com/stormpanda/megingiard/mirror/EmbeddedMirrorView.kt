@@ -46,7 +46,6 @@ fun EmbeddedMirrorView(
     val isFrozen by ScreenCaptureManager.isFrozen.collectAsStateWithLifecycle()
     val frozenBitmap by ScreenCaptureManager.frozenBitmap.collectAsStateWithLifecycle()
     val cutouts by ScreenCaptureManager.cutouts.collectAsStateWithLifecycle()
-    val edgeBlendWidthDp by ScreenCaptureManager.edgeBlendWidthDp.collectAsStateWithLifecycle()
     val maxFps by ScreenCaptureManager.maxFps.collectAsStateWithLifecycle()
     val srcWidth by ScreenCaptureManager.captureSourceWidth.collectAsStateWithLifecycle()
     val srcHeight by ScreenCaptureManager.captureSourceHeight.collectAsStateWithLifecycle()

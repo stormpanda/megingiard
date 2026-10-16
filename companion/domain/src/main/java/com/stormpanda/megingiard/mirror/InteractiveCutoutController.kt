@@ -311,7 +311,7 @@ object InteractiveCutoutController {
      * Called when Follow Touch detects a top-screen touch, overriding manual crop.
      */
     fun onFollowTouchReceived(targetCutoutId: String) {
-        if (_overrideCrops.value.containsKey(targetCutoutId) || animationJobs.containsKey(targetCutoutId)) {
+        if (trackedPointers.containsKey(targetCutoutId) || animationJobs.containsKey(targetCutoutId)) {
             AppLog.d(TAG, "Follow touch received -> overriding manual pan for cutout=$targetCutoutId")
             animationJobs[targetCutoutId]?.cancel()
             animationJobs.remove(targetCutoutId)
@@ -335,7 +335,7 @@ object InteractiveCutoutController {
         timeProvider = { SystemClock.elapsedRealtime() }
     }
 
-    private fun updateOverrideCrop(
+    internal fun updateOverrideCrop(
         cutoutId: String,
         crop: NormalizedCrop,
     ) {
@@ -345,7 +345,8 @@ object InteractiveCutoutController {
         onCropUpdated?.invoke()
     }
 
-    private fun removeOverrideCrop(cutoutId: String) {
+    internal fun removeOverrideCrop(cutoutId: String) {
+        if (!_overrideCrops.value.containsKey(cutoutId)) return
         val next = _overrideCrops.value.toMutableMap()
         next.remove(cutoutId)
         _overrideCrops.value = next

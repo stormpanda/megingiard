@@ -30,7 +30,10 @@ class ScreenCaptureFollowTest {
     private val testDispatcher = UnconfinedTestDispatcher()
     private val cutoutId = "test-cutout-id"
 
-    private fun getCutout(id: String = cutoutId) = ScreenCaptureManager.cutouts.value.find { it.id == id }!!
+    private fun getCutout(id: String = cutoutId): NormalizedCrop {
+        val cutout = ScreenCaptureManager.cutouts.value.find { it.id == id }!!
+        return InteractiveCutoutController.getEffectiveCrop(cutout)
+    }
 
     @Before
     fun setUp() {

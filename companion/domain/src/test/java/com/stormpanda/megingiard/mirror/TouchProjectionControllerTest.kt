@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.mirror
 
+import com.stormpanda.megingiard.macropad.MacroPadState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -18,10 +19,16 @@ class TouchProjectionControllerTest {
     private val testDispatcher = UnconfinedTestDispatcher()
     private lateinit var controller: TouchProjectionController
 
+    private fun setActiveCutouts(cutouts: List<ScreenCutout>) {
+        val layout = MacroPadState.activeLayout.value ?: return
+        MacroPadState.updateLayout(layout.copy(mirrorCutouts = cutouts))
+    }
+
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        ScreenCaptureManager.setCutouts(emptyList())
+        MacroPadState.loadFrom(emptyList(), null)
+        setActiveCutouts(emptyList())
         controller =
             TouchProjectionController(
                 edgeZonePx = 48f,
@@ -31,7 +38,7 @@ class TouchProjectionControllerTest {
 
     @After
     fun tearDown() {
-        ScreenCaptureManager.setCutouts(emptyList())
+        setActiveCutouts(emptyList())
         controller.reset()
         Dispatchers.resetMain()
     }
@@ -106,7 +113,7 @@ class TouchProjectionControllerTest {
                 destHeight = 0.4f,
                 touchProjectionEnabled = true,
             )
-        ScreenCaptureManager.setCutouts(listOf(bottomCutout, topCutout))
+        setActiveCutouts(listOf(bottomCutout, topCutout))
 
         // Press at (300, 300) in 1000x1000 box (destX = 0.3, destY = 0.3)
         // This is inside both bottomCutout [100..900, 100..900] and topCutout [200..600, 200..600]
@@ -140,7 +147,7 @@ class TouchProjectionControllerTest {
                 shape = CutoutShape.CIRCLE,
                 touchProjectionEnabled = true,
             )
-        ScreenCaptureManager.setCutouts(listOf(circleCutout))
+        setActiveCutouts(listOf(circleCutout))
 
         // Bounding box in 1000x1000:
         // destLeft = 200, destTop = 200, destWidth = 400, destHeight = 400

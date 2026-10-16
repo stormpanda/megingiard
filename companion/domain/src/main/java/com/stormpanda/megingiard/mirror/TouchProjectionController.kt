@@ -85,6 +85,7 @@ class TouchProjectionController(
                 if (dx * dx + dy * dy > radius * radius) continue
             }
 
+            val crop = InteractiveCutoutController.getEffectiveCrop(cutout)
             val projected =
                 projectCutoutCoordinates(
                     touchX = x,
@@ -93,10 +94,10 @@ class TouchProjectionController(
                     destTop = destTop,
                     destWidth = destWidth,
                     destHeight = destHeight,
-                    srcX = cutout.srcX,
-                    srcY = cutout.srcY,
-                    srcWidth = cutout.srcWidth,
-                    srcHeight = cutout.srcHeight,
+                    srcX = crop.srcX,
+                    srcY = crop.srcY,
+                    srcWidth = crop.srcWidth,
+                    srcHeight = crop.srcHeight,
                     clampToEdge = false,
                     rotation = cutout.rotation,
                     flipHorizontal = cutout.flipHorizontal,
@@ -177,6 +178,7 @@ class TouchProjectionController(
         val destTop = cutout.destY * boxH
         val destWidth = cutout.destWidth * boxW
         val destHeight = cutout.destHeight * boxH
+        val crop = InteractiveCutoutController.getEffectiveCrop(cutout)
 
         val coords =
             projectCutoutCoordinates(
@@ -186,10 +188,10 @@ class TouchProjectionController(
                 destTop = destTop,
                 destWidth = destWidth,
                 destHeight = destHeight,
-                srcX = cutout.srcX,
-                srcY = cutout.srcY,
-                srcWidth = cutout.srcWidth,
-                srcHeight = cutout.srcHeight,
+                srcX = crop.srcX,
+                srcY = crop.srcY,
+                srcWidth = crop.srcWidth,
+                srcHeight = crop.srcHeight,
                 clampToEdge = false,
                 rotation = cutout.rotation,
                 flipHorizontal = cutout.flipHorizontal,
@@ -206,10 +208,10 @@ class TouchProjectionController(
                     destTop = destTop,
                     destWidth = destWidth,
                     destHeight = destHeight,
-                    srcX = cutout.srcX,
-                    srcY = cutout.srcY,
-                    srcWidth = cutout.srcWidth,
-                    srcHeight = cutout.srcHeight,
+                    srcX = crop.srcX,
+                    srcY = crop.srcY,
+                    srcWidth = crop.srcWidth,
+                    srcHeight = crop.srcHeight,
                     clampToEdge = true,
                     rotation = cutout.rotation,
                     flipHorizontal = cutout.flipHorizontal,
@@ -256,6 +258,7 @@ class TouchProjectionController(
             val destTop = cutout.destY * boxH
             val destWidth = cutout.destWidth * boxW
             val destHeight = cutout.destHeight * boxH
+            val crop = InteractiveCutoutController.getEffectiveCrop(cutout)
 
             val coords =
                 projectCutoutCoordinates(
@@ -265,10 +268,10 @@ class TouchProjectionController(
                     destTop = destTop,
                     destWidth = destWidth,
                     destHeight = destHeight,
-                    srcX = cutout.srcX,
-                    srcY = cutout.srcY,
-                    srcWidth = cutout.srcWidth,
-                    srcHeight = cutout.srcHeight,
+                    srcX = crop.srcX,
+                    srcY = crop.srcY,
+                    srcWidth = crop.srcWidth,
+                    srcHeight = crop.srcHeight,
                     clampToEdge = true,
                     rotation = cutout.rotation,
                     flipHorizontal = cutout.flipHorizontal,

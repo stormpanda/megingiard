@@ -21,21 +21,33 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 
 private const val TAG = "ScreenCaptureManager"
+private const val DEFAULT_MAX_FPS = 60
+private const val FOLLOW_LERP_FACTOR = 0.15f
+private const val FOLLOW_EPSILON = 0.001f
+private const val FOLLOW_FRAME_DELAY_MS = 16L
 
 object ScreenCaptureManager {
     const val SCREENSHOT_SUBDIR = "Pictures/Megingiard"
 
+    private val derivedStateScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
+
     private val _isCapturing = MutableStateFlow(false)
     val isCapturing: StateFlow<Boolean> = _isCapturing.asStateFlow()
 
-    private val _cutouts = MutableStateFlow<List<ScreenCutout>>(emptyList())
-    val cutouts: StateFlow<List<ScreenCutout>> = _cutouts.asStateFlow()
+    val cutouts: StateFlow<List<ScreenCutout>> =
+        MacroPadState.activeLayout
+            .map { it?.mirrorCutouts.orEmpty() }
+            .stateIn(derivedStateScope, SharingStarted.Eagerly, emptyList())
 
-    private val _edgeBlendWidthDp = MutableStateFlow(0f)
-    val edgeBlendWidthDp: StateFlow<Float> = _edgeBlendWidthDp.asStateFlow()
+    val edgeBlendWidthDp: StateFlow<Float> =
+        MacroPadState.activeLayout
+            .map { it?.mirrorEdgeBlendWidth ?: 0f }
+            .stateIn(derivedStateScope, SharingStarted.Eagerly, 0f)
 
-    private val _maxFps = MutableStateFlow(60)
-    val maxFps: StateFlow<Int> = _maxFps.asStateFlow()
+    val maxFps: StateFlow<Int> =
+        MacroPadState.activeLayout
+            .map { it?.mirrorMaxFps ?: DEFAULT_MAX_FPS }
+            .stateIn(derivedStateScope, SharingStarted.Eagerly, DEFAULT_MAX_FPS)
 
     private val _isFrozen = MutableStateFlow(false)
     val isFrozen: StateFlow<Boolean> = _isFrozen.asStateFlow()
@@ -67,9 +79,9 @@ object ScreenCaptureManager {
         }
 
     val isTouchProjectionActive: StateFlow<Boolean> =
-        _cutouts
+        cutouts
             .map { list -> list.any { it.touchProjectionEnabled } }
-            .stateIn(scope, SharingStarted.Eagerly, false)
+            .stateIn(derivedStateScope, SharingStarted.Eagerly, false)
 
     init {
         restartCollectors()
@@ -85,17 +97,11 @@ object ScreenCaptureManager {
                     if (layout != null) {
                         val oldLayoutId = previousLayoutId
                         previousLayoutId = layout.id
-                        _edgeBlendWidthDp.value = layout.mirrorEdgeBlendWidth
-                        _maxFps.value = layout.mirrorMaxFps
-                        _cutouts.value = layout.mirrorCutouts
                         if (oldLayoutId != null && oldLayoutId != layout.id && _isCapturing.value) {
                             setFollowActive(layout.mirrorFollowActive)
                         }
                     } else {
                         previousLayoutId = null
-                        _edgeBlendWidthDp.value = 0f
-                        _maxFps.value = 60
-                        _cutouts.value = emptyList()
                     }
                 }
             }
@@ -134,11 +140,6 @@ object ScreenCaptureManager {
             _isFrozen.value = false
             setFrozenBitmap(null)
         }
-    }
-
-    fun setCutouts(cutouts: List<ScreenCutout>) {
-        AppLog.d(TAG, "setCutouts count=${cutouts.size}")
-        _cutouts.value = cutouts
     }
 
     fun setFrozen(frozen: Boolean) {
@@ -210,28 +211,18 @@ object ScreenCaptureManager {
     ) {
         AppLog.i(TAG, "setFollowActive(active=$active, persist=$persist)")
         _isFollowActive.value = active
-        if (persist) {
-            val layout = MacroPadState.activeLayout.value
-            if (layout != null) {
-                MacroPadState.setLayoutMirrorFollowActive(layout.id, active)
-            }
-        }
         val layout = MacroPadState.activeLayout.value
+        if (persist && layout != null) {
+            MacroPadState.setLayoutMirrorFollowActive(layout.id, active)
+        }
+        followAnimationJob?.cancel()
+        followAnimationJob = null
+        followAnimationCutoutId = null
+        layout?.mirrorCutouts?.filter { it.followTouch }?.forEach { cutout ->
+            InteractiveCutoutController.removeOverrideCrop(cutout.id)
+        }
         if (active) {
-            followAnimationJob?.cancel()
-            followAnimationJob = null
-            followAnimationCutoutId = null
-            if (layout != null) {
-                _cutouts.value = layout.mirrorCutouts
-            }
             AppStateManager.setViewportEditActive(false)
-        } else {
-            followAnimationJob?.cancel()
-            followAnimationJob = null
-            followAnimationCutoutId = null
-            if (layout != null) {
-                _cutouts.value = layout.mirrorCutouts
-            }
         }
     }
 
@@ -254,24 +245,26 @@ object ScreenCaptureManager {
         nx: Float,
         ny: Float,
     ) {
-        val targetCutout = _cutouts.value.find { it.followTouch } ?: return
+        val targetCutout = cutouts.value.find { it.followTouch } ?: return
         InteractiveCutoutController.onFollowTouchReceived(targetCutout.id)
         val targetSrcX = (nx - targetCutout.srcWidth / 2f).coerceIn(0f, (1f - targetCutout.srcWidth).coerceAtLeast(0f))
         val targetSrcY = (ny - targetCutout.srcHeight / 2f).coerceIn(0f, (1f - targetCutout.srcHeight).coerceAtLeast(0f))
 
-        val smoothing = targetCutout.motionSmoothing
-        if (!smoothing) {
+        if (!targetCutout.motionSmoothing) {
             followAnimationJob?.cancel()
             followAnimationJob = null
             followAnimationCutoutId = null
-            if (targetCutout.srcX != targetSrcX || targetCutout.srcY != targetSrcY) {
-                val currentList = _cutouts.value
-                val index = currentList.indexOfFirst { it.id == targetCutout.id }
-                if (index != -1) {
-                    val newList = ArrayList(currentList)
-                    newList[index] = targetCutout.copy(srcX = targetSrcX, srcY = targetSrcY)
-                    _cutouts.value = newList
-                }
+            val currentCrop = InteractiveCutoutController.getEffectiveCrop(targetCutout)
+            if (currentCrop.srcX != targetSrcX || currentCrop.srcY != targetSrcY) {
+                InteractiveCutoutController.updateOverrideCrop(
+                    targetCutout.id,
+                    NormalizedCrop(
+                        srcX = targetSrcX,
+                        srcY = targetSrcY,
+                        srcWidth = targetCutout.srcWidth,
+                        srcHeight = targetCutout.srcHeight,
+                    ),
+                )
             }
         } else {
             targetFollowX = targetSrcX
@@ -286,38 +279,45 @@ object ScreenCaptureManager {
         followAnimationCutoutId = cutoutId
         followAnimationJob =
             scope.launch {
-                val lerpFactor = 0.15f
-                val epsilon = 0.001f
-
                 while (isActive) {
                     val currTargetX = targetFollowX
                     val currTargetY = targetFollowY
 
-                    val list = _cutouts.value
-                    val index = list.indexOfFirst { it.id == cutoutId }
-                    if (index == -1) break
-                    val curCutout = list[index]
-                    val curX = curCutout.srcX
-                    val curY = curCutout.srcY
+                    val curCutout = cutouts.value.find { it.id == cutoutId } ?: break
+                    val curCrop = InteractiveCutoutController.getEffectiveCrop(curCutout)
+                    val curX = curCrop.srcX
+                    val curY = curCrop.srcY
 
                     val dx = currTargetX - curX
                     val dy = currTargetY - curY
 
-                    if (abs(dx) < epsilon && abs(dy) < epsilon) {
+                    if (abs(dx) < FOLLOW_EPSILON && abs(dy) < FOLLOW_EPSILON) {
                         if (curX != currTargetX || curY != currTargetY) {
-                            val newList = ArrayList(list)
-                            newList[index] = curCutout.copy(srcX = currTargetX, srcY = currTargetY)
-                            _cutouts.value = newList
+                            InteractiveCutoutController.updateOverrideCrop(
+                                cutoutId,
+                                NormalizedCrop(
+                                    srcX = currTargetX,
+                                    srcY = currTargetY,
+                                    srcWidth = curCutout.srcWidth,
+                                    srcHeight = curCutout.srcHeight,
+                                ),
+                            )
                         }
                         break
                     } else {
-                        val nextX = curX + dx * lerpFactor
-                        val nextY = curY + dy * lerpFactor
-                        val newList = ArrayList(list)
-                        newList[index] = curCutout.copy(srcX = nextX, srcY = nextY)
-                        _cutouts.value = newList
+                        val nextX = curX + dx * FOLLOW_LERP_FACTOR
+                        val nextY = curY + dy * FOLLOW_LERP_FACTOR
+                        InteractiveCutoutController.updateOverrideCrop(
+                            cutoutId,
+                            NormalizedCrop(
+                                srcX = nextX,
+                                srcY = nextY,
+                                srcWidth = curCutout.srcWidth,
+                                srcHeight = curCutout.srcHeight,
+                            ),
+                        )
                     }
-                    delay(16)
+                    delay(FOLLOW_FRAME_DELAY_MS)
                 }
             }
     }
