@@ -68,11 +68,11 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.BitmapUtils
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.input.InjectorLifecycleManager
 import com.stormpanda.megingiard.math.ViewportMath
 import com.stormpanda.megingiard.mirror.EmbeddedMirrorView
 import com.stormpanda.megingiard.mirror.InteractiveCutoutController
@@ -90,7 +90,6 @@ import com.stormpanda.megingiard.ui.MaterialSymbol
 import com.stormpanda.megingiard.ui.dimColorFilter
 import com.stormpanda.megingiard.ui.rememberBezelBrush
 import com.stormpanda.megingiard.ui.rememberQuickMenuGestureMetrics
-import com.stormpanda.megingiard.viewmodel.MacroPadViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -152,10 +151,9 @@ private fun DisabledReason.feedbackIcon(): ImageVector =
 
 @Composable
 fun MacroPadScreen(modifier: Modifier = Modifier) {
-    val viewModel: MacroPadViewModel = viewModel()
     val context = LocalContext.current
-    val profile by viewModel.activeProfile.collectAsStateWithLifecycle()
-    val layout by viewModel.activeLayout.collectAsStateWithLifecycle()
+    val profile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
+    val layout by MacroPadState.activeLayout.collectAsStateWithLifecycle()
     val isEditorActive by AppStateManager.isEditorActive.collectAsStateWithLifecycle()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsStateWithLifecycle()
     val isEditingPositions by MacroPadState.isEditingButtonPositions.collectAsStateWithLifecycle()
@@ -167,13 +165,13 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
 
     // Single watcher that starts/stops injectors reactively based on all modal flags
     LaunchedEffect(Unit) {
-        viewModel.watchInjectorLifecycle()
+        InjectorLifecycleManager.watch()
     }
 
     // Stop all injectors and reset peek state when leaving MACROPAD mode
     DisposableEffect(Unit) {
         onDispose {
-            viewModel.stopInjectors()
+            MacroPadState.resetPeek()
         }
     }
 
@@ -283,7 +281,6 @@ internal fun PadSurface(
     transparentBackground: Boolean = false,
     onDisabledActionFeedback: (DisabledReason) -> Unit = {},
 ) {
-    val viewModel: MacroPadViewModel = viewModel()
     val density = LocalDensity.current
     val colors = LocalAppColors.current
     val context = LocalContext.current
@@ -335,11 +332,11 @@ internal fun PadSurface(
 
     // Create hit-test engine with density-aware dp→px converter and haptic callback
     val engine =
-        remember(viewModel, density, vibrator) {
-            viewModel.createHitTestEngine(
+        remember(density, vibrator) {
+            MacroPadHitTestEngine(
                 buttonUnitDpToPx = { dpValue -> with(density) { dpValue.dp.toPx() } },
                 onHapticFeedback = { buttonId, strength, customDurationMs, customAmplitude, magnitude ->
-                    if (strength == HapticStrength.OFF) return@createHitTestEngine
+                    if (strength == HapticStrength.OFF) return@MacroPadHitTestEngine
                     val now = SystemClock.elapsedRealtime()
                     // magnitude == 0f → discrete event (button press or scroll batch), fire immediately.
                     // magnitude  > 0f → continuous trackpoint motion, interval shrinks with speed.
@@ -467,7 +464,7 @@ internal fun PadSurface(
                                     val h = canvasSize.height.toFloat().coerceAtLeast(1f)
 
                                     // Block input while quick menu overlay is open
-                                    if (viewModel.isQuickMenuOpen.value && event.type != PointerEventType.Release) {
+                                    if (AppStateManager.isQuickMenuOpen.value && event.type != PointerEventType.Release) {
                                         event.changes.forEach { it.consume() }
                                         continue
                                     }

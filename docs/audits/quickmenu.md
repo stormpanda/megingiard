@@ -264,7 +264,7 @@ None identified — Quick Menu and App Shell state transitions are event-driven 
 > Select which findings to implement (`All`, `Low-risk only`, or specific IDs):
 
 - [x] **`[QM-01]`** — Delete dead `NavDestination` hierarchy and 5 unused `PrimaryModalPayload` subtypes *(Complexity: High, Risk: Low)*
-- [ ] **`[QM-02]`** — Delete `MacroPadViewModel` and inline pass-through properties/setters in `GlobalSettingsViewModel` *(Complexity: High, Risk: Low)*
+- [x] **`[QM-02]`** — Delete `MacroPadViewModel` and inline pass-through properties/setters in `GlobalSettingsViewModel` *(Complexity: High, Risk: Low)*
 - [ ] **`[QM-03]`** — Delete unused tutorial dialog wrappers and reuse `SwipeGestureProcessor` / `QuickMenuSlidingPill` *(Complexity: High, Risk: Low)*
 - [ ] **`[QM-04]`** — Simplify screenshot button rendering and remove always-`true` flags in `QuickMenuMirrorCard` *(Complexity: Low, Risk: Low)*
 - [ ] **`[QM-05]`** — Remove unreachable `isValidScreen` guard in `MainAppScreen` and double `closeQuickMenu()` call in `QuickMenu` *(Complexity: Low, Risk: Low)*

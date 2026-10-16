@@ -4,24 +4,12 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.BuildConfig
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.config.InternalBackup
-import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.media.SteamGridDbClient
 import com.stormpanda.megingiard.media.SteamGridDbException
-import com.stormpanda.megingiard.privd.BootstrapStage
 import com.stormpanda.megingiard.privd.PrivdBootstrapper
-import com.stormpanda.megingiard.privd.PrivdError
 import com.stormpanda.megingiard.privd.PrivdManager
-import com.stormpanda.megingiard.privd.PrivdState
-import com.stormpanda.megingiard.settings.AppLanguage
-import com.stormpanda.megingiard.settings.KeyboardSettings
-import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.settings.SettingsManager
-import com.stormpanda.megingiard.settings.ThemeMode
-import com.stormpanda.megingiard.update.AppReleaseInfo
-import com.stormpanda.megingiard.update.UpdateManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -54,66 +42,15 @@ private fun Throwable.toSteamGridDbTestStatus(): SteamGridDbTestStatus =
     }
 
 /**
- * ViewModel for [GlobalSettingsScreen] — exposes the app-global settings state
- * and routes mutations through named functions instead of letting Composables
- * call `SettingsManager.setX(...)` directly.
- *
- * State is sourced from the persistent singletons ([SettingsManager], [MacroPadSettings])
- * which already debounce and persist via DataStore. The ViewModel is a thin facade
- * — no additional logic, just an indirection so that `GlobalSettingsScreen` is
- * decoupled from the settings layer for testing and future refactors.
+ * ViewModel for [com.stormpanda.megingiard.settings.GlobalSettingsScreen] — coordinates
+ * asynchronous operations (SteamGridDB token validation and Privileged Mode bootstrap/connection).
  */
 class GlobalSettingsViewModel : ViewModel() {
-    val internalBackups: StateFlow<List<InternalBackup>> = SettingsManager.internalBackups
-
-    val accentColor: StateFlow<Int> = SettingsManager.accentColor
-    val customAccentColor: StateFlow<Int> = SettingsManager.customAccentColor
-    val themeMode: StateFlow<ThemeMode> = SettingsManager.themeMode
-    val overlayAtBottom: StateFlow<Boolean> = SettingsManager.overlayAtBottom
-    val overlayFadeOut: StateFlow<Boolean> = SettingsManager.overlayFadeOut
-    val appLanguage: StateFlow<AppLanguage> = SettingsManager.appLanguage
-    val logLevel: StateFlow<AppLog.Level> = SettingsManager.logLevel
-    val steamGridDbApiToken: StateFlow<String> = SettingsManager.steamGridDbApiToken
-
-    val excludeFromRecents: StateFlow<Boolean> = SettingsManager.excludeFromRecents
-    val gamepadSwapFaceButtons: StateFlow<Boolean> = MacroPadSettings.gamepadSwapFaceButtons
-    val kbLayout: StateFlow<KbLayout> = KeyboardSettings.kbLayout
-    val kbTouchpadEnabled: StateFlow<Boolean> = KeyboardSettings.kbTouchpadEnabled
-    val kbAutoOpenOnFocus: StateFlow<Boolean> = KeyboardSettings.kbAutoOpenOnFocus
-
-    // Update checks
-    val autoUpdateCheckEnabled: StateFlow<Boolean> = UpdateManager.autoUpdateCheckEnabled
-    val updateAvailable: StateFlow<Boolean> = UpdateManager.updateAvailable
-    val latestReleaseInfo: StateFlow<AppReleaseInfo?> = UpdateManager.latestReleaseInfo
-    val isCheckingUpdates: StateFlow<Boolean> = UpdateManager.isChecking
-    val updateCheckError: StateFlow<String?> = UpdateManager.checkError
-
-    // Privileged Mode
-    val privdState: StateFlow<PrivdState> = PrivdManager.state
-    val privdLastError: StateFlow<PrivdError?> = PrivdManager.lastError
-    val privdDeadzoneLeft: StateFlow<Float> = MacroPadSettings.deadzoneLeft
-    val privdDeadzoneRight: StateFlow<Float> = MacroPadSettings.deadzoneRight
-    val privdBootstrapStage: StateFlow<BootstrapStage> = PrivdBootstrapper.stage
-
     private val _isRootBridgeAvailable = MutableStateFlow<Boolean?>(null)
     val isRootBridgeAvailable: StateFlow<Boolean?> = _isRootBridgeAvailable.asStateFlow()
 
-    fun setAccentColor(argb: Int) = SettingsManager.setAccentColor(argb)
-
-    fun setCustomAccentColor(argb: Int) = SettingsManager.setCustomAccentColor(argb)
-
-    fun setThemeMode(mode: ThemeMode) = SettingsManager.setThemeMode(mode)
-
-    fun setOverlayAtBottom(value: Boolean) = SettingsManager.setOverlayAtBottom(value)
-
-    fun setOverlayFadeOut(value: Boolean) = SettingsManager.setOverlayFadeOut(value)
-
-    fun setAppLanguage(value: AppLanguage) = SettingsManager.setAppLanguage(value)
-
     private val _steamGridDbTestStatus = MutableStateFlow(SteamGridDbTestStatus.IDLE)
     val steamGridDbTestStatus: StateFlow<SteamGridDbTestStatus> = _steamGridDbTestStatus.asStateFlow()
-
-    fun setLogLevel(value: AppLog.Level) = SettingsManager.setLogLevel(value)
 
     fun setSteamGridDbApiToken(value: String) {
         SettingsManager.setSteamGridDbApiToken(value)
@@ -135,29 +72,9 @@ class GlobalSettingsViewModel : ViewModel() {
         }
     }
 
-    fun resetAllTutorials() = SettingsManager.resetAllTutorials()
-
-    fun setExcludeFromRecents(value: Boolean) = SettingsManager.setExcludeFromRecents(value)
-
-    fun setGamepadSwapFaceButtons(value: Boolean) = MacroPadSettings.setGamepadSwapFaceButtons(value)
-
-    fun setKbLayout(value: KbLayout) = KeyboardSettings.setKbLayout(value)
-
-    fun setKbTouchpadEnabled(value: Boolean) = KeyboardSettings.setKbTouchpadEnabled(value)
-
-    fun setKbAutoOpenOnFocus(value: Boolean) = KeyboardSettings.setKbAutoOpenOnFocus(value)
-
-    fun setAutoUpdateCheckEnabled(value: Boolean) = UpdateManager.setAutoUpdateCheckEnabled(value)
-
-    fun checkForUpdatesManually() {
-        UpdateManager.checkForUpdates(force = true, currentVersion = BuildConfig.VERSION_NAME)
-    }
-
-    // Privileged Mode actions
-
     /**
      * Initiates a connection to the daemon socket asynchronously on [Dispatchers.IO].
-     * The result is reflected in [privdState] — optional [onComplete] callback on Main.
+     * The result is reflected in [PrivdManager.state] — optional [onComplete] callback on Main.
      */
     fun privdConnect(
         context: Context,
@@ -174,10 +91,6 @@ class GlobalSettingsViewModel : ViewModel() {
             }
         }
     }
-
-    fun setPrivdDeadzoneLeft(value: Float) = MacroPadSettings.setDeadzoneLeft(value)
-
-    fun setPrivdDeadzoneRight(value: Float) = MacroPadSettings.setDeadzoneRight(value)
 
     /**
      * Pair with the device's ADB Wireless-Debugging service.

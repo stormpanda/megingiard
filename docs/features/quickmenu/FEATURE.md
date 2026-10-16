@@ -89,8 +89,7 @@ the universal "go back" mechanism throughout the app.
 - The virtual keyboard injector remains attached while the menu is open to avoid OEM launcher
   focus-steal behavior on AYN Thor firmware when keyboard availability toggles (`qwerty` ↔ `-keyb`).
   Toggling keyboard availability could otherwise background the app immediately after opening the menu.
-- Injector stop/restart for Quick Menu and modal transitions is handled by the injector lifecycle
-  watchers (`MacroPadViewModel.watchInjectorLifecycle()` and background equivalent). The Quick Menu
+- Injector stop/restart for Quick Menu and modal transitions is handled by `InjectorLifecycleManager`. The Quick Menu
   Composable does not directly manage injector processes.
 
 ---

@@ -54,7 +54,7 @@ GitHub Releases API
        ├── Enforces 24-hour session rate limit in memory
        ├── Persists auto-check toggle & latest release tag/URL in DataStore
        ▼
-GlobalSettingsViewModel / GlobalSettingsScreen / IntegrationHomeScreen (:companion:ui)
+GlobalSettingsScreen / IntegrationHomeScreen (:companion:ui)
        │
        ├── Displays update banner in GeneralSettingsTab, status pill in UpdatesSettingsTab, & Hub badge
        └── Navigates to SettingsSubPage.UPDATE_AVAILABLE & launches top-screen browser
@@ -75,7 +75,6 @@ GlobalSettingsViewModel / GlobalSettingsScreen / IntegrationHomeScreen (:compani
 | `SemVerComparator.kt` | Version string parser and semver comparison logic |
 | `UpdateManager.kt` | Background fetcher, in-memory session rate-limiter, and DataStore state persistence |
 | `settings/SettingsKeys.kt` | Preference keys for `KEY_AUTO_UPDATE_CHECK_ENABLED`, `KEY_LATEST_RELEASE_TAG`, and `KEY_LATEST_RELEASE_URL` |
-| `viewmodel/GlobalSettingsViewModel.kt` | Exposes `UpdateManager` `StateFlow`s and manual check/toggle actions to the Settings UI |
 | `settings/GlobalSettingsScreen.kt` | Renders top-level navigation scaffold, `subPageStack` drill-down (`UPDATE_AVAILABLE` -> `CREATE_BACKUP`), and top-display URL launching |
 | `settings/tabs/GeneralSettingsTab.kt` | Renders the top-of-deck update available banner card when `updateAvailable` is true |
 | `settings/tabs/UpdatesSettingsTab.kt` | Renders update checking controls, Obtainium shortcut, and `UpdateAvailableSubPage` in Global Settings |

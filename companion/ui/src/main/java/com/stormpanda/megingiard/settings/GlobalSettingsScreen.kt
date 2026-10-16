@@ -22,11 +22,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.BuildConfig
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.log.LogReportManager
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
+import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.settings.tabs.AppearanceSettingsTab
 import com.stormpanda.megingiard.settings.tabs.ConfigurationSettingsTab
 import com.stormpanda.megingiard.settings.tabs.CreateBackupSubPage
@@ -53,6 +55,7 @@ import com.stormpanda.megingiard.ui.PrimaryModalPayload
 import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
 import com.stormpanda.megingiard.ui.cycle
 import com.stormpanda.megingiard.ui.launchUrlOnPrimaryDisplay
+import com.stormpanda.megingiard.update.UpdateManager
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
 import kotlinx.coroutines.launch
 
@@ -65,30 +68,30 @@ fun GlobalSettingsScreen(
     onBack: () -> Unit,
     viewModel: GlobalSettingsViewModel = viewModel(),
 ) {
-    val accentColorArgb by viewModel.accentColor.collectAsStateWithLifecycle()
-    val customAccentColorArgb by viewModel.customAccentColor.collectAsStateWithLifecycle()
-    val overlayAtBottom by viewModel.overlayAtBottom.collectAsStateWithLifecycle()
-    val overlayFadeOut by viewModel.overlayFadeOut.collectAsStateWithLifecycle()
-    val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
-    val appLanguage by viewModel.appLanguage.collectAsStateWithLifecycle()
-    val logLevel by viewModel.logLevel.collectAsStateWithLifecycle()
-    val excludeFromRecents by viewModel.excludeFromRecents.collectAsStateWithLifecycle()
-    val gamepadSwapFaceButtons by viewModel.gamepadSwapFaceButtons.collectAsStateWithLifecycle()
-    val kbLayout by viewModel.kbLayout.collectAsStateWithLifecycle()
-    val kbTouchpadEnabled by viewModel.kbTouchpadEnabled.collectAsStateWithLifecycle()
-    val kbAutoOpenOnFocus by viewModel.kbAutoOpenOnFocus.collectAsStateWithLifecycle()
-    val privdState by viewModel.privdState.collectAsStateWithLifecycle()
-    val deadzoneLeft by viewModel.privdDeadzoneLeft.collectAsStateWithLifecycle()
-    val deadzoneRight by viewModel.privdDeadzoneRight.collectAsStateWithLifecycle()
-    val steamGridDbApiToken by viewModel.steamGridDbApiToken.collectAsStateWithLifecycle()
+    val accentColorArgb by SettingsManager.accentColor.collectAsStateWithLifecycle()
+    val customAccentColorArgb by SettingsManager.customAccentColor.collectAsStateWithLifecycle()
+    val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsStateWithLifecycle()
+    val overlayFadeOut by SettingsManager.overlayFadeOut.collectAsStateWithLifecycle()
+    val themeMode by SettingsManager.themeMode.collectAsStateWithLifecycle()
+    val appLanguage by SettingsManager.appLanguage.collectAsStateWithLifecycle()
+    val logLevel by SettingsManager.logLevel.collectAsStateWithLifecycle()
+    val excludeFromRecents by SettingsManager.excludeFromRecents.collectAsStateWithLifecycle()
+    val gamepadSwapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsStateWithLifecycle()
+    val kbLayout by KeyboardSettings.kbLayout.collectAsStateWithLifecycle()
+    val kbTouchpadEnabled by KeyboardSettings.kbTouchpadEnabled.collectAsStateWithLifecycle()
+    val kbAutoOpenOnFocus by KeyboardSettings.kbAutoOpenOnFocus.collectAsStateWithLifecycle()
+    val privdState by PrivdManager.state.collectAsStateWithLifecycle()
+    val deadzoneLeft by MacroPadSettings.deadzoneLeft.collectAsStateWithLifecycle()
+    val deadzoneRight by MacroPadSettings.deadzoneRight.collectAsStateWithLifecycle()
+    val steamGridDbApiToken by SettingsManager.steamGridDbApiToken.collectAsStateWithLifecycle()
     val steamGridDbTestStatus by viewModel.steamGridDbTestStatus.collectAsStateWithLifecycle()
-    val internalBackups by viewModel.internalBackups.collectAsStateWithLifecycle()
+    val internalBackups by SettingsManager.internalBackups.collectAsStateWithLifecycle()
 
-    val autoUpdateCheckEnabled by viewModel.autoUpdateCheckEnabled.collectAsStateWithLifecycle()
-    val updateAvailable by viewModel.updateAvailable.collectAsStateWithLifecycle()
-    val latestReleaseInfo by viewModel.latestReleaseInfo.collectAsStateWithLifecycle()
-    val isCheckingUpdates by viewModel.isCheckingUpdates.collectAsStateWithLifecycle()
-    val updateCheckError by viewModel.updateCheckError.collectAsStateWithLifecycle()
+    val autoUpdateCheckEnabled by UpdateManager.autoUpdateCheckEnabled.collectAsStateWithLifecycle()
+    val updateAvailable by UpdateManager.updateAvailable.collectAsStateWithLifecycle()
+    val latestReleaseInfo by UpdateManager.latestReleaseInfo.collectAsStateWithLifecycle()
+    val isCheckingUpdates by UpdateManager.isChecking.collectAsStateWithLifecycle()
+    val updateCheckError by UpdateManager.checkError.collectAsStateWithLifecycle()
     val isRootBridgeAvailable by viewModel.isRootBridgeAvailable.collectAsStateWithLifecycle()
 
     val colors = LocalAppColors.current
@@ -203,10 +206,10 @@ fun GlobalSettingsScreen(
                                             viewModel.privdConnect(context)
                                         },
                                         isRootBridgeAvailable = isRootBridgeAvailable == true,
-                                        onLanguageChange = { viewModel.setAppLanguage(it) },
-                                        onExcludeFromRecentsChange = { viewModel.setExcludeFromRecents(it) },
+                                        onLanguageChange = { SettingsManager.setAppLanguage(it) },
+                                        onExcludeFromRecentsChange = { SettingsManager.setExcludeFromRecents(it) },
                                         onResetTutorials = {
-                                            viewModel.resetAllTutorials()
+                                            SettingsManager.resetAllTutorials()
                                             DialogToastManager.show(
                                                 context.getString(R.string.settings_reset_tutorials_toast),
                                             )
@@ -222,11 +225,11 @@ fun GlobalSettingsScreen(
                                         kbLayout = kbLayout,
                                         kbTouchpadEnabled = kbTouchpadEnabled,
                                         kbAutoOpenOnFocus = kbAutoOpenOnFocus,
-                                        onGamepadSwapFaceButtonsChange = { viewModel.setGamepadSwapFaceButtons(it) },
+                                        onGamepadSwapFaceButtonsChange = { MacroPadSettings.setGamepadSwapFaceButtons(it) },
                                         onOpenDeadzones = { subPageStack = listOf(SettingsSubPage.DEADZONES) },
-                                        onKbLayoutChange = { viewModel.setKbLayout(it) },
-                                        onKbTouchpadEnabledChange = { viewModel.setKbTouchpadEnabled(it) },
-                                        onKbAutoOpenOnFocusChange = { viewModel.setKbAutoOpenOnFocus(it) },
+                                        onKbLayoutChange = { KeyboardSettings.setKbLayout(it) },
+                                        onKbTouchpadEnabledChange = { KeyboardSettings.setKbTouchpadEnabled(it) },
+                                        onKbAutoOpenOnFocusChange = { KeyboardSettings.setKbAutoOpenOnFocus(it) },
                                     )
                                 }
 
@@ -237,11 +240,11 @@ fun GlobalSettingsScreen(
                                         customAccentColorArgb = customAccentColorArgb,
                                         overlayAtBottom = overlayAtBottom,
                                         overlayFadeOut = overlayFadeOut,
-                                        onThemeModeChange = { viewModel.setThemeMode(it) },
-                                        onAccentColorChange = { viewModel.setAccentColor(it) },
+                                        onThemeModeChange = { SettingsManager.setThemeMode(it) },
+                                        onAccentColorChange = { SettingsManager.setAccentColor(it) },
                                         onOpenCustomAccent = { subPageStack = listOf(SettingsSubPage.CUSTOM_ACCENT) },
-                                        onOverlayAtBottomChange = { viewModel.setOverlayAtBottom(it) },
-                                        onOverlayFadeOutChange = { viewModel.setOverlayFadeOut(it) },
+                                        onOverlayAtBottomChange = { SettingsManager.setOverlayAtBottom(it) },
+                                        onOverlayFadeOutChange = { SettingsManager.setOverlayFadeOut(it) },
                                     )
                                 }
 
@@ -271,7 +274,7 @@ fun GlobalSettingsScreen(
                                         isCheckingUpdates = isCheckingUpdates,
                                         updateCheckError = updateCheckError,
                                         hasTriggeredManualCheck = hasTriggeredManualCheck,
-                                        onAutoUpdateCheckEnabledChange = { viewModel.setAutoUpdateCheckEnabled(it) },
+                                        onAutoUpdateCheckEnabledChange = { UpdateManager.setAutoUpdateCheckEnabled(it) },
                                         onManualCheckClick = {
                                             if (isCheckingUpdates) return@UpdatesSettingsTab
 
@@ -279,7 +282,10 @@ fun GlobalSettingsScreen(
                                                 subPageStack = listOf(SettingsSubPage.UPDATE_AVAILABLE)
                                             } else {
                                                 hasTriggeredManualCheck = true
-                                                viewModel.checkForUpdatesManually()
+                                                UpdateManager.checkForUpdates(
+                                                    force = true,
+                                                    currentVersion = BuildConfig.VERSION_NAME,
+                                                )
                                             }
                                         },
                                         onOpenObtainium = {
@@ -296,7 +302,7 @@ fun GlobalSettingsScreen(
                                 SettingsCategory.DIAGNOSTICS -> {
                                     DiagnosticsSettingsTab(
                                         logLevel = logLevel,
-                                        onLogLevelChange = { viewModel.setLogLevel(it) },
+                                        onLogLevelChange = { SettingsManager.setLogLevel(it) },
                                         onSaveLogReport = { LogReportManager.requestSaveReport() },
                                     )
                                 }
@@ -315,8 +321,8 @@ fun GlobalSettingsScreen(
                             DeadzonesSubPage(
                                 deadzoneLeft = deadzoneLeft,
                                 deadzoneRight = deadzoneRight,
-                                onLeftChange = { viewModel.setPrivdDeadzoneLeft(it) },
-                                onRightChange = { viewModel.setPrivdDeadzoneRight(it) },
+                                onLeftChange = { MacroPadSettings.setDeadzoneLeft(it) },
+                                onRightChange = { MacroPadSettings.setDeadzoneRight(it) },
                             )
                         }
                     }
@@ -350,8 +356,8 @@ fun GlobalSettingsScreen(
                                 initialColor = Color(customAccentColorArgb),
                                 onSaveColor = { newColor ->
                                     val argb = newColor.toArgb()
-                                    viewModel.setCustomAccentColor(argb)
-                                    viewModel.setAccentColor(argb)
+                                    SettingsManager.setCustomAccentColor(argb)
+                                    SettingsManager.setAccentColor(argb)
                                 },
                             )
                         }

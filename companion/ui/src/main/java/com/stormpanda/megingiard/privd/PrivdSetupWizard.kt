@@ -112,8 +112,8 @@ internal fun PrivdSetupWizardDialog(
 ) {
     val context = LocalContext.current
     val colors = LocalAppColors.current
-    val stage by viewModel.privdBootstrapStage.collectAsStateWithLifecycle()
-    val lastError by viewModel.privdLastError.collectAsStateWithLifecycle()
+    val stage by PrivdBootstrapper.stage.collectAsStateWithLifecycle()
+    val lastError by PrivdManager.lastError.collectAsStateWithLifecycle()
     val isBusy = stage != BootstrapStage.IDLE && stage != BootstrapStage.DONE
 
     var step by rememberSaveable { mutableStateOf(0) }
