@@ -1152,7 +1152,7 @@ class AppStateManagerTest {
             AppStateManager.setViewportEditActive(true)
             assertTrue(AppStateManager.isViewportEditActive.value)
             assertEquals(PrimaryModalType.MIRROR_VIEWPORT_EDITOR, AppStateManager.activePrimaryModal.value?.type)
-            assertEquals(CompanionSurfaceMode.VIEWPORT_EDIT, AppStateManager.companionSurfaceMode.value)
+            assertEquals(CompanionSurfaceMode.MACROPAD, AppStateManager.companionSurfaceMode.value)
 
             AppStateManager.setViewportEditActive(false)
             assertFalse(AppStateManager.isViewportEditActive.value)

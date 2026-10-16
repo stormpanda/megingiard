@@ -274,7 +274,7 @@ None identified — Quick Menu and App Shell state transitions are event-driven 
 - [x] **`[QM-09]`** — Collapse 5 vestigial `PrimaryModalType` variants into `MACROPAD_EDITOR` and remove `isBackgroundSettingsActive` / `hasSuspendedPrimaryModal` *(Complexity: High, Risk: Low)*
 - [x] **`[QM-10]`** — Remove duplicate `watchInjectorLifecycle` and `stopInjectors()` calls from `MacroPadScreen` *(Complexity: Low, Risk: Low)*
 - [x] **`[QM-11]`** — Remove stale "Screen Mirroring" edit button entry from `QuickMenuHelpModal` *(Complexity: Low, Risk: Low)*
-- [ ] **`[QM-12]`** — Unify split-brain state between `PrimaryModalType.MIRROR_VIEWPORT_EDITOR` and `CompanionSurfaceMode.VIEWPORT_EDIT` *(Complexity: High, Risk: Low)*
+- [x] **`[QM-12]`** — Unify split-brain state between `PrimaryModalType.MIRROR_VIEWPORT_EDITOR` and `CompanionSurfaceMode.VIEWPORT_EDIT` *(Complexity: High, Risk: Low)*
 - [ ] **`[QM-13]`** — Replace one-shot request `MutableStateFlow` flags and `consume*()` methods with a `SharedFlow` *(Complexity: Med, Risk: Low)*
 - [ ] **`[QM-14]`** — Replace local Accessibility polling loop in `OnboardingWizardDialog` with `AppStateManager.isAccessibilityActive` *(Complexity: Med, Risk: Low)*
 - [ ] **`[QM-15]`** — Centralize `promptInFlight || isCapturing` guard inside `MainActivity.requestScreenCapture()` *(Complexity: Med, Risk: Low)*

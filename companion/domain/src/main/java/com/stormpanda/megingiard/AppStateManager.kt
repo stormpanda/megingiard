@@ -157,8 +157,7 @@ object AppStateManager {
     fun requestMirrorStart() {
         AppLog.i(TAG, "requestMirrorStart")
         val isViewportEditing =
-            _companionSurfaceMode.value == CompanionSurfaceMode.VIEWPORT_EDIT ||
-                _activePrimaryModal.value?.type == PrimaryModalType.MIRROR_VIEWPORT_EDITOR
+            _activePrimaryModal.value?.type == PrimaryModalType.MIRROR_VIEWPORT_EDITOR
         if (!isViewportEditing && (
                 MacroPadState.activeLayout.value
                     ?.mirrorCutouts
@@ -429,7 +428,7 @@ object AppStateManager {
     val isTouchpadSettingsOpen: StateFlow<Boolean> = isPrimaryModalActive(PrimaryModalType.TOUCHPAD_SETTINGS)
     val isEditorActive: StateFlow<Boolean> = isPrimaryModalActive(PrimaryModalType.MACROPAD_EDITOR)
 
-    val isViewportEditActive: StateFlow<Boolean> = isCompanionSurfaceActive(CompanionSurfaceMode.VIEWPORT_EDIT)
+    val isViewportEditActive: StateFlow<Boolean> = isPrimaryModalActive(PrimaryModalType.MIRROR_VIEWPORT_EDITOR)
     val isFullscreenKeyboardActive: StateFlow<Boolean> = isCompanionSurfaceActive(CompanionSurfaceMode.KEYBOARD)
     val isFullscreenMouseActive: StateFlow<Boolean> = isCompanionSurfaceActive(CompanionSurfaceMode.TOUCHPAD)
 
@@ -619,6 +618,7 @@ object AppStateManager {
     }
 
     fun openPrimaryModal(config: PrimaryModalConfig) {
+        val previousType = _activePrimaryModal.value?.type
         AppLog.i(TAG, "openPrimaryModal: type=${config.type} payload=${config.payload}")
         _activePrimaryModal.value = config
         val payload = config.payload
@@ -630,11 +630,16 @@ object AppStateManager {
             ScreenCaptureManager.setFollowActive(false, persist = true)
             _activeCropCutoutId.value = _selectedCutoutId.value
             _isMirrorEditorBackgroundHidden.value = false
-            _companionSurfaceMode.value = CompanionSurfaceMode.VIEWPORT_EDIT
-            MacroPadState.activeLayout.value?.id?.let { layoutId ->
-                MacroPadState.setLayoutMirrorAutoStart(layoutId, true)
+            MacroPadState.activeLayout.value?.let { layout ->
+                MacroPadState.setLayoutMirrorAutoStart(layout.id, true)
             }
             requestMirrorStart()
+        } else if (previousType == PrimaryModalType.MIRROR_VIEWPORT_EDITOR) {
+            _selectedCutoutId.value = null
+            _isMirrorEditorBackgroundHidden.value = false
+            if (payload !is PrimaryModalPayload.CropSelector) {
+                _activeCropCutoutId.value = null
+            }
         }
     }
 
@@ -694,11 +699,6 @@ object AppStateManager {
         _activeCropCutoutId.value = null
         _selectedCutoutId.value = null
         _isMirrorEditorBackgroundHidden.value = false
-        if (currentType == PrimaryModalType.MIRROR_VIEWPORT_EDITOR &&
-            _companionSurfaceMode.value == CompanionSurfaceMode.VIEWPORT_EDIT
-        ) {
-            _companionSurfaceMode.value = CompanionSurfaceMode.MACROPAD
-        }
     }
 
     fun setActiveCropCutoutId(id: String?) {
@@ -709,7 +709,7 @@ object AppStateManager {
     fun setSelectedCutoutId(id: String?) {
         AppLog.d(TAG, "setSelectedCutoutId($id)")
         _selectedCutoutId.value = id
-        if (_companionSurfaceMode.value == CompanionSurfaceMode.VIEWPORT_EDIT) {
+        if (isViewportEditActive.value) {
             _activeCropCutoutId.value = id
         }
     }
@@ -810,9 +810,6 @@ object AppStateManager {
             _selectedCutoutId.value = null
             _activeCropCutoutId.value = null
             _isMirrorEditorBackgroundHidden.value = false
-            if (_companionSurfaceMode.value == CompanionSurfaceMode.VIEWPORT_EDIT) {
-                _companionSurfaceMode.value = CompanionSurfaceMode.MACROPAD
-            }
             if (_activePrimaryModal.value?.type == PrimaryModalType.MIRROR_VIEWPORT_EDITOR) {
                 closePrimaryModal()
             }
@@ -834,11 +831,9 @@ object AppStateManager {
             TAG,
             "closeActiveModal: surface=${_companionSurfaceMode.value} peek=${MacroPadState.isPeekActive.value} primaryModal=${_activePrimaryModal.value?.type}",
         )
-        _activePrimaryModal.value = null
+        closePrimaryModal()
         _companionSurfaceMode.value = CompanionSurfaceMode.MACROPAD
         _fullscreenMouseSensitivity.value = 1.0f
-        _activeCropCutoutId.value = null
-        _selectedCutoutId.value = null
         MacroPadState.resetPeek()
     }
 

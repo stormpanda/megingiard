@@ -190,7 +190,6 @@ fun PrimaryModalHost(
 
         PrimaryModalType.MIRROR_VIEWPORT_EDITOR -> {
             val closeViewportEdit = {
-                AppStateManager.setViewportEditActive(false)
                 AppStateManager.openPrimaryModal(
                     PrimaryModalConfig(
                         type = PrimaryModalType.MACROPAD_EDITOR,
