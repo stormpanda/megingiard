@@ -523,19 +523,8 @@ class MainActivity : ComponentActivity() {
                         }
                         when (action) {
                             MirrorRuntimeAction.START -> {
-                                // Re-read promptInFlight from the live StateFlow before
-                                // acting. The combine() snapshot may have captured a stale
-                                // promptInFlight=false if the manual-start handler set it to
-                                // true in the same scheduler turn — causing a double launch.
-                                if (AppStateManager.promptInFlight.value) {
-                                    AppLog.d(
-                                        TAG,
-                                        "mirror policy: layout=${policy.layoutId} wants ON but prompt already in flight — skipping",
-                                    )
-                                } else {
-                                    AppLog.i(TAG, "mirror policy: layout=${policy.layoutId} wants ON → start")
-                                    startMirrorService()
-                                }
+                                AppLog.i(TAG, "mirror policy: layout=${policy.layoutId} wants ON → start")
+                                startMirrorService()
                             }
 
                             MirrorRuntimeAction.STOP -> {
@@ -556,21 +545,12 @@ class MainActivity : ComponentActivity() {
                     when (command) {
                         CompanionCommand.StartMirror -> {
                             AppLog.i(TAG, "CompanionCommand.StartMirror → triggering capture flow")
-                            val alreadyPrompting = AppStateManager.promptInFlight.value
-                            if (!alreadyPrompting) {
-                                AppStateManager.setPromptInFlight(true)
-                            }
                             activeLayout?.id?.let { layoutId ->
                                 MacroPadState.setLayoutMirrorAutoStart(layoutId, true)
                             }
                             // Manual start bypasses the global auto-start gate — launch directly.
-                            if (isOnValidScreen &&
-                                !ScreenCaptureManager.isCapturing.value &&
-                                !alreadyPrompting
-                            ) {
+                            if (isOnValidScreen) {
                                 startMirrorService()
-                            } else if (!alreadyPrompting) {
-                                AppStateManager.setPromptInFlight(false)
                             }
                         }
 
@@ -725,6 +705,13 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun startMirrorService() {
+        if (AppStateManager.promptInFlight.value || ScreenCaptureManager.isCapturing.value) {
+            AppLog.d(
+                TAG,
+                "startMirrorService: skipping (promptInFlight=${AppStateManager.promptInFlight.value}, isCapturing=${ScreenCaptureManager.isCapturing.value})",
+            )
+            return
+        }
         AppLog.i(TAG, "startMirrorService: starting ScreenCaptureService")
         AppStateManager.setPromptInFlight(true)
         val intent =
