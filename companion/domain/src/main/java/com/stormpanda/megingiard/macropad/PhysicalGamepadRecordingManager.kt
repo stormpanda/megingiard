@@ -74,9 +74,9 @@ object PhysicalGamepadRecordingManager {
     private val _state = MutableStateFlow<GamepadRecordingState>(GamepadRecordingState.Idle)
     val state: StateFlow<GamepadRecordingState> = _state.asStateFlow()
 
-    @Volatile private var recordingStartEpochMs: Long = 0L
+    private var recordingStartEpochMs: Long = 0L
 
-    @Volatile private var collectorJob: Job? = null
+    private var collectorJob: Job? = null
 
     // Per-stick gesture tracking
     private val leftSamples = mutableListOf<PathSample>()
@@ -107,80 +107,89 @@ object PhysicalGamepadRecordingManager {
      *
      * Prerequisites: [PrivdClient.isConnected] must be true.
      */
-    fun startRecording() {
-        if (_state.value is GamepadRecordingState.Recording) {
-            AppLog.w(TAG, "startRecording() called while already recording — ignored")
-            return
-        }
-        AppLog.i(TAG, "startRecording()")
-        resetInternalState()
-        GamepadInjector.isRecordingActive = true
-        PrivdClient.send("SUB GAMEPAD\n")
-        beginRecordingSession(startElapsedMs = SystemClock.elapsedRealtime())
-
-        collectorJob =
-            scope.launch {
-                PrivdClient.evdevEvents.collect { event ->
-                    recordEvdevEvent(event = event, nowElapsedMs = SystemClock.elapsedRealtime())
-                }
+    fun startRecording() =
+        synchronized(recordingLock) {
+            if (_state.value is GamepadRecordingState.Recording) {
+                AppLog.w(TAG, "startRecording() called while already recording — ignored")
+                return@synchronized
             }
-    }
+            AppLog.i(TAG, "startRecording()")
+            resetInternalState()
+            GamepadInjector.isRecordingActive = true
+            PrivdClient.send("SUB GAMEPAD\n")
+            beginRecordingSession(startElapsedMs = SystemClock.elapsedRealtime())
+
+            collectorJob?.cancel()
+            collectorJob =
+                scope.launch {
+                    PrivdClient.evdevEvents.collect { event ->
+                        recordEvdevEvent(event = event, nowElapsedMs = SystemClock.elapsedRealtime())
+                    }
+                }
+        }
 
     /**
      * Stops recording, closes any open gestures, and emits [GamepadRecordingState.Done].
      */
-    fun finishRecording() {
-        val currentState = _state.value
-        if (currentState !is GamepadRecordingState.Recording) {
-            AppLog.w(TAG, "finishRecording() called while not recording — ignored")
-            return
+    fun finishRecording() =
+        synchronized(recordingLock) {
+            val currentState = _state.value
+            if (currentState !is GamepadRecordingState.Recording) {
+                AppLog.w(TAG, "finishRecording() called while not recording — ignored")
+                return@synchronized
+            }
+            AppLog.i(TAG, "finishRecording() — ${recordedSteps.size} closed gestures so far")
+
+            collectorJob?.cancel()
+            collectorJob = null
+
+            val steps = completeRecordingAt(stopElapsedMs = SystemClock.elapsedRealtime())
+
+            PrivdClient.send("UNSUB GAMEPAD\n")
+            GamepadInjector.isRecordingActive = false
+
+            AppLog.d(TAG, "finishRecording() done: ${steps.size} steps")
+            _state.value = GamepadRecordingState.Done(steps)
         }
-        AppLog.i(TAG, "finishRecording() — ${recordedSteps.size} closed gestures so far")
-
-        collectorJob?.cancel()
-        collectorJob = null
-
-        val steps = completeRecordingAt(stopElapsedMs = SystemClock.elapsedRealtime())
-
-        PrivdClient.send("UNSUB GAMEPAD\n")
-        GamepadInjector.isRecordingActive = false
-
-        AppLog.d(TAG, "finishRecording() done: ${steps.size} steps")
-        _state.value = GamepadRecordingState.Done(steps)
-    }
 
     /**
      * Cancels the recording session without emitting any steps.
      */
-    fun cancelRecording() {
-        AppLog.i(TAG, "cancelRecording()")
-        collectorJob?.cancel()
-        collectorJob = null
-        PrivdClient.send("UNSUB GAMEPAD\n")
-        GamepadInjector.isRecordingActive = false
-        _state.value = GamepadRecordingState.Idle
-    }
+    fun cancelRecording() =
+        synchronized(recordingLock) {
+            AppLog.i(TAG, "cancelRecording()")
+            collectorJob?.cancel()
+            collectorJob = null
+            PrivdClient.send("UNSUB GAMEPAD\n")
+            GamepadInjector.isRecordingActive = false
+            resetInternalState()
+            _state.value = GamepadRecordingState.Idle
+        }
 
     /** Resets [state] to [GamepadRecordingState.Idle]. Call after consuming a [GamepadRecordingState.Done]. */
-    fun resetState() {
-        AppLog.d(TAG, "resetState()")
-        _state.value = GamepadRecordingState.Idle
-    }
+    fun resetState() =
+        synchronized(recordingLock) {
+            AppLog.d(TAG, "resetState()")
+            resetInternalState()
+            _state.value = GamepadRecordingState.Idle
+        }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Internal
     // ─────────────────────────────────────────────────────────────────────────
 
-    internal fun startRecordingForTest(startElapsedMs: Long) {
-        resetInternalState()
-        beginRecordingSession(startElapsedMs = startElapsedMs)
-    }
+    internal fun startRecordingForTest(startElapsedMs: Long) =
+        synchronized(recordingLock) {
+            resetInternalState()
+            beginRecordingSession(startElapsedMs = startElapsedMs)
+        }
 
-    internal fun finishRecordingForTest(stopElapsedMs: Long): List<MacroStep> {
-        val steps = completeRecordingAt(stopElapsedMs = stopElapsedMs)
-        _state.value = GamepadRecordingState.Done(steps)
-        return steps
-    }
+    internal fun finishRecordingForTest(stopElapsedMs: Long): List<MacroStep> =
+        synchronized(recordingLock) {
+            val steps = completeRecordingAt(stopElapsedMs = stopElapsedMs)
+            _state.value = GamepadRecordingState.Done(steps)
+            return@synchronized steps
+        }
 
     internal fun recordEvdevEvent(
         event: EvdevEvent,
