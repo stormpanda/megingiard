@@ -31,13 +31,6 @@ final class SurfaceControlReflect {
     private static final Method M_TX_SET_DISPLAY_PROJECTION;
     private static final Method M_TX_APPLY;
 
-    /**
-     * {@code LayerStack.from(int)} — non-null only on Android 12+ where
-     * {@code setDisplayLayerStack} takes a {@code LayerStack} object rather than
-     * a plain {@code int}.
-     */
-    private static final Method M_LAYER_STACK_FROM;
-
     static {
         try {
             SURFACE_CONTROL = Class.forName("android.view.SurfaceControl");
@@ -50,27 +43,12 @@ final class SurfaceControlReflect {
             TRANSACTION_CTOR = txClass.getConstructor();
             M_TX_SET_DISPLAY_SURFACE = txClass.getMethod(
                     "setDisplaySurface", IBinder.class, Surface.class);
+            M_TX_SET_DISPLAY_LAYER_STACK = txClass.getMethod(
+                    "setDisplayLayerStack", IBinder.class, int.class);
             M_TX_SET_DISPLAY_PROJECTION = txClass.getMethod(
                     "setDisplayProjection",
                     IBinder.class, int.class, Rect.class, Rect.class);
             M_TX_APPLY = txClass.getMethod("apply");
-
-            // setDisplayLayerStack signature changed in Android 12 from int to LayerStack.
-            // Try the int form first (Android ≤11); fall back to LayerStack (Android 12+).
-            Method setLayerStack;
-            Method layerStackFrom = null;
-            try {
-                setLayerStack = txClass.getMethod(
-                        "setDisplayLayerStack", IBinder.class, int.class);
-            } catch (NoSuchMethodException ignored) {
-                Class<?> lsClass = Class.forName("android.view.SurfaceControl$LayerStack");
-                layerStackFrom = lsClass.getMethod("from", int.class);
-                setLayerStack = txClass.getMethod(
-                        "setDisplayLayerStack", IBinder.class, lsClass);
-            }
-            M_TX_SET_DISPLAY_LAYER_STACK = setLayerStack;
-            M_LAYER_STACK_FROM = layerStackFrom;
-
         } catch (ReflectiveOperationException e) {
             throw new RuntimeException("SurfaceControl reflection setup failed", e);
         }
@@ -131,12 +109,7 @@ final class SurfaceControlReflect {
                                                     Rect layerStackRect,
                                                     Rect displayRect)
             throws ReflectiveOperationException {
-        if (M_LAYER_STACK_FROM != null) {
-            Object ls = M_LAYER_STACK_FROM.invoke(null, layerStack);
-            M_TX_SET_DISPLAY_LAYER_STACK.invoke(tx, displayToken, ls);
-        } else {
-            M_TX_SET_DISPLAY_LAYER_STACK.invoke(tx, displayToken, layerStack);
-        }
+        M_TX_SET_DISPLAY_LAYER_STACK.invoke(tx, displayToken, layerStack);
         M_TX_SET_DISPLAY_PROJECTION.invoke(tx, displayToken, orientation, layerStackRect, displayRect);
         M_TX_APPLY.invoke(tx);
     }
