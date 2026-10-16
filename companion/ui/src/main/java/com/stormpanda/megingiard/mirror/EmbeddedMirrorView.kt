@@ -113,7 +113,7 @@ fun EmbeddedMirrorView(
         remember {
             object {
                 var container: MultiCutoutContainer? = null
-                var textureView: ThrottledTextureView? = null
+                var textureView: TextureView? = null
                 var masterSurface: Surface? = null
                 var currentRoutedSurface: Surface? = null
                 var gpuMotionSmoother: GpuMotionSmoother? = null
@@ -238,7 +238,7 @@ fun EmbeddedMirrorView(
             containerHolder.container = mcc
 
             val tv =
-                ThrottledTextureView(ctx).apply {
+                TextureView(ctx).apply {
                     layoutParams =
                         FrameLayout.LayoutParams(
                             ViewGroup.LayoutParams.MATCH_PARENT,
@@ -351,16 +351,12 @@ fun EmbeddedMirrorView(
                 if (effectiveShowLayoutBackground) layout?.maskScaleMode ?: BackgroundScaleMode.FILL else BackgroundScaleMode.FILL
             mcc.ambientDim = if (overrideCutouts == null) layout?.ambientDim ?: 0f else 0f
 
-            val tv = containerHolder.textureView
-            if (tv != null) {
-                tv.maxFps = maxFps
-                containerHolder.masterSurface?.let { surface ->
-                    if (surface.isValid) {
-                        try {
-                            surface.setFrameRate(maxFps.toFloat(), Surface.FRAME_RATE_COMPATIBILITY_DEFAULT)
-                        } catch (e: Exception) {
-                            AppLog.e(TAG, "Error updating surface frame rate", e)
-                        }
+            containerHolder.masterSurface?.let { surface ->
+                if (surface.isValid) {
+                    try {
+                        surface.setFrameRate(maxFps.toFloat(), Surface.FRAME_RATE_COMPATIBILITY_DEFAULT)
+                    } catch (e: Exception) {
+                        AppLog.e(TAG, "Error updating surface frame rate", e)
                     }
                 }
             }
