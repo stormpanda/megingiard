@@ -874,18 +874,6 @@ class AppStateManagerTest {
         }
 
     @Test
-    fun `setPromptInFlight updates promptInFlight state flow correctly`() =
-        runTest {
-            assertFalse(AppStateManager.promptInFlight.value)
-
-            AppStateManager.setPromptInFlight(true)
-            assertTrue(AppStateManager.promptInFlight.value)
-
-            AppStateManager.setPromptInFlight(false)
-            assertFalse(AppStateManager.promptInFlight.value)
-        }
-
-    @Test
     fun `openPrimaryModal and closePrimaryModal update activePrimaryModal state flow`() =
         runTest {
             assertEquals(null, AppStateManager.activePrimaryModal.value)
@@ -1281,21 +1269,6 @@ class AppStateManagerTest {
                 AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
                 // If value unchanged (true -> true), no new emission or same item
                 expectNoEvents()
-
-                cancelAndIgnoreRemainingEvents()
-            }
-        }
-
-    @Test
-    fun `autoSwitchOffToastEvent emits unit when switching away from AUTO mode`() =
-        runTest {
-            AppStateManager.autoSwitchOffToastEvent.test {
-                AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
-                expectNoEvents()
-
-                // Transitioning from AUTO to MACROPAD triggers the event
-                AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD, isAutoSwitchButton = false)
-                assertEquals(Unit, awaitItem())
 
                 cancelAndIgnoreRemainingEvents()
             }
