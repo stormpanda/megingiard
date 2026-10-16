@@ -113,7 +113,7 @@ internal fun EditLayoutSubPageContent(
     onNameChange: (String) -> Unit,
     onInvisibleButtonsChange: (Boolean) -> Unit,
     onOpenAutomaticLayoutSwitching: () -> Unit,
-    onOpenColorSubMenu: (target: LayoutColorTarget) -> Unit,
+    onOpenColorSubMenu: (target: EditorColorTarget) -> Unit,
     onOpenTouchpadSettings: () -> Unit,
     onDeleteLayout: () -> Unit,
     onDiscard: () -> Unit = {},
@@ -543,7 +543,7 @@ internal fun AutomaticLayoutSwitchingSubPageContent(
 internal fun LayoutColorSubPageContent(
     layout: PadLayout,
     savedLayout: PadLayout?,
-    target: LayoutColorTarget,
+    target: EditorColorTarget,
     accentColor: Color,
     onColorOptionChanged: (ColorOption) -> Unit,
     onOpenColorWheel: (title: String, breadcrumbs: List<String>, initialColor: Color, inFlightLayout: PadLayout) -> Unit,

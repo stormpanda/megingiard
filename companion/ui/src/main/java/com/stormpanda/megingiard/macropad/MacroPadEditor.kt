@@ -2759,7 +2759,7 @@ private fun ButtonsDeck(
                 GamepadActionCard(
                     title = btn.label.ifBlank { btn.action.displayLabel() },
                     description = describePadButton(btn),
-                    icon = btn.action.toCategory().icon(),
+                    icon = btn.action.toCategory().icon,
                     onClick = { onEditButton(btn) },
                     itemKey = btn.id,
                     onFocusChanged = { isFocused ->
@@ -2779,7 +2779,7 @@ private fun ButtonsDeck(
                     GamepadReorderCard(
                         title = btn.label.ifBlank { btn.action.displayLabel() },
                         description = desc,
-                        icon = btn.action.toCategory().icon(),
+                        icon = btn.action.toCategory().icon,
                         index = index,
                         totalCount = buttons.size,
                         isMoving = isMoving,
@@ -2944,7 +2944,7 @@ private fun EditButtonPositionsSubPageContent(
                 GamepadCardRow(
                     title = btn.label.ifBlank { btn.action.displayLabel() },
                     description = desc,
-                    icon = btn.action.toCategory().icon(),
+                    icon = btn.action.toCategory().icon,
                     trailingContent = {
                         Button2DAdjusterPill(
                             isAdjusting = isMoving,

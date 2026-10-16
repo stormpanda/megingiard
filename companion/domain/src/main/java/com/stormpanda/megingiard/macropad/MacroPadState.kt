@@ -31,20 +31,6 @@ private fun defaultInitialName(): String =
         else -> "Default"
     }
 
-private fun List<String>.nextUniqueName(
-    baseName: String,
-    fallback: String,
-): String {
-    val normalizedBase = baseName.trim().ifBlank { fallback }
-    if (none { it.equals(normalizedBase, ignoreCase = true) }) return normalizedBase
-    var index = 2
-    while (true) {
-        val candidate = "$normalizedBase ($index)"
-        if (none { it.equals(candidate, ignoreCase = true) }) return candidate
-        index += 1
-    }
-}
-
 private fun migrateButtonBgColorOption(option: ColorOption?): ColorOption? {
     if (option is ColorOption.Custom) {
         val alpha = (option.argb ushr 24) and 0xFF

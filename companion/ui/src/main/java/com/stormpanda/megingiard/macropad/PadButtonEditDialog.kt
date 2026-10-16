@@ -396,7 +396,7 @@ internal fun EditButtonSubPageContent(
     selectedIcon: String? = null,
     onOpenIconPicker: (currentDraft: PadButton) -> Unit,
     onOpenAppPicker: (currentDraft: PadButton) -> Unit,
-    onOpenColorSubMenu: (currentDraft: PadButton, target: ButtonColorTarget) -> Unit,
+    onOpenColorSubMenu: (currentDraft: PadButton, target: EditorColorTarget) -> Unit,
     onOpenKeyboardPicker: ((currentDraft: PadButton) -> Unit)? = null,
     onOpenGamepadPicker: ((currentDraft: PadButton, slotIndex: Int) -> Unit)? = null,
     onOpenMousePicker: ((currentDraft: PadButton) -> Unit)? = null,
@@ -831,19 +831,19 @@ internal fun EditButtonSubPageContent(
 
     listOf(
         Triple(
-            ButtonColorTarget.TEXT,
+            EditorColorTarget.TEXT,
             Icons.Rounded.FormatColorText,
             buttonPreviewLeading(currentText, Color.Transparent, Color.Transparent, true) to
                 describeButtonColorOption(buttonTextColor, currentText),
         ),
         Triple(
-            ButtonColorTarget.BORDER,
+            EditorColorTarget.BORDER,
             Icons.Rounded.Palette,
             buttonPreviewLeading(Color.Transparent, currentBorder, Color.Transparent, false) to
                 describeButtonColorOption(buttonBorderColor, currentBorder),
         ),
         Triple(
-            ButtonColorTarget.BG,
+            EditorColorTarget.BG,
             Icons.Rounded.FormatColorFill,
             buttonPreviewLeading(Color.Transparent, Color.Transparent, currentBg, false) to
                 describeButtonColorOption(buttonBgColor, currentBg),
@@ -954,7 +954,7 @@ internal fun ButtonColorSubPageContent(
     button: PadButton,
     savedButton: PadButton?,
     activeLayout: PadLayout?,
-    target: ButtonColorTarget,
+    target: EditorColorTarget,
     accentColor: Color,
     onColorOptionChanged: (ColorOption?) -> Unit,
     onOpenColorWheel: (title: String, breadcrumbs: List<String>, initialColor: Color, inFlightButton: PadButton) -> Unit,

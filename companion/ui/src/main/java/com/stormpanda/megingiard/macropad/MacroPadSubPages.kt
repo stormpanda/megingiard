@@ -70,9 +70,6 @@ internal enum class EditorColorTarget(
     ),
 }
 
-internal typealias LayoutColorTarget = EditorColorTarget
-internal typealias ButtonColorTarget = EditorColorTarget
-
 internal fun PadLayout.getColorOption(target: EditorColorTarget): ColorOption =
     when (target) {
         EditorColorTarget.TEXT -> buttonTextColor
@@ -143,7 +140,7 @@ internal sealed interface MacroPadSubPage {
 
     data class LayoutColor(
         val layoutId: String,
-        val target: LayoutColorTarget,
+        val target: EditorColorTarget,
     ) : MacroPadSubPage {
         override val parentSection = EditorSection.LAYOUTS
     }
@@ -213,7 +210,7 @@ internal sealed interface MacroPadSubPage {
     data class ButtonColor(
         val button: PadButton?,
         val draftButton: PadButton,
-        val target: ButtonColorTarget,
+        val target: EditorColorTarget,
     ) : MacroPadSubPage {
         override val parentSection = EditorSection.BUTTONS
     }
