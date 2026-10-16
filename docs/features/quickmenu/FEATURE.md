@@ -10,9 +10,8 @@
 ### Overview
 
 The Quick Menu Bar and Quick Menu are the primary navigation surface of the app. A slim bar-shaped
-affordance is always visible at the configured screen edge on the secondary (non-default) display, and also
-inside the Presentation window (on the secondary display) when screen mirroring is active with ambient
-mode enabled. Swiping from that edge opens the Quick Menu — a two-card overlay that provides
+affordance is always visible at the configured screen edge on the secondary (non-default) display, including
+when screen mirroring is active inside `MainAppScreen` via `EmbeddedMirrorView`. Swiping from that edge opens the Quick Menu — a two-card overlay that provides
 profile and layout switching, layout editing, settings access, and full mirror and screenshot controls.
 
 The same swipe gesture closes any open interactive modal overlay (Quick Menu, MacroPad Editor,
@@ -51,7 +50,7 @@ the universal "go back" mechanism throughout the app.
 
 - The bottom card is always shown when the Quick Menu is open.
 - **Profile section:** A horizontally scrollable row of chips, one per profile (`ScrollableSelectionRow` backed by `Row` with `Modifier.horizontalScroll`). Tapping a chip immediately activates that profile. The Quick Menu remains open so the user can make further adjustments. Unselected profile chips render text tinted with the primary accent color (`colors.accent`).
-- **Layout section:** A horizontally scrollable row of chips, one per **enabled** layout in the active profile. Disabled layouts are hidden from this list. Tapping a chip immediately activates that layout. The Quick Menu remains open so the user can make further adjustments. Unselected layout chips render text tinted with the primary accent color (`colors.accent`).
+- **Layout section:** A horizontally scrollable row of chips, one per layout in the active profile (`activeProfile.layouts`). Tapping a chip immediately activates that layout via `LayoutTransitionManager.switchLayout(layoutId)`. The Quick Menu remains open so the user can make further adjustments. Unselected layout chips render text tinted with the primary accent color (`colors.accent`).
 - New profiles and layouts MUST be created inside the `MacroPadEditor` (using the "+ Add" separator actions), not in the Quick Menu.
 
 ### FR-PM4: Action Buttons (Bottom Card)
@@ -76,8 +75,8 @@ the universal "go back" mechanism throughout the app.
       icon when frozen (to resume/unfreeze), and a Pause icon when capturing/active (to freeze). Tinted
       with `colors.accent` when frozen. Disabled when not capturing or when in Companion Hub.
   - **Take Screenshot Card (Right Card):**
-    - Headline: "TAKE SCREENSHOT" (`R.string.quick_menu_take_screenshot`).
-    - **Top Screenshot** icon button: captures Display 0 (Top Screen) via `ScreenCaptureManager.requestScreenshot(ScreenshotTarget.TOP)`. Uses Material Symbol `splitscreen_bottom` (inverted per layout orientation convention) with label "Top". Always enabled (automatically triggers a one-shot capture prompt if neither mirroring nor Privileged Mode is active).
+    - Headline: "TAKE SCREENSHOT" (`R.string.quick_menu_take_screenshot`). All three screenshot buttons are unconditionally enabled.
+    - **Top Screenshot** icon button: captures Display 0 (Top Screen) via `ScreenCaptureManager.requestScreenshot(ScreenshotTarget.TOP)`. Uses Material Symbol `splitscreen_bottom` (inverted per layout orientation convention) with label "Top". Automatically triggers a one-shot capture prompt if neither mirroring nor Privileged Mode is active.
     - **Bottom Screenshot** icon button: captures the secondary display (Bottom Screen) via `ScreenCaptureManager.requestScreenshot(ScreenshotTarget.BOTTOM)`. Uses Material Symbol `splitscreen_top` with label "Bottom". Auto-dismisses the Quick Menu overlay to capture a clean MacroPad/companion screen.
     - **Both Screenshot** icon button: captures both screens simultaneously via `ScreenCaptureManager.requestScreenshot(ScreenshotTarget.BOTH)` and composites them into a vertical dual-screen image. Uses Material Symbol `splitscreen` with label "Both".
 - All icon buttons in these cards have compact vertical spacing with clear text labels rendered directly beneath each icon.
@@ -95,7 +94,7 @@ the universal "go back" mechanism throughout the app.
 ### Component Layout
 
 ```
-MainAppScreen (or BackgroundMacroPadOverlay)
+MainAppScreen (MacroPadScreen / CompanionDashboardScreen / EmbeddedMirrorView)
   └── QuickMenuBar
         ├── QuickMenuBarTab  — slim bar affordance at screen edge
         └── QuickMenu        — full-screen overlay when isQuickMenuOpen == true
@@ -111,7 +110,8 @@ MainAppScreen (or BackgroundMacroPadOverlay)
               └── Bottom Column card (inline Column, slides in from bottom)
                      ├── Profile chips row
                      ├── Layout chips row
-                     ├── "Show Dashboard" ActionButton (QuickMenuActionChip, conditional)
+                     ├── Divider
+                     ├── Switch to Hub / Switch to Game Profile + MagicalAutoToggleChip Row
                      ├── Divider
                      ├── "Edit Layout" ActionButton (QuickMenuActionChip)
                      ├── "Global Settings" ActionButton (QuickMenuActionChip)
@@ -153,10 +153,10 @@ precedence to the Quick Menu Bar navigation.
 
 ### State Ownership
 
-| State flag | Owner | Triggered by |
+| State / Event | Owner | Triggered by |
 | --- | --- | --- |
 | `AppStateManager.isQuickMenuOpen` | `AppStateManager` | `handleEdgeSwipe()` / scrim tap |
-| `AppStateManager.shutOffRequested` | `AppStateManager` | Shut Off confirm button in Quick Menu |
+| `AppStateManager.commands` (`CompanionCommand`) | `AppStateManager` | `requestMirrorStart()`, `requestMirrorStop()`, `requestShutOff()`, `requestAppLaunch()` |
 | `AppStateManager.isEditorActive` | `AppStateManager` | "Edit Layout" button |
 | `AppStateManager.isViewportEditActive` | `AppStateManager` | "Arrange Cutouts" action in `MacroPadEditor` (Mirror tab) |
 | `AppStateManager.activeSwipe` | `AppStateManager` | Gesture drag progress updates and release/cancel resets |
@@ -205,11 +205,13 @@ Dialogs and configuration overlays presented on the primary display (Display 0) 
 | [QuickMenuComponents.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/QuickMenuComponents.kt) | ProfileRow, LayoutRow, SectionLabel, and QuickMenuActionChip composables |
 | [QuickMenuDialogs.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/QuickMenuDialogs.kt) | `ShutOffConfirmDialog` modal confirmation dialog for app shutdown |
 | [QuickMenuMirrorCard.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/QuickMenuMirrorCard.kt) | Slide-in MirrorControlCard and MirrorControlIconButton composables |
-| [PrimaryOverlayContainer.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayContainer.kt) | Top-screen bottom-anchored modal sheet container with 3-sided bezel border, slide/fade animation, bumper badges, footer action prompt bar, and auto-focus initialization |
+| [PrimaryOverlayContainer.kt](../../../shared/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayContainer.kt) | Top-screen bottom-anchored modal sheet container with 3-sided bezel border, slide/fade animation, bumper badges, footer action prompt bar, and auto-focus initialization |
+| [PrimaryOverlayHost.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayHost.kt) | Shared mirror freeze state machine, gamepad key/motion routing, and modal Compose host shared by `PrimaryOverlayManager` and `PrimaryOverlayActivity` |
 | [PrimaryOverlayManager.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayManager.kt) | WindowManager overlay coordinator on Display 0; routes gamepad key and motion events |
-| [PrimaryOverlayInputBridge.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayInputBridge.kt) | Gamepad bumper event dispatcher, joystick-to-Dpad motion translator, and `primaryOverlayFocusable` modifier |
-| [GamepadComponents.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/GamepadComponents.kt) | Gamepad-First UI component library: `GamepadFocusCard`, `GamepadToggleCard`, `GamepadStepperCard`, `GamepadChoiceCard`, `GamepadActionCard`, `GamepadColorPaletteCard`, `GamepadColorPaletteGrid`, and `PrimaryOverlayFooter` |
+| [PrimaryOverlayInputBridge.kt](../../../shared/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayInputBridge.kt) | Gamepad bumper event dispatcher, joystick-to-Dpad motion translator, and `primaryOverlayFocusable` modifier |
+| [GamepadComponents.kt](../../../shared/ui/src/main/java/com/stormpanda/megingiard/ui/GamepadComponents.kt) | Gamepad-First UI component library: `GamepadFocusCard`, `GamepadToggleCard`, `GamepadStepperCard`, `GamepadChoiceCard`, `GamepadActionCard`, `GamepadColorPaletteCard`, `GamepadColorPaletteGrid`, and `PrimaryOverlayFooter` |
 | [AppStateManager.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/AppStateManager.kt) | `isQuickMenuOpen`, `isAnyModalActive`, `handleEdgeSwipe()`, modal open/close helpers; holds active swipe state |
 | [SwipeGestureProcessor.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/SwipeGestureProcessor.kt) | Edge-swipe detection (`pointerInput`); evaluates threshold, triggers haptics, and coordinates release actions |
-| [SwipeGestureProgress.kt](../../../shared/core/src/main/kotlin/com/stormpanda/megingiard/SwipeGestureProgress.kt) | Data model defining the current active swipe type, delta, threshold, and past-threshold flag |
+| [SwipeGestureProgress.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/SwipeGestureProgress.kt) | Data model defining the current active swipe type, delta, threshold, and past-threshold flag |
+
 
