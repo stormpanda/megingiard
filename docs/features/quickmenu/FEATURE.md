@@ -13,10 +13,9 @@ The Quick Menu Bar and Quick Menu are the primary navigation surface of the app.
 affordance is always visible at the configured screen edge on the secondary (non-default) display, and also
 inside the Presentation window (on the secondary display) when screen mirroring is active with ambient
 mode enabled. Swiping from that edge opens the Quick Menu — a two-card overlay that provides
-profile and layout switching, layout editing, settings access, and full mirror controls including
-the Background Settings shortcut.
+profile and layout switching, layout editing, settings access, and full mirror and screenshot controls.
 
-The same swipe gesture closes any open interactive modal overlay (Quick Menu, Background Settings,
+The same swipe gesture closes any open interactive modal overlay (Quick Menu, MacroPad Editor,
 Fullscreen Keyboard, Fullscreen Mouse Overlay, Viewport Edit, Peek/Scroll Peek), making the Quick Menu Bar
 the universal "go back" mechanism throughout the app.
 
@@ -159,7 +158,7 @@ precedence to the Quick Menu Bar navigation.
 | `AppStateManager.isQuickMenuOpen` | `AppStateManager` | `handleEdgeSwipe()` / scrim tap |
 | `AppStateManager.shutOffRequested` | `AppStateManager` | Shut Off confirm button in Quick Menu |
 | `AppStateManager.isEditorActive` | `AppStateManager` | "Edit Layout" button |
-| `AppStateManager.isViewportEditActive` | `AppStateManager` | "Screen Mirroring" action button in Quick Menu |
+| `AppStateManager.isViewportEditActive` | `AppStateManager` | "Arrange Cutouts" action in `MacroPadEditor` (Mirror tab) |
 | `AppStateManager.activeSwipe` | `AppStateManager` | Gesture drag progress updates and release/cancel resets |
 | `ScreenCaptureManager.isFrozen` | `ScreenCaptureManager` | "Freeze/Unfreeze" button |
 | `ScreenCaptureManager.isTouchProjectionActive` | `ScreenCaptureManager` | Cutout layout settings |
