@@ -280,7 +280,7 @@
 - [x] **`[GF-02]`** — Replace custom `JobRefHolder` class with standard Compose `LaunchedEffect` auto-hide *(Complexity: Low, Risk: Low)*
 - [x] **`[GF-03]`** — Remove unused `RomManager.detectSystem(Context, Array<DocumentFile>)` overload *(Complexity: Low, Risk: Low)*
 - [x] **`[GF-04]`** — Remove unreachable `systemDef == null` and single-OK fallback branches in `RomFolderCoreChooserDialog` *(Complexity: Low, Risk: Low)*
-- [ ] **`[GF-05]`** — Remove redundant `RomManager.romApps` linear scan fallback in `SwitchLauncher.launchGame` *(Complexity: Low, Risk: Low)*
+- [x] **`[GF-05]`** — Remove redundant `RomManager.romApps` linear scan fallback in `SwitchLauncher.launchGame` *(Complexity: Low, Risk: Low)*
 - [ ] **`[GF-06]`** — Remove paranoia `try/catch (IllegalArgumentException)` in `HorizontalPosterCarousel` and duplicate `AppPaletteExtractor.init` *(Complexity: Low, Risk: Low)*
 - [ ] **`[GF-07]`** — Deduplicate `Drawable.toAndroidBitmap()` and icon loading between `FocusImageCache` and `AppPaletteExtractor` *(Complexity: Med, Risk: Low)*
 - [ ] **`[GF-08]`** — Remove redundant `collectionAppsById` pre-computation map in `FocusTopLauncherScreen` *(Complexity: Low, Risk: Low)*
