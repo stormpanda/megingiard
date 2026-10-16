@@ -550,71 +550,62 @@ class MainActivity : ComponentActivity() {
                     }
             }
 
-            // ── Mirror button signals from MacroPad ───────────────────────────────
-            // MirrorPlayStop button sets these flags in AppStateManager; MainActivity
-            // handles them here because sending intents or launching Activities requires
+            // ── One-shot imperative commands from AppStateManager ─────────────────
             LaunchedEffect(Unit) {
-                AppStateManager.mirrorStartRequested.collect { requested ->
-                    if (!requested) return@collect
-                    AppLog.i(TAG, "mirrorStartRequested → triggering capture flow")
-                    AppStateManager.consumeMirrorStartRequest()
-                    val alreadyPrompting = AppStateManager.promptInFlight.value
-                    if (!alreadyPrompting) {
-                        AppStateManager.setPromptInFlight(true)
-                    }
-                    activeLayout?.id?.let { layoutId ->
-                        MacroPadState.setLayoutMirrorAutoStart(layoutId, true)
-                    }
-                    // Manual start bypasses the global auto-start gate — launch directly.
-                    if (isOnValidScreen &&
-                        !ScreenCaptureManager.isCapturing.value &&
-                        !alreadyPrompting
-                    ) {
-                        startMirrorService()
-                    } else if (!alreadyPrompting) {
-                        AppStateManager.setPromptInFlight(false)
-                    }
-                }
-            }
+                AppStateManager.commands.collect { command ->
+                    when (command) {
+                        CompanionCommand.StartMirror -> {
+                            AppLog.i(TAG, "CompanionCommand.StartMirror → triggering capture flow")
+                            val alreadyPrompting = AppStateManager.promptInFlight.value
+                            if (!alreadyPrompting) {
+                                AppStateManager.setPromptInFlight(true)
+                            }
+                            activeLayout?.id?.let { layoutId ->
+                                MacroPadState.setLayoutMirrorAutoStart(layoutId, true)
+                            }
+                            // Manual start bypasses the global auto-start gate — launch directly.
+                            if (isOnValidScreen &&
+                                !ScreenCaptureManager.isCapturing.value &&
+                                !alreadyPrompting
+                            ) {
+                                startMirrorService()
+                            } else if (!alreadyPrompting) {
+                                AppStateManager.setPromptInFlight(false)
+                            }
+                        }
 
-            LaunchedEffect(Unit) {
-                AppStateManager.mirrorStopRequested.collect { requested ->
-                    if (!requested) return@collect
-                    AppLog.i(TAG, "mirrorStopRequested → sending STOP to ScreenCaptureService")
-                    AppStateManager.consumeMirrorStopRequest()
-                    activeLayout?.id?.let { layoutId ->
-                        MacroPadState.setLayoutMirrorAutoStart(layoutId, false)
-                    }
-                    if (ScreenCaptureManager.isCapturing.value) {
-                        stopMirrorService()
-                    }
-                }
-            }
+                        CompanionCommand.StopMirror -> {
+                            AppLog.i(TAG, "CompanionCommand.StopMirror → sending STOP to ScreenCaptureService")
+                            activeLayout?.id?.let { layoutId ->
+                                MacroPadState.setLayoutMirrorAutoStart(layoutId, false)
+                            }
+                            if (ScreenCaptureManager.isCapturing.value) {
+                                stopMirrorService()
+                            }
+                        }
 
-            LaunchedEffect(Unit) {
-                AppStateManager.shutOffRequested.collect { requested ->
-                    if (!requested) return@collect
-                    AppLog.i(TAG, "shutOffRequested → performing graceful shutdown")
-                    AppStateManager.consumeShutOffRequest()
-                    if (ScreenCaptureManager.isCapturing.value) {
-                        stopMirrorService()
-                    }
-                    PrivdClient.disconnect()
-                    finishAndRemoveTask()
-                }
-            }
+                        CompanionCommand.ShutOff -> {
+                            AppLog.i(TAG, "CompanionCommand.ShutOff → performing graceful shutdown")
+                            if (ScreenCaptureManager.isCapturing.value) {
+                                stopMirrorService()
+                            }
+                            PrivdClient.disconnect()
+                            finishAndRemoveTask()
+                        }
 
-            LaunchedEffect(Unit) {
-                AppStateManager.pendingAppLaunchRequest.collect { req ->
-                    if (req == null) return@collect
-                    AppLog.i(TAG, "pendingAppLaunchRequest → launching ${req.packageName} at (${req.touchX}, ${req.touchY})")
-                    AppStateManager.consumeAppLaunchRequest()
-                    AppLauncherManager.launchApp(
-                        context = this@MainActivity,
-                        packageName = req.packageName,
-                        touchX = req.touchX,
-                        touchY = req.touchY,
-                    )
+                        is CompanionCommand.LaunchApp -> {
+                            AppLog.i(
+                                TAG,
+                                "CompanionCommand.LaunchApp → launching ${command.packageName} at (${command.touchX}, ${command.touchY})",
+                            )
+                            AppLauncherManager.launchApp(
+                                context = this@MainActivity,
+                                packageName = command.packageName,
+                                touchX = command.touchX,
+                                touchY = command.touchY,
+                            )
+                        }
+                    }
                 }
             }
 

@@ -1,15 +1,17 @@
 package com.stormpanda.megingiard.macropad
 
+import app.cash.turbine.test
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.CompanionCommand
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -75,25 +77,34 @@ class MacroPadActionDispatchTest {
     }
 
     @Test
-    fun injectActionDown_mirrorActions() {
-        ScreenCaptureManager.setCapturing(false)
-        injectActionDown(PadAction.MirrorPlayStop)
-        assertTrue(AppStateManager.mirrorStartRequested.value)
+    fun injectActionDown_mirrorActions() =
+        runTest {
+            AppStateManager.commands.test {
+                ScreenCaptureManager.setCapturing(false)
+                injectActionDown(PadAction.MirrorPlayStop)
+                assertEquals(CompanionCommand.StartMirror, awaitItem())
 
-        ScreenCaptureManager.setCapturing(true)
-        injectActionDown(PadAction.MirrorPlayStop)
-        assertTrue(AppStateManager.mirrorStopRequested.value)
+                ScreenCaptureManager.setCapturing(true)
+                injectActionDown(PadAction.MirrorPlayStop)
+                assertEquals(CompanionCommand.StopMirror, awaitItem())
 
-        ScreenCaptureManager.setFrozen(false)
-        injectActionDown(PadAction.MirrorFreeze)
-        assertTrue(ScreenCaptureManager.isFrozen.value)
-    }
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            ScreenCaptureManager.setFrozen(false)
+            injectActionDown(PadAction.MirrorFreeze)
+            assertTrue(ScreenCaptureManager.isFrozen.value)
+        }
 
     @Test
-    fun injectActionDown_appLauncher() {
-        injectActionDown(PadAction.AppLauncher(packageName = "com.retroarch"))
-        assertEquals("com.retroarch", AppStateManager.pendingAppLaunchRequest.value?.packageName)
-    }
+    fun injectActionDown_appLauncher() =
+        runTest {
+            AppStateManager.commands.test {
+                injectActionDown(PadAction.AppLauncher(packageName = "com.retroarch"))
+                assertEquals(CompanionCommand.LaunchApp(packageName = "com.retroarch"), awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
 
     @Test
     fun injectActionDown_navigationAndNoOpActions() {

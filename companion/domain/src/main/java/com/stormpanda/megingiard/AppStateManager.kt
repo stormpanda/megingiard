@@ -42,6 +42,20 @@ enum class CompanionViewMode {
     DASHBOARD,
 }
 
+sealed interface CompanionCommand {
+    data object StartMirror : CompanionCommand
+
+    data object StopMirror : CompanionCommand
+
+    data object ShutOff : CompanionCommand
+
+    data class LaunchApp(
+        val packageName: String,
+        val touchX: Float = -1f,
+        val touchY: Float = -1f,
+    ) : CompanionCommand
+}
+
 fun CompanionViewMode.shouldShowIntegrationHome(
     focusedAppPackageName: String?,
     focusedRomPath: String?,
@@ -107,22 +121,14 @@ object AppStateManager {
     private val _promptInFlight = MutableStateFlow(false)
     val promptInFlight: StateFlow<Boolean> = _promptInFlight.asStateFlow()
 
-    // ── Mirror control signals ────────────────────────────────────────────────
-    // One-shot fire-and-forget flags: MainActivity resets them after handling.
+    // ── One-shot imperative commands ──────────────────────────────────────────
 
-    /** Set to true by MirrorPlayStop when mirror is not yet capturing; MainActivity starts
-     * ScreenCaptureService and resets. */
-    private val _mirrorStartRequested = MutableStateFlow(false)
-    val mirrorStartRequested: StateFlow<Boolean> = _mirrorStartRequested.asStateFlow()
-
-    /** Set to true by MirrorPlayStop when mirror is currently capturing; MainActivity sends
-     * a STOP intent to ScreenCaptureService and resets. */
-    private val _mirrorStopRequested = MutableStateFlow(false)
-    val mirrorStopRequested: StateFlow<Boolean> = _mirrorStopRequested.asStateFlow()
-
-    /** Set to true when user requests app shut off; MainActivity handles graceful shutdown and resets. */
-    private val _shutOffRequested = MutableStateFlow(false)
-    val shutOffRequested: StateFlow<Boolean> = _shutOffRequested.asStateFlow()
+    private val _commands =
+        MutableSharedFlow<CompanionCommand>(
+            extraBufferCapacity = 1,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
+    val commands: SharedFlow<CompanionCommand> = _commands.asSharedFlow()
 
     private val _showEmptyCutoutsDialog = MutableStateFlow(false)
     val showEmptyCutoutsDialog: StateFlow<Boolean> = _showEmptyCutoutsDialog.asStateFlow()
@@ -131,27 +137,13 @@ object AppStateManager {
         _showEmptyCutoutsDialog.value = show
     }
 
-    data class AppLaunchRequest(
-        val packageName: String,
-        val touchX: Float = -1f,
-        val touchY: Float = -1f,
-    )
-
-    private val _pendingAppLaunchRequest = MutableStateFlow<AppLaunchRequest?>(null)
-    val pendingAppLaunchRequest: StateFlow<AppLaunchRequest?> = _pendingAppLaunchRequest.asStateFlow()
-
     fun requestAppLaunch(
         packageName: String,
         touchX: Float = -1f,
         touchY: Float = -1f,
     ) {
         AppLog.i(TAG, "requestAppLaunch: pkg=$packageName touch=($touchX, $touchY)")
-        _pendingAppLaunchRequest.value = AppLaunchRequest(packageName, touchX, touchY)
-    }
-
-    fun consumeAppLaunchRequest() {
-        AppLog.d(TAG, "consumeAppLaunchRequest")
-        _pendingAppLaunchRequest.value = null
+        _commands.tryEmit(CompanionCommand.LaunchApp(packageName, touchX, touchY))
     }
 
     fun requestMirrorStart() {
@@ -166,34 +158,19 @@ object AppStateManager {
         ) {
             _showEmptyCutoutsDialog.value = true
         }
-        _mirrorStartRequested.value = true
+        _commands.tryEmit(CompanionCommand.StartMirror)
     }
 
     fun requestMirrorStop() {
         AppLog.i(TAG, "requestMirrorStop")
         _showEmptyCutoutsDialog.value = false
-        _mirrorStopRequested.value = true
-    }
-
-    fun consumeMirrorStartRequest() {
-        AppLog.d(TAG, "consumeMirrorStartRequest")
-        _mirrorStartRequested.value = false
-    }
-
-    fun consumeMirrorStopRequest() {
-        AppLog.d(TAG, "consumeMirrorStopRequest")
-        _mirrorStopRequested.value = false
+        _commands.tryEmit(CompanionCommand.StopMirror)
     }
 
     fun requestShutOff() {
         AppLog.i(TAG, "requestShutOff")
-        _shutOffRequested.value = true
         resetPrivdPromptState()
-    }
-
-    fun consumeShutOffRequest() {
-        AppLog.d(TAG, "consumeShutOffRequest")
-        _shutOffRequested.value = false
+        _commands.tryEmit(CompanionCommand.ShutOff)
     }
 
     // ── Integration Client State ──────────────────────────────────────────────

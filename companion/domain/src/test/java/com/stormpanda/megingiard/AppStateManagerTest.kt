@@ -63,9 +63,6 @@ class AppStateManagerTest {
             focusedApp = null,
         )
         AppStateManager.setStandaloneForegroundState(null, null)
-        AppStateManager.consumeMirrorStartRequest()
-        AppStateManager.consumeMirrorStopRequest()
-        AppStateManager.consumeShutOffRequest()
         AppStateManager.setViewportEditActive(false)
         AppStateManager.setShowEmptyCutoutsDialog(false)
     }
@@ -81,9 +78,6 @@ class AppStateManagerTest {
             focusedApp = null,
         )
         AppStateManager.setStandaloneForegroundState(null, null)
-        AppStateManager.consumeMirrorStartRequest()
-        AppStateManager.consumeMirrorStopRequest()
-        AppStateManager.consumeShutOffRequest()
         AppStateManager.setViewportEditActive(false)
         AppStateManager.setShowEmptyCutoutsDialog(false)
         Dispatchers.resetMain()
@@ -260,35 +254,23 @@ class AppStateManagerTest {
         }
 
     @Test
-    fun `request flags set and consume resets`() =
+    fun `commands SharedFlow emits StartMirror, StopMirror, ShutOff, and LaunchApp`() =
         runTest {
-            fun assertRequestConsume(
-                isRequested: () -> Boolean,
-                request: () -> Unit,
-                consume: () -> Unit,
-            ) {
-                assertFalse(isRequested())
-                request()
-                assertTrue(isRequested())
-                consume()
-                assertFalse(isRequested())
-            }
+            AppStateManager.commands.test {
+                AppStateManager.requestMirrorStart()
+                assertEquals(CompanionCommand.StartMirror, awaitItem())
 
-            assertRequestConsume(
-                { AppStateManager.shutOffRequested.value },
-                { AppStateManager.requestShutOff() },
-                { AppStateManager.consumeShutOffRequest() },
-            )
-            assertRequestConsume(
-                { AppStateManager.mirrorStartRequested.value },
-                { AppStateManager.requestMirrorStart() },
-                { AppStateManager.consumeMirrorStartRequest() },
-            )
-            assertRequestConsume(
-                { AppStateManager.mirrorStopRequested.value },
-                { AppStateManager.requestMirrorStop() },
-                { AppStateManager.consumeMirrorStopRequest() },
-            )
+                AppStateManager.requestMirrorStop()
+                assertEquals(CompanionCommand.StopMirror, awaitItem())
+
+                AppStateManager.requestShutOff()
+                assertEquals(CompanionCommand.ShutOff, awaitItem())
+
+                AppStateManager.requestAppLaunch("com.test.app", 100f, 200f)
+                assertEquals(CompanionCommand.LaunchApp("com.test.app", 100f, 200f), awaitItem())
+
+                cancelAndIgnoreRemainingEvents()
+            }
         }
 
     @Test
@@ -1214,17 +1196,17 @@ class AppStateManagerTest {
     @Test
     fun `setViewportEditActive requests mirror start and activates layout mirrorAutoStart`() =
         runTest {
-            AppStateManager.consumeMirrorStartRequest()
-            assertFalse(AppStateManager.mirrorStartRequested.value)
-
             val layout = PadLayout(id = "layout_mirror_test", name = "Mirror Layout", mirrorAutoStart = false)
             val profile = PadProfile(id = "profile_mirror_test", name = "Test Profile", layouts = listOf(layout))
             MacroPadState.loadFrom(listOf(profile), profile.id)
             assertFalse(MacroPadState.activeLayout.value?.mirrorAutoStart == true)
 
-            AppStateManager.setViewportEditActive(true)
-            assertTrue(AppStateManager.mirrorStartRequested.value)
-            assertTrue(MacroPadState.activeLayout.value?.mirrorAutoStart == true)
+            AppStateManager.commands.test {
+                AppStateManager.setViewportEditActive(true)
+                assertEquals(CompanionCommand.StartMirror, awaitItem())
+                assertTrue(MacroPadState.activeLayout.value?.mirrorAutoStart == true)
+                cancelAndIgnoreRemainingEvents()
+            }
 
             AppStateManager.setViewportEditActive(false)
         }
@@ -1259,38 +1241,6 @@ class AppStateManagerTest {
             assertTrue(AppStateManager.isMirrorEditorBackgroundHidden.value)
             AppStateManager.closePrimaryModal()
             assertFalse(AppStateManager.isMirrorEditorBackgroundHidden.value)
-        }
-
-    @Test
-    fun `requestAppLaunch and consumeAppLaunchRequest`() =
-        runTest {
-            AppStateManager.requestAppLaunch("com.test.app", 100f, 200f)
-            val req = AppStateManager.pendingAppLaunchRequest.value
-            assertEquals("com.test.app", req?.packageName)
-            assertEquals(100f, req?.touchX)
-            assertEquals(200f, req?.touchY)
-
-            AppStateManager.consumeAppLaunchRequest()
-            assertEquals(null, AppStateManager.pendingAppLaunchRequest.value)
-        }
-
-    @Test
-    fun `requestMirrorStart and requestMirrorStop and requestShutOff`() =
-        runTest {
-            AppStateManager.requestMirrorStart()
-            assertTrue(AppStateManager.mirrorStartRequested.value)
-            AppStateManager.consumeMirrorStartRequest()
-            assertFalse(AppStateManager.mirrorStartRequested.value)
-
-            AppStateManager.requestMirrorStop()
-            assertTrue(AppStateManager.mirrorStopRequested.value)
-            AppStateManager.consumeMirrorStopRequest()
-            assertFalse(AppStateManager.mirrorStopRequested.value)
-
-            AppStateManager.requestShutOff()
-            assertTrue(AppStateManager.shutOffRequested.value)
-            AppStateManager.consumeShutOffRequest()
-            assertFalse(AppStateManager.shutOffRequested.value)
         }
 
     @Test
@@ -1362,10 +1312,12 @@ class AppStateManagerTest {
             AppStateManager.setViewportEditActive(false)
             AppStateManager.setShowEmptyCutoutsDialog(false)
 
-            AppStateManager.requestMirrorStart()
-
-            assertTrue(AppStateManager.showEmptyCutoutsDialog.value)
-            assertTrue(AppStateManager.mirrorStartRequested.value)
+            AppStateManager.commands.test {
+                AppStateManager.requestMirrorStart()
+                assertTrue(AppStateManager.showEmptyCutoutsDialog.value)
+                assertEquals(CompanionCommand.StartMirror, awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
         }
 
     @Test
@@ -1384,10 +1336,12 @@ class AppStateManagerTest {
             AppStateManager.setViewportEditActive(false)
             AppStateManager.setShowEmptyCutoutsDialog(false)
 
-            AppStateManager.requestMirrorStart()
-
-            assertFalse(AppStateManager.showEmptyCutoutsDialog.value)
-            assertTrue(AppStateManager.mirrorStartRequested.value)
+            AppStateManager.commands.test {
+                AppStateManager.requestMirrorStart()
+                assertFalse(AppStateManager.showEmptyCutoutsDialog.value)
+                assertEquals(CompanionCommand.StartMirror, awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
         }
 
     @Test
