@@ -236,19 +236,8 @@ fun FocusTopLauncherScreen(
                     }.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.displayName })
         }
 
-    val collectionAppsById =
-        remember(allApps, collectionMembers) {
-            collectionMembers.mapValues { (_, members) ->
-                if (members.isEmpty()) emptyList() else allApps.filter { it.packageName in members }
-            }
-        }
-
     fun getAppsForCategory(cat: GameFocusCategory): List<InstalledAppInfo> =
-        if (cat is GameFocusCategory.CustomCollection) {
-            collectionAppsById[cat.collectionId].orEmpty()
-        } else {
-            cat.filterApps(allApps, favoritesSet, frozenHiddenSet, lastUsed, collectionMembers)
-        }
+        cat.filterApps(allApps, favoritesSet, frozenHiddenSet, lastUsed, collectionMembers)
 
     val categoryApps = getAppsForCategory(selectedCategory)
     val uniqueLetters = remember(categoryApps) { LetterNavigationHelper.getUniqueStartingLetters(categoryApps) }

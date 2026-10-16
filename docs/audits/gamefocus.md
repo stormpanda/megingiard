@@ -283,7 +283,7 @@
 - [x] **`[GF-05]`** — Remove redundant `RomManager.romApps` linear scan fallback in `SwitchLauncher.launchGame` *(Complexity: Low, Risk: Low)*
 - [x] **`[GF-06]`** — Remove paranoia `try/catch (IllegalArgumentException)` in `HorizontalPosterCarousel` and duplicate `AppPaletteExtractor.init` *(Complexity: Low, Risk: Low)*
 - [x] **`[GF-07]`** — Deduplicate `Drawable.toAndroidBitmap()` and icon loading between `FocusImageCache` and `AppPaletteExtractor` *(Complexity: Med, Risk: Low)*
-- [ ] **`[GF-08]`** — Remove redundant `collectionAppsById` pre-computation map in `FocusTopLauncherScreen` *(Complexity: Low, Risk: Low)*
+- [x] **`[GF-08]`** — Remove redundant `collectionAppsById` pre-computation map in `FocusTopLauncherScreen` *(Complexity: Low, Risk: Low)*
 - [ ] **`[GF-09]`** — Delete dead `SteamGridDbClient.downloadImageToTempFile` and unused `FocusTopLauncherViewModel.isResumed` *(Complexity: Low, Risk: Low)*
 - [ ] **`[GF-10]`** — Remove legacy `gamefocus_scraped_apps.txt` migration and on-read icon disk rewrite *(Complexity: Med, Risk: Low)*
 - [ ] **`[GF-11]`** — Unify split-brain `lastTopApp`/`lastTopPackage` and `lastBottomApp`/`lastBottomPackage` in `GameFocusSessionTracker` *(Complexity: Med, Risk: Low)*
