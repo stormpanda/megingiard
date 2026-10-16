@@ -93,8 +93,6 @@ import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.catalog.InstalledAppsManager
 import com.stormpanda.megingiard.catalog.LetterNavigationHelper
 import com.stormpanda.megingiard.catalog.LibraryTab
-import com.stormpanda.megingiard.catalog.RomManager
-import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
 import com.stormpanda.megingiard.gamefocus.domain.GalleryConfig
 import com.stormpanda.megingiard.gamefocus.viewmodel.FocusTopLauncherViewModel
 import com.stormpanda.megingiard.math.floorMod
@@ -162,6 +160,7 @@ fun FocusTopLauncherScreen(
     collectionMembers: Map<String, Set<String>> = emptyMap(),
     categories: List<GameFocusCategory> = GameFocusCategory.builtIns,
     allGalleryCategories: List<GameFocusCategory> = emptyList(),
+    libraryTabs: List<LibraryTab> = listOf(LibraryTab.GAMES, LibraryTab.APPS),
     galleryConfig: GalleryConfig = GalleryConfig(),
     pairedApps: Map<String, String> = emptyMap(),
     availableAndroidApps: List<InstalledAppInfo> = emptyList(),
@@ -219,21 +218,6 @@ fun FocusTopLauncherScreen(
     val frozenHiddenSet = remember(allApps, selectedCategory, isLibraryOpen) { hiddenSet.toSet() }
 
     val availableAppsByPackage = remember(availableAndroidApps) { availableAndroidApps.associateBy { it.packageName } }
-
-    val romFolders by RomManager.romFolders.collectAsState()
-
-    val libraryTabs =
-        remember(romFolders) {
-            listOf(LibraryTab.GAMES, LibraryTab.APPS) +
-                romFolders
-                    .map { folder ->
-                        LibraryTab.RomSystem(
-                            id = "rom_${folder.systemId}",
-                            systemId = folder.systemId,
-                            displayName = SUPPORTED_SYSTEMS.find { it.id == folder.systemId }?.displayName ?: folder.systemName,
-                        )
-                    }.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.displayName })
-        }
 
     fun getAppsForCategory(cat: GameFocusCategory): List<InstalledAppInfo> =
         cat.filterApps(allApps, favoritesSet, frozenHiddenSet, lastUsed, collectionMembers)

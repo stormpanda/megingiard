@@ -443,7 +443,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 }
             val availableAndroidApps =
                 remember(allApps) {
-                    allApps.filter { !it.isRom && it.packageName != packageName }.sortedBy { it.label.lowercase() }
+                    getAvailableAndroidApps(allApps)
                 }
 
             val selectedCategory by viewModel.selectedCategory.collectAsStateWithLifecycle()
@@ -464,15 +464,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
             val libraryTabs =
                 remember(customRomFolders) {
-                    listOf(LibraryTab.GAMES, LibraryTab.APPS) +
-                        customRomFolders
-                            .map { folder ->
-                                LibraryTab.RomSystem(
-                                    id = "rom_${folder.systemId}",
-                                    systemId = folder.systemId,
-                                    displayName = SUPPORTED_SYSTEMS.find { it.id == folder.systemId }?.displayName ?: folder.systemName,
-                                )
-                            }.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.displayName })
+                    LibraryTab.buildTabs(customRomFolders)
                 }
 
             SideEffect {
@@ -569,6 +561,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             collectionMembers = collectionMembers,
                             categories = categories,
                             allGalleryCategories = allGalleryCategories,
+                            libraryTabs = libraryTabs,
                             galleryConfig = galleryConfig,
                             pairedApps = pairedApps,
                             availableAndroidApps = availableAndroidApps,
@@ -693,9 +686,11 @@ class FocusTopLauncherActivity : ComponentActivity() {
         }
     }
 
+    private fun getAvailableAndroidApps(allApps: List<InstalledAppInfo>): List<InstalledAppInfo> =
+        allApps.filter { !it.isRom && it.packageName != packageName }.sortedBy { it.label.lowercase() }
+
     private fun openPairingDialogForApp(targetApp: InstalledAppInfo) {
-        val allApps = InstalledAppsManager.installedApps.value
-        val availableApps = allApps.filter { !it.isRom && it.packageName != packageName }.sortedBy { it.label.lowercase() }
+        val availableApps = getAvailableAndroidApps(InstalledAppsManager.installedApps.value)
         val currentPaired = GameFocusPairManager.getPairedPackage(targetApp.packageName)
         val initialIndex =
             if (currentPaired != null) {
@@ -863,8 +858,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
         }
 
         if (viewModel.pairingTargetApp.value != null) {
-            val allApps = InstalledAppsManager.installedApps.value
-            val availableApps = allApps.filter { !it.isRom && it.packageName != packageName }
+            val availableApps = getAvailableAndroidApps(InstalledAppsManager.installedApps.value)
             viewModel.stepPairingFocus(direction, availableApps.size, DEFAULT_PAIRING_GRID_COLUMNS)
             return
         }
@@ -1044,8 +1038,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
         if (viewModel.pairingTargetApp.value != null) {
             val targetApp = viewModel.pairingTargetApp.value ?: return true
-            val allApps = InstalledAppsManager.installedApps.value
-            val availableApps = allApps.filter { !it.isRom && it.packageName != packageName }.sortedBy { it.label.lowercase() }
+            val availableApps = getAvailableAndroidApps(InstalledAppsManager.installedApps.value)
 
             return when {
                 isUpKey(keyCode) -> {
