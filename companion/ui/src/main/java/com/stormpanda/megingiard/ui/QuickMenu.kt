@@ -132,9 +132,6 @@ fun QuickMenu(
                 colors = colors,
                 isCapturing = isCapturing,
                 isFrozen = isFrozen,
-                isTopScreenshotEnabled = true,
-                isBottomScreenshotEnabled = true,
-                isBothScreenshotEnabled = true,
                 isCompanionHub = showIntegrationHome,
                 modifier =
                     Modifier

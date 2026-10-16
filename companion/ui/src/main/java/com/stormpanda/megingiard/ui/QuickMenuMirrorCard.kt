@@ -59,9 +59,6 @@ internal fun MirrorControlCard(
     colors: AppColors,
     isCapturing: Boolean,
     isFrozen: Boolean,
-    isTopScreenshotEnabled: Boolean,
-    isBottomScreenshotEnabled: Boolean,
-    isBothScreenshotEnabled: Boolean,
     isCompanionHub: Boolean = false,
     modifier: Modifier = Modifier,
     onStart: () -> Unit,
@@ -152,27 +149,36 @@ internal fun MirrorControlCard(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                listOf(
-                    Triple(SYMBOL_SPLITSCREEN_BOTTOM, R.string.cd_screenshot_top, R.string.quick_menu_screenshot_top) to
-                        (isTopScreenshotEnabled to onTakeTopScreenshot),
-                    Triple(SYMBOL_SPLITSCREEN_TOP, R.string.cd_screenshot_bottom, R.string.quick_menu_screenshot_bottom) to
-                        (isBottomScreenshotEnabled to onTakeBottomScreenshot),
-                    Triple(SYMBOL_SPLITSCREEN, R.string.cd_screenshot_both, R.string.quick_menu_screenshot_both) to
-                        (isBothScreenshotEnabled to onTakeBothScreenshot),
-                ).forEach { (meta, handler) ->
-                    val (symbol, cdRes, labelRes) = meta
-                    val (enabled, action) = handler
-                    MirrorControlIconButton(
-                        symbolName = symbol,
-                        contentDescription = stringResource(cdRes),
-                        label = stringResource(labelRes),
-                        tint = colors.onControlOverlay,
-                        enabled = enabled,
-                        colors = colors,
-                        onClick = action,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
+                MirrorControlIconButton(
+                    symbolName = SYMBOL_SPLITSCREEN_BOTTOM,
+                    contentDescription = stringResource(R.string.cd_screenshot_top),
+                    label = stringResource(R.string.quick_menu_screenshot_top),
+                    tint = colors.onControlOverlay,
+                    enabled = true,
+                    colors = colors,
+                    onClick = onTakeTopScreenshot,
+                    modifier = Modifier.weight(1f),
+                )
+                MirrorControlIconButton(
+                    symbolName = SYMBOL_SPLITSCREEN_TOP,
+                    contentDescription = stringResource(R.string.cd_screenshot_bottom),
+                    label = stringResource(R.string.quick_menu_screenshot_bottom),
+                    tint = colors.onControlOverlay,
+                    enabled = true,
+                    colors = colors,
+                    onClick = onTakeBottomScreenshot,
+                    modifier = Modifier.weight(1f),
+                )
+                MirrorControlIconButton(
+                    symbolName = SYMBOL_SPLITSCREEN,
+                    contentDescription = stringResource(R.string.cd_screenshot_both),
+                    label = stringResource(R.string.quick_menu_screenshot_both),
+                    tint = colors.onControlOverlay,
+                    enabled = true,
+                    colors = colors,
+                    onClick = onTakeBothScreenshot,
+                    modifier = Modifier.weight(1f),
+                )
             }
         }
     }

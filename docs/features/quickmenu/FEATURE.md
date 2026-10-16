@@ -78,7 +78,7 @@ the universal "go back" mechanism throughout the app.
       with `colors.accent` when frozen. Disabled when not capturing or when in Companion Hub.
   - **Take Screenshot Card (Right Card):**
     - Headline: "TAKE SCREENSHOT" (`R.string.quick_menu_take_screenshot`).
-    - **Top Screenshot** icon button: captures Display 0 (Top Screen) via `ScreenCaptureManager.requestScreenshot(ScreenshotTarget.TOP)`. Uses Material Symbol `splitscreen_bottom` (inverted per layout orientation convention) with label "Top". Enabled when capturing or Privileged Mode is connected.
+    - **Top Screenshot** icon button: captures Display 0 (Top Screen) via `ScreenCaptureManager.requestScreenshot(ScreenshotTarget.TOP)`. Uses Material Symbol `splitscreen_bottom` (inverted per layout orientation convention) with label "Top". Always enabled (automatically triggers a one-shot capture prompt if neither mirroring nor Privileged Mode is active).
     - **Bottom Screenshot** icon button: captures the secondary display (Bottom Screen) via `ScreenCaptureManager.requestScreenshot(ScreenshotTarget.BOTTOM)`. Uses Material Symbol `splitscreen_top` with label "Bottom". Auto-dismisses the Quick Menu overlay to capture a clean MacroPad/companion screen.
     - **Both Screenshot** icon button: captures both screens simultaneously via `ScreenCaptureManager.requestScreenshot(ScreenshotTarget.BOTH)` and composites them into a vertical dual-screen image. Uses Material Symbol `splitscreen` with label "Both".
 - All icon buttons in these cards have compact vertical spacing with clear text labels rendered directly beneath each icon.
