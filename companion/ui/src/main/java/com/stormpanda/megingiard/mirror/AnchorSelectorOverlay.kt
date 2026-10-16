@@ -60,7 +60,6 @@ import kotlin.math.roundToInt
 private const val TAG = "AnchorSelectorOverlay"
 private const val MIN_ANCHOR_SIZE = 0.01f
 private const val ASO_SCRIM_ALPHA = 0.40f
-private const val ASO_INITIAL_FOCUS_DELAY_MS = 80L
 
 private val ASO_BORDER_WIDTH = 2.dp
 
@@ -114,34 +113,10 @@ fun AnchorSelectorOverlay(
         }
     }
 
-    LaunchedEffect(Unit) {
-        try {
-            firstItemFocusRequester.requestFocus()
-            AppLog.d(TAG, "AnchorSelectorOverlay: initial focus requested")
-        } catch (_: IllegalStateException) {
-            AppLog.w(TAG, "AnchorSelectorOverlay: firstItemFocusRequester unattached on initial focus attempt")
-        }
-        delay(ASO_INITIAL_FOCUS_DELAY_MS)
-        try {
-            firstItemFocusRequester.requestFocus()
-            AppLog.d(TAG, "AnchorSelectorOverlay: post-settle focus requested")
-        } catch (_: IllegalStateException) {
-            AppLog.w(TAG, "AnchorSelectorOverlay: firstItemFocusRequester unattached after settle delay")
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        PrimaryOverlayInputBridge.focusRecoveryEvents.collect { keyCode ->
-            if (!showCalibratePrompt) {
-                try {
-                    firstItemFocusRequester.requestFocus()
-                    AppLog.d(TAG, "AnchorSelectorOverlay: focus recovered on keyCode=$keyCode")
-                } catch (_: IllegalStateException) {
-                    AppLog.w(TAG, "AnchorSelectorOverlay: focus requester unattached on focus recovery")
-                }
-            }
-        }
-    }
+    RememberTopOverlayFocusEffect(
+        initialTarget = { firstItemFocusRequester },
+        recoveryTarget = { if (!showCalibratePrompt) firstItemFocusRequester else null },
+    )
 
     // Root key handler to catch Back / B-Button
     val rootKeyModifier =
