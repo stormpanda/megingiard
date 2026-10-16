@@ -233,12 +233,10 @@ private fun GameInfoDeckContent(
 ) {
     val context = LocalContext.current
     val defaultTitle = appInfo.defaultLabel
-    // Label currently persisted in the catalog; tracked locally because [appInfo] is a snapshot.
-    var savedTitle by remember(appInfo.packageName) { mutableStateOf(appInfo.label) }
     var editedTitle by remember(appInfo.packageName) { mutableStateOf(appInfo.label) }
     val normalizedTitle = editedTitle.trim()
-    val isChanged = normalizedTitle.isNotEmpty() && normalizedTitle != savedTitle
-    val canResetToDefault = defaultTitle != null && (savedTitle != defaultTitle || editedTitle != defaultTitle)
+    val isChanged = normalizedTitle.isNotEmpty() && normalizedTitle != appInfo.label
+    val canResetToDefault = defaultTitle != null && (appInfo.label != defaultTitle || editedTitle != defaultTitle)
 
     val promptState =
         rememberSaveExitPromptState(
@@ -276,7 +274,6 @@ private fun GameInfoDeckContent(
                 enabled = canResetToDefault,
                 onClick = {
                     val restored = InstalledAppsManager.resetAppLabel(context, appInfo.packageName) ?: defaultTitle
-                    savedTitle = restored
                     editedTitle = restored
                     AppLog.i(TAG, "Display name reset to default for ${appInfo.packageName}")
                 },
@@ -313,9 +310,9 @@ private fun ScrapingDeckContent(
         appInfo = appInfo,
         apiKey = apiKey,
         accentColor = accentColor,
-        initialAppliedImageId = if (appInfo.coverPath != null) appInfo.coverImageId else null,
-        initialAppliedImageType = null,
-        initialIsDefault = appInfo.coverOptedOut,
+        appliedImageId = if (appInfo.coverPath != null) appInfo.coverImageId else null,
+        appliedImageType = null,
+        isDefault = appInfo.coverOptedOut,
         initialArtworkType = GF_GRIDS_IMAGE_TYPE,
         thumbWidth = GF_POSTER_HEIGHT * GF_POSTER_ASPECT_RATIO,
         thumbHeight = GF_POSTER_HEIGHT,
@@ -385,9 +382,9 @@ private fun LibraryIconDeckContent(
         appInfo = appInfo,
         apiKey = apiKey,
         accentColor = accentColor,
-        initialAppliedImageId = if (appInfo.libraryIconPath != null) appInfo.libraryIconImageId else null,
-        initialAppliedImageType = if (appInfo.libraryIconPath != null) appInfo.libraryIconType else null,
-        initialIsDefault = appInfo.libraryIconOptedOut,
+        appliedImageId = if (appInfo.libraryIconPath != null) appInfo.libraryIconImageId else null,
+        appliedImageType = if (appInfo.libraryIconPath != null) appInfo.libraryIconType else null,
+        isDefault = appInfo.libraryIconOptedOut,
         initialArtworkType = appInfo.libraryIconType ?: LibraryIconRef.TYPE_ICONS,
         thumbWidth = GF_ICON_THUMB_SIZE,
         thumbHeight = GF_ICON_THUMB_SIZE,
@@ -467,9 +464,9 @@ private fun SteamGridDbArtworkDeck(
     appInfo: InstalledAppInfo,
     apiKey: String,
     accentColor: Color,
-    initialAppliedImageId: Int?,
-    initialAppliedImageType: String?,
-    initialIsDefault: Boolean,
+    appliedImageId: Int?,
+    appliedImageType: String?,
+    isDefault: Boolean,
     initialArtworkType: String,
     thumbWidth: Dp,
     thumbHeight: Dp,
@@ -489,9 +486,6 @@ private fun SteamGridDbArtworkDeck(
     val thumbWidthPx = with(density) { thumbWidth.roundToPx() }
     val thumbHeightPx = with(density) { thumbHeight.roundToPx() }
 
-    var isDefault by remember(appInfo.packageName, initialIsDefault) { mutableStateOf(initialIsDefault) }
-    var appliedImageId by remember(appInfo.packageName, initialAppliedImageId) { mutableStateOf(initialAppliedImageId) }
-    var appliedImageType by remember(appInfo.packageName, initialAppliedImageType) { mutableStateOf(initialAppliedImageType) }
     var selectedArtworkType by remember(appInfo.packageName, initialArtworkType) { mutableStateOf(initialArtworkType) }
 
     var searchQuery by remember(appInfo.packageName) {
@@ -518,8 +512,6 @@ private fun SteamGridDbArtworkDeck(
         scope.launch {
             // revertToDefault* persists the opt-out itself; no separate onSetOptOut(true) needed.
             onRevertToDefault()
-            appliedImageId = null
-            appliedImageType = null
         }
     }
 
@@ -542,11 +534,7 @@ private fun SteamGridDbArtworkDeck(
                             scrapeErrorRes = steamGridDbErrorMessageRes(bytesResult.exceptionOrNull())
                         } else {
                             val saved = onSaveArtworkBytes(image, bytes, selectedArtworkType)
-                            if (saved) {
-                                appliedImageId = image.id
-                                appliedImageType = selectedArtworkType
-                                isDefault = false
-                            } else {
+                            if (!saved) {
                                 scrapeErrorRes = R.string.steamgriddb_error_save_failed
                             }
                         }
@@ -607,7 +595,6 @@ private fun SteamGridDbArtworkDeck(
     GamepadDeck {
         // ── 1. Toggle Card ───────────────────────────────────────────
         renderToggleCard(isDefault, isDownloading) { checked ->
-            isDefault = checked
             if (checked) {
                 onRevert()
             } else {
