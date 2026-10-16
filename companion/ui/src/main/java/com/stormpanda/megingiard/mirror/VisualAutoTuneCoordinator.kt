@@ -149,222 +149,70 @@ internal object VisualAutoTuneCoordinator {
         cutout: ScreenCutout,
         onComplete: ((ScreenCutout, AutoTuneResult) -> Unit)? = null,
     ) {
-        cancelCalibration(resumeSuspended = false)
-
-        val existingSuspended = AppStateManager.suspendedPrimaryModal.value
-        if (existingSuspended != null) {
-            AppStateManager.closePrimaryModal()
-        } else {
-            AppStateManager.suspendCurrentAndDismiss()
-        }
-        if (ScreenCaptureManager.isFrozen.value) {
-            ScreenCaptureManager.setFrozen(false)
-        }
-
-        isFinishRequested = false
-        isResetRequested = false
-        _isCalibrating.value = true
-        _calibrationType.value = CalibrationType.CUTOUT
-        _lastTunedPercent.value = null
-        _progress.value = 0f
-        _remainingSeconds.value = 0
-        _sampleCount.value = 0
-        _canFinish.value = false
-        _dynamicPercent.value = 0
-        _isPaused.value = false
-        setPreviewBitmap(null)
-
-        calibrationJob =
-            scope.launch {
-                AppLog.i(TAG, "Starting HUD/UI isolation calibration for cutout ${cutout.id}")
-
-                // Wait for any dismissed top-screen modals, scrims, and toolbars to finish exiting
-                // and for the video stream pipeline to flush obstructed frames.
-                delay(CALIBRATION_WARMUP_DELAY_MS)
-                if (!isActive || isFinishRequested) return@launch
-
-                val sampledFrames = ArrayList<IntArray>()
-                var cropW = 0
-                var cropH = 0
-                var tracker: CalibrationPreviewTracker? = null
-                var previewPixels: IntArray? = null
-                var cutoutFreezeBitmap: Bitmap? = null
-                var totalSampledDurationMs = 0L
-                var lastLoopTime = SystemClock.elapsedRealtime()
-
-                try {
-                    while (isActive && !isFinishRequested) {
-                        val now = SystemClock.elapsedRealtime()
-                        val loopElapsed = now - lastLoopTime
-                        lastLoopTime = now
-
-                        if (isResetRequested) {
-                            isResetRequested = false
-                            AppLog.i(TAG, "Resetting active cutout calibration session samples")
-                            sampledFrames.clear()
-                            tracker = null
-                            previewPixels = null
-                            cutoutFreezeBitmap?.let {
-                                if (!it.isRecycled) it.recycle()
-                            }
-                            cutoutFreezeBitmap = null
-                            totalSampledDurationMs = 0L
-                            _sampleCount.value = 0
-                            _canFinish.value = false
-                            _dynamicPercent.value = 0
-                            setPreviewBitmap(null)
-                        }
-
-                        if (_isPaused.value) {
-                            delay(SAMPLE_INTERVAL_MS)
-                            continue
-                        }
-
-                        totalSampledDurationMs += loopElapsed
-                        if (totalSampledDurationMs >= MAX_CALIBRATION_DURATION_MS) {
-                            AppLog.i(TAG, "Calibration reached maximum safety duration (${MAX_CALIBRATION_DURATION_MS}ms)")
-                            break
-                        }
-
-                        val frameBitmap = MirrorFrameSampler.captureFrame(SAMPLE_WIDTH, SAMPLE_HEIGHT)
-                        if (frameBitmap != null) {
-                            try {
-                                val cX = (cutout.srcX * frameBitmap.width).roundToInt().coerceIn(0, frameBitmap.width - 1)
-                                val cY = (cutout.srcY * frameBitmap.height).roundToInt().coerceIn(0, frameBitmap.height - 1)
-                                val cRight =
-                                    ((cutout.srcX + cutout.srcWidth) * frameBitmap.width).roundToInt().coerceIn(cX + 1, frameBitmap.width)
-                                val cBottom =
-                                    ((cutout.srcY + cutout.srcHeight) * frameBitmap.height).roundToInt().coerceIn(
-                                        cY + 1,
-                                        frameBitmap.height,
-                                    )
-                                cropW = cRight - cX
-                                cropH = cBottom - cY
-
-                                if (cropW > 0 && cropH > 0) {
-                                    val pixels = IntArray(cropW * cropH)
-                                    frameBitmap.getPixels(pixels, 0, cropW, cX, cY, cropW, cropH)
-                                    sampledFrames.add(pixels)
-
-                                    if (cutoutFreezeBitmap == null) {
-                                        cutoutFreezeBitmap = Bitmap.createBitmap(pixels, cropW, cropH, Bitmap.Config.ARGB_8888)
-                                    }
-
-                                    if (tracker == null || tracker.width != cropW || tracker.height != cropH) {
-                                        tracker = CalibrationPreviewTracker(cropW, cropH)
-                                        previewPixels = IntArray(cropW * cropH)
-                                    }
-
-                                    previewPixels?.let { outBuf ->
-                                        tracker.ingestFrame(pixels, outBuf)
-                                        try {
-                                            val bmp = Bitmap.createBitmap(outBuf, cropW, cropH, Bitmap.Config.ARGB_8888)
-                                            setPreviewBitmap(bmp)
-                                        } catch (e: Exception) {
-                                            AppLog.e(TAG, "Failed to create preview bitmap", e)
-                                        }
-                                        _sampleCount.value = tracker.frameCount
-                                        _dynamicPercent.value = tracker.transparentPixelPercent
-                                        if (tracker.frameCount >= MIN_CALIBRATION_FRAMES) {
-                                            _canFinish.value = true
-                                        }
-                                    }
-                                }
-                            } finally {
-                                if (frameBitmap != ScreenCaptureManager.frozenBitmap.value) {
-                                    frameBitmap.recycle()
-                                }
-                            }
-                        }
-
-                        delay(SAMPLE_INTERVAL_MS)
-                    }
-
-                    if (sampledFrames.isNotEmpty() && cropW > 0 && cropH > 0) {
-                        AppLog.i(
-                            TAG,
-                            "Collected ${sampledFrames.size} frame crops. Running pixel color change analysis on Default dispatcher...",
+        val appContext = context.applicationContext
+        var capturedFirstBitmap: Bitmap? = null
+        runCalibrationSession(
+            type = CalibrationType.CUTOUT,
+            targetId = cutout.id,
+            normX = cutout.srcX,
+            normY = cutout.srcY,
+            normW = cutout.srcWidth,
+            normH = cutout.srcHeight,
+            captureFirstFrame = true,
+            onFirstFrameChanged = { capturedFirstBitmap = it },
+            onFinalize = { sampledFrames, cropW, cropH, firstFrameBitmap, result ->
+                val mask = result.maskPixels
+                if (mask != null && result.maskWidth > 0 && result.maskHeight > 0 && !result.isStaticScene) {
+                    val maskBitmap =
+                        Bitmap.createBitmap(
+                            mask,
+                            result.maskWidth,
+                            result.maskHeight,
+                            Bitmap.Config.ARGB_8888,
                         )
-                        val result =
-                            withContext(Dispatchers.Default) {
-                                CutoutAutoTuner.analyze(sampledFrames, cropW, cropH, cutoutId = cutout.id)
+                    val refColorFrame = result.referenceColorFrame
+                    val freezeBitmap =
+                        firstFrameBitmap
+                            ?: if (refColorFrame != null && refColorFrame.size == cropW * cropH) {
+                                Bitmap.createBitmap(refColorFrame, cropW, cropH, Bitmap.Config.ARGB_8888)
+                            } else if (sampledFrames.isNotEmpty()) {
+                                Bitmap.createBitmap(sampledFrames.first(), cropW, cropH, Bitmap.Config.ARGB_8888)
+                            } else {
+                                null
                             }
-
-                        val mask = result.maskPixels
-                        if (mask != null && result.maskWidth > 0 && result.maskHeight > 0 && !result.isStaticScene) {
-                            val maskBitmap =
-                                Bitmap.createBitmap(
-                                    mask,
-                                    result.maskWidth,
-                                    result.maskHeight,
-                                    Bitmap.Config.ARGB_8888,
-                                )
-                            val refColorFrame = result.referenceColorFrame
-                            val freezeBitmap =
-                                cutoutFreezeBitmap
-                                    ?: if (refColorFrame != null && refColorFrame.size == cropW * cropH) {
-                                        Bitmap.createBitmap(refColorFrame, cropW, cropH, Bitmap.Config.ARGB_8888)
-                                    } else if (sampledFrames.isNotEmpty()) {
-                                        Bitmap.createBitmap(sampledFrames.first(), cropW, cropH, Bitmap.Config.ARGB_8888)
-                                    } else {
-                                        null
-                                    }
-                            withContext(Dispatchers.IO) {
-                                CutoutMaskManager.saveMask(
-                                    context = context.applicationContext,
-                                    cutoutId = cutout.id,
-                                    bitmap = maskBitmap,
-                                    varianceMap = result.varianceMap,
-                                    freezeFrame = freezeBitmap,
-                                )
-                            }
-                        }
-
-                        val hasMask = mask != null && !result.isStaticScene
-                        val updatedCutout =
-                            cutout.copy(
-                                hasTransparencyMask = hasMask,
-                                maskTranslucency = 0,
-                                renderAsStaticAsset = false,
-                            )
-                        MacroPadState.updateCutout(updatedCutout)
-                        _lastTunedPercent.value = if (hasMask) result.transparentPercent else null
-                        AppLog.i(
-                            TAG,
-                            "HUD/UI isolation mask calibration completed: hasMask=$hasMask, transparentPct=${result.transparentPercent}%, summary=${result.summary}",
+                    withContext(Dispatchers.IO) {
+                        CutoutMaskManager.saveMask(
+                            context = appContext,
+                            cutoutId = cutout.id,
+                            bitmap = maskBitmap,
+                            varianceMap = result.varianceMap,
+                            freezeFrame = freezeBitmap,
                         )
-                        onComplete?.invoke(updatedCutout, result)
-                    } else {
-                        AppLog.w(TAG, "No video frames could be sampled during calibration")
-                        _lastTunedPercent.value = null
                     }
-                } catch (e: Exception) {
-                    if (coroutineContext[Job]?.isCancelled == true) {
-                        AppLog.i(TAG, "Auto-Tune calibration cancelled")
-                    } else {
-                        AppLog.e(TAG, "Auto-Tune calibration failed with exception", e)
-                    }
-                    _lastTunedPercent.value = null
-                } finally {
-                    if (cutoutFreezeBitmap != null &&
-                        CutoutMaskManager.getFreezeFrame(context.applicationContext, cutout.id) != cutoutFreezeBitmap
-                    ) {
-                        if (!cutoutFreezeBitmap.isRecycled) {
-                            cutoutFreezeBitmap.recycle()
-                        }
-                    }
-                    setPreviewBitmap(null)
-                    _isCalibrating.value = false
-                    _isPaused.value = false
-                    _calibrationType.value = CalibrationType.NONE
-                    _canFinish.value = false
-                    _sampleCount.value = 0
-                    _dynamicPercent.value = 0
-                    _progress.value = 0f
-                    _remainingSeconds.value = 0
-                    AppStateManager.resumeSuspended()
                 }
-            }
+
+                val hasMask = mask != null && !result.isStaticScene
+                val updatedCutout =
+                    cutout.copy(
+                        hasTransparencyMask = hasMask,
+                        maskTranslucency = 0,
+                        renderAsStaticAsset = false,
+                    )
+                MacroPadState.updateCutout(updatedCutout)
+                _lastTunedPercent.value = if (hasMask) result.transparentPercent else null
+                AppLog.i(
+                    TAG,
+                    "HUD/UI isolation mask calibration completed: hasMask=$hasMask, transparentPct=${result.transparentPercent}%, summary=${result.summary}",
+                )
+                onComplete?.invoke(updatedCutout, result)
+            },
+            onCleanup = {
+                val bmp = capturedFirstBitmap
+                if (bmp != null && CutoutMaskManager.getFreezeFrame(appContext, cutout.id) != bmp && !bmp.isRecycled) {
+                    bmp.recycle()
+                }
+            },
+        )
     }
 
     /**
@@ -376,6 +224,86 @@ internal object VisualAutoTuneCoordinator {
         context: Context,
         layout: PadLayout,
         onComplete: ((PadLayout, VisualAnchorSignature?) -> Unit)? = null,
+    ) {
+        val appContext = context.applicationContext
+        val anchor = layout.visualAnchor
+        runCalibrationSession(
+            type = CalibrationType.LAYOUT_ANCHOR,
+            targetId = layout.id,
+            normX = anchor.srcX,
+            normY = anchor.srcY,
+            normW = anchor.srcWidth,
+            normH = anchor.srcHeight,
+            captureFirstFrame = false,
+            onFinalize = { sampledFrames, cropW, cropH, _, result ->
+                val signature = result.anchorSignature
+                val hasValidSignature = signature != null && signature.points.isNotEmpty()
+                if (hasValidSignature) {
+                    val calibratedFrame = result.calibratedFrame
+                    val refColorFrame = result.referenceColorFrame
+                    val freezeBitmap =
+                        if (calibratedFrame != null && calibratedFrame.size == cropW * cropH) {
+                            Bitmap.createBitmap(calibratedFrame, cropW, cropH, Bitmap.Config.ARGB_8888)
+                        } else if (refColorFrame != null && refColorFrame.size == cropW * cropH) {
+                            Bitmap.createBitmap(refColorFrame, cropW, cropH, Bitmap.Config.ARGB_8888)
+                        } else if (sampledFrames.isNotEmpty()) {
+                            Bitmap.createBitmap(sampledFrames.first(), cropW, cropH, Bitmap.Config.ARGB_8888)
+                        } else {
+                            null
+                        }
+                    if (freezeBitmap != null) {
+                        withContext(Dispatchers.IO) {
+                            val mask = result.maskPixels
+                            if (mask != null && result.maskWidth > 0 && result.maskHeight > 0) {
+                                val maskBitmap =
+                                    Bitmap.createBitmap(mask, result.maskWidth, result.maskHeight, Bitmap.Config.ARGB_8888)
+                                CutoutMaskManager.saveMask(
+                                    context = appContext,
+                                    cutoutId = layout.id,
+                                    bitmap = maskBitmap,
+                                    varianceMap = result.varianceMap,
+                                    freezeFrame = freezeBitmap,
+                                )
+                            } else {
+                                CutoutMaskManager.saveFreezeFrame(appContext, layout.id, freezeBitmap)
+                            }
+                        }
+                    }
+                }
+                val updatedAnchor =
+                    layout.visualAnchor.copy(
+                        enabled = hasValidSignature,
+                        signature = if (hasValidSignature) signature else null,
+                    )
+                val updatedLayout = layout.copy(visualAnchor = updatedAnchor)
+                MacroPadState.updateLayout(updatedLayout)
+                _lastTunedPercent.value = null
+                AppLog.i(
+                    TAG,
+                    "Layout anchor calibration complete: points=${signature?.points?.size ?: 0}, enabled=$hasValidSignature",
+                )
+                onComplete?.invoke(updatedLayout, signature)
+            },
+        )
+    }
+
+    private fun runCalibrationSession(
+        type: CalibrationType,
+        targetId: String,
+        normX: Float,
+        normY: Float,
+        normW: Float,
+        normH: Float,
+        captureFirstFrame: Boolean,
+        onFirstFrameChanged: (Bitmap?) -> Unit = {},
+        onFinalize: suspend (
+            sampledFrames: List<IntArray>,
+            cropW: Int,
+            cropH: Int,
+            firstFrameBitmap: Bitmap?,
+            result: AutoTuneResult,
+        ) -> Unit,
+        onCleanup: () -> Unit = {},
     ) {
         cancelCalibration(resumeSuspended = false)
 
@@ -392,7 +320,7 @@ internal object VisualAutoTuneCoordinator {
         isFinishRequested = false
         isResetRequested = false
         _isCalibrating.value = true
-        _calibrationType.value = CalibrationType.LAYOUT_ANCHOR
+        _calibrationType.value = type
         _lastTunedPercent.value = null
         _progress.value = 0f
         _remainingSeconds.value = 0
@@ -404,10 +332,8 @@ internal object VisualAutoTuneCoordinator {
 
         calibrationJob =
             scope.launch {
-                AppLog.i(TAG, "Starting layout anchor calibration for layout ${layout.id}")
+                AppLog.i(TAG, "Starting $type calibration for target $targetId")
 
-                // Wait for any dismissed top-screen modals, scrims, and toolbars to finish exiting
-                // and for the video stream pipeline to flush obstructed frames.
                 delay(CALIBRATION_WARMUP_DELAY_MS)
                 if (!isActive || isFinishRequested) return@launch
 
@@ -416,11 +342,11 @@ internal object VisualAutoTuneCoordinator {
                 var cropH = 0
                 var tracker: CalibrationPreviewTracker? = null
                 var previewPixels: IntArray? = null
+                var firstFrameBitmap: Bitmap? = null
                 var totalSampledDurationMs = 0L
                 var lastLoopTime = SystemClock.elapsedRealtime()
 
                 try {
-                    val anchor = layout.visualAnchor
                     while (isActive && !isFinishRequested) {
                         val now = SystemClock.elapsedRealtime()
                         val loopElapsed = now - lastLoopTime
@@ -428,10 +354,15 @@ internal object VisualAutoTuneCoordinator {
 
                         if (isResetRequested) {
                             isResetRequested = false
-                            AppLog.i(TAG, "Resetting layout anchor calibration session samples")
+                            AppLog.i(TAG, "Resetting active $type calibration session samples")
                             sampledFrames.clear()
                             tracker = null
                             previewPixels = null
+                            firstFrameBitmap?.let {
+                                if (!it.isRecycled) it.recycle()
+                            }
+                            firstFrameBitmap = null
+                            onFirstFrameChanged(null)
                             totalSampledDurationMs = 0L
                             _sampleCount.value = 0
                             _canFinish.value = false
@@ -446,29 +377,34 @@ internal object VisualAutoTuneCoordinator {
 
                         totalSampledDurationMs += loopElapsed
                         if (totalSampledDurationMs >= MAX_CALIBRATION_DURATION_MS) {
-                            AppLog.i(TAG, "Layout anchor calibration reached maximum safety duration (${MAX_CALIBRATION_DURATION_MS}ms)")
+                            AppLog.i(TAG, "$type calibration reached maximum safety duration (${MAX_CALIBRATION_DURATION_MS}ms)")
                             break
                         }
 
                         val frameBitmap = MirrorFrameSampler.captureFrame(SAMPLE_WIDTH, SAMPLE_HEIGHT)
                         if (frameBitmap != null) {
                             try {
-                                val aX = (anchor.srcX * frameBitmap.width).roundToInt().coerceIn(0, frameBitmap.width - 1)
-                                val aY = (anchor.srcY * frameBitmap.height).roundToInt().coerceIn(0, frameBitmap.height - 1)
-                                val aRight =
-                                    ((anchor.srcX + anchor.srcWidth) * frameBitmap.width).roundToInt().coerceIn(aX + 1, frameBitmap.width)
-                                val aBottom =
-                                    ((anchor.srcY + anchor.srcHeight) * frameBitmap.height).roundToInt().coerceIn(
-                                        aY + 1,
+                                val cX = (normX * frameBitmap.width).roundToInt().coerceIn(0, frameBitmap.width - 1)
+                                val cY = (normY * frameBitmap.height).roundToInt().coerceIn(0, frameBitmap.height - 1)
+                                val cRight =
+                                    ((normX + normW) * frameBitmap.width).roundToInt().coerceIn(cX + 1, frameBitmap.width)
+                                val cBottom =
+                                    ((normY + normH) * frameBitmap.height).roundToInt().coerceIn(
+                                        cY + 1,
                                         frameBitmap.height,
                                     )
-                                cropW = aRight - aX
-                                cropH = aBottom - aY
+                                cropW = cRight - cX
+                                cropH = cBottom - cY
 
                                 if (cropW > 0 && cropH > 0) {
                                     val pixels = IntArray(cropW * cropH)
-                                    frameBitmap.getPixels(pixels, 0, cropW, aX, aY, cropW, cropH)
+                                    frameBitmap.getPixels(pixels, 0, cropW, cX, cY, cropW, cropH)
                                     sampledFrames.add(pixels)
+
+                                    if (captureFirstFrame && firstFrameBitmap == null) {
+                                        firstFrameBitmap = Bitmap.createBitmap(pixels, cropW, cropH, Bitmap.Config.ARGB_8888)
+                                        onFirstFrameChanged(firstFrameBitmap)
+                                    }
 
                                     if (tracker == null || tracker.width != cropW || tracker.height != cropH) {
                                         tracker = CalibrationPreviewTracker(cropW, cropH)
@@ -503,83 +439,42 @@ internal object VisualAutoTuneCoordinator {
                     if (sampledFrames.isNotEmpty() && cropW > 0 && cropH > 0) {
                         AppLog.i(
                             TAG,
-                            "Collected ${sampledFrames.size} layout anchor crops. Running analysis on Default dispatcher...",
+                            "Collected ${sampledFrames.size} $type crops. Running analysis on Default dispatcher...",
                         )
                         val result =
                             withContext(Dispatchers.Default) {
-                                CutoutAutoTuner.analyze(sampledFrames, cropW, cropH, cutoutId = layout.id)
+                                CutoutAutoTuner.analyze(sampledFrames, cropW, cropH, cutoutId = targetId)
                             }
-
-                        val signature = result.anchorSignature
-                        val hasValidSignature = signature != null && signature.points.isNotEmpty()
-                        if (hasValidSignature) {
-                            val calibratedFrame = result.calibratedFrame
-                            val refColorFrame = result.referenceColorFrame
-                            val freezeBitmap =
-                                if (calibratedFrame != null && calibratedFrame.size == cropW * cropH) {
-                                    Bitmap.createBitmap(calibratedFrame, cropW, cropH, Bitmap.Config.ARGB_8888)
-                                } else if (refColorFrame != null && refColorFrame.size == cropW * cropH) {
-                                    Bitmap.createBitmap(refColorFrame, cropW, cropH, Bitmap.Config.ARGB_8888)
-                                } else if (sampledFrames.isNotEmpty()) {
-                                    Bitmap.createBitmap(sampledFrames.first(), cropW, cropH, Bitmap.Config.ARGB_8888)
-                                } else {
-                                    null
-                                }
-                            if (freezeBitmap != null) {
-                                withContext(Dispatchers.IO) {
-                                    val mask = result.maskPixels
-                                    if (mask != null && result.maskWidth > 0 && result.maskHeight > 0) {
-                                        val maskBitmap =
-                                            Bitmap.createBitmap(mask, result.maskWidth, result.maskHeight, Bitmap.Config.ARGB_8888)
-                                        CutoutMaskManager.saveMask(
-                                            context = context.applicationContext,
-                                            cutoutId = layout.id,
-                                            bitmap = maskBitmap,
-                                            varianceMap = result.varianceMap,
-                                            freezeFrame = freezeBitmap,
-                                        )
-                                    } else {
-                                        CutoutMaskManager.saveFreezeFrame(context.applicationContext, layout.id, freezeBitmap)
-                                    }
-                                }
-                            }
-                        }
-                        val updatedAnchor =
-                            layout.visualAnchor.copy(
-                                enabled = hasValidSignature,
-                                signature = if (hasValidSignature) signature else null,
-                            )
-                        val updatedLayout = layout.copy(visualAnchor = updatedAnchor)
-                        MacroPadState.updateLayout(updatedLayout)
-                        _lastTunedPercent.value = null
-                        AppLog.i(
-                            TAG,
-                            "Layout anchor calibration complete: points=${signature?.points?.size ?: 0}, enabled=$hasValidSignature",
-                        )
-                        onComplete?.invoke(updatedLayout, signature)
+                        onFinalize(sampledFrames, cropW, cropH, firstFrameBitmap, result)
                     } else {
-                        AppLog.w(TAG, "No frames collected during layout anchor calibration")
+                        AppLog.w(TAG, "No video frames could be sampled during $type calibration")
+                        _lastTunedPercent.value = null
                     }
                 } catch (e: Exception) {
                     if (coroutineContext[Job]?.isCancelled == true) {
-                        AppLog.i(TAG, "Layout anchor calibration cancelled")
+                        AppLog.i(TAG, "$type calibration cancelled")
                     } else {
-                        AppLog.e(TAG, "Layout anchor calibration failed with exception", e)
+                        AppLog.e(TAG, "$type calibration failed with exception", e)
                     }
                     _lastTunedPercent.value = null
                 } finally {
-                    setPreviewBitmap(null)
-                    _isCalibrating.value = false
-                    _isPaused.value = false
-                    _calibrationType.value = CalibrationType.NONE
-                    _canFinish.value = false
-                    _sampleCount.value = 0
-                    _dynamicPercent.value = 0
-                    _progress.value = 0f
-                    _remainingSeconds.value = 0
+                    onCleanup()
+                    resetSessionStateFlows()
                     AppStateManager.resumeSuspended()
                 }
             }
+    }
+
+    private fun resetSessionStateFlows() {
+        setPreviewBitmap(null)
+        _isCalibrating.value = false
+        _isPaused.value = false
+        _calibrationType.value = CalibrationType.NONE
+        _canFinish.value = false
+        _sampleCount.value = 0
+        _dynamicPercent.value = 0
+        _progress.value = 0f
+        _remainingSeconds.value = 0
     }
 
     /**
@@ -595,15 +490,7 @@ internal object VisualAutoTuneCoordinator {
         isFinishRequested = false
         isResetRequested = false
         calibrationJob = null
-        setPreviewBitmap(null)
-        _isCalibrating.value = false
-        _isPaused.value = false
-        _calibrationType.value = CalibrationType.NONE
-        _canFinish.value = false
-        _sampleCount.value = 0
-        _dynamicPercent.value = 0
-        _progress.value = 0f
-        _remainingSeconds.value = 0
+        resetSessionStateFlows()
         if (resumeSuspended && wasActive) {
             AppStateManager.resumeSuspended()
         }
