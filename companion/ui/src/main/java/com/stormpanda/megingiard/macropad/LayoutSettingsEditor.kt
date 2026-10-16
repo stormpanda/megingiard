@@ -329,7 +329,8 @@ internal fun AutomaticLayoutSwitchingSubPageContent(
 ) {
     AppLog.d(TAG, "AutomaticLayoutSwitchingSubPageContent for layout: ${layout.name} (${layout.id})")
     val context = LocalContext.current
-    val isCalibrating by VisualAutoTuneCoordinator.isCalibrating.collectAsStateWithLifecycle()
+    val autoTuneState by VisualAutoTuneCoordinator.uiState.collectAsStateWithLifecycle()
+    val isCalibrating = autoTuneState.isCalibrating
     var calibrationRevision by remember { mutableIntStateOf(0) }
 
     if (isCalibrating) {

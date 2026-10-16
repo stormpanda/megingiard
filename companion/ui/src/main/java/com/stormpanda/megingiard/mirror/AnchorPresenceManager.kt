@@ -290,7 +290,7 @@ object AnchorPresenceManager {
             }
 
             // Suspend presence monitoring and layout auto-switching during calibration or while editor/modal is open
-            if (VisualAutoTuneCoordinator.isCalibrating.value ||
+            if (VisualAutoTuneCoordinator.uiState.value.isCalibrating ||
                 AppStateManager.isEditorActive.value ||
                 AppStateManager.isViewportEditActive.value ||
                 AppStateManager.activePrimaryModal.value != null

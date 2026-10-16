@@ -15,6 +15,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -37,6 +38,16 @@ enum class CalibrationType {
     LAYOUT_ANCHOR,
 }
 
+internal data class AutoTuneUiState(
+    val isCalibrating: Boolean = false,
+    val isPaused: Boolean = false,
+    val calibrationType: CalibrationType = CalibrationType.NONE,
+    val sampleCount: Int = 0,
+    val canFinish: Boolean = false,
+    val dynamicPercent: Int = 0,
+    val lastTunedPercent: Int? = null,
+)
+
 /**
  * Coordinates video frame sampling and visual auto-tune calibration.
  * Exposes observable StateFlows for live preview bitmaps, sample frame counts, and completion status.
@@ -47,29 +58,11 @@ enum class CalibrationType {
  * upon completion or cancellation.
  */
 internal object VisualAutoTuneCoordinator {
-    private val _isCalibrating = MutableStateFlow(false)
-    val isCalibrating: StateFlow<Boolean> = _isCalibrating.asStateFlow()
-
-    private val _isPaused = MutableStateFlow(false)
-    val isPaused: StateFlow<Boolean> = _isPaused.asStateFlow()
-
-    private val _calibrationType = MutableStateFlow(CalibrationType.NONE)
-    val calibrationType: StateFlow<CalibrationType> = _calibrationType.asStateFlow()
+    private val _uiState = MutableStateFlow(AutoTuneUiState())
+    val uiState: StateFlow<AutoTuneUiState> = _uiState.asStateFlow()
 
     private val _previewBitmap = MutableStateFlow<Bitmap?>(null)
     val previewBitmap: StateFlow<Bitmap?> = _previewBitmap.asStateFlow()
-
-    private val _sampleCount = MutableStateFlow(0)
-    val sampleCount: StateFlow<Int> = _sampleCount.asStateFlow()
-
-    private val _canFinish = MutableStateFlow(false)
-    val canFinish: StateFlow<Boolean> = _canFinish.asStateFlow()
-
-    private val _dynamicPercent = MutableStateFlow(0)
-    val dynamicPercent: StateFlow<Int> = _dynamicPercent.asStateFlow()
-
-    private val _lastTunedPercent = MutableStateFlow<Int?>(null)
-    val lastTunedPercent: StateFlow<Int?> = _lastTunedPercent.asStateFlow()
 
     @Volatile
     private var isFinishRequested = false
@@ -93,7 +86,8 @@ internal object VisualAutoTuneCoordinator {
      * Only triggers when minimum required frames have been collected.
      */
     fun finishCalibration() {
-        if (_isCalibrating.value && _canFinish.value) {
+        val current = _uiState.value
+        if (current.isCalibrating && current.canFinish) {
             AppLog.i(TAG, "finishCalibration requested by user")
             isFinishRequested = true
         }
@@ -103,7 +97,7 @@ internal object VisualAutoTuneCoordinator {
      * Resets currently collected frames and preview state during an active calibration session.
      */
     fun resetCalibration() {
-        if (_isCalibrating.value) {
+        if (_uiState.value.isCalibrating) {
             AppLog.i(TAG, "resetCalibration requested by user")
             isResetRequested = true
         }
@@ -113,9 +107,10 @@ internal object VisualAutoTuneCoordinator {
      * Toggles calibration pause state. When paused, frame sampling is suspended.
      */
     fun togglePause() {
-        if (_isCalibrating.value) {
-            _isPaused.value = !_isPaused.value
-            AppLog.i(TAG, "togglePause: isPaused=${_isPaused.value}")
+        if (_uiState.value.isCalibrating) {
+            val nextPaused = !_uiState.value.isPaused
+            _uiState.update { it.copy(isPaused = nextPaused) }
+            AppLog.i(TAG, "togglePause: isPaused=$nextPaused")
         }
     }
 
@@ -123,8 +118,8 @@ internal object VisualAutoTuneCoordinator {
      * Explicitly sets calibration pause state.
      */
     fun setPaused(paused: Boolean) {
-        if (_isCalibrating.value) {
-            _isPaused.value = paused
+        if (_uiState.value.isCalibrating) {
+            _uiState.update { it.copy(isPaused = paused) }
             AppLog.i(TAG, "setPaused: isPaused=$paused")
         }
     }
@@ -189,7 +184,7 @@ internal object VisualAutoTuneCoordinator {
                         renderAsStaticAsset = false,
                     )
                 MacroPadState.updateCutout(updatedCutout)
-                _lastTunedPercent.value = if (hasMask) result.transparentPercent else null
+                _uiState.update { it.copy(lastTunedPercent = if (hasMask) result.transparentPercent else null) }
                 AppLog.i(
                     TAG,
                     "HUD/UI isolation mask calibration completed: hasMask=$hasMask, transparentPct=${result.transparentPercent}%, summary=${result.summary}",
@@ -267,7 +262,7 @@ internal object VisualAutoTuneCoordinator {
                     )
                 val updatedLayout = layout.copy(visualAnchor = updatedAnchor)
                 MacroPadState.updateLayout(updatedLayout)
-                _lastTunedPercent.value = null
+                _uiState.update { it.copy(lastTunedPercent = null) }
                 AppLog.i(
                     TAG,
                     "Layout anchor calibration complete: points=${signature?.points?.size ?: 0}, enabled=$hasValidSignature",
@@ -309,13 +304,11 @@ internal object VisualAutoTuneCoordinator {
 
         isFinishRequested = false
         isResetRequested = false
-        _isCalibrating.value = true
-        _calibrationType.value = type
-        _lastTunedPercent.value = null
-        _sampleCount.value = 0
-        _canFinish.value = false
-        _dynamicPercent.value = 0
-        _isPaused.value = false
+        _uiState.value =
+            AutoTuneUiState(
+                isCalibrating = true,
+                calibrationType = type,
+            )
         setPreviewBitmap(null)
 
         calibrationJob =
@@ -352,13 +345,17 @@ internal object VisualAutoTuneCoordinator {
                             firstFrameBitmap = null
                             onFirstFrameChanged(null)
                             totalSampledDurationMs = 0L
-                            _sampleCount.value = 0
-                            _canFinish.value = false
-                            _dynamicPercent.value = 0
+                            _uiState.update {
+                                it.copy(
+                                    sampleCount = 0,
+                                    canFinish = false,
+                                    dynamicPercent = 0,
+                                )
+                            }
                             setPreviewBitmap(null)
                         }
 
-                        if (_isPaused.value) {
+                        if (_uiState.value.isPaused) {
                             delay(SAMPLE_INTERVAL_MS)
                             continue
                         }
@@ -407,10 +404,12 @@ internal object VisualAutoTuneCoordinator {
                                         } catch (e: Exception) {
                                             AppLog.e(TAG, "Failed to create preview bitmap", e)
                                         }
-                                        _sampleCount.value = tracker.frameCount
-                                        _dynamicPercent.value = tracker.transparentPixelPercent
-                                        if (tracker.frameCount >= MIN_CALIBRATION_FRAMES) {
-                                            _canFinish.value = true
+                                        _uiState.update {
+                                            it.copy(
+                                                sampleCount = tracker.frameCount,
+                                                dynamicPercent = tracker.transparentPixelPercent,
+                                                canFinish = tracker.frameCount >= MIN_CALIBRATION_FRAMES,
+                                            )
                                         }
                                     }
                                 }
@@ -436,7 +435,7 @@ internal object VisualAutoTuneCoordinator {
                         onFinalize(sampledFrames, cropW, cropH, firstFrameBitmap, result)
                     } else {
                         AppLog.w(TAG, "No video frames could be sampled during $type calibration")
-                        _lastTunedPercent.value = null
+                        _uiState.update { it.copy(lastTunedPercent = null) }
                     }
                 } catch (e: Exception) {
                     if (coroutineContext[Job]?.isCancelled == true) {
@@ -444,7 +443,7 @@ internal object VisualAutoTuneCoordinator {
                     } else {
                         AppLog.e(TAG, "$type calibration failed with exception", e)
                     }
-                    _lastTunedPercent.value = null
+                    _uiState.update { it.copy(lastTunedPercent = null) }
                 } finally {
                     onCleanup()
                     resetSessionStateFlows()
@@ -455,12 +454,7 @@ internal object VisualAutoTuneCoordinator {
 
     private fun resetSessionStateFlows() {
         setPreviewBitmap(null)
-        _isCalibrating.value = false
-        _isPaused.value = false
-        _calibrationType.value = CalibrationType.NONE
-        _canFinish.value = false
-        _sampleCount.value = 0
-        _dynamicPercent.value = 0
+        _uiState.update { AutoTuneUiState(lastTunedPercent = it.lastTunedPercent) }
     }
 
     /**

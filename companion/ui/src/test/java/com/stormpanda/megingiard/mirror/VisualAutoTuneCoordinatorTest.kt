@@ -26,28 +26,28 @@ class VisualAutoTuneCoordinatorTest {
 
     @Test
     fun `isPaused defaults to false`() {
-        assertFalse(VisualAutoTuneCoordinator.isPaused.value)
+        assertFalse(VisualAutoTuneCoordinator.uiState.value.isPaused)
     }
 
     @Test
     fun `togglePause does not change state when not calibrating`() {
-        assertFalse(VisualAutoTuneCoordinator.isCalibrating.value)
+        assertFalse(VisualAutoTuneCoordinator.uiState.value.isCalibrating)
         VisualAutoTuneCoordinator.togglePause()
-        assertFalse(VisualAutoTuneCoordinator.isPaused.value)
+        assertFalse(VisualAutoTuneCoordinator.uiState.value.isPaused)
     }
 
     @Test
     fun `setPaused does not change state when not calibrating`() {
-        assertFalse(VisualAutoTuneCoordinator.isCalibrating.value)
+        assertFalse(VisualAutoTuneCoordinator.uiState.value.isCalibrating)
         VisualAutoTuneCoordinator.setPaused(true)
-        assertFalse(VisualAutoTuneCoordinator.isPaused.value)
+        assertFalse(VisualAutoTuneCoordinator.uiState.value.isPaused)
     }
 
     @Test
     fun `cancelCalibration resets isPaused state`() {
         VisualAutoTuneCoordinator.cancelCalibration(resumeSuspended = false)
-        assertFalse(VisualAutoTuneCoordinator.isCalibrating.value)
-        assertFalse(VisualAutoTuneCoordinator.isPaused.value)
+        assertFalse(VisualAutoTuneCoordinator.uiState.value.isCalibrating)
+        assertFalse(VisualAutoTuneCoordinator.uiState.value.isPaused)
     }
 
     @Test
@@ -67,11 +67,11 @@ class VisualAutoTuneCoordinatorTest {
         // Overlay closed on Display 0, but original suspended editor modal preserved
         assertNull(AppStateManager.activePrimaryModal.value)
         assertEquals(editorModal, AppStateManager.suspendedPrimaryModal.value)
-        assertTrue(VisualAutoTuneCoordinator.isCalibrating.value)
+        assertTrue(VisualAutoTuneCoordinator.uiState.value.isCalibrating)
 
         // Cancelling restores the original suspended modal
         VisualAutoTuneCoordinator.cancelCalibration(resumeSuspended = true)
-        assertFalse(VisualAutoTuneCoordinator.isCalibrating.value)
+        assertFalse(VisualAutoTuneCoordinator.uiState.value.isCalibrating)
         assertEquals(editorModal, AppStateManager.activePrimaryModal.value)
         assertNull(AppStateManager.suspendedPrimaryModal.value)
     }
@@ -102,10 +102,10 @@ class VisualAutoTuneCoordinatorTest {
 
         assertNull(AppStateManager.activePrimaryModal.value)
         assertEquals(editorModal, AppStateManager.suspendedPrimaryModal.value)
-        assertTrue(VisualAutoTuneCoordinator.isCalibrating.value)
+        assertTrue(VisualAutoTuneCoordinator.uiState.value.isCalibrating)
 
         VisualAutoTuneCoordinator.cancelCalibration(resumeSuspended = true)
-        assertFalse(VisualAutoTuneCoordinator.isCalibrating.value)
+        assertFalse(VisualAutoTuneCoordinator.uiState.value.isCalibrating)
         assertEquals(editorModal, AppStateManager.activePrimaryModal.value)
     }
 }

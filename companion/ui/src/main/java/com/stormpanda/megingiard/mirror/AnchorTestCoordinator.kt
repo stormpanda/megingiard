@@ -17,6 +17,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -26,6 +27,21 @@ private const val TEST_SAMPLE_INTERVAL_MS = 33L
 private const val TEST_WARMUP_DELAY_MS = 400L
 private const val DEFAULT_SCREEN_WIDTH = 1920
 private const val DEFAULT_SCREEN_HEIGHT = 1080
+
+data class AnchorTestUiState(
+    val isTesting: Boolean = false,
+    val currentMatchRatio: Float = 0f,
+    val isAnchorActive: Boolean = false,
+    val pointMatches: List<AnchorPointMatchResult> = emptyList(),
+    val targetPoints: List<AnchorPoint> = emptyList(),
+    val matchThreshold: Float = DEFAULT_LAYOUT_ANCHOR_MATCH_THRESHOLD,
+) {
+    val matchedPointCount: Int
+        get() = pointMatches.count { it.isMatch }
+
+    val totalPointCount: Int
+        get() = if (pointMatches.isNotEmpty()) pointMatches.size else targetPoints.size
+}
 
 /**
  * Singleton coordinator managing interactive anchor presence testing.
@@ -37,35 +53,14 @@ object AnchorTestCoordinator {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var testJob: Job? = null
 
-    private val _isTesting = MutableStateFlow(false)
-    val isTesting: StateFlow<Boolean> = _isTesting.asStateFlow()
-
-    private val _currentMatchRatio = MutableStateFlow(0f)
-    val currentMatchRatio: StateFlow<Float> = _currentMatchRatio.asStateFlow()
-
-    private val _isAnchorActive = MutableStateFlow(false)
-    val isAnchorActive: StateFlow<Boolean> = _isAnchorActive.asStateFlow()
+    private val _uiState = MutableStateFlow(AnchorTestUiState())
+    val uiState: StateFlow<AnchorTestUiState> = _uiState.asStateFlow()
 
     private val _referenceBitmap = MutableStateFlow<Bitmap?>(null)
     val referenceBitmap: StateFlow<Bitmap?> = _referenceBitmap.asStateFlow()
 
     private val _liveCropBitmap = MutableStateFlow<Bitmap?>(null)
     val liveCropBitmap: StateFlow<Bitmap?> = _liveCropBitmap.asStateFlow()
-
-    private val _pointMatches = MutableStateFlow<List<AnchorPointMatchResult>>(emptyList())
-    val pointMatches: StateFlow<List<AnchorPointMatchResult>> = _pointMatches.asStateFlow()
-
-    private val _matchedPointCount = MutableStateFlow(0)
-    val matchedPointCount: StateFlow<Int> = _matchedPointCount.asStateFlow()
-
-    private val _totalPointCount = MutableStateFlow(0)
-    val totalPointCount: StateFlow<Int> = _totalPointCount.asStateFlow()
-
-    private val _targetPoints = MutableStateFlow<List<AnchorPoint>>(emptyList())
-    val targetPoints: StateFlow<List<AnchorPoint>> = _targetPoints.asStateFlow()
-
-    private val _matchThreshold = MutableStateFlow(DEFAULT_LAYOUT_ANCHOR_MATCH_THRESHOLD)
-    val matchThreshold: StateFlow<Float> = _matchThreshold.asStateFlow()
 
     private var onUpdateLayoutCallback: ((PadLayout) -> Unit)? = null
     private var activeTestLayout: PadLayout? = null
@@ -98,7 +93,6 @@ object AnchorTestCoordinator {
         stopTesting(resumeSuspended = false)
         activeTestLayout = layout
         onUpdateLayoutCallback = onUpdateLayout
-        _matchThreshold.value = layout.visualAnchor.effectiveMatchThreshold
 
         val existingSuspended = AppStateManager.suspendedPrimaryModal.value
         if (existingSuspended != null) {
@@ -110,14 +104,13 @@ object AnchorTestCoordinator {
             ScreenCaptureManager.setFrozen(false)
         }
 
-        _isTesting.value = true
-        _currentMatchRatio.value = 0f
-        _isAnchorActive.value = false
-        _pointMatches.value = emptyList()
-        _matchedPointCount.value = 0
         val points = layout.visualAnchor.signature?.points ?: emptyList()
-        _targetPoints.value = points
-        _totalPointCount.value = points.size
+        _uiState.value =
+            AnchorTestUiState(
+                isTesting = true,
+                targetPoints = points,
+                matchThreshold = layout.visualAnchor.effectiveMatchThreshold,
+            )
 
         // Load reference calibrated bitmap (prefer pre-rendered static asset with mask, fallback to freeze frame)
         val staticAsset = CutoutMaskManager.getStaticAsset(context.applicationContext, layout.id)
@@ -174,20 +167,15 @@ object AnchorTestCoordinator {
                                             val py = (v * crop.height).toInt().coerceIn(0, crop.height - 1)
                                             crop.getPixel(px, py)
                                         }
-                                    _pointMatches.value = pointResults
                                     val matchedCount = pointResults.count { it.isMatch }
-                                    _matchedPointCount.value = matchedCount
-                                    _totalPointCount.value = pointResults.size
-
                                     val matchRatio =
                                         if (pointResults.isNotEmpty()) {
                                             matchedCount.toFloat() / pointResults.size.toFloat()
                                         } else {
                                             0f
                                         }
-                                    _currentMatchRatio.value = matchRatio
 
-                                    val presentThreshold = _matchThreshold.value
+                                    val presentThreshold = _uiState.value.matchThreshold
                                     val (nextState, nextCount) =
                                         AnchorPresenceEvaluator.transitionState(
                                             currentState = curState,
@@ -198,7 +186,13 @@ object AnchorTestCoordinator {
                                         )
                                     curState = nextState
                                     curCount = nextCount
-                                    _isAnchorActive.value = (curState == AnchorPresenceState.PRESENT)
+                                    _uiState.update {
+                                        it.copy(
+                                            pointMatches = pointResults,
+                                            currentMatchRatio = matchRatio,
+                                            isAnchorActive = (curState == AnchorPresenceState.PRESENT),
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -217,20 +211,14 @@ object AnchorTestCoordinator {
      * Terminates the active test session, cleans up memory, and restores suspended modal.
      */
     fun stopTesting(resumeSuspended: Boolean = true) {
-        val wasTesting = _isTesting.value
+        val wasTesting = _uiState.value.isTesting
         if (wasTesting) {
             AppLog.i(TAG, "Stopping anchor test session (resumeSuspended=$resumeSuspended)")
             testJob?.cancel()
             testJob = null
             setReferenceBitmap(null)
             setLiveCropBitmap(null)
-            _isTesting.value = false
-            _isAnchorActive.value = false
-            _currentMatchRatio.value = 0f
-            _pointMatches.value = emptyList()
-            _matchedPointCount.value = 0
-            _totalPointCount.value = 0
-            _targetPoints.value = emptyList()
+            _uiState.value = AnchorTestUiState()
 
             if (resumeSuspended) {
                 AppStateManager.resumeSuspended()
@@ -251,7 +239,7 @@ object AnchorTestCoordinator {
                 MAX_LAYOUT_ANCHOR_MATCH_THRESHOLD,
             )
         AppLog.d(TAG, "Anchor test match threshold updated: $clamped (layout=${activeTestLayout?.id})")
-        _matchThreshold.value = clamped
+        _uiState.update { it.copy(matchThreshold = clamped) }
         activeTestLayout?.let { curLayout ->
             val updated =
                 curLayout.copy(

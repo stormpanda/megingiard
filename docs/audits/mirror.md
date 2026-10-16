@@ -242,7 +242,7 @@
 - [x] **`[MR-04]`** — Deduplicate 3 identical `ResizeHandleView` Composables into one `internal` Composable *(Complexity: Low, Risk: Low)*
 - [x] **`[MR-08]`** — Delete `ThrottledTextureView.kt` and use standard `TextureView` in `EmbeddedMirrorView.kt` *(Complexity: Low, Risk: Low)*
 - [x] **`[MR-10]`** — Delete unused `CutoutLayoutEditorHelpModal` Composable and its imports *(Complexity: Low, Risk: Low)*
-- [ ] **`[MR-14]`** — Consolidate fragmented `MutableStateFlow`s into `AnchorTestUiState` and `AutoTuneUiState` data classes *(Complexity: Low, Risk: Low)*
+- [x] **`[MR-14]`** — Consolidate fragmented `MutableStateFlow`s into `AnchorTestUiState` and `AutoTuneUiState` data classes *(Complexity: Low, Risk: Low)*
 - [ ] **`[MR-18]`** — Commit anchor crop changes directly to `MacroPadState` and delete `AnchorPositioningCoordinator.kt` *(Complexity: Low, Risk: Low)*
 - [x] **`[MR-11]`** — Delete dead `progress`/`remainingSeconds` flows in `VisualAutoTuneCoordinator` and unused `activeSurface` in `MirrorFrameSampler` *(Complexity: Low, Risk: Low)*
 - [ ] **`[MR-17]`** — Extract shared top-overlay initial focus & recovery effect into `EditorToolbox.kt` *(Complexity: Low, Risk: Low)*

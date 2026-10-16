@@ -430,7 +430,8 @@ fun MainAppScreen() {
                 )
             }
 
-            val isAutoTuning by VisualAutoTuneCoordinator.isCalibrating.collectAsStateWithLifecycle()
+            val autoTuneState by VisualAutoTuneCoordinator.uiState.collectAsStateWithLifecycle()
+            val isAutoTuning = autoTuneState.isCalibrating
             if (isAutoTuning) {
                 AutoTuneCalibrationSheet(
                     onCancel = {
@@ -456,7 +457,8 @@ fun MainAppScreen() {
                 }
             }
 
-            val isAnchorTesting by AnchorTestCoordinator.isTesting.collectAsStateWithLifecycle()
+            val anchorTestState by AnchorTestCoordinator.uiState.collectAsStateWithLifecycle()
+            val isAnchorTesting = anchorTestState.isTesting
             if (isAnchorTesting) {
                 AnchorTestingSheet(
                     onDone = {
