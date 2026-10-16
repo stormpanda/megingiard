@@ -2,7 +2,7 @@
 
 > **Feature Spec:** [`docs/features/integration-api/FEATURE.md`](../features/integration-api/FEATURE.md)
 > **Modules & Packages:** `:companion:ui` (`provider/`, `security/`, `services/`, `ui/`), `:companion:domain` (`AppStateManager`, `macropad/AutoSwitchCoordinator`), `:shared:session` (`session/`), `:shared:catalog` (`catalog/ipc/`, `catalog/`)
-> **Audit Status:** Draft — Awaiting Operator Selection
+> **Audit Status:** Completed
 
 ---
 
@@ -291,4 +291,4 @@
 - [x] **`[IA-23]`** — Fix stale `MegingiardIpcContract.kt` module path in `FEATURE.md` *(Complexity: Low, Risk: Low)*
 - [x] **`[IA-24]`** — Remove outdated RetroArch package preference claim from `FEATURE.md` §3.2 *(Complexity: Low, Risk: Low)*
 - [x] **`[IA-25]`** — Document all `updateClientState` Bundle columns, `AutoSwitchCoordinator`, and `:shared:session` detectors in `FEATURE.md` *(Complexity: Low, Risk: Low)*
-- [ ] **`[IA-26]`** — Update `IntegrationHomeScreen` Tool Deck description in `FEATURE.md` §4.2 *(Complexity: Low, Risk: Low)*
+- [x] **`[IA-26]`** — Update `IntegrationHomeScreen` Tool Deck description in `FEATURE.md` §4.2 *(Complexity: Low, Risk: Low)*
