@@ -89,12 +89,8 @@ internal object VisualAutoTuneCoordinator {
     private fun setPreviewBitmap(bitmap: Bitmap?) {
         val old = _previewBitmap.value
         _previewBitmap.value = bitmap
-        if (old != null && old != bitmap) {
-            synchronized(old) {
-                if (!old.isRecycled) {
-                    old.recycle()
-                }
-            }
+        if (old != null && old != bitmap && !old.isRecycled) {
+            old.recycle()
         }
     }
 

@@ -186,12 +186,8 @@ object ScreenCaptureManager {
         AppLog.d(TAG, "setFrozenBitmap(${if (bitmap != null) "${bitmap.width}x${bitmap.height}" else "null"})")
         val old = _frozenBitmap.value
         _frozenBitmap.value = bitmap
-        if (old != null && old != bitmap) {
-            synchronized(old) {
-                if (!old.isRecycled) {
-                    old.recycle()
-                }
-            }
+        if (old != null && old != bitmap && !old.isRecycled) {
+            old.recycle()
         }
     }
 

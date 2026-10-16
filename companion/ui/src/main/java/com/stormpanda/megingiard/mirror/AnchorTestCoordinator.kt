@@ -73,24 +73,16 @@ object AnchorTestCoordinator {
     private fun setReferenceBitmap(bitmap: Bitmap?) {
         val old = _referenceBitmap.value
         _referenceBitmap.value = bitmap
-        if (old != null && old != bitmap) {
-            synchronized(old) {
-                if (!old.isRecycled) {
-                    old.recycle()
-                }
-            }
+        if (old != null && old != bitmap && !old.isRecycled) {
+            old.recycle()
         }
     }
 
     private fun setLiveCropBitmap(bitmap: Bitmap?) {
         val old = _liveCropBitmap.value
         _liveCropBitmap.value = bitmap
-        if (old != null && old != bitmap) {
-            synchronized(old) {
-                if (!old.isRecycled) {
-                    old.recycle()
-                }
-            }
+        if (old != null && old != bitmap && !old.isRecycled) {
+            old.recycle()
         }
     }
 
