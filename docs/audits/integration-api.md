@@ -290,5 +290,5 @@
 - [x] **`[IA-22]`** — Deduplicate 3x `ProfileAssociation` construction blocks in `IntegrationHomeScreen` *(Complexity: Low, Risk: Low)*
 - [x] **`[IA-23]`** — Fix stale `MegingiardIpcContract.kt` module path in `FEATURE.md` *(Complexity: Low, Risk: Low)*
 - [x] **`[IA-24]`** — Remove outdated RetroArch package preference claim from `FEATURE.md` §3.2 *(Complexity: Low, Risk: Low)*
-- [ ] **`[IA-25]`** — Document all `updateClientState` Bundle columns, `AutoSwitchCoordinator`, and `:shared:session` detectors in `FEATURE.md` *(Complexity: Low, Risk: Low)*
+- [x] **`[IA-25]`** — Document all `updateClientState` Bundle columns, `AutoSwitchCoordinator`, and `:shared:session` detectors in `FEATURE.md` *(Complexity: Low, Risk: Low)*
 - [ ] **`[IA-26]`** — Update `IntegrationHomeScreen` Tool Deck description in `FEATURE.md` §4.2 *(Complexity: Low, Risk: Low)*
