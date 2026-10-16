@@ -83,14 +83,11 @@ the universal "go back" mechanism throughout the app.
     - **Both Screenshot** icon button: captures both screens simultaneously via `ScreenCaptureManager.requestScreenshot(ScreenshotTarget.BOTH)` and composites them into a vertical dual-screen image. Uses Material Symbol `splitscreen` with label "Both".
 - All icon buttons in these cards have compact vertical spacing with clear text labels rendered directly beneath each icon.
 
-### FR-PM6: Injector Suspension While Open
+### FR-PM6: Centralized Injector Lifecycle
 
-- While the Quick Menu is visible, virtual **gamepad and mouse** injectors MUST be stopped.
-- The virtual keyboard injector remains attached while the menu is open to avoid OEM launcher
-  focus-steal behavior on AYN Thor firmware when keyboard availability toggles (`qwerty` ↔ `-keyb`).
-  Toggling keyboard availability could otherwise background the app immediately after opening the menu.
-- Injector stop/restart for Quick Menu and modal transitions is handled by `InjectorLifecycleManager`. The Quick Menu
-  Composable does not directly manage injector processes.
+- Input injectors (`KeyInjector`, `MouseInjector`, `TouchInjector`) are centrally managed by `InjectorLifecycleManager.watch()`, which is started once in `MainActivity.onCreate()`.
+- Standard injectors remain active whenever Megingiard is in the foreground (`AppStateManager.isActivityResumed`), keeping the virtual keyboard attached while the Quick Menu is open to avoid OEM launcher focus-steal behavior on AYN Thor firmware when keyboard availability toggles (`qwerty` ↔ `-keyb`).
+- `KeyInjector` is paused only when Megingiard is backgrounded or when Android's software IME is required (`AppStateManager.isPrivdSetupWizardActive`). Neither `QuickMenu` nor `MacroPadScreen` directly starts or stops injector processes.
 
 ---
 

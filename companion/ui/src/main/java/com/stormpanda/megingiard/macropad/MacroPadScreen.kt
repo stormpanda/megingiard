@@ -72,7 +72,6 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.BitmapUtils
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.input.InjectorLifecycleManager
 import com.stormpanda.megingiard.math.ViewportMath
 import com.stormpanda.megingiard.mirror.EmbeddedMirrorView
 import com.stormpanda.megingiard.mirror.InteractiveCutoutController
@@ -163,12 +162,7 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
     val colors = LocalAppColors.current
     var lastFeedbackAtMs by remember { mutableLongStateOf(0L) }
 
-    // Single watcher that starts/stops injectors reactively based on all modal flags
-    LaunchedEffect(Unit) {
-        InjectorLifecycleManager.watch()
-    }
-
-    // Stop all injectors and reset peek state when leaving MACROPAD mode
+    // Reset peek state when leaving MACROPAD mode
     DisposableEffect(Unit) {
         onDispose {
             MacroPadState.resetPeek()
