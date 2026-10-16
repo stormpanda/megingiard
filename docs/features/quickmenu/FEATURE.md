@@ -176,7 +176,7 @@ handler reads `isAnyModalActive` to decide whether to close the active modal ins
 
 Dialogs and configuration overlays presented on the primary display (Display 0) support full physical gamepad navigation and a console-grade TV/handheld UI:
 - **Window Focus Management:** `PrimaryOverlayManager` requests window input focus post-attachment (`view.post { view.requestFocus() }`) so hardware input events route to the overlay rather than background apps.
-- **Analog Stick & Hat Switch Translation:** `PrimaryOverlayInputBridge` processes `MotionEvent` axis streams (`AXIS_X`, `AXIS_Y`, `AXIS_HAT_X`, `AXIS_HAT_Y`) with a $0.5f$ deadzone and $180\text{ ms}$ repeat throttling, synthesizing discrete `KEYCODE_DPAD_*` key events for 2D focus traversal.
+- **Analog Stick & Hat Switch Translation:** `PrimaryOverlayInputBridge` processes `MotionEvent` axis streams (`AXIS_X`, `AXIS_Y`, `AXIS_HAT_X`, `AXIS_HAT_Y`) with a $0.5f$ deadzone and accelerating repeat throttling ($250\text{ ms}$ initial delay, $120\text{ ms} \to 60\text{ ms}$ repeat interval), synthesizing discrete `KEYCODE_DPAD_*` key events for 2D focus traversal.
 - **Button A & Enter Activation:** `Modifier.primaryOverlayFocusable` ensures that physical controller `KEYCODE_BUTTON_A` (96) and `KEYCODE_DPAD_CENTER` trigger item clicks across rows, buttons, and selectable chips.
 - **Bumper Tab Switching:** Pressing `[L1]` (102) or `[R1]` (103) dispatches `BumperDirection.PREV` / `NEXT` events via `PrimaryOverlayInputBridge.bumperEvents`, cycling active tabs and category sidebar filters.
 - **Button B / Back Dismissal:** Pressing `[B]` (97) or `BACK` triggers `onPreviewKeyEvent` / back-press dispatcher to close active dialogs and modals immediately.
@@ -193,7 +193,7 @@ Dialogs and configuration overlays presented on the primary display (Display 0) 
   - **Focus Recovery Dispatcher:** If pointer interaction clears focus or switches Compose to `InputMode.Touch`, subsequent gamepad D-Pad, Analog Stick, or Button A inputs that are unhandled are captured by `PrimaryOverlayManager` / `PrimaryOverlayActivity` and forwarded to `PrimaryOverlayInputBridge.sendFocusRecovery()`.
   - **Universal Fallback:** `GamepadTwoPaneScaffold` listens to focus recovery events and requests `InputMode.Keyboard`, instantly restoring focus to the active category or last-focused deck card without dropped inputs.
 - **Two-Pane Console Sidebar Layout (`GlobalSettingsScreen`, `MacroPadEditor`):**
-  - Left pane features a 210 dp category rail with category tiles (General, Input, Appearance, Data, Config, Updates, Diagnostics in Settings; Profiles, Layouts, Canvas, Buttons, Macros in MacroPad Editor).
+  - Left pane features a 180 dp category rail (`SIDEBAR_WIDTH`) with category tiles (General, Input, Appearance, Data, Config, Updates, Diagnostics in Settings; Profiles, Layouts, Canvas, Buttons, Macros in MacroPad Editor).
   - Right pane presents the active category's settings deck using gamepad cards with independent scroll and focus restoration.
 
 ### Source Files

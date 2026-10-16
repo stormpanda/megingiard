@@ -2,7 +2,7 @@
 
 > **Feature Spec:** [`docs/features/quickmenu/FEATURE.md`](../features/quickmenu/FEATURE.md)
 > **Modules & Packages:** `:companion:ui` (`com.stormpanda.megingiard`, `ui/`, `viewmodel/`), `:companion:domain` (`com.stormpanda.megingiard`), `:shared:core` (`navigation/`, `ui/`), `:shared:ui` (`ui/`)
-> **Audit Status:** Draft — Awaiting Operator Selection
+> **Audit Status:** Completed
 
 ---
 
@@ -283,4 +283,4 @@ None identified — Quick Menu and App Shell state transitions are event-driven 
 - [x] **`[QM-18]`** — Remove redundant `HIDE_DEBOUNCE_MS` (32 ms) delay from `PrimaryOverlayManager` *(Complexity: Low, Risk: Low)*
 - [x] **`[QM-19]`** — Delete `NavDestinationTest.kt` and remove dead modal assertions from `PrimaryModalConfigTest` and `AppStateManagerTest` *(Complexity: Med, Risk: Low)*
 - [x] **`[QM-20]`** — Update outdated architecture and functional claims in `docs/features/quickmenu/FEATURE.md` *(Complexity: Med, Risk: Low)*
-- [ ] **`[QM-21]`** — Sync gamepad repeat timing, category rail width, and focus anchor docs in `FEATURE.md` and `ARCHITECTURE.md` *(Complexity: Low, Risk: Low)*
+- [x] **`[QM-21]`** — Sync gamepad repeat timing, category rail width, and focus anchor docs in `FEATURE.md` and `ARCHITECTURE.md` *(Complexity: Low, Risk: Low)*
