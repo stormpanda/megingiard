@@ -39,7 +39,6 @@ class FocusTopLauncherViewModelPairingTest {
     fun testInitialPairingState() {
         assertNull(viewModel.pairingTargetApp.value)
         assertEquals(0, viewModel.pairingFocusedIndex.value)
-        assertEquals(0, viewModel.confirmPairingTrigger.value)
     }
 
     @Test
@@ -52,15 +51,6 @@ class FocusTopLauncherViewModelPairingTest {
         viewModel.dismissPairingDialog()
         assertNull(viewModel.pairingTargetApp.value)
         assertEquals(0, viewModel.pairingFocusedIndex.value)
-    }
-
-    @Test
-    fun testTriggerConfirmPairing() {
-        assertEquals(0, viewModel.confirmPairingTrigger.value)
-        viewModel.triggerConfirmPairing()
-        assertEquals(1, viewModel.confirmPairingTrigger.value)
-        viewModel.triggerConfirmPairing()
-        assertEquals(2, viewModel.confirmPairingTrigger.value)
     }
 
     @Test

@@ -555,7 +555,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             viewModel = viewModel,
                             allApps = allApps,
                             favoritesSet = favorites,
-                            hiddenSet = hidden,
+                            hiddenSet = frozenHidden,
                             lastUsed = lastUsed,
                             collectionMembers = collectionMembers,
                             categories = categories,

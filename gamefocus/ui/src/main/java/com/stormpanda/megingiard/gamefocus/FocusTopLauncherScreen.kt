@@ -201,7 +201,6 @@ fun FocusTopLauncherScreen(
     val dpadStepRightTrigger by viewModel.dpadStepRightTrigger.collectAsState()
     val pairingTargetApp by viewModel.pairingTargetApp.collectAsState()
     val pairingFocusedIndex by viewModel.pairingFocusedIndex.collectAsState()
-    val confirmPairingTrigger by viewModel.confirmPairingTrigger.collectAsState()
     val areButtonPromptsVisible by viewModel.areButtonPromptsVisible.collectAsState()
 
     val appColors = LocalAppColors.current
@@ -215,12 +214,10 @@ fun FocusTopLauncherScreen(
         }
     }
 
-    val frozenHiddenSet = remember(allApps, selectedCategory, isLibraryOpen) { hiddenSet.toSet() }
-
     val availableAppsByPackage = remember(availableAndroidApps) { availableAndroidApps.associateBy { it.packageName } }
 
     fun getAppsForCategory(cat: GameFocusCategory): List<InstalledAppInfo> =
-        cat.filterApps(allApps, favoritesSet, frozenHiddenSet, lastUsed, collectionMembers)
+        cat.filterApps(allApps, favoritesSet, hiddenSet, lastUsed, collectionMembers)
 
     val categoryApps = getAppsForCategory(selectedCategory)
     val uniqueLetters = remember(categoryApps) { LetterNavigationHelper.getUniqueStartingLetters(categoryApps) }
@@ -945,7 +942,6 @@ fun FocusTopLauncherScreen(
                 availableApps = availableAndroidApps,
                 focusedIndex = pairingFocusedIndex,
                 onFocusedIndexChange = viewModel::setPairingFocusedIndex,
-                confirmTrigger = confirmPairingTrigger,
                 onDismiss = viewModel::dismissPairingDialog,
                 onSelectApp = { selectedApp ->
                     onConfirmPairApp(pairingTargetApp!!, selectedApp)

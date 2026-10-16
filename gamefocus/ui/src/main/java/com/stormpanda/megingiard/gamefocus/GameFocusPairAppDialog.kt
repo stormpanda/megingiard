@@ -93,7 +93,6 @@ fun GameFocusPairAppDialog(
     availableApps: List<InstalledAppInfo>,
     focusedIndex: Int,
     onFocusedIndexChange: (Int) -> Unit,
-    confirmTrigger: Int = 0,
     onDismiss: () -> Unit,
     onSelectApp: (InstalledAppInfo) -> Unit,
     modifier: Modifier = Modifier,
@@ -116,16 +115,6 @@ fun GameFocusPairAppDialog(
             if (targetRow != lastScrolledRow) {
                 lastScrolledRow = targetRow
                 scrollToFocusedItem(gridState, safeIndex, PFD_GRID_COLUMNS, peekOffsetPx)
-            }
-        }
-    }
-
-    LaunchedEffect(confirmTrigger) {
-        if (confirmTrigger > 0) {
-            val selectedApp = availableApps.getOrNull(focusedIndex)
-            if (selectedApp != null) {
-                AppLog.i(TAG, "Confirming app pairing via trigger for ${targetApp.label} -> ${selectedApp.label}")
-                onSelectApp(selectedApp)
             }
         }
     }
