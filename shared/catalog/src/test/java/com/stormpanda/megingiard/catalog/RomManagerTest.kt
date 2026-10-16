@@ -38,7 +38,7 @@ class RomManagerTest {
         RomManager.resetForTesting()
     }
 
-    private fun docFiles(vararg names: String): Array<DocumentFile> = names.map { DocumentFile.fromFile(File(it)) }.toTypedArray()
+    private fun docFiles(vararg names: String): List<DocumentFile> = names.map { DocumentFile.fromFile(File(it)) }
 
     @Test
     fun testDetectSystem_snes() {
@@ -57,7 +57,7 @@ class RomManagerTest {
 
     @Test
     fun testDetectSystem_empty() {
-        assertNull(RomManager.detectSystem(context, emptyArray()))
+        assertNull(RomManager.detectSystem(context, emptyList()))
     }
 
     @Test
@@ -83,7 +83,7 @@ class RomManagerTest {
                 docFile.uri,
                 FileInputStream(zipFile),
             )
-            val systemId = RomManager.detectSystem(context, arrayOf(docFile))
+            val systemId = RomManager.detectSystem(context, listOf(docFile))
             assertEquals("gba", systemId)
         } finally {
             zipFile.delete()

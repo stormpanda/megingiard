@@ -544,11 +544,6 @@ object RomManager {
 
     internal fun detectSystem(
         context: Context,
-        files: Array<DocumentFile>,
-    ): String? = detectSystem(context, files.toList())
-
-    internal fun detectSystem(
-        context: Context,
         files: List<DocumentFile>,
     ): String? {
         val extensionCounts = mutableMapOf<String, Int>()
