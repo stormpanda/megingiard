@@ -2,7 +2,7 @@
 
 > **Feature Spec:** [`docs/features/gamefocus/FEATURE.md`](../features/gamefocus/FEATURE.md) · [`requirements-library-launching.md`](../features/gamefocus/requirements-library-launching.md) · [`technical-implementation.md`](../features/gamefocus/technical-implementation.md)
 > **Modules & Packages:** `:gamefocus:ui` (`com.stormpanda.megingiard.gamefocus`), `:gamefocus:domain` (`com.stormpanda.megingiard.gamefocus.domain`), `:shared:catalog` (`com.stormpanda.megingiard.catalog`), `:shared:media` (`com.stormpanda.megingiard.media`)
-> **Audit Status:** Draft — Awaiting Operator Selection
+> **Audit Status:** Completed
 
 ---
 
@@ -297,4 +297,4 @@
 - [x] **`[GF-19]`** — Remove dead `confirmPairingTrigger` counter and deduplicate `frozenHidden` computation *(Complexity: Low, Risk: Low)*
 - [x] **`[GF-20]`** — Read artwork & title state directly from reactive `liveAppInfo` in `GameFocusEditGameOverlay` *(Complexity: Med, Risk: Low)*
 - [x] **`[GF-21]`** — Sync `docs/features/gamefocus/` paths, component names, padding constants, and repeat delays with code *(Complexity: Low, Risk: Low)*
-- [ ] **`[GF-22]`** — Add `EMULATOR_ID_YUZU` Switch emulator resolution in `MegingiardSettingsClient.getActualPackageName` *(Complexity: Low, Risk: Low)*
+- [x] **`[GF-22]`** — Add `EMULATOR_ID_YUZU` Switch emulator resolution in `MegingiardSettingsClient.getActualPackageName` *(Complexity: Low, Risk: Low)*

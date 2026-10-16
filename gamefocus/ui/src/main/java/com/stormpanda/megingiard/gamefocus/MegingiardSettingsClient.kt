@@ -5,9 +5,11 @@ import android.net.Uri
 import android.os.Bundle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.EMULATOR_ID_RETROARCH
+import com.stormpanda.megingiard.catalog.EMULATOR_ID_YUZU
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.catalog.RomManager
 import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
+import com.stormpanda.megingiard.catalog.SwitchEmulators
 import com.stormpanda.megingiard.ipc.IpcSettingsParser
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import com.stormpanda.megingiard.ipc.observeContentProvider
@@ -123,14 +125,14 @@ object MegingiardSettingsClient {
         // Translate pseudo-packages to actual emulator packages and attach ROM metadata
         val focusedRomApp = resolveRomApp(request.focusedPackage)
         val finalFocusedPackage =
-            focusedRomApp?.let { getActualPackageName(appContext, it.systemId) } ?: request.focusedPackage
+            focusedRomApp?.let { getActualPackageName(appContext, it.systemId, it.emulatorPackage) } ?: request.focusedPackage
         val finalFocusedRomPath = focusedRomApp?.romPath ?: request.focusedRomPath
         val finalFocusedRomIdentifier =
             request.focusedRomIdentifier ?: finalFocusedRomPath?.let { File(it).name }
 
         val hoveredRomApp = resolveRomApp(request.hoveredPackage)
         val finalHoveredPackage =
-            hoveredRomApp?.let { getActualPackageName(appContext, it.systemId) } ?: request.hoveredPackage
+            hoveredRomApp?.let { getActualPackageName(appContext, it.systemId, it.emulatorPackage) } ?: request.hoveredPackage
         val finalHoveredRomPath = hoveredRomApp?.romPath ?: request.hoveredRomPath
         val finalHoveredRomIdentifier =
             request.hoveredRomIdentifier ?: finalHoveredRomPath?.let { File(it).name }
@@ -169,17 +171,31 @@ object MegingiardSettingsClient {
         }
     }
 
-    private fun getActualPackageName(
+    internal fun getActualPackageName(
         context: Context,
         systemId: String?,
+        emulatorPackage: String? = null,
     ): String {
         if (systemId == null) return "com.retroarch.aarch64"
         val systemDef = SUPPORTED_SYSTEMS.find { it.id == systemId }
         val candidates =
-            if (systemDef?.emulatorId == EMULATOR_ID_RETROARCH || systemDef?.emulatorId == null) {
-                listOf("com.retroarch.aarch64", "com.retroarch")
-            } else {
-                GameNativeDetector.supportedPackages
+            when (systemDef?.emulatorId) {
+                EMULATOR_ID_RETROARCH, null -> {
+                    listOf("com.retroarch.aarch64", "com.retroarch")
+                }
+
+                EMULATOR_ID_YUZU -> {
+                    val switchPackages = SwitchEmulators.SUPPORTED_EMULATOR_OPTIONS.map { it.packageName }
+                    if (!emulatorPackage.isNullOrBlank()) {
+                        listOf(emulatorPackage) + switchPackages.filterNot { it == emulatorPackage }
+                    } else {
+                        switchPackages
+                    }
+                }
+
+                else -> {
+                    GameNativeDetector.supportedPackages
+                }
             }
         val pm = context.packageManager
         return candidates.firstOrNull { pkg ->
