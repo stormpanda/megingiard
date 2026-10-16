@@ -213,8 +213,6 @@ object PrimaryOverlayManager {
     private var lifecycleOwner: WindowOverlayLifecycleOwner? = null
     private var wasFrozenForModal = false
     private val mainHandler = Handler(Looper.getMainLooper())
-    private var pendingHideRunnable: Runnable? = null
-    private const val HIDE_DEBOUNCE_MS = 32L
 
     fun init(app: Application) {
         if (application != null) return
@@ -240,30 +238,11 @@ object PrimaryOverlayManager {
 
     private fun handleOverlayStateOnMainThread(modal: PrimaryModalConfig?) {
         if (modal == null) {
-            scheduleHideOverlay()
+            hideOverlayOnMainThread()
             return
         }
-        cancelPendingHide()
         wasFrozenForModal = syncPrimaryOverlayMirrorFreeze(modal, wasFrozenForModal)
         showOverlayOnMainThread()
-    }
-
-    private fun scheduleHideOverlay() {
-        if (pendingHideRunnable != null) return
-        val runnable =
-            Runnable {
-                pendingHideRunnable = null
-                hideOverlayOnMainThread()
-            }
-        pendingHideRunnable = runnable
-        mainHandler.postDelayed(runnable, HIDE_DEBOUNCE_MS)
-    }
-
-    private fun cancelPendingHide() {
-        pendingHideRunnable?.let {
-            mainHandler.removeCallbacks(it)
-            pendingHideRunnable = null
-        }
     }
 
     private fun showOverlayOnMainThread() {
