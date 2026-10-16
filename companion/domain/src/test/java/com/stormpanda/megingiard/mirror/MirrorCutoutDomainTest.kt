@@ -30,7 +30,6 @@ class MirrorCutoutDomainTest {
         id: String = "test-layout",
         name: String = "Test Layout",
         mirrorCutouts: List<ScreenCutout> = emptyList(),
-        mirrorMultiMode: Boolean = false,
         mirrorSavedScale: Float = 1f,
         mirrorSavedOffsetX: Float = 0f,
         mirrorSavedOffsetY: Float = 0f,
@@ -40,7 +39,6 @@ class MirrorCutoutDomainTest {
                 id = id,
                 name = name,
                 mirrorCutouts = mirrorCutouts,
-                mirrorMultiMode = mirrorMultiMode,
                 mirrorSavedScale = mirrorSavedScale,
                 mirrorSavedOffsetX = mirrorSavedOffsetX,
                 mirrorSavedOffsetY = mirrorSavedOffsetY,
@@ -95,7 +93,6 @@ class MirrorCutoutDomainTest {
         val activeLayout = MacroPadState.activeLayout.value
         assertNotNull(activeLayout)
         assertEquals(0, activeLayout!!.mirrorCutouts.size)
-        assertTrue(activeLayout.mirrorConfigured)
     }
 
     @Test

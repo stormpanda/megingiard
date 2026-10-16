@@ -83,7 +83,6 @@ class MacroPadStateTest {
         buttonTextColor: ColorOption = ColorOption.Neutral,
         buttonBgColor: ColorOption = ColorOption.Neutral,
         mirrorEdgeBlendWidth: Float = 0f,
-        mirrorConfigured: Boolean = false,
         visualAnchor: LayoutVisualAnchor = LayoutVisualAnchor(),
     ) = PadLayout(
         id = id,
@@ -108,7 +107,6 @@ class MacroPadStateTest {
         buttonTextColor = buttonTextColor,
         buttonBgColor = buttonBgColor,
         mirrorEdgeBlendWidth = mirrorEdgeBlendWidth,
-        mirrorConfigured = mirrorConfigured,
         visualAnchor = visualAnchor,
     )
 
@@ -643,7 +641,7 @@ class MacroPadStateTest {
 
     @Test
     fun `setPreviewLayout and clearPreviewLayout manage in-flight layout preview`() {
-        val savedLayout = testLayout(id = "l1", name = "Saved Layout", buttonTextColor = ColorOption.Neutral, mirrorConfigured = true)
+        val savedLayout = testLayout(id = "l1", name = "Saved Layout", buttonTextColor = ColorOption.Neutral)
         val p1 = testProfile(id = "p1", layouts = listOf(savedLayout), activeLayoutId = "l1")
         loadProfiles(p1)
 
@@ -672,7 +670,7 @@ class MacroPadStateTest {
     @Test
     fun `setPreviewButton replaces existing button or appends new button in activeLayout preview`() {
         val b1 = testButton(id = "btn-1", label = "A", posX = 0.2f, posY = 0.2f, action = PadAction.KeyboardKey(65, "A"))
-        val savedLayout = testLayout(id = "l1", name = "Saved Layout", buttons = listOf(b1), mirrorConfigured = true)
+        val savedLayout = testLayout(id = "l1", name = "Saved Layout", buttons = listOf(b1))
         val p1 = testProfile(id = "p1", layouts = listOf(savedLayout), activeLayoutId = "l1")
         loadProfiles(p1)
 
@@ -743,7 +741,6 @@ class MacroPadStateTest {
                 id = "l1",
                 buttonBgColor = ColorOption.Custom(0xFF00FF00.toInt()),
                 buttons = listOf(b1, b2),
-                mirrorConfigured = true,
             )
         loadProfiles(testProfile(id = "p1", layouts = listOf(layout), activeLayoutId = "l1"))
 
@@ -1098,13 +1095,13 @@ class MacroPadStateTest {
                 signature = VisualAnchorSignature("layout-1", listOf(AnchorPoint(0.5f, 0.5f, 255, 255, 255))),
                 matchThreshold = null,
             )
-        val calibratedLayout = testLayout(id = "l1", name = "Calibrated", visualAnchor = legacyCalibratedAnchor, mirrorConfigured = true)
+        val calibratedLayout = testLayout(id = "l1", name = "Calibrated", visualAnchor = legacyCalibratedAnchor)
 
         val uncalibratedAnchor = LayoutVisualAnchor(enabled = false, signature = null, matchThreshold = null)
-        val uncalibratedLayout = testLayout(id = "l2", name = "Uncalibrated", visualAnchor = uncalibratedAnchor, mirrorConfigured = true)
+        val uncalibratedLayout = testLayout(id = "l2", name = "Uncalibrated", visualAnchor = uncalibratedAnchor)
 
         val customThresholdAnchor = LayoutVisualAnchor(enabled = true, matchThreshold = 0.90f)
-        val customLayout = testLayout(id = "l3", name = "Custom", visualAnchor = customThresholdAnchor, mirrorConfigured = true)
+        val customLayout = testLayout(id = "l3", name = "Custom", visualAnchor = customThresholdAnchor)
 
         val profile = testProfile(id = "p1", layouts = listOf(calibratedLayout, uncalibratedLayout, customLayout), activeLayoutId = "l1")
         loadProfiles(profile)

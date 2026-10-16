@@ -22,7 +22,6 @@ private const val MP_DEFAULT_PROFILE_NAME = "Profile"
 private const val MP_DEFAULT_LAYOUT_NAME = "Layout"
 private const val DEFAULT_PROFILE_NAME = "Default"
 private const val DUPLICATE_BUTTON_OFFSET = 0.05f
-private const val MP_LEGACY_BG_ALPHA_MIGRATION = 0xB3 // 70% opacity in hex (matching previous default resting level)
 
 private fun defaultInitialName(): String =
     when (Locale.getDefault().language.lowercase()) {
@@ -30,19 +29,6 @@ private fun defaultInitialName(): String =
         "de" -> "Standard"
         else -> "Default"
     }
-
-private fun migrateButtonBgColorOption(option: ColorOption?): ColorOption? {
-    if (option is ColorOption.Custom) {
-        val alpha = (option.argb ushr 24) and 0xFF
-        // If alpha is full opacity (0xFF / 1.0f) from pre-opacity versions,
-        // migrate it to the documented previous resting default 0.70f (0xB3).
-        if (alpha == 0xFF) {
-            val migratedArgb = (MP_LEGACY_BG_ALPHA_MIGRATION shl 24) or (option.argb and 0x00FFFFFF)
-            return ColorOption.Custom(migratedArgb)
-        }
-    }
-    return option
-}
 
 private fun PadButton.cloneWithMacroMapping(macroMapping: Map<String, String>): PadButton {
     val updatedAction =
@@ -328,7 +314,6 @@ object MacroPadState {
                                     PadLayout(
                                         id = layoutId,
                                         name = p.name,
-                                        mirrorConfigured = true,
                                     ),
                                 ),
                             activeLayoutId = layoutId,
@@ -336,80 +321,11 @@ object MacroPadState {
                 } else {
                     val migratedLayouts =
                         p.layouts.map { layout ->
-                            var current = layout
-                            var changed = false
-                            @Suppress("DEPRECATION")
-                            if (current.buttonColorNoMirror != null || current.buttonColorMirror != null) {
+                            val normalized = layout.normalizedOnLoad()
+                            if (normalized != layout) {
                                 needsSave = true
-                                changed = true
-                                current =
-                                    current.copy(
-                                        buttonTextColor = ColorOption.Neutral,
-                                        buttonBorderColor = ColorOption.Neutral,
-                                        buttonBgColor = ColorOption.Neutral,
-                                        buttonColorNoMirror = null,
-                                        buttonColorMirror = null,
-                                    )
                             }
-                            @Suppress("DEPRECATION")
-                            if (current.useBackgroundImageAsMask) {
-                                needsSave = true
-                                changed = true
-                                current =
-                                    current.copy(
-                                        maskImagePath = current.backgroundImagePath,
-                                        maskImageScale = current.bgImageScale,
-                                        maskImageOffsetX = current.bgImageOffsetX,
-                                        maskImageOffsetY = current.bgImageOffsetY,
-                                        maskImageDim = current.backgroundImageDim,
-                                        maskScaleMode = current.bgScaleMode,
-                                        backgroundImagePath = null,
-                                        bgImageScale = 1f,
-                                        bgImageOffsetX = 0f,
-                                        bgImageOffsetY = 0f,
-                                        backgroundImageDim = 0f,
-                                        bgScaleMode = BackgroundScaleMode.FILL,
-                                        useBackgroundImageAsMask = false,
-                                    )
-                            }
-                            val migratedBg = migrateButtonBgColorOption(current.buttonBgColor) ?: current.buttonBgColor
-                            if (migratedBg != current.buttonBgColor) {
-                                needsSave = true
-                                changed = true
-                                current = current.copy(buttonBgColor = migratedBg)
-                            }
-                            val migratedButtons =
-                                current.buttons.map { btn ->
-                                    val btnMigratedBg = migrateButtonBgColorOption(btn.buttonBgColor)
-                                    if (btnMigratedBg != btn.buttonBgColor) {
-                                        needsSave = true
-                                        changed = true
-                                        btn.copy(buttonBgColor = btnMigratedBg)
-                                    } else {
-                                        btn
-                                    }
-                                }
-                            if (migratedButtons != current.buttons) {
-                                needsSave = true
-                                changed = true
-                                current = current.copy(buttons = migratedButtons)
-                            }
-                            if (current.visualAnchor.isCalibrated && current.visualAnchor.matchThreshold == null) {
-                                needsSave = true
-                                changed = true
-                                current =
-                                    current.copy(
-                                        visualAnchor = current.visualAnchor.copy(matchThreshold = LEGACY_HARDCODED_MATCH_THRESHOLD),
-                                    )
-                            }
-                            if (!current.mirrorConfigured) {
-                                needsSave = true
-                                current.copy(mirrorConfigured = true)
-                            } else if (changed) {
-                                current
-                            } else {
-                                layout
-                            }
+                            normalized
                         }
                     p = p.copy(layouts = migratedLayouts)
                 }
@@ -637,8 +553,7 @@ object MacroPadState {
         if (uniqueName != desiredName) {
             AppLog.w(TAG, "addLayout: duplicate layout name '$desiredName' adjusted to '$uniqueName'")
         }
-        val cutouts = layout.mirrorCutouts
-        val normalizedLayout = layout.copy(name = uniqueName, mirrorCutouts = cutouts, mirrorConfigured = true)
+        val normalizedLayout = layout.copy(name = uniqueName)
         AppLog.d(TAG, "addLayout id=${normalizedLayout.id} name='${normalizedLayout.name}' to profile=${profile.id}")
         updateProfile(
             profile.copy(
@@ -650,10 +565,9 @@ object MacroPadState {
 
     fun updateLayout(layout: PadLayout) {
         val profile = activeProfile.value ?: return
-        val withConfigured = if (!layout.mirrorConfigured) layout.copy(mirrorConfigured = true) else layout
         updateProfile(
             profile.copy(
-                layouts = profile.layouts.map { if (it.id == withConfigured.id) withConfigured else it },
+                layouts = profile.layouts.map { if (it.id == layout.id) layout else it },
             ),
         )
     }
@@ -1016,10 +930,10 @@ object MacroPadState {
     ) {
         val changed =
             updateLayoutInProfiles(layoutId) { layout ->
-                if (layout.mirrorCutouts == cutouts && layout.mirrorConfigured) {
+                if (layout.mirrorCutouts == cutouts) {
                     null
                 } else {
-                    layout.copy(mirrorCutouts = cutouts, mirrorConfigured = true)
+                    layout.copy(mirrorCutouts = cutouts)
                 }
             }
         if (changed) {

@@ -902,7 +902,6 @@ fun MacroPadEditor(
                                                         PadLayout(
                                                             id = newId,
                                                             name = name,
-                                                            enabled = true,
                                                         )
                                                     MacroPadState.addLayout(newLayout)
                                                     MacroPadNavState.setStack(listOf(MacroPadSubPage.EditLayout(newId)))
