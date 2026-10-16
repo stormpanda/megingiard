@@ -590,9 +590,6 @@ fun MacroPadEditor(
                                                     onOpenScrape = {
                                                         MacroPadNavState.push(MacroPadSubPage.SteamGridDbScrape(activeLayout.id))
                                                     },
-                                                    onDiscard = {
-                                                        MacroPadState.clearPreviewLayout()
-                                                    },
                                                     onConfirm = {
                                                         bgImagePath,
                                                         bgChanged,
@@ -629,9 +626,6 @@ fun MacroPadEditor(
                                                     layout = activeLayout,
                                                     profileName = profile.name,
                                                     accentColor = colors.accent,
-                                                    onDiscard = {
-                                                        MacroPadState.clearPreviewLayout()
-                                                    },
                                                     onConfirm = {
                                                         maskImagePath,
                                                         maskChanged,

@@ -19,7 +19,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 private const val TAG = "MacroPadSettings"
-private const val MACROPAD_SAVE_DEBOUNCE_MS = 500L
+private const val MACROPAD_SAVE_DEBOUNCE_MS = 250L
 private const val PRIVD_DEFAULT_DEADZONE = 0.15f
 
 /**
@@ -86,7 +86,7 @@ object MacroPadSettings {
         this.scope = scope
 
         // Debounced MacroPad save — coalesces rapid drag-frame emissions into a
-        // single DataStore write 500 ms after the last call to saveMacroPadData().
+        // single DataStore write 250 ms after the last call to saveMacroPadData().
         scope.launch {
             _macroPadSaveRequests
                 .debounce(MACROPAD_SAVE_DEBOUNCE_MS)
@@ -186,7 +186,14 @@ object MacroPadSettings {
         _macroPadSaveRequests.tryEmit(Unit)
     }
 
-    /** Performs the actual DataStore write. Called exclusively from the debounce collector in [init]. */
+    /** Immediately flushes current in-memory MacroPad data to DataStore if initialized. */
+    suspend fun flushMacroPadDataNow() {
+        if (::dataStore.isInitialized) {
+            writeMacroPadDataNow()
+        }
+    }
+
+    /** Performs the actual DataStore write. Called exclusively from the debounce collector in [init] or [flushMacroPadDataNow]. */
     private suspend fun writeMacroPadDataNow() {
         val profiles = MacroPadState.profiles.value
         val activeId = MacroPadState.activeProfileId.value
