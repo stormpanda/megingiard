@@ -296,5 +296,5 @@
 - [x] **`[GF-18]`** — Remove redundant `MegingiardThemeClient.observeThemeUpdates` `ContentObserver` *(Complexity: Low, Risk: Low)*
 - [x] **`[GF-19]`** — Remove dead `confirmPairingTrigger` counter and deduplicate `frozenHidden` computation *(Complexity: Low, Risk: Low)*
 - [x] **`[GF-20]`** — Read artwork & title state directly from reactive `liveAppInfo` in `GameFocusEditGameOverlay` *(Complexity: Med, Risk: Low)*
-- [ ] **`[GF-21]`** — Sync `docs/features/gamefocus/` paths, component names, padding constants, and repeat delays with code *(Complexity: Low, Risk: Low)*
+- [x] **`[GF-21]`** — Sync `docs/features/gamefocus/` paths, component names, padding constants, and repeat delays with code *(Complexity: Low, Risk: Low)*
 - [ ] **`[GF-22]`** — Add `EMULATOR_ID_YUZU` Switch emulator resolution in `MegingiardSettingsClient.getActualPackageName` *(Complexity: Low, Risk: Low)*

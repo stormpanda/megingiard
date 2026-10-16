@@ -1,6 +1,6 @@
 # Feature: Megingiard Game Focus
 
-> **Related source:** `gamefocus/companion/domain/src/main/java/com/stormpanda/megingiard/gamefocus/domain/`, `gamefocus/ui/src/main/java/com/stormpanda/megingiard/gamefocus/`, `gamefocus/ui/src/main/`
+> **Related source:** `gamefocus/domain/src/main/java/com/stormpanda/megingiard/gamefocus/domain/`, `gamefocus/ui/src/main/java/com/stormpanda/megingiard/gamefocus/`, `gamefocus/ui/src/main/`
 
 > **Document map** — this spec is split so each file fits in one agent read:
 >
@@ -27,21 +27,20 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 
 ### FR-GF1: Dual-Screen Execution
 
-- Megingiard Game Focus MUST run its companion utility interface on the bottom screen (Display 4).
-- It MUST launch the top screen launcher window (`FocusTopLauncherActivity`) on the primary display (`Display.DEFAULT_DISPLAY`, Display 0).
-- If `MainActivity` is started on the primary display (`Display.DEFAULT_DISPLAY`), it MUST launch `FocusTopLauncherActivity` on Display 0 and automatically re-target itself to the secondary bottom display (`DisplayDetector.findSecondaryDisplay(context)`, Display 4) via `ActivityOptions.setLaunchDisplayId()`, finishing the top-display `MainActivity` instance to prevent false-positive `WrongScreenOverlay` rendering.
+- Megingiard Game Focus (`FocusTopLauncherActivity`) MUST run on the primary top display (`Display.DEFAULT_DISPLAY`, Display 0) as a standalone launcher application (`com.stormpanda.megingiard.gamefocus`).
+- Megingiard Companion (`MainActivity` in `:companion:ui`) runs independently on the secondary bottom display (`DisplayDetector.findSecondaryDisplay(context)`, Display 4) without launching or depending on `FocusTopLauncherActivity`.
 
 ### FR-GF2: 2:3 Poster Carousel & Gamepad Navigation
 
 - The top display MUST present installed applications in an endless 2:3 aspect ratio portrait poster carousel.
 - Spacing between posters MUST be tight (`12.dp`), with the currently highlighted poster centered horizontally on the screen.
-- Navigation MUST support D-pad left/right, joystick holding with key repeat delay (`300ms` initial delay, `100ms` repeat interval), left/right touch gestures, Gamepad L1/R1 bumper buttons (`KEYCODE_BUTTON_L1`/`KEYCODE_BUTTON_R1`) to temporarily display an interactive 9-item 3D horizontal letter carousel (`HorizontalLetterCarousel`) of existing library starting letters at the bottom of the screen with a 500ms inactivity debounce before committing the gallery scroll. Navigating via D-pad, joystick stick, or touch scroll while the letter carousel overlay is active MUST immediately cancel the letter carousel without action. Launching occurs upon D-pad center or Gamepad `A` button (`KEYCODE_BUTTON_A`).
+- Navigation MUST support D-pad left/right, joystick holding with key repeat delay (`220ms` initial delay, `70ms` repeat interval), left/right touch gestures, Gamepad L1/R1 bumper buttons (`KEYCODE_BUTTON_L1`/`KEYCODE_BUTTON_R1`) to temporarily display an interactive 9-item 3D horizontal letter carousel (`HorizontalLetterCarousel`) of existing library starting letters at the bottom of the screen with a 500ms inactivity debounce before committing the gallery scroll. Navigating via D-pad, joystick stick, or touch scroll while the letter carousel overlay is active MUST immediately cancel the letter carousel without action. Launching occurs upon D-pad center or Gamepad `A` button (`KEYCODE_BUTTON_A`).
 - The application title MUST be displayed in large bold typography at the bottom of the screen.
 
 ### FR-GF3: SteamGridDB Cover Art Scraping
 
 - Upon launcher start or when new apps/ROMs are detected, if `SettingsManager.steamGridDbApiToken` is configured, artwork MUST be scraped automatically from SteamGridDB in the background. A full catalog load (`loadInstalledApps`) triggers exactly one pass after both Android apps and ROMs are published (the internal ROM rescan is invoked with `triggerScrape = false`); standalone ROM folder changes trigger their own pass. The API token is re-read at the start of every pass.
-- Scraper execution MUST be serialized single-flight using `Mutex.tryLock()`: a request arriving during an active pass only sets a rerun flag, and the active owner re-checks that flag after unlocking so no follow-up request is lost and no duplicate concurrent pass runs.
+- Scraper execution MUST be serialized single-flight using a conflated `Channel<ScrapeRequest>(Channel.CONFLATED)` consumed sequentially on the background scope: requests arriving during an active pass coalesce into a single pending follow-up request so no follow-up pass is lost and no duplicate concurrent pass runs.
 - Automatic scraping MUST evaluate artwork eligibility per kind (`ArtworkKind.COVER`, `ArtworkKind.LOGO`, `ArtworkKind.LIBRARY_ICON`) using `shouldAutoScrape`: an item is eligible if and only if it has not been opted out by the user, has not already been attempted, and does not already have a valid file on disk.
 - For covers (`grids`), background scraping applies to all catalog applications missing cover art and writes to `cacheDir/gamefocus_covers/` atomically.
 - For ROM logos (`logos`), background scraping applies to ROMs and downloads thumb-sized title logos to `cacheDir/gamefocus_logos/` atomically, immediately updating `InstalledAppInfo.logoLastModified` to invalidate stale negative icon caches.
