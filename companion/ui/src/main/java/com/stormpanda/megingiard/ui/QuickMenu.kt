@@ -121,10 +121,7 @@ fun QuickMenu(
                     .fillMaxSize()
                     .background(Color.Black.copy(alpha = PM_SCRIM_ALPHA))
                     .pointerInput(Unit) {
-                        detectTapGestures(onTap = {
-                            AppStateManager.closeQuickMenu()
-                            onDismiss()
-                        })
+                        detectTapGestures(onTap = { onDismiss() })
                     },
         ) {
             // ── Top card — Mirror controls (always visible) ───────────────

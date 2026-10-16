@@ -224,7 +224,6 @@ fun MainAppScreen() {
                     .fillMaxSize()
                     .pointerInput(
                         overlayAtBottom,
-                        isValidScreen,
                         kbBarMinX,
                         kbBarMaxX,
                         isGesturesEnabled,
@@ -295,9 +294,6 @@ fun MainAppScreen() {
                         awaitPointerEventScope {
                             while (true) {
                                 val event = awaitPointerEvent(PointerEventPass.Initial)
-                                if (!isValidScreen) {
-                                    continue
-                                }
                                 val firstChange = event.changes.firstOrNull()
                                 val x = firstChange?.position?.x ?: 0f
                                 val y = firstChange?.position?.y ?: 0f
