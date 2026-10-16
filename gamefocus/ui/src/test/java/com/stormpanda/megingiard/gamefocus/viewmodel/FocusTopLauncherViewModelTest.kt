@@ -152,11 +152,7 @@ class FocusTopLauncherViewModelTest {
 
     @Test
     fun testLifecycleState() {
-        assertFalse(viewModel.isResumed.value)
         assertFalse(viewModel.isStarted.value)
-
-        viewModel.setResumed(true)
-        assertTrue(viewModel.isResumed.value)
 
         viewModel.setStarted(true)
         assertTrue(viewModel.isStarted.value)

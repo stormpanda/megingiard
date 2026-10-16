@@ -456,13 +456,11 @@ class FocusTopLauncherActivity : ComponentActivity() {
         AppLog.d(TAG, "FocusTopLauncherActivity resumed, refreshing installed apps")
         InstalledAppsManager.loadInstalledApps(this)
         launchedTopScreenPackage = null
-        viewModel.setResumed(true)
     }
 
     override fun onPause() {
         super.onPause()
         stopRepeat()
-        viewModel.setResumed(false)
     }
 
     override fun onStop() {

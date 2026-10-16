@@ -71,6 +71,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 
 private const val TAG = "SteamGridDbScrapeDlg"
 
@@ -323,8 +324,12 @@ internal fun SteamGridDbScrapeSubPageContent(
                         scope.launch {
                             val cacheDir = context.cacheDir
                             SteamGridDbClient
-                                .downloadImageToTempFile(currentImage.url, cacheDir)
-                                .onSuccess { tempFile ->
+                                .downloadImageBytes(currentImage.url)
+                                .mapCatching { bytes ->
+                                    val tempFile = File(cacheDir, "steamgriddb_temp_${System.currentTimeMillis()}.png")
+                                    tempFile.writeBytes(bytes)
+                                    tempFile
+                                }.onSuccess { tempFile ->
                                     AppLog.i(TAG, "Download successful, file saved to: ${tempFile.absolutePath}")
                                     onImageSelected(Uri.fromFile(tempFile))
                                     isDownloading = false

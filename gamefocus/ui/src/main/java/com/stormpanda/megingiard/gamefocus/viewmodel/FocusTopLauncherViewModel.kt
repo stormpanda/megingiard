@@ -93,9 +93,6 @@ class FocusTopLauncherViewModel : ViewModel() {
     private val _confirmPairingTrigger = MutableStateFlow(0)
     val confirmPairingTrigger: StateFlow<Int> = _confirmPairingTrigger.asStateFlow()
 
-    private val _isResumed = MutableStateFlow(false)
-    val isResumed: StateFlow<Boolean> = _isResumed.asStateFlow()
-
     private val _isStarted = MutableStateFlow(false)
     val isStarted: StateFlow<Boolean> = _isStarted.asStateFlow()
 
@@ -358,10 +355,6 @@ class FocusTopLauncherViewModel : ViewModel() {
 
     fun setFocusedApp(appInfo: InstalledAppInfo?) {
         _focusedApp.value = appInfo
-    }
-
-    fun setResumed(resumed: Boolean) {
-        _isResumed.value = resumed
     }
 
     fun setStarted(started: Boolean) {
