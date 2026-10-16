@@ -44,35 +44,6 @@ private fun migrateButtonBgColorOption(option: ColorOption?): ColorOption? {
     return option
 }
 
-/**
- * Recomputes [PadProfile.enableKeyboard], [PadProfile.enableGamepad], [PadProfile.enableMouse],
- * and [PadProfile.enableTouch] from button actions across **all layouts** so the injectors
- * are started only when needed.
- */
-private fun PadProfile.withSyncedDeviceFlags(): PadProfile {
-    val allActions = layouts.flatMap { it.buttons }.map { it.action }
-    val hasMacro = allActions.any { it is PadAction.Macro }
-    val kb = hasMacro || allActions.any { it is PadAction.KeyboardKey }
-    val gp = hasMacro || allActions.any { it is PadAction.GamepadButton }
-    val ms =
-        hasMacro ||
-            allActions.any {
-                it is PadAction.MouseButton ||
-                    it is PadAction.ScrollWheel ||
-                    (it is PadAction.TrackpointMove && it.mode == TrackpointMode.PHYSICAL_MOUSE)
-            } || layouts.any { it.backgroundTouchpad.enabled }
-    val ts =
-        hasMacro ||
-            allActions.any {
-                it is PadAction.TrackpointMove && it.mode == TrackpointMode.VIRTUAL_TOUCH
-            }
-    return if (enableKeyboard == kb && enableGamepad == gp && enableMouse == ms && enableTouch == ts) {
-        this
-    } else {
-        copy(enableKeyboard = kb, enableGamepad = gp, enableMouse = ms, enableTouch = ts)
-    }
-}
-
 private fun PadButton.cloneWithMacroMapping(macroMapping: Map<String, String>): PadButton {
     val updatedAction =
         when (val action = this.action) {
@@ -446,26 +417,19 @@ object MacroPadState {
                 p
             }
 
-        val withFlags =
-            processed.map { profile ->
-                profile.withSyncedDeviceFlags().also { synced ->
-                    if (synced != profile) needsSave = true
-                }
-            }
-
-        _profiles.value = withFlags
+        _profiles.value = processed
 
         val resolvedActiveId =
-            if (activeProfileId == null || withFlags.none { it.id == activeProfileId }) {
+            if (activeProfileId == null || processed.none { it.id == activeProfileId }) {
                 needsSave = true
-                withFlags.firstOrNull()?.id
+                processed.firstOrNull()?.id
             } else {
                 activeProfileId
             }
         assignActiveProfileId(resolvedActiveId)
         recomputeActiveState()
 
-        AppLog.d(TAG, "loadFrom: ${withFlags.size} profiles, activeId=$resolvedActiveId, needsSave=$needsSave")
+        AppLog.d(TAG, "loadFrom: ${processed.size} profiles, activeId=$resolvedActiveId, needsSave=$needsSave")
         if (needsSave) MacroPadSettings.saveMacroPadData()
     }
 
@@ -480,7 +444,7 @@ object MacroPadState {
         if (uniqueName != desiredName) {
             AppLog.w(TAG, "addProfile: duplicate profile name '$desiredName' adjusted to '$uniqueName'")
         }
-        val normalizedProfile = profile.copy(name = uniqueName).withSyncedDeviceFlags()
+        val normalizedProfile = profile.copy(name = uniqueName)
         AppLog.d(TAG, "addProfile id=${normalizedProfile.id} name='${normalizedProfile.name}'")
         _profiles.value = _profiles.value + normalizedProfile
         if (_activeProfileId.value == null) _activeProfileId.value = normalizedProfile.id
@@ -489,9 +453,8 @@ object MacroPadState {
     }
 
     fun updateProfile(profile: PadProfile) {
-        val synced = profile.withSyncedDeviceFlags()
-        AppLog.d(TAG, "updateProfile id=${synced.id} (kb=${synced.enableKeyboard} gp=${synced.enableGamepad} ms=${synced.enableMouse})")
-        _profiles.value = _profiles.value.map { if (it.id == synced.id) synced else it }
+        AppLog.d(TAG, "updateProfile id=${profile.id}")
+        _profiles.value = _profiles.value.map { if (it.id == profile.id) profile else it }
         recomputeActiveState()
         MacroPadSettings.saveMacroPadData()
     }
@@ -639,15 +602,14 @@ object MacroPadState {
             } ?: copiedLayouts.firstOrNull()?.id
 
         val duplicated =
-            sourceProfile
-                .copy(
-                    id = newProfileId,
-                    name = uniqueName,
-                    layouts = copiedLayouts,
-                    macros = copiedMacros,
-                    activeLayoutId = newActiveLayoutId,
-                    isDefault = false,
-                ).withSyncedDeviceFlags()
+            sourceProfile.copy(
+                id = newProfileId,
+                name = uniqueName,
+                layouts = copiedLayouts,
+                macros = copiedMacros,
+                activeLayoutId = newActiveLayoutId,
+                isDefault = false,
+            )
 
         AppLog.d(TAG, "duplicateProfile originalId=$profileId newId=$newProfileId name='$uniqueName'")
         _profiles.value = _profiles.value + duplicated

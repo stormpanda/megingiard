@@ -803,7 +803,6 @@ internal fun EditButtonSubPageContent(
                     height = PBD_COLOR_PREVIEW_SIZE,
                     shape = previewShape,
                     isIconOnly = iconOnly || buttonShape == ButtonShape.ICON_ONLY,
-                    isDeviceDisabled = false,
                     borderColor = bColor,
                     bgColor = bgCol,
                 ) {

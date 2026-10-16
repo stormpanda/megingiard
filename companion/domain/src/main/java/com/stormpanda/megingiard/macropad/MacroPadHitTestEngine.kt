@@ -22,13 +22,6 @@ private const val LOGICAL_SCREEN_WIDTH = 1920f
 private const val LOGICAL_SCREEN_HEIGHT = 1080f
 
 /**
- * Reason a MacroPad button tap was blocked — returned instead of an R.string resource ID
- * so the `:domain` module never references Android resources directly.
- * The UI layer maps this to a localised string.
- */
-enum class DisabledReason { KEYBOARD, GAMEPAD, MOUSE, TOUCH }
-
-/**
  * Hit-test engine and multi-touch dispatch for MacroPad use-mode.
  *
  * Extracted from [MacroPadScreen.PadSurface]: handles button lookup,
@@ -108,15 +101,13 @@ class MacroPadHitTestEngine(
     /**
      * Handle a Press event.
      *
-     * @param pointerId         unique pointer ID
-     * @param px                pointer X in canvas pixels
-     * @param py                pointer Y in canvas pixels
-     * @param canvasW           canvas width in pixels
-     * @param canvasH           canvas height in pixels
-     * @param buttons           buttons of the currently visible layout
-     * @param profile           active pad profile (for device-enabled checks)
-     * @param isPeekActive      true if ambient-peek mode is active
-     * @param onDisabledReason  optional callback invoked when the hit button's device is disabled
+     * @param pointerId     unique pointer ID
+     * @param px            pointer X in canvas pixels
+     * @param py            pointer Y in canvas pixels
+     * @param canvasW       canvas width in pixels
+     * @param canvasH       canvas height in pixels
+     * @param buttons       buttons of the currently visible layout
+     * @param isPeekActive  true if ambient-peek mode is active
      * @return true if a button consumed the press, false otherwise
      */
     fun onPress(
@@ -126,18 +117,10 @@ class MacroPadHitTestEngine(
         canvasW: Float,
         canvasH: Float,
         buttons: List<PadButton>,
-        profile: PadProfile,
         isPeekActive: Boolean,
-        onDisabledReason: ((DisabledReason) -> Unit)? = null,
     ): Boolean {
         val hitList = if (isPeekActive) buttons.filter { it.action is PadAction.BackgroundPeek } else buttons
         val hitButton = hitList.firstOrNull { btn -> isPointInsideButton(btn, px, py, canvasW, canvasH) } ?: return false
-
-        val disabledReason = deviceDisabledReason(hitButton.action, profile)
-        if (disabledReason != null) {
-            onDisabledReason?.invoke(disabledReason)
-            return true
-        }
 
         pointerMap[pointerId] = hitButton.id
         when {
@@ -191,7 +174,6 @@ class MacroPadHitTestEngine(
      * @param deltaX     position change X since last event
      * @param deltaY     position change Y since last event
      * @param buttons    buttons of the currently visible layout
-     * @param profile    active pad profile (unused here, kept for API symmetry)
      */
     fun onMove(
         pointerId: Long,
@@ -200,7 +182,6 @@ class MacroPadHitTestEngine(
         deltaX: Float,
         deltaY: Float,
         buttons: List<PadButton>,
-        profile: PadProfile,
     ) {
         val mappedId = pointerMap[pointerId] ?: return
         val mappedBtn = buttons.firstOrNull { it.id == mappedId } ?: return
@@ -283,12 +264,10 @@ class MacroPadHitTestEngine(
      *
      * @param pointerId  the pointer that released
      * @param buttons    buttons of the currently visible layout
-     * @param profile    active pad profile (unused here, kept for API symmetry)
      */
     fun onRelease(
         pointerId: Long,
         buttons: List<PadButton>,
-        profile: PadProfile,
     ) {
         val mapped = pointerMap.remove(pointerId) ?: return
         val btn = buttons.firstOrNull { it.id == mapped } ?: return
@@ -363,48 +342,5 @@ class MacroPadHitTestEngine(
                 }
             }
         }
-    }
-
-    companion object {
-        fun isDeviceDisabled(
-            action: PadAction,
-            profile: PadProfile,
-        ): Boolean = deviceDisabledReason(action, profile) != null
-
-        /**
-         * Returns the [DisabledReason] for a blocked button tap, or null if the device is enabled.
-         * The caller is responsible for mapping the reason to a localised message.
-         */
-        fun deviceDisabledReason(
-            action: PadAction,
-            profile: PadProfile,
-        ): DisabledReason? =
-            when (action) {
-                is PadAction.KeyboardKey -> {
-                    if (!profile.enableKeyboard) DisabledReason.KEYBOARD else null
-                }
-
-                is PadAction.GamepadButton -> {
-                    if (!profile.enableGamepad) DisabledReason.GAMEPAD else null
-                }
-
-                is PadAction.MouseButton,
-                is PadAction.ScrollWheel,
-                -> {
-                    if (!profile.enableMouse) DisabledReason.MOUSE else null
-                }
-
-                is PadAction.TrackpointMove -> {
-                    if (action.mode == TrackpointMode.VIRTUAL_TOUCH) {
-                        if (!profile.enableTouch) DisabledReason.TOUCH else null
-                    } else {
-                        if (!profile.enableMouse) DisabledReason.MOUSE else null
-                    }
-                }
-
-                else -> {
-                    null
-                }
-            }
     }
 }

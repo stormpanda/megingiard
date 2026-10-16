@@ -601,9 +601,6 @@ data class ProfileAssociation(
  * @param layouts          All layouts in this profile (at least one).
  * @param activeLayoutId   ID of the currently displayed layout. Null means first layout.
  * @param macros           Macros belonging to this profile (flat list, no folders).
- * @param enableKeyboard   Whether the keyboard virtual device is active (auto-computed).
- * @param enableGamepad    Whether the gamepad virtual device is active (auto-computed).
- * @param enableMouse      Whether the mouse virtual device is active (auto-computed).
  * @param isDefault        Whether this is a restorable default profile.
  * @param association      Optional profile association config.
  */
@@ -614,10 +611,6 @@ data class PadProfile(
     val layouts: List<PadLayout> = emptyList(),
     val activeLayoutId: String? = null,
     val macros: List<Macro> = emptyList(),
-    val enableKeyboard: Boolean = false,
-    val enableGamepad: Boolean = false,
-    val enableMouse: Boolean = false,
-    val enableTouch: Boolean = false,
     val isDefault: Boolean = false,
     val association: ProfileAssociation? = null,
     val autoLayoutSwitching: Boolean = false,
@@ -666,10 +659,6 @@ private class PadProfileSurrogate(
     val layouts: List<PadLayout> = emptyList(),
     val activeLayoutId: String? = null,
     val macros: List<Macro> = emptyList(),
-    val enableKeyboard: Boolean = false,
-    val enableGamepad: Boolean = false,
-    val enableMouse: Boolean = false,
-    val enableTouch: Boolean = false,
     val isDefault: Boolean = false,
     val association: ProfileAssociation? = null,
     val associatedPackage: String? = null,
@@ -690,10 +679,6 @@ object PadProfileSerializer : KSerializer<PadProfile> {
                 layouts = value.layouts,
                 activeLayoutId = value.activeLayoutId,
                 macros = value.macros,
-                enableKeyboard = value.enableKeyboard,
-                enableGamepad = value.enableGamepad,
-                enableMouse = value.enableMouse,
-                enableTouch = value.enableTouch,
                 isDefault = value.isDefault,
                 association = value.association,
                 autoLayoutSwitching = value.autoLayoutSwitching,
@@ -713,10 +698,6 @@ object PadProfileSerializer : KSerializer<PadProfile> {
             layouts = surrogate.layouts,
             activeLayoutId = surrogate.activeLayoutId,
             macros = surrogate.macros,
-            enableKeyboard = surrogate.enableKeyboard,
-            enableGamepad = surrogate.enableGamepad,
-            enableMouse = surrogate.enableMouse,
-            enableTouch = surrogate.enableTouch,
             isDefault = surrogate.isDefault,
             association = finalAssoc,
             autoLayoutSwitching = surrogate.autoLayoutSwitching,

@@ -137,19 +137,6 @@ class MacroPadStateTest {
         MacroPadState.loadFrom(profiles.toList(), activeId)
     }
 
-    private fun assertFlags(
-        kb: Boolean = false,
-        gp: Boolean = false,
-        ms: Boolean = false,
-        touch: Boolean = false,
-        profile: PadProfile = MacroPadState.activeProfile.value!!,
-    ) {
-        assertEquals(kb, profile.enableKeyboard)
-        assertEquals(gp, profile.enableGamepad)
-        assertEquals(ms, profile.enableMouse)
-        assertEquals(touch, profile.enableTouch)
-    }
-
     @Test
     fun `loadFrom with empty list generates default profile and layout`() {
         MacroPadState.loadFrom(emptyList(), null)
@@ -266,75 +253,6 @@ class MacroPadStateTest {
                 .first { it.id == "p1" }
                 .name,
         )
-    }
-
-    @Test
-    fun `withSyncedDeviceFlags synchronization rules`() {
-        val p1 = testProfile(id = "p1", layouts = listOf(testLayout(id = "l1", buttons = emptyList())), activeLayoutId = "l1")
-        loadProfiles(p1)
-
-        // 1. Empty button list -> all flags false
-        assertFlags()
-
-        fun updateWithAction(action: PadAction) {
-            val cur = MacroPadState.activeProfile.value!!
-            MacroPadState.updateLayout(cur.layouts.first().copy(buttons = listOf(testButton(action = action))))
-        }
-
-        // 2. Keyboard button
-        updateWithAction(PadAction.KeyboardKey(65, "A"))
-        assertFlags(kb = true)
-
-        // 3. Gamepad button
-        updateWithAction(PadAction.GamepadButton(96, "GP"))
-        assertFlags(gp = true)
-
-        // 4. Mouse button
-        updateWithAction(PadAction.MouseButton(MouseButton.LEFT))
-        assertFlags(ms = true)
-
-        // 5. Trackpoint VIRTUAL_TOUCH button
-        updateWithAction(PadAction.TrackpointMove(mode = TrackpointMode.VIRTUAL_TOUCH))
-        assertFlags(touch = true)
-
-        // 6. MirrorTouchProjection button -> all injector flags remain false
-        updateWithAction(PadAction.MirrorTouchProjection)
-        assertFlags()
-
-        // 7. Macro button -> all flags force-enabled (true)
-        updateWithAction(PadAction.Macro("macro-1"))
-        assertFlags(kb = true, gp = true, ms = true, touch = true)
-
-        // 8. Enable Background Touchpad -> enableMouse force-enabled
-        val active = MacroPadState.activeProfile.value!!
-        MacroPadState.updateLayout(
-            active.layouts.first().copy(
-                buttons = emptyList(),
-                backgroundTouchpad = BackgroundTouchpadConfig(enabled = true),
-            ),
-        )
-        assertFlags(ms = true)
-    }
-
-    @Test
-    fun `fullscreen keyboard and mouse actions do not enable background injector flags`() {
-        val p1 =
-            testProfile(
-                id = "p1",
-                layouts =
-                    listOf(
-                        testLayout(
-                            id = "l1",
-                            buttons =
-                                listOf(
-                                    testButton(id = "b1", action = PadAction.FullScreenKeyboard()),
-                                    testButton(id = "b2", action = PadAction.FullScreenMouse()),
-                                ),
-                        ),
-                    ),
-            )
-        loadProfiles(p1)
-        assertFlags()
     }
 
     @Test

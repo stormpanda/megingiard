@@ -117,7 +117,6 @@ internal fun PadButton(
     isPressed: Boolean,
     canvasSize: IntSize,
     accentColor: Color,
-    isDeviceDisabled: Boolean,
     isRunning: Boolean = false,
 ) {
     if (btn.invisible) {
@@ -237,7 +236,6 @@ internal fun PadButton(
             height = btnHeightDp,
             shape = chipShape,
             isIconOnly = isIconOnly,
-            isDeviceDisabled = isDeviceDisabled,
             borderColor = effectiveBorder,
             bgColor = effectiveBg,
             modifier = Modifier.fillMaxSize(),

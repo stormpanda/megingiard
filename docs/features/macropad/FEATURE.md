@@ -79,21 +79,13 @@ Each button supports one of the following actions:
     - **Layout Action Picker**: Displays all 3 layout actions (Next Layout, Previous Layout, Profile Switcher) in a 2-column card grid.
     - **App Quick-Switch**: Extracted into a dedicated top-level `ActionGroup.APP_LAUNCHER` button type. In the button editor, the app selection card (`AppLauncherPicker`) is displayed directly without redundant action sub-menu selectors to quickly switch between Megingiard and another app.
   - Modifiers (Mod 1, Mod 2 for keyboard), combo buttons (Extra 1, Extra 2, Extra 3 for gamepad), and specific app target (for App Quick-Switch) remain configurable on the `EditButton` page below the primary action card. For `GamepadButton`, selecting any extra input card (Extra 1, Extra 2, Extra 3) opens the same `VisualGamepadPicker` sub-page as the primary button action, enabling visual selection, automatic deduplication, toggle-to-deselect, and an in-deck Clear action.
-- Standard input injectors (`KeyInjector`, `MouseInjector`, `TouchInjector`) run continuously whenever Megingiard is in the foreground (`isActivityResumed && !isPrivdSetupWizardActive`), avoiding per-layout startup delays and false-positive disabled states. Gamepad buttons and macros require Megingiard System Service; if the system service is offline, they render with hatched disabled styling in the canvas and editor.
+- Standard input injectors (`KeyInjector`, `MouseInjector`, `TouchInjector`) run continuously whenever Megingiard is in the foreground (`isActivityResumed && !isPrivdSetupWizardActive`), avoiding per-layout startup delays. Gamepad buttons and macros route via Megingiard System Service.
 
-- The action picker in the editor always shows all action type categories regardless of which devices are currently enabled — the flags are derived from the buttons, not the other way around.
+- The action picker in the editor always shows all action type categories.
 
-### FR-P4: Per-Profile Device Flags
+### FR-P4: Injector Lifecycle
 
-- Each profile has four independent boolean flags: `enableKeyboard`, `enableGamepad`, `enableMouse`, `enableTouch` (all default **`false`** — new profiles start with all injectors off).
-- These flags are **not user-configurable** directly. They are automatically recomputed whenever the button list changes (add / edit / delete) by inspecting the action types of all buttons. The exact derivation rules are:
-  - If the profile contains any button with a `Macro` action, all four flags are force-enabled (`true`).
-  - Otherwise, each flag is set to `true` if any button matches the following actions:
-    - `enableKeyboard = true` if any button has a `KeyboardKey` action.
-    - `enableGamepad = true` if any button has a `GamepadButton` action.
-    - `enableMouse = true` if any button has a `MouseButton`, `ScrollWheel`, or `TrackpointMove` (with `PHYSICAL_MOUSE` tracking mode) action. (Note: `MirrorTouchProjection` is explicitly excluded from this derivation because the screen mirror presentation manages its own touch injector lifecycle).
-    - `enableTouch = true` if any button has a `TrackpointMove` (with `VIRTUAL_TOUCH` tracking mode) action.
-- Injector start and stop lifecycle is centrally managed by `InjectorLifecycleManager`, which maintains active `KeyInjector`, `MouseInjector`, and `TouchInjector` instances whenever Megingiard is in the foreground (`AppStateManager.isActivityResumed`), stopping them when backgrounded (`onStop`) or during active software keyboard input in the Privileged Mode setup wizard. Gamepad buttons and macros route strictly via Megingiard System Service merge into the physical controller.
+- Injector start and stop lifecycle is centrally managed by `InjectorLifecycleManager`, which maintains active `KeyInjector`, `MouseInjector`, and `TouchInjector` instances whenever Megingiard is in the foreground (`AppStateManager.isActivityResumed && !AppStateManager.isPrivdSetupWizardActive`), stopping them when backgrounded (`onStop`) or during active software keyboard input in the Privileged Mode setup wizard. Gamepad buttons and macros route strictly via Megingiard System Service merge into the physical controller.
 
 ### FR-P5: Trackpoint Button
 
@@ -110,7 +102,6 @@ Each button supports one of the following actions:
 - The MacroPad MUST support **simultaneous presses** of multiple buttons via multi-touch.
 - Each finger is independently tracked by `PointerId`; down and up events are matched per pointer so no button is accidentally stuck in the pressed state.
 - The gesture detector scope incorporates a `try-finally` block that invokes `engine.releaseAll()` to ensure both visual highlighted states and virtual input injections are cleanly released if a gesture is cancelled by system interruptions (such as status bar pull-down, system back gestures, or the Quick Menu overlay taking focus).
-- Attempting to press a button whose required injector type is disabled MUST show a temporary inline feedback message in the MacroPad surface.
 
 ### FR-P6: No Special Permissions Required
 

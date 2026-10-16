@@ -193,7 +193,6 @@ private data class HandlePosition(
 
 @Composable
 internal fun PadCanvas(
-    profile: PadProfile,
     layout: PadLayout?,
     accentColor: Color,
     gridMode: GridMode,
@@ -772,7 +771,6 @@ private fun DraggableButton(
 
     val density = LocalDensity.current
     val isTrackpoint = btn.action is PadAction.TrackpointMove
-    val isDeviceDisabled = false
 
     val btnWidthDp = btn.widthDp.dp
     val btnHeightDp = btn.heightDp.dp
@@ -893,7 +891,6 @@ private fun DraggableButton(
             height = btnHeightDp,
             shape = chipShape,
             isIconOnly = isIconOnly,
-            isDeviceDisabled = isDeviceDisabled,
             borderColor = effectiveBorder,
             bgColor = effectiveBg,
             modifier =

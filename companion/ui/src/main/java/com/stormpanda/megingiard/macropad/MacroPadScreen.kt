@@ -21,19 +21,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Keyboard
-import androidx.compose.material.icons.rounded.Mouse
-import androidx.compose.material.icons.rounded.SportsEsports
-import androidx.compose.material.icons.rounded.TouchApp
-import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -51,7 +44,6 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
@@ -102,8 +94,6 @@ private val MP_SCREEN_SHAPE = RoundedCornerShape(MP_CORNER_RADIUS)
 // Shared with PadCanvas so the editor canvas is pixel-identical to use mode.
 internal val MP_SCREEN_PADDING = 0.dp
 
-private const val MP_DISABLED_FEEDBACK_RATE_LIMIT_MS = 650L
-
 // Dynamic haptic interval bounds: faster movement → shorter interval
 private const val MP_HAPTIC_MIN_INTERVAL_MS = 50L
 private const val MP_HAPTIC_MAX_INTERVAL_MS = 333L
@@ -128,29 +118,12 @@ private const val MP_EMPTY_MAX_TAP_DISPLACEMENT_PX = 24f
 
 private const val TAG = "MacroPadScreen"
 
-private fun DisabledReason.feedbackTextResId(): Int =
-    when (this) {
-        DisabledReason.KEYBOARD -> R.string.macropad_device_disabled_keyboard
-        DisabledReason.GAMEPAD -> R.string.macropad_device_disabled_gamepad
-        DisabledReason.MOUSE -> R.string.macropad_device_disabled_mouse
-        DisabledReason.TOUCH -> R.string.macropad_device_disabled_touch
-    }
-
-private fun DisabledReason.feedbackIcon(): ImageVector =
-    when (this) {
-        DisabledReason.KEYBOARD -> Icons.Rounded.Keyboard
-        DisabledReason.GAMEPAD -> Icons.Rounded.SportsEsports
-        DisabledReason.MOUSE -> Icons.Rounded.Mouse
-        DisabledReason.TOUCH -> Icons.Rounded.TouchApp
-    }
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Entry point
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 fun MacroPadScreen(modifier: Modifier = Modifier) {
-    val context = LocalContext.current
     val profile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
     val layout by MacroPadState.activeLayout.collectAsStateWithLifecycle()
     val isEditorActive by AppStateManager.isEditorActive.collectAsStateWithLifecycle()
@@ -160,7 +133,6 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
     val isCroppingMask by MacroPadState.isCroppingMask.collectAsStateWithLifecycle()
     val gridMode by MacroPadState.gridMode.collectAsStateWithLifecycle()
     val colors = LocalAppColors.current
-    var lastFeedbackAtMs by remember { mutableLongStateOf(0L) }
 
     // Reset peek state when leaving MACROPAD mode
     DisposableEffect(Unit) {
@@ -198,7 +170,6 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
             )
         } else if (isEditorActive || isViewportEditActive) {
             PadCanvas(
-                profile = p,
                 layout = l,
                 accentColor = colors.accent,
                 gridMode = gridMode,
@@ -210,20 +181,9 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
             )
         } else {
             PadSurface(
-                profile = p,
                 layout = l,
                 accentColor = colors.accent,
                 transparentBackground = showEmbeddedMirror,
-                onDisabledActionFeedback = { reason ->
-                    val now = SystemClock.elapsedRealtime()
-                    if (now - lastFeedbackAtMs < MP_DISABLED_FEEDBACK_RATE_LIMIT_MS) return@PadSurface
-                    lastFeedbackAtMs = now
-                    DialogToastManager.show(
-                        message = context.getString(reason.feedbackTextResId()),
-                        icon = reason.feedbackIcon(),
-                    )
-                    AppLog.d(TAG, "show disabled action feedback: $reason")
-                },
             )
         }
 
@@ -268,15 +228,12 @@ private fun LayoutTransitionSnapshotOverlay() {
 
 @Composable
 internal fun PadSurface(
-    profile: PadProfile,
     layout: PadLayout,
     accentColor: Color,
     isPeekActive: Boolean = false,
     transparentBackground: Boolean = false,
-    onDisabledActionFeedback: (DisabledReason) -> Unit = {},
 ) {
     val density = LocalDensity.current
-    val colors = LocalAppColors.current
     val context = LocalContext.current
     val vibrator = remember { context.getSystemService(Vibrator::class.java) }
     val canvasSizeState = remember { mutableStateOf(IntSize.Zero) }
@@ -440,7 +397,6 @@ internal fun PadSurface(
                     .background(if (transparentBackground) Color.Transparent else Color.Black)
                     .onSizeChanged { canvasSizeState.value = it }
                     .pointerInput(
-                        profile,
                         layout,
                         canvasSizeState.value,
                         bgTouchpadActive,
@@ -470,7 +426,7 @@ internal fun PadSurface(
                                         // even if another component has consumed the event.
                                         if (!change.pressed && change.previousPressed) {
                                             if (engine.isPointerTracked(id)) {
-                                                engine.onRelease(id, layout.buttons, profile)
+                                                engine.onRelease(id, layout.buttons)
                                                 change.consume()
                                             } else if (InteractiveCutoutController.isPointerTracked(id)) {
                                                 InteractiveCutoutController.onRelease(id, layout.mirrorCutouts)
@@ -526,9 +482,7 @@ internal fun PadSurface(
                                                             w,
                                                             h,
                                                             layout.buttons,
-                                                            profile,
                                                             isPeekActive,
-                                                            onDisabledActionFeedback,
                                                         )
                                                     ) {
                                                         change.consume()
@@ -583,7 +537,6 @@ internal fun PadSurface(
                                                         delta.x,
                                                         delta.y,
                                                         layout.buttons,
-                                                        profile,
                                                     )
                                                     change.consume()
                                                 } else if (InteractiveCutoutController.isPointerTracked(id)) {
@@ -679,7 +632,6 @@ internal fun PadSurface(
                     layout.buttons
                 }
             visibleButtons.forEach { btn ->
-                val isDeviceDisabled = MacroPadHitTestEngine.isDeviceDisabled(btn.action, profile)
                 val isPressed = btn.id in pressedIds
                 val isRunning =
                     btn.action is PadAction.Macro &&
@@ -690,7 +642,6 @@ internal fun PadSurface(
                     isPressed = isPressed,
                     canvasSize = canvasSizeState.value,
                     accentColor = accentColor,
-                    isDeviceDisabled = isDeviceDisabled,
                     isRunning = isRunning,
                 )
             }

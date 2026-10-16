@@ -105,9 +105,6 @@ Context menu actions per macro row: Edit, Duplicate, Delete.
 PadProfile
   ├── id: String                (UUID)
   ├── name: String
-  ├── enableKeyboard: Boolean   (default false — auto-set from button actions)
-  ├── enableGamepad: Boolean    (default false — auto-set from button actions)
-  ├── enableMouse: Boolean      (default false — auto-set from button actions)
   ├── macros: List<Macro>       (per-profile macro library)
   └── layouts: List<PadLayout>  (multi-layout support)
         PadLayout
@@ -236,7 +233,6 @@ All input events from MacroPad actions (keyboard, mouse, gamepad, and touch) are
 - Private `MutableStateFlow` backing fields: `_profiles`, `_activeProfileId`, `_activeLayoutId`
 - Public read-only `StateFlow`: `profiles`, `activeProfile`, `activeLayout`
 - Mutation methods (`addProfile`, `updateProfile`, `deleteProfile`, `setActiveProfile`, `setActiveLayout`, etc.) re-emit state and schedule an asynchronous save to `SettingsManager`
-- `withSyncedDeviceFlags()` auto-derives `enable*` flags from buttons across all enabled layouts
 
 ### Injector Lifecycle
 

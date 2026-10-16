@@ -4,7 +4,6 @@ import com.stormpanda.megingiard.macropad.HapticStrength
 import com.stormpanda.megingiard.macropad.MacroPadHitTestEngine
 import com.stormpanda.megingiard.macropad.PadAction
 import com.stormpanda.megingiard.macropad.PadButton
-import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.macropad.TrackpointSize
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -43,9 +42,6 @@ class MacroPadHapticCallbackTest {
         hapticCustomAmplitude = customAmplitude,
     )
 
-    private val enabledProfile =
-        PadProfile(id = "p", name = "Test Profile", enableKeyboard = true, enableGamepad = true, enableMouse = true)
-
     private fun captureEngine(): Pair<MutableList<HapticCall>, MacroPadHitTestEngine> {
         val captured = mutableListOf<HapticCall>()
         val engine =
@@ -57,19 +53,17 @@ class MacroPadHapticCallbackTest {
 
     private fun MacroPadHitTestEngine.press(
         button: PadButton,
-        profile: PadProfile = enabledProfile,
         x: Float = 500f,
         y: Float = 500f,
-    ) = onPress(0L, x, y, canvasW, canvasH, listOf(button), profile, false)
+    ) = onPress(0L, x, y, canvasW, canvasH, listOf(button), false)
 
     private fun MacroPadHitTestEngine.move(
         button: PadButton,
-        profile: PadProfile = enabledProfile,
         x: Float = 500f,
         y: Float = 500f,
         dx: Float = 0f,
         dy: Float = 0f,
-    ) = onMove(0L, x, y, dx, dy, listOf(button), profile)
+    ) = onMove(0L, x, y, dx, dy, listOf(button))
 
     @Test
     fun `button press with haptic LIGHT fires callback with magnitude 0`() {
@@ -87,16 +81,6 @@ class MacroPadHapticCallbackTest {
     fun `button press with haptic OFF does not fire callback`() {
         val (captured, engine) = captureEngine()
         engine.press(centeredButton(PadAction.KeyboardKey(28, "Enter"), HapticStrength.OFF))
-        assertTrue(captured.isEmpty())
-    }
-
-    @Test
-    fun `disabled device button with haptic enabled does not fire callback`() {
-        val (captured, engine) = captureEngine()
-        val button = centeredButton(PadAction.KeyboardKey(28, "Enter"), HapticStrength.LIGHT)
-        val consumed = engine.press(button, profile = enabledProfile.copy(enableKeyboard = false))
-
-        assertTrue(consumed)
         assertTrue(captured.isEmpty())
     }
 
