@@ -139,8 +139,10 @@ class FocusTopLauncherActivity : ComponentActivity() {
                                     openCoreChooserForFolder(result.folder)
                                 }
                             } else {
-                                viewModel.setCoreChooserDialogSelectedIndex(0)
-                                viewModel.setNewlyAddedFolder(result.folder)
+                                val systemDef = SUPPORTED_SYSTEMS.find { it.id == result.folder.systemId }
+                                if (systemDef?.emulatorId == EMULATOR_ID_RETROARCH) {
+                                    openCoreChooserForFolder(result.folder)
+                                }
                             }
                         }
 
