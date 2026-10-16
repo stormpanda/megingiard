@@ -36,7 +36,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.SwipeGestureType
-import com.stormpanda.megingiard.macropad.AmbientPreviewManager
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.delay
@@ -78,11 +77,10 @@ private val PILL_ICON_SIZE = 24.dp
  */
 @Composable
 fun QuickMenuBar(modifier: Modifier = Modifier) {
-    val previewConfig by AmbientPreviewManager.config.collectAsStateWithLifecycle()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsStateWithLifecycle()
     val isWizardActive by OnboardingWizardManager.isWizardActive.collectAsStateWithLifecycle()
     val isPrivdSetupWizardActive by AppStateManager.isPrivdSetupWizardActive.collectAsStateWithLifecycle()
-    if (previewConfig != null || isViewportEditActive || isWizardActive || isPrivdSetupWizardActive) return
+    if (isViewportEditActive || isWizardActive || isPrivdSetupWizardActive) return
 
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsStateWithLifecycle()
     val overlayFadeOut by SettingsManager.overlayFadeOut.collectAsStateWithLifecycle()

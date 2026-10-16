@@ -256,7 +256,7 @@
 - [x] **`[MP-06]`** — Remove write-only `lastTpPos` and redundant `coerceIn(0f, 1f)` calls in `MacroPadHitTestEngine` *(Complexity: Low, Risk: Low)*
 - [x] **`[MP-07]`** — Simplify `Macro.randomized()` to a single-pass timestamp delay accumulator *(Complexity: Low, Risk: Low)*
 - [x] **`[MP-08]`** — Remove dead per-profile device flags, `withSyncedDeviceFlags()`, `DisabledReason`, and disabled-button UI pipeline *(Complexity: High, Risk: Low)*
-- [ ] **`[MP-09]`** — Delete dead `AmbientPreviewManager` singleton and unreachable preview branches in `MacroPadEditor` and `PadCanvas` *(Complexity: Med, Risk: Low)*
+- [x] **`[MP-09]`** — Delete dead `AmbientPreviewManager` singleton and unreachable preview branches in `MacroPadEditor` and `PadCanvas` *(Complexity: Med, Risk: Low)*
 - [ ] **`[MP-10]`** — Remove dead `MacroTimelineEditor` undo/redo stacks, `_appearanceDraft`, `calibrationRevision`, `onSaveColor`, and unwired `filled` toggle *(Complexity: Med, Risk: Low)*
 - [ ] **`[MP-11]`** — Consolidate legacy `PadLayout` migrations and remove dead `mirrorConfigured = true` overrides *(Complexity: Med, Risk: Low)*
 - [ ] **`[MP-12]`** — Centralize `MacroPadState` mutations + active state recomputation and remove unused `scope`/imports *(Complexity: Med, Risk: Low)*

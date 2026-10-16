@@ -36,7 +36,6 @@
 | `PadActionDisplay.kt` | Action type enums (`ActionGroup`, `ActionCategory`), string mappings, and localized gamepad button formatting/label templates. |
 | `PadActionSubPickers.kt` | Sub-widgets for configuring action details: `KeyboardKeyPicker` (with modifier support), `GamepadButtonPicker` (with face combos support), and `MacroPicker` (with info banner and sub-menu list launcher). |
 | `PadButtonEditDialog.kt` | In-deck button create/edit sub-page (`EditButtonSubPageContent`) and shared `ColorOptionPaletteSection`; groups button shape, size, and haptic strength in standard `GamepadComponents` cards. |
-| `BackgroundMacroPadOverlay.kt` | Background Display overlay on secondary display: mirror background + dim overlay + MacroPad buttons |
 | `BackgroundSettingsEditor.kt` | In-deck content (`LayoutBackgroundSubPageContent`, `LayoutMaskSubPageContent`, shared `LayerImageSettingsEditor`) for background and mask overlay image selection, live bottom-screen preview, in-place active/inactive crop toggle, scaling mode, dimming, and `GamepadSaveExitActionRow` save controls. |
 | `SteamGridDbScrapeDialog.kt` | In-deck sub-page (`SteamGridDbScrapeSubPageContent`) for searching and downloading artwork from SteamGridDB with gamepad focus and type filtering. |
 | `BackgroundTouchpadSettingsEditor.kt` | In-deck sub-page (`LayoutTouchpadSubPageContent`) for configuring per-layout relative mouse touchpad settings. |
