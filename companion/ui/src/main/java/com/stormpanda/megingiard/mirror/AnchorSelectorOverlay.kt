@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Anchor
 import androidx.compose.material.icons.rounded.Check
@@ -42,7 +41,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -71,8 +69,6 @@ private val ASO_EDGE_HANDLE_THICKNESS = 6.dp
 private val ASO_EDGE_HANDLE_MARGIN = 6.dp
 private val ASO_EDGE_TOUCH_LENGTH = 56.dp
 private val ASO_EDGE_TOUCH_THICKNESS = 36.dp
-private val ASO_EDGE_HANDLE_CORNER = 3.dp
-private val ASO_EDGE_HANDLE_SHAPE = RoundedCornerShape(ASO_EDGE_HANDLE_CORNER)
 private val ASO_TOAST_TOP_PADDING = 16.dp
 
 /**
@@ -310,7 +306,7 @@ fun AnchorSelectorOverlay(
             val topCenterY = anchorTop - marginPx - handleThicknessPx / 2f
             val topTouchX = (anchorLeft + anchorW / 2f) - touchLengthPx / 2f
             val topTouchY = topCenterY - touchThicknessPx / 2f
-            AnchorResizeHandleView(
+            ResizeHandleView(
                 offset = IntOffset(topTouchX.roundToInt(), topTouchY.roundToInt()),
                 touchWidth = ASO_EDGE_TOUCH_LENGTH,
                 touchHeight = ASO_EDGE_TOUCH_THICKNESS,
@@ -329,7 +325,7 @@ fun AnchorSelectorOverlay(
             val bottomCenterY = anchorTop + anchorH + marginPx + handleThicknessPx / 2f
             val bottomTouchX = (anchorLeft + anchorW / 2f) - touchLengthPx / 2f
             val bottomTouchY = bottomCenterY - touchThicknessPx / 2f
-            AnchorResizeHandleView(
+            ResizeHandleView(
                 offset = IntOffset(bottomTouchX.roundToInt(), bottomTouchY.roundToInt()),
                 touchWidth = ASO_EDGE_TOUCH_LENGTH,
                 touchHeight = ASO_EDGE_TOUCH_THICKNESS,
@@ -347,7 +343,7 @@ fun AnchorSelectorOverlay(
             val leftCenterX = anchorLeft - marginPx - handleThicknessPx / 2f
             val leftTouchX = leftCenterX - touchThicknessPx / 2f
             val leftTouchY = (anchorTop + anchorH / 2f) - touchLengthPx / 2f
-            AnchorResizeHandleView(
+            ResizeHandleView(
                 offset = IntOffset(leftTouchX.roundToInt(), leftTouchY.roundToInt()),
                 touchWidth = ASO_EDGE_TOUCH_THICKNESS,
                 touchHeight = ASO_EDGE_TOUCH_LENGTH,
@@ -366,7 +362,7 @@ fun AnchorSelectorOverlay(
             val rightCenterX = anchorLeft + anchorW + marginPx + handleThicknessPx / 2f
             val rightTouchX = rightCenterX - touchThicknessPx / 2f
             val rightTouchY = (anchorTop + anchorH / 2f) - touchLengthPx / 2f
-            AnchorResizeHandleView(
+            ResizeHandleView(
                 offset = IntOffset(rightTouchX.roundToInt(), rightTouchY.roundToInt()),
                 touchWidth = ASO_EDGE_TOUCH_THICKNESS,
                 touchHeight = ASO_EDGE_TOUCH_LENGTH,
@@ -477,51 +473,5 @@ fun AnchorSelectorOverlay(
                 },
             )
         }
-    }
-}
-
-@Composable
-private fun AnchorResizeHandleView(
-    offset: IntOffset,
-    touchWidth: Dp,
-    touchHeight: Dp,
-    handleWidth: Dp,
-    handleHeight: Dp,
-    color: Color,
-    onDragStart: () -> Unit,
-    onDrag: (Float, Float) -> Unit,
-) {
-    val currentOnDragStart by rememberUpdatedState(onDragStart)
-    val currentOnDrag by rememberUpdatedState(onDrag)
-    Box(
-        modifier =
-            Modifier
-                .offset { offset }
-                .size(width = touchWidth, height = touchHeight)
-                .pointerInput(Unit) {
-                    var accumulatedX = 0f
-                    var accumulatedY = 0f
-                    detectDragGestures(
-                        onDragStart = {
-                            accumulatedX = 0f
-                            accumulatedY = 0f
-                            currentOnDragStart()
-                        },
-                        onDrag = { change, dragAmount ->
-                            change.consume()
-                            accumulatedX += dragAmount.x
-                            accumulatedY += dragAmount.y
-                            currentOnDrag(accumulatedX, accumulatedY)
-                        },
-                    )
-                },
-        contentAlignment = Alignment.Center,
-    ) {
-        Box(
-            modifier =
-                Modifier
-                    .size(width = handleWidth, height = handleHeight)
-                    .background(color.copy(alpha = 0.85f), ASO_EDGE_HANDLE_SHAPE),
-        )
     }
 }

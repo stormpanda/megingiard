@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -16,13 +15,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -39,8 +35,6 @@ private val CS_EDGE_HANDLE_THICKNESS = 6.dp
 private val CS_EDGE_HANDLE_MARGIN = 6.dp
 private val CS_EDGE_TOUCH_LENGTH = 56.dp
 private val CS_EDGE_TOUCH_THICKNESS = 36.dp
-private val CS_EDGE_HANDLE_CORNER = 3.dp
-private val CS_EDGE_HANDLE_SHAPE = RoundedCornerShape(CS_EDGE_HANDLE_CORNER)
 
 private val CS_CORNER_TOUCH_SIZE = 56.dp
 private val CS_CORNER_HANDLE_MARGIN = 6.dp
@@ -420,53 +414,5 @@ fun CropSelectorOverlay(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun ResizeHandleView(
-    offset: IntOffset,
-    touchWidth: Dp,
-    touchHeight: Dp,
-    handleWidth: Dp,
-    handleHeight: Dp,
-    color: Color,
-    rotation: Float = 0f,
-    onDragStart: () -> Unit,
-    onDrag: (Float, Float) -> Unit,
-) {
-    val currentOnDragStart by rememberUpdatedState(onDragStart)
-    val currentOnDrag by rememberUpdatedState(onDrag)
-    Box(
-        modifier =
-            Modifier
-                .offset { offset }
-                .size(width = touchWidth, height = touchHeight)
-                .pointerInput(Unit) {
-                    var accumulatedX = 0f
-                    var accumulatedY = 0f
-                    detectDragGestures(
-                        onDragStart = {
-                            accumulatedX = 0f
-                            accumulatedY = 0f
-                            currentOnDragStart()
-                        },
-                        onDrag = { change, dragAmount ->
-                            change.consume()
-                            accumulatedX += dragAmount.x
-                            accumulatedY += dragAmount.y
-                            currentOnDrag(accumulatedX, accumulatedY)
-                        },
-                    )
-                },
-        contentAlignment = Alignment.Center,
-    ) {
-        Box(
-            modifier =
-                Modifier
-                    .size(width = handleWidth, height = handleHeight)
-                    .graphicsLayer { rotationZ = rotation }
-                    .background(color.copy(alpha = 0.75f), CS_EDGE_HANDLE_SHAPE),
-        )
     }
 }

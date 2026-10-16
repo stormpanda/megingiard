@@ -609,7 +609,7 @@ private data class EdgeHandleDef(
 )
 
 @Composable
-private fun ResizeHandleView(
+internal fun ResizeHandleView(
     offset: IntOffset,
     touchWidth: Dp,
     touchHeight: Dp,
