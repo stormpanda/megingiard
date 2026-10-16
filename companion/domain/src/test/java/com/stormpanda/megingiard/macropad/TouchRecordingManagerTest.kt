@@ -22,7 +22,7 @@ class TouchRecordingManagerTest {
         normX: Float,
         normY: Float,
     ) {
-        TouchScreenObserver.onTouchEvent?.invoke(slot, action, normX, normY)
+        TouchScreenObserver.dispatchTouchEvent(slot, action, normX, normY)
     }
 
     @Before

@@ -335,13 +335,14 @@ internal fun PadSurface(
 
     LaunchedEffect(isFollowActive, isCapturing) {
         if (isFollowActive && isCapturing) {
-            TouchScreenObserver.onTouchNormalized = { nx, ny ->
-                ScreenCaptureManager.onTouchReceived(nx, ny)
-            }
-            TouchScreenObserver.start("MacroPadScreen_FollowMode")
+            TouchScreenObserver.start(
+                clientToken = "MacroPadScreen_FollowMode",
+                onTouchNormalized = { nx, ny ->
+                    ScreenCaptureManager.onTouchReceived(nx, ny)
+                },
+            )
         } else {
             TouchScreenObserver.stop("MacroPadScreen_FollowMode")
-            TouchScreenObserver.onTouchNormalized = null
         }
     }
 

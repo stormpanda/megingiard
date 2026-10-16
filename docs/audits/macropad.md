@@ -263,7 +263,7 @@
 - [x] **`[MP-13]`** — Consolidate triple-stored button/macro draft state in `MacroPadEditor` and `MacroPadNavState` *(Complexity: High, Risk: Med)*
 - [x] **`[MP-14]`** — Convert 5 redundant fields in `TouchRecordingState.Recording` into computed properties *(Complexity: Low, Risk: Low)*
 - [x] **`[MP-15]`** — Synchronize all state transitions and `recordedSteps` accesses under `recordingLock` in `PhysicalGamepadRecordingManager` *(Complexity: Med, Risk: Low)*
-- [ ] **`[MP-16]`** — Associate per-client callbacks with `clientId` inside `TouchScreenObserver` *(Complexity: Med, Risk: Low)*
+- [x] **`[MP-16]`** — Associate per-client callbacks with `clientId` inside `TouchScreenObserver` *(Complexity: Med, Risk: Low)*
 - [ ] **`[MP-17]`** — Replace triple overlapping `TouchScreenObserver` hooks in `MacroPadScreen` with a single `DisposableEffect(hasFollowMode)` *(Complexity: Low, Risk: Low)*
 - [ ] **`[MP-18]`** — Debounce full-graph JSON disk writes in `MacroPadState.persistAsync()` during continuous edits *(Complexity: Med, Risk: Low)*
 - [ ] **`[MP-19]`** — Extract shared background & mask bitmap loader and `Canvas` layer for `MacroPadScreen` and `PadCanvas` *(Complexity: Med, Risk: Low)*

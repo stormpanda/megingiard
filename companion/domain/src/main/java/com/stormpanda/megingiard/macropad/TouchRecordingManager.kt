@@ -139,10 +139,12 @@ object TouchRecordingManager {
                 )
             _recordingRequested.value = true
 
-            TouchScreenObserver.onTouchEvent = { slot, action, normX, normY ->
-                handleObservedTouch(slot, action, normX, normY)
-            }
-            TouchScreenObserver.start(CLIENT_TOKEN)
+            TouchScreenObserver.start(
+                clientToken = CLIENT_TOKEN,
+                onTouchEvent = { slot, action, normX, normY ->
+                    handleObservedTouch(slot, action, normX, normY)
+                },
+            )
         }
 
     private fun handleObservedTouch(
