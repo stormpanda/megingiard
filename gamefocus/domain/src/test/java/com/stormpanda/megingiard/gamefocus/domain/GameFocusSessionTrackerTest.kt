@@ -92,6 +92,7 @@ class GameFocusSessionTrackerTest {
             secondaryDisplayId = TEST_SECONDARY_DISPLAY_ID,
         )
         assertEquals(PKG_TOP, GameFocusSessionTracker.lastTopPackage)
+        assertNull(GameFocusSessionTracker.lastTopApp)
 
         GameFocusSessionTracker.recordWindowChanged(
             displayId = TEST_SECONDARY_DISPLAY_ID,
@@ -99,6 +100,7 @@ class GameFocusSessionTrackerTest {
             secondaryDisplayId = TEST_SECONDARY_DISPLAY_ID,
         )
         assertEquals(PKG_BOTTOM, GameFocusSessionTracker.lastBottomPackage)
+        assertNull(GameFocusSessionTracker.lastBottomApp)
     }
 
     @Test
