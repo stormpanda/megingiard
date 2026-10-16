@@ -85,33 +85,9 @@ class PrimaryModalConfigTest {
     }
 
     @Test
-    fun testMacroTimelinePayloadDefaults() {
-        val defaultPayload = PrimaryModalPayload.MacroTimeline()
-        assertNull(defaultPayload.macroId)
-        assertNull(defaultPayload.focusStepIndex)
-
-        val explicitPayload =
-            PrimaryModalPayload.MacroTimeline(
-                macroId = "macro_timeline_1",
-                focusStepIndex = 3,
-            )
-        assertEquals("macro_timeline_1", explicitPayload.macroId)
-        assertEquals(3, explicitPayload.focusStepIndex)
-    }
-
-    @Test
     fun testInspectorPayloads() {
-        val buttonInspector = PrimaryModalPayload.ButtonInspector(buttonId = "btn_abc")
-        assertEquals("btn_abc", buttonInspector.buttonId)
-
-        val cutoutInspector = PrimaryModalPayload.CutoutInspector(cutoutId = "cutout_xyz")
-        assertEquals("cutout_xyz", cutoutInspector.cutoutId)
-
         val cropSelector = PrimaryModalPayload.CropSelector(cutoutId = "crop_123")
         assertEquals("crop_123", cropSelector.cutoutId)
-
-        val layoutSettings = PrimaryModalPayload.LayoutSettings(layoutId = "layout_custom")
-        assertEquals("layout_custom", layoutSettings.layoutId)
 
         val profileSettings = PrimaryModalPayload.ProfileSettings(profileId = "profile_custom")
         assertEquals("profile_custom", profileSettings.profileId)

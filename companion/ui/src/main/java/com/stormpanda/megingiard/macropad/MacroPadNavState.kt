@@ -100,7 +100,6 @@ internal object MacroPadNavState {
     fun applyPrimaryModalPayload(
         payload: PrimaryModalPayload?,
         onSetActiveProfileId: (String) -> Unit = { MacroPadState.setActiveProfileId(it) },
-        onSetSelectedButtonId: (String?) -> Unit = { MacroPadState.setSelectedButtonId(it) },
     ) {
         if (payload == null) return
         AppLog.i(TAG, "applyPrimaryModalPayload: payload=${payload::class.simpleName}")
@@ -137,11 +136,6 @@ internal object MacroPadNavState {
                 _macroTimelineFocusStepIndex.value = payload.focusStepIndex
             }
 
-            is PrimaryModalPayload.LayoutSettings -> {
-                _selectedSection.value = EditorSection.LAYOUTS
-                _subPageStack.value = listOf(MacroPadSubPage.EditLayout(payload.layoutId))
-            }
-
             is PrimaryModalPayload.ProfileSettings -> {
                 _selectedSection.value = EditorSection.PROFILES
                 val profId = payload.profileId
@@ -157,26 +151,6 @@ internal object MacroPadNavState {
                     onSetActiveProfileId(profId)
                     _subPageStack.value = listOf(MacroPadSubPage.EditProfile(profId))
                 }
-            }
-
-            is PrimaryModalPayload.MacroTimeline -> {
-                _selectedSection.value = EditorSection.MACROS
-                val macId = payload.macroId
-                if (macId != null) {
-                    _subPageStack.value = listOf(MacroPadSubPage.MacroTimeline(macId))
-                }
-                _macroTimelineFocusStepIndex.value = payload.focusStepIndex
-            }
-
-            is PrimaryModalPayload.ButtonInspector -> {
-                _selectedSection.value = EditorSection.BUTTONS
-                onSetSelectedButtonId(payload.buttonId)
-                _subPageStack.value = listOf(MacroPadSubPage.EditButtonPositions)
-            }
-
-            is PrimaryModalPayload.CutoutInspector -> {
-                _selectedSection.value = EditorSection.MIRROR
-                _subPageStack.value = listOf(MacroPadSubPage.CutoutSettings(payload.cutoutId))
             }
 
             else -> {}

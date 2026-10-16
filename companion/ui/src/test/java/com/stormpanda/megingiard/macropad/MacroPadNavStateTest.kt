@@ -87,19 +87,6 @@ class MacroPadNavStateTest {
     }
 
     @Test
-    fun `applyPrimaryModalPayload with MacroTimeline updates section and stack`() {
-        MacroPadNavState.applyPrimaryModalPayload(PrimaryModalPayload.MacroTimeline(macroId = "macro-456", focusStepIndex = 2))
-        assertNav(EditorSection.MACROS, listOf(MacroPadSubPage.MacroTimeline("macro-456")))
-        assertEquals(2, MacroPadNavState.macroTimelineFocusStepIndex.value)
-    }
-
-    @Test
-    fun `applyPrimaryModalPayload with LayoutSettings updates section and stack`() {
-        MacroPadNavState.applyPrimaryModalPayload(PrimaryModalPayload.LayoutSettings(layoutId = "layout-789"))
-        assertNav(EditorSection.LAYOUTS, listOf(MacroPadSubPage.EditLayout("layout-789")))
-    }
-
-    @Test
     fun `applyPrimaryModalPayload with ProfileSettings updates section and stack`() {
         var activatedProfileId: String? = null
         MacroPadNavState.applyPrimaryModalPayload(
@@ -126,23 +113,6 @@ class MacroPadNavStateTest {
             PrimaryModalPayload.MacroPad(newProfile = true, presetProfileName = "Crash Bandicoot", profileAssociation = assoc),
         )
         assertNav(EditorSection.PROFILES, listOf(MacroPadSubPage.NewProfile(presetName = "Crash Bandicoot", association = assoc)))
-    }
-
-    @Test
-    fun `applyPrimaryModalPayload with ButtonInspector updates section and stack`() {
-        var selectedButtonId: String? = null
-        MacroPadNavState.applyPrimaryModalPayload(
-            payload = PrimaryModalPayload.ButtonInspector(buttonId = "btn-123"),
-            onSetSelectedButtonId = { selectedButtonId = it },
-        )
-        assertNav(EditorSection.BUTTONS, listOf(MacroPadSubPage.EditButtonPositions))
-        assertEquals("btn-123", selectedButtonId)
-    }
-
-    @Test
-    fun `applyPrimaryModalPayload with CutoutInspector updates section and stack`() {
-        MacroPadNavState.applyPrimaryModalPayload(PrimaryModalPayload.CutoutInspector(cutoutId = "cutout-abc"))
-        assertNav(EditorSection.MIRROR, listOf(MacroPadSubPage.CutoutSettings("cutout-abc")))
     }
 
     @Test

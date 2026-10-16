@@ -7,19 +7,17 @@ import app.cash.turbine.test
 import com.stormpanda.megingiard.catalog.SystemRoleClassifier
 import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.macropad.AutoSwitchCoordinator
+import com.stormpanda.megingiard.macropad.EditorSection
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.macropad.ProfileAssociation
 import com.stormpanda.megingiard.mirror.ScreenCutout
-import com.stormpanda.megingiard.navigation.NavDestination
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.session.ActiveGameSession
 import com.stormpanda.megingiard.settings.KeyboardSettings
 import com.stormpanda.megingiard.settings.MacroPadSettings
-import com.stormpanda.megingiard.settings.SettingsCategory
-import com.stormpanda.megingiard.settings.SettingsSubPage
 import com.stormpanda.megingiard.ui.PrimaryModalConfig
 import com.stormpanda.megingiard.ui.PrimaryModalPayload
 import com.stormpanda.megingiard.ui.PrimaryModalType
@@ -1085,30 +1083,6 @@ class AppStateManagerTest {
         }
 
     @Test
-    fun `navigateTo updates currentNavDestination and opens corresponding primary modal`() =
-        runTest {
-            AppStateManager.closeActiveModal()
-            assertEquals(null, AppStateManager.currentNavDestination.value)
-
-            val dest =
-                NavDestination.GlobalSettings(
-                    category = SettingsCategory.APPEARANCE,
-                    subPage = SettingsSubPage.CUSTOM_ACCENT,
-                )
-            AppStateManager.navigateTo(dest)
-
-            assertEquals(dest, AppStateManager.currentNavDestination.value)
-            assertEquals(PrimaryModalType.GLOBAL_SETTINGS, AppStateManager.activePrimaryModal.value?.type)
-            val payload = AppStateManager.activePrimaryModal.value?.payload as? PrimaryModalPayload.GlobalSettings
-            assertEquals(SettingsCategory.APPEARANCE, payload?.category)
-            assertEquals(SettingsSubPage.CUSTOM_ACCENT, payload?.subPage)
-
-            AppStateManager.closePrimaryModal()
-            assertEquals(null, AppStateManager.currentNavDestination.value)
-            assertEquals(null, AppStateManager.activePrimaryModal.value)
-        }
-
-    @Test
     fun `suspendCurrentAndDismiss and resumeSuspended save and restore modal state`() =
         runTest {
             AppStateManager.closeActiveModal()
@@ -1117,15 +1091,16 @@ class AppStateManagerTest {
 
             val modalConfig =
                 PrimaryModalConfig(
-                    type = PrimaryModalType.MACRO_TIMELINE_EDITOR,
+                    type = PrimaryModalType.MACROPAD_EDITOR,
                     payload =
-                        PrimaryModalPayload.MacroTimeline(
+                        PrimaryModalPayload.MacroPad(
+                            section = EditorSection.MACROS,
                             macroId = "macro-999",
                             focusStepIndex = 3,
                         ),
                 )
             AppStateManager.openPrimaryModal(modalConfig)
-            assertEquals(PrimaryModalType.MACRO_TIMELINE_EDITOR, AppStateManager.activePrimaryModal.value?.type)
+            assertEquals(PrimaryModalType.MACROPAD_EDITOR, AppStateManager.activePrimaryModal.value?.type)
 
             // Suspend and dismiss
             AppStateManager.suspendCurrentAndDismiss()
@@ -1137,8 +1112,8 @@ class AppStateManagerTest {
             AppStateManager.resumeSuspended()
             assertFalse(AppStateManager.hasSuspendedPrimaryModal.value)
             assertEquals(null, AppStateManager.suspendedPrimaryModal.value)
-            assertEquals(PrimaryModalType.MACRO_TIMELINE_EDITOR, AppStateManager.activePrimaryModal.value?.type)
-            val restoredPayload = AppStateManager.activePrimaryModal.value?.payload as? PrimaryModalPayload.MacroTimeline
+            assertEquals(PrimaryModalType.MACROPAD_EDITOR, AppStateManager.activePrimaryModal.value?.type)
+            val restoredPayload = AppStateManager.activePrimaryModal.value?.payload as? PrimaryModalPayload.MacroPad
             assertEquals("macro-999", restoredPayload?.macroId)
             assertEquals(3, restoredPayload?.focusStepIndex)
 

@@ -7,8 +7,6 @@ import com.stormpanda.megingiard.macropad.AutoSwitchCoordinator
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
-import com.stormpanda.megingiard.navigation.NavDestination
-import com.stormpanda.megingiard.navigation.toPrimaryModalConfig
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
@@ -410,9 +408,6 @@ object AppStateManager {
     private val _activePrimaryModal = MutableStateFlow<PrimaryModalConfig?>(null)
     val activePrimaryModal: StateFlow<PrimaryModalConfig?> = _activePrimaryModal.asStateFlow()
 
-    private val _currentNavDestination = MutableStateFlow<NavDestination?>(null)
-    val currentNavDestination: StateFlow<NavDestination?> = _currentNavDestination.asStateFlow()
-
     private val _suspendedPrimaryModal = MutableStateFlow<PrimaryModalConfig?>(null)
     val suspendedPrimaryModal: StateFlow<PrimaryModalConfig?> = _suspendedPrimaryModal.asStateFlow()
 
@@ -640,22 +635,9 @@ object AppStateManager {
     fun openPrimaryModal(config: PrimaryModalConfig) {
         AppLog.i(TAG, "openPrimaryModal: type=${config.type} payload=${config.payload}")
         _activePrimaryModal.value = config
-        when (val payload = config.payload) {
-            is PrimaryModalPayload.CropSelector -> {
-                _activeCropCutoutId.value = payload.cutoutId
-            }
-
-            is PrimaryModalPayload.CutoutInspector -> {
-                _selectedCutoutId.value = payload.cutoutId
-            }
-
-            is PrimaryModalPayload.MirrorViewportEditor -> {
-                if (payload.cutoutId != null) {
-                    _selectedCutoutId.value = payload.cutoutId
-                }
-            }
-
-            else -> {}
+        val payload = config.payload
+        if (payload is PrimaryModalPayload.CropSelector) {
+            _activeCropCutoutId.value = payload.cutoutId
         }
         if (config.type == PrimaryModalType.MIRROR_VIEWPORT_EDITOR) {
             _showEmptyCutoutsDialog.value = false
@@ -672,24 +654,6 @@ object AppStateManager {
 
     fun openPrimaryModal(type: PrimaryModalType) {
         openPrimaryModal(PrimaryModalConfig(type))
-    }
-
-    /**
-     * Deep-links directly to any destination across the app.
-     */
-    fun navigateTo(destination: NavDestination) {
-        AppLog.i(TAG, "navigateTo: $destination")
-        _currentNavDestination.value = destination
-        when (destination) {
-            is NavDestination.CutoutLayoutEditor -> {
-                _selectedCutoutId.value = destination.cutoutId
-                setViewportEditActive(true)
-            }
-
-            else -> {
-                openPrimaryModal(destination.toPrimaryModalConfig())
-            }
-        }
     }
 
     /**
@@ -744,7 +708,6 @@ object AppStateManager {
         _activeCropCutoutId.value = null
         _selectedCutoutId.value = null
         _isMirrorEditorBackgroundHidden.value = false
-        _currentNavDestination.value = null
         if (currentType == PrimaryModalType.MIRROR_VIEWPORT_EDITOR &&
             _companionSurfaceMode.value == CompanionSurfaceMode.VIEWPORT_EDIT
         ) {
@@ -900,7 +863,6 @@ object AppStateManager {
         _fullscreenMouseSensitivity.value = 1.0f
         _activeCropCutoutId.value = null
         _selectedCutoutId.value = null
-        _currentNavDestination.value = null
         MacroPadState.resetPeek()
     }
 
