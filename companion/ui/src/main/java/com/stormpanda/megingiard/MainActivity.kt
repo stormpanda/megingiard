@@ -430,22 +430,11 @@ class MainActivity : ComponentActivity() {
                 am.appTasks.firstOrNull()?.setExcludeFromRecents(exclude)
             }
         }
+        val currentDisplayId = display?.displayId ?: Display.DEFAULT_DISPLAY
+        AppStateManager.setOnValidScreen(DisplayDetector.isValidScreen(currentDisplayId))
         enableEdgeToEdge()
         setContent {
-            val isCapturing by ScreenCaptureManager.isCapturing.collectAsStateWithLifecycle()
-
-            // Synchronous display evaluation gets correct value on frame 0
-            val context = LocalContext.current
-            val currentDisplayId = context.display?.displayId ?: Display.DEFAULT_DISPLAY
-            val isOnValidScreenLocal = DisplayDetector.isValidScreen(currentDisplayId)
-
-            // Update global state for other components
-            LaunchedEffect(isOnValidScreenLocal) {
-                AppStateManager.setOnValidScreen(isOnValidScreenLocal)
-            }
-
             val isOnValidScreen by AppStateManager.isOnValidScreen.collectAsStateWithLifecycle()
-
             val activeLayout by MacroPadState.activeLayout.collectAsStateWithLifecycle()
 
             // Reconcile the running mirror session with the active layout's persisted
