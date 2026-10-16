@@ -283,7 +283,7 @@
 - [x] **`[IA-15]`** — Consolidate split-brain focus/hover state across `AppStateManager`, `AutoSwitchCoordinator`, and `EmulatorDetectionFunnel` *(Complexity: High, Risk: Med)*
 - [x] **`[IA-16]`** — Avoid scanning `/storage` and double-reading `ppsspp.ini` on every 1s poll tick in `PpssppDetector` *(Complexity: Med, Risk: Low)*
 - [x] **`[IA-17]`** — Replace mixed `Mutex` + manual `pollingJob` + unsynchronized `clearSession()` in `EmulatorDetectionFunnel` with `collectLatest` *(Complexity: Med, Risk: Low)*
-- [ ] **`[IA-18]`** — Consolidate 5x overlapping Accessibility liveness sync triggers *(Complexity: Med, Risk: Low)*
+- [x] **`[IA-18]`** — Consolidate 5x overlapping Accessibility liveness sync triggers *(Complexity: Med, Risk: Low)*
 - [ ] **`[IA-19]`** — Remove stale synchronous session read in `AutoSwitchCoordinator.onPackageChanged` *(Complexity: Med, Risk: Low)*
 - [ ] **`[IA-20]`** — Remove premature `notify*Changed` broadcasts from `MegingiardSettingsProvider.onCreate()` *(Complexity: Low, Risk: Low)*
 - [ ] **`[IA-21]`** — Replace 16 individual `StateFlow` subscriptions & 11-arg `resolveTargetAppInfo` in `IntegrationHomeScreen` with consolidated focus state *(Complexity: High, Risk: Low)*

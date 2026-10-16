@@ -61,9 +61,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.SwipeGestureProcessor
@@ -504,8 +501,7 @@ fun MainAppScreen() {
             }
         }
 
-        val lifecycleOwner = LocalLifecycleOwner.current
-        DisposableEffect(context, lifecycleOwner) {
+        DisposableEffect(context) {
             val contentObserver =
                 object : ContentObserver(Handler(Looper.getMainLooper())) {
                     override fun onChange(selfChange: Boolean) {
@@ -517,17 +513,8 @@ fun MainAppScreen() {
             val uri = Settings.Secure.getUriFor(Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
             context.contentResolver.registerContentObserver(uri, false, contentObserver)
 
-            val observer =
-                LifecycleEventObserver { _, event ->
-                    if (event == Lifecycle.Event.ON_RESUME) {
-                        syncAccessibilityState(context)
-                    }
-                }
-            lifecycleOwner.lifecycle.addObserver(observer)
-
             onDispose {
                 context.contentResolver.unregisterContentObserver(contentObserver)
-                lifecycleOwner.lifecycle.removeObserver(observer)
             }
         }
 
@@ -536,7 +523,6 @@ fun MainAppScreen() {
                 overlayAtBottom = overlayAtBottom,
                 onDismiss = {
                     OnboardingWizardManager.finishWizard()
-                    syncAccessibilityState(context)
                     AppStateManager.resetPrivdPromptState()
                 },
             )
@@ -545,7 +531,6 @@ fun MainAppScreen() {
         if (showPromptDialog && !isWizardActive && !isPrivdSetupWizardActive) {
             PrivdReconnectPromptDialog(
                 onDone = {
-                    syncAccessibilityState(context)
                     AppStateManager.setPrivdPromptDismissed(true)
                 },
             )
