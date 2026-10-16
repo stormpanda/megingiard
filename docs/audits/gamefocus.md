@@ -276,7 +276,7 @@
 
 > Select which findings to implement (`All`, `Low-risk only`, or specific IDs):
 
-- [ ] **`[GF-01]`** — Consolidate `FocusTopLauncherScreen`'s 52 pass-through parameters, shims, and `apps` vs. `categoryApps` *(Complexity: High, Risk: Low)*
+- [x] **`[GF-01]`** — Consolidate `FocusTopLauncherScreen`'s 52 pass-through parameters, shims, and `apps` vs. `categoryApps` *(Complexity: High, Risk: Low)*
 - [ ] **`[GF-02]`** — Replace custom `JobRefHolder` class with standard Compose `LaunchedEffect` auto-hide *(Complexity: Low, Risk: Low)*
 - [ ] **`[GF-03]`** — Remove unused `RomManager.detectSystem(Context, Array<DocumentFile>)` overload *(Complexity: Low, Risk: Low)*
 - [ ] **`[GF-04]`** — Remove unreachable `systemDef == null` and single-OK fallback branches in `RomFolderCoreChooserDialog` *(Complexity: Low, Risk: Low)*

@@ -276,7 +276,7 @@ private fun PairAppGridItem(
                     } else {
                         Modifier
                     },
-                ).noFocusClickable(onClick),
+                ).noFocusClickable(onClick = onClick),
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,

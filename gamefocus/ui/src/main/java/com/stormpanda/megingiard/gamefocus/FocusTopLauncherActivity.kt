@@ -248,11 +248,6 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 remember(galleryConfig.collections) {
                     galleryConfig.collections.associate { collection -> collection.id to collection.members.toSet() }
                 }
-            val pairingTargetApp by viewModel.pairingTargetApp.collectAsStateWithLifecycle()
-            val pairingFocusedIndex by viewModel.pairingFocusedIndex.collectAsStateWithLifecycle()
-            val confirmPairingTrigger by viewModel.confirmPairingTrigger.collectAsStateWithLifecycle()
-            val areButtonPromptsVisible by viewModel.areButtonPromptsVisible.collectAsStateWithLifecycle()
-
             val availableAndroidApps =
                 remember(allApps) {
                     allApps.filter { !it.isRom && it.packageName != packageName }.sortedBy { it.label.lowercase() }
@@ -262,22 +257,6 @@ class FocusTopLauncherActivity : ComponentActivity() {
             val isLibraryOpen by viewModel.isLibraryOpen.collectAsStateWithLifecycle()
             val librarySelectedTab by viewModel.librarySelectedTab.collectAsStateWithLifecycle()
             val libraryFocusedIndex by viewModel.libraryFocusedIndex.collectAsStateWithLifecycle()
-            val isMainOptionsMenuExpanded by viewModel.isMainOptionsMenuExpanded.collectAsStateWithLifecycle()
-            val mainMenuSelectedIndex by viewModel.mainMenuSelectedIndex.collectAsStateWithLifecycle()
-            val isLibraryOptionsMenuExpanded by viewModel.isLibraryOptionsMenuExpanded.collectAsStateWithLifecycle()
-            val libraryMenuSelectedIndex by viewModel.libraryMenuSelectedIndex.collectAsStateWithLifecycle()
-            val newlyAddedFolder by viewModel.newlyAddedFolder.collectAsStateWithLifecycle()
-            val isRemoveRomFolderDialogOpen by viewModel.isRemoveRomFolderDialogOpen.collectAsStateWithLifecycle()
-            val removeRomFolderDialogSelectedIndex by viewModel.removeRomFolderDialogSelectedIndex.collectAsStateWithLifecycle()
-            val folderToRemove by viewModel.folderToRemove.collectAsStateWithLifecycle()
-            val coreChooserDialogSelectedIndex by viewModel.coreChooserDialogSelectedIndex.collectAsStateWithLifecycle()
-            val confirmCoreChooserTrigger by viewModel.confirmCoreChooserTrigger.collectAsStateWithLifecycle()
-            val editingAppInfo by viewModel.editingAppInfo.collectAsStateWithLifecycle()
-            val isManageGalleriesOpen by viewModel.isManageGalleriesOpen.collectAsStateWithLifecycle()
-            val prevLetterTrigger by viewModel.prevLetterTrigger.collectAsStateWithLifecycle()
-            val nextLetterTrigger by viewModel.nextLetterTrigger.collectAsStateWithLifecycle()
-            val dpadLeftTrigger by viewModel.dpadLeftTrigger.collectAsStateWithLifecycle()
-            val dpadStepRightTrigger by viewModel.dpadStepRightTrigger.collectAsStateWithLifecycle()
             val focusedApp by viewModel.focusedApp.collectAsStateWithLifecycle()
             val isStarted by viewModel.isStarted.collectAsStateWithLifecycle()
 
@@ -340,11 +319,6 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 frozenHiddenSetForInput = frozenHidden
             }
 
-            val displayedApps =
-                remember(allApps, favorites, frozenHidden, lastUsed, selectedCategory, collectionMembers) {
-                    selectedCategory.filterApps(allApps, favorites, frozenHidden, lastUsed, collectionMembers)
-                }
-
             MaterialTheme(
                 colorScheme = colorSchemeFor(appColors),
                 typography = megingiardTypography,
@@ -394,8 +368,17 @@ class FocusTopLauncherActivity : ComponentActivity() {
                         color = appColors.appBackground,
                     ) {
                         FocusTopLauncherScreen(
-                            apps = displayedApps,
-                            areButtonPromptsVisible = areButtonPromptsVisible,
+                            viewModel = viewModel,
+                            allApps = allApps,
+                            favoritesSet = favorites,
+                            hiddenSet = hidden,
+                            lastUsed = lastUsed,
+                            collectionMembers = collectionMembers,
+                            categories = categories,
+                            allGalleryCategories = allGalleryCategories,
+                            galleryConfig = galleryConfig,
+                            pairedApps = pairedApps,
+                            availableAndroidApps = availableAndroidApps,
                             onAppClickTop = { appInfo ->
                                 launchGalleryTopApp(appInfo)
                             },
@@ -413,23 +396,12 @@ class FocusTopLauncherActivity : ComponentActivity() {
                                     InstalledAppsManager.launchAppOnSecondaryDisplay(this@FocusTopLauncherActivity, appInfo)
                                 }
                             },
-                            selectedCategory = selectedCategory,
-                            categories = categories,
-                            onCategoryUp = { viewModel.cycleCategoryUp(categories) },
-                            onCategoryDown = { viewModel.cycleCategoryDown(categories) },
-                            favoritesSet = favorites,
-                            hiddenSet = hidden,
-                            collectionMembers = collectionMembers,
-                            isMainOptionsMenuExpanded = isMainOptionsMenuExpanded,
-                            onMainOptionsMenuExpandedChange = { viewModel.setMainOptionsMenuExpanded(it) },
-                            mainMenuSelectedIndex = mainMenuSelectedIndex,
                             onToggleFavorite = { appInfo ->
                                 InstalledAppsManager.toggleFavorite(this, appInfo.packageName)
                             },
                             onToggleHidden = { appInfo ->
                                 InstalledAppsManager.toggleHidden(this, appInfo.packageName)
                             },
-                            onEditArtwork = { appInfo -> viewModel.openEditGameOverlay(appInfo) },
                             onOpenAppInfo = { appInfo ->
                                 InstalledAppsManager.openAppInfo(this, appInfo.packageName, display.displayId)
                             },
@@ -441,20 +413,6 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             },
                             onAddRomFolder = { openDocumentTreeLauncher.launch(null) },
                             onRemoveRomFolder = { folder -> RomManager.removeRomFolder(this, folder) },
-                            editingAppInfo = editingAppInfo,
-                            prevLetterTrigger = prevLetterTrigger,
-                            nextLetterTrigger = nextLetterTrigger,
-                            dpadLeftTrigger = dpadLeftTrigger,
-                            dpadStepRightTrigger = dpadStepRightTrigger,
-                            onFocusedAppChanged = { viewModel.setFocusedApp(it) },
-                            onDismissEditingApp = { viewModel.setEditingAppInfo(null) },
-                            isManageGalleriesOpen = isManageGalleriesOpen,
-                            allGalleryCategories = allGalleryCategories,
-                            galleryConfig = galleryConfig,
-                            onOpenManageGalleries = { viewModel.setManageGalleriesOpen(true) },
-                            onDismissManageGalleries = { viewModel.setManageGalleriesOpen(false) },
-                            newlyAddedFolder = newlyAddedFolder,
-                            onDismissNewlyAddedFolder = { viewModel.setNewlyAddedFolder(null) },
                             onConfirmNewlyAddedFolderCore = { folder, coreOrPackage ->
                                 if (folder.systemId == SYSTEM_ID_SWITCH) {
                                     RomManager.updateRomFolderEmulatorPackage(this, folder.uriString, coreOrPackage)
@@ -463,38 +421,10 @@ class FocusTopLauncherActivity : ComponentActivity() {
                                 }
                                 viewModel.setNewlyAddedFolder(null)
                             },
-                            coreChooserDialogSelectedIndex = coreChooserDialogSelectedIndex,
-                            onCoreChooserDialogSelectedIndexChange = { viewModel.setCoreChooserDialogSelectedIndex(it) },
-                            confirmCoreChooserTrigger = confirmCoreChooserTrigger,
-                            isRemoveRomFolderDialogOpen = isRemoveRomFolderDialogOpen,
-                            onRemoveRomFolderDialogOpenChange = { viewModel.setRemoveRomFolderDialogOpen(it) },
-                            removeRomFolderDialogSelectedIndex = removeRomFolderDialogSelectedIndex,
-                            onRemoveRomFolderDialogSelectedIndexChange = { viewModel.setRemoveRomFolderDialogSelectedIndex(it) },
-                            folderToRemove = folderToRemove,
-                            onFolderToRemoveChange = { viewModel.setFolderToRemove(it) },
-                            allApps = allApps,
-                            lastUsed = lastUsed,
-                            isLibraryOpen = isLibraryOpen,
-                            librarySelectedTab = librarySelectedTab,
-                            onLibraryTabSelected = { viewModel.setLibrarySelectedTab(it) },
-                            libraryFocusedIndex = libraryFocusedIndex,
-                            onLibraryFocusedIndexChange = { viewModel.setLibraryFocusedIndex(it) },
-                            isLibraryOptionsMenuExpanded = isLibraryOptionsMenuExpanded,
-                            onLibraryOptionsMenuExpandedChange = { viewModel.setLibraryOptionsMenuExpanded(it) },
-                            libraryMenuSelectedIndex = libraryMenuSelectedIndex,
-                            onOpenLibrary = { viewModel.setLibraryOpen(true) },
-                            onCloseLibrary = { viewModel.setLibraryOpen(false) },
-                            pairedApps = pairedApps,
-                            availableAndroidApps = availableAndroidApps,
                             onOpenPairingDialog = { appInfo -> openPairingDialogForApp(appInfo) },
                             onRemovePair = { appInfo ->
                                 GameFocusPairManager.removePair(this@FocusTopLauncherActivity, appInfo.packageName)
                             },
-                            pairingTargetApp = pairingTargetApp,
-                            pairingFocusedIndex = pairingFocusedIndex,
-                            onPairingFocusedIndexChange = { viewModel.setPairingFocusedIndex(it) },
-                            confirmPairingTrigger = confirmPairingTrigger,
-                            onDismissPairing = { viewModel.dismissPairingDialog() },
                             onConfirmPairApp = { topApp, bottomApp ->
                                 AppLog.i(TAG, "Pairing app ${topApp.label} with ${bottomApp.label}")
                                 GameFocusPairManager.setPair(this@FocusTopLauncherActivity, topApp.packageName, bottomApp.packageName)

@@ -96,6 +96,7 @@ import com.stormpanda.megingiard.catalog.LibraryTab
 import com.stormpanda.megingiard.catalog.RomManager
 import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
 import com.stormpanda.megingiard.gamefocus.domain.GalleryConfig
+import com.stormpanda.megingiard.gamefocus.viewmodel.FocusTopLauncherViewModel
 import com.stormpanda.megingiard.math.floorMod
 import com.stormpanda.megingiard.ui.ExpandableActionItem
 import com.stormpanda.megingiard.ui.ExpandableActionsMenu
@@ -159,77 +160,57 @@ private class JobRefHolder(
 
 @Composable
 fun FocusTopLauncherScreen(
-    apps: List<InstalledAppInfo>,
-    onAppClickTop: (InstalledAppInfo) -> Unit = {},
-    onAppClickBottom: (InstalledAppInfo) -> Unit = {},
-    onAppClick: (InstalledAppInfo) -> Unit = onAppClickTop,
-    selectedCategory: GameFocusCategory = GameFocusCategory.GAMES,
-    categories: List<GameFocusCategory> = GameFocusCategory.builtIns,
-    onCategoryUp: () -> Unit = {},
-    onCategoryDown: () -> Unit = {},
+    viewModel: FocusTopLauncherViewModel,
+    allApps: List<InstalledAppInfo> = emptyList(),
     favoritesSet: Set<String> = emptySet(),
     hiddenSet: Set<String> = emptySet(),
+    lastUsed: List<String> = emptyList(),
     collectionMembers: Map<String, Set<String>> = emptyMap(),
-    isMainOptionsMenuExpanded: Boolean = false,
-    onMainOptionsMenuExpandedChange: (Boolean) -> Unit = {},
-    mainMenuSelectedIndex: Int = 0,
+    categories: List<GameFocusCategory> = GameFocusCategory.builtIns,
+    allGalleryCategories: List<GameFocusCategory> = emptyList(),
+    galleryConfig: GalleryConfig = GalleryConfig(),
+    pairedApps: Map<String, String> = emptyMap(),
+    availableAndroidApps: List<InstalledAppInfo> = emptyList(),
+    onAppClickTop: (InstalledAppInfo) -> Unit = {},
+    onAppClickBottom: (InstalledAppInfo) -> Unit = {},
     onToggleFavorite: (InstalledAppInfo) -> Unit = {},
     onToggleHidden: (InstalledAppInfo) -> Unit = {},
-    onEditArtwork: (InstalledAppInfo) -> Unit = {},
     onOpenAppInfo: (InstalledAppInfo) -> Unit = {},
     onUninstallApp: (InstalledAppInfo) -> Unit = {},
     onChangeCore: (CustomRomFolder) -> Unit = {},
     onAddRomFolder: () -> Unit = {},
     onRemoveRomFolder: (CustomRomFolder) -> Unit = {},
-    editingAppInfo: InstalledAppInfo? = null,
-    prevLetterTrigger: Int = 0,
-    nextLetterTrigger: Int = 0,
-    dpadLeftTrigger: Int = 0,
-    dpadStepRightTrigger: Int = 0,
-    onFocusedAppChanged: (InstalledAppInfo?) -> Unit = {},
-    onDismissEditingApp: () -> Unit = {},
-    isManageGalleriesOpen: Boolean = false,
-    allGalleryCategories: List<GameFocusCategory> = emptyList(),
-    galleryConfig: GalleryConfig = GalleryConfig(),
-    onOpenManageGalleries: () -> Unit = {},
-    onDismissManageGalleries: () -> Unit = {},
-    newlyAddedFolder: CustomRomFolder? = null,
-    onDismissNewlyAddedFolder: () -> Unit = {},
     onConfirmNewlyAddedFolderCore: (CustomRomFolder, String?) -> Unit = { _, _ -> },
-    coreChooserDialogSelectedIndex: Int = 0,
-    onCoreChooserDialogSelectedIndexChange: (Int) -> Unit = {},
-    confirmCoreChooserTrigger: Int = 0,
-    isRemoveRomFolderDialogOpen: Boolean = false,
-    onRemoveRomFolderDialogOpenChange: (Boolean) -> Unit = {},
-    removeRomFolderDialogSelectedIndex: Int = 0,
-    onRemoveRomFolderDialogSelectedIndexChange: (Int) -> Unit = {},
-    folderToRemove: CustomRomFolder? = null,
-    onFolderToRemoveChange: (CustomRomFolder?) -> Unit = {},
-    allApps: List<InstalledAppInfo> = emptyList(),
-    lastUsed: List<String> = emptyList(),
-    isLibraryOpen: Boolean = false,
-    librarySelectedTab: LibraryTab = LibraryTab.GAMES,
-    onLibraryTabSelected: (LibraryTab) -> Unit = {},
-    libraryFocusedIndex: Int = 0,
-    onLibraryFocusedIndexChange: (Int) -> Unit = {},
-    isLibraryOptionsMenuExpanded: Boolean = false,
-    onLibraryOptionsMenuExpandedChange: (Boolean) -> Unit = {},
-    libraryMenuSelectedIndex: Int = 0,
-    onOpenLibrary: () -> Unit = {},
-    onCloseLibrary: () -> Unit = {},
-    pairedApps: Map<String, String> = emptyMap(),
-    availableAndroidApps: List<InstalledAppInfo> = emptyList(),
     onOpenPairingDialog: (InstalledAppInfo) -> Unit = {},
     onRemovePair: (InstalledAppInfo) -> Unit = {},
-    pairingTargetApp: InstalledAppInfo? = null,
-    pairingFocusedIndex: Int = 0,
-    onPairingFocusedIndexChange: (Int) -> Unit = {},
-    confirmPairingTrigger: Int = 0,
-    onDismissPairing: () -> Unit = {},
     onConfirmPairApp: (InstalledAppInfo, InstalledAppInfo) -> Unit = { _, _ -> },
-    areButtonPromptsVisible: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
+    val selectedCategory by viewModel.selectedCategory.collectAsState()
+    val isLibraryOpen by viewModel.isLibraryOpen.collectAsState()
+    val librarySelectedTab by viewModel.librarySelectedTab.collectAsState()
+    val libraryFocusedIndex by viewModel.libraryFocusedIndex.collectAsState()
+    val isMainOptionsMenuExpanded by viewModel.isMainOptionsMenuExpanded.collectAsState()
+    val mainMenuSelectedIndex by viewModel.mainMenuSelectedIndex.collectAsState()
+    val isLibraryOptionsMenuExpanded by viewModel.isLibraryOptionsMenuExpanded.collectAsState()
+    val libraryMenuSelectedIndex by viewModel.libraryMenuSelectedIndex.collectAsState()
+    val newlyAddedFolder by viewModel.newlyAddedFolder.collectAsState()
+    val isRemoveRomFolderDialogOpen by viewModel.isRemoveRomFolderDialogOpen.collectAsState()
+    val removeRomFolderDialogSelectedIndex by viewModel.removeRomFolderDialogSelectedIndex.collectAsState()
+    val folderToRemove by viewModel.folderToRemove.collectAsState()
+    val coreChooserDialogSelectedIndex by viewModel.coreChooserDialogSelectedIndex.collectAsState()
+    val confirmCoreChooserTrigger by viewModel.confirmCoreChooserTrigger.collectAsState()
+    val editingAppInfo by viewModel.editingAppInfo.collectAsState()
+    val isManageGalleriesOpen by viewModel.isManageGalleriesOpen.collectAsState()
+    val prevLetterTrigger by viewModel.prevLetterTrigger.collectAsState()
+    val nextLetterTrigger by viewModel.nextLetterTrigger.collectAsState()
+    val dpadLeftTrigger by viewModel.dpadLeftTrigger.collectAsState()
+    val dpadStepRightTrigger by viewModel.dpadStepRightTrigger.collectAsState()
+    val pairingTargetApp by viewModel.pairingTargetApp.collectAsState()
+    val pairingFocusedIndex by viewModel.pairingFocusedIndex.collectAsState()
+    val confirmPairingTrigger by viewModel.confirmPairingTrigger.collectAsState()
+    val areButtonPromptsVisible by viewModel.areButtonPromptsVisible.collectAsState()
+
     val appColors = LocalAppColors.current
     val context = LocalContext.current
     val apiKey by remember(context) { MegingiardSettingsClient.observeSteamGridDbApiToken(context) }
@@ -451,7 +432,7 @@ fun FocusTopLauncherScreen(
                 val targetLetter = uniqueLetters.getOrNull(selectedLetterNavIndex)
                 isLetterOverlayActive = false
                 if (targetLetter != null) {
-                    val targetAppIndex = LetterNavigationHelper.findFirstIndexOfLetter(apps, targetLetter)
+                    val targetAppIndex = LetterNavigationHelper.findFirstIndexOfLetter(categoryApps, targetLetter)
                     AppLog.i(TAG, "500ms debounce expired -> committing letter '$targetLetter' at index $targetAppIndex")
                     activePagerState.animateScrollToPage(targetAppIndex)
                 }
@@ -460,7 +441,7 @@ fun FocusTopLauncherScreen(
 
     // Handle Gamepad L1 step (previous starting letter in letter carousel)
     LaunchedEffect(prevLetterTrigger) {
-        if (prevLetterTrigger > 0 && apps.isNotEmpty()) {
+        if (prevLetterTrigger > 0 && categoryApps.isNotEmpty()) {
             if (uniqueLetters.isNotEmpty()) {
                 if (!isLetterOverlayActive) {
                     isLetterOverlayActive = true
@@ -480,7 +461,7 @@ fun FocusTopLauncherScreen(
 
     // Handle Gamepad R1 step (next starting letter in letter carousel)
     LaunchedEffect(nextLetterTrigger) {
-        if (nextLetterTrigger > 0 && apps.isNotEmpty()) {
+        if (nextLetterTrigger > 0 && categoryApps.isNotEmpty()) {
             if (uniqueLetters.isNotEmpty()) {
                 if (!isLetterOverlayActive) {
                     isLetterOverlayActive = true
@@ -500,7 +481,7 @@ fun FocusTopLauncherScreen(
 
     // Bi-directional synchronization: update lastHighlightedPackages and notify focused app
     LaunchedEffect(currentApp, selectedCategory) {
-        onFocusedAppChanged(currentApp)
+        viewModel.setFocusedApp(currentApp)
         if (currentApp != null) {
             lastHighlightedPackages = lastHighlightedPackages + (selectedCategory to currentApp.packageName)
             AppLog.d(TAG, "Focused game changed for ${selectedCategory.id}: package=${currentApp.packageName}, label=${currentApp.label}")
@@ -510,10 +491,10 @@ fun FocusTopLauncherScreen(
     var backgroundApp by remember { mutableStateOf<InstalledAppInfo?>(null) }
 
     // Throttle background color updates during rapid gallery navigation
-    LaunchedEffect(activePagerState, apps) {
+    LaunchedEffect(activePagerState, categoryApps) {
         snapshotFlow {
             val page = activePagerState.currentPage
-            apps.getOrNull(page)
+            categoryApps.getOrNull(page)
         }.collectLatest { target ->
             if (activePagerState.isScrollInProgress) {
                 delay(FTL_BACKGROUND_COLOR_DEBOUNCE_MS)
@@ -523,7 +504,7 @@ fun FocusTopLauncherScreen(
     }
 
     LaunchedEffect(selectedCategory) {
-        backgroundApp = apps.getOrNull(activePagerState.currentPage)
+        backgroundApp = categoryApps.getOrNull(activePagerState.currentPage)
     }
 
     // Extract dynamic 2 main colors asynchronously off the UI thread using AndroidX Palette API
@@ -593,32 +574,32 @@ fun FocusTopLauncherScreen(
                     FocusLibraryScreen(
                         allApps = allApps,
                         selectedTab = librarySelectedTab,
-                        onTabSelected = onLibraryTabSelected,
+                        onTabSelected = viewModel::setLibrarySelectedTab,
                         focusedIndex = libraryFocusedIndex,
-                        onFocusedIndexChange = onLibraryFocusedIndexChange,
+                        onFocusedIndexChange = viewModel::setLibraryFocusedIndex,
                         hiddenSet = hiddenSet,
                         isOptionsMenuExpanded = isLibraryOptionsMenuExpanded,
-                        onOptionsMenuExpandedChange = onLibraryOptionsMenuExpandedChange,
+                        onOptionsMenuExpandedChange = viewModel::setLibraryOptionsMenuExpanded,
                         selectedIndex = libraryMenuSelectedIndex,
                         onToggleHidden = onToggleHidden,
-                        onEditArtwork = onEditArtwork,
+                        onEditArtwork = viewModel::openEditGameOverlay,
                         onOpenAppInfo = onOpenAppInfo,
                         onUninstallApp = onUninstallApp,
                         onChangeCore = onChangeCore,
                         onAddRomFolder = onAddRomFolder,
                         onRemoveRomFolder = onRemoveRomFolder,
-                        onOpenManageGalleries = onOpenManageGalleries,
+                        onOpenManageGalleries = { viewModel.setManageGalleriesOpen(true) },
                         onAppClickTop = onAppClickTop,
                         onAppClickBottom = onAppClickBottom,
-                        onCloseRequested = onCloseLibrary,
+                        onCloseRequested = { viewModel.setLibraryOpen(false) },
                         enabled = isLibraryOpen && editingAppInfo == null && pairingTargetApp == null && !isManageGalleriesOpen,
                         tabs = libraryTabs,
                         isRemoveRomFolderDialogOpen = isRemoveRomFolderDialogOpen,
-                        onRemoveRomFolderDialogOpenChange = onRemoveRomFolderDialogOpenChange,
+                        onRemoveRomFolderDialogOpenChange = viewModel::setRemoveRomFolderDialogOpen,
                         removeRomFolderDialogSelectedIndex = removeRomFolderDialogSelectedIndex,
-                        onRemoveRomFolderDialogSelectedIndexChange = onRemoveRomFolderDialogSelectedIndexChange,
+                        onRemoveRomFolderDialogSelectedIndexChange = viewModel::setRemoveRomFolderDialogSelectedIndex,
                         folderToRemove = folderToRemove,
-                        onFolderToRemoveChange = onFolderToRemoveChange,
+                        onFolderToRemoveChange = viewModel::setFolderToRemove,
                         areButtonPromptsVisible = areButtonPromptsVisible,
                     )
                 } else {
@@ -647,7 +628,7 @@ fun FocusTopLauncherScreen(
                                         .fillMaxSize()
                                         .pointerInput(Unit) {
                                             detectTapGestures {
-                                                onMainOptionsMenuExpandedChange(false)
+                                                viewModel.setMainOptionsMenuExpanded(false)
                                             }
                                         },
                             )
@@ -737,7 +718,7 @@ fun FocusTopLauncherScreen(
                                                 targetPage = categoryPagerState.targetPage,
                                                 onItemClick = { actualIndex ->
                                                     val appInfo = currentCategoryApps.getOrNull(actualIndex)
-                                                    if (appInfo != null) onAppClick(appInfo)
+                                                    if (appInfo != null) onAppClickTop(appInfo)
                                                 },
                                                 posterWidth = FTL_POSTER_WIDTH,
                                                 posterHeight = FTL_POSTER_HEIGHT,
@@ -876,8 +857,8 @@ fun FocusTopLauncherScreen(
                         InteractiveCategoryHeader(
                             selectedCategory = selectedCategory,
                             categories = categories,
-                            onCategoryUp = onCategoryUp,
-                            onCategoryDown = onCategoryDown,
+                            onCategoryUp = { viewModel.cycleCategoryUp(categories) },
+                            onCategoryDown = { viewModel.cycleCategoryDown(categories) },
                             enabled = isControlsEnabled,
                             areButtonPromptsVisible = areButtonPromptsVisible,
                             modifier =
@@ -913,7 +894,7 @@ fun FocusTopLauncherScreen(
                                 button = GamePadButton.BUTTON_R2,
                                 text = stringResource(R.string.gamefocus_nav_library),
                                 enabled = isControlsEnabled,
-                                onClick = onOpenLibrary,
+                                onClick = { viewModel.setLibraryOpen(true) },
                             )
                         }
 
@@ -953,7 +934,7 @@ fun FocusTopLauncherScreen(
                                                     iconSymbol = "star",
                                                     onClick = {
                                                         onToggleFavorite(currentApp)
-                                                        onMainOptionsMenuExpandedChange(false)
+                                                        viewModel.setMainOptionsMenuExpanded(false)
                                                     },
                                                 ),
                                             )
@@ -962,8 +943,8 @@ fun FocusTopLauncherScreen(
                                                     label = context.getString(R.string.gamefocus_option_edit),
                                                     iconSymbol = "palette",
                                                     onClick = {
-                                                        onEditArtwork(currentApp)
-                                                        onMainOptionsMenuExpandedChange(false)
+                                                        viewModel.openEditGameOverlay(currentApp)
+                                                        viewModel.setMainOptionsMenuExpanded(false)
                                                     },
                                                 ),
                                             )
@@ -978,7 +959,7 @@ fun FocusTopLauncherScreen(
                                                     iconSymbol = if (isCurrentHidden) "visibility" else "visibility_off",
                                                     onClick = {
                                                         onToggleHidden(currentApp)
-                                                        onMainOptionsMenuExpandedChange(false)
+                                                        viewModel.setMainOptionsMenuExpanded(false)
                                                     },
                                                 ),
                                             )
@@ -993,7 +974,7 @@ fun FocusTopLauncherScreen(
                                                     iconSymbol = "splitscreen",
                                                     onClick = {
                                                         onOpenPairingDialog(currentApp)
-                                                        onMainOptionsMenuExpandedChange(false)
+                                                        viewModel.setMainOptionsMenuExpanded(false)
                                                     },
                                                 ),
                                             )
@@ -1005,7 +986,7 @@ fun FocusTopLauncherScreen(
                                                         isDestructive = true,
                                                         onClick = {
                                                             onRemovePair(currentApp)
-                                                            onMainOptionsMenuExpandedChange(false)
+                                                            viewModel.setMainOptionsMenuExpanded(false)
                                                         },
                                                     ),
                                                 )
@@ -1016,8 +997,8 @@ fun FocusTopLauncherScreen(
                                                 label = context.getString(R.string.gamefocus_manage_galleries_title),
                                                 iconSymbol = "view_carousel",
                                                 onClick = {
-                                                    onOpenManageGalleries()
-                                                    onMainOptionsMenuExpandedChange(false)
+                                                    viewModel.setManageGalleriesOpen(true)
+                                                    viewModel.setMainOptionsMenuExpanded(false)
                                                 },
                                             ),
                                         )
@@ -1025,7 +1006,7 @@ fun FocusTopLauncherScreen(
                                 }
                             ExpandableActionsMenu(
                                 isExpanded = isMainOptionsMenuExpanded,
-                                onExpandedChange = onMainOptionsMenuExpandedChange,
+                                onExpandedChange = viewModel::setMainOptionsMenuExpanded,
                                 actions = actions,
                                 selectedIndex = mainMenuSelectedIndex,
                                 dividerAfterIndex = if (currentApp != null) actions.lastIndex - 1 else null,
@@ -1064,25 +1045,25 @@ fun FocusTopLauncherScreen(
 
         if (newlyAddedFolder != null) {
             RomFolderCoreChooserDialog(
-                folder = newlyAddedFolder,
+                folder = newlyAddedFolder!!,
                 selectedIndex = coreChooserDialogSelectedIndex,
-                onSelectedIndexChange = onCoreChooserDialogSelectedIndexChange,
+                onSelectedIndexChange = viewModel::setCoreChooserDialogSelectedIndex,
                 confirmTrigger = confirmCoreChooserTrigger,
-                onDismiss = onDismissNewlyAddedFolder,
-                onConfirm = { core -> onConfirmNewlyAddedFolderCore(newlyAddedFolder, core) },
+                onDismiss = { viewModel.setNewlyAddedFolder(null) },
+                onConfirm = { core -> onConfirmNewlyAddedFolderCore(newlyAddedFolder!!, core) },
             )
         }
 
         if (pairingTargetApp != null) {
             GameFocusPairAppDialog(
-                targetApp = pairingTargetApp,
+                targetApp = pairingTargetApp!!,
                 availableApps = availableAndroidApps,
                 focusedIndex = pairingFocusedIndex,
-                onFocusedIndexChange = onPairingFocusedIndexChange,
+                onFocusedIndexChange = viewModel::setPairingFocusedIndex,
                 confirmTrigger = confirmPairingTrigger,
-                onDismiss = onDismissPairing,
+                onDismiss = viewModel::dismissPairingDialog,
                 onSelectApp = { selectedApp ->
-                    onConfirmPairApp(pairingTargetApp, selectedApp)
+                    onConfirmPairApp(pairingTargetApp!!, selectedApp)
                 },
             )
         }
@@ -1090,12 +1071,12 @@ fun FocusTopLauncherScreen(
         // Game Edit Primary Overlay (Game Info, Gallery Artwork, Library Icon, Collections)
         if (editingAppInfo != null) {
             GameFocusEditGameOverlay(
-                appInfo = editingAppInfo,
+                appInfo = editingAppInfo!!,
                 apiKey = apiKey,
-                onDismiss = onDismissEditingApp,
+                onDismiss = { viewModel.setEditingAppInfo(null) },
                 onOpenManageGalleries = {
-                    onDismissEditingApp()
-                    onOpenManageGalleries()
+                    viewModel.setEditingAppInfo(null)
+                    viewModel.setManageGalleriesOpen(true)
                 },
             )
         }
@@ -1106,7 +1087,7 @@ fun FocusTopLauncherScreen(
                 galleries = allGalleryCategories,
                 galleryConfig = galleryConfig,
                 allApps = allApps,
-                onDismiss = onDismissManageGalleries,
+                onDismiss = { viewModel.setManageGalleriesOpen(false) },
             )
         }
     }
@@ -1528,9 +1509,6 @@ internal fun Modifier.noFocusClickable(
             onClick = onClick,
         )
 }
-
-@Composable
-internal fun Modifier.noFocusClickable(onClick: () -> Unit): Modifier = noFocusClickable(enabled = true, onClick = onClick)
 
 @Composable
 internal fun GameFocusFallbackIcon(

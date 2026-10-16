@@ -1022,7 +1022,7 @@ private fun LibraryGridItem(
                 }.clip(FLS_CARD_SHAPE)
                 .drawBehind {
                     drawRect(animatedCardBg)
-                }.noFocusClickable(onClickTop),
+                }.noFocusClickable(onClick = onClickTop),
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
