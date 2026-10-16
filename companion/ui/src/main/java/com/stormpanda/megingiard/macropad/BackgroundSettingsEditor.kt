@@ -27,7 +27,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -180,17 +179,30 @@ internal fun LayerImageSettingsEditor(
     val initialDim = if (isMask) layout.maskImageDim else layout.backgroundImageDim
     val initialScaleMode = if (isMask) layout.maskScaleMode else layout.bgScaleMode
 
-    var pendingImageUri by remember(layout) { mutableStateOf<Uri?>(null) }
-    var currentImagePath by remember(layout) { mutableStateOf(initialPath) }
-    var imageScale by remember(layout) { mutableFloatStateOf(initialScale) }
-    var imageOffsetX by remember(layout) { mutableFloatStateOf(initialOffsetX) }
-    var imageOffsetY by remember(layout) { mutableFloatStateOf(initialOffsetY) }
-    var imageDim by remember(layout) { mutableFloatStateOf(initialDim) }
-    var scaleMode by remember(layout) { mutableStateOf(initialScaleMode) }
-    var isCropActive by remember(layout) { mutableStateOf(false) }
+    val previewLayout by MacroPadState.previewLayout.collectAsStateWithLifecycle()
+    val activeDraft = previewLayout?.takeIf { it.id == layout.id } ?: layout
+
+    var pendingImageUri by remember(layout, kind) { mutableStateOf<Uri?>(null) }
+    var isCropActive by remember(layout, kind) { mutableStateOf(false) }
+
+    val currentImagePath =
+        pendingImageUri?.toString()
+            ?: if (isMask) activeDraft.maskImagePath else activeDraft.backgroundImagePath
+    val imageScale = if (isMask) activeDraft.maskImageScale else activeDraft.bgImageScale
+    val imageOffsetX = if (isMask) activeDraft.maskImageOffsetX else activeDraft.bgImageOffsetX
+    val imageOffsetY = if (isMask) activeDraft.maskImageOffsetY else activeDraft.bgImageOffsetY
+    val imageDim = if (isMask) activeDraft.maskImageDim else activeDraft.backgroundImageDim
+    val scaleMode = if (isMask) activeDraft.maskScaleMode else activeDraft.bgScaleMode
 
     var previewBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
+    var loadedImagePath by remember { mutableStateOf<String?>(null) }
     var isSaving by remember { mutableStateOf(false) }
+    val isLoadingBitmap = currentImagePath != null && loadedImagePath != currentImagePath
+
+    fun updateDraft(transform: (PadLayout) -> PadLayout) {
+        val base = MacroPadState.previewLayout.value?.takeIf { it.id == layout.id } ?: layout
+        MacroPadState.setPreviewLayout(transform(base))
+    }
 
     fun setCropping(active: Boolean) {
         if (isMask) {
@@ -200,8 +212,9 @@ internal fun LayerImageSettingsEditor(
         }
     }
 
-    LaunchedEffect(layout.id) {
+    LaunchedEffect(layout, kind) {
         AppLog.d(TAG, "LayerImageSettingsEditor($kind) opened for profile: $profileName, layout: ${layout.name}")
+        MacroPadState.setPreviewLayout(layout)
     }
 
     LaunchedEffect(isCropActive) {
@@ -214,45 +227,27 @@ internal fun LayerImageSettingsEditor(
         }
     }
 
-    LaunchedEffect(scaleMode) {
-        val pl = MacroPadState.previewLayout.value ?: layout
-        MacroPadState.setPreviewLayout(
-            if (isMask) pl.copy(maskScaleMode = scaleMode) else pl.copy(bgScaleMode = scaleMode),
-        )
-    }
-
-    val previewLayout by MacroPadState.previewLayout.collectAsStateWithLifecycle()
-    val previewScale = if (isMask) previewLayout?.maskImageScale else previewLayout?.bgImageScale
-    val previewOffsetX = if (isMask) previewLayout?.maskImageOffsetX else previewLayout?.bgImageOffsetX
-    val previewOffsetY = if (isMask) previewLayout?.maskImageOffsetY else previewLayout?.bgImageOffsetY
-    LaunchedEffect(previewScale, previewOffsetX, previewOffsetY) {
-        val pl = previewLayout ?: return@LaunchedEffect
-        imageScale = if (isMask) pl.maskImageScale else pl.bgImageScale
-        imageOffsetX = if (isMask) pl.maskImageOffsetX else pl.bgImageOffsetX
-        imageOffsetY = if (isMask) pl.maskImageOffsetY else pl.bgImageOffsetY
-    }
-
     val imageDimFilter =
         remember(imageDim) {
             dimColorFilter(imageDim)
         }
 
-    LaunchedEffect(pendingImageUri, currentImagePath) {
-        val pathOrUri = pendingImageUri?.toString() ?: currentImagePath
-        AppLog.d(TAG, "Loading $kind bitmap for: $pathOrUri")
-        withContext(Dispatchers.IO) {
-            val bitmap =
-                if (pathOrUri != null) {
-                    MacroPadMediaRepository.loadScaledBitmap(context, pathOrUri)
-                } else {
-                    null
-                }
-            withContext(Dispatchers.Main) {
-                previewBitmap = bitmap?.asImageBitmap()
-                if (bitmap == null) {
-                    isCropActive = false
-                }
+    LaunchedEffect(currentImagePath) {
+        AppLog.d(TAG, "Loading $kind bitmap for: $currentImagePath")
+        if (currentImagePath == null) {
+            previewBitmap = null
+            loadedImagePath = null
+            isCropActive = false
+            return@LaunchedEffect
+        }
+        val bitmap =
+            withContext(Dispatchers.IO) {
+                MacroPadMediaRepository.loadScaledBitmap(context, currentImagePath)
             }
+        previewBitmap = bitmap?.asImageBitmap()
+        loadedImagePath = currentImagePath
+        if (bitmap == null) {
+            isCropActive = false
         }
     }
 
@@ -261,35 +256,14 @@ internal fun LayerImageSettingsEditor(
         val uri = pickedUri ?: return@LaunchedEffect
         AppLog.d(TAG, "$kind image picked from system picker: $uri")
         pendingImageUri = uri
-        currentImagePath = null
-        BackgroundPickerManager.clearPickedUri()
-    }
-
-    // Stream in-flight layer settings to bottom-screen preview in real-time
-    LaunchedEffect(pendingImageUri, currentImagePath, imageScale, imageOffsetX, imageOffsetY, imageDim, scaleMode) {
-        val effectivePath = pendingImageUri?.toString() ?: currentImagePath
-        val base = MacroPadState.previewLayout.value ?: layout
-        val inFlightLayout =
+        updateDraft { base ->
             if (isMask) {
-                base.copy(
-                    maskImagePath = effectivePath,
-                    maskImageScale = imageScale,
-                    maskImageOffsetX = imageOffsetX,
-                    maskImageOffsetY = imageOffsetY,
-                    maskImageDim = imageDim,
-                    maskScaleMode = scaleMode,
-                )
+                base.copy(maskImagePath = uri.toString())
             } else {
-                base.copy(
-                    backgroundImagePath = effectivePath,
-                    bgImageScale = imageScale,
-                    bgImageOffsetX = imageOffsetX,
-                    bgImageOffsetY = imageOffsetY,
-                    backgroundImageDim = imageDim,
-                    bgScaleMode = scaleMode,
-                )
+                base.copy(backgroundImagePath = uri.toString())
             }
-        MacroPadState.setPreviewLayout(inFlightLayout)
+        }
+        BackgroundPickerManager.clearPickedUri()
     }
 
     // 1. Preview Frame
@@ -395,14 +369,18 @@ internal fun LayerImageSettingsEditor(
             icon = Icons.Rounded.AspectRatio,
             onPrevious = {
                 val newMode = BackgroundScaleMode.entries.cycle(scaleMode, BumperDirection.PREV)
-                scaleMode = newMode
+                updateDraft { base ->
+                    if (isMask) base.copy(maskScaleMode = newMode) else base.copy(bgScaleMode = newMode)
+                }
                 if (newMode == BackgroundScaleMode.STRETCH) {
                     isCropActive = false
                 }
             },
             onNext = {
                 val newMode = BackgroundScaleMode.entries.cycle(scaleMode, BumperDirection.NEXT)
-                scaleMode = newMode
+                updateDraft { base ->
+                    if (isMask) base.copy(maskScaleMode = newMode) else base.copy(bgScaleMode = newMode)
+                }
                 if (newMode == BackgroundScaleMode.STRETCH) {
                     isCropActive = false
                 }
@@ -441,7 +419,10 @@ internal fun LayerImageSettingsEditor(
             icon = Icons.Rounded.BrightnessMedium,
             valueLabel = "${(imageDim * BSE_PERCENT_DIVISOR).roundToInt()}%",
             onValueChange = { newVal ->
-                imageDim = (newVal * BSE_PERCENT_DIVISOR).roundToInt() / BSE_PERCENT_DIVISOR
+                val roundedDim = (newVal * BSE_PERCENT_DIVISOR).roundToInt() / BSE_PERCENT_DIVISOR
+                updateDraft { base ->
+                    if (isMask) base.copy(maskImageDim = roundedDim) else base.copy(backgroundImageDim = roundedDim)
+                }
             },
         )
     }
@@ -492,7 +473,9 @@ internal fun LayerImageSettingsEditor(
                                 currentImagePath
                             }
                         pendingImageUri = null
-                        currentImagePath = finalPath
+                        updateDraft { base ->
+                            if (isMask) base.copy(maskImagePath = finalPath) else base.copy(backgroundImagePath = finalPath)
+                        }
                         onConfirm(finalPath, imageChanged, imageScale, imageOffsetX, imageOffsetY, imageDim, scaleMode)
                         isSaving = false
                     }
@@ -502,12 +485,6 @@ internal fun LayerImageSettingsEditor(
                 isCropActive = false
                 setCropping(false)
                 pendingImageUri = null
-                currentImagePath = initialPath
-                imageScale = initialScale
-                imageOffsetX = initialOffsetX
-                imageOffsetY = initialOffsetY
-                imageDim = initialDim
-                scaleMode = initialScaleMode
                 MacroPadState.clearPreviewLayout()
                 onDiscard()
             },
@@ -519,7 +496,7 @@ internal fun LayerImageSettingsEditor(
         pulseOnChanges = hasChanges,
         saveActionText = stringResource(R.string.gamepad_action_save),
         saveIcon = Icons.Rounded.Save,
-        enabled = !isSaving,
+        enabled = !isSaving && !isLoadingBitmap,
         showExitPrompt = promptState.showExitPrompt,
         onDismissPrompt = promptState.dismissPrompt,
         saveFocusRequester = promptState.focusRequester,
@@ -550,11 +527,25 @@ internal fun LayerImageSettingsEditor(
             isCropActive = false
             setCropping(false)
             pendingImageUri = null
-            currentImagePath = null
             previewBitmap = null
-            imageScale = 1f
-            imageOffsetX = 0f
-            imageOffsetY = 0f
+            loadedImagePath = null
+            updateDraft { base ->
+                if (isMask) {
+                    base.copy(
+                        maskImagePath = null,
+                        maskImageScale = 1f,
+                        maskImageOffsetX = 0f,
+                        maskImageOffsetY = 0f,
+                    )
+                } else {
+                    base.copy(
+                        backgroundImagePath = null,
+                        bgImageScale = 1f,
+                        bgImageOffsetX = 0f,
+                        bgImageOffsetY = 0f,
+                    )
+                }
+            }
         },
     )
 }
