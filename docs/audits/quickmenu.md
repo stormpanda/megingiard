@@ -279,7 +279,7 @@ None identified — Quick Menu and App Shell state transitions are event-driven 
 - [x] **`[QM-14]`** — Replace local Accessibility polling loop in `OnboardingWizardDialog` with `AppStateManager.isAccessibilityActive` *(Complexity: Med, Risk: Low)*
 - [x] **`[QM-15]`** — Centralize `promptInFlight || isCapturing` guard inside `MainActivity.requestScreenCapture()` *(Complexity: Med, Risk: Low)*
 - [x] **`[QM-16]`** — Remove `isOnValidScreenLocal` `LaunchedEffect` round-trip in `MainActivity.setContent` *(Complexity: Low, Risk: Low)*
-- [ ] **`[QM-17]`** — Consolidate `PrimaryFocusAnchorActivity.anchorPrimaryFocus` triggers and restrict `dispatchKeyEvent` to non-repeat `ACTION_DOWN` *(Complexity: High, Risk: Low)*
+- [x] **`[QM-17]`** — Consolidate `PrimaryFocusAnchorActivity.anchorPrimaryFocus` triggers and restrict `dispatchKeyEvent` to non-repeat `ACTION_DOWN` *(Complexity: High, Risk: Low)*
 - [ ] **`[QM-18]`** — Remove redundant `HIDE_DEBOUNCE_MS` (32 ms) delay from `PrimaryOverlayManager` *(Complexity: Low, Risk: Low)*
 - [ ] **`[QM-19]`** — Delete `NavDestinationTest.kt` and remove dead modal assertions from `PrimaryModalConfigTest` and `AppStateManagerTest` *(Complexity: Med, Risk: Low)*
 - [ ] **`[QM-20]`** — Update outdated architecture and functional claims in `docs/features/quickmenu/FEATURE.md` *(Complexity: Med, Risk: Low)*

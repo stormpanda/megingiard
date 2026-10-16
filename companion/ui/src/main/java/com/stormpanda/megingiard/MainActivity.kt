@@ -227,9 +227,6 @@ class MainActivity : ComponentActivity() {
         val isValid = DisplayDetector.isValidScreen(currentDisplayId)
         AppStateManager.setOnValidScreen(isValid)
         AppStateManager.setActivityResumed(true)
-        if (currentDisplayId != Display.DEFAULT_DISPLAY) {
-            PrimaryFocusAnchorActivity.anchorPrimaryFocus(this)
-        }
     }
 
     override fun onTopResumedActivityChanged(isTopResumedActivity: Boolean) {
@@ -241,7 +238,10 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if ((display?.displayId ?: Display.DEFAULT_DISPLAY) != Display.DEFAULT_DISPLAY) {
+        if (event.action == KeyEvent.ACTION_DOWN &&
+            event.repeatCount == 0 &&
+            (display?.displayId ?: Display.DEFAULT_DISPLAY) != Display.DEFAULT_DISPLAY
+        ) {
             PrimaryFocusAnchorActivity.anchorPrimaryFocus(this)
         }
         return super.dispatchKeyEvent(event)
@@ -264,10 +264,6 @@ class MainActivity : ComponentActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
         super.onCreate(savedInstanceState)
         LayoutTransitionManager.registerWindowProvider { window }
-
-        if (display?.displayId != Display.DEFAULT_DISPLAY) {
-            PrimaryFocusAnchorActivity.anchorPrimaryFocus(this)
-        }
 
         // Init settings first so the persisted log level is active before anything
         // else runs (including SignatureGuard below). SettingsManager.init() reads

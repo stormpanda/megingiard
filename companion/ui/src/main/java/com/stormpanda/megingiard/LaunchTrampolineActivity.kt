@@ -47,10 +47,6 @@ class LaunchTrampolineActivity : Activity() {
                     }
                 }
             startActivity(targetIntent, options.toBundle())
-
-            if (targetDisplayId != Display.DEFAULT_DISPLAY) {
-                PrimaryFocusAnchorActivity.anchorPrimaryFocus(this)
-            }
         } catch (e: Exception) {
             AppLog.e(TAG, "Failed to route launch intent to MainActivity", e)
         } finally {
