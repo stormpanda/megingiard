@@ -66,9 +66,6 @@ class MegingiardSettingsProvider : ContentProvider() {
         context?.let { ctx ->
             MegingiardIpcContract.init(ctx)
             SettingsManager.init(ctx)
-            notifyThemeChanged(ctx)
-            notifySettingsChanged(ctx)
-            notifyProfilesChanged(ctx)
         }
         return true
     }
