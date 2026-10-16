@@ -237,7 +237,7 @@
 - [x] **`[MR-15]`** — Replace `directPrivdStartGeneration` and 3 collectors in `ScreenCaptureService` with `combine(...).collectLatest` *(Complexity: Med, Risk: Low)*
 - [x] **`[MR-02]`** — Inline `DirectPrivdMirrorSession` into `ScreenCaptureService` and delete wrapper class *(Complexity: Med, Risk: Low)*
 - [x] **`[MR-13]`** — Derive `cutouts`/`edgeBlendWidthDp`/`maxFps` from `MacroPadState.activeLayout` and route Follow Touch crops through transient overrides *(Complexity: Med, Risk: Low)*
-- [ ] **`[MR-16]`** — Keep `GpuMotionSmoother.setFrozen(true)` during `LOST` instead of Main-thread `tv.bitmap` readback in `AnchorPresenceManager` *(Complexity: Med, Risk: Med)*
+- [x] **`[MR-16]`** — Keep `GpuMotionSmoother.setFrozen(true)` during `LOST` instead of Main-thread `tv.bitmap` readback in `AnchorPresenceManager` *(Complexity: Med, Risk: Med)*
 - [x] **`[MR-01]`** — Simplify Binder surface protocol from `MAX_DIRECT_SURFACES = 8` list to a single `Surface` *(Complexity: Med, Risk: Low)*
 - [x] **`[MR-04]`** — Deduplicate 3 identical `ResizeHandleView` Composables into one `internal` Composable *(Complexity: Low, Risk: Low)*
 - [x] **`[MR-08]`** — Delete `ThrottledTextureView.kt` and use standard `TextureView` in `EmbeddedMirrorView.kt` *(Complexity: Low, Risk: Low)*

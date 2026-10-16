@@ -50,30 +50,6 @@ class AnchorPresenceManagerTest {
     }
 
     @Test
-    fun `getFrozenFrame returns null when neither cache nor disk has frame`() {
-        val context = RuntimeEnvironment.getApplication()
-        val frame = AnchorPresenceManager.getFrozenFrame(context, "cutout_no_frame")
-        assertNull(frame)
-    }
-
-    @Test
-    fun `getFrozenFrame retrieves saved freeze frame from disk if not in memory cache`() {
-        val context = RuntimeEnvironment.getApplication()
-        val cutoutId = "cutout_disk_frame_test"
-        val bitmap = Bitmap.createBitmap(10, 10, Bitmap.Config.ARGB_8888)
-
-        CutoutMaskManager.saveFreezeFrame(context, cutoutId, bitmap)
-
-        val retrieved = AnchorPresenceManager.getFrozenFrame(context, cutoutId)
-        assertNotNull(retrieved)
-        assertEquals(10, retrieved!!.width)
-        assertEquals(10, retrieved.height)
-
-        CutoutMaskManager.deleteMask(context, cutoutId)
-        AnchorPresenceManager.clearCutout(cutoutId)
-    }
-
-    @Test
     fun `updateMonitoringLoop starts when capturing with visual anchor and stops cleanly`() {
         val anchor =
             LayoutVisualAnchor(
@@ -111,13 +87,12 @@ class AnchorPresenceManagerTest {
             viewMode = CompanionViewMode.MACROPAD,
         )
         assertFalse(AnchorPresenceManager.isMonitoring)
-        assertEquals(0, AnchorPresenceManager.lastValidFrameCount)
     }
 
     @Test
-    fun `clearAllBuffers empties freeze frame bitmaps`() {
+    fun `clearAllBuffers resets state cleanly`() {
         AnchorPresenceManager.clearAllBuffers()
-        assertEquals(0, AnchorPresenceManager.lastValidFrameCount)
+        assertFalse(AnchorPresenceManager.isMonitoring)
     }
 
     @Test
