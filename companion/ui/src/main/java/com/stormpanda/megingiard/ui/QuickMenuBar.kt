@@ -29,6 +29,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -113,19 +114,7 @@ fun QuickMenuBar(modifier: Modifier = Modifier) {
     fun getTargetOffset(type: SwipeGestureType): Dp {
         val currentActive = activeSwipe
         return if (currentActive != null && currentActive.type == type) {
-            with(density) {
-                val delta = currentActive.deltaPx.toDp()
-                val threshold = currentActive.thresholdPx.toDp()
-                val visualDelta = delta * GESTURE_VISUAL_MULTIPLIER
-                val visualThreshold = threshold * GESTURE_VISUAL_MULTIPLIER
-                val visual =
-                    if (visualDelta < visualThreshold) {
-                        visualDelta
-                    } else {
-                        visualThreshold + (visualDelta - visualThreshold) * GESTURE_RESISTANCE_FACTOR
-                    }
-                visual.coerceAtMost(GESTURE_MAX_OFFSET)
-            }
+            computeSwipeVisualOffsetDp(currentActive.deltaPx, currentActive.thresholdPx, density)
         } else {
             0.dp
         }
@@ -229,16 +218,36 @@ fun QuickMenuBar(modifier: Modifier = Modifier) {
     }
 }
 
+internal fun computeSwipeVisualOffsetDp(
+    deltaPx: Float,
+    thresholdPx: Float,
+    density: Density,
+): Dp =
+    with(density) {
+        val delta = deltaPx.toDp()
+        val threshold = thresholdPx.toDp()
+        val visualDelta = delta * GESTURE_VISUAL_MULTIPLIER
+        val visualThreshold = threshold * GESTURE_VISUAL_MULTIPLIER
+        val visual =
+            if (visualDelta < visualThreshold) {
+                visualDelta
+            } else {
+                visualThreshold + (visualDelta - visualThreshold) * GESTURE_RESISTANCE_FACTOR
+            }
+        visual.coerceAtMost(GESTURE_MAX_OFFSET)
+    }
+
 @Composable
-private fun QuickMenuSlidingPill(
+internal fun QuickMenuSlidingPill(
     icon: ImageVector,
     animatedOffsetDp: Dp,
     isPastThreshold: Boolean,
     overlayAtBottom: Boolean,
     colors: AppColors,
     modifier: Modifier = Modifier,
+    alpha: Float = QM_BAR_ALPHA_VISIBLE,
 ) {
-    if (animatedOffsetDp <= 0.dp) return
+    if (animatedOffsetDp <= 0.dp || alpha <= 0f) return
     val initialOffscreenOffset = QuickMenuBarLayout.SLIDING_PILL_SIZE + PILL_OFFSCREEN_PADDING
     val yOffset = if (overlayAtBottom) initialOffscreenOffset - animatedOffsetDp else -initialOffscreenOffset + animatedOffsetDp
 
@@ -248,6 +257,7 @@ private fun QuickMenuSlidingPill(
                 .offset(y = yOffset)
                 .shadow(elevation = PILL_SHADOW_ELEVATION, shape = CircleShape, clip = false)
                 .size(QuickMenuBarLayout.SLIDING_PILL_SIZE)
+                .graphicsLayer(alpha = alpha)
                 .background(color = if (isPastThreshold) colors.accent else colors.controlOverlay, shape = CircleShape)
                 .border(
                     width = PILL_BORDER_WIDTH,
