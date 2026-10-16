@@ -921,7 +921,6 @@ private fun AspectRatioCard(
         var updatedCutout =
             cutout.copy(
                 aspectRatioMode = nextMode,
-                keepAspectRatio = (nextMode == AspectRatioMode.TOP),
             )
 
         if (nextMode == AspectRatioMode.TOP) {

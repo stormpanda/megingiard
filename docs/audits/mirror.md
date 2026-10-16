@@ -248,5 +248,5 @@
 - [ ] **`[MR-17]`** — Extract shared top-overlay initial focus & recovery effect into `EditorToolbox.kt` *(Complexity: Low, Risk: Low)*
 - [x] **`[MR-05]`** — Remove pre-Android 12 (`API <= 30`) `M_LAYER_STACK_FROM` reflection fallback in `SurfaceControlReflect.java` *(Complexity: Low, Risk: Low)*
 - [x] **`[MR-06]`** — Remove no-op `synchronized(old)` blocks around `Bitmap.recycle()` *(Complexity: Low, Risk: Low)*
-- [ ] **`[MR-12]`** — Stop writing deprecated `ScreenCutout.keepAspectRatio` in `MirrorEditorTopOverlay.kt` *(Complexity: Low, Risk: Low)*
+- [x] **`[MR-12]`** — Stop writing deprecated `ScreenCutout.keepAspectRatio` in `MirrorEditorTopOverlay.kt` *(Complexity: Low, Risk: Low)*
 - [ ] **`[MR-19]`** — Synchronize `docs/features/mirror/*.md` with current `privd`, `TextureView`, `GpuMotionSmoother`, and `InjectorLifecycleManager` code *(Complexity: Med, Risk: Low)*
