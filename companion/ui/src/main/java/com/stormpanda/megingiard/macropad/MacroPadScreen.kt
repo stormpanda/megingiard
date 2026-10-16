@@ -1,7 +1,5 @@
 package com.stormpanda.megingiard.macropad
 
-import android.content.Context
-import android.graphics.BitmapFactory
 import android.os.SystemClock
 import android.os.Vibrator
 import android.view.KeyEvent
@@ -17,7 +15,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,21 +22,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -56,15 +48,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
-import com.stormpanda.megingiard.BitmapUtils
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.math.ViewportMath
 import com.stormpanda.megingiard.mirror.EmbeddedMirrorView
 import com.stormpanda.megingiard.mirror.InteractiveCutoutController
 import com.stormpanda.megingiard.mirror.MasterSurfaceRegistry
@@ -78,13 +67,8 @@ import com.stormpanda.megingiard.ui.DialogToastManager
 import com.stormpanda.megingiard.ui.DialogToastPill
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.MaterialSymbol
-import com.stormpanda.megingiard.ui.dimColorFilter
 import com.stormpanda.megingiard.ui.rememberBezelBrush
 import com.stormpanda.megingiard.ui.rememberQuickMenuGestureMetrics
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
-import java.io.File
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -136,7 +120,9 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
 
     // Reset peek state when leaving MACROPAD mode
     DisposableEffect(Unit) {
+        AppLog.i(TAG, "MacroPadScreen visible")
         onDispose {
+            AppLog.i(TAG, "MacroPadScreen disposed")
             MacroPadState.resetPeek()
         }
     }
@@ -239,47 +225,7 @@ internal fun PadSurface(
     val canvasSizeState = remember { mutableStateOf(IntSize.Zero) }
     val hapticLastMsByButton = remember { mutableMapOf<String, Long>() }
 
-    var bgBitmap by remember(layout.backgroundImagePath, layout.backgroundImageVersion) { mutableStateOf<ImageBitmap?>(null) }
-    LaunchedEffect(layout.backgroundImagePath, layout.backgroundImageVersion) {
-        val path = layout.backgroundImagePath
-        if (path != null) {
-            try {
-                val decoded = MacroPadMediaRepository.loadScaledBitmap(context, path)
-                bgBitmap = decoded?.asImageBitmap()
-            } catch (e: Exception) {
-                AppLog.e(TAG, "Failed to decode background image $path", e)
-                bgBitmap = null
-            }
-        } else {
-            bgBitmap = null
-        }
-    }
-
-    var maskBitmap by remember(layout.maskImagePath, layout.maskImageVersion) { mutableStateOf<ImageBitmap?>(null) }
-    LaunchedEffect(layout.maskImagePath, layout.maskImageVersion) {
-        val path = layout.maskImagePath
-        if (path != null) {
-            try {
-                val decoded = MacroPadMediaRepository.loadScaledBitmap(context, path)
-                maskBitmap = decoded?.asImageBitmap()
-            } catch (e: Exception) {
-                AppLog.e(TAG, "Failed to decode mask image $path", e)
-                maskBitmap = null
-            }
-        } else {
-            maskBitmap = null
-        }
-    }
-
-    val bgImageDimFilter =
-        remember(layout.backgroundImageDim) {
-            dimColorFilter(layout.backgroundImageDim)
-        }
-
-    val maskImageDimFilter =
-        remember(layout.maskImageDim) {
-            dimColorFilter(layout.maskImageDim)
-        }
+    val layerBitmaps = rememberLayoutLayerBitmaps(context, layout)
 
     // Create hit-test engine with density-aware dp→px converter and haptic callback
     val engine =
@@ -591,29 +537,11 @@ internal fun PadSurface(
                         }
                     },
         ) {
-            if ((bgBitmap != null || maskBitmap != null) && !transparentBackground) {
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    if (bgBitmap != null) {
-                        drawAdjustedBitmap(
-                            bitmap = bgBitmap!!,
-                            scaleMode = layout.bgScaleMode,
-                            userScale = layout.bgImageScale,
-                            offsetX = layout.bgImageOffsetX,
-                            offsetY = layout.bgImageOffsetY,
-                            colorFilter = bgImageDimFilter,
-                        )
-                    }
-                    if (maskBitmap != null) {
-                        drawAdjustedBitmap(
-                            bitmap = maskBitmap!!,
-                            scaleMode = layout.maskScaleMode,
-                            userScale = layout.maskImageScale,
-                            offsetX = layout.maskImageOffsetX,
-                            offsetY = layout.maskImageOffsetY,
-                            colorFilter = maskImageDimFilter,
-                        )
-                    }
-                }
+            if (!transparentBackground) {
+                LayoutImageLayer(
+                    layout = layout,
+                    bitmaps = layerBitmaps,
+                )
             }
 
             if (layout.isEmpty() && !transparentBackground) {

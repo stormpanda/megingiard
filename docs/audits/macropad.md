@@ -266,7 +266,7 @@
 - [x] **`[MP-16]`** — Associate per-client callbacks with `clientId` inside `TouchScreenObserver` *(Complexity: Med, Risk: Low)*
 - [x] **`[MP-17]`** — Replace triple overlapping `TouchScreenObserver` hooks in `MacroPadScreen` with a single `DisposableEffect(hasFollowMode)` *(Complexity: Low, Risk: Low)*
 - [x] **`[MP-18]`** — Debounce full-graph JSON disk writes in `MacroPadState.persistAsync()` during continuous edits *(Complexity: Med, Risk: Low)*
-- [ ] **`[MP-19]`** — Extract shared background & mask bitmap loader and `Canvas` layer for `MacroPadScreen` and `PadCanvas` *(Complexity: Med, Risk: Low)*
+- [x] **`[MP-19]`** — Extract shared background & mask bitmap loader and `Canvas` layer for `MacroPadScreen` and `PadCanvas` *(Complexity: Med, Risk: Low)*
 - [ ] **`[MP-20]`** — Eliminate bidirectional `LaunchedEffect` ping-pong between local state and `MacroPadState.previewLayout` *(Complexity: Med, Risk: Low)*
 - [ ] **`[MP-21]`** — Remove unused `accentColor: Color` and `title: String` parameters across 12 MacroPad sub-pages *(Complexity: Low, Risk: Low)*
 - [ ] **`[MP-22]`** — Synchronize `docs/features/macropad/*.md` with the 9-section deck editor, sub-page macro editor, and current source tree *(Complexity: Med, Risk: Low)*
