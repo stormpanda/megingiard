@@ -28,12 +28,30 @@ internal object MacroPadNavState {
     private val _savedFocusKeysByDepth = MutableStateFlow<Map<Int, Any>>(emptyMap())
     val savedFocusKeysByDepth: StateFlow<Map<Int, Any>> = _savedFocusKeysByDepth.asStateFlow()
 
+    private val _buttonDraft = MutableStateFlow<PadButton?>(null)
+    val buttonDraft: StateFlow<PadButton?> = _buttonDraft.asStateFlow()
+
+    private val _macroDraft = MutableStateFlow<Macro?>(null)
+    val macroDraft: StateFlow<Macro?> = _macroDraft.asStateFlow()
+
+    fun setButtonDraft(draft: PadButton?) {
+        AppLog.d(TAG, "setButtonDraft: id=${draft?.id}")
+        _buttonDraft.value = draft
+    }
+
+    fun setMacroDraft(draft: Macro?) {
+        AppLog.d(TAG, "setMacroDraft: id=${draft?.id}")
+        _macroDraft.value = draft
+    }
+
     fun selectSection(section: EditorSection) {
         AppLog.d(TAG, "selectSection: section=$section current=${_selectedSection.value}")
         if (_selectedSection.value != section) {
             _selectedSection.value = section
             _subPageStack.value = emptyList()
             _savedFocusKeysByDepth.value = emptyMap()
+            _buttonDraft.value = null
+            _macroDraft.value = null
         }
     }
 
@@ -84,6 +102,8 @@ internal object MacroPadNavState {
         _subPageStack.value = emptyList()
         _macroTimelineFocusStepIndex.value = null
         _savedFocusKeysByDepth.value = emptyMap()
+        _buttonDraft.value = null
+        _macroDraft.value = null
     }
 
     /**

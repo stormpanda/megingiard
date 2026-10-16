@@ -99,15 +99,7 @@ internal fun MacroTimelineSubPageContent(
     val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsStateWithLifecycle()
 
     fun syncDraftToNavState(draft: Macro) {
-        val updatedStack =
-            MacroPadNavState.subPageStack.value.map { page ->
-                if (page is MacroPadSubPage.MacroTimeline && page.macroId == draft.id) {
-                    page.copy(draftMacro = draft)
-                } else {
-                    page
-                }
-            }
-        MacroPadNavState.setStack(updatedStack)
+        MacroPadNavState.setMacroDraft(draft)
     }
 
     fun startGamepadRecording() {

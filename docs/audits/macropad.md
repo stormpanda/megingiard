@@ -260,7 +260,7 @@
 - [x] **`[MP-10]`** — Remove dead `MacroTimelineEditor` undo/redo stacks, `_appearanceDraft`, `calibrationRevision`, `onSaveColor`, and unwired `filled` toggle *(Complexity: Med, Risk: Low)*
 - [x] **`[MP-11]`** — Consolidate legacy `PadLayout` migrations and remove dead `mirrorConfigured = true` overrides *(Complexity: Med, Risk: Low)*
 - [x] **`[MP-12]`** — Centralize `MacroPadState` mutations + active state recomputation and remove unused `scope`/imports *(Complexity: Med, Risk: Low)*
-- [ ] **`[MP-13]`** — Consolidate triple-stored button/macro draft state in `MacroPadEditor` and `MacroPadNavState` *(Complexity: High, Risk: Med)*
+- [x] **`[MP-13]`** — Consolidate triple-stored button/macro draft state in `MacroPadEditor` and `MacroPadNavState` *(Complexity: High, Risk: Med)*
 - [ ] **`[MP-14]`** — Convert 5 redundant fields in `TouchRecordingState.Recording` into computed properties *(Complexity: Low, Risk: Low)*
 - [ ] **`[MP-15]`** — Synchronize all state transitions and `recordedSteps` accesses under `recordingLock` in `PhysicalGamepadRecordingManager` *(Complexity: Med, Risk: Low)*
 - [ ] **`[MP-16]`** — Associate per-client callbacks with `clientId` inside `TouchScreenObserver` *(Complexity: Med, Risk: Low)*

@@ -415,11 +415,8 @@ internal fun EditButtonSubPageContent(
     val activeLayout by MacroPadState.activeLayout.collectAsStateWithLifecycle()
     val stableButtonId = remember(button?.id) { button?.id ?: UUID.randomUUID().toString() }
 
-    DisposableEffect(stableButtonId) {
+    LaunchedEffect(stableButtonId) {
         MacroPadState.setSelectedButtonId(stableButtonId)
-        onDispose {
-            MacroPadState.setPreviewButton(null)
-        }
     }
 
     val defaultButtonLabel = stringResource(R.string.macropad_editor_new_button_default_label)
@@ -574,7 +571,7 @@ internal fun EditButtonSubPageContent(
     val isNew = savedButton == null
 
     LaunchedEffect(currentButton) {
-        MacroPadState.setPreviewButton(currentButton)
+        MacroPadNavState.setButtonDraft(currentButton)
     }
 
     val hasChanges =

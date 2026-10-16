@@ -75,14 +75,27 @@ class MacroPadNavStateTest {
 
     @Test
     fun `reset restores default section and clears stack and drafts`() {
+        val draftButton =
+            PadButton(
+                id = "btn-draft",
+                label = "Draft",
+                posX = 0.5f,
+                posY = 0.5f,
+                action = PadAction.ScrollWheel,
+            )
+        val draftMacro = Macro(id = "macro-draft", name = "Draft Macro", steps = emptyList())
         MacroPadNavState.selectSection(EditorSection.BUTTONS)
         MacroPadNavState.push(MacroPadSubPage.EditButtonPositions)
         MacroPadNavState.setMacroTimelineFocusStepIndex(5)
+        MacroPadNavState.setButtonDraft(draftButton)
+        MacroPadNavState.setMacroDraft(draftMacro)
 
         MacroPadNavState.reset()
 
         assertNav(EditorSection.QUICK_ACTIONS)
         assertEquals(null, MacroPadNavState.macroTimelineFocusStepIndex.value)
+        assertEquals(null, MacroPadNavState.buttonDraft.value)
+        assertEquals(null, MacroPadNavState.macroDraft.value)
     }
 
     @Test
@@ -144,24 +157,27 @@ class MacroPadNavStateTest {
     }
 
     @Test
-    fun `MacroTimeline subpage preserves draftMacro with steps across stack updates`() {
+    fun `MacroTimeline subpage preserves macroDraft with steps across subpage navigation`() {
         val initialMacro = Macro(id = "macro-draft", name = "Initial Macro", steps = emptyList())
-        MacroPadNavState.push(MacroPadSubPage.MacroTimeline(macro = null, draftMacro = initialMacro))
+        MacroPadNavState.setMacroDraft(initialMacro)
+        MacroPadNavState.push(MacroPadSubPage.MacroTimeline(macroId = initialMacro.id))
 
         val updatedMacro =
             initialMacro.copy(
                 steps = listOf(MacroStep.GamepadButtonTap(startTimeMs = 0L, durationMs = 100L, btnCode = 96, label = "A")),
             )
 
-        val updatedStack =
-            MacroPadNavState.subPageStack.value.map { page ->
-                if (page is MacroPadSubPage.MacroTimeline && page.macroId == updatedMacro.id) page.copy(draftMacro = updatedMacro) else page
-            }
-        MacroPadNavState.setStack(updatedStack)
+        MacroPadNavState.setMacroDraft(updatedMacro)
 
         val activeSubPage = MacroPadNavState.subPageStack.value.last() as MacroPadSubPage.MacroTimeline
-        assertEquals(updatedMacro, activeSubPage.effectiveMacro)
-        assertEquals(1, activeSubPage.effectiveMacro?.steps?.size)
+        assertEquals(initialMacro.id, activeSubPage.macroId)
+        assertEquals(updatedMacro, MacroPadNavState.macroDraft.value)
+        assertEquals(
+            1,
+            MacroPadNavState.macroDraft.value
+                ?.steps
+                ?.size,
+        )
     }
 
     @Test
@@ -246,7 +262,7 @@ class MacroPadNavStateTest {
     }
 
     @Test
-    fun `ChooseMouseAction and EditButton stack flow preserves draft with ScrollWheel and Trackpoint`() {
+    fun `ChooseMouseAction and EditButton stack flow preserves buttonDraft with ScrollWheel and Trackpoint`() {
         val initialDraft =
             PadButton(
                 id = "btn-mouse-1",
@@ -256,10 +272,11 @@ class MacroPadNavStateTest {
                 action = PadAction.MouseButton(MouseButton.LEFT),
             )
         MacroPadNavState.selectSection(EditorSection.BUTTONS)
-        MacroPadNavState.push(MacroPadSubPage.EditButton(button = null, draftButton = initialDraft))
-        assertNav(EditorSection.BUTTONS, listOf(MacroPadSubPage.EditButton(button = null, draftButton = initialDraft)))
+        MacroPadNavState.setButtonDraft(initialDraft)
+        MacroPadNavState.push(MacroPadSubPage.EditButton(buttonId = null))
+        assertNav(EditorSection.BUTTONS, listOf(MacroPadSubPage.EditButton(buttonId = null)))
 
-        val mouseSubPage = MacroPadSubPage.ChooseMouseAction(button = null, draftButton = initialDraft)
+        val mouseSubPage = MacroPadSubPage.ChooseMouseAction(buttonId = null)
         assertEquals(EditorSection.BUTTONS, mouseSubPage.parentSection)
         MacroPadNavState.push(mouseSubPage)
 
@@ -269,18 +286,13 @@ class MacroPadNavStateTest {
                 widthDp = 60f,
                 heightDp = 120f,
             )
-        MacroPadNavState.setStack(listOf(MacroPadSubPage.EditButton(button = null, draftButton = updatedDraft)))
+        MacroPadNavState.setButtonDraft(updatedDraft)
+        MacroPadNavState.pop()
 
-        assertNav(EditorSection.BUTTONS, listOf(MacroPadSubPage.EditButton(button = null, draftButton = updatedDraft)))
-        assertEquals(PadAction.ScrollWheel, (MacroPadNavState.subPageStack.value.first() as MacroPadSubPage.EditButton).draftButton?.action)
-        assertEquals(
-            60f,
-            (MacroPadNavState.subPageStack.value.first() as MacroPadSubPage.EditButton).draftButton?.widthDp,
-        )
-        assertEquals(
-            120f,
-            (MacroPadNavState.subPageStack.value.first() as MacroPadSubPage.EditButton).draftButton?.heightDp,
-        )
+        assertNav(EditorSection.BUTTONS, listOf(MacroPadSubPage.EditButton(buttonId = null)))
+        assertEquals(PadAction.ScrollWheel, MacroPadNavState.buttonDraft.value?.action)
+        assertEquals(60f, MacroPadNavState.buttonDraft.value?.widthDp)
+        assertEquals(120f, MacroPadNavState.buttonDraft.value?.heightDp)
     }
 
     @Test
@@ -294,14 +306,15 @@ class MacroPadNavStateTest {
                 action = PadAction.AppLauncher(packageName = "com.retroarch"),
             )
         MacroPadNavState.selectSection(EditorSection.BUTTONS)
-        MacroPadNavState.push(MacroPadSubPage.EditButton(button = null, draftButton = initialDraft))
+        MacroPadNavState.setButtonDraft(initialDraft)
+        MacroPadNavState.push(MacroPadSubPage.EditButton(buttonId = null))
         MacroPadNavState.push(MacroPadSubPage.AppPicker)
 
         assertEquals(EditorSection.BUTTONS, MacroPadSubPage.AppPicker.parentSection)
         assertNav(
             EditorSection.BUTTONS,
             listOf(
-                MacroPadSubPage.EditButton(button = null, draftButton = initialDraft),
+                MacroPadSubPage.EditButton(buttonId = null),
                 MacroPadSubPage.AppPicker,
             ),
         )
@@ -311,11 +324,11 @@ class MacroPadNavStateTest {
                 label = "My Custom App",
                 action = PadAction.AppLauncher(packageName = "com.custom.app"),
             )
-        MacroPadNavState.setStack(listOf(MacroPadSubPage.EditButton(button = null, draftButton = updatedDraft)))
+        MacroPadNavState.setButtonDraft(updatedDraft)
+        MacroPadNavState.pop()
 
-        assertNav(EditorSection.BUTTONS, listOf(MacroPadSubPage.EditButton(button = null, draftButton = updatedDraft)))
-        val currentEditButton = MacroPadNavState.subPageStack.value.first() as MacroPadSubPage.EditButton
-        assertEquals("My Custom App", currentEditButton.draftButton?.label)
-        assertEquals(PadAction.AppLauncher("com.custom.app"), currentEditButton.draftButton?.action)
+        assertNav(EditorSection.BUTTONS, listOf(MacroPadSubPage.EditButton(buttonId = null)))
+        assertEquals("My Custom App", MacroPadNavState.buttonDraft.value?.label)
+        assertEquals(PadAction.AppLauncher("com.custom.app"), MacroPadNavState.buttonDraft.value?.action)
     }
 }
